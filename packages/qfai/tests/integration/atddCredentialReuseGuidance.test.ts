@@ -208,8 +208,8 @@ describe("TC-0008-0017 (TDD-0017): the guidance grows no vocabulary", () => {
     // set is enumerated, so the prose deliverable growing a code of its own
     // reddens it. Their promotion windows are held in `sunsetLedger.test.ts`.
     //
-    // #1065 asked for a re-pin script per pinned guard, as the workflow-hygiene
-    // lane ships. This row gets the re-derivation COMMAND and deliberately not
+    // A re-pin script per pinned guard would need to ship with the workflow-hygiene
+    // lane. This row gets the re-derivation COMMAND instead, and deliberately not
     // an auto-writer:
     //
     //     node -e "const fg=require('fast-glob');const fs=require('fs');\

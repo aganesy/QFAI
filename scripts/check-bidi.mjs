@@ -9,11 +9,10 @@
  * 2. NUL AND C0 CONTROLS. These do not reorder anything; they hide inside a
  *    token and are drawn as nothing, or as the space they replaced.
  *
- * The bidi half used to cover six named documents — the ones a CONSUMER reads —
- * while the files an AGENT reads and acts on were outside it entirely. A
- * reordered line in a skill body is an instruction that reads one way and
- * executes another, which is the worse half of the hazard and was the unguarded
- * one.
+ * Covering only six named documents — the ones a CONSUMER reads — would leave
+ * the files an AGENT reads and acts on outside it entirely. A reordered line
+ * in a skill body is an instruction that reads one way and executes another,
+ * which is the worse half of the hazard.
  *
  * Widening it was held back by two U+FEFF occurrences, and neither survives as
  * a reason: `designMd.test.ts` had a BOM as the SUBJECT of a case and now

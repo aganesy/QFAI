@@ -55,7 +55,7 @@ describe("a Change Request is a defined artifact", () => {
       expect(drift).toContain("fill `Resolution` and set `Applied at`");
 
       // The gate cites the condition from SKILL.md; the condition itself is
-      // stated in the reference under the progressive-disclosure split (#414).
+      // stated in the reference under the progressive-disclosure split.
       const skill = await read(tree, "assistant/skills/qfai-implement/SKILL.md");
       expect(flat(skill)).toContain("`Applied at` is populated — approval alone");
 
@@ -112,7 +112,7 @@ describe("a Change Request is a defined artifact", () => {
 
     it(`${tree}: the DR-ID column and the reset rule agree`, async () => {
       // The ledger column table moved out of SKILL.md into this reference under
-      // the progressive-disclosure budget (#414), so the column definition is
+      // the progressive-disclosure budget, so the column definition is
       // asserted where it now lives.
       const ledger = await read(
         tree,
@@ -135,7 +135,7 @@ describe("a Change Request is a defined artifact", () => {
 
     it(`${tree}: a retained CR-ID does not stand in for an exception's DR-ID`, async () => {
       // Exception handling moved alongside the column table into the ledger
-      // reference (#414); assert it where it lives.
+      // reference; assert it where it lives.
       const ledger = await read(
         tree,
         "assistant/skills/qfai-implement/references/execution-ledger.md",
@@ -472,7 +472,7 @@ describe("a Change Request is a defined artifact", () => {
       // A single positive definition of "resolved": everything else is
       // unresolved, so a half-filled record cannot slip through. The gate cites
       // it from SKILL.md; the conditions themselves live in the reference under
-      // the progressive-disclosure split (#414).
+      // the progressive-disclosure split.
       expect(skill).toContain(
         "`references/change-request-reset.md#when-an-in-scope-cr-counts-as-resolved`",
       );

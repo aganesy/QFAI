@@ -1825,8 +1825,8 @@ describe("TC-0017-0043 (TDD-0043): selection creates, removes and renames no che
 /**
  * The exact name `BR-0017-0032` requires. A literal — the rule is about this string.
  *
- * Moved from `build` by review finding [28] on PR #794: `build` declares no `needs` at all, so
- * requiring it and nothing else let every test lane fail with the merge condition satisfied.
+ * `build` declares no `needs` at all, so requiring it and nothing else would let every test lane
+ * fail with the merge condition satisfied.
  */
 const REQUIRED_CONTEXT_NAME = "ci-pass";
 
@@ -2088,8 +2088,7 @@ describe("TC-0017-0040 (TDD-0040): retention 7 passes, retention 8 and an uncond
 
 describe("the release tag is exactly vX.Y.Z, and the check is run rather than read", () => {
   // The pattern was `v[0-9]*.[0-9]*.[0-9]*`, and a shell `*` matches ANY run of characters — so
-  // `v1.10.1-beta.1` passed, and so did `v1x.2y.3junk`. Both were measured against the old
-  // pattern before this was changed, and both are in the table below.
+  // `v1.10.1-beta.1` passed, and so did `v1x.2y.3junk`. Both are in the table below.
   //
   // Why it matters more than a malformed tag usually would: the publish step passes no `--tag`,
   // so npm points `latest` at whatever it publishes. A hand-dispatched prerelease would have
@@ -2836,9 +2835,9 @@ describe("release automation performs decisions rather than making them", () => 
   });
 
   it("treats an existing tag as a re-run only when it names this commit", () => {
-    // Idempotent means "already did exactly this", not "the name is taken". The first version
-    // asked only whether the ref resolved, so a `vX.Y.Z` created against a different commit
-    // between Prepare release and the merge ended the job successfully with this commit
+    // Idempotent means "already did exactly this", not "the name is taken". Asking only whether
+    // the ref resolves is not enough: a `vX.Y.Z` created against a different commit between
+    // Prepare release and the merge would end the job successfully with this commit
     // untagged — release.yml never starting, and nothing anywhere saying so.
     const tagWorkflow = workflow("tag-release.yml");
     const jobs = isRecord(tagWorkflow["jobs"]) ? tagWorkflow["jobs"] : {};

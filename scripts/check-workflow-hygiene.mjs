@@ -1687,8 +1687,8 @@ function pullRequestTriggerFindings(rel, declaredJob, workflow) {
       `filters its \`pull_request\` trigger by ${filters.join(" / ")}, so a pull request touching none of those paths never creates the required status context and branch protection stays pending`,
     );
   }
-  // And the ACTIVITY types are the other half of the same
-  // hole: a path filter stops the workflow starting on some pull requests, while a `types` filter stops it
+  // And the ACTIVITY types are the other half of the same hole. A path filter stops the workflow
+  // starting on some pull requests; a `types` filter stops it
   // starting on some EVENTS of a pull request that did start it. `types: [opened]` is the common
   // shape: the context is created on the first push and never again, so every later push leaves
   // branch protection pending against a SHA that has no required check at all.
@@ -1752,10 +1752,10 @@ function checkRequiredContexts(root, jobs) {
     //
     // `if: always()` is the ONE exception, and excluding it was a real cost rather than a nicety.
     // "Any condition can skip" is a sound approximation for every condition except this one, which
-    // exists precisely to guarantee the job runs — so excluding it would bar the aggregate verdict
-    // from ever holding the context, leaving the declaration naming a job with no `needs` at all:
-    // with only `build` required, every test lane
-    // could fail and the merge condition would still be satisfied, because nothing connects them.
+    // exists precisely to guarantee the job runs — and it barred the aggregate verdict from ever
+    // holding the context, which left the declaration naming a job with no `needs` at all. With
+    // only `build` required, every test lane could fail and the merge condition was still
+    // satisfied, because nothing connects them.
     //
     // So `always()` on the DECLARED job satisfies property 2 by itself, and its dependencies'
     // conditions are then not faults: a skipped dependency is the state `always()` is for, and the

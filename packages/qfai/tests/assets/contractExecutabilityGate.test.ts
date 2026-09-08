@@ -1,5 +1,5 @@
 /**
- * The SDD gate covers Phase 0's own output (#384).
+ * The SDD gate covers Phase 0's own output.
  *
  * `sdd-quality-gate.md` — the file `qfai-sdd/SKILL.md` calls "the full
  * checklist" — contained the string `contract` zero times, so the mandatory

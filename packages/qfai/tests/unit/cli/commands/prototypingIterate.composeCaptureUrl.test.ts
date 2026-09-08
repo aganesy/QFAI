@@ -1,10 +1,10 @@
 /**
  * Direct unit tests for `composeCaptureUrl`.
  *
- * PR #210 wave-10 reviewer feedback (MINOR): the helper is exported
- * from `prototypingIterate.ts` for testability but the wave-8 / wave-9
- * landings only exercised it indirectly through the integration test
- * harness (`prototypingIterate.cliCapture.test.ts`). The export then
+ * The helper is exported from `prototypingIterate.ts` for testability,
+ * but earlier landings only exercised it indirectly through the
+ * integration test harness (`prototypingIterate.cliCapture.test.ts`).
+ * The export then
  * surfaces in `dist/*.d.ts` as a public API. Two ways to reconcile the
  * surface: (a) add direct unit tests so the export is justified by
  * direct contract coverage; (b) drop the export. Path (a) is taken
@@ -23,8 +23,7 @@
  *   6. unparseable URL composition (`new URL(...)` throws inside the
  *      try/catch) → `{ ok: false, reason }` with the operator-facing
  *      `--target-url=` flag named (NOT the internal `targetUrl=`
- *      field name). Added in PR #210 wave-12 to pin the operator
- *      surface of the catch branch.
+ *      field name), pinning the operator surface of the catch branch.
  */
 import { describe, expect, it } from "vitest";
 
@@ -87,9 +86,8 @@ describe("composeCaptureUrl — direct unit coverage", () => {
     // `new URL(":::", "not-a-base")` throws (`:::` is not a valid URL
     // and `"not-a-base"` is not a valid absolute base) — the catch
     // branch surfaces both args verbatim in the reason string. This
-    // pins the operator-facing flag rename of the catch branch
-    // (`--target-url=` instead of the internal `targetUrl=` field
-    // name), which is the part the wave-10 diff explicitly changed.
+    // pins the operator-facing flag naming of the catch branch
+    // (`--target-url=`, not the internal `targetUrl=` field name).
     const result = composeCaptureUrl(":::", "not-a-base");
     expect(result.ok).toBe(false);
     if (result.ok) {

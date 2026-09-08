@@ -23,8 +23,8 @@ const KNOWN_NOISE = [/requires you to be logged in/, /No \.npmignore file found/
  * lists its contents, which is where a packing mistake shows up — and then refuses on
  * publishability, which no pull request is asking about.
  *
- * A concrete case: `qfai@1.10.0` is published, the
- * branch is at 1.10.0, the tarball is built and listed in full, and the step fails with
+ * Consider `qfai@1.10.0` published and the branch at 1.10.0: the tarball builds and lists in
+ * full, and the step still fails with
  *
  *     npm error You cannot publish over the previously published versions: 1.10.0.
  *
@@ -45,11 +45,10 @@ const ALREADY_PUBLISHED = /cannot publish over the previously published versions
  * Whether the registry ITSELF says this version is already published.
  *
  * The tolerated case is "the version is already published, which a pull request is not asking
- * about", and reading the dry-run child's own text is not enough to decide that. The SAME argument
- * that closes the tarball half of this problem applies here too — a lifecycle script can print
- * `npm error You cannot publish over the previously published versions` for a version that was
- * never published, and a pull request can edit `prepublishOnly`. Two escapes survive a check that
- * stops at the tarball:
+ * about", and reading the dry-run child's own text to decide that is not enough on either half: a
+ * lifecycle script can print `npm error You cannot publish over the previously published versions`
+ * for a version that was never published, and a pull request can edit `prepublishOnly`. Two
+ * measured escapes survive a text-only check:
  *
  *   - `npm pack` does not run `prepublishOnly` at all, so a `prepublishOnly` that prints the
  *     sentence and exits 1 leaves `verifyTarballIndependently` answering `ok: true`;
@@ -339,9 +338,9 @@ export function classifyDryRun(result, tarballProof, publishedProof) {
     // a tarball. Any other non-zero status is a real failure — a broken pack, a network error, a
     // missing file — and stays fatal.
     //
-    // The second condition must not be `TARBALL_BUILT.test(combined)` — npm's own tarball summary,
-    // read out of the same child's output — because that is not an
-    // independent observation. `prepublishOnly`, `prepack` and `prepare` all run BEFORE the pack —
+    // Testing `TARBALL_BUILT.test(combined)` — npm's own tarball summary, read out of the same
+    // child's output — would not be an independent observation. `prepublishOnly`, `prepack` and
+    // `prepare` all run BEFORE the pack —
     // npm's own documentation says so — and a pull request can change any of them. One that prints
     // `npm notice === Tarball Details ===` and the already-published wording, then exits non-zero,
     // would satisfy both patterns with no tarball ever built, and the required `build` context
