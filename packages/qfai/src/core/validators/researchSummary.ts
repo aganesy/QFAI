@@ -311,6 +311,42 @@ export async function validateResearchSummary(root: string, config: QfaiConfig):
 }
 
 /**
+ * The rules that report nothing while the section is absent and report at
+ * `error` the moment it appears, with what each one requires.
+ *
+ * They are named in the finding for the absence, because a count that omits
+ * them is not the count the repository owes. A pack sitting at `error=0` can do
+ * exactly what the absence warning asks and land on a large error count in one
+ * step, and the two source rules are per source — a pack with 28 of them
+ * contributes 56 findings on first contact. Naming the rules turns the second
+ * step into a decision rather than a discovery.
+ *
+ * The schema-field rules are deliberately absent: they sit inside their own
+ * promotion window, so they arrive as warnings and are visible before they
+ * count. This list is the set that is red immediately.
+ *
+ * `inertGateFirstContact.test.ts` holds the list against the validator by
+ * running it on a section that satisfies none of them, so a rule added, moved
+ * or renamed cannot leave the message describing the previous set.
+ */
+const FIRST_CONTACT_RULES: ReadonlyArray<{ code: string; requires: string }> = [
+  { code: "QFAI-RESEARCH-005", requires: "sources[].url" },
+  { code: "QFAI-RESEARCH-006", requires: "sources[].published (YYYY-MM-DD)" },
+  { code: "QFAI-RESEARCH-007", requires: "best_practices (non-empty)" },
+  { code: "QFAI-RESEARCH-008", requires: "anti_patterns (non-empty)" },
+  { code: "QFAI-RESEARCH-011", requires: "reflection (non-empty)" },
+];
+
+/** The sentence naming what the absent section is holding back. */
+function firstContactNote(): string {
+  const named = FIRST_CONTACT_RULES.map((rule) => `${rule.code} (${rule.requires})`).join(", ");
+  return (
+    ` While the section is absent, these rules report nothing; each becomes an error as soon as` +
+    ` the section exists: ${named}. The two source rules apply per source.`
+  );
+}
+
+/**
  * Every content rule is skipped when a file carries no heading, so omitting the
  * section entirely used to score zero findings while half-writing it scored
  * several errors. Make the omission visible with a single warning on the pack
@@ -356,11 +392,11 @@ async function buildMissingSectionIssue(
   const sectionMissingSeverity = newRuleSeverity(toolVersion, SECTION_MISSING_PROMOTION);
   const windowNote =
     sectionMissingSeverity === "warning"
-      ? ` Reported as a warning until the ${SECTION_MISSING_PROMOTION} release, then an error`
+      ? ` Reported as a warning until the ${SECTION_MISSING_PROMOTION} release, then an error.`
       : "";
   return issue(
     "QFAI-RESEARCH-012",
-    `Discussion pack has no "Research Summary" section, so the research-first protocol is never checked.${windowNote}`,
+    `Discussion pack has no "Research Summary" section, so the research-first protocol is never checked.${windowNote}${firstContactNote()}`,
     sectionMissingSeverity,
     rel,
     "researchSummary.sectionMissing",

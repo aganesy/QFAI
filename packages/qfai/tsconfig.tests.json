@@ -43,6 +43,7 @@
     "tests/assets/atddScaffoldTunableSeed.test.ts",
     "tests/assets/atddVolumeSignalDefinition.test.ts",
     "tests/assets/autoModeApprovalDegrade.test.ts",
+    "tests/assets/autopilotHardRequiredScope.test.ts",
     "tests/assets/bareAnchorCitations.test.ts",
     "tests/assets/blockedCompletionProhibition.test.ts",
     "tests/assets/brandCatalogStepAnchor.test.ts",
@@ -234,6 +235,7 @@
     "tests/unit/cliMessageLanguage.test.ts",
     "tests/validators/justificationCatalogEmitters.test.ts",
     "tests/validators/reOpenDecisionRecord.test.ts",
+    "tests/validators/inertGateFirstContact.test.ts",
     "tests/validators/skillRolesRouting.test.ts",
     "tests/validators/uix/competitiveRefs.test.ts",
     "tests/validators/validatorReachability.test.ts"
