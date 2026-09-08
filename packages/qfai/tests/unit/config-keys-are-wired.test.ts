@@ -45,7 +45,7 @@ const CONFIG_TS = path.resolve(SRC_ROOT, "core/config.ts");
  * specSections` must not inherit this exemption just by sharing a name.
  *
  * - `validation.testStrategy.requireLayerTags` / `requireSizeTags` — no
- *   validator reads them (#408).
+ *   validator reads them.
  * - `validation.require.specSections` — parsed and shipped but no section
  *   requirement is enforced from it; same class as #408 and left to that
  *   thread rather than fixed here.

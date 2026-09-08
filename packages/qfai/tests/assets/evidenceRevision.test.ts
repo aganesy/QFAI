@@ -1,5 +1,5 @@
 /**
- * Observations name the state they describe (#388).
+ * Observations name the state they describe.
  *
  * `qfai-implement` makes four sub-agent observations load-bearing preconditions
  * for `done`, and its Evidence hard rules declare that stale evidence MUST NOT

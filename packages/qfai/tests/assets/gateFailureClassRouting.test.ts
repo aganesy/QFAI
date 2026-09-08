@@ -1,5 +1,5 @@
 /**
- * Every gate-failure class the agent is told to use has a next action (#381).
+ * Every gate-failure class the agent is told to use has a next action.
  *
  * The Autorepair Protocol named five classes, disposed of two, and closed the
  * stop list against the rest. `upstream spec/contract` — the one class the

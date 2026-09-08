@@ -1,5 +1,5 @@
 /**
- * The mandatory Change Type points at a record that exists (#616, #682, #787).
+ * The mandatory Change Type points at a record that exists.
  *
  * `workflow.md` made declaring a Change Type the hard-stop first action of every
  * stage ("Do not proceed without a declared Change Type") and then filed it in

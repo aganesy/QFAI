@@ -135,8 +135,8 @@ function quotedFromConfig(pattern: RegExp): string {
 /**
  * The exact indentation a TOP-LEVEL key carries in the config.
  *
- * Two spaces, and matched exactly rather than as `\s*`. Review finding on #1236: an
- * indentation-agnostic reader answers with a NESTED key of the same name, and every key these
+ * Two spaces, and matched exactly rather than as `\s*`. An indentation-agnostic reader would
+ * answer with a NESTED key of the same name, and every key these
  * rows ask about is one a `packageRules` entry may legitimately carry — `.github/renovate.md`
  * documents adding `automerge: false` under `packageRules` as the supported way to exempt one
  * dependency, so the collision is the documented workflow rather than a hypothetical.
@@ -419,8 +419,8 @@ describe("automerge is declared together with the check that decides whether any
 
 describe("only one of the two files schedules this bot", () => {
   it("keeps the config's window open, so a delayed cron cannot land outside it", () => {
-    // MEASURED, not anticipated. The pair used to be a weekly cron plus `before 6am on monday`
-    // here, and the first real run asked for 20:00 UTC and started at 21:55 — 06:55 in
+    // MEASURED, not anticipated: a weekly cron plus `before 6am on monday`
+    // is not enough — the first real run asked for 20:00 UTC and started at 21:55 — 06:55 in
     // Asia/Tokyo, past the window. Renovate creates nothing outside its schedule and the run
     // still succeeds, so the whole failure is a green run that did nothing, indistinguishable
     // from a green run with nothing to do.
@@ -456,9 +456,9 @@ describe("only one of the two files schedules this bot", () => {
         "below daily, and with the config's window gone this cron is the only thing pacing the bot",
     ).toEqual(["*", "*", "*"]);
 
-    // …and the setup document quotes the cron it is describing. Review on this change found
-    // `.github/renovate.md` still opening with "opened weekly" after the cron had become daily —
-    // a reader is told one cadence by the prose and another by the table, and neither is checked
+    // …and the setup document quotes the cron it is describing: without this,
+    // `.github/renovate.md` could open with "opened weekly" after the cron becomes daily —
+    // telling a reader one cadence by the prose and another by the table, with neither checked
     // by anything. Requiring the expression itself to appear makes a cron edit that leaves the
     // document behind fail here rather than mislead whoever reads it next.
     expect(

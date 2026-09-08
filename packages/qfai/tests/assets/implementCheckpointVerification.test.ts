@@ -932,7 +932,7 @@ describe("qfai-implement checkpoint verification contract", () => {
       // `Revision`: that boundary has no row, so there is no round to take one
       // from. `evidenceRevision.test.ts` owns the rename; this row owns the
       // arity, and the two must name the same fourth input or a seal taken
-      // here can never match the recomputation over there (#501).
+      // here can never match the recomputation over there.
       expect(evidence).toContain(
         "together with a `Checkpoint verification revision` of its own, recorded beside them",
       );

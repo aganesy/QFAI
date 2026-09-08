@@ -64,7 +64,7 @@ let stagingModes: Map<string, number>;
  * filesystem has no permission bits to carry the request: Node ignores
  * `mode` there and `stat()` answers `0o666` for every file and directory
  * alike. Asserting only the stat made this case fail on Windows for a
- * platform property rather than for anything the source does (#1182).
+ * platform property rather than for anything the source does.
  */
 let stagingRequestedModes: Map<string, number | undefined>;
 

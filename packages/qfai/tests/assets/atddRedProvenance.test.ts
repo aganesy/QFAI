@@ -231,7 +231,7 @@ describe.each(TREES)("%s — the split has one writer and reachable references",
     // phase, because there is no production code to mutate until then.
     const provenance = flat(await readProvenance(tree));
     expect(provenance).toContain(
-      // The handover row carries the assertion-stripped run too (#639).
+      // The handover row carries the assertion-stripped run too.
       "RED command+result, `Round 1: RED failure mode`, `Round 1: RED assertion-stripped result`, `RED revision`, **`RED test hash` and its manifest**, `qa-gatekeeper` PASS, the `Oracle proof` plan |",
     );
     expect(provenance).toContain("A natural RED is not a substitute");
@@ -794,7 +794,7 @@ describe.each(TREES)("%s (the contracts the handover has to land in)", (tree) =>
     expect(revision).toContain("A RED `/qfai-atdd` handed over is taken before the production");
     // "the routed reviews", not "the two": a UI-affecting row routes
     // `product-surface-reviewer` as well, and its `Reviewed revision` is held to
-    // the same agreement (#571).
+    // the same agreement.
     expect(revision).toContain(
       "leaves `Refactor verify revision` for item 6 and the routed reviews",
     );
@@ -2530,7 +2530,7 @@ describe.each(TREES)("%s (the two sides of each contract agree)", (tree) => {
     // recorded it — so a correct ATDD-owned row reached the completion gate
     // missing a mandatory field.
     const provenance = flat(await readProvenance(tree));
-    // The field takes the `Round N:` prefix like every other round field (#654),
+    // The field takes the `Round N:` prefix like every other round field,
     // so the sentence names it prefixed. Same claim, the spelling the closed
     // list requires.
     expect(provenance).toContain("`Round 1: RED failure mode` is on both rows");
