@@ -96,6 +96,33 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   `ui-contract-guide.md` described those screens as failing the review gate.
   They did not: they were never read, and the gate passed.
 
+- **Two more change-scoped lanes select by changed text, not changed bytes**
+  (#1426). The pack-location lane and the prompt/scanner pair lane each scoped
+  themselves with `git diff --name-only`, which selects by blob identity and
+  ignores the whitespace flags. A commit that re-normalises line endings
+  therefore handed both of them files nothing had edited: the first reported the
+  location of packs nobody moved, the second asked for a pairing edit nobody
+  owed.
+
+  Both now read `--numstat` with `--ignore-cr-at-eol`. The flag is narrow on
+  purpose. `--ignore-all-space` also hides an indentation change, and
+  indentation carries meaning in the documents these lanes read.
+
+- **A misplaced review pack is reported before anything stages it** (#1426).
+  `git status --porcelain` collapses a directory git has never seen to that one
+  entry, so a pack written but not yet added arrived as `review-bad/`. The lane
+  skips a path's last segment, taking it for the file name, and the pack fell
+  out of the scan — the case the lane exists for was the case it could not see.
+
+  The status read now passes `--untracked-files=all`, which lists each file, so
+  the pack directory is a segment the lane reads. It is also restricted to
+  untracked entries: tracked edits come from the diffs, which is where the
+  whitespace flags apply, and status cannot take one.
+
+  A pack being un-tracked stays out of scope. `git rm --cached` stages a
+  removal and leaves the file on disk, so status names a path the index is
+  dropping — the reverse of introducing one.
+
 ### Added
 
 - **`QFAI-CONTRACT-038` reports a `prototype.mode` outside the vocabulary**
