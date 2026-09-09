@@ -126,6 +126,8 @@ The maintainer picks the release number, and the changelog and the release notes
 say what the upgrade costs. A reader can check both before upgrading; a pin in
 the source is not something they can read at all.
 
-`tests/core/findingCodeBaseline.ts` still holds the code inventory, so a code
-`src/` emits that nothing has registered is reported. What it no longer asks is
-which release a code becomes an error at.
+Nothing asks which release a code becomes an error at, because nothing decides
+it. What still holds the inventory is `tests/core/issueCodeUniqueness.test.ts`,
+which asks that every error-capable code say what a clean run asserts, and the
+generated `src/core/emittedRuleCodes.ts`, which is how `QFAI-WAIVER-002` knows
+a rule is one no waiver may target.
