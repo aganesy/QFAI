@@ -6,7 +6,7 @@ import { WOULD_UNTRACK_REASON } from "../../core/doctor/archiveVisibility.js";
 import { cleanStaleReviewPacks } from "../../core/doctor/cleanReviewPacks.js";
 import { cleanStaleRunLogs, precheckRunLogPrune } from "../../core/doctor/cleanRunLogs.js";
 import { runAutoremediate } from "../../core/doctor/autoremediate.js";
-import { ensureRootGitignoreEntries } from "./init.js";
+import { ensureRootGitignoreEntries, repairIntegrationWrappers } from "./init.js";
 import type { FailOn, QfaiConfig } from "../../core/config.js";
 import { findConfigRoot, loadConfig } from "../../core/config.js";
 import type { Issue } from "../../core/types.js";
@@ -246,6 +246,14 @@ export async function runDoctor(options: DoctorCommandOptions): Promise<number> 
     // belonging there.
     if (!isCi) {
       await ensureRootGitignoreEntries(resolvedRoot, Boolean(options.dryRun), (line) =>
+        sideEffectLines.push(line),
+      );
+      // Before `createDoctorData`, like the rest of this branch, so
+      // `integration.links` grades the repaired tree rather than the one the
+      // operator asked to have repaired. Here rather than inside
+      // `runAutoremediate` for the reason above: that orchestrator is core and
+      // this repair is built on `init`'s symlink writer, which is CLI.
+      await repairIntegrationWrappers(resolvedRoot, Boolean(options.dryRun), (line) =>
         sideEffectLines.push(line),
       );
     }

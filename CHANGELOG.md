@@ -4,6 +4,34 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ## [Unreleased]
 
+### Added
+
+- **`qfai doctor --autoremediate` relinks a broken integration wrapper, and
+  only that** (#1386). `qfai init --force` clears the same finding, and it also
+  regenerates `.qfai/assistant/skills/**`, `assistant/agents/**` and the shipped
+  plain files — so local edits to any of those are gone. That is a command an
+  operator may choose to run; it is not one an unattended pass may reach for on
+  their behalf.
+
+  The repair walks the paths the gate names and writes symlinks, through the
+  same writer `init` uses. Its atomic claim, target check and rollback are the
+  reason a rewrite that fails leaves the wrapper it found rather than none at
+  all — and an absent wrapper is the one damaged state `QFAI-LINK-001` reads as
+  benign, so a naive repair would hide its own failure from the gate that sent
+  the operator there.
+
+  Three kinds of path are named rather than rewritten, because a pass that
+  passed over them in silence would read as having repaired the tree:
+
+  | path                                         | why not                                      |
+  | -------------------------------------------- | -------------------------------------------- |
+  | outside the shipped roster                   | rewriting restores what the finding is about |
+  | occupied by a real file, directory or device | the content is somebody's, not a link        |
+  | a rewrite the platform refused               | creating a symlink can need elevation        |
+
+  Waived wrappers are left alone, on the pass `validate` runs, so a project that
+  has decided to keep one does not have that decision undone unattended.
+
 ### Fixed
 
 - **A wrong root heading is one mdschema violation, not one per section**
