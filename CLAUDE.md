@@ -61,13 +61,8 @@ shipped `qfai-sdd` skill governs them
 `cli/` is this repository's alone: the contracts for QFAI's own command surface,
 and for the files QFAI writes into a consuming project.
 
-- Markdown, and they carry no `QFAI-CONTRACT-ID`. The `api/` / `db/` / `ui/`
-  contract validators do not scan them.
-- Indexed in `_policies/05_Contracts.md` under **CLI Contracts**, with `CLI-*`
-  short ids.
-- Named `qfai-<command>.md` for one command's surface. A subject name instead —
-  `worklog-entry.schema.md`, `shipped-workflows.md` — means the file holds a
-  schema or an ownership boundary that more than one command shares.
+The naming and indexing rules are in `AGENTS.md`, which every agent working here
+reads.
 
 ### ⚠️ packages/qfai/ と .qfai/ の区別（重要）
 
