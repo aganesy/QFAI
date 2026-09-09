@@ -2786,12 +2786,71 @@ async function findMultiFileCandidates(
   specDirName: string,
   bareNumeric: string,
 ): Promise<string[]> {
-  const uiDirPosix = uiDir.replace(/\\/g, "/");
+  // The search root is passed as `cwd` rather than joined into the pattern.
+  // A project path is a literal directory name, and a glob would read `[`,
+  // `{` or `!` in it as syntax — so a project under `/tmp/build[1]` would
+  // match nothing here while the single-file probe, which is a plain
+  // filesystem call, still found its file. The tier would then look absent
+  // rather than ignored.
   const [globMatches, subdirMatches] = await Promise.all([
-    fg(path.posix.join(uiDirPosix, `ui-${bareNumeric}-*.yaml`), { absolute: true }),
-    fg(path.posix.join(uiDirPosix, specDirName, "**", "*.yaml"), { absolute: true }),
+    fg(`ui-${bareNumeric}-*.yaml`, { cwd: uiDir, absolute: true }),
+    fg(`${specDirName}/**/*.yaml`, { cwd: uiDir, absolute: true }),
   ]);
   return [...globMatches, ...subdirMatches];
+}
+
+/**
+ * Every single-file candidate for one spec that exists, in precedence order.
+ *
+ * The first is the one in force. The rest are read for the same reason the
+ * multi-file tier is: a spec with two single-file candidates resolves to one of
+ * them deterministically, and whoever opens the other believes they are reading
+ * the contract the review used.
+ */
+async function findSingleFileCandidates(
+  uiDir: string,
+  specDirName: string,
+  bareNumeric: string,
+): Promise<string[]> {
+  const candidates = [
+    path.join(uiDir, `${specDirName}.yaml`),
+    path.join(uiDir, `${bareNumeric}.yaml`),
+    path.join(uiDir, `ui-${bareNumeric}.yaml`),
+  ];
+  const present: string[] = [];
+  for (const abs of candidates) {
+    if (await fileExists(abs)) {
+      present.push(abs);
+    }
+  }
+  return present;
+}
+
+/**
+ * The sentence a spec resolved from more than one candidate gets.
+ *
+ * Named separately from the resolution so it can be emitted after the taken
+ * file has parsed. A file that declares no valid screen sends the caller to the
+ * project-wide list, where the ignored files' screens are reviewed after all —
+ * saying they are not would be the opposite of what happened.
+ */
+function ignoredCandidatesWarning(
+  root: string,
+  specDirName: string,
+  taken: string,
+  ignored: string[],
+  multiFileExists: boolean,
+): string {
+  const takenRel = toRelativePosix(root, taken);
+  const recovery = multiFileExists
+    ? `Move those screens into ${takenRel} and delete the rest, or delete every single-file candidate so the multi-file tier is read.`
+    : `Move those screens into ${takenRel} and delete the rest.`;
+  return (
+    `qfai prototyping certify: per-spec UI contract resolution for ${specDirName} took ` +
+    `${takenRel} and ignored ${ignored.map((abs) => toRelativePosix(root, abs)).join(", ")}. ` +
+    `Screens declared only in the ignored file(s) are not reviewed. One spec resolves to one ` +
+    `file. ${recovery}`
+  );
 }
 
 export async function readPerSpecScreens(
@@ -2811,43 +2870,19 @@ export async function readPerSpecScreens(
   // `specDirExists` against `paths.specsDir`.
   const uiDir = path.resolve(root, contractsDirRelative, "ui");
   const bareNumeric = specDirName.replace(/^spec-/iu, "");
-  const singleFileCandidates = [
-    path.join(uiDir, `${specDirName}.yaml`),
-    path.join(uiDir, `${bareNumeric}.yaml`),
-    path.join(uiDir, `ui-${bareNumeric}.yaml`),
-  ];
-  const matched: string[] = [];
-  // True first-hit-wins: stop on first existing canonical candidate so
-  // authoring forks (e.g. both spec-0007.yaml AND ui-0007.yaml on disk)
-  // produce deterministic per-spec scope.
-  for (const abs of singleFileCandidates) {
-    if (await fileExists(abs)) {
-      matched.push(abs);
-      break;
-    }
-  }
-  // Read unconditionally, not only when the single-file tier came up empty.
-  // The tier that loses still decides what an operator is told: a project
-  // holding both shapes gets the single file, and the screens declared only in
-  // the split files are excluded from the review with nothing to say so. Two
-  // globs per spec is the price of that sentence.
-  const multiFile = await findMultiFileCandidates(uiDir, specDirName, bareNumeric);
-  if (matched.length === 0) {
-    matched.push(...multiFile);
-  } else if (multiFile.length > 0) {
-    // Reported, not resolved. First-hit-wins is the documented rule and a
-    // project with both shapes needs a deterministic answer; what it does not
-    // need is for the answer to be narrower than the contracts it wrote. An
-    // error here would break every tree that already holds both layouts, so
-    // the exit code is left alone and the operator gets the paths.
-    warn(
-      `qfai prototyping certify: per-spec UI contract resolution for ${specDirName} took ` +
-        `${toRelativePosix(root, matched[0] ?? "")} and ignored ` +
-        `${multiFile.map((abs) => toRelativePosix(root, abs)).join(", ")}. Screens declared ` +
-        "only in the ignored file(s) are not reviewed. Move them into the file in force, or " +
-        "remove that file so the multi-file tier is read.",
-    );
-  }
+  // Both tiers are read, not only the losing one when the winner came up
+  // empty. The tier that loses still decides what an operator is told: a
+  // project holding both shapes gets the single file, and the screens declared
+  // only in the other files are excluded from the review with nothing to say
+  // so. Two globs and three probes per spec is the price of that sentence.
+  const [singleFile, multiFile] = await Promise.all([
+    findSingleFileCandidates(uiDir, specDirName, bareNumeric),
+    findMultiFileCandidates(uiDir, specDirName, bareNumeric),
+  ]);
+  // First-hit-wins, so that authoring forks (both `spec-0007.yaml` and
+  // `ui-0007.yaml` on disk) produce a deterministic per-spec scope.
+  const taken = singleFile[0];
+  const matched = taken === undefined ? multiFile : [taken];
   if (matched.length === 0) return null;
 
   const screens: CanonicalScreenContract[] = [];
@@ -2868,6 +2903,16 @@ export async function readPerSpecScreens(
         "typo, or missing `id`/`route` on each entry.",
     );
     return null;
+  }
+  // Reported, not resolved, and only now that the taken file is known to hold
+  // screens. First-hit-wins is the documented rule and a project with two
+  // layouts needs a deterministic answer; what it does not need is for the
+  // answer to be narrower than the contracts it wrote. An error here would
+  // break every tree that already holds both, so the exit code is left alone
+  // and the operator gets the paths.
+  const ignored = taken === undefined ? [] : [...singleFile.slice(1), ...multiFile];
+  if (taken !== undefined && ignored.length > 0) {
+    warn(ignoredCandidatesWarning(root, specDirName, taken, ignored, multiFile.length > 0));
   }
   // First-write-wins dedup across multi-file matches (glob + subdir
   // layout can both surface duplicate `screenId`s). Matches the

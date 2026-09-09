@@ -1301,7 +1301,7 @@ describe("qfai prototyping certify (TC-0012-0407: per-spec UI contracts scope th
 
   // First-hit-wins is right and silent was not. The tier that loses still
   // decides what is reviewed, so a project holding both shapes had the split
-  // files dropped from the per-screen gate with nothing on stderr — coverage
+  // files dropped from the per-screen gate with nothing said — coverage
   // narrowing, which is the failure a gate exists to prevent.
   it("names the file it took and the ones it ignored when both tiers are on disk", async () => {
     const root = await newTempDir();
@@ -1359,6 +1359,94 @@ describe("qfai prototyping certify (TC-0012-0407: per-spec UI contracts scope th
       const screens = await readPerSpecScreens(root, ".qfai/contracts", "spec-0001");
       expect(screens?.map((s) => s.screenId)).toEqual(["home"]);
       expect(warnSpy).not.toHaveBeenCalled();
+    } finally {
+      warnSpy.mockRestore();
+    }
+  });
+
+  it("names the other single-file candidate too, so one deletion is enough", async () => {
+    // The loop stops at the first hit, so a run that only knew the taken file
+    // would tell the operator to delete it and leave candidate 3 to win the
+    // next run — the same warning a second time.
+    const root = await newTempDir();
+    await mkdir(path.join(root, ".qfai/contracts/ui"), { recursive: true });
+    await writeFile(
+      path.join(root, ".qfai/contracts/ui/spec-0001.yaml"),
+      'screens:\n  - id: home\n    route: "/home"\n',
+      "utf-8",
+    );
+    await writeFile(
+      path.join(root, ".qfai/contracts/ui/ui-0001.yaml"),
+      'screens:\n  - id: settings\n    route: "/settings"\n',
+      "utf-8",
+    );
+
+    const logger = await import("../../../src/cli/lib/logger.js");
+    const warnSpy = vi.spyOn(logger, "warn").mockImplementation(() => {});
+    try {
+      const screens = await readPerSpecScreens(root, ".qfai/contracts", "spec-0001");
+      expect(screens?.map((s) => s.screenId)).toEqual(["home"]);
+
+      const said = warnSpy.mock.calls.map((call) => String(call[0])).join("\n");
+      expect(said).toContain(".qfai/contracts/ui/ui-0001.yaml");
+    } finally {
+      warnSpy.mockRestore();
+    }
+  });
+
+  it("does not claim the ignored screens go unreviewed when the taken file declares none", async () => {
+    // A taken file that parses to zero screens sends the caller to the
+    // project-wide list, which pools every contract — so the ignored files'
+    // screens are reviewed after all. Saying otherwise is the opposite of
+    // what happened.
+    const root = await newTempDir();
+    await mkdir(path.join(root, ".qfai/contracts/ui"), { recursive: true });
+    await writeFile(path.join(root, ".qfai/contracts/ui/spec-0001.yaml"), "screens: []\n", "utf-8");
+    await writeFile(
+      path.join(root, ".qfai/contracts/ui/ui-0001-settings.yaml"),
+      'screens:\n  - id: settings\n    route: "/settings"\n',
+      "utf-8",
+    );
+
+    const logger = await import("../../../src/cli/lib/logger.js");
+    const warnSpy = vi.spyOn(logger, "warn").mockImplementation(() => {});
+    try {
+      expect(await readPerSpecScreens(root, ".qfai/contracts", "spec-0001")).toBeNull();
+
+      const said = warnSpy.mock.calls.map((call) => String(call[0])).join("\n");
+      expect(said).toContain("declared no valid screens");
+      expect(said).not.toContain("not reviewed");
+    } finally {
+      warnSpy.mockRestore();
+    }
+  });
+
+  it("finds the ignored tier under a project path carrying glob syntax", async () => {
+    // The search root is a literal directory name, and `Project (2)` is what a
+    // copied folder is called. Read as a pattern, the parentheses are an
+    // extglob group: the multi-file tier matches nothing, and a project
+    // holding both layouts is told it holds one.
+    const root = path.join(await newTempDir(), "Project (2)");
+    await mkdir(path.join(root, ".qfai/contracts/ui"), { recursive: true });
+    await writeFile(
+      path.join(root, ".qfai/contracts/ui/spec-0001.yaml"),
+      'screens:\n  - id: home\n    route: "/home"\n',
+      "utf-8",
+    );
+    await writeFile(
+      path.join(root, ".qfai/contracts/ui/ui-0001-settings.yaml"),
+      'screens:\n  - id: settings\n    route: "/settings"\n',
+      "utf-8",
+    );
+
+    const logger = await import("../../../src/cli/lib/logger.js");
+    const warnSpy = vi.spyOn(logger, "warn").mockImplementation(() => {});
+    try {
+      const screens = await readPerSpecScreens(root, ".qfai/contracts", "spec-0001");
+      expect(screens?.map((s) => s.screenId)).toEqual(["home"]);
+
+      const said = warnSpy.mock.calls.map((call) => String(call[0])).join("\n");
+      expect(said).toContain(".qfai/contracts/ui/ui-0001-settings.yaml");
     } finally {
       warnSpy.mockRestore();
     }

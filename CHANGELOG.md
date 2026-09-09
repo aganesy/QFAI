@@ -6,17 +6,26 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
-- **`certify` says when a UI contract tier it ignored has files in it**
-  (#1408). Per-spec contracts resolve in two tiers and the single-file tier wins
-  outright, so a project holding both shapes had the split files dropped from
-  the per-screen review with nothing on stderr. The run exited 0 having checked
-  a narrower set than the contracts declare.
+- **`certify` says when a UI contract candidate it ignored has files in it**
+  (#1408). Per-spec contracts resolve in two tiers and the first candidate wins
+  outright, so a project holding more than one shape had the rest dropped from
+  the per-screen review with nothing said. The run exited 0 having checked a
+  narrower set than the contracts declare.
 
-  The resolution is unchanged — a project with two candidate layouts still needs
-  a deterministic answer, and the precedence order is documented. What is new is
-  that the run names the file it took and the files it ignored, and says their
-  screens are not reviewed. The exit code is untouched, so no tree that holds
-  both layouts today starts failing.
+  The resolution is unchanged — a project with several candidate layouts still
+  needs a deterministic answer, and the precedence order is documented. What is
+  new is that the run names the file it took and every file it ignored, the
+  other single-file candidates included, so one round of deletions is enough.
+  The exit code is untouched, so no tree that holds two layouts today starts
+  failing.
+
+  The message is withheld when the taken file declares no valid screen. The run
+  then falls back to the project-wide screen list, which pools every contract,
+  so the ignored files' screens are reviewed after all.
+
+  A project path holding glob syntax — `Project (2)`, say — no longer hides the
+  ignored tier. The search root is passed as a directory rather than as part of
+  the pattern.
 
   `ui-contract-guide.md` described those screens as failing the review gate.
   They did not: they were never read, and the gate passed.
