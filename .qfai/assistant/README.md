@@ -32,6 +32,13 @@ match the record. If the comparison itself is impossible — an incomplete
 install, or one of these directories left as a symlink — `validate` says so
 (`QFAI-ASSETS-008`) rather than reporting a clean tree.
 
+Four files in `catalog/` are the exception, because they ship asking to be
+filled in: `manifest.md`, `product.md`, `structure.md` and `tech.md`. Their
+content is the project's once written. `validate` does not report them for
+differing from the release, and `--force` does not overwrite them — it says it
+left them alone. A deleted one is still reported: the skills read these for
+their commands, and nothing else notices one going missing.
+
 To add a project rule, create a `*.local.md` overlay beside the file instead of
 editing it — for example `catalog/test-layers.local.md`. Overlays are never
 written by `init`, never reported by `validate`, and never overwritten. See

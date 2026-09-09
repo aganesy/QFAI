@@ -163,6 +163,29 @@ describe("assistant asset provenance", () => {
     },
   );
 
+  it("leaves a filled-in catalog alone under --force, even once the lock records it", async () => {
+    // The other side of the same contract. Not reporting the file is only half
+    // of owning it: `--force` decides what to refresh with the same comparison
+    // the stale verdict uses, so a lock holding the project's own content made
+    // the file look refreshable and the run replaced it with the template.
+    //
+    // Nothing warned, because the note that says a file was left alone is
+    // written on the branch that declines to touch it.
+    const root = await makeProject();
+    const assistantDir = path.join(root, ".qfai", "assistant");
+    const target = path.join(assistantDir, "catalog", "tech.md");
+    const adopted = "# Tech\n\n## Standard commands (copy-paste)\n\n`pnpm test`\n";
+    await writeFile(target, adopted, "utf-8");
+    const lock = await readAssistantAssetsLock(assistantDir);
+    await writeAssistantAssetsLock(assistantDir, {
+      files: { ...(lock?.files ?? {}), "catalog/tech.md": hashAssistantAssetText(adopted) },
+    });
+
+    await captureStdout(() => runInit({ dir: root, force: true, dryRun: false, yes: true }));
+
+    expect(await readFile(target, "utf-8")).toBe(adopted);
+  }, 120000);
+
   it("still reports a catalog file the project deleted", async () => {
     // The exemption is for a difference, not for an absence: a catalog the
     // skills read is gone, and nothing else reports that.

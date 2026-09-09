@@ -27,6 +27,7 @@ import { promisify } from "node:util";
 
 import { copyTemplatePaths, copyTemplateTree } from "../lib/fs.js";
 import {
+  ADOPTER_OWNED_ASSETS,
   ASSISTANT_ASSETS_LOCK_BASENAME,
   ASSISTANT_STAGING_PREFIX,
   aliasesShippedGovernedAsset,
@@ -700,7 +701,16 @@ async function syncGovernedAssistantAssets(
       continue;
     }
 
-    const refreshable = options.force && previousHash !== undefined && currentHash === previousHash;
+    // A file matching the record but not the release is one qfai wrote and a
+    // later release moved on from, so `--force` refreshing it loses nothing —
+    // except on the four documents the project fills in and owns. There the
+    // record holds what the PROJECT wrote once the lock has been rewritten, and
+    // the same comparison then says "refreshable" about content that only
+    // exists here. Declined rather than merged: this command does not overwrite
+    // what it did not write.
+    const adopterOwned = ADOPTER_OWNED_ASSETS.has(relative);
+    const refreshable =
+      options.force && !adopterOwned && previousHash !== undefined && currentHash === previousHash;
     if (refreshable) {
       // `currentHash` was read above; the refresh is only legitimate while the
       // file still holds it. Passing it down makes the replacement decline a
@@ -726,7 +736,9 @@ async function syncGovernedAssistantAssets(
     recorded[relative] = previousHash ?? shippedHash;
     if (options.force) {
       manualMergeNotes.push(
-        `NOTE: ${dest} has diverged from the shipped content, so it was not updated (a manual merge is needed).`,
+        adopterOwned
+          ? `NOTE: ${dest} is yours to maintain, so it was left as it is. Compare it against the installed release yourself if a newer template is wanted.`
+          : `NOTE: ${dest} has diverged from the shipped content, so it was not updated (a manual merge is needed).`,
       );
     }
   }

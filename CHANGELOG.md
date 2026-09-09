@@ -18,9 +18,16 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   file — so a project following it lost the content the document exists to
   carry.
 
-  Both now pass on those four files. A deleted one is still reported: that is an
-  absence rather than a difference, and nothing else reports a catalog the
-  skills read being gone.
+  Both now pass on those four files, and `qfai init --force` leaves them alone
+  rather than refreshing them. It decided what to refresh with the same
+  comparison the stale rule uses, so a lock holding the project's own content
+  made the file look refreshable and the run replaced it with the template,
+  silently. Not reporting the file was only half of owning it.
+
+  A deleted one is still reported: that is an absence rather than a difference,
+  and nothing else reports a catalog the skills read being gone. The shipped
+  `assistant/README.md` and `constitution/drift-protocol.md` name the four as
+  the exception to the vendored-rule contract they describe.
 
 - **A test's git sandbox no longer races git's own background maintenance**
   (#1394). `git commit` starts `git maintenance run --auto`, and `gc.autoDetach`

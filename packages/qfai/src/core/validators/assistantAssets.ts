@@ -4,6 +4,8 @@ import { access, open, readFile, stat } from "node:fs/promises";
 import path from "node:path";
 
 import {
+  ADOPTER_OWNED_ASSETS,
+  ADOPTER_OWNED_CATALOG_FILES,
   ASSISTANT_ASSETS_LOCK_BASENAME,
   GOVERNED_ASSISTANT_LAYERS,
   REGENERATED_ASSISTANT_LAYERS,
@@ -47,33 +49,7 @@ const ANY_MARKDOWN_HEADING_PATTERN = /^\s*#{1,6}\s+/m;
  * unreplaced `<test command>` is a gate that cannot run, which the
  * constitution classes as UNRUN rather than passed.
  */
-const STEERING_CATALOG_FILES = ["manifest.md", "product.md", "structure.md", "tech.md"] as const;
-
-/**
- * The same four files, keyed the way the provenance walk keys them.
- *
- * They are seeded once and owned by the project afterwards, so a difference
- * from the shipped copy is what they are for. Reported as a local fork, the two
- * rules that read them contradict each other: `QFAI-ASSETS-003` asks for the
- * placeholders to be replaced, and `QFAI-ASSETS-005` reports the file the
- * moment they are — leaving the placeholder in place the only state that
- * satisfies both, on the documents the skills read for their commands.
- *
- * Both ways of differing are exempt, because they are one question asked twice.
- * Which of the two a filled-in document draws is decided by the lock rather
- * than by the document: it reads as a fork while the lock still holds the
- * shipped hash, and as stale once the lock holds what the project wrote. So
- * exempting only the fork moves the finding rather than removing it, and moves
- * it to the worse of the two — `QFAI-ASSETS-004` offers `qfai init --force`,
- * which rewrites the file, so following the remedy destroys the content the
- * document exists to carry.
- *
- * An absence is still reported. That is not a difference of content, and
- * nothing else reports a catalog the skills read being gone.
- */
-const ADOPTER_OWNED_ASSETS: ReadonlySet<string> = new Set(
-  STEERING_CATALOG_FILES.map((fileName) => `catalog/${fileName}`),
-);
+const STEERING_CATALOG_FILES = ADOPTER_OWNED_CATALOG_FILES;
 
 /**
  * The provenance verdicts that mean "this file's content differs from the
