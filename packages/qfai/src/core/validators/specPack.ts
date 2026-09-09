@@ -69,12 +69,6 @@ import { loadLayerPolicy } from "../layerPolicy.js";
 import type { Issue, IssueSeverity } from "../types.js";
 import { issue } from "./utils.js";
 
-/** The release `QFAI-TRIAGE-008` stops being a warning at. */
-
-/** The release `QFAI-TRIAGE-009` stops being a warning at. */
-
-/** The release the seven `QFAI-DECISION-*` codes stop being warnings at. */
-
 const LEDGER_REQUIRED_COLUMNS = [
   "trace_id",
   "obj_id",

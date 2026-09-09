@@ -316,8 +316,6 @@ function matchRubyRegexOpener(content: string, start: number): NonCodeSpan | nul
   return nonCodeSpan("/", "/", true, false);
 }
 
-/** The release `QFAI-TEST-003` stops being a warning at. */
-
 /**
  * A `.` in a member chain, with the line break a formatter is free to put on
  * either side of it.

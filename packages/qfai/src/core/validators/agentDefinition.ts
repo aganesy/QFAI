@@ -16,8 +16,6 @@ import {
 } from "./skillRoles.js";
 import { exists, issue } from "./utils.js";
 
-/** The release `QFAI-AGENT-014` stops being a warning at. */
-
 const REQUIRED_AGENT_SECTIONS = [
   "## Mission",
   "## Domain Responsibilities",

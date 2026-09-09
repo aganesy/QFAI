@@ -26,8 +26,6 @@ import { collectFiles } from "../fs.js";
 import type { Issue } from "../types.js";
 import { exists, isInside, issue } from "./utils.js";
 
-/** The release `QFAI-CONTRACT-050` stops being a warning at. */
-
 /** Opening line of the block; a top-level list item, no indentation. */
 const BLOCK_HEADER_RE = /^-\s+SSOT modules:\s*$/;
 

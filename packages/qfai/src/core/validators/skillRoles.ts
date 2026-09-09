@@ -6,8 +6,6 @@ import { resolvePath, type QfaiConfig } from "../config.js";
 import type { Issue } from "../types.js";
 import { issue } from "./utils.js";
 
-/** The release the five routing cross-check findings stop being warnings at. */
-
 /**
  * How firmly a phase or a review profile binds an agent.
  *

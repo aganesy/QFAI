@@ -29,8 +29,6 @@ import { validateUiMarkerPresence } from "./uiMarkerPresence.js";
 import { validateUiPrototypeMode } from "./uiPrototypeMode.js";
 import { issue } from "./utils.js";
 
-/** The release `QFAI-CONTRACT-015` stops being a warning at. */
-
 const SQL_DANGEROUS_PATTERNS: Array<{ pattern: RegExp; label: string }> = [
   { pattern: /\bDROP\s+TABLE\b/i, label: "DROP TABLE" },
   { pattern: /\bDROP\s+DATABASE\b/i, label: "DROP DATABASE" },

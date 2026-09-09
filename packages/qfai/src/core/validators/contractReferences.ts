@@ -11,15 +11,6 @@ import {
 import type { Issue } from "../types.js";
 import { issue, readSafe } from "./utils.js";
 
-/**
- * The releases the four index rules stop being warnings at.
- *
- * All four read a column nothing read before, so each necessarily fires on
- * index tables that were complete under the rules of the day they were written.
- * That is what the window is for; the severity is never a literal beside the
- * call.
- */
-
 const FULL_CONTRACT_ID_RE = /\bCON-(API|DB|UI)-(\d+)\b/gi;
 const SHORT_CONTRACT_ID_RE = /(?<!CON-)\b(API|DB|UI)-(\d{1,4})\b/gi;
 const CONTRACT_INDEX_HEADER_KEYS = new Set(["contractid", "declaredid", "shortid"]);

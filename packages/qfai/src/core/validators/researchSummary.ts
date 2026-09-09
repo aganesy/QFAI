@@ -16,9 +16,6 @@ import { readDiscussionPointer } from "../state.js";
 import type { Issue } from "../types.js";
 import { issue } from "./utils.js";
 
-/** The release `QFAI-RESEARCH-012` stops being a warning at. */
-/** The release the per-entry schema rules stop being warnings at. */
-
 const RESEARCH_SUMMARY_HEADING_RE = /^#{1,3}\s+Research\s+Summary/im;
 const FULL_DATE_RE = /^[ \t]*(?:-[ \t]*)?published:[ \t]*["']?(\d{4}-\d{2}-\d{2})["']?/m;
 /** The same shape for the date a source that was never published was seen on. */
