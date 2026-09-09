@@ -244,6 +244,18 @@ export const RULE_PROMOTIONS = {
    */
   uiMarkerNotRendered: { introducedIn: "1.11.0", promoteAt: "1.13.0" },
   /**
+   * `QFAI-CONTRACT-038` — a `prototype.mode` a UI contract declares that this
+   * tooling does not know. Nothing has ever rejected a value here, and nothing
+   * branches on one, so a project carrying a typo has been passing and has
+   * never been told. The window is what lets it be told before the gate closes.
+   *
+   * It does close. The vocabulary is one word, the contract asserting anything
+   * else says something untrue about the prototype a review is walking, and the
+   * remedy is a one-word edit — the smallest backlog a window can be asked to
+   * absorb. A warning that could never fail is one a project learns to skip.
+   */
+  uiPrototypeModeUnknown: { introducedIn: "1.11.0", promoteAt: "1.13.0" },
+  /**
    * `QFAI-PLATFORM-003` — a `--platform` the requested profile never reads.
    * The flag has parsed on every profile for as long as it has existed, so
    * every CI matrix that passes it uniformly across profiles meets the finding
