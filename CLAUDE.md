@@ -53,7 +53,7 @@ Quality-First AI (QFAI) — specification-driven development の検証フレー�
 - CI: `.github/workflows/`
 - Claude Code rules: `.claude/rules/`
 
-### `.qfai/contracts/cli/` はこのリポジトリ固有
+### `.qfai/contracts/cli/` is specific to this repository
 
 `cli/` holds the contracts for QFAI's own command surface and for the files QFAI
 writes into a consuming project. It is this repository's own operation rather
