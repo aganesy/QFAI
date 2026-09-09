@@ -135,13 +135,10 @@ function normalizeBody(body: string): string {
  * silently shipped two disagreeing copies of the same instructions and
  * `qfai validate` reported nothing.
  *
- * Warning, not error: the derived copy is regenerable, and a stale or absent
- * block does not make the tree unusable — it makes it ambiguous, which is
- * exactly what a warning is for.
- *
  * The rule necessarily lands on catalogs written before the comparison
  * existed: every repository that customised an agent already carries the
- * divergence.
+ * divergence. The derived copy is regenerable, so what the finding asks for is
+ * a regeneration rather than a decision.
  */
 function checkDeveloperInstructions(
   agent: CatalogAgent,

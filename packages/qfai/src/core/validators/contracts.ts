@@ -294,11 +294,8 @@ function validateDeclaredContractIds(ids: string[], file: string, kind: Contract
  * `-` is the explicit way to say "none", which is what the shipped rule's
  * `(or `-`)` already implied.
  *
- * `warning`, not `error`: an unstated apply order is a gap in the record, not a
- * contradiction in it, and existing contract sets predate the requirement.
- * That last clause is the whole reason the severity comes from the promotion
- * window rather than a literal — every contract written before the rule states
- * none, so the finding arrives on the entire existing set at once.
+ * Existing contract sets predate the requirement, so every contract written
+ * before the rule states none and the finding arrives on the whole set at once.
  */
 function validateDependencyDeclaration(text: string, ids: string[], file: string): Issue[] {
   // `QFAI-CONTRACT-010` / `-011` already own a file with no id or several; a
