@@ -92,9 +92,12 @@ Two layouts are a mistake the resolver cannot report:
   `ui-0007.yaml`. Candidate 1 wins deterministically, and whoever reads the
   other file believes they are reading the contract in force.
 - **A single-file candidate plus a multi-file one** — say `spec-0007.yaml`
-  alongside `ui-0007-home.yaml`. The multi-file tier is skipped entirely, so
-  screens that live only in the split files fail the per-screen review gate
-  without ever being read.
+  alongside `ui-0007-home.yaml`. The multi-file tier is skipped, so screens that
+  live only in the split files are not reviewed at all. They do not fail the
+  gate; the run passes over a narrower set than the contracts declare. `certify`
+  names the file it took and the files it ignored on stderr, and the exit code
+  is unchanged — move those screens into the file in force, or remove that file
+  so the multi-file tier is read.
 
 When the per-spec match finds files but extracts no valid screen — a YAML parse
 error, or `screens:` mistyped — `certify` names the offending path on stderr and

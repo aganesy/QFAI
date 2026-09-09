@@ -1299,6 +1299,71 @@ describe("qfai prototyping certify (TC-0012-0407: per-spec UI contracts scope th
     expect(exit).toBe(0);
   });
 
+  // First-hit-wins is right and silent was not. The tier that loses still
+  // decides what is reviewed, so a project holding both shapes had the split
+  // files dropped from the per-screen gate with nothing on stderr — coverage
+  // narrowing, which is the failure a gate exists to prevent.
+  it("names the file it took and the ones it ignored when both tiers are on disk", async () => {
+    const root = await newTempDir();
+    await mkdir(path.join(root, ".qfai/contracts/ui/spec-0001"), { recursive: true });
+    // The single-file tier wins outright.
+    await writeFile(
+      path.join(root, ".qfai/contracts/ui/spec-0001.yaml"),
+      'screens:\n  - id: home\n    route: "/home"\n',
+      "utf-8",
+    );
+    // Both multi-file shapes, so the warning has to name each of them.
+    await writeFile(
+      path.join(root, ".qfai/contracts/ui/ui-0001-settings.yaml"),
+      'screens:\n  - id: settings\n    route: "/settings"\n',
+      "utf-8",
+    );
+    await writeFile(
+      path.join(root, ".qfai/contracts/ui/spec-0001/profile.yaml"),
+      'screens:\n  - id: profile\n    route: "/profile"\n',
+      "utf-8",
+    );
+
+    const logger = await import("../../../src/cli/lib/logger.js");
+    const warnSpy = vi.spyOn(logger, "warn").mockImplementation(() => {});
+    try {
+      const screens = await readPerSpecScreens(root, ".qfai/contracts", "spec-0001");
+
+      // The resolution is unchanged: still the single file, still one screen.
+      expect(screens?.map((s) => s.screenId)).toEqual(["home"]);
+
+      const said = warnSpy.mock.calls.map((call) => String(call[0])).join("\n");
+      expect(said).toContain(".qfai/contracts/ui/spec-0001.yaml");
+      expect(said).toContain(".qfai/contracts/ui/ui-0001-settings.yaml");
+      expect(said).toContain(".qfai/contracts/ui/spec-0001/profile.yaml");
+      expect(said).toContain("not reviewed");
+    } finally {
+      warnSpy.mockRestore();
+    }
+  });
+
+  it("says nothing when only one tier is on disk", async () => {
+    // The regression guard for the row above: a project in one layout is the
+    // ordinary case and must stay quiet, or the warning is noise everywhere.
+    const root = await newTempDir();
+    await mkdir(path.join(root, ".qfai/contracts/ui"), { recursive: true });
+    await writeFile(
+      path.join(root, ".qfai/contracts/ui/spec-0001.yaml"),
+      'screens:\n  - id: home\n    route: "/home"\n',
+      "utf-8",
+    );
+
+    const logger = await import("../../../src/cli/lib/logger.js");
+    const warnSpy = vi.spyOn(logger, "warn").mockImplementation(() => {});
+    try {
+      const screens = await readPerSpecScreens(root, ".qfai/contracts", "spec-0001");
+      expect(screens?.map((s) => s.screenId)).toEqual(["home"]);
+      expect(warnSpy).not.toHaveBeenCalled();
+    } finally {
+      warnSpy.mockRestore();
+    }
+  });
+
   // Negative companion: per-spec scope still enforces presence WITHIN
   // each spec's declared set. spec-0001 declares two screens; missing
   // one of them must still fail.

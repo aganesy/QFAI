@@ -2768,6 +2768,32 @@ async function parseUiScreenFile(
  * @internal Exported for direct unit-testing — not part of the package's
  * public surface.
  */
+/** A path as an operator reads it: relative to the project, forward slashes. */
+function toRelativePosix(root: string, absolute: string): string {
+  return path.relative(root, absolute).replace(/\\/g, "/");
+}
+
+/**
+ * The multi-file tier's candidates for one spec.
+ *
+ * The glob targets the `ui-NNNN-<slug>.yaml` split-naming convention; the
+ * subdirectory targets `<spec-id>/**\/*.yaml` for projects that group a spec's
+ * contracts in a directory. Both shapes are read together, so a project may use
+ * either without saying which.
+ */
+async function findMultiFileCandidates(
+  uiDir: string,
+  specDirName: string,
+  bareNumeric: string,
+): Promise<string[]> {
+  const uiDirPosix = uiDir.replace(/\\/g, "/");
+  const [globMatches, subdirMatches] = await Promise.all([
+    fg(path.posix.join(uiDirPosix, `ui-${bareNumeric}-*.yaml`), { absolute: true }),
+    fg(path.posix.join(uiDirPosix, specDirName, "**", "*.yaml"), { absolute: true }),
+  ]);
+  return [...globMatches, ...subdirMatches];
+}
+
 export async function readPerSpecScreens(
   root: string,
   contractsDirRelative: string,
@@ -2800,19 +2826,27 @@ export async function readPerSpecScreens(
       break;
     }
   }
+  // Read unconditionally, not only when the single-file tier came up empty.
+  // The tier that loses still decides what an operator is told: a project
+  // holding both shapes gets the single file, and the screens declared only in
+  // the split files are excluded from the review with nothing to say so. Two
+  // globs per spec is the price of that sentence.
+  const multiFile = await findMultiFileCandidates(uiDir, specDirName, bareNumeric);
   if (matched.length === 0) {
-    // Multi-file shapes (glob + subdir layout). The glob targets the
-    // `ui-NNNN-<slug>.yaml` split-naming convention; the subdir targets
-    // `<spec-id>/**\/*.yaml` for projects that group per-spec contracts
-    // in a directory.
-    const uiDirPosix = uiDir.replace(/\\/g, "/");
-    const globPattern = path.posix.join(uiDirPosix, `ui-${bareNumeric}-*.yaml`);
-    const subdirPattern = path.posix.join(uiDirPosix, specDirName, "**", "*.yaml");
-    const [globMatches, subdirMatches] = await Promise.all([
-      fg(globPattern, { absolute: true }),
-      fg(subdirPattern, { absolute: true }),
-    ]);
-    matched.push(...globMatches, ...subdirMatches);
+    matched.push(...multiFile);
+  } else if (multiFile.length > 0) {
+    // Reported, not resolved. First-hit-wins is the documented rule and a
+    // project with both shapes needs a deterministic answer; what it does not
+    // need is for the answer to be narrower than the contracts it wrote. An
+    // error here would break every tree that already holds both layouts, so
+    // the exit code is left alone and the operator gets the paths.
+    warn(
+      `qfai prototyping certify: per-spec UI contract resolution for ${specDirName} took ` +
+        `${toRelativePosix(root, matched[0] ?? "")} and ignored ` +
+        `${multiFile.map((abs) => toRelativePosix(root, abs)).join(", ")}. Screens declared ` +
+        "only in the ignored file(s) are not reviewed. Move them into the file in force, or " +
+        "remove that file so the multi-file tier is read.",
+    );
   }
   if (matched.length === 0) return null;
 
@@ -2826,7 +2860,7 @@ export async function readPerSpecScreens(
     // for this spec but produced zero valid screens. Without this warn
     // the caller silently falls back to the project-wide list. The
     // operator gets a named path instead of a confusing "missing pair" error at the gate below.
-    const relPaths = matched.map((m) => path.relative(root, m).replace(/\\/g, "/")).join(", ");
+    const relPaths = matched.map((m) => toRelativePosix(root, m)).join(", ");
     warn(
       `qfai prototyping certify: per-spec UI contract file(s) for ${specDirName} ` +
         `(${relPaths}) parsed but declared no valid screens; falling back to the ` +

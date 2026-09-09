@@ -4,6 +4,23 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ## [Unreleased]
 
+### Fixed
+
+- **`certify` says when a UI contract tier it ignored has files in it**
+  (#1408). Per-spec contracts resolve in two tiers and the single-file tier wins
+  outright, so a project holding both shapes had the split files dropped from
+  the per-screen review with nothing on stderr. The run exited 0 having checked
+  a narrower set than the contracts declare.
+
+  The resolution is unchanged — a project with two candidate layouts still needs
+  a deterministic answer, and the precedence order is documented. What is new is
+  that the run names the file it took and the files it ignored, and says their
+  screens are not reviewed. The exit code is untouched, so no tree that holds
+  both layouts today starts failing.
+
+  `ui-contract-guide.md` described those screens as failing the review gate.
+  They did not: they were never read, and the gate passed.
+
 ### Added
 
 - **`qfai doctor --autoremediate` relinks a broken integration wrapper, and
