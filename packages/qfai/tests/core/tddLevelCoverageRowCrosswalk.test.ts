@@ -16,28 +16,11 @@ import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 
 import { defaultConfig } from "../../src/core/config.js";
 import type { Issue } from "../../src/core/types.js";
 import { validateTddList } from "../../src/core/validators/tddList.js";
-import type * as VersionModule from "../../src/core/version.js";
-
-/** The version `resolveToolVersion` reports; empty defers to the real one. */
-const toolVersion = vi.hoisted(() => ({ override: "" }));
-
-vi.mock("../../src/core/version.js", async (importOriginal) => {
-  const actual = await importOriginal<typeof VersionModule>();
-  return {
-    ...actual,
-    resolveToolVersion: async (): Promise<string> =>
-      toolVersion.override.length > 0 ? toolVersion.override : actual.resolveToolVersion(),
-  };
-});
-
-afterEach(() => {
-  toolVersion.override = "";
-});
 
 const HEADERS =
   "| TDD-ID   | TC-Refs | Layer | Test file       | Selector | Status | DR-ID | Evidence |";

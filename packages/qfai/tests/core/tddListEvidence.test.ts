@@ -23,7 +23,7 @@ import { chmod, lstat, mkdir, readFile, readdir, rm, symlink, writeFile } from "
 import os from "node:os";
 import path from "node:path";
 
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 
 import { defaultConfig } from "../../src/core/config.js";
 import {
@@ -33,28 +33,6 @@ import {
   ROW_EXTRA_CELLS_RULE_ID,
   validateTddList,
 } from "../../src/core/validators/tddList.js";
-import type * as VersionModule from "../../src/core/version.js";
-
-/**
- * The version the validator reads, overridable per test.
- *
- * An empty string means "defer to the real `resolveToolVersion`", so every
- * other case in this file keeps running against the shipped version.
- */
-const toolVersion = vi.hoisted(() => ({ override: "" }));
-
-vi.mock("../../src/core/version.js", async (importOriginal) => {
-  const actual = await importOriginal<typeof VersionModule>();
-  return {
-    ...actual,
-    resolveToolVersion: async (): Promise<string> =>
-      toolVersion.override.length > 0 ? toolVersion.override : actual.resolveToolVersion(),
-  };
-});
-
-afterEach(() => {
-  toolVersion.override = "";
-});
 
 const TEST_FILE = "tests/unit/sample.test.ts";
 

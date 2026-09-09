@@ -19,33 +19,11 @@ import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 
 import { defaultConfig } from "../../src/core/config.js";
 import { validateAgentDefinition } from "../../src/core/validators/agentDefinition.js";
 import type { Issue } from "../../src/core/types.js";
-import type * as VersionModule from "../../src/core/version.js";
-
-/**
- * The version the cross-check reads, overridable per test.
- *
- * An empty override means "defer to the real resolver", so every case below
- * keeps running against the version this package actually ships.
- */
-const toolVersion = vi.hoisted(() => ({ override: "" }));
-
-vi.mock("../../src/core/version.js", async (importOriginal) => {
-  const actual = await importOriginal<typeof VersionModule>();
-  return {
-    ...actual,
-    resolveToolVersion: async (): Promise<string> =>
-      toolVersion.override.length > 0 ? toolVersion.override : actual.resolveToolVersion(),
-  };
-});
-
-afterEach(() => {
-  toolVersion.override = "";
-});
 
 // tests/validators/<this file> -> tests -> packages/qfai
 const packageRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
