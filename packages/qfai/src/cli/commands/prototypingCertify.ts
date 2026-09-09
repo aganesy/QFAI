@@ -93,7 +93,6 @@ import {
   readFrozenSpecsCovered,
 } from "../../core/prototyping/specsCovered.js";
 import { SAAS_PACKAGE_SKIPPED_GATES } from "../../core/saasPackage/skippedGates.js";
-import { SUNSETS, deprecationSeverity } from "../../core/sunset.js";
 import { resolveToolVersion } from "../../core/version.js";
 import { error, info, warn } from "../lib/logger.js";
 import { EXIT_CODES } from "../lib/exitCodes.js";
@@ -281,15 +280,13 @@ export async function runPrototypingCertify(
   const legacyRunId = extractString(extractRecord(protoJson, "fullHarness"), "runId");
   const runId = canonicalRunId ?? legacyRunId;
   if (!canonicalRunId && legacyRunId) {
-    const line =
+    // The shape is retired and nothing reads it any more, so this is an error
+    // outright.
+    error(
       `qfai prototyping certify: ${DEPRECATED_SCHEMA_CODE} prototyping.json carries the legacy ` +
-      `\`fullHarness.runId\` shape instead of a top-level \`runId\`; sunset: v${SUNSETS.legacyPrototypingJsonShape}. ` +
-      `Re-run \`qfai prototyping iterate --cycle 0\` to write the current shape.`;
-    if (deprecationSeverity(toolVersion, SUNSETS.legacyPrototypingJsonShape) === "error") {
-      error(line);
-    } else {
-      warn(line);
-    }
+        `\`fullHarness.runId\` shape instead of a top-level \`runId\`. ` +
+        `Re-run \`qfai prototyping iterate --cycle 0\` to write the current shape.`,
+    );
   }
   if (!runId) {
     error(

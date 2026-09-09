@@ -5,7 +5,6 @@ import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 
 import { TRIAGE_NO_EXISTING_SPEC } from "../../../src/core/sddTriage.js";
-import { RULE_PROMOTIONS } from "../../../src/core/sunset.js";
 import {
   validateCreateRowCapabilityRefs,
   validateTriageSection,
@@ -184,40 +183,8 @@ describe("validateTriageSection", () => {
     ].join("\n");
     const issues = validateTriageSection(text, DELTA_PATH, TOOL_VERSION);
     expect(issues.map((i) => i.code)).toEqual(["QFAI-TRIAGE-008"]);
-    expect(issues[0]?.severity).toBe("warning");
-    expect(issues[0]?.message).toContain(
-      RULE_PROMOTIONS.triageHeadingNonCanonical.promoteAt,
-      // P7 step 3: the finding names the release that ends its window, so an
-      // operator running `--fail-on error` can read the debt they will owe.
-    );
-    expect(issues[0]?.refs).toEqual(["## Triage — 2026-07-26"]);
-  });
-
-  it("promotes QFAI-TRIAGE-008 to an error at its pinned release", () => {
-    // The half-landed state P7 exists to stop is a promotion that is declared
-    // and never applied. Asserted against the pin rather than a copy of it, so
-    // moving the pin moves this test with it.
-    const text = [
-      "# 09 Delta",
-      "",
-      "## Change Summary",
-      "",
-      "## Triage",
-      "",
-      ...triageTable([["REQ-1", "extend", "spec-0001", "UPDATE", "APPEND", "-", "-"]]),
-      "",
-      "## Triage — 2026-07-26",
-      "",
-      ...triageTable([["REQ-2", "later", "spec-0001", "UPDATE", "APPEND", "-", "-"]]),
-      "",
-    ].join("\n");
-    const promoteAt = RULE_PROMOTIONS.triageHeadingNonCanonical.promoteAt;
-    const issues = validateTriageSection(text, DELTA_PATH, promoteAt);
-    expect(issues.map((i) => i.code)).toEqual(["QFAI-TRIAGE-008"]);
     expect(issues[0]?.severity).toBe("error");
-    // The window note is dropped once the window has closed: there is no
-    // remaining grace to describe.
-    expect(issues[0]?.message).not.toContain(promoteAt);
+    expect(issues[0]?.refs).toEqual(["## Triage — 2026-07-26"]);
   });
 
   it("emits QFAI-TRIAGE-008 when the only Triage heading is a non-canonical one", () => {
@@ -379,30 +346,8 @@ describe("validateTriageSection Existing Spec grammar (QFAI-TRIAGE-009)", () => 
     // The `Existing Spec` grammar is new, so the rule lands on cells written
     // before it existed — including approved rows nothing rewrites. It ships
     // behind a promotion window (P7) rather than at `error` from day one.
-    expect(issues[0]?.severity).toBe("warning");
-    expect(issues[0]?.message).toContain(
-      RULE_PROMOTIONS.triageExistingSpecCell.promoteAt,
-      // P7 step 3: the finding names the release that ends its window.
-    );
-    expect(issues[0]?.refs).toEqual(["spec-0009"]);
-  });
-
-  it("promotes QFAI-TRIAGE-009 to an error at its pinned release", () => {
-    // The half-landed state P7 exists to stop is a promotion that is declared
-    // and never applied. Asserted against the pin rather than a copy of it, so
-    // moving the pin moves this test with it.
-    const promoteAt = RULE_PROMOTIONS.triageExistingSpecCell.promoteAt;
-    const issues = validateTriageSection(
-      buildDelta([["REQ-1", "extend", "spec-0009", "UPDATE", "APPEND", "-", "why"]]),
-      DELTA_PATH,
-      promoteAt,
-      KNOWN,
-    );
-    expect(issues.map((entry) => entry.code)).toEqual(["QFAI-TRIAGE-009"]);
     expect(issues[0]?.severity).toBe("error");
-    // The window note is dropped once the window has closed: there is no
-    // remaining grace to describe.
-    expect(issues[0]?.message).not.toContain(promoteAt);
+    expect(issues[0]?.refs).toEqual(["spec-0009"]);
   });
 
   it("emits QFAI-TRIAGE-009 for range notation even when both ends exist", () => {

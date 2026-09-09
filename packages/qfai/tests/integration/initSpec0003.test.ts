@@ -267,9 +267,9 @@ describe("TC-0003-0026: legacy backward-compat + sunset warning", () => {
     const content = await readFile(INIT_CLI, "utf-8");
     expect(content).toContain("D-DEPRECATED-PATH");
     expect(content).toContain("emitLegacyAssistantSteeringSunset");
-    // The actual `sunset: vX.Y.Z` literal is sourced from
-    // legacyAssistantSteeringSunsetLabel() (SSOT in assistantPaths.ts)
-    // — runtime assertion lives in tests/cli/init.test.ts (TC-0003-0026).
-    expect(content).toMatch(/sunset:\s*v\$\{sunset\}/);
+    // The version in the message comes from legacyAssistantSteeringSunsetLabel()
+    // rather than a literal here; the runtime assertion lives in
+    // tests/cli/init.test.ts.
+    expect(content).toMatch(/announced sunset \(v\$\{sunset\}\)/);
   });
 });

@@ -18,7 +18,6 @@ import path from "node:path";
 import { describe, expect, it } from "vitest";
 
 import { defaultConfig, type QfaiConfig } from "../../src/core/config.js";
-import { RULE_PROMOTIONS } from "../../src/core/sunset.js";
 import {
   STUB_SOURCE_FILE_PATTERN,
   validateTestTodoStubs,
@@ -656,7 +655,7 @@ describe("QFAI-TEST-003 — the vitest/jest skip form is its own waivable rule",
     });
   });
 
-  it(`files ${SKIP} under its own warning rule while ${TODO} stays an error`, async () => {
+  it(`files ${SKIP} under its own rule, alongside ${TODO}`, async () => {
     // A `.todo` is a bare declaration and can only mean work not done. A
     // `.skip` keeps its body and is what `qfai atdd scaffold` emits, so an
     // `error` would fail the scaffold's own output on sight.
@@ -673,10 +672,10 @@ describe("QFAI-TEST-003 — the vitest/jest skip form is its own waivable rule",
         issues.map((i) => [i.refs?.[0] ?? "", { code: i.code, severity: i.severity }] as const),
       );
       expect(graded.get(`it${TODO}`)).toEqual({ code: "QFAI-TEST-001", severity: "error" });
-      expect(graded.get(`it${SKIP}`)).toEqual({ code: "QFAI-TEST-003", severity: "warning" });
+      expect(graded.get(`it${SKIP}`)).toEqual({ code: "QFAI-TEST-003", severity: "error" });
       expect(graded.get(`describe${SKIP}`)).toEqual({
         code: "QFAI-TEST-003",
-        severity: "warning",
+        severity: "error",
       });
       // The gate `qfai-implement`'s FINAL CHECKLIST reads stays todo-only.
       expect(issues.filter((i) => i.code === "QFAI-TEST-001")).toHaveLength(1);
@@ -695,10 +694,9 @@ describe("QFAI-TEST-003 — the vitest/jest skip form is its own waivable rule",
       );
       expect(issues, "the fixture stopped producing skip findings").not.toEqual([]);
       for (const found of issues) {
-        expect(found.severity).toBe("warning");
-        expect(found.message).toContain(RULE_PROMOTIONS.testSkippedSuite.promoteAt);
+        expect(found.severity).toBe("error");
       }
-      // The `.todo` rule is not inside the window and keeps its hard error.
+      // The `.todo` rule keeps its own hard error.
       const todo = await withTests({ "tests/b.test.ts": JS_STUB }, (r) =>
         validateTestTodoStubs(r, CONFIG),
       );
@@ -750,7 +748,7 @@ describe("QFAI-TEST-003 — the vitest/jest skip form is its own waivable rule",
         `describe${SKIP}`,
         `it${SKIP}`,
       ]);
-      expect(skipped.every((i) => i.severity === "warning")).toBe(true);
+      expect(skipped.every((i) => i.severity === "error")).toBe(true);
     });
   });
 
@@ -773,7 +771,7 @@ describe("QFAI-TEST-003 — the vitest/jest skip form is its own waivable rule",
       // The label stays root + token, as it already did for the trailing
       // `.each` chain, so `refs` does not fragment once per modifier.
       expect(skipped.map((i) => i.refs?.[0])).toEqual([`test${SKIP}`, `test${SKIP}`, `it${SKIP}`]);
-      expect(skipped.every((i) => i.severity === "warning")).toBe(true);
+      expect(skipped.every((i) => i.severity === "error")).toBe(true);
     });
   });
 
@@ -801,7 +799,7 @@ describe("QFAI-TEST-003 — the vitest/jest skip form is its own waivable rule",
       // The line the construct *starts* on — the root identifier's — and every
       // finding after a multi-line match still lands on its own line.
       expect(skipped.map((i) => i.loc?.line)).toEqual([1, 3, 5]);
-      expect(skipped.every((i) => i.severity === "warning")).toBe(true);
+      expect(skipped.every((i) => i.severity === "error")).toBe(true);
       const todo = issues.filter((i) => i.code === "QFAI-TEST-001");
       expect(todo.map((i) => i.loc?.line)).toEqual([7]);
     });

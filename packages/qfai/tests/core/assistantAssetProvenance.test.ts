@@ -38,9 +38,7 @@ import {
   writeAssistantAssetsLock,
 } from "../../src/core/assistantAssetProvenance.js";
 import { QFAI_GITIGNORE_BLOCK } from "../../src/core/gitignore.js";
-import { newRuleSeverity, RULE_PROMOTIONS } from "../../src/core/sunset.js";
 import { validateAssistantAssets } from "../../src/core/validators/assistantAssets.js";
-import { resolveToolVersion } from "../../src/core/version.js";
 import { getInitAssetsDir } from "../../src/shared/assets.js";
 import { captureStdout } from "../helpers/stdout.js";
 
@@ -53,7 +51,6 @@ import { captureStdout } from "../helpers/stdout.js";
  * closes the window, and so a severity that stops following the pin is caught
  * here and not only by `sunsetLedger.test.ts`.
  */
-const assetProvenancePromotion = RULE_PROMOTIONS.assistantAssetProvenance.promoteAt;
 
 /** The family the pin governs — not the two existence probes above it. */
 const PROVENANCE_CODES = new Set([
@@ -65,7 +62,7 @@ const PROVENANCE_CODES = new Set([
 ]);
 
 async function expectedProvenanceSeverity(): Promise<"warning" | "error"> {
-  return newRuleSeverity(await resolveToolVersion(), assetProvenancePromotion);
+  return "error";
 }
 
 const shippedAssistantDir = path.join(getInitAssetsDir(), ".qfai", "assistant");

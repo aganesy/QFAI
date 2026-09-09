@@ -43,9 +43,7 @@ import path from "node:path";
 import type { QfaiConfig } from "../config.js";
 import { resolvePath } from "../config.js";
 import { collectUiContractFiles } from "../discovery.js";
-import { RULE_PROMOTIONS, newRuleSeverity } from "../sunset.js";
 import type { Issue } from "../types.js";
-import { resolveToolVersion } from "../version.js";
 import { issue } from "./utils.js";
 
 /** Waivable as `QFAI-CONTRACT-037`. */
@@ -142,10 +140,7 @@ export async function validateUiMarkerPresence(root: string, config: QfaiConfig)
     }
   }
 
-  const promotion = RULE_PROMOTIONS.uiMarkerNotRendered.promoteAt;
-  const severity = newRuleSeverity(await resolveToolVersion(), promotion);
-  const windowNote =
-    severity === "warning" ? ` Reported as a warning until ${promotion}, then an error.` : "";
+  const severity = "error";
   const srcRel = path.relative(root, srcRoot).split(path.sep).join("/") || ".";
   const issues: Issue[] = [];
   for (const [marker, where] of [...declared].sort(([a], [b]) => a.localeCompare(b))) {
@@ -155,7 +150,7 @@ export async function validateUiMarkerPresence(root: string, config: QfaiConfig)
     issues.push(
       issue(
         UI_MARKER_NOT_RENDERED_RULE_ID,
-        `UI contract marker \`${marker}\` is declared${where.required ? " and marked `required: true`" : ""} but no file under \`${srcRel}\` mentions it.${windowNote}`,
+        `UI contract marker \`${marker}\` is declared${where.required ? " and marked `required: true`" : ""} but no file under \`${srcRel}\` mentions it.`,
         severity,
         where.file,
         "contracts.uiMarkerPresence",

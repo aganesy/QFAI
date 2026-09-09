@@ -19,9 +19,7 @@
  */
 import type { QfaiConfig } from "../config.js";
 import { scanBusinessFlows } from "../businessFlow.js";
-import { RULE_PROMOTIONS, newRuleSeverity } from "../sunset.js";
 import type { Issue } from "../types.js";
-import { resolveToolVersion } from "../version.js";
 import { issue } from "./utils.js";
 
 export async function validateBusinessFlowTraceability(
@@ -37,26 +35,22 @@ export async function validateBusinessFlowTraceability(
   // no project has them yet; the first tree to adopt them is also the first to
   // meet these rules, and a typo made while adding the very first edge should
   // not be the thing that fails an upgrade.
-  const promoteAt = RULE_PROMOTIONS.businessFlowReferenceUnknown.promoteAt;
-  const severity = newRuleSeverity(await resolveToolVersion(), promoteAt);
-  const windowNote =
-    severity === "warning" ? ` Reported as a warning until ${promoteAt}, an error from it.` : "";
+  const severity = "error";
 
   const issues: Issue[] = [];
-  issues.push(...duplicateDefinitionIssues(scan, severity, windowNote));
-  issues.push(...unknownReferenceIssues(scan, severity, windowNote));
+  issues.push(...duplicateDefinitionIssues(scan, severity));
+  issues.push(...unknownReferenceIssues(scan, severity));
   return issues;
 }
 
 function duplicateDefinitionIssues(
   scan: Awaited<ReturnType<typeof scanBusinessFlows>>,
   severity: "warning" | "error",
-  windowNote: string,
 ): Issue[] {
   return scan.duplicateIds.map((id) =>
     issue(
       "QFAI-BFLOW-006",
-      `${id} is declared more than once in the business-flow document, so a story citing it names two flows.${windowNote}`,
+      `${id} is declared more than once in the business-flow document, so a story citing it names two flows.`,
       severity,
       scan.flowPath,
       "businessFlow.definition.duplicate",
@@ -71,7 +65,6 @@ function duplicateDefinitionIssues(
 function unknownReferenceIssues(
   scan: Awaited<ReturnType<typeof scanBusinessFlows>>,
   severity: "warning" | "error",
-  windowNote: string,
 ): Issue[] {
   const declared = new Set(scan.definitions.map((entry) => entry.id));
   return scan.storyRefs
@@ -79,7 +72,7 @@ function unknownReferenceIssues(
     .map((ref) =>
       issue(
         "QFAI-BFLOW-005",
-        `${ref.usId} cites ${ref.flowId}, which the business-flow document does not declare.${windowNote}`,
+        `${ref.usId} cites ${ref.flowId}, which the business-flow document does not declare.`,
         severity,
         ref.file,
         "businessFlow.reference.unknown",

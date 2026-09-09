@@ -2,12 +2,10 @@ import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
-import { beforeAll, describe, expect, it } from "vitest";
+import { describe, expect, it } from "vitest";
 
 import { defaultConfig } from "../../src/core/config.js";
-import { newRuleSeverity, RULE_PROMOTIONS } from "../../src/core/sunset.js";
 import { validateTddList } from "../../src/core/validators/tddList.js";
-import { resolveToolVersion } from "../../src/core/version.js";
 
 const HEADERS =
   "| TDD-ID   | TC-Refs | Layer | Test file       | Selector | Status    | DR-ID        | Evidence |";
@@ -94,14 +92,7 @@ const severityOf = (issues: Issues, code: string): string | undefined =>
  * other while the behaviour they cover — active keeps the rule's own severity,
  * retired drops to `info` — never changed.
  */
-let undemotedEvidenceEmpty: "warning" | "error";
-
-beforeAll(async () => {
-  undemotedEvidenceEmpty = newRuleSeverity(
-    await resolveToolVersion(),
-    RULE_PROMOTIONS.tddListEvidenceEmpty.promoteAt,
-  );
-});
+const undemotedEvidenceEmpty: "warning" | "error" = "error";
 
 describe("ledger findings follow the spec's lifecycle Status", () => {
   it("keeps full severity while the spec is active", async () => {

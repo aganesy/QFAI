@@ -248,21 +248,21 @@ column count valid — a corruption no validator can see.
 `Status` is `green`, `refactor`, `review-fix` or `done` — the statuses that
 assert a cycle has run:
 
-| Finding                        | Fires when                                                                              | Severity            |
-| ------------------------------ | --------------------------------------------------------------------------------------- | ------------------- |
-| `TDDLIST_EVIDENCE_EMPTY`       | the cell is empty or holds only dash placeholders (`-`, `–`, `—`)                       | warning, then error |
-| `TDDLIST_EVIDENCE_STATUS_ONLY` | the cell claims a verdict (`PASS`, `looks good`, …) with no command                     | warning             |
-| `QFAI-TDDLIST-011`             | the cell does not match the grammar above                                               | warning, then error |
-| `QFAI-TDDLIST-012`             | the cell is longer than 240 characters                                                  | warning, then error |
-| `QFAI-TDDLIST-013`             | `RED:n-a` on an ATDD-owned row                                                          | error               |
-| `QFAI-TDDLIST-007`             | a `done` row's cell carries no anchor at all                                            | warning, then error |
-| `QFAI-TDDLIST-008`             | an `evidence at` pointer names the wrong owner/file/item, or its file/heading is absent | warning, then error |
+| Finding                        | Fires when                                                                              | Severity |
+| ------------------------------ | --------------------------------------------------------------------------------------- | -------- |
+| `TDDLIST_EVIDENCE_EMPTY`       | the cell is empty or holds only dash placeholders (`-`, `–`, `—`)                       | error    |
+| `TDDLIST_EVIDENCE_STATUS_ONLY` | the cell claims a verdict (`PASS`, `looks good`, …) with no command                     | warning  |
+| `QFAI-TDDLIST-011`             | the cell does not match the grammar above                                               | error    |
+| `QFAI-TDDLIST-012`             | the cell is longer than 240 characters                                                  | error    |
+| `QFAI-TDDLIST-013`             | `RED:n-a` on an ATDD-owned row                                                          | error    |
+| `QFAI-TDDLIST-007`             | a `done` row's cell carries no anchor at all                                            | error    |
+| `QFAI-TDDLIST-008`             | an `evidence at` pointer names the wrong owner/file/item, or its file/heading is absent | error    |
 
 One more rule reads the row rather than a cell:
 
-| Finding            | Fires when                                              | Severity            |
-| ------------------ | ------------------------------------------------------- | ------------------- |
-| `QFAI-TDDLIST-014` | the row has more cells than the table's header declares | warning, then error |
+| Finding            | Fires when                                              | Severity |
+| ------------------ | ------------------------------------------------------- | -------- |
+| `QFAI-TDDLIST-014` | the row has more cells than the table's header declares | error    |
 
 A command is recognised by shape, not from a list of known runners, so the rule
 holds on any stack: a program name followed by an argument carrying a flag, a
@@ -273,15 +273,12 @@ are accepted directly.
 ledger written before the check exists carries prose verdicts, and failing a
 build on them is a migration rather than a gate.
 
-Four findings are inside a **promotion window**: `TDDLIST_EVIDENCE_EMPTY`,
-`QFAI-TDDLIST-011`, `QFAI-TDDLIST-012` and `QFAI-TDDLIST-014` are reported as
-warnings until the release each finding itself names, and as errors from that
-release onwards. Each rule is right and none is in doubt — but each also fires
-on ledgers written before the check existed, so an upgrade that started erroring
-on them would latch a gate that was passing. An empty cell was always wrong; the
-grammar, the cap and the surplus column arrive with the change that made
-`Evidence` a pointer, so they land on every cell written while the column was
-documented as holding the commands and their output. The finding text states
+`TDDLIST_EVIDENCE_EMPTY`, `QFAI-TDDLIST-011`, `QFAI-TDDLIST-012` and
+`QFAI-TDDLIST-014` are errors. Each also fires on ledgers written before the
+check existed: an empty cell was always wrong, while the grammar, the cap and
+the surplus column arrive with the change that made `Evidence` a pointer, so
+they land on every cell written while the column was documented as holding the
+commands and their output. The finding text states
 which release ends the window, so `--fail-on error` keeps working while the
 ledger shows the debt it will owe.
 

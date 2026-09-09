@@ -4,6 +4,82 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ## [Unreleased]
 
+### Removed
+
+- **BREAKING: severity no longer depends on which `qfai` runs** (#1421).
+  `core/sunset.ts` held two registries — `RULE_PROMOTIONS` and `SUNSETS` — and
+  `newRuleSeverity` / `deprecationSeverity` turned a version pin in them into
+  `warning` or `error` according to the version of the tool executing the run.
+  The whole mechanism is gone, along with `scripts/promotion-preflight.mjs` and
+  the four test files that held it.
+
+  **51 findings that reported `warning` now report `error`.** Each was inside an
+  open window, and `error` is the severity its pin was heading to:
+
+  `QFAI-AGENT-014`, `QFAI-AGENT-015`, `QFAI-AGENT-019`, `QFAI-ASSETS-003`,
+  `QFAI-ASSETS-004`, `QFAI-ATDD-131`, `QFAI-ATDD-132`, `QFAI-ATDD-133`,
+  `QFAI-AUTOPILOT-001`, `QFAI-BRREF-001`, `QFAI-CONTRACT-015`,
+  `QFAI-CONTRACT-032`, `QFAI-CONTRACT-033`, `QFAI-CONTRACT-034`,
+  `QFAI-CONTRACT-035`, `QFAI-CONTRACT-041`, `QFAI-CONTRACT-050`,
+  `QFAI-CTYPE-004`, `QFAI-DECISION-001`, `QFAI-LINK-002`, `QFAI-PLATFORM-003`,
+  `QFAI-PROT-011`, `QFAI-RESEARCH-012`, `QFAI-RESEARCH-015`,
+  `QFAI-RESEARCH-016`, `QFAI-SKILLS-013`, `QFAI-SKILLS-014`,
+  `QFAI-SPECSECTION-001`, `QFAI-SPLIT-106`, `QFAI-TCLEVEL-001`,
+  `QFAI-TDDLIST-007` … `QFAI-TDDLIST-016`, `QFAI-TEST-003`, `QFAI-TOOL-002`,
+  `QFAI-TRIAGE-008`, `QFAI-TRIAGE-009`, `TDDLIST_EVIDENCE_EMPTY`, and the
+  `db/` apply-order and UI-marker rules.
+
+  A project passing `validate --fail-on error` today may fail after upgrading,
+  in proportion to what it has accumulated. Measured on this repository: 0
+  errors and 1467 warnings before, 1050 of those warnings becoming errors.
+
+  A bare tree is affected too, in one specific way. `qfai init` writes the four
+  Stage 0 catalog documents with placeholders and asks the adopter to fill them
+  in, and `QFAI-ASSETS-003` reports the placeholders. On a tree where Stage 0
+  has not been done, `validate --profile full` now reports 5 errors where it
+  reported 1: the four documents, plus the `QFAI-DPACK-001` a tree with no
+  discussion pack already had. So a bare tree did not pass the full gate before
+  this change either — it now says four more things are outstanding, and all
+  five clear the same way, by doing the step they name. A tree that has done
+  Stage 0 and holds a pack is clean: `verify:pack` reports `error=0 warning=0`.
+
+  The findings no longer carry the sentence naming a release, because there is
+  no release to name.
+
+  **Why.** The maintainer picks release numbers. A severity ladder keyed on the
+  version number is a second release policy running underneath that one, and it
+  had three effects, all unwanted. Publishing `main` as one number escalated 43
+  rules while the same tree published as another escalated none, so the number
+  could not be chosen freely. A window hid the finding it deferred behind a
+  passing gate, and handed the operator the whole backlog on one upgrade. And 33
+  source files imported the registry to ask what severity to use, each rendering
+  its own sentence about the window into its own message.
+
+  A breaking change is announced in this file and in the release notes, and the
+  adopter acts on it. That is legible before an upgrade in a way a pin in the
+  source never was.
+
+  Two things that were already closed go quietly, because their windows shut at
+  1.10.0 and nothing had changed since: the legacy `.qfai/output/validate.json`
+  write path, and the pre-recut `.qfai/assistant/{steering,instructions}/`
+  layout. Both were already reported at `error`.
+
+  `docs/design-principles.md` P7 is rewritten: a code ships at the severity it
+  means, and the changelog carries the migration.
+
+  **A waiver no longer covers any of them.** `QFAI-WAIVER-002` forbids a waiver
+  whose rule is an error, and every code above now is one. The window and the
+  waiver were one escape hatch: three of these rules were documented as
+  "waivable warning, so legacy ledgers migrate instead of breaking", and that
+  route is closed. A project carrying such a waiver has to fix the condition
+  instead.
+
+  One consequence is not yet reported. `applyWaiversToExtraFindings` returns the
+  applied result and drops the waiver pass's own findings, so a waiver on a
+  finding the report appends after validation is neither applied nor refused out
+  loud — the operator sees a waiver that does nothing. That gap predates this
+  change and is tracked separately.
+
 ### Fixed
 
 - **`certify` says when a UI contract candidate it ignored has files in it**

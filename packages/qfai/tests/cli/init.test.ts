@@ -3976,7 +3976,7 @@ describe("qfai init", () => {
       const memoPath = path.join(root, memoMatches[0] ?? "");
       const firstBody = await readFile(memoPath, "utf-8");
       expect(firstBody).toContain("assistant-layer recut");
-      expect(firstBody).toContain("sunset: v1.10.0");
+      expect(firstBody).toContain("reached their sunset in v1.10.0");
 
       // Re-run: memo MUST NOT be modified (commit-immutable per OC-53).
       await runInit({
@@ -4073,34 +4073,7 @@ describe("qfai init", () => {
     return { root, legacyFile: path.join(legacy, "test-layers.md") };
   }
 
-  it("TC-0003-0026 (TDD-0026): inside the window, qfai init retains legacy steering/ and reports it on stdout", async () => {
-    let root = "";
-    try {
-      const stdout: string[] = [];
-      const captured = await captureStdout(async () => {
-        const r = await withLegacySteering(async (dir) => {
-          await runInit({
-            dir,
-            force: false,
-            dryRun: false,
-            yes: true,
-            toolVersionOverride: "1.9.0",
-          });
-        });
-        root = r.root;
-        stdout.push(r.legacyFile);
-      });
-
-      expect(await readFile(stdout[0] ?? "", "utf-8")).toBe("legacy content\n");
-      expect(captured).toMatch(/D-DEPRECATED-PATH/);
-      expect(captured).toMatch(/sunset: v1\.10\.0/);
-      expect(captured).toMatch(/read-compatible for the current minor release only/);
-    } finally {
-      if (root) await removeTempTree(root);
-    }
-  });
-
-  it("TC-0003-0026 (TDD-0026): past the sunset, qfai init still retains legacy steering/ but reports it as an error", async () => {
+  it("TC-0003-0026 (TDD-0026): qfai init retains legacy steering/ and reports it as an error", async () => {
     let root = "";
     let legacyFile = "";
     try {
@@ -4122,8 +4095,7 @@ describe("qfai init", () => {
       expect(await readFile(legacyFile, "utf-8")).toBe("legacy content\n");
 
       expect(text).toMatch(/D-DEPRECATED-PATH/);
-      expect(text).toMatch(/sunset: v1\.10\.0/);
-      expect(text).toMatch(/past the announced sunset/);
+      expect(text).toMatch(/past the announced sunset \(v1\.10\.0\)/);
       // The remediation command survives the escalation — an error the operator
       // cannot act on is worse than the warning it replaced.
       expect(text).toContain("qfai init --upgrade-assistant-tree");

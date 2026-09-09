@@ -8,7 +8,6 @@ import {
   maskNonSpecRegions,
   splitMarkdownRow,
 } from "../specPackParsers.js";
-import { RULE_PROMOTIONS, newRuleSeverity } from "../sunset.js";
 import type { Issue } from "../types.js";
 import { resolveToolVersion } from "../version.js";
 import { issue, readSafe } from "./utils.js";
@@ -21,17 +20,6 @@ import { issue, readSafe } from "./utils.js";
  * That is what the window is for; the severity is never a literal beside the
  * call.
  */
-const DEPENDS_ON_COLUMN_PROMOTION = RULE_PROMOTIONS.contractIndexDependsOnColumnMissing.promoteAt;
-const DEPENDS_ON_MIRROR_PROMOTION = RULE_PROMOTIONS.contractIndexDependsOnMirror.promoteAt;
-const INDEX_COVERAGE_PROMOTION = RULE_PROMOTIONS.contractIndexCoverageMissing.promoteAt;
-const ROW_FILE_PROMOTION = RULE_PROMOTIONS.contractIndexFileDeclaresId.promoteAt;
-
-/** `（<release> リリースまでは warning、以降は error として報告されます）`, or nothing past it. */
-function promotionWindowNote(severity: "warning" | "error", promoteAt: string): string {
-  return severity === "warning"
-    ? `（${promoteAt} リリースまでは warning、以降は error として報告されます）`
-    : "";
-}
 
 const FULL_CONTRACT_ID_RE = /\bCON-(API|DB|UI)-(\d+)\b/gi;
 const SHORT_CONTRACT_ID_RE = /(?<!CON-)\b(API|DB|UI)-(\d{1,4})\b/gi;
@@ -131,7 +119,7 @@ export async function validateContractReferences(
   }
 
   if (contractIndexFiles.size > 0) {
-    issues.push(...validateIndexCoverage(mirroredIds, contractIndex, toolVersion));
+    issues.push(...validateIndexCoverage(mirroredIds, contractIndex));
   }
 
   return issues;
@@ -148,14 +136,9 @@ export async function validateContractReferences(
  * per spec while contracts are global, so a per-file check would report every
  * contract against every other spec's index.
  */
-function validateIndexCoverage(
-  mirroredIds: Set<string>,
-  index: ContractIndex,
-  toolVersion: string,
-): Issue[] {
+function validateIndexCoverage(mirroredIds: Set<string>, index: ContractIndex): Issue[] {
   const issues: Issue[] = [];
-  const indexCoverageSeverity = newRuleSeverity(toolVersion, INDEX_COVERAGE_PROMOTION);
-  const windowNote = promotionWindowNote(indexCoverageSeverity, INDEX_COVERAGE_PROMOTION);
+  const indexCoverageSeverity = "error";
 
   for (const contractId of Array.from(index.ids).sort((a, b) => a.localeCompare(b))) {
     if (mirroredIds.has(contractId)) {
@@ -167,7 +150,7 @@ function validateIndexCoverage(
     issues.push(
       issue(
         "QFAI-CONTRACT-034",
-        `契約がどの契約インデックスにも記載されていません: ${contractId}${windowNote}`,
+        `契約がどの契約インデックスにも記載されていません: ${contractId}`,
         indexCoverageSeverity,
         files[0],
         "contracts.index.coverage",
@@ -354,8 +337,7 @@ function validateDependsOnColumn(
   toolVersion: string,
 ): Issue[] {
   const issues: Issue[] = [];
-  const dependsOnColumnSeverity = newRuleSeverity(toolVersion, DEPENDS_ON_COLUMN_PROMOTION);
-  const windowNote = promotionWindowNote(dependsOnColumnSeverity, DEPENDS_ON_COLUMN_PROMOTION);
+  const dependsOnColumnSeverity = "error";
 
   for (const table of parseIndexTables(text)) {
     const headerKeys = table.headers.map((column) => normalizeHeaderKey(column));
@@ -376,7 +358,7 @@ function validateDependsOnColumn(
       issues.push(
         issue(
           "QFAI-CONTRACT-032",
-          `契約インデックスの表に \`Depends On\` 列がありません: ${table.headers.join(" | ")}${windowNote}`,
+          `契約インデックスの表に \`Depends On\` 列がありません: ${table.headers.join(" | ")}`,
           dependsOnColumnSeverity,
           filePath,
           "contracts.index.dependsOnColumn",
@@ -531,12 +513,11 @@ function validateRowFile(cell: string, contractId: string, context: RowContext):
   if (!cellPath || namesDeclaringFile(cellPath, context.index.idToFiles.get(contractId))) {
     return [];
   }
-  const rowFileSeverity = newRuleSeverity(context.toolVersion, ROW_FILE_PROMOTION);
-  const windowNote = promotionWindowNote(rowFileSeverity, ROW_FILE_PROMOTION);
+  const rowFileSeverity = "error";
   return [
     issue(
       "QFAI-CONTRACT-035",
-      `契約インデックスの \`File\` が ${contractId} を宣言していないファイルを指しています: ${cellPath}${windowNote}`,
+      `契約インデックスの \`File\` が ${contractId} を宣言していないファイルを指しています: ${cellPath}`,
       rowFileSeverity,
       context.filePath,
       "contracts.index.fileDeclaresId",
@@ -580,8 +561,7 @@ function toPosixPath(value: string): string {
 /** The row's `Depends On` cell must state what the contract file declares. */
 function validateRowDependsOn(rawCell: string, contractId: string, context: RowContext): Issue[] {
   const dependsOnCell = rawCell.trim();
-  const dependsOnMirrorSeverity = newRuleSeverity(context.toolVersion, DEPENDS_ON_MIRROR_PROMOTION);
-  const windowNote = promotionWindowNote(dependsOnMirrorSeverity, DEPENDS_ON_MIRROR_PROMOTION);
+  const dependsOnMirrorSeverity = "error";
   const rowDependencies = new Set<string>();
   extractCellContractIds(dependsOnCell, rowDependencies);
   // A blank cell is silence, not "no dependencies". Comparing sets alone
@@ -592,7 +572,7 @@ function validateRowDependsOn(rawCell: string, contractId: string, context: RowC
     return [
       issue(
         "QFAI-CONTRACT-033",
-        `契約インデックスの \`Depends On\` セルが適用順を記載していません: ${contractId}${windowNote}`,
+        `契約インデックスの \`Depends On\` セルが適用順を記載していません: ${contractId}`,
         dependsOnMirrorSeverity,
         context.filePath,
         "contracts.index.dependsOnMirror",
@@ -622,7 +602,7 @@ function validateRowDependsOn(rawCell: string, contractId: string, context: RowC
   return [
     issue(
       "QFAI-CONTRACT-033",
-      `契約インデックスの \`Depends On\` が契約ファイルの宣言と一致しません: ${contractId} (${parts.join(" / ")})${windowNote}`,
+      `契約インデックスの \`Depends On\` が契約ファイルの宣言と一致しません: ${contractId} (${parts.join(" / ")})`,
       dependsOnMirrorSeverity,
       context.filePath,
       "contracts.index.dependsOnMirror",

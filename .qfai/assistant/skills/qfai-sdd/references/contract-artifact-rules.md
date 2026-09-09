@@ -170,10 +170,9 @@ author believes they answered a finding that is still standing — and one namin
 does not require, or that the DB domain stores after all. A value **nobody declared** still raises
 `QFAI-CONTRACT-040`, or the marker would be a silencer.
 
-It ships behind a promotion window: `warning` until the release its `RULE_PROMOTIONS` entry names,
-`error` from then on. The format is new, so the first authors to use it are answering another
-finding voluntarily and will get the grammar wrong in the ways the message exists to teach; failing
-the run on a line added to engage with the tool is the worst first experience of it.
+The format is new, so the first authors to use it are answering another finding voluntarily and
+will get the grammar wrong in the ways the message exists to teach. The message names the exact
+shape it wants for that reason.
 
 ## Executability (MUST)
 

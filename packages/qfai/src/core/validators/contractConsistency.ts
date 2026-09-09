@@ -1,10 +1,8 @@
 import { readFile } from "node:fs/promises";
 
 import { parseStructuredContract } from "../contracts.js";
-import { RULE_PROMOTIONS, newRuleSeverity } from "../sunset.js";
 import { stripContractDeclarationLines } from "../contractsDecl.js";
 import type { Issue } from "../types.js";
-import { resolveToolVersion } from "../version.js";
 import { issue } from "./utils.js";
 
 /**
@@ -41,10 +39,7 @@ export async function validateContractConsistency(
   // the worst first experience of it. Resolved once here rather than per
   // finding: it is one fact about the running version, and reading it inside a
   // loop would say otherwise.
-  const declarationSeverity = newRuleSeverity(
-    await resolveToolVersion(),
-    RULE_PROMOTIONS.derivedNotStoredDeclaration.promoteAt,
-  );
+  const declarationSeverity = "error";
 
   // Reported before anything else, and whether or not a domain was collected: a
   // declaration nobody could read is a defect in the declaration, and it is

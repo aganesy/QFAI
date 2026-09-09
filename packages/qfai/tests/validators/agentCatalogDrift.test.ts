@@ -120,7 +120,7 @@ describe("QFAI-AGENT-014 — agent-catalog developer_instructions drift", () => 
     const found = await runWith(undefined);
 
     expect(found).toHaveLength(1);
-    expect(found[0]?.severity).toBe("warning");
+    expect(found[0]?.severity).toBe("error");
     expect(found[0]?.message).toContain("no developer_instructions block");
     expect(found[0]?.message).toContain("qa-gatekeeper");
     expect(found[0]?.file).toBe(".qfai/assistant/manifest/agent-catalog.yml");
@@ -144,7 +144,7 @@ describe("QFAI-AGENT-014 — agent-catalog developer_instructions drift", () => 
     const found = await runWith(stale);
 
     expect(found).toHaveLength(1);
-    expect(found[0]?.severity).toBe("warning");
+    expect(found[0]?.severity).toBe("error");
     expect(found[0]?.message).toContain("qa-gatekeeper");
     expect(found[0]?.message).toContain(".qfai/assistant/agents/qa-gatekeeper.md");
     // The finding points at the derived copy — the file the author must fix.

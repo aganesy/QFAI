@@ -32,9 +32,7 @@ import {
 } from "../../src/core/atddTraceability.js";
 import { SCAFFOLD_PLACEHOLDER_MARKER } from "../../src/core/atdd/scaffold.js";
 import { defaultConfig } from "../../src/core/config.js";
-import { RULE_PROMOTIONS, newRuleSeverity } from "../../src/core/sunset.js";
 import { classifyCoverageLevel, UNIT_COMPONENT_LAYERS } from "../../src/core/tddHelpers.js";
-import { resolveToolVersion } from "../../src/core/version.js";
 import { validateAtddCodeTraceability } from "../../src/core/validators/atddCodeTraceability.js";
 import { validateScaffoldPlaceholder } from "../../src/core/validators/scaffoldPlaceholder.js";
 import { validateTddList } from "../../src/core/validators/tddList.js";
@@ -1829,18 +1827,6 @@ describe("a test case that says where it is verified", () => {
     );
   });
 
-  it("ships the external rule behind a promotion window", async () => {
-    await withBlocks(
-      ["## TC-0001: a", "", "- Level: L3", "- x-qfai-status: external"],
-      async (root) => {
-        const issues = await validateAtddCodeTraceability(root, defaultConfig);
-        // The marker ships with the rule, so nobody carries this state yet. The
-        // window is for the author writing the first one, not for a backlog.
-        expect(find(issues, "QFAI-ATDD-127")?.severity).toBe("warning");
-      },
-    );
-  });
-
   it("does not let one block's marker reach the next test case", async () => {
     await withBlocks(
       [
@@ -1958,9 +1944,7 @@ describe("a TC row's Level stays within L1-L3", () => {
     await withProject([{ id: "TC-0001", level: "L4" }], {}, async (root) => {
       const entry = found(await validateAtddCodeTraceability(root, defaultConfig));
 
-      expect(entry?.severity).toBe(
-        newRuleSeverity(await resolveToolVersion(), RULE_PROMOTIONS.atddTcLevelMisfiled.promoteAt),
-      );
+      expect(entry?.severity).toBe("error");
     });
   });
 });
