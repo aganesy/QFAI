@@ -55,14 +55,12 @@ Quality-First AI (QFAI) — specification-driven development の検証フレー�
 
 ### `.qfai/contracts/cli/`
 
-`api/`, `db/`, `ui/` and `design/` hold a project's own contracts, and the
-shipped `qfai-sdd` skill governs them
-(`assets/init/.qfai/assistant/skills/qfai-sdd/references/contract-artifact-rules.md`).
-`cli/` is this repository's alone: the contracts for QFAI's own command surface,
-and for the files QFAI writes into a consuming project.
+The contracts for QFAI's own command surface, and for the files QFAI writes into
+a consuming project. This directory is the repository's own; the `api/`, `db/`,
+`ui/` and `design/` directories beside it hold a project's contracts and belong
+to the shipped `qfai-sdd` skill.
 
-The naming and indexing rules are in `AGENTS.md`, which every agent working here
-reads.
+Naming and indexing rules: `AGENTS.md`.
 
 ### ⚠️ packages/qfai/ と .qfai/ の区別（重要）
 

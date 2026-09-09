@@ -38,8 +38,8 @@ and for the files QFAI writes into a consuming project.
   `worklog-entry.schema.md`, `shipped-workflows.md` — means the file holds a
   schema or an ownership boundary that more than one command shares.
 
-Nothing validates any of this, so a file written without it is caught in review
-or not at all.
+No check enforces the naming or the index entry. A new file that skips either is
+caught in review or not at all.
 
 ## バージョン規律 (全 AI 必読)
 
