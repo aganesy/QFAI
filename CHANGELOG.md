@@ -164,6 +164,21 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   Both scripts now write through one formatter, which reads the repository's own
   Prettier configuration rather than a copy of it.
 
+- **A waiver on a finding the report appends is applied or refused, never
+  silently ignored** (#1424). `report` raises `QFAI-CTYPE-004` after validation
+  has already run its waiver pass, so it runs a second pass of its own — and
+  that pass's verdicts on the waiver file were discarded. A waiver the pass
+  refused changed nothing and said nothing, so the operator saw a finding that
+  looked unwaivable rather than a waiver that was wrong.
+
+  The two passes do not reach the same verdicts. A rule's severity is read from
+  the findings in hand, and the second pass holds the findings validation never
+  saw, so `QFAI-WAIVER-001`, `-002` and `-004` can each be reached there and
+  nowhere else.
+
+  A verdict validation already published is not repeated. Both passes read the
+  same file, and that duplication is what the discarded list was avoiding.
+
 ### Added
 
 - **`QFAI-CONTRACT-038` reports a `prototype.mode` outside the vocabulary**

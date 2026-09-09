@@ -123,22 +123,18 @@ export async function applyWaivers(
  * them, and a project that deliberately keeps an unfilled delta would be stuck
  * with a warning it has no way to accept.
  *
- * The waiver file's own findings (`QFAI-WAIVER-00x`) are deliberately dropped:
- * `validateProject` already reported them for this same file, and returning
- * them again would double-count every parse error.
- *
- * The waivers this pass found applicable do come back, in `active`. The caller
- * cannot assume its own `ValidationResult` already lists them — a result read
- * back from a stored `validate.json` may carry no `waivers` block at all — and
- * a report that prints `active 0 / suppressed 1` names no waiver for the
- * suppression it just performed.
+ * Both the waivers this pass found applicable and the verdicts it reached on
+ * the waiver file come back, in `active` and `validationIssues`. The caller
+ * cannot assume its own `ValidationResult` already carries either — a result
+ * read back from a stored `validate.json` may have no `waivers` block at all —
+ * and it is the one that can tell which of them it has already published.
  */
 export async function applyWaiversToExtraFindings(
   root: string,
   findings: Issue[],
 ): Promise<ExtraFindingsWaiverResult> {
   const { applied, loaded } = await runWaiverPass(root, findings);
-  return { ...applied, active: loaded.activeWaivers };
+  return { ...applied, active: loaded.activeWaivers, validationIssues: loaded.validationIssues };
 }
 
 async function runWaiverPass(
@@ -637,6 +633,19 @@ export type ExtraFindingsWaiverResult = AppliedWaiverResult & {
    * into whatever active list it publishes.
    */
   active: ValidationWaiverEntry[];
+  /**
+   * What this pass decided about the waiver file itself — `QFAI-WAIVER-001`,
+   * `-002`, `-003` and `-004`.
+   *
+   * Both passes read the same file, so most of these arrive twice and the
+   * caller publishes each once. It cannot be only the first pass's list: the
+   * severity of a rule is read from the findings in hand, so a waiver on a
+   * finding raised after validation is judged against an index that has never
+   * seen it. A refusal that only this pass can reach has no other route to the
+   * output, and a waiver that is neither applied nor refused tells the operator
+   * nothing.
+   */
+  validationIssues: Issue[];
 };
 
 function applyWaiversToFindings(
