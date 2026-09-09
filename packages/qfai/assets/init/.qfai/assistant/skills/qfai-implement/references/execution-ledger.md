@@ -278,9 +278,8 @@ build on them is a migration rather than a gate.
 check existed: an empty cell was always wrong, while the grammar, the cap and
 the surplus column arrive with the change that made `Evidence` a pointer, so
 they land on every cell written while the column was documented as holding the
-commands and their output. The finding text states
-which release ends the window, so `--fail-on error` keeps working while the
-ledger shows the debt it will owe.
+commands and their output. A ledger that predates the change therefore meets a
+backlog rather than a single cell, and no waiver covers any of them.
 
 **A row already at a terminal status satisfies this by backfilling the cell in
 place.** Writing the outcome and its evidence pointer into `Evidence` is not a
@@ -292,30 +291,27 @@ evidence file stating what was run and that its output was not retained, then po
 the cell at that entry. The cell stays a pointer — prose about a missing run is a
 payload, and the section above says why a payload in the cell corrupts the ledger.
 
-`QFAI-TDDLIST-007` is a warning for the same reason, and is waived under that
-code — the stripped `TDDLIST-007` spelling resolves to it too. Every completion
-check hangs off the anchor, so a `done` row whose cell is only an outcome —
+`QFAI-TDDLIST-007` is an error for the same reason. Every completion check
+hangs off the anchor, so a `done` row whose cell is only an outcome —
 command-shaped, so the status-only rule passes over it — claimed completion with
-no entry, no verdict and no checkpoint behind it. A project that has moved its ledger onto pointers raises this by
-failing on warnings; one still migrating waives it per path.
+no entry, no verdict and no checkpoint behind it. A ledger still on prose
+migrates one row at a time; there is no waiver to hold the gate open meanwhile.
 
-The two grammar findings are warnings for the same reason, waivable under
-`QFAI-TDDLIST-011` (malformed) and `QFAI-TDDLIST-012` (oversize). An oversize cell whose
-only other fault is prose is reported **once**, as the cap breach: every cell
-that outgrew the cap did so by holding prose, so the two are one defect to fix.
-A cell that is a well-formed pointer but breaks a **binding** — the RED
-provenance its `Layer` owes, the evidence file its `Layer` and spec own, the
-section its `TDD-ID` names, or a compatibility marker where none is licensed —
-is reported whatever its length. Those ask for a different fix from a cap
-breach, and folding them into it would let `QFAI-TDDLIST-012` waive a violation of
-which "ATDD-owned rows" says "There is no waiver here".
+The two grammar findings are errors for the same reason: `QFAI-TDDLIST-011`
+(malformed) and `QFAI-TDDLIST-012` (oversize). An oversize cell whose only other
+fault is prose is reported **once**, as the cap breach: every cell that outgrew
+the cap did so by holding prose, so the two are one defect to fix. A cell that
+is a well-formed pointer but breaks a **binding** — the RED provenance its
+`Layer` owes, the evidence file its `Layer` and spec own, the section its
+`TDD-ID` names, or a compatibility marker where none is licensed — is reported
+whatever its length. Those ask for a different fix from a cap breach, and
+folding them into it would report a binding violation under the cap's code.
 
-`RED:n-a` on an ATDD-owned row is the one that carries no waiver at all. It is
-its own code, `QFAI-TDDLIST-013`, at `error` — a waiver may only
-target `warning` / `info`, so that is how "There is no waiver here" is spelled.
-Reported as a `QFAI-TDDLIST-011` warning it shared a rule id with every legacy prose
-cell, and waiving the migration silenced it. The other bindings stay warnings:
-they are the migration, and a row that never obtained RED provenance is not a
+`RED:n-a` on an ATDD-owned row has its own code, `QFAI-TDDLIST-013`. A waiver
+may only target `warning` / `info`, so an error is how "There is no waiver here"
+is spelled — and every rule in this section is one. The separate code still
+earns its place: reported under `QFAI-TDDLIST-011` it shared a rule id with
+every legacy prose cell, so a row that never obtained RED provenance read as a
 formatting defect the grammar introduced.
 
 `QFAI-TDDLIST-014` is a warning under `QFAI-TDDLIST-014`. Cells are read by

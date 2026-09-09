@@ -726,17 +726,12 @@ function evidenceRowGrammar(specId: string, layer: string, tddId: string): Evide
 const EVIDENCE_CELL_MAX_CHARS = 240;
 
 /**
- * Waiver rule ids for `QFAI-TDDLIST-011` / `QFAI-TDDLIST-012`.
+ * Rule ids for `QFAI-TDDLIST-011` / `QFAI-TDDLIST-012`.
  *
- * Both open as warnings for the reason `TDDLIST_EVIDENCE_STATUS_ONLY` is one:
- * every ledger written before the grammar existed holds free prose, and
- * turning all of it into build failures on upgrade is a migration, not a gate.
- * A project that has audited its legacy rows waives them per path instead of
- * rewriting evidence it can no longer reproduce.
- *
- * Both are errors, and a waiver reaches a `warning` or an `info` and never an
- * `error`, so no waiver settles either. A path carrying legacy evidence owes a
- * conforming cell.
+ * Every ledger written before the grammar existed holds free prose, so both
+ * land on a whole legacy set at once. Both are errors, and a waiver reaches a
+ * `warning` or an `info` and never an `error`, so no waiver settles either: a
+ * path carrying legacy evidence owes a conforming cell.
  */
 export const EVIDENCE_CELL_MALFORMED_RULE_ID = "QFAI-TDDLIST-011";
 export const EVIDENCE_CELL_OVERSIZE_RULE_ID = "QFAI-TDDLIST-012";
