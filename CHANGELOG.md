@@ -6,7 +6,7 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
-- **The shipped UI contract guide describes what the lanes do** (#1411). Three
+- **The shipped UI contract guide describes what the lanes do** (#1411). Four
   of its statements were wrong against the code, and a reader acts on a guide
   that ships.
 
@@ -15,6 +15,7 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   | expected markers are generated from `elements[].id`        | only the `data-qfai` values a contract writes are inspected        |
   | the fidelity snapshot is `.qfai/evidence/prototyping.json` | it is `.qfai/evidence/prototyping/prototyping.json`                |
   | screens in a skipped tier fail the per-screen review gate  | they are not reviewed, and `certify` passes without reporting them |
+  | a parse failure names the offending path on stderr         | `warn` writes to stdout                                            |
 
   The first is the one that costs coverage. A contract whose elements carry ids
   and no markers declares nothing for `validateUiMarkerPresence` to collect, so

@@ -98,7 +98,7 @@ Two layouts are a mistake the resolver cannot report:
   `certify` passes without them, reporting nothing.
 
 When the per-spec match finds files but extracts no valid screen — a YAML parse
-error, or `screens:` mistyped — `certify` names the offending path on stderr and
+error, or `screens:` mistyped — `certify` names the offending path on stdout and
 falls back to the project-wide screen list, so the authoring mistake is visible
 instead of silently re-enabling the cross-product check.
 
