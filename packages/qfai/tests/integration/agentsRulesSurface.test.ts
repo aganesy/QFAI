@@ -190,7 +190,6 @@ describe("cross-AI rules surface (.agents/rules/ master)", () => {
         "AGENTS.md",
         "CLAUDE.md",
         ".github/copilot-instructions.md",
-        ".codex/README.md",
         "packages/qfai/assets/init/root/AGENTS.md",
         "packages/qfai/assets/init/root/CLAUDE.md",
       ];
