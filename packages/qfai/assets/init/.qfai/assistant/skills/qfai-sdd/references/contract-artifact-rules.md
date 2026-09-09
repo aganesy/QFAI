@@ -23,10 +23,10 @@ Discussion UI/UX files are **non-normative** discovery / reference artifacts —
   `mockPaths` are not required. A contract that writes them is held to them:
   `QFAI-CONTRACT-037` looks for a declared marker in the code, and
   `QFAI-CONTRACT-038` reports a `prototype.mode` outside the vocabulary
-  (`interactive`) at severity warning. Nothing branches on `mode`, so a value
-  outside it breaks no run — it tells a reader the prototype is something it is
-  not. `mockPaths` is read by nobody and by no lane; it is a note to whoever
-  reviews the prototype.
+  (`interactive`), naming the release at which it stops being a warning.
+  Nothing branches on `mode`, so a value outside the vocabulary breaks no run —
+  it tells a reader the prototype is something it is not. `mockPaths` is read
+  by nobody and by no lane; it is a note to whoever reviews the prototype.
 - **A declared marker is looked for in the code.** `QFAI-CONTRACT-037` reports a
   `data-qfai` value a UI contract writes literally that no file under the
   configured source directory mentions. Without it a declared element can be

@@ -14,8 +14,9 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   disagreeing. A one-value vocabulary and no check is where a typo survives
   longest, because there is nothing to fail.
 
-  The finding is a warning with no promotion behind it: the cost is a misled
-  reader, not a missing element. Only a contract that writes a mode is asked
+  The finding ships behind a promotion window and names the release that ends
+  it. Nothing has ever rejected a value here, so a project carrying a typo has
+  been passing and was never told. Only a contract that writes a mode is asked
   anything, and only a value the vocabulary does not hold is reported — a
   contract with no `prototype`, or an unfilled `mode:`, stays silent.
 

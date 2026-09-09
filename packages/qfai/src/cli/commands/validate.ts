@@ -1922,9 +1922,9 @@ export const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
   // its pinned release.
   "QFAI-CONTRACT-037":
     "Every `data-qfai` marker a UI contract writes literally is mentioned by at least one file under the configured source directory, so an element the contract declares is one something on the screen renders.",
-  // Nothing branches on `prototype.mode`, so the finding is a warning with no
-  // promotion behind it: the cost of a wrong value is a misled reader, not a
-  // missing element.
+  // Nothing has ever rejected a value here, so a project carrying a typo has
+  // been passing and was never told. Like its neighbour it carries a promotion
+  // window (`core/sunset.ts`) and reaches `error` only at its pinned release.
   "QFAI-CONTRACT-038":
     "Every `prototype.mode` a UI contract declares is one this tooling knows, so the contract's own words say what kind of prototype the review is walking. A contract that declares no mode is asked nothing.",
   "QFAI-CONTRACT-040":

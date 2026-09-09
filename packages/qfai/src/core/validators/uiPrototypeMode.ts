@@ -26,10 +26,9 @@
  *
  * ## Severity
  *
- * A warning, with no promotion behind it. The other UI contract rule reaches
- * `error` because it reports an element that nothing renders, which is missing
- * behavior. This one reports a misleading word in a document. Failing a build
- * over it would cost more than the confusion does.
+ * A warning inside its promotion window, an error from the release that ends
+ * it. Nothing has ever rejected a value here, so a project carrying a typo has
+ * been passing and was never told; the window is what lets it be told first.
  */
 
 import { readFile } from "node:fs/promises";
@@ -38,7 +37,9 @@ import path from "node:path";
 import type { QfaiConfig } from "../config.js";
 import { resolvePath } from "../config.js";
 import { collectUiContractFiles } from "../discovery.js";
+import { RULE_PROMOTIONS, newRuleSeverity } from "../sunset.js";
 import type { Issue } from "../types.js";
+import { resolveToolVersion } from "../version.js";
 import { issue } from "./utils.js";
 
 /** Waivable as `QFAI-CONTRACT-038`. */
@@ -108,27 +109,37 @@ export async function validateUiPrototypeMode(root: string, config: QfaiConfig):
   }
 
   const known: ReadonlySet<string> = new Set(PROTOTYPE_MODES);
-  const vocabulary = PROTOTYPE_MODES.map((mode) => `\`${mode}\``).join(", ");
-  const issues: Issue[] = [];
+  const unknown: Array<{ file: string; mode: string }> = [];
   for (const file of contractFiles.slice().sort()) {
     const mode = prototypeModeIn(await readSafe(file));
     if (mode === null || mode === "" || known.has(mode)) {
       continue;
     }
-    issues.push(
-      issue(
-        UI_PROTOTYPE_MODE_RULE_ID,
-        `UI contract declares \`prototype.mode: ${mode}\`, which is not a mode this tooling knows. The vocabulary is ${vocabulary}.`,
-        "warning",
-        path.relative(root, file).split(path.sep).join("/"),
-        "contracts.uiPrototypeMode",
-        undefined,
-        "canonical",
-        `Set \`prototype.mode\` to ${vocabulary}, or drop the key. Nothing branches on the value, so one outside the vocabulary misleads whoever reads the contract and changes no run.`,
-      ),
-    );
+    unknown.push({ file: path.relative(root, file).split(path.sep).join("/"), mode });
   }
-  return issues;
+  // Read after the scan rather than before it: a tree whose contracts all
+  // declare a mode this knows asks nothing of the version.
+  if (unknown.length === 0) {
+    return [];
+  }
+
+  const vocabulary = PROTOTYPE_MODES.map((mode) => `\`${mode}\``).join(", ");
+  const promotion = RULE_PROMOTIONS.uiPrototypeModeUnknown.promoteAt;
+  const severity = newRuleSeverity(await resolveToolVersion(), promotion);
+  const windowNote =
+    severity === "warning" ? ` Reported as a warning until ${promotion}, then an error.` : "";
+  return unknown.map(({ file, mode }) =>
+    issue(
+      UI_PROTOTYPE_MODE_RULE_ID,
+      `UI contract declares \`prototype.mode: ${mode}\`, which is not a mode this tooling knows. The vocabulary is ${vocabulary}.${windowNote}`,
+      severity,
+      file,
+      "contracts.uiPrototypeMode",
+      undefined,
+      "canonical",
+      `Set \`prototype.mode\` to ${vocabulary}, or drop the key. Nothing branches on the value, so one outside the vocabulary misleads whoever reads the contract and changes no run.`,
+    ),
+  );
 }
 
 /** A file this rule cannot read contributes nothing rather than failing the run. */
