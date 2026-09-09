@@ -6,6 +6,25 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **A whitespace-only rewrite no longer pulls a document into the shape gate**
+  (#1423). `check-mdschema --scope changed` selected documents with
+  `git diff --name-only`, which answers which files a branch touched rather than
+  which documents it changed. Re-normalising a tree's line endings rewrites every
+  file, so the whole document set entered the gate and every violation it already
+  carried reported at once — which leaves "normalise the line endings" and "keep
+  the docs lane green" reading as alternatives.
+
+  Two details decide this, and neither is the obvious spelling:
+
+  | Instead of           | Use                  | Because                                                             |
+  | -------------------- | -------------------- | ------------------------------------------------------------------- |
+  | `--name-only`        | `--numstat`          | `--name-only` selects by blob identity and ignores whitespace flags |
+  | `--ignore-all-space` | `--ignore-cr-at-eol` | indentation is a shape change here, and the wide flag hides it      |
+
+  The second matters as much as the first. Moving a list item two spaces right
+  nests it under its predecessor, which is exactly what this gate grades, so a
+  flag that ignores all whitespace would drop that edit out of scope.
+
 - **The shipped UI contract guide describes what the marker lane does** (#1411).
   Two of its statements were wrong against the code, and a reader acts on a
   guide that ships.
