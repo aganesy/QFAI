@@ -147,23 +147,31 @@ selector or evidence wiring reads the old value.
 
 ## Prototype metadata
 
-A `prototype` mapping at the top level carries three keys.
+A `prototype` mapping at the top level is optional. A contract that omits it is
+asked for nothing. A contract that writes it carries three keys.
 
-| Key         | Holds                                               |
-| ----------- | --------------------------------------------------- |
-| `mode`      | `interactive`                                       |
-| `mockPaths` | the flows the prototype has to be able to walk      |
-| `markers`   | the selector convention used for runtime inspection |
-
-No validate lane reads `prototype` today. It is authoring metadata: the shape
-`templates/contracts/ui-contract.sample.yaml` shows is the one to follow, and
-what the entries mean is settled between the contract's author and whoever
-reviews the prototype.
+| Key         | Holds                                               | Read by                       |
+| ----------- | --------------------------------------------------- | ----------------------------- |
+| `mode`      | `interactive`                                       | `QFAI-CONTRACT-038`           |
+| `mockPaths` | the flows the prototype has to be able to walk      | nothing                       |
+| `markers`   | the selector convention used for runtime inspection | `QFAI-CONTRACT-037`, reviewer |
 
 `markers` states the selector convention, so a reviewer inspecting the running
 prototype knows what to look for and does not have to infer it from the markup.
+A `data-qfai` value written in a selector here is a declared marker like any
+other, so `QFAI-CONTRACT-037` looks for it under the source directory: a
+convention declared here and rendered nowhere is reported.
+
+`mode` names the kind of prototype the review walks. Nothing branches on it, so
+a value outside the vocabulary breaks no run — it tells a reader the prototype
+is something it is not, which is what `QFAI-CONTRACT-038` reports at severity
+warning. A contract that writes no `mode` is asked nothing.
+
 `mockPaths` names the flows a prototype has to be able to walk, each with an id
-stable enough to be cited from a review.
+stable enough to be cited from a review. No lane reads it, and the prototyping
+evidence records nothing against it — an entry is a note between the contract's
+author and whoever reviews the prototype. Follow the shape
+`templates/contracts/ui-contract.sample.yaml` shows.
 
 ## Screen contract rules
 

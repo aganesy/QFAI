@@ -160,6 +160,35 @@ describe("a marker the source mentions", () => {
   });
 });
 
+describe("where in the contract the marker is written", () => {
+  it("reads one declared under prototype.markers, not only under an element", async () => {
+    const root = await newRoot();
+    await write(
+      root,
+      ".qfai/contracts/ui/order.yaml",
+      [
+        "prototype:",
+        "  mode: interactive",
+        "  markers:",
+        "    - id: mk_order_form",
+        "      selector: \"[data-qfai='SCR-ORDER:order_form']\"",
+        "      purpose: order create form root",
+        "screens:",
+        "  - id: order_create",
+        "    elements:",
+        "      - id: submit",
+        "",
+      ].join("\n"),
+    );
+    await write(root, "src/OrderForm.tsx", "export const OrderForm = () => <form />;\n");
+
+    const issues = await validateUiMarkerPresence(root, defaultConfig);
+
+    expect(issues).toHaveLength(1);
+    expect(issues[0]?.message).toContain("SCR-ORDER:order_form");
+  });
+});
+
 describe("what the rule declines to ask for", () => {
   it("asks nothing of a contract that writes no marker", async () => {
     const root = await newRoot();

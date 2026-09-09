@@ -752,9 +752,10 @@ export const GATE_GROUP_FAMILIES = {
     // `validateDbContractApplyOrder`, composed by `validateContracts` beside
     // `-031` and reachable from the same two profiles.
     "QFAI-CONTRACT-036",
-    // `validateUiMarkerPresence`, composed in the same place and reachable from
-    // the same two profiles.
+    // `validateUiMarkerPresence` and `validateUiPrototypeMode`, composed in the
+    // same place and reachable from the same two profiles.
     "QFAI-CONTRACT-037",
+    "QFAI-CONTRACT-038",
     "QFAI-CONTRACT-040",
     // `-041` shipped after this list did, and the explicit enumeration that
     // keeps the wildcard from over-claiming is also what stops a new code
@@ -1921,6 +1922,11 @@ export const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
   // its pinned release.
   "QFAI-CONTRACT-037":
     "Every `data-qfai` marker a UI contract writes literally is mentioned by at least one file under the configured source directory, so an element the contract declares is one something on the screen renders.",
+  // Nothing branches on `prototype.mode`, so the finding is a warning with no
+  // promotion behind it: the cost of a wrong value is a misled reader, not a
+  // missing element.
+  "QFAI-CONTRACT-038":
+    "Every `prototype.mode` a UI contract declares is one this tooling knows, so the contract's own words say what kind of prototype the review is walking. A contract that declares no mode is asked nothing.",
   "QFAI-CONTRACT-040":
     "Every state/status value an API contract mandates must have a representable counterpart in the domain declared by the DB contract(s) bounding the same normalized field name (CHECK ... IN, CREATE TYPE ... AS ENUM, or inline ENUM), unless a DB contract declares it `Derived (not stored)`. Pairing is by normalized field name, not by an explicit pair declaration, so the finding is an error only when every such contract bounds the field with an ENUM.",
   "QFAI-CONTRACT-041":
