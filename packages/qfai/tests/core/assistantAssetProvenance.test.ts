@@ -22,6 +22,7 @@ import {
   makeGovernedContainmentGuard,
   replaceGovernedAsset,
   retireVerifiedGovernedAsset,
+  retireWithdrawnGovernedAssets,
   runInit,
   SHIPPED_WORKFLOW_NAMES,
 } from "../../src/cli/commands/init.js";
@@ -136,6 +137,92 @@ describe("assistant asset provenance", () => {
       expect(issues.filter((found) => found.code === "QFAI-ASSETS-005")).toEqual([]);
     },
   );
+
+  it.each(["manifest.md", "product.md", "structure.md", "tech.md"])(
+    "does not call a filled-in %s stale once its content is what the lock records",
+    async (fileName) => {
+      // The other half of the same question. `stale` means the file matches the
+      // lock and not the release, and its remedy is `qfai init --force`, which
+      // rewrites the file. On a document the project owns, the lock recording
+      // the adopted content is the ordinary result of re-locking, and the
+      // remedy then destroys the content the project was told to write.
+      //
+      // So the pair has to be exempt together: reported as a fork, filling the
+      // document in is a finding, and reported as stale, the fix for that
+      // finding deletes the work.
+      const root = await makeProject();
+      const assistantDir = path.join(root, ".qfai", "assistant");
+      const adopted = `# ${fileName}\n\nWhat this project actually does.\n`;
+      await writeFile(path.join(assistantDir, "catalog", fileName), adopted, "utf-8");
+      const lock = await readAssistantAssetsLock(assistantDir);
+      await writeAssistantAssetsLock(assistantDir, {
+        files: { ...(lock?.files ?? {}), [`catalog/${fileName}`]: hashAssistantAssetText(adopted) },
+      });
+
+      const issues = await validateAssistantAssets(root, defaultConfig);
+      expect(issues.filter((found) => found.code === "QFAI-ASSETS-004")).toEqual([]);
+    },
+  );
+
+  it("leaves a filled-in catalog alone under --force, even once the lock records it", async () => {
+    // The other side of the same contract. Not reporting the file is only half
+    // of owning it: `--force` decides what to refresh with the same comparison
+    // the stale verdict uses, so a lock holding the project's own content made
+    // the file look refreshable and the run replaced it with the template.
+    //
+    // Nothing warned, because the note that says a file was left alone is
+    // written on the branch that declines to touch it.
+    const root = await makeProject();
+    const assistantDir = path.join(root, ".qfai", "assistant");
+    const target = path.join(assistantDir, "catalog", "tech.md");
+    const adopted = "# Tech\n\n## Standard commands (copy-paste)\n\n`pnpm test`\n";
+    await writeFile(target, adopted, "utf-8");
+    const lock = await readAssistantAssetsLock(assistantDir);
+    await writeAssistantAssetsLock(assistantDir, {
+      files: { ...(lock?.files ?? {}), "catalog/tech.md": hashAssistantAssetText(adopted) },
+    });
+
+    await captureStdout(() => runInit({ dir: root, force: true, dryRun: false, yes: true }));
+
+    expect(await readFile(target, "utf-8")).toBe(adopted);
+  }, 120000);
+
+  it("does not retire a filled-in catalog the release has stopped shipping", async () => {
+    // Retirement decides by hash too, and it deletes rather than overwrites. A
+    // release that drops one of these four does not thereby own what the
+    // project wrote in it, but a lock holding the adopted content makes the
+    // document read as an untouched copy of ours.
+    //
+    // Driven directly: the state needs a path the release no longer ships, and
+    // no `runInit` can produce one while all four are still shipped.
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-retire-"));
+    tempRoots.push(root);
+    const assistantDir = path.join(root, ".qfai", "assistant");
+    await mkdir(path.join(assistantDir, "catalog"), { recursive: true });
+    const target = path.join(assistantDir, "catalog", "tech.md");
+    const adopted = "# Tech\n\n## Standard commands (copy-paste)\n\n`pnpm test`\n";
+    await writeFile(target, adopted, "utf-8");
+
+    const recorded: Record<string, string> = {};
+    const out = {
+      removed: [] as string[],
+      skipped: [] as string[],
+      manualMergeNotes: [] as string[],
+    };
+    await retireWithdrawnGovernedAssets(
+      assistantDir,
+      {}, // the release ships nothing by this name any more
+      { "catalog/tech.md": hashAssistantAssetText(adopted) },
+      recorded,
+      { force: true, dryRun: false },
+      makeGovernedContainmentGuard(root),
+      out,
+    );
+
+    expect(await readFile(target, "utf-8")).toBe(adopted);
+    expect(out.removed).toEqual([]);
+    expect(out.manualMergeNotes.join("\n")).toContain("its content is yours");
+  });
 
   it("still reports a catalog file the project deleted", async () => {
     // The exemption is for a difference, not for an absence: a catalog the

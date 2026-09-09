@@ -4,6 +4,8 @@ import { access, open, readFile, stat } from "node:fs/promises";
 import path from "node:path";
 
 import {
+  ADOPTER_OWNED_ASSETS,
+  ADOPTER_OWNED_CATALOG_FILES,
   ASSISTANT_ASSETS_LOCK_BASENAME,
   GOVERNED_ASSISTANT_LAYERS,
   REGENERATED_ASSISTANT_LAYERS,
@@ -15,7 +17,10 @@ import {
   hashAssistantAssetFile,
   readAssistantAssetsLockStatus,
 } from "../assistantAssetProvenance.js";
-import type { RegeneratedAssistantLayer } from "../assistantAssetProvenance.js";
+import type {
+  AssistantAssetStatus,
+  RegeneratedAssistantLayer,
+} from "../assistantAssetProvenance.js";
 import type { QfaiConfig } from "../config.js";
 import { resolvePath } from "../config.js";
 import { collectFiles } from "../fs.js";
@@ -44,25 +49,20 @@ const ANY_MARKDOWN_HEADING_PATTERN = /^\s*#{1,6}\s+/m;
  * unreplaced `<test command>` is a gate that cannot run, which the
  * constitution classes as UNRUN rather than passed.
  */
-const STEERING_CATALOG_FILES = ["manifest.md", "product.md", "structure.md", "tech.md"] as const;
+const STEERING_CATALOG_FILES = ADOPTER_OWNED_CATALOG_FILES;
 
 /**
- * The same four files, keyed the way the provenance walk keys them.
+ * The provenance verdicts that mean "this file's content differs from the
+ * release", which is the finished state for an adopter-owned document.
  *
- * They are seeded once and owned by the project afterwards, so a difference
- * from the shipped copy is what they are for. Reported as a local fork, the two
- * rules that read them contradict each other: `QFAI-ASSETS-003` asks for the
- * placeholders to be replaced, and `QFAI-ASSETS-005` reports the file the
- * moment they are — leaving the placeholder in place the only state that
- * satisfies both, on the documents the skills read for their commands.
- *
- * Only the fork is exempt. A copy still holding what qfai wrote is stale in the
- * ordinary way and refreshes without losing anything, and a deleted one is
- * still an absence.
+ * Named as a set rather than tested inline so the pair stays together: they are
+ * the same condition seen through a lock that has or has not been rewritten,
+ * and exempting one without the other is what leaves the finding reachable.
  */
-const ADOPTER_OWNED_ASSETS: ReadonlySet<string> = new Set(
-  STEERING_CATALOG_FILES.map((fileName) => `catalog/${fileName}`),
-);
+const ADOPTER_OWNED_DIVERGENCE: ReadonlySet<AssistantAssetStatus> = new Set([
+  "forked",
+  "stale",
+] as const);
 
 /**
  * An unreplaced angle-bracket placeholder, e.g. `<test command>`.
@@ -500,10 +500,10 @@ async function validateAssistantAssetProvenance(
       // fallback is *also* absent, though — see `coveredByExistenceProbe`.
       continue;
     }
-    if (status === "forked" && ADOPTER_OWNED_ASSETS.has(relative)) {
+    if (ADOPTER_OWNED_DIVERGENCE.has(status) && ADOPTER_OWNED_ASSETS.has(relative)) {
       // Filling these in is the instruction they carry, so the difference is
-      // the finished state rather than a fork. What is left unfilled is
-      // `QFAI-ASSETS-003`, which reads the same four files.
+      // the finished state rather than a fork or a stale copy. What is left
+      // unfilled is `QFAI-ASSETS-003`, which reads the same four files.
       continue;
     }
     const finding = provenanceIssue(

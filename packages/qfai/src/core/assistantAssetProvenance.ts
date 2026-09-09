@@ -39,6 +39,32 @@ export const GOVERNED_ASSISTANT_LAYERS = ["constitution", "catalog"] as const;
 export type GovernedAssistantLayer = (typeof GOVERNED_ASSISTANT_LAYERS)[number];
 
 /**
+ * The Stage 0 catalog documents a project fills in and owns from then on.
+ *
+ * Governed like the rest of the layer — qfai seeds them, records them, and
+ * reports one that goes missing — but their content is the project's. They ship
+ * as templates whose values are literal placeholders, and the shared skill
+ * baseline names them as MANDATORY refresh targets, so a difference from the
+ * shipped bytes is the finished state rather than a defect.
+ *
+ * Here rather than beside either reader because both have to agree: the
+ * validator must not report the difference, and `qfai init --force` must not
+ * overwrite it. Two copies of this list is how one of those silently stops
+ * matching the other.
+ */
+export const ADOPTER_OWNED_CATALOG_FILES = [
+  "manifest.md",
+  "product.md",
+  "structure.md",
+  "tech.md",
+] as const;
+
+/** The same four, keyed the way the lock and the provenance walk key them. */
+export const ADOPTER_OWNED_ASSETS: ReadonlySet<string> = new Set(
+  ADOPTER_OWNED_CATALOG_FILES.map((fileName) => `catalog/${fileName}`),
+);
+
+/**
  * Assistant layers `qfai init --force` regenerates outright.
  *
  * These are as normative as the governed ones — a skill body is what an agent
