@@ -123,6 +123,21 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   removal and leaves the file on disk, so status names a path the index is
   dropping — the reverse of introducing one.
 
+- **A re-pin writes a declaration `format:check` accepts** (#1430). Both re-pin
+  scripts wrote `.github/required-status-contexts.json` with `JSON.stringify`,
+  which puts every array element on its own line where Prettier keeps a short
+  array on one. Five arrays in that file are short, so what the scripts wrote
+  failed the first lane in `ci:lint`.
+
+  The dependency-update job runs those two scripts and pushes the result, so
+  every update arrived with its digests corrected and its pull request red over
+  a diff whose every line was whitespace. Re-pinning by hand met the same thing:
+  the instruction the hygiene lane prints produced a change that failed the next
+  lane.
+
+  Both scripts now write through one formatter, which reads the repository's own
+  Prettier configuration rather than a copy of it.
+
 ### Added
 
 - **`QFAI-CONTRACT-038` reports a `prototype.mode` outside the vocabulary**
