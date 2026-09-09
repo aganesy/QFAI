@@ -9,7 +9,6 @@ import {
   splitMarkdownRow,
 } from "../specPackParsers.js";
 import type { Issue } from "../types.js";
-import { resolveToolVersion } from "../version.js";
 import { issue, readSafe } from "./utils.js";
 
 /**
@@ -85,9 +84,6 @@ export async function validateContractReferences(
 
   const issues: Issue[] = [];
   const severity = config.validation.traceability.unknownContractIdSeverity;
-  // Resolved once for the whole run: the four promotion windows below are a
-  // property of the tool, not of the index file being read.
-  const toolVersion = await resolveToolVersion();
   const mirroredIds = new Set<string>();
   for (const filePath of Array.from(contractIndexFiles).sort((a, b) => a.localeCompare(b))) {
     const text = await readSafe(filePath);
@@ -115,7 +111,7 @@ export async function validateContractReferences(
       );
     }
 
-    issues.push(...validateDependsOnColumn(filePath, text, contractIndex, toolVersion));
+    issues.push(...validateDependsOnColumn(filePath, text, contractIndex));
   }
 
   if (contractIndexFiles.size > 0) {
@@ -330,12 +326,7 @@ function parseIndexTables(text: string): IndexTable[] {
  * defect of its own, and reporting only `QFAI-CONTRACT-032` would leave every
  * row of that table unread until someone restores the column.
  */
-function validateDependsOnColumn(
-  filePath: string,
-  text: string,
-  index: ContractIndex,
-  toolVersion: string,
-): Issue[] {
+function validateDependsOnColumn(filePath: string, text: string, index: ContractIndex): Issue[] {
   const issues: Issue[] = [];
   const dependsOnColumnSeverity = "error";
 
@@ -376,7 +367,6 @@ function validateDependsOnColumn(
         { declaredIdColumn, dependsOnColumn, fileColumn: headerKeys.indexOf(FILE_HEADER_KEY) },
         filePath,
         index,
-        toolVersion,
       ),
     );
   }
@@ -454,7 +444,6 @@ function validateIndexRows(
   columns: IndexRowColumns,
   filePath: string,
   index: ContractIndex,
-  toolVersion: string,
 ): Issue[] {
   const issues: Issue[] = [];
 
@@ -472,7 +461,6 @@ function validateIndexRows(
           filePath,
           line: row.line,
           index,
-          toolVersion,
         }),
       );
     }
@@ -482,7 +470,6 @@ function validateIndexRows(
           filePath,
           line: row.line,
           index,
-          toolVersion,
         }),
       );
     }
@@ -495,8 +482,6 @@ type RowContext = {
   filePath: string;
   line: number;
   index: ContractIndex;
-  /** Resolved once per validator run; feeds the row rules' promotion windows. */
-  toolVersion: string;
 };
 
 /**

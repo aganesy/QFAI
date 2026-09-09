@@ -1818,10 +1818,8 @@ export const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
   "QFAI-PROT-337":
     "prototyping.mode=exploration downgraded one or more declared-error gates to warning; the notice names the source file and the affected codes.",
   // The apply-order family. Each of these reads a column or a declaration that
-  // nothing read before them, so each carries a promotion window
-  // (`core/sunset.ts`) and reaches `error` only at its pinned release. The
-  // expected state is the same either way — the window decides how loudly a
-  // gap is reported, not what the gap is.
+  // nothing read before them, so a project meeting one of them for the first
+  // time has a backlog to work through rather than a single edit.
   "QFAI-CONTRACT-015":
     "Every contract file states its apply order (`-- Depends on:` for SQL, `x-qfai-depends-on` for YAML/JSON), writing `-` when nothing has to be applied before it.",
   "QFAI-CONTRACT-030":
@@ -1835,14 +1833,12 @@ export const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
     "Every contract index row's `File` cell names a file that declares that row's contract ID.",
   "QFAI-CONTRACT-036":
     "Every table a DB contract's foreign key references is either created by that same contract or by one its declared apply order names, so applying the contracts in the declared order never meets a `REFERENCES` to a table that does not exist yet.",
-  // Reads the implementation tree rather than another declaration, so it too
-  // carries a promotion window (`core/sunset.ts`) and reaches `error` only at
-  // its pinned release.
+  // Reads the implementation tree rather than another declaration, so what it
+  // reports is a contract and a screen that disagree.
   "QFAI-CONTRACT-037":
     "Every `data-qfai` marker a UI contract writes literally is mentioned by at least one file under the configured source directory, so an element the contract declares is one something on the screen renders.",
   // Nothing has ever rejected a value here, so a project carrying a typo has
-  // been passing and was never told. Like its neighbour it carries a promotion
-  // window (`core/sunset.ts`) and reaches `error` only at its pinned release.
+  // been passing and was never told.
   "QFAI-CONTRACT-038":
     "Every `prototype.mode` a UI contract declares is one this tooling knows, so the contract's own words say what kind of prototype the review is walking. A contract that declares no mode is asked nothing.",
   "QFAI-CONTRACT-040":
@@ -1967,8 +1963,7 @@ export const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
   "QFAI-TDDLIST-015":
     "A spec whose `tdd/test-list.md` holds `Status=blocked` rows also has a `.qfai/steering/` work-log entry accounting for the stop, associated with the spec by `scope: spec-NNNN` or by a `scope: global` entry's `links`.",
   // The companion to the row above, and it earns a catalog entry for the same
-  // reason: once its severity follows a promotion pin rather than a `warning`
-  // literal, the code is error-capable and the reader of an `expected:` line
+  // reason: the code is error-capable, and the reader of an `expected:` line
   // needs to be told the expectation is about the surface, not about any spec.
   "QFAI-TDDLIST-016":
     "`.qfai/steering/` is walkable and every entry in it is readable, so the check for a work-log entry accounting for a stop has an answer to give.",

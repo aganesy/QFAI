@@ -206,11 +206,8 @@ function checkContractsHierarchy(
           file,
         });
       } else {
-        // key-absent: legacy contract predates the primary_tasks slot.
-        // `info` inside the deprecation window, `error` from the sunset on.
-        // The message has always named a sunset; until now the severity was a
-        // hard-coded `info`, so reaching that version changed nothing and the
-        // notice expired without effect.
+        // key-absent: legacy contract predates the primary_tasks slot. The
+        // retirement the message names has passed, so this is an error.
         findings.push({
           ruleId: "QFAI-AUD-001",
           dimension: "visualHierarchy",
@@ -292,11 +289,8 @@ function checkContractHierarchyFromScreens(
           file: screen.sourceRef,
         });
       } else {
-        // key-absent: legacy contract predates the primary_tasks slot.
-        // `info` inside the deprecation window, `error` from the sunset on.
-        // The message has always named a sunset; until now the severity was a
-        // hard-coded `info`, so reaching that version changed nothing and the
-        // notice expired without effect.
+        // key-absent: legacy contract predates the primary_tasks slot. The
+        // retirement the message names has passed, so this is an error.
         findings.push({
           ruleId: "QFAI-AUD-001",
           dimension: "visualHierarchy",

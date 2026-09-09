@@ -42,17 +42,7 @@ import { validateAssistantAssets } from "../../src/core/validators/assistantAsse
 import { getInitAssetsDir } from "../../src/shared/assets.js";
 import { captureStdout } from "../helpers/stdout.js";
 
-/**
- * The five provenance codes ship behind
- * `RULE_PROMOTIONS.assistantAssetProvenance`, so the severity is whatever the
- * pin says at the version under test — `warning` inside the window, `error`
- * from the promotion release onwards. Derived from the pin rather than written
- * as a literal so this file does not have to be edited on the release that
- * closes the window, and so a severity that stops following the pin is caught
- * here and not only by `sunsetLedger.test.ts`.
- */
-
-/** The family the pin governs — not the two existence probes above it. */
+/** The five provenance codes — not the two existence probes above them. */
 const PROVENANCE_CODES = new Set([
   "QFAI-ASSETS-004",
   "QFAI-ASSETS-005",
@@ -268,7 +258,7 @@ describe("assistant asset provenance", () => {
     expect(unshipped[0]?.file).toContain("project-layers.md");
   });
 
-  it("takes every provenance code's severity from the promotion pin, not a literal", async () => {
+  it("reports every provenance code at error", async () => {
     const root = await makeProject();
     const assistantDir = path.join(root, ".qfai", "assistant");
     const catalogDir = path.join(assistantDir, "catalog");

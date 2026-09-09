@@ -23,8 +23,7 @@ import { validateTddList } from "../../src/core/validators/tddList.js";
 import type * as VersionModule from "../../src/core/version.js";
 
 /**
- * The version `resolveToolVersion` reports, so the promotion window is
- * observable from both sides of its release.
+ * The version `resolveToolVersion` reports.
  *
  * An empty string means "defer to the real one", so every other case in this
  * file keeps running against the shipped version.

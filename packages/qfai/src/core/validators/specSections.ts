@@ -83,12 +83,7 @@ type RequiredSection = {
   key: string;
 };
 
-/**
- * The severity both codes carry, resolved once from
- * `RULE_PROMOTIONS.specSectionsRequiredHeadings`. Threaded in rather than
- * recomputed here so the two findings cannot drift apart, and so the pin —
- * not a literal beside the `issue(...)` call — is what decides them.
- */
+/** The severity both codes carry, threaded in so the two cannot drift apart. */
 type SpecSectionsSeverity = "warning" | "error";
 
 function missingSectionsIssue(

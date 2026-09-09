@@ -19,13 +19,8 @@
  * branch cannot see: some of the frozen scope is unreachable and the rest is
  * fine, so the precheck's "zero UI-bearing specs resolved" condition is false.
  *
- * A `warning` behind a promotion window. The route out is
- * `prototyping rescope --remove <id> --reason <delta-id>`, which is
- * non-destructive and leaves the loop at its cycle — so unlike the first
- * revision of this finding, the window is justified on its own terms rather
- * than as an apology for having no remedy to offer. What it needs the window
- * for is the ordinary reason: a project already carrying the state has never
- * been told, and gets a minor to run the operation before the gate closes.
+ * The route out is `prototyping rescope --remove <id> --reason <delta-id>`,
+ * which is non-destructive and leaves the loop at its cycle.
  *
  * The finding and the operation read ONE reader,
  * `core/prototyping/frozenScope.ts`. `rescope` removes only what this finding
@@ -66,10 +61,6 @@ export async function validateFrozenSurfaceReachability(
     return [];
   }
 
-  // The severity comes from the promotion window, which `sunsetLedger.test.ts`
-  // requires of any registered entry — a fixed severity beside a registration
-  // is rejected, and rightly: the registry would then claim to decide something
-  // it does not.
   const severity = "error";
 
   return [

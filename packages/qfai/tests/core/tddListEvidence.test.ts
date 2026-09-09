@@ -12,11 +12,9 @@
  * 3) deliberately has none — the ledger records no run identity — and the skill
  * now says so instead of advertising a gate that does not exist.
  *
- * They also pin `TDDLIST_EVIDENCE_EMPTY`'s promotion window. Shipped straight
- * at `error`, the rule took a consuming repository from 3 errors to 27 in one
- * `qfai init`, 20 of them on rows already at `done`. The finding still fires on
- * exactly the same rows; what the window changes is whether an upgrade can
- * convert them into a build failure before the operator has seen them.
+ * They also pin `TDDLIST_EVIDENCE_EMPTY`. The rule took a consuming repository
+ * from 3 errors to 27 in one `qfai init`, 20 of them on rows already at `done`,
+ * so a project meets a backlog of these rather than one cell.
  */
 
 import { createHash } from "node:crypto";
@@ -1039,9 +1037,7 @@ describe("QFAI-TDDLIST-008", () => {
   // rule id: reported as a `QFAI-TDDLIST-011` it shared a rule id with every
   // legacy prose cell, and the migration's own waiver silenced it.
   //
-  // The severity comes from the promotion pin, not from a literal. The code is
-  // new, so it opens as a warning over the rows seeded before the provenance
-  // token existed and becomes the unwaivable error at the promotion release —
+  // The code is newer than the rows it reads, and an error cannot be waived,
   // which is what makes the separation from the grammar's code load-bearing
   // rather than cosmetic.
   it("reports the provenance breach under its own code and rule id", async () => {

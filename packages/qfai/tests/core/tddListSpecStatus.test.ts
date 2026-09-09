@@ -85,12 +85,9 @@ const severityOf = (issues: Issues, code: string): string | undefined =>
 /**
  * The severity `TDDLIST_EVIDENCE_EMPTY` carries when nothing has demoted it.
  *
- * The rule runs a promotion window (`RULE_PROMOTIONS.tddListEvidenceEmpty`), so
- * that severity is `warning` until the tool reaches `promoteAt` and `error`
- * after it. These cases are about the lifecycle demotion, not about the window:
- * asserting a literal would make them fail on one side of the promotion or the
- * other while the behaviour they cover — active keeps the rule's own severity,
- * retired drops to `info` — never changed.
+ * Named rather than spelled at each assertion, because these cases are about
+ * the lifecycle demotion: active keeps the rule's own severity, retired drops
+ * to `info`.
  */
 const undemotedEvidenceEmpty: "warning" | "error" = "error";
 

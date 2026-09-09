@@ -1937,10 +1937,9 @@ describe("a TC row's Level stays within L1-L3", () => {
     );
   });
 
-  it("takes its severity from the promotion pin", async () => {
-    // Not a literal: re-filing takes the EX and the BR/AC with it, so the
-    // window is what keeps an upgrade from failing a gate over a change that
-    // has to be planned.
+  it("reports at error", async () => {
+    // Re-filing takes the EX and the BR/AC with it, so a project meeting this
+    // has a change to plan rather than a cell to correct.
     await withProject([{ id: "TC-0001", level: "L4" }], {}, async (root) => {
       const entry = found(await validateAtddCodeTraceability(root, defaultConfig));
 

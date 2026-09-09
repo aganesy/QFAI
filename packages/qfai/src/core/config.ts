@@ -13,16 +13,15 @@ export type TraceabilitySeverity = "warning" | "error";
 /**
  * 廃止された orphanContractsPolicy の値集合。互換フィールドの型注釈はこちらを
  * 参照する: 公開 alias を参照すると `@typescript-eslint/no-deprecated` が発火し、
- * 静的解析抑制コメントを足す羽目になるため。この内部型は互換期間の終了
- * (`RULE_PROMOTIONS.retiredTraceabilityKeys`) とともに削除する。
+ * 静的解析抑制コメントを足す羽目になるため。この内部型は互換受理をやめる
+ * ときに削除する。
  */
 type RetiredOrphanContractsPolicy = "error" | "warning" | "allow";
 
 /**
  * @deprecated validation.traceability.orphanContractsPolicy は廃止された。
  * どの検証も参照しないため設定しても挙動は変わらない。既存の TypeScript 利用者
- * が import している場合に型検査が壊れないよう、互換期間中のみ残す
- * (promotion: `RULE_PROMOTIONS.retiredTraceabilityKeys`)。
+ * が import している場合に型検査が壊れないよう、互換期間中のみ残す。
  */
 export type OrphanContractsPolicy = RetiredOrphanContractsPolicy;
 
@@ -87,21 +86,18 @@ export type QfaiValidationConfig = {
     unknownContractIdSeverity: TraceabilitySeverity;
     /**
      * @deprecated 廃止済み。どの検証も参照しないため設定しても挙動は変わらず、
-     * 読み込み時に QFAI-CFG-001 が出る (severity は
-     * `RULE_PROMOTIONS.retiredTraceabilityKeys` を境に warning → error)。既存の設定
+     * 読み込み時に QFAI-CFG-001 が error として出る。既存の設定
      * オブジェクトリテラルが型検査を通るよう、互換期間中のみ optional で残す。
      */
     brMustHaveSc?: boolean;
     /**
      * @deprecated 廃止済み。SC のテスト参照欠落の指摘は severity を固定して
-     * いるため、この値は読まれない。互換期間中 (promotion:
-     * `RULE_PROMOTIONS.retiredTraceabilityKeys`) のみ optional で残す。
+     * いるため、この値は読まれない。互換期間中のみ optional で残す。
      */
     scNoTestSeverity?: TraceabilitySeverity;
     /**
      * @deprecated 廃止済み。orphan contract の指摘自体が存在しないため、
-     * この値は読まれない。互換期間中 (promotion:
-     * `RULE_PROMOTIONS.retiredTraceabilityKeys`) のみ optional で残す。
+     * この値は読まれない。互換期間中のみ optional で残す。
      */
     orphanContractsPolicy?: RetiredOrphanContractsPolicy;
   };
@@ -140,14 +136,9 @@ export type QfaiPrototypingExecutionConfig = {
   /**
    * Browser tool handed to the AI evaluator sub-agent.
    *
-   * Accepted values during the deprecation window:
-   *   - `"playwright"` (primary, post-1.9.x default).
-   *   - `"playwright-cli"` (deprecated; sunset `SUNSETS.playwrightCli`).
-   *     Inside the window the doctor probe emits `D-DEPRECATED-PROBE` at
-   *     `warning`; from the sunset onwards `normalizePrototypingExecution`
-   *     rejects the value and the probe reports `error`.
-   *
-   * At sunset only `"playwright"` is accepted.
+   * Only `"playwright"` is accepted. `"playwright-cli"` is retired:
+   * `normalizePrototypingExecution` rejects the value, and the doctor probe
+   * reports `D-DEPRECATED-PROBE` at `error`.
    */
   browserTool: "playwright" | "playwright-cli";
 };
@@ -1112,15 +1103,9 @@ function readTraceabilitySeverity(
  * knob shaped like a gate control that changes nothing is worse than no knob,
  * because it also misreports the gate the code actually runs.
  *
- * The acceptance is bounded like every other new code in the tool — the
- * severity comes from {@link RULE_PROMOTIONS.retiredTraceabilityKeys} through
- * {@link newRuleSeverity}, not from a literal here, so the window ends by
- * itself instead of warning forever.
- *
- * A promotion rather than a sunset, even though the *shape* is what is being
- * retired: `QFAI-CFG-001` is a finding code that did not exist
- * before, and P7 measures the window from the code, because the code is what
- * an upgrading repository meets.
+ * The key is accepted rather than rejected, so an existing config still loads
+ * and the one key that is wired keeps its effect. `QFAI-CFG-001` reports each
+ * retired key that is still there, and deleting the key clears it.
  */
 const RETIRED_TRACEABILITY_KEYS = [
   "brMustHaveSc",
@@ -1146,7 +1131,6 @@ function reportRetiredTraceabilityKeys(
         `validation.traceability.${key} は廃止されました。` +
           `どの検証も参照しないため、設定しても挙動は変わりません。` +
           `qfai.config.yaml から削除してください。`,
-        "error",
       ),
     );
   }
@@ -1418,23 +1402,10 @@ function configIssue(file: string, message: string): Issue {
   };
 }
 
-/**
- * The severity argument is named for where it comes from, and the property is
- * written out rather than shorthanded, because both are what make the pin
- * followable. `tests/core/sunsetLedger.test.ts` reads the `severity:` sibling
- * of `code: "…"` and asks whether that expression is one the file bound to
- * `"error"`. A shorthand
- * `severity` yields no expression at all, so a correctly wired promotion read
- * to that assertion exactly like an unwired one.
- */
-function configDeprecatedIssue(
-  file: string,
-  message: string,
-  promotedSeverity: "warning" | "error",
-): Issue {
+function configDeprecatedIssue(file: string, message: string): Issue {
   return {
     code: "QFAI-CFG-001",
-    severity: promotedSeverity,
+    severity: "error",
     category: "canonical",
     message,
     file,

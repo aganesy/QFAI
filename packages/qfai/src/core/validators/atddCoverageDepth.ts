@@ -420,11 +420,6 @@ export async function validateAtddCoverageDepth(
   root: string,
   result: AtddCodeTraceabilityResult,
 ): Promise<Issue[]> {
-  // All three codes are new, so none of them may carry a severity literal:
-  // each takes it from its own `RULE_PROMOTIONS` pin, read once per run.
-  // `resolveToolVersion` resolves rather than rejects — an unreadable version
-  // reads as inside the window, so it can never escalate one of these into a
-  // build failure.
   const matrixMissingSeverity = "error";
   const matrixIgnoredSeverity = "error";
   const inlineMatrixSeverity = "error";

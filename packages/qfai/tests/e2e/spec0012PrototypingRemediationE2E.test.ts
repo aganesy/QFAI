@@ -241,8 +241,8 @@ describe("US-0012-0123: countWords CJK 800-1500 + EN 200-500 (Intl.Segmenter + O
 });
 
 describe("US-0012-0124: browserTool playwright primary + playwright-cli past its sunset", () => {
-  // The deprecation window closed at `SUNSETS.playwrightCli`. `playwright`
-  // still loads; `playwright-cli` is now refused and falls back to the default.
+  // `playwright` still loads; `playwright-cli` is refused and falls back to
+  // the default.
   it("loadConfig keeps `playwright` and refuses `playwright-cli`", async () => {
     const rootA = await p2TempDir();
     await seedPhase2Project(rootA, "playwright");

@@ -51,7 +51,6 @@ import {
 // progress figure cannot disagree about which TCs a spec declares.
 import { collectTestCaseIds, TEST_CASES_FILE_NAME } from "../testCaseCoverageTargets.js";
 import type { Issue } from "../types.js";
-import { resolveToolVersion } from "../version.js";
 // The same `AC` / `BR` / `EX` / `TC` walk `layerCoverage.ts` scores coverage
 // with. The review-group key is derived from those very edges, so re-parsing
 // the layer files here is how the derived key and the coverage graph would come
@@ -735,11 +734,9 @@ const EVIDENCE_CELL_MAX_CHARS = 240;
  * A project that has audited its legacy rows waives them per path instead of
  * rewriting evidence it can no longer reproduce.
  *
- * Both also carry a promotion window and become errors at the release each one
- * names, and a waiver reaches a `warning` or an `info` and never an `error`.
- * So the waiver is the migration's instrument, not a permanent settlement: a
- * path waived here owes a conforming cell before that release, or the gate
- * fails on it with the waiver still in place.
+ * Both are errors, and a waiver reaches a `warning` or an `info` and never an
+ * `error`, so no waiver settles either. A path carrying legacy evidence owes a
+ * conforming cell.
  */
 export const EVIDENCE_CELL_MALFORMED_RULE_ID = "QFAI-TDDLIST-011";
 export const EVIDENCE_CELL_OVERSIZE_RULE_ID = "QFAI-TDDLIST-012";
@@ -878,14 +875,6 @@ type EvidenceMalformedContext = {
   evidence: string;
   grammar: EvidenceRowGrammar;
   relPath: string;
-  /**
-   * The resolved tool version, so each emission below reads its severity from
-   * its own promotion pin rather than from a literal. Both codes are new, so
-   * both ship inside a window: the grammar lands on every cell written while
-   * the column was documented as holding the commands, and the provenance token
-   * lands on ATDD-owned rows seeded before it existed.
-   */
-  toolVersion: string;
 };
 
 function evidenceMalformedMessage(ctx: EvidenceMalformedContext): string {
@@ -943,13 +932,11 @@ function evidenceBindingCause(
 
 /**
  * The `provenance` cause is its own code; every other cause reports under the
- * grammar's. Each takes its severity from its own promotion pin.
- * See {@link EVIDENCE_RED_PROVENANCE_RULE_ID}.
+ * grammar's. See {@link EVIDENCE_RED_PROVENANCE_RULE_ID}.
  */
 function evidenceMalformedIssue(ctx: EvidenceMalformedContext): Issue {
-  // Two constructions rather than one with three ternaries: each code carries
-  // its own promotion pin, and a severity chosen by a conditional is a severity
-  // no static reader can trace back to a pin.
+  // Two constructions rather than one with three ternaries, so a static reader
+  // can tell which code each message belongs to.
   if (ctx.cause === "provenance") {
     return issue(
       "QFAI-TDDLIST-013",
@@ -3639,10 +3626,9 @@ type StoppedSpecIndex = ReadonlySet<string> | null;
 /**
  * Everything the stop check needs, read once for the whole run.
  *
- * The index and the severity travel together because they are established at
- * the same moment and for the same reason: the steering surface is walked once
- * for the whole validation, and the promotion window is a property of the tool
- * version rather than of any one spec.
+ * The index and the severity travel together: the steering surface is walked
+ * once for the whole validation, and the severity is the rule's rather than any
+ * one spec's.
  */
 type BlockedWorklogGate = {
   /** `null` when the surface could not be walked: no answer, so no finding. */
@@ -3655,8 +3641,8 @@ type BlockedWorklogGate = {
    * `QFAI-TDDLIST-016` says the check for a work-log entry accounting for a stop
    * had no answer to give. A run whose ledgers hold no `blocked` row never
    * asked the question, so an unreadable `.qfai/steering/` withheld nothing —
-   * and raising it anyway failed `validate --profile tdd --fail-on error` once
-   * the promotion window closes, on a project with no stop to account for.
+   * and raising it anyway failed `validate --profile tdd --fail-on error` on a
+   * project with no stop to account for.
    * Once, not per spec, because the surface is read once for the whole run.
    */
   drainUnreadable: () => Issue[];
@@ -3727,12 +3713,10 @@ function blockedWithoutWorklog(
  *   spec it accounted for would be reported as an omission on the strength of a
  *   file nobody managed to open.
  *
- * Both codes it decides are new, and both run a promotion window
- * (`RULE_PROMOTIONS`, design principle P7): the obligation lands on stops
- * recorded before anyone was asked to account for them, on rows that are
- * terminal. `resolveToolVersion` resolves rather than rejects — its read
- * failures return `"unknown"`, which the comparator reads as inside the window
- * — so an unreadable version can never be what escalates either into a build
+ * Both codes it decides land on stops recorded before anyone was asked to
+ * account for them, on rows that are terminal, so a project meeting them for
+ * the first time has a backlog to work rather than one edit to make. The
+ * remedy each names is the work-log entry the stop always owed. What follows
  * failure.
  */
 async function readSteeringIndex(
@@ -3834,8 +3818,8 @@ export async function validateTddList(
   // Its findings are NOT pushed here. `QFAI-TDDLIST-016` reports that the stop
   // check had no answer, so it belongs to the first spec that has a stop to
   // account for — pushed unconditionally it fired on a project whose ledgers
-  // hold no `blocked` row at all, which after the promotion window fails
-  // `--fail-on error` with nothing to check.
+  // hold no `blocked` row at all, failing `--fail-on error` with nothing to
+  // check.
   const { issues: steeringIssues, ...gateFields } = await readSteeringIndex(root);
   let steeringIssuesDrained = false;
   const gate: BlockedWorklogGate = {
@@ -3937,9 +3921,7 @@ const REVISION_AT_REST_STATUSES = new Set(["refactor", "done", "review-fix"]);
  * Files the observation covered that have changed since the revision it names,
  * or `null` when there is nothing to report.
  *
- * A pure decision, with the finding built at the call site where the pin's
- * severity is in scope — `sunsetLedger`'s ratchet is right that a severity
- * decided beside the call is a window that never opens.
+ * A pure decision, with the finding built at the call site.
  *
  * Exported for its own rows: the four `null` states below are what a suite has
  * to separate, and reaching them through a whole ledger fixture would test the
@@ -4341,14 +4323,6 @@ async function validateSpecTddList(
     // even when the table has no rows, to detect missing test entries.
   }
 
-  // The version every promotion window below is measured against, read once.
-  //
-  // `resolveToolVersion` resolves rather than rejects — its own read failures
-  // return `"unknown"`, which the comparator reads as inside the window, so an
-  // unreadable version can never be what escalates a windowed rule into a build
-  // failure.
-  const resolvedToolVersion = await resolveToolVersion();
-
   // Check 3c: a row may not carry cells the header does not declare.
   //
   // GFM renders the surplus nowhere and every rule here reads cells by header
@@ -4358,9 +4332,9 @@ async function validateSpecTddList(
   // unreported. Reported per row rather than per surplus cell: one row, one
   // repair.
   //
-  // Behind a promotion window, for the reason `RULE_PROMOTIONS` gives: nothing
-  // read past the last declared column before this rule, so every surplus cell
-  // a ledger accumulated arrives at once, including on rows already at `done`.
+  // Nothing read past the last declared column before this rule, so every
+  // surplus cell a ledger accumulated arrives at once, including on rows
+  // already at `done`.
   const rowExtraCellsSeverity = "error";
   for (const ref of ledgerRows()) {
     const declared = ref.scan.headers.length;
@@ -4493,13 +4467,9 @@ async function validateSpecTddList(
   // Check 5a's. A blank `Layer` is reported: it is the shape the old seeding
   // produced and the one that names no owner at all.
   //
-  // `warning`, like every other rule that lands on ledgers written before it
-  // existed: the fix is a `/qfai-sdd` rerun or a `Level` declaration, and an
-  // `error` on upgrade would block a branch on a row the project did not write
-  // by hand. It takes that severity from `RULE_PROMOTIONS` rather than a
-  // literal, so the window is declared where every other new rule declares one
-  // (`docs/design-principles.md` P7) instead of being a warning with no route
-  // to `error` — `warning` until the pinned release, `error` from it onwards.
+  // Lands on ledgers written before it existed, so a project meeting it for
+  // the first time has a backlog. The fix is a `/qfai-sdd` rerun or a `Level`
+  // declaration.
   const tcLevelUndeclaredSeverity = "error";
   if (undeclaredLevelTcIds.size > 0) {
     for (const entry of ledgerRows()) {
@@ -4888,15 +4858,11 @@ async function validateSpecTddList(
   // is that account, and this pairs the two observable artifacts rather than
   // asking the agent to self-report.
   //
-  // Severity is NOT a literal here: `readSteeringIndex` derives it from
-  // `"error"`, so this is a `warning` until that release and an `error`
-  // after it, and the message carries the window note while it is the former.
-  // Reading this comment as "it is an error" understates when the gate starts
-  // biting — P7 gives a new code its window, and this one needs it: the rule
-  // lands on rows that were parked before anybody was asked to account for
-  // them, and those rows are terminal.
+  // The rule lands on rows that were parked before anybody was asked to
+  // account for them, and those rows are terminal, so a project meeting it for
+  // the first time has a backlog rather than one edit.
   //
-  // Where it lands is `error`, matching `TDDLIST_BLOCKED_MISSING_REF` on the
+  // The severity is `error`, matching `TDDLIST_BLOCKED_MISSING_REF` on the
   // same row. The command this stage completes on is `validate --profile tdd
   // --fail-on error`, so a permanent `warning` would state the obligation and
   // enforce nothing — the exact shape of the gap this check exists to close. An
@@ -4994,12 +4960,9 @@ async function validateSpecTddList(
   // retired `BR-*` therefore does not fail loudly — it regroups rows into a
   // review unit nobody chose.
   //
-  // The three checks run one promotion window (`RULE_PROMOTIONS`), for the same
-  // reason the DR-ID referent checks are soft: a ledger written against an
-  // older `04_Business-Rules.md`, or keyed under the superseded AC-first
-  // derivation, must not start failing CI on upgrade. So the severity comes
-  // from the pin rather than a literal, and the message names the release that
-  // ends the window. One entry covers the three because they are one claim
+  // The three checks are one claim: a ledger written against an older
+  // `04_Business-Rules.md`, or keyed under the superseded AC-first derivation,
+  // meets all three at once. They are described together because they are one claim
   // read three ways — an operator repairing a `BR-Ref` cell answers all of
   // them in the same edit.
   if (anyTableHasColumn(coverageTables, BR_REF_COLUMN)) {
@@ -5187,12 +5150,9 @@ async function validateSpecTddList(
   // `T@`, `Tier 2` or `t2 (authz)` match no tier, and reading them as blank
   // would hand a row its author escalated the batched ceremony instead.
   //
-  // Behind a promotion window (`RULE_PROMOTIONS`, design principle P7), for the
-  // reason the registry entry states: the column is new, so the ledgers that
-  // have one filled it against prose rather than against this value set, and
-  // every row whose spelling misses lands on the same upgrade. `warning` until
-  // the pinned release, `error` from it. `resolveToolVersion` resolves rather
-  // than rejects — a read failure returns `"unknown"`, which the comparator
+  // The column is new, so the ledgers that have one filled it against prose
+  // rather than against this value set, and every row whose spelling misses
+  // lands at once. What follows
   // reads as inside the window, so an unreadable version cannot be what turns
   // this into a build failure.
   const unknownTierSeverity = "error";
@@ -5397,7 +5357,6 @@ async function validateSpecTddList(
           evidence,
           grammar,
           relPath,
-          toolVersion: resolvedToolVersion,
         }),
       );
     }
@@ -5425,7 +5384,6 @@ async function validateSpecTddList(
           evidence,
           grammar,
           relPath,
-          toolVersion: resolvedToolVersion,
         }),
       );
     }

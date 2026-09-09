@@ -29,11 +29,8 @@ import type * as VersionModule from "../../src/core/version.js";
 /**
  * The version the cross-check reads, overridable per test.
  *
- * The five findings ship behind one promotion window
- * (`RULE_PROMOTIONS.skillRolesRoutingCrossCheck`), so at the shipped version
- * they are warnings. An empty override means "defer to the real resolver", so
- * every case below keeps running against the version this package actually
- * ships.
+ * An empty override means "defer to the real resolver", so every case below
+ * keeps running against the version this package actually ships.
  */
 const toolVersion = vi.hoisted(() => ({ override: "" }));
 

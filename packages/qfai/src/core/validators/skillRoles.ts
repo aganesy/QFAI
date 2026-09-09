@@ -139,11 +139,9 @@ export async function validateSkillRoles(
   issues: Issue[],
 ): Promise<void> {
   const skillsDir = resolvePath(root, config, "skillsDir");
-  // Resolved once for the whole run: `resolveToolVersion` reads a file, and
-  // every finding below shares one promotion window (`RULE_PROMOTIONS`). The
-  // cross-check is a new rule landing on manifests and `roles:` blocks that
-  // drifted apart before anything compared them, so it reports as a warning
-  // until the pinned release rather than latching an upgrade.
+  // The cross-check lands on manifests and `roles:` blocks that drifted apart
+  // before anything compared them, so a project meeting it for the first time
+  // has a backlog rather than one edit.
   const crossCheckSeverity = "error";
   for (const [skill, entry] of routing) {
     const skillPath = path.join(skillsDir, skill, "SKILL.md");

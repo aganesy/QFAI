@@ -851,9 +851,6 @@ const DELTA_SCAN_ISSUE_CODE = "QFAI-CTYPE-004";
  * `scope.paths` waiver reach exactly those.
  */
 function buildDeltaScanIssues(gaps: readonly ReportDeltaScanGap[]): Issue[] {
-  // Decided here rather than passed in: the ratchet in `sunsetLedger.test.ts`
-  // reads the emission site, and a severity chosen anywhere else is a window
-  // that never opens.
   const deltaScanSeverity = "error";
   const issues: Issue[] = [];
   for (const gap of gaps) {

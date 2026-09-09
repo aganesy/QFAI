@@ -6,7 +6,6 @@ import { parse as parseYaml } from "yaml";
 import { parseAgentFrontmatter } from "../agentFrontmatter.js";
 import type { QfaiConfig } from "../config.js";
 import type { Issue } from "../types.js";
-import { resolveToolVersion } from "../version.js";
 import {
   emptySkillRouting,
   recordRoutedAgents,
@@ -140,18 +139,15 @@ function normalizeBody(body: string): string {
  * block does not make the tree unusable — it makes it ambiguous, which is
  * exactly what a warning is for.
  *
- * The severity comes from the promotion window rather than a literal, because
- * the rule necessarily lands on catalogs written before the comparison existed:
- * every repository that customised an agent already carries the divergence.
- * `toolVersion` is resolved once per validator run and passed in, so the
- * comparison costs nothing per finding.
+ * The rule necessarily lands on catalogs written before the comparison
+ * existed: every repository that customised an agent already carries the
+ * divergence.
  */
 function checkDeveloperInstructions(
   agent: CatalogAgent,
   markdown: string,
   agentRel: string,
   catalogRel: string,
-  toolVersion: string,
   issues: Issue[],
 ): void {
   const developerInstructionsSeverity = "error";
@@ -208,10 +204,6 @@ export async function validateAgentDefinition(root: string, config: QfaiConfig):
   if (!(await exists(agentsDir)) && !(await exists(catalogPath))) {
     return [];
   }
-
-  // Resolved once for the whole run: `resolveToolVersion` reads a file, and the
-  // promotion window it feeds is the same for every agent in the catalog.
-  const toolVersion = await resolveToolVersion();
 
   for (const [fileName, code, resolved] of [
     ["agent-catalog.yml", "QFAI-AGENT-001", catalogPath],
@@ -288,7 +280,7 @@ export async function validateAgentDefinition(root: string, config: QfaiConfig):
         ),
       );
     }
-    checkDeveloperInstructions(agent, content, rel, catalogRel, toolVersion, issues);
+    checkDeveloperInstructions(agent, content, rel, catalogRel, issues);
     for (const heading of REQUIRED_AGENT_SECTIONS) {
       if (!content.includes(heading)) {
         issues.push(

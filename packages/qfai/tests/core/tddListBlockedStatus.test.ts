@@ -518,8 +518,7 @@ describe("QFAI-TDDLIST-015 — a stop must leave a steering record", () => {
     // `QFAI-TDDLIST-016` says the stop check had no answer to give. A project with
     // no `blocked` row never asked, so an unreadable surface withheld nothing —
     // and reporting it anyway fails `validate --profile tdd --fail-on error`
-    // once the promotion window closes, on a project with no stop to account
-    // for.
+    // on a project with no stop to account for.
     const todoRow = `| TDD-0001 | TC-0001 | Unit | tests/a.test.ts | a | todo | - | - | - |`;
     const issues = await run(`${NINE_COL}\n${todoRow}\n`, {}, { steeringIsRegularFile: true });
     const codes = issues.map((i) => i.code);

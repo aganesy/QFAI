@@ -17,11 +17,8 @@ import type { Issue } from "../types.js";
 import { exists, issue } from "./utils.js";
 
 /**
- * The validator compares the running tool version's major.minor against
- * SUNSETS.legacyAssistantSteering (core/sunset.ts):
- *   - if current < sunset: emit warning (compatibility window)
- *   - if current >= sunset: emit error (post-sunset, cutoff enforced)
- * so legacy paths cannot survive past the announced cutoff release.
+ * The pre-recut `.qfai/assistant/{steering,instructions}/` layout was retired
+ * at the release the message names, so a tree still holding it is an error.
  */
 
 export async function validateAssistantTreeMigration(

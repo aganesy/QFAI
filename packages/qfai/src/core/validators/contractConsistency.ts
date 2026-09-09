@@ -32,13 +32,6 @@ export async function validateContractConsistency(
   const collected = await collectDbStateDomains(dbFiles);
   const issues: Issue[] = [];
 
-  // `QFAI-CONTRACT-041` ships behind a promotion window (P7). The declaration
-  // FORMAT is new, so the first authors to use it are answering another finding
-  // voluntarily and will get the grammar wrong in the ways the message exists
-  // to teach; failing their run on a line they added to engage with the tool is
-  // the worst first experience of it. Resolved once here rather than per
-  // finding: it is one fact about the running version, and reading it inside a
-  // loop would say otherwise.
   const declarationSeverity = "error";
 
   // Reported before anything else, and whether or not a domain was collected: a
@@ -284,18 +277,13 @@ function mixedRemedy(enumOnly: boolean, dbFiles: string[], fromEnum: string[]): 
 /**
  * A line carrying the key that does not parse as a declaration.
  *
- * The severity comes from the promotion window, not from a literal: what this
- * adds today is the one thing the author cannot see otherwise — that the marker
+ * What this adds is the one thing the author cannot see otherwise: the marker
  * they wrote was not read, so the finding they were answering is still standing
- * for the reason it always was — and the run still reports whatever
- * `QFAI-CONTRACT-040` was going to report either way.
+ * for the reason it always was.
  */
 function unreadableDerivedDeclaration(
   file: string,
   line: string,
-  // Named as the binding is, because the ledger guard follows the NAME: an
-  // emission whose severity expression is not the one bound to this entry's pin
-  // reads as a hard-coded severity, which is a window that never opens.
   declarationSeverity: "warning" | "error",
 ): Issue {
   return issue(

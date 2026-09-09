@@ -592,6 +592,7 @@ export const ERROR_ONLY_RULE_CODES: readonly string[] = [
   "QFAI-BRREF-001",
   "QFAI-BRREF-002",
   "QFAI-BRREF-003",
+  "QFAI-CFG-001",
   "QFAI-CFG-LINK-001",
   "QFAI-CFG-LINK-003",
   "QFAI-CONTRACT-010",

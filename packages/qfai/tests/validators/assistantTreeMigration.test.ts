@@ -101,14 +101,7 @@ describe("assistantTreeMigration validator", () => {
   });
 
   // TC-0004-0022 (severity escalation): legacy steering/ still present at or past sunset minor escalates to error
-  it("TC-0004-0022 (severity): D-DEPRECATED-PATH severity is computed from the running tool version vs pinned sunset", async () => {
-    // This used to assert `["warning","error"]).toContain(severity)` and then
-    // branch on whichever came back — it passed under every possible answer,
-    // including a hard-coded one, so it could not catch a severity regression.
-    // Comparing against `deprecationSeverity` makes it falsifiable while
-    // staying version-agnostic: it breaks the moment the validator stops
-    // computing the severity. The boundary itself is covered by
-    // `tests/core/sunsetEnforcement.test.ts`.
+  it("TC-0004-0022 (severity): D-DEPRECATED-PATH reports at error", async () => {
     const mod = await import("../../src/core/validators/assistantTreeMigration.js");
     const root = await newRoot("treemig-severity");
     try {
@@ -120,13 +113,8 @@ describe("assistantTreeMigration validator", () => {
       const issues = await mod.validateAssistantTreeMigration(root, await getConfig(root));
       const sunsetIssues = issues.filter((i) => i.code === "D-DEPRECATED-PATH");
       expect(sunsetIssues.length).toBe(1);
-      const expected = "error";
-      expect(sunsetIssues[0]?.severity).toBe(expected);
-      // The headline shape MUST change with severity so reviewers know which
-      // mode fired.
-      expect(sunsetIssues[0]?.message).toMatch(
-        expected === "error" ? /past the announced sunset/ : /read-compatible only/,
-      );
+      expect(sunsetIssues[0]?.severity).toBe("error");
+      expect(sunsetIssues[0]?.message).toMatch(/past the announced sunset/);
     } finally {
       await rm(root, { recursive: true, force: true });
     }

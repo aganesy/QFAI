@@ -70,9 +70,6 @@ describe("validateAssistantAssets — Stage 0 steering placeholders", () => {
 
     expect(findings).toHaveLength(1);
     const [finding] = findings;
-    // Not a literal: the severity is decided by the promotion pin, so spelling
-    // `"warning"` here would go red the release the window closes and would
-    // say nothing about whether the pin is what decides it.
     expect(finding?.severity).toBe("error");
     expect(finding?.rule).toBe("assistantAssets.steeringPlaceholder");
     expect(finding?.file).toContain(path.join("catalog", "tech.md"));
@@ -786,7 +783,7 @@ describe("validateAssistantAssets — regenerated assistant layers", () => {
     expect(await staleFindings(root)).toHaveLength(0);
   });
 
-  it("takes its severity from the promotion pin", async () => {
+  it("reports at error", async () => {
     const root = await newRoot();
     await seedLayer(root, "skills");
     await seedLayer(root, "agents");
@@ -795,8 +792,6 @@ describe("validateAssistantAssets — regenerated assistant layers", () => {
 
     const [finding] = await staleFindings(root);
 
-    // Not a literal: spelling `"warning"` here would go red the release the
-    // window closes, and would say nothing about whether the pin decides it.
     expect(finding?.severity).toBe("error");
   });
 });

@@ -271,11 +271,9 @@ export async function runPrototypingCertify(
   // The fallback used to be silent. A hybrid record — modern `iterations[]`,
   // legacy `fullHarness.runId` — sealed a completion certificate with
   // `counts.error === 0` and no operator signal at all, while the migration
-  // memo told the same operator the shape was rejected from 1.10.0. Reporting
-  // it follows the legacy `verify.json` branch below: say so at the severity
-  // the version implies, and still seal. Refusing outright would delete the
-  // acceptance path, which OC-60 forbids inside the window and which the
-  // sunset does not ask for either — the constraint escalates the finding.
+  // memo told the same operator the shape was retired. Reporting it follows
+  // the legacy `verify.json` branch below: say so, and still seal. Refusing
+  // outright would delete the acceptance path, which OC-60 forbids.
   const canonicalRunId = extractString(protoJson, "runId");
   const legacyRunId = extractString(extractRecord(protoJson, "fullHarness"), "runId");
   const runId = canonicalRunId ?? legacyRunId;

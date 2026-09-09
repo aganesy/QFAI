@@ -1,18 +1,8 @@
 /**
- * D-SURFACE-TYPE-MISSING — warns when a spec has a matching UI
- * companion under `<contractsDir>/ui/` but its `01_Spec.md`
- * frontmatter does not declare `surface_type: ui-bearing`.
+ * D-SURFACE-TYPE-MISSING — reports a spec that has a matching UI companion
+ * under `<contractsDir>/ui/` but whose `01_Spec.md` frontmatter does not
+ * declare `surface_type: ui-bearing`.
  *
- * Severity is computed from the running version against
- * `SUNSETS.surfaceTypeMissing`: `warning` inside the window, `error` from the
- * sunset onwards.
- *
- * A hard-coded `warning` avoids pinning the sunset here on the reasoning that
- * doing so would create "a second internal version source that could drift" —
- * but leaving the version out does not avoid drift, it guarantees it: the
- * finding would keep saying "scheduled to escalate in a future minor release"
- * at the version where the escalation is already due. `core/sunset.ts` is the
- * single source both this severity and that sentence read.
  * Specs without a UI companion emit no finding.
  */
 import path from "node:path";

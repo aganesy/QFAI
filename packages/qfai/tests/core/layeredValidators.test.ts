@@ -426,14 +426,12 @@ describe("v1.4.36 layered validators", () => {
     }
   });
 
-  it("takes the QFAI-SPLIT-106 severity from its promotion pin, not from a literal", async () => {
+  it("reports QFAI-SPLIT-106 at error", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-layered-"));
     try {
-      // The `Spec` column is new, so every catalog written before it exists
-      // declares nothing and draws this finding on all of its rows in one
-      // upgrade. P7 gives such a rule a window: `warning` until the pinned
-      // release, `error` from it onwards. Shipping it at a literal `"error"`
-      // latched the final gate for those repositories on the day they upgraded.
+      // The `Spec` column is newer than the catalogs it reads, so one written
+      // before the column existed declares nothing and draws this finding on
+      // every one of its rows.
       await seedPolicies(root, ["CAP-0001", "CAP-0002"], [null, null]);
       await seedSpec(root, "0001", "CAP-0001");
       await seedSpec(root, "0002", "CAP-0002");
@@ -444,9 +442,6 @@ describe("v1.4.36 layered validators", () => {
       const mapping = issues.filter((issue) => issue.code === "QFAI-SPLIT-106");
       expect(mapping).toHaveLength(1);
       expect(mapping[0]?.severity).toBe(expected);
-      // Inside the window the operator has to be able to see the debt they are
-      // about to owe, so the release that ends it is named in the finding.
-      if (expected === "warning") expect(mapping[0]?.message).toContain(promoteAt);
     } finally {
       await rm(root, { recursive: true, force: true });
     }

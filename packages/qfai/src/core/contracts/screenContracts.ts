@@ -18,8 +18,8 @@ export type CanonicalScreenContract = {
    * screen entry (regardless of whether the resulting list is empty).
    * False when the slot is entirely absent (legacy contracts predating the
    * primary_tasks lane). Consumers use this flag to distinguish a
-   * deliberate empty-slot violation (severity=error) from a legacy
-   * slot-less contract (severity=info under deprecation window).
+   * deliberate empty-slot violation from a legacy slot-less contract; both
+   * report at `error`, under different rules.
    */
   primaryTasksKeyPresent: boolean;
   sourceRef: string;

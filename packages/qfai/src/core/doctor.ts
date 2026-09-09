@@ -2020,9 +2020,8 @@ function buildResolvedChecks(
     },
   ];
   if (resolved.stage === "deprecated-cli") {
-    // Deprecation surface: still accepted during the deprecation window but
-    // flagged as warning. The literal `sunset: 1.10.0` substring is part of
-    // the public wire contract.
+    // The literal `sunset: 1.10.0` substring is part of the public wire
+    // contract, so it is written as a constant rather than folded into prose.
     checks.push({
       // The config layer rejects this launcher, so anything softer than an
       // error would have doctor call "fine" what `loadConfig` calls broken.

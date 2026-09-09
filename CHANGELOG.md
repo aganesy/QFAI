@@ -10,24 +10,24 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   `core/sunset.ts` held two registries — `RULE_PROMOTIONS` and `SUNSETS` — and
   `newRuleSeverity` / `deprecationSeverity` turned a version pin in them into
   `warning` or `error` according to the version of the tool executing the run.
-  The whole mechanism is gone, along with `scripts/promotion-preflight.mjs` and
-  the four test files that held it.
+  The whole mechanism is gone, along with `scripts/promotion-preflight.mjs`, the
+  five test files that held it, and the frozen code baseline one of them read.
 
-  **51 findings that reported `warning` now report `error`.** Each was inside an
+  **77 findings that reported `warning` now report `error`.** Each was inside an
   open window, and `error` is the severity its pin was heading to:
 
-  `QFAI-AGENT-014`, `QFAI-AGENT-015`, `QFAI-AGENT-019`, `QFAI-ASSETS-003`,
-  `QFAI-ASSETS-004`, `QFAI-ATDD-131`, `QFAI-ATDD-132`, `QFAI-ATDD-133`,
-  `QFAI-AUTOPILOT-001`, `QFAI-BRREF-001`, `QFAI-CONTRACT-015`,
-  `QFAI-CONTRACT-032`, `QFAI-CONTRACT-033`, `QFAI-CONTRACT-034`,
-  `QFAI-CONTRACT-035`, `QFAI-CONTRACT-041`, `QFAI-CONTRACT-050`,
-  `QFAI-CTYPE-004`, `QFAI-DECISION-001`, `QFAI-LINK-002`, `QFAI-PLATFORM-003`,
-  `QFAI-PROT-011`, `QFAI-RESEARCH-012`, `QFAI-RESEARCH-015`,
-  `QFAI-RESEARCH-016`, `QFAI-SKILLS-013`, `QFAI-SKILLS-014`,
-  `QFAI-SPECSECTION-001`, `QFAI-SPLIT-106`, `QFAI-TCLEVEL-001`,
-  `QFAI-TDDLIST-007` … `QFAI-TDDLIST-016`, `QFAI-TEST-003`, `QFAI-TOOL-002`,
-  `QFAI-TRIAGE-008`, `QFAI-TRIAGE-009`, `TDDLIST_EVIDENCE_EMPTY`, and the
-  `db/` apply-order and UI-marker rules.
+  `QFAI-AGENT-014` … `QFAI-AGENT-019`, `QFAI-ASSETS-003` … `QFAI-ASSETS-009`,
+  `QFAI-ATDD-127`, `QFAI-ATDD-128`, `QFAI-ATDD-131` … `QFAI-ATDD-133`,
+  `QFAI-AUTOPILOT-001`, `QFAI-BFLOW-005`, `QFAI-BFLOW-006`, `QFAI-BRREF-001` …
+  `QFAI-BRREF-003`, `QFAI-CONTRACT-015`, `QFAI-CONTRACT-032` …
+  `QFAI-CONTRACT-038`, `QFAI-CONTRACT-041`, `QFAI-CONTRACT-050`,
+  `QFAI-CTYPE-004`, `QFAI-DECISION-001` … `QFAI-DECISION-007`, `QFAI-LINK-002`,
+  `QFAI-PLATFORM-003`, `QFAI-PROT-011`, `QFAI-RESEARCH-012`,
+  `QFAI-RESEARCH-015` … `QFAI-RESEARCH-021`, `QFAI-SKILLS-013`,
+  `QFAI-SKILLS-014`, `QFAI-SPECSECTION-001`, `QFAI-SPECSECTION-002`,
+  `QFAI-SPLIT-106`, `QFAI-TCLEVEL-001`, `QFAI-TCLEVEL-002`, `QFAI-TDDLIST-007`
+  … `QFAI-TDDLIST-018`, `QFAI-TEST-003`, `QFAI-TOOL-002`, `QFAI-TRIAGE-008`,
+  `QFAI-TRIAGE-009` and `TDDLIST_EVIDENCE_EMPTY`.
 
   A project passing `validate --fail-on error` today may fail after upgrading,
   in proportion to what it has accumulated. Measured on this repository: 0
@@ -41,7 +41,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   discussion pack already had. So a bare tree did not pass the full gate before
   this change either — it now says four more things are outstanding, and all
   five clear the same way, by doing the step they name. A tree that has done
-  Stage 0 and holds a pack is clean: `verify:pack` reports `error=0 warning=0`.
+  Stage 0 and holds a pack is clean: `verify:pack` reports no errors.
+
+  `QFAI-AGENT-019` moves in one half only. It reports a routed agent a skill's
+  `roles:` omits, and only a `required` binding was ever on the ladder — a
+  `conditional` omission was and stays a `warning`, because it is a
+  documentation gap rather than an unreachable gate.
 
   The findings no longer carry the sentence naming a release, because there is
   no release to name.
@@ -51,7 +56,7 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   had three effects, all unwanted. Publishing `main` as one number escalated 43
   rules while the same tree published as another escalated none, so the number
   could not be chosen freely. A window hid the finding it deferred behind a
-  passing gate, and handed the operator the whole backlog on one upgrade. And 33
+  passing gate, and handed the operator the whole backlog on one upgrade. And 34
   source files imported the registry to ask what severity to use, each rendering
   its own sentence about the window into its own message.
 
@@ -79,6 +84,17 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   finding the report appends after validation is neither applied nor refused out
   loud — the operator sees a waiver that does nothing. That gap predates this
   change and is tracked separately.
+
+  `QFAI-CFG-001` joins the refusal without changing severity. Its only emitter
+  always raised it at `error`, but through a variable the code generator could
+  not read, so a waiver against it was accepted on a clean run and refused on
+  the run that produced the finding. The severity is now a literal, and the
+  waiver is refused either way.
+
+  Twenty-seven source files no longer resolve the running version at all, and
+  the parameter that carried it down is gone from the functions that threaded
+  it. What still reads the version reports it: `qfai --version`, the doctor, the
+  run stamp on a result.
 
 ### Changed
 

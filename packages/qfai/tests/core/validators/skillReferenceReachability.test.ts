@@ -364,10 +364,6 @@ describe("skill reference reachability", () => {
 
       expect(issues).toHaveLength(1);
       expect(issues[0]?.file).toBe(path.join(referencesDir, "orphan.md"));
-      // Soft rule text, so the finding must not stop a run that gates on error
-      // — and the severity that says so is the code's promotion window (P7),
-      // read here rather than written as the literal of the day so the pin
-      // survives the release that promotes it.
       expect(issues[0]?.severity).toBe("error");
       expect(issues[0]?.suggested_action ?? "").not.toBe("");
     } finally {

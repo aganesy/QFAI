@@ -380,8 +380,8 @@ const FIRST_ARGUMENT = /\s*(.?)/y;
  * test is registered, reported and executed, so none of what this rule says
  * about a parked test applies to them: there is no modifier to drop, and
  * deleting the call removes a guard rather than restoring a test. Reporting
- * them also leaves a repository with a legitimate guard no passing state once
- * the promotion window closes, because an error cannot be waived.
+ * them also leaves a repository with a legitimate guard no passing state,
+ * because an error cannot be waived.
  *
  * The forms are told apart by the first argument: a string literal is the
  * test's name, and anything else — an identifier, a call, a negation, an
@@ -601,12 +601,10 @@ const STUB_DIALECTS: readonly StubDialect[] = [
  * The finding for one matched construct, worded for the rule it is filed under.
  *
  * Two `issue(...)` calls rather than one over a computed code and severity.
- * Both are read statically: `tests/core/issueCodeUniqueness.test.ts` asks that
- * every error-capable code state what a clean run asserts, and
- * `tests/core/sunsetLedger.test.ts` asks that a code with a promotion window
- * take its severity from that pin rather than from a literal beside the call.
- * Neither can follow a code carried in a value, and a rule that is invisible to
- * the ratchet is one nothing holds to either contract.
+ * Read statically: `tests/core/issueCodeUniqueness.test.ts` asks that every
+ * error-capable code state what a clean run asserts. It cannot follow a code
+ * carried in a value, and a rule invisible to the ratchet is one nothing holds
+ * to that contract.
  */
 /**
  * A dialect covers a file extension, and one extension can be two runners.

@@ -30,7 +30,6 @@ import { ASSISTANT_DIR } from "../paths/assistantPaths.js";
 import { escapeRegExp } from "../regex.js";
 import { splitMarkdownRow } from "../specPackParsers.js";
 import type { Issue } from "../types.js";
-import { resolveToolVersion } from "../version.js";
 import { getInitAssetsDir } from "../../shared/assets.js";
 import { TODO_PLACEHOLDER_RE } from "./renderCritique.js";
 import { issue } from "./utils.js";
@@ -261,7 +260,6 @@ export async function validateAssistantAssets(root: string, config: QfaiConfig):
   // `QFAI-SKILLS-014` could report it: the entry point would be the one file
   // the rule could never speak about. Reading once also means the marker
   // checks and the citation graph can never disagree about a file's bytes.
-  const toolVersion = await resolveToolVersion();
   const { documents, unreadable } = await readSkillDocuments(skillsDir);
   issues.push(...unreadable);
 
@@ -314,7 +312,7 @@ export async function validateAssistantAssets(root: string, config: QfaiConfig):
     }
   }
 
-  issues.push(...collectReferenceGraphIssues(root, skillsDir, toolVersion, documents));
+  issues.push(...collectReferenceGraphIssues(root, skillsDir, documents));
 
   return issues;
 }
@@ -334,21 +332,16 @@ export async function validateAssistantAssets(root: string, config: QfaiConfig):
  * A project with no recorded provenance is not penalised for that alone: an
  * absent record is not itself a finding, and only files that also differ from
  * the installed release are reported. What severity they carry is not fixed
- * here — the whole family follows the promotion window below, `warning` inside
- * it and `error` from the release the finding names.
+ * here; the whole family carries one severity, resolved once below.
  */
 async function validateAssistantAssetProvenance(
   root: string,
   assistantDir: string,
 ): Promise<Issue[]> {
-  // The whole family runs a promotion window (`RULE_PROMOTIONS`,
-  // docs/design-principles P7): nothing compared the governed layers before, so
-  // the first run that records provenance meets every edit a project ever made
-  // to them at once. Shipping that straight at `error` would turn an upgrade
-  // into a latched gate, which is the regression P7 was written after.
-  //
-  // `resolveToolVersion` resolves rather than rejects — a read failure returns
-  // `"unknown"`, which the comparator reads as inside the window, so an
+  // Nothing compared the governed layers before, so the first run that records
+  // provenance meets every edit a project ever made to them at once. The remedy
+  // is `qfai init --force`, which refreshes a file still matching its record,
+  // and a manual merge for one that does not. What follows
   // unreadable version can never be what escalates these into a build failure.
   const assetProvenanceSeverity = "error";
 
@@ -636,16 +629,11 @@ async function regeneratedLayerIssue(
  * `/qfai-configure` gets a work list rather than a single "something is
  * unfilled" flag.
  *
- * Severity comes from a promotion window, not from a literal beside the call.
- * The escalation the rule deserves — error, since Stage 0 has been mandatory
- * for at least one skill run by the time a project has specs — cannot land the
- * day the detector does: these four files are copied verbatim by `qfai init`,
- * so a project that has never run `/qfai-configure` would fail its own
- * `validate --profile full` gate on upgrade with four findings on files it
- * never touched. That is the migration P7 exists for, so the rule ships at
- * `warning` behind {@link RULE_PROMOTIONS.steeringCatalogPlaceholders} and
- * becomes an `error` at the pinned release. Writing `"warning"` here instead
- * would have been the same window with no way for it to ever open.
+ * An error, because Stage 0 is mandatory before a skill run and these four
+ * files are the input every later phase reads. `qfai init` copies them verbatim
+ * with their placeholders, so a project that has never run `/qfai-configure`
+ * meets four findings on files it has not touched — which is the rule saying
+ * Stage 0 is outstanding, and it clears when Stage 0 is done.
  *
  * A missing file is skipped: this rule is about unfilled content, and the
  * pre-recut `steering/` layout is already reported by `D-DEPRECATED-PATH`.
@@ -654,9 +642,6 @@ async function collectSteeringPlaceholderIssues(
   root: string,
   assistantDir: string,
 ): Promise<Issue[]> {
-  // `resolveToolVersion` resolves rather than rejects — a read failure returns
-  // `"unknown"`, which the comparator reads as inside the window, so an
-  // unreadable version can never be what escalates this into a build failure.
   const severity = "error";
   const issues: Issue[] = [];
   for (const fileName of STEERING_CATALOG_FILES) {
@@ -786,10 +771,8 @@ function unverifiableProvenanceIssue(
 }
 
 /**
- * The severity the whole provenance family carries, resolved once from
- * `RULE_PROMOTIONS.assistantAssetProvenance`. Threaded in rather than
- * recomputed per finding so the five codes cannot drift apart, and so the pin —
- * not a literal beside each `issue(...)` call — is what decides them.
+ * The severity the whole provenance family carries, resolved once. Threaded in
+ * rather than repeated per finding so the five codes cannot drift apart.
  */
 type ProvenanceSeverity = "warning" | "error";
 
@@ -1204,23 +1187,14 @@ async function exists(target: string): Promise<boolean> {
  * ships to every consuming repository and is loaded in no run at all, which is
  * a property of the graph rather than a probability.
  *
- * The severity is the code's promotion window rather than a literal: the
- * unread guidance is soft rule text, so nothing hard is being skipped today,
- * and a tree that grew a reference and lost its citation before anything
- * checked gets the window to reconnect it.
+ * A tree that grew a reference and lost its citation before anything checked
+ * meets this on its first run, and the remedy is to restore the citation.
  */
 function collectReferenceGraphIssues(
   root: string,
   skillsDir: string,
-  toolVersion: string,
   documents: Map<string, string>,
 ): Issue[] {
-  // Both codes below are new, so P7 gives each a promotion window instead of a
-  // severity literal beside its `issue(...)` call. The `toolVersion` the caller
-  // hands down comes from `resolveToolVersion`, which resolves rather than
-  // rejects — its own read failures return `"unknown"`, which the comparator
-  // reads as inside the window — so a version that cannot be read is never what
-  // escalates either code into a build failure.
   const reachable = collectReachableDocuments(citationContext(root, skillsDir), documents);
   const severity = "error";
   const unreachable = [...documents.keys()]

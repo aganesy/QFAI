@@ -19,14 +19,6 @@ import { afterEach, describe, expect, it } from "vitest";
 import { defaultConfig } from "../../src/core/config.js";
 import { validateResearchSummary } from "../../src/core/validators/researchSummary.js";
 
-/**
- * The per-entry schema rules ride one promotion window, so today they report at
- * `warning` and say which release ends that. Read from the registry rather than
- * copied: a pin moved without the message following it is the half-landed state
- * the window exists to prevent, and a literal here would agree with whichever
- * side moved.
- */
-
 const repoRoot = path.resolve(process.cwd(), "..", "..");
 const discussionRoots = [
   path.join(

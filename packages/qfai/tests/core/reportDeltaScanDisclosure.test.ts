@@ -336,11 +336,8 @@ describe("an uncounted delta file is a finding, not only prose", () => {
   // behaviour — a suppressible warning — is what an operator carrying such a
   // waiver expects.
   //
-  // The refusal itself does not reach the report. `applyWaiversToExtraFindings`
-  // returns the applied result and drops the waiver pass's own validation
-  // issues, so the operator sees a waiver that does nothing and no finding
-  // saying why. That gap is recorded separately; this case pins only what is
-  // observable today.
+  // The subject here is suppression, not the refusal. Whether the report also
+  // publishes `QFAI-WAIVER-002` is a separate question, with its own cases.
   it("is not suppressed by a waiver, because the finding is an error", async () => {
     await withProject({ "spec-0001": UNPARSABLE_DELTA }, async (root) => {
       await writeFile(path.join(root, ".qfai", "waivers.yml"), fileWaiver(), "utf-8");

@@ -16,10 +16,6 @@ import type { SpecScope } from "../specScope.js";
 import type { Issue } from "../types.js";
 import { issue } from "./utils.js";
 
-/** The window `QFAI-ATDD-127` ships behind; see `sunset.ts` for why. */
-
-/** The window `QFAI-ATDD-128` ships behind; see `sunset.ts` for why. */
-
 /** `SPEC-0004:US-0002` / `SPEC-0004:TC-0002-0007` — the spec number is group 1. */
 // The optional `QFAI:` prefix is not cosmetic: `missing.*` and `forbidden.ids`
 // carry `SPEC-0001:TC-0001`, while an unknown-reference token is the annotation
@@ -638,9 +634,6 @@ export async function validateAtddCodeTraceability(
     const refs = result.misfiledLevelTcIds;
     const home = specAttribution(refs, result.specsRoot, result.declaredSpecDirs);
     const severity = "error";
-    // The window says so in the finding itself, which is what the promotion
-    // policy asks of a rule inside one: an operator reading `--fail-on error`
-    // output can see the release the warning becomes a failure at.
     issues.push(
       issue(
         "QFAI-ATDD-128",

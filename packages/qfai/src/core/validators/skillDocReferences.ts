@@ -94,8 +94,7 @@ export async function validateSkillDocReferences(
     // User-defined non-qfai-* skills under .qfai/assistant/skills/ are
     // intentionally NOT flagged so consumers can author their own
     // SKILL.md without colliding with QFAI's path-migration finding.
-    // Severity escalates from warning to error at SUNSETS.legacyAssistantSteering
-    // (matches qfai-validate.md contract).
+    // The severity matches the qfai-validate.md contract.
     if (QFAI_SKILL_ID_RE.test(skillId)) {
       for (const ref of NON_CANONICAL_REFS) {
         if (ref.pattern.test(body)) {

@@ -118,6 +118,8 @@ export const EXPLORATION_HARD_ERROR_CODES: readonly string[] = [
   "QFAI-UIE-001",
   "QFAI-UIE-002",
   "QFAI-UIE-003",
+  // config.ts — a retired key still set in `qfai.config.yaml`
+  "QFAI-CFG-001",
   // validators/configReferenceIntegrity.ts — config path references
   "QFAI-CFG-LINK-001",
   "QFAI-CFG-LINK-003",

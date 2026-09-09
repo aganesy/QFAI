@@ -682,12 +682,7 @@ describe("QFAI-TEST-003 — the vitest/jest skip form is its own waivable rule",
     });
   });
 
-  it("takes its severity from the promotion pin, not a literal", async () => {
-    // The warning above is right today and, written as a literal, stays right
-    // forever: nothing would ever promote it, and the operator is never told a
-    // debt is coming. P7 wants that soft landing pinned to a release instead.
-    // The release name in the message is the half only the pin can put there —
-    // `warning` alone reads identically either way.
+  it("reports at error", async () => {
     await withTests({ "tests/a.test.ts": JS_SKIPS }, async (root) => {
       const issues = (await validateTestTodoStubs(root, CONFIG)).filter(
         (i) => i.code === "QFAI-TEST-003",
@@ -941,9 +936,8 @@ describe(`${SKIP} as a statement inside a running test`, () => {
   // test is registered, reported and executed — it stops early only when the
   // condition holds. Everything the rule says is wrong for it: there is no
   // modifier to drop, and deleting the call removes the guard rather than
-  // restoring a test. Once the promotion window closes the finding is an
-  // error, and an error cannot be waived, so a repository with a legitimate
-  // guard would have no passing state at all.
+  // restoring a test. The finding is an error, and an error cannot be waived,
+  // so a repository with a legitimate guard would have no passing state at all.
   const PLAYWRIGHT = 'import { expect, test } from "@playwright/test";';
 
   const guard = (argument: string): string =>

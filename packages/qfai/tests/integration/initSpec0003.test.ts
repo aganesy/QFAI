@@ -241,9 +241,8 @@ describe("TC-0003-0024: migration memo authoring", () => {
     const content = await readFile(INIT_CLI, "utf-8");
     expect(content).toContain("buildMigrationMemo");
     expect(content).toContain("joinMigrationMemo");
-    // Sunset version is sourced from SUNSETS.legacyAssistantSteering
-    // SSOT in assistantPaths.ts (shared with the validator's severity
-    // escalation point), NOT from a release-relative computation.
+    // The retirement label comes from the SSOT in `assistantPaths.ts`, shared
+    // with the validator, NOT from a release-relative computation.
     expect(content).toContain("legacyAssistantSteeringSunsetLabel");
   });
 });

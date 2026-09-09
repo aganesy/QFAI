@@ -357,11 +357,7 @@ export function extractSsotModuleEntries(text: string): SsotModuleEntry[] {
  *
  * Nothing resolved these paths before, so every contract written under the old
  * silence carries whatever route was true when it was authored — a rename that
- * happened releases ago surfaces here all at once. Severity therefore comes
- * from the promotion window (`RULE_PROMOTIONS.contractSsotModuleUnresolved`)
- * rather than a literal beside the call, so an upgrade reports the backlog
- * without latching a consuming repository's `--fail-on error` gate. The finding
- * names the release that ends the window while it is open.
+ * happened releases ago surfaces here all at once.
  */
 export async function validateContractSsotModules(
   root: string,

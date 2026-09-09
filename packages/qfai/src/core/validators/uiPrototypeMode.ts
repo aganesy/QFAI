@@ -26,9 +26,8 @@
  *
  * ## Severity
  *
- * A warning inside its promotion window, an error from the release that ends
- * it. Nothing has ever rejected a value here, so a project carrying a typo has
- * been passing and was never told; the window is what lets it be told first.
+ * An error. Nothing has ever rejected a value here, so a project carrying a
+ * typo has been passing and was never told.
  */
 
 import { readFile } from "node:fs/promises";
@@ -38,7 +37,6 @@ import type { QfaiConfig } from "../config.js";
 import { resolvePath } from "../config.js";
 import { collectUiContractFiles } from "../discovery.js";
 import type { Issue } from "../types.js";
-import { resolveToolVersion } from "../version.js";
 import { issue } from "./utils.js";
 
 /** Waivable as `QFAI-CONTRACT-038`. */

@@ -384,12 +384,7 @@ Superseded by BR-0001-0009 during triage; see also BR-0001-0008.
     }
   });
 
-  it("takes all three severities from the promotion pin, not a literal", async () => {
-    // P7: a finding code introduced after the policy ships behind a window, and
-    // the window is only real if the severity follows the pin. Warning alone
-    // does not prove that — a literal `"warning"` reads the same today and
-    // never promotes. The release name in the message is what only the pin can
-    // put there, and it is the operator's notice of the debt.
+  it("reports all three at error", async () => {
     const options = {
       rules: DERIVATION_RULES,
       examples: derivationExamples("BR-0001-0004"),

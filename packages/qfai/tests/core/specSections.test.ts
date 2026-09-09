@@ -73,18 +73,14 @@ describe("validateSpecSections", () => {
     });
   });
 
-  it("takes both codes' severity from the promotion pin, not a literal", async () => {
+  it("reports both codes at error", async () => {
     await withProject(async (root, specsRoot) => {
       await seedSpec(specsRoot, "0001", "# spec-0001\n");
 
       const issues = await validateSpecSections(root, configRequiring(["##", "Risks"]));
 
-      // The gate is new, so it necessarily fires on packs written before it
-      // existed. P7 (docs/design-principles.md) requires that to arrive as a
-      // `warning` behind a window rather than as a hard error on upgrade —
-      // shipping `"error"` beside the `issue(...)` call is what latched a
-      // consuming repository's gate. `sunsetLedger.test.ts` checks the wiring;
-      // this checks the finding an operator actually sees.
+      // The gate is newer than the packs it reads, so it necessarily fires on
+      // ones written before it existed.
       const expected = "error";
       expect(issues.map((entry) => entry.code)).toEqual([
         "QFAI-SPECSECTION-002",

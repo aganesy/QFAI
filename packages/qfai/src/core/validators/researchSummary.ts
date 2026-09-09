@@ -115,11 +115,8 @@ export async function validateResearchSummary(root: string, config: QfaiConfig):
   // rule, and only there — see the comment on that guard for why the opt-out
   // stops at "the section is missing" instead of returning [] from here.
   const issues: Issue[] = [];
-  // Resolved once for the whole run: the promotion window is a property of the
-  // tool, not of any one pack, and every rule below reads the same answer.
-  // The per-entry schema rules ride one window (`researchSummarySchemaFields`).
-  // A literal `"error"` beside any of these calls would be a registered pin
-  // that never governs anything — the state `sunsetLedger.test.ts` rejects.
+  // Resolved once for the whole run so every rule below reads the same answer,
+  // rather than repeating the literal at each call.
   const schemaSeverity = "error";
   const target = await resolveResearchSummaryScanTarget(root, config);
   issues.push(...describeBrokenPointer(root, target, schemaSeverity));
@@ -132,8 +129,8 @@ export async function validateResearchSummary(root: string, config: QfaiConfig):
   const requireSection = config.uiux?.requireResearchSummary !== false;
   if (requireSection) {
     issues.push(...(await checkStorageSlotPresence(root, target, schemaSeverity)));
-    // Resolved here rather than inside the builder: the promotion window is a
-    // property of the tool, and the builder runs once per validator run anyway.
+    // Resolved here rather than inside the builder, which runs once per
+    // validator run anyway.
     const missing = await buildMissingSectionIssue(root, target.discussionRoot);
     if (missing) {
       issues.push(missing);
@@ -360,9 +357,7 @@ export async function validateResearchSummary(root: string, config: QfaiConfig):
  * contributes 56 findings on first contact. Naming the rules turns the second
  * step into a decision rather than a discovery.
  *
- * The schema-field rules are deliberately absent: they sit inside their own
- * promotion window, so they arrive as warnings and are visible before they
- * count. This list is the set that is red immediately.
+ * This list is the set the section's arrival makes red.
  *
  * `inertGateFirstContact.test.ts` holds the list against the validator by
  * running it on a section that satisfies none of them, so a rule added, moved
