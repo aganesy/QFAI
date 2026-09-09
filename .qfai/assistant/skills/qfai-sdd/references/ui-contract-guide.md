@@ -139,10 +139,10 @@ element the marker stands for.
   change and a label does not.
 - Markers are what give an element fidelity coverage when its text is not
   visible.
-- Nothing derives them for you. `validateUiMarkerPresence` collects the
-  `data-qfai` values the contract writes and checks only those, so an element
-  with an `id` and no declared marker is never inspected. A contract that
-  declares no markers at all passes the lane having checked nothing.
+- Nothing derives them for you. The marker lane collects the `data-qfai` values
+  the contract writes and checks only those, so an element with an `id` and no
+  declared marker is never inspected. A contract that declares no markers at all
+  passes that lane having checked nothing.
 
 A contract still carrying label-based markers works, and there is no deadline on
 it; move it to the id form the next time that flow is edited, and check whatever
