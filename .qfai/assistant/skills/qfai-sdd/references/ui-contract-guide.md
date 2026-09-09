@@ -86,20 +86,28 @@ under `.qfai/contracts/ui/`, in two tiers.
 Author `<spec-id>.yaml` unless a spec has more screens than one file should
 hold. For a spec that does, pick **one** multi-file shape and stay in it.
 
-Two layouts are a mistake the resolver cannot report:
+A spec matching more than one candidate is an authoring mistake, and it takes
+two shapes:
 
 - **Two single-file candidates for one spec** — say `spec-0007.yaml` and
-  `ui-0007.yaml`. Candidate 1 wins deterministically, and whoever reads the
-  other file believes they are reading the contract in force.
+  `ui-0007.yaml`. The earlier candidate wins, and whoever opens the other file
+  believes they are reading the contract in force.
 - **A single-file candidate plus a multi-file one** — say `spec-0007.yaml`
-  alongside `ui-0007-home.yaml`. The multi-file tier is skipped entirely, so
-  screens that live only in the split files fail the per-screen review gate
-  without ever being read.
+  alongside `ui-0007-home.yaml`. The single-file tier wins, so screens that live
+  only in the split files are not reviewed at all. They do not fail the gate;
+  the run passes over a narrower set than the contracts declare.
+
+Both are reported. `certify` names the file it took and every file it ignored,
+and the exit code is unchanged. Move those screens into the file in force and
+delete the rest, or delete every single-file candidate so the multi-file tier is
+read.
 
 When the per-spec match finds files but extracts no valid screen — a YAML parse
-error, or `screens:` mistyped — `certify` names the offending path on stderr and
-falls back to the project-wide screen list, so the authoring mistake is visible
-instead of silently re-enabling the cross-product check.
+error, or `screens:` mistyped — `certify` names the offending path and falls
+back to the project-wide screen list, so the authoring mistake is visible
+instead of silently re-enabling the cross-product check. The project-wide list
+pools every contract, so the screens in the ignored files are reviewed after
+all; the run says so rather than reporting them as skipped.
 
 ## `elements[].id` naming policy
 
