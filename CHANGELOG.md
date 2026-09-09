@@ -34,6 +34,29 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **A filled-in Stage 0 catalog is exempt from the stale rule as well as the
+  fork rule** (#1396). `.qfai/assistant/catalog/{manifest,product,structure,tech}.md`
+  ship telling the reader to replace their contents, and a project that does so
+  was reported either way. Which of the two rules fired was decided by the lock
+  rather than by the document: a fork while `.assets.lock.json` still held the
+  shipped hash, and stale once it held what the project wrote.
+
+  Exempting only the fork moved the finding to the worse of the two.
+  `QFAI-ASSETS-004` offers `qfai init --force` as its remedy, which rewrites the
+  file — so a project following it lost the content the document exists to
+  carry.
+
+  Both now pass on those four files, and `qfai init --force` leaves them alone
+  rather than refreshing them. It decided what to refresh with the same
+  comparison the stale rule uses, so a lock holding the project's own content
+  made the file look refreshable and the run replaced it with the template,
+  silently. Not reporting the file was only half of owning it.
+
+  A deleted one is still reported: that is an absence rather than a difference,
+  and nothing else reports a catalog the skills read being gone. The shipped
+  `assistant/README.md` and `constitution/drift-protocol.md` name the four as
+  the exception to the vendored-rule contract they describe.
+
 - **A wrong root heading is one mdschema violation, not one per section**
   (#1388). Sections are graded against the heading above them, so a document
   whose H1 the schema does not accept had every section beneath it reported as
