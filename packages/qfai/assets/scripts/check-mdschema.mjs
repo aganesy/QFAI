@@ -351,6 +351,140 @@ export function optsOutOfSchema(text) {
   return false;
 }
 
+/**
+ * The heading a schema requires at the document's root, or `null`.
+ *
+ * Read with a line scanner, for the reason the manifest and the config are:
+ * these are fixed shapes authored in this repository, and this script must run
+ * before anything is installed beyond the root devDependencies.
+ *
+ * The root heading is the first `pattern:` under `structure:`, which every
+ * shipped schema declares. `null` for a schema that does not — the caller then
+ * has no root to check against and leaves the document to `mdschema`.
+ *
+ * @param {string} schemaText
+ * @returns {{ pattern: string, regex: boolean } | null}
+ */
+export function rootHeadingPattern(schemaText) {
+  let inStructure = false;
+  let pattern = null;
+  for (const raw of schemaText.split(/\r?\n/)) {
+    if (/^structure:/.test(raw)) {
+      inStructure = true;
+      continue;
+    }
+    if (!inStructure) continue;
+    // A line at column 0 ends `structure:` — the next top-level key.
+    if (pattern === null && /^\S/.test(raw)) return null;
+    if (pattern === null) {
+      const found = /^\s+pattern:\s*"([^"]*)"\s*$|^\s+pattern:\s*(\S+)\s*$/.exec(raw);
+      if (found !== null) {
+        pattern = found[1] ?? found[2] ?? "";
+        continue;
+      }
+      continue;
+    }
+    // `regex:` belongs to the same `heading:` mapping, so it is the next one.
+    const flag = /^\s+regex:\s*(true|false)\s*$/.exec(raw);
+    if (flag !== null) return { pattern, regex: flag[1] === "true" };
+    if (/^\s+pattern:/.test(raw)) break;
+  }
+  return pattern === null ? null : { pattern, regex: false };
+}
+
+/** Opens or closes a fenced block, whatever the fence character and length. */
+const FENCE = /^\s{0,3}(`{3,}|~{3,})/;
+
+/**
+ * The document's first ATX heading line, or `null`.
+ *
+ * Front matter and fenced blocks are skipped: a `# comment` inside a shell
+ * example is not this document's heading, and reading one as the heading would
+ * report the document against a line it does not have.
+ *
+ * @param {string} text
+ * @returns {string | null}
+ */
+export function firstHeading(text) {
+  const lines = text.split(/\r?\n/);
+  let index = 0;
+  if (lines[0] !== undefined && /^---\s*$/.test(lines[0])) {
+    index = 1;
+    while (index < lines.length && !/^---\s*$/.test(lines[index] ?? "")) index++;
+    index++;
+  }
+  let fence = null;
+  for (; index < lines.length; index++) {
+    const line = lines[index] ?? "";
+    const opener = FENCE.exec(line);
+    if (fence !== null) {
+      if (opener !== null && opener[1].startsWith(fence[0]) && opener[1].length >= fence.length) {
+        fence = null;
+      }
+      continue;
+    }
+    if (opener !== null) {
+      fence = opener[1];
+      continue;
+    }
+    if (/^\s{0,3}#{1,6}\s/.test(line)) return line;
+  }
+  return null;
+}
+
+/**
+ * Whether `text` carries the root heading `schemaText` requires.
+ *
+ * `null` when the question cannot be put — the schema declares no root heading,
+ * or its pattern does not compile. The caller then leaves the document to
+ * `mdschema` rather than inventing a verdict.
+ *
+ * @param {string} schemaText
+ * @param {string} text
+ * @returns {{ ok: boolean, expected: string, actual: string | null } | null}
+ */
+/**
+ * The one line a root-heading mismatch is worth.
+ *
+ * It names what is there, what is required, and that the document is graded no
+ * further until they agree — because a reader who is not told that will read
+ * the absence of other lines as the rest of the document being sound.
+ *
+ * @param {string} schemaText
+ * @param {string} file repository-relative
+ * @param {string} text
+ * @returns {string}
+ */
+export function describeRootMismatch(schemaText, file, text) {
+  const verdict = rootHeadingVerdict(schemaText, text);
+  const expected = verdict?.expected ?? "";
+  const actual = verdict?.actual;
+  const found = actual === null || actual === undefined ? "no heading" : `"${actual.trim()}"`;
+  return [
+    file,
+    `  ✗ 1:1  [structure] Root heading is ${found}, but the schema requires "${expected}"`,
+    "         Every section is graded against the heading above it, so this document",
+    "         is not checked further until the root heading matches.",
+  ].join("\n");
+}
+
+export function rootHeadingVerdict(schemaText, text) {
+  const required = rootHeadingPattern(schemaText);
+  if (required === null) return null;
+  const actual = firstHeading(text);
+  let matches;
+  if (required.regex) {
+    try {
+      matches = actual !== null && new RegExp(required.pattern, "u").test(actual);
+    } catch {
+      return null;
+    }
+  } else {
+    matches = actual === required.pattern;
+  }
+  return { ok: matches, expected: required.pattern, actual };
+}
+
 export function patternToRegExp(pattern) {
   let out = "";
   for (let i = 0; i < pattern.length; i++) {
@@ -785,17 +919,76 @@ export function main() {
       continue;
     }
     checked += matched.length;
-    const result = runMdschema(mdschema, schemaPath, matched, root);
+
+    // A document whose root heading is not the one the schema names cannot be
+    // graded below that heading: every section under it is compared against the
+    // wrong parent and reported as unexpected, so one wrong line becomes one
+    // violation per heading in the outline. Those statements are not true — the
+    // sections are where they belong, under a heading that is spelled wrong —
+    // and they bury the one line that is.
+    //
+    // The root heading is checked here, from the schema's own declaration,
+    // rather than by reading what `mdschema` printed. Its message text is not
+    // a contract: the same prose comes back for every `--format`, so a parser
+    // for it would be this file coupled to one release's rendering.
+    const schemaText = readFileSync(schemaPath, "utf-8");
+    const rootMismatch = matched.filter((file) => {
+      const verdict = rootHeadingVerdict(schemaText, contentOf(file));
+      return verdict !== null && !verdict.ok;
+    });
+    const gradable = matched.filter((file) => !rootMismatch.includes(file));
+
+    const rootOwed = [];
+    const rootHeld = [];
+    for (const file of rootMismatch) {
+      // The same ownership question the ratchet asks, answered without
+      // `mdschema`: a heading already wrong at the merge base is the
+      // migration's backlog, not this branch's.
+      const before = baseRev === null ? null : fileAtRev(baseRev, file, root);
+      const wasWrong =
+        before !== null &&
+        !optsOutOfSchema(before) &&
+        routeOf(entries, file, before, specsDir) === entry.id &&
+        rootHeadingVerdict(schemaText, before)?.ok === false;
+      (wasWrong ? rootHeld : rootOwed).push(
+        describeRootMismatch(schemaText, path.relative(root, file), contentOf(file)),
+      );
+    }
+    inheritedFiles += rootHeld.length;
+    if (rootOwed.length > 0) violations++;
+
+    const banner = `\n── ${entry.id} (${entry.schema}) ──`;
+    const heldBanner = `\n── ${entry.id} (${entry.schema}) — pre-existing, not this branch's ──`;
+    if (rootHeld.length > 0) {
+      console.log(heldBanner);
+      for (const line of rootHeld) console.log(line);
+    }
+    if (rootOwed.length > 0) {
+      console.error(banner);
+      for (const line of rootOwed) console.error(line);
+    }
+
+    const row = {
+      id: entry.id,
+      files: matched.length,
+      ignored: optedOut.length,
+      inherited: rootHeld.length,
+    };
+    if (gradable.length === 0) {
+      perEntry.push({ ...row, ok: rootOwed.length === 0 });
+      continue;
+    }
+
+    const result = runMdschema(mdschema, schemaPath, gradable, root);
     if (result.spawnFailed) {
       console.error(`check-mdschema: could not run mdschema: ${result.output}`);
       return 2;
     }
-    const row = { id: entry.id, files: matched.length, ignored: optedOut.length, inherited: 0 };
     if (result.ok || baseRev === null) {
-      perEntry.push({ ...row, ok: result.ok });
+      perEntry.push({ ...row, ok: result.ok && rootOwed.length === 0 });
       if (!result.ok) {
-        violations++;
-        console.error(`\n── ${entry.id} (${entry.schema}) ──`);
+        if (rootOwed.length === 0) violations++;
+        console.error(banner);
         console.error(result.output);
       }
       continue;
@@ -804,27 +997,31 @@ export function main() {
     const split = splitByOwnership(
       { mdschema, schemaPath, root, entries, specsDir, baseRev },
       entry.id,
-      matched,
+      gradable,
     );
     if (split === null) {
       console.error("check-mdschema: could not run mdschema over a single document");
       return 2;
     }
     inheritedFiles += split.inherited.length;
-    perEntry.push({ ...row, ok: split.owned.length === 0, inherited: split.inherited.length });
+    perEntry.push({
+      ...row,
+      ok: split.owned.length === 0 && rootOwed.length === 0,
+      inherited: split.inherited.length + rootHeld.length,
+    });
     if (split.inherited.length > 0) {
       // On stdout, and not counted: these documents failed at the merge base
       // too, so they are the migration's backlog rather than this branch's
       // work. Printed rather than dropped — a document nobody is told about is
       // one nobody migrates.
-      console.log(`\n── ${entry.id} (${entry.schema}) — pre-existing, not this branch's ──`);
+      console.log(heldBanner);
       for (const held of split.inherited) {
         console.log(held.output);
       }
     }
     if (split.owned.length > 0) {
-      violations++;
-      console.error(`\n── ${entry.id} (${entry.schema}) ──`);
+      if (rootOwed.length === 0) violations++;
+      console.error(banner);
       for (const owed of split.owned) {
         console.error(owed.output);
       }
