@@ -174,19 +174,8 @@ async function withUnwalkableSurface(task: (root: string) => Promise<void>): Pro
     await seedSpec(root);
     await mkdir(path.join(root, ".qfai", "assistant"), { recursive: true });
     await writeFile(path.join(root, ".qfai", "assistant", "skills"), "not a directory\n", "utf-8");
-    // Enough of a surface that `qfai init` counts as having run here.
-    await writeFile(
-      path.join(root, ".qfai", "assistant", "README.md"),
-      [
-        "# QFAI assistant tree",
-        "",
-        "## Canonical entrypoint",
-        "",
-        "- .qfai/assistant/skills/",
-        "",
-      ].join("\n"),
-      "utf-8",
-    );
+    // The record `qfai init` writes, so this tree counts as one it has run in.
+    await writeFile(path.join(root, ".qfai", "install-provenance.json"), "{}\n", "utf-8");
     await task(root);
   } finally {
     await rm(root, { recursive: true, force: true });

@@ -4,6 +4,38 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ## [Unreleased]
 
+### Changed
+
+- **`qfai init` writes no README, and the init marker is a record rather than a
+  document** (#1399). Init wrote six: one in each of the four integration
+  directories, one under `.qfai/assistant/` and one under `.qfai/steering/`.
+  Each restated something a loaded document already says, into a file the
+  adopter then owns and no release refreshes. The shipped skills forbid the
+  shape in as many words — artifact guidance belongs in a skill's references
+  and templates.
+
+  One of the six was load-bearing. `qfai validate` read `.qfai/assistant/README.md`
+  for a three-part signature to tell "init ran here and the integration surface
+  was deleted" from "init never ran here", because only the first is a defect.
+  Prose is a poor marker: a project documenting where it keeps its QFAI tree
+  writes the same sentence, which is why the signature needed three parts, and
+  four of the five candidate paths were pre-empted by any project that already
+  had a README there.
+
+  The evidence is now `.qfai/assistant/.assets.lock.json` or
+  `.qfai/install-provenance.json`, either one. Both carry names nothing else
+  uses, inside a directory init owns outright, so no project reaches one by
+  writing its own documentation. Both are negations in the managed `.gitignore`
+  block, so both survive into a fresh clone — the state the evidence is for.
+  Presence is the whole test: a record that is corrupt or from an older release
+  still answers the only question asked of it.
+
+  A run removes `.qfai/assistant/README.md` where it still carries init's
+  signature, since its text describes the behaviour that moved. A README the
+  project wrote, or anything at that path that is not a regular file, is left
+  alone. A removal that fails is a note: the file is inert either way, and the
+  tree is installed regardless.
+
 ### Added
 
 - **`qfai doctor --autoremediate` relinks a broken integration wrapper, and

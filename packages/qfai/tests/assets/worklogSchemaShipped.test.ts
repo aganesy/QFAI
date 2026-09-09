@@ -69,8 +69,9 @@ describe("work-log entry schema", () => {
     const init = await readRepo("packages/qfai/src/cli/commands/init.ts");
 
     expect(init).not.toContain(".qfai/contracts/cli/worklog-entry.schema.md");
-    // All four references repointed, including the init report line.
-    expect(init.split("assistant/catalog/worklog-entry.schema.md").length - 1).toBe(4);
+    // Both surviving references point at the published path: the seeded entry
+    // template's own comment, and the init report line.
+    expect(init.split("assistant/catalog/worklog-entry.schema.md").length - 1).toBe(2);
   });
 
   it("the package README documents the surface", async () => {

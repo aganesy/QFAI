@@ -86,19 +86,17 @@ async function wireAll(root: string, skills: string[], agents: string[]): Promis
 }
 
 /** The link `init` writes for a skill wrapper, as a relative target. */
-/** A README with the signature `qfai init` writes, so it counts as a marker. */
-const INIT_README_BODY = [
-  "# QFAI Agents skills",
-  "",
-  "This directory provides Agents/Codex-compatible skill symlinks for QFAI.",
-  "",
-  "## Canonical entrypoint",
-  "",
-  "Skill symlinks point to QFAI's canonical skill documents under:",
-  "",
-  "- .qfai/assistant/skills/",
-  "",
-].join("\n");
+/**
+ * Makes `root` read as a tree `qfai init` has run in.
+ *
+ * The evidence is the record init writes, not a document: a project cannot
+ * arrive at this path by writing its own notes, which is what the README this
+ * replaced could not promise.
+ */
+async function markInitialised(root: string): Promise<void> {
+  await mkdir(path.join(root, ".qfai"), { recursive: true });
+  await writeFile(path.join(root, ".qfai", "install-provenance.json"), "{}\n", "utf-8");
+}
 
 const skillTarget = (dir: string, id: string): string =>
   path.join(...dir.split("/").map(() => ".."), ".qfai", "assistant", "skills", id);
@@ -532,13 +530,13 @@ describe("an initialised project is recognised without any wrapper left", () => 
       if (!(await canCreateSymlink(root))) return;
       await seedCanonical(root, ["qfai-atdd"], []);
       await wireAll(root, ["qfai-atdd"], []);
-      await writeFile(path.join(root, ".agents", "README.md"), INIT_README_BODY, "utf-8");
+      await markInitialised(root);
       for (const dir of INTEGRATION_SURFACE_DIRS) {
         await rm(path.join(root, ...dir.split("/")), { recursive: true, force: true });
       }
       // The marker `qfai init` left behind is all that remains.
       await mkdir(path.join(root, ".agents"), { recursive: true });
-      await writeFile(path.join(root, ".agents", "README.md"), INIT_README_BODY, "utf-8");
+      await markInitialised(root);
 
       const found = await finding(root);
       expect(found?.message).toContain("integration surface missing");
@@ -560,7 +558,7 @@ describe("an initialised project is recognised without any wrapper left", () => 
       // One marker path is the project's own directory; another is init's.
       await mkdir(path.join(root, ".agents", "README.md"), { recursive: true });
       await mkdir(path.join(root, ".codex"), { recursive: true });
-      await writeFile(path.join(root, ".codex", "README.md"), INIT_README_BODY, "utf-8");
+      await markInitialised(root);
 
       const found = await finding(root);
       expect(found?.message).toContain("integration surface missing");
@@ -670,24 +668,40 @@ describe("a project's own entry is not proof init ran", () => {
     });
   });
 
-  it("does not accept a symlinked README as a marker init wrote", async () => {
-    // `stat` followed the link, so a project's own `.agents/README.md` pointing
-    // at another file that happens to mention `.qfai/assistant/` read as
-    // init's — and a checkout that never ran init was told all six surfaces
-    // were missing. Init writes these as plain files.
+  it("does not accept a symlink at the record path as evidence init ran", async () => {
+    // `stat` follows a link, so a symlink a project put at the record path
+    // would let any file at all stand in for init's record — and a checkout
+    // that never ran init would then be told all six surfaces are missing.
+    // Init writes the record as a plain file.
     await withProject(async (root) => {
       if (!(await canCreateSymlink(root))) return;
       await seedCanonical(root, ["qfai-atdd"], []);
       await mkdir(path.join(root, "docs"), { recursive: true });
-      await writeFile(path.join(root, "docs", "agents.md"), INIT_README_BODY, "utf-8");
-      await mkdir(path.join(root, ".agents"), { recursive: true });
+      await writeFile(path.join(root, "docs", "notes.json"), "{}\n", "utf-8");
+      await mkdir(path.join(root, ".qfai"), { recursive: true });
       await symlink(
-        path.join("..", "docs", "agents.md"),
-        path.join(root, ".agents", "README.md"),
+        path.join("..", "docs", "notes.json"),
+        path.join(root, ".qfai", "install-provenance.json"),
         "file",
       );
 
       await expect(validateIntegrationSurface(root)).resolves.toEqual([]);
+    });
+  });
+
+  it("accepts either record on its own", async () => {
+    // Both are written by init and either outlives the surface, so requiring
+    // both would make a tree missing one read as never initialised.
+    await withProject(async (root) => {
+      await seedCanonical(root, ["qfai-atdd"], []);
+      await mkdir(path.join(root, ".qfai", "assistant"), { recursive: true });
+      await writeFile(path.join(root, ".qfai", "assistant", ".assets.lock.json"), "{}\n", "utf-8");
+      for (const dir of INTEGRATION_SURFACE_DIRS) {
+        await mkdir(path.join(root, ...dir.split("/")), { recursive: true });
+      }
+
+      const found = await finding(root);
+      expect(found?.message).toContain("missing");
     });
   });
 });
@@ -985,7 +999,7 @@ describe("an ancestor that is not a directory is named directly", () => {
       if (!(await canCreateSymlink(root))) return;
       await seedCanonical(root, ["qfai-atdd"], []);
       await wireAll(root, ["qfai-atdd"], []);
-      await writeFile(path.join(root, ".agents", "README.md"), INIT_README_BODY, "utf-8");
+      await markInitialised(root);
       await rm(path.join(root, ".claude"), { recursive: true, force: true });
       await writeFile(path.join(root, ".claude"), "not a directory", "utf-8");
 
@@ -1190,18 +1204,15 @@ describe("what init wrote is still checked after the roster moves on", () => {
     });
   });
 
-  it("recognises init by the marker inside the tree it owns", async () => {
-    // The four conventional READMEs are written only when the path is free, so
-    // a project that already had its own at all four ran init and got no
-    // marker — and deleting every wrapper then read as never initialised:
-    // nothing checked, every profile passing, the assistant loading nothing.
+  it("recognises init by a record inside the tree it owns", async () => {
+    // The evidence sits under `.qfai/`, which init owns outright and creates,
+    // so nothing a project already had can pre-empt it. Deleting every wrapper
+    // therefore still reads as initialised, rather than as a tree that never
+    // ran init: nothing checked, every profile passing, the assistant loading
+    // nothing.
     await withProject(async (root) => {
       await seedCanonical(root, ["qfai-atdd"], []);
-      await writeFile(
-        path.join(root, ".qfai", "assistant", "README.md"),
-        INIT_README_BODY,
-        "utf-8",
-      );
+      await markInitialised(root);
       for (const dir of INTEGRATION_SURFACE_DIRS) {
         await mkdir(path.join(root, ...dir.split("/")), { recursive: true });
       }
@@ -1351,7 +1362,7 @@ describe("a resolving link is a finding, not a reason to stop", () => {
         for (const dir of INTEGRATION_SURFACE_DIRS) {
           await mkdir(path.join(root, ...dir.split("/")), { recursive: true });
         }
-        await writeFile(path.join(root, ".agents", "README.md"), INIT_README_BODY, "utf-8");
+        await markInitialised(root);
 
         const report = await inspectIntegrationSurface(root);
         expect(report.unwalkable).toEqual([".qfai/assistant"]);
@@ -1375,7 +1386,7 @@ describe("a resolving link is a finding, not a reason to stop", () => {
       for (const dir of INTEGRATION_SURFACE_DIRS) {
         await mkdir(path.join(root, ...dir.split("/")), { recursive: true });
       }
-      await writeFile(path.join(root, ".agents", "README.md"), INIT_README_BODY, "utf-8");
+      await markInitialised(root);
 
       const found = await finding(root);
       expect(found?.message).toContain("a canonical ancestor is a symlink");
@@ -1394,7 +1405,7 @@ describe("a resolving link is a finding, not a reason to stop", () => {
         for (const dir of INTEGRATION_SURFACE_DIRS) {
           await mkdir(path.join(root, ...dir.split("/")), { recursive: true });
         }
-        await writeFile(path.join(root, ".agents", "README.md"), INIT_README_BODY, "utf-8");
+        await markInitialised(root);
         const doc = path.join(root, ".qfai", "assistant", "skills", "qfai-atdd", "SKILL.md");
         await chmod(doc, 0o000);
         try {
@@ -1592,7 +1603,7 @@ describe("a canonical is checked even with its surface gone", () => {
       if (!(await canCreateSymlink(root))) return;
       await seedCanonical(root, ["qfai-atdd", "qfai-verify"], []);
       await wireAll(root, ["qfai-atdd", "qfai-verify"], []);
-      await writeFile(path.join(root, ".agents", "README.md"), INIT_README_BODY, "utf-8");
+      await markInitialised(root);
       for (const dir of SKILL_INTEGRATION_DIRS) {
         await rm(path.join(root, ...dir.split("/")), { recursive: true, force: true });
       }
@@ -1648,16 +1659,17 @@ describe("a broken link on the way to a surface is not an absent surface", () =>
     });
   });
 
-  it("declines an oversized file at a marker path without reading it", async () => {
-    // A project's own document at one of these paths can be any size, and
-    // reading it whole to look for three substrings cost every profile in
-    // proportion to somebody else's file.
+  it("takes a project's own README at a wrapper path for nothing at all", async () => {
+    // These directories are conventional and a project may document its own.
+    // The evidence init leaves is a record under `.qfai/`, so a document here
+    // is neither read nor weighed — and a checkout that never ran init is not
+    // told its six surfaces are missing on the strength of one.
     await withProject(async (root) => {
       await seedCanonical(root, ["qfai-atdd"], []);
       await mkdir(path.join(root, ".agents"), { recursive: true });
       await writeFile(
         path.join(root, ".agents", "README.md"),
-        INIT_README_BODY + "x".repeat(64 * 1024),
+        `# our agents\n\n${"x".repeat(64 * 1024)}\n`,
         "utf-8",
       );
 
@@ -1703,7 +1715,7 @@ describe("a broken canonical grandparent is found too", () => {
       if (!(await canCreateSymlink(root))) return;
       await seedCanonical(root, ["qfai-atdd"], []);
       await wireAll(root, ["qfai-atdd"], []);
-      await writeFile(path.join(root, ".agents", "README.md"), INIT_README_BODY, "utf-8");
+      await markInitialised(root);
       for (const dir of SKILL_INTEGRATION_DIRS) {
         await rm(path.join(root, ...dir.split("/"), "qfai-atdd"), { recursive: true, force: true });
       }

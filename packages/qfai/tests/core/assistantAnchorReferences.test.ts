@@ -632,15 +632,8 @@ describe("profile wiring", () => {
         ".qfai/assistant/agents/README.md": "# readme\n",
         // The document the roster names, replaced by a directory.
         ".qfai/assistant/agents/completion-reviewer.md/.keep": "",
-        // Enough of a surface that init counts as having run here.
-        ".qfai/assistant/README.md": [
-          "# QFAI assistant tree",
-          "",
-          "## Canonical entrypoint",
-          "",
-          "- .qfai/assistant/skills/",
-          "",
-        ].join("\n"),
+        // The record init writes, so this tree counts as one it has run in.
+        ".qfai/install-provenance.json": "{}\n",
         ".qfai/assistant/constitution/drift-protocol.md": ["# Drift protocol", ""].join("\n"),
         ".qfai/assistant/catalog/test-layers.md": [
           "# Test layers",

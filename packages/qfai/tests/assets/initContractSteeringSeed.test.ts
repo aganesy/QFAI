@@ -1,15 +1,12 @@
 /**
  * The `qfai init` contract locates the steering seed where it really lives.
  *
- * `.qfai/contracts/cli/qfai-init.md` stated a MUST-level leakage-guard
- * obligation for the seeded `.qfai/steering/README.md` and
- * `_templates/entry.md`, and in the same sentence said both ship "under
- * `assets/init/.qfai/steering/`". That directory has never existed: both
- * bodies are built in TypeScript by `buildProjectSteeringReadmeBody` /
- * `buildProjectSteeringEntryTemplate` and reach the distributed surface only
- * as string literals inside `dist/`. Anyone auditing the obligation looked for
- * artifacts at the stated path, found none, and could not tell whether the seed
- * was uncovered or the contract was stale.
+ * `.qfai/contracts/cli/qfai-init.md` carries a MUST-level leakage-guard
+ * obligation for the seeded `_templates/entry.md`. The body is built in
+ * TypeScript by `buildProjectSteeringEntryTemplate` and reaches the distributed
+ * surface only as a string literal inside `dist/`, so an auditor sent to an
+ * `assets/init/.qfai/steering/` directory finds nothing and cannot tell whether
+ * the seed is uncovered or the contract is stale.
  */
 import { access, readFile } from "node:fs/promises";
 import path from "node:path";
@@ -22,7 +19,7 @@ const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), ".."
 
 const CONTRACT = ".qfai/contracts/cli/qfai-init.md";
 const INIT_SRC = "packages/qfai/src/cli/commands/init.ts";
-const SEED_BUILDERS = ["buildProjectSteeringReadmeBody", "buildProjectSteeringEntryTemplate"];
+const SEED_BUILDERS = ["buildProjectSteeringEntryTemplate"];
 
 /**
  * The layers above the contract that state the same distribution fact. If only
@@ -90,7 +87,7 @@ describe("qfai init contract: steering seed provenance", () => {
         .filter((part) => part.length > 0)
         .join("/"),
     );
-    expect(written).toEqual(["README.md", ".gitkeep", "_templates/entry.md"]);
+    expect(written).toEqual([".gitkeep", "_templates/entry.md"]);
 
     const contract = flat(await readRepo(CONTRACT));
     for (const rel of written) {
