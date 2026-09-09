@@ -188,6 +188,22 @@ function fileWaiver(): string {
   ].join("\n");
 }
 
+/** A waiver naming a rule nothing emits, which the pass refuses rather than applies. */
+function unknownRuleWaiver(): string {
+  return [
+    "version: 1",
+    "waivers:",
+    "  - id: WVR-20260822-02",
+    "    rule: QFAI-NOT-A-RULE-999",
+    "    scope:",
+    '      paths: [".qfai/specs/**"]',
+    '    reason: "delta is intentionally unfilled until the spec is decided"',
+    '    expires: "2099-01-01"',
+    '    evidence: ".qfai/specs/spec-0001/09_delta.md"',
+    "",
+  ].join("\n");
+}
+
 /** The same waiver, scoped down to the `### DL-` entries it actually accepts. */
 function entryWaiver(dlIds: readonly string[]): string {
   return [
@@ -431,6 +447,43 @@ describe("an uncounted delta file is a finding, not only prose", () => {
       const data = await createReportData(root, validated);
 
       expect(data.waivers.active.map((waiver) => waiver.id)).toEqual(["WVR-20260822-01"]);
+    });
+  });
+
+  // A waiver the pass refuses says so, the same as one it applies. Without the
+  // verdict the operator sees a waiver that changed nothing and no reason for
+  // it, which reads like the finding is unwaivable rather than like the waiver
+  // is wrong.
+  it("reports the verdict its own pass reached on the waiver file", async () => {
+    await withProject({ "spec-0001": UNPARSABLE_DELTA }, async (root) => {
+      await writeFile(path.join(root, ".qfai", "waivers.yml"), unknownRuleWaiver(), "utf-8");
+
+      const data = await createReportData(root, EMPTY_VALIDATION);
+
+      const verdicts = data.issues.filter((issue) => issue.code === "QFAI-WAIVER-004");
+      expect(verdicts).toHaveLength(1);
+      expect(verdicts[0]?.message).toContain("QFAI-NOT-A-RULE-999");
+      expect(verdicts[0]?.file).toBe(".qfai/waivers.yml");
+      // Counted, not merely listed: a verdict outside `summary.counts` cannot
+      // reach the gate.
+      expect(data.summary.counts.warning).toBe(2);
+
+      expect(formatReportMarkdown(data)).toContain("QFAI-WAIVER-004");
+    });
+  });
+
+  // The reason the verdict was dropped in the first place. Both passes read the
+  // same file, so a refusal validation already published must not arrive twice.
+  it("does not repeat a verdict the validation result already carries", async () => {
+    await withProject({ "spec-0001": UNPARSABLE_DELTA }, async (root) => {
+      await writeFile(path.join(root, ".qfai", "waivers.yml"), unknownRuleWaiver(), "utf-8");
+
+      const validated = await validateProject(root);
+      expect(validated.issues.filter((issue) => issue.code === "QFAI-WAIVER-004")).toHaveLength(1);
+
+      const data = await createReportData(root, validated);
+
+      expect(data.issues.filter((issue) => issue.code === "QFAI-WAIVER-004")).toHaveLength(1);
     });
   });
 });

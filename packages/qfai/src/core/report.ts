@@ -14,7 +14,7 @@ import {
 import { collectFiles } from "./fs.js";
 import { buildSpecScope, isPathInSpecScope, isSpecInScope, type SpecScope } from "./specScope.js";
 import { ID_PREFIXES, extractAllIds, extractIds, type IdPrefix } from "./ids.js";
-import { normalizeValidationResult } from "./normalize.js";
+import { normalizeIssuePaths, normalizeValidationResult } from "./normalize.js";
 import { parseSpec } from "./parse/spec.js";
 import { parseScenarioDocument } from "./scenarioModel.js";
 import { parseFirstMarkdownTable } from "./specPackParsers.js";
@@ -643,8 +643,15 @@ export async function createReportData(
     ...scannedChangeTypeSummary,
     uncountedDeltaFiles: deltaScanGaps,
   };
-  const reportIssues = [...normalizedValidation.issues, ...deltaScan.issues];
-  const reportCounts = addIssueCounts(normalizedValidation.counts, deltaScan.issues);
+  const deltaScanVerdicts = selectNewWaiverVerdicts(
+    normalizedValidation.issues,
+    normalizeIssuePaths(resolvedRoot, deltaScan.validationIssues),
+  );
+  const reportIssues = [...normalizedValidation.issues, ...deltaScan.issues, ...deltaScanVerdicts];
+  const reportCounts = addIssueCounts(normalizedValidation.counts, [
+    ...deltaScan.issues,
+    ...deltaScanVerdicts,
+  ]);
   const ctypeWarnings = normalizedValidation.issues
     .filter((item) => item.code === "QFAI-CTYPE-002")
     .map((item) => {
@@ -1005,6 +1012,31 @@ function addIssueCounts(base: ValidationCounts, extra: readonly Issue[]): Valida
     counts[item.severity] += 1;
   }
   return counts;
+}
+
+/**
+ * The waiver-file verdicts the report's own pass reached and validation did not.
+ *
+ * Both passes read `.qfai/waivers.yml`, so a malformed file is reported by each
+ * and belongs in the output once. What differs is the severity index, which
+ * each pass builds from the findings it was handed: a rule validation never
+ * raised is unknown to it, so a waiver on a finding the report appends
+ * afterwards can only be refused here. Publishing both lists whole would double
+ * every parse error, and publishing neither would leave that refusal unsaid — a
+ * waiver that is neither applied nor refused tells the operator nothing.
+ *
+ * A verdict is identified by its code and its text. Both passes render the same
+ * sentence for the same waiver entry, and there is one waiver file, so nothing
+ * finer separates a repeat from a verdict only this pass can make. The space
+ * between the two is safe: a code carries none.
+ */
+function selectNewWaiverVerdicts(published: readonly Issue[], verdicts: readonly Issue[]): Issue[] {
+  const seen = new Set(published.map(waiverVerdictKey));
+  return verdicts.filter((item) => !seen.has(waiverVerdictKey(item)));
+}
+
+function waiverVerdictKey(item: Issue): string {
+  return `${item.code} ${item.message}`;
 }
 
 /**
