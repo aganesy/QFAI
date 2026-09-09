@@ -30,11 +30,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   Presence is the whole test: a record that is corrupt or from an older release
   still answers the only question asked of it.
 
-  A run removes `.qfai/assistant/README.md` where it still carries init's
-  signature, since its text describes the behaviour that moved. A README the
-  project wrote, or anything at that path that is not a regular file, is left
-  alone. A removal that fails is a note: the file is inert either way, and the
-  tree is installed regardless.
+  A README an earlier release wrote is left where it is, and still read. A
+  project that has not re-run `init` since the records were introduced has
+  neither, so reading the records alone would call its tree uninitialised — and
+  a checkout that had lost its wrappers would then pass every profile while the
+  assistant could load nothing. The signature also says init wrote the file, not
+  that init wrote all of it: a project may have added to it, and removing it
+  would take that too.
 
 ### Added
 

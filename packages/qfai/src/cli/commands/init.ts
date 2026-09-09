@@ -37,7 +37,7 @@ import {
   writeAssistantAssetsLock,
 } from "../../core/assistantAssetProvenance.js";
 import { getInitAssetsDir } from "../lib/assets.js";
-import { error, info, warn } from "../lib/logger.js";
+import { error, info } from "../lib/logger.js";
 import type { Issue } from "../../core/types.js";
 import { validateIntegrationSurface } from "../../core/validators/integrationSurface.js";
 import { applyWaivers } from "../../core/waivers.js";
@@ -79,10 +79,8 @@ import {
   ASSISTANT_LAYERS,
   HANDOFF_REQUIRED_SECTIONS,
   WORKLOG_ENTRY_STATUSES,
-  hasInitMarkerSignature,
   joinAssistantAssetLayer,
   joinAssistantLayer,
-  joinAssistantReadme,
   joinLegacyAssistantInstructions,
   joinLegacyAssistantSteering,
   joinMigrationMemo,
@@ -195,7 +193,7 @@ export async function runInit(options: InitOptions): Promise<void> {
 
   if (options.force) {
     info(
-      "NOTE: --force regenerates .qfai/assistant/skills/**, assistant/agents/** and the symlink assets (.agents/.claude/.github/.codex), and removes the legacy 10_workflow.md and the old wrappers. It also regenerates the qfai-provided plain files .github/copilot-instructions.md, .github/instructions/** (the code-review / principles review instructions) and each integration directory's README.md from the shipped templates, so local edits to those are lost. assistant/constitution/** and assistant/catalog/** are refreshed to the installed release only where the file still matches its .assets.lock.json record (a file this release no longer ships is likewise removed only when it matches the record); a diverged file is left untouched and reported as a manual merge (specs/contracts/steering and assistant/manifest/** are not overwritten — the manifest is user configuration edited by `qfai-configure`). Only agent-routing.yml is merged additively, filling in the skills / phases it is missing (existing phases are not rewritten).",
+      "NOTE: --force regenerates .qfai/assistant/skills/**, assistant/agents/** and the symlink assets (.agents/.claude/.github/.codex), and removes the legacy 10_workflow.md and the old wrappers. It also regenerates the qfai-provided plain files .github/copilot-instructions.md and .github/instructions/** (the code-review / principles review instructions) from the shipped templates, so local edits to those are lost. assistant/constitution/** and assistant/catalog/** are refreshed to the installed release only where the file still matches its .assets.lock.json record (a file this release no longer ships is likewise removed only when it matches the record); a diverged file is left untouched and reported as a manual merge (specs/contracts/steering and assistant/manifest/** are not overwritten — the manifest is user configuration edited by `qfai-configure`). Only agent-routing.yml is merged additively, filling in the skills / phases it is missing (existing phases are not rewritten).",
     );
   }
 
@@ -393,9 +391,12 @@ export async function runInit(options: InitOptions): Promise<void> {
     dryRun: options.dryRun,
     conflictPolicy: "skip",
   });
-  // The copy above is create-only, so it cannot take away a README an earlier
-  // release wrote. This does, for the one that release wrote itself.
-  const retiredReadmes = await removeRetiredAssistantReadme(destRoot, options.dryRun);
+  // A README an earlier release wrote is left where it is. It is inert — no
+  // release writes one now — and it is still the only evidence `QFAI-LINK-001`
+  // has that init ran in a tree predating the records, so taking it away would
+  // make a checkout that lost its wrappers read as one that never ran init.
+  // Deleting it would also take whatever the project added to it: the signature
+  // says init wrote the file, not that init wrote all of it.
   const governedResult = await syncGovernedAssistantAssets(assistantAssets, destRoot, {
     force: options.force,
     dryRun: options.dryRun,
@@ -560,9 +561,6 @@ export async function runInit(options: InitOptions): Promise<void> {
       ...upgradeResult.copied,
       ...governedResult.copied,
     ],
-    // The retired README is removed after a create-only copy that has already
-    // recorded it as skipped. Reporting it in both columns would say the file
-    // was left untouched and taken away in the same run, so the removal wins.
     [
       ...rootResult.skipped,
       ...withoutPaths(qfaiResult.skipped, governedPaths),
@@ -576,8 +574,8 @@ export async function runInit(options: InitOptions): Promise<void> {
       ...projectSteeringResult.skipped,
       ...upgradeResult.skipped,
       ...governedResult.skipped,
-    ].filter((entry) => !retiredReadmes.includes(entry)),
-    [...removed, ...upgradeResult.removed, ...assistantTreeResult.removed, ...retiredReadmes],
+    ],
+    [...removed, ...upgradeResult.removed, ...assistantTreeResult.removed],
     options.dryRun,
     "init",
     destRoot,
@@ -853,63 +851,6 @@ export async function replaceGovernedAsset(
 // ---------------------------------------------------------------------------
 
 /**
- * Ceiling on the README this rewrite will read before deciding.
- *
- * The same bound `QFAI-LINK-001` reads the marker under: generous against what
- * init writes — a few hundred bytes — and small enough that a document somebody
- * else put at that path costs nothing to decline.
- */
-const ASSISTANT_README_MAX_BYTES = 64 * 1024;
-
-/**
- * Removes `.qfai/assistant/README.md` when it is the one `qfai init` wrote.
- *
- * The file was a marker: `qfai validate` read it to tell "init ran here and the
- * integration surface was deleted" from "init never ran here". It reads two
- * machine-readable records for that now, so the README's own text — which
- * describes the behaviour that moved — is no longer true, and no release writes
- * it.
- *
- * Only a regular file carrying init's signature is removed, because only that
- * one is init's to remove. A project that wrote its own README at the path, or
- * annotated the one an older init left, keeps it: the signature is what tells
- * the two apart, and it is read here for the last time.
- *
- * Failure is a note, not an error. The file is inert either way, and a run that
- * installed the tree correctly has not failed because one stale document
- * survived it.
- */
-async function removeRetiredAssistantReadme(destRoot: string, dryRun: boolean): Promise<string[]> {
-  const dest = joinAssistantReadme(destRoot);
-  let current: Stats;
-  try {
-    current = await lstat(dest);
-  } catch (err: unknown) {
-    if (isEnoent(err)) {
-      return [];
-    }
-    warn(`WARN: could not stat ${dest} (${describeError(err)}); it was left in place.`);
-    return [];
-  }
-  if (!current.isFile()) {
-    return [];
-  }
-  const previous = await readExistingReadme(dest);
-  if (previous === null || !hasInitMarkerSignature(decodeForDetection(previous.content))) {
-    return [];
-  }
-  if (!dryRun) {
-    try {
-      await rm(dest);
-    } catch (err: unknown) {
-      warn(`WARN: could not remove ${dest} (${describeError(err)}); it was left in place.`);
-      return [];
-    }
-  }
-  return [dest];
-}
-
-/**
  * Handles a governed path that holds no readable regular file.
  *
  * Recording the shipped hash here was a false claim: nothing had been written,
@@ -995,24 +936,6 @@ async function restoreUnreadableGovernedAsset(
   out.skipped.push(dest);
   if (previousHash !== undefined) {
     out.recorded[out.relative] = previousHash;
-  }
-}
-
-/**
- * The bytes at `filePath`, or `null` when it is not a bounded regular file.
- *
- * Bytes, not text: what comes back is spliced into the replacement verbatim.
- */
-async function readExistingReadme(filePath: string): Promise<PinnedFileRead | null> {
-  try {
-    return await readPinnedRegularFileBytes(filePath, ASSISTANT_README_MAX_BYTES);
-  } catch (err: unknown) {
-    // Removed between the `lstat` above and this read. Nothing to repair, and
-    // the caller's other branches all mean "leave it alone" too.
-    if (isEnoent(err)) {
-      return null;
-    }
-    throw err;
   }
 }
 
@@ -1221,17 +1144,6 @@ export async function retireVerifiedGovernedAsset(
     }
     return { orphaned: quarantine };
   }
-}
-
-/**
- * The signature test's view of a body whose encoding is unknown.
- *
- * Lossy on purpose, and safe to be: the decoded string is only ever asked
- * whether init's ASCII heading and section are in it, and it is thrown away
- * afterwards. Nothing this returns is written anywhere.
- */
-function decodeForDetection(bytes: Buffer): string {
-  return bytes.toString("utf-8");
 }
 
 // ---------------------------------------------------------------------------

@@ -205,7 +205,7 @@ Scenario: レガシー管理ブロックからの自動移行
 - US-Refs: US-0003-0016
 - Given クリーンな新規プロジェクトディレクトリ
 - When `qfai init` を実行する
-- Then プロジェクトルートに `.qfai/steering/README.md`, `.qfai/steering/.gitkeep`, `.qfai/steering/_templates/entry.md` が生成される。2 回目以降 `qfai init` を実行してもユーザー編集された entry ファイルは preserve される
+- Then プロジェクトルートに `.qfai/steering/.gitkeep`, `.qfai/steering/_templates/entry.md` が生成される。README は seed しない（work-log の kind と命名は `assistant/catalog/worklog-entry.schema.md` が SSOT であり、`.qfai/**/README.md` を scaffold 文書として作らない規約に従う）。2 回目以降 `qfai init` を実行してもユーザー編集された entry ファイルは preserve される
 
 ## AC-0003-0019: --upgrade-assistant-tree flag
 

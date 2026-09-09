@@ -202,7 +202,7 @@ Setup: empty temp dir.
 Action: `runInit({ root })`、その後ユーザー編集をシミュレートして `.qfai/steering/_templates/entry.md` に追記 → `runInit({ root })` を再実行。
 Verify:
 
-- 初回実行で `.qfai/steering/README.md`, `.qfai/steering/.gitkeep`, `.qfai/steering/_templates/entry.md` が seed される
+- 初回実行で `.qfai/steering/.gitkeep`, `.qfai/steering/_templates/entry.md` が seed され、`.qfai/steering/README.md` は作られない
 - 2 回目実行後もユーザー追記内容が `_templates/entry.md` に残っている
 
 ## TC-0003-0023: --upgrade-assistant-tree migration

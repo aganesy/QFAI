@@ -5,6 +5,7 @@ import { access, lstat, open, readdir, readlink, realpath, stat } from "node:fs/
 import path from "node:path";
 
 import { getInitAssetsDir } from "../../shared/assets.js";
+import { ASSISTANT_README_SEGMENTS, hasInitMarkerSignature } from "../paths/assistantPaths.js";
 import type { Issue } from "../types.js";
 import { isInside, issue } from "./utils.js";
 import { isEperm } from "../fs/errno.js";
@@ -94,6 +95,29 @@ const OPEN_READ_FLAGS =
 const INIT_RECORDS: readonly (readonly string[])[] = [
   [".qfai", "assistant", ".assets.lock.json"],
   [".qfai", "install-provenance.json"],
+];
+
+/**
+ * READMEs an earlier release wrote, still read as evidence.
+ *
+ * A project initialised before either record existed has neither, and updating
+ * the dependency does not write one — only a fresh `qfai init` does. Reading
+ * the records alone would call such a tree uninitialised, so a checkout that
+ * lost its wrappers would pass every profile while the assistant could load
+ * nothing, which is the exact failure this evidence exists to prevent.
+ *
+ * Weaker than a record, and that is why it is second: the signature is prose,
+ * and a project documenting where it keeps its QFAI tree writes the same
+ * sentences. Three parts together are what make it init's rather than anyone's.
+ *
+ * No release writes these any more, so the list only shrinks from here.
+ */
+const LEGACY_INIT_MARKERS: readonly (readonly string[])[] = [
+  [...ASSISTANT_README_SEGMENTS],
+  [".agents", "README.md"],
+  [".codex", "README.md"],
+  [".claude", "agents", "README.md"],
+  [".github", "agents", "README.md"],
 ];
 
 type Broken = {
@@ -816,6 +840,15 @@ async function readFully(handle: FileHandle, maxBytes: number): Promise<string |
 }
 
 /**
+ * Ceiling on a legacy README this check will read before deciding.
+ *
+ * Generous against what init wrote — a few hundred bytes — and small enough
+ * that a document somebody else put at one of those paths costs nothing to
+ * decline.
+ */
+const MARKER_MAX_BYTES = 64 * 1024;
+
+/**
  * Whether `filePath` is one of the records `qfai init` writes.
  *
  * Presence is the whole test. Both paths carry a name nothing else uses, inside
@@ -836,6 +869,27 @@ async function readFully(handle: FileHandle, maxBytes: number): Promise<string |
 async function isInitRecord(filePath: string): Promise<boolean> {
   const entry = await lstatOrNull(filePath);
   return entry !== null && entry.isFile();
+}
+
+/**
+ * Whether a README at `filePath` is one an earlier `qfai init` wrote.
+ *
+ * `lstat`, not `stat`: a project's own README pointing at some other file that
+ * happens to mention the canonical tree is not init's marker, and following the
+ * link would read the target instead. A directory or a FIFO at one of these
+ * paths is likewise the project's — `isFile()` answers for all three.
+ *
+ * The read is bounded and pinned to the entry the bound was measured on. A
+ * project's own document here can be any size, and reading it whole to look for
+ * three substrings cost every profile in proportion to somebody else's file.
+ */
+async function hasLegacyInitSignature(filePath: string): Promise<boolean> {
+  const entry = await lstatOrNull(filePath);
+  if (entry === null || !entry.isFile()) {
+    return false;
+  }
+  const body = await readPinnedFile(filePath, MARKER_MAX_BYTES);
+  return body !== null && hasInitMarkerSignature(body);
 }
 
 /**
@@ -1151,6 +1205,9 @@ export async function inspectIntegrationSurface(root: string): Promise<Integrati
   const initialised = await anyEvidence([
     ...wrappers.map((wrapper, index) => () => isInitEvidence(wrapper, links[index])),
     ...INIT_RECORDS.map((record) => () => isInitRecord(path.join(root, ...record))),
+    ...LEGACY_INIT_MARKERS.map(
+      (marker) => () => hasLegacyInitSignature(path.join(root, ...marker)),
+    ),
   ]);
   // Surfaces `qfai init` creates that are not there at all. Reported once each,
   // below, instead of once per wrapper they would have held: a directory

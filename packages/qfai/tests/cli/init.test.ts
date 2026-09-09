@@ -2325,6 +2325,37 @@ describe("qfai init", () => {
     }
   });
 
+  it("leaves a README an earlier release wrote where it is", async () => {
+    // No release writes one now, and it is still the only evidence
+    // `QFAI-LINK-001` has that init ran in a tree predating the records.
+    // Removing it would also take whatever the project added to it: the
+    // signature says init wrote the file, not that init wrote all of it.
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-"));
+    try {
+      const legacy = path.join(root, ".qfai", "assistant", "README.md");
+      await mkdir(path.dirname(legacy), { recursive: true });
+      const body = [
+        "# QFAI assistant tree",
+        "",
+        "## Canonical entrypoint",
+        "",
+        "- .qfai/assistant/skills/",
+        "",
+        "## Our own note",
+        "",
+        "Added by this project.",
+        "",
+      ].join("\n");
+      await writeFile(legacy, body, "utf-8");
+
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+
+      expect(await readFile(legacy, "utf-8")).toBe(body);
+    } finally {
+      await removeTempTree(root);
+    }
+  });
+
   it("still records that it ran, in files nothing else writes", async () => {
     // `QFAI-LINK-001` reads these to tell "init ran here and the surface was
     // deleted" from "init never ran here". They replace the README that

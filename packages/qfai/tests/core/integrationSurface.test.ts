@@ -689,6 +689,36 @@ describe("a project's own entry is not proof init ran", () => {
     });
   });
 
+  it("still reads a tree that predates the records, by its old README", async () => {
+    // A project initialised before either record existed has neither, and
+    // updating the dependency does not write one — only a fresh `qfai init`
+    // does. Reading the records alone would call that tree uninitialised, so a
+    // checkout that lost its wrappers would pass every profile while the
+    // assistant could load nothing.
+    await withProject(async (root) => {
+      await seedCanonical(root, ["qfai-atdd"], []);
+      await mkdir(path.join(root, ".qfai", "assistant"), { recursive: true });
+      await writeFile(
+        path.join(root, ".qfai", "assistant", "README.md"),
+        [
+          "# QFAI assistant tree",
+          "",
+          "## Canonical entrypoint",
+          "",
+          "- .qfai/assistant/skills/",
+          "",
+        ].join("\n"),
+        "utf-8",
+      );
+      for (const dir of INTEGRATION_SURFACE_DIRS) {
+        await mkdir(path.join(root, ...dir.split("/")), { recursive: true });
+      }
+
+      const found = await finding(root);
+      expect(found?.message).toContain("missing");
+    });
+  });
+
   it("accepts either record on its own", async () => {
     // Both are written by init and either outlives the surface, so requiring
     // both would make a tree missing one read as never initialised.
