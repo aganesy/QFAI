@@ -22,6 +22,25 @@
 - `.qfai/` 配下の skill や設定を直接編集しても、パッケージとしてリリースされない。
 - リポジトリのルート直下にディレクトリ・ファイルを新規追加する際は事前にユーザー確認を必須とする（既存ルートファイルの編集は対象外）。詳細: `.agents/rules/root-additions-policy.md`。
 
+### `.qfai/contracts/cli/`
+
+`api/`, `db/`, `ui/` and `design/` hold a project's own contracts, and the
+shipped `qfai-sdd` skill governs them
+(`assets/init/.qfai/assistant/skills/qfai-sdd/references/contract-artifact-rules.md`).
+`cli/` is this repository's alone: the contracts for QFAI's own command surface,
+and for the files QFAI writes into a consuming project.
+
+- Markdown, and they carry no `QFAI-CONTRACT-ID`. The `api/` / `db/` / `ui/`
+  contract validators do not scan them.
+- Indexed in `_policies/05_Contracts.md` under **CLI Contracts**, with `CLI-*`
+  short ids.
+- Named `qfai-<command>.md` for one command's surface. A subject name instead —
+  `worklog-entry.schema.md`, `shipped-workflows.md` — means the file holds a
+  schema or an ownership boundary that more than one command shares.
+
+No check enforces the naming or the index entry. A new file that skips either is
+caught in review or not at all.
+
 ## バージョン規律 (全 AI 必読)
 
 QFAI パッケージの版番号 (`X.Y.Z`) は AI が選ばない。ユーザが決める。

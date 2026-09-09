@@ -4,6 +4,18 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ## [Unreleased]
 
+### Changed
+
+- **The `.qfai/contracts/cli/` convention is on the surface every agent reads**
+  (#1416). It sat in `CLAUDE.md` alone after the contracts README that used to
+  carry it was removed, and `AGENTS.md` is what Codex reads. An agent working
+  outside Claude had no path to the `CLI-*` index, the "no `QFAI-CONTRACT-ID`"
+  rule or the `qfai-<command>.md` naming, and a repository search found only the
+  one copy.
+
+  Moved rather than copied. Two statements of a naming rule drift, and the one
+  that goes stale is the copy its readers do not also see stated elsewhere.
+
 ### Fixed
 
 - **The shipped UI contract guide describes what the marker lane does** (#1411).
