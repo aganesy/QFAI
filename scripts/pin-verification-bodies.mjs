@@ -19,13 +19,14 @@
  *
  * Exits non-zero, changing nothing, when a declared item names a step no workflow performs.
  */
-import { readFileSync, writeFileSync } from "node:fs";
+import { readFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import path from "node:path";
 import { argv, cwd, exit, stderr, stdout } from "node:process";
 import { fileURLToPath } from "node:url";
 
 import { effectiveRunDefaults, verificationBodyDigest } from "./check-workflow-hygiene.mjs";
+import { writeFormattedJson } from "./lib/write-declaration.mjs";
 
 const require = createRequire(import.meta.url);
 /** The parser the lane itself uses, out of the workspace that depends on it. */
@@ -33,7 +34,7 @@ const { parse: parseYaml } = require("../packages/qfai/node_modules/yaml");
 
 const DECLARATION_REL = ".github/required-status-contexts.json";
 
-function main(root) {
+async function main(root) {
   const declarationPath = path.join(root, DECLARATION_REL);
   const declaration = JSON.parse(readFileSync(declarationPath, "utf-8"));
   const contexts = Array.isArray(declaration.contexts) ? declaration.contexts : [];
@@ -79,7 +80,7 @@ function main(root) {
     context.verificationBodies = bodies;
   }
 
-  writeFileSync(declarationPath, `${JSON.stringify(declaration, null, 2)}\n`, "utf-8");
+  await writeFormattedJson(declarationPath, declaration);
   stdout.write(`pinned into ${DECLARATION_REL}\n`);
   return 0;
 }
@@ -88,7 +89,7 @@ const invokedDirectly = fileURLToPath(import.meta.url) === path.resolve(argv[1] 
 if (invokedDirectly) {
   const rootFlag = argv.indexOf("--root");
   exit(
-    main(
+    await main(
       rootFlag >= 0 && argv[rootFlag + 1] !== undefined ? path.resolve(argv[rootFlag + 1]) : cwd(),
     ),
   );

@@ -231,6 +231,7 @@
     "tests/scripts/promotionPreflight.test.ts",
     "tests/scripts/releaseNotesDrift.test.ts",
     "tests/scripts/renovateMechanism.test.ts",
+    "tests/scripts/repinDeclarationFormatting.test.ts",
     "tests/scripts/scriptEntryGuard.test.ts",
     "tests/scripts/sliceSurfaceAlignment.test.ts",
     "tests/scripts/testTypeCheckEnumeration.test.ts",
