@@ -35,13 +35,14 @@ Required outputs (created if absent; merged or refreshed if present per the exis
 - `.qfai/assistant/process/**` — workflow, methodology, `migrations/`
 - `.qfai/assistant/agents/**`, `.qfai/assistant/skills/**` — unchanged from prior layouts
 - `.qfai/steering/` (project-root work-log surface, NOT under `assistant/`) seeded with:
-  - `README.md` (generic content, no internal IDs / version markers)
   - `.gitkeep`
   - `_templates/entry.md` (work-log entry template with frontmatter)
 
+No output is a `README.md`. Guidance about an artifact belongs with the skill that writes it, under `references/` and `templates/` in `.qfai/assistant/skills/**`; the work-log surface's own contract is `.qfai/assistant/catalog/worklog-entry.schema.md`. A run removes `.qfai/assistant/README.md` when it still carries the signature earlier releases wrote there, because that file described how `qfai validate` decided whether init had run and `QFAI-LINK-001` now reads a record instead. A file at that path that does not carry the signature, or that holds a project's own text below the heading an earlier repair filed it under, is left alone.
+
 Reinit behavior (existing `.qfai/` present):
 
-- The `.qfai/steering/` seed is create-only: an existing `README.md` / `_templates/entry.md` is never rewritten, not even under `--force` (that surface holds project content). When either file differs from the body the running release would seed, init prints a notice naming the file, the first differing line and both line counts, and tells the operator how to obtain a fresh copy (`qfai init --dir <scratch-dir>`, then diff). The comparison is line-ending-insensitive, so a CRLF checkout of an unedited seed is not reported as drift. When the existing path cannot be compared at all (not a regular file, or unreadable, or past the comparison size ceiling), init prints a notice saying so instead of failing the run. An unchanged file produces no notice, so a silent `skipped` entry means "already current".
+- The `.qfai/steering/` seed is create-only: an existing `_templates/entry.md` is never rewritten, not even under `--force` (that surface holds project content). When it differs from the body the running release would seed, init prints a notice naming the file, the first differing line and both line counts, and tells the operator how to obtain a fresh copy (`qfai init --dir <scratch-dir>`, then diff). The comparison is line-ending-insensitive, so a CRLF checkout of an unedited seed is not reported as drift. When the existing path cannot be compared at all (not a regular file, or unreadable, or past the comparison size ceiling), init prints a notice saying so instead of failing the run. An unchanged file produces no notice, so a silent `skipped` entry means "already current".
 - User-authored work-log entries (`.qfai/steering/*.md` that match the entry frontmatter schema with `id` matching filename stem) MUST NOT be overwritten.
 - Collisions where the user-edited file lives at an old (pre-recut) path surface a `W-USER-EDIT-PRESERVED` finding via the validate gate (REQ-0013).
 
@@ -83,7 +84,7 @@ Behavior:
 
 - For each file in the relocation table, copy the existing user-edited content to the new path. The original is left in place on purpose — see the deprecation-window bullet below and NFR-0002.
 - If a destination already exists with user edits, preserve the user-edited content and surface `W-USER-EDIT-PRESERVED` (REQ-0013).
-- After the copy, run `qfai init` default flow, which seeds a missing README / template and reports drift on an existing one (create-only, as above).
+- After the copy, run `qfai init` default flow, which seeds a missing template and reports drift on an existing one (create-only, as above).
 - Old paths are not deleted within the deprecation window (NFR-0002); they remain readable but emit `D-DEPRECATED-PATH` warnings during validate.
 
 Required preconditions:
@@ -161,9 +162,9 @@ The sunset is `SUNSETS.legacyAssistantSteering` in `packages/qfai/src/core/sunse
 
 ## Distributed-surface obligations
 
-The seeded `.qfai/steering/README.md` and `_templates/entry.md` MUST pass `packages/qfai/scripts/check-no-internal-version-leakage.sh` (no `spec-NNNN` for N ≥ 10, no `vN.M[.P]`, no `CAP-0010+`, no `DEC-NNNN-NNNN`, no `DR-NNNN`, no `OQ-NNNN-NNNN`, no `QFAI-PROT2-NNN`, no `schemaVersion`). The work-log surface itself (`.qfai/steering/`) is NOT shipped in `packages/qfai/package.json#files`.
+The seeded `.qfai/steering/_templates/entry.md` MUST pass `packages/qfai/scripts/check-no-internal-version-leakage.sh` (no `spec-NNNN` for N ≥ 10, no `vN.M[.P]`, no `CAP-0010+`, no `DEC-NNNN-NNNN`, no `DR-NNNN`, no `OQ-NNNN-NNNN`, no `QFAI-PROT2-NNN`, no `schemaVersion`). The work-log surface itself (`.qfai/steering/`) is NOT shipped in `packages/qfai/package.json#files`.
 
-Neither seeded body is a static asset. `buildProjectSteeringReadmeBody` and `buildProjectSteeringEntryTemplate` in `packages/qfai/src/cli/commands/init.ts` build them in TypeScript, taking the `kind` enum from `WORKLOG_ENTRY_KINDS`, the `status` enum from `WORKLOG_ENTRY_STATUSES` and the mandatory handoff headings from `HANDOFF_REQUIRED_SECTIONS` (`packages/qfai/src/core/paths/assistantPaths.ts`), so those three lists cannot drift from the validator; the remaining frontmatter prose is illustrative and is not derived. They therefore ship as string literals inside `dist/` rather than as files under `assets/`. Two consequences when auditing the obligation above:
+The seeded body is not a static asset. `buildProjectSteeringEntryTemplate` in `packages/qfai/src/cli/commands/init.ts` builds it in TypeScript, taking the `status` enum from `WORKLOG_ENTRY_STATUSES` and the mandatory handoff headings from `HANDOFF_REQUIRED_SECTIONS` (`packages/qfai/src/core/paths/assistantPaths.ts`), so neither list can drift from the validator; the remaining frontmatter prose is illustrative and is not derived. It therefore ships as a string literal inside `dist/` rather than as a file under `assets/`. Two consequences when auditing the obligation above:
 
-- The leakage guard reaches the two bodies only through `dist/`, so they are covered on the post-build guard run. The lint-only run skips `dist/` by design and says so (`WARN: ... skipped ... that are not on disk yet`), so a green lint-only run is not evidence that the seed was scanned.
+- The leakage guard reaches the body only through `dist/`, so it is covered on the post-build guard run. The lint-only run skips `dist/` by design and says so (`WARN: ... skipped ... that are not on disk yet`), so a green lint-only run is not evidence that the seed was scanned.
 - `packages/qfai/tests/integration/distributedSurfaceLeakage.test.ts` runs `qfai init` into a temp directory and scans the emitted tree with the same forbidden-class set, regardless of build state. It belongs to the `integration` vitest project (`packages/qfai/vitest.workspace.ts`), so it covers the seeded bodies only when that project — or the full suite — runs; a green `test:assets` or `e2e` slice alone does not scan the seed.

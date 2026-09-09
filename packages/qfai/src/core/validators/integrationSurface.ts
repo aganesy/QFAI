@@ -5,7 +5,7 @@ import { access, lstat, open, readdir, readlink, realpath, stat } from "node:fs/
 import path from "node:path";
 
 import { getInitAssetsDir } from "../../shared/assets.js";
-import { ASSISTANT_README_SEGMENTS, hasInitMarkerSignature } from "../paths/assistantPaths.js";
+import { ASSISTANT_ASSETS_LOCK_BASENAME } from "../assistantAssetProvenance.js";
 import type { Issue } from "../types.js";
 import { isInside, issue } from "./utils.js";
 import { isEperm } from "../fs/errno.js";
@@ -66,14 +66,6 @@ function isMissing(error: unknown): boolean {
 }
 
 /**
- * Ceiling on a file this rule will read looking for the init signature.
- *
- * Generous against what init writes — a few hundred bytes — and small enough
- * that a project's own document at one of these paths costs nothing to decline.
- */
-const MARKER_MAX_BYTES = 64 * 1024;
-
-/**
  * Read-only, and non-blocking where the platform defines it.
  *
  * Opening a FIFO for reading blocks until a writer appears. Windows has no
@@ -85,28 +77,36 @@ const OPEN_READ_FLAGS =
     : constants.O_RDONLY;
 
 /**
- * Files `qfai init` writes and never removes, used as proof it ran.
+ * Records `qfai init` writes and never removes, used as proof it ran.
  *
- * Kept in step with the README set in `cli/commands/init.ts`. Any one of them
- * is enough: a project with any of the integration surfaces has run init.
+ * Either one is enough. Both live inside `.qfai/`, which init creates, and
+ * both carry a name no project writes for its own reasons — so the path is the
+ * evidence, and nothing has to be read to confirm it.
+ *
+ * That is the difference from the READMEs this probe used to read. Those sat
+ * at conventional paths a project can already occupy, so presence proved
+ * nothing and the body had to carry a signature: a title, a section heading
+ * and a substring, all three, because any one of them appears in a README a
+ * project wrote about where it keeps its own QFAI tree. Init also wrote a
+ * README only when the path was free, so a project that already had its own at
+ * every integration directory ran init and got no marker at all — and deleting
+ * every wrapper afterwards left the surface reading as never initialised:
+ * nothing checked, every profile passing, and the assistant loading nothing.
+ *
+ * Presence alone, deliberately, with no parse of the contents. A record init
+ * wrote and something later truncated still proves init ran, and that state has
+ * its own finding (`QFAI-ASSETS-008`); requiring a well-formed record here
+ * would turn a damaged one into "never initialised", which is the reading this
+ * marker exists to prevent.
  */
 const INIT_MARKERS: readonly (readonly string[])[] = [
-  // The one marker that cannot be pre-empted. The four below sit in
-  // conventional directories, and `qfai init` writes a README there only when
-  // the path is free — so a project that already had its own at all four ran
-  // init and got no marker at all, and deleting every wrapper afterwards left
-  // the surface reading as never initialised: nothing checked, every profile
-  // passing, and the assistant loading nothing. This one is inside `.qfai/`,
-  // which init owns outright and creates, and init rewrites it whenever it does
-  // not carry the signature — so a project initialised before this README
-  // carried one gets the marker on its next run, instead of keeping an older
-  // README that answers nothing forever. It also outlives every integration
-  // directory, which is the state the evidence is needed for.
-  [...ASSISTANT_README_SEGMENTS],
-  [".agents", "README.md"],
-  [".codex", "README.md"],
-  [".claude", "agents", "README.md"],
-  [".github", "agents", "README.md"],
+  // Written whenever the assistant tree is installed, which is what this rule
+  // is asking about.
+  [".qfai", "assistant", ASSISTANT_ASSETS_LOCK_BASENAME],
+  // Written when files are recorded into the adopter tree. Deliberately not
+  // part of the managed gitignore block, so it reaches a fresh clone — the
+  // state the evidence is needed for.
+  [".qfai", "install-provenance.json"],
 ];
 
 type Broken = {
@@ -828,31 +828,16 @@ async function readFully(handle: FileHandle, maxBytes: number): Promise<string |
   return buffer.subarray(0, filled).toString("utf-8");
 }
 
-/** Whether a README at `filePath` is one `qfai init` wrote. */
-async function hasInitSignature(filePath: string): Promise<boolean> {
-  // A regular file, checked before the read — and checked with `lstat`, not
-  // `stat`. These paths are create-only, so whatever the project already had at
-  // one of them is still there: a directory makes `readFile` throw `EISDIR`,
-  // which rejected the whole `Promise.all` and lost the `QFAI-LINK-001` the
-  // other markers would have produced, and a FIFO blocks the read outright.
-  // `stat` followed a link, so a project's own `.agents/README.md` pointing at
-  // some other file that happens to mention `.qfai/assistant/` read as a marker
-  // init wrote — and a checkout that never ran init was told all six surfaces
-  // were missing. Init writes these as plain files; nothing else is one.
-  // Not a symlink, which only `lstat` can answer — `open` follows one, so the
-  // handle below would report the target. A project's own README pointing at a
-  // file that happens to mention the canonical tree is not init's marker.
+/** Whether the record at `filePath` is one `qfai init` wrote. */
+async function isInitRecord(filePath: string): Promise<boolean> {
+  // `lstat`, not `stat`, and a regular file only. A directory at the path makes
+  // every read of it throw `EISDIR`, and a FIFO blocks a reader outright, so
+  // neither can be treated as a record without deciding first what the entry
+  // is. A symlink is excluded for the same reason `QFAI-ASSETS-008` refuses to
+  // follow one: what it points at is outside the tree this rule is answering
+  // about, and `stat` would report the target instead of the entry.
   const entry = await lstatOrNull(filePath);
-  if (entry === null || entry.isSymbolicLink()) {
-    return false;
-  }
-  // Bounded, and pinned to the entry the bound was measured on. Init writes a
-  // short boilerplate README; a project's own file at that path can be any
-  // size, and reading it whole to look for three substrings slowed every
-  // profile in proportion to somebody else's document — or ended it on a large
-  // enough one.
-  const body = await readPinnedFile(filePath, MARKER_MAX_BYTES);
-  return body !== null && hasInitMarkerSignature(body);
+  return entry !== null && !entry.isSymbolicLink() && entry.isFile();
 }
 
 /**
@@ -1155,8 +1140,9 @@ export async function inspectIntegrationSurface(root: string): Promise<Integrati
   // Not "some wrapper survives": delete every one of them and that test says
   // the project was never initialised, so nothing is checked at all — the state
   // where the assistant can load nothing then passes every profile most
-  // confidently. `qfai init` writes these READMEs beside the wrappers and never
-  // removes them, so they outlive the links they document.
+  // confidently. The records in {@link INIT_MARKERS} sit inside `.qfai/` rather
+  // than in the integration directories, so they outlive every wrapper and the
+  // directories that held them.
   //
   // And not "some entry exists at a wrapper path" either. These directories are
   // conventional, and a shipped name can collide with one a project chose for
@@ -1167,7 +1153,7 @@ export async function inspectIntegrationSurface(root: string): Promise<Integrati
   // wrapper names.
   const initialised = await anyEvidence([
     ...wrappers.map((wrapper, index) => () => isInitEvidence(wrapper, links[index])),
-    ...INIT_MARKERS.map((marker) => () => hasInitSignature(path.join(root, ...marker))),
+    ...INIT_MARKERS.map((marker) => () => isInitRecord(path.join(root, ...marker))),
   ]);
   // Surfaces `qfai init` creates that are not there at all. Reported once each,
   // below, instead of once per wrapper they would have held: a directory

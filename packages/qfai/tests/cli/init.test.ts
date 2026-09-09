@@ -34,17 +34,24 @@ import {
   QFAI_GITIGNORE_GOVERNANCE_NEGATIONS,
   QFAI_GITIGNORE_MARKER,
 } from "../../src/core/gitignore.js";
-import {
-  WORKLOG_ENTRY_STATUSES,
-  hasInitMarkerSignature,
-} from "../../src/core/paths/assistantPaths.js";
+import { WORKLOG_ENTRY_STATUSES } from "../../src/core/paths/assistantPaths.js";
 import {
   INTEGRATION_SURFACE_DIRS,
   validateIntegrationSurface,
 } from "../../src/core/validators/integrationSurface.js";
 import { removeTempTree } from "../helpers/tempTree.js";
 
-/** The README `qfai init` wrote before it carried a marker signature. */
+/** The README earlier releases wrote at the marker path, signature and all. */
+const OWNED_ASSISTANT_README = [
+  "# QFAI assistant tree",
+  "",
+  "## Canonical entrypoint",
+  "",
+  "- .qfai/assistant/skills/",
+  "",
+].join("\n");
+
+/** A README with no signature: a project's own file at that path. */
 const LEGACY_ASSISTANT_README = [
   "# assistant/",
   "This folder contains AI assistance assets.",
@@ -415,12 +422,7 @@ describe("qfai init", () => {
           "rcp_footer.md",
         ),
         path.join(root, ".qfai", "assistant", "skills", "qfai-sdd", "references", "rcp_footer.md"),
-        // README files are regular files
-        path.join(root, ".claude", "agents", "README.md"),
-        path.join(root, ".github", "agents", "README.md"),
         path.join(root, ".github", "copilot-instructions.md"),
-        path.join(root, ".codex", "README.md"),
-        path.join(root, ".agents", "README.md"),
       ];
 
       for (const filePath of expectedRegularFiles) {
@@ -2319,10 +2321,8 @@ describe("qfai init", () => {
       // The per-tool entry points ...
       const entryPoints = [
         path.join(root, ".github", "copilot-instructions.md"),
-        path.join(root, ".codex", "README.md"),
-        path.join(root, ".agents", "README.md"),
-        path.join(root, ".claude", "agents", "README.md"),
-        path.join(root, ".github", "agents", "README.md"),
+        path.join(root, "AGENTS.md"),
+        path.join(root, "CLAUDE.md"),
       ];
       // ... plus the whole instruction surface they hand the agent:
       // constitution, catalog contracts, skills and their references.
@@ -2351,23 +2351,20 @@ describe("qfai init", () => {
     }
   });
 
-  it("keeps README.md as regular files (not symlinked)", async () => {
+  it("writes no README.md anywhere", async () => {
+    // Guidance about an artifact belongs with the skill that writes it. Two
+    // shipped skills say so, and init used to disobey them in six places.
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-"));
     try {
       await runInit({ dir: root, force: false, dryRun: false, yes: true });
 
-      const readmePaths = [
-        path.join(root, ".claude", "agents", "README.md"),
-        path.join(root, ".github", "agents", "README.md"),
-        path.join(root, ".agents", "README.md"),
-        path.join(root, ".codex", "README.md"),
-      ];
-
-      for (const readmePath of readmePaths) {
-        const stat = await lstat(readmePath);
-        expect(stat.isSymbolicLink()).toBe(false);
-        expect(stat.isFile()).toBe(true);
-      }
+      const readmes = await fg("**/README.md", {
+        cwd: root,
+        dot: true,
+        onlyFiles: false,
+        followSymbolicLinks: false,
+      });
+      expect(readmes).toEqual([]);
     } finally {
       await removeTempTree(root);
     }
@@ -2890,8 +2887,8 @@ describe("qfai init", () => {
         path.join(root, ".qfai", "assistant", "constitution", "constitution.md"),
         path.join(root, ".qfai", "assistant", "agents", "delivery-planner.md"),
         path.join(root, ".github", "copilot-instructions.md"),
-        path.join(root, ".codex", "README.md"),
-        path.join(root, ".agents", "README.md"),
+        path.join(root, "AGENTS.md"),
+        path.join(root, "CLAUDE.md"),
       ];
 
       for (const filePath of expectedRegularFiles) {
@@ -3509,14 +3506,15 @@ describe("qfai init", () => {
   });
 
   // QFAI:SPEC-0003:TC-0003-0022 (TDD-0022): project-root .qfai/steering/ seed
-  it("TC-0003-0022 (TDD-0022): seeds project-root .qfai/steering/ surface (README + .gitkeep + _templates/entry.md)", async () => {
+  it("TC-0003-0022 (TDD-0022): seeds project-root .qfai/steering/ surface (.gitkeep + _templates/entry.md)", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-tdd0022-"));
     try {
       await runInit({ dir: root, force: false, dryRun: false, yes: true });
-      const readme = await readFile(path.join(root, ".qfai", "steering", "README.md"), "utf-8");
-      expect(readme).toContain("AI work-log surface");
-      expect(readme).toContain("decision");
-      expect(readme).toContain("handoff");
+      // No README: the surface's own contract is
+      // `.qfai/assistant/catalog/worklog-entry.schema.md`.
+      await expect(
+        readFile(path.join(root, ".qfai", "steering", "README.md"), "utf-8"),
+      ).rejects.toThrow();
       const gitkeepStat = await lstat(path.join(root, ".qfai", "steering", ".gitkeep"));
       expect(gitkeepStat.isFile()).toBe(true);
       const tplBody = await readFile(
@@ -3586,15 +3584,15 @@ describe("qfai init", () => {
   });
 
   // QFAI:SPEC-0003:TC-0003-0022 (TDD-0022): re-init preserves user edits in .qfai/steering/
-  it("TC-0003-0022 (TDD-0022): re-init does not overwrite user edits in .qfai/steering/README.md", async () => {
+  it("TC-0003-0022 (TDD-0022): re-init does not overwrite user edits in .qfai/steering/_templates/entry.md", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-tdd0022b-"));
     try {
       await runInit({ dir: root, force: false, dryRun: false, yes: true });
-      const readmePath = path.join(root, ".qfai", "steering", "README.md");
-      const userEdit = "# my custom worklog notes\n";
-      await writeFile(readmePath, userEdit, "utf-8");
+      const templatePath = path.join(root, ".qfai", "steering", "_templates", "entry.md");
+      const userEdit = "---\nid: my-own-shape\n---\n";
+      await writeFile(templatePath, userEdit, "utf-8");
       await runInit({ dir: root, force: false, dryRun: false, yes: true });
-      const after = await readFile(readmePath, "utf-8");
+      const after = await readFile(templatePath, "utf-8");
       expect(after).toBe(userEdit);
     } finally {
       await removeTempTree(root);
@@ -3614,18 +3612,13 @@ describe("qfai init", () => {
       });
       expect(cleanRun).not.toContain("differs from the seed this qfai release generates");
 
-      const readmePath = path.join(root, ".qfai", "steering", "README.md");
       const templatePath = path.join(root, ".qfai", "steering", "_templates", "entry.md");
-      await writeFile(readmePath, "# my custom worklog notes\n", "utf-8");
       await writeFile(templatePath, "---\nid: stale\n---\n", "utf-8");
 
       const staleRun = await captureStdout(async () => {
         await runInit({ dir: root, force: false, dryRun: false, yes: true });
       });
 
-      expect(staleRun).toContain(
-        ".qfai/steering/README.md differs from the seed this qfai release generates",
-      );
       expect(staleRun).toContain(
         ".qfai/steering/_templates/entry.md differs from the seed this qfai release generates",
       );
@@ -3634,7 +3627,6 @@ describe("qfai init", () => {
       );
       expect(staleRun).toContain("create-only");
       // The notice never implies a rewrite happened.
-      expect(await readFile(readmePath, "utf-8")).toBe("# my custom worklog notes\n");
       expect(await readFile(templatePath, "utf-8")).toBe("---\nid: stale\n---\n");
     } finally {
       await removeTempTree(root);
@@ -3646,14 +3638,11 @@ describe("qfai init", () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-tdd0022d-"));
     try {
       await runInit({ dir: root, force: false, dryRun: false, yes: true });
-      const readmePath = path.join(root, ".qfai", "steering", "README.md");
       const templatePath = path.join(root, ".qfai", "steering", "_templates", "entry.md");
       // What core.autocrlf=true (or a Windows editor) leaves behind: the same
       // body, every LF rewritten as CRLF.
-      for (const target of [readmePath, templatePath]) {
-        const body = await readFile(target, "utf-8");
-        await writeFile(target, body.replace(/\n/g, "\r\n"), "utf-8");
-      }
+      const body = await readFile(templatePath, "utf-8");
+      await writeFile(templatePath, body.replace(/\n/g, "\r\n"), "utf-8");
 
       const crlfRun = await captureStdout(async () => {
         await runInit({ dir: root, force: false, dryRun: false, yes: true });
@@ -3673,24 +3662,24 @@ describe("qfai init", () => {
       await runInit({ dir: root, force: false, dryRun: false, yes: true });
       // A directory where the seed file belongs: occupied, so create-only skips
       // it, but there is no body to compare — that must not read as "current".
-      const readmePath = path.join(root, ".qfai", "steering", "README.md");
+      const templatePath = path.join(root, ".qfai", "steering", "_templates", "entry.md");
       // `removeTempTree` rather than a bare `rm`: this file routes every removal
       // through the helper, and its `force` / retry contract is what is wanted
       // here too — the seed is a regular file, so the recursive flag is inert.
-      await removeTempTree(readmePath);
-      await mkdir(readmePath, { recursive: true });
+      await removeTempTree(templatePath);
+      await mkdir(templatePath, { recursive: true });
 
       const blockedRun = await captureStdout(async () => {
         await runInit({ dir: root, force: false, dryRun: false, yes: true });
       });
 
       expect(blockedRun).toContain(
-        ".qfai/steering/README.md could not be compared against the seed this qfai release generates",
+        ".qfai/steering/_templates/entry.md could not be compared against the seed this qfai release generates",
       );
       expect(blockedRun).toContain("whether it is current is unknown");
-      // The unaffected sibling stays silent, and the run still succeeds.
-      expect(blockedRun).not.toContain(".qfai/steering/_templates/entry.md could not be compared");
-      const dirStat = await lstat(readmePath);
+      // Only the occupied path is reported, and the run still succeeds.
+      expect(blockedRun).not.toContain(".qfai/steering/.gitkeep could not be compared");
+      const dirStat = await lstat(templatePath);
       expect(dirStat.isDirectory()).toBe(true);
     } finally {
       await removeTempTree(root);
@@ -4176,30 +4165,23 @@ describe("qfai init", () => {
     }
   });
 
-  it("rewrites an assistant README that carries no init marker", async () => {
-    // `.qfai/assistant/README.md` is what the integration-surface rule reads to
-    // tell "init ran here and the surface was deleted" from "init never ran
-    // here". Every `.qfai/**` path is copied create-only, so a project
-    // initialised before that README carried the signature keeps its older one
-    // — and deleting every wrapper then reads as a project that never ran init:
-    // nothing checked, every profile passing.
+  it("removes an assistant README that carries the init marker", async () => {
+    // That README described how the integration-surface rule decided whether
+    // init had run. The rule reads two records now, so the file is a
+    // description of behaviour the tool no longer has, sitting in the tree the
+    // assistant loads its instructions from.
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-marker-"));
     try {
       const marker = path.join(root, ".qfai", "assistant", "README.md");
       await mkdir(path.dirname(marker), { recursive: true });
-      await writeFile(marker, LEGACY_ASSISTANT_README, "utf-8");
+      await writeFile(marker, OWNED_ASSISTANT_README, "utf-8");
 
       await runInit({ dir: root, force: false, dryRun: false, yes: true });
 
-      const rewritten = await readFile(marker, "utf-8");
-      expect(hasInitMarkerSignature(rewritten)).toBe(true);
-      // And the text that was there is kept: this repair runs on a plain
-      // `qfai init`, and `.qfai/**` is create-only, so a project may well have
-      // annotated the README an older init wrote.
-      expect(rewritten).toContain("This folder contains AI assistance assets.");
-      expect(rewritten).toContain("- `agents/` : subagent definitions (general job roles)");
+      await expect(readFile(marker, "utf-8")).rejects.toThrow();
 
-      // And the surface it is evidence for is reported once it is deleted.
+      // And the evidence it used to carry is elsewhere: the surface is still
+      // reported once every wrapper is deleted.
       for (const dir of INTEGRATION_SURFACE_DIRS) {
         await removeTempTree(path.join(root, ...dir.split("/")));
       }
@@ -4210,56 +4192,57 @@ describe("qfai init", () => {
     }
   });
 
-  it("leaves an assistant README that already carries the marker alone", async () => {
-    // The rewrite repairs a missing signature; it is not a `--force` on a file
-    // a project may have annotated below init's own text.
+  it("leaves an assistant README a project wrote for itself", async () => {
+    // Every `.qfai/**` path is create-only, so whatever a project put here is
+    // still here. Without the signature it is not init's to delete.
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-marker-"));
     try {
-      await runInit({ dir: root, force: false, dryRun: false, yes: true });
-
       const marker = path.join(root, ".qfai", "assistant", "README.md");
-      const annotated = `${await readFile(marker, "utf-8")}\n## Project note\n\nkept.\n`;
-      await writeFile(marker, annotated, "utf-8");
+      await mkdir(path.dirname(marker), { recursive: true });
+      await writeFile(marker, LEGACY_ASSISTANT_README, "utf-8");
 
       await runInit({ dir: root, force: false, dryRun: false, yes: true });
 
-      expect(await readFile(marker, "utf-8")).toBe(annotated);
+      expect(await readFile(marker, "utf-8")).toBe(LEGACY_ASSISTANT_README);
     } finally {
       await removeTempTree(root);
     }
   });
 
-  it("does not write the marker through a hard link to a file outside the project", async () => {
-    // The rewrite replaces the directory entry, it does not write through it.
-    // `writeFile` on the checked path would have written the template into
-    // every other name sharing that inode — the same breakage a symlink swapped
-    // in between the check and the write causes.
+  it("leaves an assistant README holding a project's own preserved text", async () => {
+    // An earlier release repaired a marker-less README by writing its template
+    // over it and filing what was there below a heading. The text above the
+    // heading is init's and the text below it is the project's, so the file as
+    // a whole is not init's to delete.
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-marker-"));
-    const outside = path.join(root, "outside.md");
     try {
-      await writeFile(outside, LEGACY_ASSISTANT_README, "utf-8");
-      const marker = path.join(root, "project", ".qfai", "assistant", "README.md");
+      const marker = path.join(root, ".qfai", "assistant", "README.md");
       await mkdir(path.dirname(marker), { recursive: true });
-      try {
-        await link(outside, marker);
-      } catch {
-        // No hard links on this filesystem — nothing for this case to assert.
-        return;
-      }
+      const merged = [
+        OWNED_ASSISTANT_README,
+        "",
+        "---",
+        "",
+        "## The README that was here before qfai init",
+        "",
+        "Project notes that must survive.",
+        "",
+      ].join("\n");
+      await writeFile(marker, merged, "utf-8");
 
-      await runInit({ dir: path.join(root, "project"), force: false, dryRun: false, yes: true });
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
 
-      expect(hasInitMarkerSignature(await readFile(marker, "utf-8"))).toBe(true);
-      expect(await readFile(outside, "utf-8")).toBe(LEGACY_ASSISTANT_README);
+      expect(await readFile(marker, "utf-8")).toBe(merged);
     } finally {
       await removeTempTree(root);
     }
   });
 
-  it("keeps the previous README's bytes when they are not UTF-8", async () => {
-    // The previous body is somebody else's file and may be in any encoding.
-    // Decoding it to a string and writing that back replaces every byte that
-    // is not valid UTF-8 with U+FFFD, irreversibly.
+  it("leaves an assistant README whose bytes are not UTF-8", async () => {
+    // The file at this path is somebody else's and may be in any encoding. A
+    // decode that replaces what it cannot read with U+FFFD must not be able to
+    // produce the signature, or a project's own document in another encoding
+    // could be deleted for looking like init's after mangling.
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-marker-"));
     try {
       // Shift_JIS for「プロジェクト」— not a valid UTF-8 sequence.
@@ -4274,85 +4257,75 @@ describe("qfai init", () => {
 
       await runInit({ dir: root, force: false, dryRun: false, yes: true });
 
-      const rewritten = await readFile(marker);
-      expect(hasInitMarkerSignature(rewritten.toString("utf-8"))).toBe(true);
-      expect(rewritten.includes(shiftJis)).toBe(true);
+      expect(await readFile(marker)).toEqual(legacy);
     } finally {
       await removeTempTree(root);
     }
   });
 
-  it("leaves the README alone when the merge would outgrow the marker ceiling", async () => {
-    // The rule reads the marker under a 64 KiB bound. A merge past it would
-    // report a repair and leave the project exactly as unreadable as before —
-    // and every later init would decline the oversized file too.
+  it("leaves an assistant README too large to be one init wrote", async () => {
+    // The read is bounded. A document past the ceiling is decided by nothing,
+    // and deciding nothing has to mean leaving it alone — a project's own
+    // large file at this path is exactly what the bound exists for.
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-marker-"));
     try {
       const marker = path.join(root, ".qfai", "assistant", "README.md");
       await mkdir(path.dirname(marker), { recursive: true });
-      // Just under the 64 KiB the marker is read under, so the file itself is
-      // readable — it is the merge with the template that overshoots.
-      const huge = `# assistant/\n\n${"note.\n".repeat(10800)}`;
-      expect(Buffer.byteLength(huge, "utf-8")).toBeLessThan(64 * 1024);
+      // Carries the signature, and is past the 64 KiB the read is bounded to.
+      const huge = `${OWNED_ASSISTANT_README}\n${"note.\n".repeat(11000)}`;
+      expect(Buffer.byteLength(huge, "utf-8")).toBeGreaterThan(64 * 1024);
       await writeFile(marker, huge, "utf-8");
-
-      const output = await captureStdout(async () => {
-        await runInit({ dir: root, force: false, dryRun: false, yes: true });
-      });
-
-      expect(await readFile(marker, "utf-8")).toBe(huge);
-      expect(output).toContain("would exceed the");
-    } finally {
-      await removeTempTree(root);
-    }
-  });
-
-  it("keeps the previous README's mode", async () => {
-    // A README a project keeps at 0600 must not come back world-readable
-    // because the sidecar it was replaced through was created under the umask.
-    if (process.platform === "win32") {
-      // Windows maps `chmod` onto the read-only attribute; there is no mode to
-      // carry over.
-      return;
-    }
-    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-marker-"));
-    try {
-      const marker = path.join(root, ".qfai", "assistant", "README.md");
-      await mkdir(path.dirname(marker), { recursive: true });
-      await writeFile(marker, LEGACY_ASSISTANT_README, "utf-8");
-      await chmod(marker, 0o600);
 
       await runInit({ dir: root, force: false, dryRun: false, yes: true });
 
-      expect(hasInitMarkerSignature(await readFile(marker, "utf-8"))).toBe(true);
-      expect((await lstat(marker)).mode & 0o777).toBe(0o600);
+      expect(await readFile(marker, "utf-8")).toBe(huge);
     } finally {
       await removeTempTree(root);
     }
   });
 
-  it("does not report the rewritten README as skipped", async () => {
-    // The create-only copy that runs first records the existing README as
-    // skipped. Leaving it there tells a reader running without `--force` that
-    // the file was untouched at the same time as counting it as written.
+  it("does not take a hard-linked file outside the project with it", async () => {
+    // Removing the marker unlinks one directory entry. Content reachable by
+    // another name is not this run's to destroy.
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-marker-"));
+    const outside = path.join(root, "outside.md");
+    try {
+      await writeFile(outside, OWNED_ASSISTANT_README, "utf-8");
+      const marker = path.join(root, "project", ".qfai", "assistant", "README.md");
+      await mkdir(path.dirname(marker), { recursive: true });
+      try {
+        await link(outside, marker);
+      } catch {
+        // No hard links on this filesystem — nothing for this case to assert.
+        return;
+      }
+
+      await runInit({ dir: path.join(root, "project"), force: false, dryRun: false, yes: true });
+
+      await expect(readFile(marker, "utf-8")).rejects.toThrow();
+      expect(await readFile(outside, "utf-8")).toBe(OWNED_ASSISTANT_README);
+    } finally {
+      await removeTempTree(root);
+    }
+  });
+
+  it("reports the removed README as removed, not as skipped", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-marker-"));
     try {
       const marker = path.join(root, ".qfai", "assistant", "README.md");
       await mkdir(path.dirname(marker), { recursive: true });
-      await writeFile(marker, LEGACY_ASSISTANT_README, "utf-8");
+      await writeFile(marker, OWNED_ASSISTANT_README, "utf-8");
 
       // `--verbose`: the skipped list is collapsed to a count by default and
-      // this test's whole subject is what that list contains. The report now
-      // enumerates written paths as well, so "absent from the output" no longer
-      // states the claim — read the skipped section on its own instead.
+      // this test's whole subject is which list the path lands in.
       const output = await captureStdout(async () => {
         await runInit({ dir: root, force: false, dryRun: false, yes: true, verbose: true });
       });
 
       const readmeRelative = ".qfai/assistant/README.md";
-      expect(hasInitMarkerSignature(await readFile(marker, "utf-8"))).toBe(true);
+      expect(sectionPaths(output, "  removed paths:")).toContain(readmeRelative);
       expect(sectionPaths(output, "  skipped paths:")).not.toContain(readmeRelative);
-      expect(sectionPaths(output, "  written paths:")).toContain(readmeRelative);
+      expect(sectionPaths(output, "  written paths:")).not.toContain(readmeRelative);
     } finally {
       await removeTempTree(root);
     }
