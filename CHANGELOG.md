@@ -4,6 +4,27 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ## [Unreleased]
 
+### Fixed
+
+- **The shipped UI contract guide describes what the lanes do** (#1411). Three
+  of its statements were wrong against the code, and a reader acts on a guide
+  that ships.
+
+  | Said                                                       | Does                                                               |
+  | ---------------------------------------------------------- | ------------------------------------------------------------------ |
+  | expected markers are generated from `elements[].id`        | only the `data-qfai` values a contract writes are inspected        |
+  | the fidelity snapshot is `.qfai/evidence/prototyping.json` | it is `.qfai/evidence/prototyping/prototyping.json`                |
+  | screens in a skipped tier fail the per-screen review gate  | they are not reviewed, and `certify` passes without reporting them |
+
+  The first is the one that costs coverage. A contract whose elements carry ids
+  and no markers declares nothing for `validateUiMarkerPresence` to collect, so
+  the lane passes having inspected no element at all — the same result as a
+  contract whose markers all resolve.
+
+  `templates/contracts/ui-contract.sample.yaml` is the file a new contract is
+  copied from, so its marker now uses the `CONTRACT_ID:ELEMENT_ID` form the
+  guide states, against an element the same file declares.
+
 ### Added
 
 - **`qfai doctor --autoremediate` relinks a broken integration wrapper, and

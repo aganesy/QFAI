@@ -92,9 +92,10 @@ Two layouts are a mistake the resolver cannot report:
   `ui-0007.yaml`. Candidate 1 wins deterministically, and whoever reads the
   other file believes they are reading the contract in force.
 - **A single-file candidate plus a multi-file one** — say `spec-0007.yaml`
-  alongside `ui-0007-home.yaml`. The multi-file tier is skipped entirely, so
-  screens that live only in the split files fail the per-screen review gate
-  without ever being read.
+  alongside `ui-0007-home.yaml`. The multi-file tier is skipped entirely, so the
+  screens that live only in the split files are never read. They are not
+  reviewed either: the gate walks the screens the resolver returned, and
+  `certify` passes without them, reporting nothing.
 
 When the per-spec match finds files but extracts no valid screen — a YAML parse
 error, or `screens:` mistyped — `certify` names the offending path on stderr and
@@ -121,7 +122,7 @@ changes, three things move together:
 
 1. `elements[].label` in the contract,
 2. the rendered text, or the marker that stands in for it,
-3. the fidelity snapshot in `.qfai/evidence/prototyping.json`.
+3. the fidelity snapshot in `.qfai/evidence/prototyping/prototyping.json`.
 
 Update one and the others disagree; the finding then stands unresolved with
 nothing saying which side is wrong.
@@ -138,8 +139,10 @@ element the marker stands for.
   change and a label does not.
 - Markers are what give an element fidelity coverage when its text is not
   visible.
-- Expected markers are generated from `elements[].id`, so a contract that names
-  its elements well needs no separate marker list.
+- Nothing derives them for you. `validateUiMarkerPresence` collects the
+  `data-qfai` values the contract writes and checks only those, so an element
+  with an `id` and no declared marker is never inspected. A contract that
+  declares no markers at all passes the lane having checked nothing.
 
 A contract still carrying label-based markers works, and there is no deadline on
 it; move it to the id form the next time that flow is edited, and check whatever
