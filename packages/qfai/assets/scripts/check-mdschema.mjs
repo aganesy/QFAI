@@ -22,11 +22,12 @@
  * contract is enforced over is a policy decision, taken here rather than by
  * weakening the schemas until the current tree happens to pass:
  *
- *   --scope changed  (default) documents this branch touched, judged against
- *                    their own state at the merge base. A ratchet: a new
+ *   --scope changed  (default) documents whose text this branch changed, judged
+ *                    against their own state at the merge base. A ratchet: a new
  *                    document must conform and an edited one must not get
  *                    worse, while untouched legacy documents are left for their
- *                    own change.
+ *                    own change. A rewrite that moves bytes without moving text
+ *                    — re-normalised line endings — is not a change here.
  *   --scope all      every document the manifest matches. The migration view.
  *   --scope files    only the paths named on the command line.
  *
@@ -548,10 +549,45 @@ function walk(dir, root) {
 }
 
 /**
+ * The path column of one `--numstat` row, or `null` for a row without one.
+ *
+ * A row is `<added>\t<deleted>\t<path>`, and a path may itself contain a tab,
+ * so the path is everything past the second tab rather than the third field.
+ *
+ * @param {string} line
+ * @returns {string | null}
+ */
+function numstatPath(line) {
+  const firstTab = line.indexOf("\t");
+  if (firstTab === -1) return null;
+  const secondTab = line.indexOf("\t", firstTab + 1);
+  if (secondTab === -1) return null;
+  const file = line.slice(secondTab + 1).trim();
+  return file === "" ? null : file;
+}
+
+/**
  * The files this branch changed, or `null` when the answer is degraded.
  *
  * `null` and "no files changed" are different answers and are kept different:
  * the first must widen the scope, the second must narrow it to nothing.
+ *
+ * A document whose bytes moved but whose text did not is not a document this
+ * branch changed. Re-normalising line endings across the tree rewrites every
+ * file, and pulling all of them into a shape gate reports findings nobody
+ * introduced — enough of them that the honest options become leaving the tree
+ * un-normalised or turning the lane red.
+ *
+ * Two details make that work, and neither is the obvious spelling:
+ *
+ * - `--numstat`, not `--name-only`. `--name-only` selects by blob identity and
+ *   ignores the whitespace flags entirely, so it lists a carriage-return-only
+ *   rewrite whatever else is asked of it. `--numstat` drops the row.
+ * - `--ignore-cr-at-eol`, not `--ignore-all-space`. Indentation carries meaning
+ *   in Markdown: moving a list item two spaces right nests it under its
+ *   predecessor, which is a shape change this gate exists to grade.
+ *   `--ignore-all-space` hides that edit; the narrower flag reaches the line
+ *   endings and nothing else.
  *
  * @param {string} base
  * @returns {string[] | null}
@@ -566,22 +602,24 @@ function changedFiles(base, root) {
   }
   // `A...HEAD` is the merge base, which is what "what this branch changed"
   // means; a plain two-dot diff also reports everything the base gained.
-  const diff = spawnSync("git", ["diff", "--name-only", "--no-renames", `${base}...HEAD`], {
-    cwd: root,
-    encoding: "utf-8",
-  });
+  const diff = spawnSync(
+    "git",
+    ["diff", "--numstat", "--no-renames", "--ignore-cr-at-eol", `${base}...HEAD`],
+    { cwd: root, encoding: "utf-8" },
+  );
   if (diff.status !== 0) {
     return null;
   }
-  const staged = spawnSync("git", ["diff", "--name-only", "--no-renames", "HEAD"], {
-    cwd: root,
-    encoding: "utf-8",
-  });
-  const lines = `${diff.stdout}\n${staged.status === 0 ? staged.stdout : ""}`
+  const staged = spawnSync(
+    "git",
+    ["diff", "--numstat", "--no-renames", "--ignore-cr-at-eol", "HEAD"],
+    { cwd: root, encoding: "utf-8" },
+  );
+  const files = `${diff.stdout}\n${staged.status === 0 ? staged.stdout : ""}`
     .split(/\r?\n/)
-    .map((line) => line.trim())
-    .filter((line) => line !== "");
-  return [...new Set(lines)];
+    .map((line) => numstatPath(line))
+    .filter((file) => file !== null);
+  return [...new Set(files)];
 }
 
 /**
