@@ -2716,6 +2716,33 @@ async function parseUiScreenFile(
   }));
 }
 
+/** A path as an operator reads it: relative to the project, posix separators. */
+function relativeToRoot(root: string, abs: string): string {
+  return path.relative(root, abs).replace(/\\/g, "/");
+}
+
+/**
+ * The split-file candidates for one spec.
+ *
+ * The glob targets the `ui-NNNN-<slug>.yaml` split-naming convention; the
+ * subdir targets `<spec-id>/**\/*.yaml` for projects that group per-spec
+ * contracts in a directory.
+ */
+async function findMultiFilePerSpecContracts(
+  uiDir: string,
+  specDirName: string,
+  bareNumeric: string,
+): Promise<string[]> {
+  const uiDirPosix = uiDir.replace(/\\/g, "/");
+  const globPattern = path.posix.join(uiDirPosix, `ui-${bareNumeric}-*.yaml`);
+  const subdirPattern = path.posix.join(uiDirPosix, specDirName, "**", "*.yaml");
+  const [globMatches, subdirMatches] = await Promise.all([
+    fg(globPattern, { absolute: true }),
+    fg(subdirPattern, { absolute: true }),
+  ]);
+  return [...globMatches, ...subdirMatches];
+}
+
 /**
  * Read the per-spec UI contract for `<specDirName>` (e.g. `spec-0007`) if
  * one exists under `<contractsDir>/ui/`. Returns the screens declared by
@@ -2765,6 +2792,11 @@ async function parseUiScreenFile(
  * see authoring issues at certify time instead of silently falling
  * back to the project-wide list.
  *
+ * Mixed layouts: when a single-file candidate wins and split files exist for
+ * the same spec, the split files stay unread — and a `warn` line names them.
+ * Screens declared only there are never reviewed, and `certify` exits 0
+ * without them, so nothing else in the run reports the gap.
+ *
  * @internal Exported for direct unit-testing — not part of the package's
  * public surface.
  */
@@ -2790,30 +2822,33 @@ export async function readPerSpecScreens(
     path.join(uiDir, `${bareNumeric}.yaml`),
     path.join(uiDir, `ui-${bareNumeric}.yaml`),
   ];
-  const matched: string[] = [];
+  let canonical: string | null = null;
   // True first-hit-wins: stop on first existing canonical candidate so
   // authoring forks (e.g. both spec-0007.yaml AND ui-0007.yaml on disk)
   // produce deterministic per-spec scope.
   for (const abs of singleFileCandidates) {
     if (await fileExists(abs)) {
-      matched.push(abs);
+      canonical = abs;
       break;
     }
   }
-  if (matched.length === 0) {
-    // Multi-file shapes (glob + subdir layout). The glob targets the
-    // `ui-NNNN-<slug>.yaml` split-naming convention; the subdir targets
-    // `<spec-id>/**\/*.yaml` for projects that group per-spec contracts
-    // in a directory.
-    const uiDirPosix = uiDir.replace(/\\/g, "/");
-    const globPattern = path.posix.join(uiDirPosix, `ui-${bareNumeric}-*.yaml`);
-    const subdirPattern = path.posix.join(uiDirPosix, specDirName, "**", "*.yaml");
-    const [globMatches, subdirMatches] = await Promise.all([
-      fg(globPattern, { absolute: true }),
-      fg(subdirPattern, { absolute: true }),
-    ]);
-    matched.push(...globMatches, ...subdirMatches);
+  // Looked up even when a single-file candidate won, which costs one glob pair
+  // per spec that the earlier short-circuit saved. The alternative is to keep
+  // the resolution silent, and a project cannot see that its split files went
+  // unread from anything the run prints.
+  const multiFile = await findMultiFilePerSpecContracts(uiDir, specDirName, bareNumeric);
+  if (canonical !== null && multiFile.length > 0) {
+    // Resolution is unchanged — first hit still wins. Only the silence goes.
+    warn(
+      `qfai prototyping certify: ${specDirName} declares UI contracts in both layouts. ` +
+        `Reading ${relativeToRoot(root, canonical)} and ignoring ` +
+        `${multiFile.map((abs) => relativeToRoot(root, abs)).join(", ")}. ` +
+        "Screens declared only in the ignored file(s) are never reviewed and " +
+        "certify passes without them. Move those screens into the file being read, " +
+        "or delete it so the split files resolve instead.",
+    );
   }
+  const matched = canonical === null ? multiFile : [canonical];
   if (matched.length === 0) return null;
 
   const screens: CanonicalScreenContract[] = [];
@@ -2826,7 +2861,7 @@ export async function readPerSpecScreens(
     // for this spec but produced zero valid screens. Without this warn
     // the caller silently falls back to the project-wide list. The
     // operator gets a named path instead of a confusing "missing pair" error at the gate below.
-    const relPaths = matched.map((m) => path.relative(root, m).replace(/\\/g, "/")).join(", ");
+    const relPaths = matched.map((m) => relativeToRoot(root, m)).join(", ");
     warn(
       `qfai prototyping certify: per-spec UI contract file(s) for ${specDirName} ` +
         `(${relPaths}) parsed but declared no valid screens; falling back to the ` +

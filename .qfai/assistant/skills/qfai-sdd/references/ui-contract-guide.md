@@ -86,16 +86,20 @@ under `.qfai/contracts/ui/`, in two tiers.
 Author `<spec-id>.yaml` unless a spec has more screens than one file should
 hold. For a spec that does, pick **one** multi-file shape and stay in it.
 
-Two layouts are a mistake the resolver cannot report:
+Two layouts are a mistake:
 
 - **Two single-file candidates for one spec** — say `spec-0007.yaml` and
   `ui-0007.yaml`. Candidate 1 wins deterministically, and whoever reads the
-  other file believes they are reading the contract in force.
+  other file believes they are reading the contract in force. The resolver
+  cannot report this one: both files are canonical candidates, and it stops at
+  the first that exists.
 - **A single-file candidate plus a multi-file one** — say `spec-0007.yaml`
   alongside `ui-0007-home.yaml`. The multi-file tier is skipped entirely, so the
-  screens that live only in the split files are never read. They are not
-  reviewed either: the gate walks the screens the resolver returned, and
-  `certify` passes without them, reporting nothing.
+  screens that live only in the split files are never read, and so never
+  reviewed: the gate walks the screens the resolver returned, and `certify`
+  passes without them. It names the file it read and the ones it passed over,
+  so the gap is visible — but the exit code is still 0. Move those screens into
+  the file being read, or delete it so the split files resolve.
 
 When the per-spec match finds files but extracts no valid screen — a YAML parse
 error, or `screens:` mistyped — `certify` names the offending path on stdout and

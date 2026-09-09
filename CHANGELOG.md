@@ -4,6 +4,27 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ## [Unreleased]
 
+### Changed
+
+- **`certify` names the UI contracts it passed over** (#1408). A spec with a
+  canonical single file and split files beside it resolves to the single file:
+  first hit wins, deterministically, and that is unchanged. What was missing is
+  any sign of it. The split files were read by nothing, so the screens declared
+  only there were never reviewed, and the run exited 0 having checked a subset
+  it never named.
+
+  The resolver now looks for the split files even when a single-file candidate
+  wins, and names both sides when it finds them. That costs one glob pair per
+  spec that the earlier short-circuit saved; the alternative is a project that
+  cannot see the gap from anything the run prints.
+
+  A warning rather than a rejection. Any project holding both shapes today
+  passes, and turning that into an error would break it on a patch upgrade for
+  a layout it may have had for a long time. The same function already warns
+  when per-spec files parse to zero screens instead of falling back in silence,
+  and this case has the stronger claim on that treatment: the zero-screen case
+  widens the scope, this one narrows it.
+
 ### Fixed
 
 - **The shipped UI contract guide describes what the lanes do** (#1411). Four

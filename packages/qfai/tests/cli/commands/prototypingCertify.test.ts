@@ -31,6 +31,7 @@ import {
 import { readUiContractScreenContracts } from "../../../src/core/contracts/screenContracts.js";
 import { hashDesignMd } from "../../../src/core/design/designMd.js";
 import { reviewPayload } from "../../helpers/reviewPayload.js";
+import { captureStdout } from "../../helpers/stdout.js";
 
 // Canonical DESIGN.md that satisfies the brand-SSOT parse + final-iter
 // violation scan. Copied verbatim from the legacy fixture so the
@@ -1707,5 +1708,95 @@ describe("readUiContractScreenContracts (TC-0012-0431: absolute paths.contractsD
 
     const screens = await readUiContractScreenContracts(root, externalContractsDir);
     expect(screens.map((s) => s.screenId).sort()).toEqual(["home", "settings"]);
+  });
+});
+
+describe("readPerSpecScreens (mixed single-file and split layouts)", () => {
+  // First-hit-wins is the resolution rule and is unchanged. What changes is
+  // that the project can see the outcome. The split files are read by nothing,
+  // so the screens declared only there are never reviewed and `certify` exits
+  // 0 having checked a subset it never named — the one authoring mistake in
+  // this resolver that shrinks coverage without saying so.
+  it("names the file it read and the split files it passed over", async () => {
+    const root = await newTempDir();
+    const uiDir = path.join(root, ".qfai", "contracts", "ui");
+    await mkdir(path.join(uiDir, "spec-0007"), { recursive: true });
+    await writeFile(
+      path.join(uiDir, "spec-0007.yaml"),
+      `screens:\n  - id: home\n    route: "/home"\n`,
+      "utf-8",
+    );
+    await writeFile(
+      path.join(uiDir, "ui-0007-settings.yaml"),
+      `screens:\n  - id: settings\n    route: "/settings"\n`,
+      "utf-8",
+    );
+    await writeFile(
+      path.join(uiDir, "spec-0007", "billing.yaml"),
+      `screens:\n  - id: billing\n    route: "/billing"\n`,
+      "utf-8",
+    );
+
+    let screens: Awaited<ReturnType<typeof readPerSpecScreens>> = null;
+    const out = await captureStdout(async () => {
+      screens = await readPerSpecScreens(root, ".qfai/contracts", "spec-0007");
+    });
+
+    // Resolution is untouched: the canonical single file still wins outright.
+    expect(screens).not.toBeNull();
+    expect(screens?.map((s) => s.screenId)).toEqual(["home"]);
+
+    // Both ignored tiers are named, not just the glob one.
+    expect(out).toContain(".qfai/contracts/ui/spec-0007.yaml");
+    expect(out).toContain(".qfai/contracts/ui/ui-0007-settings.yaml");
+    expect(out).toContain(".qfai/contracts/ui/spec-0007/billing.yaml");
+    expect(out).toContain("never reviewed");
+  });
+
+  it("says nothing when the spec uses one layout", async () => {
+    // The warning has to stay rare enough to be worth reading. A project on a
+    // single layout is doing the documented thing and must see no line at all.
+    const root = await newTempDir();
+    const uiDir = path.join(root, ".qfai", "contracts", "ui");
+    await mkdir(uiDir, { recursive: true });
+    await writeFile(
+      path.join(uiDir, "spec-0007.yaml"),
+      `screens:\n  - id: home\n    route: "/home"\n`,
+      "utf-8",
+    );
+
+    let screens: Awaited<ReturnType<typeof readPerSpecScreens>> = null;
+    const out = await captureStdout(async () => {
+      screens = await readPerSpecScreens(root, ".qfai/contracts", "spec-0007");
+    });
+
+    expect(screens?.map((s) => s.screenId)).toEqual(["home"]);
+    expect(out).toBe("");
+  });
+
+  it("still aggregates the split files when no single-file candidate exists", async () => {
+    // The multi-file tier is the supported layout for a spec with many
+    // screens; adding the warning must not make it warn about itself.
+    const root = await newTempDir();
+    const uiDir = path.join(root, ".qfai", "contracts", "ui");
+    await mkdir(uiDir, { recursive: true });
+    await writeFile(
+      path.join(uiDir, "ui-0007-home.yaml"),
+      `screens:\n  - id: home\n    route: "/home"\n`,
+      "utf-8",
+    );
+    await writeFile(
+      path.join(uiDir, "ui-0007-settings.yaml"),
+      `screens:\n  - id: settings\n    route: "/settings"\n`,
+      "utf-8",
+    );
+
+    let screens: Awaited<ReturnType<typeof readPerSpecScreens>> = null;
+    const out = await captureStdout(async () => {
+      screens = await readPerSpecScreens(root, ".qfai/contracts", "spec-0007");
+    });
+
+    expect(screens?.map((s) => s.screenId).sort()).toEqual(["home", "settings"]);
+    expect(out).toBe("");
   });
 });
