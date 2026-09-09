@@ -44,7 +44,10 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 
 const PIN_PATH = path.join(repoRoot, "scripts", "dogfood-backlog.json");
-const CLI = path.join(repoRoot, "packages", "qfai", "dist", "cli", "index.mjs");
+// Written as one relative path rather than joined segment by segment, so a
+// reader and a grep can both see which binary the lanes run: the local build
+// under review, never a resolution that would reach the published release.
+const CLI = path.join(repoRoot, "packages/qfai/dist/cli/index.mjs");
 const REPORT = path.join(repoRoot, ".qfai", "report", "validate.json");
 
 /**
