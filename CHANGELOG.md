@@ -4,6 +4,32 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ## [Unreleased]
 
+### Fixed
+
+- **A writer that loses the provenance lock keeps its entry** (#1418). Twenty
+  writers contend for one lock, and a reclaimer can judge a holder stale and
+  take the lock it just published. The holder finds a stranger's object at the
+  name when it reads back, which is the protocol working: the writer that lost
+  is the writer that was supposed to lose, and nothing was written.
+
+  It was raised as a plain error, which left `updateInstallProvenance`
+  entirely — above the re-apply loop that exists to absorb exactly this. So a
+  writer that lost one race lost its entry with it, and a lost provenance entry
+  does not heal: the file stays on disk with nothing recorded, reads as
+  `adopter-owned`, and no later run puts it back.
+
+  That one outcome is now typed and retried inside the loop. Nothing else is:
+  a patience exhausted against a tree somebody else is writing, or any I/O
+  fault, still leaves immediately, because going round again would spend
+  another whole patience window on the same answer. The lock windows are
+  untouched — `LOCK_ATTEMPTS × LOCK_POLL_MS > LOCK_STALE_MS` still holds, and
+  tuning them is what an earlier attempt at this cost sixteen minutes on one
+  test row.
+
+  When the attempts do run out, the message says which of the two exhausted
+  them. Losing the lock every time and being overtaken every time call for
+  different things from an operator.
+
 ### Changed
 
 - **The `.qfai/contracts/cli/` convention is on the surface every agent reads**
@@ -122,6 +148,21 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   A pack being un-tracked stays out of scope. `git rm --cached` stages a
   removal and leaves the file on disk, so status names a path the index is
   dropping — the reverse of introducing one.
+
+- **A re-pin writes a declaration `format:check` accepts** (#1430). Both re-pin
+  scripts wrote `.github/required-status-contexts.json` with `JSON.stringify`,
+  which puts every array element on its own line where Prettier keeps a short
+  array on one. Five arrays in that file are short, so what the scripts wrote
+  failed the first lane in `ci:lint`.
+
+  The dependency-update job runs those two scripts and pushes the result, so
+  every update arrived with its digests corrected and its pull request red over
+  a diff whose every line was whitespace. Re-pinning by hand met the same thing:
+  the instruction the hygiene lane prints produced a change that failed the next
+  lane.
+
+  Both scripts now write through one formatter, which reads the repository's own
+  Prettier configuration rather than a copy of it.
 
 - **A waiver on a finding the report appends is applied or refused, never
   silently ignored** (#1424). `report` raises `QFAI-CTYPE-004` after validation
