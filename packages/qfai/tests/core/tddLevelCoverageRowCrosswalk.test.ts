@@ -19,7 +19,6 @@ import path from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { defaultConfig } from "../../src/core/config.js";
-import { newRuleSeverity, RULE_PROMOTIONS } from "../../src/core/sunset.js";
 import type { Issue } from "../../src/core/types.js";
 import { validateTddList } from "../../src/core/validators/tddList.js";
 import type * as VersionModule from "../../src/core/version.js";
@@ -143,32 +142,5 @@ describe("what the rule leaves alone", () => {
 
     expect(issues.filter((entry) => entry.code === "QFAI-TCLEVEL-002")).toEqual([]);
     expect(issues.map((entry) => entry.code)).toContain("QFAI-TCLEVEL-001");
-  });
-});
-
-describe("the promotion window", () => {
-  const promotion = RULE_PROMOTIONS.tddListNonCoverageOnCoverageRow.promoteAt;
-
-  it("reports a warning inside it, and says which release ends it", async () => {
-    toolVersion.override = RULE_PROMOTIONS.tddListNonCoverageOnCoverageRow.introducedIn;
-    const found = await crosswalk("L3", [row("Unit")]);
-
-    expect(found[0]?.severity).toBe("warning");
-    expect(found[0]?.message).toContain(promotion);
-  });
-
-  it("reports an error from the promoting release, with no window note", async () => {
-    toolVersion.override = promotion;
-    const found = await crosswalk("L3", [row("Unit")]);
-
-    expect(found[0]?.severity).toBe("error");
-    expect(found[0]?.message).not.toContain("until the");
-  });
-
-  it("takes the severity from the pin rather than a literal", async () => {
-    toolVersion.override = promotion;
-    const found = await crosswalk("L3", [row("Unit")]);
-
-    expect(found[0]?.severity).toBe(newRuleSeverity(promotion, promotion));
   });
 });

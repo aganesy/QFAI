@@ -19,7 +19,6 @@ import path from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { defaultConfig } from "../../src/core/config.js";
-import { RULE_PROMOTIONS } from "../../src/core/sunset.js";
 import { validateTddList } from "../../src/core/validators/tddList.js";
 import type * as VersionModule from "../../src/core/version.js";
 
@@ -132,54 +131,6 @@ describe("Tier", () => {
     // The failure this guards: `t2 (authz)` matches no tier. Treated as blank
     // it would hand an escalated row the batched T1 ceremony.
     await withLedger([HEADERS, SEP, row("t2 (authz)")], (issues) => {
-      expect(tierIssues(issues)).toHaveLength(1);
-    });
-  });
-});
-
-/**
- * `Tier` is a new column, so the first ledgers to carry one were filled against
- * the prose rather than against this value set. Design principle P7 puts a new
- * finding code behind a promotion window for exactly that: the rule is right,
- * and shipping it straight at `error` turns an upgrade into a latched
- * `--fail-on error` gate for every row whose spelling misses.
- */
-describe("QFAI-TDDLIST-010 promotion window", () => {
-  const promotion = RULE_PROMOTIONS.tddListUnknownTier.promoteAt;
-
-  async function findingAt(version: string): Promise<{ severity: string; message: string }> {
-    toolVersion.override = version;
-    let found = { severity: "", message: "" };
-    await withLedger([HEADERS, SEP, row("Tier 2")], (issues) => {
-      const first = tierIssues(issues)[0];
-      if (first !== undefined) found = { severity: first.severity, message: first.message };
-    });
-    return found;
-  }
-
-  it("reports a warning before the promotion release, naming the release", async () => {
-    const found = await findingAt("1.9.9");
-    expect(found.severity).toBe("warning");
-    expect(found.message).toContain(promotion);
-  });
-
-  it("reports an error from the promotion release onwards", async () => {
-    const found = await findingAt("99.0.0");
-    expect(found.severity).toBe("error");
-    // No window left to advertise once the window has closed.
-    expect(found.message).not.toContain("until the");
-  });
-
-  it("stays inside the window when the version cannot be read", async () => {
-    // `resolveToolVersion` answers "unknown" on a read failure. An unreadable
-    // version must never be the thing that turns a warning into a build break.
-    const found = await findingAt("unknown");
-    expect(found.severity).toBe("warning");
-  });
-
-  it("still fires inside the window — the rule is deferred, not disabled", async () => {
-    toolVersion.override = "1.9.9";
-    await withLedger([HEADERS, SEP, row("Tier 2")], (issues) => {
       expect(tierIssues(issues)).toHaveLength(1);
     });
   });

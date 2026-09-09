@@ -94,64 +94,38 @@ ensures each layer has at least one preventive mechanism:
 When adding new code, the contributor must ask: "if this code is silently
 broken, which layer detects it?" — and at least one layer MUST answer.
 
-## P7. A new finding code ships behind a promotion window
+## P7. A new finding code carries the severity it means
 
 A new rule is correct the day it ships and still lands on data written before
-it existed. `TDDLIST_EVIDENCE_EMPTY` shipped straight at `error` and took a
-consuming repository from 3 errors to 27 in one `qfai init` — 20 of them on
-rows already at `done`, a status with no transition left that could re-observe
-anything, so the upgrade latched that repository's gate for every row that had
-not finished yet.
+it existed. `TDDLIST_EVIDENCE_EMPTY` shipped at `error` and took a consuming
+repository from 3 errors to 27 in one `qfai init` — 20 of them on rows already
+at `done`, a status with no transition left that could re-observe anything, so
+the upgrade latched that repository's gate for every row that had not finished
+yet.
 
-A new code therefore ships at `warning` and is pinned to a promotion release at
-least one minor ahead of the release that introduces it:
+That cost is real, and making the severity depend on which release is running
+was the wrong answer to it. A ladder keyed on the version number puts a policy
+change inside a release number, so the number cannot be chosen freely; it hides
+the finding it defers behind a passing `--fail-on error`; and it hands the
+operator the whole backlog on one upgrade. It also concentrated: 43 of 52
+windows closed on the same release.
 
-1. declare the promotion in `core/sunset.ts#RULE_PROMOTIONS` — the mirror image
-   of `SUNSETS`, which gives an old shape a window before it fails — recording
-   both `introducedIn` and `promoteAt`, because the contract is the distance
-   between them and the first is unrecoverable once the tool ships past the pin;
-2. emit the finding through `newRuleSeverity(await resolveToolVersion(), …)`,
-   never a literal `"error"` beside the `issue(...)` call;
-3. name the ending release in the finding text, so `--fail-on error` keeps
-   working while the operator can read the debt they are about to owe;
-4. when the code can fire on rows that are already terminal, document how a
+A code therefore ships at the severity it means, and the migration is announced
+where migrations belong:
+
+1. write the severity as a literal beside the `issue(...)` call. Nothing reads a
+   registry to decide it, and nothing reads the running version.
+2. say in the finding what satisfies it, and where the remedy is documented.
+3. when the code can fire on rows that are already terminal, document how a
    terminal row satisfies it — otherwise the only remedy left is an
    out-of-lifecycle edit, which the Drift Protocol treats as drift.
+4. record it in `CHANGELOG.md` under the release that ships it, and as a
+   breaking change when an adopter's passing run will start failing.
 
-Enforcement: `tests/core/sunsetLedger.test.ts` fails on either half-landed
-state — a `RULE_PROMOTIONS` key with no consumer outside `sunset.ts` (declared,
-never wired), and a finding code emitted by `src/` that is neither in the frozen
-`tests/core/findingCodeBaseline.ts` nor named by a promotion entry (wired, never
-declared). The emitting side is read through the constant a call site names, not
-only through a bare literal, so the house `const FINDING_CODE = "…"` style
-cannot walk past the ratchet. A third assertion checks the pin itself: a
-promotion that is not a GA release would leave the finding a warning forever
-under the conservative fallback, and one less than a minor past `introducedIn`
-would be a window nobody can migrate inside of.
+The maintainer picks the release number, and the changelog and the release notes
+say what the upgrade costs. A reader can check both before upgrading; a pin in
+the source is not something they can read at all.
 
-### Three exemptions, and the criterion for each
-
-A window is the default, not the only answer. Three registries name the codes it
-does not apply to, and each states its own test:
-
-- `tests/core/findingCodeBaseline.ts#FINDING_CODES_BEFORE_PROMOTION_POLICY` —
-  **frozen.** Codes `src/` already emitted when P7 was adopted. A code missing
-  from it is a code introduced after the policy, and the remedy is a promotion
-  entry, never a new line here.
-- `tests/core/sunsetLedger.test.ts#INFO_ONLY_SINCE_BASELINE` — a finding that is
-  `info` at every site is off the ladder. It reports a fact rather than a
-  defect: it does not claim the tree is wrong, and it is not a gate waiting to
-  close.
-- `tests/core/sunsetLedger.test.ts#ERROR_FROM_INTRODUCTION` — **the condition
-  the code reports already fails the run today.** Then the window has no backlog
-  to absorb, because no project is passing in that state — and shipping at
-  `warning` would be a regression rather than a courtesy, since a `warning`
-  under the default `--fail-on error` exits 0 where the previous behaviour did
-  not. `QFAI-SCAN-002` is the case: before it existed, a validator throwing
-  ended the process with a bare stderr line and a non-zero exit.
-
-Each `ERROR_FROM_INTRODUCTION` entry carries its reason, and the guard checks
-the reason is present, the code is `"error"` at every site, something still
-emits it, and the frozen baseline does not already cover it. **It cannot check
-that the reason is true** — a reviewer tests that by asking what the tree did
-before the code existed, which is why the list is meant to stay short.
+`tests/core/findingCodeBaseline.ts` still holds the code inventory, so a code
+`src/` emits that nothing has registered is reported. What it no longer asks is
+which release a code becomes an error at.

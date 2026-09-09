@@ -53,7 +53,6 @@ import type {
 } from "./types.js";
 import { validateProject } from "./validate.js";
 import { applyWaiversToExtraFindings } from "./waivers.js";
-import { newRuleSeverity, RULE_PROMOTIONS } from "./sunset.js";
 import { resolveToolVersion } from "./version.js";
 import { resolvePrimaryPrototypingSpec } from "./prototyping/specResolution.js";
 
@@ -633,7 +632,7 @@ export async function createReportData(
   // keeps an unfilled delta on purpose would have no way to accept it.
   const deltaScan = await applyWaiversToExtraFindings(
     resolvedRoot,
-    buildDeltaScanIssues(scannedChangeTypeSummary.uncountedDeltaFiles, await resolveToolVersion()),
+    buildDeltaScanIssues(scannedChangeTypeSummary.uncountedDeltaFiles),
   );
   const deltaScanGaps = selectUnwaivedDeltaScanGaps(
     scannedChangeTypeSummary.uncountedDeltaFiles,
@@ -851,12 +850,11 @@ const DELTA_SCAN_ISSUE_CODE = "QFAI-CTYPE-004";
  * a file-wide finding with no `dl_id`; `waivers.ts#matchesWaiver` lets a
  * `scope.paths` waiver reach exactly those.
  */
-function buildDeltaScanIssues(gaps: readonly ReportDeltaScanGap[], toolVersion: string): Issue[] {
+function buildDeltaScanIssues(gaps: readonly ReportDeltaScanGap[]): Issue[] {
   // Decided here rather than passed in: the ratchet in `sunsetLedger.test.ts`
   // reads the emission site, and a severity chosen anywhere else is a window
   // that never opens.
-  const promoteAt = RULE_PROMOTIONS.deltaEntryUncounted.promoteAt;
-  const deltaScanSeverity = newRuleSeverity(toolVersion, promoteAt);
+  const deltaScanSeverity = "error";
   const issues: Issue[] = [];
   for (const gap of gaps) {
     if (gap.uncountedEntries.length === 0) {

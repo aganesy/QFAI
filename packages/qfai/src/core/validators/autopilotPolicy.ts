@@ -25,9 +25,7 @@ import path from "node:path";
 
 import { resolvePath, type QfaiConfig } from "../config.js";
 import { isEnoent } from "../fs/errno.js";
-import { newRuleSeverity, RULE_PROMOTIONS } from "../sunset.js";
 import type { Issue } from "../types.js";
-import { resolveToolVersion } from "../version.js";
 import { exists, issue } from "./utils.js";
 
 const SKILL_DIR_REL = path.join(".qfai", "assistant", "skills");
@@ -529,20 +527,7 @@ export async function validateAutopilotPolicy(
     : path.join(root, SKILL_DIR_REL);
   if (!(await exists(skillsDir))) return issues;
 
-  // `QFAI-AUTOPILOT-001` runs a promotion window
-  // (`RULE_PROMOTIONS`, P7): the rule is right, but it necessarily fires on
-  // every SKILL.md installed before the set was pinned, and those are only
-  // refreshed by an explicit `qfai init --force`. Shipping it straight at
-  // `error` would turn an upgrade into a latched gate. `resolveToolVersion`
-  // resolves rather than rejects — a read failure returns `"unknown"`, which
-  // the comparator reads as inside the window, so an unreadable version can
-  // never be what escalates this into a build failure.
-  const hardRequiredPromotion = RULE_PROMOTIONS.autopilotHardRequiredDrift.promoteAt;
-  const hardRequiredSeverity = newRuleSeverity(await resolveToolVersion(), hardRequiredPromotion);
-  const hardRequiredWindowNote =
-    hardRequiredSeverity === "warning"
-      ? ` Reported as a warning until the ${hardRequiredPromotion} release, then an error.`
-      : "";
+  const hardRequiredSeverity = "error";
 
   let entries: Dirent[];
   try {
@@ -656,7 +641,7 @@ export async function validateAutopilotPolicy(
         `Every entry costs a guaranteed prompt, so an input nothing reads buys nothing. ` +
         `A skill may carry fewer entries than it is allowed and never more: drop the ` +
         `entry, or declare it for this skill if the skill really consumes it — ` +
-        `\`qfai init --force\` regenerates the shipped wording.${hardRequiredWindowNote} ` +
+        `\`qfai init --force\` regenerates the shipped wording. ` +
         `Justification: file=${relPath}, retired=[${result.hardRequiredRetired.join(", ")}], ` +
         `unknown=[${result.hardRequiredUnknown.join(", ")}].`;
       issues.push(

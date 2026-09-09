@@ -5,8 +5,6 @@ import path from "node:path";
 import { describe, expect, it } from "vitest";
 
 import { defaultConfig } from "../../src/core/config.js";
-import { RULE_PROMOTIONS, newRuleSeverity } from "../../src/core/sunset.js";
-import { resolveToolVersion } from "../../src/core/version.js";
 import { validateLayeredTraceability } from "../../src/core/validators/layeredTraceability.js";
 import { validateOrphanProhibition } from "../../src/core/validators/orphanProhibition.js";
 import { validateSpecSplitByCapability } from "../../src/core/validators/specSplitByCapability.js";
@@ -440,8 +438,7 @@ describe("v1.4.36 layered validators", () => {
       await seedSpec(root, "0001", "CAP-0001");
       await seedSpec(root, "0002", "CAP-0002");
 
-      const promoteAt = RULE_PROMOTIONS.specSplitDeclaredMapping.promoteAt;
-      const expected = newRuleSeverity(await resolveToolVersion(), promoteAt);
+      const expected = "error";
 
       const issues = await validateSpecSplitByCapability(root, defaultConfig);
       const mapping = issues.filter((issue) => issue.code === "QFAI-SPLIT-106");

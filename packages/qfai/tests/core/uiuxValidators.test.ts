@@ -415,7 +415,7 @@ describe("uiux validators", () => {
     const missing = issues.filter((item) => item.code === "QFAI-RESEARCH-012");
 
     expect(missing).toHaveLength(1);
-    expect(missing[0]?.severity).toBe("warning");
+    expect(missing[0]?.severity).toBe("error");
     expect(missing[0]?.file).toContain("discussion-20260101000000000");
   });
 

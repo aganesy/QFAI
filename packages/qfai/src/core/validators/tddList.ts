@@ -32,7 +32,6 @@ import {
   UNKNOWN_LEVEL_CODE,
   UNKNOWN_LEVEL_RULE_ID,
 } from "../ruleIds.js";
-import { RULE_PROMOTIONS, newRuleSeverity } from "../sunset.js";
 import type { LedgerTable } from "../tddHelpers.js";
 import {
   collectIncompleteLedgerTables,
@@ -955,7 +954,7 @@ function evidenceMalformedIssue(ctx: EvidenceMalformedContext): Issue {
     return issue(
       "QFAI-TDDLIST-013",
       evidenceMalformedMessage(ctx),
-      newRuleSeverity(ctx.toolVersion, RULE_PROMOTIONS.tddListEvidenceRedProvenance.promoteAt),
+      "error",
       ctx.relPath,
       EVIDENCE_RED_PROVENANCE_RULE_ID,
       undefined,
@@ -966,7 +965,7 @@ function evidenceMalformedIssue(ctx: EvidenceMalformedContext): Issue {
   return issue(
     "QFAI-TDDLIST-011",
     evidenceMalformedMessage(ctx),
-    newRuleSeverity(ctx.toolVersion, RULE_PROMOTIONS.tddListEvidenceCellMalformed.promoteAt),
+    "error",
     ctx.relPath,
     EVIDENCE_CELL_MALFORMED_RULE_ID,
     undefined,
@@ -3649,8 +3648,6 @@ type BlockedWorklogGate = {
   /** `null` when the surface could not be walked: no answer, so no finding. */
   stoppedSpecIds: StoppedSpecIndex;
   blockedNoWorklogSeverity: "warning" | "error";
-  /** Names the release that ends the window; empty once the promotion has happened. */
-  blockedNoWorklogWindowNote: string;
   /**
    * The unreadable-surface findings, held back until a stop actually needs an
    * answer from the surface, and returned once.
@@ -3679,8 +3676,7 @@ function blockedWithoutWorklog(
   relPath: string,
   gate: BlockedWorklogGate,
 ): Issue[] {
-  const { stoppedSpecIds, blockedNoWorklogSeverity, blockedNoWorklogWindowNote, drainUnreadable } =
-    gate;
+  const { stoppedSpecIds, blockedNoWorklogSeverity, drainUnreadable } = gate;
   // Before anything else: no stopped row here means this spec asked the
   // steering surface nothing, so it neither owes a finding nor releases the
   // held-back unreadable one.
@@ -3697,7 +3693,7 @@ function blockedWithoutWorklog(
     ...unreadable,
     issue(
       "QFAI-TDDLIST-015",
-      `${String(blockedRowLabels.length)} row(s) in tdd/test-list.md for ${specId} hold Status=blocked (${blockedRowLabels.join(", ")}) but no \`${PROJECT_STEERING_DIR}/\` entry of ${kinds} names ${specId}. The ledger records that the run stopped; nothing records why, or what the next session should pick up${blockedNoWorklogWindowNote}`,
+      `${String(blockedRowLabels.length)} row(s) in tdd/test-list.md for ${specId} hold Status=blocked (${blockedRowLabels.join(", ")}) but no \`${PROJECT_STEERING_DIR}/\` entry of ${kinds} names ${specId}. The ledger records that the run stopped; nothing records why, or what the next session should pick up`,
       blockedNoWorklogSeverity,
       relPath,
       "tddList.blockedWorklog",
@@ -3742,20 +3738,9 @@ function blockedWithoutWorklog(
 async function readSteeringIndex(
   root: string,
 ): Promise<Omit<BlockedWorklogGate, "drainUnreadable"> & { issues: Issue[] }> {
-  const toolVersion = await resolveToolVersion();
-  const blockedNoWorklogPromotion = RULE_PROMOTIONS.tddListBlockedWithoutWorklog.promoteAt;
-  const blockedNoWorklogSeverity = newRuleSeverity(toolVersion, blockedNoWorklogPromotion);
-  const blockedNoWorklogWindowNote =
-    blockedNoWorklogSeverity === "warning"
-      ? `. Reported as a warning until the ${blockedNoWorklogPromotion} release, then an error`
-      : "";
-  const unreadablePromotion = RULE_PROMOTIONS.tddListWorklogUnreadable.promoteAt;
-  const worklogUnreadableSeverity = newRuleSeverity(toolVersion, unreadablePromotion);
-  const unreadableWindowNote =
-    worklogUnreadableSeverity === "warning"
-      ? ` Reported as a warning until the ${unreadablePromotion} release, then an error.`
-      : "";
-  const window = { blockedNoWorklogSeverity, blockedNoWorklogWindowNote };
+  const blockedNoWorklogSeverity = "error" as const;
+  const worklogUnreadableSeverity = "error";
+  const window = { blockedNoWorklogSeverity };
 
   const unreadable = (location: string, detail: string, remedy: string): Issue =>
     issue(
@@ -3766,7 +3751,7 @@ async function readSteeringIndex(
       "tddList.blockedWorklog.unreadable",
       undefined,
       "change",
-      `${remedy} Until it is readable, \`QFAI-TDDLIST-015\` is not evaluated.${unreadableWindowNote}`,
+      `${remedy} Until it is readable, \`QFAI-TDDLIST-015\` is not evaluated.`,
     );
 
   let entries: readonly WorklogEntry[];
@@ -4376,19 +4361,14 @@ async function validateSpecTddList(
   // Behind a promotion window, for the reason `RULE_PROMOTIONS` gives: nothing
   // read past the last declared column before this rule, so every surplus cell
   // a ledger accumulated arrives at once, including on rows already at `done`.
-  const rowExtraCellsPromotion = RULE_PROMOTIONS.tddListRowExtraCells.promoteAt;
-  const rowExtraCellsSeverity = newRuleSeverity(resolvedToolVersion, rowExtraCellsPromotion);
-  const rowExtraCellsWindowNote =
-    rowExtraCellsSeverity === "warning"
-      ? ` Reported as a warning until the ${rowExtraCellsPromotion} release, then an error`
-      : "";
+  const rowExtraCellsSeverity = "error";
   for (const ref of ledgerRows()) {
     const declared = ref.scan.headers.length;
     if (ref.row.length <= declared) continue;
     issues.push(
       issue(
         "QFAI-TDDLIST-014",
-        `A ledger row in tdd/test-list.md for spec-${specNumber} (${ref.label}) has ${ref.row.length} cells but the table declares ${declared} columns. The surplus is read by nothing — content parked past the last column escapes every per-column rule, the Evidence grammar and its ${EVIDENCE_CELL_MAX_CHARS}-character cap included.${rowExtraCellsWindowNote}`,
+        `A ledger row in tdd/test-list.md for spec-${specNumber} (${ref.label}) has ${ref.row.length} cells but the table declares ${declared} columns. The surplus is read by nothing — content parked past the last column escapes every per-column rule, the Evidence grammar and its ${EVIDENCE_CELL_MAX_CHARS}-character cap included.`,
         rowExtraCellsSeverity,
         relPath,
         ROW_EXTRA_CELLS_RULE_ID,
@@ -4520,15 +4500,7 @@ async function validateSpecTddList(
   // literal, so the window is declared where every other new rule declares one
   // (`docs/design-principles.md` P7) instead of being a warning with no route
   // to `error` — `warning` until the pinned release, `error` from it onwards.
-  const tcLevelUndeclaredPromotion = RULE_PROMOTIONS.tddListTcLevelUndeclared.promoteAt;
-  const tcLevelUndeclaredSeverity = newRuleSeverity(
-    await resolveToolVersion(),
-    tcLevelUndeclaredPromotion,
-  );
-  const tcLevelUndeclaredWindowNote =
-    tcLevelUndeclaredSeverity === "warning"
-      ? ` Reported as a warning until the ${tcLevelUndeclaredPromotion} release, then an error`
-      : "";
+  const tcLevelUndeclaredSeverity = "error";
   if (undeclaredLevelTcIds.size > 0) {
     for (const entry of ledgerRows()) {
       const rawLayer = cell(entry, "Layer").toLowerCase();
@@ -4562,7 +4534,7 @@ async function validateSpecTddList(
       issues.push(
         issue(
           "QFAI-TCLEVEL-001",
-          `${stale.join(", ")} declare(s) no Level in ${TEST_CASES_FILE_NAME}, so ${stale.length > 1 ? "they are" : "it is"} owned by QFAI-ATDD-112 (tests/integration/**) and not by tdd/test-list.md — but spec-${specNumber} (${entry.label}) still carries a coverage row for ${stale.length > 1 ? "them" : "it"}. Retire the row or declare the TC's Level.${tcLevelUndeclaredWindowNote}`,
+          `${stale.join(", ")} declare(s) no Level in ${TEST_CASES_FILE_NAME}, so ${stale.length > 1 ? "they are" : "it is"} owned by QFAI-ATDD-112 (tests/integration/**) and not by tdd/test-list.md — but spec-${specNumber} (${entry.label}) still carries a coverage row for ${stale.length > 1 ? "them" : "it"}. Retire the row or declare the TC's Level.`,
           tcLevelUndeclaredSeverity,
           relPath,
           "tddList.tcLevelUndeclared",
@@ -4706,12 +4678,7 @@ async function validateSpecTddList(
     }
   }
 
-  const splitBoundaryPromotion = RULE_PROMOTIONS.tddListSplitBoundary.promoteAt;
-  const splitBoundarySeverity = newRuleSeverity(resolvedToolVersion, splitBoundaryPromotion);
-  const splitBoundaryWindowNote =
-    splitBoundarySeverity === "warning"
-      ? ` Reported as a warning until the ${splitBoundaryPromotion} release, then an error.`
-      : "";
+  const splitBoundarySeverity = "error";
 
   for (const [obligationId, rows] of [...rowsByObligation].sort(([left], [right]) =>
     left.localeCompare(right),
@@ -4727,7 +4694,7 @@ async function validateSpecTddList(
       issues.push(
         issue(
           "QFAI-TDDLIST-017",
-          `${obligationId} holds ${rows.length} rows in tdd/test-list.md for spec-${specNumber}, and ${unnamed.length} of them name no Boundary (${unnamed.map((entry) => entry.tddId || entry.ref.label).join(", ")}). Sibling rows repeat their obligation identically and carry serial ids, so a reseed that cannot read a boundary from the row falls back to Selector — a cell the executing stage rewrites — and can pair a row's Status and Evidence with a boundary they never described.${splitBoundaryWindowNote}`,
+          `${obligationId} holds ${rows.length} rows in tdd/test-list.md for spec-${specNumber}, and ${unnamed.length} of them name no Boundary (${unnamed.map((entry) => entry.tddId || entry.ref.label).join(", ")}). Sibling rows repeat their obligation identically and carry serial ids, so a reseed that cannot read a boundary from the row falls back to Selector — a cell the executing stage rewrites — and can pair a row's Status and Evidence with a boundary they never described.`,
           splitBoundarySeverity,
           relPath,
           SPLIT_BOUNDARY_UNNAMED_RULE_ID,
@@ -4750,7 +4717,7 @@ async function validateSpecTddList(
       issues.push(
         issue(
           "QFAI-TDDLIST-018",
-          `${owners.length} rows of ${obligationId} in tdd/test-list.md for spec-${specNumber} claim the boundary "${slug}" (${owners.join(", ")}). The pairing key is the obligation and the Boundary together, so a repeated slug leaves those rows indistinguishable and one boundary of the split covered by nothing.${splitBoundaryWindowNote}`,
+          `${owners.length} rows of ${obligationId} in tdd/test-list.md for spec-${specNumber} claim the boundary "${slug}" (${owners.join(", ")}). The pairing key is the obligation and the Boundary together, so a repeated slug leaves those rows indistinguishable and one boundary of the split covered by nothing.`,
           splitBoundarySeverity,
           relPath,
           SPLIT_BOUNDARY_DUPLICATED_RULE_ID,
@@ -4922,8 +4889,7 @@ async function validateSpecTddList(
   // asking the agent to self-report.
   //
   // Severity is NOT a literal here: `readSteeringIndex` derives it from
-  // `newRuleSeverity(toolVersion, RULE_PROMOTIONS.tddListBlockedWithoutWorklog
-  // .promoteAt)`, so this is a `warning` until that release and an `error`
+  // `"error"`, so this is a `warning` until that release and an `error`
   // after it, and the message carries the window note while it is the former.
   // Reading this comment as "it is an error" understates when the gate starts
   // biting — P7 gives a new code its window, and this one needs it: the rule
@@ -5052,12 +5018,7 @@ async function validateSpecTddList(
     const layerRefs = await collectLayerRefs(specEntry);
     // Inverted once per spec: the AC fallback runs per TC of per row.
     const acToBrRefs = invertBrToAcRefs(layerRefs.brToAcRefs);
-    const brRefPromotion = RULE_PROMOTIONS.tddListBrRefKey.promoteAt;
-    const brRefSeverity = newRuleSeverity(await resolveToolVersion(), brRefPromotion);
-    const brRefWindowNote =
-      brRefSeverity === "warning"
-        ? `. Reported as a warning until the ${brRefPromotion} release, then an error`
-        : "";
+    const brRefSeverity = "error";
     for (const ref of ledgerRows()) {
       const brRef = cell(ref, BR_REF_COLUMN);
       // Empty and `-` are the same legal state — "not resolved" — and
@@ -5077,7 +5038,7 @@ async function validateSpecTddList(
         issues.push(
           issue(
             "QFAI-BRREF-001",
-            `Malformed ${BR_REF_COLUMN} "${brRef}" in tdd/test-list.md for spec-${specNumber} (${ref.label}). Expected one BR-NNNN or BR-NNNN-NNNN, or \`-\` (or an empty cell) when no BR reaches the row${brRefWindowNote}`,
+            `Malformed ${BR_REF_COLUMN} "${brRef}" in tdd/test-list.md for spec-${specNumber} (${ref.label}). Expected one BR-NNNN or BR-NNNN-NNNN, or \`-\` (or an empty cell) when no BR reaches the row`,
             brRefSeverity,
             relPath,
             "tddList.brRefFormat",
@@ -5092,7 +5053,7 @@ async function validateSpecTddList(
         issues.push(
           issue(
             "QFAI-BRREF-002",
-            `${BR_REF_COLUMN} ${token} in tdd/test-list.md for spec-${specNumber} (${ref.label}) is declared in no ${brDeclarationFileName(specEntry)}. The T1 review group would be keyed on a rule that does not exist${brRefWindowNote}`,
+            `${BR_REF_COLUMN} ${token} in tdd/test-list.md for spec-${specNumber} (${ref.label}) is declared in no ${brDeclarationFileName(specEntry)}. The T1 review group would be keyed on a rule that does not exist`,
             brRefSeverity,
             relPath,
             "tddList.brRefResolves",
@@ -5121,7 +5082,7 @@ async function validateSpecTddList(
         issues.push(
           issue(
             "QFAI-BRREF-003",
-            `${BR_REF_COLUMN} ${token} in tdd/test-list.md for spec-${specNumber} (${ref.label}) is not the key this row's TC-Refs resolve to. Expected ${expected}${brRefWindowNote}`,
+            `${BR_REF_COLUMN} ${token} in tdd/test-list.md for spec-${specNumber} (${ref.label}) is not the key this row's TC-Refs resolve to. Expected ${expected}`,
             brRefSeverity,
             relPath,
             "tddList.brRefDerivation",
@@ -5234,12 +5195,7 @@ async function validateSpecTddList(
   // than rejects — a read failure returns `"unknown"`, which the comparator
   // reads as inside the window, so an unreadable version cannot be what turns
   // this into a build failure.
-  const unknownTierPromotion = RULE_PROMOTIONS.tddListUnknownTier.promoteAt;
-  const unknownTierSeverity = newRuleSeverity(await resolveToolVersion(), unknownTierPromotion);
-  const unknownTierWindowNote =
-    unknownTierSeverity === "warning"
-      ? ` Reported as a warning until the ${unknownTierPromotion} release, then an error.`
-      : "";
+  const unknownTierSeverity = "error";
   for (const ref of ledgerRows()) {
     const tier = cell(ref, "Tier");
     if (tier.length === 0 || tier === "-") continue;
@@ -5247,7 +5203,7 @@ async function validateSpecTddList(
     issues.push(
       issue(
         "QFAI-TDDLIST-010",
-        `Tier must be T1, T2, T3 or "-", but spec-${specNumber} (${ref.label}) declares "${tier}".${unknownTierWindowNote}`,
+        `Tier must be T1, T2, T3 or "-", but spec-${specNumber} (${ref.label}) declares "${tier}".`,
         unknownTierSeverity,
         relPath,
         "tddList.tier",
@@ -5351,56 +5307,15 @@ async function validateSpecTddList(
     );
   }
 
-  // Phase 2 – Check 9c: Evidence content on rows that have run a cycle.
-  //
-  // `Evidence` was a required column whose *cell* nothing read: the string
-  // "Evidence" reached only the required-column header check, so a ledger whose
-  // every row said `-` passed `--profile tdd --fail-on error` with `error: 0` —
-  // the one machine gate `qfai-implement`'s FINAL CHECKLIST names. That made
-  // `error: 0` an actively misleading signal for the two SKILL.md hard rules
-  // encoded below, which until now only a human reading the prose could apply.
-  //
-  // `TDDLIST_EVIDENCE_EMPTY` runs a promotion window (`RULE_PROMOTIONS`): the
-  // rule is right, but it necessarily fires on cells written before it existed,
-  // including rows already at `done` — a state with no transition left that
-  // could re-observe anything. Shipping it straight at `error` turned an
-  // upgrade into a latched gate for a consuming repository. It is a `warning`
-  // until the pinned release and an `error` from that release onwards.
-  //
-  // The two anchor rules below run their own windows for the same reason. They
-  // read a cell nothing read before, so on the release that introduces them
-  // every ledger written under the old shape meets them at once — 29 rows in
-  // this repository alone, all of them already at `done`.
-  const windowNoteFor = (severity: "warning" | "error", promoteAt: string): string =>
-    severity === "warning"
-      ? ` Reported as a warning until the ${promoteAt} release, then an error`
-      : "";
-
   // The cap runs its own window, for the same reason and on a wider blast
   // radius: the column was documented as holding the commands and their output
   // until this change, so the cells that outgrow the cap are the cells written
   // to the contract of their day.
-  const evidenceOversizePromotion = RULE_PROMOTIONS.tddListEvidenceCellOversize.promoteAt;
-  const evidenceOversizeSeverity = newRuleSeverity(resolvedToolVersion, evidenceOversizePromotion);
-  const evidenceOversizeWindowNote =
-    evidenceOversizeSeverity === "warning"
-      ? ` Reported as a warning until the ${evidenceOversizePromotion} release, then an error`
-      : "";
-  const evidenceEmptyPromotion = RULE_PROMOTIONS.tddListEvidenceEmpty.promoteAt;
-  const evidenceEmptySeverity = newRuleSeverity(resolvedToolVersion, evidenceEmptyPromotion);
-  const evidenceEmptyWindowNote = windowNoteFor(evidenceEmptySeverity, evidenceEmptyPromotion);
-  const anchorMissingPromotion = RULE_PROMOTIONS.tddListEvidenceAnchorMissing.promoteAt;
-  const anchorMissingSeverity = newRuleSeverity(resolvedToolVersion, anchorMissingPromotion);
-  const anchorMissingWindowNote = windowNoteFor(anchorMissingSeverity, anchorMissingPromotion);
-  const anchorUnresolvedPromotion = RULE_PROMOTIONS.tddListEvidenceAnchorUnresolved.promoteAt;
-  const anchorUnresolvedSeverity = newRuleSeverity(resolvedToolVersion, anchorUnresolvedPromotion);
-  const anchorUnresolvedWindowNote = windowNoteFor(
-    anchorUnresolvedSeverity,
-    anchorUnresolvedPromotion,
-  );
-  const revisionStalePromotion = RULE_PROMOTIONS.tddListEvidenceRevisionStale.promoteAt;
-  const revisionStaleSeverity = newRuleSeverity(resolvedToolVersion, revisionStalePromotion);
-  const revisionStaleWindowNote = windowNoteFor(revisionStaleSeverity, revisionStalePromotion);
+  const evidenceOversizeSeverity = "error";
+  const evidenceEmptySeverity = "error";
+  const anchorMissingSeverity = "error";
+  const anchorUnresolvedSeverity = "error";
+  const revisionStaleSeverity = "error";
   // One whole-tree diff per distinct `Revision`, shared by every row that names
   // it. Scoped to this run rather than to the module: a cache that outlived a
   // run would answer a later one from an earlier tree.
@@ -5427,7 +5342,7 @@ async function validateSpecTddList(
       issues.push(
         issue(
           "TDDLIST_EVIDENCE_EMPTY",
-          `Evidence is empty for spec-${specNumber} ${rowLabel}, Status=${status}. A row past RED owes the command and its result in its evidence file, with the cell pointing at that entry ("Empty evidence entries are rejected", qfai-implement Evidence hard rules).${evidenceEmptyWindowNote}`,
+          `Evidence is empty for spec-${specNumber} ${rowLabel}, Status=${status}. A row past RED owes the command and its result in its evidence file, with the cell pointing at that entry ("Empty evidence entries are rejected", qfai-implement Evidence hard rules).`,
           evidenceEmptySeverity,
           relPath,
           "tddList.evidencePresent",
@@ -5490,7 +5405,7 @@ async function validateSpecTddList(
       issues.push(
         issue(
           "QFAI-TDDLIST-012",
-          `Evidence for spec-${specNumber} ${rowLabel} is ${evidence.length} characters, past the ${EVIDENCE_CELL_MAX_CHARS}-character cap. The cell is a pointer, not the payload — the commands and their output belong in the evidence file the anchor names.${evidenceOversizeWindowNote}`,
+          `Evidence for spec-${specNumber} ${rowLabel} is ${evidence.length} characters, past the ${EVIDENCE_CELL_MAX_CHARS}-character cap. The cell is a pointer, not the payload — the commands and their output belong in the evidence file the anchor names.`,
           evidenceOversizeSeverity,
           relPath,
           EVIDENCE_CELL_OVERSIZE_RULE_ID,
@@ -5535,7 +5450,7 @@ async function validateSpecTddList(
       issues.push(
         issue(
           EVIDENCE_ANCHOR_MISSING_CODE,
-          `Evidence for spec-${specNumber} ${rowLabel} carries no evidence anchor (Status=done): "${evidence}". A completed row's Evidence cell is a pointer into ${expectedFile}.${anchorMissingWindowNote}`,
+          `Evidence for spec-${specNumber} ${rowLabel} carries no evidence anchor (Status=done): "${evidence}". A completed row's Evidence cell is a pointer into ${expectedFile}.`,
           anchorMissingSeverity,
           relPath,
           "tddList.evidenceAnchorPresent",
@@ -5641,7 +5556,7 @@ async function validateSpecTddList(
               `Status=${status}${atRest ? " (at rest — this row is making a claim)" : ""}. ` +
               "A stale Revision looks exactly like a fresh one — every command in the record is " +
               "real and nothing contradicts anything else — which is why it is computed rather " +
-              `than read.${revisionStaleWindowNote}`,
+              `than read.`,
             revisionStaleSeverity,
             relPath,
             "tddList.evidenceRevisionStale",
@@ -5661,7 +5576,7 @@ async function validateSpecTddList(
       issues.push(
         issue(
           EVIDENCE_ANCHOR_UNRESOLVED_CODE,
-          `Evidence anchor does not resolve for spec-${specNumber} ${rowLabel}, Status=${status}: ${anchorFailure}.${anchorUnresolvedWindowNote}`,
+          `Evidence anchor does not resolve for spec-${specNumber} ${rowLabel}, Status=${status}: ${anchorFailure}.`,
           anchorUnresolvedSeverity,
           relPath,
           "tddList.evidenceAnchorResolves",
@@ -5840,16 +5755,7 @@ async function validateSpecTddList(
   // Only a row on a COVERAGE layer contradicts the level. An `Integration` /
   // `API` / `E2E` row for such a TC is the shape Phase 2b seeds, so it is not
   // reported.
-  const nonCoverageOnCoverageRowPromotion =
-    RULE_PROMOTIONS.tddListNonCoverageOnCoverageRow.promoteAt;
-  const nonCoverageOnCoverageRowSeverity = newRuleSeverity(
-    resolvedToolVersion,
-    nonCoverageOnCoverageRowPromotion,
-  );
-  const nonCoverageOnCoverageRowWindowNote =
-    nonCoverageOnCoverageRowSeverity === "warning"
-      ? ` Reported as a warning until the ${nonCoverageOnCoverageRowPromotion} release, then an error.`
-      : "";
+  const nonCoverageOnCoverageRowSeverity = "error";
   for (const [tcId, level] of [...nonCoverageLevels].sort(([left], [right]) =>
     left.localeCompare(right),
   )) {
@@ -5869,7 +5775,7 @@ async function validateSpecTddList(
           .map((layer) => layer.toUpperCase())
           .join(
             ", ",
-          )} row(s) in tdd/test-list.md, which claims it for this ledger. The TC then has two owners and each gate passes on the other's account.${nonCoverageOnCoverageRowWindowNote}`,
+          )} row(s) in tdd/test-list.md, which claims it for this ledger. The TC then has two owners and each gate passes on the other's account.`,
         nonCoverageOnCoverageRowSeverity,
         relPath,
         NON_COVERAGE_ON_COVERAGE_ROW_RULE_ID,

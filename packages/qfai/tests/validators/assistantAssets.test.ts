@@ -17,8 +17,6 @@ import { afterEach, describe, expect, it } from "vitest";
 
 import { collectRegeneratedAssistantFiles } from "../../src/core/assistantAssetProvenance.js";
 import { defaultConfig } from "../../src/core/config.js";
-import { RULE_PROMOTIONS, newRuleSeverity } from "../../src/core/sunset.js";
-import { resolveToolVersion } from "../../src/core/version.js";
 import {
   NAMED_STALE_FILES,
   validateAssistantAssets,
@@ -75,12 +73,7 @@ describe("validateAssistantAssets — Stage 0 steering placeholders", () => {
     // Not a literal: the severity is decided by the promotion pin, so spelling
     // `"warning"` here would go red the release the window closes and would
     // say nothing about whether the pin is what decides it.
-    expect(finding?.severity).toBe(
-      newRuleSeverity(
-        await resolveToolVersion(),
-        RULE_PROMOTIONS.steeringCatalogPlaceholders.promoteAt,
-      ),
-    );
+    expect(finding?.severity).toBe("error");
     expect(finding?.rule).toBe("assistantAssets.steeringPlaceholder");
     expect(finding?.file).toContain(path.join("catalog", "tech.md"));
     expect(finding?.refs).toContain("Standard commands (copy-paste)");
@@ -647,27 +640,6 @@ describe("validateAssistantAssets — Stage 0 steering placeholders", () => {
     expect(findings[0]?.message).toContain(".qfai/assistant/catalog/tech.md");
   });
 
-  it("takes its severity from the promotion window and names the release that ends it", async () => {
-    // P7: a new finding code ships at `warning` behind a pinned promotion
-    // release, and says so in the finding itself, so `--fail-on error` keeps
-    // working while the operator sees the debt. This rule landed with a
-    // literal `"warning"` and no pin at all — which reads as "registered" to
-    // nothing, and gave the escalation its docstring promises no route to
-    // ever happen. `tests/core/sunsetLedger.test.ts` catches the missing
-    // registry entry; this catches the operator-visible half.
-    const root = await newRoot();
-    await seedShipped(root, "tech.md");
-
-    const { promoteAt } = RULE_PROMOTIONS.steeringCatalogPlaceholders;
-    const findings = await steeringFindings(root);
-    const [finding] = findings;
-
-    expect(finding?.severity).toBe(newRuleSeverity(await resolveToolVersion(), promoteAt));
-    if (finding?.severity === "warning") {
-      expect(finding.message).toContain(promoteAt);
-    }
-  });
-
   it("does not report a steering file that is absent", async () => {
     const root = await newRoot();
 
@@ -821,14 +793,10 @@ describe("validateAssistantAssets — regenerated assistant layers", () => {
     const [first] = await shippedUnder("skills");
     await writeFile(layerFile(root, "skills", first ?? ""), "behind the release\n", "utf-8");
 
-    const { promoteAt } = RULE_PROMOTIONS.assistantRegeneratedLayerStale;
     const [finding] = await staleFindings(root);
 
     // Not a literal: spelling `"warning"` here would go red the release the
     // window closes, and would say nothing about whether the pin decides it.
-    expect(finding?.severity).toBe(newRuleSeverity(await resolveToolVersion(), promoteAt));
-    if (finding?.severity === "warning") {
-      expect(finding.message).toContain(promoteAt);
-    }
+    expect(finding?.severity).toBe("error");
   });
 });

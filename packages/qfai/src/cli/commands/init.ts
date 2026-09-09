@@ -42,7 +42,6 @@ import { error, info, warn } from "../lib/logger.js";
 import type { Issue } from "../../core/types.js";
 import { validateIntegrationSurface } from "../../core/validators/integrationSurface.js";
 import { applyWaivers } from "../../core/waivers.js";
-import { SUNSETS, deprecationSeverity } from "../../core/sunset.js";
 import { hasErrnoCode, isEnoent, isEperm } from "../../core/fs/errno.js";
 import { toRelativePath } from "../../core/paths.js";
 import { deriveTestFileGlobs, withDerivedTestFileGlobs } from "../../core/testGlobDerivation.js";
@@ -169,10 +168,11 @@ export type InitOptions = {
    */
   verbose?: boolean;
   /**
-   * Overrides the running tool version for the deprecation-severity decision.
-   * Tests need it to exercise both sides of a sunset; without it the only
-   * observable behaviour is whatever side the shipped version happens to sit
-   * on, which is how the sunset line below went a whole window unverified.
+   * Overrides the running tool version.
+   *
+   * It reaches the migration memo's version line and the install-provenance
+   * record. Tests set it so an assertion about either can name a version
+   * rather than whatever the shipped `package.json` happens to carry.
    */
   toolVersionOverride?: string;
 };
@@ -601,7 +601,7 @@ export async function runInit(options: InitOptions): Promise<void> {
   // --upgrade-assistant-tree (the helper will move the directory
   // itself); skip on dry-run; skip when no legacy dir exists.
   if (!options.upgradeAssistantTree && !options.dryRun) {
-    await emitLegacyAssistantSteeringSunset(destRoot, toolVersion);
+    await emitLegacyAssistantSteeringSunset(destRoot);
   }
 }
 
@@ -2419,18 +2419,9 @@ function buildMigrationMemo(version: string, detectedSurfaces: readonly string[]
     "",
     "## Compatibility window",
     "",
-    // Branch on the running version: the memo is commit-immutable (OC-53), so a
-    // sentence that is false when written stays false forever.
-    ...(deprecationSeverity(version, SUNSETS.legacyAssistantSteering) === "error"
-      ? [
-          `Legacy \`.qfai/assistant/{steering,instructions}/\` reached their sunset in v${sunset}`,
-          `and are no longer inside the compatibility window; sunset: v${sunset}`,
-          "(D-DEPRECATED-PATH, error). Remove them once this migration is verified.",
-        ]
-      : [
-          `Legacy \`.qfai/assistant/{steering,instructions}/\` are read-compatible for the current`,
-          `minor release window only; sunset: v${sunset} (D-DEPRECATED-PATH).`,
-        ]),
+    `Legacy \`.qfai/assistant/{steering,instructions}/\` reached their sunset in v${sunset}`,
+    "and are no longer inside the compatibility window (D-DEPRECATED-PATH, error).",
+    "Remove them once this migration is verified.",
     "",
     "## Provenance",
     "",
@@ -2454,30 +2445,19 @@ function buildMigrationMemo(version: string, detectedSurfaces: readonly string[]
  * build. Both surfaces of the tree (steering/ AND instructions/) are reported,
  * matching the validator's symmetry.
  */
-async function emitLegacyAssistantSteeringSunset(
-  destRoot: string,
-  toolVersion: string,
-): Promise<void> {
+async function emitLegacyAssistantSteeringSunset(destRoot: string): Promise<void> {
   const sunset = legacyAssistantSteeringSunsetLabel();
   const detected: string[] = [];
   if (await pathExists(joinLegacyAssistantSteering(destRoot))) detected.push("steering");
   if (await pathExists(joinLegacyAssistantInstructions(destRoot))) detected.push("instructions");
   if (detected.length === 0) return;
   const surfaces = detected.map((s) => `.qfai/assistant/${s}/`).join(" + ");
-  const severity = deprecationSeverity(toolVersion, SUNSETS.legacyAssistantSteering);
-  const headline =
-    severity === "error"
-      ? `${surfaces} past the announced sunset (v${sunset}).`
-      : `${surfaces} read-compatible for the current minor release only.`;
-  // One template for both branches: splitting it would let the `sunset: v…`
-  // suffix drift out of one of them, and that suffix is the operator's only
-  // pointer to when this started applying.
-  const line = `  D-DEPRECATED-PATH: ${headline} sunset: v${sunset}. Run \`qfai init --upgrade-assistant-tree\` to migrate.`;
-  if (severity === "error") {
-    error(line);
-  } else {
-    info(line);
-  }
+  // The readers no longer accept the retired layout, so this is an error
+  // outright. The version stays in the message as the operator's only pointer
+  // to when it started applying.
+  error(
+    `  D-DEPRECATED-PATH: ${surfaces} past the announced sunset (v${sunset}). Run \`qfai init --upgrade-assistant-tree\` to migrate.`,
+  );
 }
 
 // ---------------------------------------------------------------------------

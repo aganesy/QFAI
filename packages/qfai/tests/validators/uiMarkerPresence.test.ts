@@ -19,12 +19,10 @@ import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 
 import { defaultConfig } from "../../src/core/config.js";
-import { RULE_PROMOTIONS, newRuleSeverity } from "../../src/core/sunset.js";
 import {
   UI_MARKER_NOT_RENDERED_RULE_ID,
   validateUiMarkerPresence,
 } from "../../src/core/validators/uiMarkerPresence.js";
-import { resolveToolVersion } from "../../src/core/version.js";
 
 const tempDirs: string[] = [];
 
@@ -72,20 +70,6 @@ describe("a marker the contract declares and no source carries", () => {
     expect(issues[0]?.code).toBe(UI_MARKER_NOT_RENDERED_RULE_ID);
     expect(issues[0]?.file).toBe(".qfai/contracts/ui/order.yaml");
     expect(issues[0]?.message).toContain("SCR-ORDER:submit");
-  });
-
-  it("rides its promotion window, naming the release that ends it", async () => {
-    const root = await newRoot();
-    await write(root, ".qfai/contracts/ui/order.yaml", contractDeclaring("submit"));
-    await write(root, "src/OrderForm.tsx", "export const OrderForm = () => <form />;\n");
-
-    const [finding] = await validateUiMarkerPresence(root, defaultConfig);
-    const promotion = RULE_PROMOTIONS.uiMarkerNotRendered.promoteAt;
-
-    expect(finding?.severity).toBe(newRuleSeverity(await resolveToolVersion(), promotion));
-    if (finding?.severity === "warning") {
-      expect(finding.message).toContain(promotion);
-    }
   });
 
   it("names the element the contract marked required, so the reader can rank it", async () => {

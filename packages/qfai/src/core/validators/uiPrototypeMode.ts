@@ -37,7 +37,6 @@ import path from "node:path";
 import type { QfaiConfig } from "../config.js";
 import { resolvePath } from "../config.js";
 import { collectUiContractFiles } from "../discovery.js";
-import { RULE_PROMOTIONS, newRuleSeverity } from "../sunset.js";
 import type { Issue } from "../types.js";
 import { resolveToolVersion } from "../version.js";
 import { issue } from "./utils.js";
@@ -124,14 +123,11 @@ export async function validateUiPrototypeMode(root: string, config: QfaiConfig):
   }
 
   const vocabulary = PROTOTYPE_MODES.map((mode) => `\`${mode}\``).join(", ");
-  const promotion = RULE_PROMOTIONS.uiPrototypeModeUnknown.promoteAt;
-  const severity = newRuleSeverity(await resolveToolVersion(), promotion);
-  const windowNote =
-    severity === "warning" ? ` Reported as a warning until ${promotion}, then an error.` : "";
+  const severity = "error" as const;
   return unknown.map(({ file, mode }) =>
     issue(
       UI_PROTOTYPE_MODE_RULE_ID,
-      `UI contract declares \`prototype.mode: ${mode}\`, which is not a mode this tooling knows. The vocabulary is ${vocabulary}.${windowNote}`,
+      `UI contract declares \`prototype.mode: ${mode}\`, which is not a mode this tooling knows. The vocabulary is ${vocabulary}.`,
       severity,
       file,
       "contracts.uiPrototypeMode",

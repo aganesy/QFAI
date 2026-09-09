@@ -4,7 +4,6 @@ import { loadConfig, resolvePath, type ConfigLoadResult } from "./config.js";
 import { runSaasPackageProfile } from "./saasPackage/profile.js";
 import { activeScenarioFiles, collectScenarioFiles } from "./discovery.js";
 import { collectSpecEntries } from "./specLayout.js";
-import { RULE_PROMOTIONS, newRuleSeverity } from "./sunset.js";
 import { issue } from "./validators/utils.js";
 import {
   isFindingInSpecScope,
@@ -413,10 +412,7 @@ async function buildToolProvenanceIssues(root: string): Promise<Issue[]> {
   // and those are correct operation. Splitting the code rather than promoting
   // it is what keeps both statements true.
   if (located.declaredElsewhere) {
-    const promoteAt = RULE_PROMOTIONS.toolResolvedAgainstDeclaration.promoteAt;
-    const severity = newRuleSeverity(await resolveToolVersion(), promoteAt);
-    const windowNote =
-      severity === "warning" ? ` (${promoteAt} までは warning、以降は error になります)` : "";
+    const severity = "error";
     return [
       issue(
         "QFAI-TOOL-002",
@@ -425,7 +421,7 @@ async function buildToolProvenanceIssues(root: string): Promise<Issue[]> {
           `いるため、どの版が gate をかけたかはこのプロジェクトの lockfile が決めていません。` +
           `npx が bare name を親ディレクトリ方向に探索した結果、別のチェックアウト ` +
           `(別ブランチ・別 lockfile) の qfai か、npx が黙って取得した qfai@latest が` +
-          `走っています。${windowNote}`,
+          `走っています。`,
         severity,
         undefined,
         "toolProvenance.resolvedAgainstDeclaration",
@@ -456,21 +452,18 @@ async function buildToolProvenanceIssues(root: string): Promise<Issue[]> {
   ];
 }
 
-async function buildUnusedPlatformIssues(
+function buildUnusedPlatformIssues(
   profile: ValidationProfile,
   platformOption: string | undefined,
-): Promise<Issue[]> {
+): Issue[] {
   if (!platformOption || consumesPlatformOption(profile)) {
     return [];
   }
-  const promoteAt = RULE_PROMOTIONS.platformOptionUnusedByProfile.promoteAt;
-  const severity = newRuleSeverity(await resolveToolVersion(), promoteAt);
-  const windowNote =
-    severity === "warning" ? ` (${promoteAt} までは warning、以降は error になります)` : "";
+  const severity = "error";
   return [
     issue(
       "QFAI-PLATFORM-003",
-      `--platform (${platformOption}) は profile "${profile}" では参照されません。${windowNote}`,
+      `--platform (${platformOption}) は profile "${profile}" では参照されません。`,
       severity,
       undefined,
       "platformDetection.unusedPlatformOption",
@@ -510,7 +503,7 @@ async function runProfileValidators(
   const surface = await inspectIntegrationSurface(root);
   // A CLI-boundary observation, independent of the tree below: it survives the
   // short-circuit so the operator still learns the flag went nowhere.
-  const unusedPlatform = await buildUnusedPlatformIssues(profile, platformOption);
+  const unusedPlatform = buildUnusedPlatformIssues(profile, platformOption);
   // Same standing as `unusedPlatform`: a property of the run rather than of the
   // tree, so it survives the short-circuit below. It is also the finding most
   // worth keeping when the tree turns out to be damaged — a validate run

@@ -5,7 +5,6 @@ import { parse as parseYaml } from "yaml";
 
 import { parseAgentFrontmatter } from "../agentFrontmatter.js";
 import type { QfaiConfig } from "../config.js";
-import { RULE_PROMOTIONS, newRuleSeverity } from "../sunset.js";
 import type { Issue } from "../types.js";
 import { resolveToolVersion } from "../version.js";
 import {
@@ -19,7 +18,6 @@ import {
 import { exists, issue } from "./utils.js";
 
 /** The release `QFAI-AGENT-014` stops being a warning at. */
-const DEVELOPER_INSTRUCTIONS_PROMOTION = RULE_PROMOTIONS.agentDeveloperInstructionsDrift.promoteAt;
 
 const REQUIRED_AGENT_SECTIONS = [
   "## Mission",
@@ -156,14 +154,7 @@ function checkDeveloperInstructions(
   toolVersion: string,
   issues: Issue[],
 ): void {
-  const developerInstructionsSeverity = newRuleSeverity(
-    toolVersion,
-    DEVELOPER_INSTRUCTIONS_PROMOTION,
-  );
-  const windowNote =
-    developerInstructionsSeverity === "warning"
-      ? ` Reported as a warning until the ${DEVELOPER_INSTRUCTIONS_PROMOTION} release, then an error`
-      : "";
+  const developerInstructionsSeverity = "error";
   const declared = agent.developerInstructions;
   if (declared === undefined) {
     // Present but not a string: QFAI-AGENT-006 already named it at parse time,
@@ -177,7 +168,7 @@ function checkDeveloperInstructions(
     issues.push(
       issue(
         "QFAI-AGENT-014",
-        `${catalogRel} agent "${agent.id}" has no developer_instructions block; the catalog is contracted to embed the canonical body so a loader that reads only the catalog still gets it — restore the block by copying ${agentRel} from its "## Mission" heading onward, verbatim.${windowNote}`,
+        `${catalogRel} agent "${agent.id}" has no developer_instructions block; the catalog is contracted to embed the canonical body so a loader that reads only the catalog still gets it — restore the block by copying ${agentRel} from its "## Mission" heading onward, verbatim.`,
         developerInstructionsSeverity,
         catalogRel,
         "agentDefinition.developerInstructionsMissing",
@@ -195,7 +186,7 @@ function checkDeveloperInstructions(
   issues.push(
     issue(
       "QFAI-AGENT-014",
-      `${catalogRel} agent "${agent.id}" developer_instructions diverges from the canonical body in ${agentRel}; the markdown file is the source — edit it, then restore the catalog block by copying that file from its "## Mission" heading onward, verbatim.${windowNote}`,
+      `${catalogRel} agent "${agent.id}" developer_instructions diverges from the canonical body in ${agentRel}; the markdown file is the source — edit it, then restore the catalog block by copying that file from its "## Mission" heading onward, verbatim.`,
       developerInstructionsSeverity,
       catalogRel,
       "agentDefinition.developerInstructionsDrift",

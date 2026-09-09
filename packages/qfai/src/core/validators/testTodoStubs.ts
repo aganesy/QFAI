@@ -41,10 +41,8 @@ import path from "node:path";
 
 import type { QfaiConfig } from "../config.js";
 import { collectFilesByGlobs, DEFAULT_GLOB_FILE_LIMIT } from "../fs.js";
-import { RULE_PROMOTIONS, newRuleSeverity } from "../sunset.js";
 import { DEFAULT_TEST_FILE_EXCLUDE_GLOBS, normalizeGlobs } from "../traceability.js";
 import type { Issue, IssueSeverity } from "../types.js";
-import { resolveToolVersion } from "../version.js";
 import { maskJsNonCode } from "./jsSourceMask.js";
 import { issue } from "./utils.js";
 
@@ -319,24 +317,6 @@ function matchRubyRegexOpener(content: string, start: number): NonCodeSpan | nul
 }
 
 /** The release `QFAI-TEST-003` stops being a warning at. */
-const SKIPPED_TEST_PROMOTION = RULE_PROMOTIONS.testSkippedSuite.promoteAt;
-
-/**
- * The sentence a `QFAI-TEST-003` finding carries while its window is open.
- *
- * The severity behind it was the literal `"warning"` the module docstring
- * argues for, which is the right severity *today* and never becomes anything
- * else. P7 wants the same soft landing said once, in a place a release can
- * move: a repository that has been parking suites since before this code
- * existed meets its whole backlog on upgrade, so the finding is a warning until
- * the pinned release and an error from there — and it says so, because
- * `--fail-on error` passing is the only reason an operator would not look.
- */
-function skippedTestWindowNote(severity: IssueSeverity): string {
-  return severity === "warning"
-    ? ` Reported as a warning until the ${SKIPPED_TEST_PROMOTION} release, then an error.`
-    : "";
-}
 
 /**
  * A `.` in a member chain, with the line break a formatter is free to put on
@@ -671,8 +651,7 @@ function stubIssue(
         "QFAI-TEST-003",
         `Skipped test found: ${where}. ` +
           `A skipped test is silent in ${runner} and rots as missed work. ` +
-          `Drop the skip modifier to put it back in the run.` +
-          skippedTestWindowNote(skippedTestSeverity),
+          `Drop the skip modifier to put it back in the run.`,
         skippedTestSeverity,
         relFile,
         "validation.testStrategy.forbidTestTodoStubs",
@@ -1374,11 +1353,7 @@ export async function validateTestTodoStubs(
     limit: DEFAULT_GLOB_FILE_LIMIT,
   });
 
-  // Resolved once for the whole run: the window `QFAI-TEST-003` sits in is a
-  // property of the tool, not of the file being scanned. `resolveToolVersion`
-  // resolves rather than rejects — an unreadable version reads as inside the
-  // window, so it can never be what escalates a skip into a build failure.
-  const skippedTestSeverity = newRuleSeverity(await resolveToolVersion(), SKIPPED_TEST_PROMOTION);
+  const skippedTestSeverity = "error";
 
   const issues: Issue[] = [];
   const unscannedExtensions = new Set<string>();

@@ -7,9 +7,7 @@ import { resolvePath } from "../config.js";
 import { parseHeadings } from "../parse/markdown.js";
 import { collectSpecEntries } from "../specLayout.js";
 import { maskNonSpecRegions } from "../specPackParsers.js";
-import { newRuleSeverity, RULE_PROMOTIONS } from "../sunset.js";
 import type { Issue } from "../types.js";
-import { resolveToolVersion } from "../version.js";
 import { issue } from "./utils.js";
 
 /**
@@ -23,26 +21,13 @@ import { issue } from "./utils.js";
  */
 export async function validateSpecSections(root: string, config: QfaiConfig): Promise<Issue[]> {
   const { sections: required, invalid } = normalizeRequired(config.validation.require.specSections);
-  // Both codes run a promotion window (`RULE_PROMOTIONS`, docs/design-principles
-  // P7): the gate is new, so a project that set `specSections` while nothing
-  // read it meets every pack it was never checked against at once. Shipping
-  // that straight at `error` would turn an upgrade into a latched gate.
-  //
-  // `resolveToolVersion` resolves rather than rejects — a read failure returns
-  // `"unknown"`, which the comparator reads as inside the window, so an
-  // unreadable version can never be what escalates this into a build failure.
-  const specSectionsPromotion = RULE_PROMOTIONS.specSectionsRequiredHeadings.promoteAt;
-  const specSectionsSeverity = newRuleSeverity(await resolveToolVersion(), specSectionsPromotion);
-  const windowNote =
-    specSectionsSeverity === "warning"
-      ? ` ${specSectionsPromotion} リリースまでは warning、それ以降は error として報告されます。`
-      : "";
+  const specSectionsSeverity = "error";
   // Report the unusable entries first, and report them even when nothing
   // usable is left: `specSections: ["##"]` reads as an explicit strict gate
   // yet normalizes to nothing, so staying silent would present a
   // mis-configured gate as a satisfied one.
   const issues: Issue[] =
-    invalid.length > 0 ? [invalidSectionsIssue(invalid, specSectionsSeverity, windowNote)] : [];
+    invalid.length > 0 ? [invalidSectionsIssue(invalid, specSectionsSeverity)] : [];
   if (required.length === 0) {
     return issues;
   }
@@ -83,7 +68,7 @@ export async function validateSpecSections(root: string, config: QfaiConfig): Pr
     if (missing.length === 0) {
       continue;
     }
-    issues.push(missingSectionsIssue(entry.dir, missing, specSectionsSeverity, windowNote));
+    issues.push(missingSectionsIssue(entry.dir, missing, specSectionsSeverity));
   }
   return issues;
 }
@@ -110,12 +95,11 @@ function missingSectionsIssue(
   specDir: string,
   missing: RequiredSection[],
   specSectionsSeverity: SpecSectionsSeverity,
-  windowNote: string,
 ): Issue {
   const labels = missing.map((section) => section.label);
   return issue(
     "QFAI-SPECSECTION-001",
-    `spec pack に必須見出しがありません: ${labels.join(", ")}.${windowNote}`,
+    `spec pack に必須見出しがありません: ${labels.join(", ")}.`,
     specSectionsSeverity,
     specDir,
     "validation.require.specSections",
@@ -129,12 +113,11 @@ function missingSectionsIssue(
 function invalidSectionsIssue(
   invalid: readonly string[],
   specSectionsSeverity: SpecSectionsSeverity,
-  windowNote: string,
 ): Issue {
   const shown = invalid.map((raw) => JSON.stringify(raw));
   return issue(
     "QFAI-SPECSECTION-002",
-    `\`validation.require.specSections\` に見出し名にならない要素があります: ${shown.join(", ")}.${windowNote}`,
+    `\`validation.require.specSections\` に見出し名にならない要素があります: ${shown.join(", ")}.`,
     specSectionsSeverity,
     "qfai.config.yaml",
     "validation.require.specSections",

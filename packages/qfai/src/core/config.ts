@@ -4,8 +4,6 @@ import path from "node:path";
 import { parse as parseYaml } from "yaml";
 
 import type { Issue } from "./types.js";
-import { RULE_PROMOTIONS, SUNSETS, isAtOrPastSunset, newRuleSeverity } from "./sunset.js";
-import { resolveToolVersion } from "./version.js";
 import { isEnoent } from "./fs/errno.js";
 import { normalizeRenderViewports, type RenderEvidenceConfig } from "./uiux/renderEvidenceTypes.js";
 
@@ -354,7 +352,6 @@ export async function findConfigRoot(startDir: string): Promise<ConfigSearchResu
 export async function loadConfig(root: string): Promise<ConfigLoadResult> {
   const configPath = getConfigPath(root);
   const issues: Issue[] = [];
-  const toolVersion = await resolveToolVersion();
 
   let parsed: unknown;
   try {
@@ -368,7 +365,7 @@ export async function loadConfig(root: string): Promise<ConfigLoadResult> {
     return { config: defaultConfig, issues, configPath };
   }
 
-  const normalized = normalizeConfig(parsed, configPath, issues, toolVersion);
+  const normalized = normalizeConfig(parsed, configPath, issues);
   return { config: normalized, issues, configPath, document: parsed };
 }
 
@@ -376,25 +373,20 @@ export function resolvePath(root: string, config: QfaiConfig, key: ConfigPathKey
   return path.resolve(root, config.paths[key]);
 }
 
-function normalizeConfig(
-  raw: unknown,
-  configPath: string,
-  issues: Issue[],
-  toolVersion: string,
-): QfaiConfig {
+function normalizeConfig(raw: unknown, configPath: string, issues: Issue[]): QfaiConfig {
   if (!isRecord(raw)) {
     issues.push(configIssue(configPath, "設定ファイルの形式が不正です。"));
     return defaultConfig;
   }
 
   const uiux = normalizeUiux(raw.uiux, configPath, issues);
-  const prototyping = normalizePrototyping(raw.prototyping, configPath, issues, toolVersion);
+  const prototyping = normalizePrototyping(raw.prototyping, configPath, issues);
   const review = normalizeReview(raw.review, configPath, issues);
   const report = normalizeReport(raw.report, configPath, issues);
   const atdd = normalizeAtdd(raw.atdd, configPath, issues);
   const base: QfaiConfig = {
     paths: normalizePaths(raw.paths, configPath, issues),
-    validation: normalizeValidation(raw.validation, configPath, issues, toolVersion),
+    validation: normalizeValidation(raw.validation, configPath, issues),
     output: normalizeOutput(raw.output, configPath, issues),
   };
   if (uiux) {
@@ -477,7 +469,6 @@ function normalizeValidation(
   raw: unknown,
   configPath: string,
   issues: Issue[],
-  toolVersion: string,
 ): QfaiValidationConfig {
   const base = defaultConfig.validation;
   if (!raw) {
@@ -522,7 +513,7 @@ function normalizeValidation(
     testStrategyRaw = undefined;
   }
 
-  reportRetiredTraceabilityKeys(traceabilityRaw, configPath, issues, toolVersion);
+  reportRetiredTraceabilityKeys(traceabilityRaw, configPath, issues);
 
   return {
     failOn: readFailOn(raw.failOn, base.failOn, "validation.failOn", configPath, issues),
@@ -636,7 +627,6 @@ function normalizePrototyping(
   raw: unknown,
   configPath: string,
   issues: Issue[],
-  toolVersion: string,
 ): QfaiPrototypingConfig | undefined {
   if (raw === undefined || raw === null) {
     return undefined;
@@ -647,7 +637,7 @@ function normalizePrototyping(
   }
 
   const calibration = normalizePrototypingCalibration(raw.calibration, configPath, issues);
-  const execution = normalizePrototypingExecution(raw.execution, configPath, issues, toolVersion);
+  const execution = normalizePrototypingExecution(raw.execution, configPath, issues);
   const primarySpecId = normalizePrimarySpecId(raw.primarySpecId, configPath, issues);
   const mode = normalizePrototypingMode(raw.mode, configPath, issues);
   if (!calibration && !execution && primarySpecId === undefined && mode === undefined) {
@@ -742,7 +732,6 @@ function normalizePrototypingExecution(
   raw: unknown,
   configPath: string,
   issues: Issue[],
-  toolVersion: string,
 ): NonNullable<QfaiPrototypingConfig["execution"]> | undefined {
   const base = defaultConfig.prototyping?.execution;
   if (raw === undefined || raw === null) {
@@ -779,20 +768,14 @@ function normalizePrototypingExecution(
             ` 受け取った値: ${JSON.stringify(browserToolRaw)}`,
         ),
       );
-    } else if (
-      browserToolRaw === "playwright-cli" &&
-      isAtOrPastSunset(toolVersion, SUNSETS.playwrightCli)
-    ) {
-      // The deprecation window has closed. The type doc has said "at sunset
-      // only `playwright` is accepted" since the window opened, but nothing
-      // here enforced it — so the notice would have expired with no effect.
-      // `browserTool` keeps its `playwright` default, so a run that ignores
-      // the issue proceeds against the supported launcher rather than a
-      // half-configured one.
+    } else if (browserToolRaw === "playwright-cli") {
+      // Only `playwright` is accepted. `browserTool` keeps its `playwright`
+      // default, so a run that ignores the issue proceeds against the
+      // supported launcher rather than a half-configured one.
       issues.push(
         configIssue(
           configPath,
-          `prototyping.execution.browserTool: "playwright-cli" は qfai ${SUNSETS.playwrightCli} で廃止されました。` +
+          `prototyping.execution.browserTool: "playwright-cli" は qfai 1.10.0 で廃止されました。` +
             ` "playwright" を指定し、\`npm i -D playwright\` でインストールしてください。`,
         ),
       );
@@ -1149,13 +1132,10 @@ function reportRetiredTraceabilityKeys(
   traceabilityRaw: Record<string, unknown> | undefined,
   configPath: string,
   issues: Issue[],
-  toolVersion: string,
 ): void {
   if (!traceabilityRaw) {
     return;
   }
-  const promoteAt = RULE_PROMOTIONS.retiredTraceabilityKeys.promoteAt;
-  const promotedSeverity = newRuleSeverity(toolVersion, promoteAt);
   for (const key of RETIRED_TRACEABILITY_KEYS) {
     if (traceabilityRaw[key] === undefined) {
       continue;
@@ -1165,9 +1145,8 @@ function reportRetiredTraceabilityKeys(
         configPath,
         `validation.traceability.${key} は廃止されました。` +
           `どの検証も参照しないため、設定しても挙動は変わりません。` +
-          `互換受理は qfai ${promoteAt} で終了します (同版以降は error)。` +
           `qfai.config.yaml から削除してください。`,
-        promotedSeverity,
+        "error",
       ),
     );
   }
@@ -1444,7 +1423,7 @@ function configIssue(file: string, message: string): Issue {
  * written out rather than shorthanded, because both are what make the pin
  * followable. `tests/core/sunsetLedger.test.ts` reads the `severity:` sibling
  * of `code: "…"` and asks whether that expression is one the file bound to
- * `newRuleSeverity(…, RULE_PROMOTIONS.retiredTraceabilityKeys…)`. A shorthand
+ * `"error"`. A shorthand
  * `severity` yields no expression at all, so a correctly wired promotion read
  * to that assertion exactly like an unwired one.
  */

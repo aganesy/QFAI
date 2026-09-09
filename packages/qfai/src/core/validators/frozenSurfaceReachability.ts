@@ -36,8 +36,6 @@
 import type { QfaiConfig } from "../config.js";
 import type { Issue } from "../types.js";
 import { readFrozenScopeState } from "../prototyping/frozenScope.js";
-import { newRuleSeverity, RULE_PROMOTIONS } from "../sunset.js";
-import { resolveToolVersion } from "../version.js";
 import { issue } from "./utils.js";
 import { PROTOTYPING_JSON_REL } from "../prototyping/paths.js";
 
@@ -72,10 +70,7 @@ export async function validateFrozenSurfaceReachability(
   // requires of any registered entry — a fixed severity beside a registration
   // is rejected, and rightly: the registry would then claim to decide something
   // it does not.
-  const promoteAt = RULE_PROMOTIONS.frozenSurfaceUnreachable.promoteAt;
-  const severity = newRuleSeverity(await resolveToolVersion(), promoteAt);
-  const windowNote =
-    severity === "warning" ? ` (${promoteAt} までは warning、以降は error になります)` : "";
+  const severity = "error";
 
   return [
     issue(
@@ -86,8 +81,7 @@ export async function validateFrozenSurfaceReachability(
         "this is a scope reduction rather than the all-markers-removed drift " +
         "`iterate` hard-stops on. A scope reduction has an in-loop route: " +
         "`qfai prototyping rescope --remove <id> --reason <delta-id>` drops the surface from " +
-        "the frozen union, records why, and leaves the loop at its current cycle." +
-        windowNote,
+        "the frozen union, records why, and leaves the loop at its current cycle.",
       severity,
       PROTOTYPING_JSON_REL,
       "prototyping.frozenSurfaceUnreachable",

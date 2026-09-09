@@ -34,12 +34,6 @@ export type ReportOptions = {
   strict?: boolean;
   /** `--spec <id>` values; empty / absent = the whole repo. */
   specIds?: readonly string[];
-  /**
-   * Override the tool version observed by the legacy-path migration gate
-   * under `--run-validate`. Tests use this to pin either side of the sunset;
-   * production reads `packages/qfai/package.json#version`, same as `validate`.
-   */
-  toolVersionOverride?: string;
 };
 
 type ReportPaths = {
@@ -196,10 +190,6 @@ export async function runReport(options: ReportOptions): Promise<number> {
     const legacyGate = await evaluateLegacyValidateJsonGate({
       root,
       configuredValidateJsonPath: configResult.config.output.validateJsonPath,
-      ...(options.toolVersionOverride !== undefined
-        ? { toolVersionOverride: options.toolVersionOverride }
-        : {}),
-      scopedSpecIds: specIds,
     });
     if (legacyGate.refuseConfiguredLegacyWrite) {
       // Said on stderr as well as carried as a finding: the finding tells the

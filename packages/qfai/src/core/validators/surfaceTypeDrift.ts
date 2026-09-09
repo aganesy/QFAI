@@ -18,8 +18,6 @@
 import path from "node:path";
 
 import type { QfaiConfig } from "../config.js";
-import { SUNSETS, deprecationSeverity } from "../sunset.js";
-import { resolveToolVersion } from "../version.js";
 import { hasUiCompanionForSpec } from "../detection/surfaceType.js";
 import { collectSpecEntries } from "../specLayout.js";
 import type { Issue } from "../types.js";
@@ -36,9 +34,7 @@ export async function validateSurfaceTypeDrift(root: string, config: QfaiConfig)
     return [];
   }
 
-  // Resolved once: the version cannot change mid-scan, and a per-entry
-  // await would make the severity look entry-dependent.
-  const severity = deprecationSeverity(await resolveToolVersion(), SUNSETS.surfaceTypeMissing);
+  const severity = "error" as const;
   const findings: Issue[] = [];
   for (const entry of entries) {
     const specId = entry.specNumber;
@@ -65,9 +61,7 @@ export async function validateSurfaceTypeDrift(root: string, config: QfaiConfig)
         "sdd.surfaceTypeDrift",
         [`spec-${specId}`, "D-SURFACE-TYPE-MISSING"],
         "canonical",
-        severity === "error"
-          ? `Add 'surface_type: ui-bearing' to the spec frontmatter (or rerun /qfai-sdd which auto-populates it). This is past its announced sunset (v${SUNSETS.surfaceTypeMissing}) and now blocks: without the marker the spec is excluded from the UI-bearing set, so its screens are skipped downstream.`
-          : `Add 'surface_type: ui-bearing' to the spec frontmatter (or rerun /qfai-sdd which auto-populates it). This escalates to error at v${SUNSETS.surfaceTypeMissing}; until then treat it as priority-2 cleanup rather than blocking.`,
+        `Add 'surface_type: ui-bearing' to the spec frontmatter (or rerun /qfai-sdd which auto-populates it). Without the marker the spec is excluded from the UI-bearing set, so its screens are skipped downstream.`,
       ),
     );
   }

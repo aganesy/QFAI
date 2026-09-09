@@ -13,8 +13,6 @@ import path from "node:path";
 import { describe, expect, it } from "vitest";
 
 import { validateAssistantTreeMigration } from "../../src/core/validators/assistantTreeMigration.js";
-import { SUNSETS, deprecationSeverity } from "../../src/core/sunset.js";
-import { resolveToolVersion } from "../../src/core/version.js";
 import { loadConfig } from "../../src/core/config.js";
 
 async function newRoot(prefix: string): Promise<string> {
@@ -122,10 +120,7 @@ describe("assistantTreeMigration validator", () => {
       const issues = await mod.validateAssistantTreeMigration(root, await getConfig(root));
       const sunsetIssues = issues.filter((i) => i.code === "D-DEPRECATED-PATH");
       expect(sunsetIssues.length).toBe(1);
-      const expected = deprecationSeverity(
-        await resolveToolVersion(),
-        SUNSETS.legacyAssistantSteering,
-      );
+      const expected = "error";
       expect(sunsetIssues[0]?.severity).toBe(expected);
       // The headline shape MUST change with severity so reviewers know which
       // mode fired.

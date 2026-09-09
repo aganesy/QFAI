@@ -21,9 +21,7 @@ import {
   parseSqlContract,
   type SqlParseError,
 } from "../sqlContract.js";
-import { RULE_PROMOTIONS, newRuleSeverity } from "../sunset.js";
 import type { Issue } from "../types.js";
-import { resolveToolVersion } from "../version.js";
 import { validateContractConsistency } from "./contractConsistency.js";
 import { validateDbContractApplyOrder } from "./dbContractApplyOrder.js";
 import { validateDbContractExecutability } from "./dbContractExecutability.js";
@@ -32,7 +30,6 @@ import { validateUiPrototypeMode } from "./uiPrototypeMode.js";
 import { issue } from "./utils.js";
 
 /** The release `QFAI-CONTRACT-015` stops being a warning at. */
-const DEPENDENCY_DECLARATION_PROMOTION = RULE_PROMOTIONS.contractDependencyUndeclared.promoteAt;
 
 const SQL_DANGEROUS_PATTERNS: Array<{ pattern: RegExp; label: string }> = [
   { pattern: /\bDROP\s+TABLE\b/i, label: "DROP TABLE" },
@@ -95,15 +92,14 @@ export async function validateContracts(root: string, config: QfaiConfig): Promi
 
   // Resolved once for the whole run rather than per contract file: the promotion
   // window is a property of the tool, not of the file being read.
-  const toolVersion = await resolveToolVersion();
   for (const file of uiFiles) {
-    issues.push(...(await validateContractFile(file, "UI", toolVersion)));
+    issues.push(...(await validateContractFile(file, "UI")));
   }
   for (const file of apiFiles) {
-    issues.push(...(await validateContractFile(file, "API", toolVersion)));
+    issues.push(...(await validateContractFile(file, "API")));
   }
   for (const file of dbFiles) {
-    issues.push(...(await validateContractFile(file, "DB", toolVersion)));
+    issues.push(...(await validateContractFile(file, "DB")));
   }
 
   const contractIndex = await buildContractIndex(root, config);
@@ -125,16 +121,12 @@ export async function validateContracts(root: string, config: QfaiConfig): Promi
   return issues;
 }
 
-async function validateContractFile(
-  file: string,
-  kind: ContractKind,
-  toolVersion: string,
-): Promise<Issue[]> {
+async function validateContractFile(file: string, kind: ContractKind): Promise<Issue[]> {
   const issues: Issue[] = [];
   const text = await readFile(file, "utf-8");
   const declaredIds = extractDeclaredContractIds(text);
   issues.push(...validateDeclaredContractIds(declaredIds, file, kind));
-  issues.push(...validateDependencyDeclaration(text, declaredIds, file, toolVersion));
+  issues.push(...validateDependencyDeclaration(text, declaredIds, file));
 
   if (kind === "DB") {
     issues.push(...lintSql(text, file));
@@ -308,12 +300,7 @@ function validateDeclaredContractIds(ids: string[], file: string, kind: Contract
  * window rather than a literal — every contract written before the rule states
  * none, so the finding arrives on the entire existing set at once.
  */
-function validateDependencyDeclaration(
-  text: string,
-  ids: string[],
-  file: string,
-  toolVersion: string,
-): Issue[] {
+function validateDependencyDeclaration(text: string, ids: string[], file: string): Issue[] {
   // `QFAI-CONTRACT-010` / `-011` already own a file with no id or several; a
   // second finding on the same file would only dilute theirs.
   if (ids.length !== 1) {
@@ -322,19 +309,12 @@ function validateDependencyDeclaration(
   if (hasDependencyDeclaration(text, file)) {
     return [];
   }
-  const dependencyDeclarationSeverity = newRuleSeverity(
-    toolVersion,
-    DEPENDENCY_DECLARATION_PROMOTION,
-  );
-  const windowNote =
-    dependencyDeclarationSeverity === "warning"
-      ? ` Reported as a warning until the ${DEPENDENCY_DECLARATION_PROMOTION} release, then an error.`
-      : "";
+  const dependencyDeclarationSeverity = "error";
   const id = ids[0] ?? "";
   return [
     issue(
       "QFAI-CONTRACT-015",
-      `Contract file declares no apply-order dependency: ${id}.${windowNote}` +
+      `Contract file declares no apply-order dependency: ${id}.` +
         " Until it does, an index row reading `-` for this contract agrees with it by default:" +
         " QFAI-CONTRACT-033 compares the two, so such a row is unmeasured rather than agreed," +
         " and reports as soon as this declaration names anything.",
