@@ -98,6 +98,31 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
+- **The dogfooding lanes run as a ratchet while this repository migrates**
+  (#1436). The three `qfai validate` steps in CI ran `--fail-on error`, which
+  passed while the ledger rules reported `warning`. They report `error` now,
+  and this repository carries a backlog of rows written before those rules
+  existed: 1035 findings on `tdd`, 103 on `sdd`, 1065 on `full`.
+
+  A waiver cannot clear them, and writing a pointer to evidence nobody captured
+  would be worse than the backlog, so the fix is to re-run the work spec by
+  spec. Until that lands, `scripts/check-dogfood-backlog.mjs` holds each lane
+  to `scripts/dogfood-backlog.json`:
+
+  | Contract     | Holds                                                           |
+  | ------------ | --------------------------------------------------------------- |
+  | Held at zero | a file absent from the profile's pin may report no error at all |
+  | Ratchet      | a pinned file may report no more errors than its pinned count   |
+
+  So a new failure in a clean file still fails the build, and one in a file
+  already carrying debt fails as soon as it raises that file's count. A file
+  that improves is re-pinned in the same change; one that reaches zero is
+  struck from the list so the slot cannot be reused.
+
+  This is the repository's own copy of the migration the entry above describes,
+  and it is a weaker claim than the lanes made before. The lanes go back to
+  `--fail-on error` when every pin is empty.
+
 - **The `.qfai/contracts/cli/` convention is on the surface every agent reads**
   (#1416). It sat in `CLAUDE.md` alone after the contracts README that used to
   carry it was removed, and `AGENTS.md` is what Codex reads. An agent working
