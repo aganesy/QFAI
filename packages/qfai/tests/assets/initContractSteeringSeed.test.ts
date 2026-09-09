@@ -1,15 +1,13 @@
 /**
  * The `qfai init` contract locates the steering seed where it really lives.
  *
- * `.qfai/contracts/cli/qfai-init.md` stated a MUST-level leakage-guard
- * obligation for the seeded `.qfai/steering/README.md` and
- * `_templates/entry.md`, and in the same sentence said both ship "under
- * `assets/init/.qfai/steering/`". That directory has never existed: both
- * bodies are built in TypeScript by `buildProjectSteeringReadmeBody` /
- * `buildProjectSteeringEntryTemplate` and reach the distributed surface only
- * as string literals inside `dist/`. Anyone auditing the obligation looked for
- * artifacts at the stated path, found none, and could not tell whether the seed
- * was uncovered or the contract was stale.
+ * The contract states a MUST-level leakage-guard obligation for the seeded
+ * `_templates/entry.md`, and once said it ships "under
+ * `assets/init/.qfai/steering/`". That directory has never existed: the body is
+ * built in TypeScript by `buildProjectSteeringEntryTemplate` and reaches the
+ * distributed surface only as a string literal inside `dist/`. Anyone auditing
+ * the obligation looked for an artifact at the stated path, found none, and
+ * could not tell whether the seed was uncovered or the contract was stale.
  */
 import { access, readFile } from "node:fs/promises";
 import path from "node:path";
@@ -22,7 +20,7 @@ const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), ".."
 
 const CONTRACT = ".qfai/contracts/cli/qfai-init.md";
 const INIT_SRC = "packages/qfai/src/cli/commands/init.ts";
-const SEED_BUILDERS = ["buildProjectSteeringReadmeBody", "buildProjectSteeringEntryTemplate"];
+const SEED_BUILDERS = ["buildProjectSteeringEntryTemplate"];
 
 /**
  * The layers above the contract that state the same distribution fact. If only
@@ -69,8 +67,8 @@ describe("qfai init contract: steering seed provenance", () => {
       // Each of the three states where the seed comes from; all three must
       // agree with the contract that it is built, not copied.
       expect(doc, `${rel} no longer says where the seed comes from`).toContain("dist/");
-      // ...and on *what* it produces. `seedProjectSteering` writes three
-      // targets, so a two-name list makes the third read as off-contract to
+      // ...and on *what* it produces. `seedProjectSteering` writes both
+      // targets, so a one-name list makes the other read as off-contract to
       // anyone auditing the distributed surface.
       expect(doc, `${rel} omits .gitkeep from the steering seed`).toContain("`.gitkeep`");
     }
@@ -90,7 +88,7 @@ describe("qfai init contract: steering seed provenance", () => {
         .filter((part) => part.length > 0)
         .join("/"),
     );
-    expect(written).toEqual(["README.md", ".gitkeep", "_templates/entry.md"]);
+    expect(written).toEqual([".gitkeep", "_templates/entry.md"]);
 
     const contract = flat(await readRepo(CONTRACT));
     for (const rel of written) {
@@ -98,14 +96,14 @@ describe("qfai init contract: steering seed provenance", () => {
     }
   });
 
-  it("locates the two seed bodies in the source that builds them", async () => {
+  it("locates the seed body in the source that builds it", async () => {
     const contract = flat(await readRepo(CONTRACT));
 
     for (const builder of SEED_BUILDERS) {
       expect(contract).toContain(`\`${builder}\``);
     }
     expect(contract).toContain(`\`${INIT_SRC}\``);
-    expect(contract).toContain("ship as string literals inside `dist/`");
+    expect(contract).toContain("ships as a string literal inside `dist/`");
   });
 
   it("says when the leakage guard actually covers the seed bodies", async () => {

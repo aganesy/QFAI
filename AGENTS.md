@@ -57,7 +57,7 @@ QFAI パッケージの版番号 (`X.Y.Z`) は AI が選ばない。ユーザが
 `.claude/rules/` はこれらへの symlink。Windows では Git の `core.symlinks=true` と
 Developer Mode が必要で、無い場合は `.claude/rules/*.md` がパス文字列だけの
 テキストファイルになるため、マスタを直接読む。
-Codex / Copilot は本ファイルと `.github/copilot-instructions.md` / `.codex/README.md` から参照する。
+Codex は本ファイルを、Copilot は `.github/copilot-instructions.md` を読む。
 
 ## 記述基準 (全 AI 必読)
 

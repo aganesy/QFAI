@@ -111,12 +111,6 @@ describe("cross-AI rules surface (.agents/rules/ master)", () => {
     expect(text).toMatch(/version-discipline/);
   });
 
-  it(".codex/README.md references .agents/rules/", async () => {
-    const text = await readFile(path.join(ROOT, ".codex/README.md"), "utf-8");
-    expect(text).toMatch(/\.agents\/rules\//);
-    expect(text).toMatch(/version-discipline/);
-  });
-
   it("CLAUDE.md references the version-discipline rule", async () => {
     const text = await readFile(path.join(ROOT, "CLAUDE.md"), "utf-8");
     expect(text).toMatch(/version-discipline/);
@@ -224,7 +218,7 @@ describe("cross-AI rules surface (.agents/rules/ master)", () => {
 
     it.each(
       [
-        ["AGENTS.md", "CLAUDE.md", ".github/copilot-instructions.md", ".codex/README.md"],
+        ["AGENTS.md", "CLAUDE.md", ".github/copilot-instructions.md"],
         ["packages/qfai/assets/init/root/AGENTS.md", "packages/qfai/assets/init/root/CLAUDE.md"],
       ].flat(),
     )("%s cites the rule master", async (rel) => {
