@@ -661,6 +661,38 @@ describe("the ratchet in --scope changed", () => {
     expect(result.status).toBe(1);
     expect(result.stderr).toContain("Root heading is");
   });
+
+  it("leaves a document out of scope when only its line endings changed", async () => {
+    // Re-normalising a tree to LF rewrites every file. Judging scope by which
+    // blobs moved puts documents nobody edited into the gate, and every
+    // violation they already carried reports at once — which is what makes
+    // "normalise the line endings" and "keep the docs lane green" read as
+    // alternatives.
+    const root = await twoCommits(
+      { "spec-0002": LEGACY },
+      { "spec-0002": LEGACY.replace(/\n/g, "\r\n") },
+    );
+
+    const result = runDriver(["--root", root, "--scope", "changed", "--base", "main", "--summary"]);
+
+    expect(result.status).toBe(0);
+    expect(result.stdout).not.toContain("pre-existing, not this branch's");
+  });
+
+  it("keeps a document in scope when only its indentation changed", async () => {
+    // The narrower flag is the point. Indentation carries meaning here: moving
+    // a list item two spaces right nests it under its predecessor, which is a
+    // shape change this gate grades. Ignoring all whitespace to reach the line
+    // endings would take this edit with it.
+    const root = await twoCommits(
+      { "spec-0002": LEGACY },
+      { "spec-0002": LEGACY.replace("- something", "  - something") },
+    );
+
+    const result = runDriver(["--root", root, "--scope", "changed", "--base", "main", "--summary"]);
+
+    expect(result.stdout).toContain("pre-existing, not this branch's");
+  });
 });
 
 /**
