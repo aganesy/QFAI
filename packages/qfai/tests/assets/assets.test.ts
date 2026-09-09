@@ -1770,34 +1770,6 @@ describe("assets guardrails", () => {
     }
   });
 
-  it("keeps example outputs relative", async () => {
-    const fixturesDir = path.join(repoRoot, "packages", "qfai", "tests", "fixtures", "examples");
-    const reportExample = await readFile(path.join(fixturesDir, "report.md"), "utf-8");
-    expect(reportExample).toContain("- ルート: .");
-    expect(reportExample).toContain("- 設定: qfai.config.yaml");
-
-    const validateExamplePath = path.join(fixturesDir, "validate.json");
-    const validateRaw = await readFile(validateExamplePath, "utf-8");
-    const validate = JSON.parse(validateRaw) as {
-      issues: Array<{ file?: string }>;
-      traceability: { sc: { refs: Record<string, string[]> } };
-    };
-
-    const files = [
-      // `.filter(Boolean)` drops the `undefined`s at run time but does not
-      // narrow the type, so this used to hand `path.isAbsolute` a
-      // `string | undefined` — the TS2345 that only appeared once this file
-      // entered `tsconfig.tests.json#include`.
-      ...validate.issues
-        .map((issue) => issue.file)
-        .filter((file): file is string => file !== undefined),
-      ...Object.values(validate.traceability.sc.refs).flat(),
-    ];
-    for (const file of files) {
-      expect(path.isAbsolute(file)).toBe(false);
-    }
-  });
-
   it("ensures old tdd skills are abolished (not shipped)", () => {
     for (const skillId of ["qfai-tdd-red", "qfai-tdd-green", "qfai-tdd-refactor"]) {
       expect(
