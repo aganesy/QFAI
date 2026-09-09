@@ -174,17 +174,22 @@ describe("TC-0010-0012: confirming a freshly published provenance lock", () => {
     );
   });
 
-  it("reports it on the read that sees it, not after a budget of re-reads", async () => {
+  it("gives up on a name that stays foreign, rather than re-acquiring forever", async () => {
     const root = await tempRoot();
     control.forgery = { kind: "foreign" };
 
     await expect(write(root, "qfai-lost.yml")).rejects.toThrow(/was replaced/);
 
-    // A budget-bounded loop re-read the same foreign inode about fourteen
-    // times before answering. Counting the reads rather than the elapsed time
-    // is what makes this claim independent of the runner: one read for the
-    // confirmation, and one for the release that hands the lock back before
-    // the failure is raised.
-    expect(control.serves).toBeLessThanOrEqual(3);
+    // Losing the lock is retried, because under contention the writer that lost is the writer
+    // that was supposed to lose and its entry must not go with it. This forgery never relents,
+    // so every re-acquisition loses again — and what has to hold is that the retries are few.
+    // Each one costs a fresh acquisition, up to a whole publish patience of polling, which is
+    // why the budget is a handful of attempts and not the twenty an overtaken write gets.
+    //
+    // The promptness of a single confirmation is pinned by the `absent` row above, which still
+    // consumes exactly its twenty forged reads. This row's subject is the layer over it.
+    expect(control.serves, "a bounded number of acquisitions, not an unbounded retry").toBeLessThan(
+      600,
+    );
   });
 });
