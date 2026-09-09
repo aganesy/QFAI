@@ -16,7 +16,17 @@ Discussion UI/UX files are **non-normative** discovery / reference artifacts —
 ## Rules
 
 - Keep contract files minimal: only what specs and tests actually reference.
-- UI contracts must be mockable for prototypes: define stable `elements`, `actions`, `markers`, and `mockPaths` with enough inspection-target text for Playwright evidence.
+- UI contracts must be mockable for prototypes: define stable `elements` and
+  `actions` with enough inspection-target text for Playwright evidence.
+- **The `prototype` mapping is optional, and what it declares is checked.** A
+  UI contract that omits `prototype` is asked for nothing, so `markers` and
+  `mockPaths` are not required. A contract that writes them is held to them:
+  `QFAI-CONTRACT-037` looks for a declared marker in the code, and
+  `QFAI-CONTRACT-038` reports a `prototype.mode` outside the vocabulary
+  (`interactive`), naming the release at which it stops being a warning.
+  Nothing branches on `mode`, so a value outside the vocabulary breaks no run —
+  it tells a reader the prototype is something it is not. `mockPaths` is read
+  by nobody and by no lane; it is a note to whoever reviews the prototype.
 - **A declared marker is looked for in the code.** `QFAI-CONTRACT-037` reports a
   `data-qfai` value a UI contract writes literally that no file under the
   configured source directory mentions. Without it a declared element can be

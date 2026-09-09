@@ -86,20 +86,28 @@ under `.qfai/contracts/ui/`, in two tiers.
 Author `<spec-id>.yaml` unless a spec has more screens than one file should
 hold. For a spec that does, pick **one** multi-file shape and stay in it.
 
-Two layouts are a mistake the resolver cannot report:
+A spec matching more than one candidate is an authoring mistake, and it takes
+two shapes:
 
 - **Two single-file candidates for one spec** — say `spec-0007.yaml` and
-  `ui-0007.yaml`. Candidate 1 wins deterministically, and whoever reads the
-  other file believes they are reading the contract in force.
+  `ui-0007.yaml`. The earlier candidate wins, and whoever opens the other file
+  believes they are reading the contract in force.
 - **A single-file candidate plus a multi-file one** — say `spec-0007.yaml`
-  alongside `ui-0007-home.yaml`. The multi-file tier is skipped entirely, so
-  screens that live only in the split files fail the per-screen review gate
-  without ever being read.
+  alongside `ui-0007-home.yaml`. The single-file tier wins, so screens that live
+  only in the split files are not reviewed at all. They do not fail the gate;
+  the run passes over a narrower set than the contracts declare.
+
+Both are reported. `certify` names the file it took and every file it ignored,
+and the exit code is unchanged. Move those screens into the file in force and
+delete the rest, or delete every single-file candidate so the multi-file tier is
+read.
 
 When the per-spec match finds files but extracts no valid screen — a YAML parse
-error, or `screens:` mistyped — `certify` names the offending path on stderr and
-falls back to the project-wide screen list, so the authoring mistake is visible
-instead of silently re-enabling the cross-product check.
+error, or `screens:` mistyped — `certify` names the offending path and falls
+back to the project-wide screen list, so the authoring mistake is visible
+instead of silently re-enabling the cross-product check. The project-wide list
+pools every contract, so the screens in the ignored files are reviewed after
+all; the run says so rather than reporting them as skipped.
 
 ## `elements[].id` naming policy
 
@@ -147,23 +155,32 @@ selector or evidence wiring reads the old value.
 
 ## Prototype metadata
 
-A `prototype` mapping at the top level carries three keys.
+A `prototype` mapping at the top level is optional. A contract that omits it is
+asked for nothing. A contract that writes it carries three keys.
 
-| Key         | Holds                                               |
-| ----------- | --------------------------------------------------- |
-| `mode`      | `interactive`                                       |
-| `mockPaths` | the flows the prototype has to be able to walk      |
-| `markers`   | the selector convention used for runtime inspection |
-
-No validate lane reads `prototype` today. It is authoring metadata: the shape
-`templates/contracts/ui-contract.sample.yaml` shows is the one to follow, and
-what the entries mean is settled between the contract's author and whoever
-reviews the prototype.
+| Key         | Holds                                               | Read by                       |
+| ----------- | --------------------------------------------------- | ----------------------------- |
+| `mode`      | `interactive`                                       | `QFAI-CONTRACT-038`           |
+| `mockPaths` | the flows the prototype has to be able to walk      | nothing                       |
+| `markers`   | the selector convention used for runtime inspection | `QFAI-CONTRACT-037`, reviewer |
 
 `markers` states the selector convention, so a reviewer inspecting the running
 prototype knows what to look for and does not have to infer it from the markup.
+A `data-qfai` value written in a selector here is a declared marker like any
+other, so `QFAI-CONTRACT-037` looks for it under the source directory: a
+convention declared here and rendered nowhere is reported.
+
+`mode` names the kind of prototype the review walks. Nothing branches on it, so
+a value outside the vocabulary breaks no run — it tells a reader the prototype
+is something it is not, which is what `QFAI-CONTRACT-038` reports. The finding
+names the release at which it stops being a warning. A contract that writes no
+`mode` is asked nothing.
+
 `mockPaths` names the flows a prototype has to be able to walk, each with an id
-stable enough to be cited from a review.
+stable enough to be cited from a review. No lane reads it, and the prototyping
+evidence records nothing against it — an entry is a note between the contract's
+author and whoever reviews the prototype. Follow the shape
+`templates/contracts/ui-contract.sample.yaml` shows.
 
 ## Screen contract rules
 

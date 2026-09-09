@@ -16,7 +16,73 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   Moved rather than copied. Two statements of a naming rule drift, and the one
   that goes stale is the copy its readers do not also see stated elsewhere.
 
+### Fixed
+
+- **An unquoted `data-qfai` value is a declared marker** (#1413).
+  `QFAI-CONTRACT-037` collected markers with a pattern that required quotes
+  around the value, so `[data-qfai=order_submit]` declared nothing — and a CSS
+  attribute selector may leave the value unquoted when it is an identifier, as
+  may an HTML attribute.
+
+  The miss was silent in the worst direction. A contract that names no marker
+  is asked for nothing, which is how the rule stays opt-in, so a contract whose
+  only marker was written bare read as having opted out: the element went
+  unchecked and there was no finding to say so.
+
+  A bare value now ends at whitespace or at whatever closes what it sits in —
+  `]` for a selector, `>` for a tag, `,` or `}` in flow syntax. Quoting still
+  works and is what the shipped template writes, so nothing that passes today
+  changes.
+
+- **`certify` says when a UI contract candidate it ignored has files in it**
+  (#1408). Per-spec contracts resolve in two tiers and the first candidate wins
+  outright, so a project holding more than one shape had the rest dropped from
+  the per-screen review with nothing said. The run exited 0 having checked a
+  narrower set than the contracts declare.
+
+  The resolution is unchanged — a project with several candidate layouts still
+  needs a deterministic answer, and the precedence order is documented. What is
+  new is that the run names the file it took and every file it ignored, the
+  other single-file candidates included, so one round of deletions is enough.
+  The exit code is untouched, so no tree that holds two layouts today starts
+  failing.
+
+  The message is withheld when the taken file declares no valid screen. The run
+  then falls back to the project-wide screen list, which pools every contract,
+  so the ignored files' screens are reviewed after all.
+
+  A project path holding glob syntax — `Project (2)`, say — no longer hides the
+  ignored tier. The search root is passed as a directory rather than as part of
+  the pattern.
+
+  `ui-contract-guide.md` described those screens as failing the review gate.
+  They did not: they were never read, and the gate passed.
+
 ### Added
+
+- **`QFAI-CONTRACT-038` reports a `prototype.mode` outside the vocabulary**
+  (#1402). A UI contract's `prototype` mapping is authoring metadata, and
+  `interactive` is the only mode the tooling and the shipped template know.
+  Nothing branched on the value and nothing rejected another, so `mode: static`
+  told every reader the prototype was something it is not, with no run
+  disagreeing. A one-value vocabulary and no check is where a typo survives
+  longest, because there is nothing to fail.
+
+  The finding ships behind a promotion window and names the release that ends
+  it. Nothing has ever rejected a value here, so a project carrying a typo has
+  been passing and was never told. Only a contract that writes a mode is asked
+  anything, and only a value the vocabulary does not hold is reported — a
+  contract with no `prototype`, or an unfilled `mode:`, stays silent.
+
+  Two documents disagreed about whether `prototype` was required at all.
+  `contract-artifact-rules.md` said a UI contract must define `markers` and
+  `mockPaths`; `ui-contract-guide.md` said no lane reads `prototype`. Both now
+  say the mapping is optional and what it declares is checked.
+
+  The guide's claim that no lane reads `prototype` was also wrong.
+  `QFAI-CONTRACT-037` collects `data-qfai` values from the whole contract, so a
+  selector written under `prototype.markers` — which is how the shipped template
+  writes one — is a declared marker and is looked for in the source tree.
 
 - **`qfai doctor --autoremediate` relinks a broken integration wrapper, and
   only that** (#1386). `qfai init --force` clears the same finding, and it also

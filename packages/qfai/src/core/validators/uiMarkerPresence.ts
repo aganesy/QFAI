@@ -52,22 +52,36 @@ import { issue } from "./utils.js";
 export const UI_MARKER_NOT_RENDERED_RULE_ID = "QFAI-CONTRACT-037";
 
 /**
- * A `data-qfai` attribute value, in either quoting.
+ * A `data-qfai` attribute value, quoted or bare.
  *
  * The contract writes the marker inside a selector (`[data-qfai='order-form']`)
- * or as the attribute itself, so both forms and both quotings are read. A value
- * is taken as written: the rule reports what the contract declared and does not
- * interpret it. Only the contract side is read this way — see the module note
- * on what counts as rendered.
+ * or as the attribute itself, and either shape may leave the value unquoted: a
+ * CSS attribute selector and an HTML attribute both allow a bare value when it
+ * is an identifier.
+ *
+ * Requiring quotes made `[data-qfai=order-form]` declare nothing, and nothing
+ * said so. A contract that names no marker is asked for nothing, which is the
+ * rule's opt-in, so a contract whose only marker was written bare read as
+ * having opted out: the element went unchecked and there was no finding to
+ * tell anyone.
+ *
+ * A bare value ends at whitespace or at whatever closes what it sits in — `]`
+ * for a selector, `>` for a tag, `,` or `}` in flow syntax. A value is taken as
+ * written: the rule reports what the contract declared and does not interpret
+ * it. Only the contract side is read this way — see the module note on what
+ * counts as rendered.
  */
-const MARKER_RE = /data-qfai\s*=\s*['"]([^'"]+)['"]/g;
+const MARKER_RE = /data-qfai\s*=\s*(?:(['"])([^'"]+)\1|([^\s'"\]>,}]+))/g;
 
 /** The extensions a marker can be written in on the implementation side. */
 const SOURCE_EXTENSIONS = [".ts", ".tsx", ".js", ".jsx", ".vue", ".svelte", ".html"];
 
 /** Every `data-qfai` value a text carries, in the order it writes them. */
 function markersIn(text: string): string[] {
-  return [...text.matchAll(MARKER_RE)].map((match) => match[1] ?? "").filter((v) => v.length > 0);
+  // Group 2 is the quoted body, group 3 the bare one; exactly one is set.
+  return [...text.matchAll(MARKER_RE)]
+    .map((match) => match[2] ?? match[3] ?? "")
+    .filter((v) => v.length > 0);
 }
 
 /**
