@@ -2356,6 +2356,32 @@ describe("qfai init", () => {
     }
   });
 
+  it("leaves it there under --force too, and writes the record beside it", async () => {
+    // `--force` is the run that retires a governed file the release stopped
+    // shipping, and this README is one. The retirement pass is driven by the
+    // lock, and a tree that predates the records has no lock, so the entry
+    // that would name this file does not exist and the pass cannot reach it.
+    //
+    // That is what keeps the migration evidence safe: the only tree where
+    // retirement can remove this README is one that already holds the lock,
+    // and the lock is itself the evidence.
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-"));
+    try {
+      const legacy = path.join(root, ".qfai", "assistant", "README.md");
+      await mkdir(path.dirname(legacy), { recursive: true });
+      const body = ["# QFAI assistant tree", "", "- .qfai/assistant/skills/", ""].join("\n");
+      await writeFile(legacy, body, "utf-8");
+
+      await runInit({ dir: root, force: true, dryRun: false, yes: true });
+
+      expect(await readFile(legacy, "utf-8")).toBe(body);
+      const lock = path.join(root, ".qfai", "assistant", ".assets.lock.json");
+      expect((await lstat(lock)).isFile()).toBe(true);
+    } finally {
+      await removeTempTree(root);
+    }
+  });
+
   it("still records that it ran, in files nothing else writes", async () => {
     // `QFAI-LINK-001` reads these to tell "init ran here and the surface was
     // deleted" from "init never ran here". They replace the README that
