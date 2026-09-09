@@ -39,6 +39,9 @@ import {
 } from "../../core/assistantAssetProvenance.js";
 import { getInitAssetsDir } from "../lib/assets.js";
 import { error, info, warn } from "../lib/logger.js";
+import type { Issue } from "../../core/types.js";
+import { validateIntegrationSurface } from "../../core/validators/integrationSurface.js";
+import { applyWaivers } from "../../core/waivers.js";
 import { SUNSETS, deprecationSeverity } from "../../core/sunset.js";
 import { hasErrnoCode, isEnoent, isEperm } from "../../core/fs/errno.js";
 import { toRelativePath } from "../../core/paths.js";
@@ -3794,9 +3797,21 @@ export const AGENT_INTEGRATION_CONFIGS: Array<{ dir: string; suffix: string }> =
   { dir: ".github/agents", suffix: ".agent.md" },
 ];
 
+/**
+ * Where a repair's notes go.
+ *
+ * `init` writes them to stdout, which is where an operator running it is
+ * looking. `doctor` cannot: under `--format json` stdout carries the document,
+ * and a note printed into it is a parse error for every downstream consumer —
+ * so that caller collects the notes and routes them itself.
+ */
+type Note = (message: string) => void;
+
 type WrapperSyncOptions = {
   force: boolean;
   dryRun: boolean;
+  /** Defaults to stdout, which is what `qfai init` wants. */
+  report?: Note;
 };
 
 type WrapperEntry = {
@@ -4030,6 +4045,181 @@ async function createAgentSymlinks(
   }
 
   return { copied, skipped };
+}
+
+/** One wrapper `qfai init` would write, addressed the way a finding names it. */
+type PlannedWrapper = {
+  readonly linkPath: string;
+  readonly target: string;
+  readonly type: "dir" | "file";
+};
+
+const WRAPPER_REPAIR_LABEL = "autoremediate: integration wrappers";
+
+/**
+ * Every wrapper the shipped roster calls for, keyed by its repository-relative
+ * POSIX path.
+ *
+ * The roster is the shipped one, read from the same place
+ * `validateIntegrationSurface` reads it. Both sides of the repair therefore
+ * answer for one set of names: a wrapper the gate does not know about cannot
+ * be written here, and one it names cannot be missing from this map for a
+ * reason other than not being ours.
+ */
+async function plannedWrappers(root: string): Promise<Map<string, PlannedWrapper>> {
+  const assistantAssets = path.join(getInitAssetsDir(), ".qfai", "assistant");
+  const skills = await collectCanonicalSkillIds(assistantAssets);
+  const agents = await collectCanonicalAgentNames(assistantAssets);
+  const planned = new Map<string, PlannedWrapper>();
+
+  for (const dir of SKILL_INTEGRATION_DIRS) {
+    for (const skillId of skills) {
+      planned.set(`${dir}/${skillId}`, {
+        linkPath: path.join(root, dir, skillId),
+        target: path.relative(
+          path.join(root, dir),
+          path.join(root, ".qfai", "assistant", "skills", skillId),
+        ),
+        type: "dir",
+      });
+    }
+  }
+  for (const { dir, suffix } of AGENT_INTEGRATION_CONFIGS) {
+    for (const agentName of agents) {
+      planned.set(`${dir}/${agentName}${suffix}`, {
+        linkPath: path.join(root, dir, `${agentName}${suffix}`),
+        target: path.relative(
+          path.join(root, dir),
+          path.join(root, ".qfai", "assistant", "agents", `${agentName}.md`),
+        ),
+        type: "file",
+      });
+    }
+  }
+  return planned;
+}
+
+/** Why a link rewrite is not this path's repair, read from the path itself. */
+async function describeUnrewritable(linkPath: string): Promise<string> {
+  const stats = await safeLstat(linkPath);
+  if (stats === undefined) return "the path is not there";
+  if (stats.isSymbolicLink()) return "the link already names the right target";
+  if (stats.isDirectory()) return "a real directory occupies the path";
+  if (stats.isFile()) return "a regular file occupies the path";
+  return "a special file occupies the path";
+}
+
+/** The wrapper paths the gate is currently reporting, waivers applied. */
+async function wrappersTheGateNames(root: string): Promise<ReadonlySet<string> | null> {
+  let findings: Issue[];
+  try {
+    findings = await validateIntegrationSurface(root);
+  } catch {
+    return null;
+  }
+  // The pass `validate` runs, so a waived wrapper is not rewritten under a
+  // project that has decided to keep it.
+  const waived = await applyWaivers(root, findings).catch(() => null);
+  return new Set(
+    (waived?.issues ?? findings)
+      .filter((issue) => issue.code === "QFAI-LINK-001" && issue.suppressed !== true)
+      .flatMap((issue) => issue.refs ?? []),
+  );
+}
+
+/**
+ * Relinks the integration wrappers the gate is reporting, and touches nothing
+ * else.
+ *
+ * `qfai init --force` clears the same finding, but it also regenerates
+ * `.qfai/assistant/skills/**`, `assistant/agents/**` and the shipped plain
+ * files, so an unattended pass cannot be allowed to reach for it: local edits
+ * to any of those would be gone without the operator asking. This writes
+ * symlinks and nothing else, through the same {@link ensureSymlink} `init`
+ * uses — its atomic claim, target check and rollback are why a rewrite that
+ * fails leaves the wrapper it found rather than no wrapper at all, and an
+ * absent wrapper is the one damaged state `QFAI-LINK-001` reads as benign.
+ *
+ * Two kinds of path are reported rather than rewritten, because a pass that
+ * passed over them in silence would read as having repaired the tree:
+ *
+ * | path                                          | why not                                    |
+ * | --------------------------------------------- | ------------------------------------------ |
+ * | outside the shipped roster                     | rewriting restores what the finding is about |
+ * | occupied by a real file, directory or device   | the content is somebody's, not a link      |
+ *
+ * A rewrite that cannot be made at all — creating a symlink needs Developer
+ * Mode or elevation on Windows — is reported with what the platform said, in
+ * place of a clean pass.
+ */
+export async function repairIntegrationWrappers(
+  root: string,
+  dryRun: boolean,
+  report: (line: string) => void,
+): Promise<void> {
+  const named = await wrappersTheGateNames(root);
+  if (named === null) {
+    report(
+      `${WRAPPER_REPAIR_LABEL} — skipped: the wrappers could not be inspected (check the permissions and the path)`,
+    );
+    return;
+  }
+  if (named.size === 0) {
+    report(`${WRAPPER_REPAIR_LABEL} — nothing to repair`);
+    return;
+  }
+
+  const planned = await plannedWrappers(root);
+  const repaired: string[] = [];
+  const declined: string[] = [];
+  const failed: string[] = [];
+  // The writer's own notes — a sidecar it could not remove, an original it put
+  // back and where. Collected rather than printed: this caller's stdout may be
+  // carrying a JSON document, and `init`'s writer sends them straight there.
+  const notes: string[] = [];
+
+  for (const relative of Array.from(named).sort()) {
+    const wrapper = planned.get(relative);
+    if (wrapper === undefined) {
+      declined.push(`${relative}: this release ships no skill or agent by that name`);
+      continue;
+    }
+    try {
+      const result = await ensureSymlink(wrapper.linkPath, wrapper.target, wrapper.type, {
+        force: false,
+        dryRun,
+        report: (line) => {
+          for (const part of line.split("\n")) notes.push(`  ${part.trim()}`);
+        },
+      });
+      if (result === "created") {
+        repaired.push(relative);
+      } else {
+        declined.push(`${relative}: ${await describeUnrewritable(wrapper.linkPath)}`);
+      }
+    } catch (err: unknown) {
+      const detail = err instanceof Error ? err.message : String(err);
+      failed.push(`${relative}: ${detail.split("\n").join("\n    ")}`);
+    }
+  }
+
+  report(
+    dryRun
+      ? `${WRAPPER_REPAIR_LABEL} — would relink=${String(repaired.length)}, left alone=${String(declined.length)}, failed=${String(failed.length)} (dry-run)`
+      : `${WRAPPER_REPAIR_LABEL} — relinked=${String(repaired.length)}, left alone=${String(declined.length)}, failed=${String(failed.length)}`,
+  );
+  for (const relative of repaired) {
+    report(dryRun ? `  would relink ${relative}` : `  relinked ${relative}`);
+  }
+  for (const line of declined) {
+    report(`  left alone ${line}`);
+  }
+  for (const line of failed) {
+    report(`  could not relink ${line}`);
+  }
+  for (const line of notes) {
+    report(line);
+  }
 }
 
 /**
@@ -4605,6 +4795,7 @@ async function recreateUnfollowableLink(
   linkPath: string,
   target: string,
   type: "dir" | "file",
+  note: Note,
 ): Promise<"created" | "skipped"> {
   const hold = await claimHoldDir(linkPath);
   const sidecar = path.join(hold, path.basename(linkPath));
@@ -4621,16 +4812,16 @@ async function recreateUnfollowableLink(
     // Not the entry this repair was authorised to replace. It goes back by the
     // same atomic claim the rollback uses, and the repair declines rather than
     // recreating something over a path somebody else owns.
-    await restoreHeldLink({ hold, sidecar, linkPath, type });
+    await restoreHeldLink({ hold, sidecar, linkPath, type, note });
     return "skipped";
   }
   try {
     await symlink(target, linkPath, type);
   } catch (error: unknown) {
-    await restoreHeldLink({ hold, sidecar, linkPath, type, cause: error });
+    await restoreHeldLink({ hold, sidecar, linkPath, type, note, cause: error });
     throw error;
   }
-  await discardHold(hold, linkPath);
+  await discardHold(hold, linkPath, note);
   return "created";
 }
 
@@ -4652,16 +4843,17 @@ async function restoreHeldLink(args: {
   sidecar: string;
   linkPath: string;
   type: "dir" | "file";
+  note: Note;
   cause?: unknown;
 }): Promise<void> {
-  const { hold, sidecar, linkPath, type } = args;
+  const { hold, sidecar, linkPath, type, note } = args;
   const failure = await putBackHeldEntry(sidecar, linkPath, type);
   if (failure === null) {
-    await discardHold(hold, linkPath);
+    await discardHold(hold, linkPath, note);
     return;
   }
   const occupied = (failure as NodeJS.ErrnoException | null)?.code === "EEXIST";
-  info(
+  note(
     [
       occupied
         ? `  note: ${linkPath} was not restored — another process created an entry there first.`
@@ -4726,11 +4918,11 @@ async function putBackHeldEntry(
  * hold or a transient I/O fault here is not the repair failing. Reporting it as
  * one told the operator a repair had failed that had in fact succeeded.
  */
-async function discardHold(hold: string, linkPath: string): Promise<void> {
+async function discardHold(hold: string, linkPath: string, note: Note): Promise<void> {
   try {
     await rm(hold, { recursive: true, force: true });
   } catch (cleanupErr: unknown) {
-    info(
+    note(
       `  note: the repair succeeded but the hold could not be deleted (${hold}): ` +
         `${describeError(cleanupErr)} — ${linkPath} is repaired`,
     );
@@ -4785,6 +4977,7 @@ async function ensureSymlink(
   type: "dir" | "file",
   options: WrapperSyncOptions,
 ): Promise<"created" | "skipped"> {
+  const note = options.report ?? info;
   const linkStat = await safeLstat(linkPath);
 
   if (linkStat !== undefined) {
@@ -4832,7 +5025,7 @@ async function ensureSymlink(
         if (options.dryRun) {
           return "created";
         }
-        return await recreateUnfollowableLink(linkPath, target, type);
+        return await recreateUnfollowableLink(linkPath, target, type, note);
       }
       // Broken or --force → remove and recreate
       if (!options.dryRun) {
@@ -4858,12 +5051,12 @@ async function ensureSymlink(
         // the wrapper *missing* — worse than the flattened state it started
         // from, and invisible afterwards because `QFAI-LINK-001` treats an
         // absent wrapper as one that was never created.
-        return await recreateFlattenedLink(linkPath, target, type);
+        return await recreateFlattenedLink(linkPath, target, type, note);
       }
       // The removal and the `symlink` are both suppressed under `--dry-run`;
       // saying "repaired" there reported a repair that did not happen, to the
       // one invocation whose whole purpose is to preview.
-      info(`  would repair: ${linkPath} is a flattened symlink`);
+      note(`  would repair: ${linkPath} is a flattened symlink`);
       return "created";
     } else {
       // Regular file or directory with content of its own — a customised agent
@@ -5057,6 +5250,7 @@ async function recreateFlattenedLink(
   linkPath: string,
   target: string,
   type: "dir" | "file",
+  note: Note,
 ): Promise<"created" | "skipped"> {
   // Move aside first, then verify what was moved. Reading and then deleting by
   // pathname are two operations, and between them another process can replace
@@ -5205,20 +5399,20 @@ async function recreateFlattenedLink(
   // Anything but the same target still there is left where it is, and named.
   const stillOurs = await readPinnedRegularFile(sidecar, 4096).catch(() => null);
   if (stillOurs === null || toComparableTarget(stillOurs) !== toComparableTarget(target)) {
-    info(
+    note(
       `  note: the repair succeeded, but the sidecar file was left in place because its content changed since it was inspected: ${sidecar}`,
     );
-    info(`  repaired: ${linkPath} was a flattened symlink (recreating)`);
+    note(`  repaired: ${linkPath} was a flattened symlink (recreating)`);
     return "created";
   }
   try {
     await rm(sidecar, { recursive: true, force: true });
   } catch (cleanupErr: unknown) {
-    info(
+    note(
       `  note: the repair succeeded, but the sidecar file could not be removed: ${sidecar} (${describeError(cleanupErr)})`,
     );
   }
-  info(`  repaired: ${linkPath} was a flattened symlink (recreating)`);
+  note(`  repaired: ${linkPath} was a flattened symlink (recreating)`);
   return "created";
 }
 
