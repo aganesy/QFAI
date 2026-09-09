@@ -272,6 +272,7 @@
     "tests/validators/inertGateFirstContact.test.ts",
     "tests/validators/skillRolesRouting.test.ts",
     "tests/validators/uiMarkerPresence.test.ts",
+    "tests/validators/uiPrototypeMode.test.ts",
     "tests/validators/uix/competitiveRefs.test.ts",
     "tests/validators/validatorReachability.test.ts",
     "tests/assets/mdschemaRouting.test.ts",
