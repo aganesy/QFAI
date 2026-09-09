@@ -1271,8 +1271,13 @@ async function readExistingReadme(filePath: string): Promise<PinnedFileRead | nu
  * qfai's the moment the project changed it, and deleting it would throw away
  * work. It keeps its recorded hash so a later `--force`, after the edit is
  * reverted, can still recognise and retire it.
+ *
+ * Exported for the same reason the other governed-write helpers are: the state
+ * that matters here is a path the release has stopped shipping, and a test
+ * cannot reach it through `runInit` while the release still ships everything
+ * this list names.
  */
-async function retireWithdrawnGovernedAssets(
+export async function retireWithdrawnGovernedAssets(
   destAssistant: string,
   shipped: Record<string, string>,
   previous: Record<string, string>,
@@ -1295,6 +1300,21 @@ async function retireWithdrawnGovernedAssets(
     if (!(await isContained(relative))) {
       out.skipped.push(dest);
       out.manualMergeNotes.push(escapedGovernedPathNote(dest));
+      continue;
+    }
+    if (ADOPTER_OWNED_ASSETS.has(relative)) {
+      // A release that stops shipping one of these still does not own what the
+      // project wrote in it. Retirement decides by hash, so a lock holding the
+      // adopted content would make the project's own document read as an
+      // untouched copy of ours and be deleted. Kept and named instead; moving
+      // the content is the project's call, not this command's.
+      recorded[relative] = previousHash;
+      out.skipped.push(dest);
+      if (options.force) {
+        out.manualMergeNotes.push(
+          `NOTE: ${dest} is no longer shipped by this release, and its content is yours, so it was left in place. Move what you need out of it and delete it by hand.`,
+        );
+      }
       continue;
     }
     const currentHash = await hashAssistantAssetFile(dest);

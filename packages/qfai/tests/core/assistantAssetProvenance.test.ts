@@ -22,6 +22,7 @@ import {
   makeGovernedContainmentGuard,
   replaceGovernedAsset,
   retireVerifiedGovernedAsset,
+  retireWithdrawnGovernedAssets,
   runInit,
   SHIPPED_WORKFLOW_NAMES,
 } from "../../src/cli/commands/init.js";
@@ -185,6 +186,43 @@ describe("assistant asset provenance", () => {
 
     expect(await readFile(target, "utf-8")).toBe(adopted);
   }, 120000);
+
+  it("does not retire a filled-in catalog the release has stopped shipping", async () => {
+    // Retirement decides by hash too, and it deletes rather than overwrites. A
+    // release that drops one of these four does not thereby own what the
+    // project wrote in it, but a lock holding the adopted content makes the
+    // document read as an untouched copy of ours.
+    //
+    // Driven directly: the state needs a path the release no longer ships, and
+    // no `runInit` can produce one while all four are still shipped.
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-retire-"));
+    tempRoots.push(root);
+    const assistantDir = path.join(root, ".qfai", "assistant");
+    await mkdir(path.join(assistantDir, "catalog"), { recursive: true });
+    const target = path.join(assistantDir, "catalog", "tech.md");
+    const adopted = "# Tech\n\n## Standard commands (copy-paste)\n\n`pnpm test`\n";
+    await writeFile(target, adopted, "utf-8");
+
+    const recorded: Record<string, string> = {};
+    const out = {
+      removed: [] as string[],
+      skipped: [] as string[],
+      manualMergeNotes: [] as string[],
+    };
+    await retireWithdrawnGovernedAssets(
+      assistantDir,
+      {}, // the release ships nothing by this name any more
+      { "catalog/tech.md": hashAssistantAssetText(adopted) },
+      recorded,
+      { force: true, dryRun: false },
+      makeGovernedContainmentGuard(root),
+      out,
+    );
+
+    expect(await readFile(target, "utf-8")).toBe(adopted);
+    expect(out.removed).toEqual([]);
+    expect(out.manualMergeNotes.join("\n")).toContain("its content is yours");
+  });
 
   it("still reports a catalog file the project deleted", async () => {
     // The exemption is for a difference, not for an absence: a catalog the
