@@ -129,7 +129,7 @@ changes, three things move together:
 
 1. `elements[].label` in the contract,
 2. the rendered text, or the marker that stands in for it,
-3. the fidelity snapshot in `.qfai/evidence/prototyping.json`.
+3. the fidelity snapshot in `.qfai/evidence/prototyping/prototyping.json`.
 
 Update one and the others disagree; the finding then stands unresolved with
 nothing saying which side is wrong.
@@ -146,8 +146,10 @@ element the marker stands for.
   change and a label does not.
 - Markers are what give an element fidelity coverage when its text is not
   visible.
-- Expected markers are generated from `elements[].id`, so a contract that names
-  its elements well needs no separate marker list.
+- Nothing derives them for you. The marker lane collects the `data-qfai` values
+  the contract writes and checks only those, so an element with an `id` and no
+  declared marker is never inspected. A contract that declares no markers at all
+  passes that lane having checked nothing.
 
 A contract still carrying label-based markers works, and there is no deadline on
 it; move it to the id form the next time that flow is edited, and check whatever

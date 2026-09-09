@@ -6,6 +6,25 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **The shipped UI contract guide describes what the marker lane does** (#1411).
+  Two of its statements were wrong against the code, and a reader acts on a
+  guide that ships.
+
+  | Said                                                       | Does                                                        |
+  | ---------------------------------------------------------- | ----------------------------------------------------------- |
+  | expected markers are generated from `elements[].id`        | only the `data-qfai` values a contract writes are inspected |
+  | the fidelity snapshot is `.qfai/evidence/prototyping.json` | it is `.qfai/evidence/prototyping/prototyping.json`         |
+
+  The first costs coverage. The marker rule is opt-in by construction — a
+  contract that names no marker is asked for nothing — so telling a reader that
+  naming elements well removes the need for a marker list pointed them at the
+  one shape the lane never checks. It reports success either way, and the
+  missing coverage shows up nowhere.
+
+  `templates/contracts/ui-contract.sample.yaml` is the file a new contract is
+  copied from, so its marker now uses the `CONTRACT_ID:ELEMENT_ID` form the
+  guide states, against an element the same file declares.
+
 - **An unquoted `data-qfai` value is a declared marker** (#1413).
   `QFAI-CONTRACT-037` collected markers with a pattern that required quotes
   around the value, so `[data-qfai=order_submit]` declared nothing — and a CSS
