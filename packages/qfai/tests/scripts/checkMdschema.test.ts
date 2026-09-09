@@ -32,8 +32,10 @@ import { afterEach, describe, expect, it } from "vitest";
 import {
   IGNORE_MARKER,
   findMdschemaCommand,
+  firstHeading,
   optsOutOfSchema,
   patternToRegExp,
+  rootHeadingPattern,
 } from "../../assets/scripts/check-mdschema.mjs";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -113,6 +115,9 @@ const NON_CONFORMING_SPEC = CONFORMING_SPEC.replace(
   "## Scope\n\n- In: the thing\n- Out: the other thing\n\n",
   "",
 );
+
+/** The same document with only its root heading replaced, sections intact. */
+const WRONG_ROOT = CONFORMING_SPEC.replace("# 01 Spec", "# Something Else Entirely");
 
 async function writeSpec(root: string, pack: string, body: string): Promise<string> {
   const dir = path.join(root, ".qfai", "specs", pack);
@@ -631,5 +636,148 @@ describe("the ratchet in --scope changed", () => {
 
     expect(result.status).toBe(1);
     expect(result.stdout).not.toContain("pre-existing");
+  });
+
+  it("leaves a root heading already wrong at the merge base to its own change", async () => {
+    // The root-heading verdict is taken without `mdschema`, so it needs its own
+    // answer to the ownership question the ratchet asks of everything else.
+    const root = await twoCommits(
+      { "spec-0002": WRONG_ROOT },
+      { "spec-0002": `${WRONG_ROOT}- one more line\n` },
+    );
+
+    const result = runDriver(["--root", root, "--scope", "changed", "--base", "main"]);
+
+    expect(result.status).toBe(0);
+    expect(result.stdout).toContain("pre-existing");
+    expect(result.stdout).toContain("Root heading is");
+  });
+
+  it("fails when a branch breaks a root heading that matched at the merge base", async () => {
+    const root = await twoCommits({ "spec-0001": CONFORMING_SPEC }, { "spec-0001": WRONG_ROOT });
+
+    const result = runDriver(["--root", root, "--scope", "changed", "--base", "main"]);
+
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain("Root heading is");
+  });
+});
+
+/**
+ * A document's sections are graded against the heading above them, so a root
+ * heading the schema does not accept makes every section below it report as
+ * unexpected. One wrong line becomes one violation per heading in the outline,
+ * and none of those lines is true: the sections are where they belong.
+ *
+ * The verdict is taken from the schema's own declaration rather than from what
+ * `mdschema` printed. Its message text is not a contract — the same prose comes
+ * back for every `--format` — so a parser for it would tie this repository to
+ * one release's rendering.
+ */
+describe("a root heading the schema does not accept", () => {
+  it("reports one violation rather than one per section", async () => {
+    const root = await newTempDir();
+    await writeSpec(root, "spec-0001", WRONG_ROOT);
+
+    const result = runDriver(["--root", root, "--scope", "all"]);
+    const marks = (result.stderr.match(/✗/g) ?? []).length;
+
+    // The document carries seven sections under its root.
+    expect(result.status).toBe(1);
+    expect(marks).toBe(1);
+  });
+
+  it("names what is there and what the schema requires", async () => {
+    const root = await newTempDir();
+    await writeSpec(root, "spec-0001", WRONG_ROOT);
+
+    const result = runDriver(["--root", root, "--scope", "all"]);
+
+    expect(result.stderr).toContain('"# Something Else Entirely"');
+    expect(result.stderr).toContain("^# 01 Spec");
+  });
+
+  it("says the document is not checked further", async () => {
+    // Without that line a reader takes the absence of other violations for the
+    // rest of the document being sound.
+    const root = await newTempDir();
+    await writeSpec(root, "spec-0001", WRONG_ROOT);
+
+    const result = runDriver(["--root", root, "--scope", "all"]);
+
+    expect(result.stderr).toContain("not checked further");
+  });
+
+  it("says so for a document with no heading at all", async () => {
+    const root = await newTempDir();
+    await writeSpec(root, "spec-0001", "Just a paragraph, no heading.\n");
+
+    const result = runDriver(["--root", root, "--scope", "all"]);
+
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain("no heading");
+  });
+
+  it("still grades a document whose root heading matches", async () => {
+    // The short-circuit is scoped to the one condition that makes grading
+    // meaningless. Everything else is still `mdschema`'s to answer.
+    const root = await newTempDir();
+    await writeSpec(root, "spec-0001", NON_CONFORMING_SPEC);
+
+    const result = runDriver(["--root", root, "--scope", "all"]);
+
+    expect(result.status).toBe(1);
+    expect(result.stderr).not.toContain("Root heading is");
+    expect(result.stderr).toContain("Scope");
+  });
+
+  it("reports both kinds in one run, each from its own source", async () => {
+    const root = await newTempDir();
+    await writeSpec(root, "spec-0001", WRONG_ROOT);
+    await writeSpec(root, "spec-0002", NON_CONFORMING_SPEC);
+
+    const result = runDriver(["--root", root, "--scope", "all"]);
+
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain("Root heading is");
+    expect(result.stderr).toContain("Scope");
+  });
+});
+
+describe("reading the root heading", () => {
+  it("takes the pattern the schema declares at its root", () => {
+    const schema = [
+      "structure:",
+      "  - heading:",
+      '      pattern: "^# 01 Spec.*"',
+      "      regex: true",
+    ].join("\n");
+
+    expect(rootHeadingPattern(schema)).toEqual({ pattern: "^# 01 Spec.*", regex: true });
+  });
+
+  it("answers null for a schema that declares no root heading", () => {
+    // The caller then has no root to check against and leaves the document to
+    // `mdschema` rather than inventing a verdict.
+    expect(rootHeadingPattern("rules:\n  - something: else\n")).toBeNull();
+  });
+
+  it("skips a heading inside a fenced block", () => {
+    // A `# comment` in a shell example is not the document's heading, and
+    // reading one as the heading reports the document against a line it does
+    // not have.
+    const text = ["```sh", "# not a heading", "```", "", "# The Real Heading", ""].join("\n");
+
+    expect(firstHeading(text)).toBe("# The Real Heading");
+  });
+
+  it("skips front matter", () => {
+    const text = ["---", "title: something", "---", "", "# The Real Heading", ""].join("\n");
+
+    expect(firstHeading(text)).toBe("# The Real Heading");
+  });
+
+  it("answers null when the document has no heading", () => {
+    expect(firstHeading("Just a paragraph.\n")).toBeNull();
   });
 });
