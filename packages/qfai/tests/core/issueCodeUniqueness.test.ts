@@ -417,7 +417,6 @@ const PENDING_EXPECTED_CATALOG_CODES = new Set<string>([
   "UIX-VAL-TREND-FIELD-MISSING",
   "UIX-VAL-TREND-SCAN-MISSING",
   "W-SKILL-DOC-BROKEN-REF",
-  "W-STALE-REFERENCE",
 ]);
 
 const PENDING_FIX_CATALOG_CODES = new Set<string>([
@@ -564,7 +563,6 @@ const PENDING_FIX_CATALOG_CODES = new Set<string>([
   "TDDLIST_TEST_FILE_MISSING",
   "TRACE_SHARED_SCOPE_VIOLATION",
   "W-SKILL-DOC-BROKEN-REF",
-  "W-STALE-REFERENCE",
 ]);
 
 async function collectErrorCapableUsage(): Promise<Map<string, IssueCodeUsage>> {

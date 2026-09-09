@@ -122,7 +122,7 @@
 - AC-Refs: AC-0015-0021
 - `references/iteration-loop.md`, `references/generator-prompt.md`, `references/handoff.md`, `references/evidence-requirements.md`, and each affected SKILL.md MUST be rewritten to match the implementations chosen for the OQ-0152..0157 outcomes (REQs 0150 / 0151 / 0152 / 0154 / 0156 / 0157).
 - The rewrites MUST land in the same atomic PR(s) as the implementation (no follow-up doc-only PR).
-- `qfai validate --report` MUST verify zero remaining stale references at HEAD after sunset; during the deprecation window stale references surface as warnings.
+- `qfai validate --report` MUST report every stale reference remaining at HEAD, at severity warning. That severity MUST be fixed, not derived from the date of the run.
 - spec-0015 owns this cross-skill documentation-governance obligation (CAP-0015 cross-skill governance territory).
 
 ## BR-0015-0017: Hygiene-lane finding ingestion and the deferred catalog registration
