@@ -6,6 +6,22 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **An unquoted `data-qfai` value is a declared marker** (#1413).
+  `QFAI-CONTRACT-037` collected markers with a pattern that required quotes
+  around the value, so `[data-qfai=order_submit]` declared nothing — and a CSS
+  attribute selector may leave the value unquoted when it is an identifier, as
+  may an HTML attribute.
+
+  The miss was silent in the worst direction. A contract that names no marker
+  is asked for nothing, which is how the rule stays opt-in, so a contract whose
+  only marker was written bare read as having opted out: the element went
+  unchecked and there was no finding to say so.
+
+  A bare value now ends at whitespace or at whatever closes what it sits in —
+  `]` for a selector, `>` for a tag, `,` or `}` in flow syntax. Quoting still
+  works and is what the shipped template writes, so nothing that passes today
+  changes.
+
 - **`certify` says when a UI contract candidate it ignored has files in it**
   (#1408). Per-spec contracts resolve in two tiers and the first candidate wins
   outright, so a project holding more than one shape had the rest dropped from
