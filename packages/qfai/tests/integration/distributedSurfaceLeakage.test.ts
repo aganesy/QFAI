@@ -387,14 +387,7 @@ describe("distributed surface leakage smoke", () => {
 
     // Every entry point an agent loads on its own: Codex reads `AGENTS.md`,
     // Claude Code reads `CLAUDE.md`, Copilot reads its instructions file.
-    // `.codex/README.md` is not auto-loaded, but it makes the same claim, so
-    // its citations have to resolve too.
-    const citingFiles = [
-      "AGENTS.md",
-      "CLAUDE.md",
-      ".github/copilot-instructions.md",
-      ".codex/README.md",
-    ];
+    const citingFiles = ["AGENTS.md", "CLAUDE.md", ".github/copilot-instructions.md"];
     const missing: string[] = [];
 
     for (const citing of citingFiles) {

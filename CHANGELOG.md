@@ -101,6 +101,44 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
+- **`qfai init` writes no `README.md`, and `qfai validate` reads a record
+  instead of one** (#1399). Six READMEs were written into every adopter tree —
+  `.qfai/assistant/`, `.qfai/steering/`, and one in each of the four integration
+  directories — against a rule two shipped skills already state: _do not create
+  `.qfai/**/README.md` files as scaffold or format documentation; keep artifact
+  guidance in skill references/templates._
+
+  One of them was load-bearing. `qfai validate` has to tell "init ran here and
+  the integration surface was deleted" from "init never ran here", because only
+  the first is a defect and the two look identical from the integration
+  directories alone. It answered that by reading `.qfai/assistant/README.md` for
+  a title, a section heading and a path substring — all three, because any one
+  of them appears in a README a project wrote about where it keeps its own QFAI
+  tree.
+
+  Prose was the wrong evidence. Four of the five candidate paths sit in
+  conventional directories where init wrote a README only when the path was
+  free, so a project that already had its own at every one of them ran init and
+  got no marker at all. `QFAI-LINK-001` now reads
+  `.qfai/assistant/.assets.lock.json` and `.qfai/install-provenance.json`:
+  written unconditionally, inside a directory init creates, named nothing a
+  project writes for its own reasons. Presence decides it, with no parse — a
+  record something later truncated still proves init ran, and that state has its
+  own finding.
+
+  A run removes `.qfai/assistant/README.md` when it still carries init's
+  signature, since that file described the check being replaced. A README a
+  project wrote itself is left alone, and so is one an earlier release merged a
+  project's own notes into.
+
+  The guidance those files held now sits where a reader goes for it. The UI
+  contract document was the only one with content the shipped tree did not
+  already carry: its per-spec resolution precedence, the `elements[].id` naming
+  and change policy, the label-as-inspection-target rule, the `data-qfai` marker
+  convention, the screen field tables and the failure FAQ are in
+  `qfai-sdd/references/ui-contract-guide.md`. The work-log validator set and the
+  command that runs it are in `catalog/worklog-entry.schema.md`.
+
 - **`qfai doctor` reports the broken integration wrappers `validate` reports**
   (#1258). A wrapper under `.claude/`, `.codex/`, `.agents/` or `.github/` that
   does not resolve is how a skill fails to load at all, and `validate` reports

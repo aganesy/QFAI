@@ -18,12 +18,28 @@
 - Per-project, project-root location: `.qfai/steering/`.
 - The **surface** lives at `.qfai/steering/`, not under `.qfai/assistant/`. This
   **schema** ships with the package and `npx qfai init` seeds it at
-  `.qfai/assistant/catalog/worklog-entry.schema.md` — the seeded README and entry
-  template used to point at an unpublished path, so the contract was
-  unresolvable on every consuming project.
+  `.qfai/assistant/catalog/worklog-entry.schema.md`, which is the path every
+  other document cites it by.
 - By default `.gitignore` excludes the directory; projects MAY opt in via override.
 - Filename: `.qfai/steering/<id>.md` where `<id>` is kebab-case ASCII; the frontmatter `id` MUST match the filename stem.
-- Templates live at `.qfai/steering/_templates/`; templates MUST NOT contain entry-shaped frontmatter (validator ignores `_templates/`).
+- Templates live at `.qfai/steering/_templates/`; templates MUST NOT contain entry-shaped frontmatter (validator ignores `_templates/`). `npx qfai init` seeds `entry.md` there as the canonical entry shape.
+
+## Validation
+
+```sh
+npx qfai validate --profile sdd --fail-on error
+```
+
+Five findings read this surface. Each is described where the rule it belongs to
+is stated; they are collected here so a reader knows the whole set.
+
+| Finding                 | Reports                                                                                                     |
+| ----------------------- | ----------------------------------------------------------------------------------------------------------- |
+| `W-WORKLOG-SCHEMA`      | frontmatter that does not satisfy the schema below, including an `id` that does not match the filename stem |
+| `W-WORKLOG-BROKEN-LINK` | a `links` entry that resolves to nothing                                                                    |
+| `W-WORKLOG-STALE`       | an `active` entry nothing has updated for too long                                                          |
+| `W-PENDING-PROMOTION`   | a `promote-to` target that has not been written                                                             |
+| `R-HANDOFF-INCOMPLETE`  | a `handoff` body missing one of its five required sections                                                  |
 
 ## Frontmatter schema
 

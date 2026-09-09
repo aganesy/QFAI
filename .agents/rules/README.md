@@ -5,9 +5,10 @@ AI agent working in this repository (Claude Code, Codex, GitHub Copilot, and
 others).
 
 Each rule is a plain Markdown file. The tool-specific entry points
-(`.claude/rules/*.md`, `AGENTS.md`, `.github/copilot-instructions.md`,
-`.codex/README.md`) reach these files by symlink or by reference. Edit the
-master here, never a copy under a tool-specific directory.
+(`.claude/rules/*.md`, `AGENTS.md`, `CLAUDE.md`,
+`.github/copilot-instructions.md`) reach these files by symlink or by
+reference. Edit the master here, never a copy under a tool-specific
+directory.
 
 ## Rules
 
@@ -26,8 +27,9 @@ master here, never a copy under a tool-specific directory.
 1. Write `<name>.md` here as a plain document.
 2. List it in `AGENTS.md`, the universal entry point at the repository root.
 3. Add the symlink `.claude/rules/<name>.md` (`ln -s ../../.agents/rules/<name>.md`).
-4. If Codex or Copilot must see the rule, add a one-line reference in
-   `.github/copilot-instructions.md` and `.codex/README.md`.
+4. If Copilot must see the rule, add a one-line reference in
+   `.github/copilot-instructions.md`. Codex reads `AGENTS.md`, so step 2
+   already covers it.
 
 ## Symlinks on Windows
 
