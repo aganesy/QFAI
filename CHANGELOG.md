@@ -48,6 +48,30 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Added
 
+- **`QFAI-CONTRACT-038` reports a `prototype.mode` outside the vocabulary**
+  (#1402). A UI contract's `prototype` mapping is authoring metadata, and
+  `interactive` is the only mode the tooling and the shipped template know.
+  Nothing branched on the value and nothing rejected another, so `mode: static`
+  told every reader the prototype was something it is not, with no run
+  disagreeing. A one-value vocabulary and no check is where a typo survives
+  longest, because there is nothing to fail.
+
+  The finding ships behind a promotion window and names the release that ends
+  it. Nothing has ever rejected a value here, so a project carrying a typo has
+  been passing and was never told. Only a contract that writes a mode is asked
+  anything, and only a value the vocabulary does not hold is reported — a
+  contract with no `prototype`, or an unfilled `mode:`, stays silent.
+
+  Two documents disagreed about whether `prototype` was required at all.
+  `contract-artifact-rules.md` said a UI contract must define `markers` and
+  `mockPaths`; `ui-contract-guide.md` said no lane reads `prototype`. Both now
+  say the mapping is optional and what it declares is checked.
+
+  The guide's claim that no lane reads `prototype` was also wrong.
+  `QFAI-CONTRACT-037` collects `data-qfai` values from the whole contract, so a
+  selector written under `prototype.markers` — which is how the shipped template
+  writes one — is a declared marker and is looked for in the source tree.
+
 - **`qfai doctor --autoremediate` relinks a broken integration wrapper, and
   only that** (#1386). `qfai init --force` clears the same finding, and it also
   regenerates `.qfai/assistant/skills/**`, `assistant/agents/**` and the shipped
