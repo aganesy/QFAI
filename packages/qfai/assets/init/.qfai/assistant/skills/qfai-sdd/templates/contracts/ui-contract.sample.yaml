@@ -1,13 +1,19 @@
 # QFAI-CONTRACT-ID: CON-UI-0001
 prototype:
   mode: interactive
+  # A negative-only ledger: entries record a failure or gap a review found.
+  # An expected success flow belongs in screens[].actions[], not here.
   mockPaths:
     - id: mp_create_to_list
-      flow: create -> list reflects
+      finding_ref: "<your review or ticket reference>"
+      failure_condition: "created row not reflected in the list within 2s"
+      status: open
+  # CONTRACT_ID:ELEMENT_ID, with the id from screens[].elements[].id. Only the
+  # markers declared here are inspected; nothing derives them from the ids.
   markers:
-    - id: mk_order_form
-      selector: "[data-qfai='order-form']"
-      purpose: order create form root
+    - id: mk_customer_id_input
+      selector: "[data-qfai='CON-UI-0001:customer_id_input']"
+      purpose: customer id field on the order create form
 screens:
   - id: order_create
     title: Create Order

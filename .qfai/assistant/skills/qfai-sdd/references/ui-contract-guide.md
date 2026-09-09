@@ -96,11 +96,14 @@ or a per-spec subdirectory.
 
 **Pick one tier per spec.** Authoring a single-file candidate alongside a
 multi-file one — `spec-0007.yaml` with `ui-0007-home.yaml`, or with
-`spec-0007/home.yaml` — means the multi-file tier is ignored entirely, and the
-screens that live only there fail the per-screen review gate without saying
-why. Two canonical single-file candidates for one spec (1 and 3) are the same
-trap in miniature: the resolver takes 1, and whoever is reading 3 cannot tell
-which file is authoritative.
+`spec-0007/home.yaml` — means the multi-file tier is ignored entirely. The
+screens that live only there are not reviewed at all: the gate walks the screens
+the resolver returned, and certify passes without them. Nothing reports the
+omission, which is what makes this worth avoiding rather than merely untidy.
+
+Two canonical single-file candidates for one spec (1 and 3) are the same trap in
+miniature: the resolver takes 1, and whoever is reading 3 cannot tell which file
+is authoritative.
 
 When the per-spec match finds files but extracts no valid screens — a YAML
 parse error, a `screens:` typo — certify warns on stderr with the offending
@@ -127,12 +130,12 @@ Change policy:
 
 ## `elements[].label` is inspection-target text
 
-An L2 review reads `label` as the text it expects to find at runtime, so a
-wording change is a three-part edit made together:
+A per-screen prototyping review reads `label` as the text it expects to find at
+runtime, so a wording change is a three-part edit made together:
 
 1. `contracts/ui/*.yaml` — `elements[].label`
 2. the UI itself — the visible label, or its marker mapping
-3. `.qfai/evidence/prototyping.json` — the `uiFidelity` snapshot
+3. `.qfai/evidence/prototyping/prototyping.json` — the `uiFidelity` snapshot
 
 Updating one leaves `QFAI-PROT-238` unresolved with nothing wrong in the
 change that caused it.
@@ -147,9 +150,13 @@ The canonical value is `CONTRACT_ID:ELEMENT_ID`, as in
 `data-qfai="CON-UI-0001:search_input"`.
 
 The suffix is `elements[].id`, never `elements[].label`: the marker exists to
-survive the wording, and autogen derives the expected markers from the ids.
-This is what gives fidelity coverage to an element whose text the page never
-shows.
+survive the wording. This is what gives fidelity coverage to an element whose
+text the page never shows.
+
+Nothing derives markers for you. `validateUiMarkerPresence` collects the
+`data-qfai` values written in the contract and checks only those, so an element
+with an `id` and no declared marker is neither generated nor inspected — the
+gate passes on it having checked nothing.
 
 Older contracts and downstream tooling may still carry label-based markers.
 When touching one of those flows, move it to the id-based form and check
@@ -169,7 +176,7 @@ prototype:
   mode: interactive
   mockPaths:
     - id: mp_create_to_list_mobile_reflow
-      finding_ref: "BQ-2026-04-18-014"
+      finding_ref: "<your review or ticket reference>"
       failure_condition: "Mobile viewport: created row not reflected in list within 2s (stale cache)."
       status: open
 ```
@@ -183,10 +190,10 @@ prototype:
 `kind` (`submit`, `navigate`, `toggle`, …) and `effect` — the UI state change
 it produces.
 
-For an L2 review, every interactive primary route needs at least one action
-that changes UI state, and at least one action tied to an observed browser QA
-finding so action coverage can be traced. Keep `effect` concrete enough to
-check: `navigates to /orders`, `shows success toast`.
+For the per-screen review, every interactive primary route needs at least one
+action that changes UI state, and at least one action tied to an observed
+browser QA finding so action coverage can be traced. Keep `effect` concrete
+enough to check: `navigates to /orders`, `shows success toast`.
 
 ## When a review fails
 

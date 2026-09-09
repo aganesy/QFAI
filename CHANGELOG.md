@@ -17,6 +17,21 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   point at the guide instead, so the citation resolves in an installed project
   rather than only in this repository.
 
+  Four claims the artifact README made are corrected on the way in, because a
+  guide that ships is one an adopter will act on:
+
+  | the README said                                   | what the code does                                            |
+  | ------------------------------------------------- | ------------------------------------------------------------- |
+  | markers are derived from `elements[].id`          | only markers the contract declares are inspected              |
+  | the `uiFidelity` snapshot is `prototyping.json`   | it is `.qfai/evidence/prototyping/prototyping.json`           |
+  | screens in an ignored tier fail the review gate   | they are not reviewed, and `certify` passes without them      |
+  | the per-screen review is named after a test layer | the layer name means something else in the test-layer catalog |
+
+  `contracts/ui-contract.sample.yaml` is aligned with the guide: its marker
+  carries the `CONTRACT_ID:ELEMENT_ID` selector against an element the file
+  declares, and its `mockPaths` entry records a failure rather than a success
+  flow, which is what that list is for.
+
 ### Added
 
 - **`qfai doctor --autoremediate` relinks a broken integration wrapper, and
