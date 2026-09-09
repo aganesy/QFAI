@@ -588,7 +588,6 @@ commit that bumps the package, and to keep the two from being merged separately.
 ```text
 .
 ├── .agents
-│   ├── README.md
 │   └── skills
 │       └── qfai-configure
 │           └── SKILL.md

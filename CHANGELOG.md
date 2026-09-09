@@ -38,6 +38,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   that init wrote all of it: a project may have added to it, and removing it
   would take that too.
 
+  The operator-facing text that described the old output moves with it. The
+  `--force` help entry no longer offers to rewrite "each tree's README.md", the
+  `--force` notice no longer names the integration READMEs, and the generated
+  structure no longer shows one under `.agents/`. The help entry was held by an
+  assertion that it _contains_ `README.md` — true while the sentence was wrong,
+  and failing the moment it was corrected. It asserts the absence now.
+
 ### Added
 
 - **`qfai doctor --autoremediate` relinks a broken integration wrapper, and

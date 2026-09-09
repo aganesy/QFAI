@@ -420,7 +420,15 @@ describe("cli usage text", () => {
     const entry = forceEntry(await captureHelp());
 
     expect(entry).toContain("copilot-instructions.md");
-    expect(entry).toContain("README.md");
+  });
+
+  it("does not offer to rewrite a README, because none is written", async () => {
+    // Inverted from the assertion it replaces. `toContain("README.md")` held
+    // while the sentence was wrong and would have failed the moment it was
+    // corrected, so it could only ever defend the stale text.
+    const entry = forceEntry(await captureHelp());
+
+    expect(entry).not.toContain("README.md");
   });
 
   it("does not claim everything outside skills/agents is skipped when it exists", async () => {
