@@ -420,7 +420,8 @@ describe("cli usage text", () => {
     const entry = forceEntry(await captureHelp());
 
     expect(entry).toContain("copilot-instructions.md");
-    expect(entry).toContain("README.md");
+    // And nothing else plain, now that init writes no README anywhere.
+    expect(entry).not.toContain("README.md");
   });
 
   it("does not claim everything outside skills/agents is skipped when it exists", async () => {
