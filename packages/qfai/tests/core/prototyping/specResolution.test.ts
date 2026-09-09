@@ -217,7 +217,7 @@ describe("resolveAllUiBearingSpecs", () => {
   // 23rd-wave Fix (codex r3270307469, P1 — chatgpt-codex-connector):
   // `hasMatchingUiContract` must detect the documented per-spec
   // subdirectory layout `.qfai/contracts/ui/spec-<specId>/<sub>.yaml`
-  // (candidate #5 in `.qfai/contracts/ui/README.md`). Pre-fix the
+  // (candidate 5 in the shipped `ui-contract-guide.md`). Pre-fix the
   // helper only listed top-level basenames; a project that authored
   // its UI contracts as `.qfai/contracts/ui/spec-0007/home.yaml`
   // (without `surface_type: ui-bearing` on the spec) was silently

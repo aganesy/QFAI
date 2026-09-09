@@ -282,7 +282,7 @@ async function hasMatchingUiContract(contractsRoot: string, specId: string): Pro
   // Also accept `spec-NNNN.yaml` / `ui-NNNN-*.yaml` shapes — consumer
   // projects sometimes prefix with `spec-` or follow the
   // `ui-XXXX-<slug>.yaml` convention documented in
-  // `.qfai/contracts/ui/README.md`.
+  // `assistant/skills/qfai-sdd/references/ui-contract-guide.md`.
   //
   // Codex r3264487007: tightened from the prior `(?:^|[^0-9])${specId}
   // (?:[^0-9]|$)` token-anywhere regex which over-matched unrelated
@@ -324,8 +324,8 @@ async function hasMatchingUiContract(contractsRoot: string, specId: string): Pro
   }
   // 23rd-wave Fix (codex r3270307469, P1 — chatgpt-codex-connector):
   // detect the documented per-spec subdirectory layout
-  // `<contractsDir>/ui/spec-<specId>/<sub>.yaml` (candidate #5 in
-  // `.qfai/contracts/ui/README.md` precedence table).
+  // `<contractsDir>/ui/spec-<specId>/<sub>.yaml` (candidate 5 in the
+  // precedence table in `assistant/skills/qfai-sdd/references/ui-contract-guide.md`).
   //
   // Extension policy (25th-wave clarification per codex r3270529771
   // MINOR): the subdir walk accepts arbitrary `*.yaml` basenames

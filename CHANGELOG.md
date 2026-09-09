@@ -4,6 +4,19 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ## [Unreleased]
 
+### Changed
+
+- **The UI contract guidance ships with the skill that needs it** (#1403). The
+  per-spec resolution precedence, the `elements[].id` naming and change policy,
+  the label-as-inspection-target rule, the `data-qfai` marker convention, the
+  `prototype` metadata shape and the review-failure guidance lived in an
+  artifact README that no release wrote and no agent loaded. They are now in
+  `qfai-sdd/references/ui-contract-guide.md`, which both ships and is read.
+
+  The two source comments that cited the precedence table by its old path
+  point at the guide instead, so the citation resolves in an installed project
+  rather than only in this repository.
+
 ### Added
 
 - **`qfai doctor --autoremediate` relinks a broken integration wrapper, and

@@ -53,6 +53,16 @@ Quality-First AI (QFAI) — specification-driven development の検証フレー�
 - CI: `.github/workflows/`
 - Claude Code rules: `.claude/rules/`
 
+### `.qfai/contracts/cli/` はこのリポジトリ固有
+
+`cli/` は QFAI 自身のコマンド表面と、QFAI が利用者のツリーへ書き込むファイルの契約を持つ。
+`api/` `db/` `ui/` と違い、これは配布される規約ではなくこのリポジトリの運用である。
+
+- `_policies/05_Contracts.md` の **CLI Contracts** に `CLI-*` の短い ID で索引される。
+- Markdown で書き、`QFAI-CONTRACT-ID` は持たない。`ui/` `api/` `db/` のバリデータは走査しない。
+- ファイル名は `qfai-<command>.md`。複数のコマンドが共有するスキーマや所有境界は主題で名付ける
+  (`worklog-entry.schema.md`、`shipped-workflows.md`)。
+
 ### ⚠️ packages/qfai/ と .qfai/ の区別（重要）
 
 本リポジトリは QFAI パッケージの開発リポジトリであると同時に、QFAI 自体を npm インストールして運用している。
