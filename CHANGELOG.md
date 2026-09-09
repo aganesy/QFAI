@@ -135,6 +135,30 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **A writer that loses the provenance lock keeps its entry** (#1418). Twenty
+  writers contend for one lock, and a reclaimer can judge a holder stale and
+  take the lock it just published. The holder finds a stranger's object at the
+  name when it reads back, which is the protocol working: the writer that lost
+  is the writer that was supposed to lose, and nothing was written.
+
+  It was raised as a plain error, which left `updateInstallProvenance`
+  entirely — above the re-apply loop that exists to absorb exactly this. So a
+  writer that lost one race lost its entry with it, and a lost provenance entry
+  does not heal: the file stays on disk with nothing recorded, reads as
+  `adopter-owned`, and no later run puts it back.
+
+  That one outcome is now typed and retried inside the loop. Nothing else is:
+  a patience exhausted against a tree somebody else is writing, or any I/O
+  fault, still leaves immediately, because going round again would spend
+  another whole patience window on the same answer. The lock windows are
+  untouched — `LOCK_ATTEMPTS × LOCK_POLL_MS > LOCK_STALE_MS` still holds, and
+  tuning them is what an earlier attempt at this cost sixteen minutes on one
+  test row.
+
+  When the attempts do run out, the message says which of the two exhausted
+  them. Losing the lock every time and being overtaken every time call for
+  different things from an operator.
+
 - **A whitespace-only rewrite no longer pulls a document into the shape gate**
   (#1423). `check-mdschema --scope changed` selected documents with
   `git diff --name-only`, which answers which files a branch touched rather than
@@ -239,6 +263,36 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   A pack being un-tracked stays out of scope. `git rm --cached` stages a
   removal and leaves the file on disk, so status names a path the index is
   dropping — the reverse of introducing one.
+
+- **A re-pin writes a declaration `format:check` accepts** (#1430). Both re-pin
+  scripts wrote `.github/required-status-contexts.json` with `JSON.stringify`,
+  which puts every array element on its own line where Prettier keeps a short
+  array on one. Five arrays in that file are short, so what the scripts wrote
+  failed the first lane in `ci:lint`.
+
+  The dependency-update job runs those two scripts and pushes the result, so
+  every update arrived with its digests corrected and its pull request red over
+  a diff whose every line was whitespace. Re-pinning by hand met the same thing:
+  the instruction the hygiene lane prints produced a change that failed the next
+  lane.
+
+  Both scripts now write through one formatter, which reads the repository's own
+  Prettier configuration rather than a copy of it.
+
+- **A waiver on a finding the report appends is applied or refused, never
+  silently ignored** (#1424). `report` raises `QFAI-CTYPE-004` after validation
+  has already run its waiver pass, so it runs a second pass of its own — and
+  that pass's verdicts on the waiver file were discarded. A waiver the pass
+  refused changed nothing and said nothing, so the operator saw a finding that
+  looked unwaivable rather than a waiver that was wrong.
+
+  The two passes do not reach the same verdicts. A rule's severity is read from
+  the findings in hand, and the second pass holds the findings validation never
+  saw, so `QFAI-WAIVER-001`, `-002` and `-004` can each be reached there and
+  nowhere else.
+
+  A verdict validation already published is not repeated. Both passes read the
+  same file, and that duplication is what the discarded list was avoiding.
 
 ### Added
 
