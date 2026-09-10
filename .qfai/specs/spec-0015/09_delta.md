@@ -1,5 +1,9 @@
 # 09 Delta
 
+<!-- markdownlint-disable MD024 -->
+<!-- Each round records its own `## Triage`, and the triage rules read a section
+     only under that exact heading, so the repeated heading is the shape. -->
+
 ## 2026-09-04
 
 - `CR-20260904-0004` (`confirm-only`, `/qfai-sdd 0015`):
@@ -85,7 +89,9 @@
 - Posture: additive append; preserves existing AC/BR/EX/TC numbering. NFR-0115 (justification-text contract reuse) absorbed into BR-0015-0009 (SSOT shared with spec-0004 BR-0004-0028).
 - Approved By: yusuke_senaga
 
-### Triage (rows owned by this spec)
+## Triage
+
+Rows owned by this spec.
 
 | Source                                       | Subject                                                                                                                                                                                                                                                 | Existing Spec | Operation | Sub-op | Approved By   | Rationale                                                                                          |
 | -------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------- | --------- | ------ | ------------- | -------------------------------------------------------------------------------------------------- |
@@ -93,7 +99,7 @@
 | REQ-0125 (discussion-20260523221141355)      | Reviewer-Gate `R-PROMPT-SCANNER-DRIFT` (severity error) emission with mandatory `justification:` per discussion-20260522081618995 REQ-0006 contract                                                                                                     | spec-0015     | UPDATE    | APPEND | yusuke_senaga | Reviewer-Gate is the emitter; spec-0004 BR-0004-0028 is the rejector (one contract, two enforcers) |
 | NFR-0115 (justification-text contract reuse) | absorbed into BR-0015-0009                                                                                                                                                                                                                              | spec-0015     | UPDATE    | APPEND | yusuke_senaga | NFR realized as BR-layer cross-spec SSOT (shared with BR-0004-0028)                                |
 
-### CHG-005 Operations (this PR)
+## CHG-005 Operations
 
 | Op ID  | Op Type       | Target                                                                                          | Summary                                                                                                                 |
 | ------ | ------------- | ----------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
