@@ -5381,10 +5381,6 @@ async function validateSpecTddList(
       );
     }
 
-    // A conforming pointer names its verdict as `GREEN:pass` and carries no
-    // command, so the status-only rule would reject the exact shape the
-    // grammar mandates. The grammar is the stronger statement, so it wins.
-    if (structuralPointer) continue;
     const anchors = collectEvidenceAnchors(evidence);
     const expectedFile = expectedEvidenceFile(specNumber, cell(ref, "Layer"), evidence);
     const expectedFragment = tddId.toLowerCase();
@@ -5539,10 +5535,18 @@ async function validateSpecTddList(
       );
     }
 
+    // A conforming pointer names its verdict as `GREEN:pass` and carries no
+    // command, so this rule would reject the exact shape the grammar mandates.
+    // The grammar is the stronger statement, so it wins — but only over this
+    // rule. Skipping the rest of the row with it took the anchor binding and
+    // the completed-evidence check out with it, and those are the checks a
+    // conforming pointer exists to be measured by.
+    //
     // Only a cell that *claims a verdict* can be status-only evidence. A cell
     // holding some other note without a command is under-specified, but
     // calling it "status-only" would be wrong and erroring on it would reject
     // ledger content the hard rules never described.
+    if (structuralPointer) continue;
     if (!EVIDENCE_VERDICT_WORD.test(evidence) || hasCommandShape(evidence)) continue;
     issues.push(
       issue(
