@@ -470,8 +470,7 @@ export async function emitSkeleton(
  * default MUST stay in lock-step with `core/config.ts`'s
  * `defaultConfig.paths.testsDir = "tests"` (the SSOT). If that SSOT
  * default ever changes, update this default in the same commit —
- * otherwise scaffold and validators silently diverge again (codex
- * r3338417334).
+ * otherwise scaffold and validators silently diverge again.
  *
  * Uses `path.resolve` (not `path.join`) so that an absolute
  * `paths.testsDir` is honored verbatim — `path.resolve(root,

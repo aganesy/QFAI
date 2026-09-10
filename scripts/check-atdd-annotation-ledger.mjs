@@ -826,8 +826,8 @@ function propertyValue(ts, objectLiteral, name) {
               ts.isNoSubstitutionTemplateLiteral(key.expression))
           ? key.expression.text
           : undefined;
-    // The LAST one wins, as JavaScript does. Reading the first was the other half of review
-    // finding [111]: a decoy written before the real key was the one this guard took.
+    // The LAST one wins, as JavaScript does. Reading the first instead would let a decoy
+    // key written before the real one win instead.
     if (keyText === name) found = property.initializer;
   }
   return found;

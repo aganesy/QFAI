@@ -2734,8 +2734,8 @@ describe("TC-0017-0046 (TDD-0046): a green run names every rule it evaluated", (
     // This test file already knew about the hazard from the other side: `plantedTree` copies
     // BOTH roots, and the comment there says copying only the own tree "would make every
     // shipped-tree row prove nothing ... which is indistinguishable from a passing shipped
-    // tree". The production lane had no such protection, which is implementation-review
-    // finding M2 — a hazard recognised in the fixture and never enforced in the thing shipped.
+    // tree". The production lane carries no such protection: a hazard the fixture recognizes
+    // but the thing shipped never enforces.
     const gutted = plantedTree((d) => {
       const shipped = path.join(d, SHIPPED_WORKFLOWS_REL);
       for (const entry of readdirSync(shipped)) {

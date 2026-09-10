@@ -6665,13 +6665,13 @@ async function recordInstalledWorkflows(
  * holds collapses the three into one object — everything after the rename acts on what was
  * moved, whatever later takes the vacated name.
  *
- * `commit` is what makes the removal a UNIT with whatever else has to happen for it. Review
- * finding [34]: the retired-workflow caller deleted the files and then removed their provenance
- * entries in a second step, so a read-only `.qfai`, a full disk or a lock it could not take left
- * the files gone and the entries standing — which the next run reads as names the adopter
- * deliberately removed, and never installs again. It runs while the entries are still in
- * quarantine, so a failure puts them back rather than leaving the tree half-changed. It is
- * called only when there is something to commit, and never on a dry run.
+ * `commit` is what makes the removal a UNIT with whatever else has to happen for it. Deleting
+ * the files and removing their provenance entries as two separate steps would leave a
+ * read-only `.qfai`, a full disk or a lock it could not take able to interrupt between them —
+ * files gone and entries standing, which the next run reads as names the adopter deliberately
+ * removed, and never installs again. It runs while the entries are still in quarantine, so a
+ * failure puts them back rather than leaving the tree half-changed. It is called only when
+ * there is something to commit, and never on a dry run.
  *
  * The removal is deliberately NOT recursive. Every predicate here requires `isFile()`, so a
  * directory reaching the `rm` can only be one swapped in after the snapshot — and recursing

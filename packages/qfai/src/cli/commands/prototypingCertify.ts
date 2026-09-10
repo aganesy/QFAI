@@ -2611,12 +2611,11 @@ async function fileExists(absPath: string): Promise<boolean> {
  * is exactly 4 digits. Used by {@link hasPerSpecSubdir} to gate
  * activation of the per-(spec × screen) review.json presence check on
  * the actual evidence layout — unrelated names like `spec-assets` /
- * `spec-temp` / `spec-archive` MUST NOT enable the gate (codex
- * r3271018003 P2 — chatgpt-codex-connector: pre-fix any `spec-*`
- * directory triggered the gate, so a legacy flat-iter project with an
- * incidental `spec-assets/` sibling would have the gate spuriously
- * activated and fail with missing review.json coverage that the run
- * never intended to produce).
+ * `spec-temp` / `spec-archive` MUST NOT enable the gate. Matching any
+ * `spec-*` directory would trigger the gate for a legacy flat-iter
+ * project with an incidental `spec-assets/` sibling, spuriously
+ * activating it and failing with missing review.json coverage that the
+ * run never intended to produce.
  */
 const CANONICAL_SPEC_DIR = /^spec-\d{4}$/u;
 
