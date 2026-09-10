@@ -30,8 +30,10 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   `QFAI-TRIAGE-009` and `TDDLIST_EVIDENCE_EMPTY`.
 
   A project passing `validate --fail-on error` today may fail after upgrading,
-  in proportion to what it has accumulated. Measured on this repository: 0
-  errors and 1467 warnings before, 1050 of those warnings becoming errors.
+  in proportion to what it has accumulated. Measured on this repository's
+  `--profile full`: 0 errors and 1467 warnings before, 1065 errors and 402
+  warnings after. Every one of the 1467 is accounted for — none is new, and the
+  402 that stayed are the codes no pin governed.
 
   A bare tree is affected too, in one specific way. `qfai init` writes the four
   Stage 0 catalog documents with placeholders and asks the adopter to fill them
