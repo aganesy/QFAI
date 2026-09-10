@@ -345,8 +345,9 @@ describe("runnerCorpusRoots", () => {
     // hand-kept pair the production change removed, and it would agree with a wrong answer.
     //
     // Derived by IMPORTING the configuration, though, not by re-running the pattern under test.
-    // A row using the same regex over the same raw text would have a defect in
-    // that pattern produce the same wrong answer on both sides, so the row would agree with it. The
+    // A row that re-runs the same regex over the same raw text would share any defect in that
+    // pattern: it would produce the same wrong answer on both sides, so the row would agree
+    // with it. The
     // import goes through the runner's own loader, which is the only reading of this file that is
     // authoritative — it is what Vitest itself does with it.
     const workspace: unknown = (
@@ -496,9 +497,9 @@ describe("runnerCorpusRoots", () => {
   });
 
   it("refuses a default export wrapped in a call it cannot identify", async () => {
-    // Taking any call expression's first argument as the workspace
-    // would let `export default choose(decoy, real)` — a helper returning its SECOND argument —
-    // have this guard read the decoy while Vitest ran the real one. The whole point of parsing is
+    // Taking any call expression's first argument as the workspace would have this guard read
+    // the decoy in `export default choose(decoy, real)` — a helper returning its SECOND
+    // argument — while Vitest runs the real one. The whole point of parsing is
     // that the corpus comes from what the runner uses, and taking argument zero of an
     // unidentified function is a guess about that again.
     //
@@ -596,8 +597,8 @@ describe("runnerCorpusRoots", () => {
   it("refuses a trailing spread that decides the include list", async () => {
     // `{ name: "e2e", include: [decoy], ...actual }` is evaluated by
     // Vitest with `actual.include` winning, so a scan that reads property assignments would take
-    // the decoy — an annotation-only tree certifying every claim. A third channel for the same
-    // substitution, after the comment and the shadowed callee.
+    // the decoy — an annotation-only tree certifying every claim. This is a third channel for
+    // the same substitution, after the comment and the shadowed callee.
     const dir = await temp();
     await mkdir(path.join(dir, "packages", "qfai"), { recursive: true });
     await writeFile(
@@ -735,7 +736,7 @@ describe("runnerCorpusRoots", () => {
   it("refuses a computed key it would have to evaluate", async () => {
     // `["in" + "clude"]: [...]` evaluates to `include` and overrides an
     // earlier literal one; a key extraction that skips it, because a computed name is neither an
-    // identifier nor a string literal, would read the decoy while Vitest ran the real corpus — the
+    // identifier nor a string literal, would read the decoy while Vitest runs the real corpus — the
     // same override the trailing spread achieves, spelled differently.
     const dir = await temp();
     await mkdir(path.join(dir, "packages", "qfai"), { recursive: true });
