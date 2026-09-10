@@ -151,12 +151,13 @@ describe("negationsOutrankLaterIgnores", () => {
 });
 
 describe("a bracket expression is a character class, not five literal characters", () => {
-  // Review finding [E2]. The translation escaped `[` and `]` into literals, so a project line
-  // like `.qfai/install-provenance.[j]son` — an ordinary class that git honours — matched
-  // nothing here. Git ignores the provenance record; this matcher says nothing conflicts;
-  // `ensureRootGitignoreEntries` returns early; the record stays ignored. A fresh clone then has
-  // no record at all, so the next `qfai init` reads a declined workflow as never-installed and
-  // writes it back — the one outcome that record exists to stop.
+  // The translation must not escape `[` and `]` into literals: a project line like
+  // `.qfai/install-provenance.[j]son` is an ordinary character class that git honours, and
+  // escaping the brackets would make this matcher see no conflict where git does. That
+  // mismatch would leave `ensureRootGitignoreEntries` returning early with the provenance
+  // record still ignored — and on a fresh clone, where no record exists yet, the next
+  // `qfai init` would read a declined workflow as never-installed and write it back, which is
+  // the one outcome that record exists to stop.
 
   it("matches through a class the way git does", () => {
     expect(
@@ -207,16 +208,16 @@ describe("a bracket expression is a character class, not five literal characters
 });
 
 describe("glob overlap is decided from both patterns, not from one instance of one", () => {
-  // Review finding [E1]. The check instantiated the NEGATION and asked whether each later
-  // ignore matched that one instance — and two globs can overlap without that instance being in
-  // the intersection.
+  // Instantiating only the NEGATION and asking whether each later ignore matches that one
+  // instance is not enough: two globs can overlap without that instance being in the
+  // intersection.
   //
-  // The measured case: `!.qfai/evidence/coverage-depth-*.md` instantiates as
+  // The case this test pins: `!.qfai/evidence/coverage-depth-*.md` instantiates as
   // `coverage-depth-sample.md`, and a project line `.qfai/evidence/coverage-depth-spec-*.md`
   // does not match it — while the file that actually exists, `coverage-depth-spec-0017.md`, is
-  // matched by both. The conflict went unseen, the managed block was left where it was, and the
-  // Coverage Depth Matrix stayed ignored: a governance record this repository requires in
-  // version control, silently absent from every clone.
+  // matched by both. Missing that overlap would leave the managed block where it was and the
+  // Coverage Depth Matrix — a governance record this repository requires in version control —
+  // silently absent from every clone.
   //
   // The two directions of error are not symmetric, which is what makes over-reporting the right
   // bias: a false conflict only re-appends a negation that was already last, while a missed one
