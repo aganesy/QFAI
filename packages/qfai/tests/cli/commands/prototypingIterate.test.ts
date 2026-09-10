@@ -255,13 +255,13 @@ describe("runPrototypingIterate convergence (exit 64)", () => {
     expect(exit).toBe(64);
   });
 
-  it("returns 65 (max-iterations) when last iter is at index 9 AND has DESIGN.md drift (codex AG08r)", async () => {
-    // Pre-fix the round-9 8thM recompute fall-through tried to continue
-    // the loop after detecting drift, but `--cycle` is capped at 9;
-    // expectedNextCycle would become 10 and exit 2 with a cycle-mismatch
-    // error, blocking completion of a budget-exhausted run with drift
-    // still present. Post-fix: when the last iter is at MAX_ITERATION_INDEX,
-    // emit max-iterations stop instead of falling through.
+  it("returns 65 (max-iterations) when last iter is at index 9 AND has DESIGN.md drift", async () => {
+    // When the last iter is at MAX_ITERATION_INDEX, drift found by the
+    // recompute must emit max-iterations stop rather than fall through
+    // to the next cycle: `--cycle` is capped at 9, so falling through
+    // would set expectedNextCycle to 10 and exit 2 on a cycle-mismatch,
+    // blocking completion of a budget-exhausted run with drift still
+    // present.
     const root = await newTempDir();
     await seedMinimalProject(root);
     const allExceptional = {
@@ -296,7 +296,7 @@ describe("runPrototypingIterate convergence (exit 64)", () => {
     expect(exit).toBe(65);
   });
 
-  it("does NOT exit 64 when accepted iter HTML still has DESIGN.md drift, even with all-exceptional scores + dmv:[] (codex 8thM)", async () => {
+  it("does NOT exit 64 when accepted iter HTML still has DESIGN.md drift, even with all-exceptional scores + dmv:[]", async () => {
     // The shipped reviewer prompt instructs reviewers to leave
     // designMdViolations empty unless a runtime gate injects findings,
     // and the runtime scanner historically lived in certify only. Pre-
@@ -716,9 +716,9 @@ describe("runPrototypingIterate cycle 0 DESIGN.md ingestion (TC-3.5.x)", () => {
     expect(exit).toBe(2);
   });
 
-  it("returns 2 with 'could not be read' error when DESIGN.md.lock.yaml is unreadable (codex 8zqe)", async () => {
+  it("returns 2 with 'could not be read' error when DESIGN.md.lock.yaml is unreadable", async () => {
     // Pin the new `unreadable` LockGateResult branch added to readDesignMdLockGate
-    // for the lock fail-closed posture (codex 8cTg). Without this test, a
+    // for the lock fail-closed posture. Without this test, a
     // future revert of `if (isEnoent(err)) return { kind: "missing" }; return
     // { kind: "unreadable", cause: err };` to a bare `return { kind: "missing" };`
     // would silently re-introduce the freeze-bypass vector.
@@ -1008,11 +1008,11 @@ describe("runPrototypingIterate cycle N hash gate (TC-3.5.x)", () => {
   });
 
   it("rejects cycle >= 1 with missing prototyping.json#specsCovered (no frozen seed) with exit 2", async () => {
-    // Codex 6c6n: a hand-edited or partially-corrupted prototyping.json
-    // that never wrote `specsCovered` (or has it as `[]` or `[""]`)
-    // must fail-fast at iterate. Previously the readFrozenSpecsCovered
-    // null path was a silent skip, which would allow iterate to write
-    // a fresh spec into iterate-plan.json that certify later blocks on.
+    // A hand-edited or partially-corrupted prototyping.json that never
+    // wrote `specsCovered` (or has it as `[]` or `[""]`) must fail-fast
+    // at iterate. A silent skip on the readFrozenSpecsCovered null path
+    // would let iterate write a fresh spec into iterate-plan.json that
+    // certify later blocks on.
     const root = await newTempDir();
     await seedMinimalProject(root);
     await seedRawPrototypingJson(root, {
@@ -1307,7 +1307,7 @@ describe("runPrototypingIterate cycle 0 stale-dir cleanup", () => {
     expect(stillThere).toBe(false);
   });
 
-  it("clears the completion-claim trio (completionClaimed/phase/completionCertificate) on cycle 0 reset (codex AGjFy)", async () => {
+  it("clears the completion-claim trio (completionClaimed/phase/completionCertificate) on cycle 0 reset", async () => {
     // Pre-fix writeSeedMetadata deleted the completion-certificate.json
     // file from disk on cycle 0 but preserved the in-memory completion-
     // claim fields on prototyping.json. The next validate run would
@@ -1567,8 +1567,8 @@ describe("runPrototypingIterate autonomous run (TC-0012-0375)", () => {
     );
     const src = await readFile(iterateSrcPath, "utf-8");
     // Strip JSDoc + inline comments so legitimate documentation that
-    // mentions the word "prompt" (e.g. the reviewer-prompt explainer
-    // around codex 8thM) does not false-positive. Anything left is
+    // mentions the word "prompt" (e.g. a comment explaining the
+    // reviewer prompt) does not false-positive. Anything left is
     // an actual code-path reference.
     const stripped = src
       .replace(/\/\*[\s\S]*?\*\//g, "") // block comments incl. JSDoc
@@ -2179,10 +2179,10 @@ describe("runPrototypingIterate cycle-0 no-op gate honours prototyping.primarySp
   });
 });
 
-// Regression for codex review r3264500818: `resolveAllUiBearingSpecs`
-// does not recognise the legacy `# … Prototyping …` title marker that
-// `resolvePrimaryPrototypingSpec` honours. Pre-fix a project that
-// relies solely on the title marker silently no-ops at section 0.
+// `resolveAllUiBearingSpecs` must recognise the legacy `# … Prototyping …`
+// title marker the same way `resolvePrimaryPrototypingSpec` does. A
+// project that relies solely on the title marker would otherwise
+// silently no-op at section 0.
 describe("runPrototypingIterate cycle-0 no-op gate honours legacy title marker", () => {
   // QFAI:SPEC-0012:TC-0012-0398
   it("does NOT exit 0 at section 0 when 01_Spec.md only carries the `# … Prototyping …` title marker", async () => {

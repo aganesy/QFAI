@@ -204,13 +204,13 @@ describe("dispatchReviewerToPair (interface stub)", () => {
     expect(waited).toEqual([]);
   });
 
-  // codex review r3265074289 (P3): a runner returning `{ok: true}`
-  // without a `reviewJson` payload is a schema-invalid success — the
-  // dispatcher must NOT silently flow it through to the persister /
-  // downstream certify (which would seal a cert with zero review
-  // artifact). Symmetric with the runner-throw / sleeper-throw /
-  // persister-throw paths: record a synthetic failed attempt that
-  // names the missing payload and fall through to retryExhausted.
+  // A runner returning `{ok: true}` without a `reviewJson` payload is a
+  // schema-invalid success — the dispatcher must NOT silently flow it
+  // through to the persister / downstream certify (which would seal a
+  // cert with zero review artifact). Symmetric with the runner-throw /
+  // sleeper-throw / persister-throw paths: record a synthetic failed
+  // attempt that names the missing payload and fall through to
+  // retryExhausted.
   it("records `ok: true` without reviewJson as retryExhausted and names the missing payload", async () => {
     const outcome = await dispatchReviewerToPair("0012", "dashboard", {
       attemptLimit: 1,
@@ -228,12 +228,11 @@ describe("dispatchReviewerToPair (interface stub)", () => {
     expect(outcome.reviewJsonPath).toBeUndefined();
   });
 
-  // codex review r3264765754 (P2): on success the dispatcher must
-  // surface the runner's in-memory `reviewJson` payload on the
-  // outcome so the loop driver can persist `<screen>.review.json`.
-  // Pre-fix the payload was dropped on the floor and `reviewJsonPath`
-  // was never set either — production callers got `finalStatus: "ok"`
-  // with neither payload nor path.
+  // On success the dispatcher must surface the runner's in-memory
+  // `reviewJson` payload on the outcome so the loop driver can persist
+  // `<screen>.review.json`. Without this, the payload is dropped on the
+  // floor and `reviewJsonPath` is never set either — production callers
+  // would get `finalStatus: "ok"` with neither payload nor path.
   it("propagates the runner's reviewJson payload on a first-attempt success", async () => {
     const payload = { specId: "0012", screen: "dashboard", axes: { aesthetics: 5 } };
     const outcome = await dispatchReviewerToPair("0012", "dashboard", {

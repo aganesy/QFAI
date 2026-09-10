@@ -892,9 +892,9 @@ describe("qfai prototyping certify (TC-3.6.x DESIGN.md gate)", () => {
     }
   });
 
-  it("returns 2 with 'could not be read' error when DESIGN.md.lock.yaml is unreadable (codex 8zqe)", async () => {
+  it("returns 2 with 'could not be read' error when DESIGN.md.lock.yaml is unreadable", async () => {
     // Pin the new `unreadable` LockGateResult branch added to loadLockGate
-    // for the lock fail-closed posture (codex 8cTg). Symmetric with the
+    // for the lock fail-closed posture. Symmetric with the
     // iterate test of the same name. Trigger the unreadable branch
     // portably by creating the lock path as a *directory* — Node raises
     // EISDIR on `readFile`, which routes through the new `unreadable`
@@ -917,7 +917,7 @@ describe("qfai prototyping certify (TC-3.6.x DESIGN.md gate)", () => {
     }
   });
 
-  it("findStaleIterDirs propagates non-ENOENT readdir errors (codex 9KyS regression sentinel)", async () => {
+  it("findStaleIterDirs propagates non-ENOENT readdir errors", async () => {
     // Symmetric pin with the lock-unreadable test: verify the
     // fail-closed posture in findStaleIterDirs's readdir catch
     // (`if (isEnoent(err)) return []; throw err;`). A future revert
