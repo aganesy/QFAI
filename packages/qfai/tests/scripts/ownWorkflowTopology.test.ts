@@ -545,10 +545,7 @@ describe("TC-0017-0029 (TDD-0029): the shared definition keeps its four-step ord
       .toContain("corepack prepare");
     expect.soft(runOf(3), "step 4 installs with a frozen lockfile").toContain(FROZEN_INSTALL);
     expect
-      .soft(
-        runOf(3),
-        "and runs none of the install scripts a dependency ships",
-      )
+      .soft(runOf(3), "and runs none of the install scripts a dependency ships")
       .toContain("--ignore-scripts");
     expect
       .soft(runOf(3), "and rebuilds only what the pinned allow-list names, in the same step")
