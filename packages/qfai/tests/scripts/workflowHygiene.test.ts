@@ -2426,7 +2426,7 @@ describe("the declaration is read the way the workflows are", () => {
       rmSync(elsewhere, { recursive: true, force: true });
       rmSync(dir, { recursive: true, force: true });
     }
-  }, 30_000);
+  });
 });
 
 describe("the workflow walk refuses a root it did not open, and is bounded", () => {

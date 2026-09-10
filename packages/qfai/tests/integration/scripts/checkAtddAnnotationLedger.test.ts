@@ -1219,7 +1219,7 @@ describe("the CLI entry point", () => {
       `a file the runner never opens must not discharge a claim:\n${output}`,
     ).toBe(1);
     expect(output, "and the finding must name the claim left unbacked").toContain(claim);
-  }, 30_000);
+  });
   it("does not count a claim backed only by a test the runner will not execute", async () => {
     // The WIRING for the disabled-test exclusion below, which the rows calling
     // `redactDisabledTests` directly cannot reach: a plant that removes the redaction from `main`
@@ -1283,7 +1283,7 @@ describe("the CLI entry point", () => {
       `a suite Vitest reports as skipped must not discharge a claim:\n${output}`,
     ).toBe(1);
     expect(output, "and the finding must name the claim left unbacked").toContain(claim);
-  }, 30_000);
+  });
 
   it("exits 0 with an explicit message when a tree genuinely has no ledger", async () => {
     // The one legitimate exit-0-without-checking path. Distinguishable from the wrong-cwd case
@@ -1348,7 +1348,7 @@ describe("the CLI entry point", () => {
       guard,
       "only a missing path may be read as absent — every other failure is present-and-unreadable",
     ).toMatch(/presentByName = !isMissing\(error\);/);
-  }, 30_000);
+  });
 
   it("refuses a ledger past its size ceiling instead of reading it into memory", async () => {
     // The unconditional half of the same refusal: no link, no device, nothing platform-specific — a
@@ -1368,7 +1368,7 @@ describe("the CLI entry point", () => {
     const output = `${child.stdout ?? ""}${child.stderr ?? ""}`;
     expect(child.status, `an oversized ledger must be refused:\n${output}`).toBe(1);
     expect(output).toMatch(/exists but is not a readable regular file/);
-  }, 30_000);
+  });
 });
 
 describe("the guard against this repository's own ledger", () => {

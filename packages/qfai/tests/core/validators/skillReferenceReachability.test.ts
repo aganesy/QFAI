@@ -18,13 +18,11 @@ import path from "node:path";
 import { describe, expect, it } from "vitest";
 
 import { loadConfig } from "../../../src/core/config.js";
-import { RULE_PROMOTIONS, newRuleSeverity } from "../../../src/core/sunset.js";
 import {
   citationTokensIn,
   validateAssistantAssets,
 } from "../../../src/core/validators/assistantAssets.js";
 import type { Issue } from "../../../src/core/types.js";
-import { resolveToolVersion } from "../../../src/core/version.js";
 
 const REACHABILITY_CODE = "QFAI-SKILLS-013";
 const READ_FAILURE_CODE = "QFAI-SKILLS-014";
@@ -357,7 +355,7 @@ describe("citation tokens", () => {
   });
 });
 
-describe("skill reference reachability", { timeout: 30000 }, () => {
+describe("skill reference reachability", () => {
   it("reports only the reference no reachable document names", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-reference-reachability-"));
     try {
@@ -366,16 +364,7 @@ describe("skill reference reachability", { timeout: 30000 }, () => {
 
       expect(issues).toHaveLength(1);
       expect(issues[0]?.file).toBe(path.join(referencesDir, "orphan.md"));
-      // Soft rule text, so the finding must not stop a run that gates on error
-      // — and the severity that says so is the code's promotion window (P7),
-      // read here rather than written as the literal of the day so the pin
-      // survives the release that promotes it.
-      expect(issues[0]?.severity).toBe(
-        newRuleSeverity(
-          await resolveToolVersion(),
-          RULE_PROMOTIONS.skillReferenceUnreachable.promoteAt,
-        ),
-      );
+      expect(issues[0]?.severity).toBe("error");
       expect(issues[0]?.suggested_action ?? "").not.toBe("");
     } finally {
       await rm(root, { recursive: true, force: true });

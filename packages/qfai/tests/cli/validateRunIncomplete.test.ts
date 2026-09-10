@@ -252,8 +252,7 @@ describe("validate reports a run it could not finish", () => {
     // both fail on the count alone. `--fail-on never` is the one exception a
     // caller asked for explicitly, and it stays honoured — the finding is still
     // in the output either way. Pinned because the exit code is deliberately
-    // NOT derived from counting severities: a promotion window would have made
-    // this a warning, and a warning exits 0 under the default.
+    // NOT derived from counting severities.
     for (const failOn of ["error", "warning"] as const) {
       const root = await project();
       validateProjectSpy.mockImplementation(() => Promise.reject(errno("EPERM", root)));

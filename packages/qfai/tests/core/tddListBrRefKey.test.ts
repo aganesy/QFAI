@@ -18,7 +18,6 @@ import path from "node:path";
 import { describe, expect, it } from "vitest";
 
 import { defaultConfig } from "../../src/core/config.js";
-import { RULE_PROMOTIONS } from "../../src/core/sunset.js";
 import { validateTddList } from "../../src/core/validators/tddList.js";
 
 const WITH_KEY = `# TDD Execution Ledger
@@ -191,7 +190,7 @@ describe("the ledger's review-group key is checked when it is declared", () => {
     it(`reports "${malformed}" as a malformed key`, async () => {
       const issues = await run(`${WITH_KEY}\n${row(malformed)}`, { rules: RULES });
       const finding = issues.find((i) => i.code === "QFAI-BRREF-001");
-      expect(finding?.severity).toBe("warning");
+      expect(finding?.severity).toBe("error");
       expect(finding?.message).toContain("row 1");
     });
   }
@@ -199,7 +198,7 @@ describe("the ledger's review-group key is checked when it is declared", () => {
   it("reports a well-formed key that no business rule declares", async () => {
     const issues = await run(`${WITH_KEY}\n${row("BR-0001-0009")}`, { rules: RULES });
     const finding = issues.find((i) => i.code === "QFAI-BRREF-002");
-    expect(finding?.severity).toBe("warning");
+    expect(finding?.severity).toBe("error");
     expect(finding?.message).toContain("BR-0001-0009");
   });
 
@@ -328,7 +327,7 @@ Superseded by BR-0001-0009 during triage; see also BR-0001-0008.
     };
     const issues = await run(`${WITH_KEY}\n${keyedRow("BR-0001-0004")}`, options);
     const finding = issues.find((i) => i.code === "QFAI-BRREF-003");
-    expect(finding?.severity).toBe("warning");
+    expect(finding?.severity).toBe("error");
     expect(finding?.message).toContain("BR-0001-0005");
 
     // Over-correction pin: the derived key itself is silent.
@@ -385,13 +384,7 @@ Superseded by BR-0001-0009 during triage; see also BR-0001-0008.
     }
   });
 
-  it("takes all three severities from the promotion pin, not a literal", async () => {
-    // P7: a finding code introduced after the policy ships behind a window, and
-    // the window is only real if the severity follows the pin. Warning alone
-    // does not prove that — a literal `"warning"` reads the same today and
-    // never promotes. The release name in the message is what only the pin can
-    // put there, and it is the operator's notice of the debt.
-    const promoteAt = RULE_PROMOTIONS.tddListBrRefKey.promoteAt;
+  it("reports all three at error", async () => {
     const options = {
       rules: DERIVATION_RULES,
       examples: derivationExamples("BR-0001-0004"),
@@ -410,11 +403,7 @@ Superseded by BR-0001-0009 during triage; see also BR-0001-0008.
       "the fixtures no longer trip all three codes, so the pin below is unproven",
     ).toEqual(["QFAI-BRREF-001", "QFAI-BRREF-002", "QFAI-BRREF-003"]);
     for (const finding of found) {
-      expect(finding.severity).toBe("warning");
-      expect(
-        finding.message,
-        `${finding.code} does not name the release ending its window`,
-      ).toContain(promoteAt);
+      expect(finding.severity).toBe("error");
     }
   });
 

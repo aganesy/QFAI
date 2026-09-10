@@ -13,25 +13,50 @@ import {
 import type { LocatedPack } from "../packLocator.js";
 import { findPacks } from "../packLocator.js";
 import { readDiscussionPointer } from "../state.js";
-import { RULE_PROMOTIONS, newRuleSeverity } from "../sunset.js";
 import type { Issue } from "../types.js";
-import { resolveToolVersion } from "../version.js";
 import { issue } from "./utils.js";
-
-/** The release `QFAI-RESEARCH-012` stops being a warning at. */
-const SECTION_MISSING_PROMOTION = RULE_PROMOTIONS.researchSummarySectionMissing.promoteAt;
-/** The release the per-entry schema rules stop being warnings at. */
-const SCHEMA_FIELDS_PROMOTION = RULE_PROMOTIONS.researchSummarySchemaFields.promoteAt;
-
-/** The window note every rule under {@link SCHEMA_FIELDS_PROMOTION} carries. */
-function schemaWindowNote(severity: "warning" | "error"): string {
-  return severity === "warning"
-    ? ` Reported as a warning until the ${SCHEMA_FIELDS_PROMOTION} release, then an error`
-    : "";
-}
 
 const RESEARCH_SUMMARY_HEADING_RE = /^#{1,3}\s+Research\s+Summary/im;
 const FULL_DATE_RE = /^[ \t]*(?:-[ \t]*)?published:[ \t]*["']?(\d{4}-\d{2}-\d{2})["']?/m;
+/** The same shape for the date a source that was never published was seen on. */
+const OBSERVED_DATE_RE = /^[ \t]*(?:-[ \t]*)?observed:[ \t]*["']?(\d{4}-\d{2}-\d{2})["']?/m;
+/** `type:` of a source entry, read as written. */
+const SOURCE_TYPE_RE = /^[ \t]*(?:-[ \t]*)?type:[ \t]*["']?([A-Za-z-]+)["']?/m;
+
+/**
+ * What a source entry must carry, by what kind of source it is.
+ *
+ * `url` and `published` describe published material. A brownfield discussion
+ * pack is mostly primary evidence — a screenshot of the customer's system, a
+ * file they supplied, a conversation log — which is real, citable and recorded,
+ * and has neither. Demanding those two fields there bought a locator field
+ * holding an admin path and a `published` date that is really the day someone
+ * looked, which also fed the freshness ratio and made it meaningless.
+ *
+ * So the pair is named for what it is. Both kinds owe the same two facts:
+ * where the source is, and when it is from.
+ */
+const SOURCE_FIELDS_BY_TYPE = {
+  external: { locator: "url", date: "published", dateRe: FULL_DATE_RE },
+  primary: { locator: "locator", date: "observed", dateRe: OBSERVED_DATE_RE },
+  secondary: { locator: "locator", date: "observed", dateRe: OBSERVED_DATE_RE },
+} as const;
+
+type SourceType = keyof typeof SOURCE_FIELDS_BY_TYPE;
+
+/**
+ * The kind of source an entry declares, defaulting to `external`.
+ *
+ * Absent means `external` because that is what the schema required before the
+ * distinction existed, so a pack written against the old schema keeps passing
+ * unchanged. A value outside the vocabulary defaults there too, which is the
+ * conservative direction: an unreadable `type` keeps the strictest obligation
+ * rather than letting a typo drop the entry's requirements.
+ */
+function sourceType(entry: string): SourceType {
+  const declared = SOURCE_TYPE_RE.exec(entry)?.[1]?.toLowerCase() ?? "";
+  return declared === "primary" || declared === "secondary" ? declared : "external";
+}
 /**
  * Fence info strings whose block carries the summary itself.
  *
@@ -57,8 +82,11 @@ const PLACEHOLDER_TEXT_RE = /^\[[^\]]*\]$/;
 const SCALAR_SCHEMA_FIELDS = new Set([
   "id",
   "title",
+  "type",
   "url",
   "published",
+  "locator",
+  "observed",
   "category",
   "description",
   "source_id",
@@ -84,13 +112,9 @@ export async function validateResearchSummary(root: string, config: QfaiConfig):
   // rule, and only there — see the comment on that guard for why the opt-out
   // stops at "the section is missing" instead of returning [] from here.
   const issues: Issue[] = [];
-  // Resolved once for the whole run: the promotion window is a property of the
-  // tool, not of any one pack, and every rule below reads the same answer.
-  const toolVersion = await resolveToolVersion();
-  // The per-entry schema rules ride one window (`researchSummarySchemaFields`).
-  // A literal `"error"` beside any of these calls would be a registered pin
-  // that never governs anything — the state `sunsetLedger.test.ts` rejects.
-  const schemaSeverity = newRuleSeverity(toolVersion, SCHEMA_FIELDS_PROMOTION);
+  // Resolved once for the whole run so every rule below reads the same answer,
+  // rather than repeating the literal at each call.
+  const schemaSeverity = "error";
   const target = await resolveResearchSummaryScanTarget(root, config);
   issues.push(...describeBrokenPointer(root, target, schemaSeverity));
   // `uiux.requireResearchSummary: false` is a project stating the section is
@@ -102,9 +126,9 @@ export async function validateResearchSummary(root: string, config: QfaiConfig):
   const requireSection = config.uiux?.requireResearchSummary !== false;
   if (requireSection) {
     issues.push(...(await checkStorageSlotPresence(root, target, schemaSeverity)));
-    // Resolved here rather than inside the builder: the promotion window is a
-    // property of the tool, and the builder runs once per validator run anyway.
-    const missing = await buildMissingSectionIssue(root, target.discussionRoot, toolVersion);
+    // Resolved here rather than inside the builder, which runs once per
+    // validator run anyway.
+    const missing = await buildMissingSectionIssue(root, target.discussionRoot);
     if (missing) {
       issues.push(missing);
     }
@@ -158,7 +182,7 @@ export async function validateResearchSummary(root: string, config: QfaiConfig):
         issues.push(
           issue(
             "QFAI-RESEARCH-017",
-            `Source entry missing required field "id": ${label}${schemaWindowNote(schemaSeverity)}`,
+            `Source entry missing required field "id": ${label}`,
             schemaSeverity,
             rel,
             "researchSummary.sourceId",
@@ -176,22 +200,23 @@ export async function validateResearchSummary(root: string, config: QfaiConfig):
           ),
         );
       }
-      if (!hasNonEmptyField(entry, "url")) {
+      const fields = SOURCE_FIELDS_BY_TYPE[sourceType(entry)];
+      if (!hasNonEmptyField(entry, fields.locator)) {
         issues.push(
           issue(
             "QFAI-RESEARCH-005",
-            `Source entry missing required field "url": ${label}`,
+            `Source entry missing required field "${fields.locator}": ${label}`,
             "error",
             rel,
             "researchSummary.sourceUrl",
           ),
         );
       }
-      if (!FULL_DATE_RE.test(entry)) {
+      if (!fields.dateRe.test(entry)) {
         issues.push(
           issue(
             "QFAI-RESEARCH-006",
-            `Source entry missing or invalid "published" date (YYYY-MM-DD): ${label}`,
+            `Source entry missing or invalid "${fields.date}" date (YYYY-MM-DD): ${label}`,
             "error",
             rel,
             "researchSummary.sourcePublished",
@@ -203,7 +228,12 @@ export async function validateResearchSummary(root: string, config: QfaiConfig):
     // Check freshness (≥80% within 2 years)
     const referenceNow = resolveFreshnessReferenceNow();
     const twoYearsMs = 1000 * 60 * 60 * 24 * 365 * 2;
+    // External entries only. The ratio asks how much of the research rests on
+    // recent publications, and primary evidence has no publication date to be
+    // recent or stale against — counting the day someone looked at it would
+    // score every such entry as fresh and say nothing.
     const publishedDates = sourceEntries
+      .filter((entry) => sourceType(entry) === "external")
       .map((entry) => FULL_DATE_RE.exec(entry)?.[1] ?? "")
       .map((dateText) => Date.parse(dateText))
       .filter((ts) => Number.isFinite(ts));
@@ -234,7 +264,7 @@ export async function validateResearchSummary(root: string, config: QfaiConfig):
       issues.push(
         issue(
           "QFAI-RESEARCH-021",
-          `Research Summary still carries unreplaced template placeholders (${placeholderKeys.join(", ")}); record the actual protocol run${schemaWindowNote(schemaSeverity)}`,
+          `Research Summary still carries unreplaced template placeholders (${placeholderKeys.join(", ")}); record the actual protocol run`,
           schemaSeverity,
           rel,
           "researchSummary.placeholder",
@@ -247,7 +277,7 @@ export async function validateResearchSummary(root: string, config: QfaiConfig):
       issues.push(
         issue(
           "QFAI-RESEARCH-015",
-          `"source_id" does not resolve to any sources[].id in the same Research Summary: ${unresolved}${schemaWindowNote(schemaSeverity)}`,
+          `"source_id" does not resolve to any sources[].id in the same Research Summary: ${unresolved}`,
           schemaSeverity,
           rel,
           "researchSummary.sourceIdReference",
@@ -324,9 +354,7 @@ export async function validateResearchSummary(root: string, config: QfaiConfig):
  * contributes 56 findings on first contact. Naming the rules turns the second
  * step into a decision rather than a discovery.
  *
- * The schema-field rules are deliberately absent: they sit inside their own
- * promotion window, so they arrive as warnings and are visible before they
- * count. This list is the set that is red immediately.
+ * This list is the set the section's arrival makes red.
  *
  * `inertGateFirstContact.test.ts` holds the list against the validator by
  * running it on a section that satisfies none of them, so a rule added, moved
@@ -363,7 +391,6 @@ function firstContactNote(): string {
 async function buildMissingSectionIssue(
   root: string,
   discussionRoot: string,
-  toolVersion: string,
 ): Promise<Issue | null> {
   let latestPackDir: string | null = null;
   try {
@@ -392,14 +419,10 @@ async function buildMissingSectionIssue(
   }
 
   const rel = path.relative(root, latestPackDir).replace(/\\/g, "/");
-  const sectionMissingSeverity = newRuleSeverity(toolVersion, SECTION_MISSING_PROMOTION);
-  const windowNote =
-    sectionMissingSeverity === "warning"
-      ? ` Reported as a warning until the ${SECTION_MISSING_PROMOTION} release, then an error.`
-      : "";
+  const sectionMissingSeverity = "error";
   return issue(
     "QFAI-RESEARCH-012",
-    `Discussion pack has no "Research Summary" section, so the research-first protocol is never checked.${windowNote}${firstContactNote()}`,
+    `Discussion pack has no "Research Summary" section, so the research-first protocol is never checked.${firstContactNote()}`,
     sectionMissingSeverity,
     rel,
     "researchSummary.sectionMissing",
@@ -427,7 +450,7 @@ function checkPracticeEntries(
       issues.push(
         issue(
           "QFAI-RESEARCH-018",
-          `${key} entry missing required field(s) ${missing.join(", ")}: ${describeEntry(key, entry, i)}${schemaWindowNote(schemaSeverity)}`,
+          `${key} entry missing required field(s) ${missing.join(", ")}: ${describeEntry(key, entry, i)}`,
           schemaSeverity,
           rel,
           "researchSummary.practiceFields",
@@ -454,7 +477,7 @@ function checkReflectionEntries(
       issues.push(
         issue(
           "QFAI-RESEARCH-019",
-          `reflection entry missing required field(s) ${missing.join(", ")}: ${label}${schemaWindowNote(schemaSeverity)}`,
+          `reflection entry missing required field(s) ${missing.join(", ")}: ${label}`,
           schemaSeverity,
           rel,
           "researchSummary.reflectionFields",
@@ -661,7 +684,7 @@ function describeBrokenPointer(
   return [
     issue(
       "QFAI-RESEARCH-020",
-      `Cannot resolve the current discussion pack: ${target.brokenPointer.reason}${schemaWindowNote(schemaSeverity)}`,
+      `Cannot resolve the current discussion pack: ${target.brokenPointer.reason}`,
       schemaSeverity,
       path.relative(root, target.discussionRoot).replace(/\\/g, "/"),
       "researchSummary.brokenCurrentPointer",
@@ -722,7 +745,7 @@ function storageSlotIssue(
 ): Issue {
   return issue(
     "QFAI-RESEARCH-016",
-    `${RESEARCH_SUMMARY_FILE} does not store a Research Summary (${detail}); record the research-first protocol output there${schemaWindowNote(schemaSeverity)}`,
+    `${RESEARCH_SUMMARY_FILE} does not store a Research Summary (${detail}); record the research-first protocol output there`,
     schemaSeverity,
     path.relative(root, storageFile).replace(/\\/g, "/"),
     "researchSummary.storageSlotMissing",

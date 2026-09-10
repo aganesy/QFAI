@@ -19,12 +19,10 @@ import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 
 import { defaultConfig } from "../../src/core/config.js";
-import { RULE_PROMOTIONS, newRuleSeverity } from "../../src/core/sunset.js";
 import {
   UI_MARKER_NOT_RENDERED_RULE_ID,
   validateUiMarkerPresence,
 } from "../../src/core/validators/uiMarkerPresence.js";
-import { resolveToolVersion } from "../../src/core/version.js";
 
 const tempDirs: string[] = [];
 
@@ -72,20 +70,6 @@ describe("a marker the contract declares and no source carries", () => {
     expect(issues[0]?.code).toBe(UI_MARKER_NOT_RENDERED_RULE_ID);
     expect(issues[0]?.file).toBe(".qfai/contracts/ui/order.yaml");
     expect(issues[0]?.message).toContain("SCR-ORDER:submit");
-  });
-
-  it("rides its promotion window, naming the release that ends it", async () => {
-    const root = await newRoot();
-    await write(root, ".qfai/contracts/ui/order.yaml", contractDeclaring("submit"));
-    await write(root, "src/OrderForm.tsx", "export const OrderForm = () => <form />;\n");
-
-    const [finding] = await validateUiMarkerPresence(root, defaultConfig);
-    const promotion = RULE_PROMOTIONS.uiMarkerNotRendered.promoteAt;
-
-    expect(finding?.severity).toBe(newRuleSeverity(await resolveToolVersion(), promotion));
-    if (finding?.severity === "warning") {
-      expect(finding.message).toContain(promotion);
-    }
   });
 
   it("names the element the contract marked required, so the reader can rank it", async () => {
@@ -157,6 +141,126 @@ describe("a marker the source mentions", () => {
     await write(root, "app/OrderForm.tsx", '<button data-qfai="SCR-ORDER:submit" />\n');
 
     expect(await validateUiMarkerPresence(root, defaultConfig)).toHaveLength(1);
+  });
+});
+
+describe("where in the contract the marker is written", () => {
+  it("reads one declared under prototype.markers, not only under an element", async () => {
+    const root = await newRoot();
+    await write(
+      root,
+      ".qfai/contracts/ui/order.yaml",
+      [
+        "prototype:",
+        "  mode: interactive",
+        "  markers:",
+        "    - id: mk_order_form",
+        "      selector: \"[data-qfai='SCR-ORDER:order_form']\"",
+        "      purpose: order create form root",
+        "screens:",
+        "  - id: order_create",
+        "    elements:",
+        "      - id: submit",
+        "",
+      ].join("\n"),
+    );
+    await write(root, "src/OrderForm.tsx", "export const OrderForm = () => <form />;\n");
+
+    const issues = await validateUiMarkerPresence(root, defaultConfig);
+
+    expect(issues).toHaveLength(1);
+    expect(issues[0]?.message).toContain("SCR-ORDER:order_form");
+  });
+});
+
+describe("how the contract wrote the value", () => {
+  it("reads a bare value in a selector, which CSS allows for an identifier", async () => {
+    const root = await newRoot();
+    await write(
+      root,
+      ".qfai/contracts/ui/order.yaml",
+      [
+        "id: SCR-ORDER",
+        "elements:",
+        "  - id: submit",
+        "    selector: [data-qfai=order_submit]",
+        "",
+      ].join("\n"),
+    );
+    await write(root, "src/OrderForm.tsx", "export const OrderForm = () => <form />;\n");
+
+    const issues = await validateUiMarkerPresence(root, defaultConfig);
+
+    expect(issues).toHaveLength(1);
+    expect(issues[0]?.message).toContain("order_submit");
+  });
+
+  it("reads a bare value written as the attribute itself", async () => {
+    const root = await newRoot();
+    await write(
+      root,
+      ".qfai/contracts/ui/order.yaml",
+      [
+        "id: SCR-ORDER",
+        "elements:",
+        "  - id: submit",
+        "    markup: <button data-qfai=order_submit>",
+        "",
+      ].join("\n"),
+    );
+    await write(root, "src/OrderForm.tsx", "export const OrderForm = () => <form />;\n");
+
+    expect(await validateUiMarkerPresence(root, defaultConfig)).toHaveLength(1);
+  });
+
+  it("does not report a bare value the source renders", async () => {
+    const root = await newRoot();
+    await write(
+      root,
+      ".qfai/contracts/ui/order.yaml",
+      [
+        "id: SCR-ORDER",
+        "elements:",
+        "  - id: submit",
+        "    selector: [data-qfai=order_submit]",
+        "",
+      ].join("\n"),
+    );
+    await write(root, "src/OrderForm.tsx", '<button data-qfai="order_submit" />\n');
+
+    expect(await validateUiMarkerPresence(root, defaultConfig)).toEqual([]);
+  });
+
+  it("stops a bare value at the character that closes it, taking no delimiter with it", async () => {
+    const root = await newRoot();
+    await write(
+      root,
+      ".qfai/contracts/ui/order.yaml",
+      [
+        "id: SCR-ORDER",
+        "elements:",
+        "  - id: submit",
+        "    selector: [data-qfai=order_submit]",
+        "",
+      ].join("\n"),
+    );
+    await write(root, "src/OrderForm.tsx", "export const OrderForm = () => <form />;\n");
+
+    const [finding] = await validateUiMarkerPresence(root, defaultConfig);
+
+    expect(finding?.message).toContain("`order_submit`");
+  });
+
+  it("declares nothing for an attribute left with no value", async () => {
+    const root = await newRoot();
+    await write(
+      root,
+      ".qfai/contracts/ui/order.yaml",
+      ["id: SCR-ORDER", "elements:", "  - id: submit", "    selector: [data-qfai=]", ""].join("\n"),
+    );
+    await write(root, "src/OrderForm.tsx", "export const OrderForm = () => <form />;\n");
+
+    expect(await validateUiMarkerPresence(root, defaultConfig)).toEqual([]);
   });
 });
 

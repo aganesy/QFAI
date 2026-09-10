@@ -93,9 +93,9 @@ import {
   readFrozenSpecsCovered,
 } from "../../core/prototyping/specsCovered.js";
 import { SAAS_PACKAGE_SKIPPED_GATES } from "../../core/saasPackage/skippedGates.js";
-import { SUNSETS, deprecationSeverity } from "../../core/sunset.js";
 import { resolveToolVersion } from "../../core/version.js";
 import { error, info, warn } from "../lib/logger.js";
+import { EXIT_CODES } from "../lib/exitCodes.js";
 import { profileSuffixedReportPath } from "./validate.js";
 
 export type RunPrototypingCertifyOptions = {
@@ -271,24 +271,20 @@ export async function runPrototypingCertify(
   // The fallback used to be silent. A hybrid record — modern `iterations[]`,
   // legacy `fullHarness.runId` — sealed a completion certificate with
   // `counts.error === 0` and no operator signal at all, while the migration
-  // memo told the same operator the shape was rejected from 1.10.0. Reporting
-  // it follows the legacy `verify.json` branch below: say so at the severity
-  // the version implies, and still seal. Refusing outright would delete the
-  // acceptance path, which OC-60 forbids inside the window and which the
-  // sunset does not ask for either — the constraint escalates the finding.
+  // memo told the same operator the shape was retired. Reporting it follows
+  // the legacy `verify.json` branch below: say so, and still seal. Refusing
+  // outright would delete the acceptance path, which OC-60 forbids.
   const canonicalRunId = extractString(protoJson, "runId");
   const legacyRunId = extractString(extractRecord(protoJson, "fullHarness"), "runId");
   const runId = canonicalRunId ?? legacyRunId;
   if (!canonicalRunId && legacyRunId) {
-    const line =
+    // The shape is retired and nothing reads it any more, so this is an error
+    // outright.
+    error(
       `qfai prototyping certify: ${DEPRECATED_SCHEMA_CODE} prototyping.json carries the legacy ` +
-      `\`fullHarness.runId\` shape instead of a top-level \`runId\`; sunset: v${SUNSETS.legacyPrototypingJsonShape}. ` +
-      `Re-run \`qfai prototyping iterate --cycle 0\` to write the current shape.`;
-    if (deprecationSeverity(toolVersion, SUNSETS.legacyPrototypingJsonShape) === "error") {
-      error(line);
-    } else {
-      warn(line);
-    }
+        `\`fullHarness.runId\` shape instead of a top-level \`runId\`. ` +
+        `Re-run \`qfai prototyping iterate --cycle 0\` to write the current shape.`,
+    );
   }
   if (!runId) {
     error(
@@ -746,7 +742,7 @@ export async function runPrototypingCertify(
       // screen"). Returning 2 (input error) here would split the same
       // coverage rejection across two exit codes and break operator
       // workflows that key on 64 for missing review.json gaps.
-      return 64;
+      return EXIT_CODES.prototypingStop;
     } else {
       if (!hasPerSpecLayout) {
         // Single-spec run on the flat layout: the gate is NOT skipped
@@ -926,7 +922,7 @@ export async function runPrototypingCertify(
         // declared screen" → exit 64; returning 2 (input error) here
         // would split the same coverage rejection across two exit
         // codes and break operator workflows that key on 64.
-        return 64;
+        return EXIT_CODES.prototypingStop;
       }
       if (invalidPayloads.length > 0) {
         reportPayloadFailures(
@@ -940,7 +936,7 @@ export async function runPrototypingCertify(
         // one — the (spec, screen) pair carries no parsable review —
         // so it shares the coverage rejection code (exit 64) instead
         // of introducing a third exit code for the same class.
-        return 64;
+        return EXIT_CODES.prototypingStop;
       }
       // A schema-valid payload copied in from another screen, another
       // spec, or an earlier cycle parses cleanly while reviewing
@@ -959,7 +955,7 @@ export async function runPrototypingCertify(
         );
         // Same class as a missing payload: the pair still carries no
         // review of ITS OWN surface.
-        return 64;
+        return EXIT_CODES.prototypingStop;
       }
       // `reviewerGate.result === "PASS"` is a summary claim (gated
       // above); the per-screen payloads are the evidence behind it.
@@ -983,7 +979,7 @@ export async function runPrototypingCertify(
         // Non-converged per-screen evidence is the same evidence-gap
         // class as a missing or unparsable payload: the pair has no
         // review that supports certification.
-        return 64;
+        return EXIT_CODES.prototypingStop;
       }
     }
   }
@@ -2767,6 +2763,91 @@ async function parseUiScreenFile(
  * @internal Exported for direct unit-testing — not part of the package's
  * public surface.
  */
+/** A path as an operator reads it: relative to the project, forward slashes. */
+function toRelativePosix(root: string, absolute: string): string {
+  return path.relative(root, absolute).replace(/\\/g, "/");
+}
+
+/**
+ * The multi-file tier's candidates for one spec.
+ *
+ * The glob targets the `ui-NNNN-<slug>.yaml` split-naming convention; the
+ * subdirectory targets `<spec-id>/**\/*.yaml` for projects that group a spec's
+ * contracts in a directory. Both shapes are read together, so a project may use
+ * either without saying which.
+ */
+async function findMultiFileCandidates(
+  uiDir: string,
+  specDirName: string,
+  bareNumeric: string,
+): Promise<string[]> {
+  // The search root is passed as `cwd` rather than joined into the pattern.
+  // A project path is a literal directory name, and a glob would read `[`,
+  // `{` or `!` in it as syntax — so a project under `/tmp/build[1]` would
+  // match nothing here while the single-file probe, which is a plain
+  // filesystem call, still found its file. The tier would then look absent
+  // rather than ignored.
+  const [globMatches, subdirMatches] = await Promise.all([
+    fg(`ui-${bareNumeric}-*.yaml`, { cwd: uiDir, absolute: true }),
+    fg(`${specDirName}/**/*.yaml`, { cwd: uiDir, absolute: true }),
+  ]);
+  return [...globMatches, ...subdirMatches];
+}
+
+/**
+ * Every single-file candidate for one spec that exists, in precedence order.
+ *
+ * The first is the one in force. The rest are read for the same reason the
+ * multi-file tier is: a spec with two single-file candidates resolves to one of
+ * them deterministically, and whoever opens the other believes they are reading
+ * the contract the review used.
+ */
+async function findSingleFileCandidates(
+  uiDir: string,
+  specDirName: string,
+  bareNumeric: string,
+): Promise<string[]> {
+  const candidates = [
+    path.join(uiDir, `${specDirName}.yaml`),
+    path.join(uiDir, `${bareNumeric}.yaml`),
+    path.join(uiDir, `ui-${bareNumeric}.yaml`),
+  ];
+  const present: string[] = [];
+  for (const abs of candidates) {
+    if (await fileExists(abs)) {
+      present.push(abs);
+    }
+  }
+  return present;
+}
+
+/**
+ * The sentence a spec resolved from more than one candidate gets.
+ *
+ * Named separately from the resolution so it can be emitted after the taken
+ * file has parsed. A file that declares no valid screen sends the caller to the
+ * project-wide list, where the ignored files' screens are reviewed after all —
+ * saying they are not would be the opposite of what happened.
+ */
+function ignoredCandidatesWarning(
+  root: string,
+  specDirName: string,
+  taken: string,
+  ignored: string[],
+  multiFileExists: boolean,
+): string {
+  const takenRel = toRelativePosix(root, taken);
+  const recovery = multiFileExists
+    ? `Move those screens into ${takenRel} and delete the rest, or delete every single-file candidate so the multi-file tier is read.`
+    : `Move those screens into ${takenRel} and delete the rest.`;
+  return (
+    `qfai prototyping certify: per-spec UI contract resolution for ${specDirName} took ` +
+    `${takenRel} and ignored ${ignored.map((abs) => toRelativePosix(root, abs)).join(", ")}. ` +
+    `Screens declared only in the ignored file(s) are not reviewed. One spec resolves to one ` +
+    `file. ${recovery}`
+  );
+}
+
 export async function readPerSpecScreens(
   root: string,
   contractsDirRelative: string,
@@ -2784,35 +2865,19 @@ export async function readPerSpecScreens(
   // `specDirExists` against `paths.specsDir`.
   const uiDir = path.resolve(root, contractsDirRelative, "ui");
   const bareNumeric = specDirName.replace(/^spec-/iu, "");
-  const singleFileCandidates = [
-    path.join(uiDir, `${specDirName}.yaml`),
-    path.join(uiDir, `${bareNumeric}.yaml`),
-    path.join(uiDir, `ui-${bareNumeric}.yaml`),
-  ];
-  const matched: string[] = [];
-  // True first-hit-wins: stop on first existing canonical candidate so
-  // authoring forks (e.g. both spec-0007.yaml AND ui-0007.yaml on disk)
-  // produce deterministic per-spec scope.
-  for (const abs of singleFileCandidates) {
-    if (await fileExists(abs)) {
-      matched.push(abs);
-      break;
-    }
-  }
-  if (matched.length === 0) {
-    // Multi-file shapes (glob + subdir layout). The glob targets the
-    // `ui-NNNN-<slug>.yaml` split-naming convention; the subdir targets
-    // `<spec-id>/**\/*.yaml` for projects that group per-spec contracts
-    // in a directory.
-    const uiDirPosix = uiDir.replace(/\\/g, "/");
-    const globPattern = path.posix.join(uiDirPosix, `ui-${bareNumeric}-*.yaml`);
-    const subdirPattern = path.posix.join(uiDirPosix, specDirName, "**", "*.yaml");
-    const [globMatches, subdirMatches] = await Promise.all([
-      fg(globPattern, { absolute: true }),
-      fg(subdirPattern, { absolute: true }),
-    ]);
-    matched.push(...globMatches, ...subdirMatches);
-  }
+  // Both tiers are read, not only the losing one when the winner came up
+  // empty. The tier that loses still decides what an operator is told: a
+  // project holding both shapes gets the single file, and the screens declared
+  // only in the other files are excluded from the review with nothing to say
+  // so. Two globs and three probes per spec is the price of that sentence.
+  const [singleFile, multiFile] = await Promise.all([
+    findSingleFileCandidates(uiDir, specDirName, bareNumeric),
+    findMultiFileCandidates(uiDir, specDirName, bareNumeric),
+  ]);
+  // First-hit-wins, so that authoring forks (both `spec-0007.yaml` and
+  // `ui-0007.yaml` on disk) produce a deterministic per-spec scope.
+  const taken = singleFile[0];
+  const matched = taken === undefined ? multiFile : [taken];
   if (matched.length === 0) return null;
 
   const screens: CanonicalScreenContract[] = [];
@@ -2825,7 +2890,7 @@ export async function readPerSpecScreens(
     // for this spec but produced zero valid screens. Without this warn
     // the caller silently falls back to the project-wide list. The
     // operator gets a named path instead of a confusing "missing pair" error at the gate below.
-    const relPaths = matched.map((m) => path.relative(root, m).replace(/\\/g, "/")).join(", ");
+    const relPaths = matched.map((m) => toRelativePosix(root, m)).join(", ");
     warn(
       `qfai prototyping certify: per-spec UI contract file(s) for ${specDirName} ` +
         `(${relPaths}) parsed but declared no valid screens; falling back to the ` +
@@ -2833,6 +2898,16 @@ export async function readPerSpecScreens(
         "typo, or missing `id`/`route` on each entry.",
     );
     return null;
+  }
+  // Reported, not resolved, and only now that the taken file is known to hold
+  // screens. First-hit-wins is the documented rule and a project with two
+  // layouts needs a deterministic answer; what it does not need is for the
+  // answer to be narrower than the contracts it wrote. An error here would
+  // break every tree that already holds both, so the exit code is left alone
+  // and the operator gets the paths.
+  const ignored = taken === undefined ? [] : [...singleFile.slice(1), ...multiFile];
+  if (taken !== undefined && ignored.length > 0) {
+    warn(ignoredCandidatesWarning(root, specDirName, taken, ignored, multiFile.length > 0));
   }
   // First-write-wins dedup across multi-file matches (glob + subdir
   // layout can both surface duplicate `screenId`s). Matches the

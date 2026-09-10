@@ -511,7 +511,7 @@ describe("an abandoned lock is reclaimed without deleting a live one", () => {
       Object.keys((await readInstallProvenance(root)).workflows).sort(),
       "a denial that passes must not lose the write",
     ).toEqual(["qfai-first.yml", "qfai-second.yml"]);
-  }, 60_000);
+  });
 
   it("keeps every entry under heavy concurrency", async () => {
     // The six-writer row above passed on an idle machine and FAILED inside the whole-suite run,
@@ -548,7 +548,69 @@ describe("an abandoned lock is reclaimed without deleting a live one", () => {
 
     // And no lock is left behind for the next run to wait out.
     expect(await lockHolders(root)).toBeUndefined();
-  }, 60_000);
+  });
+
+  it("keeps the entry when the published lock is taken away before the read-back", async () => {
+    // Losing the lock to a reclaimer is what the protocol does under contention, not a fault: the
+    // writer that lost is the writer that was supposed to lose. Nothing was written when it
+    // happens, so the answer is to go round again — and the re-apply loop that already exists for
+    // being overtaken is the loop that answers it.
+    //
+    // Raising it above that loop is what cost an entry. The throw left
+    // `updateInstallProvenance` entirely, so the writer never reached the retry written for
+    // exactly this, and the file it carried stays on disk with nothing recorded: it reads as
+    // `adopter-owned` from then on and no later run puts it back.
+    //
+    // The steal is planted rather than waited for. The load row above is honest that it cannot
+    // reproduce this on an idle machine — the window between publishing the lock and reading it
+    // back is microseconds when nothing else is running. A thief on a 1 ms tick that swaps
+    // whatever sits at the lock name closes that gap deterministically, and stops itself after a
+    // fixed number of steals so the writer can finish.
+    const root = await tempRoot();
+    await writeInstallProvenance(root, { workflows: {} });
+
+    let stolen = 0;
+    const thief = setInterval(() => {
+      if (stolen >= 1) return;
+      const dir = lockDir(root);
+      // Only a lock with a marker in it — one a writer published and is holding. Without this the
+      // thief keeps finding the empty directory it left behind a tick earlier and steals that,
+      // reaching its count without ever racing a writer. Measured: the row then passes with the
+      // repair reverted, which is the one thing it must not do.
+      if (!existsSync(dir) || readdirSync(dir).length === 0) return;
+      // Renamed away rather than removed, so the writer meets somebody else's object at the name
+      // — the dispossession it has to recognise — instead of an absence.
+      renameSync(dir, `${dir}.stolen`);
+      mkdirSync(dir, { recursive: true });
+      stolen += 1;
+    }, 1);
+
+    // Several writers, so the lock is held for most of the window rather than for the few
+    // milliseconds one uncontended write needs. One steal is enough to make the point; catching
+    // it at all is what needs the contention.
+    const names = Array.from({ length: 12 }, (_, index) => `qfai-robbed-${String(index)}.yml`);
+    try {
+      await Promise.all(
+        names.map((name) =>
+          updateInstallProvenance(root, (current) => ({
+            ...current,
+            workflows: { ...current.workflows, [name]: entryTyped() },
+          })),
+        ),
+      );
+    } finally {
+      clearInterval(thief);
+    }
+
+    expect(
+      stolen,
+      "the plant must actually fire, or this row passes without exercising anything",
+    ).toBe(1);
+    expect(
+      Object.keys((await readInstallProvenance(root)).workflows).sort(),
+      "an entry must survive a lock its writer published and did not get back",
+    ).toEqual([...names].sort());
+  });
 
   it("does not release a lock it no longer owns", async () => {
     const root = await tempRoot();
@@ -670,7 +732,7 @@ describe("an abandoned lock is reclaimed without deleting a live one", () => {
     } finally {
       clearInterval(stillGoing);
     }
-  }, 60_000);
+  });
 
   it("renews its marker while it holds the lock, on an interval under the ceiling", async () => {
     // The marker was stamped once, at acquisition, so a writer whose
@@ -1271,7 +1333,16 @@ describe("a holder that was reclaimed does not disturb the lock that replaced it
       acquire,
       "with acquisition failing when they disagree — continuing would record somebody else's " +
         "directory as this holder's own",
-    ).toMatch(/if \(!\(await confirmPublishedLock\([\s\S]{0,200}?throw new Error\(/);
+    ).toMatch(/if \(!\(await confirmPublishedLock\([\s\S]{0,200}?throw new LockReplacedError\(/);
+
+    // Typed, and that is the half that keeps the entry. Losing the lock to a reclaimer is
+    // contention rather than a fault, so the writer has to go round again — and the loop that
+    // answers contention is one frame up. As a plain `Error` it left `updateInstallProvenance`
+    // altogether and the entry went with it.
+    expect(
+      functionBody(source, "export async function updateInstallProvenance("),
+      "and the caller must treat that one failure as retryable rather than fatal",
+    ).toMatch(/error instanceof LockReplacedError/);
   });
 
   it("never retries a rename that already happened", async () => {

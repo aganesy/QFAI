@@ -96,9 +96,7 @@
         "a dependency condition."
       ],
       "dependencyMatrices": {
-        "test": {
-          "slice": ["core", "validators", "integration", "e2e", "cli", "unit", "scripts"]
-        }
+        "test": { "slice": ["core", "validators", "integration", "e2e", "cli", "unit", "scripts"] }
       },
       "dependencyMatricesNote": [
         "The matrix values a gated lane expands over, pinned exactly.",
@@ -158,9 +156,7 @@
         "change a reviewer reads."
       ],
       "installLifecycle": {
-        "package.json": {
-          "preinstall": "node ./scripts/check-not-a-dependency.mjs"
-        },
+        "package.json": { "preinstall": "node ./scripts/check-not-a-dependency.mjs" },
         "packages/qfai/package.json": {}
       },
       "installLifecycleNote": [
@@ -185,38 +181,42 @@
         ".github/actions/setup/action.yml": "c60bf87cda546431c66af0a2b47df1a2a3664540d3fd40b9663ee6f4cf8553d7",
         ".github/actions/setup/dependency-builds.txt": "0788adad7ac485ca2c340c2c75ed5bf581a1ba3bb17ea6fe0d0994f666dabf2f",
         ".github/actions/setup/verify-rebuild-sources.mjs": "0816918db6c8833c8d1c4f0cc6218b9eeae7b16a718a0b3113898ae026e4127f",
-        "scripts/check-atdd-annotation-ledger.mjs": "ef6e9f6b56c81862e3aa613276c7dde87379bfc97a9066fbdc72b123e9bf7f12",
+        "scripts/check-atdd-annotation-ledger.mjs": "13a40d8a69406669c479432f25124e5a391cbee8d28da59f73ec7d44285a62de",
         "scripts/check-bidi.mjs": "b006fcaaa399a3718a55f6e85f12fb3e4f87f22e067d159f6ef05c0f9739e9f4",
         "scripts/check-build-warnings.mjs": "f07d6df10d28a9ffcb4cdf1130e379c4aadfc2a89329e5f66ae23fd117000077",
-        "scripts/check-doc-clarity.mjs": "34d33cd952c7a5be2bbfdc33730e3f19a994d78eca8c27d7a987e7c276541ea0",
+        "scripts/check-conflict-markers.mjs": "4b0fe3cdd932aa64b8b4a225c4b9d39a6e21d7fc31f679124247ea4fa0cfda5a",
+        "scripts/check-doc-clarity.mjs": "9fd862da165028754970814d3c4aee732759001ac497a705f7fce8b9ea7e2322",
+        "scripts/check-dogfood-backlog.mjs": "35e6b8e27a397d0184305afc05ef7c65d408b079ea8838fb8d8a7a97b1fefb2c",
         "scripts/check-instructions-size.mjs": "edc55807a4bfdaf48ae985992d2785057ce7cf130afab34ec934cc6f740b46f4",
-        "scripts/check-lifecycle-manifests.mjs": "d1a3354deac4d4e426ce57508f1cbae68c00ec1692a1cedbafd3f0108117dcf7",
+        "scripts/check-lifecycle-manifests.mjs": "1c701af6c814c2a9e5e6d5a5c8070a58d378f35d5caec24ba0152b95b7f28786",
         "scripts/check-mdschema.mjs": "4900c69ba7e51c2766ee41579e4b41dd7edc3aaf0915f22b1432a74d8f15bebe",
         "scripts/check-mermaid.mjs": "25ee8a44086d4e2aac81db2e2049363043096ab5865ca0575d4ca184c386222a",
         "scripts/check-not-a-dependency.mjs": "ce41f9a1e9e1b63c581c3896cac3998a22cc578abfcec616abd6ecbcf032e84e",
-        "scripts/check-prompt-scanner-pair.mjs": "96d817088b1a648d39bfa34570a32a90659a37ddf7a807fb044fccada3aa49cc",
-        "scripts/check-publish-dry-run.mjs": "da9c5e600b03ee787c8e9b746d5dda32daf8a3fbb2687ac6b68d2e484c4a0769",
+        "scripts/check-prompt-scanner-pair.mjs": "3caebcae4562613ed9d8c41ca767ed8bb7a1a5a2029ab0148de8b05c7219620b",
+        "scripts/check-publish-dry-run.mjs": "06c6a1916e868395c1707d452bb95bc111c987866d91760d393af10b4dd06048",
         "scripts/check-readme-alignment.mjs": "8d150ea7bc9487c6029c578ddd4766433bf8a456a4a6f7cc87a767d446253a61",
+        "scripts/check-release-notes.mjs": "0ed297245db8640fbec4f879ea82d940e7513b02bd1c64fc8f3d13a47999de78",
         "scripts/check-review-profile-consistency.mjs": "f12212dd069051cd19934b42c5fde751d6b6391637ef96484762a3b8dab08cb0",
         "scripts/check-scanner-coverage.mjs": "0f5d0f6d9c7a3db50ead67bbc104cf958883ec74ac523b6def4557a42ec64ed8",
-        "scripts/check-toolchain-action.sh": "a617b652e350b987c05c73ffe53e81d4bfe1f97ba542e3142a87f9e308b4d777",
+        "scripts/check-toolchain-action.sh": "fff07d335dc0d74e7c2e6eca7683abd21ae87f7b68e2e39e83467647cc89e180",
         "scripts/check-types-future.mjs": "c5db610e56abad0fe7962384460760915ae1f084936a3c9684656364beb50203",
-        "scripts/check-workflow-hygiene.mjs": "e1ce83c5068118002ad93f19cce8da6347fbc1bf53b328e741e421eefabc965d",
+        "scripts/check-workflow-hygiene.mjs": "076cf4ad321d2a61f4ebf288577996129ee24ad3e5de25725470ec0140a86a03",
         "scripts/derive-cli-message-allowlist-count.mjs": "6c67359c0073519a0fa5b3be5fc9866c49b1ec5bd4bce3feff985ba2fd962d87",
-        "scripts/derive-e2e-callsites.mjs": "cf2f9fd4c961cf3ffc87c3702f0f0ec0ae84ae9d0e110b8866b31048c0b6622f",
+        "scripts/derive-e2e-callsites.mjs": "0185bc5abdcfa2fef223c02362aea44838a3c8dac53157c050d5c3285448c6d3",
+        "scripts/dogfood-backlog.json": "e39e78fcd660d20368d99e38c8c1450bea6a09ec75715bee9d4b4df669ad5e6e",
         "scripts/fresh-init-findings.json": "28bf7de140686f8df16666c3d2a9e5a8dd7deaa30d5bbbfcb8eda39494b9ecfe",
         "scripts/fresh-init-findings.mjs": "65221f0f17246de0f092c767138604e49ff671e1ec55a5477f07339fb8ba62f6",
         "scripts/gen-agent-catalog.mjs": "3a4ca269aabfd40dbebdf8579bee203d5a3ead0ad49c76647b593818d0b27da7",
         "scripts/gen-codex-agents.mjs": "732b21f9b368195dafe1138b288bb755fc19f3c692f1a92c521a01ce88b36136",
         "scripts/lib/bounded-read.mjs": "1ca91026cd7016db2ed89d31b397985d5e18fe00a3d018b7cc0cedbbb2578444",
         "scripts/lib/ts-specifier-hook.mjs": "b6501b31043719b5bb131994fce0aa3ed28b8bf6b4e8d77035610778681dad24",
+        "scripts/lib/write-declaration.mjs": "cfdd1a0a2dc37ce06a183338e3550e9d6bd169ef633cc0cfbd1110d19d5e9dc9",
         "scripts/pin-cli-message-allowlist-count.mjs": "635753d2a837eba74efc62b11dcc6b2174da26988f899317f4c547b07733d71e",
-        "scripts/pin-guard-bytes.mjs": "2dc3370e9ec27ca6a7e4f42bb667ec26ceb767f3ed93c4862aba88b9dcbadc97",
+        "scripts/pin-guard-bytes.mjs": "672f5c8c410c9fc31852b07721a89b7ed3fb68c5277f546bdaec0dc2556dc1cb",
         "scripts/pin-stage-evidence-counts.mjs": "9cf2034c8ce05387e50b7b22c0cd33f2e5ff4544f3e5913e469786044a201099",
-        "scripts/pin-verification-bodies.mjs": "7f2d8bd1254344e69c5367fed6b5a424c3ef40e64aa293f6c4435912d4b8ed2d",
-        "scripts/promotion-preflight.mjs": "695264d7763306d652559f85066664c70987d6524c2dff5d077adf21c15931b3",
+        "scripts/pin-verification-bodies.mjs": "ada370be9bd4d331a705d5a02e01ba4d4f378c862ddc62680af9ad831eb881cf",
         "scripts/sync-init-to-root.mjs": "f25f4410273d41085119c50cf0f439564e300ae25fb8f83bae869c763be29e6c",
-        "scripts/verify-pack.mjs": "3c4f8af6fae44e3d429b65bb543a0516d8afdd78811bfd3f2a6f555f8828324f"
+        "scripts/verify-pack.mjs": "e7574eba045f92b90ae2f2a914a35f3e5fec8f40f65cff1970ac30532a95f073"
       },
       "pinnedBytesNote": [
         "The bytes of every local composite action and every guard program, pinned by path.",
@@ -365,15 +365,15 @@
       ],
       "verificationBodies": {
         "Classify the change against the enumerated directory lists": "ef6e64eb3cba709c",
-        "Verify the toolchain action before running it": "fb050baa7c816053",
+        "Verify the toolchain action before running it": "7c0d3d95c45e8124",
         "Derive the verdict from the serialized needs map": "b700f852a69f52d2",
-        "Run build & pack verification": "9909088db9df9e88",
+        "Run build & pack verification": "9ce92fad292f3ee9",
         "Sanity grep — no internal spec IDs or version markers leak (post-build)": "abe312b8d2c8fc6f",
-        "QFAI self-validate this repo (dogfooding — TDD gates)": "77273cc955b604a2",
-        "QFAI self-validate this repo (dogfooding — SDD gates)": "4d0ecfd493e0942a",
-        "QFAI self-validate this repo (dogfooding — full profile)": "0bcfbd8438ea614d",
+        "QFAI self-validate this repo (dogfooding — TDD gates)": "266464e881b38c15",
+        "QFAI self-validate this repo (dogfooding — SDD gates)": "9efc82ef75f7a622",
+        "QFAI self-validate this repo (dogfooding — full profile)": "3537948e49d1d967",
         "Run qfai validate gate (fail on error)": "64fb079758255e4c",
-        "Run lint gate": "859ab8b9b9c289a5",
+        "Run lint gate": "ac576c8e3ef62e69",
         "Run type check": "fe6bc2c8db80159c",
         "Run future TypeScript compatibility check": "c58cfcd12f363478",
         "Run the package test suite on the floor": "b1949f2492ab0fbc",

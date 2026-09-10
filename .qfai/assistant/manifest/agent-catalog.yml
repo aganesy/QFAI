@@ -524,6 +524,7 @@ agents:
     owned_artifacts:
       - ui-implementation
       - surface-evidence
+      - smoke-script
     tool_profile: frontend
     permission_profile: authoring
     specialization_tags:
@@ -567,7 +568,14 @@ agents:
       - Frontend implementation summary
       - Changed files and affected flows
       - Local verification notes
-      - TDD ledger Status + Evidence entry for each item processed, returned to the orchestrator (which owns the `test-list.md` write; do not edit that file directly)
+      - TDD ledger `Status`, `DR-ID` and `Evidence` entry for each item processed, returned to
+        the orchestrator (which owns the `test-list.md` write; do not edit that file directly).
+        Return `DR-ID` whenever the row carries one: the `DR-*` that an `exception` row is
+        invalid without, and the `CR-*` that an approved upstream reset put there, which the
+        row keeps through every later status. Return `Blocked-By` as well whenever the status
+        you return is `blocked`: it records the status the row is leaving, and the ledger gate
+        rejects a `blocked` row without it. The orchestrator writes only what it receives,
+        so a cell left out of the report is a cell nobody can write.
       - Evidence summary for `.qfai/evidence/`
       - Notes on how simplicity, necessity, and reuse were preserved in the chosen implementation
 
@@ -601,6 +609,7 @@ agents:
     owned_artifacts:
       - backend-implementation
       - api-db-evidence
+      - smoke-script
     tool_profile: backend
     permission_profile: authoring
     specialization_tags:
@@ -646,7 +655,14 @@ agents:
       - Backend implementation summary
       - Changed files and affected contracts
       - Local verification notes
-      - TDD ledger Status + Evidence entry for each item processed, returned to the orchestrator (which owns the `test-list.md` write; do not edit that file directly)
+      - TDD ledger `Status`, `DR-ID` and `Evidence` entry for each item processed, returned to
+        the orchestrator (which owns the `test-list.md` write; do not edit that file directly).
+        Return `DR-ID` whenever the row carries one: the `DR-*` that an `exception` row is
+        invalid without, and the `CR-*` that an approved upstream reset put there, which the
+        row keeps through every later status. Return `Blocked-By` as well whenever the status
+        you return is `blocked`: it records the status the row is leaving, and the ledger gate
+        rejects a `blocked` row without it. The orchestrator writes only what it receives,
+        so a cell left out of the report is a cell nobody can write.
       - Evidence summary for `.qfai/evidence/`
       - Notes on invariants, validation, and why added abstractions/configuration are necessary now
 
@@ -701,7 +717,7 @@ agents:
 
       - Implement E2E coverage for required user stories.
       - Implement API coverage for declared `CON-API-*` contracts.
-      - Implement integration coverage for required `TC-*` behavior and for declared `CON-DB-*` contracts.
+      - Implement integration coverage for required `TC-*` behavior and active `CON-DB-*` contracts (those not deferred by `-- x-qfai-status: planned`).
       - Keep test-layer responsibilities separated while coordinating shared fixtures and evidence.
 
       ## Inputs you must read
@@ -720,14 +736,21 @@ agents:
       - .qfai/specs/spec-\*/02_User-stories.md
       - .qfai/specs/spec-\*/06_Test-Cases.md
       - .qfai/contracts/api/\*\*
-      - .qfai/contracts/db/\*\*
+      - .qfai/contracts/db/\*\* (under the configured `paths.contractsDir`, not always this default) — **conditional**: only where the spec references `CON-DB-*`; where it does not, absence is not a gap
 
       ## Deliverables
 
       - Acceptance test plan and implemented coverage
       - Mapping from US / TC / CON-API / CON-DB to test assets
       - Execution proof and evidence summary
-      - TDD ledger Status + Evidence entry for each item processed, returned to the orchestrator (which owns the `test-list.md` write; do not edit that file directly)
+      - TDD ledger `Status`, `DR-ID` and `Evidence` entry for each item processed, returned to
+        the orchestrator (which owns the `test-list.md` write; do not edit that file directly).
+        Return `DR-ID` whenever the row carries one: the `DR-*` that an `exception` row is
+        invalid without, and the `CR-*` that an approved upstream reset put there, which the
+        row keeps through every later status. Return `Blocked-By` as well whenever the status
+        you return is `blocked`: it records the status the row is leaving, and the ledger gate
+        rejects a `blocked` row without it. The orchestrator writes only what it receives,
+        so a cell left out of the report is a cell nobody can write.
       - Gaps and follow-up actions
 
       ## Stop conditions
@@ -832,12 +855,20 @@ agents:
         `.qfai/assistant/constitution/constitution.md` Article III.)
       - .qfai/assistant/catalog/test-layers.md
       - .qfai/specs/spec-\*/09_delta.md
+      - .qfai/specs/spec-\*/01_Spec.md
       - .qfai/specs/spec-\*/02_User-stories.md
       - .qfai/specs/spec-\*/03_Acceptance-Criteria.md
       - .qfai/specs/spec-\*/04_Business-Rules.md
       - .qfai/specs/spec-\*/05_Examples.md
       - .qfai/specs/spec-\*/06_Test-Cases.md
       - .qfai/contracts/api/\*\* (CON-API) — **conditional**, see below: only where the spec under review references `CON-API-*`
+      - .qfai/contracts/db/\*\* (under the configured `paths.contractsDir`, not always this default) — **conditional**: only where the spec references `CON-DB-*`; where it does not, absence is not a gap
+
+      A spec references a contract from either of two places: `Contract-Refs` in
+      `04_Business-Rules.md`, and a `QFAI-CONTRACT-REF` line in `01_Spec.md`. Read
+      both before deciding a conditional input does not apply. A spec that names a
+      `CON-DB-*` only in `01_Spec.md` reads as having none if the second place is
+      skipped, and the estimate then omits the Integration work that contract carries.
 
       Read `06_Test-Cases.md` and `02_User-stories.md` as the obligation set in full — `TC-*` and `US-*` — independently of whichever
       rows an execution ledger happens to hold: a coverage-target `TC-*` whose row was dropped is invisible to a check that starts from
@@ -930,6 +961,7 @@ agents:
       - .qfai/assistant/catalog/test-layers.md
       - .qfai/specs/spec-\*/09_delta.md
       - .qfai/specs/spec-\*/01_Spec.md
+      - .qfai/contracts/db/\*\* (under the configured `paths.contractsDir`, not always this default) — **conditional**: only where the spec references `CON-DB-*`; where it does not, absence is not a gap
       - QA evidence, coverage tooling outputs, and test plans
 
       ## Deliverables
@@ -1621,10 +1653,13 @@ agents:
 
       **The status alone does not carry the exclusion; the `DR-*` does.** `exception`
       is reachable from **any** active status, so a row that reached `red`, proved its
-      oracle and was parked by a failing checkpoint at `refactor -> exception` is an
-      `exception` that already owed a proof — and owes it still. Apply the exclusion
-      only where the `DR-*` records that **both** proof forms were unavailable, which
-      is the finding that puts a row on branch 3. A `DR-*` recording any other anomaly
+      oracle and was later parked as an anomaly is an `exception` that already owed a
+      proof — and owes it still. A failing checkpoint is not one of the routes that
+      park it: the row stays at `refactor` and the repair is re-run, which
+      `.qfai/assistant/skills/qfai-implement/references/checkpoint-verification.md#pass-criteria`
+      defines and nothing else does. Apply the exclusion only where the `DR-*` records
+      that **both** proof forms were unavailable, which is the finding that puts a row
+      on branch 3. A `DR-*` recording any other anomaly
       leaves the row's `Oracle proof` obligation exactly where its `red` left it, and
       absence or invalidity is REVISE there as anywhere. A `DR-*` naming no
       unavailability at all is already REVISE under "Branch 3 gets its own verdict",
@@ -1862,7 +1897,7 @@ agents:
 
       ## Test Case Quality Depth Check (MUST)
 
-      In addition to traceability-based coverage (US/TC/CON-API existence), verify the **depth** of test cases:
+      In addition to traceability-based coverage (US/TC/CON-API/CON-DB existence), verify the **depth** of test cases:
 
       - Confirm a Coverage Depth Matrix exists at `.qfai/evidence/coverage-depth-<spec-id>.md` (produced by `test-design-analyst`).
         Missing matrix: REVISE from the ATDD review cycle onward; on an SDD review cycle record it as a finding. See the scope note.
@@ -1960,18 +1995,67 @@ agents:
       unavailability, is still REVISE — this is a third form of evidence, not an
       exemption from having any.
 
+      **`assistant/agents/qa-gatekeeper.md` is the contract;
+      `assistant/manifest/agent-catalog.yml` carries a copy.** `npx qfai init --force`
+      refreshes `assistant/agents/**` and deliberately leaves `assistant/manifest/**`
+      alone, so an upgraded project can hold a catalog block that predates a phase the
+      shipped skills already route to. Where the two disagree, or where the catalog
+      describes no gate for a phase this role is routed to, read the agent file. A
+      catalog block older than the routing table is a stale copy, never a narrower
+      contract — reading it as one puts a mandatory blocking role into the Stop
+      condition on a phase it is required to pass.
+
+      Both paths are written out because this passage is itself copied into the
+      catalog and into the per-tool agent profiles. "This file" resolves to whichever
+      copy the reader has open, which is the one question the passage exists to
+      settle.
+
+      **The Skeleton observation gate reads a different set.**
+      `/qfai-implement`'s `Phase: Skeleton` runs **before the first ledger row is
+      selected** (`.qfai/assistant/skills/qfai-implement/references/walking-skeleton.md`),
+      so there is no row under review and no per-item RED/GREEN evidence to open.
+      Requiring them would put this role straight into the Stop condition below on
+      every run of a phase where it is mandatory and blocking, leaving a `PASS` that
+      cannot legally be given. At that gate the inputs are:
+
+      - `.qfai/evidence/skeleton.md`, the section of the entrypoint under judgement —
+        `Skeleton verdict`, `Skeleton entrypoint`, `Skeleton US`, `Skeleton command`,
+        `Skeleton script` (a path and a SHA-256 **per committed file the run
+        executes**, the entry script first), `Skeleton result` (its output **and exit
+        status**), `Skeleton debt`, `Skeleton cycles`;
+      - every committed file that manifest names, not only the entry script
+        `catalog/tech.md` points at, and `catalog/structure.md` for the declared
+        entrypoints.
+
+      Judge exactly the phase's exit criterion, and nothing the rows own: the recorded
+      run started the entrypoint, reached the named boot obligation's surface over the
+      transport that entrypoint declares, and exited 0; the command recorded is the
+      committed script rather than an independent copy of it; every hash in the
+      manifest matches the file on disk, so a delegate edited to a no-op is a REVISE
+      rather than a PASS on the entry script alone; the two bounds hold —
+      no predicate was written that a row owns, and every shortcut is enumerated in
+      `Skeleton debt` with the row that carries it or the `CR-*` that requests it.
+      PASS or REVISE on that. Correctness of the boot obligation is **not** in scope:
+      it belongs to the row that owns it and is taken there as an ordinary RED, so a
+      sentinel answer is not a finding here. A verdict of `not applicable` routes
+      nobody and needs no judgement.
+
       ## Deliverables
 
       - Gate decision (PASS / REVISE) with rationale
       - Hard gate status and required fixes
       - Evidence summary and unresolved quality gaps
+      - At the Skeleton gate: the verdict recorded in that entrypoint's
+        `Skeleton gatekeeper` field
 
       ## Stop conditions
 
       - Required evidence, governing specs, or target artifacts are missing — judged
         against what the invoking phase requires, per the note above the last three
         inputs. At a RED/GREEN observation that is the row's own evidence; at a
-        completion gate it is all of them.
+        completion gate it is all of them; at the Skeleton gate it is
+        `.qfai/evidence/skeleton.md` and the committed smoke script, and **no ledger
+        row or per-item evidence is required or expected**.
       - The request requires implementation or file editing instead of independent review.
       - The issue falls outside this review domain and must be rerouted to another specialist first.
 

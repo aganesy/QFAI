@@ -734,3 +734,189 @@ describe("a mistyped TC column still declares its ids", () => {
     });
   });
 });
+
+/**
+ * Writes a test file verbatim, without the fixed `describe`/`it` pair
+ * {@link seedTest} appends. The suite's call form is the subject here, so it
+ * has to be the one under test rather than one the helper supplies.
+ */
+async function seedRawTest(
+  root: string,
+  kind: "e2e" | "api" | "integration",
+  fileName: string,
+  lines: string[],
+): Promise<void> {
+  const dir = path.join(root, "tests", kind);
+  await mkdir(dir, { recursive: true });
+  await writeFile(path.join(dir, fileName), [...lines, ""].join("\n"), "utf-8");
+}
+
+/** The reported idiom: a runner entry point chosen at runtime, then called. */
+function computedSuite(annotation: string, binding = "deployed"): string[] {
+  return [
+    annotation,
+    `const ${binding} = process.env.LIVE_TARGET ? describe : describe.skip;`,
+    "",
+    `${binding}("probe", () => {`,
+    '  it("reaches the target", () => {});',
+    "});",
+  ];
+}
+
+describe("QFAI-ATDD-124: coverage that rests on a suite bound at runtime", () => {
+  it("names the carrier whose suite is chosen by a ternary", async () => {
+    // The gap this reports: `QFAI-ATDD-112` is satisfied by the annotation
+    // string alone, so the obligation clears whether the runner collects the
+    // suite or skips it. Deleting the production code behind such a TC leaves
+    // every gate green, which is the one thing the coverage gate exists to
+    // prevent.
+    await withProject(async (root) => {
+      await seedSpec(root, "0001", ["US-0001"], ["TC-0001"]);
+      await seedApiContract(root, "CON-API-0001");
+      await seedTest(root, "e2e", "a.test.ts", "/* QFAI:SPEC-0001:US-0001 */");
+      await seedTest(root, "api", "a.test.ts", "/* QFAI:CON-API-0001 */");
+      await seedRawTest(
+        root,
+        "integration",
+        "probe.test.ts",
+        computedSuite("/* QFAI:SPEC-0001:TC-0001 */"),
+      );
+
+      const issues = await validateAtddCodeTraceability(root, defaultConfig);
+      const finding = issues.find((entry) => entry.code === "QFAI-ATDD-124");
+
+      expect(finding).toBeDefined();
+      expect(finding?.severity).toBe("info");
+      expect(finding?.file).toBe("tests/integration/probe.test.ts");
+      expect(finding?.message).toContain("tests/integration/probe.test.ts");
+      // Reported, not accused: the annotation still satisfies the obligation,
+      // and nothing about the run is made to fail.
+      expect(issues.filter((entry) => entry.severity === "error")).toEqual([]);
+      expect(issues.some((entry) => entry.code === "QFAI-ATDD-112")).toBe(false);
+    });
+  });
+
+  it("stays quiet on an ordinary suite", async () => {
+    await withProject(async (root) => {
+      await seedSpec(root, "0001", ["US-0001"], ["TC-0001"]);
+      await seedApiContract(root, "CON-API-0001");
+      await seedTest(root, "e2e", "a.test.ts", "/* QFAI:SPEC-0001:US-0001 */");
+      await seedTest(root, "integration", "a.test.ts", "/* QFAI:SPEC-0001:TC-0001 */");
+      await seedTest(root, "api", "a.test.ts", "/* QFAI:CON-API-0001 */");
+
+      const issues = await validateAtddCodeTraceability(root, defaultConfig);
+      expect(issues.some((entry) => entry.code === "QFAI-ATDD-124")).toBe(false);
+    });
+  });
+
+  it("stays quiet on a literal describe.skip", async () => {
+    // A written-out modifier is a token any scan can already read, so it is a
+    // different problem with a different answer. Reporting it here would make
+    // the finding mean "this file might not run", which is true of far too
+    // much to be worth saying.
+    await withProject(async (root) => {
+      await seedSpec(root, "0001", ["US-0001"], ["TC-0001"]);
+      await seedApiContract(root, "CON-API-0001");
+      await seedTest(root, "e2e", "a.test.ts", "/* QFAI:SPEC-0001:US-0001 */");
+      await seedTest(root, "api", "a.test.ts", "/* QFAI:CON-API-0001 */");
+      await seedRawTest(root, "integration", "held.test.ts", [
+        "/* QFAI:SPEC-0001:TC-0001 */",
+        'describe.skip("held back", () => {',
+        '  it("will run later", () => {});',
+        "});",
+      ]);
+
+      const issues = await validateAtddCodeTraceability(root, defaultConfig);
+      expect(issues.some((entry) => entry.code === "QFAI-ATDD-124")).toBe(false);
+    });
+  });
+
+  it("stays quiet when the computed name is never called as a suite", async () => {
+    // Both halves are required. An initializer alone may be a value passed to
+    // something else entirely, and calling it is what makes the file's suite
+    // the undecidable one.
+    await withProject(async (root) => {
+      await seedSpec(root, "0001", ["US-0001"], ["TC-0001"]);
+      await seedApiContract(root, "CON-API-0001");
+      await seedTest(root, "e2e", "a.test.ts", "/* QFAI:SPEC-0001:US-0001 */");
+      await seedTest(root, "api", "a.test.ts", "/* QFAI:CON-API-0001 */");
+      await seedRawTest(root, "integration", "unused.test.ts", [
+        "/* QFAI:SPEC-0001:TC-0001 */",
+        "const maybe = process.env.LIVE_TARGET ? describe : describe.skip;",
+        "void maybe;",
+        "",
+        'describe("plain", () => {',
+        '  it("runs", () => {});',
+        "});",
+      ]);
+
+      const issues = await validateAtddCodeTraceability(root, defaultConfig);
+      expect(issues.some((entry) => entry.code === "QFAI-ATDD-124")).toBe(false);
+    });
+  });
+
+  it("finds a called binding that follows an uncalled one", async () => {
+    // Reading only the first binding in the file made the report depend on
+    // declaration order, so a file that computes a spare name before the one it
+    // uses read as ordinary.
+    await withProject(async (root) => {
+      await seedSpec(root, "0001", ["US-0001"], ["TC-0001"]);
+      await seedApiContract(root, "CON-API-0001");
+      await seedTest(root, "e2e", "a.test.ts", "/* QFAI:SPEC-0001:US-0001 */");
+      await seedTest(root, "api", "a.test.ts", "/* QFAI:CON-API-0001 */");
+      await seedRawTest(root, "integration", "second.test.ts", [
+        "/* QFAI:SPEC-0001:TC-0001 */",
+        "const spare = process.env.OTHER ? describe : describe.skip;",
+        "void spare;",
+        ...computedSuite("", "used").slice(1),
+      ]);
+
+      const issues = await validateAtddCodeTraceability(root, defaultConfig);
+      expect(issues.some((entry) => entry.code === "QFAI-ATDD-124")).toBe(true);
+    });
+  });
+
+  it("reports the carriers as sorted repository-relative paths", async () => {
+    await withProject(async (root) => {
+      await seedSpec(root, "0001", ["US-0001"], ["TC-0001"]);
+      await seedApiContract(root, "CON-API-0001");
+      await seedRawTest(root, "e2e", "b.test.ts", computedSuite("/* QFAI:SPEC-0001:US-0001 */"));
+      await seedRawTest(root, "api", "a.test.ts", computedSuite("/* QFAI:CON-API-0001 */"));
+      await seedTest(root, "integration", "a.test.ts", "/* QFAI:SPEC-0001:TC-0001 */");
+
+      const result = await evaluateAtddCodeTraceability(root, defaultConfig);
+      expect(result.computedSuiteCarriers).toEqual(["tests/api/a.test.ts", "tests/e2e/b.test.ts"]);
+    });
+  });
+
+  it("truncates the list at ten and counts the rest", async () => {
+    await withProject(async (root) => {
+      await seedSpec(root, "0001", ["US-0001"], ["TC-0001"]);
+      await seedApiContract(root, "CON-API-0001");
+      await seedTest(root, "e2e", "a.test.ts", "/* QFAI:SPEC-0001:US-0001 */");
+      await seedTest(root, "api", "a.test.ts", "/* QFAI:CON-API-0001 */");
+      for (let index = 0; index < 12; index += 1) {
+        await seedRawTest(
+          root,
+          "integration",
+          `probe-${String(index).padStart(2, "0")}.test.ts`,
+          // Every file is annotated: an unannotated one is never classified at
+          // all, because the classification tokenizes the whole body and
+          // nothing downstream would read the answer.
+          computedSuite("/* QFAI:SPEC-0001:TC-0001 */"),
+        );
+      }
+
+      const issues = await validateAtddCodeTraceability(root, defaultConfig);
+      const finding = issues.find((entry) => entry.code === "QFAI-ATDD-124");
+
+      expect(finding?.message).toContain("12 file(s)");
+      expect(finding?.message).toContain("(and 2 more)");
+      expect(finding?.message).toContain("tests/integration/probe-09.test.ts");
+      expect(finding?.message).not.toContain("tests/integration/probe-10.test.ts");
+      // The truncation is a message length limit, not a loss of the data: the
+      // structured payload still carries every carrier.
+      expect(finding?.relatedFiles).toHaveLength(11);
+    });
+  });
+});

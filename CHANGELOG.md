@@ -4,7 +4,880 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ## [Unreleased]
 
+## [1.11.1] - 2026-09-10
+
+### Removed
+
+- **BREAKING: severity no longer depends on which `qfai` runs** (#1421).
+  `core/sunset.ts` held two registries — `RULE_PROMOTIONS` and `SUNSETS` — and
+  `newRuleSeverity` / `deprecationSeverity` turned a version pin in them into
+  `warning` or `error` according to the version of the tool executing the run.
+  The whole mechanism is gone, along with `scripts/promotion-preflight.mjs`, the
+  five test files that held it, and the frozen code baseline one of them read.
+
+  **77 findings that reported `warning` now report `error`.** Each was inside an
+  open window, and `error` is the severity its pin was heading to:
+
+  `QFAI-AGENT-014` … `QFAI-AGENT-019`, `QFAI-ASSETS-003` … `QFAI-ASSETS-009`,
+  `QFAI-ATDD-127`, `QFAI-ATDD-128`, `QFAI-ATDD-131` … `QFAI-ATDD-133`,
+  `QFAI-AUTOPILOT-001`, `QFAI-BFLOW-005`, `QFAI-BFLOW-006`, `QFAI-BRREF-001` …
+  `QFAI-BRREF-003`, `QFAI-CONTRACT-015`, `QFAI-CONTRACT-032` …
+  `QFAI-CONTRACT-038`, `QFAI-CONTRACT-041`, `QFAI-CONTRACT-050`,
+  `QFAI-CTYPE-004`, `QFAI-DECISION-001` … `QFAI-DECISION-007`, `QFAI-LINK-002`,
+  `QFAI-PLATFORM-003`, `QFAI-PROT-011`, `QFAI-RESEARCH-012`,
+  `QFAI-RESEARCH-015` … `QFAI-RESEARCH-021`, `QFAI-SKILLS-013`,
+  `QFAI-SKILLS-014`, `QFAI-SPECSECTION-001`, `QFAI-SPECSECTION-002`,
+  `QFAI-SPLIT-106`, `QFAI-TCLEVEL-001`, `QFAI-TCLEVEL-002`, `QFAI-TDDLIST-007`
+  … `QFAI-TDDLIST-018`, `QFAI-TEST-003`, `QFAI-TOOL-002`, `QFAI-TRIAGE-008`,
+  `QFAI-TRIAGE-009` and `TDDLIST_EVIDENCE_EMPTY`.
+
+  A project passing `validate --fail-on error` today may fail after upgrading,
+  in proportion to what it has accumulated. Measured on this repository's
+  `--profile full`: 0 errors and 1467 warnings before, 1065 errors and 402
+  warnings after. Every one of the 1467 is accounted for — none is new, and the
+  402 that stayed are the codes no pin governed.
+
+  A bare tree is affected too, in one specific way. `qfai init` writes the four
+  Stage 0 catalog documents with placeholders and asks the adopter to fill them
+  in, and `QFAI-ASSETS-003` reports the placeholders. On a tree where Stage 0
+  has not been done, `validate --profile full` now reports 5 errors where it
+  reported 1: the four documents, plus the `QFAI-DPACK-001` a tree with no
+  discussion pack already had. So a bare tree did not pass the full gate before
+  this change either — it now says four more things are outstanding, and all
+  five clear the same way, by doing the step they name. A tree that has done
+  Stage 0 and holds a pack is clean: `verify:pack` reports no errors.
+
+  `QFAI-AGENT-019` moves in one half only. It reports a routed agent a skill's
+  `roles:` omits, and only a `required` binding was ever on the ladder — a
+  `conditional` omission was and stays a `warning`, because it is a
+  documentation gap rather than an unreachable gate.
+
+  The findings no longer carry the sentence naming a release, because there is
+  no release to name.
+
+  **Why.** The maintainer picks release numbers. A severity ladder keyed on the
+  version number is a second release policy running underneath that one, and it
+  had three effects, all unwanted. Publishing `main` as one number escalated 43
+  rules while the same tree published as another escalated none, so the number
+  could not be chosen freely. A window hid the finding it deferred behind a
+  passing gate, and handed the operator the whole backlog on one upgrade. And 34
+  source files imported the registry to ask what severity to use, each rendering
+  its own sentence about the window into its own message.
+
+  A breaking change is announced in this file and in the release notes, and the
+  adopter acts on it. That is legible before an upgrade in a way a pin in the
+  source never was.
+
+  Two things that were already closed go quietly, because their windows shut at
+  1.10.0 and nothing had changed since: the legacy `.qfai/output/validate.json`
+  write path, and the pre-recut `.qfai/assistant/{steering,instructions}/`
+  layout. Both were already reported at `error`.
+
+  `docs/design-principles.md` P7 is rewritten: a code ships at the severity it
+  means, and the changelog carries the migration.
+
+  **A waiver no longer covers any of them.** `QFAI-WAIVER-002` forbids a waiver
+  whose rule is an error, and every code above now is one. The window and the
+  waiver were one escape hatch: three of these rules were documented as
+  "waivable warning, so legacy ledgers migrate instead of breaking", and that
+  route is closed. A project carrying such a waiver has to fix the condition
+  instead.
+
+  One consequence is not yet reported. `applyWaiversToExtraFindings` returns the
+  applied result and drops the waiver pass's own findings, so a waiver on a
+  finding the report appends after validation is neither applied nor refused out
+  loud — the operator sees a waiver that does nothing. That gap predates this
+  change and is tracked separately.
+
+  `QFAI-CFG-001` joins the refusal without changing severity. Its only emitter
+  always raised it at `error`, but through a variable the code generator could
+  not read, so a waiver against it was accepted on a clean run and refused on
+  the run that produced the finding. The severity is now a literal, and the
+  waiver is refused either way.
+
+  Twenty-seven source files no longer resolve the running version at all, and
+  the parameter that carried it down is gone from the functions that threaded
+  it. What still reads the version reports it: `qfai --version`, the doctor, the
+  run stamp on a result.
+
+### Changed
+
+- **The dogfooding lanes run as a ratchet while this repository migrates**
+  (#1436). The three `qfai validate` steps in CI ran `--fail-on error`, which
+  passed while the ledger rules reported `warning`. They report `error` now,
+  and this repository carries a backlog of rows written before those rules
+  existed: 1035 findings on `tdd`, 103 on `sdd`, 1065 on `full`.
+
+  A waiver cannot clear them, and writing a pointer to evidence nobody captured
+  would be worse than the backlog, so the fix is to re-run the work spec by
+  spec. Until that lands, `scripts/check-dogfood-backlog.mjs` holds each lane
+  to `scripts/dogfood-backlog.json`:
+
+  | Contract     | Holds                                                           |
+  | ------------ | --------------------------------------------------------------- |
+  | Held at zero | a file absent from the profile's pin may report no error at all |
+  | Ratchet      | a pinned file may report no more errors than its pinned count   |
+
+  So a new failure in a clean file still fails the build, and one in a file
+  already carrying debt fails as soon as it raises that file's count. A file
+  that improves is re-pinned in the same change; one that reaches zero is
+  struck from the list so the slot cannot be reused.
+
+  This is the repository's own copy of the migration the entry above describes,
+  and it is a weaker claim than the lanes made before. The lanes go back to
+  `--fail-on error` when every pin is empty.
+
+- **The `.qfai/contracts/cli/` convention is on the surface every agent reads**
+  (#1416). It sat in `CLAUDE.md` alone after the contracts README that used to
+  carry it was removed, and `AGENTS.md` is what Codex reads. An agent working
+  outside Claude had no path to the `CLI-*` index, the "no `QFAI-CONTRACT-ID`"
+  rule or the `qfai-<command>.md` naming, and a repository search found only the
+  one copy.
+
+  Moved rather than copied. Two statements of a naming rule drift, and the one
+  that goes stale is the copy its readers do not also see stated elsewhere.
+
+### Fixed
+
+- **A writer that loses the provenance lock keeps its entry** (#1418). Twenty
+  writers contend for one lock, and a reclaimer can judge a holder stale and
+  take the lock it just published. The holder finds a stranger's object at the
+  name when it reads back, which is the protocol working: the writer that lost
+  is the writer that was supposed to lose, and nothing was written.
+
+  It was raised as a plain error, which left `updateInstallProvenance`
+  entirely — above the re-apply loop that exists to absorb exactly this. So a
+  writer that lost one race lost its entry with it, and a lost provenance entry
+  does not heal: the file stays on disk with nothing recorded, reads as
+  `adopter-owned`, and no later run puts it back.
+
+  That one outcome is now typed and retried inside the loop. Nothing else is:
+  a patience exhausted against a tree somebody else is writing, or any I/O
+  fault, still leaves immediately, because going round again would spend
+  another whole patience window on the same answer. The lock windows are
+  untouched — `LOCK_ATTEMPTS × LOCK_POLL_MS > LOCK_STALE_MS` still holds, and
+  tuning them is what an earlier attempt at this cost sixteen minutes on one
+  test row.
+
+  When the attempts do run out, the message says which of the two exhausted
+  them. Losing the lock every time and being overtaken every time call for
+  different things from an operator.
+
+- **A whitespace-only rewrite no longer pulls a document into the shape gate**
+  (#1423). `check-mdschema --scope changed` selected documents with
+  `git diff --name-only`, which answers which files a branch touched rather than
+  which documents it changed. Re-normalising a tree's line endings rewrites every
+  file, so the whole document set entered the gate and every violation it already
+  carried reported at once — which leaves "normalise the line endings" and "keep
+  the docs lane green" reading as alternatives.
+
+  Two details decide this, and neither is the obvious spelling:
+
+  | Instead of           | Use                  | Because                                                             |
+  | -------------------- | -------------------- | ------------------------------------------------------------------- |
+  | `--name-only`        | `--numstat`          | `--name-only` selects by blob identity and ignores whitespace flags |
+  | `--ignore-all-space` | `--ignore-cr-at-eol` | indentation is a shape change here, and the wide flag hides it      |
+
+  The second matters as much as the first. Moving a list item two spaces right
+  nests it under its predecessor, which is exactly what this gate grades, so a
+  flag that ignores all whitespace would drop that edit out of scope.
+
+- **The shipped UI contract guide describes what the marker lane does** (#1411).
+  Two of its statements were wrong against the code, and a reader acts on a
+  guide that ships.
+
+  | Said                                                       | Does                                                        |
+  | ---------------------------------------------------------- | ----------------------------------------------------------- |
+  | expected markers are generated from `elements[].id`        | only the `data-qfai` values a contract writes are inspected |
+  | the fidelity snapshot is `.qfai/evidence/prototyping.json` | it is `.qfai/evidence/prototyping/prototyping.json`         |
+
+  The first costs coverage. The marker rule is opt-in by construction — a
+  contract that names no marker is asked for nothing — so telling a reader that
+  naming elements well removes the need for a marker list pointed them at the
+  one shape the lane never checks. It reports success either way, and the
+  missing coverage shows up nowhere.
+
+  `templates/contracts/ui-contract.sample.yaml` is the file a new contract is
+  copied from, so its marker now uses the `CONTRACT_ID:ELEMENT_ID` form the
+  guide states, against an element the same file declares.
+
+- **An unquoted `data-qfai` value is a declared marker** (#1413).
+  `QFAI-CONTRACT-037` collected markers with a pattern that required quotes
+  around the value, so `[data-qfai=order_submit]` declared nothing — and a CSS
+  attribute selector may leave the value unquoted when it is an identifier, as
+  may an HTML attribute.
+
+  The miss was silent in the worst direction. A contract that names no marker
+  is asked for nothing, which is how the rule stays opt-in, so a contract whose
+  only marker was written bare read as having opted out: the element went
+  unchecked and there was no finding to say so.
+
+  A bare value now ends at whitespace or at whatever closes what it sits in —
+  `]` for a selector, `>` for a tag, `,` or `}` in flow syntax. Quoting still
+  works and is what the shipped template writes, so nothing that passes today
+  changes.
+
+- **`certify` says when a UI contract candidate it ignored has files in it**
+  (#1408). Per-spec contracts resolve in two tiers and the first candidate wins
+  outright, so a project holding more than one shape had the rest dropped from
+  the per-screen review with nothing said. The run exited 0 having checked a
+  narrower set than the contracts declare.
+
+  The resolution is unchanged — a project with several candidate layouts still
+  needs a deterministic answer, and the precedence order is documented. What is
+  new is that the run names the file it took and every file it ignored, the
+  other single-file candidates included, so one round of deletions is enough.
+  The exit code is untouched, so no tree that holds two layouts today starts
+  failing.
+
+  The message is withheld when the taken file declares no valid screen. The run
+  then falls back to the project-wide screen list, which pools every contract,
+  so the ignored files' screens are reviewed after all.
+
+  A project path holding glob syntax — `Project (2)`, say — no longer hides the
+  ignored tier. The search root is passed as a directory rather than as part of
+  the pattern.
+
+  `ui-contract-guide.md` described those screens as failing the review gate.
+  They did not: they were never read, and the gate passed.
+
+- **Two more change-scoped lanes select by changed text, not changed bytes**
+  (#1426). The pack-location lane and the prompt/scanner pair lane each scoped
+  themselves with `git diff --name-only`, which selects by blob identity and
+  ignores the whitespace flags. A commit that re-normalises line endings
+  therefore handed both of them files nothing had edited: the first reported the
+  location of packs nobody moved, the second asked for a pairing edit nobody
+  owed.
+
+  Both now read `--numstat` with `--ignore-cr-at-eol`. The flag is narrow on
+  purpose. `--ignore-all-space` also hides an indentation change, and
+  indentation carries meaning in the documents these lanes read.
+
+- **A misplaced review pack is reported before anything stages it** (#1426).
+  `git status --porcelain` collapses a directory git has never seen to that one
+  entry, so a pack written but not yet added arrived as `review-bad/`. The lane
+  skips a path's last segment, taking it for the file name, and the pack fell
+  out of the scan — the case the lane exists for was the case it could not see.
+
+  The status read now passes `--untracked-files=all`, which lists each file, so
+  the pack directory is a segment the lane reads. It is also restricted to
+  untracked entries: tracked edits come from the diffs, which is where the
+  whitespace flags apply, and status cannot take one.
+
+  A pack being un-tracked stays out of scope. `git rm --cached` stages a
+  removal and leaves the file on disk, so status names a path the index is
+  dropping — the reverse of introducing one.
+
+- **A re-pin writes a declaration `format:check` accepts** (#1430). Both re-pin
+  scripts wrote `.github/required-status-contexts.json` with `JSON.stringify`,
+  which puts every array element on its own line where Prettier keeps a short
+  array on one. Five arrays in that file are short, so what the scripts wrote
+  failed the first lane in `ci:lint`.
+
+  The dependency-update job runs those two scripts and pushes the result, so
+  every update arrived with its digests corrected and its pull request red over
+  a diff whose every line was whitespace. Re-pinning by hand met the same thing:
+  the instruction the hygiene lane prints produced a change that failed the next
+  lane.
+
+  Both scripts now write through one formatter, which reads the repository's own
+  Prettier configuration rather than a copy of it.
+
+- **A waiver on a finding the report appends is applied or refused, never
+  silently ignored** (#1424). `report` raises `QFAI-CTYPE-004` after validation
+  has already run its waiver pass, so it runs a second pass of its own — and
+  that pass's verdicts on the waiver file were discarded. A waiver the pass
+  refused changed nothing and said nothing, so the operator saw a finding that
+  looked unwaivable rather than a waiver that was wrong.
+
+  The two passes do not reach the same verdicts. A rule's severity is read from
+  the findings in hand, and the second pass holds the findings validation never
+  saw, so `QFAI-WAIVER-001`, `-002` and `-004` can each be reached there and
+  nowhere else.
+
+  A verdict validation already published is not repeated. Both passes read the
+  same file, and that duplication is what the discarded list was avoiding.
+
 ### Added
+
+- **`QFAI-CONTRACT-038` reports a `prototype.mode` outside the vocabulary**
+  (#1402). A UI contract's `prototype` mapping is authoring metadata, and
+  `interactive` is the only mode the tooling and the shipped template know.
+  Nothing branched on the value and nothing rejected another, so `mode: static`
+  told every reader the prototype was something it is not, with no run
+  disagreeing. A one-value vocabulary and no check is where a typo survives
+  longest, because there is nothing to fail.
+
+  The finding ships behind a promotion window and names the release that ends
+  it. Nothing has ever rejected a value here, so a project carrying a typo has
+  been passing and was never told. Only a contract that writes a mode is asked
+  anything, and only a value the vocabulary does not hold is reported — a
+  contract with no `prototype`, or an unfilled `mode:`, stays silent.
+
+  Two documents disagreed about whether `prototype` was required at all.
+  `contract-artifact-rules.md` said a UI contract must define `markers` and
+  `mockPaths`; `ui-contract-guide.md` said no lane reads `prototype`. Both now
+  say the mapping is optional and what it declares is checked.
+
+  The guide's claim that no lane reads `prototype` was also wrong.
+  `QFAI-CONTRACT-037` collects `data-qfai` values from the whole contract, so a
+  selector written under `prototype.markers` — which is how the shipped template
+  writes one — is a declared marker and is looked for in the source tree.
+
+- **`qfai doctor --autoremediate` relinks a broken integration wrapper, and
+  only that** (#1386). `qfai init --force` clears the same finding, and it also
+  regenerates `.qfai/assistant/skills/**`, `assistant/agents/**` and the shipped
+  plain files — so local edits to any of those are gone. That is a command an
+  operator may choose to run; it is not one an unattended pass may reach for on
+  their behalf.
+
+  The repair walks the paths the gate names and writes symlinks, through the
+  same writer `init` uses. Its atomic claim, target check and rollback are the
+  reason a rewrite that fails leaves the wrapper it found rather than none at
+  all — and an absent wrapper is the one damaged state `QFAI-LINK-001` reads as
+  benign, so a naive repair would hide its own failure from the gate that sent
+  the operator there.
+
+  Three kinds of path are named rather than rewritten, because a pass that
+  passed over them in silence would read as having repaired the tree:
+
+  | path                                         | why not                                      |
+  | -------------------------------------------- | -------------------------------------------- |
+  | outside the shipped roster                   | rewriting restores what the finding is about |
+  | occupied by a real file, directory or device | the content is somebody's, not a link        |
+  | a rewrite the platform refused               | creating a symlink can need elevation        |
+
+  Waived wrappers are left alone, on the pass `validate` runs, so a project that
+  has decided to keep one does not have that decision undone unattended.
+
+### Fixed
+
+- **A filled-in Stage 0 catalog is exempt from the stale rule as well as the
+  fork rule** (#1396). `.qfai/assistant/catalog/{manifest,product,structure,tech}.md`
+  ship telling the reader to replace their contents, and a project that does so
+  was reported either way. Which of the two rules fired was decided by the lock
+  rather than by the document: a fork while `.assets.lock.json` still held the
+  shipped hash, and stale once it held what the project wrote.
+
+  Exempting only the fork moved the finding to the worse of the two.
+  `QFAI-ASSETS-004` offers `qfai init --force` as its remedy, which rewrites the
+  file — so a project following it lost the content the document exists to
+  carry.
+
+  Both now pass on those four files, and `qfai init --force` leaves them alone
+  rather than refreshing them. It decided what to refresh with the same
+  comparison the stale rule uses, so a lock holding the project's own content
+  made the file look refreshable and the run replaced it with the template,
+  silently. Not reporting the file was only half of owning it.
+
+  A deleted one is still reported: that is an absence rather than a difference,
+  and nothing else reports a catalog the skills read being gone. The shipped
+  `assistant/README.md` and `constitution/drift-protocol.md` name the four as
+  the exception to the vendored-rule contract they describe.
+
+- **A wrong root heading is one mdschema violation, not one per section**
+  (#1388). Sections are graded against the heading above them, so a document
+  whose H1 the schema does not accept had every section beneath it reported as
+  `Unexpected section`. One wrong line became one violation per heading in the
+  outline — 55 lines for four root causes in the run that was measured — and
+  none of the extra lines was true. Those sections are where they belong, under
+  a heading that is spelled wrong.
+
+  The lane now takes that one verdict from the schema's own declaration, before
+  running `mdschema`, and does not run it over a document that fails it. The
+  cascade is never produced rather than filtered afterwards.
+
+  The output says the document is not checked further until the heading matches,
+  because a reader who is not told that reads the absence of other lines as the
+  rest of the document being sound. The cost is a second pass once the heading is
+  fixed, against a first pass whose real content was buried.
+
+  Reading the schema rather than `mdschema`'s output is what keeps this sound.
+  The schemas are this repository's, pinned by its own tests; the tool's message
+  text is not a contract, since every `--format` renders the same prose. A
+  parser for it would change what the lane reports whenever an upstream release
+  reflowed a sentence.
+
+  The ratchet is unchanged: a root heading already wrong at the merge base stays
+  the migration's backlog, and one this branch breaks is this branch's.
+
+- **A test's git sandbox no longer races git's own background maintenance**
+  (#1394). `git commit` starts `git maintenance run --auto`, and `gc.autoDetach`
+  defaults to true, so that process is detached and outlives the commit the test
+  waited on. It keeps writing into `.git/objects/pack`, and a test removing its
+  sandbox afterwards failed with `ENOTEMPTY` on that directory — with its
+  assertions already passed, on a branch touching none of the code involved.
+
+  `maintenance.auto=false` is now declared through the environment in a per-file
+  test setup, so every git a test spawns inherits it. Twenty test files build a
+  real repository and eleven of them removed it without retrying; this reaches
+  all of them, and every fixture added later, rather than asking each test to
+  remember.
+
+  `gc.auto=0` is not an alternative. It decides what maintenance does once it has
+  started, not whether `git commit` starts it.
+
+### Changed
+
+- **`qfai init` writes no `README.md`, and `qfai validate` reads a record
+  instead of one** (#1399). Six READMEs were written into every adopter tree —
+  `.qfai/assistant/`, `.qfai/steering/`, and one in each of the four integration
+  directories — against a rule two shipped skills already state: _do not create
+  `.qfai/**/README.md` files as scaffold or format documentation; keep artifact
+  guidance in skill references/templates._
+
+  One of them was load-bearing. `qfai validate` has to tell "init ran here and
+  the integration surface was deleted" from "init never ran here", because only
+  the first is a defect and the two look identical from the integration
+  directories alone. It answered that by reading `.qfai/assistant/README.md` for
+  a title, a section heading and a path substring — all three, because any one
+  of them appears in a README a project wrote about where it keeps its own QFAI
+  tree.
+
+  Prose was the wrong evidence. Four of the five candidate paths sit in
+  conventional directories where init wrote a README only when the path was
+  free, so a project that already had its own at every one of them ran init and
+  got no marker at all. `QFAI-LINK-001` now reads
+  `.qfai/assistant/.assets.lock.json` and `.qfai/install-provenance.json`:
+  written unconditionally, inside a directory init creates, named nothing a
+  project writes for its own reasons. Presence decides it, with no parse — a
+  record something later truncated still proves init ran, and that state has its
+  own finding.
+
+  A run removes `.qfai/assistant/README.md` when it still carries init's
+  signature, since that file described the check being replaced. A README a
+  project wrote itself is left alone, and so is one an earlier release merged a
+  project's own notes into.
+
+  The guidance those files held now sits where a reader goes for it. The UI
+  contract document was the only one with content the shipped tree did not
+  already carry: its per-spec resolution precedence, the `elements[].id` naming
+  and change policy, the label-as-inspection-target rule, the `data-qfai` marker
+  convention, the screen field tables and the failure FAQ are in
+  `qfai-sdd/references/ui-contract-guide.md`. The work-log validator set and the
+  command that runs it are in `catalog/worklog-entry.schema.md`.
+
+- **`qfai doctor` reports the broken integration wrappers `validate` reports**
+  (#1258). A wrapper under `.claude/`, `.codex/`, `.agents/` or `.github/` that
+  does not resolve is how a skill fails to load at all, and `validate` reports
+  it as `QFAI-LINK-001`. `doctor` is the command an operator reaches for to find
+  out whether the environment is sound, so it has to answer for the same thing.
+
+  `skills.integrity` is the neighbouring check and asks a different question —
+  whether the content matches what was shipped — which a broken wrapper leaves
+  untouched. Both belong.
+
+  `integration.links` asks whether the OS will follow the link, through the same
+  code the gate uses, and carries what that code answered rather than deciding
+  again. Severity comes from the finding — `QFAI-LINK-001` is a `warning` where
+  the canonical document still reads and an `error` where it does not — and the
+  findings pass through the same waivers `validate` applies, so a waiver that
+  suppresses one silences the check and a waiver that downgrades one to `info`
+  is reported at `info`. The two therefore stay on the same side of `--fail-on`
+  for any one tree, at every threshold rather than only at `error`.
+
+  Two states report as `error` because the gate does not survive either: an
+  inspection that cannot run, and a waiver file that cannot be read. On the
+  second the unwaived findings are used, since a suppression decided from a file
+  the gate rejected is not one to act on.
+
+  A waiver silences a finding without repairing the wrapper, so a tree whose
+  findings are all waived reports the waived count rather than claiming every
+  wrapper resolves.
+
+  The check names the wrappers and stops there. `QFAI-LINK-001` covers several
+  kinds of damage and the repair differs by kind: a flattened link is relinked
+  by `qfai init`, a wrapper occupied by a real directory is not repaired by
+  re-running `init`, and a wrapper left behind by a retired skill resolves
+  perfectly — which is the problem, because the assistant is loading
+  instructions this release no longer ships. Reporting the paths and pointing at
+  the finding keeps one description of each, in the language `doctor` writes in.
+
+- **An ATDD annotation counts when it is written into a test's name** (#1255).
+  The scan read comments and not string literals, so
+  `it("QFAI:SPEC-0018:TC-0018-0056 …")` did not count and `QFAI-ATDD-112`
+  reported the obligation as unreferenced — while naming a directory that held a
+  passing test whose title was that exact id.
+
+  It is the placement people reach for first, because it is the one place where
+  the id is also in the runner's output, so it is what anyone copies when adding
+  a test. The failure ran in the worst direction: the file read as coverage to
+  every person who opened it, and the gate stayed red.
+
+  Reading only comments was right for the reason it was chosen. A fixture
+  holding these ids as data — a digest table, a generator, a ledger quoting the
+  id it is about — would otherwise read as covering every id it names. A test's
+  name is the one literal that cannot be data: it is the first argument of a
+  declaration, and a table of ids never appears in one. A declaration written
+  inside a string is data again and still does not count, so a generator that
+  emits test files cannot cover an obligation by quoting it.
+
+  `catalog/test-layers.md` now says where an annotation may sit. It described
+  what a carrier is and never said the annotation had to be in a comment.
+
+- **Test files inherit the declared `testTimeout` instead of overriding it**
+  (#1246). Ninety-three ceilings across 50 files sat below the project's 120 s
+  default, and nothing distinguished one somebody measured from one nobody had
+  looked at since it was typed.
+
+  Measured, the overrides were not doing the job they were there for. Two files
+  had ceilings _below their own cost_: under a full-suite run they timed out
+  nine cases between them, though both pass alone in under four seconds. At the
+  other end, 33 of the 38 files measured used under 6% of their ceiling — most
+  under 1%.
+
+  A ceiling above a file's cost buys one thing, a faster failure on a hang. It
+  costs a red lane for a reason the change does not contain, which is the worst
+  shape of flake: it teaches readers to ignore red. Two minutes on a hang, once,
+  is the better trade.
+
+  All 93 are removed. A subprocess kill timeout is a different thing and is
+  untouched — it bounds a spawned process, not a test.
+
+  A guard now requires any future sub-default ceiling to carry a comment naming
+  the duration that was measured. Cost is not visible in the source; whether the
+  declaration states a measurement is. It reads the syntax tree, so every form
+  the runner accepts is one subject — the trailing argument, a named constant,
+  each spelling of the option property, a title written as a template, and a
+  runner the file derived or imported under another name. A named ceiling
+  resolves from the scope it is used in, so two blocks binding the same name are
+  two ceilings rather than whichever was read last.
+
+- **The validation contract moved out of the acceptance-test Definition of Done
+  and into a reference** (#1243). One bullet in that section was 1,047
+  characters, twice the length of any other, and a bullet nobody skims is a
+  contract nobody reads. `cross-spec-obligations.md` now carries it under
+  `## The validation the Definition of Done asks for` — the two parts the
+  result is read in, why the second exists, and what an unattributable finding
+  still means — and the bullet names the obligation and cites that anchor.
+
+  The paragraph cap in the Definition-of-Done guard comes back down to 700, just
+  above the longest bullet the section now carries. It had been raised to 1,200
+  to admit this one, which left the margin the cap was chosen for gone.
+
+### Added
+
+- **`validate` reports a test case row filed at L4 or L5** (#1260).
+  `catalog/test-layers.md` has always said a `TC-*` row's `Level` stays within
+  L1-L3: L4's goal is a `CON-API-*` and L5's is a `US-*`, so a row at either
+  level is an obligation filed under the wrong ID type rather than a test case
+  that happens to be high-layer.
+
+  The routing table already promised that such a row would be "reported once, by
+  the rule that names the real cause". No rule did. The row surfaced only through
+  the routing legend in `QFAI-ATDD-112`'s fix text, which named a directory the
+  same document tells a reader not to use — and a reader who followed it filed
+  the obligation deeper rather than re-filing it.
+
+  `QFAI-ATDD-128` reads the row's own `Level`, not where its annotation ended up:
+  covering the test case does not make the row less misfiled. It names the ID
+  type to re-file under, and says that re-filing is an upstream change — the row
+  goes together with the `EX-*` it verifies and the `BR-*`/`AC-*` that EX
+  concretizes, or the parent is left with no reference.
+
+  Ships at `warning` and becomes an `error` at 1.13.0. The window is doing real
+  work here: the remedy is not a cell edit, so a repository that has been writing
+  such rows needs time to plan the re-filing.
+
+- **`validate` reports a skills or agents tree behind the installed release**
+  (#1381). `.qfai/assistant/skills/**` and `agents/**` are copied into a project
+  once and refreshed only by an explicit `qfai init --force`, so a project that
+  upgrades qfai keeps running the skill bodies it initialised with. A `SKILL.md`
+  several releases behind describes a workflow the installed validators no
+  longer implement, and it reads as authoritative because it is checked in.
+  Nothing said so: the provenance family covers `constitution/` and `catalog/`
+  and stops there.
+
+  `QFAI-ASSETS-009` compares each file the release ships under those two layers
+  against the project's copy, and reports **one finding per layer** — the trees
+  hold over a hundred and fifty files between them, and one finding per file
+  would bury every other result. The comparison is against the shipped bytes
+  alone, with no lock entry per file: `--force` overwrites this layer either
+  way, so there is no merge decision for a record to protect.
+
+  The fix hint says the layer is overwritten, local edits included.
+  `QFAI-ASSETS-004` can offer `--force` as a plain refresh because a diverged
+  file is left alone; this layer has no such exemption, and a hint that quietly
+  destroys work is worse than the staleness it clears. Ships at `warning` and
+  becomes an `error` at 1.13.0.
+
+- **A width ceiling beside the line ceiling for shipped assistant assets**
+  (#1181). A count of lines bounds reading cost only while a line is a roughly
+  constant unit of reading, and that stopped being true: the widest line in the
+  tree ran 9,104 characters against a median of 118, and cost the 800-line
+  budget one unit. A body at the ceiling stops shedding topics and starts
+  packing them, which the count cannot see.
+
+  Every `.qfai/assistant/**` asset is now held to **400 characters per line** as
+  well. The number is read off the tree — the 90th percentile is 413, so nine
+  files in ten already comply — and the two ceilings are read together, because
+  each permits what the other refuses.
+
+  Two shapes are not measured, both because the author cannot make them
+  narrower: a table row, which markdown gives no continuation, and a fenced
+  block, whose content is verbatim. Both are read with the container they sit
+  in, so a fence ends with the blockquote or list item that opened it, and three
+  list items that look alike once their markers are stripped stay three items
+  rather than becoming one table.
+
+  Twenty files predate the ceiling and carry a recorded width of their own,
+  which may only shrink: such a file may be edited freely below the width it
+  already had, and never past it. Nothing can join that list quietly — the paths
+  on it are pinned, so narrowing one file while widening another is a change a
+  reader sees rather than a swap that keeps a total unmoved.
+
+  `qfai doctor` reports both ceilings under `assets.lineBudget`, naming the
+  width each file was held to.
+
+- **A test case can say where it is verified** (#1252). Some acceptance criteria
+  are true of the deployment rather than of the code — a TLS floor, a redirect
+  the platform terminates — and no layer the annotation gate routes to can
+  observe them. Every exit was closed: annotating anyway makes the gate green
+  over a test that checks something else, a waiver may not cover an error, and
+  retiring the row walks up `QFAI-COV-203` and `QFAI-COV-201` until the
+  requirement itself is deleted.
+
+  A test case now declares its own status in its own block:
+
+  | value      | means                                   | needs                    |
+  | ---------- | --------------------------------------- | ------------------------ |
+  | `planned`  | the test is not written yet             | nothing; remove it later |
+  | `external` | the obligation is met outside this tree | `x-qfai-verified-by`     |
+
+  `QFAI-ATDD-126` (`info`) names both, with the pointer, so the exit stays
+  visible rather than reading as coverage. `external` without
+  `x-qfai-verified-by` suspends nothing: the obligation stands and
+  `QFAI-ATDD-127` reports it, because a marker that only says "not here" is the
+  blanket silencer this exit was designed not to be.
+
+  The marker lives in a `## TC-NNNN` block and not in the table, and that cost
+  is deliberate. A marker cheap enough for a table cell gets applied to every
+  row that looks deployment-bound, including rows an in-process test could have
+  covered all along.
+
+  `QFAI-WAIVER-002` now names these alternatives. It said waivers on error
+  findings are forbidden and not what to do instead.
+
+- **A spec that owes no ATDD annotation says so** (#1251). `QFAI-ATDD-112`
+  routes each obligation by its test case's declared `Level`, and Unit and
+  Component owe none. A spec whose table declares only those therefore has an
+  obligation population of zero, and the gate never names it — correctly, but
+  silently.
+
+  Deleting every annotation in such a spec changes no output. The reasonable
+  reading of an unchanged run is that the gate is blind to the spec, and
+  settling it otherwise meant reading the compiled scanner. In one repository
+  358 of 476 test cases were outside the rule, so a green `QFAI-ATDD-112` was
+  compatible with three quarters of the table having no acceptance test.
+
+  Three things now say it:
+  - `QFAI-ATDD-125` (`info`) names each spec that declares test cases and owes
+    none, with the count and both readings — the levels are wrong, or the spec
+    genuinely has no acceptance obligation.
+  - `QFAI-ATDD-117` breaks its count down per spec rather than listing every
+    exempt id across the repository and truncating at ten.
+  - `summary.json` records `tcCensus`: per spec, how many test cases are
+    declared, exempt and owed. An empty `missing.tc` says nothing about the size
+    of the set it is empty of.
+
+- **A business flow has an ID, and an E2E test can answer for one** (#1208).
+  `_policies/04_Business-Flow.md` ships as the SSOT for how the system is used
+  end to end, and no gate read it. Nothing could cite a flow, so the E2E
+  obligation was keyed on `US-*` alone — and story count is not flow count. One
+  reporting project carried 56 stories, 130 E2E tests and about 12 flows.
+
+  Flows now carry `BF-NNNN`, opening the list item or heading that describes
+  them. A story names the flows that realize it with `- Flow: BF-0001` in its
+  own block. A test under `<testsDir>/e2e/**` annotated `QFAI:BF-0001` answers
+  `QFAI-ATDD-111` for every story naming that flow, so one test covers a flow
+  rather than a story.
+
+  The edge runs from the story upward, and only that way: `_policies/**` must
+  not name a lower-layer ID, so the flow document cannot list its stories. Two
+  things follow, and both are properties of the layering rather than choices.
+  The obligation stays on `US-*`, where acceptance lives — a flow annotation
+  discharges it and never replaces it. And a story naming no flow is not in
+  error; it keeps the obligation and the annotation form it already had, so an
+  existing tree is unchanged.
+
+  `QFAI-BFLOW-005` reports a citation the flow document does not declare and
+  `QFAI-BFLOW-006` a flow declared twice. Both are behind a promotion window:
+  the IDs ship with the rules, so nothing carries the defect yet, and the first
+  author to write one of these lines is doing it voluntarily.
+
+- **A `Boundary` column on the TDD ledger, so the sibling rows of a split test
+  case have a recorded identity** (#1316). A matrix-shaped `TC-*` is seeded one
+  row per independently observable boundary. Every one of those rows repeats
+  that `TC-*` in `TC-Refs` and carries a serial `TDD-ID`, so neither cell says
+  which row covers which boundary.
+
+  Reconciliation re-derived the boundary set from `06_Test-Cases.md` on every
+  pass. That answers how many boundaries the test case has now; it does not
+  answer which row is which. Pairing an existing row with a re-derived boundary
+  read `Selector` and `Test file` — cells `/qfai-implement` owns and a
+  review-fix handback rewrites — so a reseed after such a rewrite could pair a
+  row with a different boundary than the one it was seeded for. The effect was
+  silent: the row count stayed right, every row still cited a real test case,
+  and the coverage crosswalk still balanced. What moved was which boundary a
+  row's `Status`, `Evidence` and `TDD-ID` described.
+
+  `Boundary` is a short slug for the one boundary a row owns, written by
+  `/qfai-sdd` Phase 2b while `Test file` is still `-` and rewritten by nothing
+  downstream. A reseed matches on the (`TC-Refs`, `Boundary`) pair. The pair and
+  not the slug alone, because a slug is unique inside its own test case and
+  nowhere wider — a generic one such as `not-found` recurs across test cases.
+
+  The column is optional, so a ledger seeded before it stays valid and a test
+  case holding one row writes `-`. Once a test case holds more than one row the
+  cell carries the row's identity, and `validate` reports siblings that name no
+  boundary (`QFAI-TDDLIST-017`) and two siblings claiming the same one
+  (`QFAI-TDDLIST-018`). Both are seed shape, so the profile of the phase that
+  writes the cell evaluates them, not only the completion gate.
+
+  Both are behind one promotion window: every ledger
+  seeded before the column holds a split whose rows name nothing, so an error on
+  the introducing release would fail every project carrying one.
+
+- **`validate` names a carrier whose suite is bound at run time** (#1256). A
+  test file can choose its runner entry point while the run starts —
+  `const deployed = LIVE ? describe : describe.skip`, then `deployed(...)` — so
+  whether its tests execute is not decidable from the source. The ATDD coverage
+  gate reads the annotation string and stops, so such a file discharges
+  `QFAI-ATDD-112` whether the runner collects it or skips it, and deleting the
+  production code behind that test case leaves every gate green.
+
+  `QFAI-ATDD-124` (`info`) names those files. It is not a violation: binding
+  the suite is the ordinary way to write a probe that needs a target the run may
+  not have, and there is no release at which that should fail a build. What the
+  finding says is that the gate cannot tell, so an obligation whose sole carrier
+  is one of them needs a second owner that runs unconditionally. A written-out
+  `describe.skip(` is not reported — it is a token any scan can already read.
+
+- **`validate` reports a test case the ledger does not own, cited from a
+  coverage row** (#1250). The `Level` a test case declares and the `Layer` of
+  the ledger rows citing it were compared in one direction only: a `L1` / `L2`
+  test case referenced from another layer raised
+  `TDDLIST_COVERAGE_LAYER_MISMATCH`. The reverse was reported by nothing.
+
+  It is the worse of the two. A `L3` / `L4` / `L5` test case cited from a
+  `Layer = Unit` or `Layer = Component` row is claimed by that row for the
+  ledger and by `QFAI-ATDD-112` for the directory its `Level` names. Both gates
+  pass — one because the row is there, the other because the annotation is —
+  and each credits the other with covering the test case. The row count a
+  delivery plan is sized from then counts work nobody owes, and nothing in
+  either direction says so.
+
+  `QFAI-TCLEVEL-002` names the test case, its declared level and the layers of
+  the rows claiming it. An `Integration` / `API` / `E2E` row for the same test
+  case is the shape Phase 2b seeds and is not reported, and a row whose `Layer`
+  is outside the vocabulary is left to `TDDLIST_UNKNOWN_LAYER` rather than
+  given a second finding.
+
+  Behind a promotion window on the same reasoning its sibling states: a ledger
+  written before the crosswalk existed can carry the mismatch, so escalating on
+  the introducing release would hand a consumer a zero-length window.
+
+- **A scheduled lane that holds each published release body against the
+  changelog section it was built from** (#1336). `release.yml` checks out the
+  tagged commit, cuts the `## [X.Y.Z] - …` section out of `CHANGELOG.md` at
+  that SHA, and creates the release once. Nothing reads the file again, so an
+  entry added to a released section afterwards is in the repository and not in
+  the notes anyone reads. Measured on `v1.11.0`: its section has gained two
+  entries since the tag, one of them the promotion of `QFAI-CFG-001` to an
+  error — which is what turns a passing `validate --fail-on error` into a
+  failing one for anyone upgrading.
+
+  `scripts/check-release-notes.mjs` compares entries, not bytes. A body is
+  edited by hand and GitHub normalises line endings, so a text comparison would
+  report formatting as drift and bury the one thing that matters. An entry is a
+  top-level bullet's own line, where the bolded title lives, normalised for
+  whitespace.
+
+  The section is the authority for what a body must carry, not for what it may
+  not: a body holding an entry the section does not is an edit somebody made on
+  purpose, and reporting that would make every deliberate note a failure. A body
+  the release workflow had to cut at the 125,000-character cap is compared as a
+  prefix, since it legitimately lacks the tail of its section.
+
+  It reports and does not repair. Rewriting a published body is a wider
+  permission than any lane here holds, and would silently discard those
+  deliberate edits. `permissions:` is `contents: read` and the token only reads
+  each release.
+
+  `schedule` and `workflow_dispatch`, never `pull_request`. Drift is a property
+  of what is published, not of a branch, and a pull request that did not cause
+  it should not fail for it — so the check appears on no pull request and
+  branch protection needs no new context.
+
+- **The lint lane rejects a merge-conflict marker in a tracked file** (#1349).
+  Nothing asked that question, and an evidence document reached the default
+  branch carrying a `=======` separator, a superseded line and a `>>>>>>>`
+  marker with every lane green.
+
+  Each lane passed for its own reason, and none of them is wrong: Markdown lint
+  reads `=======` as a heading underline and `>>>>>>> ref` as a paragraph,
+  prettier reformats the block rather than rejecting it, and the guard that
+  reads the figure in that paragraph takes the first matching line and stops.
+
+  `scripts/check-conflict-markers.mjs` scans every tracked text file for a line
+  starting with seven `<`, `=`, `>` or `|` followed by a space or the end of the
+  line. The boundary is what keeps a rule of equals signs and `>>>>>>>>` in
+  ASCII art from being findings. Fenced blocks in Markdown are skipped, so a
+  document explaining conflict resolution can show one.
+
+- **A retired spec pack has a template and a schema of its own** (#1324). A spec
+  that was deleted or superseded is kept as the record of why it went away. That
+  record cannot carry a consumer view or an applicable NFR for something that no
+  longer exists, so it had no schema and was tolerated rather than checked —
+  including the `Superseded-by` bullet a reader following a stale reference
+  depends on.
+
+  Three pieces, in the order each needs the one before it.
+  1. `templates/specs/spec/01_Spec-retired.md` seeds the record: the status
+     bullets, and a `## Retirement` section saying why the spec stopped applying
+     and where its obligations went.
+  2. `spec/01_Spec-retired.mdschema.yml` states that contract, and is registered
+     in the manifest.
+  3. A manifest entry may carry `when:`, a regular expression read against the
+     document's own text. It is what lets one path carry two document shapes.
+
+  A `01_Spec.md` whose front matter declares `superseded`, `deprecated` or
+  `removed` is checked against the retired schema and dropped from the live one,
+  so the two partition the documents rather than running one document against
+  two contracts. A pack that is still live is unaffected.
+
+  Two invariants replace the old "every pattern is unique" rule, which was a
+  proxy for them: at most one entry per pattern may omit `when:`, and a
+  predicated entry shares its pattern with another entry — a `when:` on a pattern
+  nothing else claims is a filter, and the documents it misses would then be
+  checked by nothing.
+
+- **`qfai db-drift` compares the DB contracts with the migrations as schemas**
+  (#1332). `.qfai/contracts/db/**` is the schema a project declares; its
+  migrations are what actually builds the database. Nothing compared the two, so
+  they drift and every signal stays green — one measured tree differed by 58
+  columns the migrations had, 6 the contracts had, and 28 declared differently,
+  with a passing suite that proved things about the migration schema and nothing
+  about the contracts.
+
+  The command applies each side to its own in-process Postgres and reports the
+  columns they disagree about: present on one side only, or declared with a
+  different type, nullability or default.
+
+  | Exit code | Meaning                                            |
+  | --------- | -------------------------------------------------- |
+  | 0         | the two agree, or the project is out of scope      |
+  | 1         | they differ                                        |
+  | 2         | a file would not apply, or the engine is not there |
+
+  `--format json`, `--out <path>` and `--fail-on never` are accepted.
+
+  Set `paths.migrationsDir` to the project's migration directory. A project
+  without one is out of scope, not in violation: the command says so and exits 0.
+
+  It is a command rather than a `validate` rule because it needs a database, and
+  `qfai validate` starts no processes. The engine is loaded only when the
+  command runs, so a project that never runs it never pays for it.
 
 - **A `drift` validation profile, and the CI workflow `qfai init` writes now
   runs it** (#1262). The generated workflow ran `--profile full --fail-on error`
@@ -40,6 +913,157 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   nobody reviews.
 
 ### Fixed
+
+- **`check-mdschema --scope changed` no longer reports a document's old
+  violations as this branch's** (#1360). The flag selects the documents a branch
+  touched and validated each one whole, so a document predating the schema
+  failed in full. Editing one line of a legacy document reported every violation
+  it already had — in one measured run, 55 of them for a four-line change, none
+  about the changed lines.
+
+  That made the migration the flag exists to allow impossible to land
+  incrementally: the first edit to a legacy document had to carry all of it.
+
+  Each touched document is now judged against its own state at the merge base.
+
+  | at the merge base | at the head | verdict                                |
+  | ----------------- | ----------- | -------------------------------------- |
+  | not there         | fails       | this branch's — fail                   |
+  | conforms          | fails       | this branch's — fail                   |
+  | fails             | fails       | pre-existing — reported, does not fail |
+
+  A document the base checked against a different contract — routed elsewhere by
+  a `when:` predicate, or opted out — counts as not there, since this is the
+  first run that could hold it to this schema.
+
+  The unit is the document, not the violation: a branch adding an eleventh
+  violation to a document that already had ten still passes. `mdschema` renders
+  the same text for every `--format`, so a violation-level ratchet would couple
+  the lane to one release's wording, and a reflowed message would report
+  everything as new.
+
+  `--scope all` is unchanged. It is the migration view, and every violation is
+  its subject.
+
+- **The rule summary in `AGENTS.md` no longer contradicts its own master**
+  (#1392). `.agents/rules/documentation-clarity.md` forbids issue and pull
+  request numbers in source and Markdown, and exempts four surfaces: the pull
+  request body, the issue body, the commit message and `CHANGELOG.md`. The
+  one-line summary listed the prohibition and dropped the exemption, so read on
+  its own it forbade what the master directs — and `CHANGELOG.md` is Markdown.
+
+  A reviewer following the summary reports every changelog entry as a
+  violation, which is the convention all 78 of them follow.
+
+  A guard now holds any entry point that enumerates the identifiers to naming
+  the exemption in the same bullet. It reads the bullet rather than the file,
+  because every one of these documents mentions the changelog somewhere else.
+
+- **The cycle table in the prototyping skill renders as a table again** (#1378).
+  A blank line sat between its delimiter row and its body rows, and a blank line
+  ends a table. The three rows rendered as one paragraph of literal text, pipes
+  included, and the header above them labelled nothing — on the four-column
+  mapping of which agent runs each cycle phase and what it produces.
+
+  Deleting the blank line reattaches the rows. The file's recorded width ceiling
+  drops from 899 to 541 with them: table rows are not measured for width,
+  because markdown gives them no continuation, so the three lines were being
+  measured as the prose they had become.
+
+- **The recorded e2e callsite count no longer fails a branch for the base's
+  changes** (#1357). A pull request is tested on the merge of the branch with
+  its base, so the count a branch pins stops being true the moment the base
+  gains a callsite — whoever merged, and whatever the branch touched. With
+  several pull requests open, every merge turned the rest red, each needing a
+  re-merge and a re-pin that the next merge undid.
+
+  `stageEvidenceCounts.test.ts` now measures the base's own count and compares.
+  A branch that changed a callsite under the `e2e` project still fails and still
+  owes `node scripts/pin-stage-evidence-counts.mjs` in the same commit. Drift
+  the branch did not cause is reported and passes. Where git cannot answer, it
+  fails as before.
+
+  The `test` and `node-floor` jobs check out two commits rather than one. At the
+  default depth the merge commit is grafted to no parents at all, so the base is
+  unreachable and the question cannot be asked.
+
+- **Two lint lanes ran on Windows, instead of exiting 0 without looking**
+  (#1367). A script that is both a module and a command asks whether it was
+  spawned by comparing `import.meta.url` with the path in `process.argv[1]`.
+  Building that URL as `` `file://${process.argv[1]}` `` gives a URL only where
+  the path is POSIX: on Windows it yields `file://C:\dir\script.mjs` against an
+  `import.meta.url` of `file:///C:/dir/script.mjs`. The comparison was never
+  true, so the conflict-marker and release-notes lanes exited 0 having scanned
+  nothing — indistinguishable, in the output, from a tree that is clean.
+
+  Both now use `pathToFileURL(process.argv[1]).href`, as the scripts beside them
+  already did. A check holds every `.mjs` under the three script directories to
+  that form, because the failure is only reachable on a platform no runner has:
+  the lanes work correctly on every POSIX runner, so no CI job can tell the two
+  spellings apart.
+
+- **A trailing slash on a configured directory no longer makes a gate evaluate
+  nothing and report a pass** (#1368). Readers use these values two ways: joined
+  with a child path, where a trailing separator is harmless, and tested as a
+  prefix, where it is not. `paths.specsDir: ".qfai/specs/"` built the prefix
+  `.qfai/specs//`, which no repository path starts with, so the traceability
+  gate skipped every changed file, derived no spec and passed over an empty set.
+
+  Every `paths.*` value now has its trailing separators removed when the config
+  is read, so a reader cannot be written that works for one spelling and not the
+  other. A value that is nothing but separators keeps what was written, since
+  trimming it away would retarget the reader at the repository root.
+
+  The silence is closed separately, because the next spelling that fails to
+  match would otherwise be silent the same way. A specs directory that is not in
+  the repository — while the detection also selected nothing — is reported as
+  `QFAI-TRACE-003` at `info`, the code that already exists to say this check
+  could not run. A branch that deletes its last spec is not that case: the
+  finding naming the deleted spec already says which gap opened.
+
+- **A gitignore negation naming a directory re-includes the directory, not
+  everything under it** (#1361). A directory pattern covers its whole subtree
+  when it ignores, because git never descends into an excluded directory. A
+  negation cannot work the same way: gitignore(5) says a file whose parent
+  directory is excluded cannot be re-included.
+
+  The matcher applied the subtree rule to both, so `!.qfai/` — last in the
+  shipped block — outranked every ignore above it, and `isPathIgnoredByLayers`
+  answered "not ignored" for paths `git check-ignore` reports as ignored.
+
+  The shipped default hid it: a narrower negation for each governance record
+  sits below the directory ones and also wins, so the answer was right for the
+  wrong reason. A project that keeps the block but drops one of those narrower
+  lines is where the two parted — and the check that warns about an invisible
+  Coverage Depth Matrix stayed silent in exactly that configuration.
+
+- **A failing clean leg of the workflow-hygiene fixtures now names the rule and
+  the paths** (#1314). Both legs asserted the lane's exit code before its
+  findings, so a failure read `expected 1 to be 0` and the lane's own output —
+  which names the rule, the file and the job for every finding — was never
+  printed. The legs fail when the staged tree is incomplete as well as when the
+  workflow trees are, and an exit code alone cannot tell those apart.
+
+- **A failing checkpoint has one remedy, and one document states it** (#724).
+  `checkpoint-verification.md#pass-criteria` says a FAIL leaves the row at
+  `refactor` and re-runs the repair. Three other documents each described the
+  failure in their own words, and one of them — the `qa-gatekeeper` card — sent
+  the row to `exception` instead, which is the one thing a FAIL does not do. A
+  row parked there is read as an anomaly and can be carried past the oracle
+  proof it still owes.
+
+  Each of the other documents now names the criteria rather than restating it,
+  and a check reads every Markdown and YAML file on the assistant surface,
+  generated catalogs included, so a second remedy cannot come back in a file
+  nobody thought to look at.
+
+- **The governed-path report case of `assistantAssetProvenance.test.ts` no
+  longer depends on the platform's path separator** (#1315). `init` names a
+  written path with `/` on every platform and a skipped one in a `NOTE:` line
+  carrying the absolute destination with the platform's own separator. The case
+  built one needle for both surfaces with `path.join`, so on Windows the
+  written-path needle carried a backslash, matched nothing, and the case failed
+  on a tree nobody had changed. Both sides are now read with one separator.
 
 - **An imported spec can state its surface, so a CLI-only project is no longer
   read as visual** (#1295). A discussion pack states the classification in its
@@ -230,6 +1254,39 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   platform, so the shim is out of the path rather than chosen more carefully.
   `shell: true` was the other way to spawn a `.cmd`, and it would hand the
   argument list — document paths — to the command interpreter.
+
+### Changed
+
+- **Review artifacts are outside version control** (#1358). The `.gitignore`
+  block `qfai init` writes ignored `.qfai/review/*` and then re-included two
+  paths: the directory itself, and the record naming the packs that predate the
+  strict `revision` form. Both are retired, so nothing under a review directory
+  is committable.
+
+  An existing project picks this up on the next `qfai init`, which strips the
+  two lines from its managed block the way it strips every earlier retired
+  line. Packs a project already committed stay committed — `.gitignore` does
+  not untrack a path that is in the index — and the guard that stops
+  `doctor --clean` from archiving a tracked pack into an ignored directory is
+  unchanged, so that choice is still respected where it was made.
+
+  The block also ignores `.qfai/review_archive/*`, the location packs were
+  moved to before the current layout put the archive under `.qfai/review/`
+  itself.
+
+### Fixed
+
+- **`QFAI-TRACE-003` names the spec directory with one separator** (#1365).
+  The finding joined the configured specs directory with the platform's
+  separator, so a caller reading the validator's own output saw a backslash
+  path on Windows. Nothing shipped wrong — `normalizeIssuePaths` converts
+  `file` before any surface reads it — but twenty-eight assertions across the
+  suite state a finding's `file` as a POSIX literal at that boundary, and this
+  one disagreed with all of them.
+
+  A test that searched `qfai init`'s report for a `path.join` needle is
+  corrected the other way, to match what the report carries (#1363). The report
+  is POSIX on every platform, which the same file already pins.
 
 ## [1.11.0] - 2026-09-07
 
@@ -1419,6 +2476,25 @@ path` を追加した。drift ルールは対称だが縮小は非対称であ�
   Routing a ledger row **to** `exception` is not an `ask-user` decision — Red
   phase steps 3b and 5 decide it deterministically, and only the waiver that
   follows needs approval.
+
+- **`qfai --help` documents the per-command exit-code matrix, and an unknown
+  command now exits 1.** The help output carried a `Commands:` and an
+  `Options:` block and nothing else; exit codes appeared only incidentally
+  inside two option descriptions, and `64` / `65` / `66` — live return values
+  from `prototyping iterate` and `prototyping certify` — appeared nowhere. The
+  canonical matrix lives in the framework's own CLI contracts, which are not
+  part of the published package, so a consumer installing qfai from npm could
+  not reach it at all. Treating "non-zero" as one bucket misreads `64`
+  (converged — a success for the prototyping loop) as a failure. A new
+  `Exit codes:` block is rendered from the same constants the commands return,
+  per command rather than as one flat table, since the same number means
+  different things depending on the command. Alongside it, a mistyped
+  top-level command (`qfai vlaidate`, with or without `--help`) now sets exit
+  code 1 instead of printing usage and exiting 0, so a typo is detectable from
+  CI. That is a different row from a CLI-arg error — an unknown flag or a
+  rejected value — which `parseArgs` returns `2` for on every command, the code
+  `.qfai/contracts/cli/qfai-init.md` reserves for it; the block states both, so
+  a caller can tell a mistyped command name from a mistyped flag.
 
 ### Fixed
 

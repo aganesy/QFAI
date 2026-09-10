@@ -4,6 +4,7 @@ import path from "node:path";
 import { parse as parseYaml } from "yaml";
 
 import type { QfaiConfig } from "./config.js";
+import { parseTestFlowRefs, scanBusinessFlows, storiesByFlow } from "./businessFlow.js";
 import { resolvePath } from "./config.js";
 import { extractDeclaredContractIds } from "./contractsDecl.js";
 import { collectApiContractFiles, collectDbContractFiles } from "./discovery.js";
@@ -84,7 +85,55 @@ function maskTestSource(file: string, text: string): string {
   if (!JS_TEST_EXTENSIONS.has(path.extname(file).toLowerCase())) {
     return text;
   }
-  return maskJsNonCode(text, { comments: false });
+  return restoreTestNames(maskJsNonCode(text, { comments: false }), text);
+}
+
+/**
+ * A test's own name, in three parts: the runner, the call up to the name, and
+ * the name itself.
+ *
+ * The runner may carry modifiers before the call that takes the name
+ * (`it.each(rows)`, `describe.skipIf(x)`), and the name may be written in any
+ * of the three quote forms.
+ */
+const TEST_NAME_RE =
+  /\b(it|test|describe|suite|bench|scenario)((?:\s*\.\s*[A-Za-z_$][\w$]*(?:\s*\([^()]*\))?)*\s*\(\s*)("(?:[^"\\\n]|\\.)*"|'(?:[^'\\\n]|\\.)*'|`(?:[^`\\]|\\.)*`)/g;
+
+/**
+ * Puts each test's name back into the masked text.
+ *
+ * Masking every literal is what keeps an id a fixture holds as DATA from
+ * reading as a reference, and that has to stay. But it also blanked the
+ * placement a person reaches for first — the annotation written into the test's
+ * own name, where it is *also* visible in the runner's output, so it is what
+ * anyone copies when adding a test. The gate then reported the obligation as
+ * unreferenced while pointing at a directory holding a passing test that named
+ * that exact id, which reads as the gate being broken.
+ *
+ * A name is safe to read where an arbitrary literal is not: it is the first
+ * argument of a test declaration, so a table of ids held as data never appears
+ * in one, whatever else the file does.
+ *
+ * **The declaration must survive masking to count.** A fixture that writes a
+ * test file as a template literal contains the same characters, and reading
+ * those would restore the data hazard by the back door. Masking blanks the
+ * contents of literals and leaves code alone, so a runner name still standing
+ * at its own offset is code — and one that is not is quoted, whatever it spells.
+ *
+ * The mask replaces one character for one, so a restored name goes back at the
+ * offset it came from and every later offset is unmoved.
+ */
+function restoreTestNames(masked: string, original: string): string {
+  let restored = masked;
+  for (const match of original.matchAll(TEST_NAME_RE)) {
+    const [, runner = "", call = "", name = ""] = match;
+    if (!restored.startsWith(runner, match.index)) {
+      continue;
+    }
+    const start = match.index + runner.length + call.length;
+    restored = restored.slice(0, start) + name + restored.slice(start + name.length);
+  }
+  return restored;
 }
 
 const US_TEST_ANNOTATION_RE = /\bQFAI:SPEC-(\d{4}):US-(\d{4}-\d{4}|\d{4}(?!-))\b/g;
@@ -285,6 +334,48 @@ export type AtddCodeTraceabilityResult = {
    * (`TDDLIST_TC_NOT_COVERED`) is what covers them.
    */
   unitComponentTcIds: string[];
+  /**
+   * `TC-*` refs declaring a `Level` of L4/API or L5/E2E.
+   *
+   * `catalog/test-layers.md` states that a `TC-*` row's `Level` stays within
+   * L1-L3: L4's goal is a `CON-API-*` and L5's is a `US-*`, so an oracle that
+   * derives to either means the obligation is filed under the wrong ID type —
+   * not that the test case is an L4/L5 test.
+   *
+   * The routing table sends such a row to `tests/api/**` or `tests/e2e/**`
+   * rather than rejecting it, so that the row is reported once by the rule
+   * naming the real cause (`QFAI-ATDD-128`) instead of twice as "uncovered in
+   * integration" and "forbidden in api".
+   *
+   * Every declared row, not only the ones missing an annotation: the defect is
+   * the row's own `Level`, and covering it changes nothing about that.
+   */
+  misfiledLevelTcIds: string[];
+  /**
+   * Carrier files whose suite is bound through a variable, so nothing static —
+   * including this scan — can say whether their tests run.
+   *
+   * Reported rather than counted, for the same reason `unitComponentTcIds` is:
+   * the coverage gate's evidence here is a string in a file, and "nothing owed"
+   * must not look like "nothing checked".
+   */
+  computedSuiteCarriers: string[];
+  /**
+   * `TC-*` refs a status marker in their own block suspends, each with the
+   * status and — for `external` — where the obligation is really verified.
+   *
+   * Reported at `info` for the same reason `QFAI-ATDD-118` reports a deferred
+   * story: an exit nobody can see is one nobody reviews.
+   */
+  deferredTcIds: DeferredTc[];
+  /**
+   * `TC-*` refs that claim `external` and name no verifier.
+   *
+   * They keep their obligation. The marker is not a way to say "not here": it
+   * is a way to say where the obligation is met instead, and without that it
+   * says nothing a reader can act on.
+   */
+  unsupportedTcStatusIds: string[];
   /** Test files outside the scanned roots; surfaced instead of dropped. */
   skippedTestFiles: string[];
   scan: AtddTraceabilityScan;
@@ -373,6 +464,7 @@ export async function evaluateAtddCodeTraceability(
   const apiRefs = new Map<string, Set<string>>();
   const dbRefs = new Map<string, Set<string>>();
 
+  const computedSuiteCarriers: string[] = [];
   const skippedTestFiles: string[] = [];
   const unknown: AtddUnknownRef[] = [];
   const unknownDedup = new Set<string>();
@@ -387,6 +479,12 @@ export async function evaluateAtddCodeTraceability(
   const specUsIds = specRefs.us;
   const specTcIds = specRefs.tc;
   const tcLevels = specRefs.tcLevels;
+
+  // The flow-to-story map, so one `QFAI:BF-0001` on an E2E test can answer for
+  // every story that names that flow. Empty on a project that has declared no
+  // flow ids, which leaves every obligation exactly where it already was: the
+  // edge is additive, and nothing here can create an obligation or remove one.
+  const flowStories = storiesByFlow(await scanBusinessFlows(root, config));
 
   for (const file of scanResult.files) {
     const kind = resolveTestKind(file, {
@@ -431,6 +529,9 @@ export async function evaluateAtddCodeTraceability(
       // `recordContractRef` store — fast-glob yields POSIX separators even on
       // Windows, so the raw path would never match the recorded one there.
       executableCarriers.add(path.normalize(file));
+      if (hasComputedSuiteBinding(raw)) {
+        computedSuiteCarriers.push(toPosixPath(path.relative(root, file)));
+      }
     }
 
     for (const ref of usAnnotations) {
@@ -442,6 +543,19 @@ export async function evaluateAtddCodeTraceability(
       }
       if (kind === "e2e") {
         recordSpecRef(usRefs, ref.spec, `US-${ref.id}`, file);
+      }
+    }
+
+    // A flow annotation stands for the stories that cite the flow. Only under
+    // `e2e`, and only for a flow the document declares: an id that resolves to
+    // no story credits nothing, so the obligation stays and names itself.
+    if (kind === "e2e") {
+      for (const flowId of parseTestFlowRefs(text)) {
+        for (const story of flowStories.get(flowId) ?? []) {
+          if (hasSpecId(specUsIds, story.specId, story.usId)) {
+            recordSpecRef(usRefs, story.specId, story.usId, file);
+          }
+        }
       }
     }
 
@@ -546,7 +660,16 @@ export async function evaluateAtddCodeTraceability(
     missing.tc,
     tcLevels,
   );
-  missing.tc = owedTc;
+  // A test case whose own block declares where it is verified drops out of the
+  // obligation, and one that claims `external` without naming the verifier does
+  // not: the pointer is the entire cost of the exit, so a marker written
+  // without it suspends nothing and is reported instead.
+  const {
+    owed: stillOwedTc,
+    deferred: deferredTc,
+    unsupported: unsupportedTc,
+  } = partitionMissingTcByStatus(owedTc, specRefs.tcStatuses);
+  missing.tc = stillOwedTc;
   const missingTcHomes = buildMissingTcHomes(missing.tc, tcLevels);
   // A truncated scan cannot support the negative claim this partition makes.
   // `collectFilesByGlobs` stops at the limit, so the executable test that
@@ -571,6 +694,9 @@ export async function evaluateAtddCodeTraceability(
   return {
     declaredSpecDirs: specRefs.declaredSpecDirs,
     unitComponentTcIds: unitComponentTc,
+    misfiledLevelTcIds: collectMisfiledLevelTcIds(specTcIds, tcLevels),
+    deferredTcIds: deferredTc,
+    unsupportedTcStatusIds: unsupportedTc,
     specsRoot,
     testsRoot,
     contractsApiRoot,
@@ -599,6 +725,7 @@ export async function evaluateAtddCodeTraceability(
     missing,
     coveredByCarrierOnly,
     missingTcHomes,
+    computedSuiteCarriers: computedSuiteCarriers.sort(),
     skippedTestFiles: skippedTestFiles.sort(),
     scan: {
       globs: scanGlobs,
@@ -699,6 +826,8 @@ async function collectSpecRefs(specsRoot: string): Promise<{
   tc: Map<string, Set<string>>;
   /** `spec -> TC-ID -> declared Level`, lower-cased. Absent when no Level column. */
   tcLevels: Map<string, Map<string, string>>;
+  /** `spec -> TC-ID -> the status its own block declares. */
+  tcStatuses: Map<string, Map<string, TcStatusDeclaration>>;
   /** Spec number -> the directory enumerated for it. */
   declaredSpecDirs: Map<string, string>;
 }> {
@@ -707,6 +836,7 @@ async function collectSpecRefs(specsRoot: string): Promise<{
   const usPlanned = new Map<string, Set<string>>();
   const tc = new Map<string, Set<string>>();
   const tcLevels = new Map<string, Map<string, string>>();
+  const tcStatuses = new Map<string, Map<string, TcStatusDeclaration>>();
   const declaredSpecDirs = new Map(entries.map((entry) => [entry.specNumber, entry.dir]));
 
   for (const entry of entries) {
@@ -747,9 +877,17 @@ async function collectSpecRefs(specsRoot: string): Promise<{
     if (levels.size > 0) {
       tcLevels.set(entry.specNumber, levels);
     }
+
+    // Intersected with the declared set, on the same terms as the story
+    // deferral: a marker under a heading no collector reads as a test case
+    // would otherwise report a deferral for an id that owes nothing.
+    const statuses = new Map([...collectTcStatuses(tcText)].filter(([id]) => tcIds.has(id)));
+    if (statuses.size > 0) {
+      tcStatuses.set(entry.specNumber, statuses);
+    }
   }
 
-  return { us, usPlanned, tc, tcLevels, declaredSpecDirs };
+  return { us, usPlanned, tc, tcLevels, tcStatuses, declaredSpecDirs };
 }
 
 /**
@@ -1100,6 +1238,38 @@ function buildMissingTcHomes(
  * than dropped: a silent exclusion is indistinguishable from a scan that found
  * nothing, which is how the previous glob defect went unnoticed for a release.
  */
+/**
+ * Declared `TC-*` rows whose `Level` routes to the API or E2E layer.
+ *
+ * Only a `Level` the crosswalk reads as L4/L5 reaches those two kinds — an
+ * absent, unreadable or multi-valued cell falls to the integration default —
+ * so this asks {@link resolveAtddHomeKind} rather than matching level spellings
+ * a second time. One question, one answer: a private level list here is how the
+ * routing rule and this rule would come to disagree about the same cell.
+ *
+ * Intersected with the declared ids, so a level cell parsed out of a heading
+ * that no collector reads as a test case cannot report a row that does not
+ * exist.
+ */
+function collectMisfiledLevelTcIds(
+  specTcIds: Map<string, Set<string>>,
+  tcLevels: Map<string, Map<string, string>>,
+): string[] {
+  const misfiled: string[] = [];
+  for (const [spec, levels] of tcLevels.entries()) {
+    for (const [tcId, level] of levels.entries()) {
+      if (!hasSpecId(specTcIds, spec, tcId)) {
+        continue;
+      }
+      const kind = resolveAtddHomeKind(level);
+      if (kind === "api" || kind === "e2e") {
+        misfiled.push(formatTcRef(spec, tcId.replace(/^TC-/i, "")));
+      }
+    }
+  }
+  return misfiled.sort((left, right) => left.localeCompare(right));
+}
+
 function partitionMissingTcByObligation(
   missingTc: readonly string[],
   tcLevels: Map<string, Map<string, string>>,
@@ -1138,6 +1308,58 @@ function partitionMissingTcByObligation(
  * E2E annotation there, the annotation-only E2E that the surface-scope rule
  * exists to prevent.
  */
+/** A suspended test case, carried with what suspended it. */
+export type DeferredTc = {
+  /** `SPEC-NNNN:TC-NNNN`, the form every ref list here uses. */
+  ref: string;
+  status: TcVerificationStatus;
+  /** Where the obligation is verified. Present whenever `status` is `external`. */
+  verifiedBy?: string;
+};
+
+/** `SPEC-0007:TC-0007-0001` -> the two halves. */
+const TC_REF_RE = /^SPEC-(\d{4}):(TC-\d{4}(?:-\d{4})?)$/;
+
+/**
+ * Splits the owed test cases by what their own block declares.
+ *
+ * Three outcomes, and the middle one is the point: a marker that names its
+ * verifier suspends the obligation, a marker that does not keeps it, and
+ * everything unmarked is owed as before.
+ */
+function partitionMissingTcByStatus(
+  owed: string[],
+  statusesBySpec: ReadonlyMap<string, ReadonlyMap<string, TcStatusDeclaration>>,
+): { owed: string[]; deferred: DeferredTc[]; unsupported: string[] } {
+  const stillOwed: string[] = [];
+  const deferred: DeferredTc[] = [];
+  const unsupported: string[] = [];
+
+  for (const ref of owed) {
+    const match = TC_REF_RE.exec(ref);
+    const spec = match?.[1];
+    const id = match?.[2];
+    const declared =
+      spec === undefined || id === undefined ? undefined : statusesBySpec.get(spec)?.get(id);
+    if (declared === undefined) {
+      stillOwed.push(ref);
+      continue;
+    }
+    if (!suspendsObligation(declared)) {
+      unsupported.push(ref);
+      stillOwed.push(ref);
+      continue;
+    }
+    deferred.push({
+      ref,
+      status: declared.status,
+      ...(declared.verifiedBy === undefined ? {} : { verifiedBy: declared.verifiedBy }),
+    });
+  }
+
+  return { owed: stillOwed, deferred, unsupported };
+}
+
 function partitionDeclaredUs(
   specUsIds: Map<string, Set<string>>,
   plannedBySpec: Map<string, Set<string>>,
@@ -1307,6 +1529,128 @@ const ANY_HEADING_RE = /^#{1,6}\s+/;
 
 /** Markdown's bullet list markers, as a regex character class. */
 const BULLET_MARKER = "[-*+]";
+
+/**
+ * What a test case says about where it is verified.
+ *
+ * `planned` is the `US-*` deferral, one layer down: the test is not written
+ * yet, the obligation is suspended, and the marker keeps it visible rather than
+ * silent.
+ *
+ * `external` is the state the story marker has no counterpart for. Some
+ * acceptance criteria are true of the deployment rather than of the code — a
+ * TLS floor, an HTTPS redirect terminated by the platform — and no layer the
+ * annotation gate routes to can observe them. Before this, every exit was
+ * closed: annotating anyway makes the gate green over a test that checks
+ * something else, a waiver may not cover an error, and retiring the row walks
+ * up the coverage rules until the requirement itself is deleted.
+ */
+export type TcVerificationStatus = "planned" | "external";
+
+/** A test case's declared status, with the pointer `external` requires. */
+export type TcStatusDeclaration = {
+  status: TcVerificationStatus;
+  /** Where the obligation is verified. Required for `external`. */
+  verifiedBy?: string;
+};
+
+/** `- x-qfai-status: planned` / `- x-qfai-status: external`, in a TC block. */
+const TC_STATUS_META_LINE_RE = (() => {
+  const key = escapeRegExp(PLANNED_CONTRACT_KEY);
+  const quoted = (token: string): string => `(?:"${token}"|'${token}'|${token})`;
+  // One capture around the whole quoted alternation, not one per branch: with
+  // the group inside `quoted` the bare form lands in the third group and the
+  // first reads as undefined, so every unquoted marker — the shape every
+  // template writes — parsed as no marker at all.
+  const value = `(?:"|')?(planned|external)(?:"|')?`;
+  return new RegExp(
+    `^[ \\t]*${BULLET_MARKER}[ \\t]+${quoted(key)}[ \\t]*:[ \\t]*${value}[ \\t]*$`,
+    "i",
+  );
+})();
+
+/** The key an `external` test case names its real verifier with. */
+export const TC_VERIFIED_BY_KEY = "x-qfai-verified-by";
+
+/** `- x-qfai-verified-by: <where it is actually checked>`. */
+const TC_VERIFIED_BY_META_LINE_RE = new RegExp(
+  `^[ \\t]*${BULLET_MARKER}[ \\t]+${escapeRegExp(TC_VERIFIED_BY_KEY)}[ \\t]*:[ \\t]*(.+?)[ \\t]*$`,
+  "i",
+);
+
+/**
+ * Status markers declared in `06_Test-Cases.md`, by test case id.
+ *
+ * **Read from a `##`-or-deeper `TC-NNNN` block only, never from the table.**
+ * That is the design, not a limitation. The field evidence behind this marker
+ * is that two test cases looked identical from the spec's side — same level,
+ * same note calling them deployment-bound — and only one of them actually was;
+ * a marker cheap enough to write in a table cell would have been applied to
+ * both, and the one that was observable in-process would have lost its only
+ * real test.
+ *
+ * So deferring a test case costs a block of its own. The author has to lift the
+ * row out of the table, write the status, and — for `external` — name where the
+ * obligation is really checked. That is the price of the exit, and it is meant
+ * to be paid deliberately.
+ *
+ * Fenced samples and HTML comments are masked first, on the same terms as
+ * {@link collectTcLevels}: a block in a format example must not defer a real
+ * test case.
+ */
+export function collectTcStatuses(rawTcText: string): Map<string, TcStatusDeclaration> {
+  const declarations = new Map<string, TcStatusDeclaration>();
+  let currentId: string | null = null;
+
+  for (const rawLine of maskNonSpecRegions(rawTcText).replace(/\r\n/g, "\n").split("\n")) {
+    const line = rawLine.trim();
+    const heading = TC_HEADING_RE.exec(line);
+    if (heading?.[1] !== undefined) {
+      currentId = heading[1].toUpperCase();
+      continue;
+    }
+    // Any other heading closes the block: the marker belongs to the test case
+    // it is written under, not to whichever one came before it in the file.
+    if (line.startsWith("#")) {
+      currentId = null;
+      continue;
+    }
+    if (currentId === null) {
+      continue;
+    }
+
+    const status = TC_STATUS_META_LINE_RE.exec(line)?.[1]?.toLowerCase();
+    if (status === "planned" || status === "external") {
+      // First marker of the block wins, like the `- Level:` line beside it.
+      if (!declarations.has(currentId)) {
+        declarations.set(currentId, { status });
+      }
+      continue;
+    }
+
+    const verifiedBy = TC_VERIFIED_BY_META_LINE_RE.exec(line)?.[1]?.trim();
+    if (verifiedBy !== undefined && verifiedBy.length > 0) {
+      const declared = declarations.get(currentId);
+      if (declared !== undefined && declared.verifiedBy === undefined) {
+        declarations.set(currentId, { ...declared, verifiedBy });
+      }
+    }
+  }
+
+  return declarations;
+}
+
+/**
+ * Whether a declaration actually suspends the annotation obligation.
+ *
+ * `external` without a pointer does not. The pointer is the whole cost of the
+ * marker: without it the line says only "not here", which is the blanket
+ * silencer this exit exists to avoid being. Such a test case keeps its
+ * obligation and is reported, so the marker cannot be written and forgotten.
+ */
+export function suspendsObligation(declaration: TcStatusDeclaration): boolean {
+  return declaration.status === "planned" || declaration.verifiedBy !== undefined;
+}
 
 /** Markdown's ordered list marker — `1.` or `1)`, at its nine-digit ceiling. */
 const ORDERED_MARKER = "\\d{1,9}[.)]";
@@ -1607,6 +1951,52 @@ const TEST_MODIFIER_SEGMENT =
 const CALL_FORM_PATTERN = new RegExp(
   `(?:^|[^\\w$.])(?:it|test|describe|context|specify|suite|scenario)(?:\\s*\\.\\s*(?:${TEST_MODIFIER_SEGMENT}))*\\s*\\(`,
 );
+
+/**
+ * A suite or test bound through a variable, so what runs is decided at runtime.
+ *
+ * `const deployed = LIVE ? describe : describe.skip` then `deployed(...)` is
+ * the idiomatic way to write a probe that needs a target the run may not have.
+ * It is a real file with real assertions, and nothing static can say whether it
+ * executes — including this scan, which reads the annotation string and stops.
+ *
+ * That matters because the coverage gate has no other evidence. A TC whose only
+ * annotation sits in such a file is reported as covered while the runner skips
+ * it, so removing the production code leaves every gate green. Naming the file
+ * is not an accusation that it is skipped; it is the statement that the gate
+ * cannot tell, which is the part that was invisible.
+ *
+ * The binding is what makes it undecidable, so the binding is what is matched:
+ * an initializer that mentions a runner entry point, and a call of the name it
+ * binds. `describe.skip(` written literally is a different case and is already
+ * a token any scan can see.
+ */
+const COMPUTED_SUITE_BINDING_RE = new RegExp(
+  `(?:^|[^\\w$.])(?:const|let|var)\\s+([A-Za-z_$][\\w$]*)\\s*=\\s*[^;\\n]*` +
+    `[^\\w$.\\n](?:it|test|describe|context|specify|suite|scenario)` +
+    `(?:\\s*\\.\\s*(?:${TEST_MODIFIER_SEGMENT}))*`,
+  "gm",
+);
+
+/**
+ * True when the file binds a runner entry point to a name and then calls it.
+ *
+ * Both halves are required. An initializer alone may be a helper that is never
+ * used as a suite, and a bare call of some local name is ordinary code. Every
+ * binding in the file is considered: a file that computes a name it never uses
+ * before computing one it does would otherwise read as ordinary.
+ */
+function hasComputedSuiteBinding(text: string): boolean {
+  const code = stripCommentsAndLiterals(text);
+  COMPUTED_SUITE_BINDING_RE.lastIndex = 0;
+  for (const match of code.matchAll(COMPUTED_SUITE_BINDING_RE)) {
+    const bound = match[1];
+    if (bound !== undefined && new RegExp(`(?:^|[^\\w$.])${bound}\\s*\\(`).test(code)) {
+      return true;
+    }
+  }
+  return false;
+}
 
 /**
  * Runners whose entry point is a property, so {@link CALL_FORM_PATTERN} rejects

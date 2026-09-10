@@ -469,10 +469,19 @@ describe("ledger presence is checked without a branch diff", () => {
     expect(issues[0]?.file).toContain("spec-0001");
   });
 
-  it("reports no issues when specsDir does not exist", async () => {
+  it("says so when specsDir does not exist, rather than reporting nothing", async () => {
+    // Silence here is the one answer a configuration error must not produce:
+    // every gate keyed on the directory evaluates an empty set, and the run
+    // reads exactly like a project whose specs are all clean.
     vi.mocked(execFileSync).mockImplementation(gitDiffListings());
+
     const issues = await validateTraceabilityIntegrity(tmpRoot, stubConfig);
-    expect(issues).toEqual([]);
+
+    expect(issues).toHaveLength(1);
+    expect(issues[0]?.code).toBe("QFAI-TRACE-003");
+    expect(issues[0]?.rule).toBe("traceability.integrity.specsDirMissing");
+    expect(issues[0]?.severity).toBe("info");
+    expect(issues[0]?.message).toContain("ran over nothing");
   });
 });
 
@@ -514,8 +523,14 @@ describe("an unavailable diff is reported, not swallowed", () => {
   });
 
   it("does not emit QFAI-TRACE-003 when git answers with an empty diff", async () => {
+    // The specs directory is there and empty, which is the case this is about:
+    // git answered, and its answer named no spec. A directory that is not
+    // there is a different finding and would mask this one.
+    await mkdir(path.join(tmpRoot, ".qfai", "specs"), { recursive: true });
     vi.mocked(execFileSync).mockImplementation(gitDiffListings());
+
     const issues = await validateTraceabilityIntegrity(tmpRoot, stubConfig);
+
     expect(issues.some((entry) => entry.code === "QFAI-TRACE-003")).toBe(false);
   });
 });

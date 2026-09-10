@@ -85,7 +85,7 @@ function row(
 
 // ── Tests ──
 
-describe("tddList Phase 2 validators", { timeout: 15000 }, () => {
+describe("tddList Phase 2 validators", () => {
   // TDDLIST_MISSING is reported either way. Its severity follows what the
   // absent ledger costs the spec, which is what the two messages already say.
   it("emits TDDLIST_MISSING as warning when the spec declares coverage-target TC", async () => {

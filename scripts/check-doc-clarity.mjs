@@ -57,8 +57,37 @@ const EXCLUDE_PREFIX = [
   // edit. The source under packages/qfai/assets/init/** is scanned instead.
   ".qfai/assistant/",
   ".codex/agents/",
+  // A symlink to the master in .agents/rules/, so a finding would name a
+  // path that cannot be edited. The master is scanned instead.
+  ".claude/rules/",
 ];
-const EXCLUDE_EXACT = new Set(["CHANGELOG.md"]);
+
+/**
+ * Files whose subject is the forbidden shapes themselves.
+ *
+ * `CHANGELOG.md` is one because the writing rule sends issue and pull-request
+ * numbers there. The rule document is the other, and for the stronger reason:
+ * it is the specification of what this guard rejects, so it has to spell out
+ * the very shapes below as its own examples. Excluded by whole file rather
+ * than by marker — the marker would name a lane that is not shipped, and the
+ * copy under `assets/init/**` goes to projects that do not have it.
+ *
+ * The cost is that a real citation added elsewhere in one of these files goes
+ * unseen. Both are short and are about this rule, so review covers them.
+ */
+const EXCLUDE_EXACT = new Set([
+  "CHANGELOG.md",
+  ".agents/rules/documentation-clarity.md",
+  "packages/qfai/assets/init/root/.agents/rules/documentation-clarity.md",
+]);
+
+/**
+ * A spec pack's own delta log (`_policies/10_delta.md`, `spec-NNNN/09_delta.md`
+ * or another file ending `_delta.md`) is the same case as `CHANGELOG.md` by
+ * function: a record of what changed and why, where a real issue or PR
+ * reference is the citation the record exists to keep.
+ */
+const EXCLUDE_BASENAME_RE = /_delta\.md$/;
 
 const SOURCE_EXTENSIONS = new Set([".ts", ".mts", ".mjs", ".cjs", ".js"]);
 const SHELL_EXTENSIONS = new Set([".sh", ".ps1"]);
@@ -77,12 +106,12 @@ const MARKDOWN_EXTENSIONS = new Set([".md"]);
  *   - a "wave" label from a retired review process, numbered either way
  *     round, e.g. an ordinal followed by the word or the word followed by a
  *     bare number.
- *   - a short-code review reference list, "review " followed by two codes
- *     joined by a slash or comma.
+ *   - a short-code review reference list, "review " followed by two or more
+ *     codes joined by a slash.
  *   - a bracketed finding number after the words "review finding".
  */
 const PATTERNS = [
-  { name: "issue-or-pr-number", re: /(?<![\w&])#\d{2,6}\b/g },
+  { name: "issue-or-pr-number", re: /(?<![\w&])#\d{2,6}\b(?!["'])/g },
   { name: "gh-issue-number", re: /\bGH-\d+\b/g },
   { name: "pr-or-issue-word", re: /\b(?:PR|pull request|issue|Issue)\s+#?\d{2,6}\b/g },
   { name: "codex-review-id", re: /\bcodex\s+r\d{6,}\b/gi },
@@ -90,7 +119,7 @@ const PATTERNS = [
     name: "review-wave-label",
     re: /\bwave[\s-]\d+\b|\b\d+(?:st|nd|rd|th)[\s-](?:late-review[\s-])?wave\b/gi,
   },
-  { name: "review-shortcode-list", re: /\breview\s+[A-Za-z0-9]{4}(?:\s*[/,]\s*[A-Za-z0-9-]{4})+/g },
+  { name: "review-shortcode-list", re: /\breview\s+[A-Za-z0-9]{4}(?:\s*\/\s*[A-Za-z0-9-]{4})+/g },
   { name: "review-finding-bracket", re: /\bReview finding \[\d+\]/gi },
 ];
 
@@ -106,6 +135,7 @@ function trackedFiles() {
 function inScope(rel) {
   if (EXCLUDE_EXACT.has(rel)) return false;
   if (EXCLUDE_PREFIX.some((p) => rel.startsWith(p))) return false;
+  if (EXCLUDE_BASENAME_RE.test(path.basename(rel))) return false;
   const ext = path.extname(rel);
   return SOURCE_EXTENSIONS.has(ext) || SHELL_EXTENSIONS.has(ext) || MARKDOWN_EXTENSIONS.has(ext);
 }
@@ -118,9 +148,23 @@ function isCheckedLine(rel, line) {
   return trimmed.startsWith("//") || trimmed.startsWith("*") || trimmed.startsWith("/*");
 }
 
+/**
+ * A "wave" naming a delivery batch of one tracked change — a
+ * change-record id followed by a batch number, in an execution ledger —
+ * is a different word than the retired review process's wave label: it
+ * names a batch of the CHANGE, not a round of REVIEW. The line carrying a
+ * real change-record id is where that distinction is decidable — a
+ * review-round citation has no reason to sit on the same line as the id
+ * of the change it batches. A row whose batch has not landed yet carries
+ * no such id and says so directly instead, in the same column: a
+ * parenthesized "deferred" note naming the same batch number.
+ */
+const CHANGE_ID_RE = /\bCHG-\d{3}\b|\bDR-\d{4}-\d{4}\b|\(wave\s+\d+\s+deferred\)/i;
+
 function findLineHits(rel, line) {
   const hits = [];
   for (const { name, re } of PATTERNS) {
+    if (name === "review-wave-label" && CHANGE_ID_RE.test(line)) continue;
     re.lastIndex = 0;
     const m = line.match(re);
     if (m) hits.push({ name, sample: m[0] });

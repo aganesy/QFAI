@@ -279,35 +279,23 @@ async function hasMatchingUiContract(contractsRoot: string, specId: string): Pro
     }
   }
 
-  // Also accept `spec-NNNN.yaml` / `ui-NNNN-*.yaml` shapes — consumer
-  // projects sometimes prefix with `spec-` or follow the
-  // `ui-XXXX-<slug>.yaml` convention documented in
-  // `.qfai/contracts/ui/README.md`.
+  // Also accept `spec-NNNN.yaml` / `ui-NNNN-*.yaml`. Consumer projects prefix
+  // with `spec-`, or follow the `ui-XXXX-<slug>.yaml` convention the shipped
+  // guide documents (`skills/qfai-sdd/references/ui-contract-guide.md`).
   //
-  // A token-anywhere regex like `(?:^|[^0-9])${specId}
-  // (?:[^0-9]|$)` would over-match unrelated
-  // basenames whose names happen to contain the four-digit spec id
-  // (e.g. `unrelated-text-0001.yaml` would be treated as a UI contract
-  // for spec 0001), so the accepted shapes are anchored explicitly:
+  // Anchored to exactly the documented set:
   //
-  //   - `<specId>.yaml`                  (bare 4-digit id; legacy)
-  //   - `spec-<specId>.yaml`             (spec-prefixed; legacy)
-  //   - `ui-<specId>.yaml`               (ui-prefixed, no slug)
-  //   - `ui-<specId>-<slug>.yaml`        (ui-prefixed with non-empty
-  //                                       slug, per the documented
-  //                                       convention)
+  //   - `<specId>.yaml`
+  //   - `spec-<specId>.yaml`
+  //   - `ui-<specId>.yaml`
+  //   - `ui-<specId>-<slug>.yaml`, slug non-empty
   //
-  // Any other basename — including ones that merely *contain* the id
-  // token — is rejected. The fallback is intentionally narrower than
-  // the contract's "direct match" arm to avoid silent false-positives.
-  //
-  // Matching the doc exactly rules out a looser
-  // `^(?:spec-|ui-)?${specId}(?:-[^.]*)?\\.yaml$` regex, which would over-accept
-  // (a) bare-slug shapes `<id>-<slug>.yaml` / `spec-<id>-<slug>.yaml`
-  // that are NOT in the documented set, and (b) empty-slug
-  // `ui-<id>-.yaml` (`[^.]*` allows zero chars between the
-  // hyphen and the extension). The slug arm requires `[^.]+`
-  // (one or more) and only attaches to the `ui-` prefix.
+  // Any other basename is rejected, including one that merely contains the id
+  // token: `unrelated-text-0001.yaml` is not spec 0001's UI contract. The slug
+  // arm attaches to the `ui-` prefix only, and requires at least one character,
+  // so neither `<id>-<slug>.yaml` nor `ui-<id>-.yaml` matches. This is
+  // deliberately narrower than the contract's direct-match arm: a false
+  // positive here silently attributes one spec's screens to another.
   let entries: Dirent[];
   try {
     entries = await readdir(uiDir, { withFileTypes: true });
@@ -321,32 +309,20 @@ async function hasMatchingUiContract(contractsRoot: string, specId: string): Pro
   if (entries.some((entry) => entry.isFile() && anchoredRe.test(entry.name))) {
     return true;
   }
-  // Detect the documented per-spec subdirectory layout
-  // `<contractsDir>/ui/spec-<specId>/<sub>.yaml` (candidate #5 in
-  // `.qfai/contracts/ui/README.md` precedence table).
+  // The per-spec subdirectory layout, `<contractsDir>/ui/spec-<specId>/<sub>.yaml`
+  // — the last candidate in the guide's resolution table. Without it a project
+  // that authored its UI contracts that way, and put no `surface_type:
+  // ui-bearing` marker on the spec, read as non-UI-bearing: the resolver
+  // returned nothing, the precheck did nothing, and the iterate command exited
+  // without producing a single directory, silently.
   //
-  // Extension policy: the subdir walk accepts arbitrary `*.yaml` basenames
-  // (since the per-spec subdir IS the spec-scope signal — the
-  // basename does not need to encode the spec id again), but `*.yml`
-  // (single-l) is rejected for parity with the top-level anchored
-  // regex which only accepts `*.yaml`. This intentional asymmetry
-  // (subdir = any `.yaml`; top-level = anchored `<spec-id>.yaml`)
-  // matches the README precedence table semantics. TC-0012-0423
-  // pins both branches plus the empty-subdir non-match case. Checking
-  // only top-level basenames would leave a
-  // project that authors its UI contracts as
-  // `.qfai/contracts/ui/spec-0007/home.yaml` (without a
-  // `surface_type: ui-bearing` marker on the spec) silently
-  // treated as non-UI-bearing — `resolveAllUiBearingSpecs` would return
-  // empty, the cycle 0 precheck would no-op, and the iterate command
-  // would silently exit without producing iter dirs. Probing for the
-  // `spec-<specId>/` subdir + at least one `.yaml` underneath
-  // recovers the documented fallback.
+  // The walk descends recursively, because the documented `<subpath>` may have
+  // more than one component (`screens/home.yaml`).
   //
-  // The subdir walk recursively descends into nested directories under
-  // `<contractsDir>/ui/spec-<specId>/` because the README candidate #5
-  // shape (`<spec-id>/<subpath>.yaml`) explicitly allows `<subpath>` to
-  // be a multi-component path (e.g. `screens/home.yaml`).
+  // Basenames under the subdirectory are unconstrained apart from the
+  // extension: the subdirectory is itself the spec-scope signal, so the
+  // basename need not encode the id again. `.yml` is rejected, matching the
+  // top-level regex above, which accepts only `.yaml`.
   const subdir = entries.find((entry) => entry.isDirectory() && entry.name === `spec-${specId}`);
   if (subdir) {
     const subdirAbs = path.join(uiDir, subdir.name);

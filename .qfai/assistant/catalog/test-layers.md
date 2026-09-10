@@ -186,7 +186,13 @@ The derived `Level` records which oracle owns the obligation, and the [ATDD anno
 gate](#atdd-annotation-hard-gate) routes each obligation ID to exactly one directory. `US-*` is
 answered from `<testsDir>/e2e/**` (`QFAI-ATDD-111`) and `CON-API-*` from `<testsDir>/api/**`
 (`QFAI-ATDD-113`); those two are fixed by the ID type. A `TC-*` is answered from the directory **its
-own declared `Level`** names (`QFAI-ATDD-112`):
+own declared `Level`** names (`QFAI-ATDD-112`).
+
+`BF-*` is not a fourth row. It is a second way to write the first one: a
+`QFAI:BF-NNNN` annotation under `<testsDir>/e2e/**` answers `QFAI-ATDD-111` for
+every `US-*` whose block names that flow. The obligation, the directory and the
+finding code are unchanged — only the token the author writes is shorter. See
+[the E2E obligations](#atdd-annotation-hard-gate).
 
 | `Level`                       | Answered from                       |
 | ----------------------------- | ----------------------------------- |
@@ -201,7 +207,9 @@ own declared `Level`** names (`QFAI-ATDD-112`):
 **(note)** A `TC-*` **should not be** at L4 or L5 — the first bullet below says
 why and what to do instead. The gate routes it there rather than rejecting it so
 a misfiled row is reported once, by the rule that names the real cause, instead
-of twice as "uncovered in integration" and "forbidden in api".
+of twice as "uncovered in integration" and "forbidden in api". That rule is
+`QFAI-ATDD-128`, and it reads the row's own `Level` rather than where its
+annotation ended up: covering the test case does not make the row less misfiled.
 
 **(note2)** A `Level` the crosswalk does not list — a typo, a project's own
 word, or the illegal multi-valued cell — falls to the same default as an
@@ -218,7 +226,8 @@ same way an early one in `<testsDir>/api/**` is. Two consequences bind every `TC
 - **A `TC-*` row's `Level` stays within L1–L3.** L4's goal is `CON-API-*` and
   L5's goal is `US-*` (see the layer definitions above), so an oracle that
   derives to L4 or L5 means the obligation is misfiled, not that the TC is an
-  L4/L5 test. Re-file it as `CON-API-*` or `US-*`.
+  L4/L5 test. Re-file it as `CON-API-*` or `US-*`. `QFAI-ATDD-128` reports a row
+  that does not.
   **Re-filing is an upstream change, never a bare row deletion.** By step 2 the
   derivation reaches L4/L5 only when the parent `BR-*` itself owns the
   service-boundary contract or the journey, so the `TC-*` row is removed only
@@ -268,6 +277,31 @@ and `**Unit and Component owe no ATDD annotation.**` above.
   - `QFAI:CON-API-0001`
   - `QFAI:CON-DB-0001`
 
+### Where the annotation may sit
+
+Two places count, and the second is often the better one:
+
+- a comment, anywhere in the file
+- the **name of a test**, where the id is also visible in the runner's output
+
+```ts
+// QFAI:SPEC-0001:TC-0001
+it("rejects an empty recipient list", ...)
+
+it("QFAI:SPEC-0001:TC-0001 rejects an empty recipient list", ...)
+```
+
+Nothing else in the file counts, and that is deliberate. A fixture holding
+these ids as data — a digest table, a generator, a ledger quoting the id it is
+about — would otherwise read as covering every id it names. A test's name is
+exempt because it is the first argument of a declaration, a position data never
+occupies. A declaration written inside a string is data again, and does not
+count.
+
+So an id in an ordinary string literal is not a reference. `QFAI-ATDD-112`
+reports the obligation as unreferenced even though the id is in the file,
+because from the gate's side it is not.
+
 ## ATDD annotation hard gate
 
 **One reference, not one test.** The gate below asks that each obligation ID
@@ -286,9 +320,24 @@ The gate is satisfied by **one E2E test per business flow carrying every
 test("an operator schedules a call list and it dials", ...)
 ```
 
-That is the intended shape. The flows are already enumerated — Main Flow,
-Alternate and Exception Flows in `_policies/04_Business-Flow.md` — and their
-count is what should bound the E2E tree, not the story count. Input validation,
+That is the intended shape, and it can be written once instead of per story.
+The flows are enumerated in `_policies/04_Business-Flow.md`, each opening its
+entry with a `BF-NNNN`; a story names the flows that realize it with
+`- Flow: BF-0001` in its own block; and a test annotates the flow:
+
+```
+// QFAI:BF-0001
+test("an operator schedules a call list and it dials", ...)
+```
+
+That annotation answers `QFAI-ATDD-111` for every story naming `BF-0001`, so
+the flow count bounds the E2E tree rather than the story count. It discharges
+the obligation and never moves it: the obligation stays on `US-*`, because
+`_policies/**` may not name a lower-layer ID and the flow document therefore
+cannot know which stories exist. A story that names no flow keeps the
+story-grain obligation and the `QFAI:SPEC-XXXX:US-XXXX` form, which is
+unchanged. An annotation naming a flow the document does not declare answers
+for no story, so the obligation it was meant to cover is still reported. Input validation,
 boundary values and API vocabulary belong at L3/L4 whatever the story they trace
 to; putting them at E2E is the "convert all obligations into E2E" anti-pattern
 below, and no annotation obligation asks for it.
@@ -357,6 +406,18 @@ below, and no annotation obligation asks for it.
     reports a missing one. L1/L2 belong to `/qfai-implement`, which is the
     stage that writes unit and component tests.
 
+- **A suite bound at run time is a carrier the scan cannot decide.**
+  `const deployed = LIVE ? describe : describe.skip`, then `deployed(...)`, is
+  the ordinary way to write a probe that needs a target the run may not have.
+  The file declares real tests, so it is a carrier; which of the two names it
+  ends up calling is decided while the run starts, and the coverage gate's only
+  evidence is the annotation string. So a skipped suite and a passing one look
+  the same here, and an obligation carried only by such a file stays covered
+  with the production code deleted. `QFAI-ATDD-124` (`info`) names those files.
+  It is not a violation — give any obligation whose sole carrier is one of them
+  a second owner that runs unconditionally. A written-out `describe.skip(` is a
+  different case and is not named: it is a token any scan can already read.
+
 - **An annotation carrier is not a test.** The scan reads `.feature` and `.md` too, and a file's kind is read from its body: a `.feature` with a `Scenario:` declares a test, a `.md` never does, and a `.test.ts` holding only the annotation is the same ledger renamed. An obligation no carrier declares a test for clears `QFAI-ATDD-111` / `-112` / `-113` / `-115` with nothing behind it, so `QFAI-ATDD-119` (`info`) names it — a legitimate placeholder that must not read as coverage. A repo-wide gate reads `missing.<kind>` **and** `coveredByCarrierOnly` in `summary.json`, never `missing` alone; a `--spec` gate reads the narrowed `QFAI-ATDD-119` in `validate.spec-<id>.json`, because `summary.json` is repo-wide under every scope. A skipped test still counts as declared, and the partition is suppressed, not empty, when `scan.truncated` says the scan was cut short. - API obligations:
   - Every declared `CON-API-*` must be referenced at least once from `<testsDir>/api/**`.
   - Use `QFAI:CON-API-XXXX` annotations.
@@ -388,7 +449,7 @@ below, and no annotation obligation asks for it.
     is symmetric so "exactly one directory" holds in both directions: an
     annotation left behind here after the TC moved to L4/L5 is as wrong as one
     filed early into `<testsDir>/api/**`.
-- Unknown references (`US/TC/CON-API` not declared) are errors.
+- Unknown references (`US/TC/CON-API/CON-DB` not declared) are errors.
 - A `TC-*` annotation outside the directory its `Level` routes to is a
   misplacement, whichever directory it lands in. **This applies to L3-L5 only.**
   L1 and L2 route nowhere — they carry no ATDD annotation obligation at all — so
@@ -515,11 +576,10 @@ Treat these as review signals in the same class as volume floors — worth a fin
 | `.rb`                | a line starting `skip` / `pending`                                  |
 | `.cs`                | `[Ignore` / `Skip = "`                                              |
 
-`QFAI-TEST-003` (warning) is the JS/TS `.skip` family — `it.skip(` / `test.skip(` /
+`QFAI-TEST-003` is the JS/TS `.skip` family — `it.skip(` / `test.skip(` /
 `describe.skip(`, chained `.each` spellings included. It is its own rule, not a graded-down
-`QFAI-TEST-001`: a waiver is judged against the highest severity its rule produced in the run,
-so sharing one code would let a single `.todo` promote the pair to `error` and take the
-per-path waiver in `.qfai/waivers.yml` away from every `.skip`. The fix differs too — a `.skip`
+`QFAI-TEST-001`: the two name different states, and a reader of one finding should not have to
+work out which. The fix differs too — a `.skip`
 keeps its body (it is what `npx qfai atdd scaffold` emits for a skeleton awaiting
 implementation), so drop the modifier rather than delete the test.
 

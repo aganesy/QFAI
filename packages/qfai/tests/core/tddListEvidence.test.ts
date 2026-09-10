@@ -12,11 +12,9 @@
  * 3) deliberately has none — the ledger records no run identity — and the skill
  * now says so instead of advertising a gate that does not exist.
  *
- * They also pin `TDDLIST_EVIDENCE_EMPTY`'s promotion window. Shipped straight
- * at `error`, the rule took a consuming repository from 3 errors to 27 in one
- * `qfai init`, 20 of them on rows already at `done`. The finding still fires on
- * exactly the same rows; what the window changes is whether an upgrade can
- * convert them into a build failure before the operator has seen them.
+ * They also pin `TDDLIST_EVIDENCE_EMPTY`. The rule took a consuming repository
+ * from 3 errors to 27 in one `qfai init`, 20 of them on rows already at `done`,
+ * so a project meets a backlog of these rather than one cell.
  */
 
 import { createHash } from "node:crypto";
@@ -25,10 +23,9 @@ import { chmod, lstat, mkdir, readFile, readdir, rm, symlink, writeFile } from "
 import os from "node:os";
 import path from "node:path";
 
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 
 import { defaultConfig } from "../../src/core/config.js";
-import { newRuleSeverity, RULE_PROMOTIONS } from "../../src/core/sunset.js";
 import {
   EVIDENCE_CELL_MALFORMED_RULE_ID,
   EVIDENCE_CELL_OVERSIZE_RULE_ID,
@@ -36,29 +33,6 @@ import {
   ROW_EXTRA_CELLS_RULE_ID,
   validateTddList,
 } from "../../src/core/validators/tddList.js";
-import { resolveToolVersion } from "../../src/core/version.js";
-import type * as VersionModule from "../../src/core/version.js";
-
-/**
- * The version the validator reads, overridable per test.
- *
- * An empty string means "defer to the real `resolveToolVersion`", so every
- * other case in this file keeps running against the shipped version.
- */
-const toolVersion = vi.hoisted(() => ({ override: "" }));
-
-vi.mock("../../src/core/version.js", async (importOriginal) => {
-  const actual = await importOriginal<typeof VersionModule>();
-  return {
-    ...actual,
-    resolveToolVersion: async (): Promise<string> =>
-      toolVersion.override.length > 0 ? toolVersion.override : actual.resolveToolVersion(),
-  };
-});
-
-afterEach(() => {
-  toolVersion.override = "";
-});
 
 const TEST_FILE = "tests/unit/sample.test.ts";
 
@@ -759,95 +733,6 @@ describe("TDDLIST_EVIDENCE_EMPTY remediation — the recovery it names", () => {
   });
 });
 
-describe("TDDLIST_EVIDENCE_EMPTY promotion window", () => {
-  const promotion = RULE_PROMOTIONS.tddListEvidenceEmpty.promoteAt;
-
-  async function severityAt(version: string): Promise<{ severity: string; message: string }> {
-    toolVersion.override = version;
-    let found: { severity: string; message: string } = { severity: "", message: "" };
-    await withProject(async (root) => {
-      await runOn(root, ledger([{ status: "done", evidence: "-" }]));
-      const issues = await validateTddList(root, defaultConfig);
-      const issue = issues.find((i) => i.code === "TDDLIST_EVIDENCE_EMPTY");
-      if (issue) found = { severity: issue.severity, message: issue.message };
-    });
-    return found;
-  }
-
-  it("reports a warning before the promotion release, naming the release", async () => {
-    // The regression this is here for: a `--fail-on error` gate that was
-    // passing must not latch on an upgrade, and the operator must be able to
-    // read when it will.
-    const found = await severityAt("1.9.9");
-    expect(found.severity).toBe("warning");
-    expect(found.message).toContain(promotion);
-  });
-
-  it("reports an error from the promotion release onwards", async () => {
-    const found = await severityAt("99.0.0");
-    expect(found.severity).toBe("error");
-    // No window left to advertise once the window has closed.
-    expect(found.message).not.toContain("until the");
-  });
-
-  it("stays inside the window when the version cannot be read", async () => {
-    // `resolveToolVersion` answers "unknown" on a read failure. An unreadable
-    // version must never be the thing that turns a warning into a build break.
-    const found = await severityAt("unknown");
-    expect(found.severity).toBe("warning");
-  });
-});
-
-// The two anchor rules read a ledger cell nothing read before them, so on the
-// release that introduces them every ledger written under the old shape meets
-// them at once — this repository's own `qfai validate` went to 29 errors, all
-// on rows already at `done`. That is the latched-gate shape P7 exists to stop,
-// so both ship behind a window, and these are the tests that keep them there.
-describe.each([
-  {
-    code: "QFAI-TDDLIST-007" as const,
-    promotion: RULE_PROMOTIONS.tddListEvidenceAnchorMissing.promoteAt,
-    // A completed row whose Evidence states an outcome in prose: no pointer.
-    evidence: "RED: `npx vitest run tests/unit/sample.test.ts` -> 1 failed. GREEN: 1 passed",
-  },
-  {
-    code: "QFAI-TDDLIST-008" as const,
-    promotion: RULE_PROMOTIONS.tddListEvidenceAnchorUnresolved.promoteAt,
-    // A pointer that is not the canonical evidence anchor shape.
-    evidence: "evidence at ./notes/run.md",
-  },
-])("$code promotion window", ({ code, promotion, evidence }) => {
-  async function severityAt(version: string): Promise<{ severity: string; message: string }> {
-    toolVersion.override = version;
-    let found: { severity: string; message: string } = { severity: "", message: "" };
-    await withProject(async (root) => {
-      await runOn(root, ledger([{ status: "done", evidence }]));
-      const issues = await validateTddList(root, defaultConfig);
-      const issue = issues.find((i) => i.code === code);
-      if (issue) found = { severity: issue.severity, message: issue.message };
-    });
-    return found;
-  }
-
-  it("reports a warning before the promotion release, naming the release", async () => {
-    const found = await severityAt("1.9.9");
-    expect(found.severity).toBe("warning");
-    expect(found.message).toContain(promotion);
-  });
-
-  it("reports an error from the promotion release onwards", async () => {
-    const found = await severityAt("99.0.0");
-    expect(found.severity).toBe("error");
-    // No window left to advertise once the window has closed.
-    expect(found.message).not.toContain("until the");
-  });
-
-  it("stays inside the window when the version cannot be read", async () => {
-    const found = await severityAt("unknown");
-    expect(found.severity).toBe("warning");
-  });
-});
-
 describe("TDDLIST_EVIDENCE_STATUS_ONLY", () => {
   // `SKILL.md` names this shape verbatim. Reported at `warning`: see the rule
   // comment — ledgers written before the check exist in the wild, and this
@@ -1130,9 +1015,7 @@ describe("QFAI-TDDLIST-008", () => {
   // rule id: reported as a `QFAI-TDDLIST-011` it shared a rule id with every
   // legacy prose cell, and the migration's own waiver silenced it.
   //
-  // The severity comes from the promotion pin, not from a literal. The code is
-  // new, so it opens as a warning over the rows seeded before the provenance
-  // token existed and becomes the unwaivable error at the promotion release —
+  // The code is newer than the rows it reads, and an error cannot be waived,
   // which is what makes the separation from the grammar's code load-bearing
   // rather than cosmetic.
   it("reports the provenance breach under its own code and rule id", async () => {
@@ -1150,12 +1033,7 @@ describe("QFAI-TDDLIST-008", () => {
       );
       const issues = await validateTddList(root, defaultConfig);
       const found = issues.find((i) => i.code === "QFAI-TDDLIST-013");
-      expect(found?.severity).toBe(
-        newRuleSeverity(
-          await resolveToolVersion(),
-          RULE_PROMOTIONS.tddListEvidenceRedProvenance.promoteAt,
-        ),
-      );
+      expect(found?.severity).toBe("error");
       expect(found?.rule).toBe(EVIDENCE_RED_PROVENANCE_RULE_ID);
       expect(found?.rule).not.toBe(EVIDENCE_CELL_MALFORMED_RULE_ID);
       expect(found?.message).toContain("RED:n-a");
@@ -3001,13 +2879,13 @@ describe("QFAI-TDDLIST-007", () => {
   const OUTCOME_ONLY =
     "RED: `npx vitest run tests/unit/sample.test.ts` -> 1 failed. GREEN: 1 passed";
 
-  it("warns on a done row whose Evidence carries no anchor", async () => {
+  it("reports a done row whose Evidence carries no anchor", async () => {
     await withProject(async (root) => {
       const codes = await runOn(root, ledger([{ status: "done", evidence: OUTCOME_ONLY }]));
       expect(codes).toContain("QFAI-TDDLIST-007");
       const issues = await validateTddList(root, defaultConfig);
       const found = issues.find((i) => i.code === "QFAI-TDDLIST-007");
-      expect(found?.severity).toBe("warning");
+      expect(found?.severity).toBe("error");
       // The canonical code is the waiver key; `rule` carries the dotted rule
       // path, as it does for this check's sibling.
       expect(found?.rule).toBe("tddList.evidenceAnchorPresent");
@@ -3034,12 +2912,12 @@ describe("QFAI-TDDLIST-007", () => {
     });
   });
 
-  it("is a waivable warning, so legacy ledgers migrate instead of breaking", async () => {
+  it("is waivable, so legacy ledgers migrate instead of breaking", async () => {
     await withProject(async (root) => {
       await runOn(root, ledger([{ status: "done", evidence: "RED -> GREEN", tddId: "TDD-0042" }]));
       const issues = await validateTddList(root, defaultConfig);
       const found = issues.find((i) => i.code === "QFAI-TDDLIST-011");
-      expect(found?.severity).toBe("warning");
+      expect(found?.severity).toBe("error");
       expect(found?.rule).toBe(EVIDENCE_CELL_MALFORMED_RULE_ID);
       expect(found?.message).toContain("TDD-0042");
     });
@@ -3074,12 +2952,12 @@ describe("QFAI-TDDLIST-012", () => {
     });
   });
 
-  it("is a waivable warning", async () => {
+  it("is waivable", async () => {
     await withProject(async (root) => {
       await runOn(root, ledger([{ status: "done", evidence: OVERSIZE }]));
       const issues = await validateTddList(root, defaultConfig);
       const found = issues.find((i) => i.code === "QFAI-TDDLIST-012");
-      expect(found?.severity).toBe("warning");
+      expect(found?.severity).toBe("error");
       expect(found?.rule).toBe(EVIDENCE_CELL_OVERSIZE_RULE_ID);
     });
   });

@@ -22,6 +22,7 @@ import {
   makeGovernedContainmentGuard,
   replaceGovernedAsset,
   retireVerifiedGovernedAsset,
+  retireWithdrawnGovernedAssets,
   runInit,
   SHIPPED_WORKFLOW_NAMES,
 } from "../../src/cli/commands/init.js";
@@ -37,24 +38,11 @@ import {
   writeAssistantAssetsLock,
 } from "../../src/core/assistantAssetProvenance.js";
 import { QFAI_GITIGNORE_BLOCK } from "../../src/core/gitignore.js";
-import { newRuleSeverity, RULE_PROMOTIONS } from "../../src/core/sunset.js";
 import { validateAssistantAssets } from "../../src/core/validators/assistantAssets.js";
-import { resolveToolVersion } from "../../src/core/version.js";
 import { getInitAssetsDir } from "../../src/shared/assets.js";
 import { captureStdout } from "../helpers/stdout.js";
 
-/**
- * The five provenance codes ship behind
- * `RULE_PROMOTIONS.assistantAssetProvenance`, so the severity is whatever the
- * pin says at the version under test — `warning` inside the window, `error`
- * from the promotion release onwards. Derived from the pin rather than written
- * as a literal so this file does not have to be edited on the release that
- * closes the window, and so a severity that stops following the pin is caught
- * here and not only by `sunsetLedger.test.ts`.
- */
-const assetProvenancePromotion = RULE_PROMOTIONS.assistantAssetProvenance.promoteAt;
-
-/** The family the pin governs — not the two existence probes above it. */
+/** The five provenance codes — not the two existence probes above them. */
 const PROVENANCE_CODES = new Set([
   "QFAI-ASSETS-004",
   "QFAI-ASSETS-005",
@@ -64,7 +52,7 @@ const PROVENANCE_CODES = new Set([
 ]);
 
 async function expectedProvenanceSeverity(): Promise<"warning" | "error"> {
-  return newRuleSeverity(await resolveToolVersion(), assetProvenancePromotion);
+  return "error";
 }
 
 const shippedAssistantDir = path.join(getInitAssetsDir(), ".qfai", "assistant");
@@ -137,6 +125,92 @@ describe("assistant asset provenance", () => {
     },
   );
 
+  it.each(["manifest.md", "product.md", "structure.md", "tech.md"])(
+    "does not call a filled-in %s stale once its content is what the lock records",
+    async (fileName) => {
+      // The other half of the same question. `stale` means the file matches the
+      // lock and not the release, and its remedy is `qfai init --force`, which
+      // rewrites the file. On a document the project owns, the lock recording
+      // the adopted content is the ordinary result of re-locking, and the
+      // remedy then destroys the content the project was told to write.
+      //
+      // So the pair has to be exempt together: reported as a fork, filling the
+      // document in is a finding, and reported as stale, the fix for that
+      // finding deletes the work.
+      const root = await makeProject();
+      const assistantDir = path.join(root, ".qfai", "assistant");
+      const adopted = `# ${fileName}\n\nWhat this project actually does.\n`;
+      await writeFile(path.join(assistantDir, "catalog", fileName), adopted, "utf-8");
+      const lock = await readAssistantAssetsLock(assistantDir);
+      await writeAssistantAssetsLock(assistantDir, {
+        files: { ...(lock?.files ?? {}), [`catalog/${fileName}`]: hashAssistantAssetText(adopted) },
+      });
+
+      const issues = await validateAssistantAssets(root, defaultConfig);
+      expect(issues.filter((found) => found.code === "QFAI-ASSETS-004")).toEqual([]);
+    },
+  );
+
+  it("leaves a filled-in catalog alone under --force, even once the lock records it", async () => {
+    // The other side of the same contract. Not reporting the file is only half
+    // of owning it: `--force` decides what to refresh with the same comparison
+    // the stale verdict uses, so a lock holding the project's own content made
+    // the file look refreshable and the run replaced it with the template.
+    //
+    // Nothing warned, because the note that says a file was left alone is
+    // written on the branch that declines to touch it.
+    const root = await makeProject();
+    const assistantDir = path.join(root, ".qfai", "assistant");
+    const target = path.join(assistantDir, "catalog", "tech.md");
+    const adopted = "# Tech\n\n## Standard commands (copy-paste)\n\n`pnpm test`\n";
+    await writeFile(target, adopted, "utf-8");
+    const lock = await readAssistantAssetsLock(assistantDir);
+    await writeAssistantAssetsLock(assistantDir, {
+      files: { ...(lock?.files ?? {}), "catalog/tech.md": hashAssistantAssetText(adopted) },
+    });
+
+    await captureStdout(() => runInit({ dir: root, force: true, dryRun: false, yes: true }));
+
+    expect(await readFile(target, "utf-8")).toBe(adopted);
+  }, 120000);
+
+  it("does not retire a filled-in catalog the release has stopped shipping", async () => {
+    // Retirement decides by hash too, and it deletes rather than overwrites. A
+    // release that drops one of these four does not thereby own what the
+    // project wrote in it, but a lock holding the adopted content makes the
+    // document read as an untouched copy of ours.
+    //
+    // Driven directly: the state needs a path the release no longer ships, and
+    // no `runInit` can produce one while all four are still shipped.
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-retire-"));
+    tempRoots.push(root);
+    const assistantDir = path.join(root, ".qfai", "assistant");
+    await mkdir(path.join(assistantDir, "catalog"), { recursive: true });
+    const target = path.join(assistantDir, "catalog", "tech.md");
+    const adopted = "# Tech\n\n## Standard commands (copy-paste)\n\n`pnpm test`\n";
+    await writeFile(target, adopted, "utf-8");
+
+    const recorded: Record<string, string> = {};
+    const out = {
+      removed: [] as string[],
+      skipped: [] as string[],
+      manualMergeNotes: [] as string[],
+    };
+    await retireWithdrawnGovernedAssets(
+      assistantDir,
+      {}, // the release ships nothing by this name any more
+      { "catalog/tech.md": hashAssistantAssetText(adopted) },
+      recorded,
+      { force: true, dryRun: false },
+      makeGovernedContainmentGuard(root),
+      out,
+    );
+
+    expect(await readFile(target, "utf-8")).toBe(adopted);
+    expect(out.removed).toEqual([]);
+    expect(out.manualMergeNotes.join("\n")).toContain("its content is yours");
+  });
+
   it("still reports a catalog file the project deleted", async () => {
     // The exemption is for a difference, not for an absence: a catalog the
     // skills read is gone, and nothing else reports that.
@@ -184,7 +258,7 @@ describe("assistant asset provenance", () => {
     expect(unshipped[0]?.file).toContain("project-layers.md");
   });
 
-  it("takes every provenance code's severity from the promotion pin, not a literal", async () => {
+  it("reports every provenance code at error", async () => {
     const root = await makeProject();
     const assistantDir = path.join(root, ".qfai", "assistant");
     const catalogDir = path.join(assistantDir, "catalog");
@@ -413,17 +487,23 @@ describe("assistant asset provenance", () => {
       written.push(line.trim().slice(2));
     }
     const notes = lines.filter((line) => line.startsWith("NOTE:"));
+    // The two surfaces spell a path differently: a `written paths:` bullet is
+    // the project-relative path with `/` on every platform, and a `NOTE:` line
+    // carries the absolute destination with the platform's own separator. The
+    // subject here is which surface names the path, so both sides are read with
+    // one separator and the difference cannot decide the outcome.
+    const slashes = (value: string): string => value.replaceAll("\\", "/");
     const reportOf = (needle: string): { written: number; notes: number } => ({
-      written: written.filter((entry) => entry.includes(needle)).length,
-      notes: notes.filter((line) => line.includes(needle)).length,
+      written: written.filter((entry) => slashes(entry).includes(needle)).length,
+      notes: notes.filter((line) => slashes(line).includes(needle)).length,
     });
 
     // Still the content qfai recorded writing, so the governed sync refreshes
     // it — once, and never also as a path it skipped.
-    expect(reportOf(path.join("catalog", "test-layers.md"))).toEqual({ written: 1, notes: 0 });
+    expect(reportOf("catalog/test-layers.md")).toEqual({ written: 1, notes: 0 });
     // Diverged, so it is left byte-identical and named once as a manual merge,
     // and never claimed as written.
-    expect(reportOf(path.join("constitution", "quality.md"))).toEqual({ written: 0, notes: 1 });
+    expect(reportOf("constitution/quality.md")).toEqual({ written: 0, notes: 1 });
     // No staging file is left behind by the atomic refresh.
     const catalogEntries = await readdir(path.join(assistantDir, "catalog"));
     expect(catalogEntries.filter((entry) => entry.includes("qfai-staging"))).toEqual([]);
@@ -443,7 +523,6 @@ describe("assistant asset provenance", () => {
       expect(await readAssistantAssetsLock(assistantDir)).toBeNull();
       expect(Array.isArray(await validateAssistantAssets(root, defaultConfig))).toBe(true);
     },
-    15000,
   );
 
   it("retires a governed file the installed release no longer ships", async () => {
@@ -490,7 +569,6 @@ describe("assistant asset provenance", () => {
         "QFAI-ASSETS-007",
       );
     },
-    15000,
   );
 
   it.skipIf(process.platform === "win32")(
@@ -635,7 +713,7 @@ describe("assistant asset provenance", () => {
     const lonePath = path.join(root, "lone.md");
     await writeFile(lonePath, lone, "utf-8");
     expect(await hashAssistantAssetFile(lonePath)).toBe(hashAssistantAssetText(lone));
-  }, 30000);
+  });
 
   it("never writes or retires through a governed layer that leaves the project", async () => {
     const root = await makeProject();

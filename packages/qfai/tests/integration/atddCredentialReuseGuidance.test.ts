@@ -206,7 +206,13 @@ describe("TC-0008-0017 (TDD-0017): the guidance grows no vocabulary", () => {
     // is a validator, so its codes are declarations the tree now holds and the
     // baseline has to say so. What this row still guards is unchanged — the
     // set is enumerated, so the prose deliverable growing a code of its own
-    // reddens it. Their promotion windows are held in `sunsetLedger.test.ts`.
+    // reddens it.
+    //
+    // `QFAI-ATDD-128` is present on the same terms: `catalog/test-layers.md`
+    // has always said a `TC-*` row's `Level` stays within L1-L3, and the
+    // routing table already named "the rule that names the real cause" for a
+    // row that does not. That rule is a validator now, so its code is a
+    // declaration the tree holds.
     //
     // A re-pin script per pinned guard would need to ship with the workflow-hygiene
     // lane. This row gets the re-derivation COMMAND instead, and deliberately not
@@ -245,6 +251,17 @@ describe("TC-0008-0017 (TDD-0017): the guidance grows no vocabulary", () => {
       "QFAI-ATDD-121",
       "QFAI-ATDD-122",
       "QFAI-ATDD-123",
+      // Carriers whose suite is bound through a variable, so the scan cannot
+      // say whether their tests run.
+      "QFAI-ATDD-124",
+      // A spec that declares test cases and owes none of them an annotation.
+      "QFAI-ATDD-125",
+
+      // A test case that declares where it is verified, and one that claims
+      // `external` while naming no verifier.
+      "QFAI-ATDD-126",
+      "QFAI-ATDD-127",
+      "QFAI-ATDD-128",
       "QFAI-ATDD-131",
       "QFAI-ATDD-132",
       "QFAI-ATDD-133",

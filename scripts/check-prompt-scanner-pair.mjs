@@ -12,9 +12,10 @@
  *
  * Invocation modes:
  *   - `--base <ref>`     compare HEAD against <ref> via `git diff
- *                        --name-only <ref>...HEAD`. Defaults to
- *                        `origin/main`. Overridable through the
- *                        `BASE_REF` environment variable.
+ *                        --numstat <ref>...HEAD`, scoped to the files
+ *                        whose text changed. Defaults to `origin/main`.
+ *                        Overridable through the `BASE_REF` environment
+ *                        variable.
  *   - `--changed <list>` accept a comma-separated path list directly.
  *                        Used by integration / e2e tests that build
  *                        fixtures without spinning up a git repo.
@@ -106,10 +107,35 @@ function tryFetchBase(base) {
   }
 }
 
+/**
+ * The path a `--numstat` line names.
+ *
+ * A line is `<added>\t<deleted>\t<path>`, so the path begins after the
+ * second tab and may itself contain one. `--no-renames` keeps that shape:
+ * with rename detection on, numstat writes `{old => new}` inside the path
+ * instead of a plain one.
+ */
+function numstatPath(line) {
+  const first = line.indexOf("\t");
+  if (first < 0) return "";
+  const second = line.indexOf("\t", first + 1);
+  if (second < 0) return "";
+  return line.slice(second + 1).trim();
+}
+
 function computeChangedSetFromGit(base) {
-  // `git diff --name-only <base>...HEAD` — the `...` form yields the
-  // changes reachable from HEAD that are not reachable from base, which
-  // is the most appropriate "what did this PR change" view.
+  // The `...` form yields the changes reachable from HEAD that are not
+  // reachable from base, which is the "what did this PR change" view.
+  //
+  // `--numstat`, not `--name-only`. The question is whether this branch
+  // changed the prompt or the scanner, and `--name-only` answers a
+  // different one: it selects by blob identity and ignores the whitespace
+  // flags entirely, so a commit that re-normalises line endings lists
+  // every file and asks for a pairing edit nobody owes.
+  //
+  // `--ignore-cr-at-eol` rather than `--ignore-all-space`, which would
+  // reach too far: it also hides an indentation change, and indentation
+  // carries meaning in the Markdown these lanes read.
   if (!isBaseRefReachable(base)) {
     tryFetchBase(base);
   }
@@ -125,13 +151,15 @@ function computeChangedSetFromGit(base) {
     return [];
   }
   try {
-    const out = execFileSync("git", ["diff", "--name-only", `${base}...HEAD`], {
-      encoding: "utf-8",
-    });
+    const out = execFileSync(
+      "git",
+      ["diff", "--numstat", "--ignore-cr-at-eol", "--no-renames", `${base}...HEAD`],
+      { encoding: "utf-8" },
+    );
     return out
       .split("\n")
-      .map((line) => line.trim())
-      .filter((line) => line.length > 0);
+      .map((line) => numstatPath(line))
+      .filter((p) => p.length > 0);
   } catch (err) {
     stderr.write(
       `check-prompt-scanner-pair: failed to compute git diff against ${base}: ` +

@@ -123,22 +123,18 @@ export async function applyWaivers(
  * them, and a project that deliberately keeps an unfilled delta would be stuck
  * with a warning it has no way to accept.
  *
- * The waiver file's own findings (`QFAI-WAIVER-00x`) are deliberately dropped:
- * `validateProject` already reported them for this same file, and returning
- * them again would double-count every parse error.
- *
- * The waivers this pass found applicable do come back, in `active`. The caller
- * cannot assume its own `ValidationResult` already lists them — a result read
- * back from a stored `validate.json` may carry no `waivers` block at all — and
- * a report that prints `active 0 / suppressed 1` names no waiver for the
- * suppression it just performed.
+ * Both the waivers this pass found applicable and the verdicts it reached on
+ * the waiver file come back, in `active` and `validationIssues`. The caller
+ * cannot assume its own `ValidationResult` already carries either — a result
+ * read back from a stored `validate.json` may have no `waivers` block at all —
+ * and it is the one that can tell which of them it has already published.
  */
 export async function applyWaiversToExtraFindings(
   root: string,
   findings: Issue[],
 ): Promise<ExtraFindingsWaiverResult> {
   const { applied, loaded } = await runWaiverPass(root, findings);
-  return { ...applied, active: loaded.activeWaivers };
+  return { ...applied, active: loaded.activeWaivers, validationIssues: loaded.validationIssues };
 }
 
 async function runWaiverPass(
@@ -575,6 +571,16 @@ async function loadWaivers(
           "WAIVER-002",
           [id, ruleId],
           "change",
+          // The refusal said what is forbidden and not what to do instead, which
+          // left the reader to discover the alternatives by trying each one.
+          // They are declarations in the artifact the obligation lives in, not
+          // waivers, and each is narrower than a waiver on purpose.
+          "A waiver cannot clear an error, so the exit is a declaration in the artifact that owes it. " +
+            "A story outside the current slice takes `- x-qfai-status: planned` in its own block. A " +
+            "test case does too, and takes `- x-qfai-status: external` with `- x-qfai-verified-by: " +
+            "<what checks it>` when the obligation is met outside this repository. A contract takes " +
+            "the same `planned` marker at its document root. If none of those fits, the finding is " +
+            "reporting something real and the fix is the thing it names.",
         ),
       );
     }
@@ -627,6 +633,19 @@ export type ExtraFindingsWaiverResult = AppliedWaiverResult & {
    * into whatever active list it publishes.
    */
   active: ValidationWaiverEntry[];
+  /**
+   * What this pass decided about the waiver file itself — `QFAI-WAIVER-001`,
+   * `-002`, `-003` and `-004`.
+   *
+   * Both passes read the same file, so most of these arrive twice and the
+   * caller publishes each once. It cannot be only the first pass's list: the
+   * severity of a rule is read from the findings in hand, so a waiver on a
+   * finding raised after validation is judged against an index that has never
+   * seen it. A refusal that only this pass can reach has no other route to the
+   * output, and a waiver that is neither applied nor refused tells the operator
+   * nothing.
+   */
+  validationIssues: Issue[];
 };
 
 function applyWaiversToFindings(
@@ -1207,16 +1226,14 @@ const STATIC_RULE_SEVERITY: ReadonlyArray<{
   // not recognise a waiver written against the alias.
   { keys: [EXCEPTION_PARKED_CODE, EXCEPTION_PARKED_RULE_ID], severity: "warning" },
   { keys: [UNKNOWN_LEVEL_CODE, UNKNOWN_LEVEL_RULE_ID], severity: "warning" },
-  // The waivable half of the test-stub gate. `validateTestTodoStubs` only runs
-  // under the profiles that include it (`--profile sdd` does not), so on every
-  // other profile the rule never reaches `buildRuleSeverityIndex` from a
-  // finding — and a global `.qfai/waivers.yml` entry parking a deliberately
-  // skipped suite would be rejected as an unknown rule (QFAI-WAIVER-004) on
-  // those runs, failing `--fail-on warning` in profiles that have nothing to do
-  // with it. `warning` matches the emitter in
-  // `validators/testTodoStubs.ts` (SKIPPED_TEST_WARNING), so the waiver stays
-  // accepted rather than being refused as an error-severity target.
-  { keys: ["QFAI-TEST-003", "TEST-003"], severity: "warning" },
+  // `validateTestTodoStubs` runs only under the profiles that include it
+  // (`--profile sdd` does not), so on every other profile the rule reaches
+  // `buildRuleSeverityIndex` from no finding. Without an entry here a waiver
+  // naming it would be refused as an unknown rule on those runs and as an
+  // error-severity target on the runs that emit it — two different answers to
+  // one waiver file. `error` matches the emitter in
+  // `validators/testTodoStubs.ts`, so the refusal is the same either way.
+  { keys: ["QFAI-TEST-003", "TEST-003"], severity: "error" },
   // This module's own findings, emitted on every run that parses a waiver file.
   { keys: ["QFAI-WAIVER-001", "WAIVER-001"], severity: "error" },
   { keys: ["QFAI-WAIVER-002", "WAIVER-002"], severity: "error" },

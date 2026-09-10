@@ -504,6 +504,30 @@ describe("the token the setup document asks for can do what the config asks of i
       "and the classic-token equivalent, since the document offers that route too",
     ).toMatch(/`workflow`/);
   });
+
+  // The second setting a repository can hold that stops the bot dead, and the
+  // one whose symptom looks least like its cause: a ruleset forbidding
+  // force-pushes rejects every rebase, so the bot halts and its open pull
+  // requests fall behind `main` until they conflict. Nothing in this tree can
+  // read a ruleset, so the setup document is again the only place that can
+  // prevent it.
+  it("names the ruleset bypass, and rejects the config-side alternative", () => {
+    const setup = readFileSync(path.join(REPO_ROOT, ".github/renovate.md"), "utf-8");
+
+    expect(
+      setup,
+      "`.github/renovate.md` must say the force-push ruleset needs a bypass actor: without one " +
+        "the bot stops updating branches and reports a configuration error instead",
+    ).toMatch(/bypass actor/i);
+
+    // Stated as the rejected option rather than left out, because it is the
+    // change someone reaching for `renovate.json5` would make first, and it
+    // silences the error while leaving every stale branch unmergeable.
+    expect(
+      setup,
+      'and must say why `rebaseWhen: "never"` is not the fix, since it is the obvious one',
+    ).toContain('rebaseWhen: "never"');
+  });
 });
 
 describe("the presets other repositories extend still resolve to the files they name", () => {

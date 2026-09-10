@@ -7,6 +7,7 @@ import {
   atddTestKindDirs,
   evaluateAtddCodeTraceability,
   PLANNED_CONTRACT_KEY,
+  TC_VERIFIED_BY_KEY,
   type AtddCodeTraceabilityResult,
   type AtddTestKind,
   type AtddUnknownRef,
@@ -132,6 +133,12 @@ function narrowToScope(
     // the finding is filed at a spec directory, which survives the scope
     // filter, so the scoped evidence artifact named another spec's ids.
     unitComponentTcIds: result.unitComponentTcIds.filter(inScope),
+    // And again for the misfiled rows. `QFAI-ATDD-128` names them by id and is
+    // filed at a spec directory, so an unnarrowed list puts a sibling spec's
+    // rows in this run's message, refs and annotations — with the requested
+    // spec among the related files, the finding survives the later filter and
+    // carries the other spec's ids with it.
+    misfiledLevelTcIds: result.misfiledLevelTcIds.filter(inScope),
     // Same terms again: `QFAI-ATDD-118` names the deferred stories by id and is
     // filed at a spec directory, so an unnarrowed list would put a sibling
     // spec's deferrals in this run's evidence artifact.
@@ -257,6 +264,39 @@ function testPathSpecNumber(file: string, testsRoot: string): string | null {
 /** The per-layer directories `qfai atdd scaffold` writes under the tests root. */
 const LAYER_DIRS: ReadonlySet<string> = new Set(["integration", "api", "e2e", "atdd"]);
 
+/** `SPEC-0007:TC-0007-0001` -> `0007`. */
+const REF_SPEC_RE = /^SPEC-(\d{4}):/;
+
+/** What one spec's TC table owes, and what it does not. */
+type SpecTcCensus = { specNumber: string; declared: number; exempt: number; owed: number };
+
+/**
+ * Per spec: how many TCs it declares, how many the `Level` routing exempts, and
+ * how many are left owing an annotation.
+ *
+ * The counts are the point. A rule reporting no findings over a population of
+ * zero reads exactly like one reporting none over a population of 118, and a
+ * flat list of every exempt id across every spec cannot tell them apart — which
+ * is how a green `QFAI-ATDD-112` gets read as "coverage is fine" while three
+ * quarters of the TC table is outside it.
+ */
+function censusBySpec(result: AtddCodeTraceabilityResult): SpecTcCensus[] {
+  const exemptBySpec = new Map<string, number>();
+  for (const ref of result.unitComponentTcIds) {
+    const specNumber = REF_SPEC_RE.exec(ref)?.[1];
+    if (specNumber !== undefined) {
+      exemptBySpec.set(specNumber, (exemptBySpec.get(specNumber) ?? 0) + 1);
+    }
+  }
+  return [...result.specTcIds]
+    .map(([specNumber, ids]) => {
+      const exempt = exemptBySpec.get(specNumber) ?? 0;
+      return { specNumber, declared: ids.size, exempt, owed: ids.size - exempt };
+    })
+    .filter((entry) => entry.declared > 0)
+    .sort((left, right) => left.specNumber.localeCompare(right.specNumber));
+}
+
 function specAttribution(
   refs: readonly string[],
   specsRoot: string,
@@ -323,6 +363,15 @@ type AtddTraceabilitySummary = {
    * ATDD owes nothing for them and `tdd/test-list.md` is the gate.
    */
   excludedUnitComponentTc: string[];
+  /**
+   * Per spec, the TC population `QFAI-ATDD-112` is measured over.
+   *
+   * `missing.tc: []` says nothing about the size of the set it is empty of. A
+   * downstream gate reading only that cannot tell a spec whose every TC is
+   * covered from one that owes no TC at all, which is the same reading a green
+   * run gives a person.
+   */
+  tcCensus: { spec: string; declared: number; exempt: number; owed: number }[];
   unknown: Array<{ file: string; token: string }>;
   forbidden: {
     tcInApi: Array<{ file: string; ids: string[] }>;
@@ -433,13 +482,26 @@ export async function validateAtddCodeTraceability(
     );
   }
 
+  const census = censusBySpec(result);
+
   if (result.unitComponentTcIds.length > 0) {
     const ids = result.unitComponentTcIds;
     const unitComponentHome = specAttribution(ids, result.specsRoot, result.declaredSpecDirs);
+    // Per spec, not one flat list. A truncated run of ids across every spec
+    // cannot show that one of them contributes 35 of the 358 and owes nothing,
+    // which is the fact a reader needs to tell an exempt spec from a covered
+    // one.
+    const perSpec = census
+      .filter((entry) => entry.exempt > 0)
+      .map(
+        (entry) =>
+          `spec-${entry.specNumber}: ${String(entry.exempt)} exempt / ${String(entry.owed)} owed`,
+      )
+      .join("; ");
     issues.push(
       issue(
         "QFAI-ATDD-117",
-        `宣言 Level が Unit / Component の TC は ATDD の注釈義務対象外です（${String(ids.length)} 件）: ${ids.slice(0, 10).join(", ")}${ids.length > 10 ? ` (他 ${String(ids.length - 10)} 件)` : ""}`,
+        `${String(ids.length)} test case(s) declare a Unit or Component Level, so they owe no ATDD annotation. ${perSpec}`,
         "info",
         // The specs these ids name, not the specs root: filed at the root the
         // finding belongs to every scope, so a scoped run reported it whether
@@ -450,6 +512,139 @@ export async function validateAtddCodeTraceability(
         "canonical",
         "これらは `/qfai-implement` の担当です。`tdd/test-list.md` に行があること（`TDDLIST_TC_NOT_COVERED` が error で検査）で担保してください。ATDD 側の注釈は不要で、置いても違反にはなりません。",
         { relatedFiles: unitComponentHome.relatedFiles },
+      ),
+    );
+  }
+
+  if (result.computedSuiteCarriers.length > 0) {
+    const carriers = result.computedSuiteCarriers;
+    issues.push(
+      issue(
+        "QFAI-ATDD-124",
+        `Coverage in ${String(carriers.length)} file(s) rests on a suite bound through a variable, so whether those tests run is decided at runtime and this scan cannot tell: ${carriers.slice(0, 10).join(", ")}${carriers.length > 10 ? ` (and ${String(carriers.length - 10)} more)` : ""}`,
+        "info",
+        carriers[0] ?? result.specsRoot,
+        "atddCodeTraceability.coverage.computedSuiteBinding",
+        carriers,
+        "canonical",
+        "This is not a violation: binding the suite is the ordinary way to write a probe that needs a target the run may not have. It is reported because the coverage gate's only evidence for those obligations is the annotation string, so a skipped suite and a passing one look the same here. Give any obligation whose sole carrier is such a file a second owner that runs unconditionally.",
+        { relatedFiles: carriers.slice(1) },
+      ),
+    );
+  }
+
+  // A spec that declares TCs and owes none of them an annotation. Its own
+  // statement, separate from the exempt ids above, because it is the fact that
+  // was invisible: `QFAI-ATDD-112` never names such a spec, so deleting every
+  // annotation in it changes no output, and the reasonable reading of that is
+  // that the gate is broken rather than that the spec is outside it.
+  //
+  // `info`, not `warning`. The shape is legitimate — a spec whose obligations
+  // are all pure-logic has no acceptance test to owe — and it is common enough
+  // that a warning would fail runs on correct trees and teach readers to ignore
+  // the level, which is the failure this finding exists to correct. What was
+  // missing is the sentence, not the severity. The Levels being wrong is the
+  // other reading, and the message names it so a reviewer can check.
+  const exemptSpecs = census.filter((entry) => entry.owed === 0);
+  if (exemptSpecs.length > 0) {
+    const refs = exemptSpecs.map((entry) => `SPEC-${entry.specNumber}`);
+    const home = specAttribution(
+      exemptSpecs.map((entry) => `SPEC-${entry.specNumber}:`),
+      result.specsRoot,
+      result.declaredSpecDirs,
+    );
+    issues.push(
+      issue(
+        "QFAI-ATDD-125",
+        `Declares test cases and owes no ATDD annotation for any of them: ${exemptSpecs
+          .map(
+            (entry) =>
+              `spec-${entry.specNumber} (all ${String(entry.declared)} are Unit or Component)`,
+          )
+          .join(", ")}`,
+        "info",
+        home.file,
+        "atddCodeTraceability.coverage.specFullyExempt",
+        refs,
+        "canonical",
+        "`QFAI-ATDD-112` is green for this spec because the population is zero, not because anything is covered. If that is intended, `/qfai-implement` holds these through `tdd/test-list.md` (`TDDLIST_TC_NOT_COVERED`, an error). If it is not, read the `Level` column of `06_Test-Cases.md`: a test case whose oracle observes acceptance, declared L1 or L2, produces exactly this shape.",
+        { relatedFiles: home.relatedFiles },
+      ),
+    );
+  }
+
+  // A test case its own block says is verified somewhere else. `info`, like the
+  // story deferral it parallels: the exit is legitimate, and what matters is
+  // that it stays visible instead of looking like coverage.
+  if (result.deferredTcIds.length > 0) {
+    const refs = result.deferredTcIds.map((entry) => entry.ref);
+    const home = specAttribution(refs, result.specsRoot, result.declaredSpecDirs);
+    const described = result.deferredTcIds
+      .map((entry) =>
+        entry.verifiedBy === undefined
+          ? `${entry.ref} (${entry.status})`
+          : `${entry.ref} (${entry.status}: ${entry.verifiedBy})`,
+      )
+      .join(", ");
+    issues.push(
+      issue(
+        "QFAI-ATDD-126",
+        `${String(refs.length)} test case(s) declare where they are verified, so they owe no annotation here: ${described}`,
+        "info",
+        home.file,
+        "atddCodeTraceability.coverage.tcStatusDeferred",
+        refs,
+        "canonical",
+        "`planned` suspends the obligation until the test is written; remove it then. `external` says the obligation is met outside this repository and names what meets it, so the next reader can find the thing that actually checks it. Neither is a way to leave an obligation unmet — a test case nothing verifies anywhere belongs in neither state.",
+        { relatedFiles: home.relatedFiles },
+      ),
+    );
+  }
+
+  // `external` with no verifier named. The obligation is kept, because the
+  // marker without its pointer says only "not here" — which is the blanket
+  // silencer this exit was designed not to be.
+  if (result.unsupportedTcStatusIds.length > 0) {
+    const refs = result.unsupportedTcStatusIds;
+    const home = specAttribution(refs, result.specsRoot, result.declaredSpecDirs);
+    const severity = "error";
+    issues.push(
+      issue(
+        "QFAI-ATDD-127",
+        `${String(refs.length)} test case(s) declare \`${PLANNED_CONTRACT_KEY}: external\` and name no verifier, so the obligation stands: ${refs.join(", ")}`,
+        severity,
+        home.file,
+        "atddCodeTraceability.coverage.tcExternalWithoutVerifier",
+        refs,
+        "change",
+        `Add \`- ${TC_VERIFIED_BY_KEY}: <what checks it>\` to the test case's own block — a scheduled probe, a platform setting, a monitor — or drop the status and cover the test case here. The pointer is what makes this an exit rather than a silencer: without it the spec records that nothing in the repository verifies the obligation and nothing else is named either.`,
+        { relatedFiles: home.relatedFiles },
+      ),
+    );
+  }
+
+  // A `TC-*` row declaring L4 or L5. `catalog/test-layers.md` states that a
+  // test case's `Level` stays within L1-L3 — L4's goal is a `CON-API-*` and
+  // L5's is a `US-*` — so such a row is an obligation filed under the wrong ID
+  // type. The routing table routes it to that layer rather than rejecting it so
+  // the row is reported once, by the rule that names the real cause, instead of
+  // twice as uncovered in one directory and forbidden in another. This is that
+  // rule.
+  if (result.misfiledLevelTcIds.length > 0) {
+    const refs = result.misfiledLevelTcIds;
+    const home = specAttribution(refs, result.specsRoot, result.declaredSpecDirs);
+    const severity = "error";
+    issues.push(
+      issue(
+        "QFAI-ATDD-128",
+        `${String(refs.length)} test case(s) declare a Level of L4/API or L5/E2E, which files a service-boundary contract or a journey as a test case: ${refs.join(", ")}.`,
+        severity,
+        home.file,
+        "atddCodeTraceability.coverage.tcLevelMisfiled",
+        refs,
+        "change",
+        "Re-file the obligation under the ID type its level names: `CON-API-*` for a service-boundary contract, `US-*` for a full-system journey. Re-filing is an upstream change, never a bare row deletion — the row goes together with the `EX-*` it verifies and the `BR-*`/`AC-*` that EX concretizes, or the parent is left with no `EX-Ref`. Where the level cell is simply wrong, correct it to the layer the oracle really needs.",
+        { relatedFiles: home.relatedFiles },
       ),
     );
   }
@@ -874,6 +1069,12 @@ async function writeAtddTraceabilityReport(
       ),
     },
     excludedUnitComponentTc: result.unitComponentTcIds,
+    tcCensus: censusBySpec(result).map((entry) => ({
+      spec: entry.specNumber,
+      declared: entry.declared,
+      exempt: entry.exempt,
+      owed: entry.owed,
+    })),
     unknown: result.unknown.map((entry) => ({
       file: entry.file,
       token: entry.token,

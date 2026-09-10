@@ -21,7 +21,7 @@ async function readSkill(): Promise<string> {
   return readFile(path.join(skillDir, "SKILL.md"), "utf-8");
 }
 
-describe("web-research security", { timeout: 15_000 }, () => {
+describe("web-research security", () => {
   // ── MCP Failure Recovery ────────────────────────────────────────────
 
   // QFAI:SPEC-0027:TC-0027-0005  TDD-0011

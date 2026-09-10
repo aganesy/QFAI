@@ -643,6 +643,10 @@ approved` whose **`## Impact scope` names the changed path** silences it — not
   reported for a human merge. An added file that is not a `*.local.md` overlay is
   `QFAI-ASSETS-006`, a shipped rule the project no longer has is `QFAI-ASSETS-007`, and a
   comparison that could not be made at all is `QFAI-ASSETS-008`.
+  **The four Stage 0 catalogs are outside this.** `catalog/manifest.md`, `product.md`,
+  `structure.md` and `tech.md` ship asking to be filled in, so their content is the project's:
+  neither `QFAI-ASSETS-004` nor `QFAI-ASSETS-005` reports them, and `--force` leaves them alone
+  rather than refreshing them. Deleting one is still `QFAI-ASSETS-007`.
 - Downstream reviewers must not originate binding obligations that upstream SSOT does not contain.
 - If approval is not available, stay in STOP state **for that CR's blocked set** and report
   blockers. Work outside every open CR's blocked set proceeds; an unanswered decision is not a

@@ -32,8 +32,10 @@ import { afterEach, describe, expect, it } from "vitest";
 import {
   IGNORE_MARKER,
   findMdschemaCommand,
+  firstHeading,
   optsOutOfSchema,
   patternToRegExp,
+  rootHeadingPattern,
 } from "../../assets/scripts/check-mdschema.mjs";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -113,6 +115,9 @@ const NON_CONFORMING_SPEC = CONFORMING_SPEC.replace(
   "## Scope\n\n- In: the thing\n- Out: the other thing\n\n",
   "",
 );
+
+/** The same document with only its root heading replaced, sections intact. */
+const WRONG_ROOT = CONFORMING_SPEC.replace("# 01 Spec", "# Something Else Entirely");
 
 async function writeSpec(root: string, pack: string, body: string): Promise<string> {
   const dir = path.join(root, ".qfai", "specs", pack);
@@ -488,5 +493,323 @@ describe("check-mdschema command resolution", () => {
     // answer. Whether the walk then finds another one further up is not this
     // case's subject: either way, this directory must not be what answered.
     expect(findMdschemaCommand(root)?.args?.[0]).not.toBe(path.join(packageDir, "bin", "cli.js"));
+  });
+});
+
+/**
+ * `--scope changed` judges each touched document against its own state at the
+ * merge base.
+ *
+ * Without that, a document predating the schema fails whole, so editing one
+ * line of it reports every violation it already had as this branch's — and the
+ * migration the flag exists to allow can never land incrementally, because the
+ * first edit to a legacy document has to carry all of it.
+ *
+ * These cases need a real repository with two commits, which the tree builders
+ * above do not make: outside a repository the scope degrades and fails open to
+ * `all`, where no ratchet applies.
+ */
+describe("the ratchet in --scope changed", () => {
+  function git(root: string, ...args: string[]): void {
+    const done = spawnSync("git", args, { cwd: root, encoding: "utf-8" });
+    if (done.status !== 0) {
+      throw new Error(`git ${args.join(" ")} failed: ${done.stderr ?? ""}`);
+    }
+  }
+
+  /**
+   * A repository holding `base` on `main`, with `head` committed on a branch.
+   *
+   * Every document is written at both revisions, so a case says what changed by
+   * giving the two states rather than by mutating a tree between commands.
+   */
+  async function twoCommits(
+    base: Record<string, string>,
+    head: Record<string, string>,
+  ): Promise<string> {
+    const root = await newTempDir();
+    git(root, "init", "-q", "-b", "main", ".");
+    git(root, "config", "user.email", "lane@example.com");
+    git(root, "config", "user.name", "lane");
+    for (const [pack, body] of Object.entries(base)) {
+      await writeSpec(root, pack, body);
+    }
+    git(root, "add", "-A");
+    git(root, "commit", "-qm", "base");
+    git(root, "checkout", "-q", "-b", "work");
+    for (const [pack, body] of Object.entries(head)) {
+      await writeSpec(root, pack, body);
+    }
+    git(root, "add", "-A");
+    git(root, "commit", "-qm", "head");
+    return root;
+  }
+
+  /** The same legacy document at both revisions, one line longer at the head. */
+  const LEGACY = "# spec: a heading the schema does not accept\n\n## Metadata\n\n- something\n";
+  const LEGACY_EDITED = `${LEGACY}- one more line\n`;
+
+  it("leaves a pre-existing failure to its own change when a branch edits the document", async () => {
+    const root = await twoCommits({ "spec-0002": LEGACY }, { "spec-0002": LEGACY_EDITED });
+
+    const result = runDriver(["--root", root, "--scope", "changed", "--base", "main"]);
+
+    expect(result.status).toBe(0);
+    expect(result.stdout).toContain("no new violations");
+    expect(result.stdout).toContain("already failing at the merge base");
+  });
+
+  it("reports the inherited failure rather than dropping it", async () => {
+    // Held back is not the same as hidden. A document nobody is told about is
+    // one nobody migrates, which is the backlog this flag exists to let shrink.
+    const root = await twoCommits({ "spec-0002": LEGACY }, { "spec-0002": LEGACY_EDITED });
+
+    const result = runDriver(["--root", root, "--scope", "changed", "--base", "main", "--summary"]);
+
+    expect(result.stdout).toContain("pre-existing, not this branch's");
+    expect(result.stdout).toContain("01_Spec.md");
+    expect(result.stdout).toContain("PASS  spec-overview (1 file(s), 1 pre-existing)");
+  });
+
+  it("fails when a branch breaks a document that conformed at the merge base", async () => {
+    const root = await twoCommits(
+      { "spec-0001": CONFORMING_SPEC },
+      { "spec-0001": NON_CONFORMING_SPEC },
+    );
+
+    const result = runDriver(["--root", root, "--scope", "changed", "--base", "main"]);
+
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain("spec-overview");
+  });
+
+  it("fails when a branch adds a document that does not conform", async () => {
+    // Absent at the base is not "was already failing". This is the first run
+    // that could have reported it.
+    const root = await twoCommits({ "spec-0001": CONFORMING_SPEC }, { "spec-0003": LEGACY });
+
+    const result = runDriver(["--root", root, "--scope", "changed", "--base", "main"]);
+
+    expect(result.status).toBe(1);
+  });
+
+  it("still fails for what the branch owes when it also edits a legacy document", async () => {
+    const root = await twoCommits(
+      { "spec-0001": CONFORMING_SPEC, "spec-0002": LEGACY },
+      { "spec-0001": NON_CONFORMING_SPEC, "spec-0002": LEGACY_EDITED },
+    );
+
+    const result = runDriver(["--root", root, "--scope", "changed", "--base", "main"]);
+
+    expect(result.status).toBe(1);
+    // The two are separated by where they are printed: what this branch owes
+    // goes to stderr with the failure, the inherited one to stdout without it.
+    expect(result.stderr).toContain("spec-0001");
+    expect(result.stderr).not.toContain("spec-0002");
+    expect(result.stdout).toContain("spec-0002");
+  });
+
+  it("does not excuse a document the merge base checked against another contract", async () => {
+    // Live at the base and retired at the head is two document shapes at one
+    // path. Running the base text against the head's contract would fail it for
+    // lacking a section only the retired shape owes, and the real omission
+    // would read as pre-existing.
+    const retiredWithoutItsRecord = CONFORMING_SPEC.replace(
+      "# 01 Spec\n",
+      "# 01 Spec\n\n- Status: superseded\n",
+    );
+    const root = await twoCommits(
+      { "spec-0001": CONFORMING_SPEC },
+      { "spec-0001": retiredWithoutItsRecord },
+    );
+
+    const result = runDriver(["--root", root, "--scope", "changed", "--base", "main"]);
+
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain("spec-overview-retired");
+  });
+
+  it("holds every violation against --scope all, which is the migration view", async () => {
+    const root = await twoCommits({ "spec-0002": LEGACY }, { "spec-0002": LEGACY_EDITED });
+
+    const result = runDriver(["--root", root, "--scope", "all"]);
+
+    expect(result.status).toBe(1);
+    expect(result.stdout).not.toContain("pre-existing");
+  });
+
+  it("leaves a root heading already wrong at the merge base to its own change", async () => {
+    // The root-heading verdict is taken without `mdschema`, so it needs its own
+    // answer to the ownership question the ratchet asks of everything else.
+    const root = await twoCommits(
+      { "spec-0002": WRONG_ROOT },
+      { "spec-0002": `${WRONG_ROOT}- one more line\n` },
+    );
+
+    const result = runDriver(["--root", root, "--scope", "changed", "--base", "main"]);
+
+    expect(result.status).toBe(0);
+    expect(result.stdout).toContain("pre-existing");
+    expect(result.stdout).toContain("Root heading is");
+  });
+
+  it("fails when a branch breaks a root heading that matched at the merge base", async () => {
+    const root = await twoCommits({ "spec-0001": CONFORMING_SPEC }, { "spec-0001": WRONG_ROOT });
+
+    const result = runDriver(["--root", root, "--scope", "changed", "--base", "main"]);
+
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain("Root heading is");
+  });
+
+  it("leaves a document out of scope when only its line endings changed", async () => {
+    // Re-normalising a tree to LF rewrites every file. Judging scope by which
+    // blobs moved puts documents nobody edited into the gate, and every
+    // violation they already carried reports at once — which is what makes
+    // "normalise the line endings" and "keep the docs lane green" read as
+    // alternatives.
+    const root = await twoCommits(
+      { "spec-0002": LEGACY },
+      { "spec-0002": LEGACY.replace(/\n/g, "\r\n") },
+    );
+
+    const result = runDriver(["--root", root, "--scope", "changed", "--base", "main", "--summary"]);
+
+    expect(result.status).toBe(0);
+    expect(result.stdout).not.toContain("pre-existing, not this branch's");
+  });
+
+  it("keeps a document in scope when only its indentation changed", async () => {
+    // The narrower flag is the point. Indentation carries meaning here: moving
+    // a list item two spaces right nests it under its predecessor, which is a
+    // shape change this gate grades. Ignoring all whitespace to reach the line
+    // endings would take this edit with it.
+    const root = await twoCommits(
+      { "spec-0002": LEGACY },
+      { "spec-0002": LEGACY.replace("- something", "  - something") },
+    );
+
+    const result = runDriver(["--root", root, "--scope", "changed", "--base", "main", "--summary"]);
+
+    expect(result.stdout).toContain("pre-existing, not this branch's");
+  });
+});
+
+/**
+ * A document's sections are graded against the heading above them, so a root
+ * heading the schema does not accept makes every section below it report as
+ * unexpected. One wrong line becomes one violation per heading in the outline,
+ * and none of those lines is true: the sections are where they belong.
+ *
+ * The verdict is taken from the schema's own declaration rather than from what
+ * `mdschema` printed. Its message text is not a contract — the same prose comes
+ * back for every `--format` — so a parser for it would tie this repository to
+ * one release's rendering.
+ */
+describe("a root heading the schema does not accept", () => {
+  it("reports one violation rather than one per section", async () => {
+    const root = await newTempDir();
+    await writeSpec(root, "spec-0001", WRONG_ROOT);
+
+    const result = runDriver(["--root", root, "--scope", "all"]);
+    const marks = (result.stderr.match(/✗/g) ?? []).length;
+
+    // The document carries seven sections under its root.
+    expect(result.status).toBe(1);
+    expect(marks).toBe(1);
+  });
+
+  it("names what is there and what the schema requires", async () => {
+    const root = await newTempDir();
+    await writeSpec(root, "spec-0001", WRONG_ROOT);
+
+    const result = runDriver(["--root", root, "--scope", "all"]);
+
+    expect(result.stderr).toContain('"# Something Else Entirely"');
+    expect(result.stderr).toContain("^# 01 Spec");
+  });
+
+  it("says the document is not checked further", async () => {
+    // Without that line a reader takes the absence of other violations for the
+    // rest of the document being sound.
+    const root = await newTempDir();
+    await writeSpec(root, "spec-0001", WRONG_ROOT);
+
+    const result = runDriver(["--root", root, "--scope", "all"]);
+
+    expect(result.stderr).toContain("not checked further");
+  });
+
+  it("says so for a document with no heading at all", async () => {
+    const root = await newTempDir();
+    await writeSpec(root, "spec-0001", "Just a paragraph, no heading.\n");
+
+    const result = runDriver(["--root", root, "--scope", "all"]);
+
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain("no heading");
+  });
+
+  it("still grades a document whose root heading matches", async () => {
+    // The short-circuit is scoped to the one condition that makes grading
+    // meaningless. Everything else is still `mdschema`'s to answer.
+    const root = await newTempDir();
+    await writeSpec(root, "spec-0001", NON_CONFORMING_SPEC);
+
+    const result = runDriver(["--root", root, "--scope", "all"]);
+
+    expect(result.status).toBe(1);
+    expect(result.stderr).not.toContain("Root heading is");
+    expect(result.stderr).toContain("Scope");
+  });
+
+  it("reports both kinds in one run, each from its own source", async () => {
+    const root = await newTempDir();
+    await writeSpec(root, "spec-0001", WRONG_ROOT);
+    await writeSpec(root, "spec-0002", NON_CONFORMING_SPEC);
+
+    const result = runDriver(["--root", root, "--scope", "all"]);
+
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain("Root heading is");
+    expect(result.stderr).toContain("Scope");
+  });
+});
+
+describe("reading the root heading", () => {
+  it("takes the pattern the schema declares at its root", () => {
+    const schema = [
+      "structure:",
+      "  - heading:",
+      '      pattern: "^# 01 Spec.*"',
+      "      regex: true",
+    ].join("\n");
+
+    expect(rootHeadingPattern(schema)).toEqual({ pattern: "^# 01 Spec.*", regex: true });
+  });
+
+  it("answers null for a schema that declares no root heading", () => {
+    // The caller then has no root to check against and leaves the document to
+    // `mdschema` rather than inventing a verdict.
+    expect(rootHeadingPattern("rules:\n  - something: else\n")).toBeNull();
+  });
+
+  it("skips a heading inside a fenced block", () => {
+    // A `# comment` in a shell example is not the document's heading, and
+    // reading one as the heading reports the document against a line it does
+    // not have.
+    const text = ["```sh", "# not a heading", "```", "", "# The Real Heading", ""].join("\n");
+
+    expect(firstHeading(text)).toBe("# The Real Heading");
+  });
+
+  it("skips front matter", () => {
+    const text = ["---", "title: something", "---", "", "# The Real Heading", ""].join("\n");
+
+    expect(firstHeading(text)).toBe("# The Real Heading");
+  });
+
+  it("answers null when the document has no heading", () => {
+    expect(firstHeading("Just a paragraph.\n")).toBeNull();
   });
 });

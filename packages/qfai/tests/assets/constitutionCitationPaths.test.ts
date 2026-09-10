@@ -159,7 +159,7 @@ describe("the collector does not lose a citation when its document does", () => 
   });
 });
 
-describe.each(QFAI_TREES)("%s constitution citations", { timeout: 30000 }, (tree) => {
+describe.each(QFAI_TREES)("%s constitution citations", (tree) => {
   it("states the base path convention where the authoring shape is defined", async () => {
     // Without this the convention is folklore, and the next author picks
     // whichever of the four forms the file they copied from happened to use.

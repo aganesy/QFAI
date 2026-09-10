@@ -21,33 +21,11 @@ import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 
 import { defaultConfig } from "../../src/core/config.js";
-import { RULE_PROMOTIONS, newRuleSeverity } from "../../src/core/sunset.js";
-import type * as VersionModule from "../../src/core/version.js";
 import { validateContracts } from "../../src/core/validators/contracts.js";
 import { validateResearchSummary } from "../../src/core/validators/researchSummary.js";
-
-/**
- * The version every case here reads the validators at.
- *
- * Both halves of this file describe a window that is still open: the message
- * says "then an error", and the rules it names are silent until the section
- * exists. Read at whatever version the package happens to carry, the file
- * would start failing on the release that closes the window — a red build for
- * a release, with nothing about the behaviour having changed.
- *
- * Taken from the promotion these rules are under rather than typed as a
- * literal, so it is inside the window by construction: a rule ships at
- * `introducedIn` and promotes later. The first case below holds that.
- */
-const WINDOW_VERSION = RULE_PROMOTIONS.researchSummarySectionMissing.introducedIn;
-
-vi.mock("../../src/core/version.js", async (importOriginal) => {
-  const actual = await importOriginal<typeof VersionModule>();
-  return { ...actual, resolveToolVersion: (): Promise<string> => Promise.resolve(WINDOW_VERSION) };
-});
 
 async function withPack<T>(files: Record<string, string>, fn: (root: string) => Promise<T>) {
   const root = await mkdtemp(path.join(os.tmpdir(), "qfai-research-first-contact-"));
@@ -106,29 +84,14 @@ const absenceMessage = async (): Promise<string> =>
     return issues.find((item) => item.code === "QFAI-RESEARCH-012")?.message ?? "";
   });
 
-describe("the absence warning names what it is holding back", () => {
-  it("reads the validators at a version inside every window this file asserts", () => {
-    // The pin is only worth having while it sits inside the windows. Moving a
-    // promotion earlier than the release its rule shipped in would put the pin
-    // past it, and every case below would then assert post-promotion behaviour
-    // against pre-promotion wording. Named here so that change fails on the
-    // pin rather than on the wording.
-    for (const rule of [
-      "researchSummarySectionMissing",
-      "researchSummarySchemaFields",
-      "contractDependencyUndeclared",
-    ] as const) {
-      expect(
-        newRuleSeverity(WINDOW_VERSION, RULE_PROMOTIONS[rule].promoteAt),
-        `${rule} has already promoted at the pinned version`,
-      ).toBe("warning");
-    }
-  });
-
-  it("reports nothing at error while the section is absent", async () => {
-    // The premise. If the absent state already produced errors there would be
-    // no step to warn about.
-    expect(await codesAt(ABSENT, "error")).toEqual(new Set());
+describe("the absence finding names what it is holding back", () => {
+  it("reports only the absence itself while the section is absent", async () => {
+    // The premise. The absent state owes two findings about the absence and
+    // nothing from the content rules — if those already fired there would be
+    // no step left to name.
+    expect(await codesAt(ABSENT, "error")).toEqual(
+      new Set(["QFAI-RESEARCH-012", "QFAI-RESEARCH-016"]),
+    );
   });
 
   it("names every rule that becomes an error the moment the section exists", async () => {
@@ -176,11 +139,6 @@ describe("the absence warning names what it is holding back", () => {
     // The difference between a list of five rules and 56 findings.
     expect(await absenceMessage()).toContain("per source");
   });
-
-  it("keeps the promotion window in the same message", async () => {
-    // The window is what makes the step urgent rather than optional.
-    expect(await absenceMessage()).toContain("then an error");
-  });
 });
 
 describe("the undeclared-dependency warning names what it is holding back", () => {
@@ -211,9 +169,5 @@ describe("the undeclared-dependency warning names what it is holding back", () =
   it("says a `-` row is unmeasured rather than agreed", async () => {
     // The distinction the reader needs: the row looks answered and is not.
     expect(await undeclared()).toContain("unmeasured rather than agreed");
-  });
-
-  it("keeps the promotion window in the same message", async () => {
-    expect(await undeclared()).toContain("then an error");
   });
 });

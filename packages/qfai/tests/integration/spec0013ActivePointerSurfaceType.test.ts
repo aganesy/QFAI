@@ -24,8 +24,6 @@ import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { defaultConfig } from "../../src/core/config.js";
-import { SUNSETS, deprecationSeverity } from "../../src/core/sunset.js";
-import { resolveToolVersion } from "../../src/core/version.js";
 import { populateSurfaceTypeIfUiCompanion } from "../../src/core/detection/surfaceType.js";
 import {
   resolveActiveDiscussionPack,
@@ -138,9 +136,7 @@ describe("spec-0013 surface_type frontmatter CHG-006", () => {
     // release", so it kept passing through the release that was supposed to
     // change it. Comparing against `deprecationSeverity` breaks if the
     // validator hard-codes again, and holds on both sides of the sunset.
-    expect(drift91?.severity).toBe(
-      deprecationSeverity(await resolveToolVersion(), SUNSETS.surfaceTypeMissing),
-    );
+    expect(drift91?.severity).toBe("error");
     expect(drift92, "expected NO drift finding for spec-0092 (no companion)").toBeUndefined();
   });
 });

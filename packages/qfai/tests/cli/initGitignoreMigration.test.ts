@@ -129,6 +129,7 @@ describe("a legacy per-directory evidence ignore is migrated, not ignored", () =
         "!implement-*.md",
         "!atdd-*.md",
         "!coverage-depth-*.md",
+        "!skeleton.md",
         "!decisions/",
         "!decisions/**",
         "!implement-*.md",
@@ -505,12 +506,30 @@ describe("a project rule after the managed block does not win", () => {
 });
 
 describe("a project rule after the managed block keeps its place", () => {
+  /**
+   * The one governance negation the stale fixture below leaves out.
+   *
+   * Read from the list rather than written out. The fixture is only stale while
+   * the line it drops is still a negation the block writes, so naming one
+   * directly makes the fixture current the day that line retires — and a
+   * current block takes the early return, which passes every assertion below
+   * without the rebuild they are about ever running.
+   */
+  const droppedNegation = (): string => {
+    const last =
+      QFAI_GITIGNORE_GOVERNANCE_NEGATIONS[QFAI_GITIGNORE_GOVERNANCE_NEGATIONS.length - 1];
+    if (last === undefined) {
+      throw new Error("the governance negation list is empty, so no block can be one line short");
+    }
+    return last;
+  };
+
   /** A stale block — one governance negation short — plus a project negation below it. */
   const staleBlockWithNegationBelow = async (root: string): Promise<void> => {
     await runInit({ dir: root, force: false, dryRun: false, yes: true });
     const stale = (await readGitignore(root))
       .split(NL)
-      .filter((line) => line !== "!.qfai/review/.legacy-packs")
+      .filter((line) => line !== droppedNegation())
       .join(NL)
       .trimEnd();
     await writeFile(
@@ -537,7 +556,7 @@ describe("a project rule after the managed block keeps its place", () => {
       expect(projectNegation).toBeGreaterThan(reportIgnore);
       // The rewrite still did its job: the missing governance negation is back,
       // in one block, and QFAI's own negations still outrank QFAI's ignores.
-      expect(lines).toContain("!.qfai/review/.legacy-packs");
+      expect(lines).toContain(droppedNegation());
       expect(lines.filter((l) => l === QFAI_GITIGNORE_MARKER)).toHaveLength(1);
       for (const negation of QFAI_GITIGNORE_GOVERNANCE_NEGATIONS) {
         expect(lines.lastIndexOf(negation)).toBeGreaterThan(reportIgnore);
@@ -638,6 +657,124 @@ describe("a legacy evidence negation loses to a later glob too", () => {
         lines.lastIndexOf("implement-spec-*.md"),
       );
       expect(lines.lastIndexOf("!atdd-*.md")).toBeGreaterThan(lines.lastIndexOf("atdd-spec-*.md"));
+    });
+  });
+});
+
+describe("nothing under a review directory reaches a commit", () => {
+  /**
+   * What a review round writes, plus the two paths the managed block used to
+   * carve out of `.qfai/review/*`.
+   */
+  const REVIEW_PATHS: readonly string[] = [
+    ".qfai/review/review-20260101000000000/summary.json",
+    ".qfai/review/review-20260101000000000/review_request.md",
+    ".qfai/review/review-20260101000000000/R01_implementation-reviewer.md",
+    ".qfai/review/.legacy-packs",
+    ".qfai/review/README.md",
+    ".qfai/review/_archive/review-20260101000000000/summary.json",
+    ".qfai/review_archive/review-20260101000000000/summary.json",
+  ];
+
+  /**
+   * Git's verdict on a path, from a real repository at `root`.
+   *
+   * Asked of git rather than of {@link isPathIgnoredByLayers}, which answers
+   * differently here: it reads a trailing-slash negation as covering everything
+   * beneath the directory, so `!.qfai/` — last in the block, and present only
+   * to keep `.qfai` itself walkable — re-includes every path below it in that
+   * function's answer, while `git check-ignore` reports each review path
+   * ignored. What ships is a `.gitignore`, so what decides is git.
+   *
+   * `--no-index` because tracking is not the question: a path already in the
+   * index reports as not ignored however the patterns read, and these paths are
+   * being judged before anything has added them.
+   */
+  const ignoredByGit = (root: string, samplePath: string): boolean => {
+    const result = spawnSync("git", ["check-ignore", "--quiet", "--no-index", samplePath], {
+      cwd: root,
+    });
+    // 0 is ignored, 1 is not; anything else is git failing rather than deciding,
+    // and a thrown error is the only reading of that which cannot pass silently.
+    if (result.status !== 0 && result.status !== 1) {
+      throw new Error(
+        `git check-ignore could not decide ${samplePath}: status ${String(result.status)}`,
+      );
+    }
+    return result.status === 0;
+  };
+
+  const gitProject = async (root: string): Promise<void> => {
+    expect(spawnSync("git", ["init", "--quiet"], { cwd: root }).status).toBe(0);
+  };
+
+  it("ignores every review path a fresh init leaves behind", async () => {
+    await withProject(async (root) => {
+      await gitProject(root);
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+
+      const reachable = REVIEW_PATHS.filter((sample) => !ignoredByGit(root, sample));
+      expect(reachable, "a review artifact must not be committable").toEqual([]);
+    });
+  });
+
+  it("strips the two carve-outs from an older block, and settles", async () => {
+    await withProject(async (root) => {
+      await gitProject(root);
+      // The block as it shipped while the leaf record was tracked. Written out
+      // rather than derived: what is under test is the migration of a file this
+      // version no longer produces, so deriving it from the current constants
+      // would leave nothing to migrate.
+      const older = [
+        QFAI_GITIGNORE_MARKER,
+        ".qfai/report/*",
+        ".qfai/evidence/*",
+        ".qfai/discussion/*",
+        ".qfai/review/*",
+        ".qfai/state.json",
+        "!.qfai/",
+        "!.qfai/review/",
+        "!.qfai/review/.legacy-packs",
+        "",
+      ].join(NL);
+      await writeFile(path.join(root, ".gitignore"), older, "utf-8");
+      expect(ignoredByGit(root, ".qfai/review/.legacy-packs")).toBe(false);
+
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+
+      const migrated = await readGitignore(root);
+      const lines = migrated.split(NL).map((l) => l.trimEnd());
+      expect(lines).not.toContain("!.qfai/review/");
+      expect(lines).not.toContain("!.qfai/review/.legacy-packs");
+      expect(lines.filter((l) => l === QFAI_GITIGNORE_MARKER)).toHaveLength(1);
+      expect(ignoredByGit(root, ".qfai/review/.legacy-packs")).toBe(true);
+
+      // And nothing is left for the freshness check to react to. Without this
+      // the migration would be correct and still rewrite identical bytes on
+      // every run, because the needle that finds a retired line is a substring
+      // of the lines around it.
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+      expect(await readGitignore(root)).toBe(migrated);
+    });
+  });
+
+  it("leaves the governance records the same block re-includes", async () => {
+    // Over-correction pin. `!.qfai/` is what makes every evidence negation
+    // reachable at all, and dropping two of its neighbours must not take it
+    // along — which a text search for `!.qfai/` cannot distinguish from
+    // dropping only the review lines.
+    await withProject(async (root) => {
+      await gitProject(root);
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+
+      const hidden = [
+        ".qfai/evidence/decisions/20260101T000000000.json",
+        ".qfai/evidence/implement-spec-0001.md",
+        ".qfai/evidence/atdd-spec-0001.md",
+        ".qfai/evidence/coverage-depth-spec-0001.md",
+        ".qfai/install-provenance.json",
+      ].filter((sample) => ignoredByGit(root, sample));
+      expect(hidden, "a governance record must stay committable").toEqual([]);
     });
   });
 });

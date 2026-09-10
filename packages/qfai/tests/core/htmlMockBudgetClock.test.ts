@@ -116,7 +116,7 @@ describe("the mock budget measures parsing, not the parser's load", () => {
       parseMs,
       "the load is a real cost, and it is not the parsing this budget is for",
     ).toBeLessThan(BUDGET_MS);
-  }, 30_000);
+  });
 
   it("still overshoots a budget the parsing itself cannot meet", async () => {
     // The other direction, so the clock is a clock and not a removed check. Zero is a budget no
@@ -124,7 +124,7 @@ describe("the mock budget measures parsing, not the parser's load", () => {
     const root = await treeWithOneMock();
     const parseMs = await parseMsFor(root);
     expect(parseMs, "a budget of zero must still be exceeded").toBeGreaterThan(0);
-  }, 30_000);
+  });
 
   it("attributes nothing when there is no block to parse", async () => {
     // The load is skipped entirely here, so there is no cost to attribute and the sink must be left
@@ -135,5 +135,5 @@ describe("the mock budget measures parsing, not the parser's load", () => {
 
     await expect(validateHtmlMock(root, "web", config(), timing)).resolves.toEqual([]);
     expect(timing.parseMs, "an untouched sink keeps the caller's initial value").toBe(-1);
-  }, 30_000);
+  });
 });

@@ -175,18 +175,7 @@ async function withUnwalkableSurface(task: (root: string) => Promise<void>): Pro
     await mkdir(path.join(root, ".qfai", "assistant"), { recursive: true });
     await writeFile(path.join(root, ".qfai", "assistant", "skills"), "not a directory\n", "utf-8");
     // Enough of a surface that `qfai init` counts as having run here.
-    await writeFile(
-      path.join(root, ".qfai", "assistant", "README.md"),
-      [
-        "# QFAI assistant tree",
-        "",
-        "## Canonical entrypoint",
-        "",
-        "- .qfai/assistant/skills/",
-        "",
-      ].join("\n"),
-      "utf-8",
-    );
+    await writeFile(path.join(root, ".qfai", "install-provenance.json"), "{}\n", "utf-8");
     await task(root);
   } finally {
     await rm(root, { recursive: true, force: true });
@@ -526,7 +515,9 @@ describe("GATE_GROUP_FAMILIES files each family under the group that runs it", (
       const families = listedFamilies(notice?.message ?? "");
 
       // Everything else is unevaluated, which is what makes it the narrow gate.
-      expect(families).toContain("QFAI-TDDLIST-*");
+      // The ledger's execution-state codes are listed one by one: the seed
+      // gate holds the rest of that prefix, so a glob here would claim both.
+      expect(families).toContain("QFAI-TDDLIST-007");
       expect(families).toContain("QFAI-ATDD-*");
       expect(families).toContain("QFAI-SPECSECTION-*");
     });
@@ -591,11 +582,11 @@ describe("GATE_GROUP_FAMILIES files each family under the group that runs it", (
       await withProject(async (root) => {
         for (const profile of PARTIAL_PROFILES) {
           const notice = await noticeFor(root, profile);
-          expect(notice?.message ?? "").not.toMatch(/TDDLIST-\d/);
-          // A BARE `TDDLIST-` glob only. `QFAI-TDDLIST-*` is the canonical
-          // spelling of the execution-state family and is a real finding code
-          // prefix, so a plain substring test rejects the entry the table is
-          // supposed to carry.
+          // A BARE `TDDLIST-` id or glob only. `QFAI-TDDLIST-NNN` is the
+          // canonical spelling of a real execution-state code, and the notice
+          // lists those one by one, so a plain substring test rejects the
+          // entries the table is supposed to carry.
+          expect(notice?.message ?? "").not.toMatch(/(?<!QFAI-)TDDLIST-\d/);
           expect(notice?.message ?? "").not.toMatch(/(?<!QFAI-)TDDLIST-\*/);
         }
       });

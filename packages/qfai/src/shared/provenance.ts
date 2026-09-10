@@ -481,8 +481,37 @@ export async function updateInstallProvenance(
   // writer's entries, and every earlier writer notices its own pass was overtaken and repeats.
   // This is what stops the lost update directly; it is the part that does not depend
   // on the lock being perfect.
+  let lockLost = 0;
   for (let attempt = 1; attempt <= UPDATE_ATTEMPTS; attempt += 1) {
-    const release = await acquireRecordLock(recordDir);
+    // Losing the published lock to a reclaimer is contention, not a fault, and this is the loop
+    // that answers contention. Raising it above the loop meant a writer that lost one race lost
+    // its entry with it — the record stays on disk with nothing recorded, reads as
+    // `adopter-owned`, and no later run puts it back.
+    //
+    // Only this outcome is caught. A patience exhausted against a tree somebody else is writing,
+    // or any I/O fault, still leaves immediately: going round again would spend another whole
+    // patience window on the same answer.
+    //
+    // And it is retried a FEW times, not `UPDATE_ATTEMPTS` times. The two bounds count different
+    // things. Being overtaken is cheap to answer — the write landed and the next pass re-applies
+    // onto newer content — while every lost lock costs a fresh acquisition, up to a whole
+    // `LOCK_PATIENCE_MS` of it. Losing once or twice is contention; losing repeatedly is a tree
+    // something else keeps reclaiming, and spending twenty patience windows to say so helps
+    // nobody. The original failure is what surfaces then, so a persistent loss still reports
+    // exactly what it reported before.
+    let release: (() => Promise<void>) | undefined;
+    try {
+      release = await acquireRecordLock(recordDir);
+    } catch (error) {
+      if (!(error instanceof LockReplacedError)) {
+        throw error;
+      }
+      lockLost += 1;
+      if (lockLost >= LOCK_LOST_ATTEMPTS) {
+        throw error;
+      }
+      continue;
+    }
     let written: string | undefined;
     try {
       const next = mutate(await readInstallProvenance(rootDir));
@@ -505,6 +534,20 @@ export async function updateInstallProvenance(
     `install-provenance record at ${recordPath} was overwritten by another writer on ${String(UPDATE_ATTEMPTS)} consecutive attempts; refusing to loop further`,
   );
 }
+
+/**
+ * How many times a lock lost to a reclaimer is re-acquired before the loss is reported.
+ *
+ * Small on purpose, and deliberately not {@link UPDATE_ATTEMPTS}. Each one costs a fresh
+ * acquisition — up to a whole `LOCK_PATIENCE_MS` of polling — where being overtaken costs only a
+ * re-apply onto newer content.
+ *
+ * One retry, because one is what the failure needs: a writer loses the lock to a reclaimer and
+ * the next acquisition finds the name free. A tree where the second attempt loses too has
+ * something in it that keeps reclaiming, and asking a third time neither succeeds nor says
+ * anything the second answer did not.
+ */
+const LOCK_LOST_ATTEMPTS = 2;
 
 /** How many times a write that was overtaken is re-applied before the attempt is abandoned. */
 const UPDATE_ATTEMPTS = 20;
@@ -569,6 +612,33 @@ const LOCK_DIR_NAME = ".install-provenance.lock.d";
  * entry lost to a race is not self-healing — the file stays on disk with no entry, reads as
  * `adopter-owned`, and is never recorded again.
  */
+/**
+ * This writer published a lock and did not get it back.
+ *
+ * A distinct type because it is the one acquisition failure that is an ORDINARY outcome of
+ * contention rather than a fault. A reclaimer judged this holder's lock stale and moved it, and
+ * `clearAbandonedLock` could not put it back — so somebody else holds the lock, and the writer
+ * that lost is the writer that was supposed to lose.
+ *
+ * Nothing was written when this is raised: the lock is given back first, and the section it
+ * guards never ran. So the answer is the same as for any other contended attempt — go round
+ * again — and `updateInstallProvenance` already has the loop for that. Raising it as a plain
+ * `Error` put a contention outcome above the loop built to absorb contention, which is how a
+ * writer that lost one race ended up losing its entry.
+ */
+class LockReplacedError extends Error {
+  readonly lockDir: string;
+
+  constructor(lockDir: string) {
+    super(
+      "qfai: the provenance lock was replaced between publishing it and reading it back. " +
+        "Nothing was written.",
+    );
+    this.name = "LockReplacedError";
+    this.lockDir = lockDir;
+  }
+}
+
 async function acquireRecordLock(recordDir: string): Promise<() => Promise<void>> {
   const lockDir = path.join(recordDir, LOCK_DIR_NAME);
   const marker = randomUUID();
@@ -730,10 +800,7 @@ async function acquireRecordLock(recordDir: string): Promise<() => Promise<void>
       // before it can reclaim — which is the second half of what this defect cost.
       held = { dev: staged.dev, ino: staged.ino };
       await release();
-      throw new Error(
-        "qfai: the provenance lock was replaced between publishing it and reading it back. " +
-          "Nothing was written. Re-run once no other `qfai` process is working in this tree.",
-      );
+      throw new LockReplacedError(lockDir);
     }
     held = { dev: staged.dev, ino: staged.ino };
     return release;

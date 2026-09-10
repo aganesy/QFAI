@@ -141,154 +141,148 @@ const FINDING_ID = "workflows.integrity";
 const BLOCKING_HEADER = "errors blocking the active profile";
 const ADVISORY_HEADER = "advisory findings (drift, non-blocking by default)";
 
-describe(
-  "TC-0006-0029 (TDD-0040): the drift advisory renders below the advisory-findings header and not in the blocking bucket",
-  { timeout: 60000 },
-  () => {
-    it("places the drift finding inside the advisory bucket, outside the blocking bucket, tagged [info]", async () => {
-      const dir = await pool.seedAdopterTree();
-      await editShippedWorkflow(dir, STALE_NAME);
+describe("TC-0006-0029 (TDD-0040): the drift advisory renders below the advisory-findings header and not in the blocking bucket", () => {
+  it("places the drift finding inside the advisory bucket, outside the blocking bucket, tagged [info]", async () => {
+    const dir = await pool.seedAdopterTree();
+    await editShippedWorkflow(dir, STALE_NAME);
 
-      // Guard #1 (hard) — the tree really drifts, so the line under test is the
-      // `modified` rendering the TC's Setup names and not the clean-tree `ok`
-      // one. Attribution, primarily: the `ok` arm renders in the header-less ok
-      // group ABOVE both headers, so a fixture that stopped drifting would
-      // already redden C1 — this guard is what separates "the fixture stopped
-      // drifting" from "the renderer stopped bucketing" at the point of
-      // failure, and it survives a future refactor that folded the ok group into
-      // the advisory bucket, where a clean tree WOULD satisfy C1-C3.
-      const diff = await diffInstalledShippedWorkflows(dir);
-      expect(
-        diff.modified,
-        "drift must be observable in this tree, or the line under test is the `installed`/`ok` rendering and says nothing about advisory placement",
-      ).toContain(`${ADOPTER_WORKFLOWS_DIR}/${STALE_NAME}`);
+    // Guard #1 (hard) — the tree really drifts, so the line under test is the
+    // `modified` rendering the TC's Setup names and not the clean-tree `ok`
+    // one. Attribution, primarily: the `ok` arm renders in the header-less ok
+    // group ABOVE both headers, so a fixture that stopped drifting would
+    // already redden C1 — this guard is what separates "the fixture stopped
+    // drifting" from "the renderer stopped bucketing" at the point of
+    // failure, and it survives a future refactor that folded the ok group into
+    // the advisory bucket, where a clean tree WOULD satisfy C1-C3.
+    const diff = await diffInstalledShippedWorkflows(dir);
+    expect(
+      diff.modified,
+      "drift must be observable in this tree, or the line under test is the `installed`/`ok` rendering and says nothing about advisory placement",
+    ).toContain(`${ADOPTER_WORKFLOWS_DIR}/${STALE_NAME}`);
 
-      // Guard #6 (hard) — nothing OTHER than the finding under test is severity
-      // `error`, so the blocking bucket's contents are attributable to this
-      // row's routing. Without it, C3's empty result could mean only "this
-      // fixture happens to name nobody in that bucket". One notch stricter than
-      // the bucket strictly needs, stated so the extra strictness is not read as
-      // an oversight: the renderer excludes `skills.integrity` from the blocking
-      // group by ID, so an `error` there would red this guard without moving a
-      // line into the window C3 scans. Kept in the broader form — a tree whose
-      // other checks turned `error` is a different fixture from the TC's, and
-      // this row would rather hear about it here than in C3.
-      const data = await createDoctorData({ startDir: dir, rootExplicit: true });
-      expect(
-        data.checks
-          .filter((entry) => entry.id !== FINDING_ID && entry.severity === "error")
-          .map((entry) => entry.id),
-        "no finding other than workflows.integrity may be severity `error`, or the blocking bucket's contents are not attributable to this row's routing",
-      ).toEqual([]);
+    // Guard #6 (hard) — nothing OTHER than the finding under test is severity
+    // `error`, so the blocking bucket's contents are attributable to this
+    // row's routing. Without it, C3's empty result could mean only "this
+    // fixture happens to name nobody in that bucket". One notch stricter than
+    // the bucket strictly needs, stated so the extra strictness is not read as
+    // an oversight: the renderer excludes `skills.integrity` from the blocking
+    // group by ID, so an `error` there would red this guard without moving a
+    // line into the window C3 scans. Kept in the broader form — a tree whose
+    // other checks turned `error` is a different fixture from the TC's, and
+    // this row would rather hear about it here than in C3.
+    const data = await createDoctorData({ startDir: dir, rootExplicit: true });
+    expect(
+      data.checks
+        .filter((entry) => entry.id !== FINDING_ID && entry.severity === "error")
+        .map((entry) => entry.id),
+      "no finding other than workflows.integrity may be severity `error`, or the blocking bucket's contents are not attributable to this row's routing",
+    ).toEqual([]);
 
-      const run = await runDoctorText(dir, "error");
-      const lines = run.stdout.split("\n");
+    const run = await runDoctorText(dir, "error");
+    const lines = run.stdout.split("\n");
 
-      // Guard #2 (hard) — the captured document is the diagnostic pass's
-      // rendering. It also closes the arithmetic hole behind C2: with no
-      // `summary:` line, `findingIdx < -1` is false and the failure would read
-      // as a placement defect.
-      const summaryIdx = lines.findIndex((line) => line.startsWith("summary: "));
-      expect(
-        summaryIdx,
-        "the rendered document must carry the `summary:` line, or no bucket was rendered at all and placement is unobservable",
-      ).toBeGreaterThan(-1);
+    // Guard #2 (hard) — the captured document is the diagnostic pass's
+    // rendering. It also closes the arithmetic hole behind C2: with no
+    // `summary:` line, `findingIdx < -1` is false and the failure would read
+    // as a placement defect.
+    const summaryIdx = lines.findIndex((line) => line.startsWith("summary: "));
+    expect(
+      summaryIdx,
+      "the rendered document must carry the `summary:` line, or no bucket was rendered at all and placement is unobservable",
+    ).toBeGreaterThan(-1);
 
-      // Guard #3 (hard) — rendered on exactly one line. The SET, not a `find`:
-      // "the line" needs a referent, and under DOUBLE rendering "some occurrence
-      // sits below the advisory header" is true while the blocking bucket names
-      // it too, which is precisely what Verify bullet 3 denies. Not to be
-      // softened to accommodate a mutation that renders the line twice — that
-      // mutation is meant to be caught here, legibly.
-      const findingIdxs = lines.flatMap((line, index) =>
-        line.includes(FINDING_ID) ? [index] : [],
-      );
-      expect(
-        findingIdxs,
-        "workflows.integrity must be rendered on exactly one line, or `the` line has no referent and an advisory-bucket occurrence can coexist with a blocking-bucket one",
-      ).toHaveLength(1);
-      // `-1` fails in the safe direction (C1's `toBeGreaterThan` rejects it) for
-      // the same reason `runDoctorText` seeds its exit code with it; unreachable
-      // while the guard above holds, since a hard failure aborts the test.
-      const findingIdx = findingIdxs[0] ?? -1;
+    // Guard #3 (hard) — rendered on exactly one line. The SET, not a `find`:
+    // "the line" needs a referent, and under DOUBLE rendering "some occurrence
+    // sits below the advisory header" is true while the blocking bucket names
+    // it too, which is precisely what Verify bullet 3 denies. Not to be
+    // softened to accommodate a mutation that renders the line twice — that
+    // mutation is meant to be caught here, legibly.
+    const findingIdxs = lines.flatMap((line, index) => (line.includes(FINDING_ID) ? [index] : []));
+    expect(
+      findingIdxs,
+      "workflows.integrity must be rendered on exactly one line, or `the` line has no referent and an advisory-bucket occurrence can coexist with a blocking-bucket one",
+    ).toHaveLength(1);
+    // `-1` fails in the safe direction (C1's `toBeGreaterThan` rejects it) for
+    // the same reason `runDoctorText` seeds its exit code with it; unreachable
+    // while the guard above holds, since a hard failure aborts the test.
+    const findingIdx = findingIdxs[0] ?? -1;
 
-      const errorHeaderIdx = lines.findIndex((line) => line.includes(BLOCKING_HEADER));
-      const advisoryHeaderIdx = lines.findIndex((line) => line.includes(ADVISORY_HEADER));
+    const errorHeaderIdx = lines.findIndex((line) => line.includes(BLOCKING_HEADER));
+    const advisoryHeaderIdx = lines.findIndex((line) => line.includes(ADVISORY_HEADER));
 
-      // Guard #4 (hard) — both headers exist and are in contract order. THE
-      // anti-vacuity guard: see the header on why "below the advisory header" is
-      // free against -1. It closes the swapped-header mode at the same time, in
-      // which C3's slice is zero-length and filters to `[]` for nothing.
-      expect(
-        errorHeaderIdx,
-        "the blocking-bucket header must be present, or the window C3 scans has no left edge",
-      ).toBeGreaterThan(-1);
-      expect(
-        advisoryHeaderIdx,
-        "the advisory header must be present and must follow the blocking header, or `below the advisory header` is a comparison against -1 that every line satisfies",
-      ).toBeGreaterThan(errorHeaderIdx);
+    // Guard #4 (hard) — both headers exist and are in contract order. THE
+    // anti-vacuity guard: see the header on why "below the advisory header" is
+    // free against -1. It closes the swapped-header mode at the same time, in
+    // which C3's slice is zero-length and filters to `[]` for nothing.
+    expect(
+      errorHeaderIdx,
+      "the blocking-bucket header must be present, or the window C3 scans has no left edge",
+    ).toBeGreaterThan(-1);
+    expect(
+      advisoryHeaderIdx,
+      "the advisory header must be present and must follow the blocking header, or `below the advisory header` is a comparison against -1 that every line satisfies",
+    ).toBeGreaterThan(errorHeaderIdx);
 
-      // Guard #5 (hard) — the blocking-bucket window is non-degenerate, so C3
-      // scans something. Expressed as a WINDOW WIDTH and not as an assertion on
-      // the empty-bucket placeholder's wording, which is another AC's surface.
-      expect(
-        advisoryHeaderIdx - errorHeaderIdx,
-        "the blocking bucket must render at least one line between the headers, or the window C3 scans is empty by construction and asserts nothing",
-      ).toBeGreaterThan(1);
+    // Guard #5 (hard) — the blocking-bucket window is non-degenerate, so C3
+    // scans something. Expressed as a WINDOW WIDTH and not as an assertion on
+    // the empty-bucket placeholder's wording, which is another AC's surface.
+    expect(
+      advisoryHeaderIdx - errorHeaderIdx,
+      "the blocking bucket must render at least one line between the headers, or the window C3 scans is empty by construction and asserts nothing",
+    ).toBeGreaterThan(1);
 
-      // CLAIM 1, Verify bullet 3 (lower delimiter) — the rendered line sits
-      // BELOW the advisory-findings header.
-      expect
-        .soft(
-          findingIdx,
-          "the drift advisory must render inside the advisory bucket — a line above the advisory header is in the blocking bucket or the ok group",
-        )
-        .toBeGreaterThan(advisoryHeaderIdx);
+    // CLAIM 1, Verify bullet 3 (lower delimiter) — the rendered line sits
+    // BELOW the advisory-findings header.
+    expect
+      .soft(
+        findingIdx,
+        "the drift advisory must render inside the advisory bucket — a line above the advisory header is in the blocking bucket or the ok group",
+      )
+      .toBeGreaterThan(advisoryHeaderIdx);
 
-      // CLAIM 2 (upper delimiter) — and ABOVE the `summary:` line that closes
-      // the bucket. A bucket has two delimiters: without this, "below the
-      // advisory header" is satisfied by any trailer appended after the summary,
-      // which is the same vacuity as a bare `toContain` moved one header down.
-      // Keyed on the `summary: ` PREFIX and not on the counts, which are
-      // AC-0006-0025's surface.
-      expect
-        .soft(
-          findingIdx,
-          "the drift advisory must render inside the advisory bucket, which the summary line closes — a line after it belongs to no bucket",
-        )
-        .toBeLessThan(summaryIdx);
+    // CLAIM 2 (upper delimiter) — and ABOVE the `summary:` line that closes
+    // the bucket. A bucket has two delimiters: without this, "below the
+    // advisory header" is satisfied by any trailer appended after the summary,
+    // which is the same vacuity as a bare `toContain` moved one header down.
+    // Keyed on the `summary: ` PREFIX and not on the counts, which are
+    // AC-0006-0025's surface.
+    expect
+      .soft(
+        findingIdx,
+        "the drift advisory must render inside the advisory bucket, which the summary line closes — a line after it belongs to no bucket",
+      )
+      .toBeLessThan(summaryIdx);
 
-      // CLAIM 3 (complement) — and nowhere in the blocking-bucket window, which
-      // is the half that makes this a ROUTING claim rather than a presence one.
-      // The FILTERED SLICE rather than a negated `toContain` on the document, so
-      // a failure prints the offending line verbatim. Honest limit, recorded
-      // rather than papered over: given Guard #3 this is ENTAILED by C1 — one
-      // occurrence below the advisory header cannot also sit between the headers
-      // — so it is kept for legibility of the failure and must NOT be counted as
-      // a second independent oracle.
-      expect
-        .soft(
-          lines
-            .slice(errorHeaderIdx + 1, advisoryHeaderIdx)
-            .filter((line) => line.includes(FINDING_ID)),
-          "the drift advisory must not appear in the blocking bucket — it is advisory, and the blocking bucket is what drives exit 1",
-        )
-        .toEqual([]);
+    // CLAIM 3 (complement) — and nowhere in the blocking-bucket window, which
+    // is the half that makes this a ROUTING claim rather than a presence one.
+    // The FILTERED SLICE rather than a negated `toContain` on the document, so
+    // a failure prints the offending line verbatim. Honest limit, recorded
+    // rather than papered over: given Guard #3 this is ENTAILED by C1 — one
+    // occurrence below the advisory header cannot also sit between the headers
+    // — so it is kept for legibility of the failure and must NOT be counted as
+    // a second independent oracle.
+    expect
+      .soft(
+        lines
+          .slice(errorHeaderIdx + 1, advisoryHeaderIdx)
+          .filter((line) => line.includes(FINDING_ID)),
+        "the drift advisory must not appear in the blocking bucket — it is advisory, and the blocking bucket is what drives exit 1",
+      )
+      .toEqual([]);
 
-      // CLAIM 4 — the placed line's rendered severity tag. Extracted from the
-      // line ALREADY located by bare id and deliberately not part of the
-      // locator: a locator like `/^\[info\] workflows\.integrity/` would empty
-      // `findingIdxs` under a severity mutation, abort the test at Guard #3, and
-      // leave C1-C3 unexecuted. The extracted TAG rather than a `toMatch` on the
-      // whole line, so the failure reads `expected 'error' to be 'info'` instead
-      // of dumping a 400-character message body.
-      const tag = lines[findingIdx]?.match(/^\[([a-z]+)\] /u)?.[1];
-      expect
-        .soft(
-          tag,
-          "the drift advisory renders as an info line — the renderer prints the registered severity, and `modified` is `info` per the doctor contract",
-        )
-        .toBe("info");
-    });
-  },
-);
+    // CLAIM 4 — the placed line's rendered severity tag. Extracted from the
+    // line ALREADY located by bare id and deliberately not part of the
+    // locator: a locator like `/^\[info\] workflows\.integrity/` would empty
+    // `findingIdxs` under a severity mutation, abort the test at Guard #3, and
+    // leave C1-C3 unexecuted. The extracted TAG rather than a `toMatch` on the
+    // whole line, so the failure reads `expected 'error' to be 'info'` instead
+    // of dumping a 400-character message body.
+    const tag = lines[findingIdx]?.match(/^\[([a-z]+)\] /u)?.[1];
+    expect
+      .soft(
+        tag,
+        "the drift advisory renders as an info line — the renderer prints the registered severity, and `modified` is `info` per the doctor contract",
+      )
+      .toBe("info");
+  });
+});

@@ -32,8 +32,6 @@ import {
 } from "../../src/core/agentEntryPoints.js";
 import { getInitAssetsDir } from "../../src/shared/assets.js";
 
-const TIMEOUT = 90_000;
-
 async function withProject(task: (root: string) => Promise<void>): Promise<void> {
   const root = await mkdtemp(path.join(os.tmpdir(), "qfai-agent-entry-"));
   try {
@@ -59,41 +57,37 @@ const PROJECT_TEXT = [
 const occurrences = (haystack: string, needle: string): number => haystack.split(needle).length - 1;
 
 describe("qfai init connects a pre-existing agent entry point to the rule masters", () => {
-  it(
-    "appends the managed section to an AGENTS.md / CLAUDE.md it did not create",
-    { timeout: TIMEOUT },
-    async () => {
-      await withProject(async (root) => {
-        for (const name of AGENT_ENTRY_POINT_FILES) {
-          await writeFile(path.join(root, name), PROJECT_TEXT, "utf-8");
+  it("appends the managed section to an AGENTS.md / CLAUDE.md it did not create", async () => {
+    await withProject(async (root) => {
+      for (const name of AGENT_ENTRY_POINT_FILES) {
+        await writeFile(path.join(root, name), PROJECT_TEXT, "utf-8");
+      }
+
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+
+      for (const name of AGENT_ENTRY_POINT_FILES) {
+        const after = await readEntryPoint(root, name);
+        // The project's own instructions are still there, first.
+        expect(after.startsWith(PROJECT_TEXT.trimEnd()), `${name} lost its content`).toBe(true);
+        expect(after).toContain(QFAI_AGENT_RULES_BEGIN);
+        expect(after).toContain(QFAI_AGENT_RULES_END);
+
+        // Every master the template's section names is cited AND resolves, so
+        // the agent that loads this file can actually read the rules.
+        const expected = citedRuleMasters(
+          extractManagedRulesSection(await readTemplate(name)) ?? "",
+        );
+        expect(expected.length).toBeGreaterThan(0);
+        for (const master of expected) {
+          expect(after, `${name} does not cite ${master}`).toContain(master);
+          const stats = await stat(path.join(root, ...master.split("/"))).catch(() => null);
+          expect(stats?.isFile(), `${name} cites ${master}, which does not exist`).toBe(true);
         }
+      }
+    });
+  });
 
-        await runInit({ dir: root, force: false, dryRun: false, yes: true });
-
-        for (const name of AGENT_ENTRY_POINT_FILES) {
-          const after = await readEntryPoint(root, name);
-          // The project's own instructions are still there, first.
-          expect(after.startsWith(PROJECT_TEXT.trimEnd()), `${name} lost its content`).toBe(true);
-          expect(after).toContain(QFAI_AGENT_RULES_BEGIN);
-          expect(after).toContain(QFAI_AGENT_RULES_END);
-
-          // Every master the template's section names is cited AND resolves, so
-          // the agent that loads this file can actually read the rules.
-          const expected = citedRuleMasters(
-            extractManagedRulesSection(await readTemplate(name)) ?? "",
-          );
-          expect(expected.length).toBeGreaterThan(0);
-          for (const master of expected) {
-            expect(after, `${name} does not cite ${master}`).toContain(master);
-            const stats = await stat(path.join(root, ...master.split("/"))).catch(() => null);
-            expect(stats?.isFile(), `${name} cites ${master}, which does not exist`).toBe(true);
-          }
-        }
-      });
-    },
-  );
-
-  it("pin: a second init does not append the section again", { timeout: TIMEOUT }, async () => {
+  it("pin: a second init does not append the section again", async () => {
     await withProject(async (root) => {
       await writeFile(path.join(root, "AGENTS.md"), PROJECT_TEXT, "utf-8");
 
@@ -107,50 +101,42 @@ describe("qfai init connects a pre-existing agent entry point to the rule master
     });
   });
 
-  it(
-    "pin: a fresh project gets the template's single section, not a second copy",
-    { timeout: TIMEOUT },
-    async () => {
-      await withProject(async (root) => {
-        await runInit({ dir: root, force: false, dryRun: false, yes: true });
+  it("pin: a fresh project gets the template's single section, not a second copy", async () => {
+    await withProject(async (root) => {
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
 
-        for (const name of AGENT_ENTRY_POINT_FILES) {
-          const written = await readEntryPoint(root, name);
-          expect(written).toBe(await readTemplate(name));
-          expect(occurrences(written, QFAI_AGENT_RULES_BEGIN)).toBe(1);
-        }
-      });
-    },
-  );
+      for (const name of AGENT_ENTRY_POINT_FILES) {
+        const written = await readEntryPoint(root, name);
+        expect(written).toBe(await readTemplate(name));
+        expect(occurrences(written, QFAI_AGENT_RULES_BEGIN)).toBe(1);
+      }
+    });
+  });
 
-  it(
-    "pin: a file that already cites every master by hand is left untouched",
-    { timeout: TIMEOUT },
-    async () => {
-      await withProject(async (root) => {
-        const masters = citedRuleMasters(
-          extractManagedRulesSection(await readTemplate("CLAUDE.md")) ?? "",
-        );
-        const handWired = [
-          "# Claude Code",
-          "",
-          "Read these before acting:",
-          "",
-          ...masters.map((master) => `- \`${master}\``),
-          "",
-        ].join("\n");
-        await writeFile(path.join(root, "CLAUDE.md"), handWired, "utf-8");
+  it("pin: a file that already cites every master by hand is left untouched", async () => {
+    await withProject(async (root) => {
+      const masters = citedRuleMasters(
+        extractManagedRulesSection(await readTemplate("CLAUDE.md")) ?? "",
+      );
+      const handWired = [
+        "# Claude Code",
+        "",
+        "Read these before acting:",
+        "",
+        ...masters.map((master) => `- \`${master}\``),
+        "",
+      ].join("\n");
+      await writeFile(path.join(root, "CLAUDE.md"), handWired, "utf-8");
 
-        await runInit({ dir: root, force: false, dryRun: false, yes: true });
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
 
-        // No markers bolted on, no duplicated bullets: the rules already reach
-        // the agent, and init has no better wording to impose.
-        expect(await readEntryPoint(root, "CLAUDE.md")).toBe(handWired);
-      });
-    },
-  );
+      // No markers bolted on, no duplicated bullets: the rules already reach
+      // the agent, and init has no better wording to impose.
+      expect(await readEntryPoint(root, "CLAUDE.md")).toBe(handWired);
+    });
+  });
 
-  it("pin: --dry-run writes nothing", { timeout: TIMEOUT }, async () => {
+  it("pin: --dry-run writes nothing", async () => {
     await withProject(async (root) => {
       await writeFile(path.join(root, "AGENTS.md"), PROJECT_TEXT, "utf-8");
 

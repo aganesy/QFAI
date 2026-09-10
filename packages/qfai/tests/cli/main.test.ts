@@ -9,7 +9,7 @@ import { run } from "../../src/cli/main.js";
 import { resolveToolVersion } from "../../src/core/version.js";
 import { captureStdout } from "../helpers/stdout.js";
 
-describe("cli root discovery", { timeout: 15000 }, () => {
+describe("cli root discovery", () => {
   it("finds config in parent when --root is omitted", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-cli-root-"));
     const cwd = path.join(root, "packages", "app");
@@ -261,16 +261,22 @@ describe("cli root discovery", { timeout: 15000 }, () => {
     expect(output).toContain("qfai <command> [options]");
   });
 
-  it("sets exitCode=1 when the command is unknown", async () => {
+  it("sets exitCode=1 when the top-level command is unknown", async () => {
     const cwd = process.cwd();
 
-    const previousExitCode = process.exitCode;
-    process.exitCode = undefined;
-    try {
-      await run(["bogus"], cwd);
-      expect(process.exitCode).toBe(1);
-    } finally {
-      process.exitCode = previousExitCode;
+    // Two spellings of the same defect, one from each side of this merge: a
+    // word that is no command at all, and a near-miss typo of one that is.
+    // Both reach the same `Unknown command` path, and keeping both keeps the
+    // typo case from being read as a suggestion feature that does not exist.
+    for (const unknown of ["bogus", "vlaidate"]) {
+      const previousExitCode = process.exitCode;
+      process.exitCode = undefined;
+      try {
+        await run([unknown], cwd);
+        expect(process.exitCode).toBe(1);
+      } finally {
+        process.exitCode = previousExitCode;
+      }
     }
   });
 
@@ -414,7 +420,8 @@ describe("cli usage text", () => {
     const entry = forceEntry(await captureHelp());
 
     expect(entry).toContain("copilot-instructions.md");
-    expect(entry).toContain("README.md");
+    // And nothing else plain, now that init writes no README anywhere.
+    expect(entry).not.toContain("README.md");
   });
 
   it("does not claim everything outside skills/agents is skipped when it exists", async () => {

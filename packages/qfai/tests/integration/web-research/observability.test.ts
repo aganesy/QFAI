@@ -20,7 +20,7 @@ async function readSkill(): Promise<string> {
   return readFile(skillPath, "utf-8");
 }
 
-describe("web-research observability", { timeout: 15_000 }, () => {
+describe("web-research observability", () => {
   // QFAI:SPEC-0027:TC-0027-0015 (TDD-0023)
   it("log completeness - 6 mandatory field categories, no secrets", async () => {
     const content = await readSkill();
