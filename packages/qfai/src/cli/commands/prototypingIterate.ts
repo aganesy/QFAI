@@ -1038,11 +1038,11 @@ export async function runPrototypingIterate(
   // operator drives `--capture` from the CLI without DI, derive the
   // screens list from the project's UI contracts via
   // `collectScreensForCapture` so both the plan emission AND the
-  // capture invocation read from a single source of truth. CLI wiring
-  // that only set `capture: true` without populating `screens` would
-  // make `runCapturePath` short-circuit with a
-  // warning and produce zero PNG/HTML artifacts — the operator-facing
-  // flag would be a silent no-op. Derivation is gated on
+  // capture invocation read from a single source of truth. CLI wiring that
+  // only set `capture: true` without populating `screens` would make
+  // `runCapturePath` short-circuit with a warning and produce zero
+  // PNG/HTML artifacts — the operator-facing flag would be a silent no-op.
+  // Derivation is gated on
   // `options.capture === true` so the default-OFF posture
   // (no PNG/HTML written when --capture is absent) remains
   // byte-equivalent.
@@ -1957,14 +1957,14 @@ type CollectImageSourcesResult =
  * but empty (caller also skips); `{ok: true, sources: <non-empty>}`
  * when every entry validates.
  *
- * Malformed entries must not be
- * silently dropped: an `imageSources[]` whose entries
- * all carry e.g. a misspelled `licence:` field would otherwise reduce to an empty
- * narrowed array, and the caller would skip the exit-66 license gate
- * entirely. Instead any non-record entry, missing field, or non-string
- * field returns `{ok: false, errors}` listing the offending index +
- * field; the caller surfaces a hard error and exits non-zero so the
- * operator fixes the typo before the cycle proceeds.
+ * Malformed entries must not be silently dropped: an `imageSources[]`
+ * whose entries all carry e.g. a misspelled `licence:` field would
+ * otherwise reduce to an empty narrowed array, and the caller would skip
+ * the exit-66 license gate entirely. Instead any non-record entry,
+ * missing field, or non-string field returns `{ok: false, errors}`
+ * listing the offending index + field; the caller surfaces a hard error
+ * and exits non-zero so the operator fixes the typo before the cycle
+ * proceeds.
  */
 function collectImageSources(record: PrototypingJsonShape | null): CollectImageSourcesResult {
   if (!record) return { ok: true, sources: null };
