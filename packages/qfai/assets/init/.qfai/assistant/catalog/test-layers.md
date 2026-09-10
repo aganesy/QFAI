@@ -576,11 +576,10 @@ Treat these as review signals in the same class as volume floors — worth a fin
 | `.rb`                | a line starting `skip` / `pending`                                  |
 | `.cs`                | `[Ignore` / `Skip = "`                                              |
 
-`QFAI-TEST-003` (warning) is the JS/TS `.skip` family — `it.skip(` / `test.skip(` /
+`QFAI-TEST-003` is the JS/TS `.skip` family — `it.skip(` / `test.skip(` /
 `describe.skip(`, chained `.each` spellings included. It is its own rule, not a graded-down
-`QFAI-TEST-001`: a waiver is judged against the highest severity its rule produced in the run,
-so sharing one code would let a single `.todo` promote the pair to `error` and take the
-per-path waiver in `.qfai/waivers.yml` away from every `.skip`. The fix differs too — a `.skip`
+`QFAI-TEST-001`: the two name different states, and a reader of one finding should not have to
+work out which. The fix differs too — a `.skip`
 keeps its body (it is what `npx qfai atdd scaffold` emits for a skeleton awaiting
 implementation), so drop the modifier rather than delete the test.
 

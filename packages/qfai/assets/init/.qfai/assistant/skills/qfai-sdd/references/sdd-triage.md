@@ -294,7 +294,7 @@ catches a source that was misspelled or never allocated.
   in `_policies/03_Capabilities.md`. This is the structural gate that
   enforces the append-first principle: CREATE is only permitted when a
   new capability is being added to the catalog.
-- `QFAI-TRIAGE-008` (warning): the file carries a heading that starts with
+- `QFAI-TRIAGE-008`: the file carries a heading that starts with
   `Triage` but is not a canonical `## Triage` section — its rows are read by
   none of the checks above. Rename the heading to `## Triage`.
 - `QFAI-TRIAGE-009` (error): `Existing Spec` does not follow the grammar

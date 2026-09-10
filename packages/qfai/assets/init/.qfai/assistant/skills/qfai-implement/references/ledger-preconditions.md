@@ -189,8 +189,8 @@ between the two TC groups, handled by the rule in
 `Layer` in place.
 
 A ledger written before this rule may already hold such a row — the older rule
-did make a `Level`-less TC a target. `QFAI-TCLEVEL-001` (`warning`)
-reports each one, because the row keeps the TC on this ledger while
+did make a `Level`-less TC a target. `QFAI-TCLEVEL-001` reports each one,
+because the row keeps the TC on this ledger while
 `QFAI-ATDD-112` holds the same TC. Do not implement it: either declare the TC's
 `Level` or retire the row through `/qfai-sdd`. A row whose `Layer` is
 `Integration` is not reported — that one already agrees with the TC's ATDD home.

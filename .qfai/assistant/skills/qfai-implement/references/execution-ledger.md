@@ -314,9 +314,9 @@ earns its place: reported under `QFAI-TDDLIST-011` it shared a rule id with
 every legacy prose cell, so a row that never obtained RED provenance read as a
 formatting defect the grammar introduced.
 
-`QFAI-TDDLIST-014` is a warning under `QFAI-TDDLIST-014`. Cells are read by
-header index, so anything parked past the last declared column is read by
-nothing — a conforming `Evidence` cell followed by a surplus column holding the
+`QFAI-TDDLIST-014` reports a row with more cells than its header declares.
+Cells are read by header index, so anything parked past the last declared
+column is read by nothing — a conforming `Evidence` cell followed by a surplus column holding the
 payload passed both the grammar and the cap with no finding at all.
 
 Rows at `todo`, `red` and `exception` are not checked — the first two have

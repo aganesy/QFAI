@@ -331,7 +331,7 @@ Each `.qfai/specs/<spec-id>/tdd/test-list.md` is the execution ledger for the TD
   `catalog/test-layers.md`.
 - A TC with no declared `Level` — a blank cell, or a `06_Test-Cases.md` with no test-case classification column at all — is **not** a coverage target and gets no row. It is owned by `QFAI-ATDD-112`, which routes it to `tests/integration/**`; seeding a row for it as well would put one TC on two gates with two owners and two evidence files, and give the row a `Layer` the spec does not support.
 - A ledger seeded before that rule may still carry such a row.
-  `QFAI-TCLEVEL-001` (`warning`) reports every coverage row whose
+  `QFAI-TCLEVEL-001` reports every coverage row whose
   `TC-Refs` names a `Level`-less TC; clear it by declaring the TC's `Level` in
   `06_Test-Cases.md` (`L1`/`L2` to keep it here) or by removing the row. A
   decomposition reference names the TC it belongs to, so a row citing
@@ -374,7 +374,7 @@ Each `.qfai/specs/<spec-id>/tdd/test-list.md` is the execution ledger for the TD
 - `Evidence` is a **pointer**, not the payload: one legal shape
   (`RED:… GREEN:pass ORACLE:… [TIER:…] REV:… -> .qfai/evidence/<implement|atdd>-<spec-id>.md#<tdd-nnnn>`),
   capped at 240 characters (`QFAI-TDDLIST-011` /
-  `QFAI-TDDLIST-012`, both `warning`). `ORACLE:` is a required
+  `QFAI-TDDLIST-012`). `ORACLE:` is a required
   token so oracle-proof coverage is countable rather than buried in prose; and
   `REV:` takes only the two spellings `evidence-revision.md` defines, so the
   uncommitted `working-tree+<sha256>` form is legal here too. The anchor is
@@ -382,17 +382,18 @@ Each `.qfai/specs/<spec-id>/tdd/test-list.md` is the execution ledger for the TD
   assigns, its `<spec-id>` is this spec's, and its fragment is this row's own
   `### TDD-NNNN` section — so evidence from another spec, from the stage that
   did not author the test, or from a neighbouring row is rejected too. A
-  binding breach is reported even when the cell is also oversize —
-  `QFAI-TDDLIST-012` must not waive it. Ledgers predating the grammar waive
-  `QFAI-TDDLIST-011` / `QFAI-TDDLIST-012` while they migrate.
+  binding breach is reported even when the cell is also oversize, so it is
+  never read as a cap breach. A ledger predating the grammar carries these on
+  every legacy cell, and no waiver settles them: each row owes a conforming
+  cell.
 - `RED:n-a` on an `Integration` / `API` / `E2E` row is
-  `QFAI-TDDLIST-013` (`error`, rule `QFAI-TDDLIST-013`) and carries
-  no waiver: those rows owe an observed RED or a falsifiability argument, and
-  `execution-ledger.md#atdd-owned-rows` says of exactly them "There is no
-  waiver here". A waiver may only target `warning` / `info`, so `error` is how
-  that is spelled.
+  `QFAI-TDDLIST-013`, under its own rule id: those rows owe an observed RED or
+  a falsifiability argument, and `execution-ledger.md#atdd-owned-rows` says of
+  exactly them "There is no waiver here". A waiver may only target `warning` /
+  `info`, so `error` is how that is spelled — and every rule in this list is
+  one.
 - A ledger row may not carry more cells than its table's header declares —
-  `QFAI-TDDLIST-014` (`warning`, rule `QFAI-TDDLIST-014`). Cells are read by
+  `QFAI-TDDLIST-014`. Cells are read by
   header index, so a surplus column is read by no rule at all: the payload the
   `Evidence` cap forbids simply moved one column right.
 - `DR-ID` carries Decision Record (`DR-*`) **and** Change Request (`CR-*`)

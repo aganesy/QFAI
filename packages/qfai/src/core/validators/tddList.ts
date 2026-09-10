@@ -740,15 +740,13 @@ export const EVIDENCE_CELL_OVERSIZE_RULE_ID = "QFAI-TDDLIST-012";
  * `RED:n-a` on an ATDD-owned row: its own code, at `error`, and not waivable.
  *
  * `execution-ledger.md#atdd-owned-rows` says of exactly these rows "There is no
- * waiver here". Emitted as `QFAI-TDDLIST-011` it was a
- * `warning` under `QFAI-TDDLIST-011` — the same id every legacy prose cell needs
- * waived — so the migration procedure's own waiver silenced a violation the
- * contract declares unwaivable. A waiver may only target `warning` / `info`
- * findings, so `error` is what "no waiver here" is spelled as in this package.
+ * waiver here". A waiver may only target `warning` / `info` findings, so
+ * `error` is what that is spelled as in this package.
  *
- * The other two stay warnings: they are the migration, and this one is not.
- * A row that never obtained RED provenance is not a formatting defect that
- * predates the grammar — nothing about the split changed what it owed.
+ * The separate code still earns its place. Reported under `QFAI-TDDLIST-011`
+ * this shared a rule id with every legacy prose cell, so a row that never
+ * obtained RED provenance read as a formatting defect predating the grammar —
+ * which is not what it owed.
  */
 export const EVIDENCE_RED_PROVENANCE_RULE_ID = "QFAI-TDDLIST-013";
 
