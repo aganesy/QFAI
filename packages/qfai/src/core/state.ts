@@ -333,9 +333,9 @@ type Scratch = {
 /**
  * Stage the replacement document in a directory this write owns alone.
  *
- * The scratch used to be a plain sibling of the document, which on a
- * shared checkout put it in a directory other accounts may create,
- * rename and unlink entries in: between the last byte and the `rename`
+ * A scratch file placed as a plain sibling of the document would sit in a
+ * directory other accounts may create, rename and unlink entries in: between
+ * the last byte and the `rename`
  * such an account could swap the scratch for a symlink, and the rename
  * would publish that link AS the document. Detecting the swap afterwards
  * is inherently racy — the check and the `rename` are two separate

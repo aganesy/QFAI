@@ -31,7 +31,7 @@ const SCAN_ROOTS = ["config.ts", "saasPackage", "validators", "waivers.ts"] as c
  * Rule codes already emitted from more than one module when this guard was
  * introduced, pinned to the exact set of files allowed to emit them. They are
  * pre-existing collisions, not permission to add more — each needs its own
- * split, tracked separately from #241.
+ * split, tracked as its own concern.
  *
  * The value is the whole allowed owner set, not just the code: a third module
  * re-using the code, or a partial split that drops one owner, both change the
@@ -228,9 +228,9 @@ const ISSUE_FIRST_ARG =
  *
  * Nothing is currently hidden by it, and that is luck rather than design: both
  * codes are baseline, and both also appear as literal first arguments
- * elsewhere in the same file. #1062's point is the structure — a NEW hard
- * error emitted through a ternary would be registered nowhere and owned by
- * nothing, having followed the house style.
+ * elsewhere in the same file. The risk is structural: a NEW hard error emitted
+ * through a ternary would be registered nowhere and owned by nothing, despite
+ * following the house style.
  *
  * Both branches are captured. Either can be the code that reaches users, so
  * attributing one and dropping the other would trade a blind spot for a
@@ -335,7 +335,7 @@ async function collectScanFiles(): Promise<string[]> {
  * the only ambiguity that matters here.
  */
 /**
- * Comments blanked, literals kept — the shared reduction (#1089).
+ * Comments blanked, literals kept — the shared reduction.
  *
  * The hand-rolled scan this replaced tracked strings and templates but not
  * regular expressions, so a regex whose body held a backtick opened a phantom

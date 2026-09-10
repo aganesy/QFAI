@@ -31,7 +31,7 @@ import {
   runLane,
 } from "./helpers/hygieneTree.js";
 describe("the aggregate's dependency topology is declared, not inferred", () => {
-  // Review findings [80] and [81]. The verdict is derived from `${{ toJSON(needs) }}`, and its
+  // The verdict is derived from `${{ toJSON(needs) }}`, and its
   // accepting set includes `skipped` — so two things decide what the required context means
   // beyond the seven enumerated verification items: WHICH lanes are in `needs`, and which of
   // them may skip. Neither was pinned anywhere, and property 3 cannot see either: the seven
@@ -149,7 +149,7 @@ describe("the aggregate's dependency topology is declared, not inferred", () => 
   });
 
   it("reports the gate output rewired to a constant", () => {
-    // Review finding [81] as filed: `detect.outputs.full: ${{ false }}` skips every gated lane
+    // `detect.outputs.full: ${{ false }}` would skip every gated lane
     // without touching a condition or a line of the classifier, and the classifier's own tests
     // are inside one of the lanes that skips.
     const dir = plantedTree((d) => {
@@ -204,7 +204,7 @@ describe("the aggregate's dependency topology is declared, not inferred", () => 
 });
 
 describe("the pre-flight refusal runs before anything can disable it", () => {
-  // Review finding [82]. The lane's own report of a poisoned local composite action is
+  // The lane's own report of a poisoned local composite action is
   // unreachable when the poison sits in the action the lane's own job runs first: a step
   // appending `BASH_ENV=<a script that exits 0>` to the environment file makes every later
   // `shell: bash` step exit 0 without running its body, the lane among them. A check the attack
@@ -260,8 +260,8 @@ describe("the pre-flight refusal runs before anything can disable it", () => {
   });
 
   it("reports an external action ahead of the pre-flight", () => {
-    // Review finding [94]. The order check counted `run:` and local `uses:` as work and treated
-    // everything else as inert, so `uses: attacker/action@<sha>` could sit before the refusal.
+    // An order check that counts `run:` and local `uses:` as work and treats
+    // everything else as inert would let `uses: attacker/action@<sha>` sit before the refusal.
     // `action-pin` proves such a reference is immutable and says nothing about what it does — and
     // an action ahead of the pre-flight can write a command file, or replace the very script the
     // pre-flight is about to run, out of the checkout it just produced.
@@ -462,7 +462,7 @@ describe("the command-file names are one list, read by two refusals", () => {
 });
 
 describe("a global install names where the package comes from", () => {
-  // Review finding [87], after [83]. A pinned VERSION is a name, not a source: `npm` resolves
+  // A pinned VERSION is a name, not a source: `npm` resolves
   // its registry from `NPM_CONFIG_REGISTRY` or from a project `.npmrc`, both of which a pull
   // request controls, so `npm install --global corepack@0.35.0` is a request an attacker's
   // registry can answer with a different package — whose bin then runs in the job that
@@ -523,12 +523,12 @@ describe("a global install names where the package comes from", () => {
     ],
   ] as const) {
     it(`reports ${label}`, () => {
-      // Review findings [91] and [92]. The first version asked whether the BODY carried the
-      // two flags anywhere — and the body it was written for explains both in a comment
-      // directly above the command, so reverting the command left every substring in place
-      // and the rule green. A flag belongs to an invocation. So does its VALUE: `--registry`
+      // Asking only whether the BODY carries the
+      // two flags anywhere is not enough — a comment directly above the command can explain both,
+      // so reverting the command would leave every substring in place and the rule green. A flag
+      // belongs to an invocation. So does its VALUE: `--registry`
       // is worth nothing unless what it names is checked, and npm's own alias table has ten
-      // more spellings of `install` than the first enumeration knew.
+      // more spellings of `install` than a short enumeration would catch.
       const dir = plantedTree((d) => {
         editWorkflow(d, firstContext(d).workflow, (text) => {
           const anchor = "      - name: Run build & pack verification\n";
@@ -547,8 +547,8 @@ describe("a global install names where the package comes from", () => {
   }
 
   it("reports a second --registry, because npm takes the last one", () => {
-    // Review finding [99]. The check read the FIRST match, so
-    // `--registry=<trusted> --registry=<attacker>` passed — and npm resolves that to the
+    // A check that reads only the FIRST match would let
+    // `--registry=<trusted> --registry=<attacker>` pass — and npm resolves that to the
     // attacker's, verified against `npm config get registry` carrying both flags. A duplicate is
     // refused rather than resolved: two answers to one question is not a pin, whichever end this
     // lane reads from.
@@ -682,10 +682,10 @@ describe("a global install names where the package comes from", () => {
 });
 
 describe("the work of a lane that may skip is pinned too", () => {
-  // Review finding [89]. A gated lane was a declared dependency by name and condition and
-  // nothing else, so replacing `pnpm ci:coverage` with `true` left this lane silent, the job
-  // green and the aggregate green — while no other job in the repository runs that script, so
-  // the coverage floor stopped being checked at all. Being IN the aggregate is not the same
+  // A gated lane that is a declared dependency by name and condition and
+  // nothing else would let replacing `pnpm ci:coverage` with `true` leave this lane silent, the
+  // job green and the aggregate green — while no other job in the repository runs that script, so
+  // the coverage floor would stop being checked at all. Being IN the aggregate is not the same
   // claim as still doing the work.
 
   /** The first gated item and the job the declaration puts it in. */
@@ -764,7 +764,7 @@ describe("the work of a lane that may skip is pinned too", () => {
 
   it("reports a gated item the declaration pins no body for", () => {
     // The precondition. A named item with no digest is pinned by nothing, and the name alone is
-    // what review finding [89] measured as worthless.
+    // worthless as a pin.
     const dir = plantedTree((d) => {
       editDeclaration(d, (decl) => {
         const context = onlyContext(decl);
@@ -803,9 +803,9 @@ describe("the work of a lane that may skip is pinned too", () => {
 });
 
 describe("an external action inside a local one is code the closure runs", () => {
-  // Review finding [88]. The scan that reads a local action's steps followed `./` references
-  // only, so `uses: attacker/action@<sha>` inside the toolchain preamble every job runs first was
-  // passed over. `action-pin` proves such a reference is immutable and says nothing about what it
+  // A scan that reads a local action's steps and follows `./` references
+  // only would pass over `uses: attacker/action@<sha>` inside the toolchain preamble every job
+  // runs first. `action-pin` proves such a reference is immutable and says nothing about what it
   // does; the pre-flight refusal reads this repository's checkout, not the action's code.
 
   it("reports an external action the declaration does not enumerate", () => {
@@ -1104,7 +1104,7 @@ describe("the pre-flight stands where the attack passes", () => {
 });
 
 describe("the values a gated lane expands over are pinned too", () => {
-  // Review finding [97]. `Run tests (${{ matrix.slice }})` is digested with the EXPRESSION in
+  // `Run tests (${{ matrix.slice }})` is digested with the EXPRESSION in
   // it, so the digest says nothing about what it expands to — and every value reaches a shell.
   // `matrix-fail-fast` looks only at `fail-fast`, and nothing else looked at the values at all.
 
@@ -1199,9 +1199,9 @@ describe("the values a gated lane expands over are pinned too", () => {
 });
 
 describe("a local action arrives with its digest or not at all", () => {
-  // Review finding [95]. The pre-flight refused a command-file NAME and nothing else, so a step
-  // added to the toolchain action could `printf 'process.exit(0)' > <the hygiene lane>` and
-  // replace this program before it ran — or rewrite any verification source, in every job that
+  // A pre-flight that refuses a command-file NAME and nothing else would let a step
+  // added to the toolchain action `printf 'process.exit(0)' > <the hygiene lane>` and
+  // replace this program before it runs — or rewrite any verification source, in every job that
   // uses the action. Enumerating what a step may DO is the losing side of that argument; what
   // the action IS can be pinned.
 
@@ -1285,7 +1285,7 @@ describe("a local action arrives with its digest or not at all", () => {
 });
 
 describe("the pre-flight checks its own bytes before it checks anything else", () => {
-  // Review finding [101]. Everything this step runs comes out of the pull request's checkout,
+  // Everything this step runs comes out of the pull request's checkout,
   // so a pull request could rewrite `check-toolchain-action.sh` to `exit 0` and then poison the
   // composite action freely — the digest agreement between the action list and the declaration
   // is verified by the hygiene lane, and that lane runs AFTER the action it was protecting.
@@ -1329,7 +1329,7 @@ describe("what runs beside and before a verification is pinned too", () => {
   // that follows a step's `run:` into its package script.
 
   it("reports a pre-script added beside a script a verification invokes", () => {
-    // Review finding [104]. `preci:lint` runs before `ci:lint` and the digest never saw it.
+    // `preci:lint` runs before `ci:lint`, and a digest that never covers it would miss it.
     const dir = plantedTree((d) => {
       const manifest = path.join(d, "package.json");
       const parsed: unknown = JSON.parse(readFileSync(manifest, "utf-8"));
@@ -1351,7 +1351,7 @@ describe("what runs beside and before a verification is pinned too", () => {
   });
 
   it("reports an install lifecycle script the declaration does not pin", () => {
-    // Review finding [105]. `pnpm install` runs it inside the composite action, in every job,
+    // `pnpm install` runs it inside the composite action, in every job,
     // before every verification — and no body digest reaches it, because the package manager
     // invokes it rather than a step.
     const dir = plantedTree((d) => {
@@ -1413,9 +1413,9 @@ describe("what runs beside and before a verification is pinned too", () => {
 });
 
 describe("an external action the closure invokes directly is enumerated too", () => {
-  // Review finding [106]. `nestedActions` covers what a LOCAL composite action reaches, and the
-  // command-file scan opens an action only when the reference starts with `./` — so
-  // `uses: attacker/action@<sha>` added as a step in the closure was examined by nothing. A SHA
+  // `nestedActions` covers what a LOCAL composite action reaches, and a
+  // command-file scan that opens an action only when the reference starts with `./` would leave
+  // `uses: attacker/action@<sha>` added as a step in the closure examined by nothing. A SHA
   // pin makes a reference immutable and says nothing about what it does.
 
   it("reports an external step action the declaration does not enumerate", () => {
@@ -1478,8 +1478,8 @@ describe("an external action the closure invokes directly is enumerated too", ()
 });
 
 describe("the lifecycle is pinned for every manifest the workspace installs", () => {
-  // Review finding [107]. The loop walked the manifests the DECLARATION names, so deleting a
-  // manifest's key and adding a `prepare` to that manifest reported nothing — and `pnpm install
+  // A loop that walks only the manifests the DECLARATION names would report nothing when a
+  // manifest's key is deleted and a `prepare` is added to that manifest — and `pnpm install
   // --frozen-lockfile` runs a workspace package's lifecycle exactly as it runs the root's.
 
   it("reports a workspace manifest the declaration stopped covering", () => {
@@ -1505,11 +1505,11 @@ describe("the lifecycle is pinned for every manifest the workspace installs", ()
 });
 
 describe("the guard programs are pinned like the actions", () => {
-  // Review finding [108]. `pnpm ci:lint` ran `pnpm lint` before the hygiene lane, and
-  // `eslint.config.js` is top-level code a pull request controls — so it could replace the lane
-  // with a program that exits 0 before the lane ever ran, and ESLint would report success over
-  // the replacement. The lane is the first member of `ci:lint` now, and its own bytes are pinned
-  // beside the actions and verified by the pre-flight before any of it runs.
+  // If `pnpm ci:lint` ran `pnpm lint` before the hygiene lane, `eslint.config.js` — top-level
+  // code a pull request controls — could replace the lane with a program that exits 0 before the
+  // lane ever ran, and ESLint would report success over the replacement. The lane is the first
+  // member of `ci:lint` instead, and its own bytes are pinned beside the actions and verified by
+  // the pre-flight before any of it runs.
 
   it("reports a guard program whose bytes moved", () => {
     const dir = plantedTree((d) => {
@@ -1566,10 +1566,10 @@ describe("the pre-flight compares sets, and refuses code that runs at install ti
   // count and a literal.
 
   it("compares the pinned paths as a set, not by counting lines", () => {
-    // Review finding [112]: comparing counts let a deletion and a duplicate cancel out — drop
+    // Comparing counts would let a deletion and a duplicate cancel out — drop
     // `setup/action.yml` from the list, put a benign action's line in twice, and `sha256sum -c`
-    // verifies the duplicate happily while both counts read 2. The unpinned setup action then
-    // runs, before every verification in the job.
+    // would verify the duplicate happily while both counts read 2. The unpinned setup action
+    // would then run, before every verification in the job.
     const source = readFileSync(
       path.join(REPO_ROOT, "scripts", "check-toolchain-action.sh"),
       "utf-8",
@@ -1585,14 +1585,15 @@ describe("the pre-flight compares sets, and refuses code that runs at install ti
   });
 
   it("refuses a manifest that runs code at install time and is not on the allow-list", () => {
-    // Review finding [110]: `pnpm install --frozen-lockfile` runs the lifecycle hooks of every
-    // manifest in the workspace, and the lane compared the declaration against a FIXED array —
-    // `pnpm-workspace.yaml` is not that array. A pull request adding a package with a `prepare`
-    // hook had it run before every verification, in a manifest nothing examined.
+    // `pnpm install --frozen-lockfile` runs the lifecycle hooks of every
+    // manifest in the workspace, so a lane that compares the declaration against a FIXED array
+    // would miss that `pnpm-workspace.yaml` is not that array — a pull request adding a package
+    // with a `prepare` hook would have it run before every verification, in a manifest nothing
+    // examined.
     //
     // Refused in the pre-flight because that is before `pnpm install`, the only moment that
-    // helps. The computation itself moved into `scripts/check-lifecycle-manifests.mjs` when
-    // review finding [124] made it more than a grep; it is byte-verified before it runs, and
+    // helps. The computation itself lives in `scripts/check-lifecycle-manifests.mjs`, which is
+    // more than a grep: it is byte-verified before it runs, and
     // this row pins that ordering because it is what makes running it safe at all.
     const shell = readFileSync(
       path.join(REPO_ROOT, "scripts", "check-toolchain-action.sh"),
@@ -1618,7 +1619,7 @@ describe("the pre-flight compares sets, and refuses code that runs at install ti
     ).toMatch(/manifestsUnder/);
     expect(
       guard,
-      "read out of the parsed JSON. Review finding [118]: a pattern over line shape misses a " +
+      "read out of the parsed JSON, because a pattern over line shape misses a " +
         "valid one-line manifest, which the executing rows further down measure",
     ).toMatch(/JSON\.parse\(readFileSync/);
   });
@@ -1734,10 +1735,10 @@ describe("the pre-flight is run against planted trees, not read", () => {
   });
 
   it("reads a lifecycle hook out of the JSON, not off the start of a line", () => {
-    // Review finding [118]. The refusal matched a lifecycle key at the start of a line, and a
-    // valid one-line manifest matches no such pattern — measured: the old pattern does not match
-    // `{"scripts":{"prepare":"…"}}`. A pull request adding that manifest to the workspace passed
-    // here and had `prepare` run by the very next step's `pnpm install --frozen-lockfile`.
+    // A refusal that matches a lifecycle key only at the start of a line misses a
+    // valid one-line manifest such as `{"scripts":{"prepare":"…"}}`, which matches no such
+    // pattern. A pull request adding that manifest to the workspace would pass
+    // here and have `prepare` run by the very next step's `pnpm install --frozen-lockfile`.
     for (const [shape, body] of [
       ["one line", '{"name":"planted","private":true,"scripts":{"prepare":"echo planted"}}'],
       [
@@ -1794,11 +1795,11 @@ describe("the pre-flight is run against planted trees, not read", () => {
   });
 
   it("refuses the allow-list the same pull request widened", () => {
-    // Review finding [117]. The allow-list decides which manifests may run code at install time,
+    // The allow-list decides which manifests may run code at install time,
     // and it ships in the same checkout as the manifest — so adding the hostile manifest's path to
-    // it passed this refusal, and `pnpm install --frozen-lockfile` in the very next step ran the
-    // hook. The list's digest is now pinned in the pre-flight's own step in `ci.yml`, which is the
-    // one place the pull request cannot change without a reviewer seeing it beside the script.
+    // it would pass this refusal, and `pnpm install --frozen-lockfile` in the very next step would
+    // run the hook. The list's digest is pinned in the pre-flight's own step in `ci.yml`, which is
+    // the one place the pull request cannot change without a reviewer seeing it beside the script.
     //
     // The subject is the STEP: the script verifies exactly the list it was handed, and pinning
     // that list is what the step does.
@@ -1822,10 +1823,10 @@ describe("the pre-flight is run against planted trees, not read", () => {
   });
 
   it("refuses a composite action rewritten and re-listed in the same commit", () => {
-    // Review finding [119]. `sha256sum -c` verifies the tree against a list that ships WITH the
-    // tree, so rewriting `setup/action.yml` and recording its new digest passed — and that action
-    // runs before the hygiene lane that compares the list against the declaration, so nothing
-    // later would have caught it either.
+    // `sha256sum -c` verifies the tree against a list that ships WITH the
+    // tree, so rewriting `setup/action.yml` and recording its new digest would pass — and that
+    // action runs before the hygiene lane that compares the list against the declaration, so
+    // nothing later would catch it either.
     withTree(
       (dir) => {
         const action = path.join(dir, ".github", "actions", "setup", "action.yml");
@@ -1853,13 +1854,14 @@ describe("the pre-flight is run against planted trees, not read", () => {
     );
   });
   it("refuses a package declaring any hook the package manager runs at install time", () => {
-    // Review finding [125]. The first list stopped at `preinstall` / `install` / `postinstall`
-    // plus `prepare`, and the reviewer measured pnpm 10.28.1 running `preprepare` and
-    // `postprepare` too — so a package declaring only one of those was read as hookless and
-    // passed, and its hook could append to the environment file every later guard shell reads.
+    // pnpm 10.28.1 runs `preprepare` and `postprepare`, alongside `preinstall` / `install` /
+    // `postinstall` / `prepare` — a list stopping short of those would read a package declaring
+    // only one of them as hookless and pass it, letting its hook append to the environment file
+    // every later guard shell reads.
     //
-    // Every hook is exercised rather than the two that were missing: a list is the kind of thing
-    // that loses a member in an edit, and a row naming only the new members would not notice.
+    // Every hook is exercised rather than assumed: a list is the kind of thing
+    // that loses a member in an edit, and a row naming only the hooks already known would not
+    // notice.
     for (const hook of [
       "preinstall",
       "install",
@@ -1886,10 +1888,11 @@ describe("the pre-flight is run against planted trees, not read", () => {
   });
 
   it("refuses an allow-listed manifest whose hook body changed", () => {
-    // Review finding [124]. `package.json` and `packages/qfai/package.json` were on the list, and
-    // the list named PATHS — so the root `preinstall`, which really does run in every job before
-    // every verification, could become anything at all and pass. Being on the allow-list permits
-    // a manifest to run code at install time; it does not permit that code to change unseen.
+    // `package.json` and `packages/qfai/package.json` are on the list, and
+    // a list naming only PATHS would let the root `preinstall`, which really does run in every
+    // job before every verification, become anything at all and pass. Being on the allow-list
+    // permits a manifest to run code at install time; it does not permit that code to change
+    // unseen.
     withTree(
       (dir) => {
         const file = path.join(dir, "package.json");
@@ -1960,7 +1963,7 @@ describe("the pre-flight is run against planted trees, not read", () => {
 
   it("refuses an allow-list entry that pins nothing", () => {
     // A bare path was the old format. Accepting it now would be accepting exactly the state
-    // review finding [124] describes — a manifest permitted to run code with no pin on what.
+    // the previous case guards against — a manifest permitted to run code with no pin on what.
     withTree(
       (dir) => {
         const list = path.join(dir, ".github", "lifecycle-manifests.txt");
@@ -1996,11 +1999,11 @@ describe("the pre-flight is run against planted trees, not read", () => {
 });
 
 describe("a pnpmfile is executable configuration, and the install does not run it", () => {
-  // Review finding [140]. `--ignore-scripts` stops LIFECYCLE scripts; a root `.pnpmfile.cjs` is
+  // `--ignore-scripts` stops LIFECYCLE scripts; a root `.pnpmfile.cjs` is
   // not one. pnpm evaluates its top level and its hooks during the install regardless, and the
   // flag that stops that is `--ignore-pnpmfile` — pnpm's own help lists them as separate things,
-  // and the reviewer measured pnpm 10.28.1 creating a marker from a pnpmfile under
-  // `--ignore-scripts`.
+  // and pnpm 10.28.1 creates a marker from a pnpmfile even under
+  // `--ignore-scripts`, confirming the flag does not stop it.
   //
   // Nothing pinned that file: the pre-flight covered manifests and the two program trees. So a
   // pull request could add one and have it run before any verification in the job.

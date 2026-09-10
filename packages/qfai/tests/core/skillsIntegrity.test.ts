@@ -25,7 +25,7 @@ afterEach(() => {
  * `testTimeout`, on a file whose ten `runInit` calls each copy a 204-file
  * template tree and spawn `git` several times for the `core.symlinks` probe —
  * a three-form `rev-parse` fallback chain, then `git config` reads and possibly
- * a write, so the count is a range rather than a constant (#1218).
+ * a write, so the count is a range rather than a constant.
  *
  * `vitest.knobs.ts` is the precedent for inheriting rather than the reason: it
  * raised `testTimeout` to 120 s and its measurement is about spawning the qfai

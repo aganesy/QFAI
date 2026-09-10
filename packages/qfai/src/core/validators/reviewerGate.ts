@@ -41,9 +41,9 @@ const NON_PROTOTYPING_SCOPES = new Set(["atdd", "full", "implement"]);
  * return `null` when the file is missing / unreadable / not an object.
  *
  * Callers re-narrow each field they read (e.g. `typeof scope === "string"`)
- * so the loader does not need to ship a typed `T` parameter — that
- * pattern previously required a bare `as T` cast after a runtime object
- * check, which CLAUDE.md project rule prohibits.
+ * so the loader does not need a typed `T` parameter, which would require a
+ * bare `as T` cast after the runtime object check — a cast the project rules
+ * prohibit.
  */
 async function loadJsonObject(filePath: string): Promise<Record<string, unknown> | null> {
   if (!(await exists(filePath))) return null;
@@ -93,8 +93,7 @@ function isPrototypingLoopActive(proto: Record<string, unknown> | null): boolean
 }
 
 async function detectCertifyVerifyCircular(root: string): Promise<Issue[]> {
-  // Canonical-first with a legacy fallback; the literal used to be pinned to
-  // `.qfai/output/verify.json` here as well.
+  // Canonical-first with a legacy fallback.
   const verifyRead = await readVerifyJson(root);
   const verify = verifyRead.json;
   // `missing` and `unreadable` both leave no `scope` to reason about, so this
@@ -141,8 +140,7 @@ async function detectCertifyVerifyCircular(root: string): Promise<Issue[]> {
       // covered — never a stage you did not run", so an ordinary full-profile
       // run has to write `scope: "full"`, and writing it turned `error=0` into
       // `error=1`. A loop stays open for weeks while other stages run, and
-      // waivers are restricted to `warning` / `info`, so there was no exit
-      // (#1097).
+      // waivers are restricted to `warning` / `info`, so there was no exit.
       //
       // A `scope: "full"` verdict on disk is not damage. Consuming it in
       // `certify` is, and `certify` refuses. The observation is still worth

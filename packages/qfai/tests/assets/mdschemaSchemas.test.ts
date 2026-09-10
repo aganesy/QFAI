@@ -14,6 +14,7 @@
  */
 import { spawnSync } from "node:child_process";
 import { existsSync, readFileSync, readdirSync } from "node:fs";
+import { createRequire } from "node:module";
 import path from "node:path";
 import process from "node:process";
 import { fileURLToPath } from "node:url";
@@ -25,20 +26,43 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = path.resolve(__dirname, "../../../..");
 const SCHEMA_ROOT = path.join(REPO_ROOT, "packages/qfai/assets/mdschema");
 const MANIFEST = path.join(SCHEMA_ROOT, "manifest.yml");
+const require_ = createRequire(import.meta.url);
+
 /**
- * The `node_modules/.bin` shim, named the way this platform names it.
+ * The checker's own JavaScript entry point, run through {@link process.execPath}.
  *
- * On Windows a package manager writes `mdschema` (a shell script for Git Bash)
- * beside `mdschema.cmd`, and only the `.cmd` is executable by `spawnSync`
- * without a shell. Picking the extensionless name there finds a file that then
- * fails to spawn, so this whole describe would report every schema as violated
- * on Windows while the schemas were fine.
+ * Not the `node_modules/.bin` shim. Node refuses to `spawnSync` a `.cmd` or
+ * `.bat` without `shell: true`, and on Windows the shim beside the
+ * extensionless name is exactly that — so spawning it there fails before the
+ * checker runs, and every case below reports a schema violation that is really
+ * an unspawned process. Passing `shell: true` instead would put every schema
+ * and template path through a command-line parser for no gain.
+ *
+ * The entry point is read from the package's own `bin` field rather than
+ * written out. Naming an internal file here would be the same guess as naming
+ * the platform's shim: right until the package moves it, and silent when it
+ * does.
  */
-const MDSCHEMA_BIN = path.join(
-  REPO_ROOT,
-  "node_modules/.bin",
-  process.platform === "win32" ? "mdschema.cmd" : "mdschema",
-);
+function resolveMdschemaCli(): string {
+  const manifestPath = require_.resolve("@jackchuka/mdschema/package.json");
+  const manifest: unknown = JSON.parse(readFileSync(manifestPath, "utf-8"));
+  const bin =
+    typeof manifest === "object" && manifest !== null && "bin" in manifest
+      ? manifest.bin
+      : undefined;
+  const entry =
+    typeof bin === "string"
+      ? bin
+      : typeof bin === "object" && bin !== null && "mdschema" in bin
+        ? bin.mdschema
+        : undefined;
+  if (typeof entry !== "string") {
+    throw new Error(`@jackchuka/mdschema declares no "mdschema" bin entry in ${manifestPath}`);
+  }
+  return path.resolve(path.dirname(manifestPath), entry);
+}
+
+const MDSCHEMA_CLI = resolveMdschemaCli();
 
 /**
  * The packaged template tree, which is also what the repository root mirrors.
@@ -55,6 +79,8 @@ interface ManifestEntry {
   id: string;
   schema: string;
   pattern: string;
+  /** The content predicate that routes one path to two schemas, if any. */
+  when?: string;
 }
 
 function readManifest(): ManifestEntry[] {
@@ -62,24 +88,36 @@ function readManifest(): ManifestEntry[] {
   let current: Partial<ManifestEntry> = {};
   const flush = (): void => {
     if (current.id !== undefined && current.schema !== undefined && current.pattern !== undefined) {
-      entries.push({ id: current.id, schema: current.schema, pattern: current.pattern });
+      entries.push({
+        id: current.id,
+        schema: current.schema,
+        pattern: current.pattern,
+        ...(current.when !== undefined ? { when: current.when } : {}),
+      });
     }
     current = {};
   };
   for (const raw of readFileSync(MANIFEST, "utf-8").split(/\r?\n/)) {
     const line = raw.replace(/\s+#.*$/, "");
-    const start = /^\s*-\s+id:\s*(.+?)\s*$/.exec(line);
-    if (start !== null) {
+    // The captures are narrowed rather than assigned straight through: a group
+    // that did not participate reads as `undefined`, and under
+    // `exactOptionalPropertyTypes` writing that into an optional field is not
+    // the same as leaving the field out.
+    const id = /^\s*-\s+id:\s*(.+?)\s*$/.exec(line)?.[1];
+    if (id !== undefined) {
       flush();
-      current = { id: start[1] };
+      current = { id };
       continue;
     }
-    const field = /^\s+(schema|pattern):\s*"?([^"\r\n]+?)"?\s*$/.exec(line);
-    if (field !== null && current.id !== undefined) {
-      if (field[1] === "schema") {
-        current.schema = field[2];
+    const field = /^\s+(schema|pattern|when):\s*"?([^"\r\n]+?)"?\s*$/.exec(line);
+    const value = field?.[2];
+    if (value !== undefined && current.id !== undefined) {
+      if (field?.[1] === "schema") {
+        current.schema = value;
+      } else if (field?.[1] === "when") {
+        current.when = value;
       } else {
-        current.pattern = field[2];
+        current.pattern = value;
       }
     }
   }
@@ -145,14 +183,54 @@ describe("shipped Markdown schemas", () => {
     expect(orphans).toEqual([]);
   });
 
-  it("gives every manifest entry a unique id and a unique pattern", () => {
-    // Two entries on one pattern run the same documents against two contracts,
-    // and the losing one is invisible in the summary.
+  it("gives every manifest entry a unique id", () => {
     const ids = manifest.map((entry) => entry.id);
-    const patterns = manifest.map((entry) => entry.pattern);
 
     expect(new Set(ids).size).toBe(ids.length);
-    expect(new Set(patterns).size).toBe(patterns.length);
+  });
+
+  it("leaves at most one entry per pattern without a `when` predicate", () => {
+    // The invariant is that no document is run against two contracts, with the
+    // loser invisible in the summary. Two entries on one pattern are how a path
+    // that carries two document shapes is expressed, and the predicate is what
+    // partitions them — so a second UNPREDICATED entry is the state that
+    // breaks it, not a repeated pattern.
+    const byPattern = new Map<string, string[]>();
+    for (const entry of manifest.filter((e) => e.when === undefined)) {
+      byPattern.set(entry.pattern, [...(byPattern.get(entry.pattern) ?? []), entry.id]);
+    }
+    const contested = [...byPattern].filter(([, ids]) => ids.length > 1);
+
+    expect(contested.map(([pattern, ids]) => `${pattern}: ${ids.join(", ")}`)).toEqual([]);
+  });
+
+  it("gives every predicated entry a pattern some other entry also carries", () => {
+    // A `when:` on a pattern nothing else claims is a filter, not a route: the
+    // documents it does not match are then checked by nothing at all, and the
+    // gap reads in the summary exactly like a pack nobody has written yet.
+    const patterns = manifest.map((entry) => entry.pattern);
+    const stranded = manifest.filter(
+      (entry) =>
+        entry.when !== undefined &&
+        patterns.filter((pattern) => pattern === entry.pattern).length < 2,
+    );
+
+    expect(stranded.map((entry) => `${entry.id}: ${entry.pattern}`)).toEqual([]);
+  });
+
+  it("gives every `when` predicate a valid regular expression", () => {
+    const broken = manifest
+      .filter((entry) => entry.when !== undefined)
+      .filter((entry) => {
+        try {
+          new RegExp(entry.when ?? "", "mu");
+          return false;
+        } catch {
+          return true;
+        }
+      });
+
+    expect(broken.map((entry) => `${entry.id}: ${entry.when ?? ""}`)).toEqual([]);
   });
 
   it("roots every pattern at the configured specs directory", () => {
@@ -169,7 +247,21 @@ describe("shipped schemas agree with the SDD templates", () => {
   it("finds the mdschema binary", () => {
     // Every case below spawns it; without this the failures read as schema
     // violations rather than as a missing devDependency.
-    expect(existsSync(MDSCHEMA_BIN)).toBe(true);
+    expect(existsSync(MDSCHEMA_CLI)).toBe(true);
+  });
+
+  it("runs the checker rather than reporting an unspawned process", () => {
+    // The failure this guards against is silent: a spawn that never starts
+    // returns empty output, and an empty string contains no violation text, so
+    // every case below would report the template as violating its schema. This
+    // one asks whether the process ran at all.
+    const result = spawnSync(process.execPath, [MDSCHEMA_CLI, "--help"], {
+      cwd: REPO_ROOT,
+      encoding: "utf-8",
+    });
+
+    expect(result.error).toBeUndefined();
+    expect(`${result.stdout ?? ""}${result.stderr ?? ""}`).not.toBe("");
   });
 
   for (const schemaRelative of schemaFiles()) {
@@ -185,8 +277,8 @@ describe("shipped schemas agree with the SDD templates", () => {
         return;
       }
       const result = spawnSync(
-        MDSCHEMA_BIN,
-        ["check", "--schema", path.join(SCHEMA_ROOT, schemaRelative), template],
+        process.execPath,
+        [MDSCHEMA_CLI, "check", "--schema", path.join(SCHEMA_ROOT, schemaRelative), template],
         { cwd: REPO_ROOT, encoding: "utf-8" },
       );
 

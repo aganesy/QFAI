@@ -81,7 +81,7 @@ describe("TC-0012-0476: acceptedIterationIndex resolves to convergence-mode iter
   });
 });
 
-// Pin cross-surface mode consistency (codex r3338416753):
+// Pin cross-surface mode consistency:
 // `extractIterationViewsForCertify` (certify) MUST inherit the most-
 // recent explicit mode for iterations that omit `mode`, matching
 // `readPrototypingModeForRelax` (validate-relax). Without this, an

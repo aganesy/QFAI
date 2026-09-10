@@ -4,7 +4,7 @@ import path from "node:path";
 import fg from "fast-glob";
 import { describe, expect, it } from "vitest";
 
-describe("uiux sidecar templates", { timeout: 15000 }, () => {
+describe("uiux sidecar templates", () => {
   const repoRoot = path.resolve(process.cwd(), "..", "..");
   const templateDir = path.join(
     repoRoot,

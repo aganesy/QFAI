@@ -94,10 +94,10 @@ describe("test-layers.md volume policy is a recording obligation, not a gate", (
         volumePolicy(await readFile(path.join(repoRoot, relativePath), "utf-8")),
       );
       // `collectTestStrategy` reads Gherkin `@layer-*` tags where they parse and
-      // the ledger's `Layer` column where they do not, and #1197 made the two
-      // knobs measure whichever one produced the numbers. The paragraph used to
-      // say they "never inspect" anything but Gherkin, which stopped being true
-      // of the layered layout — the shape the same paragraph calls normal.
+      // the ledger's `Layer` column where they do not, so the two
+      // knobs must measure whichever one produced the numbers. The paragraph
+      // must not say they "never inspect" anything but Gherkin — that would not
+      // be true of the layered layout, the shape the same paragraph calls normal.
       expect(section).toContain("**What it counts.**");
       expect(section).toContain("Gherkin scenarios parsed out of each spec's Examples file");
       expect(section).toContain("the `Layer` column of every active spec's `tdd/test-list.md`");

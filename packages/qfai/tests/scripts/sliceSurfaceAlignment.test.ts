@@ -65,7 +65,7 @@ const PACKAGE_JSON = path.join(PACKAGE_ROOT, "package.json");
 const CI_WORKFLOW = path.join(REPO_ROOT, ".github", "workflows", "ci.yml");
 
 /**
- * The project name deleted by this change, kept as a literal.
+ * The project name that stopped being declared, kept as a literal.
  *
  * A literal and not a derivation: the whole point of `TC-0017-0063` is that this
  * particular name stopped being declared, and a name read out of the file it was

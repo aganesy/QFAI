@@ -49,7 +49,7 @@ Stage 0 Preflight  -> Stage 1 Triage  -> Phase 0 Contracts-first
 
 Follow `.qfai/assistant/constitution/shared-skill-operating-baseline.md#stage-0---steering-completion-refresh-mandatory`.
 Take a source inventory. A discussion pack is **optional, non-normative reference material** here — sources, requirement seeds, UX exploration and provenance IDs — not an upstream SSOT, so an incomplete pack, a contradictory one, or a blocking discussion OQ does not by itself stop this stage. Do NOT edit, repair or re-run a pack to make this stage's gate pass: the correction belongs in the SDD-owned spec, policy or contract artifact, with the source discrepancy recorded in delta/evidence. Stop only when there is no usable source at all — no pack, no import-lite input, and no explicit user requirement. A product decision that cannot be inferred safely still goes to the user, and the answer is recorded in SDD artifacts rather than back-propagated into the pack.
-When there is no discussion pack at all and specs already exist (import-lite entrypoint), record the input source instead: write `.qfai/evidence/import-lite-<17-digit timestamp>.md` from `templates/evidence/import-lite.md` before editing any spec, filling `generated_at` with an ISO8601 datetime and at least one real `Sources` entry or user excerpt (a file left on its `<...>` placeholders is not accepted). Validator: `QFAI-IMPLITE-001`.
+When there is no discussion pack at all and specs already exist (import-lite entrypoint), record the input source instead: write `.qfai/evidence/import-lite-<ts>.md` from `templates/evidence/import-lite.md` before editing any spec (`<ts>` is the 17-digit run stamp; see Evidence below for the full naming rule), filling `generated_at` with an ISO8601 datetime and at least one real `Sources` entry or user excerpt (a file left on its `<...>` placeholders is not accepted). Validator: `QFAI-IMPLITE-001`.
 On validate / doctor / quality-gate failures, follow `.qfai/assistant/constitution/shared-skill-operating-baseline.md#gate-failure-autorepair-protocol`.
 
 ## Stage 1: Triage (Mandatory)
@@ -60,7 +60,7 @@ Before any spec edit:
 2. Classify each REQ/NFR into one of the 8 operations using `_policies/11_Slice-Policy.md`:
    - **CREATE / DELETE / SPLIT / MERGE / SUPERSEDE** (top-level, approval required)
    - **UPDATE:APPEND / UPDATE:MODIFY / UPDATE:REMOVE** (UPDATE:REMOVE also requires approval). The colon-separated form is **prose shorthand** for the operation pair, never a cell value. In the Triage table the pair occupies **two cells**: `Operation` = `UPDATE`, `Sub-op` = `APPEND` / `MODIFY` / `REMOVE`. Writing `UPDATE:APPEND` into the `Operation` cell fails `QFAI-TRIAGE-003`. Row shape: `references/sdd-triage.md` (`## Triage table format`).
-3. **Append-first**: default to UPDATE on an existing active spec whose subject tokens overlap the REQ; walk the impact cascade and add MODIFY/REMOVE rows on companion specs. CREATE only when there is **zero subject-token overlap with any active spec** AND the REQ introduces a genuinely new capability — first add the `CAP-NNNN` row to `_policies/03_Capabilities.md` and fill its `Spec` cell with the next unused `spec-NNNN` (an empty cell reports `QFAI-SPLIT-106`; while that code is inside its promotion window it is a `warning`, so `validate --fail-on error` still exits 0 — read the findings, do not read the exit code), then cite it in the CREATE row Rationale (`QFAI-TRIAGE-006`). Under `--auto` that catalog row is not written until the CREATE row is approved — see "User Questions" below. See `references/sdd-triage.md` for the precise APPEND-vs-CREATE algorithm.
+3. **Append-first**: default to UPDATE on an existing active spec whose subject tokens overlap the REQ; walk the impact cascade and add MODIFY/REMOVE rows on companion specs. CREATE only when there is **zero subject-token overlap with any active spec** AND the REQ introduces a genuinely new capability — first add the `CAP-NNNN` row to `_policies/03_Capabilities.md` and fill its `Spec` cell with the next unused `spec-NNNN` (an empty cell reports `QFAI-SPLIT-106`; that code is an error, so `validate --fail-on error` stops on it), then cite it in the CREATE row Rationale (`QFAI-TRIAGE-006`). Under `--auto` that catalog row is not written until the CREATE row is approved — see "User Questions" below. See `references/sdd-triage.md` for the precise APPEND-vs-CREATE algorithm.
 4. Obtain AskUserQuestion approval for every approval-required row. Under `--auto` no
    question is asked and the agent does not self-approve — see "User Questions" below.
 5. Persist the Triage table in `<spec>/09_delta.md` (per-spec) or `_policies/10_delta.md` (cross-spec / policy).
@@ -360,7 +360,11 @@ Follow `.qfai/assistant/constitution/shared-skill-operating-baseline.md#delta-re
    new TCs and newly active obligations append at `todo`, and
    changed / removed TCs are reset or retired under the upstream-reset rule —
    **per boundary within a matrix-shaped TC**, so a boundary the TC no longer
-   declares has its row retired rather than reset back to `todo` — as is the row
+   declares has its row retired rather than reset back to `todo`. Retiring a row
+   means **deleting it from the table**, since there is no `retired` status, and
+   the deletion is recorded in whatever authorised it: the approved
+   `UPDATE:REMOVE` Triage row's `09_delta.md` / `_policies/10_delta.md` on a
+   normal reseed, the driving `CR-*` on a Drift Protocol owner rerun. The same holds for the row
    of a `US-*` / `CON-API-*` deleted upstream or newly exempt
    (`references/sdd-phase-checklists.md`). **An eight-column ledger is migrated
    in the same pass**: add `US-Refs` and `CON-API-Refs` to its header, and move
@@ -452,6 +456,8 @@ Write a `.qfai/steering/<id>.md` entry when this stage hits one of the condition
 - Updated contracts under `.qfai/contracts/**`; UI-bearing targets normalize design/ui contracts
 - `<paths.outDir>/preflight/run-<timestamp>/preflight_summary.md`, default `.qfai/report/preflight/run-<timestamp>/preflight_summary.md`, plus the `<paths.outDir>/preflight_summary.md` latest-run pointer (both written by `npx qfai sdd preflight`, which reports the run-scoped path it wrote; carry-over findings via `--assume`)
 - Evidence file: `.qfai/evidence/sdd-<spec-id>.md`
+- Evidence file: `.qfai/evidence/import-lite-<ts>.md` — imported spec sets only (specs present, no
+  discussion pack); see Evidence below
 
 The canonical file set is defined by skill templates under `.qfai/assistant/skills/qfai-sdd/templates/`.
 
@@ -484,8 +490,13 @@ with no visual secondary surface). `/qfai-discussion` authors no root
 `validators/designContractReadiness.ts` skips `QFAI-DCON-030` / `-031` on
 the same condition — so demanding a freeze here would only re-block the
 pack on a token tree nothing reads. Read the classification from the
-active discussion pack `01_Context.md`; when there is no pack, treat the
-target as visual and run the freeze.
+active discussion pack `01_Context.md`. A spec taken in through import-lite
+has no pack, so read it instead from the `## Surface` section of the
+import-lite evidence its own provenance names (`Source: import-lite-<ts>#...`).
+When neither states a surface, **stop and ask** for one rather than running
+the freeze: a project whose only surface is a CLI cannot produce a root
+`DESIGN.md`, a design contract or a prototype, so assuming visual leaves it
+with no way forward at all.
 
 1. Read root `DESIGN.md` at `<consuming-project-root>/DESIGN.md`. If
    missing, stop and ask the user to run `/qfai-discussion` (which
@@ -541,6 +552,58 @@ schema from `.qfai/assistant/constitution/shared-skill-delegation-baseline.md`; 
 `PASS` or `REVISE`. Contract executability carries one `- Executability: CON-DB-NNNN — …` line per
 `db/` contract this cycle authored or changed (`QFAI-CONTRACT-031`), or `- none`.
 
+### Import-lite evidence (imported spec sets only)
+
+Producer: Stage 0, in every invocation form. When Stage 0 finds specs under `<paths.specsDir>` and
+no `<paths.discussionDir>/discussion-*/` pack directory at all, create
+`.qfai/evidence/import-lite-<ts>.md`
+from `templates/evidence/import-lite.md` and record where the requirements actually came from. That
+is the documented route for a spec set imported from outside QFAI, and it satisfies
+`QFAI-IMPLITE-001` without fabricating a discussion pack. A pack that exists but is incomplete is
+not this case — the pack is present, so this route never opens for it. Stage 0 handles it the way
+it handles any non-normative source: record what is missing and carry on. Neither repair the pack
+nor write import-lite evidence beside it.
+
+The `-<ts>` suffix is what makes one file per import run possible. The check does also accept a copy
+kept under the template's own name (`import-lite.md`), but that is a single fixed path, so a second
+import would overwrite the first run's trail. `<ts>` is the canonical 17-digit run stamp
+(`YYYYMMDDhhmmssSSS`, the same form discussion packs use); a suffix that is not exactly that stamp
+is rejected, so a `-<n>` collision counter does not work here. Claim the name with an exclusive
+create (`wx` / `O_EXCL`) — listing the directory and picking a free name is not a reservation, so
+two runs inside the same millisecond would both read the same name as free and the later write
+would erase the earlier run's trail. When the exclusive create fails because the file exists,
+re-stamp and retry: one file per import run, never an overwrite of an earlier one.
+
+Create it only once at least one `## Sources` entry or a `## User provided excerpt` is in hand, and
+delete it if the run then stops for want of an input source: an otherwise empty `import-lite-*` file
+silences `QFAI-IMPLITE-001` while leaving preflight with nothing to read. This artifact is a pointer
+for preflight, never requirement/spec SSOT — carry unresolved items into the spec's Open Questions.
+
+The packaged `runSddPreflight` API takes this route itself, so do not hand-write the summary. When
+the pack check blocks and the evidence resolves, it returns `source: import-lite` with the evidence
+file as the selected input, an unknown `Imported REQ count` (a pointer artifact carries no REQ ids)
+and `/qfai-sdd` as the next command — so the summary names its real input source instead of a pack
+that does not exist. It writes both copies under `<paths.outDir>`: the run-scoped
+`preflight/run-<timestamp>/preflight_summary.md` that evidence cites, and the
+`preflight_summary.md` pointer each rerun rewrites — the latter is
+`.qfai/report/preflight_summary.md` only when `qfai.config.yaml` leaves `paths.outDir` at its
+default; a hand-written copy in the old place would be a second, unread one. Evidence is an
+entrypoint, never an override: a pack that exists but is incomplete or misnamed still blocks.
+
+On this route Stage 1 has no pack to read, so it takes its REQ/NFR intake from that evidence file
+instead: the `## Sources` and `## User provided excerpt` it records stand in for `06_REQ.md` /
+`07_NFR.md`. See `references/sdd-triage.md`, Inputs — never guess the intake from existing specs.
+US and AC items this route writes carry the evidence pair `Source: import-lite-<ts>#<REQ-ID>` in
+place of the `<pack-id>#<discussion-id>` one; the form is defined in
+`references/spec-traceability-rules.md`.
+
+`<paths.specsDir>` and `<paths.discussionDir>` are the resolved settings, `.qfai/specs/` and
+`.qfai/discussion/` by default; the check resolves them before it looks. The evidence path is not
+one of them — `.qfai/evidence/` is canonical and stays put even under a `paths.discussionDir`
+override, because every writer (`npx qfai init`, prototyping, audit log) uses it. Writing the evidence
+beside a relocated discussion directory puts it where nothing looks, leaving `QFAI-IMPLITE-001`
+unclearable.
+
 ## Done Declaration
 
 When declaring DONE, include:
@@ -577,7 +640,6 @@ The skill collapses avoidable per-session prompts to 0-1 by classifying every de
   - version-pin changes (`package.json#version`, branch pin)
   - scope expansions outside the active envelope
 - hard-required:
-  - `companyName`
   - brand intent
   - `primarySpecId` (when absent from inputs)
 

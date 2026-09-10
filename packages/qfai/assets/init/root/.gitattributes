@@ -1,0 +1,45 @@
+# QFAI's default, seeded by `npx qfai init`. It is written only when this file does
+# not exist; an existing .gitattributes is never overwritten.
+#
+# The rules cover only the paths QFAI owns. A repository-wide `* eol=lf` would
+# report every file already committed as CRLF as "all lines changed", so a
+# setting meant to keep SSOT diffs readable would produce a large unrelated diff
+# instead. Line endings for product code stay the project's own decision.
+#
+# The SSOT artifacts QFAI writes — the markdown, yaml, json and sql under
+# .qfai/ — all ship LF-normalised. The Drift Protocol makes the diff of those
+# artifacts the reviewable object, so a checkout or an editor save that flips a
+# whole file's line endings turns it into an "all lines changed" diff that
+# cannot be reviewed. Pinning the line endings here is what prevents that.
+#
+# text=auto: git detects binaries itself and leaves them out of the conversion.
+#
+# Adopting this in an existing repository: attributes do not reach backwards
+# through the index. If a protected path is already committed as CRLF, run this
+# once after adding this file
+#
+#     git add --renormalize .qfai
+#
+# and keep the result as its own commit. The root files this one pins to LF —
+# qfai.config.yaml, DESIGN.md, .github/workflows/qfai-validate.yml,
+# qfai-tests.yml and qfai-docs.yml — go on the same command line if they too
+# were committed as CRLF. Skipping this step only defers the "all lines changed"
+# diff to the day one of them is next saved with LF endings.
+
+# The SSOT tree QFAI owns
+.qfai/** text=auto eol=lf
+
+# Windows-only scripts keep CRLF
+.qfai/**/*.bat text eol=crlf
+.qfai/**/*.cmd text eol=crlf
+
+# The root artifacts and configuration `npx qfai init` seeds
+/qfai.config.yaml text=auto eol=lf
+/DESIGN.md text=auto eol=lf
+# All three workflows `npx qfai init` seeds, not one of them. Pinning a single file
+# leaves the other two to arrive as CRLF on a Windows checkout, where this
+# setting's purpose — keeping review diffs free of line-ending noise — would go
+# unserved for them.
+/.github/workflows/qfai-validate.yml text=auto eol=lf
+/.github/workflows/qfai-tests.yml text=auto eol=lf
+/.github/workflows/qfai-docs.yml text=auto eol=lf

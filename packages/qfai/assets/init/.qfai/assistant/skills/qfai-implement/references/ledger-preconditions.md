@@ -71,8 +71,12 @@ until then.
 **One row per independently observable boundary, and at least one per TC.**
 "One row" is a floor, not a cap: a matrix-shaped TC — several rejection reasons,
 a status-code matrix, several independent state transitions — is seeded as one
-row per boundary, every row carrying that TC in `TC-Refs`
-(`selector-granularity.md`; `TC-Refs` is many-to-many with `TDD-ID`). For an
+row per boundary, every row carrying that TC in `TC-Refs` and naming its own
+boundary in `Boundary`
+(`selector-granularity.md`; `TC-Refs` is many-to-many with `TDD-ID`). Leave
+`Boundary` as you found it: it is the cell a reseed pairs the row by, and the
+cells this skill may rewrite — `Test file` and `Selector` — are the ones it
+exists to stop a pairing from reading. For an
 `Integration` TC that split belongs to Phase 2b: `/qfai-atdd` never writes this
 ledger and takes its RED per row at P1b, so a row that reaches it conflating
 several boundaries has no splitter of its own and its RED is invalid by
@@ -185,8 +189,8 @@ between the two TC groups, handled by the rule in
 `Layer` in place.
 
 A ledger written before this rule may already hold such a row — the older rule
-did make a `Level`-less TC a target. `QFAI-TCLEVEL-001` (`warning`)
-reports each one, because the row keeps the TC on this ledger while
+did make a `Level`-less TC a target. `QFAI-TCLEVEL-001` reports each one,
+because the row keeps the TC on this ledger while
 `QFAI-ATDD-112` holds the same TC. Do not implement it: either declare the TC's
 `Level` or retire the row through `/qfai-sdd`. A row whose `Layer` is
 `Integration` is not reported — that one already agrees with the TC's ATDD home.

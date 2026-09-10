@@ -92,7 +92,7 @@ async function countTests(includes: readonly string[]): Promise<number> {
     const dir = path.join(PACKAGE_ROOT, base);
     // Named from the call rather than from `typeof readdir`: that alias picks the overload returning
     // `Dirent<NonSharedBuffer>`, whose `name` is a Buffer, and the mismatch only surfaced once this
-    // file entered `tsconfig.tests.json` — which is the whole of what review finding [12] predicted.
+    // file entered `tsconfig.tests.json`.
     let entries: Dirent[];
     try {
       entries = await readdir(dir, { recursive: true, withFileTypes: true });

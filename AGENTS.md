@@ -22,53 +22,61 @@
 - `.qfai/` 配下の skill や設定を直接編集しても、パッケージとしてリリースされない。
 - リポジトリのルート直下にディレクトリ・ファイルを新規追加する際は事前にユーザー確認を必須とする（既存ルートファイルの編集は対象外）。詳細: `.agents/rules/root-additions-policy.md`。
 
+### `.qfai/contracts/cli/`
+
+`api/`, `db/`, `ui/` and `design/` hold a project's own contracts, and the
+shipped `qfai-sdd` skill governs them
+(`assets/init/.qfai/assistant/skills/qfai-sdd/references/contract-artifact-rules.md`).
+`cli/` is this repository's alone: the contracts for QFAI's own command surface,
+and for the files QFAI writes into a consuming project.
+
+- Markdown, and they carry no `QFAI-CONTRACT-ID`. The `api/` / `db/` / `ui/`
+  contract validators do not scan them.
+- Indexed in `_policies/05_Contracts.md` under **CLI Contracts**, with `CLI-*`
+  short ids.
+- Named `qfai-<command>.md` for one command's surface. A subject name instead —
+  `worklog-entry.schema.md`, `shipped-workflows.md` — means the file holds a
+  schema or an ownership boundary that more than one command shares.
+
+No check enforces the naming or the index entry. A new file that skips either is
+caught in review or not at all.
+
 ## バージョン規律 (全 AI 必読)
 
-QFAI パッケージの版番号 (`X.Y.Z`) を AI が独断で選んではいけない。
-版番号の選択はユーザが事前に与える: (1) ブランチ名に `vX.Y.Z` を pin
-する、または (2) 対話で明示指示する。pinned branch では pin 自体が
-ユーザ承認に当たる。詳細とガード仕様は
-`.agents/rules/version-discipline.md` (SSOT) を参照。
+QFAI パッケージの版番号 (`X.Y.Z`) は AI が選ばない。ユーザが決める。
+ユーザはブランチ名に `vX.Y.Z` を pin するか、対話で明示指示する。
+詳細とガードは `.agents/rules/version-discipline.md` を参照。
 
-- **pinned branch** (例: `feature/v1.8.8`): pin = ユーザ承認。
-  AI は次を独断で実行してよい (PR を merge 可能状態に整える段階で
-  実行する義務がある):
+- **pinned branch** (例: `feature/v1.8.8`): pin がユーザの指示。
+  PR を merge 可能な状態に整える段階で、次の 3 つを行う。
   - `packages/qfai/package.json#version` を pin 値に同期
-  - `CHANGELOG.md` の `## [Unreleased]` を `## [X.Y.Z] - YYYY-MM-DD`
-    に rename し、空の `## [Unreleased]` を再挿入
+  - `CHANGELOG.md` の `## [Unreleased]` を `## [X.Y.Z] - YYYY-MM-DD` に改名し、空の `## [Unreleased]` を再挿入
   - `chore(release): qfai X.Y.Z` で commit
   - pin と異なる版番号への変更は禁止 (要ユーザ確認)
-- **unpinned branch** (例: `main`, `chore/...`): `package.json#version`
-  / CHANGELOG H2 / `chore(release):` commit のいずれもユーザ明示指示
-  なしには実行しない。
-- pinned / unpinned いずれでも、tag 付与 (`git tag vX.Y.Z`) /
-  `npm publish` / `git push --force` / amend / `gh pr merge` は
-  ユーザの明示指示を要する。
+- **unpinned branch** (例: `main`, `chore/...`): `package.json#version` /
+  CHANGELOG の版見出し / `chore(release):` commit のいずれも、ユーザの明示指示なしに行わない。
+- どちらでも、tag (`git tag vX.Y.Z`) / `npm publish` / `git push --force` / amend /
+  `gh pr merge` はユーザの明示指示が必要。
 
-詳細とガード仕様: `.agents/rules/version-discipline.md`。
-自動ガード: `packages/qfai/scripts/check-branch-version-pin.sh`
-(CI lint job 必須)。
+自動ガード: `packages/qfai/scripts/check-branch-version-pin.sh` (CI の lint job)。
 
 ## 全 AI 共通ルール一覧 (`.agents/rules/`)
 
-リポジトリで作業する全 AI が遵守すべきルールは
-`.agents/rules/` 配下のマスタファイルを SSOT とする:
+リポジトリで作業する全 AI が守るルールは `.agents/rules/` 配下のマスタが SSOT。
 
-- `version-discipline.md` (本セクションの SSOT)
+- `version-discipline.md` (上記「バージョン規律」の詳細)
 - `distributed-surface.md` (npm 配布物の internal id / version leak 禁止)
 - `root-additions-policy.md` (repo root への新規追加は要確認)
 - `temporary-files.md` (一時ファイルは `tmp/` 配下のみ)
 - `document-schema.md` (SDD ドキュメントの章構成・表・図の構造は
   `packages/qfai/assets/mdschema/**` が SSOT)
 - `documentation-clarity.md` (PR / issue / コメント / Markdown の記述基準)
+- `repository-language.md` (this repository is written in English)
 
-`.claude/rules/` はこれらへの symlink (Windows 環境では Git の
-`core.symlinks=true` 設定 + Developer Mode が必要。それ以外の場合は
-`.claude/rules/*.md` がパス文字列を含む通常テキストファイルとして
-展開されるため、Claude セッションは master を直接参照すること)。
-Codex / Copilot は本ファイル (`AGENTS.md`) と
-`.github/copilot-instructions.md` / `.codex/README.md` の参照経由で
-これらを参照すること。
+`.claude/rules/` はこれらへの symlink。Windows では Git の `core.symlinks=true` と
+Developer Mode が必要で、無い場合は `.claude/rules/*.md` がパス文字列だけの
+テキストファイルになるため、マスタを直接読む。
+Codex は本ファイルを、Copilot は `.github/copilot-instructions.md` を読む。
 
 ## 記述基準 (全 AI 必読)
 
@@ -76,6 +84,8 @@ PR / issue のタイトルと説明、変更差分に含まれるコードコメ
 `.agents/rules/documentation-clarity.md` (SSOT) の基準を満たしてから完了とする。
 
 - ソースと Markdown に issue/PR 番号、チケット ID、内輪の呼称を書かない。
+  PR / issue の本文、commit message、`CHANGELOG.md` は対象外で、番号とリンクは
+  そこに置く。
 - 検討や実装の経緯を書かない。現在の仕様とその理由だけを書く。
 - 自明・重複・冗長な記述を削る。箇条書きと表で整理する。
 - 一般的な用語のみを使い、一文を短くする。

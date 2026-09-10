@@ -29,6 +29,7 @@ import { argv, cwd, exit, stdout } from "node:process";
 import { fileURLToPath } from "node:url";
 
 import { LIFECYCLE_MANIFESTS_REL, lifecycleProjection } from "./check-lifecycle-manifests.mjs";
+import { writeFormattedJson } from "./lib/write-declaration.mjs";
 
 /** The roots whose every file is pinned, repo-relative and POSIX-separated. */
 const PINNED_ROOTS = [".github/actions", "scripts"];
@@ -79,7 +80,7 @@ function digestOf(root, rel) {
     .digest("hex");
 }
 
-function main(root) {
+async function main(root) {
   // The list first, over the roots as they now stand: the workflow pins its digest, so the file
   // has to be final before the workflow can be written. Nothing here is circular — `ci.yml` is
   // not itself pinned by bytes, so writing it changes none of the digests just computed.
@@ -109,12 +110,12 @@ function main(root) {
   for (const context of Array.isArray(declaration.contexts) ? declaration.contexts : []) {
     context.pinnedBytes = Object.fromEntries(entries.map(([digest, rel]) => [rel, digest]));
   }
-  writeFileSync(declarationPath, `${JSON.stringify(declaration, null, 2)}\n`, "utf-8");
+  await writeFormattedJson(declarationPath, declaration);
   stdout.write(`pinned into ${DECLARATION_REL}\n`);
 
   // THEN the lifecycle allow-list, whose entries pin what each listed manifest runs at install
-  // time rather than merely naming it. Review finding [124]: being on the list permitted a
-  // manifest to run code at install time AND permitted that code to change unseen, so the root
+  // time rather than merely naming it. Being on the list alone would permit a
+  // manifest to run code at install time AND let that code change unseen, so the root
   // `preinstall` could become a step that neuters every later guard shell in the job.
   //
   // The digest is over the lifecycle PROJECTION, not the whole file, so a dependency bump or an
@@ -169,7 +170,7 @@ const invokedDirectly = fileURLToPath(import.meta.url) === path.resolve(argv[1] 
 if (invokedDirectly) {
   const rootFlag = argv.indexOf("--root");
   exit(
-    main(
+    await main(
       rootFlag >= 0 && argv[rootFlag + 1] !== undefined ? path.resolve(argv[rootFlag + 1]) : cwd(),
     ),
   );

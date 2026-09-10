@@ -170,7 +170,7 @@ describe("a coverage row for a TC that declares no Level", () => {
     const findings = await findingsFor(tableWithLevel(""), [UNIT_ROW]);
 
     const finding = findings.find((entry) => entry.code === "QFAI-TCLEVEL-001");
-    expect(finding?.severity).toBe("warning");
+    expect(finding?.severity).toBe("error");
     expect(finding?.refs).toEqual(["TC-0001"]);
     // `warning`, not `error`: an upgraded project did not write these rows by
     // hand and must not have its branch blocked on them.

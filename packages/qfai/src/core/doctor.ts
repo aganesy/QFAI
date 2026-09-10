@@ -3,7 +3,6 @@ import { access, readdir, readFile } from "node:fs/promises";
 import path from "node:path";
 
 import { parseAgentFrontmatter } from "./agentFrontmatter.js";
-import { SUNSETS, deprecationSeverity } from "./sunset.js";
 import {
   defaultConfig,
   findConfigRoot,
@@ -37,7 +36,10 @@ import { resolvePrimaryPrototypingSpec } from "./prototyping/specResolution.js";
 import { collectSpecEntries } from "./specLayout.js";
 import { DEFAULT_TEST_FILE_EXCLUDE_GLOBS } from "./traceability.js";
 import { diffProjectSkillsAgainstInitAssets, type SkillsIntegrityDiff } from "./skillsIntegrity.js";
+import type { Issue } from "./types.js";
 import { validateSddDesignContractReadiness } from "./validators/designContractReadiness.js";
+import { validateIntegrationSurface } from "./validators/integrationSurface.js";
+import { applyWaivers } from "./waivers.js";
 import { resolveToolVersion } from "./version.js";
 import { loadDecisionGuardrails, normalizeDecisionGuardrails } from "./decisionGuardrails.js";
 import {
@@ -45,11 +47,13 @@ import {
   SKILL_MANIFEST_RUNTIME_DEPENDENCIES_FIELD,
   type SkillManifestProbeResult,
 } from "./doctor/skillManifestProbe.js";
+import { planCapCatalogSpecColumn } from "./doctor/capCatalogSpecColumn.js";
 import { detectOutDirCollisions } from "./doctor/outDirCollisions.js";
 import {
   checkAssistantAssetLineBudget,
   type ExemptAssistantAsset,
   type OversizedAssistantAsset,
+  type WideLineAssistantAsset,
 } from "./doctor/assetLineBudget.js";
 import { diffInstalledShippedWorkflows } from "./doctor/workflowsIntegrity.js";
 
@@ -311,7 +315,7 @@ export async function createDoctorData(options: CreateDoctorDataOptions): Promis
         });
       } else {
         // skills.integrity defaults to `warning`: direct edits to
-        // .qfai/assistant/skills/** are advisory, not active-profile-blocking.
+        //.qfai/assistant/skills/** are advisory, not active-profile-blocking.
         // The doctor 2-group renderer always routes this finding into the
         // advisory group regardless of message wording.
         addCheck(checks, {
@@ -334,6 +338,7 @@ export async function createDoctorData(options: CreateDoctorDataOptions): Promis
     }
   }
 
+  addCheck(checks, await buildIntegrationLinksCheck(root));
   addCheck(checks, await buildAgentFrontmatterCheck(root));
   addCheck(checks, await buildAssetLineBudgetCheck(root));
 
@@ -341,10 +346,9 @@ export async function createDoctorData(options: CreateDoctorDataOptions): Promis
   // advisory below, the content-identical `ok` state as the `ok` check after it,
   // and the unresolved-packaged-copy skip as the `info` skip after that.
   //
-  // The chain is now TOTAL AT ITS STATUS TESTS over `WorkflowsIntegrityStatus`,
-  // whose three members each have an arm — where it previously stated the general
-  // rule "every status without a branch registers nothing" because the skip had no
-  // arm yet. Scoped to the STATUS TESTS on purpose, because DISPATCH is not total:
+  // The chain is TOTAL AT ITS STATUS TESTS over `WorkflowsIntegrityStatus`,
+  // whose three members each have an arm. Scoped to the STATUS TESTS on
+  // purpose, because DISPATCH is not total:
   // the `modified.length > 0` paragraph below says why, a `modified` status whose
   // `modified` list is empty matching this arm's status test and still registering
   // nothing. (Named rather than counted in lines — "the conjunct 16 lines below" was
@@ -767,6 +771,33 @@ export async function createDoctorData(options: CreateDoctorDataOptions): Promis
     },
   });
 
+  // A catalog written before the `Spec` column existed maps CAP to spec by row
+  // position, and that derivation cannot hold the ID gap an approved DELETE
+  // leaves — so the DELETE cannot be completed until the column is declared.
+  // Reported here and written by `--autoremediate`: the file is the project's
+  // own data, so nothing adds the column as a side effect of an upgrade.
+  const capCatalogPlan = await planCapCatalogSpecColumn(specsRoot);
+  if (capCatalogPlan.state !== "no-catalog") {
+    addCheck(checks, {
+      id: "spec.capCatalogSpecColumn",
+      severity: capCatalogPlan.state === "declared" ? "ok" : "warning",
+      title: "CAP catalog mapping",
+      message:
+        capCatalogPlan.state === "declared"
+          ? "The CAP catalog declares its Spec column"
+          : capCatalogPlan.state === "migratable"
+            ? `The CAP catalog maps CAP to spec by row position (rows=${String(capCatalogPlan.pairs.length)}). Run qfai doctor --autoremediate to declare the Spec column.`
+            : "The CAP catalog maps CAP to spec by row position, and the order does not describe the tree, so the pairing cannot be derived. Declare the Spec column by hand.",
+      details: {
+        state: capCatalogPlan.state,
+        ...(capCatalogPlan.state === "migratable"
+          ? { rows: capCatalogPlan.pairs.map((pair) => `${pair.capId} -> ${pair.specId}`) }
+          : {}),
+        ...(capCatalogPlan.state === "ambiguous" ? { reasons: capCatalogPlan.reasons } : {}),
+      },
+    });
+  }
+
   const guardrailsLoad = await loadDecisionGuardrails(root, {
     specsRoot,
   });
@@ -926,9 +957,9 @@ export async function createDoctorData(options: CreateDoctorDataOptions): Promis
 /**
  * Reports assistant assets that exceed the shipped line ceiling.
  *
- * The ceiling used to be asserted only by the framework's own asset test, which
- * is not published, so a project created by init had no way to check the rule
- * its operating baseline states. Severity is `warning`: an oversized asset is
+ * The framework's own asset test asserts the ceiling too, but it is not
+ * published, so without this check a project created by init has no way to
+ * check the rule its operating baseline states. Severity is `warning`: an oversized asset is
  * authoring drift, not something that stops the active profile.
  */
 async function buildAssetLineBudgetCheck(root: string): Promise<DoctorCheck> {
@@ -937,8 +968,10 @@ async function buildAssetLineBudgetCheck(root: string): Promise<DoctorCheck> {
   const details = {
     assistantDir: toRelativePath(root, report.assistantDir),
     maxLines: report.maxLines,
+    maxLineChars: report.maxLineChars,
     scanned: report.scanned,
     oversized: report.oversized,
+    wideLines: report.wideLines,
     // The baseline promises the exemption is visible to the reader, not just to
     // the implementation: each exempt path is listed with the reason it was not
     // measured, and the same pair is rendered into the message for text readers.
@@ -963,7 +996,19 @@ async function buildAssetLineBudgetCheck(root: string): Promise<DoctorCheck> {
       id: "assets.lineBudget",
       severity: "ok",
       title,
-      message: `all ${report.scanned} assistant assets are within ${report.maxLines} lines${exemptNote}`,
+      // "within the ceiling that applies to each" rather than "within 400": the
+      // shipped files carrying a recorded width are inside their own number and
+      // over the default one, so naming the default here would tell a reader the
+      // opposite of what was checked.
+      // Two counts, because the two ceilings measure different populations.
+      // Every scanned asset is held to a width; the exempt ones are not held to
+      // a line count, so saying "all N are within 800 lines" would claim a check
+      // that did not run on them — and contradict the exemption note beside it.
+      message:
+        `all ${String(report.scanned - report.exempt.length)} assistant assets held to the ` +
+        `line ceiling are within ${report.maxLines} lines, and all ${report.scanned} are ` +
+        `within the line width each is held to (${report.maxLineChars} unless the shipped ` +
+        `file carries a recorded width)${exemptNote}`,
       details,
     };
   }
@@ -993,14 +1038,26 @@ async function buildAssetLineBudgetCheck(root: string): Promise<DoctorCheck> {
     unmeasured > 0
       ? ` (a further ${unmeasured} could not be read and were not checked: ${formatMessagePaths(unmeasuredPaths)})`
       : "";
-  const nextActions = assetLineBudgetNextActions(report.oversized);
+  const nextActions = assetLineBudgetNextActions(report.oversized, report.wideLines);
+  // Both halves in one message. A file can fail either ceiling, and reporting
+  // only the count would leave the width failure with no line of its own.
+  const overruns = [
+    ...(report.oversized.length > 0
+      ? [
+          `${report.oversized.length} exceed ${report.maxLines} lines: ` +
+            formatOversizedAssets(report.oversized),
+        ]
+      : []),
+    ...(report.wideLines.length > 0
+      ? [`${report.wideLines.length} carry a line too wide: ` + formatWideAssets(report.wideLines)]
+      : []),
+  ].join("; ");
   return {
     id: "assets.lineBudget",
     severity: "warning",
     title,
     message:
-      `${report.oversized.length} assistant assets exceed ${report.maxLines} lines: ` +
-      `${formatOversizedAssets(report.oversized)}${unmeasuredNote}${exemptNote}` +
+      `assistant assets over budget — ${overruns}${unmeasuredNote}${exemptNote}` +
       formatNextActionHint(nextActions),
     details: {
       ...details,
@@ -1066,6 +1123,19 @@ function formatOversizedAssets(oversized: ReadonlyArray<OversizedAssistantAsset>
 }
 
 /**
+ * Names the width each file was held to, not only the width it has.
+ *
+ * A file carrying a recorded width is measured against that number rather than
+ * the shipped ceiling, so `(1500 chars)` alone would leave a reader unable to
+ * tell a regression from a file that was always wide.
+ */
+function formatWideAssets(wide: ReadonlyArray<WideLineAssistantAsset>): string {
+  return wide
+    .map((entry) => `${escapeForMessage(entry.path)} (${entry.widest} > ${entry.allowed} chars)`)
+    .join(", ");
+}
+
+/**
  * States what was skipped and why, in the default output as well as in JSON.
  *
  * An asset that is never measured is invisible otherwise: the counts speak only
@@ -1080,7 +1150,10 @@ function formatExemptAssets(exempt: ReadonlyArray<ExemptAssistantAsset>): string
   const entries = exempt
     .map((entry) => `${escapeForMessage(entry.path)} (${escapeForMessage(entry.reason)})`)
     .join(", ");
-  return ` (${exempt.length} exempt from the check: ${entries})`;
+  // "from the line ceiling", not "from the check": these files are measured for
+  // width like every other asset, and the same message says so one clause
+  // earlier. Naming the whole check reads as though they were skipped.
+  return ` (${exempt.length} exempt from the line ceiling: ${entries})`;
 }
 
 /** Appends the repair guidance so text readers get it, not only JSON readers. */
@@ -1096,16 +1169,29 @@ function formatNextActionHint(actions: ReadonlyArray<string>): string {
  * relocate a constitution document or a manifest YAML into an unrelated skill
  * and break the loader contract that reads it from its own layer.
  */
-function assetLineBudgetNextActions(oversized: ReadonlyArray<{ path: string }>): string[] {
+function assetLineBudgetNextActions(
+  oversized: ReadonlyArray<{ path: string }>,
+  wide: ReadonlyArray<{ path: string }>,
+): string[] {
   const actions: string[] = [];
-  const hasSkillAsset = oversized.some((entry) => entry.path.startsWith("assistant/skills/"));
-  const hasOtherAsset = oversized.some((entry) => !entry.path.startsWith("assistant/skills/"));
+  const paths = [...new Set(oversized.map((entry) => entry.path))];
+  const hasSkillAsset = paths.some((entry) => entry.startsWith("assistant/skills/"));
+  const hasOtherAsset = paths.some((entry) => !entry.startsWith("assistant/skills/"));
   if (hasSkillAsset) {
     actions.push("move one topic out of the oversized skill into that skill's own references/");
   }
   if (hasOtherAsset) {
     actions.push(
       "split a non-skill asset (constitution/, catalog/, manifest/, ...) by topic within its own layer, and update the paths that reference it",
+    );
+  }
+  // A separate action, because the two ceilings ask for different edits. A file
+  // of two lines can fail the width one, and telling its author to move a topic
+  // into `references/` asks for a structural change that would not fix it: what
+  // the width ceiling wants is the line wrapped.
+  if (wide.length > 0) {
+    actions.push(
+      "wrap the over-wide prose — a list item, an ordered item or a paragraph — at the width ceiling; a table row and a fenced block are not measured",
     );
   }
   return actions;
@@ -1128,6 +1214,150 @@ async function inspectSkillsIntegrity(
   } catch {
     return null;
   }
+}
+
+/**
+ * Whether the integration wrappers a skill is loaded through actually resolve.
+ *
+ * Asks the question `validate` asks, through the same code and at the severity
+ * that code chose, so the two cannot disagree about one tree. `skills.integrity`
+ * answers a different question — whether the CONTENT matches — and a tree whose
+ * wrappers are broken passes it, because the canonical documents behind them are
+ * untouched.
+ *
+ * Severity is carried, not decided here. `QFAI-LINK-001` is a `warning` when the
+ * canonical document is readable and an `error` when it is not, and choosing one
+ * of them for both would put this check and the gate on opposite sides of
+ * `--fail-on error` for the same tree.
+ *
+ * The remedy is carried for the same reason: it depends on which damage the
+ * validator found, and several shapes are not fixed by re-running `init` at all.
+ *
+ * A wrapper that was never created is not damage and is not reported here; the
+ * validator draws that line, and this check inherits it by not drawing its own.
+ */
+/**
+ * The worst severity in `issues`, or `null` when there are none.
+ *
+ * A finding reaches this check at `error`, `warning` or `info` — the last when
+ * a waiver lowered it without suppressing it — and the check has to sit on the
+ * same side of every `--fail-on` threshold as the gate, not only `error`.
+ */
+function worstSeverity(issues: readonly Issue[]): DoctorSeverity | null {
+  if (issues.some((issue) => issue.severity === "error")) return "error";
+  if (issues.some((issue) => issue.severity === "warning")) return "warning";
+  return issues.length > 0 ? "info" : null;
+}
+
+async function buildIntegrationLinksCheck(root: string): Promise<DoctorCheck> {
+  const title = "Integration wrappers (.claude / .codex / .agents / .github)";
+  let issues: Issue[];
+  try {
+    issues = await validateIntegrationSurface(root);
+  } catch {
+    // The surface could not be walked at all — a permission or an I/O failure
+    // over a directory or a link. Reported rather than thrown, because a check
+    // that exists to describe a damaged tree must survive one; at `error`,
+    // because the validator propagates this and takes `validate` down with it.
+    // A check that could not run is not a check that passed.
+    return {
+      id: "integration.links",
+      severity: "error",
+      title,
+      message:
+        "Could not inspect the integration wrappers (reading a directory or a link failed). " +
+        "Check the permissions and the path.",
+      details: {},
+    };
+  }
+
+  // The same waiver pass `validate` runs. Without it a project that waived this
+  // finding passes the gate and fails the diagnostic, which is the disagreement
+  // this check exists to remove — reintroduced one layer along.
+  const waived = await applyWaivers(root, issues).catch(() => null);
+  const applied = waived?.issues ?? issues;
+
+  // The waiver pass reports on its own input as well as on the findings: a
+  // waiver file that does not parse, or one written at the unsupported
+  // extension, comes back as `QFAI-WAIVER-001`. Keeping only the link findings
+  // dropped those, so `validate` failed on the waiver file while `doctor`
+  // passed — the same disagreement this check exists to remove, over the file
+  // that decides what the check is allowed to stay quiet about.
+  //
+  // The suppressions themselves are still read. A file that fails to parse
+  // yields no waivers at all, so there is nothing there to distrust; the one
+  // fault that leaves working suppressions behind is a stray `.yaml` beside a
+  // valid `.yml`, and those suppressions are the project's, correctly parsed.
+  const waiverFaults = applied.filter(
+    (issue) => issue.code === "QFAI-WAIVER-001" && issue.suppressed !== true,
+  );
+  const broken = applied.filter(
+    (issue) => issue.code === "QFAI-LINK-001" && issue.suppressed !== true,
+  );
+
+  if (broken.length === 0) {
+    const suppressed = applied.filter(
+      (issue) => issue.code === "QFAI-LINK-001" && issue.suppressed === true,
+    ).length;
+    if (waiverFaults.length > 0) {
+      return {
+        id: "integration.links",
+        // The gate fails on the waiver file whatever the wrappers look like, so
+        // a clean sweep of the wrappers is not a passing check here.
+        severity: worstSeverity(waiverFaults) ?? /* c8 ignore next */ "error",
+        title,
+        message:
+          "No unwaived integration wrapper findings, but the waiver file itself is rejected. " +
+          "`qfai validate` reports it as QFAI-WAIVER-001.",
+        details: {},
+      };
+    }
+    return {
+      id: "integration.links",
+      severity: "ok",
+      title,
+      // A waiver silences a finding; it does not repair the wrapper. Saying
+      // every wrapper resolves would report a tree as sound on the strength of
+      // a decision to stop being told about it.
+      message:
+        suppressed === 0
+          ? "Every integration wrapper resolves to the skill or agent it names"
+          : `No unwaived integration wrapper findings (${String(suppressed)} waived — still unrepaired)`,
+      details: suppressed === 0 ? {} : { waivedFindings: suppressed },
+    };
+  }
+
+  const paths = broken.flatMap((issue) => issue.refs ?? []);
+  // The worst severity anything in this run carries — the wrapper findings and
+  // the waiver pass's own. The validator reports the damage classes separately
+  // (a readable canonical document is a `warning`, an unreadable one an
+  // `error`) and a waiver can downgrade either to `info` without suppressing
+  // it, so collapsing everything short of `error` to `warning` put this check
+  // on the far side of `validation.failOn: warning` from a `validate` that
+  // passes on the downgrade.
+  const severity: DoctorSeverity =
+    worstSeverity([...broken, ...waiverFaults]) ?? /* c8 ignore next */ "warning";
+  return {
+    id: "integration.links",
+    severity,
+    title,
+    // Counts and paths, not a diagnosis. `QFAI-LINK-001` covers several shapes
+    // and they do not share one sentence: a flattened link is not loaded at
+    // all, while a wrapper left behind by a retired skill resolves perfectly
+    // and is loading instructions this release no longer ships. Asserting
+    // "not being loaded" over both hid the second, which is the worse one.
+    message:
+      `${String(paths.length || broken.length)} integration wrapper(s) need attention. ` +
+      "`qfai validate` reports the same paths as QFAI-LINK-001, and its finding says which " +
+      "damage each one is and how to repair it.",
+    details: {
+      wrappers: paths,
+      // English, because `doctor`'s output is. The per-shape remedy is the
+      // validator's and stays there: pointing at it beats copying text written
+      // to a different contract into this one's JSON.
+      nextActions: ["Run qfai validate and follow the QFAI-LINK-001 finding for these paths"],
+    },
+  };
 }
 
 async function buildAgentFrontmatterCheck(root: string): Promise<DoctorCheck> {
@@ -1737,7 +1967,7 @@ async function buildPrototypingRolesCheck(root: string): Promise<DoctorCheck> {
   };
 }
 
-const PLAYWRIGHT_SUNSET = SUNSETS.playwrightCli;
+const PLAYWRIGHT_SUNSET = "1.10.0";
 const PLAYWRIGHT_INSTALL_HINT = "npm i -D playwright";
 
 async function buildPlaywrightLauncherChecks(root: string): Promise<DoctorCheck[]> {
@@ -1750,13 +1980,7 @@ async function buildPlaywrightLauncherChecks(root: string): Promise<DoctorCheck[
   };
 
   if (resolution.status === "resolved" && resolution.resolved) {
-    return buildResolvedChecks(
-      root,
-      resolution.resolved,
-      lookedInRelative,
-      probeOrder,
-      await resolveToolVersion(),
-    );
+    return buildResolvedChecks(root, resolution.resolved, lookedInRelative, probeOrder);
   }
   if (resolution.status === "not_runnable") {
     return [buildNotRunnableCheck(root, resolution.attempts, lookedInRelative, probeOrder)];
@@ -1775,7 +1999,6 @@ function buildResolvedChecks(
   resolved: PlaywrightLauncherResolution["attempts"][number],
   lookedInRelative: LauncherLookedIn,
   probeOrder: string[],
-  toolVersion: string,
 ): DoctorCheck[] {
   const checks: DoctorCheck[] = [
     {
@@ -1797,16 +2020,13 @@ function buildResolvedChecks(
     },
   ];
   if (resolved.stage === "deprecated-cli") {
-    // Deprecation surface: still accepted during the deprecation window but
-    // flagged as warning. The literal `sunset: 1.10.0` substring is part of
-    // the public wire contract.
+    // The literal `sunset: 1.10.0` substring is part of the public wire
+    // contract, so it is written as a constant rather than folded into prose.
     checks.push({
-      // The window is what makes this a warning; past the sunset the probe is
-      // reporting a launcher the config layer now rejects, so leaving it at
-      // `warning` would have doctor call "fine" what `loadConfig` calls an
-      // error.
+      // The config layer rejects this launcher, so anything softer than an
+      // error would have doctor call "fine" what `loadConfig` calls broken.
       id: "D-DEPRECATED-PROBE",
-      severity: deprecationSeverity(toolVersion, PLAYWRIGHT_SUNSET),
+      severity: "error",
       title: "Deprecated playwright-cli probe",
       message: `playwright-cli probe is deprecated (sunset: ${PLAYWRIGHT_SUNSET}); install playwright as the primary launcher (${PLAYWRIGHT_INSTALL_HINT})`,
       details: {
@@ -1932,7 +2152,28 @@ async function probeHttpUrl(
   }
 }
 
-function extractLiteralRequiredInputs(content: string): string[] {
+/**
+ * The path a required-input bullet names, taken off the front of it.
+ *
+ * A bullet is free to say what the input is for, and the explanation is not
+ * part of the path. Read whole, `.qfai/assistant/catalog/test-layers.md (SSOT
+ * for hard coverage obligations)` is a required input no tree can satisfy —
+ * while the file it names is on disk.
+ *
+ * The path ends at the first space, `(`, backtick or em dash; everything after
+ * that is prose.
+ */
+function leadingPath(bullet: string): string {
+  return (/^[^\s(`—]+/u.exec(bullet)?.[0] ?? "").replace(/[.,]$/u, "");
+}
+
+/**
+ * The paths an agent card's `## Inputs you must read` section requires on disk.
+ *
+ * @internal Exported for direct unit-testing — not part of the package's public
+ * surface.
+ */
+export function extractLiteralRequiredInputs(content: string): string[] {
   const lines = content.split(/\r?\n/u);
   const items: string[] = [];
   let inInputsSection = false;
@@ -1973,13 +2214,16 @@ function extractLiteralRequiredInputs(content: string): string[] {
   return Array.from(
     new Set(
       items
-        .map((item) => item.replace(/`/gu, "").replace(/[.,]$/u, "").trim())
-        .filter(
-          (item) =>
-            item.startsWith(".") &&
-            !/[*?]/u.test(item) &&
-            !/\boptional\b|\bwhen available\b/iu.test(item),
-        ),
+        // Read against the whole bullet: a card says an input is optional in
+        // the prose beside the path, which the path itself cannot carry.
+        .filter((item) => !/\boptional\b|\bwhen available\b/iu.test(item))
+        .map((item) => leadingPath(item.replace(/`/gu, "").trim()))
+        // A glob names a set and a `<placeholder>` names a shape, so neither is
+        // a file to find: `.qfai/specs/<spec-id>/tdd/test-list.md` is one path
+        // per spec and none of them is at that name. Tested on the path so
+        // that a glob or a placeholder written in a bullet's explanation does
+        // not drop the file the bullet actually requires.
+        .filter((item) => item.startsWith(".") && !/[*?<>]/u.test(item)),
     ),
   );
 }

@@ -309,7 +309,7 @@ worker's returned `done` at `refactor` until these steps pass
    are listed edges (`execution-ledger.md#allowed-transitions`) **because the
    row was never written `done`** — the same remedy applied to a row already at
    `done` would need `done -> refactor` or `done -> review-fix`, neither of
-   which that list carries. It does not by itself invalidate the other slices.
+   which that list carries. It does not by itself invalidate the other slices. (`ui-affecting.md`)
 
 This is the same re-take a T1 group close performs, for the same reason
 (`volume-policy.md#group-formation-states-and-transitions`): the address was
@@ -336,8 +336,10 @@ So:
   worktree copy is read-only for the duration of the slice. This is the scope of
   the prohibition: it is the whole `tdd/` subtree, not `test-list.md` alone.
 - Each worker returns, per item it processed: `TDD-ID`, final `Status`, its
-  `DR-ID` where the item's status requires one, and the `Evidence` payload
-  carrying **every** field of
+  `DR-ID` whenever the row carries one — the `DR-*` an `exception` row is
+  invalid without, and the `CR-*` an approved upstream reset put there, which
+  the row keeps through every later status — its `Blocked-By` when the status it
+  returns is `blocked`, and the `Evidence` payload carrying **every** field of
   `../SKILL.md#per-item-evidence-contract-fresh-evidence-required` — the parent
   directory, because this file lives in `references/`. That contract is
   the only statement of the field list — `Status` and `DR-ID` are ledger cells
@@ -346,12 +348,94 @@ So:
   places is what went stale, and a worker returning the short copy returns a
   block the next bullet rejects.
 - The orchestrator writes those rows into the trunk ledger during
-  `../SKILL.md#post-parallel-integration-verify`, before the verify runs.
+  `../SKILL.md#post-parallel-integration-verify`, before the verify runs —
+  **every cell a worker reports**, not Status and Evidence alone. Those are the
+  four the Drift Protocol carves out unconditionally, and `Blocked-By` is among
+  them whenever the worker took an edge to `blocked` inside its slice — from
+  `todo` before it started the row, and otherwise from the active status it had
+  reached, which is the departure status the cell records
+  (`execution-ledger.md#allowed-transitions`). The edge is the orchestrator's to
+  write in serial mode because that is where the transition happens, and under
+  parallel dispatch it happens in the worker. A
+  worker cannot write the ledger, and `/qfai-implement`'s Completion step
+  reconciles rather than writes, so a cell dropped here is written by nobody:
+  an `exception` row lands without the `DR-*` that
+  `TDDLIST_EXCEPTION_MISSING_DR` requires at `error`, a row reset by an
+  approved Change Request loses the `CR-*` it must retain through its later
+  statuses, and a row the worker parked lands at `blocked` naming no blocker,
+  which is what `TDDLIST_BLOCKED_MISSING_REF` reports.
+- **`Prototype parity` is the one field the orchestrator recomputes rather than
+  copies.** Completeness is not enough for it: `n/a` is a complete value and the
+  cheapest one, and the worker returning it is the implementer — the actor whose
+  self-report gate item 9 exists to check. A worker that missed a clause, or
+  answered before its own production change existed, would skip
+  `product-surface-reviewer` on the strength of its own say-so, which is what a
+  single mechanical definition (`ui-affecting.md`) was written to prevent. So
+  before it routes reviewers or writes the row, the orchestrator evaluates the
+  three clauses **itself**, on the merged trunk, from the ledger row, the
+  declared UI paths, the slice's actual diff and the declared UI contracts
+  (`ui-affecting.md#the-test`). Its own result decides; a worker value that
+  disagrees is a **reported discrepancy**, not a tie to break — record it with
+  the row and treat a worker `n/a` on a row a clause selects the way any other
+  false gate claim is treated (`#seam-reconciliation-after-a-parallel-run`).
+
+**This is a rule of the ledger writer, not of parallel mode.** Serial execution
+has the same shape and the same actor: the implementation agent returns Status
+and Evidence, the orchestrator writes the row. Placed under coordinated parallel
+mode alone, the recomputation was skipped by default — the ordinary run copied
+the implementer's `Prototype parity` straight into the ledger, and the
+self-report the gate exists to check went unchecked in the mode most rows take.
+So: **whoever writes the row recomputes `Prototype parity` before writing it**,
+in every execution mode. It is the one evidence field the writer does not copy.
+In serial mode the inputs are the same, minus the merge: the ledger row, the
+declared UI paths, the row's own diff and the declared UI contracts.
+
 - A merged item whose row is still `todo` fails that verify. Silence there is
   indistinguishable from work that was never done.
 
+**Per-phase writes are a serial-mode property, and parallel mode does not have
+them.** `../SKILL.md`'s Orchestrator Protocol requires the trunk ledger to be
+written as each phase completes, so an interrupted run leaves the recovery
+passages something current to read. Two facts above make that unreachable under
+parallel dispatch, and neither is a gap to close by contract:
+
+- A worker **cannot** write the ledger, and it reports **once** — at the end of
+  its slice, not at each phase. A per-phase trunk write would need a per-phase
+  return, which means dispatching each phase separately and dissolving the
+  slice that parallel mode exists to run.
+- The trunk row **must not** advance before its slice merges. A row at `done`
+  whose code is not yet in the trunk is the same false report the reconcile
+  exists to prevent, inverted — and gate item 10 reads that row.
+
+So the write point stays where it is, and the recovery story differs by mode:
+an interrupted **parallel** run leaves every dispatched row at its pre-dispatch
+status, and recovery is re-dispatching the unmerged slices. That is safe
+precisely _because_ no trunk write happened — a discarded worktree holds
+nothing the trunk was owed. Read a `todo` row after an interrupted parallel run
+as "not merged", not as "not attempted".
+
+**Check the slice head before re-dispatching it.** Merging a slice and writing
+the ledger are two steps, so an interruption between them leaves the code in
+the trunk and the row still at `todo`. That row reads exactly like one whose
+slice never merged, and re-dispatching it applies the same change twice —
+a conflict, or a duplicate that lands quietly and disagrees with the evidence.
+So the status is not the test: compare the slice head with the base it was
+dispatched from, and then ask the trunk whether that head is an ancestor of it.
+
+- **Head is the dispatch base** — the worker made no commit, so nothing merged
+  whatever the trunk says about ancestry. Re-dispatch the slice. This case has
+  to be read first: the base is an ancestor of the trunk by construction, so
+  the ancestry test alone calls an untouched slice merged and sends a row that
+  was never attempted to the stop below, where it stays for good.
+- **Not an ancestor** — not merged. Re-dispatch the slice, as above.
+- **An ancestor, and the head moved** — merged. Do not re-dispatch. Reconcile
+  the ledger alone, from the returned report, which is what the interrupted
+  step was going to do. A slice with no returned report is the one case with
+  neither answer available: stop and report it rather than guessing, since the
+  row's evidence is what a re-run would have to overwrite.
+
 In serial mode the same rule holds with no merge step: the implementation agent
-returns Status + Evidence, the orchestrator writes them.
+returns `Status`, `DR-ID` and `Evidence`, the orchestrator writes them.
 
 ### Coordinated parallel mode
 
@@ -486,15 +570,18 @@ merged row can never reach `done`:
   loses no evidence and adds no status value.
 - Every other returned status is reached by continuing the same replay to it,
   never by jumping: `refactor -> review-fix` for a returned `review-fix`, the
-  active-status edge to `exception` for a returned `exception`, `todo -> blocked`
-  for a row the worker could not start. A returned status with no listed path
-  from `todo` is not written at all — report it as a reconciliation failure and
+  active-status edge to `exception` for a returned `exception`, the active-status
+  edge to `blocked` for a returned `blocked` — from `todo` when the worker never
+  started the row, and otherwise from the status the replay has reached, which
+  is the departure status the returned `Blocked-By` records. A returned status
+  with no listed path from `todo` is not written at all — report it as a reconciliation failure and
   leave the row where the replay stopped, because inventing the edge is what
   this rule exists to prevent.
 - The orchestrator writes `refactor -> done` only once the integration verify,
   that item's re-verify and **every re-review it owes** have returned PASS on
   the merged tree — `completion-reviewer` and `implementation-reviewer` on every
-  item, and `product-surface-reviewer` as well on a UI-affecting one. That is
+  item, and `product-surface-reviewer` as well on a UI-affecting one
+  (`ui-affecting.md`). That is
   the ledger write gate item 10 reads, and it is now the first time the row's
   status asserts anything about the integrated tree.
 - A merged item whose row is still `todo` fails that verify. Silence there is
@@ -505,9 +592,9 @@ merged row can never reach `done`:
   another.
 
 In serial mode the same rule holds with no merge step, and the replay has
-nothing to reconstruct: the implementation agent returns Status + Evidence after
-each phase and the orchestrator writes them then, so the row walks those same
-edges as they happen rather than afterwards.
+nothing to reconstruct: the implementation agent returns `Status`, `DR-ID` and
+`Evidence` after each phase and the orchestrator writes them then, so the row
+walks those same edges as they happen rather than afterwards.
 `RED revision`, `Falsifiability revision` and `Round N: Replacement proof revision` are
 exempt from steps 2 and 3 and carry over unchanged — they are transient
 observations that name their own tree by design

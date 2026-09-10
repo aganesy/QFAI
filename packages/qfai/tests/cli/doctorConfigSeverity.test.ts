@@ -16,7 +16,6 @@ import path from "node:path";
 import { describe, expect, it } from "vitest";
 
 import { createDoctorData } from "../../src/core/doctor.js";
-import { SUNSETS } from "../../src/core/sunset.js";
 
 async function withConfig<T>(body: string, fn: (root: string) => Promise<T>): Promise<T> {
   const root = await mkdtemp(path.join(os.tmpdir(), "qfai-doctor-config-"));
@@ -44,7 +43,7 @@ describe("doctor config.load severity", () => {
         // The message must say the issues need fixing, not that defaults were
         // applied — that phrasing is what made the fault look benign.
         expect(check?.message).toContain("must be fixed");
-        expect(JSON.stringify(check?.details ?? {})).toContain(SUNSETS.playwrightCli);
+        expect(JSON.stringify(check?.details ?? {})).toContain("1.10.0");
       },
     );
   });

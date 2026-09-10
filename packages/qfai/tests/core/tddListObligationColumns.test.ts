@@ -328,8 +328,8 @@ describe("the Layer enum is checked on every row", () => {
 // tests/core/<this file> -> tests -> packages/qfai -> packages -> repo root
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "..", "..");
 const QFAI_TREES = ["packages/qfai/assets/init/.qfai", ".qfai"];
-// The ledger schema moved out of SKILL.md under the progressive-disclosure
-// budget (#414); the body keeps a summary and a pointer.
+// The ledger schema lives outside SKILL.md under the progressive-disclosure
+// budget; the body keeps a summary and a pointer.
 const LEDGER = "assistant/skills/qfai-implement/references/execution-ledger.md";
 
 describe("the shipped ledger schema documents all eight required columns", () => {

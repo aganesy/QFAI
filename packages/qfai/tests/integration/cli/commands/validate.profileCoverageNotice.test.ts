@@ -21,6 +21,7 @@ const PARTIAL_PROFILES = [
   "atdd",
   "tdd",
   "saas-package",
+  "drift",
 ] as const;
 
 /**
@@ -41,6 +42,7 @@ const EVERY_PROFILE: Record<ValidationProfile, true> = {
   verify: true,
   full: true,
   "saas-package": true,
+  drift: true,
 };
 
 const ALL_PROFILES: readonly ValidationProfile[] = Object.keys(EVERY_PROFILE).filter(
@@ -82,8 +84,10 @@ async function seedSpec(root: string): Promise<void> {
     ["# 06 Test cases", "", "## TC-0001: title", "- Parent: EX-0001", ""].join("\n"),
     "utf-8",
   );
-  // `validateSddDesignContractReadiness` only speaks when a root DESIGN.md
-  // exists, and the unreplaced `qfai init` seed is what QFAI-DCON-034 names.
+  // This fixture wants `QFAI-DCON-034`, which reads an unreplaced sample, so
+  // it writes one. (The same validator also reports a DESIGN.md that is
+  // missing, under a different code and only where the project has UI
+  // contracts.)
   await writeFile(
     path.join(root, "DESIGN.md"),
     ["# DESIGN", "", "Brand: qfai", "", "## Tone", "", "qfai sample brand.", ""].join("\n"),
@@ -171,18 +175,7 @@ async function withUnwalkableSurface(task: (root: string) => Promise<void>): Pro
     await mkdir(path.join(root, ".qfai", "assistant"), { recursive: true });
     await writeFile(path.join(root, ".qfai", "assistant", "skills"), "not a directory\n", "utf-8");
     // Enough of a surface that `qfai init` counts as having run here.
-    await writeFile(
-      path.join(root, ".qfai", "assistant", "README.md"),
-      [
-        "# QFAI assistant tree",
-        "",
-        "## Canonical entrypoint",
-        "",
-        "- .qfai/assistant/skills/",
-        "",
-      ].join("\n"),
-      "utf-8",
-    );
+    await writeFile(path.join(root, ".qfai", "install-provenance.json"), "{}\n", "utf-8");
     await task(root);
   } finally {
     await rm(root, { recursive: true, force: true });
@@ -330,8 +323,7 @@ describe("the prototyping-skill group is measured against what each profile emit
   // The reason is one call site. `validatePrototypingSkill` is reached from
   // `runFullValidators` alone — `runPrototypingValidators` does not call it,
   // despite the group's name — so `--profile prototyping` naming
-  // `UIX-VAL-SKILL-*` as unevaluated is correct, and review read it as the
-  // opposite (#1230). Move that call into the prototyping composition and the
+  // `UIX-VAL-SKILL-*` as unevaluated is correct. Move that call into the prototyping composition and the
   // notice starts denying a gate the run just evaluated, with nothing to catch
   // it: the family table would still be right, and the group's absence from
   // `PROTOTYPING_GATE_GROUPS` would be the only thing wrong.
@@ -493,7 +485,10 @@ describe("GATE_GROUP_FAMILIES files each family under the group that runs it", (
       await withProject(async (root) => {
         const prototyping = await noticeFor(root, "prototyping");
         expect(prototyping?.message).toContain("QFAI-DCON-019 (`--profile sdd`)");
-        expect(prototyping?.message).toContain("QFAI-DRIFT-* (`--profile tdd`)");
+        // `--profile drift`, not `--profile tdd`. Both evaluate the guard, and
+        // only one of them can be run on work in flight: `tdd` is the
+        // completion gate and asks for everything a finished branch owes.
+        expect(prototyping?.message).toContain("QFAI-DRIFT-* (`--profile drift`)");
         // Not folded into the "run full" list.
         expect(listedFamilies(prototyping?.message ?? "")).not.toContain("QFAI-DCON-019");
         expect(listedFamilies(prototyping?.message ?? "")).not.toContain("QFAI-DRIFT-*");
@@ -503,7 +498,28 @@ describe("GATE_GROUP_FAMILIES files each family under the group that runs it", (
         expect(sdd?.message).not.toContain("QFAI-DCON-019");
         const tdd = await noticeFor(root, "tdd");
         expect(tdd?.message).not.toContain("QFAI-DRIFT-*");
+        // The named owner evaluates it too, so it names nothing else to run
+        // for it either.
+        const drift = await noticeFor(root, "drift");
+        expect(drift?.message).not.toContain("QFAI-DRIFT-*");
       });
+    });
+  });
+
+  it("runs the drift guard alone under its own profile", async () => {
+    // The gate CI can run on a branch in flight. `tdd` evaluates the same
+    // guard and every completion obligation with it, so a workflow that wanted
+    // the drift answer had to accept a completion gate on every pull request.
+    await withProject(async (root) => {
+      const notice = await noticeFor(root, "drift");
+      const families = listedFamilies(notice?.message ?? "");
+
+      // Everything else is unevaluated, which is what makes it the narrow gate.
+      // The ledger's execution-state codes are listed one by one: the seed
+      // gate holds the rest of that prefix, so a glob here would claim both.
+      expect(families).toContain("QFAI-TDDLIST-007");
+      expect(families).toContain("QFAI-ATDD-*");
+      expect(families).toContain("QFAI-SPECSECTION-*");
     });
   });
 
@@ -566,11 +582,11 @@ describe("GATE_GROUP_FAMILIES files each family under the group that runs it", (
       await withProject(async (root) => {
         for (const profile of PARTIAL_PROFILES) {
           const notice = await noticeFor(root, profile);
-          expect(notice?.message ?? "").not.toMatch(/TDDLIST-\d/);
-          // A BARE `TDDLIST-` glob only. `QFAI-TDDLIST-*` is the canonical
-          // spelling of the execution-state family and is a real finding code
-          // prefix, so a plain substring test rejects the entry the table is
-          // supposed to carry.
+          // A BARE `TDDLIST-` id or glob only. `QFAI-TDDLIST-NNN` is the
+          // canonical spelling of a real execution-state code, and the notice
+          // lists those one by one, so a plain substring test rejects the
+          // entries the table is supposed to carry.
+          expect(notice?.message ?? "").not.toMatch(/(?<!QFAI-)TDDLIST-\d/);
           expect(notice?.message ?? "").not.toMatch(/(?<!QFAI-)TDDLIST-\*/);
         }
       });

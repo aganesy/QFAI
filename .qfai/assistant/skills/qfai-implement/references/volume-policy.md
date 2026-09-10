@@ -14,11 +14,11 @@ Derive the tier from the ledger row's `Layer`, what the item touches, and what
 it would cost to get wrong. `/qfai-sdd` Phase 2b derives it once per row, while
 it is seeding the row, and writes it to that row's `Tier` column:
 
-| Tier              | Row shape                                                                                                              | Ceremony                                                                                                                          |
-| ----------------- | ---------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
-| **T1 — standard** | Pure decision logic; unit/component layer; touches no infrastructure, no public API surface, no UI; not critical below | `qa-gatekeeper` confirms RED/GREEN once per coherent group instead of once per row. Reviews are batched the same way (below).     |
-| **T2 — elevated** | Touches infrastructure, a public API surface, a contract (`CON-*`), or persisted schema — **or** is critical (below)   | Full per-item ceremony: per-row `qa-gatekeeper` RED and GREEN turns, per-row `completion-reviewer` and `implementation-reviewer`. |
-| **T3 — surface**  | Changes UI behavior or rendered output                                                                                 | T2 plus `product-surface-reviewer`.                                                                                               |
+| Tier              | Row shape                                                                                                                         | Ceremony                                                                                                                          |
+| ----------------- | --------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
+| **T1 — standard** | Pure decision logic; unit/component layer; touches no infrastructure, no public API surface; not UI-affecting; not critical below | `qa-gatekeeper` confirms RED/GREEN once per coherent group instead of once per row. Reviews are batched the same way (below).     |
+| **T2 — elevated** | Touches infrastructure, a public API surface, a contract (`CON-*`), or persisted schema — **or** is critical (below)              | Full per-item ceremony: per-row `qa-gatekeeper` RED and GREEN turns, per-row `completion-reviewer` and `implementation-reviewer`. |
+| **T3 — surface**  | UI-affecting (`references/ui-affecting.md`)                                                                                       | T2 plus `product-surface-reviewer`.                                                                                               |
 
 The tier lives in the row's own `Tier` column
 (`execution-ledger.md#declared-tier-column-optional-seeded-at-ledger-authoring-time`).
@@ -38,6 +38,13 @@ in _that_ table from the table above before processing it and apply the
 criticality tie-break below, whatever a neighbouring table declares. An absent
 column is not a claim of T1, and a sibling table's column does not stand in for
 the missing one.
+
+T3 and gate item 9 route on the **same** predicate, deliberately. The tier row
+used to read "changes UI behavior or rendered output" — a second, wider test,
+under which a row could owe `product-surface-reviewer` here while recording
+`Prototype parity: n/a (not UI-affecting)` there, so running the review and
+skipping it both broke a rule. `references/ui-affecting.md` is the one test;
+this row selects the ceremony, not the condition.
 
 ### Criticality outranks connectedness
 

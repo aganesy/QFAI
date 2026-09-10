@@ -15,6 +15,8 @@ import path from "node:path";
 
 import { describe, expect, it } from "vitest";
 
+import { gateItemList } from "../helpers/gateItems.js";
+
 const repoRoot = path.resolve(process.cwd(), "..", "..");
 
 /** Shipped surface plus its root mirror. */
@@ -23,7 +25,6 @@ const SKILL_DIRS = [
   path.join(repoRoot, ".qfai/assistant/skills/qfai-implement"),
 ];
 
-const GATE_HEADING = "### Item completion checklist (12-point gate)";
 const SPEC_CONDITIONS_HEADING = "### Spec completion conditions";
 const PROHIBITIONS_HEADING = "### Completion prohibition conditions";
 
@@ -74,27 +75,9 @@ function sectionBullets(skill: string, heading: string): string[] {
   return bullets.map((bullet) => bullet.replace(/\s+/g, " "));
 }
 
-/** The numbered items of the 12-point gate, each by its own number. */
-function gateItems(skill: string): { number: number; text: string }[] {
-  const section = skillSection(skill, GATE_HEADING);
-  const items: { number: number; text: string }[] = [];
-  for (const line of section.split(/\r?\n/)) {
-    const match = /^(\d+)\.\s(.*)$/.exec(line);
-    if (match?.[1] !== undefined && match[2] !== undefined) {
-      items.push({ number: Number(match[1]), text: match[2].replace(/\s+/g, " ") });
-      continue;
-    }
-    const last = items[items.length - 1];
-    if (last !== undefined && /^\s+\S/.test(line)) {
-      last.text = `${last.text} ${line.trim()}`.replace(/\s+/g, " ");
-    }
-  }
-  return items;
-}
-
 /** The numbered items of the 12-point gate, by their own numbering. */
 function gateItemNumbers(skill: string): number[] {
-  return gateItems(skill).map((item) => item.number);
+  return gateItemList(skill).map((item) => item.number);
 }
 
 interface ChecklistBox {
@@ -186,6 +169,15 @@ const GATE_ITEM_PARITY: readonly {
   readonly item: number;
   readonly condition: string;
   readonly box: string;
+  /**
+   * Where the clause is written. `"skill"` — the default — means the gate item
+   * states it inline. `"record"` means gate item 10 states the obligation and
+   * the rule it cites carries the clause, which is the shape that keeps the
+   * gate's attention on the software rather than on the record. Either way the
+   * clause has to exist somewhere normative and the checklist has to have a box
+   * citing the item, which is what this map is for.
+   */
+  readonly source?: "skill" | "record";
 }[] = [
   {
     item: 1,
@@ -255,6 +247,16 @@ const GATE_ITEM_PARITY: readonly {
     box: "on a cli-only target a surface review of the captured command output in its place",
   },
   {
+    item: 9,
+    condition: "it is decided by `references/ui-affecting.md`",
+    box: "decided by `ui-affecting.md`",
+  },
+  {
+    item: 9,
+    condition: "a row no clause selects records `n/a (not UI-affecting)`",
+    box: "`n/a (not UI-affecting)` where no clause does",
+  },
+  {
     item: 10,
     condition: "`test-list.md` Status is current",
     box: "`test-list.md` statuses are accurate",
@@ -269,23 +271,27 @@ const GATE_ITEM_PARITY: readonly {
     item: 10,
     condition: "the row carries `Pre-split-evidence: implement` in its `Evidence` cell",
     box: "`Pre-split-evidence: implement` marker",
+    source: "record",
   },
   {
     item: 10,
     condition: "Every `Review pack seal` the entry carries",
     box: "`Review pack seal` and each `Audited evidence hash` recomputed",
+    source: "record",
   },
   {
     item: 10,
     condition:
       "A verdict carrying a `Record re-attestation` is compared against **that** hash and not the superseded original",
     box: "the `Record re-attestation pack seal` recomputes here beside the round's `Review pack seal`",
+    source: "record",
   },
   {
     item: 10,
     condition:
       "**only items 7 and 8 judge the final tree**, and they name the **same** revision as item 6's post-refactor re-confirmation",
     box: "**agree on the revision the row finally landed at**",
+    source: "record",
   },
   {
     item: 11,
@@ -313,6 +319,7 @@ const GATE_ITEM_PARITY: readonly {
     item: 10,
     condition: "on a UI-affecting row item 9's `Prototype parity reviewed revision` shares it too",
     box: "a parity PASS taken before the surface moved is stale",
+    source: "record",
   },
 ];
 
@@ -332,7 +339,7 @@ const GATE_ITEM_PARITY: readonly {
  * content, which makes *any* edit to a gate item — an added clause, a reworded
  * obligation, a deleted one — fail here until someone re-reads it against its
  * box, extends `GATE_ITEM_PARITY` and the checklist, and re-pins the digest.
- * `gateItems` folds continuation lines and collapses whitespace first, so a
+ * `gateItemList` folds continuation lines and collapses whitespace first, so a
  * rewrap or a re-indent does not move a digest; only the words do.
  */
 const GATE_ITEM_CONTRACT_DIGESTS: Readonly<Record<number, string>> = {
@@ -344,9 +351,19 @@ const GATE_ITEM_CONTRACT_DIGESTS: Readonly<Record<number, string>> = {
   6: "aaaff54532bbe37f4bea22f5caa5e661d0c11474558e3ccdc91ba9ff309f7fba",
   7: "fee818c19155095affcd06e2d17aa640d31b23b0dcecd87acaf7414205c04fed",
   8: "afe34136da80789a108e0eb6960a0a7bf21565dc21bffd1dc8863e37bad6c2a3",
-  9: "13d73c84383d0ec0c4eb6339eafaa5040ebda31bb56b5adb840ed976bcbc85e8",
-  10: "8de31b510f78a9b49a8b7bcc57db80363b5e4696628b9a4956a052af3bf4075b",
-  11: "a7470dc8a8e922a0ea06fd70b7703a2ea35e31eb79c27436f84c329d11dc9493",
+  9: "a69c2dd38ac1ff6c06904dfbfe06a20177130fee88200a9e841d540cfa67d435",
+  // The item states the obligation, cites the rule in
+  // `references/record-contract.md`, and says which pass writes the
+  // compatibility marker. The clauses it used to carry inline are in
+  // `GATE_ITEM_PARITY` with `source: "record"`, so both directions are still
+  // covered.
+  //
+  // The digest is over the collapsed words, so punctuation is part of it. The
+  // comma in "until it has run, an unmarked legacy row …" is load-bearing:
+  // without it the row reads as the object of "run", and the item reads the
+  // marker rather than running anything.
+  10: "3daeaebbea15108b917b3dbadc3b70a4c37df424f85018075237535af78056d3",
+  11: "75e9ab3c44343c25af4c2e473178f180a33a79af58924d5b3b8c50e2122c9cb2",
   12: "0a4e91b6525964607ac950366ffcd1e2638d34d1c0f4d98ff4b3242cf91d21ee",
 };
 
@@ -452,6 +469,9 @@ const SPEC_LEVEL_PARITY: readonly {
 const readSkill = async (dir: string): Promise<string> =>
   await readFile(path.join(dir, "SKILL.md"), "utf-8");
 
+const readRecordContract = async (dir: string): Promise<string> =>
+  await readFile(path.join(dir, "references/record-contract.md"), "utf-8");
+
 const readChecklist = async (dir: string): Promise<string> =>
   await readFile(path.join(dir, "references/final-checklist.md"), "utf-8");
 
@@ -486,17 +506,25 @@ describe.each(SKILL_DIRS)("%s final checklist", (dir) => {
     // tell that the box now restates a contract nobody wrote. The clause has to
     // be matched on both sides — as `SPEC_LEVEL_PARITY` already does for the
     // conditions that carry no number.
-    const items = gateItems(await readSkill(dir));
+    const items = gateItemList(await readSkill(dir));
     const boxes = checklistBoxes(await readChecklist(dir)).map((box) => ({
       text: box.text.replace(/\s+/g, " "),
       cites: citedGateItems(box.text),
     }));
+    const record = (await readRecordContract(dir)).replace(/\s+/g, " ");
     for (const entry of GATE_ITEM_PARITY) {
-      const matched = items.filter((item) => item.text.includes(entry.condition));
-      expect(matched, `"${entry.condition}" names exactly one gate item`).toHaveLength(1);
-      expect(matched[0]?.number, `"${entry.condition}" is gate item ${entry.item}`).toBe(
-        entry.item,
-      );
+      if (entry.source === "record") {
+        expect(
+          record.includes(entry.condition),
+          `"${entry.condition}" is missing from the record contract gate item ${entry.item} cites`,
+        ).toBe(true);
+      } else {
+        const matched = items.filter((item) => item.text.includes(entry.condition));
+        expect(matched, `"${entry.condition}" names exactly one gate item`).toHaveLength(1);
+        expect(matched[0]?.number, `"${entry.condition}" is gate item ${entry.item}`).toBe(
+          entry.item,
+        );
+      }
       const covering = boxes.filter(
         (box) => box.cites.has(entry.item) && box.text.includes(entry.box),
       );
@@ -517,7 +545,7 @@ describe.each(SKILL_DIRS)("%s final checklist", (dir) => {
     // every mapped substring still matches, the number still has an entry and
     // `unmapped` is still empty, so the checklist can stay a clause behind
     // forever. Addressing the item's whole text is what makes that visible.
-    const items = gateItems(await readSkill(dir));
+    const items = gateItemList(await readSkill(dir));
     expect(items.map((item) => item.number)).toEqual(
       Object.keys(GATE_ITEM_CONTRACT_DIGESTS)
         .map(Number)

@@ -8,20 +8,16 @@
  * Complements scripts/check-no-internal-version-leakage.sh by checking
  * the *output* of init (post-template-copy), not just the source assets.
  *
- * SSOT note (PR #206 review LtfD / Nv4N): the `PATTERNS` array below is
- * one of THREE semantically-equivalent expressions of the same forbidden
- * class set:
+ * SSOT note: the `PATTERNS` array below is one of THREE equivalent
+ * expressions of the same forbidden class set:
  *   1. `packages/qfai/scripts/lint-shipping.ts` `src-comment` rules
  *      (JS RegExp, pre-build, `src/*.ts` JSDoc scan).
  *   2. `packages/qfai/scripts/check-no-internal-version-leakage.sh`
- *      L21..L45 (POSIX ERE, post-build `dist/` scan).
+ *      (POSIX ERE, post-build `dist/` scan).
  *   3. This file (JS RegExp, smoke against `qfai init` output).
  *
- * Updating one (e.g. tightening `INTERNAL_VERSION_RE` to a QFAI-context
- * pattern) requires updating ALL THREE in the same PR — Rule of Three
- * has been hit and a single source module is now a reasonable next
- * step, deferred from this PR. See `.agents/rules/distributed-surface.md`
- * "Defenses (4 layers)" for the layered defense overview.
+ * Updating one requires updating all three in the same change. The guard
+ * table in `.agents/rules/distributed-surface.md` lists the layers.
  *
  * The patterns are applied in two dimensions: to file CONTENT and to
  * file NAMES (`scanPathName` below), because `qfai init` copies a path
@@ -191,7 +187,7 @@ function scanPathName(relativePath: string): Hit[] {
   return found;
 }
 
-describe("distributed surface leakage smoke", { timeout: 90000 }, () => {
+describe("distributed surface leakage smoke", () => {
   it("qfai init output contains no internal IDs or version markers", async () => {
     const tmpDir = await newTempDir();
     await captureStdout(() => runInit({ dir: tmpDir, force: false, dryRun: false, yes: true }));
@@ -262,9 +258,21 @@ describe("distributed surface leakage smoke", { timeout: 90000 }, () => {
     }
     expect(nameHits).toEqual([]);
 
-    // TC-1.5.1: DESIGN.md must be in the walked file list (guard against
-    // accidental rename / exclusion of the root brand SSOT).
-    expect(visitedRelative).toContain("DESIGN.md");
+    // TC-1.5.1: the brand sample must be in the walked file list (guard
+    // against accidental rename / exclusion). It ships as the prototyping
+    // template rather than at the project root: `qfai init` writes no root
+    // DESIGN.md, because `/qfai-discussion` emits one and only for a
+    // visual-prototyping surface.
+    expect(visitedRelative).toContain(
+      path.join(
+        ".qfai",
+        "assistant",
+        "skills",
+        "qfai-prototyping",
+        "templates",
+        "DESIGN.md.sample",
+      ),
+    );
 
     // The walk must actually reach the symlinked wrappers, or the name pass
     // above proves nothing about the names `syncIntegrationWrappers` mints.
@@ -334,9 +342,17 @@ describe("distributed surface leakage smoke", { timeout: 90000 }, () => {
     expect(classNames(path.join(".qfai", "assistant", "steering", "test-layers.md"))).toEqual([]);
   });
 
-  // TC-1.5.2: standalone DESIGN.md template scan against all 4 PATTERNS.
-  it("DESIGN.md template alone has zero matches across all 4 forbidden patterns", async () => {
-    const designMdPath = path.join(getInitAssetsDir(), "root", "DESIGN.md");
+  // TC-1.5.2: standalone DESIGN.md sample scan against all 4 PATTERNS.
+  it("the DESIGN.md sample alone has zero matches across all 4 forbidden patterns", async () => {
+    const designMdPath = path.join(
+      getInitAssetsDir(),
+      ".qfai",
+      "assistant",
+      "skills",
+      "qfai-prototyping",
+      "templates",
+      "DESIGN.md.sample",
+    );
     const content = await readFile(designMdPath, "utf-8");
     const lines = content.split("\n");
     const hits: Array<{ pattern: string; line: number; match: string }> = [];
@@ -371,14 +387,7 @@ describe("distributed surface leakage smoke", { timeout: 90000 }, () => {
 
     // Every entry point an agent loads on its own: Codex reads `AGENTS.md`,
     // Claude Code reads `CLAUDE.md`, Copilot reads its instructions file.
-    // `.codex/README.md` is not auto-loaded, but it makes the same claim, so
-    // its citations have to resolve too.
-    const citingFiles = [
-      "AGENTS.md",
-      "CLAUDE.md",
-      ".github/copilot-instructions.md",
-      ".codex/README.md",
-    ];
+    const citingFiles = ["AGENTS.md", "CLAUDE.md", ".github/copilot-instructions.md"];
     const missing: string[] = [];
 
     for (const citing of citingFiles) {

@@ -1,10 +1,10 @@
 /**
- * `### Change Type` printed `decision entries: 0` for a tree full of deltas.
+ * `### Change Type` must not print `decision entries: 0` for a tree full of deltas.
  *
  * `parseDeltaV1` reads one shape only (`## Decision Log` / `### DL-` /
- * `#### Meta`), and the shipped template did not carry it, so every populated
- * `09_delta.md` parsed to nothing and the whole section reported zeros while
- * `delta coverage: ok (issues=0)` sat underneath it (#545).
+ * `#### Meta`). If the shipped template did not carry it, every populated
+ * `09_delta.md` would parse to nothing and the whole section would report
+ * zeros while `delta coverage: ok (issues=0)` sits underneath it.
  *
  * A count has to name the input it counted: "no delta was classified" and
  * "deltas were read and could not be counted" are different claims, and only
@@ -188,17 +188,15 @@ function fileWaiver(): string {
   ].join("\n");
 }
 
-/** The same waiver, scoped down to the `### DL-` entries it actually accepts. */
-function entryWaiver(dlIds: readonly string[]): string {
+/** A waiver naming a rule nothing emits, which the pass refuses rather than applies. */
+function unknownRuleWaiver(): string {
   return [
     "version: 1",
     "waivers:",
-    "  - id: WVR-20260822-01",
-    `    rule: ${SCAN_CODE}`,
+    "  - id: WVR-20260822-02",
+    "    rule: QFAI-NOT-A-RULE-999",
     "    scope:",
     '      paths: [".qfai/specs/**"]',
-    "    match:",
-    `      dl_ids: [${dlIds.map((id) => `"${id}"`).join(", ")}]`,
     '    reason: "delta is intentionally unfilled until the spec is decided"',
     '    expires: "2099-01-01"',
     '    evidence: ".qfai/specs/spec-0001/09_delta.md"',
@@ -309,7 +307,7 @@ describe("the Change Type summary names the input it counted", () => {
         },
       ]);
       expect(data.changeType.deltaCoverage.status).toBe("delta-not-counted");
-      expect(data.summary.counts.warning).toBe(2);
+      expect(data.summary.counts.error).toBe(2);
 
       const findings = data.issues.filter((issue) => issue.code === SCAN_CODE);
       expect(findings).toHaveLength(2);
@@ -350,6 +348,23 @@ describe("the Change Type summary names the input it counted", () => {
 });
 
 describe("an uncounted delta file is a finding, not only prose", () => {
+  // A waiver no longer suppresses it: `QFAI-WAIVER-002` forbids a waiver whose
+  // rule is an error, and this finding is one. Pinned because the previous
+  // behaviour — a suppressible warning — is what an operator carrying such a
+  // waiver expects.
+  //
+  // The subject here is suppression, not the refusal. Whether the report also
+  // publishes `QFAI-WAIVER-002` is a separate question, with its own cases.
+  it("is not suppressed by a waiver, because the finding is an error", async () => {
+    await withProject({ "spec-0001": UNPARSABLE_DELTA }, async (root) => {
+      await writeFile(path.join(root, ".qfai", "waivers.yml"), fileWaiver(), "utf-8");
+
+      const data = await createReportData(root, EMPTY_VALIDATION);
+
+      expect(data.issues.find((issue) => issue.code === SCAN_CODE)?.suppressed).toBeUndefined();
+      expect(data.waivers.suppressed.total).toBe(0);
+    });
+  });
   it("reaches issues, summary.counts and deltaCoverage", async () => {
     await withProject(
       { "spec-0001": PARSABLE_DELTA, "spec-0002": UNPARSABLE_DELTA },
@@ -360,158 +375,73 @@ describe("an uncounted delta file is a finding, not only prose", () => {
 
         const findings = data.issues.filter((issue) => issue.code === SCAN_CODE);
         expect(findings).toHaveLength(1);
-        expect(findings[0]?.severity).toBe("warning");
+        expect(findings[0]?.severity).toBe("error");
         expect(findings[0]?.category).toBe("change");
         expect(findings[0]?.file).toBe(".qfai/specs/spec-0002/09_delta.md");
 
         // The gate reads counts, not the Markdown body.
-        expect(data.summary.counts).toEqual({ info: 0, warning: 1, error: 0 });
+        expect(data.summary.counts).toEqual({ info: 0, warning: 0, error: 1 });
         expect(data.changeType.deltaCoverage.status).toBe("delta-not-counted");
         expect(data.changeType.deltaCoverage.uncountedDeltaFiles).toBe(1);
 
         const markdown = formatReportMarkdown(data);
-        expect(markdown).toContain("- fail-on=warning: FAIL");
+        expect(markdown).toContain("- fail-on=error: FAIL");
         expect(markdown).toContain(SCAN_CODE);
       },
     );
   });
-
-  // The finding is raised after `validateProject` has already applied waivers,
-  // so it has to run the same pass itself. Without it a project that keeps an
-  // unfilled delta on purpose has no way to accept the warning.
-  it("goes through the project's waivers like any other finding", async () => {
+  // A refused waiver is not an active one. It was loaded, and the pass then
+  // declined to arm it, so the report lists nothing under `active` and the
+  // reason arrives as the verdict the case below asserts. Pinned because the
+  // active list is the other half of the answer an operator reads: a waiver
+  // that appears there and suppresses nothing is a different bug.
+  it("arms nothing when the pass refuses the waiver", async () => {
     await withProject({ "spec-0001": UNPARSABLE_DELTA }, async (root) => {
       await writeFile(path.join(root, ".qfai", "waivers.yml"), fileWaiver(), "utf-8");
 
       const data = await createReportData(root, EMPTY_VALIDATION);
 
-      expect(data.issues.find((issue) => issue.code === SCAN_CODE)?.suppressed).toBe(true);
-      expect(data.summary.counts).toEqual({ info: 0, warning: 0, error: 0 });
-      expect(data.waivers.suppressed.total).toBe(1);
-      expect(data.waivers.suppressed.byRule["QFAI-CTYPE-004"]).toBe(1);
-
-      // A waiver that silences the finding but not the verdict it drives is not
-      // a waiver: the Dashboard has to read clean too.
-      expect(data.changeType.deltaCoverage.status).toBe("ok");
-      expect(data.changeType.deltaCoverage.uncountedDeltaFiles).toBe(0);
-      expect(data.changeType.summary.uncountedDeltaFiles).toEqual([]);
-
-      const markdown = formatReportMarkdown(data);
-      expect(markdown).toContain("- fail-on=warning: PASS");
-      expect(markdown).not.toContain(NOTE_MARKER);
+      expect(data.waivers.active).toEqual([]);
+      expect(data.waivers.suppressed.total).toBe(0);
     });
   });
 
-  // The suppression above is performed by the report's own waiver pass, which
-  // reads `.qfai/waivers.yml` itself. The `ValidationResult` it is folded into
-  // need not have done the same — a stored `validate.json` predating the
-  // waivers block carries none — so the active list has to come from the pass
-  // that actually applied the waiver.
-  it("names the waiver its own pass applied, not just the suppressed count", async () => {
+  // A waiver the pass refuses says so, the same as one it applies. Without the
+  // verdict the operator sees a waiver that changed nothing and no reason for
+  // it, which reads like the finding is unwaivable rather than like the waiver
+  // is wrong.
+  it("reports the verdict its own pass reached on the waiver file", async () => {
     await withProject({ "spec-0001": UNPARSABLE_DELTA }, async (root) => {
-      await writeFile(path.join(root, ".qfai", "waivers.yml"), fileWaiver(), "utf-8");
+      await writeFile(path.join(root, ".qfai", "waivers.yml"), unknownRuleWaiver(), "utf-8");
 
       const data = await createReportData(root, EMPTY_VALIDATION);
 
-      expect(data.waivers.suppressed.total).toBe(1);
-      expect(data.waivers.active.map((waiver) => waiver.id)).toEqual(["WVR-20260822-01"]);
-      expect(data.waivers.active[0]?.rule).toBe(SCAN_CODE);
+      const verdicts = data.issues.filter((issue) => issue.code === "QFAI-WAIVER-004");
+      expect(verdicts).toHaveLength(1);
+      expect(verdicts[0]?.message).toContain("QFAI-NOT-A-RULE-999");
+      expect(verdicts[0]?.file).toBe(".qfai/waivers.yml");
+      // Counted, not merely listed: a verdict outside `summary.counts` cannot
+      // reach the gate. The delta-scan finding beside it is an error now, so
+      // the two land in different buckets.
+      expect(data.summary.counts.warning).toBe(1);
+      expect(data.summary.counts.error).toBe(1);
 
-      expect(formatReportMarkdown(data)).toContain("- waivers: active 1 / suppressed 1");
+      expect(formatReportMarkdown(data)).toContain("QFAI-WAIVER-004");
     });
   });
 
-  // Both passes read the same file, so the common case is the same waiver
-  // arriving twice. It must be listed once.
-  it("does not list the same waiver twice when both passes loaded it", async () => {
+  // The reason the verdict was dropped in the first place. Both passes read the
+  // same file, so a refusal validation already published must not arrive twice.
+  it("does not repeat a verdict the validation result already carries", async () => {
     await withProject({ "spec-0001": UNPARSABLE_DELTA }, async (root) => {
-      await writeFile(path.join(root, ".qfai", "waivers.yml"), fileWaiver(), "utf-8");
+      await writeFile(path.join(root, ".qfai", "waivers.yml"), unknownRuleWaiver(), "utf-8");
 
       const validated = await validateProject(root);
+      expect(validated.issues.filter((issue) => issue.code === "QFAI-WAIVER-004")).toHaveLength(1);
+
       const data = await createReportData(root, validated);
 
-      expect(data.waivers.active.map((waiver) => waiver.id)).toEqual(["WVR-20260822-01"]);
-    });
-  });
-});
-
-describe("a QFAI-CTYPE-004 waiver is scoped to the entry it accepted", () => {
-  it("raises one finding per uncounted entry, each naming its DL id", async () => {
-    await withProject({ "spec-0001": PARTIALLY_COUNTED_DELTA }, async (root) => {
-      const data = await createReportData(root, EMPTY_VALIDATION);
-
-      const findings = data.issues.filter((issue) => issue.code === SCAN_CODE);
-      expect(findings.map((issue) => issue.dl_id)).toEqual(["DL-0002", "DL-0003"]);
-      expect(findings[0]?.message).toContain("`### DL-0002`");
-      // The suggestion has to name the key that scopes the waiver, or the
-      // operator writes the `scope.paths`-only one that no longer applies.
-      expect(findings[0]?.suggested_action).toContain("match.dl_ids");
-      expect(findings[0]?.suggested_action).toContain("DL-0002");
-    });
-  });
-
-  it("keeps the entries a paths-only waiver never named", async () => {
-    // The over-broad waiver this scoping exists to refuse: it names the file and
-    // nothing else, so it must not decide anything about the rows inside it.
-    await withProject({ "spec-0001": PARTIALLY_COUNTED_DELTA }, async (root) => {
-      await writeFile(path.join(root, ".qfai", "waivers.yml"), fileWaiver(), "utf-8");
-
-      const data = await createReportData(root, EMPTY_VALIDATION);
-
-      const findings = data.issues.filter((issue) => issue.code === SCAN_CODE);
-      expect(findings.map((issue) => issue.suppressed ?? false)).toEqual([false, false]);
-      expect(data.waivers.suppressed.total).toBe(0);
-      expect(data.changeType.deltaCoverage.status).toBe("delta-not-counted");
-      expect(data.summary.counts.warning).toBe(2);
-      expect(formatReportMarkdown(data)).toContain("- fail-on=warning: FAIL");
-    });
-  });
-
-  it("suppresses only the entry the waiver listed in match.dl_ids", async () => {
-    await withProject({ "spec-0001": PARTIALLY_COUNTED_DELTA }, async (root) => {
-      await writeFile(path.join(root, ".qfai", "waivers.yml"), entryWaiver(["DL-0002"]), "utf-8");
-
-      const data = await createReportData(root, EMPTY_VALIDATION);
-
-      const findings = data.issues.filter((issue) => issue.code === SCAN_CODE);
-      expect(findings.map((issue) => [issue.dl_id, issue.suppressed ?? false])).toEqual([
-        ["DL-0002", true],
-        ["DL-0003", false],
-      ]);
-      expect(data.waivers.suppressed.total).toBe(1);
-
-      // The gap row and the coverage verdict follow the same split: DL-0003 is
-      // still uncounted, so the Dashboard must not read OK.
-      expect(data.changeType.summary.uncountedDeltaFiles).toEqual([
-        {
-          file: ".qfai/specs/spec-0001/09_delta.md",
-          reason: "unparsed",
-          countedEntries: 1,
-          uncountedEntries: [{ dlId: "DL-0003", reason: "unparsed" }],
-        },
-      ]);
-      expect(data.changeType.deltaCoverage.status).toBe("delta-not-counted");
-      expect(data.summary.counts.warning).toBe(1);
-    });
-  });
-
-  // Over-correction pin: scoping the waiver per entry must not make a genuine
-  // accept-everything waiver impossible — naming both ids still clears the file.
-  it("clears the file once the waiver names every uncounted entry", async () => {
-    await withProject({ "spec-0001": PARTIALLY_COUNTED_DELTA }, async (root) => {
-      await writeFile(
-        path.join(root, ".qfai", "waivers.yml"),
-        entryWaiver(["DL-0002", "DL-0003"]),
-        "utf-8",
-      );
-
-      const data = await createReportData(root, EMPTY_VALIDATION);
-
-      expect(data.waivers.suppressed.total).toBe(2);
-      expect(data.changeType.summary.uncountedDeltaFiles).toEqual([]);
-      expect(data.changeType.deltaCoverage.status).toBe("ok");
-      expect(data.summary.counts).toEqual({ info: 0, warning: 0, error: 0 });
-      expect(formatReportMarkdown(data)).not.toContain(NOTE_MARKER);
+      expect(data.issues.filter((issue) => issue.code === "QFAI-WAIVER-004")).toHaveLength(1);
     });
   });
 });

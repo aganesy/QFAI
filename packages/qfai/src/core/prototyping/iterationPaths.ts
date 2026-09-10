@@ -32,8 +32,7 @@ function padIndex(index: number): string {
  * (iteration, spec) pair's evidence, e.g.
  * `.qfai/evidence/prototyping/iter-02/spec-0007`.
  *
- * Codex r3264484517 / r3264489484: physically renamed (was
- * `iterationDir`) to avoid an oratory name collision with the
+ * Named this way, rather than `iterationDir`, to avoid a name collision with the
  * legacy single-spec helper of the same name in `./iteration.ts`.
  * The two helpers cannot coexist in a barrel re-export and even at
  * the import-site level, IDE autoimports were prone to silently
@@ -52,8 +51,7 @@ export function iterationDirPerSpec(index: number, specId: string): string {
  * Returns the project-root relative path to a per-screen review file
  * under a (iteration, spec) directory.
  *
- * Codex r3264484517 / r3264489484: physically renamed (was
- * `iterationReviewPath`) to disambiguate from the legacy single-spec
+ * Named this way, rather than `iterationReviewPath`, to disambiguate from the legacy single-spec
  * helper of the same name in `./iteration.ts`. See
  * {@link iterationDirPerSpec} for the full rationale.
  */

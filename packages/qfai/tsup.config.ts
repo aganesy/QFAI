@@ -23,7 +23,12 @@ export default defineConfig({
   clean: true,
   target: "node20",
   splitting: false,
-  external: ["playwright"],
+  // Neither is a dependency of this package: each is loaded through a dynamic
+  // import only when the command that needs it runs, and resolved from the
+  // project's own `node_modules`. Bundling either is wrong in the same way —
+  // the engine ships a data file beside its entry point, so an inlined copy
+  // looks for that file next to `dist/` and fails on the first use.
+  external: ["playwright", "@electric-sql/pglite"],
   outExtension({ format }) {
     return { js: format === "esm" ? ".mjs" : ".cjs" };
   },

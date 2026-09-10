@@ -26,7 +26,7 @@ export async function resolveToolVersion(): Promise<string> {
  * `npx qfai` resolves a bare name by walking PARENT directories for
  * `node_modules/.bin`, so a nested worktree with no dependencies of its own
  * runs the enclosing checkout's binary — a different branch and lockfile — and
- * the run says nothing about it (#1096). This is what makes that visible.
+ * the run says nothing about it. This is what makes that visible.
  *
  * The package directory rather than `process.argv[1]`: the shim npm writes into
  * `.bin` is a different path from the package it forwards to, and the package
@@ -90,7 +90,7 @@ export async function locateToolAgainstProject(
  *
  * This is the intent signal `outside` cannot carry. A path comparison says the
  * copy came from outside the project; it cannot say whether that was chosen.
- * Four resolutions land outside and only two are hazards (#1108):
+ * Four resolutions land outside and only two are hazards:
  *
  * - **a declaration exists and the copy is not under it** — the worktree case,
  *   and the `_npx` cache case. Another checkout's lockfile decided what ran,

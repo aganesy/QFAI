@@ -49,7 +49,7 @@ function reportedCount(output: string, heading: string): number {
   return line === undefined ? 0 : Number(line.slice(prefix.length));
 }
 
-describe("qfai init run report", { timeout: 60000 }, () => {
+describe("qfai init run report", () => {
   it("enumerates the paths a --dry-run would write, in the future tense", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-report-"));
     try {
@@ -142,7 +142,7 @@ describe("qfai init run report", { timeout: 60000 }, () => {
 
       const listed = pathsUnder(output, "  would write paths:");
       // POSIX-joined, because that is what the report writes. `path.join` here would
-      // build `\`-separated on Windows and never match a `/`-separated entry (#1176).
+      // build `\`-separated on Windows and never match a `/`-separated entry.
       const migrated = ".qfai/assistant/constitution/quality.md";
       expect(listed.filter((entry) => entry === migrated)).toHaveLength(1);
       expect(new Set(listed).size).toBe(listed.length);
@@ -332,8 +332,10 @@ describe("qfai init run report", { timeout: 60000 }, () => {
 
       const written = pathsUnder(secondRun, "  written paths:");
       const skipped = pathsUnder(secondRun, "  skipped paths:");
-      expect(skipped).toContain("DESIGN.md");
-      expect(written).not.toContain("DESIGN.md");
+      // A create-only root file the first run wrote: the second run has to
+      // report it as skipped rather than written.
+      expect(skipped).toContain("qfai.config.yaml");
+      expect(written).not.toContain("qfai.config.yaml");
       expect(skipped.length).toBeGreaterThan(1);
       expect(reportedCount(secondRun, "skipped")).toBe(skipped.length);
     } finally {

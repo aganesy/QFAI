@@ -9,8 +9,10 @@ export { validateImportLiteEvidencePresence } from "./importLite.js";
 export { validateLayerCoverage } from "./layerCoverage.js";
 export { validateLayeredTraceability } from "./layeredTraceability.js";
 export { validateMermaidEnforcement } from "./mermaidEnforcement.js";
+export { validateBusinessFlowTraceability } from "./businessFlowTraceability.js";
 export { validateContractReferences } from "./contractReferences.js";
 export { validateContractSsotModules } from "./contractSsotModules.js";
+export { validateDbContractApplyOrder } from "./dbContractApplyOrder.js";
 export { validateAtddCodeTraceability } from "./atddCodeTraceability.js";
 export { validateAtddCoverageDepth } from "./atddCoverageDepth.js";
 export { validateScaffoldPlaceholder } from "./scaffoldPlaceholder.js";
@@ -36,6 +38,8 @@ export { validateMermaidScreenFlow } from "./mermaidScreenFlow.js";
 export { validateBpApDb } from "./bpApDb.js";
 export { detectPlatform } from "./platformDetection.js";
 export { validateUiDefinitionConsistency } from "./uiDefinitionConsistency.js";
+export { validateUiMarkerPresence } from "./uiMarkerPresence.js";
+export { validateUiPrototypeMode } from "./uiPrototypeMode.js";
 export { validateResearchSummary } from "./researchSummary.js";
 export { validateAgentDefinition } from "./agentDefinition.js";
 export { validateSkillRoles } from "./skillRoles.js";
@@ -108,12 +112,7 @@ export {
   isAdvisoryFailingCatalogCode,
 } from "./justificationCatalog.js";
 export type { JustificationCatalogEntry } from "./justificationCatalog.js";
-export {
-  STALE_REFERENCES,
-  STALE_REFERENCE_SUNSET,
-  staleReferenceSeverity,
-  validateStaleReferences,
-} from "./staleReferences.js";
+export { STALE_REFERENCES, validateStaleReferences } from "./staleReferences.js";
 export type { StaleReferenceEntry } from "./staleReferences.js";
 export { HANDOFF_SCHEMA_REL, HANDOFF_WRITER_PAIRS } from "./handoffSchemaPairs.js";
 export type { HandoffWriterPair } from "./handoffSchemaPairs.js";

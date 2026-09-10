@@ -34,7 +34,7 @@ async function loadContent(): Promise<string> {
 describe("item completion checklist end-to-end enforcement", () => {
   it("defines a numbered item completion checklist", async () => {
     const c = await loadContent();
-    // #251 split the evidence write into its own gate point, so the count in
+    // The evidence write is its own gate point, so the count in
     // the heading is not fixed at 11. The obligation is that the checklist
     // exists and covers every gate item below.
     const heading = /Item completion checklist \((\d+)-point gate\)/i.exec(c);
@@ -70,14 +70,14 @@ describe("item completion checklist end-to-end enforcement", () => {
     expect(c).toMatch(
       /prototype parity.*product-surface-reviewer|product-surface-reviewer.*prototype parity/i,
     );
-    // The gate item was restated against the Evidence *anchor* (#358): the cell
+    // The gate item is stated against the Evidence *anchor*: the cell
     // is a pointer, because a GFM cell cannot hold a command's output.
     expect(c).toMatch(
       /test-list\.md.*updated|Status.*Evidence.*updated|Evidence cell's anchor resolves to a fresh per-item entry/i,
     );
-    // The gate point #251 added: the verdict half of the evidence file is
+    // The verdict half of the evidence file is
     // appended only after the reviewers have returned PASS. The obligation is
-    // over *every routed* reviewer, not a fixed pair (#571): a UI-affecting row
+    // over *every routed* reviewer, not a fixed pair: a UI-affecting row
     // routes `product-surface-reviewer` as well, and a count of two left that
     // verdict unrecorded.
     // The file is named by item 10, not hard-coded here: an `E2E` / `API` /

@@ -24,16 +24,19 @@ does not name is the state an agent invents, out of the four forbidden moves.
 
 - `QFAI-ATDD-113` (`CON-API`) and `QFAI-ATDD-115` (`CON-DB`) are attributed to
   `.qfai/contracts/**`, which has no spec owner in the model.
-- `QFAI-TEST-001` is attributed to the test file, which no spec owns either, so
-  a sibling spec's stub exits 1 in a scoped run too. This profile runs the stub
+- `QFAI-TEST-001` is attributed to the test file. A file under the canonical
+  `tests/<layer>/spec-NNNN/**` layout is owned by that spec, so a scoped run
+  drops a sibling's stub the way it drops a sibling's broken reference — the
+  directory decides, whatever the file's annotation says. A test file outside
+  that layout has no owner, so a sibling's stub there still exits 1 in a scoped
+  run. This profile runs the stub
   gate over `tests/e2e/**`, `tests/api/**` and `tests/integration/**`, so an
   acceptance test written as a silent stub — `it.todo` in vitest and jest,
   `pytest.skip` in pytest, the equivalent in each supported stack — fails it
   however it is annotated. `it.skip` / `describe.skip` are a different rule: a
   scaffolded one is `D-SCAFFOLD-PLACEHOLDER`'s and a hand-written one is
-  `QFAI-TEST-003`, a warning until the release that finding names and an error
-  from there. So the gate passing on `--fail-on error` is not yet proof they are
-  gone — the warnings are where they show, and they become failures on upgrade.
+  `QFAI-TEST-003`, an error. So a run that passes on `--fail-on error` is proof
+  they are gone.
 - A reference, or a scaffold directory, naming a spec number no spec pack has,
   **and sitting where no spec owns it either**: `--spec` on that number is
   itself rejected, so nothing would report it otherwise. A file under the
@@ -43,6 +46,29 @@ does not name is the state an agent invents, out of the four forbidden moves.
   — reading it as a repo-wide blocker in a sibling run reports something that
   run cannot see.
 - Anything else reported against a repo-level path.
+
+## The validation the Definition of Done asks for
+
+The gate command is one, and it is stated in the skill's Completion Gate. What
+the Definition of Done adds is how its result is read: in **two parts**, not as
+one exit code.
+
+| Part | What it asks                                      | How it is met                                                                                                                        |
+| ---- | ------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
+| 1    | No finding this spec owns remains                 | Every rule `--spec` narrows reports clean for `<spec-id>`                                                                            |
+| 2    | Every residual finding is attributed and recorded | Each one names its owning sibling spec under `## Cross-spec obligations` in this stage's evidence, and the completion report says so |
+
+Part 2 exists because of what part 1 cannot reach. `QFAI-ATDD-113` and `-115`
+are filed against `.qfai/contracts/**`, which no spec owns, so a sibling's
+uncovered contract holds the command at exit 1 however complete this spec is.
+
+Requiring exit 0 outright therefore left the compliant run not-done with no
+other state to be in — and a run in no state the skill names is one an agent
+resolves by inventing one, out of the four moves CRITICAL CONSTRAINTS forbids.
+
+Both parts met is the terminal state below. A residual finding attributable to
+no named sibling spec is not residue at all: it is this spec's own, and it
+still FAILs.
 
 ## The terminal state
 

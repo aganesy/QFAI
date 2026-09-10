@@ -241,8 +241,8 @@ describe("US-0012-0123: countWords CJK 800-1500 + EN 200-500 (Intl.Segmenter + O
 });
 
 describe("US-0012-0124: browserTool playwright primary + playwright-cli past its sunset", () => {
-  // The deprecation window closed at `SUNSETS.playwrightCli`. `playwright`
-  // still loads; `playwright-cli` is now refused and falls back to the default.
+  // `playwright` still loads; `playwright-cli` is refused and falls back to
+  // the default.
   it("loadConfig keeps `playwright` and refuses `playwright-cli`", async () => {
     const rootA = await p2TempDir();
     await seedPhase2Project(rootA, "playwright");
@@ -604,7 +604,7 @@ describe("US-0012-0135: --license-patch add-only + audit row", () => {
     expect(proto.licensePatchAudit.length).toBe(1);
     expect(isLicensePatchAuditRow(proto.licensePatchAudit[0])).toBe(true);
     expect(proto.licensePatchAudit[0].addedSources).toEqual(["wikimedia-commons"]);
-    // Codex P1 wave-4 (Option A): `frozenLicenseCatalog` is the
+    // Option A: `frozenLicenseCatalog` is the
     // immutable cycle-0 baseline (drift gate compares it against
     // DEFAULT_LICENSE_CATALOG). Patched sources live in the audit
     // ledger only; the runtime catalog used for license-verify is

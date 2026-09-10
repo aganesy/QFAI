@@ -139,6 +139,43 @@ routing:
         parallel_groups: []
         blocking_agents: [delivery-planner]
         rerun_policy: changed-scope-dependents
+      # The one phase whose exit criterion is that the product *runs*
+      # (`skills/qfai-implement/references/walking-skeleton.md`). It had no
+      # routing entry at all: every other phase here is `per-ledger-item` and
+      # runs after a row is selected, while `SKILL.md`'s Orchestrator Protocol
+      # forbids the orchestrator writing code — so the entrypoint and the smoke
+      # script the phase requires had nobody permitted to author them, and a
+      # mandatory phase stalled on its first project.
+      # `per-invocation`, not `per-ledger-item`: it runs ahead of the rows, once
+      # per declared entrypoint that has no recorded pass.
+      - id: skeleton
+        iteration: per-invocation
+        # `qa-gatekeeper` is MANDATORY, not conditional. The exit criterion is
+        # an execution result, and the gatekeeper is its only judge. Listed
+        # conditional it could simply not be selected, and `blocking_agents`
+        # would not save it: blocking stops the REVISE of an agent the
+        # orchestrator already routed, so an unrouted gatekeeper left the phase
+        # passing on the smoke run its own author reported — the exact
+        # self-attestation the `red` gate exists to prevent.
+        # A spec set with no runnable entrypoint is not the exception to this:
+        # it records `Skeleton: not applicable` in `.qfai/evidence/skeleton.md`
+        # and the phase does not run at all, so there is no run to judge.
+        mandatory_agents: [qa-gatekeeper]
+        # The production owners author the entrypoint, the smoke script and its
+        # line in `catalog/tech.md#standard-commands-copy-paste`; `smoke-script`
+        # is in their `owned_artifacts`, their `permission_profile` is
+        # `authoring`, and the catalog entry is authored content like any other.
+        # `devops-ci-engineer` supplies and verifies the start command — its
+        # profile is `execution`, so it runs the script and reports the command
+        # rather than writing either. Conditional because which production owner
+        # applies depends on where the entrypoint lives.
+        conditional_agents: [frontend-engineer, backend-engineer, devops-ci-engineer]
+        parallel_groups: []
+        # Its PASS on the recorded run is required before `Phase: Red` starts,
+        # and is written to `Skeleton gatekeeper`
+        # (`skills/qfai-implement/references/walking-skeleton.md#evidence`).
+        blocking_agents: [qa-gatekeeper]
+        rerun_policy: changed-scope-dependents
       # The failing test exists and no production code does. This is the only
       # window in which "watch it fail" is a first-hand observation, so the
       # gatekeeper is mandatory AND blocking here: RED must be confirmed before
@@ -202,6 +239,11 @@ routing:
       - id: review
         iteration: per-ledger-item
         mandatory_agents: [implementation-reviewer, qa-gatekeeper, completion-reviewer]
+        # The condition is not free judgement and does not live here: an item
+        # routes to `product-surface-reviewer` exactly when it is UI-affecting
+        # per `skills/qfai-implement/references/ui-affecting.md`,
+        # which is also gate item 9's predicate. This key says which agent may
+        # join, never whether it may be skipped.
         conditional_agents: [product-surface-reviewer]
         parallel_groups: []
         # `implementation-reviewer` is blocking, not advisory: it is item 8 of the
@@ -364,6 +406,6 @@ routing:
 # - `changed-scope-dependents`  re-run every agent whose inputs the change
 #                               touched, including ones that passed
 #
-# The key was previously on all 23 phases, defined nowhere and read by nothing,
-# so a typo in it was invisible. `.qfai/assistant/constitution/drift-protocol.md`
+# A key that is defined nowhere and read by nothing hides its own typos, which is
+# why the vocabulary is validated. `.qfai/assistant/constitution/drift-protocol.md`
 # step 4 uses the same vocabulary when a Change Request names its rerun mode.

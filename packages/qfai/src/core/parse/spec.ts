@@ -43,16 +43,39 @@ export type ParsedBrWithInvalidPriority = {
  *   require `Deprecated-at` so callers can audit when the spec
  *   stopped applying.
  *
- * TODO(QFAI-PR206-followup): the `removed` vs DELETE distinction
- * (PR #206 review #7) is currently subtle — DELETE removes the
+ * TODO: the `removed` vs DELETE distinction is subtle — DELETE removes the
  * directory while `Status: removed` keeps it. A follow-up may either
  * (a) drop `removed` and require DELETE for any retirement, or
  * (b) introduce `Removal-reason` + a dedicated QFAI-STATUS-007
  * validator that pairs with `Deprecated-at` to make the archival
- * intent explicit. Captured as an open question, not blocking 1.8.8.
+ * intent explicit. Captured as an open question.
  */
 export const SPEC_STATUS_VALUES = ["active", "superseded", "deprecated", "removed"] as const;
 export type SpecStatus = (typeof SPEC_STATUS_VALUES)[number];
+
+/**
+ * The statuses that say a spec has stopped applying.
+ *
+ * Named once because more than one reader has to agree on it. The execution
+ * playbook already tells the agent to skip these when it enumerates specs, and
+ * a validator that reads them anyway reports the retirement as a defect: a
+ * retired spec has no business rules, no examples and no test cases, which is
+ * what retiring it means.
+ *
+ * `active` is not the complement. A spec whose lifecycle cannot be read at all
+ * carries no status, and every such spec is still current — see
+ * {@link SpecEntry.status} for what makes a declaration readable.
+ */
+export const TERMINAL_SPEC_STATUSES: ReadonlySet<SpecStatus> = new Set([
+  "superseded",
+  "deprecated",
+  "removed",
+]);
+
+/** Whether a spec's declared lifecycle says it has stopped applying. */
+export function isTerminalSpecStatus(status: SpecStatus | undefined): boolean {
+  return status !== undefined && TERMINAL_SPEC_STATUSES.has(status);
+}
 
 /** Type guard equivalent of `SPEC_STATUS_VALUES.includes` that narrows to `SpecStatus`. */
 function isSpecStatus(value: string): value is SpecStatus {
@@ -358,7 +381,7 @@ export function parseSpec(md: string, file: string): ParsedSpec {
   // first one and may pass a self-contradicting spec. Detecting
   // duplicates requires either a new helper (`extractBulletFields`)
   // and a new validator code (QFAI-STATUS-007 "duplicate Status
-  // bullets") — design beyond PR #206 scope (review #44).
+  // bullets"), which this parser does not attempt.
   const supersededBy = extractBulletField(lifecycleSource, "Superseded-by");
   if (supersededBy !== undefined) {
     parsed.supersededBy = supersededBy;

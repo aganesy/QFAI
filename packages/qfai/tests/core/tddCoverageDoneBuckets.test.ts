@@ -1,5 +1,5 @@
 /**
- * `qfai report` no longer counts unfinished rows as done (#386).
+ * `qfai report` must not count unfinished rows as done.
  *
  * `TDD_DONE_STATUSES` was `{"done", "green", "refactor"}`, so a row with a
  * passing test that had cleared neither blocking reviewer nor checkpoint

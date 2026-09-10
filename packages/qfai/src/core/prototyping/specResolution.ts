@@ -55,7 +55,7 @@ export type ResolvedSpec = {
    *                           located via a matching `.qfai/contracts/ui/<spec-id>*.yaml`
    *                           contract file (extends the multi-spec
    *                           `resolveAllUiBearingSpecs` fallback to the single-spec
-   *                           primary resolver). 10th-wave Fix I.
+   *                           primary resolver).
    */
   source: "config" | "marker-scan" | "contract-fallback";
 };
@@ -140,9 +140,9 @@ export async function resolvePrimaryPrototypingSpec(
         specId: entry.specNumber,
         specDir: entry.dir,
         specMdPath: path.join(entry.dir, "01_Spec.md"),
-        // 10th-wave Fix I: this branch locates the spec via UI contract
-        // scan, not via spec-side marker scan; relabel to keep the
-        // discriminant honest (architecture-reviewer r3265261917).
+        // This branch locates the spec via UI contract
+        // scan, not via spec-side marker scan; the label keeps the
+        // discriminant honest.
         source: "contract-fallback",
       };
     }
@@ -260,11 +260,11 @@ export async function resolveTitleMarkerSpecs(root: string, specsDir: string): P
 async function hasMatchingUiContract(contractsRoot: string, specId: string): Promise<boolean> {
   const uiDir = path.join(contractsRoot, "ui");
   const direct = path.join(uiDir, `${specId}.yaml`);
-  // codex r3271969283 (P2, 50th-wave): use `stat().isFile()` instead of
+  // Use `stat().isFile()` instead of
   // `access()` so a directory (or symlink to non-file) named like
-  // `<specId>.yaml` does NOT falsely classify the spec as UI-bearing.
-  // Pre-fix `access()` only checked existence; a misauthored project
-  // with `<contractsDir>/ui/0007.yaml/` (directory) would have made
+  // `<specId>.yaml` does NOT falsely classify the spec as UI-bearing:
+  // `access()` alone only checks existence, so a misauthored project
+  // with `<contractsDir>/ui/0007.yaml/` (directory) would make
   // `resolveSurfaceUnion` / `resolvePrimaryPrototypingSpec` report a
   // phantom UI surface and drive `prototyping iterate` / drift gates
   // against it instead of the expected no-op path. The downstream
@@ -279,36 +279,23 @@ async function hasMatchingUiContract(contractsRoot: string, specId: string): Pro
     }
   }
 
-  // Also accept `spec-NNNN.yaml` / `ui-NNNN-*.yaml` shapes — consumer
-  // projects sometimes prefix with `spec-` or follow the
-  // `ui-XXXX-<slug>.yaml` convention documented in
-  // `.qfai/contracts/ui/README.md`.
+  // Also accept `spec-NNNN.yaml` / `ui-NNNN-*.yaml`. Consumer projects prefix
+  // with `spec-`, or follow the `ui-XXXX-<slug>.yaml` convention the shipped
+  // guide documents (`skills/qfai-sdd/references/ui-contract-guide.md`).
   //
-  // Codex r3264487007: tightened from the prior `(?:^|[^0-9])${specId}
-  // (?:[^0-9]|$)` token-anywhere regex which over-matched unrelated
-  // basenames whose names happened to contain the four-digit spec id
-  // (e.g. `unrelated-text-0001.yaml` would be treated as a UI contract
-  // for spec 0001). The accepted shapes are now anchored explicitly:
+  // Anchored to exactly the documented set:
   //
-  //   - `<specId>.yaml`                  (bare 4-digit id; legacy)
-  //   - `spec-<specId>.yaml`             (spec-prefixed; legacy)
-  //   - `ui-<specId>.yaml`               (ui-prefixed, no slug)
-  //   - `ui-<specId>-<slug>.yaml`        (ui-prefixed with non-empty
-  //                                       slug, per the documented
-  //                                       convention)
+  //   - `<specId>.yaml`
+  //   - `spec-<specId>.yaml`
+  //   - `ui-<specId>.yaml`
+  //   - `ui-<specId>-<slug>.yaml`, slug non-empty
   //
-  // Any other basename — including ones that merely *contain* the id
-  // token — is rejected. The fallback is intentionally narrower than
-  // the contract's "direct match" arm to avoid silent false-positives.
-  //
-  // 7th late-review wave (codex r3264965744 / r3264968391, LOW/MINOR):
-  // tightened further to match the doc exactly. The prior
-  // `^(?:spec-|ui-)?${specId}(?:-[^.]*)?\\.yaml$` regex over-accepted
-  // (a) bare-slug shapes `<id>-<slug>.yaml` / `spec-<id>-<slug>.yaml`
-  // that are NOT in the documented set, and (b) empty-slug
-  // `ui-<id>-.yaml` (the `[^.]*` allowed zero chars between the
-  // hyphen and the extension). The slug arm now requires `[^.]+`
-  // (one or more) and only attaches to the `ui-` prefix.
+  // Any other basename is rejected, including one that merely contains the id
+  // token: `unrelated-text-0001.yaml` is not spec 0001's UI contract. The slug
+  // arm attaches to the `ui-` prefix only, and requires at least one character,
+  // so neither `<id>-<slug>.yaml` nor `ui-<id>-.yaml` matches. This is
+  // deliberately narrower than the contract's direct-match arm: a false
+  // positive here silently attributes one spec's screens to another.
   let entries: Dirent[];
   try {
     entries = await readdir(uiDir, { withFileTypes: true });
@@ -322,38 +309,20 @@ async function hasMatchingUiContract(contractsRoot: string, specId: string): Pro
   if (entries.some((entry) => entry.isFile() && anchoredRe.test(entry.name))) {
     return true;
   }
-  // 23rd-wave Fix (codex r3270307469, P1 — chatgpt-codex-connector):
-  // detect the documented per-spec subdirectory layout
-  // `<contractsDir>/ui/spec-<specId>/<sub>.yaml` (candidate #5 in
-  // `.qfai/contracts/ui/README.md` precedence table).
+  // The per-spec subdirectory layout, `<contractsDir>/ui/spec-<specId>/<sub>.yaml`
+  // — the last candidate in the guide's resolution table. Without it a project
+  // that authored its UI contracts that way, and put no `surface_type:
+  // ui-bearing` marker on the spec, read as non-UI-bearing: the resolver
+  // returned nothing, the precheck did nothing, and the iterate command exited
+  // without producing a single directory, silently.
   //
-  // Extension policy (25th-wave clarification per codex r3270529771
-  // MINOR): the subdir walk accepts arbitrary `*.yaml` basenames
-  // (since the per-spec subdir IS the spec-scope signal — the
-  // basename does not need to encode the spec id again), but `*.yml`
-  // (single-l) is rejected for parity with the top-level anchored
-  // regex which only accepts `*.yaml`. This intentional asymmetry
-  // (subdir = any `.yaml`; top-level = anchored `<spec-id>.yaml`)
-  // matches the README precedence table semantics. TC-0012-0423
-  // pins both branches plus the empty-subdir non-match case. Pre-fix
-  // `hasMatchingUiContract` only checked top-level basenames, so a
-  // project that authored its UI contracts as
-  // `.qfai/contracts/ui/spec-0007/home.yaml` (without a
-  // `surface_type: ui-bearing` marker on the spec) would be silently
-  // treated as non-UI-bearing — `resolveAllUiBearingSpecs` returned
-  // empty, the cycle 0 precheck no-op'd, and the iterate command
-  // silently exited without producing iter dirs. Probing for the
-  // `spec-<specId>/` subdir + at least one `.yaml` underneath
-  // recovers the documented fallback.
-  // The subdir walk recursively descends into nested directories under
-  // `<contractsDir>/ui/spec-<specId>/` because the README candidate #5
-  // shape (`<spec-id>/<subpath>.yaml`) explicitly allows `<subpath>` to
-  // be a multi-component path (e.g. `screens/home.yaml`). 26th-wave
-  // refinement per codex r3270526761 + r3270527599 MINOR: dropped the
-  // dead outer try/catch (the only throw path inside the loop is the
-  // inner `readdir` — already discriminated as ENOENT / propagate) and
-  // updated comments / test name to say `recursively walks the spec
-  // subdirectory` instead of the misleading "one level deep" wording.
+  // The walk descends recursively, because the documented `<subpath>` may have
+  // more than one component (`screens/home.yaml`).
+  //
+  // Basenames under the subdirectory are unconstrained apart from the
+  // extension: the subdirectory is itself the spec-scope signal, so the
+  // basename need not encode the id again. `.yml` is rejected, matching the
+  // top-level regex above, which accepts only `.yaml`.
   const subdir = entries.find((entry) => entry.isDirectory() && entry.name === `spec-${specId}`);
   if (subdir) {
     const subdirAbs = path.join(uiDir, subdir.name);
@@ -390,31 +359,29 @@ async function hasMatchingUiContract(contractsRoot: string, specId: string): Pro
  * short-circuit is skipped so the legacy `resolvePrimaryPrototypingSpec`
  * path can drive the loop.
  *
- * codex review r3264508578: bare `catch {}` previously swallowed
- * EACCES / EIO / ENOTDIR alike as "doesn't exist", letting a
- * permission-denied spec dir silently no-op the run. The discriminated
- * ENOENT branch preserves the genuine-absence semantic and propagates
+ * A bare `catch {}` would swallow EACCES / EIO / ENOTDIR alike as
+ * "doesn't exist", letting a permission-denied spec dir silently no-op
+ * the run. The discriminated ENOENT branch preserves the genuine-absence
+ * semantic instead, and propagates
  * every other errno.
  *
- * 19th-wave Fix (codex r3270055214, MAJOR — architecture-reviewer):
- * moved here from `cli/commands/prototypingIterate.ts` together with
- * {@link resolveSurfaceUnion} so the CLI → CLI sideways import (which
- * `prototypingCertify.ts` had to take to align with iterate's drift
- * gate) is replaced by both CLI commands importing the union resolver
- * from a single core module. The dependency DAG (CLI → core) is
- * restored.
+ * Lives here, alongside
+ * {@link resolveSurfaceUnion}, so both CLI commands import the union
+ * resolver from a single core module rather than `prototypingCertify.ts`
+ * taking a CLI → CLI sideways import to align with iterate's drift
+ * gate. The dependency DAG (CLI → core) stays one-directional.
  */
 async function specDirExists(root: string, specsDir: string, specId: string): Promise<boolean> {
   const dirName = `spec-${specId}`;
-  // codex r3271656121 (P1, chatgpt-codex-connector): use `path.resolve`
+  // Use `path.resolve`
   // instead of `path.join` so an absolute `paths.specsDir` override in
   // `qfai.config.yaml` (e.g. `/tmp/specs`) resolves to the absolute
-  // path directly. Pre-fix `path.join(root, "/tmp/specs", "spec-0001")`
-  // produced `<root>/tmp/specs/spec-0001` (string concatenation, no
-  // absolute-segment reset), so the probe missed the real spec dir
-  // and `resolveSurfaceUnion` failed to include a valid
+  // path directly: `path.join(root, "/tmp/specs", "spec-0001")` alone
+  // produces `<root>/tmp/specs/spec-0001` (string concatenation, no
+  // absolute-segment reset), so the probe would miss the real spec dir
+  // and `resolveSurfaceUnion` would fail to include a valid
   // `prototyping.primarySpecId` pin — `prototyping iterate --cycle 0`
-  // then hit the zero-UI short-circuit (exit 0) for explicit-primary
+  // would then hit the zero-UI short-circuit (exit 0) for explicit-primary
   // workflows relying on absolute path overrides. `path.resolve`
   // correctly resets to the latter absolute segment when one is
   // supplied (relative `specsDir` still composes against `root` the
@@ -452,12 +419,10 @@ async function specDirExists(root: string, specsDir: string, specId: string): Pr
  * `liveUiBearing` so the live scope reported by show-spec is
  * apples-to-apples with what iterate actually enforces.
  *
- * 19th-wave Fix (codex r3270055214, MAJOR — architecture-reviewer):
- * moved here from `cli/commands/prototypingIterate.ts` so both CLI
- * commands import this resolver from the core layer instead of
+ * Lives in the core layer so both CLI
+ * commands import this resolver from there instead of
  * `prototypingCertify.ts` taking a sideways import on
- * `prototypingIterate.ts`. The original location was a leftover from
- * the 8th-wave extraction; this wave finishes the layer cleanup.
+ * `prototypingIterate.ts`.
  *
  * @internal Exported for direct unit-testing of the union composition
  * rule and so consumers across the CLI layer can re-resolve the live
