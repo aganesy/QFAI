@@ -4,7 +4,7 @@ import path from "node:path";
 
 import { describe, expect, it, vi } from "vitest";
 
-import { applyWaivers } from "../../src/core/waivers.js";
+import { applyWaivers, applyWaiversToExtraFindings } from "../../src/core/waivers.js";
 import type { Issue } from "../../src/core/types.js";
 
 describe("applyWaivers", () => {
@@ -637,11 +637,12 @@ describe("applyWaivers", () => {
 
   // `validateTestTodoStubs` does not run under every profile (`--profile sdd`
   // skips it), so on those runs QFAI-TEST-003 reaches the severity index from
-  // no finding. Without a static entry a legitimate global waiver for a
-  // deliberately parked suite was rejected as an unknown rule on every such
-  // run, failing `--fail-on warning` in profiles unrelated to the gate.
+  // no finding. The rule is an error, so the waiver is refused — and the
+  // static entry is what makes the refusal the same on a run that emits the
+  // finding and a run that does not. Without it the same waiver file reads as
+  // an unknown rule on one profile and an error-severity target on another.
   it.each([["QFAI-TEST-003"], ["TEST-003"]])(
-    "accepts a waiver naming %s even when the stub validator did not run",
+    "refuses a waiver naming %s as an error target, even when the stub validator did not run",
     async (rule) => {
       const root = await createRoot();
       try {
@@ -665,11 +666,11 @@ describe("applyWaivers", () => {
         // QFAI-TEST-003 finding is in hand.
         const result = await applyWaivers(root, [buildIssue({ rule: "COMPAT-003" })]);
 
+        // Not an unknown rule: the static entry is what recognises it.
         expect(result.issues.some((item) => item.code === "QFAI-WAIVER-004")).toBe(false);
-        // Registered as `warning`, so it is not refused as an error-severity
-        // target either.
-        expect(result.issues.some((item) => item.code === "QFAI-WAIVER-002")).toBe(false);
-        expect(result.waivers.active).toHaveLength(1);
+        // Refused for the reason that is true on every profile.
+        expect(result.issues.some((item) => item.code === "QFAI-WAIVER-002")).toBe(true);
+        expect(result.waivers.active).toHaveLength(0);
       } finally {
         await rm(root, { recursive: true, force: true });
       }
@@ -1329,6 +1330,102 @@ describe("applyWaivers", () => {
     }
   });
 });
+
+/**
+ * The pass over findings raised outside `validateProject` reports on the waiver
+ * file too.
+ *
+ * Its verdicts are not a copy of the first pass's. Rule severity is read from
+ * the findings in hand, and these findings are the ones validation never saw,
+ * so a waiver against them is judged against an index the first pass could not
+ * build. A caller that gets only the applied result has no way to say why a
+ * waiver did nothing.
+ *
+ * One case per code, because each is reached by a different defect in the file
+ * and a single fixture would pass on whichever one it happened to trip.
+ */
+describe("applyWaiversToExtraFindings reports on the waiver file", () => {
+  it("returns the wrong-extension verdict", async () => {
+    const root = await createRoot();
+    try {
+      await writeFile(
+        path.join(root, ".qfai", "waivers.yaml"),
+        "version: 1\nwaivers: []\n",
+        "utf-8",
+      );
+
+      const result = await applyWaiversToExtraFindings(root, [buildIssue({ rule: "CTYPE-004" })]);
+
+      expect(result.validationIssues.map((item) => item.code)).toContain("QFAI-WAIVER-001");
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("returns the refusal of a waiver whose rule this run raised as an error", async () => {
+    const root = await createRoot();
+    try {
+      await writeWaivers(root, extraFindingWaiver("QFAI-CTYPE-004"));
+
+      const result = await applyWaiversToExtraFindings(root, [
+        buildIssue({ rule: "CTYPE-004", severity: "error" }),
+      ]);
+
+      const refusal = result.validationIssues.find((item) => item.code === "QFAI-WAIVER-002");
+      expect(refusal?.message).toContain("QFAI-CTYPE-004");
+      // The refusal is the whole answer: nothing was suppressed, so without it
+      // the operator sees a waiver that did nothing and no reason for it.
+      expect(result.suppressed.total).toBe(0);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("returns the unknown-rule verdict", async () => {
+    const root = await createRoot();
+    try {
+      await writeWaivers(root, extraFindingWaiver("QFAI-NOT-A-RULE-999"));
+
+      const result = await applyWaiversToExtraFindings(root, [buildIssue({ rule: "CTYPE-004" })]);
+
+      const verdict = result.validationIssues.find((item) => item.code === "QFAI-WAIVER-004");
+      expect(verdict?.message).toContain("QFAI-NOT-A-RULE-999");
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("keeps applying the waivers it accepts", async () => {
+    const root = await createRoot();
+    try {
+      await writeWaivers(root, extraFindingWaiver("QFAI-CTYPE-004"));
+
+      const result = await applyWaiversToExtraFindings(root, [buildIssue({ rule: "CTYPE-004" })]);
+
+      expect(result.validationIssues).toEqual([]);
+      expect(result.suppressed.total).toBe(1);
+      expect(result.active.map((waiver) => waiver.id)).toEqual(["WVR-20260901-01"]);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+});
+
+/** A repo-wide waiver on one rule, so only the rule id varies between cases. */
+function extraFindingWaiver(rule: string): string {
+  return [
+    "version: 1",
+    "waivers:",
+    "  - id: WVR-20260901-01",
+    `    rule: ${rule}`,
+    "    scope:",
+    '      paths: ["**"]',
+    '    reason: "accepted while the delta is still being decided"',
+    '    expires: "2099-01-01"',
+    '    evidence: ".qfai/specs/spec-0001/09_delta.md"',
+    "",
+  ].join("\n");
+}
 
 async function createRoot(): Promise<string> {
   const root = await mkdtemp(path.join(os.tmpdir(), "qfai-waivers-"));

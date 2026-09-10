@@ -35,9 +35,8 @@ does not name is the state an agent invents, out of the four forbidden moves.
   `pytest.skip` in pytest, the equivalent in each supported stack — fails it
   however it is annotated. `it.skip` / `describe.skip` are a different rule: a
   scaffolded one is `D-SCAFFOLD-PLACEHOLDER`'s and a hand-written one is
-  `QFAI-TEST-003`, a warning until the release that finding names and an error
-  from there. So the gate passing on `--fail-on error` is not yet proof they are
-  gone — the warnings are where they show, and they become failures on upgrade.
+  `QFAI-TEST-003`, an error. So a run that passes on `--fail-on error` is proof
+  they are gone.
 - A reference, or a scaffold directory, naming a spec number no spec pack has,
   **and sitting where no spec owns it either**: `--spec` on that number is
   itself rejected, so nothing would report it otherwise. A file under the

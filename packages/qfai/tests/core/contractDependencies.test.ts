@@ -401,7 +401,7 @@ describe("QFAI-CONTRACT-015 — a contract must state its apply order", () => {
       async (root) => {
         const issues = await validateContracts(root, defaultConfig);
         const found = issues.find((i) => i.code === "QFAI-CONTRACT-015");
-        expect(found?.severity).toBe("warning");
+        expect(found?.severity).toBe("error");
         expect(found?.refs).toEqual(["CON-DB-0001"]);
       },
     );

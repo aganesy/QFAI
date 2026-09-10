@@ -6,7 +6,6 @@ import { loadConfig } from "../../core/config.js";
 import { normalizeValidationResult } from "../../core/normalize.js";
 import { normalizeSpecId } from "../../core/specScope.js";
 import { buildCiProfileIssue } from "../../core/phasePolicy.js";
-import { SUNSETS, isAtOrPastSunset } from "../../core/sunset.js";
 import { toRelativePath } from "../../core/paths.js";
 import { EMITTED_RULE_CODES } from "../../core/emittedRuleCodes.js";
 import { ATTESTATION_MISSING_CODE, HANDOFF_SCHEMA_CODE } from "../../core/saasPackage/profile.js";
@@ -54,26 +53,23 @@ export type ValidateOptions = {
    */
   specIds?: readonly string[];
   /**
-   * Override the tool version observed by the legacy-path deprecation
-   * gate. Tests use this to simulate the post-sunset world (>= 1.10.0)
-   * without mocking the resolver. Operational callers leave this
-   * undefined; production reads `packages/qfai/package.json#version`.
+   * Override the tool version this run reports as its own.
+   *
+   * It reaches the provenance line and the result of a run that could not
+   * complete. Operational callers leave it undefined; production reads
+   * `packages/qfai/package.json#version`.
    */
   toolVersionOverride?: string;
 };
 
 /**
- * Sunset version for the legacy `.qfai/output/validate.json` write
- * path. Until the running tool reaches this version the legacy path
- * keeps being written and a `D-DEPRECATED-PATH` warning fires; at and
- * past the sunset, the legacy path is no longer written and the
- * finding escalates to severity `error`.
+ * The release that retired the legacy `.qfai/output/validate.json` write path.
  *
- * The literal sunset version is the only npm-version marker permitted
- * by `.agents/rules/distributed-surface.md` exception (npm version is
- * canonical), because it tracks the next minor of the pinned branch.
+ * Nothing compares against it: the path is not written and the finding is an
+ * `error`. It appears in the message so an operator meeting the finding knows
+ * which release stopped writing the file they are still reading.
  */
-const LEGACY_VALIDATE_JSON_SUNSET = SUNSETS.legacyValidateJson;
+const LEGACY_VALIDATE_JSON_SUNSET = "1.10.0";
 const LEGACY_VALIDATE_JSON_REL = ".qfai/output/validate.json";
 
 async function pathExists(p: string): Promise<boolean> {
@@ -121,8 +117,6 @@ export function configTargetsLegacyValidateJsonPath(configuredPath: string): boo
 export type LegacyValidateJsonGate = {
   /** Finding to append to the run's result, or `null` when none is due. */
   issue: Issue | null;
-  /** True while the deprecation window is open (legacy path still written). */
-  legacyWriteEnabled: boolean;
   /** True when `output.validateJsonPath` still names the legacy SSOT. */
   configTargetsLegacyPath: boolean;
   /** True when the writer must refuse the configured (legacy) target. */
@@ -142,14 +136,7 @@ export type LegacyValidateJsonGate = {
 export async function evaluateLegacyValidateJsonGate(args: {
   root: string;
   configuredValidateJsonPath: string;
-  /** Override the observed tool version; production reads package.json. */
-  toolVersionOverride?: string;
-  /** Spec ids of a `--spec`-scoped run; empty for an unscoped run. */
-  scopedSpecIds?: readonly string[];
 }): Promise<LegacyValidateJsonGate> {
-  const effectiveToolVersion = args.toolVersionOverride ?? (await resolveToolVersion());
-  const legacySeverity = legacyValidateJsonSeverity(effectiveToolVersion);
-  const legacyWriteEnabled = legacySeverity === "warning";
   // Detect whether the operator's project config still aims the writer
   // at the legacy SSOT. This is a stronger signal than "the legacy file
   // exists on disk" — even a clean filesystem will trigger the gate if
@@ -158,42 +145,24 @@ export async function evaluateLegacyValidateJsonGate(args: {
   const configTargetsLegacyPath = configTargetsLegacyValidateJsonPath(
     args.configuredValidateJsonPath,
   );
-  const scopedSpecIds = args.scopedSpecIds ?? [];
-  // Post-sunset, only emit the deprecation finding when there is
-  // observable evidence (config or on-disk file) that a consumer still
-  // depends on the legacy path. Otherwise every clean validate run on
-  // tool >= sunset would carry an unactionable error finding for a path
-  // the user never used. Pre-sunset the finding is always emitted as a
-  // warning because the tool itself is still writing the path.
-  const legacyOnDisk = !legacyWriteEnabled
-    ? await pathExists(path.join(args.root, LEGACY_VALIDATE_JSON_REL))
-    : false;
-  // A scoped run writes no shared report at all, so the PRE-sunset writer-side
-  // notice would describe a deprecated write that never happens — and fail an
-  // otherwise-clean slice gate under `--strict` / `--fail-on warning`. That is
-  // the only part a scope may suppress. Post-sunset the finding is evidence of
-  // a legacy path this project still depends on (config or stale file), and
-  // suppressing it would let `--spec` alone walk past the migration gate with
-  // exit 0.
-  const emitDeprecationIssue = legacyWriteEnabled
-    ? scopedSpecIds.length === 0
-    : legacyOnDisk || configTargetsLegacyPath;
-  // Post-sunset, refuse to write to the configured legacy path. This is
-  // the migration gate: the legacy SSOT is dead, the config must be
-  // updated. Pre-sunset writes proceed normally (writer-side warning).
-  const refuseConfiguredLegacyWrite = configTargetsLegacyPath && !legacyWriteEnabled;
+  // The finding is due only where there is observable evidence — the config or
+  // a file on disk — that a consumer still depends on the legacy path.
+  // Otherwise every clean run would carry an unactionable error for a path the
+  // project never used. A `--spec` scope may not suppress it: the evidence is
+  // of a dependency this project has, and suppressing it would let a scoped run
+  // walk past the migration gate with exit 0.
+  const legacyOnDisk = await pathExists(path.join(args.root, LEGACY_VALIDATE_JSON_REL));
+  const emitDeprecationIssue = legacyOnDisk || configTargetsLegacyPath;
   return {
     issue: emitDeprecationIssue
       ? buildDeprecationIssue({
-          severity: legacySeverity,
-          legacyWriteEnabled,
           configTargetsLegacyPath,
-          refuseConfiguredLegacyWrite,
         })
       : null,
-    legacyWriteEnabled,
     configTargetsLegacyPath,
-    refuseConfiguredLegacyWrite,
+    // The legacy SSOT is dead: a config that still names it is refused, which
+    // is the migration gate.
+    refuseConfiguredLegacyWrite: configTargetsLegacyPath,
   };
 }
 
@@ -246,10 +215,8 @@ export async function runValidate(options: ValidateOptions): Promise<number> {
   const legacyGate = await evaluateLegacyValidateJsonGate({
     root,
     configuredValidateJsonPath,
-    toolVersionOverride: effectiveToolVersion,
-    scopedSpecIds,
   });
-  const { legacyWriteEnabled, configTargetsLegacyPath, refuseConfiguredLegacyWrite } = legacyGate;
+  const { refuseConfiguredLegacyWrite } = legacyGate;
   const result: ValidationResult = legacyGate.issue
     ? appendIssue(rawResult, legacyGate.issue)
     : rawResult;
@@ -359,17 +326,6 @@ export async function runValidate(options: ValidateOptions): Promise<number> {
       );
       await emitJson(normalized, root, profileSuffixedRel);
     }
-    // Legacy path — written for the whole deprecation window per BR-0004-0026,
-    // and skipped only when the configured path is already the legacy path
-    // (avoid double-writing the same file). This is intentionally NOT gated on
-    // the finding's evidence: a downstream consumer reading .qfai/output/
-    // from a clean checkout has left no evidence to find, and withholding the
-    // write would break it before the announced sunset. Post-sunset
-    // (legacyWriteEnabled === false) the write stops, which is the whole
-    // point of the sunset.
-    if (legacyWriteEnabled && !configTargetsLegacyPath) {
-      await emitJson(normalized, root, LEGACY_VALIDATE_JSON_REL);
-    }
   }
 
   return willFail ? 1 : 0;
@@ -441,69 +397,31 @@ export function profileSuffixedReportPath(configured: string, profile: string): 
 }
 
 /**
- * Severity of the `D-DEPRECATED-PATH` finding for the legacy validate
- * output path. Warning while the deprecation window is open; error
- * once the running tool reaches the announced sunset.
+ * Build the `D-DEPRECATED-PATH` finding for the legacy validate output SSOT.
  *
- * Exported for unit testing of the prerelease-aware comparison rule.
- * Production callers go through `runValidate`.
- */
-export function legacyValidateJsonSeverity(currentVersion: string): "warning" | "error" {
-  return isAtOrPastSunset(currentVersion, LEGACY_VALIDATE_JSON_SUNSET) ? "error" : "warning";
-}
-
-/**
- * Build the `D-DEPRECATED-PATH` finding for the legacy validate output
- * SSOT. Exactly three states can reach this function, matching
- * `emitDeprecationIssue` in `runValidate`:
+ * Two states reach this function, both of them `error`: the legacy path is
+ * retired, so nothing writes it and a project still naming it has a migration
+ * to make.
  *
- *   1. `refuseConfiguredLegacyWrite` — post-sunset AND the config points
- *      at the legacy path: the writer skipped, so the message must direct
- *      the operator to update their config.
- *   2. `legacyWriteEnabled` — pre-sunset, on any unscoped run, whether or
- *      not the config names the legacy literal. This branch is deliberately
- *      NOT evidence-gated: pre-sunset the tool still writes the legacy file
- *      on every run, so the warning describes a write that is really
- *      happening, and a project reading `.qfai/output/` from a clean
- *      checkout produces no evidence to gate on. `configTargetsLegacyPath`
- *      only selects which of the two pre-sunset messages is used. Severity
- *      is `warning`; the compatibility write still happens.
- *      The evidence gate this PR adds applies to state 3.
- *   3. Otherwise — post-sunset with a stale file left on disk. The write
- *      has stopped, so the message asks the operator to delete it.
+ *   1. `configTargetsLegacyPath` — the config points at the legacy path, so
+ *      the writer refused and the message directs the operator to update it.
+ *   2. Otherwise — a stale file left on disk, so the message asks for it to be
+ *      deleted.
  */
-function buildDeprecationIssue(args: {
-  severity: "warning" | "error";
-  legacyWriteEnabled: boolean;
-  configTargetsLegacyPath: boolean;
-  refuseConfiguredLegacyWrite: boolean;
-}): Issue {
-  const message = args.refuseConfiguredLegacyWrite
+function buildDeprecationIssue(args: { configTargetsLegacyPath: boolean }): Issue {
+  const message = args.configTargetsLegacyPath
     ? `qfai.config.yaml#output.validateJsonPath points at the legacy SSOT ` +
       `${LEGACY_VALIDATE_JSON_REL}, which is past the announced sunset ` +
       `(${LEGACY_VALIDATE_JSON_SUNSET}). The validate writer REFUSED this ` +
       `write to enforce the migration gate. Update output.validateJsonPath ` +
       `to .qfai/report/validate.json (canonical) and rerun validate.`
-    : args.legacyWriteEnabled
-      ? // BR-0004-0026 requires the sunset version as a literal `sunset: X`
-        // string in every pre-sunset warning body, so both branches carry it.
-        args.configTargetsLegacyPath
-        ? `qfai.config.yaml#output.validateJsonPath still points at the legacy ` +
-          `SSOT ${LEGACY_VALIDATE_JSON_REL}; the file is still being written for ` +
-          `backward compatibility; sunset: ${LEGACY_VALIDATE_JSON_SUNSET}. ` +
-          `Update output.validateJsonPath to .qfai/report/validate.json ` +
-          `before the next minor.`
-        : `Legacy validate output path ${LEGACY_VALIDATE_JSON_REL} is still being written ` +
-          `for backward compatibility; sunset: ${LEGACY_VALIDATE_JSON_SUNSET}. Point consumers ` +
-          `at .qfai/report/validate.json (always-latest) or ` +
-          `.qfai/report/validate-<profile>.json before the next minor.`
-      : `Legacy validate output path ${LEGACY_VALIDATE_JSON_REL} is past the announced ` +
-        `sunset (${LEGACY_VALIDATE_JSON_SUNSET}); the legacy file is no longer written but ` +
-        `still exists on disk. Update consumers to read .qfai/report/validate.json or ` +
-        `.qfai/report/validate-<profile>.json and delete the stale legacy file.`;
+    : `Legacy validate output path ${LEGACY_VALIDATE_JSON_REL} is past the announced ` +
+      `sunset (${LEGACY_VALIDATE_JSON_SUNSET}); the legacy file is no longer written but ` +
+      `still exists on disk. Update consumers to read .qfai/report/validate.json or ` +
+      `.qfai/report/validate-<profile>.json and delete the stale legacy file.`;
   return {
     code: "D-DEPRECATED-PATH",
-    severity: args.severity,
+    severity: "error",
     category: "canonical",
     message,
     file: LEGACY_VALIDATE_JSON_REL,
@@ -1900,10 +1818,8 @@ export const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
   "QFAI-PROT-337":
     "prototyping.mode=exploration downgraded one or more declared-error gates to warning; the notice names the source file and the affected codes.",
   // The apply-order family. Each of these reads a column or a declaration that
-  // nothing read before them, so each carries a promotion window
-  // (`core/sunset.ts`) and reaches `error` only at its pinned release. The
-  // expected state is the same either way — the window decides how loudly a
-  // gap is reported, not what the gap is.
+  // nothing read before them, so a project meeting one of them for the first
+  // time has a backlog to work through rather than a single edit.
   "QFAI-CONTRACT-015":
     "Every contract file states its apply order (`-- Depends on:` for SQL, `x-qfai-depends-on` for YAML/JSON), writing `-` when nothing has to be applied before it.",
   "QFAI-CONTRACT-030":
@@ -1917,14 +1833,12 @@ export const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
     "Every contract index row's `File` cell names a file that declares that row's contract ID.",
   "QFAI-CONTRACT-036":
     "Every table a DB contract's foreign key references is either created by that same contract or by one its declared apply order names, so applying the contracts in the declared order never meets a `REFERENCES` to a table that does not exist yet.",
-  // Reads the implementation tree rather than another declaration, so it too
-  // carries a promotion window (`core/sunset.ts`) and reaches `error` only at
-  // its pinned release.
+  // Reads the implementation tree rather than another declaration, so what it
+  // reports is a contract and a screen that disagree.
   "QFAI-CONTRACT-037":
     "Every `data-qfai` marker a UI contract writes literally is mentioned by at least one file under the configured source directory, so an element the contract declares is one something on the screen renders.",
   // Nothing has ever rejected a value here, so a project carrying a typo has
-  // been passing and was never told. Like its neighbour it carries a promotion
-  // window (`core/sunset.ts`) and reaches `error` only at its pinned release.
+  // been passing and was never told.
   "QFAI-CONTRACT-038":
     "Every `prototype.mode` a UI contract declares is one this tooling knows, so the contract's own words say what kind of prototype the review is walking. A contract that declares no mode is asked nothing.",
   "QFAI-CONTRACT-040":
@@ -2049,8 +1963,7 @@ export const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
   "QFAI-TDDLIST-015":
     "A spec whose `tdd/test-list.md` holds `Status=blocked` rows also has a `.qfai/steering/` work-log entry accounting for the stop, associated with the spec by `scope: spec-NNNN` or by a `scope: global` entry's `links`.",
   // The companion to the row above, and it earns a catalog entry for the same
-  // reason: once its severity follows a promotion pin rather than a `warning`
-  // literal, the code is error-capable and the reader of an `expected:` line
+  // reason: the code is error-capable, and the reader of an `expected:` line
   // needs to be told the expectation is about the surface, not about any spec.
   "QFAI-TDDLIST-016":
     "`.qfai/steering/` is walkable and every entry in it is readable, so the check for a work-log entry accounting for a stop has an answer to give.",

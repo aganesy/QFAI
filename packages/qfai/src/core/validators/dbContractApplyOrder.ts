@@ -23,8 +23,6 @@
 import path from "node:path";
 
 import { extractDeclaredDependencies } from "../contractsDecl.js";
-import { RULE_PROMOTIONS, newRuleSeverity } from "../sunset.js";
-import { resolveToolVersion } from "../version.js";
 import type { Issue } from "../types.js";
 import { issue, readSafe } from "./utils.js";
 
@@ -161,16 +159,7 @@ export async function validateDbContractApplyOrder(
   const files = await readContractFiles(root, dbFiles);
   const owners = ownersOfTables(files);
 
-  // A window, and it is doing real work: the condition is invisible today, so
-  // a project carrying it has never been told. Failing the gate on the release
-  // that first makes it visible would fail it on a backlog nobody was warned
-  // about. `resolveToolVersion` returns `"unknown"` rather than throwing when
-  // it cannot read a version, and the comparator reads that as inside the
-  // window, so an unreadable version never escalates this into a failure.
-  const promotion = RULE_PROMOTIONS.dbContractApplyOrder.promoteAt;
-  const severity = newRuleSeverity(await resolveToolVersion(), promotion);
-  const windowNote =
-    severity === "warning" ? ` Reported as a warning until ${promotion}, then an error.` : "";
+  const severity = "error";
 
   const issues: Issue[] = [];
   for (const file of files) {
@@ -196,7 +185,7 @@ export async function validateDbContractApplyOrder(
     issues.push(
       issue(
         DB_CONTRACT_APPLY_ORDER_RULE_ID,
-        `DB contract references a table another contract creates without declaring it: ${file.rel} — ${detail}.${windowNote}`,
+        `DB contract references a table another contract creates without declaring it: ${file.rel} — ${detail}.`,
         severity,
         file.rel,
         "contracts.db.applyOrder",

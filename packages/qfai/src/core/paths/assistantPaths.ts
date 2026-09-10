@@ -1,7 +1,5 @@
 import path from "node:path";
 
-import { SUNSETS } from "../sunset.js";
-
 /**
  * SSOT for the 4-layer assistant-tree path segments.
  * Hard-coded `.qfai/assistant/<layer>/` literals elsewhere in
@@ -24,19 +22,15 @@ export const PROJECT_STEERING_TEMPLATES_SUBDIR = "_templates" as const;
 export const MIGRATIONS_SUBDIR = "migrations" as const;
 
 /**
- * Sunset label for the legacy `.qfai/assistant/steering/` layout.
+ * The release that retired the legacy `.qfai/assistant/steering/` layout.
  *
- * Derived from `SUNSETS.legacyAssistantSteering` rather than pinned here. The
- * pin used to live in this module as `{ major, minor }`, which put it outside
- * `isAtOrPastSunset` — it could not parse that shape — so three separate
- * hand-rolled comparators grew around it, in `assistantTreeMigration`,
- * `skillDocReferences` and `init`. Two of them ignored the patch and
- * prerelease fields and so disagreed with every other deprecation about
- * `1.10.0-rc.1`. Deriving the label removes the possibility of drift instead of
- * asking three call sites to stay in step.
+ * A literal, because nothing compares against it any more: the readers accept
+ * the old paths unconditionally and the finding that reports one is an `error`
+ * outright. It survives only as the version an operator's message names, so
+ * they know which release moved the layout under them.
  */
 export function legacyAssistantSteeringSunsetLabel(): string {
-  return SUNSETS.legacyAssistantSteering;
+  return "1.10.0";
 }
 
 export function isAssistantLayer(value: string): value is AssistantLayer {

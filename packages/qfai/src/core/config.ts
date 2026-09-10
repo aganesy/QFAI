@@ -4,8 +4,6 @@ import path from "node:path";
 import { parse as parseYaml } from "yaml";
 
 import type { Issue } from "./types.js";
-import { RULE_PROMOTIONS, SUNSETS, isAtOrPastSunset, newRuleSeverity } from "./sunset.js";
-import { resolveToolVersion } from "./version.js";
 import { isEnoent } from "./fs/errno.js";
 import { normalizeRenderViewports, type RenderEvidenceConfig } from "./uiux/renderEvidenceTypes.js";
 
@@ -15,16 +13,15 @@ export type TraceabilitySeverity = "warning" | "error";
 /**
  * 廃止された orphanContractsPolicy の値集合。互換フィールドの型注釈はこちらを
  * 参照する: 公開 alias を参照すると `@typescript-eslint/no-deprecated` が発火し、
- * 静的解析抑制コメントを足す羽目になるため。この内部型は互換期間の終了
- * (`RULE_PROMOTIONS.retiredTraceabilityKeys`) とともに削除する。
+ * 静的解析抑制コメントを足す羽目になるため。この内部型は互換受理をやめる
+ * ときに削除する。
  */
 type RetiredOrphanContractsPolicy = "error" | "warning" | "allow";
 
 /**
  * @deprecated validation.traceability.orphanContractsPolicy は廃止された。
  * どの検証も参照しないため設定しても挙動は変わらない。既存の TypeScript 利用者
- * が import している場合に型検査が壊れないよう、互換期間中のみ残す
- * (promotion: `RULE_PROMOTIONS.retiredTraceabilityKeys`)。
+ * が import している場合に型検査が壊れないよう、互換期間中のみ残す。
  */
 export type OrphanContractsPolicy = RetiredOrphanContractsPolicy;
 
@@ -89,21 +86,18 @@ export type QfaiValidationConfig = {
     unknownContractIdSeverity: TraceabilitySeverity;
     /**
      * @deprecated 廃止済み。どの検証も参照しないため設定しても挙動は変わらず、
-     * 読み込み時に QFAI-CFG-001 が出る (severity は
-     * `RULE_PROMOTIONS.retiredTraceabilityKeys` を境に warning → error)。既存の設定
+     * 読み込み時に QFAI-CFG-001 が error として出る。既存の設定
      * オブジェクトリテラルが型検査を通るよう、互換期間中のみ optional で残す。
      */
     brMustHaveSc?: boolean;
     /**
      * @deprecated 廃止済み。SC のテスト参照欠落の指摘は severity を固定して
-     * いるため、この値は読まれない。互換期間中 (promotion:
-     * `RULE_PROMOTIONS.retiredTraceabilityKeys`) のみ optional で残す。
+     * いるため、この値は読まれない。互換期間中のみ optional で残す。
      */
     scNoTestSeverity?: TraceabilitySeverity;
     /**
      * @deprecated 廃止済み。orphan contract の指摘自体が存在しないため、
-     * この値は読まれない。互換期間中 (promotion:
-     * `RULE_PROMOTIONS.retiredTraceabilityKeys`) のみ optional で残す。
+     * この値は読まれない。互換期間中のみ optional で残す。
      */
     orphanContractsPolicy?: RetiredOrphanContractsPolicy;
   };
@@ -142,14 +136,9 @@ export type QfaiPrototypingExecutionConfig = {
   /**
    * Browser tool handed to the AI evaluator sub-agent.
    *
-   * Accepted values during the deprecation window:
-   *   - `"playwright"` (primary, post-1.9.x default).
-   *   - `"playwright-cli"` (deprecated; sunset `SUNSETS.playwrightCli`).
-   *     Inside the window the doctor probe emits `D-DEPRECATED-PROBE` at
-   *     `warning`; from the sunset onwards `normalizePrototypingExecution`
-   *     rejects the value and the probe reports `error`.
-   *
-   * At sunset only `"playwright"` is accepted.
+   * Only `"playwright"` is accepted. `"playwright-cli"` is retired:
+   * `normalizePrototypingExecution` rejects the value, and the doctor probe
+   * reports `D-DEPRECATED-PROBE` at `error`.
    */
   browserTool: "playwright" | "playwright-cli";
 };
@@ -354,7 +343,6 @@ export async function findConfigRoot(startDir: string): Promise<ConfigSearchResu
 export async function loadConfig(root: string): Promise<ConfigLoadResult> {
   const configPath = getConfigPath(root);
   const issues: Issue[] = [];
-  const toolVersion = await resolveToolVersion();
 
   let parsed: unknown;
   try {
@@ -368,7 +356,7 @@ export async function loadConfig(root: string): Promise<ConfigLoadResult> {
     return { config: defaultConfig, issues, configPath };
   }
 
-  const normalized = normalizeConfig(parsed, configPath, issues, toolVersion);
+  const normalized = normalizeConfig(parsed, configPath, issues);
   return { config: normalized, issues, configPath, document: parsed };
 }
 
@@ -376,25 +364,20 @@ export function resolvePath(root: string, config: QfaiConfig, key: ConfigPathKey
   return path.resolve(root, config.paths[key]);
 }
 
-function normalizeConfig(
-  raw: unknown,
-  configPath: string,
-  issues: Issue[],
-  toolVersion: string,
-): QfaiConfig {
+function normalizeConfig(raw: unknown, configPath: string, issues: Issue[]): QfaiConfig {
   if (!isRecord(raw)) {
     issues.push(configIssue(configPath, "設定ファイルの形式が不正です。"));
     return defaultConfig;
   }
 
   const uiux = normalizeUiux(raw.uiux, configPath, issues);
-  const prototyping = normalizePrototyping(raw.prototyping, configPath, issues, toolVersion);
+  const prototyping = normalizePrototyping(raw.prototyping, configPath, issues);
   const review = normalizeReview(raw.review, configPath, issues);
   const report = normalizeReport(raw.report, configPath, issues);
   const atdd = normalizeAtdd(raw.atdd, configPath, issues);
   const base: QfaiConfig = {
     paths: normalizePaths(raw.paths, configPath, issues),
-    validation: normalizeValidation(raw.validation, configPath, issues, toolVersion),
+    validation: normalizeValidation(raw.validation, configPath, issues),
     output: normalizeOutput(raw.output, configPath, issues),
   };
   if (uiux) {
@@ -477,7 +460,6 @@ function normalizeValidation(
   raw: unknown,
   configPath: string,
   issues: Issue[],
-  toolVersion: string,
 ): QfaiValidationConfig {
   const base = defaultConfig.validation;
   if (!raw) {
@@ -522,7 +504,7 @@ function normalizeValidation(
     testStrategyRaw = undefined;
   }
 
-  reportRetiredTraceabilityKeys(traceabilityRaw, configPath, issues, toolVersion);
+  reportRetiredTraceabilityKeys(traceabilityRaw, configPath, issues);
 
   return {
     failOn: readFailOn(raw.failOn, base.failOn, "validation.failOn", configPath, issues),
@@ -636,7 +618,6 @@ function normalizePrototyping(
   raw: unknown,
   configPath: string,
   issues: Issue[],
-  toolVersion: string,
 ): QfaiPrototypingConfig | undefined {
   if (raw === undefined || raw === null) {
     return undefined;
@@ -647,7 +628,7 @@ function normalizePrototyping(
   }
 
   const calibration = normalizePrototypingCalibration(raw.calibration, configPath, issues);
-  const execution = normalizePrototypingExecution(raw.execution, configPath, issues, toolVersion);
+  const execution = normalizePrototypingExecution(raw.execution, configPath, issues);
   const primarySpecId = normalizePrimarySpecId(raw.primarySpecId, configPath, issues);
   const mode = normalizePrototypingMode(raw.mode, configPath, issues);
   if (!calibration && !execution && primarySpecId === undefined && mode === undefined) {
@@ -742,7 +723,6 @@ function normalizePrototypingExecution(
   raw: unknown,
   configPath: string,
   issues: Issue[],
-  toolVersion: string,
 ): NonNullable<QfaiPrototypingConfig["execution"]> | undefined {
   const base = defaultConfig.prototyping?.execution;
   if (raw === undefined || raw === null) {
@@ -779,20 +759,14 @@ function normalizePrototypingExecution(
             ` 受け取った値: ${JSON.stringify(browserToolRaw)}`,
         ),
       );
-    } else if (
-      browserToolRaw === "playwright-cli" &&
-      isAtOrPastSunset(toolVersion, SUNSETS.playwrightCli)
-    ) {
-      // The deprecation window has closed. The type doc has said "at sunset
-      // only `playwright` is accepted" since the window opened, but nothing
-      // here enforced it — so the notice would have expired with no effect.
-      // `browserTool` keeps its `playwright` default, so a run that ignores
-      // the issue proceeds against the supported launcher rather than a
-      // half-configured one.
+    } else if (browserToolRaw === "playwright-cli") {
+      // Only `playwright` is accepted. `browserTool` keeps its `playwright`
+      // default, so a run that ignores the issue proceeds against the
+      // supported launcher rather than a half-configured one.
       issues.push(
         configIssue(
           configPath,
-          `prototyping.execution.browserTool: "playwright-cli" は qfai ${SUNSETS.playwrightCli} で廃止されました。` +
+          `prototyping.execution.browserTool: "playwright-cli" は qfai 1.10.0 で廃止されました。` +
             ` "playwright" を指定し、\`npm i -D playwright\` でインストールしてください。`,
         ),
       );
@@ -1129,15 +1103,9 @@ function readTraceabilitySeverity(
  * knob shaped like a gate control that changes nothing is worse than no knob,
  * because it also misreports the gate the code actually runs.
  *
- * The acceptance is bounded like every other new code in the tool — the
- * severity comes from {@link RULE_PROMOTIONS.retiredTraceabilityKeys} through
- * {@link newRuleSeverity}, not from a literal here, so the window ends by
- * itself instead of warning forever.
- *
- * A promotion rather than a sunset, even though the *shape* is what is being
- * retired: `QFAI-CFG-001` is a finding code that did not exist
- * before, and P7 measures the window from the code, because the code is what
- * an upgrading repository meets.
+ * The key is accepted rather than rejected, so an existing config still loads
+ * and the one key that is wired keeps its effect. `QFAI-CFG-001` reports each
+ * retired key that is still there, and deleting the key clears it.
  */
 const RETIRED_TRACEABILITY_KEYS = [
   "brMustHaveSc",
@@ -1149,13 +1117,10 @@ function reportRetiredTraceabilityKeys(
   traceabilityRaw: Record<string, unknown> | undefined,
   configPath: string,
   issues: Issue[],
-  toolVersion: string,
 ): void {
   if (!traceabilityRaw) {
     return;
   }
-  const promoteAt = RULE_PROMOTIONS.retiredTraceabilityKeys.promoteAt;
-  const promotedSeverity = newRuleSeverity(toolVersion, promoteAt);
   for (const key of RETIRED_TRACEABILITY_KEYS) {
     if (traceabilityRaw[key] === undefined) {
       continue;
@@ -1165,9 +1130,7 @@ function reportRetiredTraceabilityKeys(
         configPath,
         `validation.traceability.${key} は廃止されました。` +
           `どの検証も参照しないため、設定しても挙動は変わりません。` +
-          `互換受理は qfai ${promoteAt} で終了します (同版以降は error)。` +
           `qfai.config.yaml から削除してください。`,
-        promotedSeverity,
       ),
     );
   }
@@ -1439,23 +1402,10 @@ function configIssue(file: string, message: string): Issue {
   };
 }
 
-/**
- * The severity argument is named for where it comes from, and the property is
- * written out rather than shorthanded, because both are what make the pin
- * followable. `tests/core/sunsetLedger.test.ts` reads the `severity:` sibling
- * of `code: "…"` and asks whether that expression is one the file bound to
- * `newRuleSeverity(…, RULE_PROMOTIONS.retiredTraceabilityKeys…)`. A shorthand
- * `severity` yields no expression at all, so a correctly wired promotion read
- * to that assertion exactly like an unwired one.
- */
-function configDeprecatedIssue(
-  file: string,
-  message: string,
-  promotedSeverity: "warning" | "error",
-): Issue {
+function configDeprecatedIssue(file: string, message: string): Issue {
   return {
     code: "QFAI-CFG-001",
-    severity: promotedSeverity,
+    severity: "error",
     category: "canonical",
     message,
     file,

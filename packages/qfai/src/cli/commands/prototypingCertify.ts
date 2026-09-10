@@ -93,7 +93,6 @@ import {
   readFrozenSpecsCovered,
 } from "../../core/prototyping/specsCovered.js";
 import { SAAS_PACKAGE_SKIPPED_GATES } from "../../core/saasPackage/skippedGates.js";
-import { SUNSETS, deprecationSeverity } from "../../core/sunset.js";
 import { resolveToolVersion } from "../../core/version.js";
 import { error, info, warn } from "../lib/logger.js";
 import { EXIT_CODES } from "../lib/exitCodes.js";
@@ -272,24 +271,20 @@ export async function runPrototypingCertify(
   // The fallback used to be silent. A hybrid record — modern `iterations[]`,
   // legacy `fullHarness.runId` — sealed a completion certificate with
   // `counts.error === 0` and no operator signal at all, while the migration
-  // memo told the same operator the shape was rejected from 1.10.0. Reporting
-  // it follows the legacy `verify.json` branch below: say so at the severity
-  // the version implies, and still seal. Refusing outright would delete the
-  // acceptance path, which OC-60 forbids inside the window and which the
-  // sunset does not ask for either — the constraint escalates the finding.
+  // memo told the same operator the shape was retired. Reporting it follows
+  // the legacy `verify.json` branch below: say so, and still seal. Refusing
+  // outright would delete the acceptance path, which OC-60 forbids.
   const canonicalRunId = extractString(protoJson, "runId");
   const legacyRunId = extractString(extractRecord(protoJson, "fullHarness"), "runId");
   const runId = canonicalRunId ?? legacyRunId;
   if (!canonicalRunId && legacyRunId) {
-    const line =
+    // The shape is retired and nothing reads it any more, so this is an error
+    // outright.
+    error(
       `qfai prototyping certify: ${DEPRECATED_SCHEMA_CODE} prototyping.json carries the legacy ` +
-      `\`fullHarness.runId\` shape instead of a top-level \`runId\`; sunset: v${SUNSETS.legacyPrototypingJsonShape}. ` +
-      `Re-run \`qfai prototyping iterate --cycle 0\` to write the current shape.`;
-    if (deprecationSeverity(toolVersion, SUNSETS.legacyPrototypingJsonShape) === "error") {
-      error(line);
-    } else {
-      warn(line);
-    }
+        `\`fullHarness.runId\` shape instead of a top-level \`runId\`. ` +
+        `Re-run \`qfai prototyping iterate --cycle 0\` to write the current shape.`,
+    );
   }
   if (!runId) {
     error(

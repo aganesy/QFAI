@@ -5,7 +5,6 @@ import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 
 import { TRIAGE_NO_EXISTING_SPEC } from "../../../src/core/sddTriage.js";
-import { RULE_PROMOTIONS } from "../../../src/core/sunset.js";
 import {
   validateCreateRowCapabilityRefs,
   validateTriageSection,
@@ -32,23 +31,15 @@ async function newTempCapabilitiesPath(content: string): Promise<string> {
 
 const DELTA_PATH = "spec-0042/09_delta.md";
 
-/**
- * A version inside every promotion window, so `QFAI-TRIAGE-008` reports at its
- * pre-promotion severity. A literal rather than the shipped version, so the
- * cases below keep asserting what they were written for once the promotion
- * release lands; the promotion itself is asserted separately, against the pin.
- */
-const TOOL_VERSION = "0.0.0";
-
 describe("validateTriageSection", () => {
   it("returns no issues when delta has neither Change Summary nor Triage", () => {
     const text = "# 09 Delta\n";
-    expect(validateTriageSection(text, DELTA_PATH, TOOL_VERSION)).toEqual([]);
+    expect(validateTriageSection(text, DELTA_PATH)).toEqual([]);
   });
 
   it("emits QFAI-TRIAGE-001 when Change Summary exists without Triage", () => {
     const text = "# 09 Delta\n\n## Change Summary\n\n- one change\n";
-    const issues = validateTriageSection(text, DELTA_PATH, TOOL_VERSION);
+    const issues = validateTriageSection(text, DELTA_PATH);
     expect(issues).toHaveLength(1);
     expect(issues[0]?.code).toBe("QFAI-TRIAGE-001");
     expect(issues[0]?.severity).toBe("warning");
@@ -56,7 +47,7 @@ describe("validateTriageSection", () => {
 
   it("emits QFAI-TRIAGE-002 when Triage section has no table", () => {
     const text = "# 09 Delta\n\n## Change Summary\n\n## Triage\n\nno table here\n";
-    const issues = validateTriageSection(text, DELTA_PATH, TOOL_VERSION);
+    const issues = validateTriageSection(text, DELTA_PATH);
     expect(issues.map((i) => i.code)).toEqual(["QFAI-TRIAGE-002"]);
   });
 
@@ -73,13 +64,13 @@ describe("validateTriageSection", () => {
       "| REQ-1 | CREATE |",
       "",
     ].join("\n");
-    const issues = validateTriageSection(text, DELTA_PATH, TOOL_VERSION);
+    const issues = validateTriageSection(text, DELTA_PATH);
     expect(issues.map((i) => i.code)).toEqual(["QFAI-TRIAGE-002"]);
   });
 
   it("emits QFAI-TRIAGE-003 for invalid Operation enum", () => {
     const text = buildDelta([["REQ-1", "subject", "spec-0001", "ARCHIVE", "-", "-", "-"]]);
-    const issues = validateTriageSection(text, DELTA_PATH, TOOL_VERSION);
+    const issues = validateTriageSection(text, DELTA_PATH);
     expect(issues.map((i) => i.code)).toEqual(["QFAI-TRIAGE-003"]);
   });
 
@@ -95,25 +86,25 @@ describe("validateTriageSection", () => {
 
   it("emits QFAI-TRIAGE-004 when UPDATE has invalid Sub-op", () => {
     const text = buildDelta([["REQ-1", "subject", "spec-0001", "UPDATE", "PATCH", "-", "-"]]);
-    const issues = validateTriageSection(text, DELTA_PATH, TOOL_VERSION);
+    const issues = validateTriageSection(text, DELTA_PATH);
     expect(issues.map((i) => i.code)).toEqual(["QFAI-TRIAGE-004"]);
   });
 
   it("emits QFAI-TRIAGE-004 when UPDATE has empty Sub-op", () => {
     const text = buildDelta([["REQ-1", "subject", "spec-0001", "UPDATE", "-", "-", "-"]]);
-    const issues = validateTriageSection(text, DELTA_PATH, TOOL_VERSION);
+    const issues = validateTriageSection(text, DELTA_PATH);
     expect(issues.map((i) => i.code)).toEqual(["QFAI-TRIAGE-004"]);
   });
 
   it("emits QFAI-TRIAGE-005 when CREATE has no Approved By", () => {
     const text = buildDelta([["REQ-1", "new", "(none)", "CREATE", "-", "-", "-"]]);
-    const issues = validateTriageSection(text, DELTA_PATH, TOOL_VERSION);
+    const issues = validateTriageSection(text, DELTA_PATH);
     expect(issues.map((i) => i.code)).toEqual(["QFAI-TRIAGE-005"]);
   });
 
   it("emits QFAI-TRIAGE-005 when UPDATE:REMOVE has no Approved By", () => {
     const text = buildDelta([["REQ-1", "drop", "spec-0001", "UPDATE", "REMOVE", "-", "-"]]);
-    const issues = validateTriageSection(text, DELTA_PATH, TOOL_VERSION);
+    const issues = validateTriageSection(text, DELTA_PATH);
     expect(issues.map((i) => i.code)).toEqual(["QFAI-TRIAGE-005"]);
   });
 
@@ -126,7 +117,7 @@ describe("validateTriageSection", () => {
     const text = buildDelta([
       ["REQ-1", "drop something", "spec-0001", "UPDATE", "REMOVE-WRONG", "-", "-"],
     ]);
-    const issues = validateTriageSection(text, DELTA_PATH, TOOL_VERSION);
+    const issues = validateTriageSection(text, DELTA_PATH);
     expect(issues.map((i) => i.code)).toEqual(["QFAI-TRIAGE-004"]);
   });
 
@@ -134,14 +125,14 @@ describe("validateTriageSection", () => {
     const text = buildDelta([
       ["REQ-1", "extend", "spec-0001", "UPDATE", "APPEND", "-", "rationale"],
     ]);
-    expect(validateTriageSection(text, DELTA_PATH, TOOL_VERSION)).toEqual([]);
+    expect(validateTriageSection(text, DELTA_PATH)).toEqual([]);
   });
 
   it("returns no issues for a complete CREATE triage with approval", () => {
     const text = buildDelta([
       ["REQ-1", "new packaging command", "(none)", "CREATE", "-", "user@host", "rationale"],
     ]);
-    expect(validateTriageSection(text, DELTA_PATH, TOOL_VERSION)).toEqual([]);
+    expect(validateTriageSection(text, DELTA_PATH)).toEqual([]);
   });
 
   it("validates every canonical `## Triage` section, not just the first", () => {
@@ -162,7 +153,7 @@ describe("validateTriageSection", () => {
       ...triageTable([["REQ-2", "later", "spec-0001", "BOGUSOP", "-", "-", "-"]]),
       "",
     ].join("\n");
-    const issues = validateTriageSection(text, DELTA_PATH, TOOL_VERSION);
+    const issues = validateTriageSection(text, DELTA_PATH);
     expect(issues.map((i) => i.code)).toEqual(["QFAI-TRIAGE-003"]);
     expect(issues[0]?.message).toContain("section 2");
   });
@@ -182,42 +173,10 @@ describe("validateTriageSection", () => {
       ...triageTable([["REQ-2", "later", "spec-0001", "BOGUSOP", "-", "-", "-"]]),
       "",
     ].join("\n");
-    const issues = validateTriageSection(text, DELTA_PATH, TOOL_VERSION);
-    expect(issues.map((i) => i.code)).toEqual(["QFAI-TRIAGE-008"]);
-    expect(issues[0]?.severity).toBe("warning");
-    expect(issues[0]?.message).toContain(
-      RULE_PROMOTIONS.triageHeadingNonCanonical.promoteAt,
-      // P7 step 3: the finding names the release that ends its window, so an
-      // operator running `--fail-on error` can read the debt they will owe.
-    );
-    expect(issues[0]?.refs).toEqual(["## Triage — 2026-07-26"]);
-  });
-
-  it("promotes QFAI-TRIAGE-008 to an error at its pinned release", () => {
-    // The half-landed state P7 exists to stop is a promotion that is declared
-    // and never applied. Asserted against the pin rather than a copy of it, so
-    // moving the pin moves this test with it.
-    const text = [
-      "# 09 Delta",
-      "",
-      "## Change Summary",
-      "",
-      "## Triage",
-      "",
-      ...triageTable([["REQ-1", "extend", "spec-0001", "UPDATE", "APPEND", "-", "-"]]),
-      "",
-      "## Triage — 2026-07-26",
-      "",
-      ...triageTable([["REQ-2", "later", "spec-0001", "UPDATE", "APPEND", "-", "-"]]),
-      "",
-    ].join("\n");
-    const promoteAt = RULE_PROMOTIONS.triageHeadingNonCanonical.promoteAt;
-    const issues = validateTriageSection(text, DELTA_PATH, promoteAt);
+    const issues = validateTriageSection(text, DELTA_PATH);
     expect(issues.map((i) => i.code)).toEqual(["QFAI-TRIAGE-008"]);
     expect(issues[0]?.severity).toBe("error");
-    // The window note is dropped once the window has closed: there is no
-    // remaining grace to describe.
-    expect(issues[0]?.message).not.toContain(promoteAt);
+    expect(issues[0]?.refs).toEqual(["## Triage — 2026-07-26"]);
   });
 
   it("emits QFAI-TRIAGE-008 when the only Triage heading is a non-canonical one", () => {
@@ -231,7 +190,7 @@ describe("validateTriageSection", () => {
       ...triageTable([["REQ-1", "extend", "spec-0001", "UPDATE", "APPEND", "-", "-"]]),
       "",
     ].join("\n");
-    const issues = validateTriageSection(text, DELTA_PATH, TOOL_VERSION);
+    const issues = validateTriageSection(text, DELTA_PATH);
     // QFAI-TRIAGE-001 alone would only say "no Triage section"; the heading
     // finding names the section that is carrying the ungated rows.
     expect(issues.map((i) => i.code)).toEqual(["QFAI-TRIAGE-008", "QFAI-TRIAGE-001"]);
@@ -250,7 +209,7 @@ describe("validateTriageSection", () => {
       "## Triaged backlog",
       "",
     ].join("\n");
-    expect(validateTriageSection(text, DELTA_PATH, TOOL_VERSION)).toEqual([]);
+    expect(validateTriageSection(text, DELTA_PATH)).toEqual([]);
   });
 
   it("ignores a `## Triage` example inside a fenced code block", () => {
@@ -278,7 +237,7 @@ describe("validateTriageSection", () => {
       "```",
       "",
     ].join("\n");
-    expect(validateTriageSection(text, DELTA_PATH, TOOL_VERSION)).toEqual([]);
+    expect(validateTriageSection(text, DELTA_PATH)).toEqual([]);
   });
 
   it("does not emit QFAI-TRIAGE-001 when both headings only appear as an example", () => {
@@ -308,7 +267,7 @@ describe("validateTriageSection", () => {
       "-->",
       "",
     ].join("\n");
-    expect(validateTriageSection(text, DELTA_PATH, TOOL_VERSION)).toEqual([]);
+    expect(validateTriageSection(text, DELTA_PATH)).toEqual([]);
   });
 
   it("ignores a Triage heading inside an HTML comment", () => {
@@ -328,7 +287,7 @@ describe("validateTriageSection", () => {
       "-->",
       "",
     ].join("\n");
-    expect(validateTriageSection(text, DELTA_PATH, TOOL_VERSION)).toEqual([]);
+    expect(validateTriageSection(text, DELTA_PATH)).toEqual([]);
   });
 
   it("returns no issues when Triage exists without Change Summary", () => {
@@ -342,7 +301,7 @@ describe("validateTriageSection", () => {
       "| REQ-1 | extend | spec-0001 | UPDATE | APPEND | - | - |",
       "",
     ].join("\n");
-    expect(validateTriageSection(text, DELTA_PATH, TOOL_VERSION)).toEqual([]);
+    expect(validateTriageSection(text, DELTA_PATH)).toEqual([]);
   });
 });
 
@@ -350,9 +309,7 @@ describe("validateTriageSection Existing Spec grammar (QFAI-TRIAGE-009)", () => 
   const KNOWN = new Set(["spec-0001", "spec-0003", "spec-0004"]);
 
   const codesFor = (rows: string[][], known?: ReadonlySet<string>): string[] =>
-    validateTriageSection(buildDelta(rows), DELTA_PATH, TOOL_VERSION, known).map(
-      (entry) => entry.code,
-    );
+    validateTriageSection(buildDelta(rows), DELTA_PATH, known).map((entry) => entry.code);
 
   it("accepts a single spec, a `+` enumeration and a `_policies` target", () => {
     expect(
@@ -372,37 +329,13 @@ describe("validateTriageSection Existing Spec grammar (QFAI-TRIAGE-009)", () => 
     const issues = validateTriageSection(
       buildDelta([["REQ-1", "extend", "spec-0009", "UPDATE", "APPEND", "-", "why"]]),
       DELTA_PATH,
-      TOOL_VERSION,
       KNOWN,
     );
     expect(issues.map((entry) => entry.code)).toEqual(["QFAI-TRIAGE-009"]);
-    // The `Existing Spec` grammar is new, so the rule lands on cells written
-    // before it existed — including approved rows nothing rewrites. It ships
-    // behind a promotion window (P7) rather than at `error` from day one.
-    expect(issues[0]?.severity).toBe("warning");
-    expect(issues[0]?.message).toContain(
-      RULE_PROMOTIONS.triageExistingSpecCell.promoteAt,
-      // P7 step 3: the finding names the release that ends its window.
-    );
-    expect(issues[0]?.refs).toEqual(["spec-0009"]);
-  });
-
-  it("promotes QFAI-TRIAGE-009 to an error at its pinned release", () => {
-    // The half-landed state P7 exists to stop is a promotion that is declared
-    // and never applied. Asserted against the pin rather than a copy of it, so
-    // moving the pin moves this test with it.
-    const promoteAt = RULE_PROMOTIONS.triageExistingSpecCell.promoteAt;
-    const issues = validateTriageSection(
-      buildDelta([["REQ-1", "extend", "spec-0009", "UPDATE", "APPEND", "-", "why"]]),
-      DELTA_PATH,
-      promoteAt,
-      KNOWN,
-    );
-    expect(issues.map((entry) => entry.code)).toEqual(["QFAI-TRIAGE-009"]);
+    // The `Existing Spec` grammar is newer than the cells it reads, including
+    // approved rows nothing rewrites, so a project meets a backlog of these.
     expect(issues[0]?.severity).toBe("error");
-    // The window note is dropped once the window has closed: there is no
-    // remaining grace to describe.
-    expect(issues[0]?.message).not.toContain(promoteAt);
+    expect(issues[0]?.refs).toEqual(["spec-0009"]);
   });
 
   it("emits QFAI-TRIAGE-009 for range notation even when both ends exist", () => {
@@ -437,7 +370,6 @@ describe("validateTriageSection Existing Spec grammar (QFAI-TRIAGE-009)", () => 
     const issues = validateTriageSection(
       buildDelta([["REQ-1", "extend", "spec-00010", "UPDATE", "APPEND", "-", "why"]]),
       DELTA_PATH,
-      TOOL_VERSION,
       KNOWN,
     );
     expect(issues.map((entry) => entry.code)).toEqual(["QFAI-TRIAGE-009"]);
@@ -500,7 +432,6 @@ describe("validateTriageSection Existing Spec grammar (QFAI-TRIAGE-009)", () => 
       const issues = validateTriageSection(
         buildDelta([["REQ-1", "extend", cell, "UPDATE", "APPEND", "-", "why"]]),
         DELTA_PATH,
-        TOOL_VERSION,
         KNOWN,
       );
       expect(issues.map((entry) => entry.code)).toEqual(["QFAI-TRIAGE-009"]);
@@ -558,7 +489,6 @@ describe("validateTriageSection Existing Spec grammar (QFAI-TRIAGE-009)", () => 
       const issues = validateTriageSection(
         buildDelta([["REQ-1", "collapse", "spec-0003+spec-9999", op, "-", "user@host", "why"]]),
         DELTA_PATH,
-        TOOL_VERSION,
         KNOWN,
       );
       expect(issues.map((entry) => entry.code)).toEqual(["QFAI-TRIAGE-009"]);

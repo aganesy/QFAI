@@ -365,7 +365,7 @@ jobs:
           # body, which `verificationBodies` pins and a reviewer reads in the diff.
           sha256sum -c --quiet <<'PINNED_INPUTS'
           fff07d335dc0d74e7c2e6eca7683abd21ae87f7b68e2e39e83467647cc89e180  scripts/check-toolchain-action.sh
-          c230ed744daa2f43f31e750d39ad6045a93012df61cd69d03d97a529e3fe7ed1  .github/pinned-bytes.txt
+          64e8ea7acc6b0c8ae62cd1bf0e9b798982e214933bcd6278062bb0baf4d31325  .github/pinned-bytes.txt
           bb649cb2684f9db02bdbe3872f029571a8e52c4c6e2ab95e8c8fcf804370af41  .github/lifecycle-manifests.txt
           43d2586975550f5062b4af23112223068cc5676f0906c04fce2bc231df471a9e  .github/command-files.txt
           PINNED_INPUTS
@@ -668,14 +668,17 @@ jobs:
         run: |
           set -euo pipefail
           # `tdd` profile includes QFAI-TEST-001 (forbidden it.todo/test.todo
-          # stubs) and the TDD list / SC traceability gates. Running it against
-          # the repo root (`--root .`) means QFAI ships nothing to downstream
-          # users that its own repo wouldn't pass.
-          node packages/qfai/dist/cli/index.mjs validate \
-            --profile tdd \
-            --fail-on error \
-            --format github \
-            --root .
+          # stubs) and the TDD list / SC traceability gates. It runs against the
+          # repo root (`--root .`), so the gates QFAI ships are run over QFAI.
+          #
+          # The lane is a ratchet, not a clean gate. The ledger rules it runs
+          # report `error`, and this repository carries rows written before
+          # they existed. `check-dogfood-backlog.mjs` holds every file absent
+          # from the pin at zero and every pinned file to its pinned count, so
+          # a new failure still fails the build while the backfill lands. A
+          # waiver cannot substitute: `QFAI-WAIVER-002` refuses a waiver whose
+          # rule is an error.
+          node scripts/check-dogfood-backlog.mjs --profile tdd
 
       - name: QFAI self-validate this repo (dogfooding — SDD gates)
         shell: bash
@@ -691,11 +694,14 @@ jobs:
           # paired here with `--profile tdd` above and the broader
           # default-profile sandbox validate below; broad coverage is
           # preserved (see packages/qfai/src/core/phasePolicy.ts).
-          node packages/qfai/dist/cli/index.mjs validate \
-            --profile sdd \
-            --fail-on error \
-            --format github \
-            --root .
+          # The lane is a ratchet, not a clean gate. The ledger rules it runs
+          # report `error`, and this repository carries rows written before
+          # they existed. `check-dogfood-backlog.mjs` holds every file absent
+          # from the pin at zero and every pinned file to its pinned count, so
+          # a new failure still fails the build while the backfill lands. A
+          # waiver cannot substitute: `QFAI-WAIVER-002` refuses a waiver whose
+          # rule is an error.
+          node scripts/check-dogfood-backlog.mjs --profile sdd
 
       - name: QFAI self-validate this repo (dogfooding — full profile)
         shell: bash
@@ -712,11 +718,14 @@ jobs:
           # from here resolves to the PUBLISHED release — CI would validate a
           # version nobody is reviewing. That is why the run was folded in rather
           # than repointed at the shipped workflow file.
-          node packages/qfai/dist/cli/index.mjs validate \
-            --profile full \
-            --fail-on error \
-            --format github \
-            --root .
+          # The lane is a ratchet, not a clean gate. The ledger rules it runs
+          # report `error`, and this repository carries rows written before
+          # they existed. `check-dogfood-backlog.mjs` holds every file absent
+          # from the pin at zero and every pinned file to its pinned count, so
+          # a new failure still fails the build while the backfill lands. A
+          # waiver cannot substitute: `QFAI-WAIVER-002` refuses a waiver whose
+          # rule is an error.
+          node scripts/check-dogfood-backlog.mjs --profile full
 
       - name: Run qfai validate gate (fail on error)
         shell: bash

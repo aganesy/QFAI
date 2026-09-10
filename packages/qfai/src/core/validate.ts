@@ -4,7 +4,6 @@ import { loadConfig, resolvePath, type ConfigLoadResult } from "./config.js";
 import { runSaasPackageProfile } from "./saasPackage/profile.js";
 import { activeScenarioFiles, collectScenarioFiles } from "./discovery.js";
 import { collectSpecEntries } from "./specLayout.js";
-import { RULE_PROMOTIONS, newRuleSeverity } from "./sunset.js";
 import { issue } from "./validators/utils.js";
 import {
   isFindingInSpecScope,
@@ -370,14 +369,10 @@ function consumesPlatformOption(profile: ValidationProfile): boolean {
  * dropped in silence: a stale or misspelled platform in a CI matrix fanned out
  * over identical legs with no finding naming the cause.
  *
- * Behind a promotion window (`RULE_PROMOTIONS.platformOptionUnusedByProfile`),
- * because the invocations it fires on were legal when they were written: a
- * matrix that passes one `--platform` uniformly across profiles meets the
- * finding on four legs at once on upgrade. `warning` until the pinned release,
- * `error` from it — never a hard-coded severity, which is a window that never
- * opens. `resolveToolVersion` resolves rather than rejects (its own read
- * failures return `"unknown"`, read as inside the window), so an unreadable
- * version cannot be what escalates this into a build failure.
+ * The invocations it fires on were legal when they were written, so a matrix
+ * that passes one `--platform` uniformly across profiles meets the finding on
+ * four legs at once. The fix is one edit per leg: drop the flag where the
+ * profile does not read it.
  */
 /**
  * A finding when the running qfai was resolved from outside the project root.
@@ -390,17 +385,15 @@ function consumesPlatformOption(profile: ValidationProfile): boolean {
  * version was reachable only inside `validate.json`, which the README calls
  * internal, so no gate and no pasted evidence block could tell the two apart.
  *
- * `info`, at every site, and deliberately off P7's promotion ladder. The same
- * path test catches a deliberate global install and a dependency hoisted to a
- * monorepo root, and both of those are correct operation — so a window ending
- * in `error` would make `--fail-on error` fail for a project doing nothing
- * wrong, with no way out: `applyWaivers` rejects a waiver against an `error`
- * finding (`QFAI-WAIVER-002`). This is the shape
+ * `info`, at every site. The same path test catches a deliberate global
+ * install and a dependency hoisted to a monorepo root, and both of those are
+ * correct operation — an `error` would make `--fail-on error` fail for a
+ * project doing nothing wrong, with no way out, because `applyWaivers` rejects
+ * a waiver against an `error` finding (`QFAI-WAIVER-002`). This is the shape
  * `INFO_ONLY_SINCE_BASELINE` exists for, in the words its first member is
- * described with — it does not claim the tree is wrong, and it is not a gate
- * waiting to close. Promoting it needs the project's own dependency
- * declaration to tell an intended resolution from an ambient one, which is
- * more than a path comparison, and what that would take is recorded in #1108.
+ * described with: it does not claim the tree is wrong. Saying more than that
+ * needs the project's own dependency declaration to tell an intended
+ * resolution from an ambient one, which is more than a path comparison.
  */
 async function buildToolProvenanceIssues(root: string): Promise<Issue[]> {
   const located = await locateToolAgainstProject(root);
@@ -413,10 +406,7 @@ async function buildToolProvenanceIssues(root: string): Promise<Issue[]> {
   // and those are correct operation. Splitting the code rather than promoting
   // it is what keeps both statements true.
   if (located.declaredElsewhere) {
-    const promoteAt = RULE_PROMOTIONS.toolResolvedAgainstDeclaration.promoteAt;
-    const severity = newRuleSeverity(await resolveToolVersion(), promoteAt);
-    const windowNote =
-      severity === "warning" ? ` (${promoteAt} までは warning、以降は error になります)` : "";
+    const severity = "error";
     return [
       issue(
         "QFAI-TOOL-002",
@@ -425,7 +415,7 @@ async function buildToolProvenanceIssues(root: string): Promise<Issue[]> {
           `いるため、どの版が gate をかけたかはこのプロジェクトの lockfile が決めていません。` +
           `npx が bare name を親ディレクトリ方向に探索した結果、別のチェックアウト ` +
           `(別ブランチ・別 lockfile) の qfai か、npx が黙って取得した qfai@latest が` +
-          `走っています。${windowNote}`,
+          `走っています。`,
         severity,
         undefined,
         "toolProvenance.resolvedAgainstDeclaration",
@@ -456,21 +446,18 @@ async function buildToolProvenanceIssues(root: string): Promise<Issue[]> {
   ];
 }
 
-async function buildUnusedPlatformIssues(
+function buildUnusedPlatformIssues(
   profile: ValidationProfile,
   platformOption: string | undefined,
-): Promise<Issue[]> {
+): Issue[] {
   if (!platformOption || consumesPlatformOption(profile)) {
     return [];
   }
-  const promoteAt = RULE_PROMOTIONS.platformOptionUnusedByProfile.promoteAt;
-  const severity = newRuleSeverity(await resolveToolVersion(), promoteAt);
-  const windowNote =
-    severity === "warning" ? ` (${promoteAt} までは warning、以降は error になります)` : "";
+  const severity = "error";
   return [
     issue(
       "QFAI-PLATFORM-003",
-      `--platform (${platformOption}) は profile "${profile}" では参照されません。${windowNote}`,
+      `--platform (${platformOption}) は profile "${profile}" では参照されません。`,
       severity,
       undefined,
       "platformDetection.unusedPlatformOption",
@@ -510,7 +497,7 @@ async function runProfileValidators(
   const surface = await inspectIntegrationSurface(root);
   // A CLI-boundary observation, independent of the tree below: it survives the
   // short-circuit so the operator still learns the flag went nowhere.
-  const unusedPlatform = await buildUnusedPlatformIssues(profile, platformOption);
+  const unusedPlatform = buildUnusedPlatformIssues(profile, platformOption);
   // Same standing as `unusedPlatform`: a property of the run rather than of the
   // tree, so it survives the short-circuit below. It is also the finding most
   // worth keeping when the tree turns out to be damaged — a validate run
@@ -788,8 +775,7 @@ async function runSddValidators(
     // names its finding codes as unevaluated.
     ...(await runPackageSelfGovernanceValidators(root)),
     // Doc governance — surface pre-implementation tokens in
-    // `references/*.md` + SKILL.md as warning during the deprecation
-    // window and error at sunset.
+    // `references/*.md` and `SKILL.md`.
     ...(await validateStaleReferences(root, { config })),
     // `rcp_footer.md` states both halves of the review-cycle contract — the
     // mandatory pack files and `qfai validate --profile sdd` as the gate — so
@@ -1015,8 +1001,7 @@ function dedupeStubFindings(issues: Issue[]): Issue[] {
   return issues.filter((entry) => {
     // All three codes this validator emits, not only the first two: `full`
     // runs it once per profile, so a `.skip` the two selections share was
-    // counted twice as `QFAI-TEST-003` — twice in the warning count and, after
-    // the promotion window closes, twice in the error count.
+    // counted twice as `QFAI-TEST-003`, so twice in the error count.
     if (!STUB_VALIDATOR_CODES.has(entry.code)) return true;
     const key = [
       entry.code,

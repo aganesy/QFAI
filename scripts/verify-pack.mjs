@@ -26,12 +26,6 @@ import {
   readBaseline,
   writeBaseline,
 } from "./fresh-init-findings.mjs";
-import {
-  findingsAwaitingPromotion,
-  formatAwaitingPromotion,
-  LEDGER_REL,
-  readRulePromotions,
-} from "./promotion-preflight.mjs";
 
 function toPosix(p) {
   return p.split(path.sep).join("/");
@@ -451,13 +445,9 @@ const seededDiscussionPackFiles = {
     "- Confidence: high",
     "- Rationale: provide stable evidence for seeded discussion.",
     "",
-    // The research-first protocol stores its output here, and the gate now
-    // requires the section on the current pack — a seeded pack without it is
-    // QFAI-RESEARCH-016. That code rides the `researchSummarySchemaFields`
-    // promotion window, so while the window is open it is a `warning` and the
-    // `--fail-on error` run below reports it without failing; from
-    // the release the window names it is an `error` and the run stops. Seeded
-    // either way, so this fixture does not start failing on the promotion.
+    // The research-first protocol stores its output here, and the gate requires
+    // the section on the current pack: a seeded pack without it reports
+    // QFAI-RESEARCH-016 as an error and stops the `--fail-on error` run below.
     "## Research Summary",
     "",
     "```yaml",
@@ -726,11 +716,6 @@ execFileSync(
 //
 // The seeded review pack must not be the reason for a finding about itself.
 //
-// A rule inside a promotion window is a warning today and an error from the
-// release its pin names, and the severity follows the version of the tool that
-// is running. So a pin is otherwise only observed on the release it blocks:
-// this same gate, run against this same sandbox.
-//
 // And the finding set as a whole is compared against what was recorded, in
 // both directions — a new warning on a tree the tool wrote is a decision, and
 // a finding that is gone should stay gone.
@@ -766,14 +751,6 @@ if (selfInflicted.length > 0) {
         .join("\n"),
   );
 }
-const awaitingPromotion = findingsAwaitingPromotion(
-  validateReport.issues,
-  await readRulePromotions(path.join(root, LEDGER_REL)),
-);
-if (awaitingPromotion.length > 0) {
-  throw new Error(formatAwaitingPromotion(awaitingPromotion));
-}
-
 const freshFindings = fingerprintReport(validateReport, validateJsonPath);
 
 if (process.env[UPDATE_ENV] === "1") {

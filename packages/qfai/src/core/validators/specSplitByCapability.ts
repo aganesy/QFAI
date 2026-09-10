@@ -10,9 +10,7 @@ import {
   parseAllMarkdownTables,
   splitMarkdownRow,
 } from "../specPackParsers.js";
-import { RULE_PROMOTIONS, newRuleSeverity } from "../sunset.js";
 import type { Issue } from "../types.js";
-import { resolveToolVersion } from "../version.js";
 import { exists, issue, readSafe, to4, uniqueMatches } from "./utils.js";
 
 const CAP_ID_RE = /\bCAP-\d{4}\b/g;
@@ -448,34 +446,19 @@ function reusedSpecIds(catalog: DeclaredCatalog): string[] {
 }
 
 /** Flags CAP rows the declared mapping cannot resolve, and spec ids it reuses. */
-async function declaredMappingIssues(
+function declaredMappingIssues(
   catalog: DeclaredCatalog,
   capIds: string[],
   capabilitiesPath: string,
-): Promise<Issue[]> {
+): Issue[] {
   const issues: Issue[] = [];
-  // The `Spec` column is what this rule reads, and it did not exist before this
-  // change — so every catalog authored under the positional scheme declares
-  // nothing and draws the finding on all of its rows in one upgrade. The window
-  // gives those catalogs a release to fill the column in before the gate
-  // latches. `resolveToolVersion` resolves rather than rejects: its own read
-  // failures return `"unknown"`, which the comparator reads as inside the
-  // window, so an unreadable version never escalates this into a build failure.
-  const declaredMappingPromotion = RULE_PROMOTIONS.specSplitDeclaredMapping.promoteAt;
-  const declaredMappingSeverity = newRuleSeverity(
-    await resolveToolVersion(),
-    declaredMappingPromotion,
-  );
-  const declaredMappingWindowNote =
-    declaredMappingSeverity === "warning"
-      ? ` (${declaredMappingPromotion} リリースまでは warning、それ以降は error)`
-      : "";
+  const declaredMappingSeverity = "error";
   const undeclared = undeclaredCapIds(catalog, capIds);
   if (undeclared.length > 0) {
     issues.push(
       issue(
         "QFAI-SPLIT-106",
-        `Spec 列に spec ディレクトリが宣言されていない CAP があります: ${undeclared.join(", ")}${declaredMappingWindowNote}`,
+        `Spec 列に spec ディレクトリが宣言されていない CAP があります: ${undeclared.join(", ")}`,
         declaredMappingSeverity,
         capabilitiesPath,
         "specSplitByCapability.declaredMapping",
@@ -488,7 +471,7 @@ async function declaredMappingIssues(
     issues.push(
       issue(
         "QFAI-SPLIT-106",
-        `Spec 列に複数の spec ディレクトリを宣言している CAP があります: ${ambiguous.join(", ")}${declaredMappingWindowNote}`,
+        `Spec 列に複数の spec ディレクトリを宣言している CAP があります: ${ambiguous.join(", ")}`,
         declaredMappingSeverity,
         capabilitiesPath,
         "specSplitByCapability.declaredMapping",
@@ -501,7 +484,7 @@ async function declaredMappingIssues(
     issues.push(
       issue(
         "QFAI-SPLIT-106",
-        `1 行の CAP ID セルに複数の CAP が書かれています (1 行 1 CAP): ${multiCap.join(", ")}${declaredMappingWindowNote}`,
+        `1 行の CAP ID セルに複数の CAP が書かれています (1 行 1 CAP): ${multiCap.join(", ")}`,
         declaredMappingSeverity,
         capabilitiesPath,
         "specSplitByCapability.declaredMapping",
@@ -514,7 +497,7 @@ async function declaredMappingIssues(
     issues.push(
       issue(
         "QFAI-SPLIT-106",
-        `同じ CAP が複数の行に登場しています: ${repeated.join(", ")}${declaredMappingWindowNote}`,
+        `同じ CAP が複数の行に登場しています: ${repeated.join(", ")}`,
         declaredMappingSeverity,
         capabilitiesPath,
         "specSplitByCapability.declaredMapping",
@@ -527,7 +510,7 @@ async function declaredMappingIssues(
     issues.push(
       issue(
         "QFAI-SPLIT-106",
-        `複数の CAP が同じ spec ディレクトリを宣言しています: ${duplicated.join(", ")}${declaredMappingWindowNote}`,
+        `複数の CAP が同じ spec ディレクトリを宣言しています: ${duplicated.join(", ")}`,
         declaredMappingSeverity,
         capabilitiesPath,
         "specSplitByCapability.declaredMapping",
@@ -742,7 +725,7 @@ export async function validateSpecSplitByCapability(
   }
 
   if (catalog) {
-    issues.push(...(await declaredMappingIssues(catalog, capIds, capabilitiesPath)));
+    issues.push(...declaredMappingIssues(catalog, capIds, capabilitiesPath));
   }
 
   if (missingSpecIds.length > 0) {

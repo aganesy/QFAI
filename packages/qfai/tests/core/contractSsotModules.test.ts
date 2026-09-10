@@ -6,7 +6,6 @@ import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 
 import { defaultConfig } from "../../src/core/config.js";
-import { RULE_PROMOTIONS } from "../../src/core/sunset.js";
 import { validateProject } from "../../src/core/validate.js";
 import {
   extractSsotModuleEntries,
@@ -181,8 +180,7 @@ describe("validateContractSsotModules", () => {
       // routes that went stale releases ago. It ships behind a promotion
       // window (P7) rather than at `error` from day one, and the finding names
       // the release that ends that window while it is open.
-      expect(dead[0]?.severity).toBe("warning");
-      expect(dead[0]?.message).toContain(RULE_PROMOTIONS.contractSsotModuleUnresolved.promoteAt);
+      expect(dead[0]?.severity).toBe("error");
       expect(dead[0]?.refs).toContain("src/core/worklog/parseEntry.ts");
       expect(dead[0]?.file).toBe(".qfai/contracts/cli/qfai-init.md");
       expect(dead[0]?.loc?.line).toBe(5);
@@ -229,8 +227,7 @@ describe("validateContractSsotModules", () => {
 
       expect(issues).toHaveLength(1);
       expect(issues[0]?.code).toBe("QFAI-CONTRACT-050");
-      expect(issues[0]?.severity).toBe("warning");
-      expect(issues[0]?.message).toContain(RULE_PROMOTIONS.contractSsotModuleUnresolved.promoteAt);
+      expect(issues[0]?.severity).toBe("error");
       expect(issues[0]?.message).toContain("プロジェクトルート外");
       expect(issues[0]?.refs).toContain("../outside.ts");
       expect(issues[0]?.loc?.line).toBe(4);
@@ -258,8 +255,7 @@ describe("validateContractSsotModules", () => {
 
       expect(issues).toHaveLength(1);
       expect(issues[0]?.code).toBe("QFAI-CONTRACT-050");
-      expect(issues[0]?.severity).toBe("warning");
-      expect(issues[0]?.message).toContain(RULE_PROMOTIONS.contractSsotModuleUnresolved.promoteAt);
+      expect(issues[0]?.severity).toBe("error");
       expect(issues[0]?.message).toContain("プロジェクトルート外");
       expect(issues[0]?.refs).toContain(absolute);
       expect(issues[0]?.loc?.line).toBe(4);

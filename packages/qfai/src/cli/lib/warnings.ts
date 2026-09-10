@@ -141,19 +141,11 @@ export const INCOMPLETE_RUN_CODE = "QFAI-SCAN-002";
  * no claim at all, and it has to be reachable from `--fail-on`, the annotation
  * stream and the run-log rather than from stderr.
  *
- * **`error`, with no promotion window, deliberately.** P7 ships a new code
- * behind a window, and `sunsetLedger.test.ts` enforces that a registered entry
- * DECIDES the severity through `newRuleSeverity` — so registering this one
- * would make it a `warning` until the promotion. A `warning` exits 0 under the
- * default `--fail-on error`, which would turn a crash into a pass: strictly
- * worse than the bare stderr line this replaces, which at least exited 1. The
- * window also has no backlog to absorb, because the condition crashes the run
- * today and no project is passing in this state. Same shape as
- * {@link TRUNCATED_SCAN_CODE} above, which likewise fixes its own severity.
- * That P7 cannot express "an error from day one" is a gap in the policy rather
- * than a property of this finding. Nothing currently asks the question because
- * the registry's extractor cannot see either scan code; once it can, this
- * severity should become a decision rather than an omission.
+ * **`error`, deliberately.** A `warning` exits 0 under the default
+ * `--fail-on error`, which would turn a crash into a pass: strictly worse than
+ * the bare stderr line this replaces, which at least exited 1. There is no
+ * backlog to absorb either — the condition crashes the run, so no project is
+ * passing in this state. Same shape as {@link TRUNCATED_SCAN_CODE} above.
  *
  * The errno and the path go in the message because that is what makes the cause
  * actionable — a Windows `git worktree` writes `.claude/skills/*` as FILE

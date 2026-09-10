@@ -18,7 +18,6 @@ import path from "node:path";
 import { describe, expect, it } from "vitest";
 
 import { defaultConfig, type QfaiConfig } from "../../src/core/config.js";
-import { RULE_PROMOTIONS } from "../../src/core/sunset.js";
 import {
   STUB_SOURCE_FILE_PATTERN,
   validateTestTodoStubs,
@@ -622,7 +621,7 @@ describe("the opt-out still turns the whole validator off", () => {
   });
 });
 
-describe("QFAI-TEST-003 — the vitest/jest skip form is its own waivable rule", () => {
+describe("QFAI-TEST-003 — the vitest/jest skip form is its own rule", () => {
   // Six of the seven dialects matched their stack's *skip* construct while the
   // JS/TS entry matched `.todo` alone, so `it.skip` / `test.skip` /
   // `describe.skip` — the form a developer actually writes to park a suite
@@ -648,6 +647,69 @@ describe("QFAI-TEST-003 — the vitest/jest skip form is its own waivable rule",
     });
   });
 
+  // `qfai atdd scaffold` writes its skeletons as `it.skip`, and
+  // `D-SCAFFOLD-PLACEHOLDER` owns an unfilled scaffold with a ladder of its
+  // own: a warning for `atdd.scaffoldEscalateCycles` validate runs, then an
+  // error. Reporting the same block here too would fail `--fail-on error` on
+  // the scaffold's own output before a line of it was written, and would
+  // overrule that ladder from outside.
+  const SCAFFOLDED = [
+    'import { describe, it } from "vitest";',
+    "",
+    `it${SKIP}("pending — scaffold placeholder", () => {`,
+    "  // QFAI-SCAFFOLD-PLACEHOLDER — replace this block with a real assertion.",
+    "});",
+    "",
+  ].join("\n");
+
+  it("leaves an unfilled scaffold to the rule that owns it", async () => {
+    await withTests({ "tests/a.test.ts": SCAFFOLDED }, async (root) => {
+      const issues = await validateTestTodoStubs(root, CONFIG);
+
+      expect(issues.filter((i) => i.code === "QFAI-TEST-003")).toEqual([]);
+    });
+  });
+
+  // The marker is the scaffold's own line, so authoring the block removes it.
+  // A `.skip` left behind after that is a hand-written one.
+  it("reports the skip once the scaffold's own marker is gone", async () => {
+    const authored = [
+      'import { describe, it } from "vitest";',
+      "",
+      `it${SKIP}("parked by hand", () => {`,
+      "  expect(1).toBe(1);",
+      "});",
+      "",
+    ].join("\n");
+
+    await withTests({ "tests/a.test.ts": authored }, async (root) => {
+      const issues = await validateTestTodoStubs(root, CONFIG);
+
+      expect(issues.filter((i) => i.code === "QFAI-TEST-003")).toHaveLength(1);
+    });
+  });
+
+  // The exemption is for the skip form only. The scaffold writes no `.todo`,
+  // so one in a scaffold file was put there by hand and is still the stub rule.
+  it("still reports a todo stub inside a scaffold file", async () => {
+    const mixed = [
+      'import { describe, it } from "vitest";',
+      "",
+      `it${SKIP}("pending — scaffold placeholder", () => {`,
+      "  // QFAI-SCAFFOLD-PLACEHOLDER — replace this block with a real assertion.",
+      "});",
+      'it.todo("added by hand");',
+      "",
+    ].join("\n");
+
+    await withTests({ "tests/a.test.ts": mixed }, async (root) => {
+      const issues = await validateTestTodoStubs(root, CONFIG);
+
+      expect(issues.filter((i) => i.code === "QFAI-TEST-003")).toEqual([]);
+      expect(issues.filter((i) => i.code === "QFAI-TEST-001")).toHaveLength(1);
+    });
+  });
+
   it("keeps refs on the exact construct so waivers and grouping stay stable", async () => {
     await withTests({ "tests/a.test.ts": JS_SKIPS }, async (root) => {
       const issues = await validateTestTodoStubs(root, CONFIG);
@@ -656,7 +718,7 @@ describe("QFAI-TEST-003 — the vitest/jest skip form is its own waivable rule",
     });
   });
 
-  it(`files ${SKIP} under its own warning rule while ${TODO} stays an error`, async () => {
+  it(`files ${SKIP} under its own rule, alongside ${TODO}`, async () => {
     // A `.todo` is a bare declaration and can only mean work not done. A
     // `.skip` keeps its body and is what `qfai atdd scaffold` emits, so an
     // `error` would fail the scaffold's own output on sight.
@@ -673,32 +735,26 @@ describe("QFAI-TEST-003 — the vitest/jest skip form is its own waivable rule",
         issues.map((i) => [i.refs?.[0] ?? "", { code: i.code, severity: i.severity }] as const),
       );
       expect(graded.get(`it${TODO}`)).toEqual({ code: "QFAI-TEST-001", severity: "error" });
-      expect(graded.get(`it${SKIP}`)).toEqual({ code: "QFAI-TEST-003", severity: "warning" });
+      expect(graded.get(`it${SKIP}`)).toEqual({ code: "QFAI-TEST-003", severity: "error" });
       expect(graded.get(`describe${SKIP}`)).toEqual({
         code: "QFAI-TEST-003",
-        severity: "warning",
+        severity: "error",
       });
       // The gate `qfai-implement`'s FINAL CHECKLIST reads stays todo-only.
       expect(issues.filter((i) => i.code === "QFAI-TEST-001")).toHaveLength(1);
     });
   });
 
-  it("takes its severity from the promotion pin, not a literal", async () => {
-    // The warning above is right today and, written as a literal, stays right
-    // forever: nothing would ever promote it, and the operator is never told a
-    // debt is coming. P7 wants that soft landing pinned to a release instead.
-    // The release name in the message is the half only the pin can put there —
-    // `warning` alone reads identically either way.
+  it("reports at error", async () => {
     await withTests({ "tests/a.test.ts": JS_SKIPS }, async (root) => {
       const issues = (await validateTestTodoStubs(root, CONFIG)).filter(
         (i) => i.code === "QFAI-TEST-003",
       );
       expect(issues, "the fixture stopped producing skip findings").not.toEqual([]);
       for (const found of issues) {
-        expect(found.severity).toBe("warning");
-        expect(found.message).toContain(RULE_PROMOTIONS.testSkippedSuite.promoteAt);
+        expect(found.severity).toBe("error");
       }
-      // The `.todo` rule is not inside the window and keeps its hard error.
+      // The `.todo` rule keeps its own hard error.
       const todo = await withTests({ "tests/b.test.ts": JS_STUB }, (r) =>
         validateTestTodoStubs(r, CONFIG),
       );
@@ -724,7 +780,10 @@ describe("QFAI-TEST-003 — the vitest/jest skip form is its own waivable rule",
       const skipAction = issues.find((i) => i.code === "QFAI-TEST-003")?.suggested_action ?? "";
       expect(skipAction).toContain("Remove the skip modifier");
       expect(skipAction).not.toContain("delete the stub");
-      expect(skipAction).toContain("QFAI-TEST-003");
+      // The remedy used to end at a per-path waiver. The rule is an error, so
+      // that route is closed and the text says so rather than leaving the
+      // operator to discover it from a refusal.
+      expect(skipAction).toContain("No waiver reaches this finding");
       const todoAction = issues.find((i) => i.code === "QFAI-TEST-001")?.suggested_action ?? "";
       expect(todoAction).toContain("delete the stub");
     });
@@ -750,7 +809,7 @@ describe("QFAI-TEST-003 — the vitest/jest skip form is its own waivable rule",
         `describe${SKIP}`,
         `it${SKIP}`,
       ]);
-      expect(skipped.every((i) => i.severity === "warning")).toBe(true);
+      expect(skipped.every((i) => i.severity === "error")).toBe(true);
     });
   });
 
@@ -773,7 +832,7 @@ describe("QFAI-TEST-003 — the vitest/jest skip form is its own waivable rule",
       // The label stays root + token, as it already did for the trailing
       // `.each` chain, so `refs` does not fragment once per modifier.
       expect(skipped.map((i) => i.refs?.[0])).toEqual([`test${SKIP}`, `test${SKIP}`, `it${SKIP}`]);
-      expect(skipped.every((i) => i.severity === "warning")).toBe(true);
+      expect(skipped.every((i) => i.severity === "error")).toBe(true);
     });
   });
 
@@ -801,7 +860,7 @@ describe("QFAI-TEST-003 — the vitest/jest skip form is its own waivable rule",
       // The line the construct *starts* on — the root identifier's — and every
       // finding after a multi-line match still lands on its own line.
       expect(skipped.map((i) => i.loc?.line)).toEqual([1, 3, 5]);
-      expect(skipped.every((i) => i.severity === "warning")).toBe(true);
+      expect(skipped.every((i) => i.severity === "error")).toBe(true);
       const todo = issues.filter((i) => i.code === "QFAI-TEST-001");
       expect(todo.map((i) => i.loc?.line)).toEqual([7]);
     });
@@ -943,9 +1002,8 @@ describe(`${SKIP} as a statement inside a running test`, () => {
   // test is registered, reported and executed — it stops early only when the
   // condition holds. Everything the rule says is wrong for it: there is no
   // modifier to drop, and deleting the call removes the guard rather than
-  // restoring a test. Once the promotion window closes the finding is an
-  // error, and an error cannot be waived, so a repository with a legitimate
-  // guard would have no passing state at all.
+  // restoring a test. The finding is an error, and an error cannot be waived,
+  // so a repository with a legitimate guard would have no passing state at all.
   const PLAYWRIGHT = 'import { expect, test } from "@playwright/test";';
 
   const guard = (argument: string): string =>

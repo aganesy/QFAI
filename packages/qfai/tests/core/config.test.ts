@@ -6,8 +6,6 @@ import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 
 import { loadConfig, type QfaiValidationConfig } from "../../src/core/config.js";
-import { RULE_PROMOTIONS, SUNSETS, newRuleSeverity } from "../../src/core/sunset.js";
-import { resolveToolVersion } from "../../src/core/version.js";
 
 describe("baseBranch config", () => {
   it("loads baseBranch from config YAML", async () => {
@@ -179,13 +177,13 @@ describe("spec-0012 prototyping.execution config", () => {
         "utf-8",
       );
 
-      // The deprecation window closed at `SUNSETS.playwrightCli`, which the
+      // The deprecation window closed at `"1.10.0"`, which the
       // shipped version is now past. `browserTool` falls back to the supported
       // default rather than carrying a value the launcher no longer accepts.
       const { config, issues } = await loadConfig(root);
       expect(issues).toHaveLength(1);
       expect(issues[0]?.message).toContain("playwright-cli");
-      expect(issues[0]?.message).toContain(SUNSETS.playwrightCli);
+      expect(issues[0]?.message).toContain("1.10.0");
       expect(config.prototyping?.execution?.browserTool).toBe("playwright");
     } finally {
       await rm(root, { recursive: true, force: true });
@@ -418,13 +416,7 @@ describe("retired validation.traceability keys", () => {
       const { config, issues } = await loadConfig(root);
 
       const deprecated = issues.filter((issue) => issue.code === "QFAI-CFG-001");
-      // Severity is the central promotion pin's, not a literal: warning
-      // inside the window, error from
-      // `RULE_PROMOTIONS.retiredTraceabilityKeys.promoteAt`. P7 keys the
-      // window on the finding code, and `QFAI-CFG-001` is new even
-      // though the config shape it names is old.
-      const { promoteAt } = RULE_PROMOTIONS.retiredTraceabilityKeys;
-      const expected = newRuleSeverity(await resolveToolVersion(), promoteAt);
+      const expected = "error";
       expect(deprecated.map((issue) => issue.severity)).toEqual([expected, expected, expected]);
       for (const key of ["brMustHaveSc", "scNoTestSeverity", "orphanContractsPolicy"]) {
         expect(
@@ -432,8 +424,6 @@ describe("retired validation.traceability keys", () => {
           `expected a deprecation warning naming ${key}`,
         ).toBe(true);
       }
-      // The window's end is stated to the operator, not just enforced silently.
-      expect(deprecated.every((issue) => issue.message.includes(promoteAt))).toBe(true);
       // The retired keys must not be rejected outright: an existing config still loads,
       // and the key that is actually wired keeps its effect.
       expect(issues.some((issue) => issue.code === "QFAI_CONFIG_INVALID")).toBe(false);

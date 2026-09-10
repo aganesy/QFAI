@@ -13,16 +13,8 @@ import {
   type AtddUnknownRef,
 } from "../atddTraceability.js";
 import type { SpecScope } from "../specScope.js";
-import { RULE_PROMOTIONS, newRuleSeverity } from "../sunset.js";
 import type { Issue } from "../types.js";
-import { resolveToolVersion } from "../version.js";
 import { issue } from "./utils.js";
-
-/** The window `QFAI-ATDD-127` ships behind; see `sunset.ts` for why. */
-const TC_STATUS_PROMOTION = RULE_PROMOTIONS.tcExternalWithoutVerifier.promoteAt;
-
-/** The window `QFAI-ATDD-128` ships behind; see `sunset.ts` for why. */
-const TC_LEVEL_MISFILED_PROMOTION = RULE_PROMOTIONS.atddTcLevelMisfiled.promoteAt;
 
 /** `SPEC-0004:US-0002` / `SPEC-0004:TC-0002-0007` — the spec number is group 1. */
 // The optional `QFAI:` prefix is not cosmetic: `missing.*` and `forbidden.ids`
@@ -615,7 +607,7 @@ export async function validateAtddCodeTraceability(
   if (result.unsupportedTcStatusIds.length > 0) {
     const refs = result.unsupportedTcStatusIds;
     const home = specAttribution(refs, result.specsRoot, result.declaredSpecDirs);
-    const severity = newRuleSeverity(await resolveToolVersion(), TC_STATUS_PROMOTION);
+    const severity = "error";
     issues.push(
       issue(
         "QFAI-ATDD-127",
@@ -641,18 +633,11 @@ export async function validateAtddCodeTraceability(
   if (result.misfiledLevelTcIds.length > 0) {
     const refs = result.misfiledLevelTcIds;
     const home = specAttribution(refs, result.specsRoot, result.declaredSpecDirs);
-    const severity = newRuleSeverity(await resolveToolVersion(), TC_LEVEL_MISFILED_PROMOTION);
-    // The window says so in the finding itself, which is what the promotion
-    // policy asks of a rule inside one: an operator reading `--fail-on error`
-    // output can see the release the warning becomes a failure at.
-    const windowNote =
-      severity === "warning"
-        ? ` Reported as a warning until the ${TC_LEVEL_MISFILED_PROMOTION} release, and as an error from then on.`
-        : "";
+    const severity = "error";
     issues.push(
       issue(
         "QFAI-ATDD-128",
-        `${String(refs.length)} test case(s) declare a Level of L4/API or L5/E2E, which files a service-boundary contract or a journey as a test case: ${refs.join(", ")}.${windowNote}`,
+        `${String(refs.length)} test case(s) declare a Level of L4/API or L5/E2E, which files a service-boundary contract or a journey as a test case: ${refs.join(", ")}.`,
         severity,
         home.file,
         "atddCodeTraceability.coverage.tcLevelMisfiled",
