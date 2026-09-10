@@ -16,10 +16,16 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   second copy of the same lane rather than early warning of the next major. And
   neither lane named the compiler it had used, which is why it stood.
 
-  The lane now names its compiler by path, prints the version it got, and
-  refuses to run when that version's major is not the one
+  The lane names its compiler by path now, and `scripts/check-tsc-compiler.mjs`
+  runs first: it prints the version and refuses when that major is not the one
   `devDependencies.typescript` declares. Link order cannot decide it, and a
   later change to the bin set cannot return this silently.
+
+  The compiler stays in the script body rather than moving into the guard.
+  `tests/helpers/buildCommand.ts` resolves script bodies and cannot see inside a
+  Node program, and this lane emits into `packages/qfai/dist` — so hiding the
+  `tsc -b` would have traded a wrong compiler for a build scan that is wrong
+  about a lane that still builds.
 
   The tree is clean under both compilers, so nothing else moves.
 

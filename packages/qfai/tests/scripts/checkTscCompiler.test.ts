@@ -10,6 +10,12 @@
  * Reached through the decision rather than by running a compiler. A case that
  * shelled out would assert against whichever `tsc` this checkout happens to
  * have resolved, which is the thing under test.
+ *
+ * The compiler itself stays in the `check-types` script body rather than moving
+ * into the guard. `tests/helpers/buildCommand.ts` resolves script bodies and
+ * cannot see inside a Node program, and this lane emits into
+ * `packages/qfai/dist` — hiding the `tsc -b` would have made the build scan
+ * wrong about a lane that still builds.
  */
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
@@ -30,7 +36,7 @@ type Guard = {
  * drive letter, which an import specifier reads as a scheme.
  */
 async function load(): Promise<Guard> {
-  const url = pathToFileURL(path.join(repoRoot, "scripts", "check-types.mjs")).href;
+  const url = pathToFileURL(path.join(repoRoot, "scripts", "check-tsc-compiler.mjs")).href;
   return (await import(url)) as Guard;
 }
 

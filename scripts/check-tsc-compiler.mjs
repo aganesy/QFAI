@@ -1,19 +1,25 @@
 #!/usr/bin/env node
 /* global console, process */
 /**
- * The stable type gate, and the check that it is actually the stable one.
+ * Refuses the stable type gate when the compiler it is about to run is not the
+ * declared one.
  *
  * Two packages in this tree ship a `tsc`: `typescript`, and `typescript-future`
  * which is an alias for the next major. Two packages claiming one bin name
- * means one wins, and `node_modules/.bin/tsc` resolved to the alias — so this
+ * means one wins, and `node_modules/.bin/tsc` resolves to the alias — so the
  * lane, spelled `tsc -b` with the bare name, graded every run against a
  * release candidate. The range the package declares support for was checked by
- * nothing, the forward-looking lane beside it became a second copy of this
- * one, and neither said which compiler it had run.
+ * nothing, the forward-looking lane beside it became a second copy of this one,
+ * and neither said which compiler it had run.
  *
- * So the compiler is named by path rather than by bin name, and the version it
- * reports is held against the declared range. Link order cannot decide it, and
- * a future change to the bin set cannot return this silently.
+ * The lane names its compiler by path now. This runs first and holds that path
+ * to `devDependencies.typescript`, so a later change to the bin set or to the
+ * declared range cannot return the mismatch silently.
+ *
+ * It checks and reports; it compiles nothing. The compiler stays in the script
+ * body, where `tests/helpers/buildCommand.ts` can still see that the lane emits
+ * — a `tsc -b` moved inside a Node program is invisible to a scan that resolves
+ * script bodies, and this lane really does write `packages/qfai/dist`.
  */
 import { spawnSync } from "node:child_process";
 import { readFileSync } from "node:fs";
@@ -71,34 +77,23 @@ function main() {
     encoding: "utf-8",
   });
   if (version.status !== 0) {
-    console.error(`check-types: could not run ${stableTscPath}`);
+    console.error(`check-tsc-compiler: could not run ${stableTscPath}`);
     process.stderr.write(version.stderr ?? "");
     process.exit(1);
   }
 
   const mismatch = compilerMismatch(manifest.devDependencies?.typescript, version.stdout);
   if (mismatch !== null) {
-    console.error(`check-types: ${mismatch}.`);
+    console.error(`check-tsc-compiler: ${mismatch}.`);
     process.exit(1);
   }
 
-  // Both projects, the same compiler, and the version said out loud — the lane
-  // used to name neither what it ran nor what it ran it with.
-  console.log(`check-types: ${version.stdout.trim()} (node_modules/typescript)`);
-  for (const args of [["-b"], ["-p", "packages/qfai/tsconfig.tests.json"]]) {
-    const result = spawnSync(process.execPath, [stableTscPath, ...args, "--pretty", "false"], {
-      cwd: repoRoot,
-      encoding: "utf-8",
-    });
-    process.stdout.write(result.stdout ?? "");
-    process.stderr.write(result.stderr ?? "");
-    if (result.status !== 0) {
-      process.exit(result.status ?? 1);
-    }
-  }
+  // Said out loud, because the lane used to name neither the compiler it ran
+  // nor the version it ran at, and that is why the wrong one went unnoticed.
+  console.log(`check-tsc-compiler: ${version.stdout.trim()} (node_modules/typescript)`);
 }
 
-// Importing this file reads its rules; running it runs the compiler.
+// Importing this file reads its rules; running it reads the compiler.
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   main();
 }
