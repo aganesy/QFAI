@@ -416,7 +416,7 @@ function collectAllowedColors(dm: DesignMd): Set<string> {
 // when scanColors recognized the rgba/hex inside the shadow value
 // but not the box-shadow property anchor, or (b) require a global
 // shadow-color allow that bleeds into unrelated declarations (the
-// pre-1.8.9 behavior). scanShadow continues to
+// pre-1.8.9 behavior caught by codex 6r-e). scanShadow continues to
 // validate the full shadow value against `dm.visual.shadow` tokens
 // independently, so legitimate registered shadows still pass.
 //
@@ -641,6 +641,7 @@ function scanColors(html: string, dm: DesignMd, out: DesignMdViolation[]): void 
     // slipped past the scanner. Splitting on the broader
     // CSS-grammar set `[\s,()!;]+` extracts each identifier even
     // inside CSS functions / `!important` markers / nested commas.
+    // codex 9R4j.
     for (const token of value.split(/[\s,()!;]+/)) {
       if (token.length === 0) continue;
       if (SAFE_LITERALS.has(token)) continue;
@@ -905,7 +906,7 @@ const TAILWIND_FONT_PREFIXES: ReadonlySet<string> = new Set(["font"]);
 // Numeric (100..900 in Tailwind's stepped form) and the named-weight
 // keywords below are weight tokens — NOT font-family drift. Anything
 // else routed through `font-[X]` is treated as a font-family
-// candidate and compared against DESIGN.md's family stacks.
+// candidate and compared against DESIGN.md's family stacks. codex 9Ify.
 const TAILWIND_FONT_WEIGHT_KEYWORDS: ReadonlySet<string> = new Set([
   "thin",
   "extralight",
@@ -928,7 +929,7 @@ function isFontWeightArbitrary(value: string): boolean {
 // resolves to a Tailwind built-in color, NOT a DESIGN.md token. Since
 // the shipped prototype generator uses the Tailwind CDN (no theme
 // override possible), every palette+scale class on the rendered DOM
-// is by definition drift from DESIGN.md.
+// is by definition drift from DESIGN.md. codex AHzR7.
 const TAILWIND_PALETTE_NAMES: ReadonlySet<string> = new Set([
   "slate",
   "gray",
@@ -989,7 +990,7 @@ const TAILWIND_PALETTE_SCALES: ReadonlySet<string> = new Set([
 //
 // Bare `rounded` / `shadow` (no suffix) resolve to Tailwind's `DEFAULT`
 // theme key, which the DESIGN.md schema cannot declare, so they remain
-// unconditional drift and are matched separately below.
+// unconditional drift and are matched separately below. codex AHzR7.
 const TAILWIND_RADIUS_SCALE_ALIASES: ReadonlySet<string> = new Set([
   "none",
   "sm",
@@ -1066,7 +1067,7 @@ function scanTailwindArbitraryColor(
   // so mixed-syntax shorthands like `border-[#ff0000_rgb(0_0_0)]`
   // (decoded: `#ff0000 rgb(0 0 0)`) flag BOTH `#ff0000` (per-token)
   // AND `rgb(0 0 0)` (matchAll) instead of dropping the L4 syntax
-  // when per-token already pushed something.
+  // when per-token already pushed something. codex 9vcu.
   //
   // RGB_RE / HSL_RE are global-flagged by design (used by the CSS
   // region scanner). Reusing them here keeps the L4 detection
@@ -1108,7 +1109,7 @@ function scanTailwindArbitraryColor(
 // missed violation — and the runtime certify gate's contract is
 // "tokens that the rendered DOM uses must come from DESIGN.md", so
 // the tutorial-content edge case is rare in practice. Swap in a
-// parse5-class HTML parser if it becomes load-bearing.
+// parse5-class HTML parser if it becomes load-bearing. codex 9If2.
 function scanTailwindArbitrary(html: string, dm: DesignMd, out: DesignMdViolation[]): void {
   const allowedColors = collectAllowedColors(dm);
   const allowedRadii = new Set<string>(Object.values(dm.visual.radius));
@@ -1155,6 +1156,7 @@ function scanTailwindArbitrary(html: string, dm: DesignMd, out: DesignMdViolatio
         // a known font-weight keyword → weight (silently skipped — out
         // of scope); anything else is treated as a font-family
         // candidate and compared against DESIGN.md's family stacks.
+        // codex 9Ify.
         if (isFontWeightArbitrary(value)) continue;
         if (SAFE_LITERALS.has(value.toLowerCase())) continue;
         const stripped = stripQuotes(value).trim();
@@ -1175,7 +1177,7 @@ function scanTailwindArbitrary(html: string, dm: DesignMd, out: DesignMdViolatio
 // They resolve to Tailwind's default theme, NOT to DESIGN.md tokens —
 // the shipped prototype generator uses the CDN with no theme
 // override, so every such class is by definition drift from
-// DESIGN.md. This scanner closes that gap.
+// DESIGN.md. This scanner closes that gap. codex AHzR7.
 //
 // Scope is intentionally narrow:
 //   - color palette+scale: `<prefix>-<palette>-<scale>` (e.g.
