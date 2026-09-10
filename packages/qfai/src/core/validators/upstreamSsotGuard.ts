@@ -123,9 +123,10 @@ function extractImpactScope(content: string): string {
   const masked = maskNonSpecRegions(content);
   // EVERY section, not the first. Repeating an H2 on each re-run is an
   // established shape here — `QFAI-TRIAGE-008`'s own remedy tells authors that
-  // "`## Triage` を複数置けば全セクションが検査されます" — and reading only the
-  // first silently ignored a later declaration, reporting an edit that WAS
-  // declared as undeclared.
+  // a ledger carrying several rounds gives each section its own name, and that
+  // every named section is checked — and reading only the first silently
+  // ignored a later declaration, reporting an edit that WAS declared as
+  // undeclared.
   // `matchAll` rather than an `exec` loop: a module-level `/g` pattern carries
   // `lastIndex` between calls, and `matchAll` iterates without mutating it. An
   // `exec` loop needs an explicit reset to be safe, and that reset is

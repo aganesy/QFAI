@@ -179,6 +179,66 @@ describe("validateTriageSection", () => {
     expect(issues[0]?.refs).toEqual(["## Triage — 2026-07-26"]);
   });
 
+  it("reads a section whose heading names its round in parentheses", () => {
+    // A ledger records one Triage section per round, so the bare heading made
+    // every section in such a file identical. The qualifier names each one and
+    // the rows under it are checked exactly as an unqualified section's are —
+    // which is what "section 2" reporting on the second table proves.
+    const text = [
+      "# 09 Delta",
+      "",
+      "## Change Summary",
+      "",
+      "## Triage (2026-05-06)",
+      "",
+      ...triageTable([["REQ-1", "extend", "spec-0001", "UPDATE", "APPEND", "-", "-"]]),
+      "",
+      "## Triage (2026-05-24)",
+      "",
+      ...triageTable([["REQ-2", "later", "spec-0001", "BOGUSOP", "-", "-", "-"]]),
+      "",
+    ].join("\n");
+    const issues = validateTriageSection(text, DELTA_PATH);
+    expect(issues.map((i) => i.code)).toEqual(["QFAI-TRIAGE-003"]);
+    expect(issues[0]?.message).toContain("section 2");
+  });
+
+  it("keeps every trailer but a parenthesised one outside the grammar", () => {
+    // The qualifier is one form on purpose. A bare word after `Triage` is the
+    // shape this rule exists to catch, and a hyphen with no space reads as a
+    // compound word rather than as a name for the section.
+    for (const heading of [
+      "## Triage Table",
+      "## Triage Table (cross-spec rows only)",
+      "## Triage-Table",
+      "## Triage — 2026-05-24",
+      "## Triage: 2026-05-24",
+      "## Triage ()",
+      "## Triage (a) (b)",
+    ]) {
+      const text = [
+        "# 09 Delta",
+        "",
+        "## Change Summary",
+        "",
+        "## Triage",
+        "",
+        ...triageTable([["REQ-1", "extend", "spec-0001", "UPDATE", "APPEND", "-", "-"]]),
+        "",
+        heading,
+        "",
+        ...triageTable([["REQ-2", "later", "spec-0001", "UPDATE", "APPEND", "-", "-"]]),
+        "",
+      ].join("\n");
+      const issues = validateTriageSection(text, DELTA_PATH);
+      expect(
+        issues.map((i) => i.code),
+        heading,
+      ).toEqual(["QFAI-TRIAGE-008"]);
+      expect(issues[0]?.refs, heading).toEqual([heading]);
+    }
+  });
+
   it("emits QFAI-TRIAGE-008 when the only Triage heading is a non-canonical one", () => {
     const text = [
       "# 09 Delta",
