@@ -121,8 +121,8 @@ describe("scripts/check-doc-clarity.mjs", () => {
   });
 
   it("reports the review tool's short alphanumeric-hash comment id", async () => {
-    // The same tool that leaves a numeric id ("codex r1234567") also leaves a
-    // short alphanumeric hash — both are the same kind of citation.
+    // The same tool that leaves a long digit-only id also leaves a short
+    // alphanumeric hash — both are the same kind of citation.
     const dir = await newRepo({
       "src/thing.ts": "// codex AG08r: fixed here\nexport const a = 1;\n",
     });
