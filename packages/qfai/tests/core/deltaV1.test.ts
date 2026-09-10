@@ -119,7 +119,7 @@ describe("deltaV1 parser", () => {
   it("tells an unfilled skeleton apart from a decision", () => {
     // The template ships real `primary` / `tags` / `compat` so the first copy
     // teaches the counted vocabulary; `date` / `scope` / `notes` are the only
-    // evidence that somebody actually wrote something (#545).
+    // fields left to show whether someone actually filled the record in.
     expect(isPlaceholderDeltaMeta(FILLED_META)).toBe(false);
     expect(isPlaceholderDeltaMeta({ ...FILLED_META, date: "YYYY-MM-DD" })).toBe(true);
     expect(isPlaceholderDeltaMeta({ ...FILLED_META, notes: "<one line of context>" })).toBe(true);
