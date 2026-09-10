@@ -1,5 +1,9 @@
 # 09 Delta (Migration Record)
 
+<!-- markdownlint-disable MD024 -->
+<!-- Each round records its own `## Triage`, and the triage rules read a section
+     only under that exact heading, so the repeated heading is the shape. -->
+
 ## Origin
 
 - Consolidates: old spec-0013 (UI/UX review -- ATDD-relevant parts)
@@ -53,14 +57,16 @@
 - Operation: UPDATE:APPEND (additive; preserves existing US/AC/BR/EX/TC numbering)
 - Local ID ranges added: US-0008-0007, AC-0008-0010..0011, BR-0008-0008..0009, EX-0008-0009..0010, TC-0008-0013..0014
 
-### Triage (rows owned by this spec)
+## Triage
 
-| Operation     | Sub-op | Target                                                                                 | Source (REQ) | Rationale                                                   | DR-Ref  | Status |
-| ------------- | ------ | -------------------------------------------------------------------------------------- | ------------ | ----------------------------------------------------------- | ------- | ------ |
-| UPDATE:APPEND | APPEND | 01_Spec.md (Relevant Requirements + US range→0007 + Consumer-View copy-down)           | REQ-0157     | atdd scaffold bulk skeleton gen; cascade verified           | DR-0272 | PASS   |
-| UPDATE:APPEND | APPEND | 02_User-stories.md (US-0008-0007)                                                      | REQ-0157     | scaffold user story; cascade verified                       | DR-0272 | PASS   |
-| UPDATE:APPEND | APPEND | 03..06 (AC-0008-0010,0011 / BR-0008-0008,0009 / EX-0008-0009,0010 / TC-0008-0013,0014) | REQ-0157     | skeleton shape + idempotency + escalation; cascade verified | DR-0272 | PASS   |
-| UPDATE:APPEND | APPEND | 07_Decisions.md (DR-0008-0003 cites DR-0272) + 08_Open-questions (OQ-0166)             | REQ-0157     | escalate-count resolved by DR-0272; cascade verified        | DR-0272 | PASS   |
+Rows owned by this spec. `Approved By` is `-` throughout: every row is append-first, so no operation here is approval-gated.
+
+| Source   | Subject                                                                                | Existing Spec | Operation | Sub-op | Approved By | Rationale                                                   | DR-Ref  | Status |
+| -------- | -------------------------------------------------------------------------------------- | ------------- | --------- | ------ | ----------- | ----------------------------------------------------------- | ------- | ------ |
+| REQ-0157 | 01_Spec.md (Relevant Requirements + US range→0007 + Consumer-View copy-down)           | spec-0008     | UPDATE    | APPEND | -           | atdd scaffold bulk skeleton gen; cascade verified           | DR-0272 | PASS   |
+| REQ-0157 | 02_User-stories.md (US-0008-0007)                                                      | spec-0008     | UPDATE    | APPEND | -           | scaffold user story; cascade verified                       | DR-0272 | PASS   |
+| REQ-0157 | 03..06 (AC-0008-0010,0011 / BR-0008-0008,0009 / EX-0008-0009,0010 / TC-0008-0013,0014) | spec-0008     | UPDATE    | APPEND | -           | skeleton shape + idempotency + escalation; cascade verified | DR-0272 | PASS   |
+| REQ-0157 | 07_Decisions.md (DR-0008-0003 cites DR-0272) + 08_Open-questions (OQ-0166)             | spec-0008     | UPDATE    | APPEND | -           | escalate-count resolved by DR-0272; cascade verified        | DR-0272 | PASS   |
 
 - Notes:
   - REQ-0157 が "default deferred to /qfai-sdd" としていた escalate-cycle count は DR-0272 (既定 3, `atdd.scaffoldEscalateCycles` 可変) で確定。

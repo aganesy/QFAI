@@ -49,6 +49,31 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   clock across the former cutoff instead of holding a seam of its own, so a
   rule that went back to reading the real one would fail it.
 
+- **Five delta ledgers put their triage rows under the rules that read them**
+  (#1436). `QFAI-TRIAGE-008` reports a Triage heading the triage rules do not
+  recognise, and every `QFAI-TRIAGE-*` rule skips such a section outright. Seven
+  headings in this repository were in that state, so those rows were not passing
+  the rules — they were escaping them.
+
+  `spec-0004`, `spec-0006`, `spec-0008`, `spec-0013` and `spec-0015` now name
+  every triage section `## Triage`, exactly, with the qualifier that used to sit
+  in the heading moved into the body. Two of the tables recorded the same rows
+  under different column names, and those are relabelled to the names the rules
+  read: `Source (REQ)` to `Source`, `Target` to `Subject`, `Existing Spec` taken
+  from the pack the file belongs to, and `UPDATE:APPEND` split across
+  `Operation` and `Sub-op`.
+
+  A `## Triage` section runs to the next H1 or H2, so a sibling `### Operations`
+  or `### Notes` would sit inside it and have its table read as a triage table.
+  Those siblings are promoted alongside, into the flat round layout the rest of
+  each file already uses. A ledger records one `## Triage` per round, so the
+  repeated heading is the shape rather than a slip, and `MD024` is disabled per
+  file with that reason stated in place.
+
+  All five files reach zero and leave the `sdd` and `full` pins: 103 errors to
+  98, and 1065 to 1060. `spec-0012/09_delta.md` and `_policies/10_delta.md`
+  carry the same heading and stay pinned.
+
 - **The two cross-round ledgers put their triage rows under the rules that read
   them** (#1436). `spec-0012/09_delta.md` and `_policies/10_delta.md` name every
   triage section `## Triage` now, exactly, so `QFAI-TRIAGE-*` reads the rows
@@ -72,7 +97,8 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
   A `## Triage` section runs to the next H1 or H2, so each round's other parts
   are promoted beside the table rather than left inside its section. Both files
-  reach zero: `sdd` 103 errors to 101, `full` 1065 to 1063.
+  reach zero and leave the pins, which the five ledgers above have already
+  taken to 98 and 1060: `sdd` 98 errors to 96, `full` 1060 to 1058.
 
 ## [1.11.1] - 2026-09-10
 

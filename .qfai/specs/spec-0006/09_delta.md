@@ -1,5 +1,9 @@
 # 09 Delta
 
+<!-- markdownlint-disable MD024 -->
+<!-- Each round records its own `## Triage`, and the triage rules read a section
+     only under that exact heading, so the repeated heading is the shape. -->
+
 ## Change Summary
 
 - Change ID: DELTA-0001
@@ -36,7 +40,9 @@
 - Posture: additive append; preserves existing AC/BR/EX/TC numbering. NFR-0112 (fresh init + playwright install yields zero error lines) absorbed into AC-0006-0012 / TC-0006-0016.
 - Approved By: yusuke_senaga
 
-### Triage (rows owned by this spec)
+## Triage
+
+Rows owned by this spec.
 
 | Source                                         | Subject                                                                                                                                       | Existing Spec | Operation | Sub-op | Approved By   | Rationale                                                     |
 | ---------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- | ------------- | --------- | ------ | ------------- | ------------------------------------------------------------- |
@@ -44,7 +50,7 @@
 | REQ-0122 (discussion-20260523221141355)        | `skills.integrity` 既定 severity を `warning` に downgrade; doctor summary を errors / warnings の 2 group に分割表示                         | spec-0006     | UPDATE    | APPEND | yusuke_senaga | doctor output shape は spec-0006 owned                        |
 | NFR-0112 (fresh init + playwright zero errors) | absorbed into AC-0006-0012 / TC-0006-0016                                                                                                     | spec-0006     | UPDATE    | APPEND | yusuke_senaga | NFR realized as acceptance signal on doctor fresh-project run |
 
-### CHG-005 Operations (this PR)
+## CHG-005 Operations
 
 | Op ID  | Op Type       | Target                                                                                | Summary                                                                                                                 |
 | ------ | ------------- | ------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
@@ -73,15 +79,17 @@
 - Operation: UPDATE:APPEND (additive; preserves existing US/AC/BR/EX/TC numbering)
 - Local ID ranges added: US-0006-0008..0010, AC-0006-0015..0020, BR-0006-0012..0017, EX-0006-0015..0020, TC-0006-0019..0026
 
-### Triage (rows owned by this spec)
+## Triage
 
-| Operation     | Sub-op | Target                                                                       | Source (REQ) | Rationale                                             | DR-Ref  | Status |
-| ------------- | ------ | ---------------------------------------------------------------------------- | ------------ | ----------------------------------------------------- | ------- | ------ |
-| UPDATE:APPEND | APPEND | 01_Spec.md (Relevant Requirements + US range→0010 + Consumer-View copy-down) | REQ-0153     | stale review-pack TTL archival; cascade verified      | DR-0264 | PASS   |
-| UPDATE:APPEND | APPEND | 02..06 (US-0006-0008 / AC-0006-0015,0016 / BR-0006-0012,0013 / EX/TC edges)  | REQ-0153     | `doctor --clean` archival edges; cascade verified     | DR-0264 | PASS   |
-| UPDATE:APPEND | APPEND | 02..06 (US-0006-0009 / AC-0006-0017,0018 / BR-0006-0014,0015 / EX/TC edges)  | REQ-0156     | `doctor --autoremediate` mode; cascade verified       | DR-0264 | PASS   |
-| UPDATE:APPEND | APPEND | 02..06 (US-0006-0010 / AC-0006-0019,0020 / BR-0006-0016,0017 / EX/TC edges)  | REQ-0159     | per-skill manifest probe (Pair III); cascade verified | DR-0264 | PASS   |
-| UPDATE:APPEND | APPEND | 07_Decisions.md (DR-0006-0003 cites DR-0264) + 08_Open-questions (OQ-0155)   | REQ-0153     | TTL default resolved by DR-0264; cascade verified     | DR-0264 | PASS   |
+Rows owned by this spec. `Approved By` is `-` throughout: every row is append-first, so no operation here is approval-gated.
+
+| Source   | Subject                                                                      | Existing Spec | Operation | Sub-op | Approved By | Rationale                                             | DR-Ref  | Status |
+| -------- | ---------------------------------------------------------------------------- | ------------- | --------- | ------ | ----------- | ----------------------------------------------------- | ------- | ------ |
+| REQ-0153 | 01_Spec.md (Relevant Requirements + US range→0010 + Consumer-View copy-down) | spec-0006     | UPDATE    | APPEND | -           | stale review-pack TTL archival; cascade verified      | DR-0264 | PASS   |
+| REQ-0153 | 02..06 (US-0006-0008 / AC-0006-0015,0016 / BR-0006-0012,0013 / EX/TC edges)  | spec-0006     | UPDATE    | APPEND | -           | `doctor --clean` archival edges; cascade verified     | DR-0264 | PASS   |
+| REQ-0156 | 02..06 (US-0006-0009 / AC-0006-0017,0018 / BR-0006-0014,0015 / EX/TC edges)  | spec-0006     | UPDATE    | APPEND | -           | `doctor --autoremediate` mode; cascade verified       | DR-0264 | PASS   |
+| REQ-0159 | 02..06 (US-0006-0010 / AC-0006-0019,0020 / BR-0006-0016,0017 / EX/TC edges)  | spec-0006     | UPDATE    | APPEND | -           | per-skill manifest probe (Pair III); cascade verified | DR-0264 | PASS   |
+| REQ-0153 | 07_Decisions.md (DR-0006-0003 cites DR-0264) + 08_Open-questions (OQ-0155)   | spec-0006     | UPDATE    | APPEND | -           | TTL default resolved by DR-0264; cascade verified     | DR-0264 | PASS   |
 
 - Notes:
   - REQ-0159 manifest-schema authoring / 配布 lint side は spec-0015 owned; 本 slice は doctor probe 挙動のみ (REQ-0159 を shared Source として参照)。
