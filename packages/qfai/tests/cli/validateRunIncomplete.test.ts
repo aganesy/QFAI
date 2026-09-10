@@ -162,11 +162,10 @@ describe("describeIncompleteRun", () => {
 });
 
 describe("the boundary is wired into every command", () => {
-  // `--root`, not `--dir`. `--dir` is an argument error outside `init`,
-  // so a row written with `--dir` makes `run` return before dispatching,
-  // never reaching the boundary below — the row fails, which is the fix
-  // working.
-  // `validate` answers a fault with `QFAI-SCAN-002`, from wrapping
+  // `--root`, not `--dir`. `--dir` is an argument error outside `init`, so a
+  // row written with `--dir` fails at argument parsing — `run` returns before
+  // dispatching and never reaches the boundary below.
+  // `validate` answers a fault with `QFAI-SCAN-002` because it wraps
   // `validateProject`. The rest have no verdict artifact, so the rows above
   // only matter if `run` actually consults them — which is what this checks,
   // through a command that is not `validate`.
