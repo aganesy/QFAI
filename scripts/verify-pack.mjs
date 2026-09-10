@@ -1,4 +1,7 @@
 import { execFileSync } from "node:child_process";
+// `console` is a global at runtime, but the lane's `no-undef` does not know
+// that in a module. `node:console` exports the same instance as its default.
+import console from "node:console";
 import {
   existsSync,
   lstatSync,
@@ -12,6 +15,17 @@ import {
 import path from "node:path";
 import process from "node:process";
 import { fileURLToPath, URL } from "node:url";
+
+import {
+  BASELINE_PATH,
+  UPDATE_ENV,
+  diffFingerprints,
+  fingerprintReport,
+  formatDiff,
+  parseValidateReport,
+  readBaseline,
+  writeBaseline,
+} from "./fresh-init-findings.mjs";
 
 function toPosix(p) {
   return p.split(path.sep).join("/");
@@ -431,13 +445,9 @@ const seededDiscussionPackFiles = {
     "- Confidence: high",
     "- Rationale: provide stable evidence for seeded discussion.",
     "",
-    // The research-first protocol stores its output here, and the gate now
-    // requires the section on the current pack — a seeded pack without it is
-    // QFAI-RESEARCH-016. That code rides the `researchSummarySchemaFields`
-    // promotion window, so while the window is open it is a `warning` and the
-    // `--fail-on error` run below reports it without failing; from
-    // the release the window names it is an `error` and the run stops. Seeded
-    // either way, so this fixture does not start failing on the promotion.
+    // The research-first protocol stores its output here, and the gate requires
+    // the section on the current pack: a seeded pack without it reports
+    // QFAI-RESEARCH-016 as an error and stops the `--fail-on error` run below.
     "## Research Summary",
     "",
     "```yaml",
@@ -659,6 +669,39 @@ if (existsSync(skillsLocalDir)) {
   throw new Error("init --force generated deprecated .qfai/assistant/skills.local directory.");
 }
 
+// Stand in for the `/qfai-configure` run a project makes before it gates. The
+// four Stage 0 catalogs ship as placeholders, and `qfai init` copies them
+// verbatim: a sandbox that never fills them is a project that never ran Stage
+// 0, and gating one of those at `--fail-on error` measures the fixture rather
+// than the package. Every angle-bracket slot becomes a value, and every bare
+// TODO / TBD goes, which is what the rule reads.
+for (const catalogFile of ["manifest.md", "product.md", "structure.md", "tech.md"]) {
+  const catalogPath = path.join(outputDir, ".qfai", "assistant", "catalog", catalogFile);
+  if (!existsSync(catalogPath)) {
+    // An `ENOENT` here names the path and nothing else, and the reader's next
+    // question is whether the file was renamed or whether init stopped writing
+    // it — which is what decides whether the fill or the package is wrong.
+    throw new Error(
+      `init --force wrote no ${catalogPath}. The four Stage 0 catalogs are what a project fills ` +
+        `before it gates, so this fill has nothing to stand in for.`,
+    );
+  }
+  const before = readFileSync(catalogPath, "utf-8");
+  // One value for both placeholder forms: they stand for the same thing, and a
+  // reader should not have to compare two strings to see that.
+  const fixtureValue = "verify-pack fixture value";
+  const after = before
+    .replace(/<(?!\/|!)[^<>\n]+>/g, fixtureValue)
+    .replace(/\b(?:TODO|TBD)\b/g, fixtureValue);
+  if (after === before) {
+    throw new Error(
+      `${catalogFile} carries no placeholder to fill. The shipped catalogs are what this stands ` +
+        `in for, so a copy with none means the fixture is measuring nothing.`,
+    );
+  }
+  writeFileSync(catalogPath, after);
+}
+
 execFileSync(
   "node",
   [cliPath, "validate", "--root", outputDir, "--fail-on", "error", "--format", "github"],
@@ -667,23 +710,34 @@ execFileSync(
   },
 );
 
-// The seeded pack must not be the reason for a finding about itself. Read
-// through the report rather than the console: `--fail-on error` lets a warning
-// past, so the run stays green while the list a reader scans before shipping
-// carries an entry no change to the product can remove.
+// Three questions of the same report, asked of the file rather than the
+// console: `--fail-on error` lets a warning past, so the run stays green while
+// the list a reader scans before shipping moves underneath it.
+//
+// The seeded review pack must not be the reason for a finding about itself.
+//
+// And the finding set as a whole is compared against what was recorded, in
+// both directions — a new warning on a tree the tool wrote is a decision, and
+// a finding that is gone should stay gone.
 const validateJsonPath = path.join(outputDir, ".qfai", "report", "validate.json");
 if (!existsSync(validateJsonPath)) {
-  throw new Error("validate did not write .qfai/report/validate.json.");
+  throw new Error(
+    `validate wrote no ${validateJsonPath}. The checks below read the findings that run ` +
+      `produced, so they have nothing to read without it.`,
+  );
 }
-const validateReport = JSON.parse(readFileSync(validateJsonPath, "utf-8"));
+const validateReport = parseValidateReport(
+  readFileSync(validateJsonPath, "utf-8"),
+  validateJsonPath,
+);
 // Stated rather than defaulted to an empty list. A report whose `issues` is
-// not a list is one this check cannot read, and reading it as "no findings"
-// gives the answer the check exists to withhold — the pass would then mean
-// the file was unreadable, and nothing would say so.
+// not a list is one these checks cannot read, and reading it as "no findings"
+// gives the answer they exist to withhold — the pass would then mean the file
+// was unreadable, and nothing would say so.
 if (!Array.isArray(validateReport.issues)) {
   throw new Error(
-    `${validateJsonPath} has no \`issues\` array. The self-finding check reads that list, so a ` +
-      `report without one is unreadable rather than clean.`,
+    `${validateJsonPath} has no \`issues\` array. These checks read that list, so a report ` +
+      `without one is unreadable rather than clean.`,
   );
 }
 const selfInflicted = validateReport.issues.filter(
@@ -697,6 +751,30 @@ if (selfInflicted.length > 0) {
         .join("\n"),
   );
 }
+const freshFindings = fingerprintReport(validateReport, validateJsonPath);
+
+if (process.env[UPDATE_ENV] === "1") {
+  writeBaseline(freshFindings);
+  console.log(
+    `Recorded ${freshFindings.length} findings in ${toPosix(path.relative(root, BASELINE_PATH))}.`,
+  );
+}
+
+// Held rather than thrown at the comparison. `report` and `doctor` read the
+// same sandbox, and their output is what a reader opens to see why the set
+// moved — so failing before them costs the run the evidence it was collecting.
+// Printed here as well, because a later step can fail first and this has to
+// survive that.
+let baselineDiff = null;
+if (process.env[UPDATE_ENV] !== "1") {
+  const findingsDiff = diffFingerprints(freshFindings, readBaseline());
+  if (findingsDiff.added.length > 0 || findingsDiff.missing.length > 0) {
+    baselineDiff = formatDiff(findingsDiff);
+    console.error(baselineDiff);
+  } else {
+    console.log(`A fresh init validates to the recorded ${freshFindings.length} findings.`);
+  }
+}
 
 execFileSync("node", [cliPath, "report", "--root", outputDir, "--out", reportPath], {
   stdio: "inherit",
@@ -709,3 +787,10 @@ if (!existsSync(reportPath)) {
 execFileSync("node", [cliPath, "doctor", "--root", outputDir, "--fail-on", "error"], {
   stdio: "inherit",
 });
+
+// The exit code, not a second copy. The diff was printed where it was found,
+// and throwing it here would repeat every line and wrap them in a stack trace
+// of this file — which says nothing about a finding set that moved.
+if (baselineDiff !== null) {
+  process.exitCode = 1;
+}

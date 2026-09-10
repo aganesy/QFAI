@@ -21,13 +21,12 @@
  * license, attribution}` — so the runtime gate refuses any entry the
  * handoff stage would also reject.
  *
- * 12th-wave Fix (codex r3265482144, P2): `attribution` was previously
- * deferred to the handoff stage with an inline comment ("recorded
- * separately at certify"), which let unattributed stock photos pass
- * the cycle ≥ 1 license-verify gate even though the contract's exit-66
- * class explicitly includes "missing attribution". The field is now
- * carried on the runtime type (optional at the type level so older
- * fixtures still compile) and the gate emits
+ * Deferring `attribution` to the handoff stage, with only a comment noting
+ * it is "recorded separately at certify", would let unattributed stock
+ * photos pass the cycle ≥ 1 license-verify gate even though the contract's
+ * exit-66 class explicitly includes "missing attribution". The field is
+ * carried on the runtime type instead (optional at the type level so older
+ * fixtures still compile), and the gate emits
  * `license-missing-attribution` whenever the value is undefined or an
  * empty string.
  */
@@ -45,8 +44,8 @@ export type LicenseCatalog = {
    * Optional per-source URL host allowlist. When present, every
    * `imageSources[]` entry's URL host (`new URL(url).hostname`) MUST be
    * one of the strings in `sourceHosts[entry.source]`; otherwise the
-   * verifier emits `license-host-mismatch`. Closes the
-   * source-label-only-bypass flagged by codex r3265260657 (P1): a
+   * verifier emits `license-host-mismatch`. Closes a
+   * source-label-only bypass: without it, a
    * caller could claim `source: "unsplash"` while pointing at an
    * arbitrary host. Backward-compat: if `sourceHosts` is undefined or
    * the per-source list is undefined, the host check is skipped (old
@@ -135,7 +134,7 @@ export function licenseVerify(
       errors.push({ code: "license-not-allowlisted", source, url });
       continue;
     }
-    // 10th-wave Fix G (codex r3265260657, P1): if the catalog declares
+    // If the catalog declares
     // `sourceHosts[source]`, bind the claimed source to acceptable URL
     // hosts so a caller cannot claim `source: "unsplash"` with a URL
     // pointing at `https://unapproved.example/img.jpg`. When the
@@ -145,7 +144,7 @@ export function licenseVerify(
     const expectedHosts = catalog.sourceHosts?.[source];
     if (expectedHosts && expectedHosts.length > 0) {
       const host = urlHost(url);
-      // 12th-wave Fix (codex r3265474144, P2): compare both sides
+      // Compare both sides
       // case-insensitively. `urlHost()` already lowercases the URL
       // side, but the catalog side was taken verbatim, so a user
       // catalog with `"Images.Unsplash.com"` would false-positive
@@ -163,17 +162,17 @@ export function licenseVerify(
       errors.push({ code: "license-tier-unknown", source, license, url });
       continue;
     }
-    // 12th-wave Fix (codex r3265482144, P2): require non-empty
+    // Require non-empty
     // attribution at the runtime license gate. The CLI contract's
     // exit-66 class explicitly enumerates "missing attribution", and
     // the handoff schema requires `{url, license, attribution,
-    // source}`. Pre-fix the runtime type lacked the field entirely,
-    // so unattributed stock photos passed iterate and only surfaced
+    // source}`; a runtime type that lacked the field entirely would let
+    // unattributed stock photos pass iterate and only surface
     // at certify (handoff) time. Undefined and empty-string are both
     // treated as "missing" here so the gate works for callers that
     // pass through the optional field as either form.
     //
-    // 14th-wave Fix (codex r3269193005, MINOR): a whitespace-only
+    // A whitespace-only
     // attribution (`"   "`, `"\t\n"`, ideographic space) is
     // semantically equivalent to missing — operators copy/pasting from
     // a stock-photo listing occasionally trim the credit to a blank

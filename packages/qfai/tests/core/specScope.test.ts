@@ -15,6 +15,9 @@ import {
 const root = path.resolve("/repo");
 const specsRoot = path.join(root, ".qfai", "specs");
 const roots = { root, specsRoot };
+const testsRoot = path.join(root, "tests");
+/** The same roots, plus the test tree a scoped run also attributes from. */
+const withTests = { root, specsRoot, testsRoot };
 
 describe("normalizeSpecId", () => {
   it("accepts the shapes the CLI and the spec directories use", () => {
@@ -100,6 +103,42 @@ describe("owningSpecNumber", () => {
     expect(owningSpecNumber(path.join(root, "qfai.config.yaml"), roots)).toBeNull();
     expect(owningSpecNumber(specsRoot, roots)).toBeNull();
     expect(owningSpecNumber("qfai.config.yaml", roots)).toBeNull();
+  });
+
+  it("resolves the owning spec of a file in the canonical test layout", () => {
+    // `<testsDir>/<layer>/spec-NNNN/**` is owned by that spec whatever its
+    // annotation says. The rule was applied to a broken reference and not to
+    // the file itself, so a scoped run dropped a sibling's dangling reference
+    // and kept a sibling's stub.
+    expect(
+      owningSpecNumber(path.join(testsRoot, "e2e", "spec-0002", "checkout.test.ts"), withTests),
+    ).toBe("0002");
+    expect(owningSpecNumber("tests/integration/spec-0007/api.test.ts", withTests)).toBe("0007");
+  });
+
+  it("owns nothing in the test tree when no tests root is given", () => {
+    // The roots carry `testsRoot` only where a run attributes from it, so a
+    // caller asking about spec-pack paths alone gets the answer it always got.
+    expect(
+      owningSpecNumber(path.join(testsRoot, "e2e", "spec-0002", "checkout.test.ts"), roots),
+    ).toBeNull();
+  });
+
+  it("reads only the layout, not a spec-shaped name deeper in the tree", () => {
+    // The layout is one layer directory then the spec directory. A `spec-NNNN`
+    // segment below that is a name inside somebody's fixture tree, and reading
+    // it as an owner would hide a finding from the run that owns the file.
+    expect(
+      owningSpecNumber(path.join(testsRoot, "e2e", "checkout", "spec-0002", "case.ts"), withTests),
+    ).toBeNull();
+    // Directly under the tests root there is no layer, so there is no layout.
+    expect(owningSpecNumber(path.join(testsRoot, "spec-0002.test.ts"), withTests)).toBeNull();
+  });
+
+  it("keeps a test file with no spec directory unattributable", () => {
+    // A file in neither shape reaches every run, the way an unattributable
+    // finding always has: dropping it from every scoped run would hide it.
+    expect(owningSpecNumber(path.join(testsRoot, "e2e", "checkout.test.ts"), withTests)).toBeNull();
   });
 });
 

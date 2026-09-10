@@ -179,11 +179,10 @@ describe("the own tree takes its Node version from one shared definition", () =>
     // The shared definition, at either of the two paths it can be reached by.
     //
     // `release.yml`'s gate checks out the TAG's tree, and `uses: ./…` resolves against the
-    // workspace — so for a tag created before the composite action existed the reference does not
-    // resolve and the job dies on step resolution, which is review finding [07]: the re-publish
-    // route this workflow opens with was documented and unreachable for exactly the tags it was
-    // written for. The gate therefore fetches `.github/actions` at `github.sha` into a side path
-    // and consumes it from there.
+    // workspace — so for a tag created before the composite action existed, the reference fails
+    // to resolve and the job dies on step resolution: the re-publish route this workflow opens
+    // with would be unreachable for exactly the tags it exists to serve. The gate therefore
+    // fetches `.github/actions` at `github.sha` into a side path and consumes it from there.
     //
     // Both spellings name the SAME definition — the obligation `BR-0017-0027` states is
     // single-definition, and a second path to one file is not a second definition. What would
@@ -276,11 +275,11 @@ describe("the own tree takes its Node version from one shared definition", () =>
 
     // Set B, third clause: the release gate takes the action from a revision that HAS it.
     //
-    // Review finding [07]. `uses: ./…` resolves against the workspace, and the gate's checkout puts
-    // the TAG's tree there — so re-publishing a tag created before the composite action existed
-    // left the reference unresolvable and the job died on step resolution, never reaching
-    // `pnpm ci:gate`. The `workflow_dispatch` re-publish route this workflow opens with was
-    // documented and unreachable for exactly the tags it was written for.
+    // `uses: ./…` resolves against the workspace, and the gate's checkout puts the TAG's tree
+    // there — so re-publishing a tag created before the composite action existed would leave the
+    // reference unresolvable and the job would die on step resolution, never reaching
+    // `pnpm ci:gate`. That would make the `workflow_dispatch` re-publish route this workflow
+    // opens with unreachable for exactly the tags it exists to serve.
     //
     // Asserted as the PAIR, because either half alone is the defect: the side-path `uses:`, and a
     // checkout of `github.sha` into that path. A plant reverting just the `uses:` passed while this
@@ -343,11 +342,11 @@ describe("the own tree takes its Node version from one shared definition", () =>
     }
     // Both keys, and NEITHER of them a version. `node-version-file` is the default path;
     // `node-version` carries the floor the action DERIVES from that same file when a caller asks
-    // for it (review finding [13] — otherwise every lane resolves the range and nothing ever runs
-    // on the floor the package promises). The pin is the exact pair, so a literal appearing in
-    // either slot fails here: the property this row defends is that the shared definition is not
-    // "the single place the whole tree is wrong from", and an expression reading a step output is
-    // not a place anything can be wrong from — `engines.node` still is.
+    // for it — otherwise every lane resolves the range and nothing ever runs on the floor the
+    // package promises. The pin is the exact pair, so a literal appearing in either slot fails
+    // here: the property this row defends is that the shared definition is not "the single place
+    // the whole tree is wrong from", and an expression reading a step output is not a place
+    // anything can be wrong from — `engines.node` still is.
     //
     // `node-version-file` is guarded on the same step output, so exactly one of the two is
     // non-empty on each path. Passing both unconditionally left `setup-node` to discard one by

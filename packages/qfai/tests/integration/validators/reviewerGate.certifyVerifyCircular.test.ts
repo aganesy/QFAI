@@ -57,7 +57,7 @@ async function seedPair(root: string, scope: string): Promise<void> {
   // reviewer-gate validator now reads from the same location. Per-loop
   // state slots `stopReason` and `acceptedIterationIndex` are both
   // `null` here to signal an in-flight loop, which is the only state
-  // that activates the R-CERTIFY-VERIFY-CIRCULAR finding (wave-18).
+  // that activates the R-CERTIFY-VERIFY-CIRCULAR finding.
   await writeFile(
     path.join(root, ".qfai/evidence/prototyping/prototyping.json"),
     JSON.stringify({

@@ -11,9 +11,7 @@ import { runInit } from "../../src/cli/commands/init.js";
 import { run } from "../../src/cli/main.js";
 import { captureStdout } from "../helpers/stdout.js";
 
-// This suite runs end-to-end CLI flows (`init` + `doctor`) with real
-// filesystem work, so we keep a higher timeout to prevent CI flakiness.
-describe("doctor", { timeout: 60000 }, () => {
+describe("doctor", () => {
   it("finds config in parent when --root is omitted", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-doctor-"));
     const cwd = path.join(root, "packages", "app");
@@ -577,7 +575,7 @@ describe("doctor", { timeout: 60000 }, () => {
   it("reports launcher probe failures when only a broken playwright-cli exists", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-doctor-"));
     const server = await startTestServer();
-    // Probe-order flip (spec-0006 CHG-005): playwright-cli is now the
+    // Probe order (spec-0006): playwright-cli is now the
     // deprecated stage. To force the launcher check into the error path we
     // must also suppress the stage-2 `npx --no-install playwright` fallback,
     // which would otherwise resolve against any developer-host install.

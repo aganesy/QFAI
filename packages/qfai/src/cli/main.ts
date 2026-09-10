@@ -2,6 +2,7 @@ import { runAtddScaffold } from "./commands/atddScaffold.js";
 import { runAuditLog } from "./commands/auditLog.js";
 import { runDiscussion } from "./commands/discussion.js";
 import { runDoctor } from "./commands/doctor.js";
+import { runDbDrift } from "./commands/dbDrift.js";
 import { formatGuardrailsErrorJson, runGuardrails } from "./commands/guardrails.js";
 import { runHandoffUpgrade } from "./commands/handoffUpgrade.js";
 import { runInit } from "./commands/init.js";
@@ -13,6 +14,7 @@ import { runSddPreflightCommand } from "./commands/sddPreflight.js";
 import { runValidate } from "./commands/validate.js";
 import type { ParsedArgs } from "./lib/args.js";
 import { parseArgs } from "./lib/args.js";
+import { EXIT_CODES, formatExitCodesSection } from "./lib/exitCodes.js";
 import { describeIncompleteRun } from "./lib/warnings.js";
 import { error, info, warn } from "./lib/logger.js";
 import { findConfigRoot } from "../core/config.js";
@@ -26,12 +28,36 @@ import { resolveToolVersion } from "../core/version.js";
  * reserves — 2, for an unknown flag or a malformed value — and the parser never
  * sets `invalid` for an unrecognized command, so borrowing it here would file a
  * mistyped command under a row the contract wrote for something else. 1 keeps
- * the two distinguishable while still refusing to report success, which is the
- * defect this branch closed: the `default:` arm used to print `Unknown command`
- * and exit 0. A `--flag`-shaped first token never reaches here — the parser
- * catches it, leaves `command` null, and the invalid-args branch above exits 2.
+ * the two distinguishable while still refusing to report success. A
+ * `--flag`-shaped first token never reaches here — the parser catches it,
+ * leaves `command` null, and the invalid-args branch above exits 2.
+ *
+ * Read from `EXIT_CODES.findings` rather than written as `1`. That entry's own
+ * documentation lists a mistyped command among what it carries, so the number
+ * has a single source and cannot drift from the table `--help` prints.
  */
-const UNKNOWN_COMMAND_EXIT_CODE = 1;
+const UNKNOWN_COMMAND_EXIT_CODE = EXIT_CODES.findings;
+
+/**
+ * The top-level commands the switch below dispatches. Kept as data so the
+ * unknown-command check can run *before* the `--help` branch: `qfai
+ * vlaidate --help` would otherwise print usage and exit 0, contradicting
+ * the `Exit codes:` note that a mistyped command name is a usage error.
+ */
+const KNOWN_COMMANDS: ReadonlySet<string> = new Set([
+  "init",
+  "validate",
+  "report",
+  "doctor",
+  "db-drift",
+  "guardrails",
+  "audit",
+  "sdd",
+  "atdd",
+  "handoff",
+  "discussion",
+  "prototyping",
+]);
 
 export async function run(argv: string[], cwd: string): Promise<void> {
   const { command, invalid, invalidReason, options } = parseArgs(argv, cwd);
@@ -40,6 +66,22 @@ export async function run(argv: string[], cwd: string): Promise<void> {
   // version is readable from anywhere, including outside a project.
   if (options.version) {
     info(await resolveToolVersion());
+    return;
+  }
+
+  // Before the help branch: `--help` must not turn a mistyped command
+  // name into a successful run.
+  //
+  // `UNKNOWN_COMMAND_EXIT_CODE`, not `options.invalidExitCode`: the two are
+  // different rows of the same table, and the `Exit codes:` block this command
+  // prints says a mistyped command name is a usage error at
+  // `EXIT_CODES.findings` even when `--help` follows it. Borrowing the
+  // CLI-arg-error code here would make the help text the CLI ships disagree
+  // with the code that ships it.
+  if (command !== null && !KNOWN_COMMANDS.has(command)) {
+    error(`Unknown command: ${command}`);
+    info(usage());
+    process.exitCode = UNKNOWN_COMMAND_EXIT_CODE;
     return;
   }
 
@@ -79,8 +121,8 @@ export async function run(argv: string[], cwd: string): Promise<void> {
   // Every command except `validate` sends a filesystem fault straight to
   // `cli/index.ts`, which writes `err.message` and exits 1 — a line naming the
   // errno and the path but not the command, and not saying that the run is
-  // undetermined rather than clean (#1104). `validate` answers with
-  // `QFAI-SCAN-002` instead because #1112 wrapped `validateProject`; the others
+  // undetermined rather than clean. `validate` answers with
+  // `QFAI-SCAN-002` instead because `validateProject` is wrapped; the others
   // have no verdict artifact, so the refusal itself has to carry it.
   //
   // Rethrown, never swallowed: the exit code and the `cause` chain are what a
@@ -126,9 +168,11 @@ async function dispatch(command: string, options: ParsedArgs["options"]): Promis
     case "report":
       {
         const resolvedRoot = await resolveRoot(options);
-        await runReport({
+        process.exitCode = await runReport({
           root: resolvedRoot,
           format: options.reportFormat,
+          strict: options.strict,
+          ...(options.failOn !== undefined ? { failOn: options.failOn } : {}),
           ...(options.reportOut !== undefined ? { outPath: options.reportOut } : {}),
           ...(options.reportIn !== undefined ? { inputPath: options.reportIn } : {}),
           ...(options.reportBaseUrl !== undefined ? { baseUrl: options.reportBaseUrl } : {}),
@@ -169,6 +213,17 @@ async function dispatch(command: string, options: ParsedArgs["options"]): Promis
           ...(options.yes ? { yes: true } : {}),
         });
         process.exitCode = exitCode;
+      }
+      return;
+    case "db-drift":
+      {
+        const resolvedRoot = await resolveRoot(options, options.dbDriftFormat === "json");
+        process.exitCode = await runDbDrift({
+          root: resolvedRoot,
+          ...(options.dbDriftFormat !== undefined ? { format: options.dbDriftFormat } : {}),
+          ...(options.dbDriftOut !== undefined ? { outPath: options.dbDriftOut } : {}),
+          ...(options.failOn === "never" ? { failOn: "never" as const } : {}),
+        });
       }
       return;
     case "guardrails":
@@ -266,7 +321,7 @@ async function dispatch(command: string, options: ParsedArgs["options"]): Promis
         if (!discussionAction) {
           return;
         }
-        // `discussion ... --format json` writes its whole payload to
+        // `discussion... --format json` writes its whole payload to
         // stdout, so the defaultConfig notice has to go to stderr there —
         // otherwise stdout is JSON-plus-a-Japanese-warning and no
         // `JSON.parse` (or downstream jq) can read it.
@@ -363,6 +418,9 @@ async function dispatch(command: string, options: ParsedArgs["options"]): Promis
       return;
 
     default:
+      // 通常は到達しない: 未知のコマンド名は help 分岐より前で弾いている。
+      // KNOWN_COMMANDS がこの switch から drift した場合の backstop として
+      // 残す — exit 0 で素通りさせるより、使用法エラーで落とす方が安全。
       error(`Unknown command: ${command}`);
       info(usage());
       process.exitCode = UNKNOWN_COMMAND_EXIT_CODE;
@@ -378,6 +436,7 @@ Commands:
   validate                     Check specs, contracts and references
   report                       Emit validation results and aggregates
   doctor                       Diagnose config, paths and output preconditions
+  db-drift                     Compare the DB contracts with the migrations as schemas (needs paths.migrationsDir)
   guardrails                   Extract / check Decision Guardrails (list|extract|check)
   discussion list              List the discussion packs (the active pointer's pack is marked with *)
   discussion list --active     Show the active discussion session pointer (state.json#discussion.currentId)
@@ -400,7 +459,7 @@ Options:
   --root <path>   Target directory (for init, the output directory when --dir is absent)
   --dir <path>    init: output directory (init only; --dir wins when both are given)
   --force         init: overwrite .qfai/assistant/{skills,agents}/**, the published skills/agents, and the symlink-asset output under .agents/.claude/.github/.codex
-                  (that output includes each tree's README.md and the qfai-provided .github/copilot-instructions.md and .github/instructions/**; specs/contracts/steering and assistant/manifest/** are never overwritten)
+                  (that output includes the qfai-provided .github/copilot-instructions.md and .github/instructions/**; specs/contracts/steering and assistant/manifest/** are never overwritten)
                   It deletes as well as overwrites: the wrappers a past qfai placed in
                   .claude/commands/ and .github/prompts/, and the wrappers qfai placed for skills
                   that are no longer shipped (including the real directories from before they
@@ -424,10 +483,11 @@ Options:
   --reason <delta-id>          prototyping rescope: the delta / decision id that retired it (required)
   --format <text|json>         doctor / prototyping preflight / discussion list: output format
   --active                     discussion list: show the active session pointer instead of listing packs
-  --strict                     validate: exit 1 on warning or worse
-  --profile <discussion|sdd|prototyping|atdd|tdd|verify|saas-package|full>  validate/report: select the validation profile
+  --strict                     validate/report: exit 1 on warning or worse
+  --profile <discussion|sdd|prototyping|atdd|tdd|verify|saas-package|full|drift>  validate/report: select the validation profile
+                                drift runs the drift guard alone: the same gate tdd carries, without the completion obligations
   --profile <prototyping|<skill>>  doctor: prototyping-specific preflight diagnosis, or a skill manifest runtimeDependencies probe
-  --fail-on <error|warning|never>  validate: failure threshold (takes precedence over --strict)
+  --fail-on <error|warning|never>  validate/report: failure threshold (takes precedence over --strict)
   --fail-on <error|warning|never>  doctor / prototyping preflight: failure threshold (defaults to validation.failOn; the shipped default is error)
   --fail-on <error|warning|never>  sdd preflight: failure threshold (never exits 0 even when blocked; preflight has no warning tier, so warning means the same as error)
   --platform <web|windows|mobile-ios|mobile-android|cross-platform>  validate: UI/UX platform
@@ -463,6 +523,8 @@ Options:
                                  report: also switches the default input/output to validate.spec-<ids>.json / report.spec-<ids>.md
   -h, --help      Show this help
   -V, --version   Show the version (prints the installed qfai's version to stdout)
+
+${formatExitCodesSection()}
 `;
 }
 

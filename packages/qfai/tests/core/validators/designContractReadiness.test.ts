@@ -631,7 +631,7 @@ describe("validateSddDesignContractReadiness (TC-3.8.x)", () => {
   });
 
   it("design-system.yaml mirror with diverging color value → DCON-005 with diff diagnostic", async () => {
-    // Codex 5zDx: the mirror is contractually a verbatim DESIGN.md
+    // The mirror is contractually a verbatim DESIGN.md
     // copy. A hand-authored mirror that disagrees with DESIGN.md must
     // be rejected so downstream `/qfai-implement` cannot bind to a
     // tampered identity.
@@ -763,7 +763,7 @@ describe("validateSddDesignContractReadiness (TC-3.8.x)", () => {
   });
 
   it("optional visual.spacing in DESIGN.md must be mirrored verbatim → DCON-005 on divergence", async () => {
-    // Codex 696D: optional DESIGN.md tokens are also part of the
+    // Optional DESIGN.md tokens are also part of the
     // verbatim-mirror contract when DESIGN.md authors them. A
     // mirror that diverges on `visual.spacing.base` must surface
     // as DCON-005.
@@ -820,8 +820,8 @@ describe("validateSddDesignContractReadiness (TC-3.8.x)", () => {
     ).toBe(true);
   });
 
-  it("mirror authors visual.spacing.scale that DESIGN.md never authored → DCON-005 (codex 89xl)", async () => {
-    // Codex 89xl: pre-fix the reverse spacing-key check only rejected
+  it("mirror authors visual.spacing.scale that DESIGN.md never authored → DCON-005", async () => {
+    // Pre-fix the reverse spacing-key check only rejected
     // keys outside the schema-defined `{base, scale}` set, which let
     // an author add `spacing.scale` to design-system.yaml even though
     // DESIGN.md only authored `spacing.base`. Post-fix that case
@@ -880,14 +880,15 @@ describe("validateSddDesignContractReadiness (TC-3.8.x)", () => {
     ).toBe(true);
   });
 
-  it("symmetric: mirror authors visual.spacing.base that DESIGN.md never authored → DCON-005 (codex 9Vbc)", async () => {
-    // Reverse direction of the codex 89xl test: DESIGN.md authors only
-    // `spacing.scale` (no `base`), mirror fabricates `base`. The fix's
-    // reverse loop iterates mirror keys, so the `base` branch and the
-    // `scale` branch share the same code path; without this symmetric
-    // pin, a future special-case for `expected.scale !== undefined`
-    // (typography helpers split by sub-key, so it's plausible) could
-    // silently regress one direction while the 89xl test stays green.
+  it("symmetric: mirror authors visual.spacing.base that DESIGN.md never authored → DCON-005", async () => {
+    // Reverse direction of the mirror-authors-an-extra-spacing-key case
+    // above: DESIGN.md authors only `spacing.scale` (no `base`), mirror
+    // fabricates `base`. The fix's reverse loop iterates mirror keys, so
+    // the `base` branch and the `scale` branch share the same code path;
+    // without this symmetric pin, a future special-case for
+    // `expected.scale !== undefined` (typography helpers split by
+    // sub-key, so it's plausible) could silently regress one direction
+    // while the test above stays green.
     const root = await newTempDir();
     await seedUiBearingProject(root);
     const designMdSpacingScaleOnly = VALID_DESIGN_MD.replace(
@@ -1077,7 +1078,7 @@ describe("validateSddDesignContractReadiness (TC-3.8.x)", () => {
   });
 
   it("malformed root DESIGN.md WITHOUT lock yaml still surfaces DCON-033 (parse error)", async () => {
-    // Codex 668Z: pre-fix, parseDesignMd was nested under
+    // Pre-fix, parseDesignMd was nested under
     // `designMdText !== null && lockText !== null`, so a project
     // with a malformed DESIGN.md and no lock yet (the common
     // initial state) saw only DCON-031 and missed the parse error.
@@ -1129,7 +1130,7 @@ describe("validateSddDesignContractReadiness (TC-3.8.x)", () => {
   });
 
   it("prototype-handoff.yaml designMdPath !== root DESIGN.md → DCON-013", async () => {
-    // Codex 55GV: a handoff that points at an alternate file must be
+    // A handoff that points at an alternate file must be
     // rejected so downstream `/qfai-implement` cannot bind to a
     // non-SSOT design identity.
     const root = await newTempDir();
@@ -1215,7 +1216,7 @@ describe("validateSddDesignContractReadiness (TC-3.8.x)", () => {
   });
 
   it("prototype-handoff.yaml designMdSha256 stale (valid hex but != lock) → DCON-013", async () => {
-    // Codex 55GV second arm: a syntactically-valid-but-wrong sha must
+    // Companion to the designMdPath-mismatch case above: a syntactically-valid-but-wrong sha must
     // be cross-checked against DESIGN.md.lock.yaml#designMdSha256.
     const root = await newTempDir();
     await seedUiBearingProject(root);
@@ -1274,14 +1275,32 @@ describe("validateSddDesignContractReadiness (TC-3.8.x)", () => {
 // ---------------------------------------------------------------------------
 // QFAI-DCON-034 — unreplaced sample DESIGN.md.
 //
-// The sample gate has to fire BEFORE the UI-contract gate: `qfai init`
-// seeds the sample on day one, `contracts/ui/**` is authored later in SDD,
-// and Phase 0 freezes the file's sha256 in between.
+// The sample gate has to fire BEFORE the UI-contract gate: a copied sample
+// can be in place from the first commit, `contracts/ui/**` is authored later
+// in SDD, and Phase 0 freezes the file's sha256 in between.
 // ---------------------------------------------------------------------------
+
+/**
+ * The sample brand the package ships, as the prototyping template.
+ *
+ * `qfai init` writes no root `DESIGN.md`, so a project only holds this text
+ * because someone put it there — copied from the template, or seeded by a
+ * release that still did. Both are what this gate exists to catch, so the
+ * sample is still the fixture; only where it ships has moved.
+ */
+const SHIPPED_DESIGN_MD_SAMPLE = path.join(
+  getInitAssetsDir(),
+  ".qfai",
+  "assistant",
+  "skills",
+  "qfai-prototyping",
+  "templates",
+  "DESIGN.md.sample",
+);
 
 describe("validateSddDesignContractReadiness — unreplaced sample (QFAI-DCON-034)", () => {
   async function readShippedSample(): Promise<string> {
-    return readFile(path.join(getInitAssetsDir(), "root", "DESIGN.md"), "utf-8");
+    return readFile(SHIPPED_DESIGN_MD_SAMPLE, "utf-8");
   }
 
   it("reports DCON-034 before any UI contract exists (fresh init)", async () => {
@@ -1291,8 +1310,9 @@ describe("validateSddDesignContractReadiness — unreplaced sample (QFAI-DCON-03
     const dcon034 = issues.filter((i) => i.code === "QFAI-DCON-034");
     expect(dcon034).toHaveLength(1);
     expect(dcon034[0]?.file).toBe("DESIGN.md");
-    // Warning, not error: every `qfai init` seeds this file, including
-    // into projects that never ship a UI and never reach Phase 0.
+    // Warning, not error: a project that ships no UI freezes nothing, so the
+    // sample costs it nothing yet. An error would stop a project that never
+    // opted into the design surface at all.
     expect(dcon034[0]?.severity).toBe("warning");
   });
 
@@ -1426,10 +1446,7 @@ describe("cli-only surface carve-out (root DESIGN.md gates)", () => {
     const root = await newTempDir();
     await seedUiBearingProject(root);
     await seedClassification(root, "cli", []);
-    const shippedSample = await readFile(
-      path.join(getInitAssetsDir(), "root", "DESIGN.md"),
-      "utf-8",
-    );
+    const shippedSample = await readFile(SHIPPED_DESIGN_MD_SAMPLE, "utf-8");
     await writeFile(path.join(root, "DESIGN.md"), shippedSample, "utf-8");
     const issues = await validateSddDesignContractReadiness(root, defaultConfig);
     expect(issues.map((i) => i.code)).not.toContain("QFAI-DCON-034");
@@ -1439,10 +1456,7 @@ describe("cli-only surface carve-out (root DESIGN.md gates)", () => {
     const root = await newTempDir();
     await seedUiBearingProject(root);
     await seedClassification(root, "web", []);
-    const shippedSample = await readFile(
-      path.join(getInitAssetsDir(), "root", "DESIGN.md"),
-      "utf-8",
-    );
+    const shippedSample = await readFile(SHIPPED_DESIGN_MD_SAMPLE, "utf-8");
     await writeFile(path.join(root, "DESIGN.md"), shippedSample, "utf-8");
     const issues = await validateSddDesignContractReadiness(root, defaultConfig);
     expect(issues.find((i) => i.code === "QFAI-DCON-034")?.severity).toBe("error");
@@ -1539,10 +1553,7 @@ describe("cli-only surface carve-out (root DESIGN.md gates)", () => {
     await seedClassification(root, "cli", [], "discussion-20260101000000000");
     await mkdir(path.join(root, ".qfai"), { recursive: true });
     await writeFile(path.join(root, ".qfai", "state.json"), body, "utf-8");
-    const shippedSample = await readFile(
-      path.join(getInitAssetsDir(), "root", "DESIGN.md"),
-      "utf-8",
-    );
+    const shippedSample = await readFile(SHIPPED_DESIGN_MD_SAMPLE, "utf-8");
     await writeFile(path.join(root, "DESIGN.md"), shippedSample, "utf-8");
     const codes = (await validateSddDesignContractReadiness(root, defaultConfig)).map(
       (i) => i.code,
@@ -1632,10 +1643,7 @@ describe("cli-only carve-out is scoped to every UI-bearing spec", () => {
     await seedSpec(root, "0001", CLI_PACK);
     await seedSpec(root, "0002", WEB_PACK);
     await writeDiscussionCurrentId(root, CLI_PACK);
-    const shippedSample = await readFile(
-      path.join(getInitAssetsDir(), "root", "DESIGN.md"),
-      "utf-8",
-    );
+    const shippedSample = await readFile(SHIPPED_DESIGN_MD_SAMPLE, "utf-8");
     await writeFile(path.join(root, "DESIGN.md"), shippedSample, "utf-8");
 
     const codes = (await validateSddDesignContractReadiness(root, defaultConfig)).map(

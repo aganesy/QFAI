@@ -8,8 +8,8 @@
  * structural enforcement via `pnpm ci:lint`.
  *
  * Allowed roots:
- *   - review-*      .qfai/review/<pack-name>/  (or tmp/<pack-name>/)
- *   - discussion-*  .qfai/discussion/<pack-name>/  (or tmp/<pack-name>/)
+ *   - review-*.qfai/review/<pack-name>/  (or tmp/<pack-name>/)
+ *   - discussion-*.qfai/discussion/<pack-name>/  (or tmp/<pack-name>/)
  *
  * Scope (per the pack-location lint scope decision):
  *   The lane inspects ONLY the changed paths in scope of the current
@@ -19,17 +19,19 @@
  *   rule are deliberately not re-flagged.
  *
  * Invocation modes:
- *   - default          read three change-sources and union them:
- *                      `git diff --name-only --cached HEAD` (staged),
- *                      `git status --porcelain` (working-tree), and
- *                      `git diff --name-only <base>...HEAD` (PR diff
- *                      against the base ref). The three reads are
+ *   - default          read four change-sources and union them:
+ *                      `git diff --numstat --cached HEAD` (staged),
+ *                      `git diff --numstat` (unstaged tracked),
+ *                      `git status --porcelain` filtered to untracked
+ *                      entries, and
+ *                      `git diff --numstat <base>...HEAD` (PR diff
+ *                      against the base ref). The four reads are
  *                      ALWAYS unioned regardless of which subset
  *                      yields paths — that keeps the contract a
  *                      superset (no misses) and matches both local
- *                      and CI invocations: locally the staged + status
- *                      sets carry uncommitted edits; in CI those two
- *                      are empty after `actions/checkout`, and the
+ *                      and CI invocations: locally the first three
+ *                      carry uncommitted edits; in CI they are empty
+ *                      after `actions/checkout`, and the
  *                      base-diff catches the committed-but-misplaced
  *                      pack on the PR branch. The base-ref read
  *                      soft-fails (try/catch) when the base ref is
@@ -74,6 +76,104 @@ const ALLOWED_ROOTS = {
   review: [".qfai/review", "tmp"],
   discussion: [".qfai/discussion", "tmp"],
 };
+
+/**
+ * The `git diff` flags every read here shares.
+ *
+ * `--numstat`, not `--name-only`. The lane asks which paths this change
+ * touched, and `--name-only` answers a different question: it selects by
+ * blob identity and ignores the whitespace flags, so a commit that
+ * re-normalises line endings hands over the whole tree and the lane
+ * reports the location of packs nobody moved.
+ *
+ * `--ignore-cr-at-eol` rather than `--ignore-all-space`, which reaches
+ * too far — it also hides an indentation change, and indentation is
+ * meaningful in the documents these packs hold.
+ *
+ * `--no-renames` keeps the path field plain: with rename detection on,
+ * numstat writes `{old => new}` inside it.
+ */
+const NUMSTAT_DIFF = ["diff", "--numstat", "--ignore-cr-at-eol", "--no-renames"];
+
+/**
+ * The path a `--numstat` line names.
+ *
+ * A line is `<added>\t<deleted>\t<path>`, so the path begins after the
+ * second tab and may itself contain one.
+ */
+function numstatPath(line) {
+  const first = line.indexOf("\t");
+  if (first < 0) return "";
+  const second = line.indexOf("\t", first + 1);
+  if (second < 0) return "";
+  return line.slice(second + 1).trim();
+}
+
+/**
+ * Paths the index no longer carries while the working tree still holds
+ * the file.
+ *
+ * `git rm --cached` is how a pack stops being tracked without leaving
+ * the contributor's disk. It stages a deletion and leaves an untracked
+ * file behind, so status names the pack and the staged diff calls it a
+ * removal. Reading status alone would take that for a pack being
+ * introduced, which is the reverse of what happened.
+ */
+function stagedDeletions() {
+  try {
+    const out = execFileSync("git", [...NUMSTAT_DIFF, "--diff-filter=D", "--cached", "HEAD"], {
+      encoding: "utf-8",
+    });
+    return new Set(
+      out
+        .split("\n")
+        .map((line) => numstatPath(line))
+        .filter((p) => p.length > 0),
+    );
+  } catch {
+    // The caller reads the staged diff first and soft-passes when git
+    // fails there, so this is unreachable in practice. An empty set
+    // leaves the untracked half unfiltered rather than dropping it.
+    return new Set();
+  }
+}
+
+/**
+ * Paths git has never seen, which have no diff to read.
+ *
+ * `--untracked-files=all` lists each untracked FILE. The default
+ * collapses a wholly new directory to `review-bad/`, and a pack segment
+ * is only read when a segment follows it — so the one shape this lane
+ * most needs to catch, a misplaced pack nobody has staged yet, arrived
+ * as a bare directory name and matched nothing.
+ *
+ * Returns null when git fails, which the caller reads as a soft pass.
+ */
+function readUntracked() {
+  let status;
+  try {
+    status = execFileSync("git", ["status", "--porcelain", "--untracked-files=all"], {
+      encoding: "utf-8",
+    });
+  } catch (err) {
+    stderr.write(
+      `check-pack-locations: git status --porcelain failed: ${err && err.message ? err.message : String(err)}\n`,
+    );
+    return null;
+  }
+  const removed = stagedDeletions();
+  const paths = [];
+  for (const line of status.split("\n")) {
+    if (line.trim().length === 0) continue;
+    // Untracked entries only — `??` in both code columns. Tracked
+    // changes come from the diffs, where the whitespace flag applies.
+    if (line.slice(0, 2) !== "??") continue;
+    const raw = line.slice(2).trim();
+    if (raw.length === 0 || removed.has(raw)) continue;
+    paths.push(raw);
+  }
+  return paths;
+}
 
 function parseArgs(args) {
   const out = { changed: undefined, baseRef: undefined, help: false };
@@ -125,12 +225,20 @@ function readChangedFromGit(baseRef) {
   //     pack on the PR branch would otherwise slip through.
   const set = new Set();
   try {
-    const staged = execFileSync("git", ["diff", "--name-only", "--cached", "HEAD"], {
-      encoding: "utf-8",
-    });
+    const staged = execFileSync(
+      "git",
+      // Lower-case `d` EXCLUDES deletions. The lane reports a pack
+      // introduced outside its allowed root, and a removal is the
+      // opposite: without this, deleting a legacy pack from a
+      // disallowed location reports every file in it as a new
+      // violation, and the only way to land the removal is to keep
+      // the pack.
+      [...NUMSTAT_DIFF, "--diff-filter=d", "--cached", "HEAD"],
+      { encoding: "utf-8" },
+    );
     for (const line of staged.split("\n")) {
-      const t = line.trim();
-      if (t.length > 0) set.add(t);
+      const p = numstatPath(line);
+      if (p.length > 0) set.add(p);
     }
   } catch (err) {
     stderr.write(
@@ -141,24 +249,29 @@ function readChangedFromGit(baseRef) {
     // hard-fail the lane.
     return null;
   }
+  // Unstaged edits to tracked files. `git status` cannot take a
+  // whitespace flag, so the tracked half is read as a diff and only the
+  // untracked half comes from status below. Splitting them is what lets
+  // a line-ending rewrite drop out here too: without it the local run
+  // stays noisy while the CI run is clean, and the lane would be scoped
+  // by changed text in one place and changed bytes in another.
   try {
-    const status = execFileSync("git", ["status", "--porcelain"], { encoding: "utf-8" });
-    for (const line of status.split("\n")) {
-      // Each non-empty status line is `XY <path>` (and optionally
-      // ` -> <newpath>` for renames). Split on whitespace; the LAST
-      // token is the path that should be considered.
-      const t = line.trim();
-      if (t.length === 0) continue;
-      const arrow = t.indexOf(" -> ");
-      const raw = arrow >= 0 ? t.slice(arrow + 4) : t.slice(2).trim();
-      if (raw.length > 0) set.add(raw);
+    const unstaged = execFileSync("git", [...NUMSTAT_DIFF, "--diff-filter=d"], {
+      encoding: "utf-8",
+    });
+    for (const line of unstaged.split("\n")) {
+      const p = numstatPath(line);
+      if (p.length > 0) set.add(p);
     }
   } catch (err) {
     stderr.write(
-      `check-pack-locations: git status --porcelain failed: ${err && err.message ? err.message : String(err)}\n`,
+      `check-pack-locations: git diff (unstaged) failed: ${err && err.message ? err.message : String(err)}\n`,
     );
     return null;
   }
+  const untracked = readUntracked();
+  if (untracked === null) return null;
+  for (const p of untracked) set.add(p);
   // PR-diff scan against the base ref. The explicit `--base-ref`
   // argument wins; otherwise default to `origin/main` (matches the
   // pair-changed CI lane and our ci.yml `fetch-depth: 0`). If the
@@ -167,12 +280,14 @@ function readChangedFromGit(baseRef) {
   // case is already covered by the staged/status reads above.
   const effectiveBase = baseRef && baseRef.length > 0 ? baseRef : "origin/main";
   try {
-    const diff = execFileSync("git", ["diff", "--name-only", `${effectiveBase}...HEAD`], {
-      encoding: "utf-8",
-    });
+    const diff = execFileSync(
+      "git",
+      [...NUMSTAT_DIFF, "--diff-filter=d", `${effectiveBase}...HEAD`],
+      { encoding: "utf-8" },
+    );
     for (const line of diff.split("\n")) {
-      const t = line.trim();
-      if (t.length > 0) set.add(t);
+      const p = numstatPath(line);
+      if (p.length > 0) set.add(p);
     }
   } catch {
     // Soft-pass: base ref not reachable (e.g. local invocation, or

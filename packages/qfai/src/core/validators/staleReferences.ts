@@ -10,11 +10,16 @@
  * docs that still describes pre-implementation behavior — captured by
  * a SSOT manifest of "before-token → guidance" entries.
  *
- * Severity policy:
- *   - During the deprecation window (today < cutoff): `warning`.
- *   - At sunset (today >= cutoff): `error`.
- * Cutoff = `STALE_REFERENCE_SUNSET` (the same fail-open posture used by
- * `skillDocReferences.brokenRefSeverity` mirrors this pattern).
+ * The finding reports `warning` — the severity its code letter names, and
+ * the one it means: a reference doc that has fallen behind is not a tree
+ * that cannot be validated.
+ *
+ * That severity is a literal rather than a computation. One read off the
+ * clock answers differently for the same tree on two different days, so a
+ * green run cannot be re-created and a red one has no commit to point at,
+ * and the escalation would reach every project at once with nothing to
+ * upgrade and nothing to read. Raising this rule is a change to announce,
+ * not a date to arrive.
  */
 import type { Dirent } from "node:fs";
 import { readdir, readFile } from "node:fs/promises";
@@ -26,16 +31,6 @@ import type { Issue } from "../types.js";
 import { exists, issue } from "./utils.js";
 
 const SKILLS_REL = path.join(".qfai", "assistant", "skills");
-
-/**
- * Hard sunset cutoff in YYYY-MM-DD form. After this date, stale
- * references escalate from warning to error.
- *
- * The cutoff is intentionally far enough out to give consumers a clear
- * deprecation window; bump or pull in via a future PR when the
- * ecosystem catches up.
- */
-export const STALE_REFERENCE_SUNSET = "2026-12-01" as const;
 
 /**
  * SSOT manifest of stale-reference tokens. Each entry maps a
@@ -82,37 +77,19 @@ const REFERENCE_DOC_NAMES = [
   "evidence-requirements.md",
 ] as const;
 
-function todayIsoDate(now: () => Date): string {
-  return now().toISOString().slice(0, 10);
-}
-
-/**
- * Severity gate: warning during the window, error at sunset. Exported
- * for unit testability.
- */
-export function staleReferenceSeverity(
-  todayIso: string,
-  sunsetIso: string = STALE_REFERENCE_SUNSET,
-): "warning" | "error" {
-  return todayIso >= sunsetIso ? "error" : "warning";
-}
-
 /**
  * Validate that no stale-reference tokens appear in the in-tree
  * reference docs and SKILL.md files. Returns an array of issues; empty
  * means zero stale references at HEAD.
  *
- * The `now` parameter is a test seam — callers in production pass
- * `() => new Date()` (or use the default).
+ * The answer depends on the tree and nothing else. Two runs over the same
+ * tree agree, whenever either of them happens.
  */
 export async function validateStaleReferences(
   root: string,
-  options: { now?: () => Date; config?: QfaiConfig } = {},
+  options: { config?: QfaiConfig } = {},
 ): Promise<Issue[]> {
   const issues: Issue[] = [];
-  const now = options.now ?? (() => new Date());
-  const todayIso = todayIsoDate(now);
-  const severity = staleReferenceSeverity(todayIso);
 
   // Honor `config.paths.skillsDir` via the canonical `resolvePath`
   // helper (SSOT). When no config is supplied, fall back to the
@@ -135,35 +112,25 @@ export async function validateStaleReferences(
   for (const entry of entries) {
     if (!entry.isDirectory()) continue;
     const skillDir = path.join(skillsDir, entry.name);
-    await scanSkillDir(root, skillDir, severity, issues);
+    await scanSkillDir(root, skillDir, issues);
   }
   return issues;
 }
 
-async function scanSkillDir(
-  root: string,
-  skillDir: string,
-  severity: "warning" | "error",
-  issues: Issue[],
-): Promise<void> {
+async function scanSkillDir(root: string, skillDir: string, issues: Issue[]): Promise<void> {
   // SKILL.md
   const skillMd = path.join(skillDir, "SKILL.md");
-  await scanFileForStaleRefs(root, skillMd, severity, issues);
+  await scanFileForStaleRefs(root, skillMd, issues);
   // references/<name>.md
   const refsDir = path.join(skillDir, "references");
   if (!(await exists(refsDir))) return;
   for (const name of REFERENCE_DOC_NAMES) {
     const full = path.join(refsDir, name);
-    await scanFileForStaleRefs(root, full, severity, issues);
+    await scanFileForStaleRefs(root, full, issues);
   }
 }
 
-async function scanFileForStaleRefs(
-  root: string,
-  file: string,
-  severity: "warning" | "error",
-  issues: Issue[],
-): Promise<void> {
+async function scanFileForStaleRefs(root: string, file: string, issues: Issue[]): Promise<void> {
   let body: string;
   try {
     body = await readFile(file, "utf-8");
@@ -179,7 +146,7 @@ async function scanFileForStaleRefs(
       `"${entry.beforeToken}". Rewrite to match the chosen implementation: ` +
       `${entry.replacement}.`;
     issues.push(
-      issue("W-STALE-REFERENCE", message, severity, relPath, "staleReferences.preImplementation"),
+      issue("W-STALE-REFERENCE", message, "warning", relPath, "staleReferences.preImplementation"),
     );
   }
 }

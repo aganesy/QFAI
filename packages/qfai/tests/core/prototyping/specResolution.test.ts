@@ -214,20 +214,18 @@ describe("resolveAllUiBearingSpecs", () => {
     expect(result).toEqual(["0042"]);
   });
 
-  // 23rd-wave Fix (codex r3270307469, P1 — chatgpt-codex-connector):
   // `hasMatchingUiContract` must detect the documented per-spec
   // subdirectory layout `.qfai/contracts/ui/spec-<specId>/<sub>.yaml`
-  // (candidate #5 in `.qfai/contracts/ui/README.md`). Pre-fix the
-  // helper only listed top-level basenames; a project that authored
+  // (candidate #5 in `.qfai/contracts/ui/README.md`). Checking only
+  // top-level basenames would silently treat a project that authored
   // its UI contracts as `.qfai/contracts/ui/spec-0007/home.yaml`
-  // (without `surface_type: ui-bearing` on the spec) was silently
-  // treated as non-UI-bearing and the iterate command no-op'd.
+  // (without `surface_type: ui-bearing` on the spec) as non-UI-bearing,
+  // and the iterate command would no-op.
   //
-  // QFAI:SPEC-0012:TC-0012-0423 — 25th-wave traceability stitch
-  // (codex r3270527912 MAJOR) plus edge-case coverage from codex
-  // r3270529771 MINOR (`.yml` single-l rejection). AC-Refs:
-  // AC-0012-0037 (cycle-0 precheck input candidates) /
-  // AC-0012-0049 (mid-run spec-set freeze).
+  // QFAI:SPEC-0012:TC-0012-0423 covers this fallback together with the
+  // `.yml` single-l rejection edge case below. AC-Refs: AC-0012-0037
+  // (cycle-0 precheck input candidates) / AC-0012-0049 (mid-run
+  // spec-set freeze).
   it("accepts the per-spec subdirectory contract fallback (spec-<id>/<sub>.yaml)", async () => {
     const root = await newTempDir();
     await seedSpec(root, "0007", "# spec-0007\n\nNo marker.\n");
@@ -256,13 +254,12 @@ describe("resolveAllUiBearingSpecs", () => {
     expect(result).toEqual(["0007"]);
   });
 
-  // 27th-wave coverage gap fix (codex r3270624828 MINOR —
-  // architecture-reviewer): the wave-23 helper is documented as
-  // "recursively walks the spec subdirectory" (DFS, unbounded depth)
-  // because the README candidate #5 layout (`<spec-id>/<subpath>.yaml`)
-  // allows `<subpath>` to be a multi-component path. Pin the
-  // unbounded-DFS contract with a 2-level-deep fixture so a future
-  // "optimisation" to a single-level scan cannot land green.
+  // `hasMatchingUiContract` is documented as "recursively walks the
+  // spec subdirectory" (DFS, unbounded depth) because the README
+  // candidate #5 layout (`<spec-id>/<subpath>.yaml`) allows
+  // `<subpath>` to be a multi-component path. This fixture pins the
+  // unbounded-DFS contract two levels deep so a future "optimisation"
+  // to a single-level scan cannot land green.
   it("recursively accepts a per-spec subdirectory contract nested two levels deep", async () => {
     const root = await newTempDir();
     await seedSpec(root, "0007", "# spec-0007\n\nNo marker.\n");
@@ -288,11 +285,11 @@ describe("resolveAllUiBearingSpecs", () => {
     expect(result).toEqual([]);
   });
 
-  // 25th-wave coverage gap fix (codex r3270529771 MINOR): the subdir
-  // branch's `.endsWith(".yaml")` check intentionally rejects `.yml`
-  // (single-l) for parity with the top-level anchored regex which
-  // only accepts `*.yaml`. Pin the boundary so a future refactor that
-  // broadens the predicate to `.yml` is caught by CI.
+  // The subdirectory branch's `.endsWith(".yaml")` check intentionally
+  // rejects `.yml` (single-l) for parity with the top-level anchored
+  // regex, which only accepts `*.yaml`. This fixture pins the boundary
+  // so a future refactor that broadens the predicate to `.yml` is
+  // caught by CI.
   it("does NOT match a per-spec subdirectory whose only file uses the .yml (single-l) extension", async () => {
     const root = await newTempDir();
     await seedSpec(root, "0007", "# spec-0007\n\nNo marker.\n");
@@ -303,16 +300,15 @@ describe("resolveAllUiBearingSpecs", () => {
     expect(result).toEqual([]);
   });
 
-  // Codex r3264487007: regression — unrelated yaml basenames that
-  // merely contain the four-digit spec id token must NOT be treated as
-  // UI contracts. The fallback is anchored to bare `<id>.yaml`,
-  // `spec-<id>.yaml`, `ui-<id>.yaml`, or `ui-<id>-<slug>.yaml`.
+  // Unrelated yaml basenames that merely contain the four-digit spec
+  // id token must NOT be treated as UI contracts. The fallback is
+  // anchored to bare `<id>.yaml`, `spec-<id>.yaml`, `ui-<id>.yaml`, or
+  // `ui-<id>-<slug>.yaml`.
   //
-  // 7th late-review wave (codex r3264965744 / r3264968391, LOW/MINOR):
-  // extended to reject (a) bare-slug `<id>-<slug>.yaml` /
-  // `spec-<id>-<slug>.yaml` shapes (NOT in the documented set) and
-  // (b) empty-slug `ui-<id>-.yaml` (slug must be non-empty per the
-  // tightened `(?:-[^.]+)?` slug arm).
+  // The fallback also rejects (a) bare-slug `<id>-<slug>.yaml` /
+  // `spec-<id>-<slug>.yaml` shapes (not in the documented set) and (b)
+  // empty-slug `ui-<id>-.yaml` (the slug must be non-empty per the
+  // `(?:-[^.]+)?` slug arm).
   it("contract fallback rejects yaml basenames that merely contain the spec id token", async () => {
     const root = await newTempDir();
     await seedSpec(root, "0001", "# spec-0001\n\nNo marker.\n");
@@ -326,9 +322,9 @@ describe("resolveAllUiBearingSpecs", () => {
   });
 
   it("contract fallback rejects bare-slug and empty-slug shapes that drift from the documented 4 forms", async () => {
-    // 7th late-review wave: each rejected shape lives in its own
-    // fixture so a regression that re-widens any single arm is
-    // distinguishable in the failure output.
+    // Each rejected shape lives in its own fixture so that a change
+    // re-widening any single arm is distinguishable in the failure
+    // output.
     const rejectedShapes: Array<{ specId: string; filename: string }> = [
       // (a) Bare-slug (no `ui-` / `spec-` prefix) — not documented.
       { specId: "0007", filename: "0007-cart.yaml" },
@@ -434,19 +430,18 @@ describe("resolveAllUiBearingSpecs", () => {
     }
   });
 
-  // codex r3271969283 (P2, 50th-wave): `hasMatchingUiContract` (via
-  // `resolveAllUiBearingSpecs`) previously used `access(direct)` to
-  // confirm the bare `<specId>.yaml` direct-match candidate. `access`
-  // does NOT distinguish file from directory — a misauthored project
-  // that created `<contractsDir>/ui/0007.yaml/` (a directory) would
-  // have falsely classified spec-0007 as UI-bearing, driving the
-  // iterate / drift gates against a phantom UI surface instead of
-  // taking the documented no-op path. Post-fix the direct-match arm
-  // uses `stat().isFile()`, consistent with the entries-walk
-  // branch's `entry.isFile()` filter for the spec-prefixed /
-  // ui-prefixed candidates. This regression pins the discipline so
-  // a future `access`-style shortcut cannot regress green.
-  it("does NOT classify a spec as UI-bearing when the direct-match candidate `<id>.yaml` exists but is a directory (codex r3271969283)", async () => {
+  // `hasMatchingUiContract` (via `resolveAllUiBearingSpecs`) confirms
+  // the bare `<specId>.yaml` direct-match candidate with
+  // `stat().isFile()`, consistent with the entries-walk branch's
+  // `entry.isFile()` filter for the spec-prefixed / ui-prefixed
+  // candidates. Using `access()` there instead would not distinguish
+  // file from directory — a misauthored project that created
+  // `<contractsDir>/ui/0007.yaml/` (a directory) would then have
+  // spec-0007 falsely classified as UI-bearing, driving the iterate /
+  // drift gates against a phantom UI surface instead of taking the
+  // documented no-op path. This fixture pins that discipline so a
+  // future `access()`-style shortcut cannot land green.
+  it("does NOT classify a spec as UI-bearing when the direct-match candidate `<id>.yaml` exists but is a directory", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-uicontract-dir-"));
     try {
       // Author a UI-only spec (no surface_type marker, no title

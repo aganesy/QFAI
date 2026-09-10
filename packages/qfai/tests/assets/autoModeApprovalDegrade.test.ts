@@ -1,5 +1,5 @@
 /**
- * `--auto` forbade the question Stage 1 required (#537).
+ * `--auto` forbade the question Stage 1 required.
  *
  * `qfai-sdd` advertises `--auto`; the constitution's AskUserQuestion rule 4
  * makes `--auto` a no-question mode; Stage 1 makes AskUserQuestion the only way

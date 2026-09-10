@@ -1,5 +1,5 @@
 /**
- * `--upgrade-assistant-tree` copies; the contract must say so (#717).
+ * `--upgrade-assistant-tree` copies; the contract must say so.
  *
  * `.qfai/contracts/cli/qfai-init.md` described the per-file operation three
  * times and one of the three said "move". The exit-code table uses the copy
@@ -41,7 +41,7 @@ const upgradeHelperBody = (source: string): string | undefined => {
   return source.slice(start, end);
 };
 
-describe("--upgrade-assistant-tree contract wording (#717)", () => {
+describe("--upgrade-assistant-tree contract wording", () => {
   it("describes the per-file operation as a copy that leaves the original in place", async () => {
     const contract = flat(await readRepo(CONTRACT));
 

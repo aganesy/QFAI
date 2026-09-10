@@ -160,13 +160,13 @@ describe("TC-0013-0035: incomplete / open structured primary_tasks rejected", ()
     });
   });
 
-  // Pin codex r3338487529: when EVERY structured primary_tasks entry
+  // When EVERY structured primary_tasks entry
   // is malformed (extractPrimaryTasks records shape findings but the
   // parsed list ends up empty), QFAI-AUD-021 closed-schema diagnostics
   // MUST still surface alongside the QFAI-AUD-001 empty-list signal.
-  // Pre-fix the early `continue` on `primaryTasks.length === 0`
-  // returned before the shape-findings loop, hiding the AUD-021
-  // detail and leaving the user with only a generic "empty
+  // An early `continue` on `primaryTasks.length === 0`
+  // returning before the shape-findings loop would hide the AUD-021
+  // detail and leave the user with only a generic "empty
   // primary_tasks" error.
   it("surfaces QFAI-AUD-021 shape findings even when every entry is malformed (parsed list empty)", async () => {
     const ui = [

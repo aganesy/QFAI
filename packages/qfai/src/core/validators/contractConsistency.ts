@@ -1,10 +1,8 @@
 import { readFile } from "node:fs/promises";
 
 import { parseStructuredContract } from "../contracts.js";
-import { RULE_PROMOTIONS, newRuleSeverity } from "../sunset.js";
 import { stripContractDeclarationLines } from "../contractsDecl.js";
 import type { Issue } from "../types.js";
-import { resolveToolVersion } from "../version.js";
 import { issue } from "./utils.js";
 
 /**
@@ -16,7 +14,7 @@ import { issue } from "./utils.js";
  *
  * This validator implements the mechanizable slice of that reconciliation: state/status domains.
  * It compares the enum domain an API contract declares for a state-like field against the domain
- * the DB contracts declare for the same field (`CHECK (... IN (...))`, `CREATE TYPE ... AS ENUM`,
+ * the DB contracts declare for the same field (`CHECK (... IN (...))`, `CREATE TYPE... AS ENUM`,
  * or an inline column `ENUM(...)`), and reports API-mandated values with no representable DB
  * counterpart.
  *
@@ -34,17 +32,7 @@ export async function validateContractConsistency(
   const collected = await collectDbStateDomains(dbFiles);
   const issues: Issue[] = [];
 
-  // `QFAI-CONTRACT-041` ships behind a promotion window (P7). The declaration
-  // FORMAT is new, so the first authors to use it are answering another finding
-  // voluntarily and will get the grammar wrong in the ways the message exists
-  // to teach; failing their run on a line they added to engage with the tool is
-  // the worst first experience of it. Resolved once here rather than per
-  // finding: it is one fact about the running version, and reading it inside a
-  // loop would say otherwise.
-  const declarationSeverity = newRuleSeverity(
-    await resolveToolVersion(),
-    RULE_PROMOTIONS.derivedNotStoredDeclaration.promoteAt,
-  );
+  const declarationSeverity = "error";
 
   // Reported before anything else, and whether or not a domain was collected: a
   // declaration nobody could read is a defect in the declaration, and it is
@@ -93,7 +81,7 @@ type DbFieldBinding = {
    * Within one file the enum wins where the two forms provably bound the SAME
    * column: an ENUM column carrying a redundant CHECK is still an ENUM column,
    * and the strictest constraint is the one an implementation has to satisfy
-   * (#1100). Where they may not — see {@link enumEvidence} — this is false and
+   * Where they may not — see {@link enumEvidence} — this is false and
    * the finding stays a warning.
    */
   enumBacked: boolean;
@@ -103,7 +91,7 @@ type DbFieldBinding = {
    * `collectSqlDomainBounds` keys on the column NAME, not on the table, so a
    * contract declaring two tables that each have a `status` column — one ENUM,
    * one CHECK — collapses to one entry carrying both forms, indistinguishable
-   * there from #1100's single column with a redundant CHECK. The tie is broken
+   * there from a single column with a redundant CHECK. The tie is broken
    * by the one fact that separates them: a file declaring ONE table has only
    * one column of that name, so both forms are the same column; a file
    * declaring several may not, and the same rule as across contracts applies —
@@ -133,9 +121,9 @@ type DbFieldBinding = {
  * that happen to declare a column called `status` made it `error` on the
  * strength of `call_list_status` — an ENUM on a different table, which rejects
  * no insert into `sim_lines` at all. The message said so in as many words
- * (`insert 時に拒絶される物理制約`), of a field that does not have one (#1162).
+ * (`insert 時に拒絶される物理制約`), of a field that does not have one.
  *
- * #1100's "enum wins" is unaffected: it is about ONE field bound by both
+ * The "enum wins" rule is unaffected: it is about ONE field bound by both
  * forms, which is a per-file question and is settled per file.
  */
 type DbDomain = {
@@ -180,8 +168,7 @@ function enumFiles(domain: DbDomain): string[] {
  * contracts, and that only holds when the value is refused whichever of the
  * candidate bindings is the real one. A single `CHECK` among them means the
  * value can be stored somewhere the pairing considers a match, so the claim is
- * not available and the finding stays a `warning` — which is also what the
- * rule said before #1100 raised the genuinely impossible case.
+ * not available and the finding stays a `warning`.
  */
 function isEnumOnly(domain: DbDomain): boolean {
   return domain.bindings.length > 0 && domain.bindings.every((binding) => binding.enumBacked);
@@ -194,7 +181,7 @@ function isEnumOnly(domain: DbDomain): boolean {
  * `SimLine.status` held `accepted`, `archived`, `sending`, `succeeded` … while
  * `sim_lines.status` accepts four values — so a value legal only in an
  * unrelated table counted as representable, and the reader had no way to see
- * that from the message (#1162). Narrowing the pairing itself needs a
+ * that from the message. Narrowing the pairing itself needs a
  * table-to-schema binding this rule does not have; showing which contract
  * contributed what is what it can do, and is enough to act on.
  */
@@ -213,7 +200,7 @@ function describeDbDomain(domain: DbDomain): string {
 /** Which form bounds the field, and — when the candidates disagree — whose. */
 function describeDbConstraint(domain: DbDomain): string {
   if (isEnumOnly(domain)) {
-    return "ENUM (a physical constraint: the value is rejected at insert time)";
+    return "ENUM (a physical constraint: the insert is rejected)";
   }
   const fromEnum = enumFiles(domain);
   if (fromEnum.length === 0) {
@@ -224,7 +211,7 @@ function describeDbConstraint(domain: DbDomain): string {
   }
   return (
     `CHECK and ENUM mixed - the ENUM is declared by ${fromEnum.join(", ")}. ` +
-    "An ENUM on a same-named column bounds that table's column, so it need not reject the value this API field allows"
+    "An ENUM on a same-named column bounds that table's column, and need not reject an insert of this API field"
   );
 }
 
@@ -243,11 +230,10 @@ function describeDbConstraint(domain: DbDomain): string {
 function mixedRemedy(enumOnly: boolean, dbFiles: string[], fromEnum: string[]): string {
   if (enumOnly) {
     return (
-      `The ENUM in the DB contracts (${dbFiles.join(", ")}) is canonical - ` +
-      "it is a physical constraint that rejects the value at insert time, " +
-      "so no implementation satisfies both contracts. " +
-      "Add the value to the ENUM (this needs a migration), " +
-      "or correct the API contract's terminal semantics."
+      `The ENUM in the DB contracts (${dbFiles.join(", ")}) is canonical - it is a physical ` +
+      "constraint that rejects the value at insert time, so no implementation satisfies both " +
+      "contracts. Add the value to the ENUM (this needs a migration), or correct the API " +
+      "contract's terminal semantics."
     );
   }
   if (fromEnum.length === 0) {
@@ -291,18 +277,13 @@ function mixedRemedy(enumOnly: boolean, dbFiles: string[], fromEnum: string[]): 
 /**
  * A line carrying the key that does not parse as a declaration.
  *
- * The severity comes from the promotion window, not from a literal: what this
- * adds today is the one thing the author cannot see otherwise — that the marker
+ * What this adds is the one thing the author cannot see otherwise: the marker
  * they wrote was not read, so the finding they were answering is still standing
- * for the reason it always was — and the run still reports whatever
- * `QFAI-CONTRACT-040` was going to report either way.
+ * for the reason it always was.
  */
 function unreadableDerivedDeclaration(
   file: string,
   line: string,
-  // Named as the binding is, because the ledger guard follows the NAME: an
-  // emission whose severity expression is not the one bound to this entry's pin
-  // reads as a hard-coded severity, which is a window that never opens.
   declarationSeverity: "warning" | "error",
 ): Issue {
   return issue(
@@ -429,15 +410,14 @@ async function validateApiFileAgainstDb(
     // the real one: Postgres rejects the value at insert time. Every gate qfai
     // prescribes is `--fail-on error`, so at `warning` this never blocked
     // anything and sat in a bucket ~95 entries deep — the constraint violation
-    // was found by Postgres rather than by the gate that exists to find it
-    // (#1100).
+    // was found by Postgres rather than by the gate that exists to find it.
     //
     // A `CHECK` constraint stays `warning`: it is a bound the DB currently
     // asserts rather than the shape of the column, and it can be dropped,
     // replaced or declared `NOT VALID`. Raising both would lose the distinction
     // between "impossible" and "currently disallowed".
     //
-    // A MIX stays `warning` too, and this is the case #1162 reported: one
+    // A MIX stays `warning` too: one
     // `CHECK` among the candidates means the value can be stored in a contract
     // the pairing considers a match, so "no implementation can satisfy this"
     // is not a claim this rule is entitled to make from a field name alone.
@@ -629,12 +609,12 @@ const CREATE_TYPE_ENUM_PATTERN =
   /\bCREATE\s+TYPE\s+(?:[A-Za-z_][A-Za-z0-9_]*\s*\.\s*)?"?([A-Za-z_][A-Za-z0-9_]*)"?\s+AS\s+ENUM\s*\(([^)]*)\)/gi;
 const INLINE_ENUM_PATTERN = /^\s*"?([A-Za-z_][A-Za-z0-9_]*)"?\s+ENUM\s*\(([^)]*)\)/gim;
 
-// Column declarations that USE a named enum type. `CREATE TYPE ... AS ENUM` binds values to the
+// Column declarations that USE a named enum type. `CREATE TYPE... AS ENUM` binds values to the
 // type name, not to any column, so the domain has to be carried across the usage edge before it
 // can be reconciled with an API field name. Each pattern captures (column, type):
 //   1. a column line inside a CREATE TABLE body — `status order_status NOT NULL`
-//   2. `ALTER TABLE ... ADD COLUMN status order_status`
-//   3. `ALTER TABLE ... ALTER COLUMN status [SET DATA] TYPE order_status`
+//   2. `ALTER TABLE... ADD COLUMN status order_status`
+//   3. `ALTER TABLE... ALTER COLUMN status [SET DATA] TYPE order_status`
 // A schema qualifier (`public.order_status`) is consumed and ignored: types are matched by their
 // bare name, which is how the declaration side records them too.
 const NAMED_TYPE_USAGE_PATTERNS = [
@@ -661,7 +641,7 @@ function countCreateTables(rawText: string): number {
  * value derived from the wall clock goes stale the moment the clock moves,
  * which is why it is not stored. Deleting it from the API would remove a value
  * the UI contract requires the screen to display. There was no way to say so,
- * so the finding had no valid remedy and stayed in the bucket forever (#1203).
+ * so the finding had no valid remedy and stayed in the bucket forever.
  *
  * The declaration lives in the DB contract, not on the API property, because
  * storage is the DB contract's subject. An API contract asserting "this is not
@@ -784,7 +764,7 @@ async function collectDbStateDomains(dbFiles: string[]): Promise<DbStateDomains>
       }
     }
     // One table means one column of any given name, so a name carrying both
-    // forms carries them on the SAME column and #1100's "enum wins" applies.
+    // forms carries them on the SAME column and "enum wins" applies.
     // Counted over comment-stripped text, so a commented-out `CREATE TABLE`
     // cannot make a single-table contract look like several.
     const singleTable = countCreateTables(text) <= 1;
@@ -846,7 +826,7 @@ export type SqlDomainBound = {
    * out-of-domain value at insert time, so an API contract requiring one
    * describes a pair no implementation can satisfy. A check constraint is a
    * bound the DB currently asserts and can be dropped, replaced or declared
-   * `NOT VALID` (#1100).
+   * `NOT VALID`.
    */
   enumBacked: boolean;
   /**
@@ -991,9 +971,9 @@ function readSqlStringLiterals(list: string): string[] {
 
 /**
  * Blank out SQL comments so a commented-out `CHECK (...)` or
- * `CREATE TYPE ... AS ENUM` cannot be read as a live domain.
+ * `CREATE TYPE... AS ENUM` cannot be read as a live domain.
  *
- * The DB contract template itself ships full-line `-- QFAI-CONTRACT-ID: ...`
+ * The DB contract template itself ships full-line `-- QFAI-CONTRACT-ID:...`
  * headers, so scanning raw text means every contract carries comment content
  * into the domain extractor and `QFAI-CONTRACT-040` can fire on a domain
  * nobody declared.

@@ -12,34 +12,62 @@ import {
 } from "../discussionPack.js";
 import type { LocatedPack } from "../packLocator.js";
 import { findPacks } from "../packLocator.js";
-import { readDiscussionCurrentId } from "../state.js";
-import { RULE_PROMOTIONS, newRuleSeverity } from "../sunset.js";
+import { readDiscussionPointer } from "../state.js";
 import type { Issue } from "../types.js";
-import { resolveToolVersion } from "../version.js";
 import { issue } from "./utils.js";
-
-/** The release `QFAI-RESEARCH-012` stops being a warning at. */
-const SECTION_MISSING_PROMOTION = RULE_PROMOTIONS.researchSummarySectionMissing.promoteAt;
-/** The release the per-entry schema rules stop being warnings at. */
-const SCHEMA_FIELDS_PROMOTION = RULE_PROMOTIONS.researchSummarySchemaFields.promoteAt;
-
-/** The window note every rule under {@link SCHEMA_FIELDS_PROMOTION} carries. */
-function schemaWindowNote(severity: "warning" | "error"): string {
-  return severity === "warning"
-    ? ` Reported as a warning until the ${SCHEMA_FIELDS_PROMOTION} release, then an error`
-    : "";
-}
 
 const RESEARCH_SUMMARY_HEADING_RE = /^#{1,3}\s+Research\s+Summary/im;
 const FULL_DATE_RE = /^[ \t]*(?:-[ \t]*)?published:[ \t]*["']?(\d{4}-\d{2}-\d{2})["']?/m;
+/** The same shape for the date a source that was never published was seen on. */
+const OBSERVED_DATE_RE = /^[ \t]*(?:-[ \t]*)?observed:[ \t]*["']?(\d{4}-\d{2}-\d{2})["']?/m;
+/** `type:` of a source entry, read as written. */
+const SOURCE_TYPE_RE = /^[ \t]*(?:-[ \t]*)?type:[ \t]*["']?([A-Za-z-]+)["']?/m;
+
 /**
- * A fenced block inside the stored section — the prose around it is not data.
+ * What a source entry must carry, by what kind of source it is.
  *
- * Any info string, not `yaml` alone: the shipped template fences the summary as
- * ```yaml, but a pack that fences it bare or as ```yml carries the same data and
- * reading none of it would report every field missing.
+ * `url` and `published` describe published material. A brownfield discussion
+ * pack is mostly primary evidence — a screenshot of the customer's system, a
+ * file they supplied, a conversation log — which is real, citable and recorded,
+ * and has neither. Demanding those two fields there bought a locator field
+ * holding an admin path and a `published` date that is really the day someone
+ * looked, which also fed the freshness ratio and made it meaningless.
+ *
+ * So the pair is named for what it is. Both kinds owe the same two facts:
+ * where the source is, and when it is from.
  */
-const YAML_FENCE_RE = /^```[^\n]*\n([\s\S]*?)^```/gm;
+const SOURCE_FIELDS_BY_TYPE = {
+  external: { locator: "url", date: "published", dateRe: FULL_DATE_RE },
+  primary: { locator: "locator", date: "observed", dateRe: OBSERVED_DATE_RE },
+  secondary: { locator: "locator", date: "observed", dateRe: OBSERVED_DATE_RE },
+} as const;
+
+type SourceType = keyof typeof SOURCE_FIELDS_BY_TYPE;
+
+/**
+ * The kind of source an entry declares, defaulting to `external`.
+ *
+ * Absent means `external` because that is what the schema required before the
+ * distinction existed, so a pack written against the old schema keeps passing
+ * unchanged. A value outside the vocabulary defaults there too, which is the
+ * conservative direction: an unreadable `type` keeps the strictest obligation
+ * rather than letting a typo drop the entry's requirements.
+ */
+function sourceType(entry: string): SourceType {
+  const declared = SOURCE_TYPE_RE.exec(entry)?.[1]?.toLowerCase() ?? "";
+  return declared === "primary" || declared === "secondary" ? declared : "external";
+}
+/**
+ * Fence info strings whose block carries the summary itself.
+ *
+ * The shipped template writes a `yaml` fence, but a pack that fences the same
+ * data bare or as `yml` carries it too, and reading none of those would report
+ * every field missing. An allowlist rather than a denylist of languages: a
+ * denylist cannot be complete, and a block this does not recognise is not lost
+ * either — a section with no YAML fence at all still falls back whole.
+ */
+const YAML_INFO_WORDS = new Set(["", "yaml", "yml"]);
+
 /** `[fill me in]` — the shipped template's placeholder shape, once parsed. */
 const PLACEHOLDER_TEXT_RE = /^\[[^\]]*\]$/;
 /**
@@ -54,8 +82,11 @@ const PLACEHOLDER_TEXT_RE = /^\[[^\]]*\]$/;
 const SCALAR_SCHEMA_FIELDS = new Set([
   "id",
   "title",
+  "type",
   "url",
   "published",
+  "locator",
+  "observed",
   "category",
   "description",
   "source_id",
@@ -81,13 +112,9 @@ export async function validateResearchSummary(root: string, config: QfaiConfig):
   // rule, and only there — see the comment on that guard for why the opt-out
   // stops at "the section is missing" instead of returning [] from here.
   const issues: Issue[] = [];
-  // Resolved once for the whole run: the promotion window is a property of the
-  // tool, not of any one pack, and every rule below reads the same answer.
-  const toolVersion = await resolveToolVersion();
-  // The per-entry schema rules ride one window (`researchSummarySchemaFields`).
-  // A literal `"error"` beside any of these calls would be a registered pin
-  // that never governs anything — the state `sunsetLedger.test.ts` rejects.
-  const schemaSeverity = newRuleSeverity(toolVersion, SCHEMA_FIELDS_PROMOTION);
+  // Resolved once for the whole run so every rule below reads the same answer,
+  // rather than repeating the literal at each call.
+  const schemaSeverity = "error";
   const target = await resolveResearchSummaryScanTarget(root, config);
   issues.push(...describeBrokenPointer(root, target, schemaSeverity));
   // `uiux.requireResearchSummary: false` is a project stating the section is
@@ -99,9 +126,9 @@ export async function validateResearchSummary(root: string, config: QfaiConfig):
   const requireSection = config.uiux?.requireResearchSummary !== false;
   if (requireSection) {
     issues.push(...(await checkStorageSlotPresence(root, target, schemaSeverity)));
-    // Resolved here rather than inside the builder: the promotion window is a
-    // property of the tool, and the builder runs once per validator run anyway.
-    const missing = await buildMissingSectionIssue(root, target.discussionRoot, toolVersion);
+    // Resolved here rather than inside the builder, which runs once per
+    // validator run anyway.
+    const missing = await buildMissingSectionIssue(root, target.discussionRoot);
     if (missing) {
       issues.push(missing);
     }
@@ -155,7 +182,7 @@ export async function validateResearchSummary(root: string, config: QfaiConfig):
         issues.push(
           issue(
             "QFAI-RESEARCH-017",
-            `Source entry missing required field "id": ${label}${schemaWindowNote(schemaSeverity)}`,
+            `Source entry missing required field "id": ${label}`,
             schemaSeverity,
             rel,
             "researchSummary.sourceId",
@@ -173,22 +200,23 @@ export async function validateResearchSummary(root: string, config: QfaiConfig):
           ),
         );
       }
-      if (!hasNonEmptyField(entry, "url")) {
+      const fields = SOURCE_FIELDS_BY_TYPE[sourceType(entry)];
+      if (!hasNonEmptyField(entry, fields.locator)) {
         issues.push(
           issue(
             "QFAI-RESEARCH-005",
-            `Source entry missing required field "url": ${label}`,
+            `Source entry missing required field "${fields.locator}": ${label}`,
             "error",
             rel,
             "researchSummary.sourceUrl",
           ),
         );
       }
-      if (!FULL_DATE_RE.test(entry)) {
+      if (!fields.dateRe.test(entry)) {
         issues.push(
           issue(
             "QFAI-RESEARCH-006",
-            `Source entry missing or invalid "published" date (YYYY-MM-DD): ${label}`,
+            `Source entry missing or invalid "${fields.date}" date (YYYY-MM-DD): ${label}`,
             "error",
             rel,
             "researchSummary.sourcePublished",
@@ -200,7 +228,12 @@ export async function validateResearchSummary(root: string, config: QfaiConfig):
     // Check freshness (≥80% within 2 years)
     const referenceNow = resolveFreshnessReferenceNow();
     const twoYearsMs = 1000 * 60 * 60 * 24 * 365 * 2;
+    // External entries only. The ratio asks how much of the research rests on
+    // recent publications, and primary evidence has no publication date to be
+    // recent or stale against — counting the day someone looked at it would
+    // score every such entry as fresh and say nothing.
     const publishedDates = sourceEntries
+      .filter((entry) => sourceType(entry) === "external")
       .map((entry) => FULL_DATE_RE.exec(entry)?.[1] ?? "")
       .map((dateText) => Date.parse(dateText))
       .filter((ts) => Number.isFinite(ts));
@@ -231,7 +264,7 @@ export async function validateResearchSummary(root: string, config: QfaiConfig):
       issues.push(
         issue(
           "QFAI-RESEARCH-021",
-          `Research Summary still carries unreplaced template placeholders (${placeholderKeys.join(", ")}); record the actual protocol run${schemaWindowNote(schemaSeverity)}`,
+          `Research Summary still carries unreplaced template placeholders (${placeholderKeys.join(", ")}); record the actual protocol run`,
           schemaSeverity,
           rel,
           "researchSummary.placeholder",
@@ -244,7 +277,7 @@ export async function validateResearchSummary(root: string, config: QfaiConfig):
       issues.push(
         issue(
           "QFAI-RESEARCH-015",
-          `"source_id" does not resolve to any sources[].id in the same Research Summary: ${unresolved}${schemaWindowNote(schemaSeverity)}`,
+          `"source_id" does not resolve to any sources[].id in the same Research Summary: ${unresolved}`,
           schemaSeverity,
           rel,
           "researchSummary.sourceIdReference",
@@ -311,6 +344,40 @@ export async function validateResearchSummary(root: string, config: QfaiConfig):
 }
 
 /**
+ * The rules that report nothing while the section is absent and report at
+ * `error` the moment it appears, with what each one requires.
+ *
+ * They are named in the finding for the absence, because a count that omits
+ * them is not the count the repository owes. A pack sitting at `error=0` can do
+ * exactly what the absence warning asks and land on a large error count in one
+ * step, and the two source rules are per source — a pack with 28 of them
+ * contributes 56 findings on first contact. Naming the rules turns the second
+ * step into a decision rather than a discovery.
+ *
+ * This list is the set the section's arrival makes red.
+ *
+ * `inertGateFirstContact.test.ts` holds the list against the validator by
+ * running it on a section that satisfies none of them, so a rule added, moved
+ * or renamed cannot leave the message describing the previous set.
+ */
+const FIRST_CONTACT_RULES: ReadonlyArray<{ code: string; requires: string }> = [
+  { code: "QFAI-RESEARCH-005", requires: "sources[].url" },
+  { code: "QFAI-RESEARCH-006", requires: "sources[].published (YYYY-MM-DD)" },
+  { code: "QFAI-RESEARCH-007", requires: "best_practices (non-empty)" },
+  { code: "QFAI-RESEARCH-008", requires: "anti_patterns (non-empty)" },
+  { code: "QFAI-RESEARCH-011", requires: "reflection (non-empty)" },
+];
+
+/** The sentence naming what the absent section is holding back. */
+function firstContactNote(): string {
+  const named = FIRST_CONTACT_RULES.map((rule) => `${rule.code} (${rule.requires})`).join(", ");
+  return (
+    ` While the section is absent, these rules report nothing; each becomes an error as soon as` +
+    ` the section exists: ${named}. The two source rules apply per source.`
+  );
+}
+
+/**
  * Every content rule is skipped when a file carries no heading, so omitting the
  * section entirely used to score zero findings while half-writing it scored
  * several errors. Make the omission visible with a single warning on the pack
@@ -324,7 +391,6 @@ export async function validateResearchSummary(root: string, config: QfaiConfig):
 async function buildMissingSectionIssue(
   root: string,
   discussionRoot: string,
-  toolVersion: string,
 ): Promise<Issue | null> {
   let latestPackDir: string | null = null;
   try {
@@ -353,14 +419,10 @@ async function buildMissingSectionIssue(
   }
 
   const rel = path.relative(root, latestPackDir).replace(/\\/g, "/");
-  const sectionMissingSeverity = newRuleSeverity(toolVersion, SECTION_MISSING_PROMOTION);
-  const windowNote =
-    sectionMissingSeverity === "warning"
-      ? ` Reported as a warning until the ${SECTION_MISSING_PROMOTION} release, then an error`
-      : "";
+  const sectionMissingSeverity = "error";
   return issue(
     "QFAI-RESEARCH-012",
-    `Discussion pack has no "Research Summary" section, so the research-first protocol is never checked.${windowNote}`,
+    `Discussion pack has no "Research Summary" section, so the research-first protocol is never checked.${firstContactNote()}`,
     sectionMissingSeverity,
     rel,
     "researchSummary.sectionMissing",
@@ -388,7 +450,7 @@ function checkPracticeEntries(
       issues.push(
         issue(
           "QFAI-RESEARCH-018",
-          `${key} entry missing required field(s) ${missing.join(", ")}: ${describeEntry(key, entry, i)}${schemaWindowNote(schemaSeverity)}`,
+          `${key} entry missing required field(s) ${missing.join(", ")}: ${describeEntry(key, entry, i)}`,
           schemaSeverity,
           rel,
           "researchSummary.practiceFields",
@@ -415,7 +477,7 @@ function checkReflectionEntries(
       issues.push(
         issue(
           "QFAI-RESEARCH-019",
-          `reflection entry missing required field(s) ${missing.join(", ")}: ${label}${schemaWindowNote(schemaSeverity)}`,
+          `reflection entry missing required field(s) ${missing.join(", ")}: ${label}`,
           schemaSeverity,
           rel,
           "researchSummary.reflectionFields",
@@ -468,8 +530,15 @@ type ResearchSummaryScanTarget = {
   reportMissingStorageFile: boolean;
   /** Discussion root, used to anchor pack-level findings. */
   discussionRoot: string;
-  /** `currentId` that is set but does not resolve to exactly one pack on disk. */
-  brokenPointer: { currentId: string; reason: string } | null;
+  /**
+   * The pointer could not be turned into exactly one pack on disk.
+   *
+   * Two shapes, and the `currentId` says which: a string is a pointer that is
+   * set and resolves to no pack (or to more than one); `null` is a state file
+   * that is present but unreadable, where the pointer's value is unknown
+   * rather than absent.
+   */
+  brokenPointer: { currentId: string | null; reason: string } | null;
 };
 
 /**
@@ -482,8 +551,15 @@ type ResearchSummaryScanTarget = {
  * schema against, say, an `01_Context.md` that merely mentions the heading.
  *
  * A pointer that is set but unresolvable is a broken SSOT and is reported
- * (QFAI-RESEARCH-020) instead of being papered over. A pointer that is simply
- * absent is the normal state of a gitignored runtime file, so it falls back to
+ * (QFAI-RESEARCH-020) instead of being papered over. So is a state file that is
+ * present but unreadable: `readDiscussionPointer` separates "no pointer
+ * recorded" from "the pointer could not be read", and only the first of those
+ * may reach the fallbacks below — inferring "latest pack" from a corrupt file
+ * substitutes a pack nobody selected, and the gate then passes or fails on the
+ * wrong session's evidence.
+ *
+ * A pointer that is simply absent is the normal state of a gitignored runtime
+ * file, so it falls back to
  * the same rule `qfai discussion list --active` uses: a lone `discussion-*`
  * directory is the de-facto active session; two or more are ambiguous, so the
  * latest pack is still read (an abandoned older pack must not keep the gate red
@@ -498,12 +574,20 @@ async function resolveResearchSummaryScanTarget(
   const discussionRoot = path.resolve(root, config.paths.discussionDir);
   const base = { discussionRoot, brokenPointer: null, reportMissingStorageFile: false } as const;
 
-  let currentId: string | null = null;
-  try {
-    currentId = await readDiscussionCurrentId(root);
-  } catch {
-    currentId = null;
+  const pointer = await readDiscussionPointer(root);
+  if (!pointer.ok) {
+    // Unreadable, not unset. `readDiscussionCurrentId` collapses the two to
+    // `null`, and its own docblock says a caller that picks a fallback cannot
+    // use it for exactly this reason: the fallbacks below would validate the
+    // latest pack against a state file that may well pin an older one.
+    return {
+      ...base,
+      files: [],
+      activePackDir: null,
+      brokenPointer: { currentId: null, reason: pointer.reason },
+    };
   }
+  const currentId = pointer.currentId;
 
   if (currentId !== null) {
     try {
@@ -600,7 +684,7 @@ function describeBrokenPointer(
   return [
     issue(
       "QFAI-RESEARCH-020",
-      `Cannot resolve the current discussion pack: ${target.brokenPointer.reason}${schemaWindowNote(schemaSeverity)}`,
+      `Cannot resolve the current discussion pack: ${target.brokenPointer.reason}`,
       schemaSeverity,
       path.relative(root, target.discussionRoot).replace(/\\/g, "/"),
       "researchSummary.brokenCurrentPointer",
@@ -661,7 +745,7 @@ function storageSlotIssue(
 ): Issue {
   return issue(
     "QFAI-RESEARCH-016",
-    `${RESEARCH_SUMMARY_FILE} does not store a Research Summary (${detail}); record the research-first protocol output there${schemaWindowNote(schemaSeverity)}`,
+    `${RESEARCH_SUMMARY_FILE} does not store a Research Summary (${detail}); record the research-first protocol output there`,
     schemaSeverity,
     path.relative(root, storageFile).replace(/\\/g, "/"),
     "researchSummary.storageSlotMissing",
@@ -671,10 +755,96 @@ function storageSlotIssue(
 /**
  * The fenced YAML blocks of the stored section, or the whole section when it
  * carries none (packs written before the template shipped a fence).
+ *
+ * Walks with {@link parseFenceLine} rather than carrying a fence pattern of
+ * its own. A second rule is a second thing to keep in step, and the two had
+ * already drifted: this read a backtick fence at column 0, while the mask that
+ * decides where the section even STARTS takes CommonMark's 0-3 leading spaces
+ * and `~~~` as well. A pack indenting its fence by two spaces was inside the
+ * section and outside its payload, so the whole section — prose included —
+ * went to the YAML reader.
+ *
+ * A closing fence is the same marker, at least as long as the opener, and
+ * carries no info string: the same three conditions the mask applies. An
+ * unclosed one yields what followed it — including nothing, when it opened at
+ * the end of the section: the fallback belongs to a section with no YAML fence
+ * at all, not to one whose fence is empty.
+ *
+ * Only a block whose opener is **YAML or unlabelled** is collected — the info
+ * words {@link YAML_INFO_WORDS} admits, which are `yaml`, `yml` and the empty
+ * string, because a pack that fences the same data bare carries it too. Every
+ * other fence is still tracked so its body cannot be mistaken for one: a
+ * mermaid diagram, or a markdown paste of the blank template, is prose the
+ * section happens to carry, and reading it as data reported placeholders the
+ * real summary had already filled in.
  */
 function extractYamlPayload(section: string): string {
-  const blocks = [...section.matchAll(YAML_FENCE_RE)].map((match) => match[1] ?? "");
-  return blocks.length > 0 ? blocks.join("\n") : section;
+  const lines = section.split("\n");
+  const blocks: string[] = [];
+  // Every line a fence owns — its markers and its body — blanked out of the
+  // fallback below. A section whose only fences are `markdown` or `mermaid`
+  // has no YAML payload at all, and reading an illustration's `sources:` as
+  // data is what the fallback used to do.
+  const fenced = new Array<boolean>(lines.length).fill(false);
+  let open: { marker: string; length: number; collect: boolean } | null = null;
+  let current: string[] = [];
+
+  for (let index = 0; index < lines.length; index += 1) {
+    const line = lines[index] ?? "";
+    const fence = parseFenceLine(line);
+    if (!open) {
+      if (fence) {
+        fenced[index] = true;
+        open = {
+          marker: fence.marker,
+          length: fence.length,
+          collect: YAML_INFO_WORDS.has(fenceInfoWord(fence.info)),
+        };
+      }
+      continue;
+    }
+    fenced[index] = true;
+    if (
+      fence &&
+      fence.marker === open.marker &&
+      fence.length >= open.length &&
+      !fence.info.trim()
+    ) {
+      if (open.collect) {
+        blocks.push(current.join("\n"));
+      }
+      current = [];
+      open = null;
+      continue;
+    }
+    if (open.collect) {
+      current.push(line);
+    }
+  }
+  // `current.length` is not a condition. An unclosed YAML fence with an empty
+  // body is a payload that says "no data", and pushing nothing left `blocks`
+  // empty — which sends the whole section, fence line and prose included, to
+  // the YAML reader. The closing branch above already pushes unconditionally;
+  // this is the same rule at the file's end.
+  if (open?.collect) {
+    blocks.push(current.join("\n"));
+  }
+
+  if (blocks.length > 0) {
+    return blocks.join("\n");
+  }
+  // Blanked rather than dropped, so a reported line number still names the
+  // line the author wrote.
+  return lines.map((line, index) => (fenced[index] === true ? "" : line)).join("\n");
+}
+
+/**
+ * The first word of a fence's info string, lowercased: `yaml` out of an opener
+ * that carries attributes after the language, and the empty string out of a
+ * bare fence.
+ */
+function fenceInfoWord(info: string): string {
+  return info.trim().split(/\s+/u)[0]?.toLowerCase() ?? "";
 }
 
 /**

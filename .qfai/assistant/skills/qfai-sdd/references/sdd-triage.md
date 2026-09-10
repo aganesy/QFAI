@@ -43,13 +43,10 @@ Concretely, before persisting any Triage row:
    blocker set (steps 5 and 7). An unapproved CREATE row must never leave
    a new CAP behind in the catalog.
 
-   `QFAI-SPLIT-106` is inside its promotion window, so it is emitted at
-   `warning` and `validate --fail-on error` **still exits 0** while the
-   cell is empty. A blank cell also suppresses `QFAI-SPLIT-103` / `104` /
-   `105` for that row, so no other code stands in for it. Do not treat
-   the exit code as the check here: read the reported findings and
-   confirm no `QFAI-SPLIT-106` remains. The finding's own message names
-   the release it becomes an `error` in.
+   `QFAI-SPLIT-106` is an error, so `validate --fail-on error` stops
+   while the cell is empty. A blank cell also suppresses
+   `QFAI-SPLIT-103` / `104` / `105` for that row, so no other code
+   stands in for it.
 
 The triage classifier implements an append-first fallback: when the REQ's
 capability does not match exactly, it still proposes APPEND on the active
@@ -113,9 +110,33 @@ and that none were added or dropped — in the `Rationale` column of the
 1. Latest discussion-pack `06_REQ.md` / `07_NFR.md` / `99_delta.md` — reference
    input, not normative. Requirement seeds to triage, not obligations to obey;
    an explicit user requirement or an import-lite source serves the same slot.
+   **Import-lite exception** — when Stage 0 took the missing-pack route
+   (specs present, no discussion pack at all), input 1 is instead the
+   evidence file it wrote, `.qfai/evidence/import-lite-<ts>.md`. That
+   path is canonical and does not follow `paths.discussionDir`: a project
+   that moved its discussion packs still reads and writes the evidence
+   under `.qfai/evidence/`, which is where the check looks. Its
+   `## Sources` and `## User provided excerpt` are the canonical REQ/NFR
+   intake for this run, and its `## Assumptions / Missing information`
+   items become Open Questions on whichever spec each row lands on.
+   The evidence file is a pointer, not SSOT — do not invent REQs beyond
+   what it cites; if it cites nothing usable, delete the evidence file and
+   stop to ask, so an input-less pointer cannot silence `QFAI-IMPLITE-001`
+   on the next validate.
+   Item provenance follows the input: US and AC rows this route adds or
+   changes carry `Source: import-lite-<ts>#<REQ-ID>` — the evidence file's
+   basename without the `.md`, then the requirement ID as the imported
+   material names it, or the `IMP-NNN` its `## Imported requirements`
+   assigns when the material has none — in place of the
+   `<pack-id>#<discussion-id>` pair.
+   The form is defined in `spec-traceability-rules.md`; never record `-`
+   here, and never invent a discussion ID for a pack that does not exist.
 2. `_policies/03_Capabilities.md` (CAP catalog).
 3. `_policies/11_Slice-Policy.md` (operation rules + size thresholds).
-4. Active spec summaries from `01_Spec.md` headers across `.qfai/specs/spec-*`.
+4. Active spec summaries from `01_Spec.md` headers across `<paths.specsDir>/spec-*`
+   (`.qfai/specs/spec-*` at the default). Read the resolved path: on a project
+   that moved `paths.specsDir`, a fixed `.qfai/specs` enumerates nothing and every
+   append-first REQ is misclassified as CREATE.
 
 ## Procedure
 
@@ -132,7 +153,15 @@ and that none were added or dropped — in the `Rationale` column of the
 5. **Approval pass.** For every row whose Operation requires approval
    (CREATE, DELETE, SPLIT, MERGE, SUPERSEDE) or whose Sub-op is REMOVE,
    present an AskUserQuestion with the proposed operation. Record the
-   approver in the `Approved By` column. Under `--auto` the row leaves
+   approver in the `Approved By` column. An `UPDATE:MODIFY` row needs it
+   whenever it deletes a ledger row at Phase 2b — a `Level` change either
+   way does that: out of the coverage-target set the TC's row is retired,
+   and into a different target layer the old row is retired and a new one
+   seeded — because deleting a ledger row is operator-approved on every
+   other path (`spec-traceability-rules.md`, Ownership split). Ask for the deletion
+   itself, not for the `Level` change, and record the approver on that
+   row. Without it Phase 2b has no authorisation and the removal takes
+   the Change Request path instead. Under `--auto` the row leaves
    `--auto` scope and no question may be asked — not through
    AskUserQuestion and not in plain text, operator present or not — so stop
    at step 7 instead. Never synthesize an `Approved By` value — the column
@@ -265,7 +294,7 @@ catches a source that was misspelled or never allocated.
   in `_policies/03_Capabilities.md`. This is the structural gate that
   enforces the append-first principle: CREATE is only permitted when a
   new capability is being added to the catalog.
-- `QFAI-TRIAGE-008` (warning): the file carries a heading that starts with
+- `QFAI-TRIAGE-008`: the file carries a heading that starts with
   `Triage` but is not a canonical `## Triage` section — its rows are read by
   none of the checks above. Rename the heading to `## Triage`.
 - `QFAI-TRIAGE-009` (error): `Existing Spec` does not follow the grammar

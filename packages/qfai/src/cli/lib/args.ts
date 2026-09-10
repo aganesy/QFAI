@@ -43,7 +43,8 @@ export type ParsedArgs = {
       | "tdd"
       | "verify"
       | "full"
-      | "saas-package";
+      | "saas-package"
+      | "drift";
     /**
      * `qfai doctor --profile <skill>` per-skill profile. Distinct from
      * the validate-side `profile` enum above: when `doctor --profile`
@@ -63,6 +64,8 @@ export type ParsedArgs = {
     guardrailsKeyword?: string;
     /** --format <text|json> for `qfai guardrails list|extract|check`. */
     guardrailsFormat?: "text" | "json";
+    dbDriftFormat?: "text" | "json";
+    dbDriftOut?: string;
     platform?: string;
     prototypingAction?: "preflight" | "iterate" | "certify" | "show-spec" | "rescope";
     /** `rescope --remove <surface-id>`, repeatable. */
@@ -307,9 +310,9 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
    *
    * A flag accepted where nothing reads it reaches nothing, and the run
    * proceeds as if it had not been given. `--dir` produced a verdict about the
-   * CURRENT tree and made `report` overwrite its `report.md` (#1143);
+   * CURRENT tree and made `report` overwrite its `report.md`;
    * `--upgrade-assistant-tree` exited 0 having upgraded nothing;
-   * `--dry-run` let an operator believe a run was a rehearsal (#1144).
+   * `--dry-run` let an operator believe a run was a rehearsal.
    *
    * The owner lists are derived from where `main.ts` reads each field, not
    * guessed:
@@ -610,9 +613,10 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
         }
         break;
       case "--strict":
-        // usage(): validate 専用。report / doctor では runReport /
-        // runDoctor が strict を読まないため、黙って捨てずに拒否する。
-        if (command === "validate") {
+        // usage(): validate と report が読む。runReport は findings を
+        // gate するようになったので strict を尊重する。doctor では
+        // runDoctor が読まないため、黙って捨てずに拒否する。
+        if (command === "validate" || command === "report") {
           options.strict = true;
         } else {
           markInvalid(notValidHere("--strict"));
@@ -640,7 +644,7 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
             badValue(
               "--profile",
               next,
-              "discussion|sdd|prototyping|atdd|tdd|verify|full|saas-package",
+              "discussion|sdd|prototyping|atdd|tdd|verify|full|saas-package|drift",
             ),
           );
         }
@@ -668,14 +672,16 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
           markInvalid(missingValue("--fail-on"));
           break;
         }
-        // usage(): validate / doctor / prototyping preflight / sdd preflight のみが
-        // failOn を読む。report 等に付けても runReport は無視するため拒否。
+        // usage(): validate / report / doctor / prototyping preflight / sdd
+        // preflight のみが failOn を読む。report は findings を gate する
+        // ようになったため所有側に含める。それ以外に付けても読まれないので拒否。
         // `sdd` は preflight しか subcommand を持たず、subcommand なしの
         // `qfai sdd` は末尾の guard が既に markInvalid() するため、ここは
         // command 名だけで足りる (runSddPreflightCommand が `never` を exit 0
         // として読む)。
         if (
           command !== "validate" &&
+          command !== "report" &&
           command !== "doctor" &&
           command !== "sdd" &&
           !ownedByPrototyping("preflight")
@@ -690,7 +696,9 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
         } else {
           // An unknown threshold must not fall through to the config
           // default: the gate would then silently differ from the flag
-          // the caller wrote, in either direction.
+          // the caller wrote, in either direction. A typo (`--fail-on warn`)
+          // dropped silently would let a CI step that meant to gate on warnings
+          // exit 0 on a warning-only run.
           markInvalid(badValue("--fail-on", next, "never|warning|error"));
         }
         break;
@@ -708,6 +716,8 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
           options.doctorOut = next;
         } else if (command === "report") {
           options.reportOut = next;
+        } else if (command === "db-drift") {
+          options.dbDriftOut = next;
         } else {
           markInvalid(notValidHere("--out"));
         }
@@ -1273,6 +1283,13 @@ function applyFormatOption(
     }
     return false;
   }
+  if (command === "db-drift") {
+    if (value === "text" || value === "json") {
+      options.dbDriftFormat = value;
+      return true;
+    }
+    return false;
+  }
   return false;
 }
 
@@ -1303,7 +1320,8 @@ function isValidationProfile(
   | "tdd"
   | "verify"
   | "full"
-  | "saas-package" {
+  | "saas-package"
+  | "drift" {
   return (
     value === "discussion" ||
     value === "sdd" ||
@@ -1312,6 +1330,7 @@ function isValidationProfile(
     value === "tdd" ||
     value === "verify" ||
     value === "full" ||
-    value === "saas-package"
+    value === "saas-package" ||
+    value === "drift"
   );
 }

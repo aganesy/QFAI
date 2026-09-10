@@ -82,7 +82,7 @@ function collectOrderedList(section: string): string {
 // `FORBIDDEN_LEGACY_PATTERNS` is a regex list, so it cannot be searched for in
 // prose; these are the concrete filenames that stand in for it. The coverage
 // case below fails if the validator grows a pattern with no representative
-// here, which is what previously let the sweep fall behind the SSOT.
+// here, which is what would let the sweep fall behind the SSOT.
 const FORBIDDEN_SIDECAR_NAMES = [
   "10_implementation_strategy.md",
   "11_design_taste_interview.md",
@@ -120,7 +120,7 @@ describe("discussion skill template integration", () => {
     expect(files).toContain("40_screen_contracts.md");
     expect(files).toContain("50_review_input_bundle.md");
     // Brand-level inputs moved to root DESIGN.md; rubric/calibration
-    // sidecars previously removed.
+    // sidecars are removed.
     expect(files).not.toContain("33_exploration_rubric.md");
     expect(files).not.toContain("34_evaluator_calibration.md");
   });
@@ -348,7 +348,11 @@ describe("discussion skill template integration", () => {
       implementSkill.split(/^## /m).find((s) => s.startsWith("Visual Review Guard")) ?? "";
     expect(guard, "no Visual Review Guard section").not.toBe("");
     expect(guard).toMatch(/cli-only/);
-    expect(guard).toMatch(/`\.qfai\/contracts\/ui\/\*\.yaml`/);
+    // The configured directory, not the default spelled out. A project that
+    // repoints `paths.contractsDir` has no `.qfai/contracts/ui`, so a guard
+    // naming that path sends its review at a directory that is not there.
+    expect(guard).toMatch(/<contractsDir>\/ui\/\*\*/);
+    expect(guard).not.toMatch(/`\.qfai\/contracts\/ui\//);
   });
 
   // `/qfai-implement` takes ONE spec from an argument or the queue, while

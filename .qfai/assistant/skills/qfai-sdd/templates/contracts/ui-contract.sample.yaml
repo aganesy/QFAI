@@ -4,10 +4,12 @@ prototype:
   mockPaths:
     - id: mp_create_to_list
       flow: create -> list reflects
+  # CONTRACT_ID:ELEMENT_ID, with the suffix taken from screens[].elements[].id.
+  # Only the markers declared here are inspected; nothing derives them.
   markers:
-    - id: mk_order_form
-      selector: "[data-qfai='order-form']"
-      purpose: order create form root
+    - id: mk_customer_id_input
+      selector: "[data-qfai='CON-UI-0001:customer_id_input']"
+      purpose: customer id field on the order create form
 screens:
   - id: order_create
     title: Create Order

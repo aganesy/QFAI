@@ -1,4 +1,5 @@
-import { readFile, readdir } from "node:fs/promises";
+import { mkdtemp, readFile, readdir, rm, writeFile } from "node:fs/promises";
+import os from "node:os";
 import path from "node:path";
 
 import { describe, expect, it } from "vitest";
@@ -357,10 +358,8 @@ const PENDING_EXPECTED_CATALOG_CODES = new Set<string>([
   "R-PROMPT-SCANNER-DRIFT",
   "R-SKILL-MANIFEST-DRIFT",
   "TDDLIST_BLOCKED_MISSING_REF",
-  "TDDLIST_COVERAGE_LAYER_MISMATCH",
   "TDDLIST_DUPLICATE_ID",
   "TDDLIST_EVIDENCE_EMPTY",
-  "TDDLIST_EVIDENCE_STATUS_ONLY",
   "TDDLIST_EXCEPTION_MISSING_DR",
   "TDDLIST_INVALID_ID",
   "TDDLIST_INVALID_OBLIGATION_REF",
@@ -418,7 +417,6 @@ const PENDING_EXPECTED_CATALOG_CODES = new Set<string>([
   "UIX-VAL-TREND-FIELD-MISSING",
   "UIX-VAL-TREND-SCAN-MISSING",
   "W-SKILL-DOC-BROKEN-REF",
-  "W-STALE-REFERENCE",
 ]);
 
 const PENDING_FIX_CATALOG_CODES = new Set<string>([
@@ -546,7 +544,6 @@ const PENDING_FIX_CATALOG_CODES = new Set<string>([
   "QFAI-TRACE-122",
   "QFAI-TRACE-123",
   "QFAI-WAIVER-001",
-  "QFAI-WAIVER-002",
   "QFAI_CONFIG_INVALID",
   "R-AUTOPILOT-POLICY-MISSING",
   "R-EVIDENCE-MUTATION-UNLOGGED",
@@ -566,12 +563,28 @@ const PENDING_FIX_CATALOG_CODES = new Set<string>([
   "TDDLIST_TEST_FILE_MISSING",
   "TRACE_SHARED_SCOPE_VIOLATION",
   "W-SKILL-DOC-BROKEN-REF",
-  "W-STALE-REFERENCE",
 ]);
 
 async function collectErrorCapableUsage(): Promise<Map<string, IssueCodeUsage>> {
   const usage = await collectIssueCodeUsage(path.resolve(__dirname, "../../src"));
   return new Map([...usage].filter(([, entry]) => entry.errorCapable));
+}
+
+/**
+ * The census the reader builds for one source file, written to a sandbox.
+ *
+ * The cases above answer "what does the tree contain", which cannot say what
+ * the reader would do with a shape the tree happens not to hold today. This
+ * one supplies the shape.
+ */
+async function censusOf(source: string): Promise<Map<string, IssueCodeUsage>> {
+  const dir = await mkdtemp(path.join(os.tmpdir(), "qfai-issue-census-"));
+  try {
+    await writeFile(path.join(dir, "sample.ts"), source, "utf-8");
+    return await collectIssueCodeUsage(dir);
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
 }
 
 describe("issue report metadata", () => {
@@ -630,6 +643,52 @@ describe("issue report metadata", () => {
     }
     // The pin: a real `Issue` object literal is still counted.
     expect(usage.has("QFAI-SKILLS-001")).toBe(true);
+  });
+
+  it("reads a severity that branches on what the rule found", async () => {
+    // A rule whose severity depends on its own finding writes a conditional.
+    // Read as one opaque expression, every such rule joined the error-capable
+    // census and owed catalog metadata for a severity it can never reach.
+    const usage = await censusOf(`
+      export function a() {
+        return issue("C-BOTH-NON-ERROR", "m", owed > 0 ? "warning" : "info", "f", "r",
+          undefined, "canonical", undefined);
+      }
+      export function b() {
+        return issue("C-ONE-ERROR", "m", owed > 0 ? "error" : "info", "f", "r",
+          undefined, "canonical", undefined);
+      }
+      export function c() {
+        return issue("C-NESTED", "m", owed > 2 ? "warning" : owed > 0 ? "info" : "warning", "f",
+          "r", undefined, "canonical", undefined);
+      }
+      export function d() {
+        return issue("C-COMMENTED", "m",
+          // Why the severity branches, written where the reader meets it.
+          owed > 0 ? "warning" : "info", "f", "r", undefined, "canonical", undefined);
+      }
+      export function e() {
+        return issue("C-UNRESOLVABLE", "m", owed > 0 ? chosen : "info", "f", "r",
+          undefined, "canonical", undefined);
+      }
+    `);
+
+    expect(usage.get("C-BOTH-NON-ERROR")?.errorCapable).toBe(false);
+    expect(usage.get("C-NESTED")?.errorCapable).toBe(false);
+    expect(usage.get("C-COMMENTED")?.errorCapable).toBe(false);
+    // One `error` branch is enough, and so is one branch the reader cannot
+    // decide: the census errs towards demanding metadata.
+    expect(usage.get("C-ONE-ERROR")?.errorCapable).toBe(true);
+    expect(usage.get("C-UNRESOLVABLE")?.errorCapable).toBe(true);
+  });
+
+  it("keeps TDDLIST_MISSING out of the error census", async () => {
+    // The rule reports `warning` for a spec that owes ledger rows and `info`
+    // for one that owes none. Neither branch is an `error`, and the escalation
+    // it carries is `TDDLIST_TC_NOT_COVERED`, which is in the census.
+    const usage = await collectErrorCapableUsage();
+    expect(usage.has("TDDLIST_MISSING")).toBe(false);
+    expect(usage.has("TDDLIST_TC_NOT_COVERED")).toBe(true);
   });
 
   it("every error-capable issue code has an expected-state catalog entry or is pending", async () => {

@@ -86,7 +86,7 @@ describe("extractScopeBullets", () => {
     expect(extractScopeBullets("## Scope\n- Out: only\n", "In")).toEqual([]);
   });
 
-  it("normalises whitespace across continuation lines (PR #206 #41)", () => {
+  it("normalises whitespace across continuation lines", () => {
     // The In bullet wraps onto a continuation line. Each part of the
     // comma-separated list should be a single word with no double-space
     // residue from the line break.

@@ -635,7 +635,7 @@ export function parseEvaluatorReview(input: unknown): ParseReviewerPayloadResult
   } else if (typeof input.cycle !== "number" || !Number.isInteger(input.cycle) || input.cycle < 0) {
     errors.push(`cycle must be a non-negative integer (got ${String(input.cycle)})`);
   } else if (input.cycle > MAX_ITERATION_INDEX) {
-    // 13th-wave Fix (codex r3265809796 / r3265811203, MAJOR/MINOR): the CLI
+    // The CLI
     // contract pins `cycle: 0..MAX_ITERATION_INDEX` (currently 0..9) as the
     // SSOT; the parser must reject upper-bound violations to keep the
     // closed-schema contract symmetric with the enum/range surface. A

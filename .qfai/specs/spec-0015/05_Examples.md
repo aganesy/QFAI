@@ -114,12 +114,12 @@
 - When the operator runs `qfai handoff upgrade session-handoff.yaml`
 - Then a conforming `handoff.yaml` is emitted at the canonical path with the recognized fields mapped and every original field preserved under a `legacy:` key (no data loss)
 
-## EX-0015-0017: validate --report flags a stale reference during the window
+## EX-0015-0017: validate --report flags a stale reference as a warning
 
 - BR-Ref: BR-0015-0016
 - Given a `references/handoff.md` still describing pre-CLI-HANDOFF ad-hoc files after the implementation PR
-- When `qfai validate --report` runs during the deprecation window
-- Then the stale reference surfaces as a warning; after sunset the same stale reference at HEAD fails (zero-stale-reference obligation); a doc rewritten in the same atomic PR as the implementation reports zero stale references
+- When `qfai validate --report` runs
+- Then the stale reference surfaces as a warning, whatever the date of the run; a doc rewritten in the same atomic PR as the implementation reports zero stale references
 
 ## EX-0015-0018: Hygiene-lane drift reaches review without a justification demand
 

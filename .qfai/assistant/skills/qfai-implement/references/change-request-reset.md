@@ -19,12 +19,18 @@ So the sweep is a **preflight**, not an opportunistic step:
 
 1. On every run, before the ledger is read for any other purpose, enumerate
    `.qfai/decisions/CR-*.md` and keep those in scope for the target spec.
-   **Both the approved and the still-open ones** — the open set is what the two
-   rules below read, and enumerating only the approved ones made this preflight
-   unable to see the blockers it is supposed to honour.
+   **Every one of them, whatever its `Status`.** The approved ones authorise the
+   resets in step 2; the open ones are the blockers the two rules below honour;
+   the `rejected` and `superseded` ones are what step 3 reads. Enumerating only
+   the approved ones made this preflight unable to see the blockers it is
+   supposed to honour, and enumerating only those and the open ones left every
+   row a withdrawn change had parked with no exit at all.
 2. Apply every reset the approved ones authorise (conditions below).
-3. Only then judge the ledger. A run whose preflight reset rows must not report
-   "nothing to do", because the all-`done` state it would report is stale.
+3. Release the rows whose blockers have all resolved without authorising one
+   (`#releasing-a-row-whose-blocker-resolved-without-authorising-a-reset`).
+4. Only then judge the ledger. A run whose preflight reset or released rows must
+   not report "nothing to do", because the all-`done` state it would report is
+   stale.
 
 A run with no in-scope CR at all does nothing here and proceeds unchanged.
 
@@ -32,12 +38,15 @@ A run with no in-scope CR at all does nothing here and proceeds unchanged.
 
 **A row named in an open in-scope CR's blocked set is not selected**, whatever
 its status. A `todo` row carries that as `blocked` in the ledger, parked by the
-raiser at `.qfai/assistant/constitution/drift-protocol.md` step 2; a row past `todo`, and a `done` row, could
-not be parked at all, because `todo -> blocked` is the only inbound edge there
-is (`execution-ledger.md#allowed-transitions`). Reading the CR files here — the
-record the parking is derived from — gives those rows the same protection
-without an illegal transition, and without re-deriving the determination on
-every pass, which is the loop `blocked` exists to stop.
+raiser at `.qfai/assistant/constitution/drift-protocol.md` step 2; a row past
+`todo`, and a `done` row, are left where they are. The ledger would take the
+write — `any active status -> blocked` is a legal edge, and `Blocked-By` records
+the status the row is leaving (`execution-ledger.md#allowed-transitions`) — but
+that step parks only `todo` rows, because the CR file already carries the
+determination and parking a row mid-phase adds a trip out of it and back.
+Reading the CR files here gives those rows the same protection without
+re-deriving the determination on every pass, which is the loop `blocked` exists
+to stop.
 
 The rows this covers are ordinary: a post-RED scope gap is raised from a row at
 `red` or later, a checkpoint regression from one at `done`, and a `review-fix`
@@ -68,6 +77,39 @@ own claim. So the release is a re-evaluation, not an unconditional write:
 Reading the approved CR's enumeration alone is what made this wrong: that list
 says which rows the operator approved reopening, not which rows are free to
 run.
+
+## Releasing a row whose blocker resolved without authorising a reset
+
+A `rejected` CR withdrew its own change; a `superseded` one handed it to another
+CR. Both count as resolved (`#when-an-in-scope-cr-counts-as-resolved`), so both
+leave the unresolved union — and neither authorises a reset, so the release
+above never runs for them. Nothing else writes `blocked -> todo`, and ordinary
+selection skips a `blocked` row unconditionally, so without this the row sits
+parked against a decision nobody will ever apply, `validate` is quiet, and the
+spec's completion gate is clear.
+
+The release is the same recomputation the approved path makes:
+
+- Recompute the **union** of the blocked sets of every in-scope CR still
+  unresolved. A CR that resolved without authorising a reset leaves that union
+  by the same rule an approved one does.
+- **A row still in the union stays where it is.** Remove only the resolved CR's
+  ID from `Blocked-By` and leave the other blockers.
+- **A row no longer in the union takes `blocked -> todo`**: `Blocked-By`
+  cleared, **no `DR-ID`**, and the round's `Resumed-from-blocked` recorded
+  (`execution-ledger.md#allowed-transitions`).
+
+**No `DR-ID`, because nothing upstream moved.** That cell records the approved
+change which invalidated the row's obligation. A rejection withdrew a change
+that was never made, and a supersession handed it to a CR of its own, so
+recording either there claims an invalidation that did not happen — and sends
+the next reader looking for the obligation it replaced.
+
+**The row's obligation decides this, not the CR's status.** A `rejected` or
+`superseded` CR never moves what a row owes, which is why the resumption edge
+always fits them. An approved one may or may not: the approval that left the
+obligation and its sources alone takes this same edge, and only the approval
+that moved them takes the reset above (`execution-ledger.md#allowed-transitions`).
 
 ## The exception
 

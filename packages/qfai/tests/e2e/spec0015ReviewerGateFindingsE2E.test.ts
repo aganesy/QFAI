@@ -10,11 +10,13 @@
  * E2E scope: invokes the composite `validateReviewerGate` validator
  * against a tmpdir fixture populated to mimic a real prototyping run,
  * then asserts that the resulting Issue list contains the expected
- * `R-CERTIFY-VERIFY-CIRCULAR` is `info` in `validate` — the enforcement is
- * `qfai prototyping certify`'s exit-2 refusal of a non-prototyping scope. At `error`
- * severity a repo-wide run made `/qfai-verify`'s Completion Contract unsatisfiable
- * outside Work Order H (#1097). The other codes here keep theirs.
  * severity code with a non-empty 3-part justification.
+ *
+ * `R-CERTIFY-VERIFY-CIRCULAR` is `info` in `validate` — the enforcement is
+ * `qfai prototyping certify`'s exit-2 refusal of a non-prototyping scope. At
+ * `error` severity, a repo-wide run would make `/qfai-verify`'s Completion
+ * Contract unsatisfiable outside Work Order H. The other codes here keep
+ * theirs.
  */
 // QFAI:SPEC-0015:US-0015-0007
 // QFAI:SPEC-0015:US-0015-0008
@@ -83,7 +85,7 @@ describe("US-0015-0007: Reviewer-Gate emits R-CERTIFY-VERIFY-CIRCULAR on regress
     );
     // Canonical prototyping state path (.qfai/evidence/prototyping/
     // prototyping.json). The legacy `phase` field is no longer emitted
-    // by iterate — the wave-18 active-loop signal is
+    // by iterate — the active-loop signal is
     // `stopReason === null` AND `acceptedIterationIndex === null`.
     await writeFileEnsure(
       path.join(root, ".qfai/evidence/prototyping/prototyping.json"),
@@ -104,7 +106,7 @@ describe("US-0015-0007: Reviewer-Gate emits R-CERTIFY-VERIFY-CIRCULAR on regress
     expect(findings.length).toBe(1);
     const f = findings[0];
     // `info` in `validate`; the enforcement is `qfai prototyping certify`
-    // refusing a non-prototyping scope with exit 2 (#1097).
+    // refusing a non-prototyping scope with exit 2.
     expect(f?.severity).toBe("info");
     // 3-part justification probe.
     expect(f?.message).toMatch(/certify=/);

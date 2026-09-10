@@ -452,7 +452,7 @@ describe("TDD-0009: --full flag", () => {
 
 // ---------------------------------------------------------------------------
 // TDD-0010: Policy change detection (unit-test angle).
-// PR #206 review N39l: TDD-0015 in tdd/test-list.md maps to TC-0013-0020
+// TDD-0015 in tdd/test-list.md maps to TC-0013-0020
 // (validate-pipeline wiring), NOT TC-0013-0015. Don't claim a TDD-NNNN
 // link here — this describe is a unit-level companion to TC-0013-0015
 // (Policy Change Detection) whose canonical integration coverage lives at

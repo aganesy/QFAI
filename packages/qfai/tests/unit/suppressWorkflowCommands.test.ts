@@ -5,7 +5,7 @@
 // FILE, and asserting on it from inside a file it already patched cannot tell
 // "the filter works" from "the assertion was written against the patched
 // function". A child runs the same setup fresh and reports what its stdout
-// actually carried, which is the thing GitHub reads (#1160).
+// actually carried, which is the thing GitHub reads.
 
 import { execFileSync } from "node:child_process";
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
@@ -68,7 +68,7 @@ function stdoutOf(body: string): string {
   });
 }
 
-describe("the suite does not emit GitHub workflow commands (#1160)", () => {
+describe("the suite does not emit GitHub workflow commands", () => {
   it("drops an annotation a fixture would have pointed at this repository", () => {
     const out = stdoutOf(
       `process.stdout.write("::error file=.qfai/specs/_policies/03_Capabilities.md::missing\\n");`,

@@ -1,96 +1,75 @@
 # Distributed Surface Discipline
 
-QFAI npm パッケージとして配布されるファイル群を「配布サーフェス」と呼ぶ。
-配布サーフェスに QFAI 内部の識別子・版番号を書いてはいけない。
+QFAI の npm パッケージとして配布されるファイル群を「配布サーフェス」と呼ぶ。
+配布サーフェスに QFAI 内部の識別子と版番号を書かない。
 
-## Distributed Surface (SSOT)
+迷ったら「このファイルはユーザの環境にコピーされるか」で判断する。
+コピーされるなら書かない。
 
-配布サーフェス = `packages/qfai/package.json` の `"files"` フィールドに列挙
-されたパス。現状: `dist/`, `assets/`, `README.md`, `LICENSE`。
+## 配布サーフェスの範囲
 
-`files` を変更したら、ガード (`packages/qfai/scripts/check-no-internal-version-leakage.sh`)
-は自動追従する (パスを動的に展開する)。追加作業は不要。
+`packages/qfai/package.json` の `files` に列挙されたパス。
+現在は `dist/`, `assets/`, `README.md`, `LICENSE`。
 
-## Forbidden in Distributed Surface
+ガードは `files` を読んで対象パスを決める。`files` を変えても追加作業はない。
 
-| カテゴリ                      | パターン                            | 例                               |
-| ----------------------------- | ----------------------------------- | -------------------------------- |
-| QFAI 内部 spec ID             | `spec-0010` 以降                    | `spec-0011`, `spec-0042`         |
-| QFAI 内部 capability ID       | `CAP-0010` 以降                     | `CAP-0013`                       |
-| QFAI 内部 decision ID         | `DEC-NNNN-NNNN`                     | `DEC-0001-0042`                  |
-| QFAI 内部 design rationale    | `DR-NNNN`                           | `DR-0007`                        |
-| QFAI 内部 open-question ID    | `OQ-NNNN-NNNN`                      | `OQ-0012-0006`                   |
-| QFAI 内部 change ID           | `CHG-NNN` (`_policies/10_delta.md`) | `CHG-003`, `CHG-006`             |
-| QFAI 内部 trace prefix        | `QFAI-PROT2-NNN` 等の廃止 prefix    | (廃止済み)                       |
-| 内部バージョンマーカー        | `vN.M`, `vN.M.P`, `v1.x`            | `v2.0`, `v3.0`                   |
-| 内部 schemaVersion フィールド | `"schemaVersion"`, `schemaVersion:` | (永続アーティファクトに置かない) |
+## 書いてはいけないもの
 
-例外:
+| 種類                     | パターン                            | 例                       |
+| ------------------------ | ----------------------------------- | ------------------------ |
+| 内部 spec ID             | `spec-0010` 以降                    | `spec-0011`, `spec-0042` |
+| 内部 capability ID       | `CAP-0010` 以降                     | `CAP-0013`               |
+| 内部 decision ID         | `DEC-NNNN-NNNN`                     | `DEC-0001-0042`          |
+| 内部 design rationale ID | `DR-NNNN`                           | `DR-0007`                |
+| 内部 open-question ID    | `OQ-NNNN-NNNN`                      | `OQ-0012-0006`           |
+| 内部 change ID           | `CHG-NNN`                           | `CHG-003`                |
+| 廃止済み trace prefix    | `QFAI-PROT2-NNN`                    |                          |
+| 内部バージョンマーカー   | `vN.M`, `vN.M.P`, `v1.x`            | `v2.0`, `v3.0`           |
+| 内部 schemaVersion       | `"schemaVersion"`, `schemaVersion:` |                          |
 
-- `spec-0001..0009` はサンプル / Category B として配布物に登場してよい
-  (`qfai init` で生成される spec の例示)。
-- `package.json` の `"version"` フィールドは正規版番なので除外。
-- `.qfai/assistant/process/migrations/v<MAJOR>.<MINOR>.<PATCH>[-*].md` の
-  **ファイル名** に含まれる版番は意図的な刻印なので、ファイル名 scan の
-  version クラスから除外する。memo は ADR 的な引用先であり公開後に名前を
-  変えられず、`src/core/paths/assistantPaths.ts` の
-  `migrationMemoRelativePath()` が `--upgrade-assistant-tree` のたびに
-  1 件生成する。除外は version クラスかつファイル名のみ — memo 本文と、
-  spec ID / trace ID は従来どおり検出する。
-  除外は「この形の basename だけを無害化する」書き換えとして実装する
-  (パスを丸ごと skip しない)。したがって同ディレクトリの
-  `notes-v2.0-draft.md`、下位ディレクトリ `drafts-v2.0/`、`.qfai/` 配下
-  でない別ツリーの同名パスは引き続き検出される。
+### 例外
 
-## Canonical Version Source
+- `spec-0001` から `spec-0009` は `qfai init` が生成するサンプル spec の ID なので書いてよい。
+- `package.json` の `version` は正規の版番号なので対象外。
+- `.qfai/assistant/process/migrations/v<MAJOR>.<MINOR>.<PATCH>[-*].md` の**ファイル名**にある版番号は対象外。
+  この memo は `qfai init --upgrade-assistant-tree` が 1 回ごとに生成し、他の文書から引用されるため改名できない。
+  ガードはこの形の basename だけを無害化してから走査する。
+  memo の本文、spec ID / trace ID、`notes-v2.0-draft.md` や `drafts-v2.0/` のような他の名前は検出対象のまま。
 
-配布物に登場する版番号は `packages/qfai/package.json#version` のみ。
-独自の `schemaVersion` / 内部 `vN.M` を新設しない。互換破壊は npm 版番の
-minor / major 上げで表現する。
+## 版番号の出どころ
 
-## Defenses (4 layers)
+配布物に書く版番号は `packages/qfai/package.json` の `version` だけ。
+独自の `schemaVersion` や内部 `vN.M` を新設しない。
+互換性を壊す変更は npm の minor / major を上げて表す。
 
-1. **pre-build lint** — `packages/qfai/scripts/lint-shipping.ts`
-   (`src-comment` ターゲット) と CI の `pnpm ci:lint` レーン。
-   `src/*.ts` の JSDoc / コメント行を `INTERNAL_SPEC_RE` 等と同じ
-   regex セットで scan し、tsup が `dist/*.d.ts` に retain する
-   経路を pre-build で塞ぐ。`spec-NNNN` / `.qfai/specs/spec-NNNN/` /
-   `vN.M[.P]` / `CAP-0010+` / `DEC-NNNN-NNNN` / `DR-NNNN` /
-   `OQ-NNNN-NNNN` / `QFAI-PROT2-NNN` / `CHG-NNN` / `schemaVersion` を全て catch。行頭が
-   comment marker の行のみ検出 — 末尾 `//` や行内 `/* */` は
-   layer 2 (post-build) で catch する known limitation。
-   PR #206 review Ntbp / NwM- で導入。
-2. **post-build 静的ガード** — `packages/qfai/scripts/check-no-internal-version-leakage.sh`。
-   `package.json#files` を読んで配布物パスを動的決定し、上の正規表現で grep。
-   CI lint job + build job (post-build) で実行。layer 1 を補完する
-   最終バックストップ — comment 行検出粒度に依存しない。
-   scan は 2 次元: ファイル **内容** と **ファイル名** の両方に同じ正規表現を
-   当てる。名前側の hit は `FAIL: ... leaked in a FILE NAME` として
-   内容側と区別して報告する。
-3. **smoke test** — `packages/qfai/tests/integration/distributedSurfaceLeakage.test.ts`。
-   `qfai init` を temp dir に走らせ、出力ツリーを同じ正規表現で grep
-   (layer 2 と同じく内容 + ファイル名の 2 次元)。
-   `copyTemplateTree` のロジック / asset 取り込みフィルタの抜けを catch。
-   拡張子 allowlist に加えて `.gitkeep` 等の拡張子なしテキストファイルも
-   basename allowlist で走査する (`path.extname(".gitkeep") === ""` のため
-   拡張子だけでは読まれない)。
-4. **規約文書** — このファイル。寄稿者の認識合わせ用。
+## 4 層のガード
 
-**SSOT-sync invariant**: layer 1 / 2 / 3 は同じ forbidden class 集合を
-3 つの言語で書いた等価表現。1 箇所更新時は他 2 箇所も同時更新する。
-規約文書 (layer 4) も追従する。
+| 層               | 実装                                                                | 何を見るか                                                                    |
+| ---------------- | ------------------------------------------------------------------- | ----------------------------------------------------------------------------- |
+| pre-build lint   | `packages/qfai/scripts/lint-shipping.ts` (`src-comment`)            | `src/**/*.ts` のコメント行。tsup が `dist/*.d.ts` に残す経路を build 前に塞ぐ |
+| post-build guard | `packages/qfai/scripts/check-no-internal-version-leakage.sh`        | `package.json` の `files` が指すパスの内容とファイル名                        |
+| smoke test       | `packages/qfai/tests/integration/distributedSurfaceLeakage.test.ts` | `qfai init` を一時ディレクトリに実行し、出力ツリーの内容とファイル名          |
+| 規約             | このファイル                                                        | 寄稿者の認識合わせ                                                            |
 
-## Where Internal IDs Are OK
+- pre-build lint は行頭がコメント記号の行だけを見る。行末の `//` や行内の `/* */` は post-build guard が拾う。
+- post-build guard と smoke test はファイル名の hit を `leaked in a FILE NAME` として内容の hit と区別して報告する。
+- smoke test は拡張子のないテキストファイル (`.gitkeep` など) も basename の allowlist で走査する。
+- 3 つの実装は同じ禁止パターン集合を持つ。1 つを変えたら残り 2 つとこのファイルも同時に変える。
 
-開発時の design / spec トレーサビリティでは内部 ID を使ってよいが、
-以下の場所のみ:
+CI での実行箇所は次のとおり。
 
-- `.qfai/specs/`, `.qfai/discussion/`, `.qfai/contracts/` (配布物外)
-- `CHANGELOG.md` (リポジトリ root、配布物外)
-- `packages/qfai/docs/` (配布物外)
-- git commit message / PR description (履歴のみ)
-- `packages/qfai/src/**` の **コメントでない** 識別子 (テストフィクスチャ内の
-  spec 名など)。JSDoc には書かない: tsup が `dist/*.d.ts` に残す。
+| 層               | 実行するジョブとステップ                                      |
+| ---------------- | ------------------------------------------------------------- |
+| pre-build lint   | lint job の `pnpm ci:lint` (`lint:shipping` として)           |
+| post-build guard | lint job と build job の専用ステップ。build job では build 後 |
+| smoke test       | test job                                                      |
 
-迷ったら: 「これはユーザの環境にコピーされうるか?」で判断する。
-コピーされうるなら書かない。
+post-build guard は `pnpm ci:lint` には入っていない。`ci:lint` から呼べば build 前の `dist/` を見ることになり、それは pre-build lint が別の粒度で見ている対象である。
+
+## 内部 ID を書いてよい場所
+
+- `.qfai/specs/`, `.qfai/discussion/`, `.qfai/contracts/`
+- `CHANGELOG.md`
+- `packages/qfai/docs/`
+- commit message と PR の説明
+- `packages/qfai/src/**` のコメント以外の識別子 (テストフィクスチャの spec 名など)。JSDoc には書かない。tsup が `dist/*.d.ts` に残す。

@@ -26,7 +26,7 @@ describe("a reviewer REVISE has a legal state and an evidence slot", () => {
   for (const relativePath of SKILL_DIRS) {
     // The ledger schema and its transitions live in
     // `references/execution-ledger.md` under the progressive-disclosure budget
-    // (#414); SKILL.md keeps the process steps and a pointer.
+    // SKILL.md keeps the process steps and a pointer.
     it(`${relativePath}: review-fix is a status with both edges`, async () => {
       const ledger = await read(relativePath, "references/execution-ledger.md");
       expect(ledger).toContain(
@@ -194,8 +194,8 @@ describe("a reviewer REVISE has a legal state and an evidence slot", () => {
         "**A round that was reviewed more than once carries one pair per attempt**",
       );
       expect(flat(revision)).toContain("**Gate item 10 recomputes every seal the entry carries**");
-      const skill = await read(relativePath, "SKILL.md");
-      expect(skill).toContain("Every `Review pack seal` the entry carries");
+      const record = await read(relativePath, "references/record-contract.md");
+      expect(flat(record)).toContain("Every `Review pack seal` the entry carries");
     });
 
     it(`${relativePath}: review is requested from refactor, so REVISE has a legal edge`, async () => {

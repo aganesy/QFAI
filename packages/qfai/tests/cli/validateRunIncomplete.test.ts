@@ -1,5 +1,5 @@
 /**
- * `validate` produces a verdict even when a validator throws (#1104).
+ * `validate` produces a verdict even when a validator throws.
  *
  * `runValidate` awaited `validateProject` with no `try`, so an fs error from any
  * validator reached `cli/index.ts` as a single stderr line: no `counts:`, no
@@ -162,12 +162,10 @@ describe("describeIncompleteRun", () => {
 });
 
 describe("the boundary is wired into every command", () => {
-  // `--root`, not `--dir`. These rows were written with `--dir`, which `report`
-  // accepted and never read — the confusion #1143 is about, reproduced in this
-  // repository's own suite. Once `--dir` became an argument error outside
-  // `init`, `run` returned before dispatching and the boundary was never
-  // reached, so the rows failed. That is the fix working.
-  // `validate` answers a fault with `QFAI-SCAN-002` because #1112 wrapped
+  // `--root`, not `--dir`. `--dir` is an argument error outside `init`, so a
+  // row written with `--dir` fails at argument parsing — `run` returns before
+  // dispatching and never reaches the boundary below.
+  // `validate` answers a fault with `QFAI-SCAN-002` because it wraps
   // `validateProject`. The rest have no verdict artifact, so the rows above
   // only matter if `run` actually consults them — which is what this checks,
   // through a command that is not `validate`.
@@ -253,8 +251,7 @@ describe("validate reports a run it could not finish", () => {
     // both fail on the count alone. `--fail-on never` is the one exception a
     // caller asked for explicitly, and it stays honoured — the finding is still
     // in the output either way. Pinned because the exit code is deliberately
-    // NOT derived from counting severities: a promotion window would have made
-    // this a warning, and a warning exits 0 under the default.
+    // NOT derived from counting severities.
     for (const failOn of ["error", "warning"] as const) {
       const root = await project();
       validateProjectSpy.mockImplementation(() => Promise.reject(errno("EPERM", root)));

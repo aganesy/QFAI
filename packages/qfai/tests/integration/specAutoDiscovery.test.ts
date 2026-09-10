@@ -18,6 +18,7 @@ vi.mock("node:child_process", () => ({
   execFileSync: vi.fn(),
 }));
 
+import { gitDiffListings } from "../helpers/gitDiffMock.js";
 import {
   detectPolicyChanges,
   detectSourceC,
@@ -491,7 +492,9 @@ describe("TC-0013-0010: spec BR changed + impl unchanged → QFAI-TRACE-001", ()
     await writeFile(path.join(specDir, "16_Traceability-ledger.md"), ledger, "utf-8");
 
     // Git shows BR file changed but NOT the implementation file
-    vi.mocked(execFileSync).mockReturnValue(".qfai/specs/spec-0001/04_Business-Rules.md\n");
+    vi.mocked(execFileSync).mockImplementation(
+      gitDiffListings({ changed: ["1\t1\t.qfai/specs/spec-0001/04_Business-Rules.md"] }),
+    );
 
     const issues = await validateTraceabilityIntegrity(tmpRoot, stubConfig);
     expect(issues.length).toBeGreaterThanOrEqual(1);
@@ -529,8 +532,13 @@ describe("TC-0013-0011: spec BR changed + impl changed → PASS", () => {
     await writeFile(path.join(specDir, "16_Traceability-ledger.md"), ledger, "utf-8");
 
     // Git shows BOTH BR file and implementation file changed
-    vi.mocked(execFileSync).mockReturnValue(
-      ".qfai/specs/spec-0001/04_Business-Rules.md\nsrc/core/someModule.ts\n",
+    vi.mocked(execFileSync).mockImplementation(
+      gitDiffListings({
+        changed: [
+          "1\t1\t.qfai/specs/spec-0001/04_Business-Rules.md",
+          "1\t1\tsrc/core/someModule.ts",
+        ],
+      }),
     );
 
     const issues = await validateTraceabilityIntegrity(tmpRoot, stubConfig);
@@ -559,7 +567,9 @@ describe("TC-0013-0012: missing traceability ledger → QFAI-TRACE-002 warning",
     // Deliberately do NOT create 16_Traceability-ledger.md
 
     // Git shows BR file changed
-    vi.mocked(execFileSync).mockReturnValue(".qfai/specs/spec-0001/04_Business-Rules.md\n");
+    vi.mocked(execFileSync).mockImplementation(
+      gitDiffListings({ changed: ["1\t1\t.qfai/specs/spec-0001/04_Business-Rules.md"] }),
+    );
 
     const issues = await validateTraceabilityIntegrity(tmpRoot, stubConfig);
     expect(issues.some((i) => i.code === "QFAI-TRACE-002")).toBe(true);
@@ -975,7 +985,7 @@ describe("TC-0014-0027: fixture 4-axis reject", () => {
 });
 
 describe("TC-0014-0028: integration e2e — validateProject entrypoint", () => {
-  it("validateProject function is importable and callable", { timeout: 30000 }, async () => {
+  it("validateProject function is importable and callable", async () => {
     const { validateProject } = await import("../../src/core/validate.js");
     expect(typeof validateProject).toBe("function");
   });

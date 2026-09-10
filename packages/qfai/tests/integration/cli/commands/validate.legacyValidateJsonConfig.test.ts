@@ -74,34 +74,6 @@ afterEach(async () => {
   if (savedGhaEnv !== undefined) process.env.GITHUB_ACTIONS = savedGhaEnv;
 });
 
-describe("config validateJsonPath = legacy literal — pre-sunset", () => {
-  it("PRE-sunset (1.9.1): writer proceeds AND D-DEPRECATED-PATH warning fires with config-aware message", async () => {
-    await seedLegacyConfig(root);
-
-    const exit = await runValidate({
-      root,
-      strict: false,
-      profile: "prototyping",
-      toolVersionOverride: "1.9.1",
-    });
-    expect(exit).toBe(0);
-
-    const legacy = path.join(root, ".qfai/output/validate.json");
-    expect(await pathExists(legacy)).toBe(true);
-
-    const body = JSON.parse(await readFile(legacy, "utf-8")) as {
-      issues: Array<{ code: string; severity: string; message: string }>;
-    };
-    const dep = body.issues.find((i) => i.code === "D-DEPRECATED-PATH");
-    expect(dep).toBeDefined();
-    expect(dep?.severity).toBe("warning");
-    // Config-aware message text must surface the qfai.config.yaml field.
-    expect(dep?.message).toContain("qfai.config.yaml");
-    expect(dep?.message).toContain("validateJsonPath");
-    expect(dep?.message).toContain(".qfai/output/validate.json");
-  });
-});
-
 describe("config validateJsonPath = legacy literal — post-sunset", () => {
   it("AT sunset (1.10.0): writer REFUSES the legacy write AND D-DEPRECATED-PATH error fires with actionable migration text on stdout", async () => {
     await seedLegacyConfig(root);
