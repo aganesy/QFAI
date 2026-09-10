@@ -375,9 +375,10 @@ async function emittedCodes(): Promise<string[]> {
  *
  * `ts.createSourceFile` normalises the name it is handed to forward slashes,
  * and the keys this file resolves come from `path.resolve`. On POSIX those are
- * the same string; on win32 they differ by every separator, so the lookup in
- * {@link codesInFile} always missed and the guard below never ran on a Windows
- * checkout while passing in CI (#1130). Normalised here rather than at
+ * the same string; on win32 they differ by every separator, so without
+ * normalising, the lookup in {@link codesInFile} would always miss and the
+ * guard below would never run on a Windows checkout while passing in CI.
+ * Normalised here rather than at
  * `createSourceFile`, because `fileName` is TypeScript's to shape and a later
  * version could normalise it differently — the test's own key is the test's.
  *
@@ -416,8 +417,7 @@ async function codesInFile(file: string): Promise<string[]> {
  * Read as one pattern it satisfies neither arm — not a glob, and equal to no
  * code — so every coverage claim built on it passed by checking nothing. The
  * guard below is one of those claims; it survives today only because the codes
- * it scans happen to be covered by a different, clean entry in the same array
- * (#1200).
+ * it scans happen to be covered by a different, clean entry in the same array.
  */
 describe("gate-family matching", () => {
   const ANNOTATED = "TDDLIST_* (execution state)";
@@ -576,9 +576,9 @@ describe("finding code grammar", () => {
   it("looks a source up by a win32-shaped path on every platform", async () => {
     // `ts.createSourceFile` normalises `fileName` to forward slashes and the
     // keys this file resolves come from `path.resolve`, so on win32 the two
-    // differed by every separator: the lookup found nothing, the row below
-    // threw `not scanned:`, and CI stayed green because POSIX spells both the
-    // same way (#1130).
+    // would differ by every separator: the lookup would find nothing, the row
+    // below would throw `not scanned:`, and CI would stay green because POSIX
+    // spells both the same way.
     //
     // Keyed on a literal backslash form so this row fails on POSIX too if the
     // normalisation is removed. A guard only one platform can observe is what

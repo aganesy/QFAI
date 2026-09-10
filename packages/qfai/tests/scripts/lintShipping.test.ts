@@ -211,7 +211,7 @@ describe("lint-shipping fixture — detection rules", () => {
   it("flags framework source paths inside comment lines of a shipped .ts template", async () => {
     // A `.ts` template under assets/init/ classifies as `init-runtime`, so it
     // has no `src-comment` rules — but its `//` / JSDoc lines are copied into
-    // the consuming repo verbatim, exactly like a YAML comment (PR #1019).
+    // the consuming repo verbatim, exactly like a YAML comment.
     const root = await newTempDir();
     await mkdir(path.join(root, "assets/init/.qfai/assistant/templates"), { recursive: true });
     await writeFile(
@@ -292,8 +292,7 @@ describe("lint-shipping fixture — detection rules", () => {
   });
 
   it("does NOT flag composite trace IDs (BR/AC/TC) in JSDoc — only internal spec-NNNN paths/IDs", async () => {
-    // PR #206 review Ntbp updated this rule. Composite trace IDs
-    // (BR-NNNN-NNNN, AC-NNNN-NNNN, TC-NNNN-NNNN) are NOT in the
+    // Composite trace IDs (BR-NNNN-NNNN, AC-NNNN-NNNN, TC-NNNN-NNNN) are NOT in the
     // forbidden set declared by `.agents/rules/distributed-surface.md`
     // (only spec-0010+, CAP-0010+, DEC-NNNN-NNNN, DR-NNNN, and the
     // QFAI-PROT2-NNN trace prefix are forbidden). Composite IDs in
@@ -318,7 +317,7 @@ describe("lint-shipping fixture — detection rules", () => {
   });
 
   it("flags internal spec-NNNN ID in src/ JSDoc — leaks via dist/*.d.ts", async () => {
-    // PR #206 review Ntbp: `tsup` strips comments from `dist/*.js` but
+    // `tsup` strips comments from `dist/*.js` but
     // RETAINS them in `dist/*.d.ts`, so internal spec IDs (spec-0010+)
     // in JSDoc DO ship into user repos. The lint-shipping invariant
     // must catch this at source instead of waiting for the post-build
@@ -393,18 +392,15 @@ describe("lint-shipping fixture — detection rules", () => {
       '"schemaVersion"',
       '/**\n * Documents the "schemaVersion" field.\n */\nexport function bar(): void {}\n',
     ],
-  ])(
-    "flags %s in src/ JSDoc (PR #206 review NwM- / Nv2- / Nv_Q full SSOT parity)",
-    async (rule, expectedMatch, body) => {
-      const root = await newTempDir();
-      await mkdir(path.join(root, "src/foo"), { recursive: true });
-      await writeFile(path.join(root, "src/foo/bar.ts"), body, "utf-8");
+  ])("flags %s in src/ JSDoc", async (rule, expectedMatch, body) => {
+    const root = await newTempDir();
+    await mkdir(path.join(root, "src/foo"), { recursive: true });
+    await writeFile(path.join(root, "src/foo/bar.ts"), body, "utf-8");
 
-      const { violations } = await runLintShipping(root);
-      expect(violations.map((v) => v.pattern)).toContain(rule);
-      expect(violations.map((v) => v.matched)).toContain(expectedMatch);
-    },
-  );
+    const { violations } = await runLintShipping(root);
+    expect(violations.map((v) => v.pattern)).toContain(rule);
+    expect(violations.map((v) => v.matched)).toContain(expectedMatch);
+  });
 
   it("does NOT flag sample-tier spec-0001..0009 in src/ JSDoc (Category-B / runtime examples)", async () => {
     // The leakage script tolerates spec-0001..0009 as Category-B /

@@ -4,26 +4,18 @@ import path from "node:path";
 
 import { resolvePath, type QfaiConfig } from "../config.js";
 import { isEnoent } from "../fs/errno.js";
-import { resolveToolVersion } from "../version.js";
 import { legacyAssistantSteeringSunsetLabel } from "../paths/assistantPaths.js";
-import { SUNSETS, deprecationSeverity } from "../sunset.js";
 import type { Issue } from "../types.js";
 import { exists, issue } from "./utils.js";
 
 /**
- * Severity escalates to `error` once the running tool reaches or passes
- * the SUNSETS.legacyAssistantSteering version. SSOT shared with the
- * assistantTreeMigration validator so both surfaces flip at the same
- * cutoff. Per qfai-validate.md contract: "warning (during window) /
- * error (after sunset)".
+ * The pre-recut paths are retired, so a reference to one is an error.
+ *
+ * Kept as a named export because the contract test drives it directly, and
+ * shared with the assistantTreeMigration validator so both surfaces agree.
  */
-/**
- * Kept as a named export because the contract test drives it directly; the body
- * is now the shared comparator, which — unlike the version this replaced —
- * reads the patch and prerelease fields.
- */
-export function brokenRefSeverity(version: string): "warning" | "error" {
-  return deprecationSeverity(version, SUNSETS.legacyAssistantSteering);
+export function brokenRefSeverity(): "error" {
+  return "error";
 }
 
 // Paths that are legacy / non-canonical after the assistant-layer recut.
@@ -50,9 +42,9 @@ const NON_CANONICAL_REFS: Array<{ pattern: RegExp; reason: string }> = [
 // Every `qfai-*` skill MUST declare a trailing `project_memory:` block.
 // The block surfaces remembered-context invariants the skill expects
 // downstream agents to honor. The validator emits a warning when
-// missing (severity intentionally kept at warning for now to avoid
-// breaking projects mid-migration; will escalate to error once the
-// seeded asset templates uniformly carry the block).
+// missing (warning rather than error so projects mid-migration are
+// not broken; it becomes error once the seeded asset templates
+// uniformly carry the block).
 const QFAI_SKILL_ID_RE = /^qfai-/;
 
 export async function validateSkillDocReferences(
@@ -71,10 +63,7 @@ export async function validateSkillDocReferences(
   const skillsDir = resolvePath(root, config, "skillsDir");
   if (!(await exists(skillsDir))) return issues;
 
-  // Resolve current tool version once so broken-ref severity escalates
-  // consistently across every skill scanned in this pass.
-  const toolVersion = await resolveToolVersion();
-  const refSeverity = brokenRefSeverity(toolVersion);
+  const refSeverity = brokenRefSeverity();
 
   let entries: Dirent[];
   try {
@@ -105,15 +94,11 @@ export async function validateSkillDocReferences(
     // User-defined non-qfai-* skills under .qfai/assistant/skills/ are
     // intentionally NOT flagged so consumers can author their own
     // SKILL.md without colliding with QFAI's path-migration finding.
-    // Severity escalates from warning to error at SUNSETS.legacyAssistantSteering
-    // (matches qfai-validate.md contract).
+    // The severity matches the qfai-validate.md contract.
     if (QFAI_SKILL_ID_RE.test(skillId)) {
       for (const ref of NON_CANONICAL_REFS) {
         if (ref.pattern.test(body)) {
-          const headline =
-            refSeverity === "error"
-              ? `${skillId}/SKILL.md references a non-canonical path (post-recut) past the announced sunset (v${legacyAssistantSteeringSunsetLabel()}). Migrate the reference to fix.`
-              : `${skillId}/SKILL.md references a non-canonical path (post-recut). Read-compatible only for the current minor release; sunset: v${legacyAssistantSteeringSunsetLabel()}.`;
+          const headline = `${skillId}/SKILL.md references a non-canonical path (post-recut) past the announced sunset (v${legacyAssistantSteeringSunsetLabel()}). Migrate the reference to fix.`;
           issues.push(
             issue(
               "W-SKILL-DOC-BROKEN-REF",

@@ -3,9 +3,8 @@
 What makes a failure count as the RED observation for a ledger row.
 
 `Phase: Red` step 4 says "confirm the test actually fails for the expected
-reason". That phrase used to be the whole standard qfai shipped — it appeared
-three times across the assistant tree, always as an obligation and never as a
-definition, and no validator adjudicated it. This file is the definition.
+reason". That phrase is an obligation, not a definition. This file is the
+definition.
 
 ## The criterion
 
@@ -39,6 +38,12 @@ A **missing seam**, not a RED:
 Each of these proves the seam is absent. None of them says anything about
 whether the assertions discriminate — which is the property RED exists to
 establish.
+
+For a `Layer = E2E` or `Layer = API` row the absent seam is frequently the
+**program itself**: a system with no entrypoint cannot answer a request, so
+every such row collects rather than asserts and none of them is startable. That
+is not a defect in this criterion — it is what `Phase: Skeleton` exists to
+remove before the first row is selected (`walking-skeleton.md`).
 
 This matters most exactly where discriminating power matters most. Under the
 skill's own ordering, Phase Red writes the test and Phase Green writes the

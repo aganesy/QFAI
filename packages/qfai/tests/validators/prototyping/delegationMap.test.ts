@@ -75,7 +75,7 @@ describe("validateDelegationMapIssues (v1.8.4 standard adapter)", () => {
     expect(new Set(issues.map((i) => i.code))).toEqual(new Set(["QFAI-PROT-311"]));
   });
 
-  // ─── Non-string value rejection (Codex review on PR #201) ────────────────
+  // ─── Non-string value rejection ───────────────────────────────────────
   // Previously stateGate.extractDelegationMap silently filtered out non-string
   // entries before validation, so { UI実装: 123 } was indistinguishable from
   // { UI実装: <missing> } and never raised QFAI-PROT-311.

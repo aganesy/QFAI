@@ -10,12 +10,11 @@ import path from "node:path";
  *      (Windows shims: `.cmd` / `.bat` / `.ps1`), then PATH.
  *   2. `npx --no-install playwright --version` — fallback when a partial
  *      node_modules tree is present but no direct shim exists.
- *   3. `playwright-cli` — deprecated probe. Still accepted during the
- *      deprecation window (sunset: 1.10.0). When resolved through this
- *      stage the doctor emits `D-DEPRECATED-PROBE` (severity warning).
+ *   3. `playwright-cli` — retired probe. Resolving through this stage makes
+ *      the doctor emit `D-DEPRECATED-PROBE` at `error`.
  *
- * The legacy export `resolvePlaywrightCliLauncher` is retained as a thin
- * alias for the deprecation window so external callers do not break.
+ * The legacy export `resolvePlaywrightCliLauncher` is retained as a thin alias
+ * so external callers keep compiling.
  */
 
 export type PlaywrightLauncherStage = "primary" | "npx-fallback" | "deprecated-cli";
@@ -133,9 +132,8 @@ export async function resolvePlaywrightLauncher(
 }
 
 /**
- * Deprecated alias. Retained during the deprecation window so external
- * callers continue to compile; new code MUST use `resolvePlaywrightLauncher`.
- * Sunset: 1.10.0.
+ * Deprecated alias, retained so external callers keep compiling. New code MUST
+ * use `resolvePlaywrightLauncher`.
  *
  * @deprecated Use `resolvePlaywrightLauncher` instead.
  */

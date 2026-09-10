@@ -16,7 +16,26 @@ Discussion UI/UX files are **non-normative** discovery / reference artifacts —
 ## Rules
 
 - Keep contract files minimal: only what specs and tests actually reference.
-- UI contracts must be mockable for prototypes: define stable `elements`, `actions`, `markers`, and `mockPaths` with enough inspection-target text for Playwright evidence.
+- UI contracts must be mockable for prototypes: define stable `elements` and
+  `actions` with enough inspection-target text for Playwright evidence.
+- **The `prototype` mapping is optional, and what it declares is checked.** A
+  UI contract that omits `prototype` is asked for nothing, so `markers` and
+  `mockPaths` are not required. A contract that writes them is held to them:
+  `QFAI-CONTRACT-037` looks for a declared marker in the code, and
+  `QFAI-CONTRACT-038` reports a `prototype.mode` outside the vocabulary
+  (`interactive`), naming the release at which it stops being a warning.
+  Nothing branches on `mode`, so a value outside the vocabulary breaks no run —
+  it tells a reader the prototype is something it is not. `mockPaths` is read
+  by nobody and by no lane; it is a note to whoever reviews the prototype.
+- **A declared marker is looked for in the code.** `QFAI-CONTRACT-037` reports a
+  `data-qfai` value a UI contract writes literally that no file under the
+  configured source directory mentions. Without it a declared element can be
+  rendered by nothing and no gate notice: an element nobody built is also an
+  element no test names, so the one-way check from test to contract cannot see
+  it. Only the markers the contract writes count, so a contract that names none
+  is asked for nothing. A marker counts as rendered wherever its text appears,
+  not only where the attribute is written out — a framework that builds the
+  attribute from a variable still writes the marker somewhere.
 - `api/`, `db/`, and `ui/` contracts must declare `QFAI-CONTRACT-ID` at the top.
 - Use prefixes `CON-API-*`, `CON-DB-*`, and `CON-UI-*`.
 - `design/` files do not require `QFAI-CONTRACT-ID`, but they are execution-time SSOT for UI-bearing work. Having no ID, they are addressed by repo-relative path when an owner rerun targets them: `/qfai-sdd --contract .qfai/contracts/design/<file>`. The same path form addresses an `api/` / `db/` / `ui/` contract whose ID is the thing under repair.
@@ -38,21 +57,21 @@ Discussion UI/UX files are **non-normative** discovery / reference artifacts —
     that does not exist. Getting the set wrong is otherwise silent: the wrong
     subset still applies cleanly and the tests still pass, against a schema
     missing the tables under test.
-  - `QFAI-CONTRACT-015` (warning) reports a contract that states no apply order
+  - `QFAI-CONTRACT-015` reports a contract that states no apply order
     at all. Write `-` when nothing must be applied first: "no dependencies" and
     "never stated" are different claims, and only the first is checkable. The
     key on its own (`-- Depends on:` with nothing after it) is still silence,
     and so is a list holding anything but `CON-*` ids: in `CON-DB-0001, TBD`
     the resolvable half would otherwise make an undetermined order look
     settled, leaving `TBD` unreported by every check.
-  - `QFAI-CONTRACT-032` (warning) reports a contract index table that dropped
-    the `Depends On` column, and `QFAI-CONTRACT-033` (warning) reports a row
+  - `QFAI-CONTRACT-032` reports a contract index table that dropped the
+    `Depends On` column, and `QFAI-CONTRACT-033` reports a row
     whose cell disagrees with the declaration in the file that row names — a
     blank cell included, for the same reason: it records no claim at all.
-  - `QFAI-CONTRACT-034` (warning) reports a contract that appears in no index
+  - `QFAI-CONTRACT-034` reports a contract that appears in no index
     table. Deleting the row hides the contract and its apply order from every
     reader of the index, and the row-level checks need a row to compare.
-  - `QFAI-CONTRACT-035` (warning) reports a row whose `File` is not a file
+  - `QFAI-CONTRACT-035` reports a row whose `File` is not a file
     declaring that row's id. The mirror is checked by id, so a row pointing at
     another contract's file otherwise passes every check while sending the
     reader to the wrong contract. A glob or a `<slug>` placeholder names no one
@@ -74,10 +93,10 @@ Discussion UI/UX files are **non-normative** discovery / reference artifacts —
 
 ## What validation checks in a `.sql` contract
 
-Scope is **apply-ability, not semantic correctness**. `.sql` used to be the only
-contract kind the validator never parsed — the "this contract does not parse" check
-guarding UI and API files was unreachable for it — so a DB contract that cannot
-run passed `npx qfai validate --profile sdd --fail-on error`. It now has a structural lane:
+Scope is **apply-ability, not semantic correctness**. Without this lane a DB contract
+that cannot run would pass `npx qfai validate --profile sdd --fail-on error`, since the
+"this contract does not parse" check guarding UI and API files does not reach `.sql`.
+The structural lane:
 
 | Finding             | Fires when                                                                    | Severity |
 | ------------------- | ----------------------------------------------------------------------------- | -------- |
@@ -161,10 +180,9 @@ author believes they answered a finding that is still standing — and one namin
 does not require, or that the DB domain stores after all. A value **nobody declared** still raises
 `QFAI-CONTRACT-040`, or the marker would be a silencer.
 
-It ships behind a promotion window: `warning` until the release its `RULE_PROMOTIONS` entry names,
-`error` from then on. The format is new, so the first authors to use it are answering another
-finding voluntarily and will get the grammar wrong in the ways the message exists to teach; failing
-the run on a line added to engage with the tool is the worst first experience of it.
+The format is new, so the first authors to use it are answering another finding voluntarily and
+will get the grammar wrong in the ways the message exists to teach. The message names the exact
+shape it wants for that reason.
 
 ## Executability (MUST)
 
@@ -194,6 +212,31 @@ satisfied by a file that cannot run.
   correctness. Neither a syntax-level parse nor a structural comparison would
   have caught the observed defects, so a cheap record of "this was actually
   driven" is what the omission needs.
+
+  One thing about a `db/` contract _is_ checked without a database.
+  `QFAI-CONTRACT-036` reads the DDL: a `REFERENCES` clause names a table, and
+  the contract that creates that table must appear in this file's
+  `-- Depends on:` line. A foreign key's target has to exist when the statement
+  runs, so an undeclared one means the stated apply order does not work — and
+  the three rules that read the dependency line do not read the SQL under it,
+  so nothing else says so.
+
+  The check is narrow on purpose. Only a `REFERENCES` clause counts, a table no
+  contract in the set creates is left alone, and a table two contracts both
+  create is not attributed to either.
+
+- **Compare the contracts with the migrations.** `npx qfai db-drift` applies
+  both to separate in-process databases and reports the columns they disagree
+  about: present on one side only, or declared with a different type,
+  nullability or default. Set `paths.migrationsDir` to the project's migration
+  directory; a project with no value there is out of scope and the command says
+  so.
+
+  This is the one question the rules above cannot answer. Contracts are frozen
+  early and implementation moves, so the two schemas drift by default, and a
+  suite that passes against the migration schema proves nothing about the
+  contracts. It is a separate command because it needs a database, and
+  `npx qfai validate` starts no processes.
 
 The cost of skipping this is not paid in Phase 0. It is paid inside a TDD
 micro-cycle, by an implementer who is forbidden from fixing the contract and has

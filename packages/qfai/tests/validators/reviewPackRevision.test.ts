@@ -1,5 +1,5 @@
 /**
- * QFAI-REVIEW-009 — a review pack says which state it ruled on (#388).
+ * QFAI-REVIEW-009 — a review pack says which state it ruled on.
  *
  * `summary.json` recorded `overall_status` and per-reviewer `status`, with no
  * field addressing the state those verdicts describe. The field is optional in

@@ -112,7 +112,7 @@ export function validateImageSources(input: unknown): ValidateImageSourcesResult
         continue;
       }
       if (field === "url" && !isHttpsUrl(value)) {
-        // Codex r3264477851: enforce the contract's `url(https)` rule
+        // Enforce the contract's `url(https)` rule
         // at schema-validation time so the certify gate does not also
         // have to re-check scheme. The most-actionable diagnostic is
         // recorded; `accepted.url` stays unset so the entry never

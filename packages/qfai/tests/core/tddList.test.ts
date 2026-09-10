@@ -85,15 +85,31 @@ function row(
 
 // ── Tests ──
 
-describe("tddList Phase 2 validators", { timeout: 15000 }, () => {
-  // Current canonical behavior: TDDLIST_MISSING = warning
-  it("emits TDDLIST_MISSING as warning when test-list.md absent", async () => {
+describe("tddList Phase 2 validators", () => {
+  // TDDLIST_MISSING is reported either way. Its severity follows what the
+  // absent ledger costs the spec, which is what the two messages already say.
+  it("emits TDDLIST_MISSING as warning when the spec declares coverage-target TC", async () => {
+    await withTddProject(async (root) => {
+      await seedSpec(root, "0001", { testCases: TC_TABLE_UNIT_COMPONENT });
+      const issues = await validateTddList(root, defaultConfig);
+      const missing = issues.find((i) => i.code === "TDDLIST_MISSING");
+      expect(missing).toBeDefined();
+      expect(missing?.severity).toBe("warning");
+      // Unit and Component TC are gated here alone, so the same absence also
+      // lands as an error the operator has to clear.
+      expect(issues.some((i) => i.code === "TDDLIST_TC_NOT_COVERED")).toBe(true);
+    });
+  });
+
+  it("emits TDDLIST_MISSING as info when the spec declares none", async () => {
     await withTddProject(async (root) => {
       await seedSpec(root, "0001", {});
       const issues = await validateTddList(root, defaultConfig);
       const missing = issues.find((i) => i.code === "TDDLIST_MISSING");
       expect(missing).toBeDefined();
-      expect(missing?.severity).toBe("warning");
+      expect(missing?.message).toContain("optional");
+      expect(missing?.severity).toBe("info");
+      expect(issues.some((i) => i.code === "TDDLIST_TC_NOT_COVERED")).toBe(false);
     });
   });
 

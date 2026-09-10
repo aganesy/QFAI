@@ -1,137 +1,84 @@
 # Version Discipline (全 AI 共通)
 
-QFAI パッケージのバージョン番号は、AI エージェントが独断で
-「どの版を出すか」を決めない。
-この規律はリポジトリで作業する全 AI (Claude Code / Codex / GitHub
-Copilot / その他) に適用される。
+QFAI パッケージの版番号 (`X.Y.Z`) は AI が選ばない。ユーザが決める。
+このルールはリポジトリで作業する全 AI (Claude Code / Codex / GitHub Copilot / その他) に適用する。
 
-## 上位原則: 版番号の決定権はユーザにある
+## 版番号の決め方
 
-AI は版番号 (`X.Y.Z`) を自分で選んではいけない。版番号の選択は次の
-いずれかの形でユーザが事前に与える:
+ユーザは次のどちらかで版番号を事前に与える。
 
-1. **branch 名に `vX.Y.Z` を pin する** (推奨)
-2. branch 名に SemVer を含めず、対話で `X.Y.Z` を明示指示する
+| 方法                                          | 検出                                                                                    |
+| --------------------------------------------- | --------------------------------------------------------------------------------------- |
+| ブランチ名に `vX.Y.Z` を pin する (推奨)      | `check-branch-version-pin.sh` と `pr-fix` の `CheckVersionAlignment` が機械的に検査する |
+| ブランチ名に含めず、対話で `X.Y.Z` を指示する | 機械的に検出できない。人間レビューに依る                                                |
 
-(1) は構造的に検出可能で、`check-branch-version-pin.sh` および
-`pr-fix` script (`CheckVersionAlignment`) で強制される。pin が存在
-する以上、AI はその版でリリース成果物 (package.json#version /
-CHANGELOG H2 / `chore(release):` commit) を整える義務を負う。
+pin はその版でリリースする指示にあたる。
+pin があれば、AI はその版でリリース成果物 (`package.json#version` / CHANGELOG の版見出し / `chore(release):` commit) を整える。
 
-(2) は構造的に検出できないため、対話ログによる人間レビュー依存となる。
+## ブランチ名と pin
 
-## Master rule: ブランチ名 → version pin
+### pinned branch
 
-1. **ブランチ名にセマンティックバージョンが含まれる場合 (pinned)**
-   - 例: `feature/v1.8.8`, `release/v1.9.0`, `hotfix/v1.10.2-foo`
-   - 推奨命名規則: `<type>/v<X.Y.Z>[-<slug>]` (leading `v` 必須)
-   - **pin = その版でリリースする旨のユーザ指示**。AI は pin と一致
-     する形で `packages/qfai/package.json#version` を維持し、PR を
-     merge 可能状態に整える時点で CHANGELOG / `chore(release):`
-     commit も pin に合わせて整備する (下記「pinned branch で許可
-     される操作」「pinned branch でも禁止」を参照)
-   - **pin と異なる版** (bump / down / 任意の書換) を AI が選ぶこと
-     は禁止。pin の書換が必要な場合はユーザに確認する
-2. **ブランチ名にバージョンが含まれない場合 (unpinned)**
-   - 例: `main`, `chore/update-deps`, `feature/refactor-x`
-   - `package.json#version` の **編集 (bump / down / 任意の書換) を
-     行う前に必ずユーザに確認**
-   - CHANGELOG H2 (`## [X.Y.Z]`) の新規追加、`chore(release):`
-     commit、tag 系操作も同様にユーザの明示指示なしには行わない
-   - このケースは `check-branch-version-pin.sh` では構造的に検出
-     できないため (SemVer 抽出時に skip)、実質的に人間レビュー
-     依存となる
-3. **SemVer 抽出の正規表現** (guard と一致): `(?:^|[/_-])v([0-9]+)\.([0-9]+)\.([0-9]+)(?:$|[/_-])`
-   - leading `v` プレフィックスを word boundary 付きで必須とする
-   - `feature/api-2024.10.05` / `bugfix/issue-1.2.3-typo` / `fix/log4j-2.17.1`
-     のような SemVer ではない数字列は意図的に捕捉しない
-   - MAJOR.MINOR.PATCH のみサポート (pre-release / build metadata は対象外)。
-     `release/v1.9.0-rc.1` のような pre-release 運用が必要な場合は
-     `VERSION_PIN_SKIP=1` の例外で運用する
-
-## pinned branch で AI に許可される操作
-
-ブランチ名に `vX.Y.Z` pin がある場合、AI は次を独断で実行してよい
-(pin = ユーザ指示なので、追加の対話確認は不要):
-
-- `packages/qfai/package.json#version` を pin 値に同期
-- `CHANGELOG.md` の `## [Unreleased]` を `## [X.Y.Z] - YYYY-MM-DD`
-  に rename し、空の `## [Unreleased]` セクションを再挿入
-- `chore(release): qfai X.Y.Z` commit を作成して push
-
-実施タイミングの目安:
-
-- 機能 commit が一通り終わり、PR を merge 可能状態に整える段階
-  (典型的には `pr-fix` script の `CheckVersionAlignment` で
-  exit 1 が出たとき) で実施する
-- 機能 commit を打つたびに毎回 release commit を更新する必要は
-  ない。`[Unreleased]` 配下に追記し続け、最終的に rename する
-
-## pinned branch でも禁止 (明示指示が必要)
-
-pin があってもユーザの明示指示なしには実行しない:
-
-- pin と異なる版番への変更 (例: `feature/v1.8.8` 上で 1.9.0 へ
-  bump する。pin そのものを変更したい場合はユーザに確認)
-- `git tag vX.Y.Z` / `git tag qfai@X.Y.Z` 等のリリース系 tag の実行
-- `npm publish` / `pnpm publish` 系の実行
-- `git commit --amend` によるリリース commit の事後改竄
-- `git push --force` / `git push --force-with-lease` (リモートの
-  リリース履歴上書き)
-- `gh pr merge` / `gh pr merge --auto` 等で AI 自身がリリース PR を
-  マージすること
-- `npm version <patch|minor|major>` / `pnpm version <patch|minor|major>`
-  系のオールインワンコマンド (tag を副作用で打つため)。版同期は
-  `package.json` 直接編集で行う
-
-unpinned branch では上記に加えて、`package.json#version` 編集 /
-CHANGELOG H2 追加 / `chore(release):` commit も明示指示が必要。
-
-## 機能完成時の正しいフロー
-
-### pinned branch (推奨)
-
-1. `feat(...)` / `fix(...)` / `docs(...)` / `refactor(...)` の機能
-   commit を打つ
-2. `CHANGELOG.md` の `## [Unreleased]` 配下に変更内容を追記
-3. PR を merge 可能状態に整える段階で:
-   1. `packages/qfai/package.json#version` を pin 値に同期
-   2. `CHANGELOG.md` の `## [Unreleased]` を
-      `## [X.Y.Z] - YYYY-MM-DD` に rename
-   3. 空の `## [Unreleased]` セクションを再挿入
-   4. `chore(release): qfai X.Y.Z` で commit / push
+- 例: `feature/v1.8.8`, `release/v1.9.0`, `hotfix/v1.10.2-foo`
+- 推奨形式: `<type>/v<X.Y.Z>[-<slug>]`。先頭の `v` は必須
+- `packages/qfai/package.json#version` を pin と一致させる
+- PR を merge 可能な状態に整える段階で、CHANGELOG と `chore(release):` commit も pin に合わせる
+- pin と異なる版番号への変更 (上げる・下げる・書き換える) は禁止。pin 自体を変えたいときはユーザに確認する
 
 ### unpinned branch
 
-1. 機能 commit + `## [Unreleased]` 追記までは pinned と同じ
-2. リリース commit はユーザの明示指示を待つ — 自分から打たない
+- 例: `main`, `chore/update-deps`, `feature/refactor-x`
+- `package.json#version` の編集、CHANGELOG の版見出し (`## [X.Y.Z]`) の追加、`chore(release):` commit、tag 操作のいずれも、ユーザの明示指示なしに行わない
+- ガードは SemVer の無いブランチを検査しない。人間レビューに依る
+
+### SemVer の抽出
+
+ガードと同じ正規表現: `(?:^|[/_-])v([0-9]+)\.([0-9]+)\.([0-9]+)(?:$|[/_-])`
+
+- 先頭の `v` を、区切り文字に挟まれた形で必須とする
+- `feature/api-2024.10.05` / `bugfix/issue-1.2.3-typo` / `fix/log4j-2.17.1` のような SemVer でない数字列は捕捉しない
+- MAJOR.MINOR.PATCH のみ。`release/v1.9.0-rc.1` のような pre-release は `VERSION_PIN_SKIP=1` で運用する
+
+## pinned branch で AI が行ってよい操作
+
+pin はユーザの指示なので、追加の確認なしに実行してよい。
+
+1. `packages/qfai/package.json#version` を pin 値に同期する
+2. `CHANGELOG.md` の `## [Unreleased]` を `## [X.Y.Z] - YYYY-MM-DD` に改名し、空の `## [Unreleased]` を再挿入する
+3. `chore(release): qfai X.Y.Z` として commit し push する
+
+実施するのは、機能 commit が揃い、PR を merge 可能な状態に整える段階 (典型的には `CheckVersionAlignment` が失敗したとき)。
+機能 commit のたびに release commit を更新する必要はない。`[Unreleased]` に追記を続け、最後に改名する。
+
+## 明示指示が必要な操作
+
+pin があっても、ユーザの明示指示なしには行わない。
+
+- pin と異なる版番号への変更
+- `git tag vX.Y.Z` / `git tag qfai@X.Y.Z` などリリース tag の作成
+- `npm publish` / `pnpm publish`
+- `git commit --amend` によるリリース commit の書き換え
+- `git push --force` / `git push --force-with-lease`
+- `gh pr merge` などで AI 自身がリリース PR を merge すること
+- `npm version` / `pnpm version` (tag を副作用で打つ)。版の同期は `package.json` の直接編集で行う
+
+unpinned branch では、これに加えて `package.json#version` の編集 / CHANGELOG の版見出し追加 / `chore(release):` commit も明示指示が必要。
+
+## 機能完成時の流れ
+
+1. `feat` / `fix` / `docs` / `refactor` の機能 commit を打つ
+2. `CHANGELOG.md` の `## [Unreleased]` に変更内容を追記する
+3. pinned branch なら、PR を merge 可能な状態に整える段階で上記 3 操作を行う。unpinned branch ならユーザの明示指示を待つ
 
 ## 自動ガード
 
-- `packages/qfai/scripts/check-branch-version-pin.sh`
-  - 現ブランチ名から SemVer を抽出 (見つからなければ pass)
-  - `packages/qfai/package.json#version` と一致しなければ exit 1
-  - CI の lint job から呼び出され、pin 不一致 PR を構造的にブロック
-- `.agents/skills/pr-fix/scripts/run-pr-fix.ps1`
-  (`CheckVersionAlignment`)
-  - pinned branch で `package.json#version` および CHANGELOG H2
-    (`## [X.Y.Z]` または `## [X.Y.Z] - YYYY-MM-DD`) の存在を要求
-  - 不整合があれば throw して dry-run / live monitor を停止
+| ガード                                                                    | 内容                                                                                                                                         |
+| ------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
+| `packages/qfai/scripts/check-branch-version-pin.sh`                       | ブランチ名から SemVer を抽出し (無ければ pass)、`packages/qfai/package.json#version` と一致しなければ exit 1。CI の lint job が実行する      |
+| `.agents/skills/pr-fix/scripts/run-pr-fix.ps1` の `CheckVersionAlignment` | pinned branch で `package.json#version` と CHANGELOG の版見出し (`## [X.Y.Z]` または `## [X.Y.Z] - YYYY-MM-DD`) を要求し、不整合なら停止する |
 
-緊急時は `VERSION_PIN_SKIP=1` で前者を無効化可能 (ユーザ承認済みの
-coordinated release で、ブランチ名と version を一時的に乖離させる
-ケース用)。
-
-## 過去事例
-
-- 2026-05-02: `feature/v1.8.8` 上で AI (Claude Code) が **pin と
-  異なる** 1.9.0 → 1.9.1 をリリース commit に格上げ。違反点は「AI が
-  版番号 (pin と異なる値) を独断で選んだ」こと。履歴を
-  `git reset --hard` で巻き戻した上で、本ルールと自動ガードを追加
-  した。pin 値そのものでリリース成果物を整備する行為は、本事例
-  以降「ユーザが pin を切った時点で承認済み」として扱う。
+ユーザ承認済みの coordinated release でブランチ名と version を一時的に乖離させる場合は、`VERSION_PIN_SKIP=1` で前者を無効化できる。
 
 ## 関連
 
-- 配布物の version marker leak は別ルール:
-  `.agents/rules/distributed-surface.md`。
+- 配布物への version marker 混入は別ルール: `.agents/rules/distributed-surface.md`

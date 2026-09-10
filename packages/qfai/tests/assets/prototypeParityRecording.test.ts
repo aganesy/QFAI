@@ -1,5 +1,5 @@
 /**
- * `Prototype parity` needs a recording obligation, not just a field (#571).
+ * `Prototype parity` needs a recording obligation, not just a field.
  *
  * `qfai-implement/SKILL.md` makes prototype parity PASS item 9 of the gate and
  * gives it a named field in the per-item evidence contract, but the two
@@ -179,10 +179,14 @@ describe("prototype parity is recorded, not merely required", () => {
       // A hash that recomputes proves the evidence did not move; it says
       // nothing about the UI. Without item 9 in the same-revision set, a parity
       // PASS taken before the surface changed still carries the row to `done`.
-      const skill = flat(await readSkill(tree));
       const revision = flat(await readAsset(tree, REVISION_REL));
+      // Gate item 10 cites the record contract, which is where the
+      // same-revision set — item 9 included — is stated.
+      const record = flat(
+        await readAsset(tree, "assistant/skills/qfai-implement/references/record-contract.md"),
+      );
 
-      expect(skill).toContain(
+      expect(record).toContain(
         "on a UI-affecting row item 9's `Prototype parity reviewed revision` shares it too",
       );
       // main renumbered the agreeing set to items 6, 7 and 8, so the parity verdict

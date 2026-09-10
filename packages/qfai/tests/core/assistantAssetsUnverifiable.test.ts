@@ -27,19 +27,10 @@ vi.mock("../../src/shared/assets.js", async (importOriginal) => {
 
 const { defaultConfig } = await import("../../src/core/config.js");
 const { validateAssistantAssets } = await import("../../src/core/validators/assistantAssets.js");
-const { newRuleSeverity, RULE_PROMOTIONS } = await import("../../src/core/sunset.js");
-const { resolveToolVersion } = await import("../../src/core/version.js");
 
-/**
- * `QFAI-ASSETS-008` ships behind `RULE_PROMOTIONS.assistantAssetProvenance`
- * with the rest of the family, so the severity follows the pin rather than a
- * literal written here.
- */
+/** The severity the whole provenance family reports at. */
 async function expectedProvenanceSeverity(): Promise<"warning" | "error"> {
-  return newRuleSeverity(
-    await resolveToolVersion(),
-    RULE_PROMOTIONS.assistantAssetProvenance.promoteAt,
-  );
+  return "error";
 }
 const { getInitAssetsDir: realInitAssetsDir } = await vi.importActual<typeof AssetsModule>(
   "../../src/shared/assets.js",

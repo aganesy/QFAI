@@ -1,5 +1,5 @@
 /**
- * `TDD-NNNN` has an allocation rule (#405).
+ * `TDD-NNNN` has an allocation rule.
  *
  * The shipped specification for `TDD-ID` was one line — match `TDD-NNNN`, be
  * unique within the spec — while `constitution/workflow.md` mandates worktree

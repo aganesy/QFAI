@@ -76,14 +76,17 @@ describe("sub-agent roster completeness and handoff contracts", () => {
       /delivery-planner[\s\S]*?assigns it to the appropriate implementation agent/i,
     );
     expect(content).toMatch(
-      // Split into a RED submission and a GREEN submission (#355): one combined
+      // Split into a RED submission and a GREEN submission: one combined
       // post-hoc submission is only satisfiable after the RED state is gone.
       /Implementation agent submits the RED run to `qa-gatekeeper`[\s\S]*?then the GREEN run after it/i,
     );
     expect(content).toMatch(/`qa-gatekeeper` confirms or rejects each observation/i);
     expect(content).toMatch(/completion-reviewer[\s\S]*?implementation-reviewer/i);
+    // The trigger is not restated inline. It is defined once in
+    // `references/ui-affecting.md` and every routing site cites that file, so
+    // the contract asserts the citation rather than a second copy of the rule.
     expect(content).toMatch(
-      /product-surface-reviewer[\s\S]*?added when the item affects UI behavior/i,
+      /product-surface-reviewer` is added when the item is UI-affecting[\s\S]*?references\/ui-affecting\.md/i,
     );
     // "routed blocking reviewers" was narrower than the real gate:
     // `blocking_agents` omits `implementation-reviewer`, whose REVISE still
@@ -103,7 +106,7 @@ describe("qa-gatekeeper is sole observation authority", () => {
 
     expect(content).toMatch(/qa-gatekeeper[\s\S]*?sole[\s\S]*?authorit/i);
     expect(content).toMatch(
-      // Split into a RED submission and a GREEN submission (#355): one combined
+      // Split into a RED submission and a GREEN submission: one combined
       // post-hoc submission is only satisfiable after the RED state is gone.
       /Implementation agent submits the RED run to `qa-gatekeeper`[\s\S]*?then the GREEN run after it/i,
     );
@@ -173,7 +176,7 @@ describe("TC-0012-0044: routing consistency", () => {
       /delivery-planner[\s\S]*?assigns it to the appropriate implementation agent/i,
     );
     expect(content).toMatch(
-      // Split into a RED submission and a GREEN submission (#355): one combined
+      // Split into a RED submission and a GREEN submission: one combined
       // post-hoc submission is only satisfiable after the RED state is gone.
       /Implementation agent submits the RED run to `qa-gatekeeper`[\s\S]*?then the GREEN run after it/i,
     );

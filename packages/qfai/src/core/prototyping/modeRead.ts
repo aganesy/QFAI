@@ -24,8 +24,8 @@ export type PrototypingMode = "convergence" | "exploration";
  * with `core/validators/prototyping/explorationCertify.ts#
  * CertifyIterationView` is intentional — certify and the relax
  * helper consume the SAME view set so the two surfaces can never
- * disagree on the effective mode of any iteration (codex
- * r3338445364: one SSOT for cross-surface mode resolution).
+ * disagree on the effective mode of any iteration — one SSOT for
+ * cross-surface mode resolution.
  */
 export type PrototypingIterationView = {
   readonly index: number;

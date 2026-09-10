@@ -7,10 +7,20 @@
 ## US-0001: <title>
 
 - Parent: CAP-XXXX
-- Source: discussion-YYYYMMDDhhmmssSSS#DUS-XXX <!-- originating pack + story ID, or `-` if none -->
+- Source: discussion-YYYYMMDDhhmmssSSS#DUS-XXX <!-- pack route: originating pack + story ID. Imported spec set (no pack): import-lite-YYYYMMDDhhmmssSSS#REQ-XXXX. `-` only when neither route produced this item. -->
+- Flow: BF-XXXX <!-- optional; the business flows that realize this story, comma-separated -->
 - Goal: <goal>
 - Non-goals: <non-goal>
 - Notes: <notes>
+
+> **`Flow` binds the story to the business flow that realizes it.** Write the IDs
+> `_policies/04_Business-Flow.md` declares, comma-separated, in this story's own block. A test
+> under `<testsDir>/e2e/**` annotated `QFAI:BF-0001` then answers the E2E obligation of every
+> story naming that flow, so one test covers a flow rather than one test covering a story —
+> which is the grain E2E verifies. The line is optional: a story that names no flow keeps the
+> obligation it already had, answered by a `QFAI:SPEC-XXXX:US-XXXX` annotation as before. The
+> edge runs this way, and only this way, because `_policies/**` must not name a lower-layer ID;
+> see `references/spec-traceability-rules.md`.
 
 > **Deferring a story out of the current slice.** Add a `- x-qfai-status: planned` meta line
 > to this block. That story is then excluded from the E2E coverage obligation (`QFAI-ATDD-111`)
@@ -33,6 +43,14 @@
 > prose, and never renumber it into the spec-local `US-0001` form. Discussion IDs are
 > `D`-prefixed precisely so they cannot be mistaken for spec IDs, and the `_policies`
 > lower-layer-ID rule does not apply to them (it covers spec-local 4-digit IDs only).
+>
+> **Imported spec sets (no discussion pack)** carry the evidence pair instead:
+> `import-lite-<ts>#<REQ-ID>` — the basename of the import-lite evidence file Stage 0 wrote,
+> minus the `.md`, then the requirement ID as the imported material names it, or the `IMP-NNN`
+> the evidence file's `## Imported requirements` assigns when that material has no IDs of its
+> own. Both halves stay required. See
+> `references/spec-traceability-rules.md`. Do not write `-` here and do not invent a discussion
+> ID: on this route no pack exists to hold one.
 >
 > **Packs written before the `D` prefix** carry unprefixed IDs (`US-001`, `AC-001-01`).
 > Copy those verbatim too: `discussion-YYYYMMDDhhmmssSSS#US-001`. Do NOT invent a `DUS-`

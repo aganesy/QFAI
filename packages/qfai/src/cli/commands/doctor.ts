@@ -6,7 +6,7 @@ import { WOULD_UNTRACK_REASON } from "../../core/doctor/archiveVisibility.js";
 import { cleanStaleReviewPacks } from "../../core/doctor/cleanReviewPacks.js";
 import { cleanStaleRunLogs, precheckRunLogPrune } from "../../core/doctor/cleanRunLogs.js";
 import { runAutoremediate } from "../../core/doctor/autoremediate.js";
-import { ensureRootGitignoreEntries } from "./init.js";
+import { ensureRootGitignoreEntries, repairIntegrationWrappers } from "./init.js";
 import type { FailOn, QfaiConfig } from "../../core/config.js";
 import { findConfigRoot, loadConfig } from "../../core/config.js";
 import type { Issue } from "../../core/types.js";
@@ -109,8 +109,8 @@ function formatDoctorJson(data: unknown): string {
  * Both cleaners still populate their result arrays under dry-run (they
  * list what the live command WOULD do), so reusing the past-tense
  * wording from the live path would falsely read as "it happened".
- * Mirror the `autoremediate` dry-run vocabulary (`would run ...` /
- * `would fill ...`).
+ * Mirror the `autoremediate` dry-run vocabulary (`would run...` /
+ * `would fill...`).
  *
  * Review-pack archival always runs (it moves, and is therefore
  * recoverable). The run-log prune deletes, so it runs only after
@@ -235,14 +235,25 @@ export async function runDoctor(options: DoctorCommandOptions): Promise<number> 
     // --autoremediate` would see clean + config-fill run but never the
     // install they were expecting. The diagnostic pass below also receives
     // `skillProfile`, so the two stay in lockstep on the same option.
-    // Before it, so the record the legacy-review-pack migration writes is not
-    // ignored: an existing repository still carries the older managed block,
-    // whose `.qfai/review/*` would keep `.legacy-packs` out of every commit —
-    // and every legacy claim is then uncorroborated in CI and in the next
-    // clone. `runAutoremediate` lives in core and this helper in the CLI, so
-    // the call belongs here rather than the import belonging there.
+    // Before it, so the files the remediation goes on to write under
+    // `.qfai/review/` are ignored by the time they exist. An existing
+    // repository still carries a managed block that re-includes the
+    // legacy-pack record, and the migration below writes exactly that file —
+    // so on the old block a `git add .` after this command commits a review
+    // artifact. Repairing the block first is what makes the write invisible to
+    // git rather than merely untidy. `runAutoremediate` lives in core and this
+    // helper in the CLI, so the call belongs here rather than the import
+    // belonging there.
     if (!isCi) {
       await ensureRootGitignoreEntries(resolvedRoot, Boolean(options.dryRun), (line) =>
+        sideEffectLines.push(line),
+      );
+      // Before `createDoctorData`, like the rest of this branch, so
+      // `integration.links` grades the repaired tree rather than the one the
+      // operator asked to have repaired. Here rather than inside
+      // `runAutoremediate` for the reason above: that orchestrator is core and
+      // this repair is built on `init`'s symlink writer, which is CLI.
+      await repairIntegrationWrappers(resolvedRoot, Boolean(options.dryRun), (line) =>
         sideEffectLines.push(line),
       );
     }

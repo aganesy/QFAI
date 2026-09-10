@@ -150,7 +150,7 @@ afterEach(async () => {
 // TOML, so a project that installed qfai got Claude and GitHub agent wrappers
 // and Codex got nothing — including after `qfai init --force`, the documented
 // way to pull agent corrections in.
-describe("qfai init generates the Codex agent profiles", { timeout: 60000 }, () => {
+describe("qfai init generates the Codex agent profiles", () => {
   it("writes one TOML per canonical agent", async () => {
     const root = await initProject();
     const expected = await canonicalAgentNames();

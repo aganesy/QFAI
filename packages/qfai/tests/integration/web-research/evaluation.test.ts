@@ -20,7 +20,7 @@ async function readSkill(): Promise<string> {
   return readFile(skillPath, "utf-8");
 }
 
-describe("web-research evaluation metrics and HITL gates", { timeout: 15_000 }, () => {
+describe("web-research evaluation metrics and HITL gates", () => {
   // QFAI:SPEC-0027:TC-0027-0017 (TDD-0025)
   it("golden task evaluation - 4 metrics scored", async () => {
     const content = await readSkill();

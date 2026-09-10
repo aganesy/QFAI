@@ -1,5 +1,5 @@
 /**
- * The four provenance defects PR #794's review found, each with the failure it produces.
+ * Four provenance defects, each with the failure it produces.
  *
  * They are one family: the record is adopter-controlled, and every one of these is a way the
  * reader or the writer trusts it further than it should. Their consequences converge too — three of
@@ -64,7 +64,7 @@ const recordPath = (root: string): string => path.join(root, ".qfai", "install-p
 /**
  * The lock, as the writer now shapes it: a directory whose entry NAMES its holder.
  *
- * Review finding [39]. While the lock was a file whose CONTENTS named its holder, both the
+ * While the lock was a file whose CONTENTS named its holder, both the
  * reclaim and the release identified it by path — read the token, then unlink the name — and a
  * holder stalled past the staleness ceiling deleted whatever had since been published under
  * that name. Naming the holder in the directory ENTRY makes both removals exact: `unlink` names
@@ -246,7 +246,7 @@ describe("a timestamp naming a date that does not exist is not a timestamp", () 
 // ── [66] ─────────────────────────────────────────────────────
 describe("a workflows map has no prototype for a record to replace", () => {
   it("keeps a __proto__ entry as data instead of assigning it to the prototype", async () => {
-    // Review finding [66] filed a chain one step longer than what reproduces, and the difference
+    // filed a chain one step longer than what reproduces, and the difference
     // is worth writing down: it said a `__proto__` value carrying an extra `qfai-tests.yml` key
     // would make that shipped name resolve through the prototype, classifying a first `init` as
     // `declined` forever. Measured — `toWorkflowEntry` returns a FRESH three-field object, so what
@@ -511,7 +511,7 @@ describe("an abandoned lock is reclaimed without deleting a live one", () => {
       Object.keys((await readInstallProvenance(root)).workflows).sort(),
       "a denial that passes must not lose the write",
     ).toEqual(["qfai-first.yml", "qfai-second.yml"]);
-  }, 60_000);
+  });
 
   it("keeps every entry under heavy concurrency", async () => {
     // The six-writer row above passed on an idle machine and FAILED inside the whole-suite run,
@@ -548,7 +548,123 @@ describe("an abandoned lock is reclaimed without deleting a live one", () => {
 
     // And no lock is left behind for the next run to wait out.
     expect(await lockHolders(root)).toBeUndefined();
-  }, 60_000);
+  });
+
+  it("keeps the entry when the published lock is taken away before the read-back", async () => {
+    // Losing the lock to a reclaimer is what the protocol does under contention, not a fault: the
+    // writer that lost is the writer that was supposed to lose. Nothing was written when it
+    // happens, so the answer is to go round again — and the re-apply loop that already exists for
+    // being overtaken is the loop that answers it.
+    //
+    // Raising it above that loop is what cost an entry. The throw left
+    // `updateInstallProvenance` entirely, so the writer never reached the retry written for
+    // exactly this, and the file it carried stays on disk with nothing recorded: it reads as
+    // `adopter-owned` from then on and no later run puts it back.
+    //
+    // The steal is planted rather than waited for. The load row above is honest that it cannot
+    // reproduce this on an idle machine — the window between publishing the lock and reading it
+    // back is microseconds when nothing else is running. A thief on a 1 ms tick that swaps
+    // whatever sits at the lock name closes that gap deterministically, and stops itself after a
+    // fixed number of steals so the writer can finish.
+    const root = await tempRoot();
+    await writeInstallProvenance(root, { workflows: {} });
+
+    let stolen = 0;
+    const thief = setInterval(() => {
+      if (stolen >= 1) return;
+      const dir = lockDir(root);
+      // Only a lock with a marker in it — one a writer published and is holding. Without this the
+      // thief keeps finding the empty directory it left behind a tick earlier and steals that,
+      // reaching its count without ever racing a writer. Measured: the row then passes with the
+      // repair reverted, which is the one thing it must not do.
+      if (!existsSync(dir) || readdirSync(dir).length === 0) return;
+      // Renamed away rather than removed, so the writer meets somebody else's object at the name
+      // — the dispossession it has to recognise — instead of an absence.
+      renameSync(dir, `${dir}.stolen`);
+      mkdirSync(dir, { recursive: true });
+      stolen += 1;
+    }, 1);
+
+    // Several writers, so the lock is held for most of the window rather than for the few
+    // milliseconds one uncontended write needs. One steal is enough to make the point; catching
+    // it at all is what needs the contention.
+    const names = Array.from({ length: 12 }, (_, index) => `qfai-robbed-${String(index)}.yml`);
+    try {
+      await Promise.all(
+        names.map((name) =>
+          updateInstallProvenance(root, (current) => ({
+            ...current,
+            workflows: { ...current.workflows, [name]: entryTyped() },
+          })),
+        ),
+      );
+    } finally {
+      clearInterval(thief);
+    }
+
+    expect(
+      stolen,
+      "the plant must actually fire, or this row passes without exercising anything",
+    ).toBe(1);
+    expect(
+      Object.keys((await readInstallProvenance(root)).workflows).sort(),
+      "an entry must survive a lock its writer published and did not get back",
+    ).toEqual([...names].sort());
+  });
+
+  it("does not overwrite a committed entry with content it read before losing the lock", async () => {
+    // The row above steals the lock BEFORE the read-back, which is the window the read-back
+    // closes. This one steals it after, which nothing used to watch.
+    //
+    // `rename` is the arbitration and it fails only onto a NON-EMPTY directory, so an empty one at
+    // the lock name lets the next writer's rename land while the first is still inside the
+    // section. Two writers are then working from reads taken at different moments, and the one
+    // that writes last wins — so an entry that was already committed is replaced by content
+    // computed before it existed. Both calls return successfully and the file never records it
+    // again, which is why this cannot be left to a later run.
+    //
+    // Planted rather than raced, for the reason the row above is: the window is microseconds on an
+    // idle machine. Everything here happens inside one mutator call, which is the section.
+    const root = await tempRoot();
+    await writeInstallProvenance(root, { workflows: { "qfai-seed.yml": entryTyped() } });
+
+    let displaced = false;
+    await updateInstallProvenance(root, (current) => {
+      if (!displaced) {
+        displaced = true;
+        // Take this writer's lock away and leave an empty directory at the name — what a holder
+        // that died between its `unlink` and its `rmdir` leaves, and what the next `rename` lands
+        // on.
+        const dir = lockDir(root);
+        renameSync(dir, `${dir}.stolen`);
+        mkdirSync(dir, { recursive: true });
+        // The writer that took the freed section, finishing its own read-modify-write. `current`
+        // above was read before this landed, so returning a mutation of it is what drops the
+        // entry.
+        writeFileSync(
+          recordPath(root),
+          `${JSON.stringify(
+            {
+              workflows: { "qfai-seed.yml": entryTyped(), "qfai-rival.yml": entryTyped() },
+            },
+            null,
+            2,
+          )}\n`,
+          "utf-8",
+        );
+      }
+      return {
+        ...current,
+        workflows: { ...current.workflows, "qfai-victim.yml": entryTyped() },
+      };
+    });
+
+    expect(displaced, "the plant must fire, or this row exercises nothing").toBe(true);
+    expect(
+      Object.keys((await readInstallProvenance(root)).workflows).sort(),
+      "a writer dispossessed inside the section must not write over what it did not read",
+    ).toEqual(["qfai-rival.yml", "qfai-seed.yml", "qfai-victim.yml"]);
+  });
 
   it("does not release a lock it no longer owns", async () => {
     const root = await tempRoot();
@@ -556,8 +672,8 @@ describe("an abandoned lock is reclaimed without deleting a live one", () => {
 
     // Replaced from INSIDE the mutator, which is the only moment this writer holds the lock. That
     // models the state after another process reclaimed it and published its own: this writer's
-    // marker is gone and somebody else's is there. Review finding [39] measured what the old
-    // release did about it — nothing: it read the token, found its own, and unlinked the PATH,
+    // marker is gone and somebody else's is there. The old
+    // release did nothing about it: it read the token, found its own, and unlinked the PATH,
     // which by then named the other writer's lock. Two of them were then in the section at once,
     // which is the lost update the lock exists to prevent.
     //
@@ -616,8 +732,7 @@ describe("an abandoned lock is reclaimed without deleting a live one", () => {
     // the cost of an attempt can only make the last poll late.
     //
     // The refresh here stands for ANOTHER PROCESS, which is what a lock is for and what no
-    // in-process fixture can supply. Review finding [46] read it the other way round and was
-    // right to: the production holder had no heartbeat at all, so a writer whose own section ran
+    // in-process fixture can supply: the production holder had no heartbeat at all, so a writer whose own section ran
     // past the ceiling was reclaimed while it was still inside it. That is now `acquireRecordLock`'s
     // own interval, and the row below is what says so.
     const root = await tempRoot();
@@ -671,10 +786,10 @@ describe("an abandoned lock is reclaimed without deleting a live one", () => {
     } finally {
       clearInterval(stillGoing);
     }
-  }, 60_000);
+  });
 
   it("renews its marker while it holds the lock, on an interval under the ceiling", async () => {
-    // Review finding [46]. The marker was stamped once, at acquisition, so a writer whose
+    // The marker was stamped once, at acquisition, so a writer whose
     // read-modify-write ran longer than the staleness ceiling — a slow disk, a suspended process, a
     // loaded machine — was judged abandoned and reclaimed while it was still inside the section.
     // Two writers in there at once is the lost update this primitive exists to prevent, and it is
@@ -721,7 +836,7 @@ describe("an abandoned lock is reclaimed without deleting a live one", () => {
   });
 
   it("removes only what it moved aside, never a path under the lock name", async () => {
-    // Review finding [62], the fourth on this function and the first that could not be answered by
+    // the fourth on this function and the first that could not be answered by
     // checking harder: `lstat` the directory, compare `dev`/`ino`, `lstat` each marker — and the
     // `unlink` still resolved `lockDir/<marker>` through a parent a concurrent process could replace
     // one syscall earlier, landing the removal on an external file of the same name. Every version
@@ -1007,7 +1122,7 @@ describe("a symlinked record is refused on every platform", () => {
 
 describe("the record writer pins the directory it verified", () => {
   it("compares the record directory across the staging write, before the rename", async () => {
-    // Review finding [73]. `ancestorsAreRealDirectories` runs before the `mkdir` and again after it,
+    // `ancestorsAreRealDirectories` runs before the `mkdir` and again after it,
     // and then the write happens — three pathname operations with the same gap between them the
     // reviewer-artifact writers already close. A concurrent process that moves `.qfai` aside and
     // leaves a link in its place has the staging file created on the far side, and the rename
@@ -1055,7 +1170,7 @@ describe("the record writer pins the directory it verified", () => {
 
 describe("releasing a lock does not follow a name that was swapped under it", () => {
   it("leaves an outside file named like its marker exactly where it was", async () => {
-    // Review finding [122]. Release was `unlink(lockDir/marker)` then `rmdir(lockDir)`, both
+    // Release was `unlink(lockDir/marker)` then `rmdir(lockDir)`, both
     // resolved through the lock NAME at the moment of the call. Anything that can write `.qfai/`
     // can move the acquired directory aside and leave a symlink to somewhere else in its place —
     // and the marker's name is readable out of the acquired directory, so an external file can be
@@ -1076,7 +1191,7 @@ describe("releasing a lock does not follow a name that was swapped under it", ()
     let swapped = false;
     let hostage = "";
 
-    await updateInstallProvenance(root, (current) => {
+    const outcome = await updateInstallProvenance(root, (current) => {
       // Inside the section: the lock is held and its marker names this holder.
       const markers = readdirSync(lockDir);
       if (markers.length === 1) {
@@ -1098,11 +1213,25 @@ describe("releasing a lock does not follow a name that was swapped under it", ()
         }
       }
       return { ...current, workflows: { ...current.workflows, "qfai-tests.yml": entryTyped() } };
-    });
+    }).then(
+      () => undefined,
+      (error: unknown) => error,
+    );
 
     if (!swapped) {
       return; // the fixture could not be built here
     }
+
+    // The write is refused rather than carried out. A link standing where this writer's lock was
+    // means the lock is not held, and a writer that is not holding it does not write — so the
+    // second attempt meets the same link at acquisition and stops on the path.
+    //
+    // What this row is about is unchanged: whatever the write does, release must not reach through
+    // that name on its way out.
+    expect(
+      outcome,
+      "a lock name swapped for a link is refused, not written through",
+    ).toBeInstanceOf(Error);
 
     expect(
       existsSync(hostage),
@@ -1142,7 +1271,7 @@ describe("releasing a lock does not follow a name that was swapped under it", ()
 
 describe("a holder that was reclaimed does not disturb the lock that replaced it", () => {
   it("leaves a successor's lock exactly where it is", async () => {
-    // Review finding [128]. The release freed the canonical NAME before it could tell whose
+    // The release freed the canonical NAME before it could tell whose
     // lock was under it: holder A is judged stale, holder B takes over, A resumes and releases,
     // and A's unconditional `rename` moves B's lock aside. If a third writer then takes the
     // freed name, B's restore fails — and B, still inside its section, is joined by that writer.
@@ -1203,12 +1332,12 @@ describe("a holder that was reclaimed does not disturb the lock that replaced it
   it("never moves the canonical name, so it cannot free another holder's", async () => {
     // The row above pins the OUTCOME. This one pins the mechanism, and the mechanism changed.
     //
-    // Release used to check the identity and then rename the lock aside. Those are two
-    // syscalls: a holder that verified its own lock, stalled, was reclaimed as stale and
-    // replaced, and then resumed would move its SUCCESSOR's directory — and if a third writer
-    // took the freed name, the restore declined and two writers were inside the section. That
-    // is review finding [137], and narrowing the window does not close it, because the
-    // operation acted on a NAME rather than on this holder's object.
+    // Checking the identity and then renaming the lock aside would be two syscalls: a holder
+    // that verified its own lock, stalled, was reclaimed as stale and replaced, and then resumed
+    // would move its SUCCESSOR's directory — and if a third writer took the freed name, the
+    // restore would decline and two writers would be inside the section. Narrowing the window
+    // does not close that, because the operation would still act on a NAME rather than on this
+    // holder's object.
     //
     // So it acts on the object. `rmdir` removes a directory only when it is empty, and the only
     // way it becomes empty is this holder unlinking the one marker it created; a successor's
@@ -1242,7 +1371,7 @@ describe("a holder that was reclaimed does not disturb the lock that replaced it
   });
 
   it("takes its published identity from the object it staged, not from the name", async () => {
-    // Review finding [134]. The identity was read with `lstat(lockDir)` AFTER the rename, which
+    // The identity was read with `lstat(lockDir)` AFTER the rename, which
     // asks what is at that name NOW — not necessarily what was just put there. A `rename` is
     // atomic, so the object that arrived is the object staged, and the staging directory was
     // read under a private name nothing else could reach.
@@ -1272,7 +1401,16 @@ describe("a holder that was reclaimed does not disturb the lock that replaced it
       acquire,
       "with acquisition failing when they disagree — continuing would record somebody else's " +
         "directory as this holder's own",
-    ).toMatch(/if \(!\(await confirmPublishedLock\([\s\S]{0,200}?throw new Error\(/);
+    ).toMatch(/if \(!\(await confirmPublishedLock\([\s\S]{0,200}?throw new LockReplacedError\(/);
+
+    // Typed, and that is the half that keeps the entry. Losing the lock to a reclaimer is
+    // contention rather than a fault, so the writer has to go round again — and the loop that
+    // answers contention is one frame up. As a plain `Error` it left `updateInstallProvenance`
+    // altogether and the entry went with it.
+    expect(
+      functionBody(source, "export async function updateInstallProvenance("),
+      "and the caller must treat that one failure as retryable rather than fatal",
+    ).toMatch(/error instanceof LockReplacedError/);
   });
 
   it("never retries a rename that already happened", async () => {

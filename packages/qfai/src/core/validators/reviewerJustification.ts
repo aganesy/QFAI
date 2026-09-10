@@ -61,17 +61,17 @@ type ReviewerFinding = {
 /**
  * Does this field carry a control character? No file path, job id, rule name or lane detail does.
  *
- * C0 and DEL. Review finding [40]: these reports come out of `.qfai/review/**`, a directory a
+ * C0 and DEL. These reports come out of `.qfai/review/**`, a directory a
  * pull request writes, and the fields here are passed through to `Issue` — where the GitHub
  * formatter interpolates `file` into a workflow command's location metadata. A newline there
  * split the command in two and let a fork's pull request inject one of its own. The formatter
  * now escapes what it emits, which is the fix for every producer; this is the other half, and
  * it is worth having: a payload carrying a newline is corrupt whoever eventually renders it.
  *
- * Scanned by CODE POINT rather than matched by a regular expression. The pattern needed an
- * `eslint-disable` for `no-control-regex`, and `.instruction/00_universal/quality.md` forbids
- * adding one of those without the user asking for it — a rule this change had broken. Reading
- * the code points needs no suppression and says the same thing more directly.
+ * Scanned by CODE POINT rather than matched by a regular expression. A regular expression for
+ * this needs an `eslint-disable` for `no-control-regex`, which `.instruction/00_universal/quality.md`
+ * forbids adding without the user asking for it. Reading the code points needs no suppression
+ * and says the same thing more directly.
  *
  * @param value the field as the lane reported it
  * @returns whether it carries a C0 control character or DEL
@@ -180,19 +180,19 @@ export async function validateReviewerJustification(
       // today and would stop being a record of anything the moment either set
       // moved.
       //
-      // Emitted at `error`, not `info`. Review finding [25]: the severity was
-      // downgraded here as well, so `qfai validate --fail-on error` succeeded
-      // while holding an ingested lint failure. `BR-0015-0017` grants ONE
+      // Emitted at `error`, not `info`. Downgrading the severity here too would
+      // let `qfai validate --fail-on error` succeed while holding an ingested
+      // lint failure. `BR-0015-0017` grants ONE
       // exemption and this branch was taking two — it says the gate "does not
       // re-derive, re-word or re-classify" the payload, that both codes are
       // "declared lint-failure codes in `CLI-WFSET`, i.e. error class", and that
       // what is deferred until catalog registration lands is REJECTING them for
       // an empty `justification:`. Nothing there defers the severity.
       if (DEFERRED_CATALOG_REGISTRATION_CODE_SET.has(code)) {
-        // Passed through in STRUCTURED fields, not folded into prose. Review finding [32]:
-        // `file` was overwritten with the artifact's own path and `rule` with a constant
-        // naming this branch, so the lane's file and rule were destroyed and its job never
-        // had a field to survive in — a JSON consumer of `qfai validate` got the artifact
+        // Passed through in STRUCTURED fields, not folded into prose. Overwriting
+        // `file` with the artifact's own path and `rule` with a constant
+        // naming this branch would destroy the lane's file and rule, leaving its job
+        // no field to survive in — a JSON consumer of `qfai validate` would get the artifact
         // it came from and nothing about the offending workflow. `BR-0015-0017` says the
         // gate passes the lane's payload through rather than reconstructing it, and a site
         // that exists only inside a sentence has been reconstructed.

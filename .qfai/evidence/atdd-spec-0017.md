@@ -306,7 +306,7 @@ alone has 28. Filed as `CR-20260820-0011`; not this spec's work, recorded as a c
   answer to a question ten versions of the classifier could not settle. It asks what a lane **invokes**
   rather than whether a command **is a build**, which needs no corpus of build spellings and fails
   closed
-- **new** `packages/qfai/tests/unit/shippedLaneCommands.test.ts` — 14 tests. The falsification: every
+- **new** `packages/qfai/tests/unit/shippedLaneCommands.test.ts` — 15 tests. The falsification: every
   form rounds 8, 9, 10 and 11 planted, all refused, and the shipped tree's own shapes accepted. Round 11
   added three, and what they cover is the class the first five could not: the corpus was 62 BARE commands,
   so wrapping any of them in one shell construct escaped 61 of 62. It is now checked wrapped as well as
@@ -370,7 +370,7 @@ pnpm -C packages/qfai exec vitest run --project e2e tests/e2e/spec0017LayeredCiS
       while the classifier corpus lived here, before round 4 moved it to
       tests/unit/buildCommand.test.ts where it belongs)
 pnpm -C packages/qfai exec vitest run --project unit tests/unit/shippedLaneCommands.test.ts
-  -> Tests 14 passed (14), exit 0
+  -> Tests 15 passed (15), exit 0
      (the 11th is the sweep's corpus: one assertion over every mechanism it
       confirmed executing, added with the repairs that close them. The 12th is
       the digest collision found by attacking the new gate rather than by a
@@ -2257,25 +2257,29 @@ revision at which this number can be made true. A branch-local discipline — in
 strongest argument in this record for deriving the count rather than committing it: a literal that only
 a merge can invalidate has no author to hold responsible for it.
 
-Re-measured for this commit by a separate walk of the two include roots — not by calling into
-`stageEvidenceCounts.test.ts`, because a probe derived from its subject cannot contradict it — and both
-readings agree: **1747** (`tests/assets` 1577, `tests/e2e` 170).
+The count and its split across the two include roots are on one line, and both are derived by the same
+walk:
 
-e2e callsites at this tree: 1747
-
+e2e callsites at this tree: 1955 (packages/qfai/tests/assets 1785, packages/qfai/tests/e2e 170)
 **That line is the repair, and it is the seventh attempt at this defect.** Rounds 4, 5, 6, 7, 10 and 11
-each found these totals a round behind, and each repair re-typed the number. The seventh INSTANCE is
+each found the per-root totals a round behind, and each repair re-typed them. The seventh INSTANCE is
 the merge above — which is why no round produced it — and the seventh REPAIR is this commit. The two
 are not the same event: the merge is what carried a count from one parent into a tree that holds both
 parents' callsites, and re-recording the derived count is what corrects it. The numbers are left out
 of this sentence on purpose — naming them here is a second literal only a merge can invalidate, which
-is the defect the paragraph above describes. The line above carries the value; this says what happened
-to it. Neither total can be derived by a test — deriving them would mean running the suite from
-inside it — but the thing that INVALIDATES them can be: a commit that changes an `it` / `test`
-callsite under the e2e project's two include globs.
-`stageEvidenceCounts.test.ts` measures that count and requires the line above to equal it, so a commit
-that moves a callsite reddens until the line is corrected, and the totals beside it are known-invalid
-rather than presumed-valid in the window between.
+is the defect the paragraph above describes.
+
+**The per-root split used to be prose, and that is what made it recur.** It read as an independent
+second measurement agreeing with the derived total, but nothing produced it except a person typing what
+they had just run, and nothing checked it afterwards. `pin-stage-evidence-counts.mjs` re-pinned the
+total and left the sentence describing an earlier tree, every time; the last such gap read 937 against
+a tree holding 1728. Both numbers come from `deriveE2eCallsites()` — the split is what that walk
+returns on the way to the total — so writing one and typing the other was never the cheaper option.
+
+`stageEvidenceCounts.test.ts` compares the whole line with a fresh walk, so a commit that moves a
+callsite reddens until the line is re-pinned. The split is compared root by root rather than folded
+into the total, which is the one drift a total cannot see: a callsite moving between the two roots
+leaves it unchanged.
 
 It reads "at this tree" rather than naming a revision on purpose. A row cannot name the commit it is
 written in — round 10's `m1` — so pointing the guard at the sequence's last row would either make the row

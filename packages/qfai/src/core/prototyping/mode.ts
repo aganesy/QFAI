@@ -110,6 +110,7 @@ export const EXPLORATION_HARD_ERROR_CODES: readonly string[] = [
   // validators/prototyping/** — linkage, paths, completion certificate
   "QFAI-PROT-008", // specsCovered[] id format / missing spec
   "QFAI-PROT-009", // artifact path integrity (empty / outside-root / missing ref)
+  "QFAI-PROT-011", // frozenSurfaceUnion names a spec that no longer resolves
   "QFAI-PROT-311", // delegation map: entries must name a role the skill declares
   "QFAI-PROT-335", // completion certificate: required evidence
   "QFAI-PROT-336", // completion certificate: completion claimed without seal
@@ -117,6 +118,8 @@ export const EXPLORATION_HARD_ERROR_CODES: readonly string[] = [
   "QFAI-UIE-001",
   "QFAI-UIE-002",
   "QFAI-UIE-003",
+  // config.ts — a retired key still set in `qfai.config.yaml`
+  "QFAI-CFG-001",
   // validators/configReferenceIntegrity.ts — config path references
   "QFAI-CFG-LINK-001",
   "QFAI-CFG-LINK-003",
@@ -176,6 +179,12 @@ export const EXPLORATION_HARD_ERROR_CODES: readonly string[] = [
   "QFAI-AGENT-011",
   "QFAI-AGENT-012",
   "QFAI-AGENT-013",
+  // Errors since the version-keyed severity ladder was retired.
+  "QFAI-AGENT-014",
+  "QFAI-AGENT-015",
+  "QFAI-AGENT-016",
+  "QFAI-AGENT-017",
+  "QFAI-AGENT-018",
   // validators/bpApDb.ts
   "QFAI-BPAP-001",
   "QFAI-BPAP-002",
@@ -199,6 +208,14 @@ export const EXPLORATION_HARD_ERROR_CODES: readonly string[] = [
   "QFAI-RESEARCH-009",
   "QFAI-RESEARCH-010",
   "QFAI-RESEARCH-011",
+  "QFAI-RESEARCH-012",
+  "QFAI-RESEARCH-015",
+  "QFAI-RESEARCH-016",
+  "QFAI-RESEARCH-017",
+  "QFAI-RESEARCH-018",
+  "QFAI-RESEARCH-019",
+  "QFAI-RESEARCH-020",
+  "QFAI-RESEARCH-021",
   // validators/uix/** — canonical discussion-pack gates.
   //
   // Reached through `CANONICAL_UIX_VALIDATORS`, the module-level array

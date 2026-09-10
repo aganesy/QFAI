@@ -1,5 +1,5 @@
 /**
- * The work-log surface's contract is published (#395).
+ * The work-log surface's contract is published.
  *
  * `qfai init` creates `.qfai/steering/` and writes a README and an entry
  * template that both point at `.qfai/contracts/cli/worklog-entry.schema.md` as
@@ -69,8 +69,12 @@ describe("work-log entry schema", () => {
     const init = await readRepo("packages/qfai/src/cli/commands/init.ts");
 
     expect(init).not.toContain(".qfai/contracts/cli/worklog-entry.schema.md");
-    // All four references repointed, including the init report line.
-    expect(init.split("assistant/catalog/worklog-entry.schema.md").length - 1).toBe(4);
+    // Every mention repointed, not merely the ones somebody remembered. Stated
+    // as two counts rather than one number, so a reference deleted along with
+    // the text around it does not have to be re-pinned here.
+    const mentions = init.split("worklog-entry.schema.md").length - 1;
+    expect(mentions).toBeGreaterThan(0);
+    expect(init.split("assistant/catalog/worklog-entry.schema.md").length - 1).toBe(mentions);
   });
 
   it("the package README documents the surface", async () => {

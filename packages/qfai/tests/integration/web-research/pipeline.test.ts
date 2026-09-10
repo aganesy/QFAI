@@ -25,7 +25,7 @@ async function readSkill(): Promise<string> {
   return readFile(path.join(skillDir, "SKILL.md"), "utf-8");
 }
 
-describe("web-research pipeline", { timeout: 15_000 }, () => {
+describe("web-research pipeline", () => {
   // QFAI:SPEC-0027:TC-0027-0001
   it("defines 8 pipeline stages in order: search→rank→fetch→extract→sanitize→cache→verify→cite", async () => {
     const content = await readSkill();

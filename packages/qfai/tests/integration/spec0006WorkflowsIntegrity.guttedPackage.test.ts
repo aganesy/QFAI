@@ -1,12 +1,13 @@
 /**
  * Integration: a packaged workflows directory that exists and holds nothing.
  *
- * Review finding [86]. The whole-tree precondition asked only whether the packaged path was a
- * readable DIRECTORY — and a partial extraction, or a half-finished install, leaves exactly that:
- * the directory, with the workflow files gone. Every packaged file then reads as absent, the
- * per-file rule treats each one as a name the package no longer ships and excludes it, the count
- * lands on zero, `status` is `ok`, and `doctor` registers neither drift nor a skip. The package
- * damage that repair exists for reads as a clean check.
+ * A packaged directory that exists but holds none of the shipped files is package damage, and
+ * must not be reported as a clean comparison. Checking only whether the packaged path is a
+ * readable DIRECTORY would not catch it: a partial extraction, or a half-finished install, leaves
+ * exactly that — the directory, with the workflow files gone. Left unguarded, every packaged file
+ * would then read as absent, the per-file rule would treat each one as a name the package no
+ * longer ships and exclude it, the count would land on zero, `status` would read `ok`, and
+ * `doctor` would register neither drift nor a skip.
  *
  * Two directions, because a precondition that fires on everything is not a precondition: a gutted
  * tree is unresolved, and a tree holding the packaged copy is compared exactly as before.
@@ -138,11 +139,11 @@ describe("a packaged workflows directory holding none of the shipped files", () 
   });
 
   it("is unresolved when a packaged file is present but cannot be read", async () => {
-    // Review finding [93]. The precondition checked `lstat().isFile()` and was named for
-    // something it did not do: a regular file over the bounded reader's ceiling satisfies that
-    // test, and then the recorded workflow of the same name reads as `unreadable` further down,
-    // is classified `modified`, and `doctor` tells the operator to copy from a packaged file it
-    // cannot read. Damage reported as drift, with a repair instruction that cannot work.
+    // Checking only `lstat().isFile()` would not answer whether the file can actually be read: a
+    // regular file over the bounded reader's ceiling would satisfy that test, and then the
+    // recorded workflow of the same name would read as `unreadable` further down, be classified
+    // `modified`, and have `doctor` tell the operator to copy from a packaged file it cannot
+    // read — damage reported as drift, with a repair instruction that cannot work.
     const name = "qfai-tests.yml";
     const dir = await adopterTree(name, "name: shipped\n");
     const packaged = await temp();

@@ -8,7 +8,7 @@ The only thing between a dependency bump and `main` is `ci-pass`.
 - **What it does:** `.github/renovate.json5`
 - **What other repositories can extend:** `.github/renovate-presets/` (see below)
 
-## The two things a human has to do
+## The three things a human has to do
 
 ### 1. The token
 
@@ -77,6 +77,24 @@ merging**, and select **`ci-pass`**.
 without it the run fails loudly and changes nothing. This one is the opposite: with the token in
 place and the check not required, the first scheduled run merges its own pull requests without
 waiting for a lane to start, and nothing reports that it happened.
+
+### 3. A ruleset bypass, so the bot can rebase
+
+**The ruleset that forbids force-pushes must list Renovate as a bypass actor.**
+
+Renovate force-pushes whenever it regenerates a branch: a rebase onto a moved base, a re-resolved
+lockfile. A ruleset covering every branch rejects that push, and Renovate then halts entirely
+rather than leave branches half updated. What it leaves behind is a set of update pull requests
+that have fallen behind `main`, conflict, and cannot recover — the rebase that would clear the
+conflict is the operation being rejected.
+
+Add it at **Settings → Rules → Rulesets → the ruleset carrying the force-push rule → Bypass list**,
+naming the account the token belongs to.
+
+`rebaseWhen: "never"` is the config-side alternative and is the wrong one. It stops the pushes by
+stopping the rebases, so a branch that falls behind stays behind and never becomes mergeable. With
+`platformAutomerge` waiting on mergeability, that switches automerge off for every update whose
+base moves first, which is most of them.
 
 ### Why not the job token
 

@@ -52,9 +52,10 @@ Step 1 assumes a pack exists. When the project has **no** discussion-pack
 whatsoever and specs already exist, do not stop — record the input source
 instead and continue:
 
-1. Write `.qfai/evidence/import-lite-<17-digit timestamp>.md` from
-   `templates/evidence/import-lite.md` before editing any spec. `import-lite.md`
-   without a stamp is also accepted; any other suffix is not.
+1. Write `.qfai/evidence/import-lite-<ts>.md` from
+   `templates/evidence/import-lite.md` before editing any spec, where `<ts>` is
+   the 17-digit run stamp. `import-lite.md` without a stamp is also accepted;
+   any other suffix is not.
 2. Fill `generated_at` with an ISO8601 datetime, plus at least one real
    `Sources` entry or user excerpt. `<...>` placeholders and fillers (`TBD`,
    `none.`, `n/a`) are rejected, and an unclosed excerpt fence with them.

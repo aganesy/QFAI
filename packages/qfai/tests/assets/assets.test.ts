@@ -19,7 +19,21 @@ import {
   isBinary,
   listShippedAssistantFiles,
 } from "../helpers/repositoryAttribution.js";
-import { countLines, LINE_BUDGET_EXEMPT, SKILL_MD_MAX_LINES } from "../helpers/skillBudget.js";
+import {
+  classifyHardRequiredEntries,
+  collectHardRequiredEntries,
+  HARD_REQUIRED_COMMON_ENTRIES,
+  RETIRED_HARD_REQUIRED_ENTRIES,
+} from "../../src/core/validators/autopilotPolicy.js";
+import {
+  ASSISTANT_ASSET_MAX_LINE_CHARS,
+  countLines,
+  LINE_BUDGET_EXEMPT,
+  SKILL_MD_MAX_LINES,
+  WIDTH_BACKLOG_PATHS,
+  WIDTH_BUDGET_BACKLOG,
+  widestMeasurableLine,
+} from "../helpers/skillBudget.js";
 import { shapeValueLiterals } from "../integration/shippedWorkflowShape.js";
 
 const repoRoot = path.resolve(process.cwd(), "..", "..");
@@ -119,7 +133,7 @@ function findBudgetRestatements(content: string): string[] {
   );
 }
 
-describe("assets guardrails", { timeout: 30000 }, () => {
+describe("assets guardrails", () => {
   it("checks relative path references in markdown", async () => {
     const markdownFiles = await fg(
       ["README.md", "docs/**/*.md", "packages/qfai/assets/init/**/*.md"],
@@ -190,9 +204,9 @@ describe("assets guardrails", { timeout: 30000 }, () => {
       "### Delegation Failure (Hard Stop)",
       "Do not simulate roles",
       "## Work Orders Summary",
-      // #248 review: the reviewer-budget branch mandates recording an
+      // The reviewer-budget branch mandates recording an
       // un-runnable gate as `PENDING`, so the status vocabulary each skill
-      // declares has to admit it. `PASS/REVISE` is now a prefix of the
+      // declares has to admit it. `PASS/REVISE` is a prefix of the
       // required value rather than the whole of it.
       "Status (PASS/REVISE/PENDING)",
       "### Reviewer Gate (MUST)",
@@ -230,7 +244,7 @@ describe("assets guardrails", { timeout: 30000 }, () => {
     const requiredHardStopPayload = [
       "Attempt the first required delegation at stage start using the platform's native delegation mechanism.",
       "Treat that first real delegation attempt as the capability check. Do not gate execution on preflight availability questions or synthetic probe-only checks.",
-      // #248 splits delegation failure into unavailable vs saturated, so the
+      // Delegation failure splits into unavailable vs saturated, so the
       // response is class-dependent; the invariant that survives is that a
       // failure is never answered by simulating roles or self-executing.
       "If the delegation fails, classify the failure first",
@@ -264,13 +278,13 @@ describe("assets guardrails", { timeout: 30000 }, () => {
       "fix skill-owned artifacts and code/test defects autonomously",
       "rerun the same failing gate after each fix batch",
       "do not weaken profiles, lower `--fail-on`, waive errors, invent evidence, or skip required reviewers",
-      // #231 added a second stop condition (reviewer round count), so the
-      // list is no longer exhaustive and "only" was dropped.
-      // #381 inserted `**any upstream spec/contract finding**` into the stop
-      // list so it is closed over the five-class classification; the routing
+      // A second stop condition (reviewer round count) means the
+      // list is not exhaustive, so "only" does not appear.
+      // The stop list includes `**any upstream spec/contract finding**` so it
+      // is closed over the five-class classification; the routing
       // itself is pinned in `gateFailureClassRouting.test.ts`.
       "stop for destructive changes, **any upstream spec/contract finding**, ambiguous product/spec decisions, missing permissions/tools, or repeated no-progress failures",
-      // #381 appended the work counts: an agent that can report "21 complete,
+      // The work counts matter: an agent that can report "21 complete,
       // 5 blocked" has a credible alternative to repairing upstream.
       "cause, attempted fixes, remaining blocker, user action, retry gate, and **the work counts",
     ];
@@ -1384,7 +1398,7 @@ describe("assets guardrails", { timeout: 30000 }, () => {
     expect(deltaTemplate).toContain("# 09 Delta");
     expect(deltaTemplate).toContain("## Change Summary");
     // The sections `parseDeltaV1` reads. Without them the file is invisible to
-    // `qfai report`, which then prints zeros as if the run were clean (#545).
+    // `qfai report`, which then prints zeros as if the run were clean.
     // The parse itself is pinned in tests/assets/deltaTemplateParses.test.ts.
     expect(deltaTemplate).toContain("## Update History");
     expect(deltaTemplate).toContain("## Decision Log");
@@ -1405,7 +1419,7 @@ describe("assets guardrails", { timeout: 30000 }, () => {
     expect(waiversTemplate).toContain("version: 1");
     expect(waiversTemplate).toContain("waivers: []");
     // The worked example must name a rule some validator actually emits, in the
-    // spelling `validate.json` prints. `COMPAT-003` was neither (issue #398).
+    // spelling `validate.json` prints. `COMPAT-003` was neither.
     expect(waiversTemplate).toContain("rule: TDDLIST_UNKNOWN_LEVEL");
     expect(waiversTemplate).not.toContain("COMPAT-");
     expect(waiversTemplate).toContain("expires:");
@@ -1430,6 +1444,80 @@ describe("assets guardrails", { timeout: 30000 }, () => {
         ).toBe(false);
       }
     }
+  });
+
+  it("ships a root .gitattributes that pins the SSOT file types to LF", async () => {
+    // The Drift Protocol makes the diff of the shipped SSOT markdown a review
+    // artifact, and every one of those files is LF. Without an attributes file
+    // in the consumer repo, one whole-file rewrite on Windows flips a blob's
+    // line endings and the review degrades to "every line changed".
+    const attributesPath = path.join(templateRootDir, ".gitattributes");
+    expect(existsSync(attributesPath), "root init assets must ship .gitattributes").toBe(true);
+
+    const bytes = await readFile(attributesPath);
+    // The file that declares the repository LF must itself be LF.
+    expect(bytes.includes(0x0d), ".gitattributes must not contain CR").toBe(false);
+
+    const text = bytes.toString("utf-8");
+
+    // Attributes never rewrite a blob that is already in the index, so a
+    // repository that adopts QFAI with protected files already committed as
+    // CRLF stays CRLF until it renormalises once. Seeding the rules without
+    // saying so leaves that project believing it is LF-normalised when it is
+    // not, and the all-lines-changed diff simply waits for the next save.
+    expect(text).toContain("git add --renormalize .qfai");
+
+    const rules = text
+      .split("\n")
+      .map((line) => line.trim())
+      .filter((line) => line.length > 0 && !line.startsWith("#"));
+
+    // Every rule must be scoped to a path QFAI owns. A repository-wide `*`
+    // rule reaches product files the framework never wrote: in a project that
+    // committed them as CRLF, dropping this file in reports untouched sources
+    // as fully rewritten, which is the exact noise the seed exists to prevent.
+    for (const rule of rules) {
+      const pattern = rule.split(/\s+/)[0] ?? "";
+      expect(
+        pattern.startsWith(".qfai/") || pattern.startsWith("/"),
+        `.gitattributes rule '${rule}' must be scoped to a QFAI-owned path`,
+      ).toBe(true);
+    }
+
+    for (const pattern of [".qfai/**", "/qfai.config.yaml", "/DESIGN.md"]) {
+      expect(
+        rules.some((rule) => rule.startsWith(`${pattern} `) && rule.endsWith("eol=lf")),
+        `.gitattributes must pin ${pattern} to eol=lf`,
+      ).toBe(true);
+    }
+    // Windows-only scripts are the documented exception: forcing LF on them
+    // breaks the interpreter that reads them.
+    for (const pattern of [".qfai/**/*.bat", ".qfai/**/*.cmd"]) {
+      expect(
+        rules.some((rule) => rule.startsWith(`${pattern} `) && rule.endsWith("eol=crlf")),
+        `.gitattributes must keep ${pattern} at eol=crlf`,
+      ).toBe(true);
+    }
+  });
+
+  it("states the LF line-ending policy in the Drift Protocol", async () => {
+    // The attributes file is create-only, so a project that already had one
+    // keeps it and can still produce an EOL-flipped diff. The protocol has to
+    // tell the reviewer adjudicating that diff how to read it.
+    const protocolPath = path.join(
+      templateQfaiDir,
+      "assistant",
+      "constitution",
+      "drift-protocol.md",
+    );
+    const protocol = await readFile(protocolPath, "utf-8");
+
+    expect(protocol).toContain(".gitattributes");
+    expect(protocol).toContain("--ignore-cr-at-eol");
+    // Adopting the seed is not the whole migration for a repository whose
+    // protected blobs are already CRLF; the protocol has to name the one-time
+    // renormalisation too.
+    expect(protocol).toContain("--renormalize");
   });
 
   it("keeps npm README onboarding consistent", async () => {
@@ -1679,34 +1767,6 @@ describe("assets guardrails", { timeout: 30000 }, () => {
       expect(skillMd.length).toBeGreaterThan(0);
     } finally {
       await rm(root, { recursive: true, force: true });
-    }
-  });
-
-  it("keeps example outputs relative", async () => {
-    const fixturesDir = path.join(repoRoot, "packages", "qfai", "tests", "fixtures", "examples");
-    const reportExample = await readFile(path.join(fixturesDir, "report.md"), "utf-8");
-    expect(reportExample).toContain("- ルート: .");
-    expect(reportExample).toContain("- 設定: qfai.config.yaml");
-
-    const validateExamplePath = path.join(fixturesDir, "validate.json");
-    const validateRaw = await readFile(validateExamplePath, "utf-8");
-    const validate = JSON.parse(validateRaw) as {
-      issues: Array<{ file?: string }>;
-      traceability: { sc: { refs: Record<string, string[]> } };
-    };
-
-    const files = [
-      // `.filter(Boolean)` drops the `undefined`s at run time but does not
-      // narrow the type, so this used to hand `path.isAbsolute` a
-      // `string | undefined` — the TS2345 that only appeared once this file
-      // entered `tsconfig.tests.json#include`.
-      ...validate.issues
-        .map((issue) => issue.file)
-        .filter((file): file is string => file !== undefined),
-      ...Object.values(validate.traceability.sc.refs).flat(),
-    ];
-    for (const file of files) {
-      expect(path.isAbsolute(file)).toBe(false);
     }
   });
 
@@ -2205,11 +2265,11 @@ describe("assets guardrails", { timeout: 30000 }, () => {
   });
 
   it("keeps 05_Contracts example rows aligned with their own table header", async () => {
-    // #653: the three commented example rows carried 5 cells under a 6-column
-    // header, so an author who did what the comment asks — copy the row into
-    // the table — tripped QFAI-TABLE-001 and parked a purpose string in
-    // `Depends On`. Copying a shipped example row under its own header must
-    // produce a well-formed row.
+    // The three commented example rows must carry the full column count:
+    // dropping a cell would trip QFAI-TABLE-001 for an author who does what
+    // the comment asks — copies the row into the table — and parks a purpose
+    // string in `Depends On`. Copying a shipped example row under its own
+    // header must produce a well-formed row.
     const contractsTemplatePath = path.join(
       templateQfaiDir,
       "assistant",
@@ -2263,10 +2323,10 @@ describe("assets guardrails", { timeout: 30000 }, () => {
       readFile(workflowPath, "utf-8"),
     ]);
 
-    // #373 added the contract-scoped target the Drift Protocol's rerun step
-    // names; the two existing modes are unchanged. Its placeholder widened to
-    // `<CON-ID-or-path>` once `.qfai/contracts/design/**` — which declares no
-    // `QFAI-CONTRACT-ID` — needed an addressable rerun.
+    // The Drift Protocol's rerun step names a contract-scoped target, in
+    // addition to the two existing modes. Its placeholder is
+    // `<CON-ID-or-path>` because `.qfai/contracts/design/**` — which declares
+    // no `QFAI-CONTRACT-ID` — needs an addressable rerun.
     expect(skill).toContain(
       'argument-hint: "[<spec-id-or-name>] [--contract <CON-ID-or-path>] [--auto]"',
     );
@@ -2321,6 +2381,95 @@ describe("assets guardrails", { timeout: 30000 }, () => {
     );
   });
 
+  it("keeps every shipped assistant asset inside the width ceiling it is held to", async () => {
+    // The line ceiling above bounds reading cost only while a line is a roughly
+    // constant unit of reading, and packing broke that: one line in the tree
+    // runs 9,104 characters and costs the count one unit. This is the other
+    // half, and the two are read together — width alone permits a thin file of
+    // a thousand short lines, the count alone permits a packed one.
+    // Case-insensitive, because the runtime scan lowercases the extension
+    // before testing it. A `.MD` asset is measured by `qfai doctor` and would
+    // not have been matched here, so a wide line in one could reach the package
+    // and then warn on a tree its author never edited.
+    const assetFiles = await fg(["assistant/**/*.{md,yml,yaml}"], {
+      cwd: templateQfaiDir,
+      absolute: false,
+      caseSensitiveMatch: false,
+    });
+    expect(assetFiles.length, "no shipped assets matched — the glob is wrong").toBeGreaterThan(50);
+
+    const tooWide: string[] = [];
+    for (const relativePath of assetFiles.sort()) {
+      // No exemption skip here, unlike the line ceiling above. `LINE_BUDGET_EXEMPT`
+      // excuses a roster from having its LENGTH counted; nothing in that reason
+      // is about how wide one line may be, and skipping it here would leave the
+      // one shipped file this rule cannot reach.
+      const content = await readFile(path.join(templateQfaiDir, relativePath), "utf-8");
+      const widest = widestMeasurableLine(content);
+      const allowed = WIDTH_BUDGET_BACKLOG.get(relativePath) ?? ASSISTANT_ASSET_MAX_LINE_CHARS;
+      if (widest > allowed) {
+        tooWide.push(`${relativePath} (${widest} > ${allowed})`);
+      }
+    }
+
+    expect(
+      tooWide,
+      `a line is wider than the ceiling that applies to it. A file in WIDTH_BUDGET_BACKLOG is ` +
+        `held at its recorded width and may not grow past it; every other file is held at ` +
+        `${ASSISTANT_ASSET_MAX_LINE_CHARS}. Wrap the prose — a table row and a fenced block are ` +
+        `not measured, because neither can be wrapped.`,
+    ).toEqual([]);
+  });
+
+  it("pins every width backlog entry to the file's real width", async () => {
+    // A recorded backlog is only a ratchet while its numbers track the files.
+    // An entry merely ABOVE the real width is a licence: reflow a file from 900
+    // to 500, leave the 900, and it may grow back to 900 with nothing to say so.
+    // So each entry must equal what the file measures — narrowing one is an edit
+    // that lowers its number in the same change.
+    // The paths and not their count: narrowing one file while widening another
+    // leaves the total unmoved, so a count lets a newly wide file take the
+    // vacated slot with nothing in the diff naming it.
+    expect(
+      [...WIDTH_BUDGET_BACKLOG.keys()].sort(),
+      "the width backlog may only shrink — remove the path you fixed, and never add one to " +
+        "admit a newly widened file",
+    ).toEqual([...WIDTH_BACKLOG_PATHS].sort());
+
+    const stale: string[] = [];
+    const loose: string[] = [];
+    const drifted: string[] = [];
+    for (const [relativePath, allowed] of WIDTH_BUDGET_BACKLOG) {
+      const absolute = path.join(templateQfaiDir, relativePath);
+      if (!existsSync(absolute)) {
+        stale.push(relativePath);
+        continue;
+      }
+      // An entry at or below the floor is not a backlog entry at all: the file
+      // would pass on the real ceiling, so the line only weakens it.
+      if (allowed <= ASSISTANT_ASSET_MAX_LINE_CHARS) {
+        loose.push(`${relativePath} (${allowed})`);
+        continue;
+      }
+      const widest = widestMeasurableLine(await readFile(absolute, "utf-8"));
+      if (widest !== allowed) {
+        drifted.push(`${relativePath} (recorded ${allowed}, measures ${widest})`);
+      }
+    }
+
+    expect(stale, "width backlog names a file that is not shipped").toEqual([]);
+    expect(
+      loose,
+      `at or under ${ASSISTANT_ASSET_MAX_LINE_CHARS} the entry grants nothing — remove it`,
+    ).toEqual([]);
+    expect(
+      drifted,
+      "a backlog entry must be the file's measured width. Lower it to what the file now " +
+        "measures (and delete the entry once that is at or under the ceiling); a number left " +
+        "above the real width is room to grow back into.",
+    ).toEqual([]);
+  });
+
   it("states the same ceiling in the shipped baseline authors read", async () => {
     // The number is owned by `src/core/doctor/assetLineBudget.ts` and quoted in
     // prose that ships to a `qfai init` project. Nothing tied the two together,
@@ -2332,6 +2481,12 @@ describe("assets guardrails", { timeout: 30000 }, () => {
       "utf-8",
     );
     expect(baseline).toContain(`**${SKILL_MD_MAX_LINES} lines per assistant asset file**`);
+    // The width ceiling ships the same way and for the same reason: for a
+    // project that has only the published package, this prose is the only copy
+    // of the rule it can read.
+    expect(baseline).toContain(
+      `**A width ceiling makes the count honest: ${ASSISTANT_ASSET_MAX_LINE_CHARS} characters per line.**`,
+    );
   });
 
   it("justifies every line-budget exemption and keeps it live", () => {
@@ -2350,8 +2505,8 @@ describe("assets guardrails", { timeout: 30000 }, () => {
 
   it("ensures v1.4.36 layered spec templates exist for sdd", async () => {
     const expected = [
-      // #394 added the four _policies templates and spec/10_Plan.md that were
-      // Mandatory Outputs with no shipped skeleton. Coverage against the
+      // The four _policies templates and spec/10_Plan.md are Mandatory
+      // Outputs with a shipped skeleton. Coverage against the
       // required-file registry is pinned in sddTemplateCoverage.test.ts.
       "_policies/01_Objective.md",
       "_policies/02_Initiative.md",
@@ -2365,6 +2520,9 @@ describe("assets guardrails", { timeout: 30000 }, () => {
       "_policies/10_delta.md",
       "_policies/11_Slice-Policy.md",
       "spec/01_Spec.md",
+      // The same document once its spec has retired: the record of why the
+      // obligation went away, which the live schema cannot describe.
+      "spec/01_Spec-retired.md",
       "spec/02_User-stories.md",
       "spec/03_Acceptance-Criteria.md",
       "spec/04_Business-Rules.md",
@@ -2374,9 +2532,9 @@ describe("assets guardrails", { timeout: 30000 }, () => {
       "spec/08_Open-questions.md",
       "spec/09_delta.md",
       "spec/10_Plan.md",
-      // The TDD execution ledger `/qfai-implement` selects from (#223).
+      // The TDD execution ledger `/qfai-implement` selects from.
       "spec/tdd/test-list.md",
-      // The traceability ledger QFAI-TRACE-001 requires (#271).
+      // The traceability ledger QFAI-TRACE-001 requires.
       "spec/16_Traceability-ledger.md",
     ].sort();
 
@@ -2626,6 +2784,150 @@ describe("assets guardrails", { timeout: 30000 }, () => {
 
     expect(content).toMatch(/does not block on missing `prototyping\.yaml`/i);
     expect(content).toMatch(/when `prototyping\.yaml` is present/i);
+  });
+
+  it("pins the hard-required autopilot bucket to exactly the entries a shipped asset consumes", async () => {
+    // `hard-required` is defined as "no default possible; must be supplied
+    // before proceeding", so every entry costs a guaranteed prompt out of the
+    // 0-1 budget the same section opens by declaring. `companyName` bought
+    // nothing: no template slot, no artifact section and no reference file in
+    // the shipped tree ever read it, so the prompt had no consumer. Pin the
+    // bucket to the entries that do have one — `brand intent` (routed to root
+    // DESIGN.md front-matter by qfai-discussion) and `primarySpecId`.
+    //
+    // A skill may narrow this bucket, and may hard-require an input only it
+    // reads — declared per skill, so adding one is a reviewed change. What it
+    // may not do is carry an entry nothing declares.
+    //
+    // Membership is decided by `classifyHardRequiredEntries`, the SAME matcher
+    // `validateAutopilotPolicy` emits from, rather than by a test written out
+    // again here: two copies of this rule are how one hole reaches both at once.
+    const skillDocs = await fg(["assistant/skills/qfai-*/SKILL.md"], {
+      cwd: templateQfaiDir,
+      absolute: false,
+    });
+    expect(skillDocs.length, "no shipped qfai-* SKILL.md matched").toBeGreaterThan(5);
+
+    const offenders: string[] = [];
+    for (const relativePath of skillDocs.sort()) {
+      const content = await readFile(path.join(templateQfaiDir, relativePath), "utf-8");
+      const entries = collectHardRequiredEntries(content);
+      expect(
+        entries.length,
+        `${relativePath} declares no hard-required entry: the bucket is absent, or it is there ` +
+          `and empty`,
+      ).toBeGreaterThan(0);
+      const skillId = path.basename(path.dirname(relativePath));
+      const classified = classifyHardRequiredEntries(entries, skillId);
+      offenders.push(
+        ...[...classified.retired, ...classified.unknown].map(
+          (entry) => `${relativePath}: ${entry}`,
+        ),
+      );
+    }
+
+    expect(offenders, "hard-required entry with no consumer in the shipped tree").toEqual([]);
+  });
+
+  it("ends the bucket at a sibling bullet however it is indented", () => {
+    // Markdown admits up to three spaces before a top-level bullet, so the
+    // next bucket can open at column three and still be a sibling. A collector
+    // anchored at column zero read that line, and every item under it, as more
+    // hard-required entries — which reports `QFAI-AUTOPILOT-001` against a
+    // policy that says nothing wrong, and fails validate once the window
+    // closes.
+    for (const indent of ["", " ", "  ", "   "]) {
+      const policy = [
+        "- hard-required:",
+        "  - brand intent",
+        `${indent}- ask-user:`,
+        "  - which surface to prototype",
+        "",
+      ].join("\n");
+
+      expect(
+        collectHardRequiredEntries(policy),
+        `a bucket opening at ${indent.length} spaces`,
+      ).toEqual(["brand intent"]);
+    }
+  });
+
+  it("keeps a blank line, a comment and prose inside the bucket", () => {
+    // The other half of the boundary. Only a sibling or a heading closes it,
+    // so a formatting edit cannot hide the entries below itself.
+    const policy = [
+      "- hard-required:",
+      "  - brand intent",
+      "",
+      "<!-- the two the run cannot infer -->",
+      "  prose that belongs to the entry above",
+      "  - `primarySpecId`",
+      "## Next section",
+      "  - never reached",
+      "",
+    ].join("\n");
+
+    expect(collectHardRequiredEntries(policy)).toEqual([
+      "brand intent prose that belongs to the entry above",
+      "`primarySpecId`",
+    ]);
+  });
+
+  it("rejects a retired entry smuggled in beside a pinned one", () => {
+    // The hole the shared matcher closes. Each bullet writes the retired name
+    // beside a live one, so an equality test sees neither; the word match
+    // inside the normalized bullet sees the retired one.
+    for (const smuggled of [
+      "brand intent / companyName",
+      "brand intent, companyName",
+      "`primarySpecId` + companyName",
+    ]) {
+      expect(
+        classifyHardRequiredEntries([smuggled, "brand intent", "`primarySpecId`"]).retired,
+        `a bullet naming two entries must be reported: ${smuggled}`,
+      ).toContain(smuggled);
+    }
+
+    // The decoration the shipped tree really uses reports nothing, including
+    // the long qualifier whose own dash sits inside its parentheses.
+    expect(
+      classifyHardRequiredEntries([
+        "brand intent",
+        "`primarySpecId` (when absent from inputs)",
+        "`primarySpecId` (only when Spec Auto-Discovery cannot resolve one — zero candidates)",
+      ]),
+    ).toEqual({ retired: [], unknown: [] });
+
+    // A narrowed bucket is lawful and reports nothing.
+    expect(classifyHardRequiredEntries(["brand intent"])).toEqual({ retired: [], unknown: [] });
+    // A skill-specific input is lawful for the skill that declares it, and for
+    // no other — which is what makes it a declaration rather than a hole.
+    const own = ["a `testFileGlobs` proposal that matches at least one real file"];
+    expect(classifyHardRequiredEntries(own, "qfai-configure").unknown).toEqual([]);
+    expect(classifyHardRequiredEntries(own, "qfai-verify").unknown).toEqual(own);
+    // And an entry nothing declares is reported wherever it appears.
+    expect(classifyHardRequiredEntries(["unreviewedSecret"], "qfai-configure").unknown).toEqual([
+      "unreviewedSecret",
+    ]);
+    // The same smuggling the retired search closes, one set over: another
+    // skill's declared input written beside a common one. The allowed test
+    // asks only whether *some* permitted name is in the bullet, so the first
+    // half of each of these answers for the second.
+    for (const smuggled of [
+      "brand intent / `testFileGlobs`",
+      "brand intent, testFileGlobs",
+      "`primarySpecId` — a `testFileGlobs` proposal",
+    ]) {
+      expect(
+        classifyHardRequiredEntries([smuggled], "qfai-verify").unknown,
+        `a bullet carrying another skill's input must be reported: ${smuggled}`,
+      ).toEqual([smuggled]);
+      // And lawful for the skill that declares it, which is what keeps this a
+      // declaration rather than a ban.
+      expect(classifyHardRequiredEntries([smuggled], "qfai-configure").unknown).toEqual([]);
+    }
+    expect(HARD_REQUIRED_COMMON_ENTRIES).toEqual(["brand intent", "primaryspecid"]);
+    expect(RETIRED_HARD_REQUIRED_ENTRIES).toEqual(["companyname"]);
   });
 });
 

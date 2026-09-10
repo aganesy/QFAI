@@ -141,9 +141,7 @@ describe("TC-0013-0027: QFAI-AUD-001 aligned lane passes when primary_tasks is n
       const audit001 = issues.filter((issue) => issue.code === "QFAI-AUD-001");
       expect(audit001.length).toBeGreaterThan(0);
 
-      // The window closed at `SUNSETS.legacyPrimaryTasksSlot`. Key-absent was
-      // `info` while it was open; past the sunset it blocks, which is what the
-      // message promised all along.
+      // Key-absent blocks, which is what the message promised all along.
       expect(audit001.filter((issue) => issue.severity === "info")).toEqual([]);
 
       const blocked = audit001.find((issue) => issue.severity === "error");

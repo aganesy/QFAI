@@ -229,7 +229,7 @@ describe("the contract index's Depends On column", () => {
       const issues = await validateContractReferences(root, defaultConfig);
       const issue = issues.find((item) => item.code === "QFAI-CONTRACT-032");
 
-      expect(issue?.severity).toBe("warning");
+      expect(issue?.severity).toBe("error");
       expect(issue?.file).toContain("05_Contracts.md");
       expect(issue?.loc?.line).toBe(5);
     } finally {
@@ -269,7 +269,7 @@ describe("the contract index's Depends On column", () => {
       const issues = await validateContractReferences(root, defaultConfig);
       const issue = issues.find((item) => item.code === "QFAI-CONTRACT-033");
 
-      expect(issue?.severity).toBe("warning");
+      expect(issue?.severity).toBe("error");
       expect(issue?.refs).toEqual(["CON-API-0001", "CON-DB-0001"]);
       expect(issue?.loc?.line).toBe(7);
     } finally {
@@ -315,7 +315,7 @@ describe("the contract index's Depends On column", () => {
       const issues = await validateContractReferences(root, defaultConfig);
       const issue = issues.find((item) => item.code === "QFAI-CONTRACT-033");
 
-      expect(issue?.severity).toBe("warning");
+      expect(issue?.severity).toBe("error");
       expect(issue?.refs).toEqual(["CON-API-0001"]);
       expect(issue?.loc?.line).toBe(7);
     } finally {
@@ -443,7 +443,7 @@ describe("the contract index's Depends On column", () => {
       const issues = await validateContractReferences(root, defaultConfig);
       const issue = issues.find((item) => item.code === "QFAI-CONTRACT-035");
 
-      expect(issue?.severity).toBe("warning");
+      expect(issue?.severity).toBe("error");
       expect(issue?.refs).toEqual(["CON-API-0001"]);
       expect(issue?.loc?.line).toBe(7);
       expect(issues.some((item) => item.code === "QFAI-CONTRACT-030")).toBe(false);
@@ -651,7 +651,7 @@ describe("QFAI-CONTRACT-034 — a contract missing from every index", () => {
       const issues = await validateContractReferences(root, defaultConfig);
       const issue = issues.find((item) => item.code === "QFAI-CONTRACT-034");
 
-      expect(issue?.severity).toBe("warning");
+      expect(issue?.severity).toBe("error");
       expect(issue?.refs).toEqual(["CON-API-0001"]);
       expect(issue?.file).toContain("api-0001-sample.yaml");
     } finally {
@@ -685,7 +685,7 @@ describe("QFAI-CONTRACT-034 — a contract missing from every index", () => {
       const issues = await validateContractReferences(root, defaultConfig);
       const issue = issues.find((item) => item.code === "QFAI-CONTRACT-034");
 
-      expect(issue?.severity).toBe("warning");
+      expect(issue?.severity).toBe("error");
       expect(issue?.refs).toEqual(["CON-API-0001"]);
     } finally {
       await rm(root, { recursive: true, force: true });

@@ -92,7 +92,7 @@ gh pr view --json number,headRefName,baseRefName,url
 $pr = gh pr view --json number,headRefName,baseRefName,url
 ```
 
-- 例: 現在ブランチの PR が #169 の場合は、`-PrNumber 169` 相当として扱う。
+- 解決した PR 番号を `-PrNumber` に渡したものとして扱う。
 - `-PrNumber` を指定したとき、現在ブランチに紐づく PR 番号と不一致なら即エラーで停止する（確認なしで継続しない）。
 - 固定番号タスク名や過去ログは参考情報であり、PR 対象の根拠に使わない。
 

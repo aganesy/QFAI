@@ -123,7 +123,7 @@ describe("QFAI-SPACK-101 reaches a cross-spec EX/TC id", () => {
     // thing the author cannot do — the ID belongs to another spec. Layered
     // specs share entities, so citing the owner is a real need, and the only
     // form that passes is the owner's CONTRACT id. That was discoverable only
-    // by tripping the validator repeatedly (#1101).
+    // by tripping the validator repeatedly.
     await withSpec({ testCases: "# TC\n\n## TC-0007-0001\n" }, async (root) => {
       const found = (await validateSpecPacks(root, defaultConfig)).find(
         (i) => i.code === "QFAI-SPACK-101",
