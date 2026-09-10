@@ -45,8 +45,8 @@ importers:
         specifier: ^8.5.0
         version: 8.50.1(eslint@9.39.2)(typescript@5.9.3)
       typescript-future:
-        specifier: npm:typescript@6.0.1-rc
-        version: typescript@6.0.1-rc
+        specifier: npm:typescript@6.0.3
+        version: typescript@6.0.3
 
   packages/qfai:
     dependencies:
@@ -2253,8 +2253,8 @@ packages:
     engines: {node: '>=14.17'}
     hasBin: true
 
-  typescript@6.0.1-rc:
-    resolution: {integrity: sha512-7XlzYb+p/7YxX6qSOzwB4mxVFRdAgWWkj1PgAZ+jzldeuFV6Z77vwFbNxHsUXAL/bhlWY2jCT8shLwDJR8337g==}
+  typescript@6.0.3:
+    resolution: {integrity: sha512-y2TvuxSZPDyQakkFRPZHKFm+KKVqIisdg9/CZwm9ftvKXLP8NRWj38/ODjNbr43SsoXqNuAisEf1GdCxqWcdBw==}
     engines: {node: '>=14.17'}
     hasBin: true
 
@@ -4583,7 +4583,7 @@ snapshots:
 
   typescript@5.9.3: {}
 
-  typescript@6.0.1-rc: {}
+  typescript@6.0.3: {}
 
   uc.micro@2.1.0: {}
 
