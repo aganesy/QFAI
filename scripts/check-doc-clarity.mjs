@@ -108,7 +108,8 @@ const MARKDOWN_EXTENSIONS = new Set([".md"]);
  *     bare number.
  *   - a short-code review reference list, "review " followed by two or more
  *     codes joined by a slash.
- *   - a bracketed finding number after the words "review finding".
+ *   - a bracketed finding id after the words "review finding" — a bare
+ *     number or a letter-prefixed one, e.g. `[86]` or `[E1]`.
  */
 const PATTERNS = [
   { name: "issue-or-pr-number", re: /(?<![\w&])#\d{2,6}\b(?!["'])/g },
@@ -120,7 +121,7 @@ const PATTERNS = [
     re: /\bwave[\s-]\d+\b|\b\d+(?:st|nd|rd|th)[\s-](?:late-review[\s-])?wave\b/gi,
   },
   { name: "review-shortcode-list", re: /\breview\s+[A-Za-z0-9]{4}(?:\s*\/\s*[A-Za-z0-9-]{4})+/g },
-  { name: "review-finding-bracket", re: /\bReview finding \[\d+\]/gi },
+  { name: "review-finding-bracket", re: /\bReview finding \[[A-Za-z]?\d+\]/gi },
 ];
 
 function git(args) {

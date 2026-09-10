@@ -121,8 +121,8 @@ describe("scripts/check-doc-clarity.mjs", () => {
   });
 
   it("leaves a quoted hex color alone", async () => {
-    // `#111827` is a color value, not an issue number. Without a boundary
-    // check after the digits, the pattern cannot tell them apart.
+    // A quoted hex color and an issue number share the same shape; only the
+    // trailing quote tells them apart.
     const dir = await newRepo({ "src/theme.ts": 'export const ink = "#111827";\n' });
 
     const result = runGuard(dir, ["--scope", "all"]);
