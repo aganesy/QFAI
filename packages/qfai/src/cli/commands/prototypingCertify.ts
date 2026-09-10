@@ -1137,10 +1137,10 @@ export async function runPrototypingCertify(
   try {
     staleIterDirs = await findStaleIterDirs(evidenceRoot, iterationCount);
   } catch (err) {
-    // codex 8zqb: findStaleIterDirs propagates non-ENOENT fs errors
-    // (EACCES / EPERM / EIO) so a permission flip cannot silently
-    // bypass the stale-iter guard — symmetric with the lock
-    // `unreadable` path. Surface a clear operator-facing message
+    // findStaleIterDirs propagates non-ENOENT fs errors (EACCES /
+    // EPERM / EIO) instead of swallowing them, so a permission flip
+    // cannot silently bypass the stale-iter guard — symmetric with the
+    // lock `unreadable` path. Surface a clear operator-facing message
     // instead of letting the raw error stack escape.
     const cause = err instanceof Error ? err.message : String(err);
     error(
@@ -2030,8 +2030,7 @@ async function findIterationHtmlFiles(
  */
 /**
  * @internal Exported for direct unit-testing of the symmetric
- * fail-closed posture (codex 8zqb regression sentinel) — not part
- * of the package's public surface.
+ * fail-closed posture — not part of the package's public surface.
  */
 export async function findStaleIterDirs(
   evidenceRoot: string,
@@ -2049,11 +2048,11 @@ export async function findStaleIterDirs(
     // flag in either case.
     //
     // EACCES / EPERM / EIO: the same fail-closed posture as the
-    // `unreadable` LockGateResult branch above (codex 8cTg). Returning
-    // [] here would let a permission flip silently bypass the
-    // stale-iter guard, which is the same vector the lock fix closed.
-    // Symmetric: propagate so certify's caller surfaces a hard error
-    // rather than seal a possibly-stale digest set.
+    // `unreadable` LockGateResult branch above. Returning [] here would
+    // let a permission flip silently bypass the stale-iter guard, the
+    // same vector the lock branch guards against. Symmetric: propagate
+    // so certify's caller surfaces a hard error rather than seal a
+    // possibly-stale digest set.
     if (isEnoent(err)) return [];
     throw err;
   }
