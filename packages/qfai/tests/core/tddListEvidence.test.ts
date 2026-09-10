@@ -958,6 +958,68 @@ describe("QFAI-TDDLIST-008", () => {
 `;
   }
 
+  // The cell shape the grammar actually mandates, as opposed to the prose-ish
+  // pointer the cases around it use. Every check below the anchor — the file
+  // and fragment binding, and the completed-evidence field set — used to be
+  // skipped for exactly this shape: the guard that keeps the status-only rule
+  // off a conforming pointer sat above them and left the row entirely, so the
+  // one cell written the way the grammar asks was the one cell nothing read.
+  //
+  // Nothing caught it because no row in this repository carries a conforming
+  // pointer yet, and every case here reaches the anchor through the older
+  // spelling.
+  const GRAMMAR_POINTER =
+    "RED:fail GREEN:pass ORACLE:proved REV:abc1230 -> `.qfai/evidence/implement-spec-0001.md#tdd-0001`";
+
+  it("checks the completed-evidence fields behind a conforming pointer", async () => {
+    await withProject(async (root) => {
+      const issues = await runIssuesOn(
+        root,
+        ledger([{ status: "done", evidence: GRAMMAR_POINTER }]),
+        {
+          ".qfai/evidence/implement-spec-0001.md": "# Evidence\n\n### TDD-0001\n",
+        },
+      );
+
+      const unresolved = issues.find((issue) => issue.code === "QFAI-TDDLIST-008");
+      expect(unresolved, "a section with no fields is not a completion record").toBeDefined();
+      expect(unresolved?.message).toContain("missing completed evidence fields");
+    });
+  });
+
+  it("reads a conforming pointer's section against the row, not merely for shape", async () => {
+    await withProject(async (root) => {
+      const issues = await runIssuesOn(
+        root,
+        ledger([{ status: "done", evidence: GRAMMAR_POINTER }]),
+        {
+          ".qfai/evidence/implement-spec-0001.md": completeEntry("Unit").replace(
+            "- TDD-ID: TDD-0001",
+            "- TDD-ID: TDD-9999",
+          ),
+        },
+      );
+
+      const unresolved = issues.find((issue) => issue.code === "QFAI-TDDLIST-008");
+      expect(unresolved, "a section naming another row is not this row's proof").toBeDefined();
+      expect(unresolved?.message).toContain("TDD-ID");
+    });
+  });
+
+  it("accepts a conforming pointer whose section is complete, and says nothing else about it", async () => {
+    await withProject(async (root) => {
+      const codes = await runOn(root, ledger([{ status: "done", evidence: GRAMMAR_POINTER }]), {
+        ".qfai/evidence/implement-spec-0001.md": completeEntry("Unit"),
+      });
+
+      expect(codes).not.toContain("QFAI-TDDLIST-008");
+      // The reason the guard existed: a conforming pointer states `GREEN:pass`
+      // and carries no command, which is the status-only rule's shape exactly.
+      // It still must not fire here.
+      expect(codes).not.toContain("TDDLIST_EVIDENCE_STATUS_ONLY");
+    });
+  });
+
   it("errors when the evidence file does not exist", async () => {
     await withProject(async (root) => {
       const codes = await runOn(root, ledger([{ status: "done", evidence: IMPLEMENT_POINTER }]));

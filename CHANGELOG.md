@@ -29,6 +29,28 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   A lock name swapped for a link is now refused rather than written through. The
   write was previously carried out against a lock the writer did not hold.
 
+- **A completed row's evidence is read again** (#1440). `QFAI-TDDLIST-008`
+  verifies that a `done` row's evidence section says what the row says and
+  carries the fields a completion record owes. It verified that the section's
+  heading existed, and nothing else: a section with no fields was accepted, and
+  so was one naming a different row.
+
+  The guard that keeps the status-only rule off a conforming pointer left the
+  row entirely rather than skipping that one rule, and every check below it —
+  the file and fragment binding, and the completed-evidence field set — went
+  with it. So the one cell shape the grammar mandates was the one shape nothing
+  read.
+
+  Nothing noticed because no ledger row carries a conforming pointer yet. Every
+  `Evidence` cell still holding prose stops earlier, at `QFAI-TDDLIST-007` or
+  `-011`, so the first row written the way the findings ask is the first to
+  reach this path.
+
+  That matters while the ledger backlog is being worked off: the remediation
+  those findings print is to write the pointer and the section it names, and
+  under this defect a pack could go from tens of errors to zero on headings
+  alone.
+
 ### Changed
 
 - **`W-STALE-REFERENCE` carries the severity it means, instead of reading the
