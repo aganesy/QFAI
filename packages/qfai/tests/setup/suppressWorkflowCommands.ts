@@ -11,8 +11,8 @@
  * The damage is not cosmetic. GitHub caps annotations at **ten per level per
  * step**, so a lane whose fixtures emit ten `error` commands has no room left
  * for a real one — the cap was measured at `{"warning":10,"failure":10,
- * "notice":10}` on the `test (cli)` lane, all three saturated by fixtures
- * (#1160). And a green job carrying `failure` annotations teaches every reader
+ * "notice":10}` on the `test (cli)` lane, all three saturated by fixtures.
+ * And a green job carrying `failure` annotations teaches every reader
  * to distrust the annotation surface.
  *
  * Two tests already captured stdout with `vi.spyOn` and did not leak. The
@@ -105,12 +105,12 @@ process.stdout.write = ((...args: WriteArgs): boolean => {
  */
 function report(line: string): void {
   if (suppressed <= 3) {
-    process.stderr.write(`[test setup] dropped a GitHub workflow command (#1160): ${line}\n`);
+    process.stderr.write(`[test setup] dropped a GitHub workflow command: ${line}\n`);
     return;
   }
   if (suppressed % 20 === 0) {
     process.stderr.write(
-      `[test setup] dropped ${String(suppressed)} GitHub workflow commands so far (#1160)\n`,
+      `[test setup] dropped ${String(suppressed)} GitHub workflow commands so far\n`,
     );
   }
 }

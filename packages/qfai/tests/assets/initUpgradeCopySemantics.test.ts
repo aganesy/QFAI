@@ -41,7 +41,7 @@ const upgradeHelperBody = (source: string): string | undefined => {
   return source.slice(start, end);
 };
 
-describe("--upgrade-assistant-tree contract wording (#717)", () => {
+describe("--upgrade-assistant-tree contract wording", () => {
   it("describes the per-file operation as a copy that leaves the original in place", async () => {
     const contract = flat(await readRepo(CONTRACT));
 
