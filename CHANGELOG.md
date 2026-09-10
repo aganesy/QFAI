@@ -74,6 +74,32 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   98, and 1065 to 1060. `spec-0012/09_delta.md` and `_policies/10_delta.md`
   carry the same heading and stay pinned.
 
+- **The two cross-round ledgers put their triage rows under the rules that read
+  them** (#1436). `spec-0012/09_delta.md` and `_policies/10_delta.md` name every
+  triage section `## Triage` now, exactly, so `QFAI-TRIAGE-*` reads the rows
+  instead of skipping the section.
+
+  Three of the tables record the same rows under other column names, and each is
+  relabelled to the names the rules read. `REQ-ID` and `Source (REQ)` become
+  `Source`; `Title` becomes `Subject`; `Target` becomes `Existing Spec` where it
+  named a pack, and the pack the file belongs to fills it where it named a file.
+  `UPDATE:APPEND` splits across `Operation` and `Sub-op`, which is the form
+  `QFAI-TRIAGE-003` accepts.
+
+  `Sub-op` holds one of `APPEND`, `MODIFY` and `REMOVE`, so a row naming more
+  than one becomes one row per sub-operation. The columns recording what each
+  round touched and added already separate the two halves, and they are carried
+  on each resulting row.
+
+  One `CREATE` row named `spec-0017` as its `Existing Spec`. A `CREATE` has no
+  existing spec — that is what `QFAI-TRIAGE-009` requires `-` for — and the pack
+  being created belongs in the subject, where it now sits.
+
+  A `## Triage` section runs to the next H1 or H2, so each round's other parts
+  are promoted beside the table rather than left inside its section. Both files
+  reach zero and leave the pins, which the five ledgers above have already
+  taken to 98 and 1060: `sdd` 98 errors to 96, `full` 1060 to 1058.
+
 ## [1.11.1] - 2026-09-10
 
 ### Removed
