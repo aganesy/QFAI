@@ -1,5 +1,9 @@
 # 09 Delta (Migration Record)
 
+<!-- markdownlint-disable MD024 -->
+<!-- Each round records its own `## Triage`, and the triage rules read a section
+     only under that exact heading, so the repeated heading is the shape. -->
+
 ## Origin
 
 - Consolidates: old spec-0011 (Spec Diff Protocol), spec-0038 (Auto-Discovery)
@@ -90,14 +94,16 @@
 - Posture: additive append; preserves existing AC/BR/EX/TC numbering. NFR-0110 (testability of scanner + countWords as pure functions) naturally pairs with spec-0012 for the function-purity side; spec-0013's piece is the UI contract template `primary_tasks:` slot + the new validate lane gating `/qfai-prototyping`.
 - Approved By: yusuke_senaga
 
-### Triage (rows owned by this spec)
+## Triage
+
+Rows owned by this spec.
 
 | Source                                                         | Subject                                                                                                                                                                                        | Existing Spec | Operation | Sub-op | Approved By   | Rationale                                                                                                                                                   |
 | -------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------- | --------- | ------ | ------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | REQ-0115 (discussion-20260523221141355)                        | UI spec template `primary_tasks: []` slot per screen + requirements-analyst guide instruction + new validate lane (QFAI-AUD-001 aligned) blocking `/qfai-prototyping` on empty `primary_tasks` | spec-0013     | UPDATE    | APPEND | yusuke_senaga | SDD UI contract template is spec-0013 (CAP-0013) territory; new validate lane's enforcement-side implementation routes through spec-0004's validator family |
 | NFR-0110 (testability — pure functions, paired with spec-0012) | spec-0013 piece: UI contract template + validate lane (structural). The pure-function side lives in spec-0012.                                                                                 | spec-0013     | UPDATE    | APPEND | yusuke_senaga | NFR has two pair-points — only the template / lane half lands in spec-0013                                                                                  |
 
-### CHG-005 Operations (this PR)
+## CHG-005 Operations
 
 | Op ID  | Op Type       | Target                                                                     | Summary                                                                                           |
 | ------ | ------------- | -------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------- |
