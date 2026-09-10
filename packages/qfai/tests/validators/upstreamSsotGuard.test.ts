@@ -403,7 +403,7 @@ describe("validateUpstreamSsotGuard", () => {
     // `QFAI-TRIAGE-008`'s own remedy tells authors that placing several
     // `## Triage` sections means all of them are checked. Reading only the
     // first ignored a later declaration and reported an edit that WAS
-    // declared as undeclared (#1139).
+    // declared as undeclared.
     const root = await newRepo({ ".qfai/contracts/db/CON-DB-0007.sql": "SELECT 1;\n" });
     await commitEdits(root, {
       ".qfai/contracts/db/CON-DB-0007.sql": "SELECT 2;\n",
@@ -426,10 +426,12 @@ describe("validateUpstreamSsotGuard", () => {
   });
 
   it("does NOT let a fenced example authorise the path it illustrates", async () => {
-    // The serious half. For `## Triage` an unmasked fence produced a false
+    // The serious half. For `## Triage` an unmasked fence produces a false
     // POSITIVE; for an exemption it is inverted — the CR's EXAMPLE grants what
-    // it names while the real scope declares nothing. That is #1121's own
-    // headline, "a prohibition reads as a permission", by another route.
+    // it names while the real scope declares nothing. The shape matches reading
+    // the whole CR body instead of the declared section: a prohibition reads as
+    // a permission, reached here through an unmasked fence rather than an
+    // unscoped read.
     const root = await newRepo({ ".qfai/contracts/db/CON-DB-0007.sql": "SELECT 1;\n" });
     await commitEdits(root, {
       ".qfai/contracts/db/CON-DB-0007.sql": "SELECT 2;\n",

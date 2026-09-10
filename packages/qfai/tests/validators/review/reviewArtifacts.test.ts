@@ -176,11 +176,11 @@ describe("validateReviewArtifacts — summary.json schema", () => {
     expect(found[0]?.message).toContain("Rxx_*.md");
   });
 
-  // Review finding [27]. The contradiction check used to ask whether the pack made a VALID
-  // zero-response declaration, which is a different question: a summary that is wrong twice over —
-  // an empty list AND `overall_status: "PASS"` — answered `false` to it, so neither branch fired
-  // and a pack contradicted by its own report files was accepted. Two defects cancelling is not a
-  // pack passing.
+  // The contradiction check only needs the empty list, whatever else the summary says. Asking
+  // instead whether the pack makes a valid zero-response declaration would be a different
+  // question: a summary that is wrong twice over — an empty list AND `overall_status: "PASS"` —
+  // would answer `false` to it too, so neither branch would fire, and a pack contradicted by its
+  // own report files would be accepted. Two defects cancelling is not a pack passing.
   it("rejects an empty reviewers array beside reports even when the summary also claims PASS", async () => {
     const root = await newTempDir();
     await scaffoldRoot(root);
@@ -206,9 +206,13 @@ describe("validateReviewArtifacts — summary.json schema", () => {
     ).toBe(1);
   });
 
-  // Review finding [22] on PR #794: the first version keyed on the empty array ALONE, so two shapes
-  // slipped through. Both are declaration failures, not report failures, which is why each still
-  // reports `QFAI-REVIEW-005` — the pack has no reports and has not said why.
+  // Keying the declaration check on the empty array alone would conflate two shapes: a v1
+  // pack could carry an unrelated empty `reviewers` array beside its `roster` and skip
+  // `QFAI-REVIEW-005` with no report files at all, and a v2 pack could declare zero
+  // reviewers while still saying `overall_status: "PASS"`, recording a round nobody
+  // answered as a round that succeeded. Both are declaration failures, not report
+  // failures, which is why each still reports `QFAI-REVIEW-005` — the pack has no reports
+  // and has not said why.
   it("does not accept a v1 roster pack that carries an unrelated empty reviewers array", async () => {
     const root = await newTempDir();
     await scaffoldRoot(root);
