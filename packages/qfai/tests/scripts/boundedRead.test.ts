@@ -117,11 +117,11 @@ describe("readBoundedText", () => {
 });
 
 describe("neither root guard keeps a private copy of the posture", () => {
-  // Review finding [76] is the reason this row is here rather than a comment. The hygiene lane had
-  // the reader as a private function and the ledger guard read its markdown with a plain
-  // `readFile` — the same defect, in a lane just as required, reported separately because there was
-  // nothing shared to have fixed once. A reader reintroduced locally would satisfy every
-  // behavioural row above while putting the repository back where it started.
+  // A guard that drops the shared reader — back to a private function, or a
+  // plain `readFile` on the markdown it parses — would still pass every
+  // behavioural row above, so a comment alone cannot guarantee the two stay
+  // wired to it. Reading each guard's own source and confirming it imports
+  // the shared module is the check that catches that regression.
   for (const relative of [
     "scripts/check-workflow-hygiene.mjs",
     "scripts/check-atdd-annotation-ledger.mjs",
