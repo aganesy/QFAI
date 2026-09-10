@@ -4,6 +4,26 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ## [Unreleased]
 
+### Changed
+
+- **`W-STALE-REFERENCE` carries the severity it means, instead of reading the
+  calendar** (#1433). The rule reported `warning` before `2026-12-01` and
+  `error` from that date, so the same tree graded differently according to the
+  day it was validated. On the cutoff every project holding a stale reference
+  would have gone from a passing gate to a failing one at once — with no
+  upgrade, no changelog entry and no commit to point at — and meanwhile no
+  green leg could be re-created and no red one bisected.
+
+  The finding is a `warning`, the severity its code letter names. Nothing an
+  adopter runs today answers differently, because that is what the rule already
+  reported; what goes away is the escalation nobody had committed to. Raising
+  this rule later is a change to announce here, not a date to arrive.
+
+  `STALE_REFERENCE_SUNSET`, `staleReferenceSeverity` and the injected clock
+  `validateStaleReferences` accepted are deleted. The suite moves the system
+  clock across the former cutoff instead of holding a seam of its own, so a
+  rule that went back to reading the real one would fail it.
+
 ## [1.11.1] - 2026-09-10
 
 ### Removed

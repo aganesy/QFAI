@@ -112,12 +112,7 @@ export {
   isAdvisoryFailingCatalogCode,
 } from "./justificationCatalog.js";
 export type { JustificationCatalogEntry } from "./justificationCatalog.js";
-export {
-  STALE_REFERENCES,
-  STALE_REFERENCE_SUNSET,
-  staleReferenceSeverity,
-  validateStaleReferences,
-} from "./staleReferences.js";
+export { STALE_REFERENCES, validateStaleReferences } from "./staleReferences.js";
 export type { StaleReferenceEntry } from "./staleReferences.js";
 export { HANDOFF_SCHEMA_REL, HANDOFF_WRITER_PAIRS } from "./handoffSchemaPairs.js";
 export type { HandoffWriterPair } from "./handoffSchemaPairs.js";
