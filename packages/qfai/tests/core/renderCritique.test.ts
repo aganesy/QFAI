@@ -131,12 +131,11 @@ describe("Render Critique Loop validation", () => {
   });
 
   it("reads viewports from canonical PROTOTYPING_JSON_REL path (.qfai/evidence/prototyping/prototyping.json)", async () => {
-    // Codex 6c6l: pre-1.8.9 the path was `.qfai/evidence/prototyping.json`.
-    // After the SSOT move, viewport metadata written by iterate /
-    // validate at the canonical path was invisible to render-critique
-    // and surfaced as spurious QFAI-CRIT-003/004. This test pins that
-    // viewports recorded under the canonical path satisfy the
-    // viewport-coverage gates without any markdown-section evidence.
+    // Reading only the legacy `.qfai/evidence/prototyping.json` path would make viewport
+    // metadata that iterate / validate write at the canonical path invisible to
+    // render-critique, surfacing spurious QFAI-CRIT-003/004. This test pins that
+    // viewports recorded under the canonical path satisfy the viewport-coverage gates
+    // without any markdown-section evidence.
     await seedSkillPrompt(
       "qfai-prototyping",
       [
