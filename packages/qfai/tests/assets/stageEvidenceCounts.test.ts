@@ -719,10 +719,9 @@ describe("the stage evidence's counts are derived, not typed", () => {
     //
     // The derivation is imported, not re-implemented. Keeping it inline here
     // instead, with nothing shipping it, would mean every contributor this row
-    // reddens re-derives it from the prose above — eight have done that
-    // independently in one sweep, landing on a merge conflict where a human
-    // sees two plausible integers with no hint that the answer is neither of
-    // them.
+    // reddens re-derives it from the prose above, risking a merge conflict
+    // where a human sees two plausible integers with no hint that the answer
+    // is neither of them.
     //
     // `scripts/derive-e2e-callsites.mjs` is now the one implementation, and
     // `scripts/pin-stage-evidence-counts.mjs` writes what it returns. This row
