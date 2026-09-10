@@ -8,22 +8,21 @@
  * `[Ignore]` in .NET. They neither pass nor fail, so they do not block CI by
  * default and rot as stale work-not-done markers.
  *
- * `QFAI-TEST-001` (error) is the stub proper. The vitest/jest `.skip` form
- * carries its **own** code, `QFAI-TEST-003` (warning), and that split is
- * deliberate on both axes:
+ * `QFAI-TEST-001` is the stub proper. The vitest/jest `.skip` form carries its
+ * **own** code, `QFAI-TEST-003`, because the two name different states and ask
+ * for different fixes: a `.todo` is a bare declaration and is deleted or
+ * implemented, while a `.skip` keeps its body and the fix is to drop the
+ * modifier.
  *
- * - severity: a `.todo` is a bare declaration and can only ever mean work not
- *   done. A `.skip` keeps its body, and it is what `qfai atdd scaffold` emits
- *   for a skeleton the operator is expected to graduate, so an `error` would
- *   fail `qfai validate --fail-on error` on the scaffold's own output before a
- *   line of it had been written.
- * - code: `waivers.ts` grades a waiver against the **highest** severity its
- *   rule produced in the run (`buildRuleSeverityIndex`) and rejects any waiver
- *   aimed at an `error` rule (`QFAI-WAIVER-002`). Had both forms shared
- *   `QFAI-TEST-001`, a single `.todo` anywhere in the repo would promote the
- *   whole rule to `error` and take the per-path waiver away from the `.skip`
- *   findings — the remediation this validator advertises. A separate code
- *   keeps the warning waivable no matter what else the run found.
+ * A file still carrying {@link SCAFFOLD_PLACEHOLDER_MARKER} is exempt from
+ * `QFAI-TEST-003`. `qfai atdd scaffold` writes its skeletons as `it.skip`, and
+ * `D-SCAFFOLD-PLACEHOLDER` already owns an unfilled scaffold — with a
+ * deliberate ladder that stays a warning for `atdd.scaffoldEscalateCycles`
+ * validate runs before it becomes an error. Reporting the same block here as
+ * well would fail `qfai validate --fail-on error` on the scaffold's own output
+ * before a line of it had been written, and would overrule that ladder from
+ * outside. A `.todo` in the same file is still `QFAI-TEST-001`: the scaffold
+ * does not write one.
  *
  * `QFAI-TEST-002` (info) names the states in which the scan produced no
  * evidence: extensions with no dialect, and an empty
@@ -40,6 +39,7 @@ import { readFile } from "node:fs/promises";
 import path from "node:path";
 
 import type { QfaiConfig } from "../config.js";
+import { SCAFFOLD_PLACEHOLDER_MARKER } from "../atdd/scaffold.js";
 import { collectFilesByGlobs, DEFAULT_GLOB_FILE_LIMIT } from "../fs.js";
 import { DEFAULT_TEST_FILE_EXCLUDE_GLOBS, normalizeGlobs } from "../traceability.js";
 import type { Issue, IssueSeverity } from "../types.js";
@@ -654,14 +654,11 @@ function stubIssue(
         [matchedKind],
         "canonical",
         // A `.skip` keeps its body, so "delete the stub" is the wrong first
-        // move here: followed literally it throws away a working test. The
-        // normal fix is to remove the modifier; the waiver is for the case
-        // where the suite is parked on purpose.
+        // move here: followed literally it throws away a working test.
         "Remove the skip modifier so the test runs again — restore " +
           "`it` / `test` / `describe`, implementing the body first if it is " +
-          "still empty. Do not delete a test that already has one. If the " +
-          "suite is parked deliberately, waive `QFAI-TEST-003` per path in " +
-          ".qfai/waivers.yml; setting " +
+          "still empty. Do not delete a test that already has one. No waiver " +
+          "reaches this finding; setting " +
           "`validation.testStrategy.forbidTestTodoStubs: false` in " +
           "qfai.config.yaml turns the whole check off instead.",
       )
@@ -714,6 +711,11 @@ function collectStubIssues(
   skippedTestSeverity: IssueSeverity,
 ): Issue[] {
   const issues: Issue[] = [];
+  // An unfilled scaffold is `D-SCAFFOLD-PLACEHOLDER`'s, and its `it.skip` is
+  // what this scan would otherwise read as a parked suite. The marker is the
+  // scaffold's own, so it is gone the moment the block is authored — after
+  // which a `.skip` left behind is a hand-written one and is reported.
+  const scaffolded = content.includes(SCAFFOLD_PLACEHOLDER_MARKER);
   // Offsets and line breaks survive both passes, so a match position in the
   // scanned text is still a position in the file the finding names.
   const masked = dialect.mask(content);
@@ -750,6 +752,9 @@ function collectStubIssues(
     // match spanned, and `refs` / the message are single-line surfaces.
     const matchedKind = dialect.label ? dialect.label(match) : match[0].trim().replace(/\s+/g, " ");
     const isSkip = dialect.isSkip?.(match) === true;
+    if (isSkip && scaffolded) {
+      continue;
+    }
     issues.push(
       stubIssue(
         relFile,

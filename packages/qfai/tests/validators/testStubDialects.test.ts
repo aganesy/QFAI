@@ -621,7 +621,7 @@ describe("the opt-out still turns the whole validator off", () => {
   });
 });
 
-describe("QFAI-TEST-003 — the vitest/jest skip form is its own waivable rule", () => {
+describe("QFAI-TEST-003 — the vitest/jest skip form is its own rule", () => {
   // Six of the seven dialects matched their stack's *skip* construct while the
   // JS/TS entry matched `.todo` alone, so `it.skip` / `test.skip` /
   // `describe.skip` — the form a developer actually writes to park a suite
@@ -644,6 +644,69 @@ describe("QFAI-TEST-003 — the vitest/jest skip form is its own waivable rule",
       const stubs = issues.filter((i) => i.code === "QFAI-TEST-003");
       expect(stubs).toHaveLength(3);
       expect(stubs.map((i) => i.loc?.line)).toEqual([3, 4, 5]);
+    });
+  });
+
+  // `qfai atdd scaffold` writes its skeletons as `it.skip`, and
+  // `D-SCAFFOLD-PLACEHOLDER` owns an unfilled scaffold with a ladder of its
+  // own: a warning for `atdd.scaffoldEscalateCycles` validate runs, then an
+  // error. Reporting the same block here too would fail `--fail-on error` on
+  // the scaffold's own output before a line of it was written, and would
+  // overrule that ladder from outside.
+  const SCAFFOLDED = [
+    'import { describe, it } from "vitest";',
+    "",
+    `it${SKIP}("pending — scaffold placeholder", () => {`,
+    "  // QFAI-SCAFFOLD-PLACEHOLDER — replace this block with a real assertion.",
+    "});",
+    "",
+  ].join("\n");
+
+  it("leaves an unfilled scaffold to the rule that owns it", async () => {
+    await withTests({ "tests/a.test.ts": SCAFFOLDED }, async (root) => {
+      const issues = await validateTestTodoStubs(root, CONFIG);
+
+      expect(issues.filter((i) => i.code === "QFAI-TEST-003")).toEqual([]);
+    });
+  });
+
+  // The marker is the scaffold's own line, so authoring the block removes it.
+  // A `.skip` left behind after that is a hand-written one.
+  it("reports the skip once the scaffold's own marker is gone", async () => {
+    const authored = [
+      'import { describe, it } from "vitest";',
+      "",
+      `it${SKIP}("parked by hand", () => {`,
+      "  expect(1).toBe(1);",
+      "});",
+      "",
+    ].join("\n");
+
+    await withTests({ "tests/a.test.ts": authored }, async (root) => {
+      const issues = await validateTestTodoStubs(root, CONFIG);
+
+      expect(issues.filter((i) => i.code === "QFAI-TEST-003")).toHaveLength(1);
+    });
+  });
+
+  // The exemption is for the skip form only. The scaffold writes no `.todo`,
+  // so one in a scaffold file was put there by hand and is still the stub rule.
+  it("still reports a todo stub inside a scaffold file", async () => {
+    const mixed = [
+      'import { describe, it } from "vitest";',
+      "",
+      `it${SKIP}("pending — scaffold placeholder", () => {`,
+      "  // QFAI-SCAFFOLD-PLACEHOLDER — replace this block with a real assertion.",
+      "});",
+      'it.todo("added by hand");',
+      "",
+    ].join("\n");
+
+    await withTests({ "tests/a.test.ts": mixed }, async (root) => {
+      const issues = await validateTestTodoStubs(root, CONFIG);
+
+      expect(issues.filter((i) => i.code === "QFAI-TEST-003")).toEqual([]);
+      expect(issues.filter((i) => i.code === "QFAI-TEST-001")).toHaveLength(1);
     });
   });
 
@@ -717,7 +780,10 @@ describe("QFAI-TEST-003 — the vitest/jest skip form is its own waivable rule",
       const skipAction = issues.find((i) => i.code === "QFAI-TEST-003")?.suggested_action ?? "";
       expect(skipAction).toContain("Remove the skip modifier");
       expect(skipAction).not.toContain("delete the stub");
-      expect(skipAction).toContain("QFAI-TEST-003");
+      // The remedy used to end at a per-path waiver. The rule is an error, so
+      // that route is closed and the text says so rather than leaving the
+      // operator to discover it from a refusal.
+      expect(skipAction).toContain("No waiver reaches this finding");
       const todoAction = issues.find((i) => i.code === "QFAI-TEST-001")?.suggested_action ?? "";
       expect(todoAction).toContain("delete the stub");
     });
