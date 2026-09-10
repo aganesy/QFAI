@@ -8,22 +8,21 @@
  * `[Ignore]` in .NET. They neither pass nor fail, so they do not block CI by
  * default and rot as stale work-not-done markers.
  *
- * `QFAI-TEST-001` (error) is the stub proper. The vitest/jest `.skip` form
- * carries its **own** code, `QFAI-TEST-003` (warning), and that split is
- * deliberate on both axes:
+ * `QFAI-TEST-001` is the stub proper. The vitest/jest `.skip` form carries its
+ * **own** code, `QFAI-TEST-003`, because the two name different states and ask
+ * for different fixes: a `.todo` is a bare declaration and is deleted or
+ * implemented, while a `.skip` keeps its body and the fix is to drop the
+ * modifier.
  *
- * - severity: a `.todo` is a bare declaration and can only ever mean work not
- *   done. A `.skip` keeps its body, and it is what `qfai atdd scaffold` emits
- *   for a skeleton the operator is expected to graduate, so an `error` would
- *   fail `qfai validate --fail-on error` on the scaffold's own output before a
- *   line of it had been written.
- * - code: `waivers.ts` grades a waiver against the **highest** severity its
- *   rule produced in the run (`buildRuleSeverityIndex`) and rejects any waiver
- *   aimed at an `error` rule (`QFAI-WAIVER-002`). Had both forms shared
- *   `QFAI-TEST-001`, a single `.todo` anywhere in the repo would promote the
- *   whole rule to `error` and take the per-path waiver away from the `.skip`
- *   findings — the remediation this validator advertises. A separate code
- *   keeps the warning waivable no matter what else the run found.
+ * A file still carrying {@link SCAFFOLD_PLACEHOLDER_MARKER} is exempt from
+ * `QFAI-TEST-003`. `qfai atdd scaffold` writes its skeletons as `it.skip`, and
+ * `D-SCAFFOLD-PLACEHOLDER` already owns an unfilled scaffold — with a
+ * deliberate ladder that stays a warning for `atdd.scaffoldEscalateCycles`
+ * validate runs before it becomes an error. Reporting the same block here as
+ * well would fail `qfai validate --fail-on error` on the scaffold's own output
+ * before a line of it had been written, and would overrule that ladder from
+ * outside. A `.todo` in the same file is still `QFAI-TEST-001`: the scaffold
+ * does not write one.
  *
  * `QFAI-TEST-002` (info) names the states in which the scan produced no
  * evidence: extensions with no dialect, and an empty
@@ -40,11 +39,10 @@ import { readFile } from "node:fs/promises";
 import path from "node:path";
 
 import type { QfaiConfig } from "../config.js";
+import { SCAFFOLD_PLACEHOLDER_MARKER } from "../atdd/scaffold.js";
 import { collectFilesByGlobs, DEFAULT_GLOB_FILE_LIMIT } from "../fs.js";
-import { RULE_PROMOTIONS, newRuleSeverity } from "../sunset.js";
 import { DEFAULT_TEST_FILE_EXCLUDE_GLOBS, normalizeGlobs } from "../traceability.js";
 import type { Issue, IssueSeverity } from "../types.js";
-import { resolveToolVersion } from "../version.js";
 import { maskJsNonCode } from "./jsSourceMask.js";
 import { issue } from "./utils.js";
 
@@ -318,26 +316,6 @@ function matchRubyRegexOpener(content: string, start: number): NonCodeSpan | nul
   return nonCodeSpan("/", "/", true, false);
 }
 
-/** The release `QFAI-TEST-003` stops being a warning at. */
-const SKIPPED_TEST_PROMOTION = RULE_PROMOTIONS.testSkippedSuite.promoteAt;
-
-/**
- * The sentence a `QFAI-TEST-003` finding carries while its window is open.
- *
- * The severity behind it was the literal `"warning"` the module docstring
- * argues for, which is the right severity *today* and never becomes anything
- * else. P7 wants the same soft landing said once, in a place a release can
- * move: a repository that has been parking suites since before this code
- * existed meets its whole backlog on upgrade, so the finding is a warning until
- * the pinned release and an error from there — and it says so, because
- * `--fail-on error` passing is the only reason an operator would not look.
- */
-function skippedTestWindowNote(severity: IssueSeverity): string {
-  return severity === "warning"
-    ? ` Reported as a warning until the ${SKIPPED_TEST_PROMOTION} release, then an error.`
-    : "";
-}
-
 /**
  * A `.` in a member chain, with the line break a formatter is free to put on
  * either side of it.
@@ -400,8 +378,8 @@ const FIRST_ARGUMENT = /\s*(.?)/y;
  * test is registered, reported and executed, so none of what this rule says
  * about a parked test applies to them: there is no modifier to drop, and
  * deleting the call removes a guard rather than restoring a test. Reporting
- * them also leaves a repository with a legitimate guard no passing state once
- * the promotion window closes, because an error cannot be waived.
+ * them also leaves a repository with a legitimate guard no passing state,
+ * because an error cannot be waived.
  *
  * The forms are told apart by the first argument: a string literal is the
  * test's name, and anything else — an identifier, a call, a negation, an
@@ -621,12 +599,10 @@ const STUB_DIALECTS: readonly StubDialect[] = [
  * The finding for one matched construct, worded for the rule it is filed under.
  *
  * Two `issue(...)` calls rather than one over a computed code and severity.
- * Both are read statically: `tests/core/issueCodeUniqueness.test.ts` asks that
- * every error-capable code state what a clean run asserts, and
- * `tests/core/sunsetLedger.test.ts` asks that a code with a promotion window
- * take its severity from that pin rather than from a literal beside the call.
- * Neither can follow a code carried in a value, and a rule that is invisible to
- * the ratchet is one nothing holds to either contract.
+ * Read statically: `tests/core/issueCodeUniqueness.test.ts` asks that every
+ * error-capable code state what a clean run asserts. It cannot follow a code
+ * carried in a value, and a rule invisible to the ratchet is one nothing holds
+ * to that contract.
  */
 /**
  * A dialect covers a file extension, and one extension can be two runners.
@@ -671,22 +647,18 @@ function stubIssue(
         "QFAI-TEST-003",
         `Skipped test found: ${where}. ` +
           `A skipped test is silent in ${runner} and rots as missed work. ` +
-          `Drop the skip modifier to put it back in the run.` +
-          skippedTestWindowNote(skippedTestSeverity),
+          `Drop the skip modifier to put it back in the run.`,
         skippedTestSeverity,
         relFile,
         "validation.testStrategy.forbidTestTodoStubs",
         [matchedKind],
         "canonical",
         // A `.skip` keeps its body, so "delete the stub" is the wrong first
-        // move here: followed literally it throws away a working test. The
-        // normal fix is to remove the modifier; the waiver is for the case
-        // where the suite is parked on purpose.
+        // move here: followed literally it throws away a working test.
         "Remove the skip modifier so the test runs again — restore " +
           "`it` / `test` / `describe`, implementing the body first if it is " +
-          "still empty. Do not delete a test that already has one. If the " +
-          "suite is parked deliberately, waive `QFAI-TEST-003` per path in " +
-          ".qfai/waivers.yml; setting " +
+          "still empty. Do not delete a test that already has one. No waiver " +
+          "reaches this finding; setting " +
           "`validation.testStrategy.forbidTestTodoStubs: false` in " +
           "qfai.config.yaml turns the whole check off instead.",
       )
@@ -739,6 +711,11 @@ function collectStubIssues(
   skippedTestSeverity: IssueSeverity,
 ): Issue[] {
   const issues: Issue[] = [];
+  // An unfilled scaffold is `D-SCAFFOLD-PLACEHOLDER`'s, and its `it.skip` is
+  // what this scan would otherwise read as a parked suite. The marker is the
+  // scaffold's own, so it is gone the moment the block is authored — after
+  // which a `.skip` left behind is a hand-written one and is reported.
+  const scaffolded = content.includes(SCAFFOLD_PLACEHOLDER_MARKER);
   // Offsets and line breaks survive both passes, so a match position in the
   // scanned text is still a position in the file the finding names.
   const masked = dialect.mask(content);
@@ -775,6 +752,9 @@ function collectStubIssues(
     // match spanned, and `refs` / the message are single-line surfaces.
     const matchedKind = dialect.label ? dialect.label(match) : match[0].trim().replace(/\s+/g, " ");
     const isSkip = dialect.isSkip?.(match) === true;
+    if (isSkip && scaffolded) {
+      continue;
+    }
     issues.push(
       stubIssue(
         relFile,
@@ -1374,11 +1354,7 @@ export async function validateTestTodoStubs(
     limit: DEFAULT_GLOB_FILE_LIMIT,
   });
 
-  // Resolved once for the whole run: the window `QFAI-TEST-003` sits in is a
-  // property of the tool, not of the file being scanned. `resolveToolVersion`
-  // resolves rather than rejects — an unreadable version reads as inside the
-  // window, so it can never be what escalates a skip into a build failure.
-  const skippedTestSeverity = newRuleSeverity(await resolveToolVersion(), SKIPPED_TEST_PROMOTION);
+  const skippedTestSeverity = "error";
 
   const issues: Issue[] = [];
   const unscannedExtensions = new Set<string>();

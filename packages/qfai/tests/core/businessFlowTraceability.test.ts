@@ -171,18 +171,6 @@ describe("validateBusinessFlowTraceability", () => {
       expect(issues.some((entry) => entry.code === "QFAI-BFLOW-006")).toBe(true);
     });
   });
-
-  it("ships behind a promotion window, so the first tree to adopt ids is not failed", async () => {
-    await withProject(async (root) => {
-      await seedFlows(root, ["BF-0001"]);
-      await seedStory(root, "0001", "US-0001", ["BF-0009"]);
-
-      const issues = await validateBusinessFlowTraceability(root, defaultConfig);
-      // The ids ship with the rules, so nothing carries this defect yet. What
-      // the window protects is the author writing the very first edge.
-      expect(issues.every((entry) => entry.severity === "warning")).toBe(true);
-    });
-  });
 });
 
 describe("a flow annotation answers the stories that name the flow", () => {

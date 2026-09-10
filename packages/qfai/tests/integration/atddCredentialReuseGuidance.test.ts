@@ -206,7 +206,7 @@ describe("TC-0008-0017 (TDD-0017): the guidance grows no vocabulary", () => {
     // is a validator, so its codes are declarations the tree now holds and the
     // baseline has to say so. What this row still guards is unchanged — the
     // set is enumerated, so the prose deliverable growing a code of its own
-    // reddens it. Their promotion windows are held in `sunsetLedger.test.ts`.
+    // reddens it.
     //
     // `QFAI-ATDD-128` is present on the same terms: `catalog/test-layers.md`
     // has always said a `TC-*` row's `Level` stays within L1-L3, and the

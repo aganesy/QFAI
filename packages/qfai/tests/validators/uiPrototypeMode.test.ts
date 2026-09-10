@@ -7,7 +7,7 @@
  *
  * The reading they hold: only a contract that writes a mode is asked anything,
  * the mode read is the one directly under a top-level `prototype`, and the
- * finding is a warning.
+ * finding is an error.
  */
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
@@ -16,12 +16,10 @@ import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 
 import { defaultConfig } from "../../src/core/config.js";
-import { RULE_PROMOTIONS, newRuleSeverity } from "../../src/core/sunset.js";
 import {
   UI_PROTOTYPE_MODE_RULE_ID,
   validateUiPrototypeMode,
 } from "../../src/core/validators/uiPrototypeMode.js";
-import { resolveToolVersion } from "../../src/core/version.js";
 
 const tempDirs: string[] = [];
 
@@ -71,17 +69,13 @@ describe("a mode outside the vocabulary", () => {
     expect(issues[0]?.message).toContain("interactive");
   });
 
-  it("rides its promotion window, naming the release that ends it", async () => {
+  it("reports an unknown mode as an error", async () => {
     const root = await newRoot();
     await write(root, ".qfai/contracts/ui/order.yaml", contractWithPrototype("  mode: static"));
 
     const [finding] = await validateUiPrototypeMode(root, defaultConfig);
-    const promotion = RULE_PROMOTIONS.uiPrototypeModeUnknown.promoteAt;
 
-    expect(finding?.severity).toBe(newRuleSeverity(await resolveToolVersion(), promotion));
-    if (finding?.severity === "warning") {
-      expect(finding.message).toContain(promotion);
-    }
+    expect(finding?.severity).toBe("error");
   });
 
   it("is named as written when quoted, so the message matches the file", async () => {

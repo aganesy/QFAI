@@ -637,11 +637,12 @@ describe("applyWaivers", () => {
 
   // `validateTestTodoStubs` does not run under every profile (`--profile sdd`
   // skips it), so on those runs QFAI-TEST-003 reaches the severity index from
-  // no finding. Without a static entry a legitimate global waiver for a
-  // deliberately parked suite was rejected as an unknown rule on every such
-  // run, failing `--fail-on warning` in profiles unrelated to the gate.
+  // no finding. The rule is an error, so the waiver is refused — and the
+  // static entry is what makes the refusal the same on a run that emits the
+  // finding and a run that does not. Without it the same waiver file reads as
+  // an unknown rule on one profile and an error-severity target on another.
   it.each([["QFAI-TEST-003"], ["TEST-003"]])(
-    "accepts a waiver naming %s even when the stub validator did not run",
+    "refuses a waiver naming %s as an error target, even when the stub validator did not run",
     async (rule) => {
       const root = await createRoot();
       try {
@@ -665,11 +666,11 @@ describe("applyWaivers", () => {
         // QFAI-TEST-003 finding is in hand.
         const result = await applyWaivers(root, [buildIssue({ rule: "COMPAT-003" })]);
 
+        // Not an unknown rule: the static entry is what recognises it.
         expect(result.issues.some((item) => item.code === "QFAI-WAIVER-004")).toBe(false);
-        // Registered as `warning`, so it is not refused as an error-severity
-        // target either.
-        expect(result.issues.some((item) => item.code === "QFAI-WAIVER-002")).toBe(false);
-        expect(result.waivers.active).toHaveLength(1);
+        // Refused for the reason that is true on every profile.
+        expect(result.issues.some((item) => item.code === "QFAI-WAIVER-002")).toBe(true);
+        expect(result.waivers.active).toHaveLength(0);
       } finally {
         await rm(root, { recursive: true, force: true });
       }

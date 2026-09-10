@@ -230,7 +230,7 @@ failure, which is what makes it attributable.
 Checkpoint verification PASSES only when **every** command in the applicable set exits 0, and — for
 the per-spec set, the only one that includes it — step 4
 reports zero `QFAI-TEST-001` **and** zero `QFAI-TEST-002` findings that a waiver has not already
-marked `suppressed=true`. The JS/TS `.skip` family is the separate warning rule `QFAI-TEST-003` and is
+marked `suppressed=true`. The JS/TS `.skip` family is the separate rule `QFAI-TEST-003` and is
 not counted here. `QFAI-TEST-002` is `info`, so it never fails `--fail-on error`; it reports that the
 stub scan produced no evidence — most often an empty `validation.traceability.testFileGlobs`, the
 value `npx qfai init` ships, under which zero files are scanned and `QFAI-TEST-001` cannot fire at

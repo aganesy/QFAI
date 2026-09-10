@@ -754,26 +754,6 @@ describe("report", () => {
     expect(report).toContain("D-DEPRECATED-PATH");
   });
 
-  it("still writes --run-validate output while the legacy config is pre-sunset", async () => {
-    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-report-"));
-    await runInit({ dir: root, force: false, dryRun: false, yes: true });
-    await writeFile(
-      path.join(root, "qfai.config.yaml"),
-      ["output:", "  validateJsonPath: .qfai/output/validate.json", ""].join("\n"),
-      "utf-8",
-    );
-
-    await runReport({
-      root,
-      format: "md",
-      runValidate: true,
-      toolVersionOverride: "1.9.0",
-    });
-
-    const validation = await readFile(path.join(root, ".qfai", "output", "validate.json"), "utf-8");
-    expect(validation).toContain('"toolVersion"');
-  });
-
   it("refuses an unresolvable --spec value instead of writing a shared name", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-report-"));
     await runInit({ dir: root, force: false, dryRun: false, yes: true });
@@ -1177,33 +1157,6 @@ describe("report --run-validate shares the validate migration gate", () => {
       const deprecation = report.issues.find((issue) => issue.code === "D-DEPRECATED-PATH");
       expect(deprecation?.severity).toBe("error");
       expect(deprecation?.message).toContain("REFUSED");
-    } finally {
-      await rm(root, { recursive: true, force: true });
-    }
-  });
-
-  it("PRE sunset: writes the configured legacy path and warns instead of erroring", async () => {
-    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-report-legacycfg-"));
-    try {
-      await runInit({ dir: root, force: false, dryRun: false, yes: true });
-      await seedLegacyConfig(root);
-
-      const exitCode = await runReport({
-        root,
-        format: "md",
-        runValidate: true,
-        // `never` isolates the gate from the fixture's unrelated
-        // QFAI-DPACK-001 error; the deprecation severity is asserted below.
-        failOn: "never",
-        toolVersionOverride: "1.9.1",
-      });
-
-      expect(exitCode).toBe(0);
-      const written = JSON.parse(
-        await readFile(path.join(root, ".qfai", "output", "validate.json"), "utf-8"),
-      ) as { issues: Array<{ code: string; severity: string }> };
-      const deprecation = written.issues.find((issue) => issue.code === "D-DEPRECATED-PATH");
-      expect(deprecation?.severity).toBe("warning");
     } finally {
       await rm(root, { recursive: true, force: true });
     }

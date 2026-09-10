@@ -17,34 +17,10 @@ import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 
 import { defaultConfig } from "../../src/core/config.js";
-import { newRuleSeverity, RULE_PROMOTIONS } from "../../src/core/sunset.js";
 import { validateTddList, validateTddListSeedShape } from "../../src/core/validators/tddList.js";
-import type * as VersionModule from "../../src/core/version.js";
-
-/**
- * The version `resolveToolVersion` reports, so the promotion window is
- * observable from both sides of its release.
- *
- * An empty string means "defer to the real one", so every other case in this
- * file keeps running against the shipped version.
- */
-const toolVersion = vi.hoisted(() => ({ override: "" }));
-
-vi.mock("../../src/core/version.js", async (importOriginal) => {
-  const actual = await importOriginal<typeof VersionModule>();
-  return {
-    ...actual,
-    resolveToolVersion: async (): Promise<string> =>
-      toolVersion.override.length > 0 ? toolVersion.override : actual.resolveToolVersion(),
-  };
-});
-
-afterEach(() => {
-  toolVersion.override = "";
-});
 
 type Issues = Awaited<ReturnType<typeof validateTddList>>;
 
@@ -372,38 +348,5 @@ describe("the gate the writing stage runs", () => {
     } finally {
       await rm(root, { recursive: true, force: true });
     }
-  });
-});
-
-describe("the promotion window", () => {
-  const promotion = RULE_PROMOTIONS.tddListSplitBoundary.promoteAt;
-  const split = [HEADERS, SEP, row("TDD-0001", "TC-0001", "-"), row("TDD-0002", "TC-0001", "-")];
-
-  it("reports a warning inside it, and says which release ends it", async () => {
-    toolVersion.override = RULE_PROMOTIONS.tddListSplitBoundary.introducedIn;
-    await withLedger(split, (issues) => {
-      const found = unnamed(issues);
-      expect(found[0]?.severity).toBe("warning");
-      expect(found[0]?.message).toContain(promotion);
-    });
-  });
-
-  it("reports an error from the promoting release, with no window note", async () => {
-    toolVersion.override = promotion;
-    await withLedger(split, (issues) => {
-      const found = unnamed(issues);
-      expect(found[0]?.severity).toBe("error");
-      expect(found[0]?.message).not.toContain("until the");
-    });
-  });
-
-  it("takes the severity from the pin rather than a literal", async () => {
-    // Derived on both sides so the release that closes the window does not have
-    // to edit this file, and so a severity that stops following the pin is
-    // caught here and not only by the ledger guard.
-    toolVersion.override = promotion;
-    await withLedger(split, (issues) => {
-      expect(unnamed(issues)[0]?.severity).toBe(newRuleSeverity(promotion, promotion));
-    });
   });
 });

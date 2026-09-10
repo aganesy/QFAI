@@ -13,17 +13,12 @@ import {
   isAssistantLayer,
   legacyAssistantSteeringSunsetLabel,
 } from "../paths/assistantPaths.js";
-import { SUNSETS, deprecationSeverity } from "../sunset.js";
 import type { Issue } from "../types.js";
-import { resolveToolVersion } from "../version.js";
 import { exists, issue } from "./utils.js";
 
 /**
- * The validator compares the running tool version's major.minor against
- * SUNSETS.legacyAssistantSteering (core/sunset.ts):
- *   - if current < sunset: emit warning (compatibility window)
- *   - if current >= sunset: emit error (post-sunset, cutoff enforced)
- * so legacy paths cannot survive past the announced cutoff release.
+ * The pre-recut `.qfai/assistant/{steering,instructions}/` layout was retired
+ * at the release the message names, so a tree still holding it is an error.
  */
 
 export async function validateAssistantTreeMigration(
@@ -73,14 +68,11 @@ export async function validateAssistantTreeMigration(
     }
   }
 
-  // 2. D-DEPRECATED-PATH — pre-recut legacy layers (.qfai/assistant/
-  // steering/ AND .qfai/assistant/instructions/) are read-compatible
-  // for the current minor window only; severity escalates to error
-  // from SUNSETS.legacyAssistantSteering onwards. Both surfaces fire symmetric
-  // findings per qfai-init.md contract line 50.
-  const current = await resolveToolVersion();
+  // 2. D-DEPRECATED-PATH — the pre-recut legacy layers (.qfai/assistant/
+  // steering/ AND .qfai/assistant/instructions/) are retired, so both surfaces
+  // fire symmetric errors.
   const sunset = legacyAssistantSteeringSunsetLabel();
-  const severity = deprecationSeverity(current, SUNSETS.legacyAssistantSteering);
+  const severity = "error" as const;
   for (const legacySurface of [
     {
       dir: joinLegacyAssistantSteering(root),
@@ -92,10 +84,7 @@ export async function validateAssistantTreeMigration(
     },
   ]) {
     if (!(await exists(legacySurface.dir))) continue;
-    const headline =
-      severity === "error"
-        ? `${legacySurface.label} is past the announced sunset (v${sunset}).`
-        : `${legacySurface.label} is read-compatible only for the current minor release.`;
+    const headline = `${legacySurface.label} is past the announced sunset (v${sunset}).`;
     issues.push(
       issue(
         "D-DEPRECATED-PATH",

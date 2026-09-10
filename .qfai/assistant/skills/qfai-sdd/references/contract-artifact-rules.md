@@ -57,21 +57,21 @@ Discussion UI/UX files are **non-normative** discovery / reference artifacts —
     that does not exist. Getting the set wrong is otherwise silent: the wrong
     subset still applies cleanly and the tests still pass, against a schema
     missing the tables under test.
-  - `QFAI-CONTRACT-015` (warning) reports a contract that states no apply order
+  - `QFAI-CONTRACT-015` reports a contract that states no apply order
     at all. Write `-` when nothing must be applied first: "no dependencies" and
     "never stated" are different claims, and only the first is checkable. The
     key on its own (`-- Depends on:` with nothing after it) is still silence,
     and so is a list holding anything but `CON-*` ids: in `CON-DB-0001, TBD`
     the resolvable half would otherwise make an undetermined order look
     settled, leaving `TBD` unreported by every check.
-  - `QFAI-CONTRACT-032` (warning) reports a contract index table that dropped
-    the `Depends On` column, and `QFAI-CONTRACT-033` (warning) reports a row
+  - `QFAI-CONTRACT-032` reports a contract index table that dropped the
+    `Depends On` column, and `QFAI-CONTRACT-033` reports a row
     whose cell disagrees with the declaration in the file that row names — a
     blank cell included, for the same reason: it records no claim at all.
-  - `QFAI-CONTRACT-034` (warning) reports a contract that appears in no index
+  - `QFAI-CONTRACT-034` reports a contract that appears in no index
     table. Deleting the row hides the contract and its apply order from every
     reader of the index, and the row-level checks need a row to compare.
-  - `QFAI-CONTRACT-035` (warning) reports a row whose `File` is not a file
+  - `QFAI-CONTRACT-035` reports a row whose `File` is not a file
     declaring that row's id. The mirror is checked by id, so a row pointing at
     another contract's file otherwise passes every check while sending the
     reader to the wrong contract. A glob or a `<slug>` placeholder names no one
@@ -180,10 +180,9 @@ author believes they answered a finding that is still standing — and one namin
 does not require, or that the DB domain stores after all. A value **nobody declared** still raises
 `QFAI-CONTRACT-040`, or the marker would be a silencer.
 
-It ships behind a promotion window: `warning` until the release its `RULE_PROMOTIONS` entry names,
-`error` from then on. The format is new, so the first authors to use it are answering another
-finding voluntarily and will get the grammar wrong in the ways the message exists to teach; failing
-the run on a line added to engage with the tool is the worst first experience of it.
+The format is new, so the first authors to use it are answering another finding voluntarily and
+will get the grammar wrong in the ways the message exists to teach. The message names the exact
+shape it wants for that reason.
 
 ## Executability (MUST)
 

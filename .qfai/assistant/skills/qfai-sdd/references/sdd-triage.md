@@ -43,13 +43,10 @@ Concretely, before persisting any Triage row:
    blocker set (steps 5 and 7). An unapproved CREATE row must never leave
    a new CAP behind in the catalog.
 
-   `QFAI-SPLIT-106` is inside its promotion window, so it is emitted at
-   `warning` and `validate --fail-on error` **still exits 0** while the
-   cell is empty. A blank cell also suppresses `QFAI-SPLIT-103` / `104` /
-   `105` for that row, so no other code stands in for it. Do not treat
-   the exit code as the check here: read the reported findings and
-   confirm no `QFAI-SPLIT-106` remains. The finding's own message names
-   the release it becomes an `error` in.
+   `QFAI-SPLIT-106` is an error, so `validate --fail-on error` stops
+   while the cell is empty. A blank cell also suppresses
+   `QFAI-SPLIT-103` / `104` / `105` for that row, so no other code
+   stands in for it.
 
 The triage classifier implements an append-first fallback: when the REQ's
 capability does not match exactly, it still proposes APPEND on the active
@@ -297,7 +294,7 @@ catches a source that was misspelled or never allocated.
   in `_policies/03_Capabilities.md`. This is the structural gate that
   enforces the append-first principle: CREATE is only permitted when a
   new capability is being added to the catalog.
-- `QFAI-TRIAGE-008` (warning): the file carries a heading that starts with
+- `QFAI-TRIAGE-008`: the file carries a heading that starts with
   `Triage` but is not a canonical `## Triage` section — its rows are read by
   none of the checks above. Rename the heading to `## Triage`.
 - `QFAI-TRIAGE-009` (error): `Existing Spec` does not follow the grammar

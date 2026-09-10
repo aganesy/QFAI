@@ -275,11 +275,9 @@ describe("classifyTriage", () => {
     if (!proposal) return;
     const rendered = renderTriageMarkdown([{ ...proposal, approvedBy: "user@host" }]);
     expect(
-      // A version inside every promotion window, so a rule still inside its
-      // window reports at its pre-promotion severity. `renderTriageMarkdown`
-      // writes a canonical `## Triage`, so nothing here reaches the heading
-      // rule and this stays a single-code assertion either way.
-      validateTriageSection(`# 09 Delta\n\n${rendered}`, "spec-0042/09_delta.md", "0.0.0").map(
+      // `renderTriageMarkdown` writes a canonical `## Triage`, so nothing here
+      // reaches the heading rule and this stays a single-code assertion.
+      validateTriageSection(`# 09 Delta\n\n${rendered}`, "spec-0042/09_delta.md").map(
         (entry) => entry.code,
       ),
     ).toEqual(["QFAI-TRIAGE-009"]);

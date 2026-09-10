@@ -1226,16 +1226,14 @@ const STATIC_RULE_SEVERITY: ReadonlyArray<{
   // not recognise a waiver written against the alias.
   { keys: [EXCEPTION_PARKED_CODE, EXCEPTION_PARKED_RULE_ID], severity: "warning" },
   { keys: [UNKNOWN_LEVEL_CODE, UNKNOWN_LEVEL_RULE_ID], severity: "warning" },
-  // The waivable half of the test-stub gate. `validateTestTodoStubs` only runs
-  // under the profiles that include it (`--profile sdd` does not), so on every
-  // other profile the rule never reaches `buildRuleSeverityIndex` from a
-  // finding — and a global `.qfai/waivers.yml` entry parking a deliberately
-  // skipped suite would be rejected as an unknown rule (QFAI-WAIVER-004) on
-  // those runs, failing `--fail-on warning` in profiles that have nothing to do
-  // with it. `warning` matches the emitter in
-  // `validators/testTodoStubs.ts` (SKIPPED_TEST_WARNING), so the waiver stays
-  // accepted rather than being refused as an error-severity target.
-  { keys: ["QFAI-TEST-003", "TEST-003"], severity: "warning" },
+  // `validateTestTodoStubs` runs only under the profiles that include it
+  // (`--profile sdd` does not), so on every other profile the rule reaches
+  // `buildRuleSeverityIndex` from no finding. Without an entry here a waiver
+  // naming it would be refused as an unknown rule on those runs and as an
+  // error-severity target on the runs that emit it — two different answers to
+  // one waiver file. `error` matches the emitter in
+  // `validators/testTodoStubs.ts`, so the refusal is the same either way.
+  { keys: ["QFAI-TEST-003", "TEST-003"], severity: "error" },
   // This module's own findings, emitted on every run that parses a waiver file.
   { keys: ["QFAI-WAIVER-001", "WAIVER-001"], severity: "error" },
   { keys: ["QFAI-WAIVER-002", "WAIVER-002"], severity: "error" },

@@ -20,7 +20,6 @@ import { fileURLToPath } from "node:url";
 
 import { describe, expect, it } from "vitest";
 
-import { RULE_PROMOTIONS } from "../../src/core/sunset.js";
 import { escapeTableCell, splitMarkdownRow } from "../../src/core/specPackParsers.js";
 
 // tests/assets/<this file> -> tests -> packages/qfai -> packages -> repo root
@@ -85,25 +84,16 @@ describe.each(TREES)("%s", (tree) => {
     expect(skill).toContain("**Per item, one `### TDD-NNNN` section**");
   });
 
-  // The table stated a flat severity for both anchor findings — `warning` for
-  // 007 and `error` for 008 — while both are emitted through `newRuleSeverity`
-  // against a `RULE_PROMOTIONS` window, so both are `warning` today and become
-  // `error` at the promotion release. A reader setting `--fail-on` off the
+  // The table stated a flat severity for both anchor findings, while the
+  // validator reports both as errors. A reader setting `--fail-on` off the
   // table would have mis-planned the upgrade in both directions.
-  it.each([
-    ["QFAI-TDDLIST-007", "tddListEvidenceAnchorMissing"],
-    ["QFAI-TDDLIST-008", "tddListEvidenceAnchorUnresolved"],
-  ] as const)(
-    "states %s's severity as the window it is actually emitted under",
-    async (code, promotion) => {
-      // The window is the reason the wording has to be the two-stage one; read it
-      // rather than assumed, so removing the window reddens this too.
-      expect(RULE_PROMOTIONS[promotion]?.promoteAt).toBeDefined();
-
+  it.each(["QFAI-TDDLIST-007", "QFAI-TDDLIST-008"] as const)(
+    "states %s's severity as the one it is actually emitted with",
+    async (code) => {
       const ledger = await read(tree, LEDGER);
       const row = new RegExp(`\\| \`${code}\` \\|[^|]*\\|([^|]*)\\|`).exec(ledger);
       expect(row, `${code} must have a row in the findings table`).not.toBeNull();
-      expect(flat(row?.[1] ?? "").trim()).toBe("warning, then error");
+      expect(flat(row?.[1] ?? "").trim()).toBe("error");
     },
   );
 

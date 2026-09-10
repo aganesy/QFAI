@@ -23,20 +23,8 @@ import path from "node:path";
 import type { QfaiConfig } from "../config.js";
 import { resolvePath } from "../config.js";
 import { collectFiles } from "../fs.js";
-import { RULE_PROMOTIONS, newRuleSeverity } from "../sunset.js";
 import type { Issue } from "../types.js";
-import { resolveToolVersion } from "../version.js";
 import { exists, isInside, issue } from "./utils.js";
-
-/** The release `QFAI-CONTRACT-050` stops being a warning at. */
-const SSOT_MODULE_PROMOTION = RULE_PROMOTIONS.contractSsotModuleUnresolved.promoteAt;
-
-/** `（<release> リリースまでは warning、以降は error として報告されます）`, or nothing past it. */
-function promotionWindowNote(severity: "warning" | "error", promoteAt: string): string {
-  return severity === "warning"
-    ? `（${promoteAt} リリースまでは warning、以降は error として報告されます）`
-    : "";
-}
 
 /** Opening line of the block; a top-level list item, no indentation. */
 const BLOCK_HEADER_RE = /^-\s+SSOT modules:\s*$/;
@@ -367,11 +355,7 @@ export function extractSsotModuleEntries(text: string): SsotModuleEntry[] {
  *
  * Nothing resolved these paths before, so every contract written under the old
  * silence carries whatever route was true when it was authored — a rename that
- * happened releases ago surfaces here all at once. Severity therefore comes
- * from the promotion window (`RULE_PROMOTIONS.contractSsotModuleUnresolved`)
- * rather than a literal beside the call, so an upgrade reports the backlog
- * without latching a consuming repository's `--fail-on error` gate. The finding
- * names the release that ends the window while it is open.
+ * happened releases ago surfaces here all at once.
  */
 export async function validateContractSsotModules(
   root: string,
@@ -380,11 +364,7 @@ export async function validateContractSsotModules(
   const contractsRoot = resolvePath(root, config, "contractsDir");
   const files = await collectFiles(contractsRoot, { extensions: [".md"] });
   const issues: Issue[] = [];
-  // `resolveToolVersion` resolves rather than rejects — a read failure returns
-  // `"unknown"`, which the comparator reads as inside the window, so an
-  // unreadable version can never be what escalates this into a build failure.
-  const ssotModuleSeverity = newRuleSeverity(await resolveToolVersion(), SSOT_MODULE_PROMOTION);
-  const windowNote = promotionWindowNote(ssotModuleSeverity, SSOT_MODULE_PROMOTION);
+  const ssotModuleSeverity = "error";
 
   for (const file of files.sort((a, b) => a.localeCompare(b))) {
     const contract = await readContract(file);
@@ -393,7 +373,7 @@ export async function validateContractSsotModules(
       issues.push(
         issue(
           "QFAI-CONTRACT-050",
-          `契約を読み取れなかったため SSOT modules を検査できませんでした: ${contract.reason}${windowNote}`,
+          `契約を読み取れなかったため SSOT modules を検査できませんでした: ${contract.reason}`,
           ssotModuleSeverity,
           relFile,
           "contracts.ssotModuleUnreadable",
@@ -420,7 +400,7 @@ export async function validateContractSsotModules(
         issues.push(
           issue(
             "QFAI-CONTRACT-050",
-            `契約の SSOT modules がプロジェクトルート外を参照しています: ${entry.modulePath}${windowNote}`,
+            `契約の SSOT modules がプロジェクトルート外を参照しています: ${entry.modulePath}`,
             ssotModuleSeverity,
             relFile,
             "contracts.ssotModuleExists",
@@ -439,7 +419,7 @@ export async function validateContractSsotModules(
         issues.push(
           issue(
             "QFAI-CONTRACT-050",
-            `契約の SSOT modules がプロジェクトルート外を参照しています: ${entry.modulePath}${windowNote}`,
+            `契約の SSOT modules がプロジェクトルート外を参照しています: ${entry.modulePath}`,
             ssotModuleSeverity,
             relFile,
             "contracts.ssotModuleExists",
@@ -454,7 +434,7 @@ export async function validateContractSsotModules(
       issues.push(
         issue(
           "QFAI-CONTRACT-050",
-          `契約の SSOT modules が存在しないパスを参照しています: ${entry.modulePath}${windowNote}`,
+          `契約の SSOT modules が存在しないパスを参照しています: ${entry.modulePath}`,
           ssotModuleSeverity,
           relFile,
           "contracts.ssotModuleExists",

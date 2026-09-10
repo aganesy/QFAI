@@ -29,9 +29,7 @@ import { parseHeadings } from "../parse/markdown.js";
 import { ASSISTANT_DIR } from "../paths/assistantPaths.js";
 import { escapeRegExp } from "../regex.js";
 import { splitMarkdownRow } from "../specPackParsers.js";
-import { RULE_PROMOTIONS, newRuleSeverity } from "../sunset.js";
 import type { Issue } from "../types.js";
-import { resolveToolVersion } from "../version.js";
 import { getInitAssetsDir } from "../../shared/assets.js";
 import { TODO_PLACEHOLDER_RE } from "./renderCritique.js";
 import { issue } from "./utils.js";
@@ -262,8 +260,7 @@ export async function validateAssistantAssets(root: string, config: QfaiConfig):
   // `QFAI-SKILLS-014` could report it: the entry point would be the one file
   // the rule could never speak about. Reading once also means the marker
   // checks and the citation graph can never disagree about a file's bytes.
-  const toolVersion = await resolveToolVersion();
-  const { documents, unreadable } = await readSkillDocuments(skillsDir, toolVersion);
+  const { documents, unreadable } = await readSkillDocuments(skillsDir);
   issues.push(...unreadable);
 
   const skillFiles = await collectSkillFiles([skillsDir]);
@@ -315,7 +312,7 @@ export async function validateAssistantAssets(root: string, config: QfaiConfig):
     }
   }
 
-  issues.push(...collectReferenceGraphIssues(root, skillsDir, toolVersion, documents));
+  issues.push(...collectReferenceGraphIssues(root, skillsDir, documents));
 
   return issues;
 }
@@ -335,31 +332,18 @@ export async function validateAssistantAssets(root: string, config: QfaiConfig):
  * A project with no recorded provenance is not penalised for that alone: an
  * absent record is not itself a finding, and only files that also differ from
  * the installed release are reported. What severity they carry is not fixed
- * here — the whole family follows the promotion window below, `warning` inside
- * it and `error` from the release the finding names.
+ * here; the whole family carries one severity, resolved once below.
  */
 async function validateAssistantAssetProvenance(
   root: string,
   assistantDir: string,
 ): Promise<Issue[]> {
-  // The whole family runs a promotion window (`RULE_PROMOTIONS`,
-  // docs/design-principles P7): nothing compared the governed layers before, so
-  // the first run that records provenance meets every edit a project ever made
-  // to them at once. Shipping that straight at `error` would turn an upgrade
-  // into a latched gate, which is the regression P7 was written after.
-  //
-  // `resolveToolVersion` resolves rather than rejects — a read failure returns
-  // `"unknown"`, which the comparator reads as inside the window, so an
+  // Nothing compared the governed layers before, so the first run that records
+  // provenance meets every edit a project ever made to them at once. The remedy
+  // is `qfai init --force`, which refreshes a file still matching its record,
+  // and a manual merge for one that does not. What follows
   // unreadable version can never be what escalates these into a build failure.
-  const assetProvenancePromotion = RULE_PROMOTIONS.assistantAssetProvenance.promoteAt;
-  const assetProvenanceSeverity = newRuleSeverity(
-    await resolveToolVersion(),
-    assetProvenancePromotion,
-  );
-  const windowNote =
-    assetProvenanceSeverity === "warning"
-      ? ` Reported as a warning until the ${assetProvenancePromotion} release, and as an error from then on.`
-      : "";
+  const assetProvenanceSeverity = "error";
 
   let shipped: Record<string, string>;
   try {
@@ -377,15 +361,7 @@ async function validateAssistantAssetProvenance(
     // no findings let every such tree pass `validate` with its provenance
     // unchecked — `init` already fails closed on the same condition, so only
     // this side accepted it. The inability is itself the finding.
-    return [
-      unverifiableProvenanceIssue(
-        assistantDir,
-        "shipped",
-        error,
-        assetProvenanceSeverity,
-        windowNote,
-      ),
-    ];
+    return [unverifiableProvenanceIssue(assistantDir, "shipped", error, assetProvenanceSeverity)];
   }
 
   // Every component from the project root down, not just the layer directory.
@@ -403,7 +379,6 @@ async function validateAssistantAssetProvenance(
           `A component of the path to ${ASSISTANT_DIR}/ is not a real directory (a symlink or junction may point outside the project).`,
         ),
         assetProvenanceSeverity,
-        windowNote,
       ),
     ];
   }
@@ -419,7 +394,6 @@ async function validateAssistantAssetProvenance(
         "record",
         new Error(`${ASSISTANT_ASSETS_LOCK_BASENAME}: ${lockStatus.reason}`),
         assetProvenanceSeverity,
-        windowNote,
       ),
     ];
   }
@@ -431,15 +405,7 @@ async function validateAssistantAssetProvenance(
   } catch (error: unknown) {
     // Same reasoning on the project's own side. A layer root that is not a real
     // directory reaches here rather than being walked.
-    return [
-      unverifiableProvenanceIssue(
-        assistantDir,
-        "vendored",
-        error,
-        assetProvenanceSeverity,
-        windowNote,
-      ),
-    ];
+    return [unverifiableProvenanceIssue(assistantDir, "vendored", error, assetProvenanceSeverity)];
   }
 
   // The union of both key sets, not just what is on disk. Walking only the
@@ -478,9 +444,7 @@ async function validateAssistantAssetProvenance(
   }
   for (const layer of GOVERNED_ASSISTANT_LAYERS) {
     if (!presentLayers.has(layer) && recordedLayers.has(layer)) {
-      issues.push(
-        missingGovernedLayerIssue(assistantDir, layer, assetProvenanceSeverity, windowNote),
-      );
+      issues.push(missingGovernedLayerIssue(assistantDir, layer, assetProvenanceSeverity));
     }
   }
 
@@ -506,13 +470,7 @@ async function validateAssistantAssetProvenance(
       // unfilled is `QFAI-ASSETS-003`, which reads the same four files.
       continue;
     }
-    const finding = provenanceIssue(
-      status,
-      relative,
-      filePath,
-      assetProvenanceSeverity,
-      windowNote,
-    );
+    const finding = provenanceIssue(status, relative, filePath, assetProvenanceSeverity);
     if (finding !== null) {
       issues.push(finding);
     }
@@ -558,12 +516,7 @@ export const NAMED_STALE_FILES = 3;
  * reporting one would name something the remedy cannot fix.
  */
 async function collectRegeneratedLayerIssues(root: string, assistantDir: string): Promise<Issue[]> {
-  const promoteAt = RULE_PROMOTIONS.assistantRegeneratedLayerStale.promoteAt;
-  const severity = newRuleSeverity(await resolveToolVersion(), promoteAt);
-  const windowNote =
-    severity === "warning"
-      ? ` Reported as a warning until the ${promoteAt} release, and as an error from then on.`
-      : "";
+  const severity = "error";
   const shippedRoot = path.join(getInitAssetsDir(), ...ASSISTANT_DIR.split("/"));
 
   // The same parent-path guard the governed comparison applies, for the same
@@ -589,13 +542,7 @@ async function collectRegeneratedLayerIssues(root: string, assistantDir: string)
     if (!(await isDirectory(path.join(assistantDir, layer)))) {
       continue;
     }
-    const finding = await regeneratedLayerIssue(
-      assistantDir,
-      shippedRoot,
-      layer,
-      severity,
-      windowNote,
-    );
+    const finding = await regeneratedLayerIssue(assistantDir, shippedRoot, layer, severity);
     if (finding !== null) {
       issues.push(finding);
     }
@@ -609,15 +556,12 @@ async function regeneratedLayerIssue(
   shippedRoot: string,
   layer: RegeneratedAssistantLayer,
   severity: ProvenanceSeverity,
-  windowNote: string,
 ): Promise<Issue | null> {
   let shippedFiles: string[];
   try {
     shippedFiles = await collectRegeneratedAssistantFiles(shippedRoot, layer);
   } catch (error: unknown) {
-    return unverifiableProvenanceIssue(assistantDir, "shipped", error, severity, windowNote, [
-      layer,
-    ]);
+    return unverifiableProvenanceIssue(assistantDir, "shipped", error, severity, [layer]);
   }
   if (shippedFiles.length === 0) {
     // Not "nothing to compare against, so nothing is wrong". The release ships
@@ -629,7 +573,6 @@ async function regeneratedLayerIssue(
       "shipped",
       new Error(`the installed release ships no files under ${layer}/`),
       severity,
-      windowNote,
       [layer],
     );
   }
@@ -666,7 +609,7 @@ async function regeneratedLayerIssue(
     `${ASSISTANT_DIR}/${layer}/ differs from the installed release in ${String(behind.length)} of ` +
       `the ${String(shippedFiles.length)} files it ships (${examples}). ` +
       "`qfai init` copies this layer once and only `--force` refreshes it, so the project is " +
-      `running the ${layer} it initialised with.${windowNote}`,
+      `running the ${layer} it initialised with.`,
     severity,
     path.join(assistantDir, layer),
     "assistantAssets.staleRegeneratedLayer",
@@ -686,16 +629,11 @@ async function regeneratedLayerIssue(
  * `/qfai-configure` gets a work list rather than a single "something is
  * unfilled" flag.
  *
- * Severity comes from a promotion window, not from a literal beside the call.
- * The escalation the rule deserves — error, since Stage 0 has been mandatory
- * for at least one skill run by the time a project has specs — cannot land the
- * day the detector does: these four files are copied verbatim by `qfai init`,
- * so a project that has never run `/qfai-configure` would fail its own
- * `validate --profile full` gate on upgrade with four findings on files it
- * never touched. That is the migration P7 exists for, so the rule ships at
- * `warning` behind {@link RULE_PROMOTIONS.steeringCatalogPlaceholders} and
- * becomes an `error` at the pinned release. Writing `"warning"` here instead
- * would have been the same window with no way for it to ever open.
+ * An error, because Stage 0 is mandatory before a skill run and these four
+ * files are the input every later phase reads. `qfai init` copies them verbatim
+ * with their placeholders, so a project that has never run `/qfai-configure`
+ * meets four findings on files it has not touched — which is the rule saying
+ * Stage 0 is outstanding, and it clears when Stage 0 is done.
  *
  * A missing file is skipped: this rule is about unfilled content, and the
  * pre-recut `steering/` layout is already reported by `D-DEPRECATED-PATH`.
@@ -704,15 +642,7 @@ async function collectSteeringPlaceholderIssues(
   root: string,
   assistantDir: string,
 ): Promise<Issue[]> {
-  // `resolveToolVersion` resolves rather than rejects — a read failure returns
-  // `"unknown"`, which the comparator reads as inside the window, so an
-  // unreadable version can never be what escalates this into a build failure.
-  const promoteAt = RULE_PROMOTIONS.steeringCatalogPlaceholders.promoteAt;
-  const severity = newRuleSeverity(await resolveToolVersion(), promoteAt);
-  const windowNote =
-    severity === "warning"
-      ? ` Reported as a warning until the ${promoteAt} release, and as an error from then on.`
-      : "";
+  const severity = "error";
   const issues: Issue[] = [];
   for (const fileName of STEERING_CATALOG_FILES) {
     const filePath = path.join(assistantDir, "catalog", fileName);
@@ -729,7 +659,7 @@ async function collectSteeringPlaceholderIssues(
     issues.push(
       issue(
         "QFAI-ASSETS-003",
-        `Stage 0 steering ファイル ${toRepoRelative(root, filePath)} に未置換のテンプレート値が ${total} 件残っています（該当セクション: ${detail}）。${windowNote}`,
+        `Stage 0 steering ファイル ${toRepoRelative(root, filePath)} に未置換のテンプレート値が ${total} 件残っています（該当セクション: ${detail}）。`,
         severity,
         filePath,
         "assistantAssets.steeringPlaceholder",
@@ -755,11 +685,10 @@ function missingGovernedLayerIssue(
   assistantDir: string,
   layer: string,
   assetProvenanceSeverity: ProvenanceSeverity,
-  windowNote: string,
 ): Issue {
   return issue(
     "QFAI-ASSETS-007",
-    `${ASSISTANT_DIR}/${layer}/ is a governed layer recorded in .assets.lock.json, but no directory is there (the whole layer is missing).${windowNote}`,
+    `${ASSISTANT_DIR}/${layer}/ is a governed layer recorded in .assets.lock.json, but no directory is there (the whole layer is missing).`,
     assetProvenanceSeverity,
     path.join(assistantDir, layer),
     "assistantAssets.missingVendoredLayer",
@@ -814,7 +743,6 @@ function unverifiableProvenanceIssue(
   side: "shipped" | "vendored" | "record",
   error: unknown,
   assetProvenanceSeverity: ProvenanceSeverity,
-  windowNote: string,
   // Which layers went unverified. Defaulted to the governed ones so the
   // provenance callers read as they did; the regenerated layers pass their own,
   // because a message naming `constitution/ / catalog/` for a `skills/` failure
@@ -832,7 +760,7 @@ function unverifiableProvenanceIssue(
     "QFAI-ASSETS-008",
     `${subject} could not be read, so the provenance of ${layers
       .map((layer) => `${layer}/`)
-      .join(" / ")} was not verified (${detail}).${windowNote}`,
+      .join(" / ")} was not verified (${detail}).`,
     assetProvenanceSeverity,
     assistantDir,
     "assistantAssets.unverifiableProvenance",
@@ -843,10 +771,8 @@ function unverifiableProvenanceIssue(
 }
 
 /**
- * The severity the whole provenance family carries, resolved once from
- * `RULE_PROMOTIONS.assistantAssetProvenance`. Threaded in rather than
- * recomputed per finding so the five codes cannot drift apart, and so the pin —
- * not a literal beside each `issue(...)` call — is what decides them.
+ * The severity the whole provenance family carries, resolved once. Threaded in
+ * rather than repeated per finding so the five codes cannot drift apart.
  */
 type ProvenanceSeverity = "warning" | "error";
 
@@ -855,7 +781,6 @@ function provenanceIssue(
   relative: string,
   filePath: string,
   assetProvenanceSeverity: ProvenanceSeverity,
-  windowNote: string,
 ): Issue | null {
   switch (status) {
     case "shipped":
@@ -863,7 +788,7 @@ function provenanceIssue(
     case "stale":
       return issue(
         "QFAI-ASSETS-004",
-        `${ASSISTANT_DIR}/${relative} still holds exactly what qfai wrote, but that differs from the content of the installed release (a stale copy).${windowNote}`,
+        `${ASSISTANT_DIR}/${relative} still holds exactly what qfai wrote, but that differs from the content of the installed release (a stale copy).`,
         assetProvenanceSeverity,
         filePath,
         "assistantAssets.staleVendoredAsset",
@@ -874,7 +799,7 @@ function provenanceIssue(
     case "forked":
       return issue(
         "QFAI-ASSETS-005",
-        `${ASSISTANT_DIR}/${relative} matches neither the content of the installed release nor the ${ASSISTANT_ASSETS_LOCK_BASENAME} record (a local fork).${windowNote}`,
+        `${ASSISTANT_DIR}/${relative} matches neither the content of the installed release nor the ${ASSISTANT_ASSETS_LOCK_BASENAME} record (a local fork).`,
         assetProvenanceSeverity,
         filePath,
         "assistantAssets.forkedVendoredAsset",
@@ -885,7 +810,7 @@ function provenanceIssue(
     case "unshipped":
       return issue(
         "QFAI-ASSETS-006",
-        `${ASSISTANT_DIR}/${relative} is a file the installed release does not ship (an addition that is not an overlay).${windowNote}`,
+        `${ASSISTANT_DIR}/${relative} is a file the installed release does not ship (an addition that is not an overlay).`,
         assetProvenanceSeverity,
         filePath,
         "assistantAssets.unshippedVendoredAsset",
@@ -896,7 +821,7 @@ function provenanceIssue(
     case "missing":
       return issue(
         "QFAI-ASSETS-007",
-        `${ASSISTANT_DIR}/${relative} is a normative file the installed release ships, but it is not there as a regular file (missing).${windowNote}`,
+        `${ASSISTANT_DIR}/${relative} is a normative file the installed release ships, but it is not there as a regular file (missing).`,
         assetProvenanceSeverity,
         filePath,
         "assistantAssets.missingVendoredAsset",
@@ -1262,35 +1187,23 @@ async function exists(target: string): Promise<boolean> {
  * ships to every consuming repository and is loaded in no run at all, which is
  * a property of the graph rather than a probability.
  *
- * The severity is the code's promotion window rather than a literal: the
- * unread guidance is soft rule text, so nothing hard is being skipped today,
- * and a tree that grew a reference and lost its citation before anything
- * checked gets the window to reconnect it.
+ * A tree that grew a reference and lost its citation before anything checked
+ * meets this on its first run, and the remedy is to restore the citation.
  */
 function collectReferenceGraphIssues(
   root: string,
   skillsDir: string,
-  toolVersion: string,
   documents: Map<string, string>,
 ): Issue[] {
-  // Both codes below are new, so P7 gives each a promotion window instead of a
-  // severity literal beside its `issue(...)` call. The `toolVersion` the caller
-  // hands down comes from `resolveToolVersion`, which resolves rather than
-  // rejects — its own read failures return `"unknown"`, which the comparator
-  // reads as inside the window — so a version that cannot be read is never what
-  // escalates either code into a build failure.
   const reachable = collectReachableDocuments(citationContext(root, skillsDir), documents);
-  const promoteAt = RULE_PROMOTIONS.skillReferenceUnreachable.promoteAt;
-  const severity = newRuleSeverity(toolVersion, promoteAt);
-  const windowNote =
-    severity === "warning" ? ` ${promoteAt} までは warning、以降は error です。` : "";
+  const severity = "error";
   const unreachable = [...documents.keys()]
     .filter((file) => isReferenceDocument(skillsDir, file) && !reachable.has(file))
     .sort((a, b) => a.localeCompare(b))
     .map((file) =>
       issue(
         "QFAI-SKILLS-013",
-        `references/ 配下のファイルが SKILL.md から到達可能な文書のどこからも参照されていないため、読み込まれることがありません。必要な文書なら参照するステップから引用し、不要なら削除してください。${windowNote}`,
+        `references/ 配下のファイルが SKILL.md から到達可能な文書のどこからも参照されていないため、読み込まれることがありません。必要な文書なら参照するステップから引用し、不要なら削除してください。`,
         severity,
         file,
         "skills.referenceReachability",
@@ -1318,14 +1231,11 @@ type SkillDocuments = {
  * all. An unusable reference is a worse outcome than an uncited one, so the
  * read error becomes its own issue.
  */
-async function readSkillDocuments(skillsDir: string, toolVersion: string): Promise<SkillDocuments> {
+async function readSkillDocuments(skillsDir: string): Promise<SkillDocuments> {
   const files = await collectFiles(skillsDir, { extensions: [".md", ".yaml", ".yml"] });
   const documents = new Map<string, string>();
   const unreadable: Issue[] = [];
-  const promoteAt = RULE_PROMOTIONS.skillDocumentUnreadable.promoteAt;
-  const severity = newRuleSeverity(toolVersion, promoteAt);
-  const windowNote =
-    severity === "warning" ? ` ${promoteAt} までは warning、以降は error です。` : "";
+  const severity = "error";
   for (const file of files.sort((a, b) => a.localeCompare(b))) {
     try {
       documents.set(file, await readFile(file, "utf-8"));
@@ -1333,7 +1243,7 @@ async function readSkillDocuments(skillsDir: string, toolVersion: string): Promi
       unreadable.push(
         issue(
           "QFAI-SKILLS-014",
-          `skills 配下の文書を読み込めませんでした（${describeReadError(error)}）。参照到達性を判定できないため、権限と I/O を確認してください。${windowNote}`,
+          `skills 配下の文書を読み込めませんでした（${describeReadError(error)}）。参照到達性を判定できないため、権限と I/O を確認してください。`,
           severity,
           file,
           "skills.documentReadable",

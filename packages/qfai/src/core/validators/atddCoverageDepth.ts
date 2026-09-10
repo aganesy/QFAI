@@ -4,10 +4,8 @@ import path from "node:path";
 import type { AtddCodeTraceabilityResult } from "../atddTraceability.js";
 import type { GitignoreLayer } from "../gitignore.js";
 import { isPathIgnoredByLayers } from "../gitignore.js";
-import { newRuleSeverity, RULE_PROMOTIONS } from "../sunset.js";
 import { collectLedgerTables, isLedgerRow } from "../tddHelpers.js";
 import type { Issue } from "../types.js";
-import { resolveToolVersion } from "../version.js";
 import { exists, issue, readSafe } from "./utils.js";
 
 /**
@@ -418,41 +416,13 @@ function referencesMatrix(body: readonly string[], matrixRel: string): boolean {
   return pathCandidates(body).some((candidate) => resolveReference(candidate) === matrixRel);
 }
 
-/**
- * The sentence a finding inside its promotion window adds to its own message.
- *
- * Empty once the window has closed: at that point the severity is the finding's
- * settled one, and a note about a release that has already happened would read
- * as a reprieve the operator no longer has.
- */
-function windowNote(severity: "warning" | "error", promoteAt: string): string {
-  return severity === "warning"
-    ? ` ${promoteAt} リリースまでは warning、それ以降は error として報告されます。`
-    : "";
-}
-
 export async function validateAtddCoverageDepth(
   root: string,
   result: AtddCodeTraceabilityResult,
 ): Promise<Issue[]> {
-  // All three codes are new, so none of them may carry a severity literal:
-  // each takes it from its own `RULE_PROMOTIONS` pin, read once per run.
-  // `resolveToolVersion` resolves rather than rejects — an unreadable version
-  // reads as inside the window, so it can never escalate one of these into a
-  // build failure.
-  const version = await resolveToolVersion();
-  const matrixMissingSeverity = newRuleSeverity(
-    version,
-    RULE_PROMOTIONS.atddCoverageDepthMatrixMissing.promoteAt,
-  );
-  const matrixIgnoredSeverity = newRuleSeverity(
-    version,
-    RULE_PROMOTIONS.atddCoverageDepthMatrixIgnored.promoteAt,
-  );
-  const inlineMatrixSeverity = newRuleSeverity(
-    version,
-    RULE_PROMOTIONS.atddCoverageDepthInlineMatrix.promoteAt,
-  );
+  const matrixMissingSeverity = "error";
+  const matrixIgnoredSeverity = "error";
+  const inlineMatrixSeverity = "error";
 
   const issues = await matrixFileIssues(
     root,
@@ -512,8 +482,7 @@ function missingMatrixIssue(
 ): Issue {
   return issue(
     "QFAI-ATDD-131",
-    `${specId}: ATDD 対象テストがあるのに Coverage Depth Matrix (${matrixRel}) がありません。` +
-      windowNote(matrixMissingSeverity, RULE_PROMOTIONS.atddCoverageDepthMatrixMissing.promoteAt),
+    `${specId}: ATDD 対象テストがあるのに Coverage Depth Matrix (${matrixRel}) がありません。`,
     matrixMissingSeverity,
     specDir,
     "atddCoverageDepth.matrixMissing",
@@ -542,8 +511,7 @@ function ignoredMatrixIssue(
 ): Issue {
   return issue(
     "QFAI-ATDD-132",
-    `${specId}: Coverage Depth Matrix (${matrixRel}) が .gitignore で除外されています。` +
-      windowNote(matrixIgnoredSeverity, RULE_PROMOTIONS.atddCoverageDepthMatrixIgnored.promoteAt),
+    `${specId}: Coverage Depth Matrix (${matrixRel}) が .gitignore で除外されています。`,
     matrixIgnoredSeverity,
     matrixRel,
     "atddCoverageDepth.matrixIgnored",
@@ -647,8 +615,7 @@ async function stageEvidenceIssues(
     issues.push(
       issue(
         "QFAI-ATDD-133",
-        `${specId}: ${problem}。このセクションは ${matrixRel} へのリンクと集計だけにしてください。` +
-          windowNote(inlineMatrixSeverity, RULE_PROMOTIONS.atddCoverageDepthInlineMatrix.promoteAt),
+        `${specId}: ${problem}。このセクションは ${matrixRel} へのリンクと集計だけにしてください。`,
         inlineMatrixSeverity,
         evidenceRel,
         "atddCoverageDepth.inlineMatrix",

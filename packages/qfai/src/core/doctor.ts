@@ -3,7 +3,6 @@ import { access, readdir, readFile } from "node:fs/promises";
 import path from "node:path";
 
 import { parseAgentFrontmatter } from "./agentFrontmatter.js";
-import { SUNSETS, deprecationSeverity } from "./sunset.js";
 import {
   defaultConfig,
   findConfigRoot,
@@ -1968,7 +1967,7 @@ async function buildPrototypingRolesCheck(root: string): Promise<DoctorCheck> {
   };
 }
 
-const PLAYWRIGHT_SUNSET = SUNSETS.playwrightCli;
+const PLAYWRIGHT_SUNSET = "1.10.0";
 const PLAYWRIGHT_INSTALL_HINT = "npm i -D playwright";
 
 async function buildPlaywrightLauncherChecks(root: string): Promise<DoctorCheck[]> {
@@ -1981,13 +1980,7 @@ async function buildPlaywrightLauncherChecks(root: string): Promise<DoctorCheck[
   };
 
   if (resolution.status === "resolved" && resolution.resolved) {
-    return buildResolvedChecks(
-      root,
-      resolution.resolved,
-      lookedInRelative,
-      probeOrder,
-      await resolveToolVersion(),
-    );
+    return buildResolvedChecks(root, resolution.resolved, lookedInRelative, probeOrder);
   }
   if (resolution.status === "not_runnable") {
     return [buildNotRunnableCheck(root, resolution.attempts, lookedInRelative, probeOrder)];
@@ -2006,7 +1999,6 @@ function buildResolvedChecks(
   resolved: PlaywrightLauncherResolution["attempts"][number],
   lookedInRelative: LauncherLookedIn,
   probeOrder: string[],
-  toolVersion: string,
 ): DoctorCheck[] {
   const checks: DoctorCheck[] = [
     {
@@ -2028,16 +2020,13 @@ function buildResolvedChecks(
     },
   ];
   if (resolved.stage === "deprecated-cli") {
-    // Deprecation surface: still accepted during the deprecation window but
-    // flagged as warning. The literal `sunset: 1.10.0` substring is part of
-    // the public wire contract.
+    // The literal `sunset: 1.10.0` substring is part of the public wire
+    // contract, so it is written as a constant rather than folded into prose.
     checks.push({
-      // The window is what makes this a warning; past the sunset the probe is
-      // reporting a launcher the config layer now rejects, so leaving it at
-      // `warning` would have doctor call "fine" what `loadConfig` calls an
-      // error.
+      // The config layer rejects this launcher, so anything softer than an
+      // error would have doctor call "fine" what `loadConfig` calls broken.
       id: "D-DEPRECATED-PROBE",
-      severity: deprecationSeverity(toolVersion, PLAYWRIGHT_SUNSET),
+      severity: "error",
       title: "Deprecated playwright-cli probe",
       message: `playwright-cli probe is deprecated (sunset: ${PLAYWRIGHT_SUNSET}); install playwright as the primary launcher (${PLAYWRIGHT_INSTALL_HINT})`,
       details: {

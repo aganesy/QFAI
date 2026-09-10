@@ -4,6 +4,137 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ## [Unreleased]
 
+### Removed
+
+- **BREAKING: severity no longer depends on which `qfai` runs** (#1421).
+  `core/sunset.ts` held two registries — `RULE_PROMOTIONS` and `SUNSETS` — and
+  `newRuleSeverity` / `deprecationSeverity` turned a version pin in them into
+  `warning` or `error` according to the version of the tool executing the run.
+  The whole mechanism is gone, along with `scripts/promotion-preflight.mjs`, the
+  five test files that held it, and the frozen code baseline one of them read.
+
+  **77 findings that reported `warning` now report `error`.** Each was inside an
+  open window, and `error` is the severity its pin was heading to:
+
+  `QFAI-AGENT-014` … `QFAI-AGENT-019`, `QFAI-ASSETS-003` … `QFAI-ASSETS-009`,
+  `QFAI-ATDD-127`, `QFAI-ATDD-128`, `QFAI-ATDD-131` … `QFAI-ATDD-133`,
+  `QFAI-AUTOPILOT-001`, `QFAI-BFLOW-005`, `QFAI-BFLOW-006`, `QFAI-BRREF-001` …
+  `QFAI-BRREF-003`, `QFAI-CONTRACT-015`, `QFAI-CONTRACT-032` …
+  `QFAI-CONTRACT-038`, `QFAI-CONTRACT-041`, `QFAI-CONTRACT-050`,
+  `QFAI-CTYPE-004`, `QFAI-DECISION-001` … `QFAI-DECISION-007`, `QFAI-LINK-002`,
+  `QFAI-PLATFORM-003`, `QFAI-PROT-011`, `QFAI-RESEARCH-012`,
+  `QFAI-RESEARCH-015` … `QFAI-RESEARCH-021`, `QFAI-SKILLS-013`,
+  `QFAI-SKILLS-014`, `QFAI-SPECSECTION-001`, `QFAI-SPECSECTION-002`,
+  `QFAI-SPLIT-106`, `QFAI-TCLEVEL-001`, `QFAI-TCLEVEL-002`, `QFAI-TDDLIST-007`
+  … `QFAI-TDDLIST-018`, `QFAI-TEST-003`, `QFAI-TOOL-002`, `QFAI-TRIAGE-008`,
+  `QFAI-TRIAGE-009` and `TDDLIST_EVIDENCE_EMPTY`.
+
+  A project passing `validate --fail-on error` today may fail after upgrading,
+  in proportion to what it has accumulated. Measured on this repository's
+  `--profile full`: 0 errors and 1467 warnings before, 1065 errors and 402
+  warnings after. Every one of the 1467 is accounted for — none is new, and the
+  402 that stayed are the codes no pin governed.
+
+  A bare tree is affected too, in one specific way. `qfai init` writes the four
+  Stage 0 catalog documents with placeholders and asks the adopter to fill them
+  in, and `QFAI-ASSETS-003` reports the placeholders. On a tree where Stage 0
+  has not been done, `validate --profile full` now reports 5 errors where it
+  reported 1: the four documents, plus the `QFAI-DPACK-001` a tree with no
+  discussion pack already had. So a bare tree did not pass the full gate before
+  this change either — it now says four more things are outstanding, and all
+  five clear the same way, by doing the step they name. A tree that has done
+  Stage 0 and holds a pack is clean: `verify:pack` reports no errors.
+
+  `QFAI-AGENT-019` moves in one half only. It reports a routed agent a skill's
+  `roles:` omits, and only a `required` binding was ever on the ladder — a
+  `conditional` omission was and stays a `warning`, because it is a
+  documentation gap rather than an unreachable gate.
+
+  The findings no longer carry the sentence naming a release, because there is
+  no release to name.
+
+  **Why.** The maintainer picks release numbers. A severity ladder keyed on the
+  version number is a second release policy running underneath that one, and it
+  had three effects, all unwanted. Publishing `main` as one number escalated 43
+  rules while the same tree published as another escalated none, so the number
+  could not be chosen freely. A window hid the finding it deferred behind a
+  passing gate, and handed the operator the whole backlog on one upgrade. And 34
+  source files imported the registry to ask what severity to use, each rendering
+  its own sentence about the window into its own message.
+
+  A breaking change is announced in this file and in the release notes, and the
+  adopter acts on it. That is legible before an upgrade in a way a pin in the
+  source never was.
+
+  Two things that were already closed go quietly, because their windows shut at
+  1.10.0 and nothing had changed since: the legacy `.qfai/output/validate.json`
+  write path, and the pre-recut `.qfai/assistant/{steering,instructions}/`
+  layout. Both were already reported at `error`.
+
+  `docs/design-principles.md` P7 is rewritten: a code ships at the severity it
+  means, and the changelog carries the migration.
+
+  **A waiver no longer covers any of them.** `QFAI-WAIVER-002` forbids a waiver
+  whose rule is an error, and every code above now is one. The window and the
+  waiver were one escape hatch: three of these rules were documented as
+  "waivable warning, so legacy ledgers migrate instead of breaking", and that
+  route is closed. A project carrying such a waiver has to fix the condition
+  instead.
+
+  One consequence is not yet reported. `applyWaiversToExtraFindings` returns the
+  applied result and drops the waiver pass's own findings, so a waiver on a
+  finding the report appends after validation is neither applied nor refused out
+  loud — the operator sees a waiver that does nothing. That gap predates this
+  change and is tracked separately.
+
+  `QFAI-CFG-001` joins the refusal without changing severity. Its only emitter
+  always raised it at `error`, but through a variable the code generator could
+  not read, so a waiver against it was accepted on a clean run and refused on
+  the run that produced the finding. The severity is now a literal, and the
+  waiver is refused either way.
+
+  Twenty-seven source files no longer resolve the running version at all, and
+  the parameter that carried it down is gone from the functions that threaded
+  it. What still reads the version reports it: `qfai --version`, the doctor, the
+  run stamp on a result.
+
+### Changed
+
+- **The dogfooding lanes run as a ratchet while this repository migrates**
+  (#1436). The three `qfai validate` steps in CI ran `--fail-on error`, which
+  passed while the ledger rules reported `warning`. They report `error` now,
+  and this repository carries a backlog of rows written before those rules
+  existed: 1035 findings on `tdd`, 103 on `sdd`, 1065 on `full`.
+
+  A waiver cannot clear them, and writing a pointer to evidence nobody captured
+  would be worse than the backlog, so the fix is to re-run the work spec by
+  spec. Until that lands, `scripts/check-dogfood-backlog.mjs` holds each lane
+  to `scripts/dogfood-backlog.json`:
+
+  | Contract     | Holds                                                           |
+  | ------------ | --------------------------------------------------------------- |
+  | Held at zero | a file absent from the profile's pin may report no error at all |
+  | Ratchet      | a pinned file may report no more errors than its pinned count   |
+
+  So a new failure in a clean file still fails the build, and one in a file
+  already carrying debt fails as soon as it raises that file's count. A file
+  that improves is re-pinned in the same change; one that reaches zero is
+  struck from the list so the slot cannot be reused.
+
+  This is the repository's own copy of the migration the entry above describes,
+  and it is a weaker claim than the lanes made before. The lanes go back to
+  `--fail-on error` when every pin is empty.
+
+- **The `.qfai/contracts/cli/` convention is on the surface every agent reads**
+  (#1416). It sat in `CLAUDE.md` alone after the contracts README that used to
+  carry it was removed, and `AGENTS.md` is what Codex reads. An agent working
+  outside Claude had no path to the `CLI-*` index, the "no `QFAI-CONTRACT-ID`"
+  rule or the `qfai-<command>.md` naming, and a repository search found only the
+  one copy.
+
+  Moved rather than copied. Two statements of a naming rule drift, and the one
+  that goes stale is the copy its readers do not also see stated elsewhere.
+
 ### Fixed
 
 - **A writer that loses the provenance lock keeps its entry** (#1418). Twenty
@@ -29,20 +160,6 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   When the attempts do run out, the message says which of the two exhausted
   them. Losing the lock every time and being overtaken every time call for
   different things from an operator.
-
-### Changed
-
-- **The `.qfai/contracts/cli/` convention is on the surface every agent reads**
-  (#1416). It sat in `CLAUDE.md` alone after the contracts README that used to
-  carry it was removed, and `AGENTS.md` is what Codex reads. An agent working
-  outside Claude had no path to the `CLI-*` index, the "no `QFAI-CONTRACT-ID`"
-  rule or the `qfai-<command>.md` naming, and a repository search found only the
-  one copy.
-
-  Moved rather than copied. Two statements of a naming rule drift, and the one
-  that goes stale is the copy its readers do not also see stated elsewhere.
-
-### Fixed
 
 - **A whitespace-only rewrite no longer pulls a document into the shape gate**
   (#1423). `check-mdschema --scope changed` selected documents with

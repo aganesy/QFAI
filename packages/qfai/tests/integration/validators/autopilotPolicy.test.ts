@@ -177,20 +177,7 @@ ${hardRequired}
     const finding = issues.find((i) => i.code === "QFAI-AUTOPILOT-001");
     expect(finding).toBeDefined();
     expect(finding?.message ?? "").toContain("companyName");
-    // The severity follows the promotion window, so it is derived from the
-    // same registry the validator reads rather than pinned to one release: a
-    // pinned `warning` fails on the version that promotes the rule.
-    const { RULE_PROMOTIONS, newRuleSeverity } = await import("../../../src/core/sunset.js");
-    const { resolveToolVersion } = await import("../../../src/core/version.js");
-    const expected = newRuleSeverity(
-      await resolveToolVersion(),
-      RULE_PROMOTIONS.autopilotHardRequiredDrift.promoteAt,
-    );
-    expect(finding?.severity).toBe(expected);
-    if (expected === "warning") {
-      // Inside the window the message names the release that ends it.
-      expect(finding?.message ?? "").toMatch(/warning until the \d+\.\d+\.\d+ release/);
-    }
+    expect(finding?.severity).toBe("error");
   });
 
   it("reports a retired entry written beside a pinned one, which a substring test missed", async () => {

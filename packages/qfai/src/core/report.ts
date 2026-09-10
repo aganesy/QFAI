@@ -53,7 +53,6 @@ import type {
 } from "./types.js";
 import { validateProject } from "./validate.js";
 import { applyWaiversToExtraFindings } from "./waivers.js";
-import { newRuleSeverity, RULE_PROMOTIONS } from "./sunset.js";
 import { resolveToolVersion } from "./version.js";
 import { resolvePrimaryPrototypingSpec } from "./prototyping/specResolution.js";
 
@@ -633,7 +632,7 @@ export async function createReportData(
   // keeps an unfilled delta on purpose would have no way to accept it.
   const deltaScan = await applyWaiversToExtraFindings(
     resolvedRoot,
-    buildDeltaScanIssues(scannedChangeTypeSummary.uncountedDeltaFiles, await resolveToolVersion()),
+    buildDeltaScanIssues(scannedChangeTypeSummary.uncountedDeltaFiles),
   );
   const deltaScanGaps = selectUnwaivedDeltaScanGaps(
     scannedChangeTypeSummary.uncountedDeltaFiles,
@@ -848,22 +847,15 @@ const DELTA_SCAN_ISSUE_CODE = "QFAI-CTYPE-004";
  * and the Dashboard still prints `fail-on=warning: PASS` — a defect reported as
  * a clean run for every consumer that reads anything but the prose.
  *
- * One finding per `### DL-` entry, each carrying its `dl_id`, so a waiver is
- * scoped to the entry the operator actually accepted. Aggregated per file, a
- * `scope.paths` waiver for one deliberately unfilled entry also cleared every
- * broken entry beside it and every entry added to that file afterwards — and
- * with the whole gap gone the Dashboard read `delta coverage: OK`.
+ * One finding per `### DL-` entry, each carrying its `dl_id`, so the operator
+ * is told which entry is uncounted rather than which file holds one. Aggregated
+ * per file, a report named the file and left the reader to find the entry.
  *
  * A file the parser finds no `### DL-` entry in has no row to name, so it keeps
- * a file-wide finding with no `dl_id`; `waivers.ts#matchesWaiver` lets a
- * `scope.paths` waiver reach exactly those.
+ * a file-wide finding with no `dl_id`.
  */
-function buildDeltaScanIssues(gaps: readonly ReportDeltaScanGap[], toolVersion: string): Issue[] {
-  // Decided here rather than passed in: the ratchet in `sunsetLedger.test.ts`
-  // reads the emission site, and a severity chosen anywhere else is a window
-  // that never opens.
-  const promoteAt = RULE_PROMOTIONS.deltaEntryUncounted.promoteAt;
-  const deltaScanSeverity = newRuleSeverity(toolVersion, promoteAt);
+function buildDeltaScanIssues(gaps: readonly ReportDeltaScanGap[]): Issue[] {
+  const deltaScanSeverity = "error";
   const issues: Issue[] = [];
   for (const gap of gaps) {
     if (gap.uncountedEntries.length === 0) {
