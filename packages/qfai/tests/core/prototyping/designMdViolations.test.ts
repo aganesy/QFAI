@@ -179,7 +179,7 @@ describe("findDesignMdViolations — color (TC-3.2.1..9)", () => {
   });
 
   it("background shorthand with quoted url + named color flags the named color", () => {
-    // Codex 696E: `background: url("hero.png") no-repeat red` —
+    // `background: url("hero.png") no-repeat red` —
     // CSS_URL_RE strips `url("hero.png")` from the cssText BEFORE
     // COLOR_PROP_RE matches, so the post-strip value is
     // ` no-repeat red`, and the per-token loop flags `red`.
@@ -195,7 +195,7 @@ describe("findDesignMdViolations — color (TC-3.2.1..9)", () => {
   });
 
   it("background shorthand with named color (background: red) IS flagged", () => {
-    // Codex 6r-a: `background: red` is the most common shorthand
+    // `background: red` is the most common shorthand
     // path that bypassed the pre-fix scanner because background
     // wasn't in COLOR_PROP_RE. Now caught.
     const html = '<div style="background: red"></div>';
@@ -204,7 +204,7 @@ describe("findDesignMdViolations — color (TC-3.2.1..9)", () => {
   });
 
   it("border shorthand with named color (border: 1px solid red) IS flagged", () => {
-    // Codex 6r-a: `border: 1px solid red` shorthand. The per-token
+    // `border: 1px solid red` shorthand. The per-token
     // loop walks `1px solid red`; `1px` skipped (numeric), `solid`
     // skipped (not in CSS_NAMED_COLORS), `red` flagged.
     const html = '<div style="border: 1px solid red"></div>';
@@ -288,7 +288,7 @@ describe("findDesignMdViolations — color (TC-3.2.1..9)", () => {
   });
 
   it("rgba embedded in a registered box-shadow does NOT silently allow it on background-color", () => {
-    // Codex 6r-e: pre-fix, `collectAllowedColors` widened the global
+    // Pre-fix, `collectAllowedColors` widened the global
     // color allow-set with literals embedded in registered shadows,
     // so an unrelated `background-color: rgba(15,23,42,0.05)`
     // (which is the rgba inside `dm.visual.shadow.sm`) slipped past
@@ -352,7 +352,7 @@ describe("findDesignMdViolations — color (TC-3.2.1..9)", () => {
     expect(out.filter((v) => v.kind === "color")).toEqual([]);
   });
 
-  it("Tailwind arbitrary-value class with a non-token hex IS flagged (codex 8thE)", () => {
+  it("Tailwind arbitrary-value class with a non-token hex IS flagged", () => {
     // Pre-fix this test asserted the opposite — the class-attribute
     // pass was missing, so `bg-[#abcdef]` slipped past the certify
     // gate even though the rendered Tailwind utility produces
@@ -627,7 +627,7 @@ describe("findDesignMdViolations — aggregation (TC-3.2.25..28)", () => {
   });
 });
 
-describe("findDesignMdViolations — Tailwind arbitrary-value classes (codex 8thE)", () => {
+describe("findDesignMdViolations — Tailwind arbitrary-value classes", () => {
   // The shipped generator prompt mandates Tailwind utilities and forbids
   // raw `#hex` outside DESIGN.md. Drift authored as `bg-[#ff0000]` /
   // `rounded-[13px]` / `shadow-[...]` lives in `class="..."` attrs and
@@ -729,7 +729,8 @@ describe("findDesignMdViolations — Tailwind arbitrary-value classes (codex 8th
     expect(out.some((v) => v.kind === "shadow" && v.found === "0 0 99px red")).toBe(true);
   });
 
-  // codex 9Ifs: CSS Color Module L4 space-separated function syntax
+  // CSS Color Module Level 4 allows space-separated function arguments,
+  // e.g. `rgb(255 0 0)` instead of the comma-separated `rgb(255, 0, 0)`.
   it("bg-[rgb(255_0_0)] (space-separated rgb after underscore decode) is flagged", () => {
     // Pre-fix the per-token whitespace split shredded `rgb(255 0 0)` into
     // `["rgb(255", "0", "0)"]`, none of which match the rgba?\(...\)
@@ -760,8 +761,10 @@ describe("findDesignMdViolations — Tailwind arbitrary-value classes (codex 8th
   });
 });
 
-// codex 9Ify: Tailwind `font-[X]` overload disambiguation
-describe("findDesignMdViolations — Tailwind font-[X] disambiguation (codex 9Ify)", () => {
+// Tailwind's `font-[X]` arbitrary-value class overloads both a numeric or
+// keyword font-weight and a font-family name; these tests confirm weight
+// values are skipped while off-token family values are flagged.
+describe("findDesignMdViolations — Tailwind font-[X] disambiguation", () => {
   it("font-[600] (numeric weight) is silently skipped (NOT a font-family violation)", () => {
     const html = '<div class="font-[600]">x</div>';
     const out = findDesignMdViolations(html, sampleDesignMd());
@@ -793,8 +796,10 @@ describe("findDesignMdViolations — Tailwind font-[X] disambiguation (codex 9If
   });
 });
 
-// codex 9R4j: named colors in CSS punctuation / function context
-describe("findDesignMdViolations — named colors in punctuation context (codex 9R4j)", () => {
+// Named colors sitting next to CSS punctuation or inside function arguments
+// (e.g. `linear-gradient(red, blue)`, `red!important`) rather than standing
+// alone as a value.
+describe("findDesignMdViolations — named colors in punctuation context", () => {
   it("named color in linear-gradient() arguments is flagged", () => {
     // Pre-fix `linear-gradient(red, blue)` tokenized as
     // `["linear-gradient(red,", "blue)"]` after whitespace-only split,
@@ -817,7 +822,7 @@ describe("findDesignMdViolations — named colors in punctuation context (codex 
     expect(out.some((v) => v.kind === "color" && v.found === "red")).toBe(true);
   });
 
-  it("border-[#ff0000_rgb(0_0_0)] (mixed hex + L4 spaced rgb in same shorthand) flags BOTH (codex 9vcu)", async () => {
+  it("border-[#ff0000_rgb(0_0_0)] (mixed hex + L4 spaced rgb in same shorthand) flags BOTH", async () => {
     // Pre-fix the per-token loop pushed `#ff0000` then `if
     // (perTokenMatched) return;` skipped the whole-value fallback,
     // so the L4 spaced `rgb(0 0 0)` was lost in mixed-syntax
@@ -852,12 +857,12 @@ describe("findDesignMdViolations — named colors in punctuation context (codex 
   });
 });
 
-// codex AHzR7: standard Tailwind palette/scale utility classes carry
-// no CSS literal in the rendered HTML and bypass every other scanner.
-// They resolve to Tailwind defaults (CDN-served), NOT to DESIGN.md
-// tokens, so a final prototype can drift while findDesignMdViolations
-// returns zero. This block pins scanTailwindUtility.
-describe("findDesignMdViolations — Tailwind palette/scale utility classes (codex AHzR7)", () => {
+// Standard Tailwind palette/scale utility classes carry no CSS literal in
+// the rendered HTML and bypass every other scanner. They resolve to
+// Tailwind defaults (CDN-served), NOT to DESIGN.md tokens, so a final
+// prototype can drift while findDesignMdViolations returns zero. This
+// block pins scanTailwindUtility.
+describe("findDesignMdViolations — Tailwind palette/scale utility classes", () => {
   it("bg-blue-500 (palette+scale color) is flagged as drift", () => {
     const html = '<div class="bg-blue-500">x</div>';
     const out = findDesignMdViolations(html, sampleDesignMd());
