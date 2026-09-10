@@ -6,6 +6,23 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **The stable type gate runs the stable compiler** (#1449). Two packages here
+  ship a `tsc` — `typescript`, and `typescript-future`, an alias for the next
+  major. One wins the bin name and the alias did, so `check-types`, spelled
+  `tsc -b` with the bare name, graded every run against a release candidate.
+
+  Three things followed. The range the package declares support for was checked
+  by nothing, so a break under it went unreported. `check-types:future` became a
+  second copy of the same lane rather than early warning of the next major. And
+  neither lane named the compiler it had used, which is why it stood.
+
+  The lane now names its compiler by path, prints the version it got, and
+  refuses to run when that version's major is not the one
+  `devDependencies.typescript` declares. Link order cannot decide it, and a
+  later change to the bin set cannot return this silently.
+
+  The tree is clean under both compilers, so nothing else moves.
+
 - **A writer dispossessed inside the section no longer overwrites a committed
   entry** (#1442). The lock was checked once, immediately after it was
   published. Nothing asked again before the write, so a holder that lost the
