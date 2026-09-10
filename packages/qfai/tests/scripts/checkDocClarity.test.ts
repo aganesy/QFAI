@@ -120,6 +120,43 @@ describe("scripts/check-doc-clarity.mjs", () => {
     expect(result.stderr).toContain("docs/guide.md:1");
   });
 
+  it("reports the review tool's short alphanumeric-hash comment id", async () => {
+    // The same tool that leaves a numeric id ("codex r1234567") also leaves a
+    // short alphanumeric hash — both are the same kind of citation.
+    const dir = await newRepo({
+      "src/thing.ts": "// codex AG08r: fixed here\nexport const a = 1;\n",
+    });
+
+    const result = runGuard(dir, ["--scope", "all"]);
+
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain("codex-review-id");
+  });
+
+  it("reports the numeric comment id even with 'review' inserted before it", async () => {
+    const dir = await newRepo({
+      "src/thing.ts": "// codex review r3264500818: fixed here\nexport const a = 1;\n",
+    });
+
+    const result = runGuard(dir, ["--scope", "all"]);
+
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain("codex-review-id");
+  });
+
+  it("leaves plain words after 'codex' alone", async () => {
+    // "codex agent" and "codex review" (with nothing after) are ordinary
+    // product vocabulary in this repository, not a citation. A citation
+    // token always carries at least one digit.
+    const dir = await newRepo({
+      "src/thing.ts": "// the codex agent reads this file, and codex review runs it\nexport const a = 1;\n",
+    });
+
+    const result = runGuard(dir, ["--scope", "all"]);
+
+    expect(result.status).toBe(0);
+  });
+
   it("leaves a quoted hex color alone", async () => {
     // A quoted hex color and an issue number share the same shape; only the
     // trailing quote tells them apart.
