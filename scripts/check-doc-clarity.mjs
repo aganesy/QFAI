@@ -102,7 +102,11 @@ const MARKDOWN_EXTENSIONS = new Set([".md"]);
  *     excludes a preceding word character or `&` so it does not fire on an
  *     HTML entity or a hex-adjacent token.
  *   - "GH-" or "PR #" or "pull request #" followed by digits.
- *   - the review tool's own comment id, "codex r" followed by digits.
+ *   - the review tool's own comment id: "codex" (optionally followed by
+ *     "review") then a token that carries at least one digit — the tool
+ *     has used both a numeric id ("r3270307469") and a short alphanumeric
+ *     one ("8zqb", "AG08r"). A digit is required so plain phrases such as
+ *     "codex agent" or "codex review" alone do not match.
  *   - a "wave" label from a retired review process, numbered either way
  *     round, e.g. an ordinal followed by the word or the word followed by a
  *     bare number.
@@ -115,7 +119,7 @@ const PATTERNS = [
   { name: "issue-or-pr-number", re: /(?<![\w&])#\d{2,6}\b(?!["'])/g },
   { name: "gh-issue-number", re: /\bGH-\d+\b/g },
   { name: "pr-or-issue-word", re: /\b(?:PR|pull request|issue|Issue)\s+#?\d{2,6}\b/g },
-  { name: "codex-review-id", re: /\bcodex\s+r\d{6,}\b/gi },
+  { name: "codex-review-id", re: /\bcodex\s+(?:review\s+)?(?=[a-z0-9]*\d)[a-z0-9]{3,12}\b/gi },
   {
     name: "review-wave-label",
     re: /\bwave[\s-]\d+\b|\b\d+(?:st|nd|rd|th)[\s-](?:late-review[\s-])?wave\b/gi,
