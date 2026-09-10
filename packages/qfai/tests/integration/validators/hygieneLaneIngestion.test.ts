@@ -110,13 +110,12 @@ describe("TC-0015-0035 (TDD-0036): hygiene drift is ingested with its site intac
     expect(ingested, "the hygiene drift finding was not surfaced at all").toHaveLength(1);
     // Surfaced at the severity the LANE emits it with, which is error class.
     //
-    // Reporting this row as `info`, with a comment reading "it must not be reported at a severity
-    // that fails a run" — a reading `BR-0015-0017` does not support — would measure the cost:
-    // `qfai validate --fail-on error` would succeed while holding an ingested
-    // lint failure. The BR says the gate "does not re-derive, re-word or re-classify" the
-    // payload, that both codes are "declared lint-failure codes in `CLI-WFSET`, i.e. error
-    // class", and that what is deferred is rejecting them for an empty `justification:`.
-    // Two exemptions were available and only one was granted.
+    // `BR-0015-0017` says the gate "does not re-derive, re-word or re-classify" the payload,
+    // that both codes are "declared lint-failure codes in `CLI-WFSET`, i.e. error class", and
+    // that what is deferred is rejecting them for an empty `justification:`. The BR grants that
+    // one exemption and no other — severity re-classification is not among them. Reporting
+    // `info` here instead of `error` would let `qfai validate --fail-on error` succeed while an
+    // ingested lint failure is still outstanding.
     expect(ingested[0]?.severity).toBe("error");
 
     // All three fields, each asserted on its own. Joining them into one haystack
@@ -132,10 +131,11 @@ describe("TC-0015-0035 (TDD-0036): hygiene drift is ingested with its site intac
 
     // …and in the STRUCTURED fields, which is the half that reaches a JSON consumer.
     //
-    // Review finding [32]: `file` held the artifact's own path and `rule` the constant
-    // `reviewerJustification.ingested`, so `qfai validate --format json` reported a finding
-    // about `.qfai/review/**` with no way back to the workflow, and the job was nowhere at
-    // all. Every assertion above passed while that was true — a message is not a field.
+    // `file` holds the lane's own file and `rule` the lane's own rule name — not the artifact's
+    // path, and not a constant such as `reviewerJustification.ingested`. Either substitution
+    // would make `qfai validate --format json` report a finding about `.qfai/review/**` with no
+    // way back to the workflow, and the job would appear nowhere in the structured output.
+    // Checking the free-text message cannot catch that: a message is not a field.
     expect(
       ingested[0]?.file,
       "`file` must be the lane's file, not the artifact it arrived in",
@@ -165,10 +165,11 @@ describe("TC-0015-0035 (TDD-0036): hygiene drift is ingested with its site intac
   });
 
   it("has a production producer for BOTH exempt codes, not just the hygiene one", async () => {
-    // The exemption list names two codes and the gate is required to ingest both. Review finding
-    // on `package.json:19`: only `R-WORKFLOW-HYGIENE-DRIFT` had a producer — the hygiene lane —
-    // while `R-SHIPPED-WORKFLOW-SHAPE-DRIFT` appeared in the catalog and in tests and nowhere
-    // else, so shape drift reddened `lint:workflow-shape` and reached no reviewer at all.
+    // The exemption list names two codes, and the gate must ingest both. A code can be listed in
+    // the catalog and referenced in tests while no lane actually produces a review artifact for
+    // it, and such a code never reaches a reviewer through this gate at all — it can only turn
+    // its own lint script red, which is a different signal on a different day. This test pins a
+    // production producer for EACH exempt code, not just one of them.
     //
     // This RUNS each producer into a temp directory rather than inspecting `.qfai/review/**` in
     // the working tree. Measured: the first version asserted the artifacts were present, and CI
