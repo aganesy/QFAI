@@ -76,9 +76,11 @@ describe("the test tree's type-check enumeration", () => {
   });
 
   it("holds every sibling split out of a file it already names", () => {
-    // Review finding [120]. `workflowHygiene.test.ts` was enumerated and
-    // `workflowHygieneRequiredContext.test.ts` — split out of it in the same change — was not, so the
-    // required type-check job read none of it.
+    // A suite split out of an already-enumerated file needs its own entry:
+    // splitting `workflowHygiene.test.ts` into a second file such as
+    // `workflowHygieneRequiredContext.test.ts` without adding that file to
+    // the enumeration would leave the required type-check job reading none
+    // of the split-off half.
     //
     // A split sibling is recognised by NAME: same directory, and a basename that extends an
     // enumerated basename. That is what a split produces, in this repository and in general, and it

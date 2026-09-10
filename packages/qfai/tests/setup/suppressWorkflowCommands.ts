@@ -11,9 +11,9 @@
  * The damage is not cosmetic. GitHub caps annotations at **ten per level per
  * step**, so a lane whose fixtures emit ten `error` commands has no room left
  * for a real one — the cap was measured at `{"warning":10,"failure":10,
- * "notice":10}` on the `test (cli)` lane, all three saturated by fixtures
- * (#1160). And a green job carrying `failure` annotations teaches every reader
- * to distrust the annotation surface.
+ * "notice":10}` on the `test (cli)` lane, all three saturated by fixtures.
+ * And a green job carrying `failure` annotations teaches every reader to
+ * distrust the annotation surface.
  *
  * Two tests already captured stdout with `vi.spyOn` and did not leak. The
  * discipline existed and did not scale: a new test that calls `qfai init` and

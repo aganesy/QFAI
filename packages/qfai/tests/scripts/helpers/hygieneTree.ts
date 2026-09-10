@@ -124,9 +124,9 @@ export interface Declaration {
     /**
      * Item name -> digest of that step's `run` / `uses` / `with`.
      *
-     * Optional in the TYPE and required in the LANE, which is the distinction review finding [24]
-     * turned on: a context that omits an item's digest is a declaration the lane must reject, so the
-     * shape has to be expressible here in order to be planted.
+     * Optional in the TYPE and required in the LANE: a context that omits an
+     * item's digest is a declaration the lane must reject, so the shape has
+     * to stay expressible here in order to be planted.
      */
     verificationBodies?: Record<string, string>;
     /**

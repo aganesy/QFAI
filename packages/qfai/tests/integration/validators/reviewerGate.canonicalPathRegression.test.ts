@@ -134,10 +134,12 @@ describe("R-CERTIFY-VERIFY-CIRCULAR — canonical-path regression coverage", () 
     expect(circular).toEqual([]);
   });
 
-  // Wave-18: presence-only was a persistent false-positive once a
-  // previous loop left prototyping.json on disk. The four cases below
-  // pin the active-loop signal so the gate fires for in-flight loops
-  // and stays silent for any terminal / absent state.
+  // Presence alone is not a reliable signal: a completed loop leaves
+  // prototyping.json on disk too, so checking only for the file's
+  // existence would misreport a finished loop as in-flight. The four
+  // cases below pin the active-loop signal instead, so the gate fires
+  // for in-flight loops and stays silent for any terminal / absent
+  // state.
 
   it("does NOT emit when the loop converged (stopReason=axes-exceptional, acceptedIterationIndex=3)", async () => {
     const root = await newTempDir();
@@ -176,14 +178,12 @@ describe("R-CERTIFY-VERIFY-CIRCULAR — canonical-path regression coverage", () 
     expect(circular).toEqual([]);
   });
 
-  // Wave-19: writeSeedMetadata persists acceptedIterationIndex=0 at
-  // cycle 0 even while the loop is still iterating. The wave-18
-  // predicate (stopReason=null AND acceptedIterationIndex=null) was
-  // too strict and skipped real in-flight runs in this common state.
-  // The refined predicate is `stopReason === null` alone — terminal
-  // cause is the only structural signal the pipeline writes when (and
-  // only when) the loop actually finishes.
-  it("emits the finding when the cycle-0 seed has populated acceptedIterationIndex but stopReason is still null (wave-19 regression)", async () => {
+  // The active-loop signal is `stopReason === null` alone. Requiring
+  // `acceptedIterationIndex === null` too would be wrong: writeSeedMetadata
+  // persists `acceptedIterationIndex = 0` at cycle 0 while the loop is
+  // still iterating, so that stricter predicate would skip real in-flight
+  // runs in this common state.
+  it("emits the finding when the cycle-0 seed has populated acceptedIterationIndex but stopReason is still null", async () => {
     const root = await newTempDir();
     await writeVerify(root, "atdd");
     await writeCanonicalPrototyping(root, {
