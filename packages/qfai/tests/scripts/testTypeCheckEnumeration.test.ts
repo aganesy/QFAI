@@ -150,7 +150,7 @@ describe("the test tree's type-check enumeration", () => {
     expect(
       unchecked.sort(),
       `${CONFIG_REL} leaves a shipped-asset budget guard un-type-checked, which is how the suite ` +
-        "that polices the 500-line ceiling came to carry a TS2345 of its own (#1066)",
+        "that polices the 500-line ceiling came to carry a TS2345 of its own",
     ).toEqual([]);
   });
 

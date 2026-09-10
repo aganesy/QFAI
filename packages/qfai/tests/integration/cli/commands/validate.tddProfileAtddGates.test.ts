@@ -238,7 +238,7 @@ describe("--profile tdd can observe the ATDD routing gates", () => {
     });
   });
 
-  it("runs the narrow profile in CI and reports it (#397)", async () => {
+  it("runs the narrow profile in CI and reports it", async () => {
     await withCiEnv(true, async () => {
       await withProject(async (root) => {
         await runValidate({ root, strict: false, profile: "atdd" });

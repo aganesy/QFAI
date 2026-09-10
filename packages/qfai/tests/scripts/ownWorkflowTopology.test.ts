@@ -3170,7 +3170,7 @@ describe("release automation performs decisions rather than making them", () => 
     }
   });
 
-  describe("the tag gate reads the field the REST response actually carries (#1155)", () => {
+  describe("the tag gate reads the field the REST response actually carries", () => {
     /**
      * The shipped association check, cut out of `tag-release.yml` and made
      * runnable.

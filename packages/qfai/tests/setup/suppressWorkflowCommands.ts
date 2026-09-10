@@ -105,12 +105,12 @@ process.stdout.write = ((...args: WriteArgs): boolean => {
  */
 function report(line: string): void {
   if (suppressed <= 3) {
-    process.stderr.write(`[test setup] dropped a GitHub workflow command (#1160): ${line}\n`);
+    process.stderr.write(`[test setup] dropped a GitHub workflow command: ${line}\n`);
     return;
   }
   if (suppressed % 20 === 0) {
     process.stderr.write(
-      `[test setup] dropped ${String(suppressed)} GitHub workflow commands so far (#1160)\n`,
+      `[test setup] dropped ${String(suppressed)} GitHub workflow commands so far\n`,
     );
   }
 }
