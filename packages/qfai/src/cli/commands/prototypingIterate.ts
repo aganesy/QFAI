@@ -363,11 +363,9 @@ type PrototypingJsonShape = {
  * verify every `imageSources[]` entry. Hard-coded here as the initial
  * baseline.
  *
- * TODO (codex review — tracked as a follow-up, not blocking
- * this release; see the spec's open-questions log): expose
- * `qfai.config.yaml#prototyping.licenseCatalog` so consumer projects
- * can register additional allowlisted sources (e.g. `pixabay`)
- * without forking QFAI. Today consumers are bound to the
+ * TODO: expose `qfai.config.yaml#prototyping.licenseCatalog` so
+ * consumer projects can register additional allowlisted sources (e.g.
+ * `pixabay`) without forking QFAI. Today consumers are bound to the
  * `unsplash` + `pexels` baseline. The wire-in path is (1) extend
  * `QfaiConfig` with an optional `prototyping.licenseCatalog?: { ... }`
  * field, (2) honour it in `writeSeedMetadata` (the cycle-0 frozen
@@ -861,12 +859,12 @@ export async function runPrototypingIterate(
     // but deleting the on-disk dirs guarantees no resolver can stumble
     // into them.
     //
-    // codex AHzR5: fail closed when rm fails. Pre-fix this swallowed
-    // the error and continued; the new loop reuses iter-NN/ and any
-    // surviving subfile (Windows file lock / EACCES / EBUSY) gets
-    // sealed into the next certificate's evidenceDigests. Surfacing
-    // the failed dir + cause lets the operator clear the lock before
-    // iterate writes the new plan.
+    // Fail closed when rm fails: surface the failed dir + cause instead
+    // of swallowing the error and continuing, so the operator can clear
+    // the lock before iterate writes the new plan. The new loop reuses
+    // iter-NN/, so silently continuing would let any surviving subfile
+    // (Windows file lock / EACCES / EBUSY) get sealed into the next
+    // certificate's evidenceDigests.
     const rmResult = await clearEvidenceIterDirs(
       path.join(options.root, PROTOTYPING_EVIDENCE_REL),
       options.root,
@@ -2401,17 +2399,16 @@ async function clearEvidenceIterDirs(
     try {
       await rm(abs, { recursive: true, force: true });
     } catch (err) {
-      // codex AHzR5: pre-fix this only logged and continued, but the
-      // new loop reuses the same iter-NN/ dir. `certify` only treats
-      // dirs whose index is >= iterations.length as stale; files that
-      // survive INSIDE a reused iter-00/ (because capture writes only
-      // the screens it knows about and any extra files persist) get
-      // sealed into the new certificate's evidenceDigests. The fix is
-      // to fail closed: surface the rm failure as a hard error so the
-      // operator clears the lock (Windows file lock / EACCES / EBUSY)
-      // before iterate writes the new plan. The hint at the call site
-      // names the offending dir + cause so the operator can act
-      // immediately.
+      // Fails closed here: surface the rm failure as a hard error so
+      // the operator clears the lock (Windows file lock / EACCES /
+      // EBUSY) before iterate writes the new plan. The hint at the
+      // call site names the offending dir + cause so the operator can
+      // act immediately. Logging and continuing instead would not help
+      // — the new loop reuses the same iter-NN/ dir, `certify` only
+      // treats dirs whose index is >= iterations.length as stale, and
+      // any file that survives INSIDE a reused iter-00/ (capture writes
+      // only the screens it knows about, so extra files persist) would
+      // get sealed into the new certificate's evidenceDigests.
       return { ok: false, failedDir: abs, cause: err };
     }
   }
@@ -2458,7 +2455,7 @@ function buildRunId(designMdSha: string): string {
  * Re-run the runtime DESIGN.md drift scanner against every `*.html`
  * file in the accepted iteration's evidence dir.
  *
- * codex 8thM: shouldStop honors the reviewer-recorded
+ * `shouldStop` honors the reviewer-recorded
  * `designMdViolations: []` at face value, but the shipped reviewer
  * prompt instructs reviewers NOT to author that field directly — only
  * runtime gates inject findings. Without this re-scan, a prototype with
@@ -3086,7 +3083,7 @@ async function evaluateCycleGteOneGate(
     return { shortCircuit: true, exitCode: 2 };
   }
   if (protoRecord.designMd.sha256 !== input.currentSha) {
-    // codex AHM3: phrase the error so both the legacy "sha256 mismatch"
+    // Phrase the error so both the legacy "sha256 mismatch"
     // text AND the canonical mid-loop-drift regex
     // /DESIGN\.md hash mismatch.*re-run from cycle 0/ match.
     // Reviewers (and the prototyping orchestrator) parse stderr for
@@ -3166,7 +3163,7 @@ async function evaluateCycleGteOneGate(
   }
   const stop = shouldStop(recordedIterations);
   if (stop !== null) {
-    // codex 8thM: shouldStop accepts the reviewer-recorded
+    // `shouldStop` accepts the reviewer-recorded
     // `designMdViolations: []` at face value, but the shipped reviewer
     // prompt instructs reviewers to leave that field empty unless a
     // runtime gate injects findings — and the only runtime scanner
@@ -3184,7 +3181,7 @@ async function evaluateCycleGteOneGate(
       );
       const first = recomputed[0];
       if (first !== undefined) {
-        // codex AG08r: max-budget drift edge case. If the last iter is
+        // Max-budget drift edge case: if the last iter is
         // already at MAX_ITERATION_INDEX (cycle 9), there is no valid
         // next cycle (--cycle is capped at 9). Falling through to the
         // expectedNextCycle gate would then exit 2 with a cycle-mismatch

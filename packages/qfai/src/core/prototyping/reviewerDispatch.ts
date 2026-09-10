@@ -70,9 +70,9 @@ export type ReviewerOutcome = {
    * `<screen>.review.json`). Omitted on `retryExhausted` /
    * `launchFailed` outcomes because no attempt produced a payload.
    *
-   * codex review r3264765754 (P2): pre-fix the dispatcher dropped the
-   * runner's `reviewJson` on the floor and never set `reviewJsonPath`
-   * either, so production callers got `finalStatus: "ok"` with neither
+   * Without this field, the dispatcher would drop the runner's
+   * `reviewJson` on the floor and never set `reviewJsonPath` either, so
+   * production callers would see `finalStatus: "ok"` with neither
    * payload nor path — making the success state operationally useless.
    */
   readonly reviewJson?: unknown;
@@ -171,11 +171,11 @@ export type ReviewerDispatchOptions = {
    * `<screen>.review.json` file; the dispatcher records the returned
    * path on the outcome's `reviewJsonPath`.
    *
-   * codex review r3264765754 (P2): kept optional so existing test stubs
-   * (which only need to assert payload propagation) do not have to
-   * wire a writer. Production callers inject a real writer; persistence
-   * failures propagate as thrown errors and the dispatcher records the
-   * failure as another attempt (consistent with the runner-throw path).
+   * Optional so existing test stubs (which only need to assert payload
+   * propagation) do not have to wire a writer. Production callers
+   * inject a real writer; persistence failures propagate as thrown
+   * errors and the dispatcher records the failure as another attempt
+   * (consistent with the runner-throw path).
    */
   readonly persistReviewJson?: (
     specId: string,
@@ -282,15 +282,14 @@ export async function dispatchReviewerToPair(
       continue;
     }
     if (result.ok) {
-      // codex review r3265074289 (P3): a runner returning
-      // `{ok: true}` without a `reviewJson` payload is a schema-invalid
-      // success — there is nothing for the persister to write, and
-      // letting it flow through silently would seal a downstream
-      // certificate with no review artifact. Symmetric with the
-      // runner-throw / sleeper-throw / persister-throw paths: record
-      // the synthetic failed attempt, break, and fall through to
-      // `retryExhausted` so the caller treats the pair as
-      // uncompleted. The error message names the missing payload so
+      // A runner returning `{ok: true}` without a `reviewJson` payload
+      // is a schema-invalid success — there is nothing for the
+      // persister to write, and letting it flow through silently would
+      // seal a downstream certificate with no review artifact.
+      // Symmetric with the runner-throw / sleeper-throw / persister-
+      // throw paths: record the synthetic failed attempt, break, and
+      // fall through to `retryExhausted` so the caller treats the pair
+      // as uncompleted. The error message names the missing payload so
       // operators can diagnose the runner contract violation.
       if (result.reviewJson === undefined) {
         attempts.push({
@@ -301,14 +300,14 @@ export async function dispatchReviewerToPair(
         break;
       }
       attempts.push({ ok: true, attemptIndex: i });
-      // codex review r3264765754 (P2): propagate the in-memory
-      // `reviewJson` payload to the outcome and (optionally) call the
-      // injected persister to write the `<screen>.review.json` file.
-      // The persister is invoked exactly once on the FIRST successful
-      // attempt; persistence failures are recorded as a synthetic
-      // failed attempt (symmetric with the runner-throw + sleeper-throw
-      // paths above) so the outcome's `finalStatus` remains the source
-      // of truth for the operator-facing gate.
+      // Propagate the in-memory `reviewJson` payload to the outcome
+      // and (optionally) call the injected persister to write the
+      // `<screen>.review.json` file. The persister is invoked exactly
+      // once on the FIRST successful attempt; persistence failures are
+      // recorded as a synthetic failed attempt (symmetric with the
+      // runner-throw + sleeper-throw paths above) so the outcome's
+      // `finalStatus` remains the source of truth for the
+      // operator-facing gate.
       const successPayload = result.reviewJson;
       if (options.persistReviewJson !== undefined) {
         try {
