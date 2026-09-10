@@ -774,7 +774,7 @@ function zeroSecretPins(): ShapePin[] {
         // string to the YAML parser — so it appears in neither a dotted pattern
         // nor the `secrets` mapping-key count below.
         //
-        // `${{ toJSON(secrets) }}` is worse than either — review finding [11].
+        // `${{ toJSON(secrets) }}` is worse than either:
         // GitHub Actions lets a context OBJECT be passed to `toJSON`, so one
         // `env:` entry hands the adopter's entire secret set to a step and from
         // there anywhere the step can reach. It names no property, so no
@@ -958,7 +958,7 @@ export async function writeShapeFindingsForReviewerGate(
   // Every component from `boundary` down must be a real directory, and the artifact goes to an
   // exclusive temp name that is RENAMED into place.
   //
-  // Review finding [48], filed against the hygiene lane's identical writer and applying here
+  // The same reasoning as the hygiene lane's identical writer, applying here
   // word for word: `.qfai/review/**` is gitignored but not unwritable, and a pull request can
   // force-add a path under it — the artifact's own name as a symlink, or a directory component
   // as one, which `mkdir` follows without creating anything. `writeFile` then truncates whatever
@@ -993,7 +993,7 @@ export async function writeShapeFindingsForReviewerGate(
   await walk();
 
   // The parent's IDENTITY — device and inode — pinned across the write, the same way the
-  // hygiene lane's writer does it. Review finding [71] named this producer as the one with no
+  // hygiene lane's writer does it. Without it, this producer would be the one with no
   // identity comparison at all: the descent walk above and the `open` below are separate
   // operations on a name, and a directory swapped for a link in between puts both the staging
   // file and the rename on the far side.

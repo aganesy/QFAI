@@ -612,6 +612,60 @@ describe("an abandoned lock is reclaimed without deleting a live one", () => {
     ).toEqual([...names].sort());
   });
 
+  it("does not overwrite a committed entry with content it read before losing the lock", async () => {
+    // The row above steals the lock BEFORE the read-back, which is the window the read-back
+    // closes. This one steals it after, which nothing used to watch.
+    //
+    // `rename` is the arbitration and it fails only onto a NON-EMPTY directory, so an empty one at
+    // the lock name lets the next writer's rename land while the first is still inside the
+    // section. Two writers are then working from reads taken at different moments, and the one
+    // that writes last wins — so an entry that was already committed is replaced by content
+    // computed before it existed. Both calls return successfully and the file never records it
+    // again, which is why this cannot be left to a later run.
+    //
+    // Planted rather than raced, for the reason the row above is: the window is microseconds on an
+    // idle machine. Everything here happens inside one mutator call, which is the section.
+    const root = await tempRoot();
+    await writeInstallProvenance(root, { workflows: { "qfai-seed.yml": entryTyped() } });
+
+    let displaced = false;
+    await updateInstallProvenance(root, (current) => {
+      if (!displaced) {
+        displaced = true;
+        // Take this writer's lock away and leave an empty directory at the name — what a holder
+        // that died between its `unlink` and its `rmdir` leaves, and what the next `rename` lands
+        // on.
+        const dir = lockDir(root);
+        renameSync(dir, `${dir}.stolen`);
+        mkdirSync(dir, { recursive: true });
+        // The writer that took the freed section, finishing its own read-modify-write. `current`
+        // above was read before this landed, so returning a mutation of it is what drops the
+        // entry.
+        writeFileSync(
+          recordPath(root),
+          `${JSON.stringify(
+            {
+              workflows: { "qfai-seed.yml": entryTyped(), "qfai-rival.yml": entryTyped() },
+            },
+            null,
+            2,
+          )}\n`,
+          "utf-8",
+        );
+      }
+      return {
+        ...current,
+        workflows: { ...current.workflows, "qfai-victim.yml": entryTyped() },
+      };
+    });
+
+    expect(displaced, "the plant must fire, or this row exercises nothing").toBe(true);
+    expect(
+      Object.keys((await readInstallProvenance(root)).workflows).sort(),
+      "a writer dispossessed inside the section must not write over what it did not read",
+    ).toEqual(["qfai-rival.yml", "qfai-seed.yml", "qfai-victim.yml"]);
+  });
+
   it("does not release a lock it no longer owns", async () => {
     const root = await tempRoot();
     await writeInstallProvenance(root, { workflows: {} });
@@ -1137,7 +1191,7 @@ describe("releasing a lock does not follow a name that was swapped under it", ()
     let swapped = false;
     let hostage = "";
 
-    await updateInstallProvenance(root, (current) => {
+    const outcome = await updateInstallProvenance(root, (current) => {
       // Inside the section: the lock is held and its marker names this holder.
       const markers = readdirSync(lockDir);
       if (markers.length === 1) {
@@ -1159,11 +1213,25 @@ describe("releasing a lock does not follow a name that was swapped under it", ()
         }
       }
       return { ...current, workflows: { ...current.workflows, "qfai-tests.yml": entryTyped() } };
-    });
+    }).then(
+      () => undefined,
+      (error: unknown) => error,
+    );
 
     if (!swapped) {
       return; // the fixture could not be built here
     }
+
+    // The write is refused rather than carried out. A link standing where this writer's lock was
+    // means the lock is not held, and a writer that is not holding it does not write — so the
+    // second attempt meets the same link at acquisition and stops on the path.
+    //
+    // What this row is about is unchanged: whatever the write does, release must not reach through
+    // that name on its way out.
+    expect(
+      outcome,
+      "a lock name swapped for a link is refused, not written through",
+    ).toBeInstanceOf(Error);
 
     expect(
       existsSync(hostage),

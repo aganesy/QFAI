@@ -1,5 +1,5 @@
 /**
- * QFAI-SPACK-095 — a divergent required-file catalog is reported (#393).
+ * QFAI-SPACK-095 — a divergent required-file catalog is reported.
  *
  * `resolveLayeredRequiredFileSets` prefers the on-disk catalog over the in-code
  * defaults and falls back silently, and a well-formed catalog array replaces

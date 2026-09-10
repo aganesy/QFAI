@@ -32,8 +32,8 @@ vi.mock("node:fs/promises", async (importOriginal) => {
 const { collectMissingLayeredRequiredFiles, collectSpecEntries } =
   await import("../../src/core/specLayout.js");
 
-// Mirrors REQUIRED_LAYERED_SPEC_FILES_V1421. `10_Plan.md` joined it in #393,
-// which reconciled the constant with the shipped catalog that already had it.
+// Mirrors REQUIRED_LAYERED_SPEC_FILES_V1421, reconciled with the shipped
+// catalog, which includes `10_Plan.md`.
 const V1421_SPEC_FILES = [
   "01_Spec.md",
   "02_User-stories.md",

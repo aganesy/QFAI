@@ -40,7 +40,7 @@ const readTemplate = (tree: string, rel: string): Promise<string> =>
 
 /**
  * The catalog is the required set; the shipped required file lists come from
- * `specLayout.ts`, which #393 reconciled with `spec_required_files.json`.
+ * `specLayout.ts`, kept in sync with `spec_required_files.json`.
  */
 const REQUIRED = {
   _policies: REQUIRED_LAYERED_SHARED_FILES_V1421,

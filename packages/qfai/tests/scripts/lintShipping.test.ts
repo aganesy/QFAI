@@ -392,18 +392,15 @@ describe("lint-shipping fixture — detection rules", () => {
       '"schemaVersion"',
       '/**\n * Documents the "schemaVersion" field.\n */\nexport function bar(): void {}\n',
     ],
-  ])(
-    "flags %s in src/ JSDoc (PR #206 review NwM- / Nv2- / Nv_Q full SSOT parity)",
-    async (rule, expectedMatch, body) => {
-      const root = await newTempDir();
-      await mkdir(path.join(root, "src/foo"), { recursive: true });
-      await writeFile(path.join(root, "src/foo/bar.ts"), body, "utf-8");
+  ])("flags %s in src/ JSDoc", async (rule, expectedMatch, body) => {
+    const root = await newTempDir();
+    await mkdir(path.join(root, "src/foo"), { recursive: true });
+    await writeFile(path.join(root, "src/foo/bar.ts"), body, "utf-8");
 
-      const { violations } = await runLintShipping(root);
-      expect(violations.map((v) => v.pattern)).toContain(rule);
-      expect(violations.map((v) => v.matched)).toContain(expectedMatch);
-    },
-  );
+    const { violations } = await runLintShipping(root);
+    expect(violations.map((v) => v.pattern)).toContain(rule);
+    expect(violations.map((v) => v.matched)).toContain(expectedMatch);
+  });
 
   it("does NOT flag sample-tier spec-0001..0009 in src/ JSDoc (Category-B / runtime examples)", async () => {
     // The leakage script tolerates spec-0001..0009 as Category-B /

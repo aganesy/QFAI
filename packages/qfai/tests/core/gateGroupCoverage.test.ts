@@ -4,11 +4,11 @@
  * checking it against the emitters.
  *
  * The message asserts completeness ("Hard gates NOT evaluated in this run: …"),
- * so a family missing from the table reads as a family that WAS evaluated. When
- * #572 was filed the table named 25 families of at least 37, and the twelve it
- * omitted included the spec-pack structural gates — triage approval, status
- * enums, acceptance-criteria verification, the Traceability Ledger. An
- * implementer running `--profile tdd` per item was told accurately that
+ * so a family missing from the table reads as a family that WAS evaluated. A
+ * table naming 25 families of at least 37 would omit twelve that included the
+ * spec-pack structural gates — triage approval, status enums,
+ * acceptance-criteria verification, the Traceability Ledger. An
+ * implementer running `--profile tdd` would then be told accurately that
  * repository hygiene and the prototyping gates were skipped, and told nothing
  * about six spec-pack families that were also skipped. The list's specificity
  * is what makes the omission misleading.
@@ -155,13 +155,13 @@ describe("QFAI-PROFILE-001's skip-set accounts for every code that can be emitte
     // still reported exactly once — by whichever group is missing. Misreporting
     // needs a profile that runs the narrow group WITHOUT the wildcard one.
     //
-    // No profile did, in the instance this case was written for.
-    // `canonical-uix` HELD `["UIX-VAL-*"]`, which swallowed all twelve
-    // `UIX-VAL-SKILL-*` codes that `prototyping-skill` owns (#1215) — and
-    // `prototyping-skill` is reachable only from `runFullValidators`, which
-    // runs `canonical-uix` too, so nothing misreported. The same commit
-    // replaced that glob with an enumeration, so the overlap is gone and this
-    // case is asserted for the divergence that has not happened yet.
+    // No profile does today. `canonical-uix` holds an enumeration rather
+    // than `["UIX-VAL-*"]`, so it no longer swallows the twelve
+    // `UIX-VAL-SKILL-*` codes that `prototyping-skill` owns — and even a
+    // wildcard there would not misreport, since `prototyping-skill` is
+    // reachable only from `runFullValidators`, which runs `canonical-uix`
+    // too. This case is asserted for the divergence that has not happened
+    // yet.
     //
     // It is worth asserting because it has happened twice on other prefixes,
     // and both repairs are in the table as comments: `QFAI-CONTRACT-*` "would

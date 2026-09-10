@@ -1,5 +1,9 @@
 # 09 Delta
 
+<!-- markdownlint-disable MD024 -->
+<!-- Each round records its own `## Triage`, and the triage rules read a section
+     only under that exact heading, so the repeated heading is the shape. -->
+
 ## 2026-09-04
 
 - `CR-20260904-0003` (`confirm-only`, `/qfai-sdd 0004`): this spec's
@@ -78,7 +82,7 @@
 - Posture: additive append; no purge in spec-0004. Backward compatibility for existing validators retained.
 - Approved By: yusuke_senaga
 
-### Triage
+## Triage
 
 | Source                       | Subject                                     | Existing Spec | Operation | Sub-op | Approved By   | Rationale                                  |
 | ---------------------------- | ------------------------------------------- | ------------- | --------- | ------ | ------------- | ------------------------------------------ |
@@ -88,7 +92,7 @@
 | spec-0017 AC-0017-0019       | designMdViolations schema validator         | spec-0004     | UPDATE    | APPEND | yusuke_senaga | violation shape gate is validate           |
 | spec-0017 AC-0017-0020       | `findDesignMdViolations` purity contract    | spec-0004     | UPDATE    | APPEND | yusuke_senaga | pure-fn determinism is validate            |
 
-### Operations
+## CHG-001 Operations
 
 | Op ID  | Op Type       | Target                                                | Summary                                                                                                                         |
 | ------ | ------------- | ----------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
@@ -98,7 +102,7 @@
 | OP-004 | UPDATE:APPEND | 05_Examples.md (EX-0004-0007..0012)                   | worked examples per AC-0004-0008..0014                                                                                          |
 | OP-005 | UPDATE:APPEND | 06_Test-Cases.md (TC-0004-0008..0014)                 | test coverage per AC; routes to existing tests under `packages/qfai/tests/core/validators/`                                     |
 
-### Notes
+## CHG-001 Notes
 
 - spec-0004 は CHG-001 から開始 (既存 CHG-NNN なし、本日 2026-05-06 が初 CHG)。
 - `QFAI-PROT2-NNN` プレフィックスは distributed-surface 禁止リスト (`.agents/rules/distributed-surface.md`) のため、本 spec 文面では `QFAI-DCON-NNN` / `QFAI-PROT-NNN` のみ使用。
@@ -168,7 +172,7 @@
 - Posture: additive append; preserves all existing AC/BR/EX/TC numbering. NFR-0101 (SSOT-sync mirror) and NFR-0103 (validate warning names sunset version) absorbed into BR layer via BR-0004-0026 / BR-0004-0027.
 - Approved By: yusuke_senaga
 
-### Triage
+## Triage
 
 | Source                                  | Subject                                                                                                                                        | Existing Spec | Operation | Sub-op | Approved By   | Rationale                                                                                                                    |
 | --------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- | ------------- | --------- | ------ | ------------- | ---------------------------------------------------------------------------------------------------------------------------- |
@@ -178,7 +182,7 @@
 | NFR-0101 (SSOT-sync mirror enforced)    | absorbed into BR-0004-0027 (SSOT-sync pair-changed CI lane)                                                                                    | spec-0004     | UPDATE    | APPEND | yusuke_senaga | NFR realized as BR-layer mechanical guarantee                                                                                |
 | NFR-0103 (warning names sunset version) | absorbed into BR-0004-0026 (legacy validate.json deprecation window)                                                                           | spec-0004     | UPDATE    | APPEND | yusuke_senaga | NFR realized through existing sunset-named-in-warning pattern (BR-0004-0021)                                                 |
 
-### CHG-005 Operations (this PR)
+## CHG-005 Operations
 
 | Op ID  | Op Type       | Target                                                                                  | Summary                                                                                                                                                                        |
 | ------ | ------------- | --------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |

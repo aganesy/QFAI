@@ -136,8 +136,8 @@ describe("Unit and Component carry no ATDD annotation obligation", () => {
 
   it("does not call an L1 annotation inside a scanned directory forbidden", async () => {
     // The routing rule and the forbidden rule have to agree. Reporting the
-    // annotation as misplaced while also not counting it is the two-errors-from
-    // -one-action shape #217 removed for L4; L1/L2 must not reintroduce it.
+    // annotation as misplaced while also not counting it is a two-errors-from
+    // -one-action shape; L4 does not do this, and L1/L2 must not reintroduce it.
     await withProject(
       [{ id: "TC-0001", level: "L1" }],
       { "tests/integration/spec_0001/tc-0001.test.ts": "# QFAI:SPEC-0001:TC-0001\n" },

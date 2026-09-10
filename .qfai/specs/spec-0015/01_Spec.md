@@ -16,7 +16,7 @@
   - All handoff writers use the canonical CLI-HANDOFF schema (`packages/qfai/src/core/schemas/handoff.ts`); `R-HANDOFF-SCHEMA-DRIFT` (error) guards SSOT-sync Pair IV; legacy files accepted with `D-HANDOFF-LEGACY-FORMAT` during the window (REQ-0161).
   - The eight-code Reviewer-Gate catalog (`R-AUTOPILOT-POLICY-MISSING`, `R-HANDOFF-SCHEMA-DRIFT`, `R-EVIDENCE-MUTATION-UNLOGGED`, `R-DESIGN-MD-PATCH-OUT-OF-ZONE`, `R-PACK-LOCATION-DRIFT`, `R-SKILL-MANIFEST-DRIFT`, `R-EXPLORATION-CERTIFY-ATTEMPT`, `R-MOCK-HREF-DRIFT`) governs membership only and declares no per-code severity column — each code's severity belongs to the detector that emits it (`R-DESIGN-MD-PATCH-OUT-OF-ZONE` stays warning per REQ-0151) — while every catalog code carries a mandatory non-empty `justification:` whose empty / whitespace-only value is rejected by `qfai validate` ingestion at severity error for all eight; prompt-augmentation timing stays OQ-0119-deferred (REQ-0168).
   - `qfai audit log` (CLI-AUDIT, SHOULD) and `qfai handoff upgrade` (SHOULD) provide the audit-listing and legacy-adapter ergonomics (REQ-0171 / REQ-0172).
-  - `references/*.md` + each SKILL.md are realigned to the OQ-0152..0157 outcomes in the same atomic PR; `qfai validate --report` enforces zero stale references at HEAD after sunset (REQ-0173).
+  - `references/*.md` + each SKILL.md are realigned to the OQ-0152..0157 outcomes in the same atomic PR; `qfai validate --report` reports every stale reference left at HEAD as a warning (REQ-0173).
 
 ## Scope
 
@@ -68,7 +68,7 @@
 - REQ-0168: new Reviewer-Gate finding-code catalog (8 codes, membership only — no per-code severity column; mandatory non-empty `justification:`, empty value rejected at severity error); prompt-augmentation timing inherits OQ-0119 carry-forward deferral
 - REQ-0171: `qfai audit log` CLI surface (CLI-AUDIT, SHOULD) per DR-0271 (`--scope`/`--operator`/`--clause` + `--format table|json`)
 - REQ-0172: `qfai handoff upgrade <legacy>` adapter helper (SHOULD); preserves originals under `legacy:`
-- REQ-0173: cross-skill documentation realignment to the OQ-0152..0157 outcomes; `qfai validate --report` verifies zero stale references after sunset
+- REQ-0173: cross-skill documentation realignment to the OQ-0152..0157 outcomes; `qfai validate --report` reports every stale reference left at HEAD as a warning
 - REQ-0015-0015: PROMPT_SCANNER_PAIRS manifest expansion — `packages/qfai/src/core/validators/promptScannerPairs.ts` は現状 proof-of-concept として単一 clause (`color-literal-ban`) のみを encode している。これを残りの DesignMd violation kinds (`font-family-ban` / `radius-literal-ban` / `shadow-rgba-ban`) まで拡張する。各 entry は scanner-source token 集合と対応する `generator-prompt.md` clause token を pair で持ち、drift 時に R-PROMPT-SCANNER-DRIFT emission で unmatched clause を triage 用に naming する。validator code は既に data-driven (`for (const pair of ...)` loop) であり、本 REQ は manifest の growth + 対応 fixture coverage を pin する。Acceptance signal: 4 entries (color / font / radius / shadow) が manifest に揃い、各 entry に対し scanner-only edit と prompt-only edit のいずれもが `R-PROMPT-SCANNER-DRIFT` を fire する unit/integration test が green。
 
 ## Entry points

@@ -1,10 +1,10 @@
 /**
- * Review finding [32]: `validateHtmlMock` imported jsdom whether or not it had anything to parse.
+ * `validateHtmlMock` must not import jsdom regardless of whether it has anything to parse.
  *
- * Moving that import off module scope is what stopped every `qfai` command paying jsdom's 910 ms.
- * Paying it inside the validator regardless handed the whole saving straight back to `validate`,
+ * Moving that import off module scope is what stops every `qfai` command paying jsdom's 910 ms.
+ * Paying it inside the validator regardless would hand the whole saving straight back to `validate`,
  * which is the command that runs on the overwhelmingly common tree with no HTML mock in it at all —
- * and because the import now happens after `startTime`, a project whose `htmlMockTimeout` is under
+ * and if the import happened after `startTime`, a project whose `htmlMockTimeout` is under
  * 910 ms would raise `QFAI-MOCK-099` having inspected nothing.
  *
  * Asserted by MOCKING the module rather than by timing it. A stopwatch here measures the module

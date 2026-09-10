@@ -1,16 +1,16 @@
 /**
- * A narrow profile in CI is reported, not blocked (#397).
+ * A narrow profile in CI must be reported, not blocked.
  *
- * `buildCiProfileIssue` returned a hard `error` for any profile outside
- * `{full, verify, tdd, sdd}` whenever `CI=true`, and `runValidate`
- * short-circuited: zero validators ran and the command exited non-zero.
- * `qfai-atdd`, `qfai-discussion` and `qfai-prototyping` each name one of the
- * rejected profiles as their **only** completion gate, with no CI-legal
- * fallback documented — so all three became uncompletable the moment they ran
- * anywhere that exports `CI=true`.
+ * `buildCiProfileIssue` returning a hard `error` for any profile outside
+ * `{full, verify, tdd, sdd}` whenever `CI=true` would make `runValidate`
+ * short-circuit: zero validators run and the command exits non-zero.
+ * `qfai-atdd`, `qfai-discussion` and `qfai-prototyping` each name one of
+ * those profiles as their **only** completion gate, with no CI-legal
+ * fallback documented — so all three would become uncompletable the moment
+ * they ran anywhere that exports `CI=true`.
  *
- * The operator-facing strings also named three profiles while the allowlist
- * held four.
+ * The operator-facing strings must also name all four profiles the
+ * allowlist holds.
  */
 import { describe, expect, it } from "vitest";
 

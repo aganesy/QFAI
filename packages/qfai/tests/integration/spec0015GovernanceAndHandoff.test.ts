@@ -44,10 +44,7 @@ import {
 } from "../../src/core/validators/handoffSchemaPairs.js";
 import { JUSTIFICATION_CATALOG } from "../../src/core/validators/justificationCatalog.js";
 import { validateReviewerJustification } from "../../src/core/validators/reviewerJustification.js";
-import {
-  STALE_REFERENCE_SUNSET,
-  validateStaleReferences,
-} from "../../src/core/validators/staleReferences.js";
+import { validateStaleReferences } from "../../src/core/validators/staleReferences.js";
 import { validateHandoff } from "../../src/core/schemas/handoff.js";
 import { loadConfig } from "../../src/core/config.js";
 import { removeTempTree } from "../helpers/tempTree.js";
@@ -405,13 +402,11 @@ describe("spec-0015 stale-ref report CHG-006", () => {
     const dir = path.join(root, ".qfai", "assistant", "skills", "qfai-prototyping", "references");
     await mkdir(dir, { recursive: true });
     await writeFile(path.join(dir, "handoff.md"), "# Handoff\nUses handoff.yaml.\n", "utf-8");
-    const issues = await validateStaleReferences(root, {
-      now: () => new Date("2026-06-01T00:00:00Z"),
-    });
+    const issues = await validateStaleReferences(root);
     expect(issues.filter((i) => i.code === "W-STALE-REFERENCE")).toEqual([]);
   });
 
-  it("QFAI:SPEC-0015:TC-0015-0033 — error: stale ref → warning in window, error at sunset", async () => {
+  it("QFAI:SPEC-0015:TC-0015-0033 — error: a stale ref at HEAD reports warning", async () => {
     const dir = path.join(root, ".qfai", "assistant", "skills", "qfai-prototyping", "references");
     await mkdir(dir, { recursive: true });
     await writeFile(
@@ -419,16 +414,10 @@ describe("spec-0015 stale-ref report CHG-006", () => {
       "# Handoff\nUses session-handoff.yaml.\n",
       "utf-8",
     );
-    const inWindow = await validateStaleReferences(root, {
-      now: () => new Date("2026-06-01T00:00:00Z"),
-    });
-    const inFindings = inWindow.filter((i) => i.code === "W-STALE-REFERENCE");
-    expect(inFindings[0]?.severity).toBe("warning");
-
-    const atSunset = await validateStaleReferences(root, {
-      now: () => new Date(`${STALE_REFERENCE_SUNSET}T00:00:00Z`),
-    });
-    const atFindings = atSunset.filter((i) => i.code === "W-STALE-REFERENCE");
-    expect(atFindings[0]?.severity).toBe("error");
+    const findings = (await validateStaleReferences(root)).filter(
+      (i) => i.code === "W-STALE-REFERENCE",
+    );
+    expect(findings.length).toBeGreaterThanOrEqual(1);
+    expect(findings[0]?.severity).toBe("warning");
   });
 });

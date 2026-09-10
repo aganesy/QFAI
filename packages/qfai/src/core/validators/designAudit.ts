@@ -270,8 +270,7 @@ function checkContractHierarchyFromScreens(
       // primary_task is a malformed structured object (extractPrimaryTasks
       // recorded shape findings but the parsed list ended up empty) would
       // surface only the generic "empty primary_tasks" QFAI-AUD-001
-      // diagnostic and the closed-schema detail would be hidden. Codex
-      // r3338487529.
+      // diagnostic and the closed-schema detail would be hidden.
       for (const shape of screen.primaryTaskShapeFindings) {
         findings.push(shapeFindingFor(screen.screenId, shape, filePath, screen.sourceRef));
       }

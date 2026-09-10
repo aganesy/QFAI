@@ -470,18 +470,17 @@ export async function emitSkeleton(
  * default MUST stay in lock-step with `core/config.ts`'s
  * `defaultConfig.paths.testsDir = "tests"` (the SSOT). If that SSOT
  * default ever changes, update this default in the same commit —
- * otherwise scaffold and validators silently diverge again (codex
- * r3338417334).
+ * otherwise scaffold and validators silently diverge again.
  *
  * Uses `path.resolve` (not `path.join`) so that an absolute
  * `paths.testsDir` is honored verbatim — `path.resolve(root,
  * "/abs/testsDir", ...)` ignores `root` and rebases on the absolute
  * segment, matching how the placeholder validator (via
- * `resolvePath`) resolves the same config key. Pre-fix `path.join`
- * silently rebased `/abs/testsDir` under `root` as
- * `<root>/abs/testsDir`, so scaffolded tests landed outside the
- * configured tree and `qfai validate --profile atdd|full` never saw
- * them (codex r3338447140).
+ * `resolvePath`) resolves the same config key. `path.join` would instead
+ * silently rebase `/abs/testsDir` under `root` as
+ * `<root>/abs/testsDir`, so scaffolded tests would land outside the
+ * configured tree and `qfai validate --profile atdd|full` would never see
+ * them.
  */
 /** The layer directory a scaffolded `TC-*` skeleton belongs in. */
 export const SCAFFOLD_LAYER_DIR = "integration";

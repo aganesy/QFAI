@@ -601,16 +601,17 @@ describe("TC-0003-0044 (TDD-0044): absent packageManager field fails closed with
     expect(violations).toEqual([]);
   });
   it("accepts only an integrity algorithm this runner can actually hash with", async () => {
-    // The algorithm half of `+<algorithm>.<digest>` was checked as a run
-    // of alphanumerics and hyphens and nothing more, so `pnpm@9.12.3+garbage.deadbeef` was
-    // pronounced resolvable — and corepack, which hands that name to `crypto.createHash`, then
-    // failed with the opaque resolution error this precondition exists to replace. The
-    // precondition reached the failure it was written to prevent.
+    // Checking the algorithm half of `+<algorithm>.<digest>` as a run
+    // of alphanumerics and hyphens and nothing more would pronounce `pnpm@9.12.3+garbage.deadbeef`
+    // resolvable — and corepack, which hands that name to `crypto.createHash`, would then
+    // fail with the opaque resolution error this precondition exists to replace. The
+    // precondition would reach the failure it was written to prevent.
     //
-    // Asked of `crypto.getHashes()` rather than of a fixed list, so `sha3-256` still passes:
-    // that case is why the original comment refused a closed list, and it is a case this row
-    // holds on to. Executed, not read — the defect was in what the shell accepted, and reading
-    // the shape of the `case` statement is what let it through in the first place.
+    // Checked against `crypto.getHashes()` rather than a fixed list, so a
+    // runtime-supported algorithm such as `sha3-256` still passes — which is why the guard
+    // carries no closed list. Executed, not read: running the value through the shell's own
+    // `case` statement catches what reading its pattern shape cannot, since a value can be
+    // shaped like a real algorithm without being one.
     const cases: Array<{ value: string; resolvable: boolean; why: string }> = [
       {
         value: "pnpm@9.12.3+sha512.deadbeef",
@@ -630,7 +631,7 @@ describe("TC-0003-0044 (TDD-0044): absent packageManager field fails closed with
       {
         value: "pnpm@9.12.3+garbage.deadbeef",
         resolvable: false,
-        why: "the reviewer's value: alphanumeric, and not an algorithm that exists",
+        why: "alphanumeric, and not an algorithm that exists",
       },
       {
         value: "pnpm@9.12.3+sha999.deadbeef",

@@ -87,7 +87,7 @@ import {
 // enforces. the resolver was
 // moved to `core/prototyping/specResolution.ts` so this import lands
 // in the core layer instead of taking the sideways CLI → CLI hop on
-// `prototypingIterate.ts` that wave-15 left behind.
+// `prototypingIterate.ts`.
 import {
   classifyFrozenSpecsCoveredMultiSpec,
   readFrozenSpecsCovered,
@@ -647,7 +647,7 @@ export async function runPrototypingCertify(
   //     valid and the per-pair gate skips, preserving the long-standing
   //     single-page test fixtures.
   //
-  // Per-spec screen contracts are deferred to reviewerDispatch (Wave 1).
+  // Per-spec screen contracts are deferred to reviewerDispatch.
   // Today, UI contracts under `.qfai/contracts/ui/` are project-wide,
   // so the same screen list applies to every spec in the frozen set.
   //
@@ -657,7 +657,7 @@ export async function runPrototypingCertify(
   // single-spec field would silently iterate ONLY the primary spec
   // and let a frozen-set secondary spec ship a sealed certificate
   // with completely-missing review.json files. Fall back to the
-  // legacy field for pre-Wave-3 evidence that predates the
+  // legacy field for legacy evidence that predates the
   // `frozenSpecsCovered` write.
   // classify the
   // multi-spec field so a PRESENT-but-malformed `frozenSpecsCovered`
@@ -1036,7 +1036,7 @@ export async function runPrototypingCertify(
   // review.json files exist for the secondary specs — corrupting the
   // audited scope of a completed multi-spec run. Mirror the per-(spec
   // x screen) review.json gate above: prefer the multi-spec field;
-  // fall back to the legacy single-spec field for pre-Wave-3 evidence
+  // fall back to the legacy single-spec field for legacy evidence
   // that predates the `frozenSpecsCovered` write so older runs still
   // certify cleanly.
   //
@@ -1137,10 +1137,10 @@ export async function runPrototypingCertify(
   try {
     staleIterDirs = await findStaleIterDirs(evidenceRoot, iterationCount);
   } catch (err) {
-    // codex 8zqb: findStaleIterDirs propagates non-ENOENT fs errors
-    // (EACCES / EPERM / EIO) so a permission flip cannot silently
-    // bypass the stale-iter guard — symmetric with the lock
-    // `unreadable` path. Surface a clear operator-facing message
+    // findStaleIterDirs propagates non-ENOENT fs errors (EACCES /
+    // EPERM / EIO) instead of swallowing them, so a permission flip
+    // cannot silently bypass the stale-iter guard — symmetric with the
+    // lock `unreadable` path. Surface a clear operator-facing message
     // instead of letting the raw error stack escape.
     const cause = err instanceof Error ? err.message : String(err);
     error(
@@ -1341,10 +1341,10 @@ export async function runPrototypingShowSpec(options: { root: string }): Promise
   }
   // surface which prototyping.json
   // field the spec list was actually read from so operators doing drift
-  // analysis can tell post-Wave-3 records (frozen field present) apart from
-  // legacy Wave-2 records (only `specsCovered` on disk). Pre-fix the payload
-  // emitted the value under the key `frozenSpecsCovered` regardless of
-  // source, which masked the signal that cycle 0 was seeded with the
+  // analysis can tell current records (frozen field present) apart from
+  // legacy records (only `specsCovered` on disk). Emitting the payload's
+  // value under the key `frozenSpecsCovered` regardless of
+  // source would mask the signal that cycle 0 was seeded with the
   // pre-multi-spec schema.
   const frozenSpecsCoveredSource: "frozenSpecsCovered" | "specsCovered" =
     frozenSpecsCovered !== null ? "frozenSpecsCovered" : "specsCovered";
@@ -2030,8 +2030,7 @@ async function findIterationHtmlFiles(
  */
 /**
  * @internal Exported for direct unit-testing of the symmetric
- * fail-closed posture (codex 8zqb regression sentinel) — not part
- * of the package's public surface.
+ * fail-closed posture — not part of the package's public surface.
  */
 export async function findStaleIterDirs(
   evidenceRoot: string,
@@ -2049,11 +2048,11 @@ export async function findStaleIterDirs(
     // flag in either case.
     //
     // EACCES / EPERM / EIO: the same fail-closed posture as the
-    // `unreadable` LockGateResult branch above (codex 8cTg). Returning
-    // [] here would let a permission flip silently bypass the
-    // stale-iter guard, which is the same vector the lock fix closed.
-    // Symmetric: propagate so certify's caller surfaces a hard error
-    // rather than seal a possibly-stale digest set.
+    // `unreadable` LockGateResult branch above. Returning [] here would
+    // let a permission flip silently bypass the stale-iter guard, the
+    // same vector the lock branch guards against. Symmetric: propagate
+    // so certify's caller surfaces a hard error rather than seal a
+    // possibly-stale digest set.
     if (isEnoent(err)) return [];
     throw err;
   }
@@ -2612,12 +2611,11 @@ async function fileExists(absPath: string): Promise<boolean> {
  * is exactly 4 digits. Used by {@link hasPerSpecSubdir} to gate
  * activation of the per-(spec × screen) review.json presence check on
  * the actual evidence layout — unrelated names like `spec-assets` /
- * `spec-temp` / `spec-archive` MUST NOT enable the gate (codex
- * r3271018003 P2 — chatgpt-codex-connector: pre-fix any `spec-*`
- * directory triggered the gate, so a legacy flat-iter project with an
- * incidental `spec-assets/` sibling would have the gate spuriously
- * activated and fail with missing review.json coverage that the run
- * never intended to produce).
+ * `spec-temp` / `spec-archive` MUST NOT enable the gate. Matching any
+ * `spec-*` directory would trigger the gate for a legacy flat-iter
+ * project with an incidental `spec-assets/` sibling, spuriously
+ * activating it and failing with missing review.json coverage that the
+ * run never intended to produce.
  */
 const CANONICAL_SPEC_DIR = /^spec-\d{4}$/u;
 
@@ -2861,7 +2859,7 @@ export async function readPerSpecScreens(
   // absolute-segment reset), so per-spec contract discovery missed every
   // file under the absolute contractsDir. Certify then fell back to the
   // project-wide screen list and enforced wrong (spec, screen) coverage
-  // for explicit-contracts-dir workflows. Mirrors the wave-45 fix for
+  // for explicit-contracts-dir workflows. Mirrors the same fix for
   // `specDirExists` against `paths.specsDir`.
   const uiDir = path.resolve(root, contractsDirRelative, "ui");
   const bareNumeric = specDirName.replace(/^spec-/iu, "");

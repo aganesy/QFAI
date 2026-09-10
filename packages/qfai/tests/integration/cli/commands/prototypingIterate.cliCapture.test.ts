@@ -172,11 +172,10 @@ describe("iterate --capture: (2) threading via injected captureScreen", () => {
 });
 
 describe("iterate --capture: (3) default Playwright runner fallback when captureScreen omitted", () => {
-  // Determinism note (PR #210 wave-Batch-C):
+  // Determinism note:
   //
-  // The Phase 2 follow-up landing carried a non-deterministic assertion
-  // (`expect(typeof exit).toBe("number")`) that passed regardless of
-  // whether Playwright was installed in the test environment — masking
+  // A bare `expect(typeof exit).toBe("number")` assertion would pass regardless of
+  // whether Playwright is installed in the test environment — masking
   // the missing-dep path CI is supposed to cover. Deterministic
   // interception of `await import("playwright")` inside
   // `defaultCaptureScreen` is not reliable across vitest versions
@@ -402,7 +401,7 @@ async function seedUiContract(
   await writeFile(path.join(uiDir, `${fileBase}.${extension}`), yamlBody, "utf-8");
 }
 
-describe("iterate --capture: (8) Codex P1 wave-8 — auto-derive screens from UI contracts", () => {
+describe("iterate --capture: (8) auto-derive screens from UI contracts", () => {
   it("derives screens from UI contracts when CLI sets capture=true without DI screens", async () => {
     const root = await newTempDir();
     await seedMinimal(root);
@@ -474,7 +473,7 @@ describe("iterate --capture: (8) Codex P1 wave-8 — auto-derive screens from UI
   });
 });
 
-describe("iterate --capture: (9) Codex P2 wave-8 — capture URL composition with targetUrl", () => {
+describe("iterate --capture: (9) capture URL composition with targetUrl", () => {
   it("passes absolute URLs verbatim (operator override wins over base targetUrl)", async () => {
     const root = await newTempDir();
     await seedMinimal(root);
@@ -593,7 +592,7 @@ describe("iterate --capture: (9) Codex P2 wave-8 — capture URL composition wit
   });
 });
 
-describe("iterate --capture: (10) Codex P2 wave-10 — auto-derive screens accepts `.yml` UI contracts", () => {
+describe("iterate --capture: (10) auto-derive screens accepts `.yml` UI contracts", () => {
   it("derives screens from `.yml` UI contracts (extension parity with `.yaml`)", async () => {
     // Repos that author UI contracts as `.yml` (rather than `.yaml`)
     // were silently producing an empty screens list under `--capture`,

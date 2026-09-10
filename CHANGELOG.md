@@ -6,6 +6,29 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **A writer dispossessed inside the section no longer overwrites a committed
+  entry** (#1442). The lock was checked once, immediately after it was
+  published. Nothing asked again before the write, so a holder that lost the
+  lock while it was working never found out: it wrote content it had computed
+  from a read taken before the writer that displaced it committed, and the entry
+  that writer had already recorded was gone. Both calls returned successfully,
+  which is why it surfaced as a missing entry rather than an error, and a lost
+  provenance entry does not heal — the file stays on disk with nothing recorded
+  and reads as `adopter-owned` from then on.
+
+  `rename` is the arbitration and it fails only onto a non-empty directory, so
+  an empty one at the lock name lets the next writer in while the first is still
+  working. A holder that died between its `unlink` and its `rmdir` leaves
+  exactly that, and so does anything else with write access to `.qfai/`.
+
+  The same question the read-back asks is now asked once more, in the section
+  and immediately before the write. A writer that no longer holds the lock takes
+  the retry that already exists for losing it instead of writing. Nothing was
+  written when that happens, so the bound on those retries is unchanged.
+
+  A lock name swapped for a link is now refused rather than written through. The
+  write was previously carried out against a lock the writer did not hold.
+
 - **A completed row's evidence is read again** (#1440). `QFAI-TDDLIST-008`
   verifies that a `done` row's evidence section says what the row says and
   carries the fields a completion record owes. It verified that the section's
@@ -27,6 +50,77 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   those findings print is to write the pointer and the section it names, and
   under this defect a pack could go from tens of errors to zero on headings
   alone.
+
+### Changed
+
+- **`W-STALE-REFERENCE` carries the severity it means, instead of reading the
+  calendar** (#1433). The rule reported `warning` before `2026-12-01` and
+  `error` from that date, so the same tree graded differently according to the
+  day it was validated. On the cutoff every project holding a stale reference
+  would have gone from a passing gate to a failing one at once — with no
+  upgrade, no changelog entry and no commit to point at — and meanwhile no
+  green leg could be re-created and no red one bisected.
+
+  The finding is a `warning`, the severity its code letter names. Nothing an
+  adopter runs today answers differently, because that is what the rule already
+  reported; what goes away is the escalation nobody had committed to. Raising
+  this rule later is a change to announce here, not a date to arrive.
+
+  `STALE_REFERENCE_SUNSET`, `staleReferenceSeverity` and the injected clock
+  `validateStaleReferences` accepted are deleted. The suite moves the system
+  clock across the former cutoff instead of holding a seam of its own, so a
+  rule that went back to reading the real one would fail it.
+
+- **Five delta ledgers put their triage rows under the rules that read them**
+  (#1436). `QFAI-TRIAGE-008` reports a Triage heading the triage rules do not
+  recognise, and every `QFAI-TRIAGE-*` rule skips such a section outright. Seven
+  headings in this repository were in that state, so those rows were not passing
+  the rules — they were escaping them.
+
+  `spec-0004`, `spec-0006`, `spec-0008`, `spec-0013` and `spec-0015` now name
+  every triage section `## Triage`, exactly, with the qualifier that used to sit
+  in the heading moved into the body. Two of the tables recorded the same rows
+  under different column names, and those are relabelled to the names the rules
+  read: `Source (REQ)` to `Source`, `Target` to `Subject`, `Existing Spec` taken
+  from the pack the file belongs to, and `UPDATE:APPEND` split across
+  `Operation` and `Sub-op`.
+
+  A `## Triage` section runs to the next H1 or H2, so a sibling `### Operations`
+  or `### Notes` would sit inside it and have its table read as a triage table.
+  Those siblings are promoted alongside, into the flat round layout the rest of
+  each file already uses. A ledger records one `## Triage` per round, so the
+  repeated heading is the shape rather than a slip, and `MD024` is disabled per
+  file with that reason stated in place.
+
+  All five files reach zero and leave the `sdd` and `full` pins: 103 errors to
+  98, and 1065 to 1060. `spec-0012/09_delta.md` and `_policies/10_delta.md`
+  carry the same heading and stay pinned.
+
+- **The two cross-round ledgers put their triage rows under the rules that read
+  them** (#1436). `spec-0012/09_delta.md` and `_policies/10_delta.md` name every
+  triage section `## Triage` now, exactly, so `QFAI-TRIAGE-*` reads the rows
+  instead of skipping the section.
+
+  Three of the tables record the same rows under other column names, and each is
+  relabelled to the names the rules read. `REQ-ID` and `Source (REQ)` become
+  `Source`; `Title` becomes `Subject`; `Target` becomes `Existing Spec` where it
+  named a pack, and the pack the file belongs to fills it where it named a file.
+  `UPDATE:APPEND` splits across `Operation` and `Sub-op`, which is the form
+  `QFAI-TRIAGE-003` accepts.
+
+  `Sub-op` holds one of `APPEND`, `MODIFY` and `REMOVE`, so a row naming more
+  than one becomes one row per sub-operation. The columns recording what each
+  round touched and added already separate the two halves, and they are carried
+  on each resulting row.
+
+  One `CREATE` row named `spec-0017` as its `Existing Spec`. A `CREATE` has no
+  existing spec — that is what `QFAI-TRIAGE-009` requires `-` for — and the pack
+  being created belongs in the subject, where it now sits.
+
+  A `## Triage` section runs to the next H1 or H2, so each round's other parts
+  are promoted beside the table rather than left inside its section. Both files
+  reach zero and leave the pins, which the five ledgers above have already
+  taken to 98 and 1060: `sdd` 98 errors to 96, `full` 1060 to 1058.
 
 ## [1.11.1] - 2026-09-10
 

@@ -185,7 +185,7 @@ describe("report", () => {
     }
   });
 
-  it("reports a narrow profile in CI without failing the run (#397)", async () => {
+  it("reports a narrow profile in CI without failing the run", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-report-"));
     await runInit({ dir: root, force: false, dryRun: false, yes: true });
     const previousCi = process.env.CI;
@@ -211,7 +211,7 @@ describe("report", () => {
         // findings: a bare `qfai init` tree has no discussion pack, so this
         // run also carries an unrelated QFAI-DPACK-001 error. Under `never`
         // the only way to come back non-zero is a hard-coded narrow-profile
-        // failure — exactly the #397 regression.
+        // failure.
         failOn: "never",
       });
 
@@ -278,7 +278,7 @@ describe("report", () => {
     expect(report).toContain("# QFAI Report");
   });
 
-  it("reads validate-<profile>.json when --profile is given without --run-validate (#667)", async () => {
+  it("reads validate-<profile>.json when --profile is given without --run-validate", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-report-"));
     await runInit({ dir: root, force: false, dryRun: false, yes: true });
 
@@ -311,7 +311,7 @@ describe("report", () => {
     expect(report.profile).toBe("sdd");
   });
 
-  it("guides toward the profile run when validate-<profile>.json is missing (#667)", async () => {
+  it("guides toward the profile run when validate-<profile>.json is missing", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-report-"));
     await runInit({ dir: root, force: false, dryRun: false, yes: true });
 
@@ -340,7 +340,7 @@ describe("report", () => {
     }
   });
 
-  it("warns about a narrow profile in CI without --run-validate (#667)", async () => {
+  it("warns about a narrow profile in CI without --run-validate", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-report-"));
     await runInit({ dir: root, force: false, dryRun: false, yes: true });
 
@@ -381,7 +381,7 @@ describe("report", () => {
     }
   });
 
-  it("warns when --in holds a different profile than --profile (#667)", async () => {
+  it("warns when --in holds a different profile than --profile", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-report-"));
     await runInit({ dir: root, force: false, dryRun: false, yes: true });
 
@@ -406,7 +406,7 @@ describe("report", () => {
     }
   });
 
-  it("writes validate-<profile>.json on the --run-validate path too (#667)", async () => {
+  it("writes validate-<profile>.json on the --run-validate path too", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-report-"));
     await runInit({ dir: root, force: false, dryRun: false, yes: true });
     const previousCi = process.env.CI;
@@ -462,7 +462,7 @@ describe("report", () => {
     }
   });
 
-  it("bases the CI narrow-profile warning on the loaded profile (#667)", async () => {
+  it("bases the CI narrow-profile warning on the loaded profile", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-report-"));
     await runInit({ dir: root, force: false, dryRun: false, yes: true });
 

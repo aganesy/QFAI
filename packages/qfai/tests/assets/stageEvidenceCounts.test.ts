@@ -717,12 +717,11 @@ describe("the stage evidence's counts are derived, not typed", () => {
     // `source()` here, so the line's shape is stated in one place — the
     // derivation module — instead of in a regex on each side of the check.
     //
-    // The derivation is imported, not re-implemented. It used to live inline
-    // here, and because nothing shipped it, every contributor this row
-    // reddened re-derived it from the prose above — #1065 recorded eight doing
-    // that independently in one sweep, and noted that whoever resolves the
-    // resulting merge conflict sees two plausible integers with no hint that
-    // the answer is neither of them.
+    // The derivation is imported, not re-implemented. Keeping it inline here
+    // instead, with nothing shipping it, would mean every contributor this row
+    // reddens re-derives it from the prose above, risking a merge conflict
+    // where a human sees two plausible integers with no hint that the answer
+    // is neither of them.
     //
     // `scripts/derive-e2e-callsites.mjs` is now the one implementation, and
     // `scripts/pin-stage-evidence-counts.mjs` writes what it returns. This row

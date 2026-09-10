@@ -564,12 +564,13 @@ describe("meta-test: validators/index.ts lists only wired validators", () => {
   });
 
   it("does not let a delimiter inside a regex literal re-frame the file", () => {
-    // #1061. A regex body can hold a backtick, and the scan this replaced
-    // tracked strings and templates but not regexes. `core/specPackParsers.ts`
-    // matches CommonMark fences, so its regex carries a run of backticks; the
-    // phantom template that opened there ran forty-six lines into a JSDoc and
-    // swallowed that JSDoc's own opener, after which prose read as code and
-    // code read as data. Both assertions below flip without the fix.
+    // A regex body can hold a backtick, so the scan must track regex literals
+    // as well as strings and templates. `core/specPackParsers.ts` matches
+    // CommonMark fences, so its regex carries a run of backticks; misread as a
+    // template, that regex would open a phantom template spanning forty-six
+    // lines into a JSDoc and swallow the JSDoc's own opener, after which prose
+    // reads as code and code reads as data. Both assertions below pin that
+    // distinction.
     const fenceMatcher = [
       "const FENCE = /^ {0,3}(`{3,}|~{3,})/;",
       "/**",

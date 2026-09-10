@@ -120,6 +120,79 @@ describe("scripts/check-doc-clarity.mjs", () => {
     expect(result.stderr).toContain("docs/guide.md:1");
   });
 
+  it("reports the review tool's short alphanumeric-hash comment id", async () => {
+    // The same tool that leaves a long digit-only id also leaves a short
+    // alphanumeric hash — both are the same kind of citation.
+    const dir = await newRepo({
+      "src/thing.ts": "// codex AG08r: fixed here\nexport const a = 1;\n",
+    });
+
+    const result = runGuard(dir, ["--scope", "all"]);
+
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain("codex-review-id");
+  });
+
+  it("reports the numeric comment id even with 'review' inserted before it", async () => {
+    const dir = await newRepo({
+      "src/thing.ts": "// codex review r3264500818: fixed here\nexport const a = 1;\n",
+    });
+
+    const result = runGuard(dir, ["--scope", "all"]);
+
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain("codex-review-id");
+  });
+
+  it("leaves plain words after 'codex' alone", async () => {
+    // "codex agent" and "codex review" (with nothing after) are ordinary
+    // product vocabulary in this repository, not a citation. A citation
+    // token always carries at least one digit.
+    const dir = await newRepo({
+      "src/thing.ts":
+        "// the codex agent reads this file, and codex review runs it\nexport const a = 1;\n",
+    });
+
+    const result = runGuard(dir, ["--scope", "all"]);
+
+    expect(result.status).toBe(0);
+  });
+
+  it("leaves a quoted hex color alone", async () => {
+    // A quoted hex color and an issue number share the same shape; only the
+    // trailing quote tells them apart.
+    const dir = await newRepo({ "src/theme.ts": 'export const ink = "#111827";\n' });
+
+    const result = runGuard(dir, ["--scope", "all"]);
+
+    expect(result.status).toBe(0);
+  });
+
+  it("reports a review shortcode list joined by a slash", async () => {
+    const dir = await newRepo({
+      "src/thing.ts": "// fixed in review AB12/CD34\nexport const a = 1;\n",
+    });
+
+    const result = runGuard(dir, ["--scope", "all"]);
+
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain("review-shortcode-list");
+  });
+
+  it("leaves ordinary prose that happens to say 'review' before a comma alone", async () => {
+    // A four-letter word right after "review" reads like a shortcode's
+    // first code, but the pattern needs a slash-joined second code too, and
+    // ordinary prose has none. The separator is a slash, not a comma,
+    // because that is what this codebase's real shortcode lists use.
+    const dir = await newRepo({
+      "src/thing.ts": "// see the review gate, which runs after build\nexport const a = 1;\n",
+    });
+
+    const result = runGuard(dir, ["--scope", "all"]);
+
+    expect(result.status).toBe(0);
+  });
+
   describe("the files whose subject is the forbidden shapes", () => {
     it("exempts the rule document, which has to name what it forbids", async () => {
       const dir = await newRepo({

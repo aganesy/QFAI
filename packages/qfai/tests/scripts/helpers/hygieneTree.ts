@@ -58,11 +58,10 @@ export function plantedTree(mutate: (dir: string) => void): string {
   });
   // And everything else the lane's body digest reads: the manifests it resolves package scripts
   // out of, and the script directories whose file contents it hashes. `run: pnpm ci:build-verify`
-  // is a reference and `run: bash .../check-no-internal-version-leakage.sh` is another, and
-  // review findings [36] and [42] each measured that pinning a reference pins the pointer rather
-  // than the work. A planted tree without all of it is a tree where every declared body resolves
-  // to nothing, so every required-context row would report a mismatch it was not planted to
-  // produce.
+  // is a reference and `run: bash .../check-no-internal-version-leakage.sh` is another —
+  // pinning either reference alone would pin the pointer rather than the work behind it. A
+  // planted tree without all of it is a tree where every declared body resolves to nothing, so
+  // every required-context row would report a mismatch it was not planted to produce.
   for (const input of DIGESTED_LANE_INPUTS_REL) {
     mkdirSync(path.dirname(path.join(dir, input)), { recursive: true });
     cpSync(path.join(REPO_ROOT, input), path.join(dir, input), { recursive: true });
@@ -124,9 +123,9 @@ export interface Declaration {
     /**
      * Item name -> digest of that step's `run` / `uses` / `with`.
      *
-     * Optional in the TYPE and required in the LANE, which is the distinction review finding [24]
-     * turned on: a context that omits an item's digest is a declaration the lane must reject, so the
-     * shape has to be expressible here in order to be planted.
+     * Optional in the TYPE and required in the LANE: a context that omits an
+     * item's digest is a declaration the lane must reject, so the shape has
+     * to stay expressible here in order to be planted.
      */
     verificationBodies?: Record<string, string>;
     /**

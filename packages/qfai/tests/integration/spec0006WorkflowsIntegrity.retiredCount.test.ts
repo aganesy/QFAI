@@ -1,11 +1,12 @@
 /**
- * Review finding [26]: a record holding only retired names read as a successful comparison.
+ * A record holding only retired names must not read as a successful comparison.
  *
  * `comparedCount` is the `ok` arm's second conjunct — `doctor.ts` prints "installed shipped
  * workflow(s) match the packaged copy" when the count is positive and `modified` is empty. The
- * declined split incremented that count and moved on BEFORE asking whether the running package still
- * ships the name at all, so an entry for a workflow that has since been retired, whose installed file
- * is also gone, produced a positive count over a run in which no packaged file was ever opened.
+ * declined split has to ask whether the running package still ships the name BEFORE it counts an
+ * entry: skip that check, and an entry for a workflow that has since been retired, whose installed
+ * file is also gone, would increment the count and move on, producing a positive count over a run
+ * in which no packaged file was ever opened.
  *
  * The two directions are one property: a name the package no longer ships is out of scope, and a name
  * it does ship is in scope whether or not its installed file is still there.

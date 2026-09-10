@@ -1,5 +1,5 @@
 /**
- * The declared tier column (#499).
+ * The declared tier column.
  *
  * `Tier` used to be free prose inside `Evidence` — a pointer cell, written last,
  * by the agent whose ceremony the tier decides — and an unrecorded tier meant

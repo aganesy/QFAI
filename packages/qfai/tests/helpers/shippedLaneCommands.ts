@@ -991,11 +991,12 @@ export function invocationsOf(body: string): string[] {
  *   Widening either would admit every global install, which is the capability the rule refuses.
  *
  * Both are here because Node stopped bundling Corepack at 25 and the Node a shipped lane runs is
- * the ADOPTER's, from their own `.nvmrc` / `.node-version`. The yarn branch called `corepack
- * enable` unconditionally and stopped at `command not found` before installing anything — review
- * finding [22]. Adding one exact string per need is what makes that a change a reviewer reads,
- * which is this instrument's whole purpose; the test below requires every member to be invoked by
- * the shipped tree, so an entry cannot outlive its use.
+ * the ADOPTER's, from their own `.nvmrc` / `.node-version`. Calling `corepack enable`
+ * unconditionally in the yarn branch would stop at `command not found` before installing
+ * anything, on an adopter Node build old enough to lack Corepack. Adding one exact string per
+ * need is what makes that a change a reviewer reads, which is this instrument's whole purpose;
+ * the test below requires every member to be invoked by the shipped tree, so an entry cannot
+ * outlive its use.
  */
 export const ALLOWED_EXACT_COMMANDS: ReadonlySet<string> = new Set([
   "command -v corepack",

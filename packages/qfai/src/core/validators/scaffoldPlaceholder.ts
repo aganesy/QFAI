@@ -391,7 +391,7 @@ export async function validateScaffoldPlaceholder(
           // Observability: log the failure class to stderr so a
           // programming bug (TypeError / RangeError) is not silently
           // swallowed alongside the expected ENOENT/EACCES/ENOSPC
-          // class. Codex r3338412192.
+          // class.
           counterWritesDisabled = true;
           logFailSoft("recordValidateCycle", specId, tcId, err);
         }
@@ -407,7 +407,7 @@ export async function validateScaffoldPlaceholder(
     //   - counter write failed → show "counter unavailable" so the
     //     operator is NOT misled into thinking they have a fresh
     //     grace window when the placeholder may have been there for
-    //     many cycles. Codex r3338411383.
+    //     many cycles.
     let progressNote = "";
     if (specId !== null && threshold > 0) {
       progressNote = counterAvailable
@@ -417,13 +417,12 @@ export async function validateScaffoldPlaceholder(
     // Message split: `progressNote` carries the live counter (may
     // exceed threshold once escalation has fired and the placeholder
     // remains across further passes), `escalationNote` describes the
-    // threshold boundary. Pre-fix the error note said "after N
-    // cycles" alongside a `(5/3...)` progress note which read as
-    // "did this happen at 3 or at 5?" — codex r3338411701.
+    // threshold boundary. An error note saying "after N
+    // cycles" alongside a `(5/3...)` progress note would read as
+    // "did this happen at 3 or at 5?"
     // Pluralization: `scaffoldEscalateCycles: 1` is a supported
     // operator setting (`shouldEscalate` fires at `threshold >= 1`),
-    // so use singular "cycle" when threshold === 1 — codex
-    // r3338479241.
+    // so use singular "cycle" when threshold === 1.
     const cycleWord = threshold === 1 ? "cycle" : "cycles";
     const verbAreReached = threshold === 1 ? "is reached" : "are reached";
     const escalationNote = escalated
@@ -470,7 +469,7 @@ export async function validateScaffoldPlaceholder(
   // starts counting from zero again, not from the leftover N.
   // Fail-soft on read errors (no list = nothing to reset). Errors
   // are logged via `logFailSoft` so programming bugs aren't silently
-  // swallowed (codex r3338412192).
+  // swallowed.
   try {
     const tracked = await listValidateCycleKeys(root);
     for (const { specId, tcId } of tracked) {
@@ -519,10 +518,9 @@ function logFailSoft(
   const message = err instanceof Error ? err.message : String(err);
   const cls = err instanceof Error ? err.constructor.name : typeof err;
   const target = specId !== null && tcId !== null ? ` for ${specId}:${tcId}` : "";
-  // Preserve the pre-refactor "no empty-paren tail" behavior: empty-
-  // string `code` is suppressed (Node fs errors never produce one,
-  // but keeping this explicit means the bare-as refactor is exactly
-  // behavior-equivalent — codex r3338522010 / r3338522975).
+  // No empty-paren tail: empty-string `code` is suppressed (Node fs
+  // errors never produce one, but keeping this explicit keeps the
+  // behavior exactly equivalent regardless of how `code` is read).
   const codeStr = hasErrnoCode(err) && err.code.length > 0 ? ` (${err.code})` : "";
   process.stderr.write(
     `qfai validate [D-SCAFFOLD-PLACEHOLDER]: ${operation} fail-soft${target} — ${cls}${codeStr}: ${message}\n`,

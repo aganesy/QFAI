@@ -235,8 +235,8 @@ describe("validatePrototypingArtifactRefIntegrity", () => {
   // The pre-fix seed shape, kept as a case rather than a memory: it pointed at
   // `iter-00/index.{png,html}`, which nothing in the loop writes at any point —
   // capture honours the plan's `iter-NN/{screen}.png` template. Those two
-  // QFAI-PROT-009 errors are what #1073 reported, and the exemption is what
-  // makes them unreachable from the seed.
+  // QFAI-PROT-009 errors are the missing-artifact findings such refs raise, and
+  // the exemption is what keeps them from firing on the seed.
   it("would have reported the pre-fix seed refs, and does not now that they are gone", async () => {
     const root = await newTempDir();
     const preFix = {

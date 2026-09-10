@@ -15,7 +15,7 @@
  * Deferred (NOT implemented here — see batch report):
  *   - TC-0012-0374 — Reviewer Playwright-session failure hard-stop
  *     (requires live Reviewer sub-agent + Playwright wiring + run-exit
- *     plumbing; out of scope for the Wave 1 stub landing).
+ *     plumbing; out of scope for this stub landing).
  *   - TC-0012-0383 — Reviewer navigates every primary menu entry
  *     (requires real Playwright session + prototype harness fixture).
  *
@@ -55,17 +55,17 @@ const PROTOTYPING_ITERATE_SRC = path.join(
  * call-site token; we are NOT trying to parse TypeScript.
  */
 /**
- * Comments blanked, literals kept — the shared reduction (#1089).
+ * Comments blanked, literals kept — the shared reduction.
  *
- * This replaced two independent `replace` passes, which is the original defect:
- * each delimiter occurs inside the other's body, so whichever regex ran first
- * read the other's content as its own opener. On this file's ONE subject,
- * `cli/commands/prototypingIterate.ts`, that removed **11,381 characters of
- * non-comment text** and lost 91 identifiers — among them
+ * Two independent `replace` passes would each risk the same defect:
+ * each delimiter occurs inside the other's body, so whichever regex runs first
+ * would read the other's content as its own opener. On this file's ONE subject,
+ * `cli/commands/prototypingIterate.ts`, that would remove **11,381 characters of
+ * non-comment text** and lose 91 identifiers — among them
  * `resolvedCaptureScreens`, adjacent to the very token asserted against below.
  *
- * The assertion here is a NEGATIVE, so over-deletion made it easier to pass:
- * this guard could have gone quiet without ever reddening.
+ * The assertion here is a NEGATIVE, so over-deletion would make it easier to pass:
+ * this guard could go quiet without ever reddening.
  */
 function stripComments(source: string): string {
   return withoutComments(source);
@@ -204,13 +204,13 @@ describe("dispatchReviewerToPair (interface stub)", () => {
     expect(waited).toEqual([]);
   });
 
-  // codex review r3265074289 (P3): a runner returning `{ok: true}`
-  // without a `reviewJson` payload is a schema-invalid success — the
-  // dispatcher must NOT silently flow it through to the persister /
-  // downstream certify (which would seal a cert with zero review
-  // artifact). Symmetric with the runner-throw / sleeper-throw /
-  // persister-throw paths: record a synthetic failed attempt that
-  // names the missing payload and fall through to retryExhausted.
+  // A runner returning `{ok: true}` without a `reviewJson` payload is a
+  // schema-invalid success — the dispatcher must NOT silently flow it
+  // through to the persister / downstream certify (which would seal a
+  // cert with zero review artifact). Symmetric with the runner-throw /
+  // sleeper-throw / persister-throw paths: record a synthetic failed
+  // attempt that names the missing payload and fall through to
+  // retryExhausted.
   it("records `ok: true` without reviewJson as retryExhausted and names the missing payload", async () => {
     const outcome = await dispatchReviewerToPair("0012", "dashboard", {
       attemptLimit: 1,
@@ -228,12 +228,11 @@ describe("dispatchReviewerToPair (interface stub)", () => {
     expect(outcome.reviewJsonPath).toBeUndefined();
   });
 
-  // codex review r3264765754 (P2): on success the dispatcher must
-  // surface the runner's in-memory `reviewJson` payload on the
-  // outcome so the loop driver can persist `<screen>.review.json`.
-  // Pre-fix the payload was dropped on the floor and `reviewJsonPath`
-  // was never set either — production callers got `finalStatus: "ok"`
-  // with neither payload nor path.
+  // On success the dispatcher must surface the runner's in-memory
+  // `reviewJson` payload on the outcome so the loop driver can persist
+  // `<screen>.review.json`. Without this, the payload is dropped on the
+  // floor and `reviewJsonPath` is never set either — production callers
+  // would get `finalStatus: "ok"` with neither payload nor path.
   it("propagates the runner's reviewJson payload on a first-attempt success", async () => {
     const payload = { specId: "0012", screen: "dashboard", axes: { aesthetics: 5 } };
     const outcome = await dispatchReviewerToPair("0012", "dashboard", {

@@ -1,5 +1,5 @@
 /**
- * QFAI-CONTRACT-031 — DB contracts must have been run, and say so (#384).
+ * QFAI-CONTRACT-031 — DB contracts must have been run, and say so.
  *
  * `contract-artifact-rules.md` calls `.qfai/contracts/**` "downstream execution
  * truth", and the complete set of quality properties qfai asserted about a
