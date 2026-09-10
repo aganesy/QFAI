@@ -74,7 +74,7 @@
 - Per DR-0269, every SKILL.md MUST carry a `## Default Autopilot Policy` section populated with three named buckets:
   - **auto-decide** (named defaults, AI proceeds without prompting): output formatting, ID / sequence numbering, append-vs-create when a subject overlaps an existing artifact, and option-pick among demonstrably-equivalent alternatives.
   - **ask-user** (AI prompts via `AskUserQuestion` with the bucket's prompt template): approval-required governance operations, destructive operations, version-pin changes, scope expansions. The first entry is a **category**: each skill instantiates it with the operations its own run cannot authorize for itself — the triage ops (CREATE / DELETE / SPLIT / MERGE / SUPERSEDE / UPDATE:REMOVE) in `/qfai-sdd`, and the `TDDLIST-001` accepted-risk waiver, the Drift-Protocol Change-Request escalation and consent to item-level parallelism in `/qfai-implement`. A skill's instantiation must cover every decision its own body already gates on a user: `/qfai-implement`'s Parallelization Policy requires explicit user approval on top of the `delivery-planner` technical gate, so omitting it left a user-gated decision in no bucket while the section claims to classify every decision.
-  - **hard-required** (no default possible; must be supplied before proceeding): `companyName`, brand intent, `primarySpecId` when absent.
+  - **hard-required** (no default possible; must be supplied before proceeding): brand intent, `primarySpecId` when absent.
 - The skill body MUST reference this section as the source of truth. A skill MAY narrow any of the three buckets (drop an entry it cannot reach) and MAY instantiate a category entry with its own operations, but MUST NOT add an entry outside the prototype's categories.
 - Reviewer Gate emits `R-AUTOPILOT-POLICY-MISSING` (severity error, non-empty `justification:`) when the section is absent OR is present but missing one or more required buckets (heading-only / partial-bucket population — the "populated with three named buckets" requirement is not satisfied). The `justification:` MUST name the missing bucket(s) by name when the trigger is partial population.
 
@@ -122,7 +122,7 @@
 - AC-Refs: AC-0015-0021
 - `references/iteration-loop.md`, `references/generator-prompt.md`, `references/handoff.md`, `references/evidence-requirements.md`, and each affected SKILL.md MUST be rewritten to match the implementations chosen for the OQ-0152..0157 outcomes (REQs 0150 / 0151 / 0152 / 0154 / 0156 / 0157).
 - The rewrites MUST land in the same atomic PR(s) as the implementation (no follow-up doc-only PR).
-- `qfai validate --report` MUST verify zero remaining stale references at HEAD after sunset; during the deprecation window stale references surface as warnings.
+- `qfai validate --report` MUST report every stale reference remaining at HEAD, at severity warning. That severity MUST be fixed, not derived from the date of the run.
 - spec-0015 owns this cross-skill documentation-governance obligation (CAP-0015 cross-skill governance territory).
 
 ## BR-0015-0017: Hygiene-lane finding ingestion and the deferred catalog registration

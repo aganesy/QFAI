@@ -479,12 +479,14 @@ export async function diffInstalledShippedWorkflows(
     };
   }
 
-  // …and it has to HOLD what this package ships. Review finding [86]: the directory test
-  // above is satisfied by an empty directory, which a partial extraction or a half-finished
-  // install leaves behind — and then every packaged file reads as absent, the per-file rule
-  // treats each one as a name the package no longer ships, `comparedCount` lands on zero, and
-  // the status is `ok`. `doctor` registers neither drift nor a skip. That is the same
-  // fail-open the whole-tree case was written to close, reached one level in.
+  // …and it has to HOLD what this package ships, not merely exist as a directory. An empty
+  // directory — what a partial extraction or a half-finished install leaves behind — satisfies
+  // the readability test above, and every packaged file would then read as absent. The per-file
+  // rule already treats an absent packaged file as a name the package no longer ships, so
+  // `comparedCount` would land on zero and the status would read `ok`, with `doctor` registering
+  // neither drift nor a skip: the same package damage the check above exists to catch, reached
+  // one level in. The check below closes it, by requiring the directory to actually hold shipped
+  // files before any name is compared.
   //
   // Which names must be present depends on WHOSE tree this is. Against the running package,
   // all of them: this list is the package's own claim about what it ships, and a missing one
@@ -530,17 +532,19 @@ export async function diffInstalledShippedWorkflows(
     const installedPath = path.join(installedDir, name);
 
     // A recorded name the running package no longer ships is EXCLUDED from the
-    // count as well as from drift, and this test comes FIRST — before the
-    // `declined` split, not after it. Review finding [26]: an entry for a
-    // retired workflow whose installed file is also gone reached the declined
-    // branch, which counted it and moved on without ever asking whether the
-    // packaged side had that name. A record holding only such entries then read
-    // as `ok` with a non-zero count, and `doctor.ts` printed "installed shipped
-    // workflow(s) match the packaged copy" over a run in which no packaged file
-    // was opened at all. `hasDrifted` already answers `false` for these names —
-    // correctly, since equality with a copy that does not exist cannot be shown.
-    // Uncounted, that tree reaches the count conjunct as zero and the check stays
-    // silent, which is what "nothing was compared" means.
+    // count as well as from drift, and this test has to come FIRST — before the
+    // `declined` split, not after it. Ordered the other way, an entry for a
+    // retired workflow whose installed file is also gone would match the
+    // declined branch instead: it would be counted and pushed to `declined`
+    // without ever asking whether the packaged side still has that name. A
+    // record holding only such entries would then read as `ok` with a non-zero
+    // count, and `doctor.ts` would print "installed shipped workflow(s) match
+    // the packaged copy" over a run that opened no packaged file at all.
+    // `hasDrifted` already answers `false` for these names — correctly, since
+    // equality with a copy that does not exist cannot be shown — but leaving
+    // them uncounted is what holds `comparedCount`, the `ok` arm's second
+    // conjunct, at zero for a tree made only of such entries: what "nothing was
+    // compared" means.
     if ((await digestFile(path.join(packagedDir, name))).kind === "absent") {
       continue;
     }
@@ -591,17 +595,16 @@ export async function diffInstalledShippedWorkflows(
 /**
  * Whether `file` can actually be READ, by the reader the comparison will use.
  *
- * Review finding [93]: this checked `lstat().isFile()` and was named for something it did not
- * do. A regular file over the bounded reader's ceiling, or one this process has no permission to
- * open, satisfied that test — and then the recorded workflow of the same name read as
- * `unreadable` further down, was classified `modified`, and `doctor` told the operator to copy
- * from a packaged file it could not read. A partially damaged package reported as drift, with a
- * repair instruction that cannot work.
+ * Checking only `lstat().isFile()` would not answer that question: a regular file over the
+ * bounded reader's ceiling, or one this process has no permission to open, would satisfy that
+ * test while the comparison later reads the same file as `unreadable`, classifies the recorded
+ * workflow `modified`, and has `doctor` tell the operator to copy from a packaged file it cannot
+ * read — a partially damaged package reported as drift, with a repair instruction that cannot
+ * work.
  *
- * The SAME bounded reader, at the same ceiling, so the precondition and the comparison can never
- * disagree about what is readable. It refuses a symlink by name too, which is the property the
- * previous version was written for: the packaged tree is this package's own, and a link inside it
- * is damage of the same kind a missing file is.
+ * Using the SAME bounded reader, at the same ceiling, keeps the precondition and the comparison
+ * from ever disagreeing about what is readable. It also refuses a symlink by name: the packaged
+ * tree is this package's own, and a link inside it is damage of the same kind a missing file is.
  */
 async function isReadableFile(file: string): Promise<boolean> {
   return (await readBoundedRegularFile(file, MAX_WORKFLOW_BYTES)) !== undefined;

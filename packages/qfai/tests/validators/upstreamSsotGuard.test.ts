@@ -37,6 +37,10 @@ async function newRepo(seed: Record<string, string>): Promise<string> {
   git(root, "init", "--initial-branch=base");
   git(root, "config", "user.email", "test@example.com");
   git(root, "config", "user.name", "test");
+  // The EOL case below needs the CRLF bytes to reach the blob. Git for Windows
+  // installs `core.autocrlf=true` globally, which would renormalise them away
+  // and turn that test into a tautology.
+  git(root, "config", "core.autocrlf", "false");
   for (const [rel, content] of Object.entries(seed)) {
     await write(root, rel, content);
   }
@@ -125,6 +129,42 @@ describe("validateUpstreamSsotGuard", () => {
     await expect(validateUpstreamSsotGuard(root, config)).resolves.toEqual([]);
   });
 
+  it("ignores a protected file whose only change is its line endings", async () => {
+    // `drift-protocol.md#line-endings-in-the-artifacts-under-review` tells the
+    // reviewer that an all-lines-changed diff is not evidence of drift. If the
+    // detector still reported the path, the operator would owe a Change
+    // Request for a change carrying no content, and nothing but reverting the
+    // line endings could discharge it.
+    const root = await newRepo({ ".qfai/contracts/db/CON-DB-0007.sql": "SELECT 1;\nSELECT 2;\n" });
+    await commitEdits(root, {
+      ".qfai/contracts/db/CON-DB-0007.sql": "SELECT 1;\r\nSELECT 2;\r\n",
+    });
+
+    // Guard the premise: the CRLF really did land in the committed blob. Read
+    // over the same three-dot range the guard itself uses, so the premise this
+    // case rests on is the one the code under test evaluates.
+    const named = execFileSync("git", ["diff", "--name-only", "base...HEAD"], {
+      cwd: root,
+      encoding: "utf-8",
+    });
+    expect(named).toContain(".qfai/contracts/db/CON-DB-0007.sql");
+
+    await expect(validateUpstreamSsotGuard(root, config)).resolves.toEqual([]);
+  });
+
+  it("still flags a protected file whose diff counts no changed lines", async () => {
+    // An added empty contract counts `0 0` in `--numstat`, exactly like the
+    // EOL-only case above. The detector must separate the two by the patch
+    // itself, not by the line counts, or "add the file, fill it next commit"
+    // would walk straight past the guard.
+    const root = await newRepo({ "src/app.ts": "export const a = 1;\n" });
+    await commitEdits(root, { ".qfai/contracts/db/CON-DB-0009.sql": "" });
+
+    const issues = await validateUpstreamSsotGuard(root, config);
+
+    expect(issues.map((i) => i.file)).toEqual([".qfai/contracts/db/CON-DB-0009.sql"]);
+  });
+
   it("ignores ordinary source and test changes", async () => {
     const root = await newRepo({ "src/app.ts": "export const a = 1;\n" });
     await commitEdits(root, {
@@ -138,8 +178,9 @@ describe("validateUpstreamSsotGuard", () => {
   it("is silenced by an approved Change Request declaring the path in `## Impact scope`", async () => {
     // The section is the CR's declaration of what it covers, and a declaration
     // is what an exemption rests on. This row was written against
-    // `## Proposed change`, which is prose: the exemption used to be a
-    // substring match over the whole body, so any section did (#1121).
+    // `## Proposed change`, which is prose: an exemption based on a
+    // substring match over the whole body would treat any section as
+    // sufficient.
     const root = await newRepo({ ".qfai/contracts/db/CON-DB-0007.sql": "SELECT 1;\n" });
     await commitEdits(root, {
       ".qfai/contracts/db/CON-DB-0007.sql": "SELECT 2;\n",
@@ -193,7 +234,7 @@ describe("validateUpstreamSsotGuard", () => {
   it("is NOT silenced by a prohibition, which used to read as a permission", async () => {
     // The sharpest form of the defect: a CR that FORBIDS the edit granted it
     // the moment `Status` reached `approved`, because the guard asked only
-    // whether the path appeared somewhere in the body (#1121).
+    // whether the path appeared somewhere in the body.
     const root = await newRepo({ ".qfai/contracts/db/CON-DB-0007.sql": "SELECT 1;\n" });
     await commitEdits(root, {
       ".qfai/contracts/db/CON-DB-0007.sql": "SELECT 2;\n",
@@ -362,7 +403,7 @@ describe("validateUpstreamSsotGuard", () => {
     // `QFAI-TRIAGE-008`'s own remedy tells authors that placing several
     // `## Triage` sections means all of them are checked. Reading only the
     // first ignored a later declaration and reported an edit that WAS
-    // declared as undeclared (#1139).
+    // declared as undeclared.
     const root = await newRepo({ ".qfai/contracts/db/CON-DB-0007.sql": "SELECT 1;\n" });
     await commitEdits(root, {
       ".qfai/contracts/db/CON-DB-0007.sql": "SELECT 2;\n",
@@ -385,10 +426,12 @@ describe("validateUpstreamSsotGuard", () => {
   });
 
   it("does NOT let a fenced example authorise the path it illustrates", async () => {
-    // The serious half. For `## Triage` an unmasked fence produced a false
+    // The serious half. For `## Triage` an unmasked fence produces a false
     // POSITIVE; for an exemption it is inverted — the CR's EXAMPLE grants what
-    // it names while the real scope declares nothing. That is #1121's own
-    // headline, "a prohibition reads as a permission", by another route.
+    // it names while the real scope declares nothing. The shape matches reading
+    // the whole CR body instead of the declared section: a prohibition reads as
+    // a permission, reached here through an unmasked fence rather than an
+    // unscoped read.
     const root = await newRepo({ ".qfai/contracts/db/CON-DB-0007.sql": "SELECT 1;\n" });
     await commitEdits(root, {
       ".qfai/contracts/db/CON-DB-0007.sql": "SELECT 2;\n",
@@ -460,8 +503,8 @@ describe("validateUpstreamSsotGuard", () => {
     // THIS BRANCH", and for such a file that sentence is false — so the error
     // count grew as `origin/main` advanced, on a branch whose review cycle the
     // gate itself makes slow. Gate item 12's step 4 is
-    // `qfai validate --fail-on error`, which made the gate a function of
-    // wall-clock time rather than of the tree (#1149).
+    // `qfai validate --fail-on error`, which makes the gate a function of
+    // wall-clock time rather than of the tree.
     const root = await newRepo({
       ".qfai/contracts/db/branch-owned.sql": "SELECT 1;\n",
       ".qfai/contracts/api/main-owned.yaml": "openapi: 3.0.0\n",

@@ -43,6 +43,35 @@ a body at the ceiling stops shedding topics and starts packing them into longer
 lines, and a line count cannot see that. Raise it again only against evidence of
 that kind.
 
+**A width ceiling makes the count honest: 400 characters per line.** A count of
+lines bounds reading cost only while a line is a roughly constant unit of
+reading, and packing broke that — one line in the shipped tree ran 9,104
+characters against a median of 118, and cost the budget one unit. The two are
+read together, because each permits what the other refuses: width alone allows a
+thin file of a thousand short lines, and the count alone allows a packed one.
+
+Two shapes are not measured, and for the same reason — the author cannot make
+them narrower:
+
+| not measured   | why                                                       |
+| -------------- | --------------------------------------------------------- |
+| a table row    | markdown gives it no continuation, so it cannot wrap      |
+| a fenced block | its content is a command, a diagram or a sample, verbatim |
+
+A table is found by its delimiter row, not by a leading pipe: that pipe is
+optional, so a table written without one is still a table, and a paragraph
+that opens with one is still a paragraph. Rows a blank line has cut off from
+their delimiter are prose, because that is how they render.
+
+Some shipped files predate the ceiling and carry a recorded width of their own.
+It is the width each arrives with, so `npx qfai doctor` does not report a fresh tree
+for content you received rather than wrote. That record belongs to the package
+and shrinks there; it is not a per-project allowance, and it never loosens the
+ceiling on an asset you write. **Everything you author is held at 400.**
+
+The exemption from the line ceiling does not carry here. Its reason is about a
+file's length, not about how wide one line may be.
+
 One shipped file is exempt, and only because it is a roster rather than prose:
 `assistant/manifest/agent-catalog.yml` holds one entry per agent, mirroring
 `assistant/agents/<id>.md`, so its length tracks the number of agents — whether
@@ -113,6 +142,19 @@ There is one base, and it is the project root.
 - If AskUserQuestion is unavailable, ask the same question in a normal message with explicit numbered choices.
 - Preserve structured choice semantics when falling back.
 - State why AskUserQuestion was unavailable.
+- The three buckets of a skill's `## Default Autopilot Policy` say who settles a
+  decision:
+  - `auto-decide` — the skill settles it without asking.
+  - `ask-user` — the skill asks before acting.
+  - `hard-required` — no default is possible, so a run may not proceed on a
+    guess. The value is either supplied by the user or read off evidence that
+    settles it. A `testFileGlobs` proposal is settled that way: a glob either
+    matches real files or it does not. `primarySpecId` is not, and a single
+    candidate does not settle it — which spec to work on is a choice, and
+    auto-discovery narrows the candidates without making it.
+
+  What a missing hard-required value costs a run is below.
+
 - Spend **at most 5 clarifying questions per invocation**, the unit being one
   top-level skill or command invocation (a `/qfai-*` stage, `/qfai-configure`,
   `/web-research`, …), counted per question item rather than per

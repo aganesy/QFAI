@@ -55,10 +55,7 @@ const KNOWN_UNREACHABLE = new Map<string, string>([
  * terms as `KNOWN_UNREACHABLE` — the assertion below demands equality, so an
  * entry has to go the moment its validator is wired up.
  */
-const KNOWN_UNDISPATCHED = new Map<string, string>([
-  // `validate.ts` imports the `inspectIntegrationSurface` wrapper instead.
-  ["validateIntegrationSurface", "unfiled — superseded by inspectIntegrationSurface"],
-]);
+const KNOWN_UNDISPATCHED = new Map<string, string>([]);
 
 const parsed = new Map<string, ts.SourceFile | null>();
 

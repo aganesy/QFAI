@@ -14,7 +14,7 @@
  * only other producer is `qfai init`, which cannot run in this root without
  * writing a pile of unrelated files. So the only ways to satisfy the test were
  * to hand-edit a file it says is not hand-edited, or to copy the expected bytes
- * out of its failure message (#1183).
+ * out of its failure message.
  *
  * The markdown is the source; the TOML is derived. Runs after
  * `gen-agent-catalog.mjs` in the `sync:ssot` chain, because the kind of each

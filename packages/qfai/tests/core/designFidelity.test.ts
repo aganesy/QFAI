@@ -20,7 +20,7 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { defaultConfig, type QfaiConfig } from "../../src/core/config.js";
 import { validateDesignFidelity } from "../../src/core/validators/designFidelity.js";
 
-describe("Design Fidelity Scorecard validation", { timeout: 10000 }, () => {
+describe("Design Fidelity Scorecard validation", () => {
   let root: string;
 
   beforeEach(async () => {

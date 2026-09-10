@@ -87,19 +87,13 @@ the full suite only for a row that sits on a boundary.
 
 ### Checkpoint runs before `done`, never after
 
-The lifecycle allows `refactor -> exception` but forbids re-opening a `done`
-row, so verification has to happen while the row is still `refactor`:
+The lifecycle forbids re-opening a `done` row, so verification has to happen
+while the row is still `refactor`:
 
 - run the checkpoint at the end of Refactor, after the reviewers return PASS;
-- PASS -> `refactor -> done`;
-- FAIL -> `refactor -> exception` with a DR-ID, and the regression is filed as
-  a new `todo` row carrying the failing selector — **filed upstream, not here**:
-  raise a Change Request per
-  `.qfai/assistant/constitution/drift-protocol.md#when-drift-is-detected` and
-  `/qfai-sdd` Phase 2b seeds that row
-  (`../../qfai-sdd/references/sdd-phase-checklists.md`). This skill owns cells,
+- the outcome and its handling are defined once, in
+  `checkpoint-verification.md#pass-criteria`. Whichever repair it directs, a row
+  that repair needs is **filed upstream, not here**. This skill owns cells,
   never rows.
 
-Rows already `done` from earlier boundaries are never re-opened. Spec completion
-stays blocked until the new row reaches `done`, because "Checkpoint verification
-passed" is a spec completion condition.
+Rows already `done` from earlier boundaries are never re-opened.

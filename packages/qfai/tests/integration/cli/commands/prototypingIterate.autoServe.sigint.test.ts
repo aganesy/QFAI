@@ -144,14 +144,14 @@ describe("iterate --auto-serve SIGINT teardown", () => {
     expect(process.listenerCount("SIGINT")).toBe(sigintListenersBefore);
   });
 
-  // Codex P2 wave-11 regression: if `runCapturePath` throws (e.g.,
+  // If `runCapturePath` throws (e.g.,
   // `mirrorAcceptedIterToAggregateDirs` hits a non-ENOENT readdir /
   // mkdir failure), iterate must still tear down the auto-serve
-  // runner and detach the SIGINT handler. Before the try/finally
-  // wrap, the throw-from-helper path skipped both, leaking a live
+  // runner and detach the SIGINT handler: without a try/finally
+  // wrap, the throw-from-helper path would skip both, leaking a live
   // HTTP server + SIGINT listener into the parent process.
   //
-  // We simulate the throw by planting a regular file at the path the
+  // This simulates the throw by planting a regular file at the path the
   // aggregate mirror tries to create as a directory; `mkdir(...,
   // { recursive: true })` then raises `EEXIST` / `ENOTDIR`, which
   // bubbles up past `runCapturePath`.

@@ -1,13 +1,13 @@
 /**
  * `qfai prototyping certify` relates the stored `validate.json` to the evidence
- * it is about to seal (#1107).
+ * it is about to seal.
  *
- * Before this, certify checked three things about that file — it exists, its
- * `profile` is `prototyping`, its `counts.error` is 0
- * (`prototypingCertify.ts:286-319`) — and nothing that tied the result to the
- * tree. So a success recorded while a flat `review.json` was present let it seal
+ * Checking only that the file exists, its
+ * `profile` is `prototyping`, and its `counts.error` is 0
+ * (`prototypingCertify.ts:286-319`) ties nothing to the
+ * tree: a success recorded while a flat `review.json` was present would let it seal
  * a per-spec-only layout the current `validate` rejects, and the certificate
- * recorded `validateRun.ranAt` as the CERTIFY instant: a timestamp manufactured
+ * would record `validateRun.ranAt` as the CERTIFY instant — a timestamp manufactured
  * at the moment the question became unanswerable.
  *
  * mtime, with the limitations the sibling check at `:1216-1294` already
@@ -196,7 +196,7 @@ describe("certify relates validate.json to the evidence it seals", () => {
   });
 
   it("refuses when an evidence file is newer than the run", async () => {
-    // The #1107 sequence: validate passes, the evidence then changes, certify
+    // Validate passes, the evidence then changes, certify
     // is asked to seal it. The stored result is no longer a verdict on this
     // tree, and the three checks above it cannot tell.
     const root = await newTempDir();

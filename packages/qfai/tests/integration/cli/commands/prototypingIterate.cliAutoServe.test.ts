@@ -249,7 +249,7 @@ describe("iterate --auto-serve: (6) 2-second teardown bound (NFR-0106)", () => {
 });
 
 describe("iterate --auto-serve: (7a) defaultServerRunner path-traversal — Windows edge cases", () => {
-  // PR #210 wave-Batch-C — verifies that the path-traversal guard in
+  // Verifies that the path-traversal guard in
   // `defaultServerRunner` correctly rejects platform-specific traversal
   // shapes (Windows drive-letter `C:\...` and UNC `\\server\share\...`)
   // in addition to the URL-decoded `../../etc/passwd` POSIX shape.

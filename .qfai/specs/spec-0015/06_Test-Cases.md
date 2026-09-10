@@ -232,13 +232,13 @@
 - Level: integration
 - Verify that when `references/*.md` + SKILL.md are rewritten in the same atomic PR as the OQ-0152..0157 implementation, `qfai validate --report` reports zero stale references at HEAD.
 
-## TC-0015-0033: `validate --report` flags stale reference (warning in window, error at sunset)
+## TC-0015-0033: `validate --report` flags a stale reference as a warning
 
 - EX-Ref: EX-0015-0017
 - AC-Refs: AC-0015-0021
 - Type: error
 - Level: integration
-- Verify that a `references/*.md` still describing pre-implementation behavior surfaces as a warning during the deprecation window and fails (error) at HEAD after sunset under the zero-stale-reference obligation.
+- Verify that a `references/*.md` still describing pre-implementation behavior surfaces as a warning at HEAD, and that the severity is the same whatever the date of the run.
 
 ## TC-0015-0035: Reviewer-Gate ingests hygiene drift without demanding a justification
 

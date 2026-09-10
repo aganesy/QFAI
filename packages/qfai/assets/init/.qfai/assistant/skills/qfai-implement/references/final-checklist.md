@@ -55,6 +55,9 @@ releases completion.
       evidence entry records the verdict on either target — the field name does not change — and it
       is not the verdict; the `--profile tdd` run this list ends on reports no `QFAI-REVIEW-*`
       finding, so a pack that never held a UI review passes it (gate item 9).
+      Whether a row is UI-affecting is decided by `ui-affecting.md`, not by the implementer,
+      and the answer is recorded either way: the verdict together with the number of the
+      clause that selected the row, or `n/a (not UI-affecting)` where no clause does.
       Its `Prototype parity reviewed revision` names the **same** revision as items 6, 7
       and 8: a parity PASS taken before the surface moved is stale, and it is the one
       verdict a later reader cannot re-derive from the spec and the diff (gate item 10).
@@ -162,8 +165,9 @@ releases completion.
 - [ ] All tests pass.
 - [ ] `npx qfai validate --profile tdd --fail-on error --spec <spec-id>` passes with zero
       `QFAI-TEST-001` findings (no `it.todo` / `test.todo` / `describe.todo` stubs remain).
-      The JS/TS `.skip` family is a separate warning rule, `QFAI-TEST-003`, and is **not**
-      counted here — a `.skip` parked in some unrelated scaffold cannot block completion.
+      The JS/TS `.skip` family is a separate rule, `QFAI-TEST-003`, and is **not**
+      counted here — this gate asks only about `QFAI-TEST-001`. The profile run
+      still reports the `.skip`, and still exits 1 on it.
       `--spec` scopes the **spec-owned** rules; `QFAI-TEST-001` is **not** one of them and
       still fails this gate wherever the stub lives. It names a test file, which no spec
       owns, so a sibling spec's `it.todo` exits 1 here. That is a real limit, not a

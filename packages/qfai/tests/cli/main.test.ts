@@ -9,7 +9,7 @@ import { run } from "../../src/cli/main.js";
 import { resolveToolVersion } from "../../src/core/version.js";
 import { captureStdout } from "../helpers/stdout.js";
 
-describe("cli root discovery", { timeout: 15000 }, () => {
+describe("cli root discovery", () => {
   it("finds config in parent when --root is omitted", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-cli-root-"));
     const cwd = path.join(root, "packages", "app");
@@ -32,6 +32,36 @@ describe("cli root discovery", { timeout: 15000 }, () => {
     }
   });
 
+  it("sets exitCode from report so --fail-on gates the run", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-cli-report-"));
+    try {
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+
+      const previousExitCode = process.exitCode;
+      process.exitCode = undefined;
+      try {
+        await run(["report", "--root", root, "--run-validate", "--fail-on", "never"], root);
+        expect(process.exitCode).toBe(0);
+
+        const validatePath = path.join(root, ".qfai", "report", "validate.json");
+        const parsed = JSON.parse(await readFile(validatePath, "utf-8")) as { counts: unknown };
+        const seededPath = path.join(root, ".qfai", "report", "validate.seeded.json");
+        await writeFile(
+          seededPath,
+          `${JSON.stringify({ ...parsed, counts: { info: 0, warning: 0, error: 1 } }, null, 2)}\n`,
+          "utf-8",
+        );
+
+        await run(["report", "--root", root, "--in", seededPath, "--fail-on", "error"], root);
+        expect(process.exitCode).toBe(1);
+      } finally {
+        process.exitCode = previousExitCode;
+      }
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
   // CLI-arg errors exit 2 on every command, not just `guardrails`
   // (`.qfai/contracts/cli/qfai-init.md` exit-code table).
   it("sets exitCode=2 when help is shown due to invalid args", async () => {
@@ -45,6 +75,30 @@ describe("cli root discovery", { timeout: 15000 }, () => {
     } finally {
       process.exitCode = previousExitCode;
     }
+  });
+
+  it("documents --strict and --fail-on as report gates in the help text", async () => {
+    // The gate flags are only discoverable to an operator reading `--help`;
+    // while `usage()` scoped both to `validate` alone they looked unsupported
+    // on `report` even though main.ts forwards them.
+    const chunks: string[] = [];
+    const previousWrite = process.stdout.write.bind(process.stdout);
+    const previousExitCode = process.exitCode;
+    process.exitCode = undefined;
+    try {
+      process.stdout.write = (chunk: string | Uint8Array): boolean => {
+        chunks.push(typeof chunk === "string" ? chunk : Buffer.from(chunk).toString("utf-8"));
+        return true;
+      };
+      await run(["--help"], process.cwd());
+    } finally {
+      process.stdout.write = previousWrite;
+      process.exitCode = previousExitCode;
+    }
+
+    const help = chunks.join("");
+    expect(help).toContain("--strict                     validate/report:");
+    expect(help).toContain("--fail-on <error|warning|never>  validate/report:");
   });
 
   it("reports the unknown flag on stderr and exits 2 instead of running the command", async () => {
@@ -207,16 +261,22 @@ describe("cli root discovery", { timeout: 15000 }, () => {
     expect(output).toContain("qfai <command> [options]");
   });
 
-  it("sets exitCode=1 when the command is unknown", async () => {
+  it("sets exitCode=1 when the top-level command is unknown", async () => {
     const cwd = process.cwd();
 
-    const previousExitCode = process.exitCode;
-    process.exitCode = undefined;
-    try {
-      await run(["bogus"], cwd);
-      expect(process.exitCode).toBe(1);
-    } finally {
-      process.exitCode = previousExitCode;
+    // Two spellings of the same defect, one from each side of this merge: a
+    // word that is no command at all, and a near-miss typo of one that is.
+    // Both reach the same `Unknown command` path, and keeping both keeps the
+    // typo case from being read as a suggestion feature that does not exist.
+    for (const unknown of ["bogus", "vlaidate"]) {
+      const previousExitCode = process.exitCode;
+      process.exitCode = undefined;
+      try {
+        await run([unknown], cwd);
+        expect(process.exitCode).toBe(1);
+      } finally {
+        process.exitCode = previousExitCode;
+      }
     }
   });
 
@@ -360,7 +420,8 @@ describe("cli usage text", () => {
     const entry = forceEntry(await captureHelp());
 
     expect(entry).toContain("copilot-instructions.md");
-    expect(entry).toContain("README.md");
+    // And nothing else plain, now that init writes no README anywhere.
+    expect(entry).not.toContain("README.md");
   });
 
   it("does not claim everything outside skills/agents is skipped when it exists", async () => {

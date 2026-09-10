@@ -1,5 +1,5 @@
 /**
- * QFAI-TABLE-001 — header/row arity is finally compared (#389).
+ * QFAI-TABLE-001 — header/row arity is compared.
  *
  * `parseAllMarkdownTables` builds `headers` and `rows` independently and never
  * compares them, and every consumer reads `row[headers.indexOf(name)] ?? ""`.

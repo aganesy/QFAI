@@ -20,19 +20,12 @@ import path from "node:path";
 import type * as fsPromises from "node:fs/promises";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-/** The signature `qfai init` writes into the READMEs it leaves behind. */
-const INIT_README_BODY = [
-  "# QFAI Agents skills",
-  "",
-  "This directory provides Agents/Codex-compatible skill symlinks for QFAI.",
-  "",
-  "## Canonical entrypoint",
-  "",
-  "Skill symlinks point to QFAI's canonical skill documents under:",
-  "",
-  "- .qfai/assistant/skills/",
-  "",
-].join("\n");
+/** One of the records `qfai init` writes and never removes. */
+async function seedInitRecord(root: string): Promise<void> {
+  const target = path.join(root, ".qfai", "install-provenance.json");
+  await mkdir(path.dirname(target), { recursive: true });
+  await writeFile(target, "{}\n", "utf-8");
+}
 
 type FsPromises = typeof fsPromises;
 
@@ -148,11 +141,10 @@ describe("validateIntegrationSurface read errors", () => {
       const claudeSkills = path.join(root, ".claude", "skills");
       await mkdir(path.dirname(claudeSkills), { recursive: true });
       await writeFile(claudeSkills, "not a directory\n", "utf-8");
-      // A marker so the project reads as initialised: a project that never ran
-      // init owns whatever is at these paths, and claiming it would be the
-      // false positive this rule was taught not to make.
-      await mkdir(path.join(root, ".agents"), { recursive: true });
-      await writeFile(path.join(root, ".agents", "README.md"), INIT_README_BODY, "utf-8");
+      // A record so the project reads as initialised: a project that never ran
+      // init owns whatever is at the integration paths, and claiming it would
+      // be the false positive this rule was taught not to make.
+      await seedInitRecord(root);
 
       const issues = await validateIntegrationSurface(root);
       expect(issues.map((entry) => entry.code)).toContain("QFAI-LINK-001");
@@ -203,7 +195,7 @@ describe("validateIntegrationSurface read errors", () => {
 
 describe("a structurally broken target is a finding, not a crash", () => {
   it("reports EPERM instead of propagating it", async () => {
-    // #1095. `git worktree add` on Windows materialises every
+    // `git worktree add` on Windows materialises every
     // `.claude/skills/*` link as a FILE symlink pointing at a directory —
     // because at the moment git writes it the target does not yet exist in the
     // new worktree and it has no reftype hint — and Windows will not follow
@@ -231,8 +223,59 @@ describe("a structurally broken target is a finding, not a crash", () => {
       );
 
       const issues = await validateIntegrationSurface(root);
-      expect(issues.map((entry) => entry.code)).toEqual(["QFAI-LINK-001"]);
-      expect(issues[0]?.message).toContain("will not follow");
+      expect(issues.map((entry) => entry.code)).toEqual(["QFAI-LINK-001", "QFAI-LINK-001"]);
+      expect(issues.some((entry) => entry.message.includes("will not follow"))).toBe(true);
+    });
+  });
+
+  it("reports a wrapper the OS will not follow as a warning, not an error", async () => {
+    // The severity is the operator's whole reading of it. `git worktree`
+    // produces this shape on every wrapper, on a tree where every canonical
+    // document is present and readable — so an `error` here made
+    // `validate --fail-on error` unable to exit 0 in the workflow the skills
+    // are written for, and the rule stopped being read as a rule.
+    await withProject(async (root) => {
+      await seedCanonical(root);
+      const wrapper = path.join(root, ".claude", "skills", "qfai-atdd");
+      await mkdir(path.dirname(wrapper), { recursive: true });
+      await symlink("../../.qfai/assistant/skills/qfai-atdd", wrapper, "dir");
+      statSpy.mockImplementation((actual: FsPromises, target: string, ...rest: never[]) =>
+        path.resolve(String(target)) === path.resolve(wrapper)
+          ? Promise.reject(errno("EPERM"))
+          : actual.stat(target, ...rest),
+      );
+
+      const issues = await validateIntegrationSurface(root);
+      const unfollowable = issues.find((entry) => entry.message.includes("will not follow"));
+      expect(unfollowable?.severity).toBe("warning");
+      // And it says so rather than repeating the claim it cannot make: the
+      // document is in the tree, this path does not reach it.
+      expect(unfollowable?.message).toContain("the instructions are in this tree");
+      expect(unfollowable?.message).not.toContain("まったく適用されていません");
+      expect(unfollowable?.suggested_action).toContain("git worktree");
+    });
+  });
+
+  it("keeps the error when the canonical behind such a wrapper is gone", async () => {
+    // The over-correction pin. Unreadable behind the link is the case the
+    // original claim describes exactly — the instructions are not in this tree
+    // — and downgrading on the errno alone would have taken it with it.
+    await withProject(async (root) => {
+      await seedCanonical(root);
+      const wrapper = path.join(root, ".claude", "skills", "qfai-atdd");
+      await mkdir(path.dirname(wrapper), { recursive: true });
+      await symlink("../../.qfai/assistant/skills/qfai-atdd", wrapper, "dir");
+      await rm(path.join(root, ".qfai", "assistant", "skills", "qfai-atdd", "SKILL.md"));
+      statSpy.mockImplementation((actual: FsPromises, target: string, ...rest: never[]) =>
+        path.resolve(String(target)) === path.resolve(wrapper)
+          ? Promise.reject(errno("EPERM"))
+          : actual.stat(target, ...rest),
+      );
+
+      const issues = await validateIntegrationSurface(root);
+      const named = issues.filter((entry) => entry.message.includes(".claude/skills/qfai-atdd"));
+      expect(named).toHaveLength(1);
+      expect(named[0]?.severity).toBe("error");
     });
   });
 

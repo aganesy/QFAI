@@ -14,12 +14,28 @@
 # `**` (any depth). A pattern that matches nothing is not an error: a pack that
 # has not been created yet, and an optional document like the traceability
 # ledger, are both ordinary states.
+#
+# An entry may also carry `when:`, a regular expression read against the
+# document's own text. It exists because a path can carry two document shapes:
+# a `01_Spec.md` specifies something while its spec is live, and records why the
+# spec went away once it is not. A file the predicate matches is checked against
+# that entry and dropped from the entry on the same path that has no predicate,
+# so the two partition the documents rather than running one document against
+# two contracts. Write the predicate without `#`, which starts a comment here.
 
 documents:
   # ── Spec packs ────────────────────────────────────────────────────
   - id: spec-overview
     schema: spec/01_Spec.mdschema.yml
     pattern: "{specsDir}/spec-*/01_Spec.md"
+
+  # The same document once its spec has retired. A pack outlives the thing it
+  # specifies, and the record it becomes cannot carry a consumer view or an
+  # applicable NFR for something that no longer exists.
+  - id: spec-overview-retired
+    schema: spec/01_Spec-retired.mdschema.yml
+    pattern: "{specsDir}/spec-*/01_Spec.md"
+    when: "^- Status:[ \t]*(superseded|deprecated|removed)[ \t]*$"
 
   - id: spec-user-stories
     schema: spec/02_User-stories.mdschema.yml

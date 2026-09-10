@@ -564,12 +564,13 @@ describe("meta-test: validators/index.ts lists only wired validators", () => {
   });
 
   it("does not let a delimiter inside a regex literal re-frame the file", () => {
-    // #1061. A regex body can hold a backtick, and the scan this replaced
-    // tracked strings and templates but not regexes. `core/specPackParsers.ts`
-    // matches CommonMark fences, so its regex carries a run of backticks; the
-    // phantom template that opened there ran forty-six lines into a JSDoc and
-    // swallowed that JSDoc's own opener, after which prose read as code and
-    // code read as data. Both assertions below flip without the fix.
+    // A regex body can hold a backtick, so the scan must track regex literals
+    // as well as strings and templates. `core/specPackParsers.ts` matches
+    // CommonMark fences, so its regex carries a run of backticks; misread as a
+    // template, that regex would open a phantom template spanning forty-six
+    // lines into a JSDoc and swallow the JSDoc's own opener, after which prose
+    // reads as code and code reads as data. Both assertions below pin that
+    // distinction.
     const fenceMatcher = [
       "const FENCE = /^ {0,3}(`{3,}|~{3,})/;",
       "/**",
@@ -640,6 +641,29 @@ describe("meta-test: validators/index.ts lists only wired validators", () => {
       false,
     );
     expect(reachable.has(VALIDATORS_INDEX)).toBe(false);
+  });
+
+  it("does not let a glob inside a line comment open a block comment", () => {
+    // The shape `validate.ts` actually carries: a `//` comment naming
+    // `references/*.md`, and a JSDoc further down whose terminator used to
+    // close the `/*` that glob spells. Everything between the two disappeared.
+    const source = [
+      "// Doc governance — `references/*.md` + SKILL.md as warning.",
+      "...(await validateStaleReferences(root, { config })),",
+      "/** Count findings by severity. */",
+      "export function countIssues(issues: Issue[]): ValidationCounts {",
+    ].join("\n");
+
+    // The call between the two comments has to survive, or every name it
+    // mentions silently reads as unwired.
+    expect(referencesName(source, "validateStaleReferences")).toBe(true);
+    expect(stripComments(source)).toContain("export function countIssues");
+
+    // Still a comment stripper: both forms go, in either order, and a `//`
+    // inside a block comment does not end it early.
+    expect(stripComments("/* a\n b */ kept")).not.toContain("a");
+    expect(stripComments("/* has // inside */ kept").trim()).toBe("kept");
+    expect(stripComments("const u = 'https://x';").trim()).toBe("const u = 'https://x';");
   });
 
   it("the retired /qfai-require validators are gone from the barrel", async () => {

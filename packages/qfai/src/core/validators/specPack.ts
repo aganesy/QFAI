@@ -66,19 +66,8 @@ import {
   type TriageUpdateSubOp,
 } from "../sddTriage.js";
 import { loadLayerPolicy } from "../layerPolicy.js";
-import { RULE_PROMOTIONS, newRuleSeverity } from "../sunset.js";
 import type { Issue, IssueSeverity } from "../types.js";
-import { resolveToolVersion } from "../version.js";
 import { issue } from "./utils.js";
-
-/** The release `QFAI-TRIAGE-008` stops being a warning at. */
-const TRIAGE_HEADING_PROMOTION = RULE_PROMOTIONS.triageHeadingNonCanonical.promoteAt;
-
-/** The release `QFAI-TRIAGE-009` stops being a warning at. */
-const EXISTING_SPEC_PROMOTION = RULE_PROMOTIONS.triageExistingSpecCell.promoteAt;
-
-/** The release the seven `QFAI-DECISION-*` codes stop being warnings at. */
-const RE_OPEN_PROMOTION = RULE_PROMOTIONS.specPackReOpenDecisionRecord.promoteAt;
 
 const LEDGER_REQUIRED_COLUMNS = [
   "trace_id",
@@ -143,10 +132,6 @@ export async function validateSpecPacks(root: string, config: QfaiConfig): Promi
 
   const contractIndex = await buildContractIndex(root, config);
   const layerPolicy = await loadLayerPolicy(root, config);
-  // Resolved once for the whole run rather than per spec entry: the promotion
-  // window `QFAI-TRIAGE-008` sits in is a property of the tool, not of the
-  // delta file being read.
-  const toolVersion = await resolveToolVersion();
   const issues: Issue[] = [...layerPolicy.issues];
 
   const knownSpecIds = new Set(entries.map((entry) => `spec-${entry.specNumber}`));
@@ -168,29 +153,28 @@ export async function validateSpecPacks(root: string, config: QfaiConfig): Promi
       // surface the layout problem separately.
       continue;
     }
-    // Common checks (PR #206 review #42): Status / Triage validation is
+    // Common checks: Status / Triage validation is
     // layout-independent, so factor it out of the per-branch tail to
     // avoid two-place drift when a third layout is introduced.
     issues.push(...(await validateSpecStatusForEntry(entry, knownSpecIds, specStatuses)));
-    issues.push(...(await validateTriageSectionForEntry(entry, toolVersion, knownSpecIds)));
-    issues.push(...(await validateReOpenForEntry(entry, specsRoot, toolVersion)));
+    issues.push(...(await validateTriageSectionForEntry(entry, knownSpecIds)));
+    issues.push(...(await validateReOpenForEntry(entry, specsRoot)));
   }
 
   // Cross-spec / policy-only triage rows live in `_policies/10_delta.md`
   // (per `_policies/11_Slice-Policy.md` Decision procedure). The
   // per-entry loop above does not include `_policies/` so the same
   // Triage validators (QFAI-TRIAGE-001..006) must be invoked separately
-  // (PR #206 review LW-F). Without this branch, CREATE rows in the
+  // Without this branch, CREATE rows in the
   // policy delta would silently bypass QFAI-TRIAGE-006 and SPLIT/MERGE
   // rows would skip the approval gate.
-  issues.push(...(await validatePoliciesDeltaTriage(specsRoot, toolVersion, knownSpecIds)));
+  issues.push(...(await validatePoliciesDeltaTriage(specsRoot, knownSpecIds)));
 
   return issues;
 }
 
 async function validatePoliciesDeltaTriage(
   specsRoot: string,
-  toolVersion: string,
   knownSpecIds: ReadonlySet<string>,
 ): Promise<Issue[]> {
   const deltaPath = path.join(specsRoot, "_policies", "10_delta.md");
@@ -203,7 +187,7 @@ async function validatePoliciesDeltaTriage(
     return [];
   }
   const capabilitiesPath = path.join(specsRoot, "_policies", "03_Capabilities.md");
-  const issues = validateTriageSection(text, deltaPath, toolVersion, knownSpecIds);
+  const issues = validateTriageSection(text, deltaPath, knownSpecIds);
   issues.push(...(await validateCreateRowCapabilityRefs(text, deltaPath, capabilitiesPath)));
   return issues;
 }
@@ -668,7 +652,7 @@ const TRIAGE_SUB_OPS = new Set<string>(TRIAGE_UPDATE_SUBOPS);
 
 /**
  * Type guard for the canonical triage Operation labels (top-level + UPDATE).
- * Replaces a bare `as` assertion at the call site (PR #206 review #34).
+ * Replaces a bare `as` assertion at the call site.
  */
 function isTriageTopLevelLabel(value: string): value is "UPDATE" | TriageTopLevelOp {
   return TRIAGE_TOP_LEVEL_LABELS.has(value);
@@ -676,8 +660,7 @@ function isTriageTopLevelLabel(value: string): value is "UPDATE" | TriageTopLeve
 
 /**
  * Type guard for the canonical triage UPDATE Sub-op labels. Replaces a
- * bare `as TriageUpdateSubOp` assertion at the call site
- * (PR #206 review #37).
+ * bare `as TriageUpdateSubOp` assertion at the call site.
  */
 function isTriageUpdateSubOp(value: string): value is TriageUpdateSubOp {
   return TRIAGE_SUB_OPS.has(value);
@@ -685,7 +668,6 @@ function isTriageUpdateSubOp(value: string): value is TriageUpdateSubOp {
 
 async function validateTriageSectionForEntry(
   entry: SpecEntry,
-  toolVersion: string,
   knownSpecIds: ReadonlySet<string>,
 ): Promise<Issue[]> {
   const deltaPath = entry.deltaPath;
@@ -698,7 +680,7 @@ async function validateTriageSectionForEntry(
   } catch {
     return [];
   }
-  const issues = validateTriageSection(text, deltaPath, toolVersion, knownSpecIds);
+  const issues = validateTriageSection(text, deltaPath, knownSpecIds);
   issues.push(...(await validateCreateRowCapabilityRefs(text, deltaPath, entry.capabilityPath)));
   return issues;
 }
@@ -725,10 +707,10 @@ type TriageSection = {
 /**
  * canonical な `## Triage` セクションを **すべて** 返す。
  *
- * 以前は最初の 1 つだけを読んでいたため、skill 再実行で 2 つ目以降の
- * セクションに積まれた行が QFAI-TRIAGE-* の検査対象から丸ごと外れて
- * いた。セクション内の複数テーブル対応 (PR #206 review LWri) は
- * セクションをまたげないので、呼び出し側で全セクションを走査する。
+ * skill を再実行すると 2 つ目以降のセクションに行が積まれる。最初の
+ * セクションだけを読むと、それらの行が QFAI-TRIAGE-* の検査対象から外れる。
+ * セクション内の複数テーブル対応はセクションをまたげないので、呼び出し側で
+ * 全セクションを走査する。
  *
  * 走査前に `maskNonSpecRegions` で非仕様領域 (fenced code block / HTML
  * コメント / indented code) を blank する。delta が自分の書式を例示する
@@ -793,23 +775,18 @@ function collectUncheckedTriageHeadings(text: string): string[] {
  * append-first / 承認 gate が静かに外れる状態を可視化する。
  *
  * 既存の delta ファイルは、この規則が無かった時代の見出しをそのまま
- * 抱えている。だから severity は literal ではなく promotion window から
- * 取る (`toolVersion` は validator 実行ごとに 1 回だけ解決して渡される)。
+ * 抱えている。そのため初回の実行でまとめて指摘が出る。
  */
-function validateTriageHeadings(text: string, deltaPath: string, toolVersion: string): Issue[] {
+function validateTriageHeadings(text: string, deltaPath: string): Issue[] {
   const unchecked = collectUncheckedTriageHeadings(text);
   if (unchecked.length === 0) {
     return [];
   }
-  const triageHeadingSeverity = newRuleSeverity(toolVersion, TRIAGE_HEADING_PROMOTION);
-  const windowNote =
-    triageHeadingSeverity === "warning"
-      ? `（${TRIAGE_HEADING_PROMOTION} リリースまでは warning、以降は error として報告されます）`
-      : "";
+  const triageHeadingSeverity = "error";
   return [
     issue(
       "QFAI-TRIAGE-008",
-      `canonical でない Triage 見出しは QFAI-TRIAGE-* の検査対象外です: ${unchecked.join(", ")}${windowNote}`,
+      `canonical でない Triage 見出しは QFAI-TRIAGE-* の検査対象外です: ${unchecked.join(", ")}`,
       triageHeadingSeverity,
       deltaPath,
       "triage.headingCanonical",
@@ -845,10 +822,9 @@ export async function validateCreateRowCapabilityRefs(
   const issues: Issue[] = [];
   for (const section of sections) {
     // Triage section MAY contain multiple tables (e.g. when authors split
-    // a large change into themed sub-tables). Earlier behaviour read only
-    // the first table, letting CREATE rows in subsequent tables bypass
-    // QFAI-TRIAGE-006 entirely (PR #206 review LWri). Walk every table so
-    // the structural CAP-NNNN gate is uniform.
+    // a large change into themed sub-tables). Reading only the first table
+    // would let CREATE rows in later tables bypass QFAI-TRIAGE-006, so walk
+    // every table and keep the structural CAP-NNNN gate uniform.
     const tables = parseAllMarkdownTables(section.body);
     for (const [tableIndex, table] of tables.entries()) {
       const scopeLabel = buildTriageScopeLabel(
@@ -866,8 +842,8 @@ export async function validateCreateRowCapabilityRefs(
 
 /**
  * Resolve the known CAP set. When the capabilities catalog is missing
- * or unreadable, intentionally treat the known set as empty (PR #206
- * review #39). The caller will then surface QFAI-TRIAGE-006 for every
+ * or unreadable, intentionally treat the known set as empty. The caller
+ * will then surface QFAI-TRIAGE-006 for every
  * CREATE row that references a CAP, which is the desired structural
  * behaviour: append-first regression should fail loud rather than
  * silently skip when the SSOT cannot be loaded. A separate validator
@@ -992,28 +968,21 @@ function validateCreateRows(
  *
  * The grammar this enforces is itself new, so the rule necessarily lands on
  * cells written before it existed — on rows already approved, where the cell
- * is no longer rewritten by anything. Severity therefore comes from the
- * promotion window (`RULE_PROMOTIONS.triageExistingSpecCell`) rather than a
- * literal beside the call, so an upgrade cannot latch a consuming repository's
- * `--fail-on error` gate the moment it lands.
+ * is no longer rewritten by anything. A project meeting it for the first time
+ * therefore has a backlog rather than one edit.
  */
 function validateExistingSpecCell(
   cell: string,
   opUpper: "UPDATE" | TriageTopLevelOp,
   rowLabel: string,
   deltaPath: string,
-  toolVersion: string,
   knownSpecIds: ReadonlySet<string> | undefined,
 ): Issue[] {
-  const existingSpecSeverity = newRuleSeverity(toolVersion, EXISTING_SPEC_PROMOTION);
-  const windowNote =
-    existingSpecSeverity === "warning"
-      ? `（${EXISTING_SPEC_PROMOTION} リリースまでは warning、以降は error として報告されます）`
-      : "";
+  const existingSpecSeverity = "error";
   const report = (message: string, refs: string[]): Issue[] => [
     issue(
       "QFAI-TRIAGE-009",
-      `${message} (${rowLabel})${windowNote}`,
+      `${message} (${rowLabel})`,
       existingSpecSeverity,
       deltaPath,
       "triage.existingSpec",
@@ -1090,11 +1059,6 @@ function validateExistingSpecCell(
 }
 
 /**
- * `toolVersion` は必須引数。既定値を持たせると、渡し忘れた呼び出しでは
- * `QFAI-TRIAGE-008` / `QFAI-TRIAGE-009` が永久に warning のまま据え置かれ、
- * promotion window が黙って無効化される。呼び出し側は `resolveToolVersion()`
- * の結果を渡す。
- *
  * `knownSpecIds` は任意。delta.md を単体で検証する呼び出し (spec ツリーを
  * 持たないユニットテスト等) では `QFAI-TRIAGE-009` の文法だけを見て、
  * 存在検査は行わない。
@@ -1102,7 +1066,6 @@ function validateExistingSpecCell(
 export function validateTriageSection(
   text: string,
   deltaPath: string,
-  toolVersion: string,
   knownSpecIds?: ReadonlySet<string>,
 ): Issue[] {
   const issues: Issue[] = [];
@@ -1118,7 +1081,7 @@ export function validateTriageSection(
 
   // Fires regardless of the canonical sections' state: a Triage heading
   // nobody validates must never be silent.
-  issues.push(...validateTriageHeadings(text, deltaPath, toolVersion));
+  issues.push(...validateTriageHeadings(text, deltaPath));
 
   if (hasChangeSummary && !hasTriage) {
     // QFAI-TRIAGE-001 is intentionally a warning rather than an error
@@ -1134,8 +1097,8 @@ export function validateTriageSection(
     //   triage-skip is still caught the moment someone tries to use
     //   the Triage table for real work.
     //
-    // TODO(QFAI-PR206-followup): once the operational backfill PR
-    // ships (PR #206 review #4), promote this to `error` so that
+    // TODO: once existing spec packs carry a Triage section, promote this
+    // to `error` so that
     // missing Triage sections become structurally impossible.
     issues.push(
       issue(
@@ -1157,11 +1120,9 @@ export function validateTriageSection(
   }
 
   // Validate every canonical `## Triage` section, and every table inside
-  // each of them (PR #206 review LWri covered the tables only).
+  // each of them.
   for (const section of sections) {
-    issues.push(
-      ...validateTriageSectionBody(section, sections.length, deltaPath, toolVersion, knownSpecIds),
-    );
+    issues.push(...validateTriageSectionBody(section, sections.length, deltaPath, knownSpecIds));
   }
 
   return issues;
@@ -1171,7 +1132,6 @@ function validateTriageSectionBody(
   section: TriageSection,
   sectionCount: number,
   deltaPath: string,
-  toolVersion: string,
   knownSpecIds: ReadonlySet<string> | undefined,
 ): Issue[] {
   const issues: Issue[] = [];
@@ -1223,9 +1183,7 @@ function validateTriageSectionBody(
       continue;
     }
 
-    issues.push(
-      ...validateTriageRows(table, headerMap, deltaPath, tableLabel, toolVersion, knownSpecIds),
-    );
+    issues.push(...validateTriageRows(table, headerMap, deltaPath, tableLabel, knownSpecIds));
   }
 
   return issues;
@@ -1236,7 +1194,6 @@ function validateTriageRows(
   headerMap: Map<string, number>,
   deltaPath: string,
   tableLabel: string,
-  toolVersion: string,
   knownSpecIds: ReadonlySet<string> | undefined,
 ): Issue[] {
   const issues: Issue[] = [];
@@ -1267,21 +1224,14 @@ function validateTriageRows(
       continue;
     }
     // `opUpper` is now narrowed to `"UPDATE" | TriageTopLevelOp` without
-    // a bare type assertion (PR #206 review #34).
+    // a bare type assertion.
     const opUpper = opUpperRaw;
 
     // QFAI-TRIAGE-009 is orthogonal to the Sub-op / approval gates below,
     // so it is evaluated for every row whose Operation parsed, and the
     // row keeps flowing through the remaining checks.
     issues.push(
-      ...validateExistingSpecCell(
-        existingSpecCell,
-        opUpper,
-        rowLabel,
-        deltaPath,
-        toolVersion,
-        knownSpecIds,
-      ),
+      ...validateExistingSpecCell(existingSpecCell, opUpper, rowLabel, deltaPath, knownSpecIds),
     );
 
     if (opUpper === "UPDATE") {
@@ -1302,11 +1252,11 @@ function validateTriageRows(
         // Fail-fast: skip the QFAI-TRIAGE-005 (approval) check for this
         // row so an invalid Sub-op does not double-report alongside an
         // approval issue. The next pass with a corrected Sub-op will
-        // re-evaluate approval (PR #206 review #37).
+        // re-evaluate approval.
         continue;
       }
       // `subUpper` is now narrowed to `TriageUpdateSubOp` without a
-      // bare type assertion (PR #206 review #37).
+      // bare type assertion.
       if (subUpper === "REMOVE" && (approvedCell.length === 0 || approvedCell === "-")) {
         issues.push(
           issue(
@@ -1897,10 +1847,9 @@ function validateLayeredNamespace(
       mismatched,
       "canonical",
       `${path.basename(filePath)} の ${prefix} ID を spec-${entry.specNumber} に合わせて修正してください。` +
-        // The old remedy asked the author to do the one thing they cannot: the
-        // mismatched ID belongs to ANOTHER spec, so 「make it match this one」 is
-        // not a repair. The supported form was undiscoverable except by tripping
-        // the validator repeatedly (#1101).
+        // The mismatched ID belongs to ANOTHER spec, so 「make it match this one」
+        // is not a repair the author can perform. Name the supported form here,
+        // where the author reads it.
         "別 spec が所有する ID を参照したい場合は、その spec の contract id " +
         "(`CON-DB-*` / `CON-API-*` / `CON-UI-*`) を引用してください — `BR-*` / `US-*` などの " +
         "レイヤー ID を直接参照することはこの検査が禁止します。所有 spec は対象 spec の " +
@@ -2106,11 +2055,7 @@ const RE_OPENED_BY_LINE = /^\s*[-*]\s*re-opened\s+by\s*[:：]\s*(.*)$/i;
  * actually writes `Status: re-open` or a `Re-opened by:` back-reference, so an
  * existing spec pack that has never re-opened anything is unaffected.
  */
-async function validateReOpenForEntry(
-  entry: SpecEntry,
-  specsRoot: string,
-  toolVersion: string,
-): Promise<Issue[]> {
+async function validateReOpenForEntry(entry: SpecEntry, specsRoot: string): Promise<Issue[]> {
   const decisionsText = await readSafe(entry.decisionsPath);
   const deltas = await collectDeltaFiles(entry);
   const records = parseDecisionRecordEntries(decisionsText);
@@ -2120,7 +2065,7 @@ async function validateReOpenForEntry(
   );
   const unbound = deltas.flatMap((delta) => delta.rejected.unbound);
   const decisionsName = path.basename(entry.decisionsPath);
-  const window = reOpenWindow(toolVersion);
+  const window = reOpenWindow();
   // Runs whether or not a re-open exists: a candidate moved from `## Rejected`
   // to `## Adopted` with no record at all is the reintroduction the guard is
   // about, and it is exactly the case the two `Re-opened by:` checks below
@@ -2157,27 +2102,18 @@ async function validateReOpenForEntry(
 }
 
 /**
- * The promotion window the seven `QFAI-DECISION-*` codes report inside.
+ * The severity the seven `QFAI-DECISION-*` codes report at.
  *
- * The guard is new, and the records it reads are not: a spec that re-opened a
+ * The guard is newer than the records it reads: a spec that re-opened a
  * decision before any of these fields were defined is missing every one of
- * them, and a spec that re-adopted a rejected candidate meets the whole
- * backlog in a single run. So the severity comes from the pin rather than from
- * a literal beside each `issue(...)`, and the message says which release ends
- * the window while `--fail-on error` keeps working.
+ * them, and a spec that re-adopted a rejected candidate meets the whole backlog
+ * in a single run.
  *
- * Resolved once per validator run and threaded through {@link ReOpenContext}:
- * the window is a property of the tool, not of the spec being read.
+ * Resolved once per validator run and threaded through {@link ReOpenContext},
+ * so the seven cannot drift apart.
  */
-function reOpenWindow(toolVersion: string): ReOpenWindow {
-  const reOpenSeverity = newRuleSeverity(toolVersion, RE_OPEN_PROMOTION);
-  return {
-    reOpenSeverity,
-    windowNote:
-      reOpenSeverity === "warning"
-        ? `（${RE_OPEN_PROMOTION} リリースまでは warning、以降は error として報告されます）`
-        : "",
-  };
+function reOpenWindow(): ReOpenWindow {
+  return { reOpenSeverity: "error" };
 }
 
 /** One delta file of a spec, with the two sections these checks read parsed. */
@@ -2290,7 +2226,7 @@ function validateReadoptedCandidates(
     return [];
   }
 
-  const { reOpenSeverity, windowNote } = window;
+  const { reOpenSeverity } = window;
   const issues: Issue[] = [];
   for (const candidate of delta.rejected.candidates) {
     const key = candidateKey(candidate.name);
@@ -2303,7 +2239,7 @@ function validateReadoptedCandidates(
     issues.push(
       issue(
         "QFAI-DECISION-006",
-        `delta の \`## Rejected\` にある候補「${candidate.name}」が \`## Adopted\` にも現れていますが、この候補の \`Re-opened by:\` が空のままです。${windowNote}`,
+        `delta の \`## Rejected\` にある候補「${candidate.name}」が \`## Adopted\` にも現れていますが、この候補の \`Re-opened by:\` が空のままです。`,
         reOpenSeverity,
         delta.path,
         RE_OPENED_BY_RULE,
@@ -2463,13 +2399,13 @@ function validateUniqueDecisionIds(
   records: DecisionRecordEntry[],
   context: ReOpenContext,
 ): Issue[] {
-  const { reOpenSeverity, windowNote } = context;
+  const { reOpenSeverity } = context;
   const issues: Issue[] = [];
   for (const [id, count] of duplicateDecisionIds(records)) {
     issues.push(
       issue(
         "QFAI-DECISION-007",
-        `${context.decisionsName} に \`### ${id}\` の Decision Record が ${count} 件あります。同じ ID の重複宣言は、どの決定を再オープンしたのかを一意に定めません。${windowNote}`,
+        `${context.decisionsName} に \`### ${id}\` の Decision Record が ${count} 件あります。同じ ID の重複宣言は、どの決定を再オープンしたのかを一意に定めません。`,
         reOpenSeverity,
         context.decisionsPath,
         RE_OPEN_RULE,
@@ -2565,14 +2501,14 @@ function ambiguousOwnerIssue(
   policyPath: string,
   context: ReOpenContext,
 ): Issue {
-  const { reOpenSeverity, windowNote } = context;
+  const { reOpenSeverity } = context;
   const spread = local > 0;
   const where = spread
     ? `${context.decisionsName} と ${POLICY_DECISIONS_LABEL} の両方に \`### ${id}\` の Decision Record があります`
     : `${POLICY_DECISIONS_LABEL} に \`### ${id}\` の Decision Record が ${policy} 件あります`;
   return issue(
     "QFAI-DECISION-007",
-    `${where}。この spec の \`Re-opens: ${id}\` がどの決定を再考したのか一意に定まりません。${windowNote}`,
+    `${where}。この spec の \`Re-opens: ${id}\` がどの決定を再考したのか一意に定まりません。`,
     reOpenSeverity,
     spread ? context.decisionsPath : policyPath,
     RE_OPEN_RULE,
@@ -2585,7 +2521,7 @@ function ambiguousOwnerIssue(
 }
 
 /** The severity every `QFAI-DECISION-*` finding takes, and how it says so. */
-type ReOpenWindow = { reOpenSeverity: IssueSeverity; windowNote: string };
+type ReOpenWindow = { reOpenSeverity: IssueSeverity };
 
 /** What the per-record checks need beyond the record itself. */
 type ReOpenContext = ReOpenWindow & {
@@ -2657,11 +2593,11 @@ function validateReOpenIdScheme(record: DecisionRecordEntry, context: ReOpenCont
   if (DR_SPEC_SCOPED_ID_FORMAT.test(record.id)) {
     return [];
   }
-  const { reOpenSeverity, windowNote } = context;
+  const { reOpenSeverity } = context;
   return [
     issue(
       "QFAI-DECISION-001",
-      `${record.id} は \`Status: ${RE_OPEN_STATUS}\` ですが、ID が spec スコープの DR-NNNN-MMMM 形式ではありません（短い DR-NNNN は _policies/08_Decisions.md 専用です）。${windowNote}`,
+      `${record.id} は \`Status: ${RE_OPEN_STATUS}\` ですが、ID が spec スコープの DR-NNNN-MMMM 形式ではありません（短い DR-NNNN は _policies/08_Decisions.md 専用です）。`,
       reOpenSeverity,
       context.decisionsPath,
       RE_OPEN_RULE,
@@ -2674,7 +2610,7 @@ function validateReOpenIdScheme(record: DecisionRecordEntry, context: ReOpenCont
 
 /** `Re-opens:` names a well-formed prior `DR-*` that is declared somewhere. */
 function validateReOpensField(record: DecisionRecordEntry, context: ReOpenContext): Issue[] {
-  const { reOpenSeverity, windowNote } = context;
+  const { reOpenSeverity } = context;
   const issues: Issue[] = [];
   const prior = isPlaceholderValue(record.reOpens) ? "" : (record.reOpens ?? "").trim();
   const cyclic = context.cyclic.has(record.id);
@@ -2686,7 +2622,7 @@ function validateReOpensField(record: DecisionRecordEntry, context: ReOpenContex
     issues.push(
       issue(
         "QFAI-DECISION-001",
-        `${record.id} は \`Status: ${RE_OPEN_STATUS}\` ですが、${reason}。${windowNote}`,
+        `${record.id} は \`Status: ${RE_OPEN_STATUS}\` ですが、${reason}。`,
         reOpenSeverity,
         context.decisionsPath,
         RE_OPEN_RULE,
@@ -2699,7 +2635,7 @@ function validateReOpensField(record: DecisionRecordEntry, context: ReOpenContex
     issues.push(
       issue(
         "QFAI-DECISION-002",
-        `${record.id} の \`Re-opens: ${prior}\` に対応する Decision Record が ${context.decisionsName} にも _policies/08_Decisions.md にもありません。${windowNote}`,
+        `${record.id} の \`Re-opens: ${prior}\` に対応する Decision Record が ${context.decisionsName} にも _policies/08_Decisions.md にもありません。`,
         reOpenSeverity,
         context.decisionsPath,
         RE_OPEN_RULE,
@@ -2724,11 +2660,11 @@ function validateReOpenRationale(record: DecisionRecordEntry, context: ReOpenCon
   if (!isPlaceholderValue(record.decision)) {
     return [];
   }
-  const { reOpenSeverity, windowNote } = context;
+  const { reOpenSeverity } = context;
   return [
     issue(
       "QFAI-DECISION-005",
-      `${record.id} は \`Status: ${RE_OPEN_STATUS}\` ですが、却下時から何が変わったかを述べる \`Decision:\` がありません。${windowNote}`,
+      `${record.id} は \`Status: ${RE_OPEN_STATUS}\` ですが、却下時から何が変わったかを述べる \`Decision:\` がありません。`,
       reOpenSeverity,
       context.decisionsPath,
       RE_OPEN_RULE,
@@ -2748,14 +2684,14 @@ function validateReOpenApproval(record: DecisionRecordEntry, context: ReOpenCont
   if (!missingApprover && !badInstant) {
     return [];
   }
-  const { reOpenSeverity, windowNote } = context;
+  const { reOpenSeverity } = context;
   const reason = missingApprover
     ? "明示的な承認 (`Approved by` / `Approved at`) がありません"
     : `\`Approved at: ${(record.approvedAt ?? "").trim() || "(なし)"}\` が YYYY-MM-DDThh:mm:ssZ 形式の実在する時刻ではありません`;
   return [
     issue(
       "QFAI-DECISION-003",
-      `${record.id} は \`Status: ${RE_OPEN_STATUS}\` ですが、${reason}。${windowNote}`,
+      `${record.id} は \`Status: ${RE_OPEN_STATUS}\` ですが、${reason}。`,
       reOpenSeverity,
       context.decisionsPath,
       RE_OPEN_RULE,
@@ -2787,7 +2723,7 @@ function validateReOpenBackReferences(
   decisionsName: string,
   window: ReOpenWindow,
 ): Issue[] {
-  const { reOpenSeverity, windowNote } = window;
+  const { reOpenSeverity } = window;
   const issues: Issue[] = [];
   const reOpenIds = new Set(reOpens.map((record) => record.id));
   const referenced = new Set(bound.map((ref) => ref.toUpperCase()));
@@ -2797,7 +2733,7 @@ function validateReOpenBackReferences(
     issues.push(
       issue(
         "QFAI-DECISION-004",
-        `delta の \`## Rejected\` にある \`Re-opened by: ${ref}\` が、この spec の ${decisionsName} にある \`Status: re-open\` の Decision Record に解決しません。${windowNote}`,
+        `delta の \`## Rejected\` にある \`Re-opened by: ${ref}\` が、この spec の ${decisionsName} にある \`Status: re-open\` の Decision Record に解決しません。`,
         reOpenSeverity,
         deltaFile,
         RE_OPENED_BY_RULE,
@@ -2812,7 +2748,7 @@ function validateReOpenBackReferences(
     issues.push(
       issue(
         "QFAI-DECISION-004",
-        `${record.id} は \`Status: ${RE_OPEN_STATUS}\` ですが、delta の \`## Rejected\` に \`Re-opened by: ${record.id}\` の逆参照がありません。${windowNote}`,
+        `${record.id} は \`Status: ${RE_OPEN_STATUS}\` ですが、delta の \`## Rejected\` に \`Re-opened by: ${record.id}\` の逆参照がありません。`,
         reOpenSeverity,
         deltaFile,
         RE_OPENED_BY_RULE,

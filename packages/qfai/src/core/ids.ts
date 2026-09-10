@@ -25,7 +25,15 @@ export type IdPrefix =
  * at `error`, but no ID class existed — so any non-empty string satisfied the
  * gate, including a token the operator invented on the spot.
  */
-export type IdFormatPrefix = IdPrefix | "ADR" | "DR";
+/**
+ * `BF` joins them for the same reason, from the other end of the layering.
+ *
+ * A business flow is declared in `_policies/04_Business-Flow.md`, above every
+ * spec, so it is not something a spec decomposes into and `extractAllIds` must
+ * not walk it. What it needs is a format, because a story cites one by ID and a
+ * test may annotate one, and until there was a pattern any token would do.
+ */
+export type IdFormatPrefix = IdPrefix | "ADR" | "DR" | "BF";
 
 export const ID_PREFIXES: IdPrefix[] = [
   "CAP",
@@ -87,6 +95,9 @@ const STRICT_ID_PATTERNS: Record<IdFormatPrefix, RegExp> = {
   // already in use in real ledgers, so the format follows the practice rather
   // than replacing it.
   DR: /\bDR-\d{4}(?:-\d{4})?\b/g,
+  // One part, like `CAP`. A business flow is a policy-layer item: it is
+  // declared once for the whole spec set, so there is no spec to scope it to.
+  BF: /\bBF-\d{4}\b/g,
 };
 
 const LOOSE_ID_PATTERNS: Record<IdFormatPrefix, RegExp> = {
@@ -105,6 +116,7 @@ const LOOSE_ID_PATTERNS: Record<IdFormatPrefix, RegExp> = {
   THEMA: new RegExp(`\\bTHEMA-${DIGIT_AHEAD}[A-Za-z0-9_-]+\\b`, "gi"),
   ADR: new RegExp(`\\bADR-${DIGIT_AHEAD}[A-Za-z0-9_-]+\\b`, "gi"),
   DR: new RegExp(`\\bDR-${DIGIT_AHEAD}[A-Za-z0-9_-]+\\b`, "gi"),
+  BF: new RegExp(`\\bBF-${DIGIT_AHEAD}[A-Za-z0-9_-]+\\b`, "gi"),
 };
 
 /**

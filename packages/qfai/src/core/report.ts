@@ -14,7 +14,7 @@ import {
 import { collectFiles } from "./fs.js";
 import { buildSpecScope, isPathInSpecScope, isSpecInScope, type SpecScope } from "./specScope.js";
 import { ID_PREFIXES, extractAllIds, extractIds, type IdPrefix } from "./ids.js";
-import { normalizeValidationResult } from "./normalize.js";
+import { normalizeIssuePaths, normalizeValidationResult } from "./normalize.js";
 import { parseSpec } from "./parse/spec.js";
 import { parseScenarioDocument } from "./scenarioModel.js";
 import { parseFirstMarkdownTable } from "./specPackParsers.js";
@@ -53,7 +53,6 @@ import type {
 } from "./types.js";
 import { validateProject } from "./validate.js";
 import { applyWaiversToExtraFindings } from "./waivers.js";
-import { newRuleSeverity, RULE_PROMOTIONS } from "./sunset.js";
 import { resolveToolVersion } from "./version.js";
 import { resolvePrimaryPrototypingSpec } from "./prototyping/specResolution.js";
 
@@ -633,7 +632,7 @@ export async function createReportData(
   // keeps an unfilled delta on purpose would have no way to accept it.
   const deltaScan = await applyWaiversToExtraFindings(
     resolvedRoot,
-    buildDeltaScanIssues(scannedChangeTypeSummary.uncountedDeltaFiles, await resolveToolVersion()),
+    buildDeltaScanIssues(scannedChangeTypeSummary.uncountedDeltaFiles),
   );
   const deltaScanGaps = selectUnwaivedDeltaScanGaps(
     scannedChangeTypeSummary.uncountedDeltaFiles,
@@ -643,8 +642,15 @@ export async function createReportData(
     ...scannedChangeTypeSummary,
     uncountedDeltaFiles: deltaScanGaps,
   };
-  const reportIssues = [...normalizedValidation.issues, ...deltaScan.issues];
-  const reportCounts = addIssueCounts(normalizedValidation.counts, deltaScan.issues);
+  const deltaScanVerdicts = selectNewWaiverVerdicts(
+    normalizedValidation.issues,
+    normalizeIssuePaths(resolvedRoot, deltaScan.validationIssues),
+  );
+  const reportIssues = [...normalizedValidation.issues, ...deltaScan.issues, ...deltaScanVerdicts];
+  const reportCounts = addIssueCounts(normalizedValidation.counts, [
+    ...deltaScan.issues,
+    ...deltaScanVerdicts,
+  ]);
   const ctypeWarnings = normalizedValidation.issues
     .filter((item) => item.code === "QFAI-CTYPE-002")
     .map((item) => {
@@ -841,22 +847,15 @@ const DELTA_SCAN_ISSUE_CODE = "QFAI-CTYPE-004";
  * and the Dashboard still prints `fail-on=warning: PASS` — a defect reported as
  * a clean run for every consumer that reads anything but the prose.
  *
- * One finding per `### DL-` entry, each carrying its `dl_id`, so a waiver is
- * scoped to the entry the operator actually accepted. Aggregated per file, a
- * `scope.paths` waiver for one deliberately unfilled entry also cleared every
- * broken entry beside it and every entry added to that file afterwards — and
- * with the whole gap gone the Dashboard read `delta coverage: OK`.
+ * One finding per `### DL-` entry, each carrying its `dl_id`, so the operator
+ * is told which entry is uncounted rather than which file holds one. Aggregated
+ * per file, a report named the file and left the reader to find the entry.
  *
  * A file the parser finds no `### DL-` entry in has no row to name, so it keeps
- * a file-wide finding with no `dl_id`; `waivers.ts#matchesWaiver` lets a
- * `scope.paths` waiver reach exactly those.
+ * a file-wide finding with no `dl_id`.
  */
-function buildDeltaScanIssues(gaps: readonly ReportDeltaScanGap[], toolVersion: string): Issue[] {
-  // Decided here rather than passed in: the ratchet in `sunsetLedger.test.ts`
-  // reads the emission site, and a severity chosen anywhere else is a window
-  // that never opens.
-  const promoteAt = RULE_PROMOTIONS.deltaEntryUncounted.promoteAt;
-  const deltaScanSeverity = newRuleSeverity(toolVersion, promoteAt);
+function buildDeltaScanIssues(gaps: readonly ReportDeltaScanGap[]): Issue[] {
+  const deltaScanSeverity = "error";
   const issues: Issue[] = [];
   for (const gap of gaps) {
     if (gap.uncountedEntries.length === 0) {
@@ -1005,6 +1004,31 @@ function addIssueCounts(base: ValidationCounts, extra: readonly Issue[]): Valida
     counts[item.severity] += 1;
   }
   return counts;
+}
+
+/**
+ * The waiver-file verdicts the report's own pass reached and validation did not.
+ *
+ * Both passes read `.qfai/waivers.yml`, so a malformed file is reported by each
+ * and belongs in the output once. What differs is the severity index, which
+ * each pass builds from the findings it was handed: a rule validation never
+ * raised is unknown to it, so a waiver on a finding the report appends
+ * afterwards can only be refused here. Publishing both lists whole would double
+ * every parse error, and publishing neither would leave that refusal unsaid — a
+ * waiver that is neither applied nor refused tells the operator nothing.
+ *
+ * A verdict is identified by its code and its text. Both passes render the same
+ * sentence for the same waiver entry, and there is one waiver file, so nothing
+ * finer separates a repeat from a verdict only this pass can make. The space
+ * between the two is safe: a code carries none.
+ */
+function selectNewWaiverVerdicts(published: readonly Issue[], verdicts: readonly Issue[]): Issue[] {
+  const seen = new Set(published.map(waiverVerdictKey));
+  return verdicts.filter((item) => !seen.has(waiverVerdictKey(item)));
+}
+
+function waiverVerdictKey(item: Issue): string {
+  return `${item.code} ${item.message}`;
 }
 
 /**
@@ -1698,9 +1722,9 @@ export function formatReportMarkdown(
       const integrationTcsWithoutRow = spec.integrationTcsWithoutRow ?? [];
       // `?? 0` on both counts, not only on the gate: the second arm prints the
       // line for a spec that OWES rows and has none, which is exactly the
-      // shape where a producer that never ran leaves both fields unset. The
-      // line then read `Integration rows (ATDD-owned): undefined (unfinished:
-      // undefined)` in the report this PR adds it to.
+      // shape where a producer that never ran leaves both fields unset. Without
+      // the fallback, the line would read `Integration rows (ATDD-owned):
+      // undefined (unfinished: undefined)`.
       const integrationRowTotal = spec.integrationRowTotal ?? 0;
       const integrationRowOpenCount = spec.integrationRowOpenCount ?? 0;
       if (integrationRowTotal > 0 || integrationTcsWithoutRow.length > 0) {
@@ -2251,7 +2275,7 @@ function partitionDeltaEntries(entries: readonly DeltaDecisionEntry[]): DeltaEnt
  *
  * A file with no recognisable entry at all is a gap too: `countedEntries: 0`
  * with an empty `uncountedEntries` is "nothing here parsed", which is the shape
- * the old shipped template produced (#545).
+ * the old shipped template produced.
  */
 function toDeltaScanGap(file: string, partition: DeltaEntryPartition): ReportDeltaScanGap | null {
   const countedEntries = partition.counted.length;
@@ -2839,7 +2863,7 @@ async function collectTestStrategy(
   // layered layout — the normal shape for a project whose E2E lives in code
   // rather than in Gherkin — both knobs were compared against zero and could
   // not fire however many E2E rows the ledger held. A project could set them,
-  // read them in `qfai.config.yaml`, and be told nothing (#1197).
+  // read them in `qfai.config.yaml`, and be told nothing.
   //
   // A ledger row is a TC obligation rather than a parsed scenario, which is why
   // `layerSource` says which one produced these numbers. It is the same axis:

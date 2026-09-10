@@ -96,12 +96,10 @@ describe("maskJsNonCode", () => {
 
   // ── the rule this function did not have, and the one it must not lose ──────
   //
-  // #1154: this file and `atddTraceability.ts` each blanked JS literals, through two
-  // implementations, and only the other one knew that a `)` closing a control statement's header
-  // does not end a value. Two green branches composed into a real miss — a file holding a live
-  // `it(` reported as an annotation-only carrier — because the reader wired to THIS function had
-  // the older rule. The rule is here now and the other implementation is gone; these rows are
-  // what stop it from being here in name only.
+  // This file and `atddTraceability.ts` share one implementation for blanking JS literals, so the
+  // rule that a `)` closing a control statement's header does not end a value has to live here: a
+  // reader that missed it would blank a live `it(` following such a header and report the file as
+  // carrying no test at all. These rows are what keep that rule in force, not just in name.
 
   it("reads a regex after a control statement's header as a literal, not as division", () => {
     // The failure in full: read as division, the backtick INSIDE the regex opens a template

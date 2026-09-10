@@ -67,8 +67,8 @@ describe("check-branch-version-pin.sh", () => {
   });
 
   it("skips when SemVer-shaped digits lack the required leading 'v' (e.g. dependency upgrade branch)", () => {
-    // After PR #206 review (#1, #28): the regex requires a leading `v`
-    // with word boundary so dependency-version-shaped branches such as
+    // The regex requires a leading `v` with word boundary so
+    // dependency-version-shaped branches such as
     // `feature/upgrade-eslint-9.10.0` are NOT mis-pinned to 9.10.0.
     const r = runGuard({ GITHUB_REF_NAME: "feature/upgrade-eslint-9.10.0" });
     expect(r.status).toBe(0);
@@ -152,10 +152,9 @@ describe("check-branch-version-pin.sh", () => {
     expect(r.status).toBe(0);
   });
 
-  // PR #206 review LtQx: explicit coverage of the canonical pre-release /
-  // build-metadata rejection added to the script. Without these tests a
-  // future regression that loosens the regex (e.g. dropping the `-rc` /
-  // `+build` discriminator) could ship green.
+  // Explicit coverage of the canonical pre-release / build-metadata
+  // rejection. Without these tests a future regression that loosens the
+  // regex (e.g. dropping the `-rc` / `+build` discriminator) could ship green.
 
   it.each([
     ["release/v1.9.0-rc.1", "rc"],

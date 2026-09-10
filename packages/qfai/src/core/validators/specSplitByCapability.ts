@@ -10,9 +10,7 @@ import {
   parseAllMarkdownTables,
   splitMarkdownRow,
 } from "../specPackParsers.js";
-import { RULE_PROMOTIONS, newRuleSeverity } from "../sunset.js";
 import type { Issue } from "../types.js";
-import { resolveToolVersion } from "../version.js";
 import { exists, issue, readSafe, to4, uniqueMatches } from "./utils.js";
 
 const CAP_ID_RE = /\bCAP-\d{4}\b/g;
@@ -30,11 +28,16 @@ const CAP_CATALOG_HEADING = /^ {0,3}(#{1,6})\s*cap\s*catalog\s*(?:\([^)]*\)|（[
 const ANY_HEADING = /^ {0,3}(#{1,6})\s+\S/;
 
 /**
- * Body of the `## CAP Catalog` section, or `null` when the document has no
- * such heading. The section ends at the next heading of the same or a higher
- * level, mirroring `extractTestCaseTableSection`.
+ * The `## CAP Catalog` section's body and the line it starts on, or `null` when
+ * the document has no such heading. The section ends at the next heading of the
+ * same or a higher level, mirroring `extractTestCaseTableSection`.
+ *
+ * The offset is returned beside the body so a caller that has to WRITE back —
+ * the `Spec` column migration — can name the line in the whole document rather
+ * than in the slice. Deriving it a second time is what would let the writer and
+ * this reader disagree about which table they are looking at.
  */
-function extractCapCatalogSection(text: string): string | null {
+function locateCapCatalogSection(text: string): { body: string; startLine: number } | null {
   const lines = text.replace(/\r\n/g, "\n").split("\n");
   const start = lines.findIndex((line) => CAP_CATALOG_HEADING.test(line));
   if (start === -1) {
@@ -50,7 +53,71 @@ function extractCapCatalogSection(text: string): string | null {
       break;
     }
   }
-  return lines.slice(start + 1, end).join("\n");
+  return { body: lines.slice(start + 1, end).join("\n"), startLine: start + 1 };
+}
+
+/** Body of the `## CAP Catalog` section, or `null` when there is no heading. */
+function extractCapCatalogSection(text: string): string | null {
+  return locateCapCatalogSection(text)?.body ?? null;
+}
+
+/**
+ * Where the catalog table sits in a capabilities document, in whole-document
+ * line numbers.
+ *
+ * Exported for the `Spec` column migration, which edits the very table this
+ * file reads. It resolves the table through {@link parseDeclaredCatalog}'s own
+ * rules — mask first, prefer the `## CAP Catalog` section, take the FIRST
+ * confirmed CAP table — so a migration cannot fill in a column on one table
+ * while the validator grades another.
+ */
+export type CapCatalogTableLocation = {
+  /** Line of the header row. */
+  readonly headerLine: number;
+  /** Line of the GFM delimiter row, always `headerLine + 1`. */
+  readonly delimiterLine: number;
+  /** Index of the CAP column among the header cells. */
+  readonly capColumn: number;
+  /** Index of the spec column, or `-1` when the table declares none. */
+  readonly specColumn: number;
+  /** Lines of the body rows that name a CAP, in table order. */
+  readonly rowLines: readonly number[];
+  /** The CAP each of {@link rowLines} names first, positionally aligned. */
+  readonly rowCapIds: readonly string[];
+};
+
+export function locateCapCatalogTable(text: string): CapCatalogTableLocation | null {
+  const masked = maskNonSpecRegions(text.replace(/\r\n/g, "\n"));
+  const section = locateCapCatalogSection(masked);
+  const offset = section?.startLine ?? 0;
+  const lines = (section?.body ?? masked).split("\n");
+  for (let index = 0; index < lines.length; index += 1) {
+    const header = tableCells(lines[index] ?? "");
+    if (header.length === 0) continue;
+    const capColumn = header.findIndex((cell) => CAP_HEADER_RE.test(cell));
+    if (capColumn < 0) continue;
+    if (!isDelimiterRow(tableCells(lines[index + 1] ?? ""))) continue;
+    const specColumn = header.findIndex((cell) => SPEC_HEADER_RE.test(cell));
+    const rowLines: number[] = [];
+    const rowCapIds: string[] = [];
+    for (let row = index + 2; row < lines.length; row += 1) {
+      const cells = tableCells(lines[row] ?? "");
+      if (cells.length === 0) break;
+      const capId = (cells[capColumn] ?? "").match(CAP_ID_CELL_RE)?.[0];
+      if (capId === undefined) continue;
+      rowLines.push(offset + row);
+      rowCapIds.push(capId);
+    }
+    return {
+      headerLine: offset + index,
+      delimiterLine: offset + index + 1,
+      capColumn,
+      specColumn,
+      rowLines,
+      rowCapIds,
+    };
+  }
+  return null;
 }
 
 function hasCapIdColumn(table: MarkdownTable): boolean {
@@ -379,34 +446,19 @@ function reusedSpecIds(catalog: DeclaredCatalog): string[] {
 }
 
 /** Flags CAP rows the declared mapping cannot resolve, and spec ids it reuses. */
-async function declaredMappingIssues(
+function declaredMappingIssues(
   catalog: DeclaredCatalog,
   capIds: string[],
   capabilitiesPath: string,
-): Promise<Issue[]> {
+): Issue[] {
   const issues: Issue[] = [];
-  // The `Spec` column is what this rule reads, and it did not exist before this
-  // change — so every catalog authored under the positional scheme declares
-  // nothing and draws the finding on all of its rows in one upgrade. The window
-  // gives those catalogs a release to fill the column in before the gate
-  // latches. `resolveToolVersion` resolves rather than rejects: its own read
-  // failures return `"unknown"`, which the comparator reads as inside the
-  // window, so an unreadable version never escalates this into a build failure.
-  const declaredMappingPromotion = RULE_PROMOTIONS.specSplitDeclaredMapping.promoteAt;
-  const declaredMappingSeverity = newRuleSeverity(
-    await resolveToolVersion(),
-    declaredMappingPromotion,
-  );
-  const declaredMappingWindowNote =
-    declaredMappingSeverity === "warning"
-      ? ` (${declaredMappingPromotion} リリースまでは warning、それ以降は error)`
-      : "";
+  const declaredMappingSeverity = "error";
   const undeclared = undeclaredCapIds(catalog, capIds);
   if (undeclared.length > 0) {
     issues.push(
       issue(
         "QFAI-SPLIT-106",
-        `Spec 列に spec ディレクトリが宣言されていない CAP があります: ${undeclared.join(", ")}${declaredMappingWindowNote}`,
+        `Spec 列に spec ディレクトリが宣言されていない CAP があります: ${undeclared.join(", ")}`,
         declaredMappingSeverity,
         capabilitiesPath,
         "specSplitByCapability.declaredMapping",
@@ -419,7 +471,7 @@ async function declaredMappingIssues(
     issues.push(
       issue(
         "QFAI-SPLIT-106",
-        `Spec 列に複数の spec ディレクトリを宣言している CAP があります: ${ambiguous.join(", ")}${declaredMappingWindowNote}`,
+        `Spec 列に複数の spec ディレクトリを宣言している CAP があります: ${ambiguous.join(", ")}`,
         declaredMappingSeverity,
         capabilitiesPath,
         "specSplitByCapability.declaredMapping",
@@ -432,7 +484,7 @@ async function declaredMappingIssues(
     issues.push(
       issue(
         "QFAI-SPLIT-106",
-        `1 行の CAP ID セルに複数の CAP が書かれています (1 行 1 CAP): ${multiCap.join(", ")}${declaredMappingWindowNote}`,
+        `1 行の CAP ID セルに複数の CAP が書かれています (1 行 1 CAP): ${multiCap.join(", ")}`,
         declaredMappingSeverity,
         capabilitiesPath,
         "specSplitByCapability.declaredMapping",
@@ -445,7 +497,7 @@ async function declaredMappingIssues(
     issues.push(
       issue(
         "QFAI-SPLIT-106",
-        `同じ CAP が複数の行に登場しています: ${repeated.join(", ")}${declaredMappingWindowNote}`,
+        `同じ CAP が複数の行に登場しています: ${repeated.join(", ")}`,
         declaredMappingSeverity,
         capabilitiesPath,
         "specSplitByCapability.declaredMapping",
@@ -458,7 +510,7 @@ async function declaredMappingIssues(
     issues.push(
       issue(
         "QFAI-SPLIT-106",
-        `複数の CAP が同じ spec ディレクトリを宣言しています: ${duplicated.join(", ")}${declaredMappingWindowNote}`,
+        `複数の CAP が同じ spec ディレクトリを宣言しています: ${duplicated.join(", ")}`,
         declaredMappingSeverity,
         capabilitiesPath,
         "specSplitByCapability.declaredMapping",
@@ -476,9 +528,8 @@ async function capReferenceIssues(
   layeredEntries: SpecEntry[],
 ): Promise<Issue[]> {
   const issues: Issue[] = [];
-  // Indexed once. The lookup used to be a `find` per CAP row, which is O(n*m)
-  // in a repository with many specs and many capabilities; first entry wins, as
-  // the linear scan did.
+  // Indexed once: a `find` per CAP row is O(n*m) in a repository with many
+  // specs and many capabilities. First entry wins.
   const byDirName = new Map<string, SpecEntry>();
   for (const entry of layeredEntries) {
     const key = path.basename(entry.dir).toLowerCase();
@@ -674,7 +725,7 @@ export async function validateSpecSplitByCapability(
   }
 
   if (catalog) {
-    issues.push(...(await declaredMappingIssues(catalog, capIds, capabilitiesPath)));
+    issues.push(...declaredMappingIssues(catalog, capIds, capabilitiesPath));
   }
 
   if (missingSpecIds.length > 0) {

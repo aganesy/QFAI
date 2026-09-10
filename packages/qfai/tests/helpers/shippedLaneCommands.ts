@@ -29,6 +29,7 @@
  */
 
 import { createHash } from "node:crypto";
+import path from "node:path";
 
 /**
  * `local` is deliberately not special-cased anywhere: `local x=1` is an assignment, and the
@@ -990,11 +991,12 @@ export function invocationsOf(body: string): string[] {
  *   Widening either would admit every global install, which is the capability the rule refuses.
  *
  * Both are here because Node stopped bundling Corepack at 25 and the Node a shipped lane runs is
- * the ADOPTER's, from their own `.nvmrc` / `.node-version`. The yarn branch called `corepack
- * enable` unconditionally and stopped at `command not found` before installing anything — review
- * finding [22]. Adding one exact string per need is what makes that a change a reviewer reads,
- * which is this instrument's whole purpose; the test below requires every member to be invoked by
- * the shipped tree, so an entry cannot outlive its use.
+ * the ADOPTER's, from their own `.nvmrc` / `.node-version`. Calling `corepack enable`
+ * unconditionally in the yarn branch would stop at `command not found` before installing
+ * anything, on an adopter Node build old enough to lack Corepack. Adding one exact string per
+ * need is what makes that a change a reviewer reads, which is this instrument's whole purpose;
+ * the test below requires every member to be invoked by the shipped tree, so an entry cannot
+ * outlive its use.
  */
 export const ALLOWED_EXACT_COMMANDS: ReadonlySet<string> = new Set([
   "command -v corepack",
@@ -1009,11 +1011,11 @@ export const ALLOWED_EXACT_COMMANDS: ReadonlySet<string> = new Set([
   // point of asking.
   "yarn cache",
   // The VERSION and the REGISTRY are both part of the exact string, and that is the enumeration
-  // working as intended: review finding [55] pinned the version because an unpinned install
-  // fetches whatever the registry calls latest at the moment the job runs, and review finding
-  // [83] pinned the source because a version names WHAT to fetch and not WHERE from — `npm`
-  // takes its registry from `NPM_CONFIG_REGISTRY` or a project `.npmrc`. Bumping either has to
-  // be a change a reviewer reads here too.
+  // working as intended: the version has to be pinned, because an unpinned install fetches
+  // whatever the registry calls latest at the moment the job runs, and the source has to be
+  // pinned too, because a version names WHAT to fetch and not WHERE from — `npm` takes its
+  // registry from `NPM_CONFIG_REGISTRY` or a project `.npmrc`. Bumping either has to be a change
+  // a reviewer reads here too.
   //
   // `--ignore-scripts` is in the string rather than in `ALLOWED_FLAGS` for the reason the whole
   // tier exists: `npm install` is denied a bare package argument, so widening its flag set would
@@ -1231,7 +1233,9 @@ export const ALLOWED_JOB_SHAPE: ReadonlyMap<string, string> = new Map([
  */
 export const ALLOWED_WORKFLOW_FILES: ReadonlyMap<string, string> = new Map([
   ["qfai-tests.yml", "e3d534f0e816fdc42db85265b56e4a77343d3679bb8944d3b441bffe5c874345"],
-  ["qfai-validate.yml", "8c552639887060e0413ab576991ab5022508662ef973d8a2c1f67ef87c652494"],
+  // Re-pinned when the lane gained the drift gate and the conditional checkout
+  // depth that gate needs.
+  ["qfai-validate.yml", "d4968abdb0951ff7210fc400aaecb3bea8cb52e3a46f4bbb23941b55f6a6df37"],
   ["qfai-docs.yml", "43c5d722c44a9d5fc24cd65477782a66ca143293c2074ed698718494d1262d5d"],
 ]);
 
@@ -1268,19 +1272,18 @@ export const ALLOWED_INIT_PATHS: ReadonlySet<string> = new Set([
   ".github/workflows/qfai-docs.yml",
   ".github/workflows/qfai-tests.yml",
   ".github/workflows/qfai-validate.yml",
+  ".gitattributes",
   ".gitignore",
   "AGENTS.md",
   "CLAUDE.md",
-  "DESIGN.md",
   "qfai.config.yaml",
 ]);
 
 /**
  * And the CONTENT of the files that are not workflows.
  *
- * The path pin says which files arrive; it says nothing about what is in them, so an arbitrary line
- * planted in the shipped `DESIGN.md` was invisible — four of the six files then shipped were pinned by
- * name only, which round 18's gate measured. The two workflows are byte-pinned by
+ * The path pin says which files arrive; it says nothing about what is in them, so a line planted in
+ * a file pinned by name alone is invisible. The two workflows are byte-pinned by
  * `ALLOWED_WORKFLOW_FILES`; the rest are byte-pinned here, and between them every adopter-facing file
  * this tree writes is pinned by content.
  *
@@ -1295,6 +1298,10 @@ export const ALLOWED_INIT_PATHS: ReadonlySet<string> = new Set([
  * that the `.agents/rules/` masters this run writes are cited by something. They belong here for the
  * same reason `.github/copilot-instructions.md` does: an adopter's agent reads them as instructions,
  * so their bytes are the reviewed surface.
+ *
+ * `.gitattributes` joined the list when init began seeding one. It is pinned here for the reason the
+ * others are, and for one more: its whole purpose is to fix the bytes of everything beside it, so a
+ * silent edit to it changes how every other pinned file is checked out.
  */
 export const ALLOWED_INIT_CONTENT: ReadonlyMap<string, string> = new Map([
   [
@@ -1313,14 +1320,40 @@ export const ALLOWED_INIT_CONTENT: ReadonlyMap<string, string> = new Map([
     ".github/copilot-instructions.md",
     "2a264d5ee6cfc2d05df27d8bb30a878414b7ea48b07f2315138160b2044181c6",
   ],
-  // Re-pinned when the managed block gained the three vendored-assistant
-  // negations — `!.qfai/assistant/`, `!.qfai/assistant/**` and
-  // `!.qfai/assistant/.assets.lock.json`. Measured on a tree carrying a broad
-  // `.qfai/*` (`git check-ignore`) and again on one carrying `.qfai/**`
-  // (`git status --ignored`): without them the provenance record never reaches
-  // a fresh clone, and every untouched governed file from an older release then
-  // reads as a local fork; without the recursive one the record arrives and the
-  // rules it vouches for do not.
+  // `qfai init` copies this file verbatim, so it is pinned like every other
+  // adopter-facing file here — and for one reason none of the others has: it
+  // decides how git rewrites the bytes of everything beside it on checkout. An
+  // unreviewed edit to it moves what an adopter's working tree holds for files
+  // whose own digests never change, which is the one way a content pin can be
+  // satisfied and still be wrong.
+  //
+  // Its comments are English and name the launcher as `npx qfai init`, like
+  // every other adopter-facing template this command writes. The rules a reader
+  // has to weigh are the ones this file scopes and the one-off renormalise it
+  // asks for, and a project reads them in the language and the spelling its
+  // neighbours in the same seeded tree use.
+  //
+  // Derived by running the command into a temp root and hashing what it wrote.
+  // The comment block is the whole delta: the rule lines are byte-identical to
+  // the ones `c428b147…` covered.
+  [".gitattributes", "8787db9bb4011d5461314183735ba22d84390d6008d73322ddf18fbc00ff7ff1"],
+  // The shipped `.gitignore` IS the generated managed block, so every governance
+  // negation moves this digest by construction. Four of them are why it stands
+  // where it does:
+  //
+  // - `!.qfai/assistant/`, `!.qfai/assistant/**` and
+  //   `!.qfai/assistant/.assets.lock.json`. Measured on a tree carrying a broad
+  //   `.qfai/*` (`git check-ignore`) and again on one carrying `.qfai/**`
+  //   (`git status --ignored`): without them the provenance record never reaches
+  //   a fresh clone, and every untouched governed file from an older release
+  //   then reads as a local fork; without the recursive one the record arrives
+  //   and the rules it vouches for do not.
+  // - `!.qfai/evidence/skeleton.md`. `Phase: Skeleton` enumerates its
+  //   `Skeleton debt` into that file, and every later invocation reads the
+  //   record to find the entrypoint's smoke command, re-runs it, and decides
+  //   from THAT exit status whether the entrypoint is still proven.
+  //   Ignored, both the debt and the command exist only in the working
+  //   directory that ran the phase.
   //
   // Derived by running `qfai init` into a temp root and reading what it wrote,
   // which is how every predecessor was derived — not copied off a failure
@@ -1328,7 +1361,48 @@ export const ALLOWED_INIT_CONTENT: ReadonlyMap<string, string> = new Map([
   // the file init writes today reproduces the previous digest
   // `f35a2624…` byte for byte, which is what makes this a review of three lines
   // rather than a re-blessing of the block.
-  [".gitignore", "4e72a478777a5b7b57550b9258c9095093f2c11bfdf9fc663e7eefdec2d49abf"],
+  //
+  // Re-pinned again for the two `import-lite` negations. The evidence
+  // directory is ignored wholesale, so the file recording where an imported
+  // spec set's requirements came from never reached a commit — and the warning
+  // that asks for it reads the committed tree. Two lines, for the two names
+  // the check accepts:
+  //
+  //     !.qfai/evidence/import-lite.md
+  //     !.qfai/evidence/import-lite-<17 digits>.md
+  //
+  // the copy an operator kept under the shipped template's own name, and the
+  // run-stamped one. The second line is written as `[0-9]` once per digit,
+  // which is what fixes the width: a shorthand for the repeat is not gitignore
+  // syntax, and anything wider commits a name the check rejects outright —
+  // a file in the repository that nothing reads.
+  //
+  // Derived the same way as its predecessors — `qfai init` into a temp root,
+  // then reading what it wrote — not copied off a failure message. Those two
+  // lines are the whole delta: dropping them from the file init writes today
+  // reproduces `4e72a478…` byte for byte.
+  // The skeleton evidence negation is a fourth line on the same footing: the
+  // phase that proves an entrypoint starts writes it, and the evidence
+  // directory is ignored wholesale, so without the negation the proof never
+  // reaches a commit either.
+  //
+  //     !.qfai/evidence/skeleton.md
+  //
+  // Re-pinned for the review tree as well. Nothing under `.qfai/review/` is
+  // tracked, so the two lines that carved an exception out of `.qfai/review/*`
+  // are gone:
+  //
+  //     !.qfai/review/
+  //     !.qfai/review/.legacy-packs
+  //
+  // and one ignore joined the block, for the archive location packs were moved
+  // to before the archive moved under `.qfai/review/` itself:
+  //
+  //     .qfai/review_archive/*
+  //
+  // Derived the way its predecessors were — `qfai init` into a temp root, then
+  // reading what it wrote.
+  [".gitignore", "bba1090962529e016912dc9a0a80a23e500805c384ea4d6328c6d4c91536a70e"],
   // One bullet each, inside the managed cross-AI rules block: the
   // `documentation-clarity.md` master that the same run seeds beside them.
   // Removing that line from both files reproduces the previous digests
@@ -1343,13 +1417,6 @@ export const ALLOWED_INIT_CONTENT: ReadonlyMap<string, string> = new Map([
   // `tests/assets/documentationClarityHooks.test.ts` executes and parses. The
   // bytes are what an adopter's agent runs, so the bytes are the pin.
   [".claude/settings.json", "b13d4081b4e4e404656858ff2bc365f36887b93321c0003394a89d918f7911d1"],
-  // Moved when the state lock joined `QFAI_GITIGNORE_BLOCK`: the lock now sits beside
-  // `.qfai/state.json` so that everyone who may write the state may also reap a lock a crash left
-  // behind, and a file init writes beside the state file is a file init must ignore. Re-derived
-  // rather than copied off the failure: dropping that one line from the tree init writes today
-  // reproduces the previous digest (`2cfeb083…`) byte for byte, which is what says the line is the
-  // whole change.
-  ["DESIGN.md", "f59eb3d151acfb95d09cd278ef719a2ca28b30134a53097b526464c45d1efaef"],
   // Re-derived for the MERGED file, which carries both sides' edits: the three
   // retired `validation.traceability` knobs are gone (`brMustHaveSc`,
   // `scNoTestSeverity`, `orphanContractsPolicy`), the `forbidTestTodoStubs`
@@ -1358,15 +1425,21 @@ export const ALLOWED_INIT_CONTENT: ReadonlyMap<string, string> = new Map([
   // predecessor's digest describes what ships, and the map is keyed by file
   // name, so this is one pin rather than two.
   //
-  // Derived by running `qfai init` into the E2E's temp root and reading what it
-  // wrote, which is how both predecessors were derived — not copied from a
-  // failure message.
-  // Re-derived once more for the MERGED file: main dropped the three retired
-  // `validation.traceability` knobs and reworded the `forbidTestTodoStubs`
-  // comment, and this branch seeds `testFileGlobs`. Neither predecessor digest
-  // describes what ships. Taken by running `qfai init` into a temp root and
-  // hashing the file it wrote, which is how both predecessors were taken.
-  ["qfai.config.yaml", "ed3b8b5e22a67ba6a83a81aa1a83d0db8ca39ba5f262b68895135ef9a57acf90"],
+  // Derived by running `qfai init` into a temp root and hashing the file it
+  // wrote, never copied from a failure message.
+  //
+  // Re-pinned again for the `testFileGlobs` comment block, which now describes
+  // a derived value: `qfai init` matches each recognised layout against the
+  // tree it runs in and writes the ones that select a file. The whole delta is
+  // that comment — restoring the previous wording reproduces `ed3b8b5e…` byte
+  // for byte.
+  //
+  // A byte pin still holds even though the value now varies by repository. The
+  // root this runs against has no test file, so no layout matches and the key
+  // keeps the empty list the template ships. That is also the case the comment
+  // calls a fact about the repository rather than about the default, so the pin
+  // covers the shipped text and the empty-tree behaviour at once.
+  ["qfai.config.yaml", "b2e38829ba21be13029c5983a7b0dfdaa861c75bbdf8d5ba60e2ac85a2846d26"],
 ]);
 
 /**
@@ -1483,12 +1556,12 @@ export const ALLOWED_INIT_SOURCE_ASSETS: ReadonlySet<string> = new Set([
   "root/.agents/rules/root-additions-policy.md",
   "root/.agents/rules/temporary-files.md",
   "root/.agents/rules/version-discipline.md",
+  "root/.gitattributes",
   "root/.github/workflows/qfai-docs.yml",
   "root/.github/workflows/qfai-tests.yml",
   "root/.github/workflows/qfai-validate.yml",
   "root/AGENTS.md",
   "root/CLAUDE.md",
-  "root/DESIGN.md",
   "root/qfai.config.yaml",
   ".claude/settings.json",
   ".github/instructions/code-review.instructions.md",
@@ -1508,11 +1581,14 @@ export const INIT_SOURCE_MIRRORED_TREE = ".qfai/";
  * offset". It reached an adopter with every pin green.
  *
  * The property that separates it from everything legitimately here is not its name and not its
- * content: **it is that the init source ships DATA, and data has a data extension.** All 185 entries
- * are `.md`, `.yml`, `.yaml`, `.json`, `.toml`, `.sql` or `.sample`, 159 of them markdown, and none
- * has ever been extensionless. So the rule is an enumeration of what may ship rather than a list of
- * what may not — the same inversion the rest of this file is built on, arrived at three rounds late
- * because the earlier attempts kept enumerating the dangerous side, which cannot be finished.
+ * content: **it is that the init source ships DATA, and data has a data extension.** All but one of
+ * the 208 entries are `.md`, `.yml`, `.yaml`, `.json`, `.toml`, `.sql` or `.sample`, 179 of them
+ * markdown. The exception is the `.gitattributes` init now seeds: `path.extname` reads a leading dot
+ * with nothing after it as no extension at all, so that one is admitted by whole name in
+ * `ALLOWED_INIT_SOURCE_BASENAMES` below rather than by extension. So the rule is an enumeration of
+ * what may ship rather than a list of what may not — the same inversion the rest of this file is
+ * built on. The dangerous side cannot be enumerated: every extension left off such a list ships
+ * unreviewed, and nothing says when the list is finished.
  *
  * A legitimate file with a new extension reddens and is a one-line review. That is the intended cost,
  * and `.toml` is the first entry to pay it: the `web-research` skill's MCP server templates moved into
@@ -1530,6 +1606,36 @@ export const ALLOWED_INIT_SOURCE_EXTENSIONS: ReadonlySet<string> = new Set([
   ".sql",
   ".sample",
 ]);
+
+/**
+ * The dotfiles the rule above cannot see, enumerated by WHOLE NAME.
+ *
+ * `path.extname(".gitattributes")` is `""` — a leading dot with nothing after it is not an extension
+ * to node — so the extension set alone reads a seeded `.gitattributes` as an extensionless file, which
+ * is the kind this guard refuses. Widening the extension set with `""` would answer that by admitting
+ * every extensionless file, which is the guard, deleted.
+ *
+ * A dotfile's whole basename IS its kind: `.gitattributes` names a git data format as exactly as `.md`
+ * names markdown, and it is a closed name rather than an open class. `bootstrap` still has no token and
+ * is still refused; so is any dotfile nobody put here. `distributedSurfaceLeakage.test.ts` reached the
+ * same shape independently for the same `path.extname` reason (`TEXT_BASENAMES` beside
+ * `TEXT_EXTENSIONS`), which is the convention this follows rather than invents.
+ */
+export const ALLOWED_INIT_SOURCE_BASENAMES: ReadonlySet<string> = new Set([".gitattributes"]);
+
+/**
+ * Whether an init-source file ships as data — the two sets above asked as one question.
+ *
+ * It lives here rather than at the call site so the enumerations and the token that is looked up in
+ * them cannot drift: adding a name to one of the sets while the caller derives a different token is
+ * a guard that reads green over a file nobody enumerated, which is this file's recurring class.
+ */
+export function initSourceShipsAsData(relativePath: string): boolean {
+  return (
+    ALLOWED_INIT_SOURCE_EXTENSIONS.has(path.extname(relativePath)) ||
+    ALLOWED_INIT_SOURCE_BASENAMES.has(path.basename(relativePath))
+  );
+}
 
 /**
  * The one file inside an instruction tree that is pinned anyway, by SHAPE.
@@ -1766,8 +1872,12 @@ export const ALLOWED_STEP_SHAPE: ReadonlyArray<readonly [string, string]> = [
     '{"name":"Aggregate lane results (green on skip)","env":{"QFAI_NEEDS_JSON":"${{ toJSON(needs) }}"},"shell":"bash","run":"<body 7ee82953e37be82d81440045826adfa89282355c973d6e7dacf80bc0ed381fe8>"}',
   ],
   [
+    // Re-pinned when the drift gate below was added. The checkout asks for full
+    // history on a pull request, because the gate compares this branch against
+    // its base and a shallow clone has no merge base to compare from. A push
+    // keeps the shallow fetch, where the gate does not run.
     "qfai-validate.yml#validate",
-    '{"name":"Checkout via actions/checkout 5.1.0","uses":"actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09","with":{"persist-credentials":false}}',
+    '{"name":"Checkout via actions/checkout 5.1.0","uses":"actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09","with":{"persist-credentials":false,"fetch-depth":"${{ github.event_name == \'pull_request\' && \'0\' || \'1\' }}"}}',
   ],
   [
     "qfai-validate.yml#validate",
@@ -1796,6 +1906,14 @@ export const ALLOWED_STEP_SHAPE: ReadonlyArray<readonly [string, string]> = [
   [
     "qfai-validate.yml#validate",
     '{"name":"qfai validate","run":"<body cafa0558d597d81a2b477a24bf245ceb02e38e714767bde76bf0ff0918dd31d9>"}',
+  ],
+  [
+    // The `full` profile above evaluates every gate group except drift, so on
+    // its own the lane cannot fail on a downstream edit to upstream SSOT. Pull
+    // requests only: the gate compares against a base branch and says nothing
+    // when it cannot resolve one.
+    "qfai-validate.yml#validate",
+    '{"name":"qfai validate (drift protocol)","if":"github.event_name == \'pull_request\'","run":"<body 995eb7509a0aa6e91297702f51ec1bdd4f4f5b3cfac4c354edcfa9b28b2303cc>"}',
   ],
 ];
 
@@ -2037,8 +2155,8 @@ const ALLOWED_FLAGS: ReadonlyMap<string, ReadonlySet<string>> = new Map([
 export const ALLOWED_STEP_ENV: ReadonlyMap<string, string> = new Map([
   ["QFAI_BASE_REF", "${{ github.event.pull_request.base.sha || github.event.before }}"],
   // Which event started the run, so the detection body can take a two-dot diff on a push and a
-  // three-dot one on a pull request — review finding [32]. Its value comes from `github.event_name`,
-  // a closed set GitHub controls, and the body compares it to one literal. It reaches no program.
+  // three-dot one on a pull request. Its value comes from `github.event_name`, a closed set
+  // GitHub controls, and the body compares it to one literal. It reaches no program.
   ["QFAI_EVENT_NAME", "${{ github.event_name }}"],
   ["QFAI_NEEDS_JSON", "${{ toJSON(needs) }}"],
 ]);

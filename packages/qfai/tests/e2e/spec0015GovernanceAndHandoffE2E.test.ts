@@ -45,10 +45,7 @@ import {
 } from "../../src/core/validators/handoffSchemaPairs.js";
 import { JUSTIFICATION_CATALOG } from "../../src/core/validators/justificationCatalog.js";
 import { validateReviewerJustification } from "../../src/core/validators/reviewerJustification.js";
-import {
-  STALE_REFERENCE_SUNSET,
-  validateStaleReferences,
-} from "../../src/core/validators/staleReferences.js";
+import { validateStaleReferences } from "../../src/core/validators/staleReferences.js";
 import { loadConfig } from "../../src/core/config.js";
 import { removeTempTree } from "../helpers/tempTree.js";
 
@@ -293,13 +290,11 @@ describe("spec-0015 US-0015-0015 doc realignment (E2E, deterministic temp-fixtur
     const dir = path.join(root, ".qfai", "assistant", "skills", "qfai-prototyping", "references");
     await mkdir(dir, { recursive: true });
     await writeFile(path.join(dir, "handoff.md"), "# Handoff\nUses handoff.yaml.\n", "utf-8");
-    const issues = await validateStaleReferences(root, {
-      now: () => new Date("2026-06-01T00:00:00Z"),
-    });
+    const issues = await validateStaleReferences(root);
     expect(issues.filter((i) => i.code === "W-STALE-REFERENCE")).toEqual([]);
   });
 
-  it("QFAI:SPEC-0015:US-0015-0015 — error: a stale reference at HEAD escalates to error at sunset", async () => {
+  it("QFAI:SPEC-0015:US-0015-0015 — error: a stale reference at HEAD is reported", async () => {
     const dir = path.join(root, ".qfai", "assistant", "skills", "qfai-prototyping", "references");
     await mkdir(dir, { recursive: true });
     await writeFile(
@@ -307,10 +302,9 @@ describe("spec-0015 US-0015-0015 doc realignment (E2E, deterministic temp-fixtur
       "# Handoff\nUses session-handoff.yaml (legacy).\n",
       "utf-8",
     );
-    const atSunset = new Date(`${STALE_REFERENCE_SUNSET}T00:00:00Z`);
-    const issues = await validateStaleReferences(root, { now: () => atSunset });
+    const issues = await validateStaleReferences(root);
     const findings = issues.filter((i) => i.code === "W-STALE-REFERENCE");
     expect(findings.length).toBeGreaterThanOrEqual(1);
-    expect(findings[0]?.severity).toBe("error");
+    expect(findings[0]?.severity).toBe("warning");
   });
 });
