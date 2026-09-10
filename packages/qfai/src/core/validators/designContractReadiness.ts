@@ -1457,7 +1457,7 @@ function crossCheckSpacing(
   // `visual.spacing` in design-system.yaml with `scale` even when
   // DESIGN.md only authored `base` — a verbatim-copy violation that
   // pre-fix slipped through because the previous check only enforced
-  // (a). See codex 89xl.
+  // (a).
   const SCHEMA_SPACING_KEYS = new Set(["base", "scale"]);
   for (const key of Object.keys(mirror)) {
     if (!SCHEMA_SPACING_KEYS.has(key)) {
