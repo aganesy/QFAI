@@ -4,6 +4,8 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ## [Unreleased]
 
+## [1.11.1] - 2026-09-10
+
 ### Removed
 
 - **BREAKING: severity no longer depends on which `qfai` runs** (#1421).
