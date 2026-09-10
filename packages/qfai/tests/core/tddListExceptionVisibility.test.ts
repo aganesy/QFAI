@@ -70,7 +70,7 @@ describe("parked exception rows are visible in CI", () => {
         expect(parked(issues)[0]?.severity).toBe("warning");
         expect(parked(issues)[0]?.message).toContain("TDD-0001");
         // The code, not the rule id: that is the spelling `validate.json` and
-        // the CLI print, so it is the one an operator can copy (issue #398).
+        // the CLI print, so it is the one an operator can copy.
         expect(parked(issues)[0]?.message).toContain("`TDDLIST_EXCEPTION_PARKED` waiver");
         expect(parked(issues)[0]?.message).toContain("(DR-ID DR-0001-0001)");
         expect(parked(issues)[0]?.refs).toEqual(["DR-0001-0001"]);

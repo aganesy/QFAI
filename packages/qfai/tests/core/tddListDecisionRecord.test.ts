@@ -267,7 +267,7 @@ describe("the DR-ID resolves to a Decisions file", () => {
   // `posixOnly` marks a fixture Windows cannot CREATE. `<` and `>` are illegal
   // in a Windows filename, so `writeFile` answers `ENOENT` before the row
   // reaches its assertion — and the hazard itself cannot occur there for the
-  // same reason, so the rule is unreachable rather than unverified (#1133).
+  // same reason, so the rule is unreachable rather than unverified.
   // The sibling fixtures below are creatable and run everywhere.
   for (const [label, fileName, posixOnly] of [
     ["whose slug placeholder was never substituted", "DR-0270-<slug>.md", true],

@@ -117,7 +117,7 @@ export type LayerCoverageOptions = {
    * Explicitly `| undefined` so callers can pass the value through as-is under
    * `exactOptionalPropertyTypes`. Without it, a caller holding a possibly-
    * undefined scope had to spread conditionally, and the natural way to write
-   * that check — `specScope ? … : {}` — reads as if an EMPTY scope were also
+   * that check — `specScope ? …: {}` — reads as if an EMPTY scope were also
    * being skipped. It is not: an empty `Set` is truthy, and `isSpecInScope`
    * already treats `undefined` as "everything is in scope".
    */
@@ -740,9 +740,8 @@ export const THIN_COVERAGE_SIGNAL_CODE = "QFAI-COV-207";
 
 /**
  * Single definition of what `QFAI-COV-207` means, so the specs-coverage report
- * and the validate issue catalog cannot drift apart. The code originally
- * flagged EX rows referencing multiple BR IDs; that emission was removed and
- * the code now carries the thin-coverage signal the report actually prints.
+ * and the validate issue catalog cannot drift apart. The code carries the
+ * thin-coverage signal the report prints.
  */
 export const THIN_COVERAGE_SIGNAL_EXPECTATION =
   "Artifacts covered by exactly 1 downstream case are review signals, not gate failures; triage each one in the specs-coverage report.";

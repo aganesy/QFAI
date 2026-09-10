@@ -313,7 +313,7 @@ describe("checkCompletionCertificate", () => {
 
 // ─────────────────────────────────────────────────────────────────────────
 // TC-0012-0382 / TC-0012-0390 — frozen-set SSOT drives certify aggregation
-// (Wave 3 TDD-0386 / TDD-0388)
+// (TDD-0386 / TDD-0388)
 // ─────────────────────────────────────────────────────────────────────────
 
 describe("readFrozenSpecsCovered drives certify aggregation (TC-0012-0382)", () => {

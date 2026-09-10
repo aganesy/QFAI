@@ -43,7 +43,7 @@ describe("validateLayeredTraceability (v1421)", () => {
       expect(downstreamIssue?.refs).toContain("BR-0001");
       // The rule carried no remedy at all, and the sentence an author reaches
       // for — "per BR-0017-0004" — is what trips it. The supported form is the
-      // owning spec's contract id, and it has to be in the finding (#1101).
+      // owning spec's contract id, and it has to be in the finding.
       expect(downstreamIssue?.suggested_action).toContain("contract id");
       expect(downstreamIssue?.suggested_action).toContain("CON-DB-*");
       expect(downstreamIssue?.suggested_action).toContain("Contracts");

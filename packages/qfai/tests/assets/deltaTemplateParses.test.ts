@@ -6,7 +6,7 @@
  * `REQUIRED_DELTA_META_KEYS`. The shipped `spec/09_delta.md` had none of it, so
  * an author who followed the template produced a file `qfai report` extracted
  * nothing from, and the Change Type section printed zeros as if the run were
- * clean (#545).
+ * clean.
  *
  * Round-tripping the template through the parser is the guard: a delta template
  * the parser returns no complete entry for fails the build.

@@ -91,7 +91,7 @@ describe("--platform on a profile that never reads it", () => {
         platform: "totally-bogus",
       });
       const finding = result.issues.find((found) => found.code === UNUSED);
-      expect(finding?.severity).toBe("warning");
+      expect(finding?.severity).toBe("error");
       expect(finding?.message).toContain("totally-bogus");
       expect(finding?.message).toContain("atdd");
     });

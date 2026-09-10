@@ -1,5 +1,5 @@
 /**
- * The SSOT mirror is checked in both directions (#396).
+ * The SSOT mirror is checked in both directions.
  *
  * `sync-init-to-root.mjs` iterated the **source** file list only, and `ci:gate`
  * then asserted drift with `git diff --exit-code .qfai/`. A committed path under
@@ -43,10 +43,8 @@ describe("sync-init-to-root --check", () => {
   });
 
   it("no longer carries the legacy steering residue", () => {
-    // This test used to assert the residue was *reported*. It is now gone:
-    // `.qfai/assistant/steering/` reached the sunset pinned in
-    // `sunset.ts#SUNSETS.legacyAssistantSteering` (1.10.0), which is what made
-    // `assistantTreeMigration` escalate `D-DEPRECATED-PATH` to `error`.
+    // `.qfai/assistant/steering/` is gone, and `assistantTreeMigration`
+    // reports `D-DEPRECATED-PATH` at `error` for a tree that still holds it.
     const { output } = runCheck();
 
     expect(output).not.toContain("KNOWN-STALE: .qfai/assistant/steering/");

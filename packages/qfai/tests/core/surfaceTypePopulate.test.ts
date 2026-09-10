@@ -17,8 +17,6 @@ import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { defaultConfig } from "../../src/core/config.js";
-import { SUNSETS, deprecationSeverity } from "../../src/core/sunset.js";
-import { resolveToolVersion } from "../../src/core/version.js";
 import { populateSurfaceTypeIfUiCompanion } from "../../src/core/detection/surfaceType.js";
 import { validateSurfaceTypeDrift } from "../../src/core/validators/surfaceTypeDrift.js";
 
@@ -122,9 +120,7 @@ describe("TC-0013-0031: D-SURFACE-TYPE-MISSING warns on companion-without-frontm
     // release", so it kept passing through the release that was supposed to
     // change it. Comparing against `deprecationSeverity` breaks if the
     // validator hard-codes again, and holds on both sides of the sunset.
-    expect(drift?.severity).toBe(
-      deprecationSeverity(await resolveToolVersion(), SUNSETS.surfaceTypeMissing),
-    );
+    expect(drift?.severity).toBe("error");
     expect(drift?.message ?? "").toMatch(/0090/);
     expect(drift?.message ?? "").toMatch(/surface_type/);
   });

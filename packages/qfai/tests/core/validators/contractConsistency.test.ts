@@ -13,8 +13,6 @@ import path from "node:path";
 
 import { afterEach, describe, expect, it } from "vitest";
 
-import { RULE_PROMOTIONS, newRuleSeverity } from "../../../src/core/sunset.js";
-import { resolveToolVersion } from "../../../src/core/version.js";
 import {
   collectApiStateEnums,
   collectSqlEnumDomains,
@@ -263,7 +261,7 @@ describe("validateContractConsistency (QFAI-CONTRACT-040)", () => {
   });
 
   it("raises an ENUM-backed contradiction to error", async () => {
-    // The severity is the point of #1100. A Postgres ENUM rejects an
+    // The severity is the point. A Postgres ENUM rejects an
     // out-of-domain value at insert time, so the two contracts cannot both be
     // implemented — and every gate qfai prescribes is `--fail-on error`, so at
     // `warning` this never blocked anything and Postgres found it first.
@@ -315,7 +313,7 @@ describe("validateContractConsistency (QFAI-CONTRACT-040)", () => {
    * bindings before that attribution let a `status` ENUM on an unrelated table
    * decide the severity of a `status` column bounded by a plain CHECK — and
    * the message asserted `insert 時に拒絶される物理制約` of a field that has no
-   * such constraint (#1162, reported against published 1.10.2).
+   * such constraint.
    */
   describe("a field name several contracts declare", () => {
     const SIM_LINE_API = [
@@ -425,7 +423,7 @@ describe("validateContractConsistency (QFAI-CONTRACT-040)", () => {
 
     it("still raises to error when every candidate binding is an ENUM", async () => {
       // The mix is what removes the claim. Where nothing can store the value,
-      // the finding #1100 raised is unchanged.
+      // the finding stays the same.
       const OTHER_ENUM_DB = [
         "CREATE TYPE sim_line_status AS ENUM ('active', 'inactive', 'in_call', 'error');",
         "",
@@ -443,9 +441,7 @@ describe("validateContractConsistency (QFAI-CONTRACT-040)", () => {
       const issues = await validateContractConsistency([api], dbs);
 
       expect(issues[0]?.severity).toBe("error");
-      expect(issues[0]?.message).toContain(
-        "ENUM (a physical constraint: the value is rejected at insert time)",
-      );
+      expect(issues[0]?.message).toContain("ENUM (a physical constraint: the insert is rejected)");
     });
 
     /**
@@ -542,7 +538,7 @@ describe("validateContractConsistency (QFAI-CONTRACT-040)", () => {
     });
 
     it("still raises to error when the redundant CHECK is on the only table", async () => {
-      // #1100's case, and the reason the tie is broken on the table count
+      // The reason the tie is broken on the table count
       // rather than on the mere presence of both forms: with one table there is
       // one column of that name, so the CHECK is redundant on the ENUM column
       // and the value is refused at insert time either way.
@@ -562,9 +558,7 @@ describe("validateContractConsistency (QFAI-CONTRACT-040)", () => {
       const issues = await validateContractConsistency([api], dbs);
 
       expect(issues[0]?.severity).toBe("error");
-      expect(issues[0]?.message).toContain(
-        "ENUM (a physical constraint: the value is rejected at insert time)",
-      );
+      expect(issues[0]?.message).toContain("ENUM (a physical constraint: the insert is rejected)");
     });
 
     it("does not let a commented-out CREATE TABLE make one table look like two", async () => {
@@ -588,10 +582,9 @@ describe("validateContractConsistency (QFAI-CONTRACT-040)", () => {
     });
 
     /**
-     * A value computed at read time is not a contradiction, and until it could
-     * be declared the finding had no valid remedy: widening the domain makes it
-     * possible to STORE a value the contract forbids storing, and deleting it
-     * from the API removes a value the UI requires (#1203).
+     * A value computed at read time is not a contradiction: widening the domain
+     * would make it possible to STORE a value the contract forbids storing, and
+     * deleting it from the API would remove a value the UI requires.
      */
     describe("a value the DB contract declares derived", () => {
       const DERIVED_DB = [
@@ -653,22 +646,6 @@ describe("validateContractConsistency (QFAI-CONTRACT-040)", () => {
         expect(issues.filter((entry) => entry.code === "QFAI-CONTRACT-041")).toHaveLength(1);
         const domain = issues.filter((entry) => entry.code === "QFAI-CONTRACT-040");
         expect(domain[0]?.message).toContain("powered_off, standby");
-      });
-
-      it("takes the declaration severity from its promotion window", async () => {
-        // Read from the pin rather than asserted as a literal: the window opens
-        // at 1.12.0, and a hard-coded `warning` here would start failing then
-        // for a rule that is working exactly as declared.
-        const noFrom = DERIVED_DB.replace(" from enabled, connection_status, JST clock", "");
-        const { api, dbs } = await seedMany(SIM_LINE_API, { "db-0003-sim-lines.sql": noFrom });
-
-        const issues = await validateContractConsistency([api], dbs);
-
-        const expected = newRuleSeverity(
-          await resolveToolVersion(),
-          RULE_PROMOTIONS.derivedNotStoredDeclaration.promoteAt,
-        );
-        expect(issues.find((entry) => entry.code === "QFAI-CONTRACT-041")?.severity).toBe(expected);
       });
 
       it("reports a declaration covering a value the DB stores anyway", async () => {

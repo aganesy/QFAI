@@ -91,12 +91,12 @@ describe("the layer distribution reads the artifact the templates produce", () =
    * The total and the E2E count follow the histogram, because the two knobs are
    * compared against THEM and not against the buckets.
    *
-   * Until they did, the report contradicted itself — six buckets summing to six
-   * beside `totalScenarios: 0` — and the contradiction was load-bearing:
-   * `maxE2eScenarioRatio` and `maxE2eScenarioCount` were measured against zero
+   * If they did not, the report would contradict itself — six buckets summing to six
+   * beside `totalScenarios: 0` — and the contradiction would be load-bearing:
+   * `maxE2eScenarioRatio` and `maxE2eScenarioCount` would be measured against zero
    * on the layered layout, which is the normal shape for a project whose E2E
    * lives in code rather than in Gherkin. A project could set either knob, read
-   * it back in `qfai.config.yaml`, and never be told anything (#1197).
+   * it back in `qfai.config.yaml`, and never be told anything.
    */
   describe("the E2E knobs measure what the ledger says", () => {
     it("carries the ledger's totals, so the buckets and the total agree", async () => {

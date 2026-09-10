@@ -22,24 +22,23 @@ export function isCiEnvironment(env: NodeJS.ProcessEnv = process.env): boolean {
 //
 //   - `--profile tdd` covers test-side gates (validateTddList,
 //     validateTestTodoStubs, validateTraceability, validateTraceabilityIntegrity).
-//   - `--profile sdd` covers structural / append-first gates introduced in
-//     PR #206 (validateSpecPacks → QFAI-STATUS-001..006, QFAI-TRIAGE-001..006,
+//   - `--profile sdd` covers the structural / append-first gates
+//     (validateSpecPacks → QFAI-STATUS-001..006, QFAI-TRIAGE-001..006,
 //     plus validateStatusInSpecs). Without an `sdd`-allowed CI profile,
 //     a future regression in sddTriage / specPack validators could ship
-//     green because `tdd` does not exercise those code paths
-//     (PR #206 review LW-G).
+//     green because `tdd` does not exercise those code paths.
 //
 // The narrow-profile guard exists to stop CI from *accidentally* skipping
 // unrelated gates. When two narrow profiles are deliberately paired
 // alongside the existing `full` validate step against the sandbox
 // (`--root tmp/pack/sandbox/out`), broad coverage is preserved.
 //
-// A profile outside this set is REPORTED, not blocked. It used to be a hard
-// `error` that replaced the entire run — and `qfai-atdd`, `qfai-discussion`
-// and `qfai-prototyping` each name one of those profiles as their **only**
-// completion gate, with no CI-legal fallback documented. Every one of the three
-// became uncompletable the moment it ran anywhere that exports `CI=true`, which
-// is GitHub Actions, most hosted agent runners, and many devcontainers. A guard
+// A profile outside this set is REPORTED, not blocked. A hard `error` that
+// replaced the entire run would make `qfai-atdd`, `qfai-discussion` and
+// `qfai-prototyping` uncompletable the moment they ran anywhere that exports
+// `CI=true` — GitHub Actions, most hosted agent runners, and many
+// devcontainers — since each names one of these profiles as its **only**
+// completion gate, with no CI-legal fallback. A guard
 // against accidental narrowing must not make a deliberate stage gate
 // unreachable.
 const CI_ALLOWED_PROFILES = new Set<ValidationProfile>(["full", "verify", "tdd", "sdd"]);

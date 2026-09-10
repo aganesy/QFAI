@@ -54,7 +54,7 @@ describe("E2E: evidence contract hardening", () => {
 // QFAI:SPEC-0011:US-0011-0004
 describe("E2E: parallel dispatch rules", () => {
   it("SKILL.md defines allow/deny conditions and delivery-planner authority", async () => {
-    // #232: full conditions live in references/parallelization-policy.md.
+    // Full conditions live in references/parallelization-policy.md.
     const content = [
       await readFile(implementSkillPath, "utf-8"),
       await readFile(

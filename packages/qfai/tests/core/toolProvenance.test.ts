@@ -140,8 +140,8 @@ describe("classifyToolLocation", () => {
   });
 
   it("reports a dependency hoisted above the project", () => {
-    // Also benign, also reported, and the reason the rule ships at `warning`
-    // through its promotion window rather than as an error.
+    // Also benign, also reported, and the reason the rule ships at `info`
+    // rather than as an error.
     const root = at("repo", "packages", "web");
     expect(classifyToolLocation(root, at("repo", "node_modules", "qfai"))).toBe(true);
   });
@@ -178,7 +178,7 @@ describe("classifyAgainstDeclaration", () => {
   const at = (...segments: string[]): string => path.resolve(path.join(...segments));
 
   it("reports the worktree hazard: declared here, running from the enclosing checkout", () => {
-    // The case #1096 was filed for, and the one resolution nobody chose. The
+    // The important case, and the one resolution nobody chose. The
     // worktree declares qfai; `npx` walked parents and found the enclosing
     // checkout's copy, so another lockfile decided what gated this project.
     const declaring = at("repo", ".claude", "worktrees", "w");

@@ -14,6 +14,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   gitignorePatternMatches,
+  isPathIgnoredByLayers,
   negationSamplePath,
   negationsOutrankLaterIgnores,
 } from "../../src/core/gitignore.js";
@@ -78,8 +79,33 @@ describe("negationSamplePath", () => {
     ["!decisions/", "decisions/sample"],
     ["!decisions/**", "decisions/sample/leaf"],
     ["!.qfai/evidence/decision-*.md", ".qfai/evidence/decision-sample.md"],
+    // A bracket expression stands for one character, so the sample carries one.
+    // Left as the four characters `[0-9]`, the sample is a path no rule written
+    // about digits matches, and every overlap question about it answers "no".
+    ["!evidence/import-lite-[0-9][0-9].md", "evidence/import-lite-00.md"],
+    ["!logs/[a-z].txt", "logs/a.txt"],
+    ["!logs/[!0-9].txt", "logs/a.txt"],
+    ["!logs/?.txt", "logs/s.txt"],
+    // Read with the same parser `gitignorePatternMatches` uses, so a POSIX
+    // class, a leading `]` and an escape are one expression rather than the
+    // first `]` a scan happens to reach.
+    ["!logs/[[:digit:]].txt", "logs/0.txt"],
+    ["!logs/[]a].txt", "logs/a.txt"],
+    // Only the escaped character is a member, so the answer is not one the
+    // candidate order could have reached first.
+    ["!logs/[\\-].txt", "logs/-.txt"],
+    // An unterminated `[` matches nothing in git either, so it stands for
+    // itself and the rest of the path is still instantiated.
+    ["!logs/[0-9/*.txt", "logs/[0-9/sample.txt"],
   ])("%s -> %s", (negation, expected) => {
     expect(negationSamplePath(negation)).toBe(expected);
+  });
+
+  it("keeps a class no candidate satisfies rather than inventing a path", () => {
+    // The alphabet is short on purpose. A class it cannot instantiate leaves
+    // the caller where it was, which costs a relocation, rather than handing it
+    // a path the negation does not re-include.
+    expect(negationSamplePath("!logs/[%&].txt")).toBe("logs/[%&].txt");
   });
 });
 
@@ -112,15 +138,26 @@ describe("negationsOutrankLaterIgnores", () => {
     const lines = ["!coverage-depth-*.md", "*.json", "node_modules/"];
     expect(negationsOutrankLaterIgnores(lines, ["!coverage-depth-*.md"])).toBe(true);
   });
+
+  it("rejects a stamped negation a later digit rule re-ignores", () => {
+    // The managed negation for the stamped import-lite record spells its stamp
+    // out as bracket classes. A project rule written the shorter way covers the
+    // same file, so the negation is not the last word on it.
+    const stamped = `!.qfai/evidence/import-lite-${"[0-9]".repeat(17)}.md`;
+    const lines = [".qfai/evidence/*", stamped, ".qfai/evidence/import-lite-[0-9]*.md"];
+
+    expect(negationsOutrankLaterIgnores(lines, [stamped])).toBe(false);
+  });
 });
 
 describe("a bracket expression is a character class, not five literal characters", () => {
-  // Review finding [E2]. The translation escaped `[` and `]` into literals, so a project line
-  // like `.qfai/install-provenance.[j]son` — an ordinary class that git honours — matched
-  // nothing here. Git ignores the provenance record; this matcher says nothing conflicts;
-  // `ensureRootGitignoreEntries` returns early; the record stays ignored. A fresh clone then has
-  // no record at all, so the next `qfai init` reads a declined workflow as never-installed and
-  // writes it back — the one outcome that record exists to stop.
+  // The translation must not escape `[` and `]` into literals: a project line like
+  // `.qfai/install-provenance.[j]son` is an ordinary character class that git honours, and
+  // escaping the brackets would make this matcher see no conflict where git does. That
+  // mismatch would leave `ensureRootGitignoreEntries` returning early with the provenance
+  // record still ignored — and on a fresh clone, where no record exists yet, the next
+  // `qfai init` would read a declined workflow as never-installed and write it back, which is
+  // the one outcome that record exists to stop.
 
   it("matches through a class the way git does", () => {
     expect(
@@ -171,16 +208,16 @@ describe("a bracket expression is a character class, not five literal characters
 });
 
 describe("glob overlap is decided from both patterns, not from one instance of one", () => {
-  // Review finding [E1]. The check instantiated the NEGATION and asked whether each later
-  // ignore matched that one instance — and two globs can overlap without that instance being in
-  // the intersection.
+  // Instantiating only the NEGATION and asking whether each later ignore matches that one
+  // instance is not enough: two globs can overlap without that instance being in the
+  // intersection.
   //
-  // The measured case: `!.qfai/evidence/coverage-depth-*.md` instantiates as
+  // The case this test pins: `!.qfai/evidence/coverage-depth-*.md` instantiates as
   // `coverage-depth-sample.md`, and a project line `.qfai/evidence/coverage-depth-spec-*.md`
   // does not match it — while the file that actually exists, `coverage-depth-spec-0017.md`, is
-  // matched by both. The conflict went unseen, the managed block was left where it was, and the
-  // Coverage Depth Matrix stayed ignored: a governance record this repository requires in
-  // version control, silently absent from every clone.
+  // matched by both. Missing that overlap would leave the managed block where it was and the
+  // Coverage Depth Matrix — a governance record this repository requires in version control —
+  // silently absent from every clone.
   //
   // The two directions of error are not symmetric, which is what makes over-reporting the right
   // bias: a false conflict only re-appends a negation that was already last, while a missed one
@@ -243,5 +280,72 @@ describe("glob overlap is decided from both patterns, not from one instance of o
 
   it("reports a missing negation rather than calling it effective", () => {
     expect(negationsOutrankLaterIgnores([".qfai/evidence/*"], [MANAGED])).toBe(false);
+  });
+});
+
+/**
+ * A negation naming a directory re-includes the directory entry, not the
+ * subtree under it.
+ *
+ * gitignore(5) is explicit that a file whose parent directory is excluded
+ * cannot be re-included, so `!.qfai/` cancels the exclusion of `.qfai` itself
+ * and nothing more. Read as a subtree it sat last in the shipped block and
+ * outranked every ignore above it, and the verdict came back "not ignored" for
+ * paths `git check-ignore` reports as ignored.
+ *
+ * The shipped block hid it: a narrower negation for each governance record sits
+ * below the directory ones and also wins, so the answer was right for the wrong
+ * reason. Removing one of those narrower lines — which `qfai init` respects and
+ * never re-adds — is what makes the two disagree.
+ */
+describe("a directory negation re-includes the directory, not everything under it", () => {
+  /** The shipped block, ignores first and negations last, as `qfai init` writes it. */
+  const BLOCK = [
+    ".qfai/report/*",
+    ".qfai/evidence/*",
+    ".qfai/review/*",
+    "!.qfai/",
+    "!.qfai/evidence/",
+    "!.qfai/evidence/decisions/",
+    "!.qfai/evidence/decisions/**",
+    "!.qfai/evidence/coverage-depth-*.md",
+  ];
+
+  const verdict = (lines: readonly string[], samplePath: string): boolean =>
+    isPathIgnoredByLayers([{ dir: "", lines: [...lines] }], samplePath);
+
+  it("leaves a generated file ignored, the way git does", () => {
+    // `git check-ignore -v` names `.qfai/review/*` as the winner here. Read as
+    // a subtree, `!.qfai/` sat last and answered "not ignored".
+    expect(verdict(BLOCK, ".qfai/review/review-20260101/summary.json")).toBe(true);
+    expect(verdict(BLOCK, ".qfai/report/validate.json")).toBe(true);
+  });
+
+  it("keeps a record ignored once the project drops its own negation", () => {
+    // The configuration the caller exists for: a project keeps the block but
+    // removes the matrix negation, so git ignores the matrix. Reported visible,
+    // the validator that warns about an invisible governance record says
+    // nothing.
+    const withoutMatrix = BLOCK.filter((line) => !line.includes("coverage-depth"));
+
+    expect(verdict(withoutMatrix, ".qfai/evidence/coverage-depth-0001.md")).toBe(true);
+  });
+
+  it("still re-includes what the block re-includes", () => {
+    // The over-correction pin. Narrowing the directory negations must not take
+    // the records with them: each has its own negation below, and a `**`
+    // negation says descendants in its own text.
+    expect(verdict(BLOCK, ".qfai/evidence/coverage-depth-0001.md")).toBe(false);
+    expect(verdict(BLOCK, ".qfai/evidence/decisions/20260101.json")).toBe(false);
+    expect(verdict(BLOCK, ".qfai/evidence")).toBe(false);
+    expect(verdict(BLOCK, ".qfai")).toBe(false);
+  });
+
+  it("reads a negation naming a file as covering that file", () => {
+    // Only the trailing-slash form narrows. A negation naming a file has no
+    // descendants, so nothing about it changes.
+    expect(verdict([".qfai/evidence/*", "!.qfai/evidence/keep.md"], ".qfai/evidence/keep.md")).toBe(
+      false,
+    );
   });
 });

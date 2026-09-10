@@ -1,5 +1,5 @@
 /**
- * Whether the cycle-0 frozen scope still exists (#1099).
+ * Whether the cycle-0 frozen scope still exists.
  *
  * Cycle 0 records the screen set in `prototyping.json#frozenSurfaceUnion`, and
  * every later edit to it is lock drift — `qfai-prototyping/SKILL.md:120-123`
@@ -19,13 +19,8 @@
  * branch cannot see: some of the frozen scope is unreachable and the rest is
  * fine, so the precheck's "zero UI-bearing specs resolved" condition is false.
  *
- * A `warning` behind a promotion window. The route out is
- * `prototyping rescope --remove <id> --reason <delta-id>` (#1099), which is
- * non-destructive and leaves the loop at its cycle — so unlike the first
- * revision of this finding, the window is justified on its own terms rather
- * than as an apology for having no remedy to offer. What it needs the window
- * for is the ordinary reason: a project already carrying the state has never
- * been told, and gets a minor to run the operation before the gate closes.
+ * The route out is `prototyping rescope --remove <id> --reason <delta-id>`,
+ * which is non-destructive and leaves the loop at its cycle.
  *
  * The finding and the operation read ONE reader,
  * `core/prototyping/frozenScope.ts`. `rescope` removes only what this finding
@@ -36,8 +31,6 @@
 import type { QfaiConfig } from "../config.js";
 import type { Issue } from "../types.js";
 import { readFrozenScopeState } from "../prototyping/frozenScope.js";
-import { newRuleSeverity, RULE_PROMOTIONS } from "../sunset.js";
-import { resolveToolVersion } from "../version.js";
 import { issue } from "./utils.js";
 import { PROTOTYPING_JSON_REL } from "../prototyping/paths.js";
 
@@ -68,14 +61,7 @@ export async function validateFrozenSurfaceReachability(
     return [];
   }
 
-  // The severity comes from the promotion window, which `sunsetLedger.test.ts`
-  // requires of any registered entry — a fixed severity beside a registration
-  // is rejected, and rightly: the registry would then claim to decide something
-  // it does not.
-  const promoteAt = RULE_PROMOTIONS.frozenSurfaceUnreachable.promoteAt;
-  const severity = newRuleSeverity(await resolveToolVersion(), promoteAt);
-  const windowNote =
-    severity === "warning" ? ` (${promoteAt} までは warning、以降は error になります)` : "";
+  const severity = "error";
 
   return [
     issue(
@@ -86,8 +72,7 @@ export async function validateFrozenSurfaceReachability(
         "this is a scope reduction rather than the all-markers-removed drift " +
         "`iterate` hard-stops on. A scope reduction has an in-loop route: " +
         "`qfai prototyping rescope --remove <id> --reason <delta-id>` drops the surface from " +
-        "the frozen union, records why, and leaves the loop at its current cycle." +
-        windowNote,
+        "the frozen union, records why, and leaves the loop at its current cycle.",
       severity,
       PROTOTYPING_JSON_REL,
       "prototyping.frozenSurfaceUnreachable",

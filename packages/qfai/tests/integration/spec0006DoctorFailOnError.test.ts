@@ -46,60 +46,54 @@ async function agentFiles(dir: string): Promise<string[]> {
 
 // QFAI:SPEC-0006:TC-0006-0036
 describe("TC-0006-0036: an error-severity finding exits non-zero under `--fail-on error`", () => {
-  it(
-    "exits 0 while the tree carries no error, and 1 the moment it carries one",
-    { timeout: 60000 },
-    async () => {
-      const dir = await pool.seedAdopterTree();
+  it("exits 0 while the tree carries no error, and 1 the moment it carries one", async () => {
+    const dir = await pool.seedAdopterTree();
 
-      // Direction 1 — the tree a passing run is taken on. This is also the direction every other
-      // `--fail-on error` suite already covered, and on its own it is exactly what the mutant satisfies.
-      const before = await createDoctorData({ startDir: dir, rootExplicit: true });
-      expect(
-        before.summary.error,
-        "a freshly initialised tree must carry no error-severity finding, or direction 2 is not attributable",
-      ).toBe(0);
-      const clean = await runDoctorText(dir, "error");
-      expect(clean.exitCode, "no error finding, so `--fail-on error` has nothing to fail on").toBe(
-        0,
-      );
+    // Direction 1 — the tree a passing run is taken on. This is also the direction every other
+    // `--fail-on error` suite already covered, and on its own it is exactly what the mutant satisfies.
+    const before = await createDoctorData({ startDir: dir, rootExplicit: true });
+    expect(
+      before.summary.error,
+      "a freshly initialised tree must carry no error-severity finding, or direction 2 is not attributable",
+    ).toBe(0);
+    const clean = await runDoctorText(dir, "error");
+    expect(clean.exitCode, "no error finding, so `--fail-on error` has nothing to fail on").toBe(0);
 
-      // Plant exactly one error: an agent file whose frontmatter does not parse. Chosen because
-      // `agents.frontmatter` is error-severity by construction and needs no other part of the tree to
-      // be wrong, so the delta below has one cause.
-      const files = await agentFiles(dir);
-      expect(
-        files.length,
-        "the seeded tree must ship agent files for this to corrupt one",
-      ).toBeGreaterThan(0);
-      const victim = path.join(dir, AGENTS_DIR, files[0] ?? "");
-      const original = await readFile(victim, "utf-8");
-      await writeFile(
-        victim,
-        "---\nname: [unterminated\ndescription: broken\n---\n\nbody\n",
-        "utf-8",
-      );
+    // Plant exactly one error: an agent file whose frontmatter does not parse. Chosen because
+    // `agents.frontmatter` is error-severity by construction and needs no other part of the tree to
+    // be wrong, so the delta below has one cause.
+    const files = await agentFiles(dir);
+    expect(
+      files.length,
+      "the seeded tree must ship agent files for this to corrupt one",
+    ).toBeGreaterThan(0);
+    const victim = path.join(dir, AGENTS_DIR, files[0] ?? "");
+    const original = await readFile(victim, "utf-8");
+    await writeFile(
+      victim,
+      "---\nname: [unterminated\ndescription: broken\n---\n\nbody\n",
+      "utf-8",
+    );
 
-      // Direction 2 — the one that had no oracle.
-      const after = await createDoctorData({ startDir: dir, rootExplicit: true });
-      expect(
-        after.summary.error,
-        "the plant must actually produce an error finding, or the exit code below proves nothing",
-      ).toBeGreaterThan(0);
-      const failing = await runDoctorText(dir, "error");
-      expect(
-        failing.exitCode,
-        "an error-severity finding under `--fail-on error` MUST exit non-zero — inverting this branch " +
-          "silently turns every erroring tree into exit 0, which is the failure a CI gate exists to catch",
-      ).toBe(1);
+    // Direction 2 — the one that had no oracle.
+    const after = await createDoctorData({ startDir: dir, rootExplicit: true });
+    expect(
+      after.summary.error,
+      "the plant must actually produce an error finding, or the exit code below proves nothing",
+    ).toBeGreaterThan(0);
+    const failing = await runDoctorText(dir, "error");
+    expect(
+      failing.exitCode,
+      "an error-severity finding under `--fail-on error` MUST exit non-zero — inverting this branch " +
+        "silently turns every erroring tree into exit 0, which is the failure a CI gate exists to catch",
+    ).toBe(1);
 
-      // And back, so the exit code is shown to track the finding rather than the number of runs.
-      await writeFile(victim, original, "utf-8");
-      const restored = await runDoctorText(dir, "error");
-      expect(
-        restored.exitCode,
-        "removing the error must return the exit code to 0; a branch that only ever fails is not this branch",
-      ).toBe(0);
-    },
-  );
+    // And back, so the exit code is shown to track the finding rather than the number of runs.
+    await writeFile(victim, original, "utf-8");
+    const restored = await runDoctorText(dir, "error");
+    expect(
+      restored.exitCode,
+      "removing the error must return the exit code to 0; a branch that only ever fails is not this branch",
+    ).toBe(0);
+  });
 });

@@ -62,7 +62,11 @@ export type ValidationProfile =
   | "tdd"
   | "verify"
   | "full"
-  | "saas-package";
+  | "saas-package"
+  // Runs the drift guard alone. `tdd` evaluates it too, and is also the
+  // completion gate, so a run that only wants the drift answer had to accept
+  // every completion obligation with it.
+  | "drift";
 
 export type ValidationTraceability = {
   sc: ScCoverage;
@@ -140,7 +144,7 @@ export type ValidationResult = {
    * It exists so a consumer can relate the result to the tree it describes.
    * `qfai prototyping certify` seals evidence on the strength of a STORED
    * `validate.json`, and with no timestamp on it a success from before the
-   * evidence changed was indistinguishable from one after (#1107).
+   * evidence changed was indistinguishable from one after.
    */
   generatedAt?: string;
   profile?: ValidationProfile;

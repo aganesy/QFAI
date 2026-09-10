@@ -248,21 +248,21 @@ column count valid — a corruption no validator can see.
 `Status` is `green`, `refactor`, `review-fix` or `done` — the statuses that
 assert a cycle has run:
 
-| Finding                        | Fires when                                                                              | Severity            |
-| ------------------------------ | --------------------------------------------------------------------------------------- | ------------------- |
-| `TDDLIST_EVIDENCE_EMPTY`       | the cell is empty or holds only dash placeholders (`-`, `–`, `—`)                       | warning, then error |
-| `TDDLIST_EVIDENCE_STATUS_ONLY` | the cell claims a verdict (`PASS`, `looks good`, …) with no command                     | warning             |
-| `QFAI-TDDLIST-011`             | the cell does not match the grammar above                                               | warning, then error |
-| `QFAI-TDDLIST-012`             | the cell is longer than 240 characters                                                  | warning, then error |
-| `QFAI-TDDLIST-013`             | `RED:n-a` on an ATDD-owned row                                                          | error               |
-| `QFAI-TDDLIST-007`             | a `done` row's cell carries no anchor at all                                            | warning, then error |
-| `QFAI-TDDLIST-008`             | an `evidence at` pointer names the wrong owner/file/item, or its file/heading is absent | warning, then error |
+| Finding                        | Fires when                                                                              | Severity |
+| ------------------------------ | --------------------------------------------------------------------------------------- | -------- |
+| `TDDLIST_EVIDENCE_EMPTY`       | the cell is empty or holds only dash placeholders (`-`, `–`, `—`)                       | error    |
+| `TDDLIST_EVIDENCE_STATUS_ONLY` | the cell claims a verdict (`PASS`, `looks good`, …) with no command                     | warning  |
+| `QFAI-TDDLIST-011`             | the cell does not match the grammar above                                               | error    |
+| `QFAI-TDDLIST-012`             | the cell is longer than 240 characters                                                  | error    |
+| `QFAI-TDDLIST-013`             | `RED:n-a` on an ATDD-owned row                                                          | error    |
+| `QFAI-TDDLIST-007`             | a `done` row's cell carries no anchor at all                                            | error    |
+| `QFAI-TDDLIST-008`             | an `evidence at` pointer names the wrong owner/file/item, or its file/heading is absent | error    |
 
 One more rule reads the row rather than a cell:
 
-| Finding            | Fires when                                              | Severity            |
-| ------------------ | ------------------------------------------------------- | ------------------- |
-| `QFAI-TDDLIST-014` | the row has more cells than the table's header declares | warning, then error |
+| Finding            | Fires when                                              | Severity |
+| ------------------ | ------------------------------------------------------- | -------- |
+| `QFAI-TDDLIST-014` | the row has more cells than the table's header declares | error    |
 
 A command is recognised by shape, not from a list of known runners, so the rule
 holds on any stack: a program name followed by an argument carrying a flag, a
@@ -273,17 +273,13 @@ are accepted directly.
 ledger written before the check exists carries prose verdicts, and failing a
 build on them is a migration rather than a gate.
 
-Four findings are inside a **promotion window**: `TDDLIST_EVIDENCE_EMPTY`,
-`QFAI-TDDLIST-011`, `QFAI-TDDLIST-012` and `QFAI-TDDLIST-014` are reported as
-warnings until the release each finding itself names, and as errors from that
-release onwards. Each rule is right and none is in doubt — but each also fires
-on ledgers written before the check existed, so an upgrade that started erroring
-on them would latch a gate that was passing. An empty cell was always wrong; the
-grammar, the cap and the surplus column arrive with the change that made
-`Evidence` a pointer, so they land on every cell written while the column was
-documented as holding the commands and their output. The finding text states
-which release ends the window, so `--fail-on error` keeps working while the
-ledger shows the debt it will owe.
+`TDDLIST_EVIDENCE_EMPTY`, `QFAI-TDDLIST-011`, `QFAI-TDDLIST-012` and
+`QFAI-TDDLIST-014` are errors. Each also fires on ledgers written before the
+check existed: an empty cell was always wrong, while the grammar, the cap and
+the surplus column arrive with the change that made `Evidence` a pointer, so
+they land on every cell written while the column was documented as holding the
+commands and their output. A ledger that predates the change therefore meets a
+backlog rather than a single cell, and no waiver covers any of them.
 
 **A row already at a terminal status satisfies this by backfilling the cell in
 place.** Writing the outcome and its evidence pointer into `Evidence` is not a
@@ -295,35 +291,32 @@ evidence file stating what was run and that its output was not retained, then po
 the cell at that entry. The cell stays a pointer — prose about a missing run is a
 payload, and the section above says why a payload in the cell corrupts the ledger.
 
-`QFAI-TDDLIST-007` is a warning for the same reason, and is waived under that
-code — the stripped `TDDLIST-007` spelling resolves to it too. Every completion
-check hangs off the anchor, so a `done` row whose cell is only an outcome —
+`QFAI-TDDLIST-007` is an error for the same reason. Every completion check
+hangs off the anchor, so a `done` row whose cell is only an outcome —
 command-shaped, so the status-only rule passes over it — claimed completion with
-no entry, no verdict and no checkpoint behind it. A project that has moved its ledger onto pointers raises this by
-failing on warnings; one still migrating waives it per path.
+no entry, no verdict and no checkpoint behind it. A ledger still on prose
+migrates one row at a time; there is no waiver to hold the gate open meanwhile.
 
-The two grammar findings are warnings for the same reason, waivable under
-`QFAI-TDDLIST-011` (malformed) and `QFAI-TDDLIST-012` (oversize). An oversize cell whose
-only other fault is prose is reported **once**, as the cap breach: every cell
-that outgrew the cap did so by holding prose, so the two are one defect to fix.
-A cell that is a well-formed pointer but breaks a **binding** — the RED
-provenance its `Layer` owes, the evidence file its `Layer` and spec own, the
-section its `TDD-ID` names, or a compatibility marker where none is licensed —
-is reported whatever its length. Those ask for a different fix from a cap
-breach, and folding them into it would let `QFAI-TDDLIST-012` waive a violation of
-which "ATDD-owned rows" says "There is no waiver here".
+The two grammar findings are errors for the same reason: `QFAI-TDDLIST-011`
+(malformed) and `QFAI-TDDLIST-012` (oversize). An oversize cell whose only other
+fault is prose is reported **once**, as the cap breach: every cell that outgrew
+the cap did so by holding prose, so the two are one defect to fix. A cell that
+is a well-formed pointer but breaks a **binding** — the RED provenance its
+`Layer` owes, the evidence file its `Layer` and spec own, the section its
+`TDD-ID` names, or a compatibility marker where none is licensed — is reported
+whatever its length. Those ask for a different fix from a cap breach, and
+folding them into it would report a binding violation under the cap's code.
 
-`RED:n-a` on an ATDD-owned row is the one that carries no waiver at all. It is
-its own code, `QFAI-TDDLIST-013`, at `error` — a waiver may only
-target `warning` / `info`, so that is how "There is no waiver here" is spelled.
-Reported as a `QFAI-TDDLIST-011` warning it shared a rule id with every legacy prose
-cell, and waiving the migration silenced it. The other bindings stay warnings:
-they are the migration, and a row that never obtained RED provenance is not a
+`RED:n-a` on an ATDD-owned row has its own code, `QFAI-TDDLIST-013`. A waiver
+may only target `warning` / `info`, so an error is how "There is no waiver here"
+is spelled — and every rule in this section is one. The separate code still
+earns its place: reported under `QFAI-TDDLIST-011` it shared a rule id with
+every legacy prose cell, so a row that never obtained RED provenance read as a
 formatting defect the grammar introduced.
 
-`QFAI-TDDLIST-014` is a warning under `QFAI-TDDLIST-014`. Cells are read by
-header index, so anything parked past the last declared column is read by
-nothing — a conforming `Evidence` cell followed by a surplus column holding the
+`QFAI-TDDLIST-014` reports a row with more cells than its header declares.
+Cells are read by header index, so anything parked past the last declared
+column is read by nothing — a conforming `Evidence` cell followed by a surplus column holding the
 payload passed both the grammar and the cap with no finding at all.
 
 Rows at `todo`, `red` and `exception` are not checked — the first two have
@@ -382,6 +375,14 @@ This list is the complete one. `qfai-implement/SKILL.md` summarises it and
   completion, the upstream reset needs an approved `CR-*` that by definition does
   not exist yet, and leaving the row at `green` throws away the `Blocked-By` this
   status exists to hold and re-derives the determination on every pass.
+  Also write the `.qfai/steering/<id>.md` work-log entry for the stop —
+  `Blocked-By` names WHAT the row waits on, the entry is what was tried and what
+  the next session picks up. `QFAI-TDDLIST-015` reports while no open
+  (non-`archived`) `kind: blocker` / `kind: handoff` entry names this spec —
+  through its own `scope:`, or through `links:` on a `scope: global` entry. It is
+  a warning inside its migration window and an error from the release the finding
+  names, so a stop recorded before the check existed is not an upgrade that fails
+  on the spot.
 - `blocked` -> `todo` (the blocker cleared **with this row's obligation intact**).
   This is a **resumption, not a backward transition**: nothing upstream changed, so
   nothing is being undone. A row blocked on an unresolved `CR-*` may take it
@@ -439,6 +440,13 @@ This list is the complete one. `qfai-implement/SKILL.md` summarises it and
   `Resumed-from-blocked` field and the round block left behind are the audit trail a
   sibling row id provides in the ordinary case. Weakening the correct test until it
   fails is forbidden here as everywhere.
+  **Close the entry that accounted for the stop**: set its `status:` to
+  `archived` in the same edit that moves the row. `QFAI-TDDLIST-015` is satisfied
+  by any open entry naming the spec, so an entry left open outlives the stop it
+  described — resume once and it stands in for every later stop of that spec, and
+  forgetting the next work-log entry is never reported. An entry that still
+  accounts for something else stays open; write the new stop its own entry rather
+  than reusing this one.
 - `blocked` -> `review-fix` (the blocker cleared on a row that was blocked
   **while reworking a `REVISE`**, with this row's obligation intact). The same
   resumption as the edge above, differing only in destination, and taken on
@@ -474,8 +482,8 @@ This list is the complete one. `qfai-implement/SKILL.md` summarises it and
   keeps the anomaly's DR-ID alongside the reset ID. A reset without a recorded
   approval is a backward transition and is prohibited.
 - `exception` -> `todo` — **anomaly resolved**, the item re-enters the cycle
-  from the start. This is the exit `exception` previously lacked; without it a
-  parked item could never be un-parked without a lifecycle violation. Distinct
+  from the start. Without this exit a parked item could never be un-parked
+  without a lifecycle violation. Distinct
   from the upstream reset above: nothing upstream changed, so it needs no CR/DR
   approval — the anomaly's own DR-ID stays in place.
 - A reset row is at `todo`, so it owes no test file until it reaches `green`.

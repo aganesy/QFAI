@@ -7,6 +7,30 @@ import { SKILL_MD_MAX_LINES } from "../helpers/skillBudget.js";
 
 const repoRoot = path.resolve(process.cwd(), "..", "..");
 
+/** The whole assistant tree on both sides — skills, agents, catalogs, manifests. */
+const ASSISTANT_TREES = [
+  path.join(repoRoot, "packages/qfai/assets/init/.qfai/assistant"),
+  path.join(repoRoot, ".qfai/assistant"),
+];
+
+/** Every readable `.md` / `.yml` under `root`, recursively. */
+async function markdownAndYamlUnder(root: string): Promise<string[]> {
+  const found: string[] = [];
+  const walk = async (dir: string): Promise<void> => {
+    for (const entry of await readdir(dir, { withFileTypes: true })) {
+      const full = path.join(dir, entry.name);
+      if (entry.isSymbolicLink()) continue;
+      if (entry.isDirectory()) {
+        await walk(full);
+        continue;
+      }
+      if (/\.(?:md|ya?ml)$/.test(entry.name)) found.push(full);
+    }
+  };
+  await walk(root);
+  return found;
+}
+
 /** Shipped surface plus its root mirror. */
 const SKILL_DIRS = [
   path.join(repoRoot, "packages/qfai/assets/init/.qfai/assistant/skills/qfai-implement"),
@@ -579,7 +603,7 @@ describe("qfai-implement checkpoint verification contract", () => {
       expect(perSpec).toMatch(/^3\. The project's static gates/m);
       expect(perSpec).toContain("npx qfai validate --profile tdd --fail-on error --spec");
       expect(flat(perSpec)).toContain(
-        "the spec-level set is step 2 above plus steps 3 and 4 below",
+        "the spec-level set is step 2 above plus steps 3, 4 and 5 below",
       );
     }
   });
@@ -875,18 +899,24 @@ describe("qfai-implement checkpoint verification contract", () => {
     for (const dir of SKILL_DIRS) {
       const skill = await readFile(path.join(dir, "SKILL.md"), "utf-8");
       const item10 = gateItem(skill, 10);
+      // Item 10 states the obligation and cites the rule; the substitution is
+      // written in the contract it cites.
+      expect(item10).toContain("`references/record-contract.md`");
+      const record = (
+        await readFile(path.join(dir, "references/record-contract.md"), "utf-8")
+      ).replace(/\s+/g, " ");
 
-      expect(item10).toContain(
+      expect(record).toContain(
         "**A `## Shared-artifact re-verify` entry naming this row is read in place of the per-item observations it re-took**",
       );
-      expect(item10).toContain("not only to clear the `RED test hash` mismatch above");
-      expect(item10).toContain(
+      expect(record).toContain("not only to clear the `RED test hash` mismatch above");
+      expect(record).toContain(
         "items 5, 7-9 and 12 are satisfied by what it carries at the `Revision` it names",
       );
       // The block's revision is the one the substituted items agree on.
-      expect(item10).toContain("That `Revision` is then the one those items agree on.");
+      expect(record).toContain("That `Revision` is then the one those items agree on.");
       // Over-correction pin: the entry is still not rewritten, and item 3 keeps its own.
-      expect(item10).toContain("that row's own entry is deliberately not rewritten");
+      expect(record).toContain("that row's own entry is deliberately not rewritten");
 
       // The reference states the same rule from the boundary's side.
       const criteria = flat(
@@ -926,7 +956,7 @@ describe("qfai-implement checkpoint verification contract", () => {
       // `Revision`: that boundary has no row, so there is no round to take one
       // from. `evidenceRevision.test.ts` owns the rename; this row owns the
       // arity, and the two must name the same fourth input or a seal taken
-      // here can never match the recomputation over there (#501).
+      // here can never match the recomputation over there.
       expect(evidence).toContain(
         "together with a `Checkpoint verification revision` of its own, recorded beside them",
       );
@@ -1236,6 +1266,187 @@ describe("qfai-implement gate arity naming", () => {
         expect(content).toContain(`item ${named} of the ${named}-point gate`);
         expect(content, `${rel} cites the pre-insertion ordinal`).not.toMatch(/\bitem 11\b/);
       }
+    }
+  });
+
+  // A failed checkpoint had two remedies: the pass criteria kept the row at
+  // `refactor`, while `relevant-test-suite.md` sent it to `exception` + a DR,
+  // a status that then needs a user-approved waiver to satisfy completion.
+  it("states FAIL handling once, in the pass criteria, for both boundaries", async () => {
+    for (const dir of SKILL_DIRS) {
+      const reference = await readFile(
+        path.join(dir, "references", "checkpoint-verification.md"),
+        "utf-8",
+      );
+      expect(headingSlugs(reference)).toContain("pass-criteria");
+      expect(reference).toMatch(/\*\*FAIL handling is defined here\s+and nowhere else\*\*/);
+      expect(reference).toContain("the item stays at `refactor`, the failure is fixed");
+      expect(reference).toContain("does **not** go to `exception`");
+      // The per-spec boundary owns no row, so it needs its own branch here
+      // rather than being left undefined by the deletion.
+      expect(reference).toContain("**Per spec** — the boundary owns no row");
+      expect(reference).toContain("Spec-level completion is not declared until it passes");
+      // A ledger row is upstream SSOT: the carve-out this skill holds is the
+      // Status / DR-ID / Evidence cells, so the per-spec repair may not append
+      // a `todo` row itself — it takes the drift path and the owner's rerun.
+      expect(reference).toContain("**Do not add a row here.**");
+      expect(reference).toContain(
+        "`.qfai/assistant/constitution/drift-protocol.md#allowed-exceptions-minimal-whitelist`",
+      );
+      expect(reference).toContain("#when-drift-is-detected");
+
+      // No second remedy in the two documents that state the checkpoint's own
+      // vocabulary. The whole shipped surface is held by the case below this
+      // one: three files cannot support a claim about everywhere.
+      const suite = await readFile(path.join(dir, "references", "relevant-test-suite.md"), "utf-8");
+      expect(suite).toContain("`checkpoint-verification.md#pass-criteria`");
+      expect(suite).not.toContain("`refactor -> exception`");
+
+      const skill = await readFile(path.join(dir, "SKILL.md"), "utf-8");
+      expect(skill).not.toContain("on failure transition to `exception` with a DR-ID");
+      expect(skill).toContain("a FAIL keeps the row at `refactor`");
+
+      // A FAIL now keeps the row at `refactor`, which is neither terminal nor
+      // selectable by Phase Red step 1 (named row / `review-fix` / `todo`). An
+      // interrupted repair would strand it for every later invocation, so
+      // preflight has to be the entry that re-selects it.
+      expect(skill).toContain("**Resume every row left at `refactor`.**");
+      expect(skill).toContain("This is the only entry that re-selects `refactor`");
+      expect(reference).toContain("The preflight resume step (`../SKILL.md`, Phase: Stage 0 +");
+    }
+  });
+
+  it("carries no second FAIL remedy anywhere on the shipped assistant surface", async () => {
+    // "defined here and nowhere else" is a claim about the whole tree, and a
+    // check that reads three files cannot support it. One agent card described
+    // a failing checkpoint parking a row at `refactor -> exception` — the
+    // second remedy the rule forbids — and its generated catalog entry carried
+    // the same sentence, both outside every path the case above reads.
+    //
+    // Scoped to the transition, not to the word `exception`: that status is
+    // legal from any active status and is written about all over the tree. What
+    // may not exist twice is a route from a failing checkpoint to it.
+    const offenders: string[] = [];
+    for (const tree of ASSISTANT_TREES) {
+      for (const file of await markdownAndYamlUnder(tree)) {
+        const body = await readFile(file, "utf-8");
+        if (!body.includes("refactor -> exception")) continue;
+        offenders.push(path.relative(repoRoot, file));
+      }
+    }
+
+    expect(
+      offenders.sort(),
+      "a shipped document still routes a failing checkpoint to `exception`, which " +
+        "`checkpoint-verification.md#pass-criteria` says is the one thing a FAIL does not do",
+    ).toEqual([]);
+  });
+
+  // Resuming an unrelated `refactor` row ahead of what Phase Red step 1 would
+  // have selected runs that row's full-suite checkpoint against a deliberate
+  // RED, so it FAILs on an obligation the resumed row does not own. The order
+  // is that step's to state; restating it here is what made the two disagree.
+  it("defers to Phase Red step 1 for selection order", async () => {
+    for (const dir of SKILL_DIRS) {
+      const skill = await readFile(path.join(dir, "SKILL.md"), "utf-8");
+      expect(skill).toContain(
+        "**It does not run on every invocation, and it reorders nothing in Phase Red.**",
+      );
+      // The condition is readable in preflight. Stating it as "Phase Red runs
+      // its queues first and comes back" described a control flow the phase
+      // order forbids: this step is inside Stage 0, ahead of Phase Red.
+      expect(skill).toContain("three facts readable here, before Phase Red is reached");
+      expect(skill).toContain("FAILs it on an obligation the row does not own");
+      // Nor does it pre-empt an open group: that Fill is a selection among
+      // `todo` rows, which this step never touches.
+      expect(skill).toContain("It pre-empts no open group either");
+      // A row an unresolved Change Request names may not move, whatever its
+      // status, so the resume is not the one selection that ignores that.
+      expect(skill).toContain("**A row an unresolved `CR-*` names is not resumed.**");
+
+      const reference = await readFile(
+        path.join(dir, "references", "checkpoint-verification.md"),
+        "utf-8",
+      );
+      expect(reference).toContain("when it resumes, and as what unit, is stated there");
+    }
+  });
+
+  // A T1 coherent group parks every member in `refactor` by design, so an
+  // interrupted run leaves several. Resuming them one by one would review each
+  // separately and break the one-ledger-write group transition.
+  it("resumes interrupted refactor rows by review unit, not row by row", async () => {
+    for (const dir of SKILL_DIRS) {
+      const skill = await readFile(path.join(dir, "SKILL.md"), "utf-8");
+      // The old premise — "a fresh invocation holds no open T1 group" — is false.
+      expect(skill).not.toContain("no in-flight reviewer round and no open T1 group");
+      expect(skill).toContain(
+        "a T1 group left open, whose members park in `refactor` legally and by design",
+      );
+      expect(skill).toContain("**Resume the review unit, not the `refactor` rows inside it.**");
+      // The unit is every T1 row of the key, not the subset currently parked at
+      // `refactor`: closing over that subset ends the group early, and closing
+      // over a group whose member is at `review-fix` closes it unrepaired.
+      expect(skill).toContain("an open T1 group is every T1 row of one `BR-Ref`");
+      expect(skill).toContain("resumes by continuing Fill");
+      expect(skill).toContain("a `review-fix` member is blocked on that repair");
+    }
+  });
+
+  // A spec-level repair edits code every row's reviewer PASS, GREEN and
+  // per-item checkpoint were taken against, on rows the item loop skips — so
+  // nothing later supplies the missing observation unless this boundary owes it.
+  it("invalidates the observations a spec-level repair moved", async () => {
+    for (const dir of SKILL_DIRS) {
+      const reference = await readFile(
+        path.join(dir, "references", "checkpoint-verification.md"),
+        "utf-8",
+      );
+      expect(reference).toContain("### Repairing a per-spec FAIL");
+      expect(reference).toContain("**A per-spec FAIL is not a ledger event.**");
+      expect(reference).toContain("**Re-verify each affected `done` row, and record it at the");
+      expect(reference).toContain(
+        "Only once every affected `done` row is re-verified do\nyou re-run the **whole** per-spec set",
+      );
+    }
+  });
+
+  it("names the observations that re-verification owes, not just a fresh revision", async () => {
+    // Gate items 3 and 5 want observations, not addresses. Re-submitting
+    // reviewers and bumping `Evidence` leaves the GREEN and the oracle proof
+    // untouched, on a row that is already `done` and that Phase Red does not
+    // re-select.
+    for (const dir of SKILL_DIRS) {
+      const reference = await readFile(
+        path.join(dir, "references", "checkpoint-verification.md"),
+        "utf-8",
+      );
+      expect(reference).toContain("the row's own selector re-run");
+      expect(reference).toContain("`Oracle proof` mutation re-taken against the repaired tree");
+      expect(reference).toContain("a fresh verdict from every **required** reviewer");
+      // A RED addresses the manifest it was observed on, and a `done` row has
+      // no transition that would let it observe another.
+      expect(reference).toContain("**Item 3 is not re-taken**");
+      // And the line between a repair and a change to the deliverable.
+      expect(reference).toContain("**A test edit alone is not a Change Request.**");
+    }
+  });
+
+  it("resumes a review unit with the whole reviewer set it owes", async () => {
+    // A T1 group close takes a `qa-gatekeeper` turn as well as the two review
+    // passes, and item 9 takes a `product-surface-reviewer` PASS on a
+    // UI-affecting row. Naming two reviewers in the resume step sent a resumed
+    // row to the gate missing a verdict it could no longer obtain.
+    for (const dir of SKILL_DIRS) {
+      const skill = await readFile(path.join(dir, "SKILL.md"), "utf-8");
+      expect(skill).toContain("**A reopened unit owes its whole reviewer set, not a subset.**");
+      expect(skill).toContain("never from a list written here");
+      expect(skill).toContain("`qa-gatekeeper` turn over the members' recorded RED/GREEN evidence");
+      expect(skill).toContain("`references/ui-affecting.md`");
+      // …and the enumeration that caused it is gone.
+      expect(skill).not.toContain(
+        "one `completion-reviewer` pass, one `implementation-reviewer` pass, one checkpoint run",
+      );
     }
   });
 });

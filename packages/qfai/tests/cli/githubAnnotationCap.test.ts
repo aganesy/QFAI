@@ -6,7 +6,7 @@
  * `annotations=40/40`, which reads as "every finding was emitted", while the runner displayed ten
  * and dropped thirty in silence. The summary is the only thing an operator sees, and it said the
  * opposite of what happened. Measured on the `test (cli)` lane, all three levels sat at exactly
- * ten — the truncation was the steady state, not an edge case (#1164).
+ * ten — the truncation was the steady state, not an edge case.
  *
  * ## What the rows below are about, and why the partition one is the important one
  *
@@ -58,7 +58,7 @@ describe("the cap is GitHub's number", () => {
     // Every other row in this file is expressed RELATIVE to the constant — `CAP + 7`,
     // `CAP - 2`, `CAP * 3` — which is right for those rows and leaves the constant itself
     // unguarded: set it back to 100 and the expectations move with it, so the whole file stays
-    // green while the summary starts lying again in exactly the way #1164 reports. That is not
+    // green while the summary starts lying again. This is not
     // hypothetical; it was measured here by planting it, and only this row caught it.
     //
     // Ten is a fact about GitHub, not a tuning parameter: `error`, `warning` and `notice` are

@@ -171,6 +171,129 @@ describe("uiux validators", () => {
     expect(result.source).toBe("fallback");
   });
 
+  describe("a source that was never published", () => {
+    /** A pack whose Research Summary holds exactly the given source entries. */
+    async function codesForSources(entries: readonly string[]): Promise<string[]> {
+      const root = await newTempDir();
+      const discussionDir = path.join(root, ".qfai", "discussion");
+      await mkdir(discussionDir, { recursive: true });
+      const md = [
+        "# Spec",
+        "",
+        "## Research Summary",
+        "sources:",
+        ...entries,
+        "best_practices:",
+        "  - practice",
+        "anti_patterns:",
+        "  - anti",
+        "reflection:",
+        "  - action: apply",
+        "    reason: relevant",
+        "",
+      ].join("\n");
+      await writeFile(path.join(discussionDir, "sample.md"), md, "utf-8");
+      return (await validateResearchSummary(root, defaultConfig)).map((item) => item.code);
+    }
+
+    it("takes a locator and an observation date from primary evidence", async () => {
+      // A screenshot of the customer's system is real, citable and recorded,
+      // and has no URL and no publication date. Demanding those two bought an
+      // admin path written into `url` and the day someone looked written into
+      // `published`.
+      const codes = await codesForSources([
+        "  - id: SRC-0001",
+        "    title: 商材管理一覧のスクリーンショット",
+        "    type: primary",
+        "    locator: page=pods-manage-syozai",
+        "    observed: 2026-09-01",
+      ]);
+
+      expect(codes).not.toContain("QFAI-RESEARCH-005");
+      expect(codes).not.toContain("QFAI-RESEARCH-006");
+    });
+
+    it("still demands both facts, under the names its type gives them", async () => {
+      // The obligation is unchanged: where the source is, and when it is from.
+      // Only the fields carrying them move.
+      const codes = await codesForSources([
+        "  - id: SRC-0001",
+        "    title: 商材管理一覧のスクリーンショット",
+        "    type: primary",
+      ]);
+
+      expect(codes).toContain("QFAI-RESEARCH-005");
+      expect(codes).toContain("QFAI-RESEARCH-006");
+    });
+
+    it("does not let a published source answer with a locator instead", async () => {
+      const codes = await codesForSources([
+        "  - id: SRC-0001",
+        "    title: Example",
+        "    type: external",
+        "    locator: somewhere",
+        "    observed: 2026-09-01",
+      ]);
+
+      expect(codes).toContain("QFAI-RESEARCH-005");
+      expect(codes).toContain("QFAI-RESEARCH-006");
+    });
+
+    it("reads an entry with no type as external, as the older schema did", async () => {
+      const codes = await codesForSources([
+        "  - id: SRC-0001",
+        "    title: Example",
+        "    locator: somewhere",
+        "    observed: 2026-09-01",
+      ]);
+
+      expect(codes).toContain("QFAI-RESEARCH-005");
+    });
+
+    it("reads a type outside the vocabulary as external rather than as no obligation", async () => {
+      // The conservative direction. A typo that dropped the entry's
+      // requirements would make the strictest case the easiest one to reach.
+      const codes = await codesForSources([
+        "  - id: SRC-0001",
+        "    title: Example",
+        "    type: primry",
+        "    locator: somewhere",
+        "    observed: 2026-09-01",
+      ]);
+
+      expect(codes).toContain("QFAI-RESEARCH-005");
+    });
+
+    it("keeps primary evidence out of the freshness ratio", async () => {
+      // The shape a pack took to satisfy the old schema: the day someone looked
+      // written into `published`. Four such entries and one genuinely old paper
+      // scored 80% and cleared the threshold, so the ratio reported freshness
+      // about material that was never published. Counted over the external
+      // entry alone it is 0%, which is the true answer for this pack.
+      const primary = (n: number): string[] => [
+        `  - id: SRC-000${String(n)}`,
+        "    title: 画面キャプチャ",
+        "    type: primary",
+        "    locator: page=pods-manage-syozai",
+        "    observed: 2026-09-01",
+        "    published: 2026-09-01",
+      ];
+      const codes = await codesForSources([
+        "  - id: SRC-0001",
+        "    title: Old paper",
+        "    type: external",
+        "    url: https://example.com",
+        "    published: 2015-01-01",
+        ...primary(2),
+        ...primary(3),
+        ...primary(4),
+        ...primary(5),
+      ]);
+
+      expect(codes).toContain("QFAI-RESEARCH-002");
+    });
+  });
+
   it("extracts Research Summary section content correctly", async () => {
     const root = await newTempDir();
     const discussionDir = path.join(root, ".qfai", "discussion");
@@ -292,7 +415,7 @@ describe("uiux validators", () => {
     const missing = issues.filter((item) => item.code === "QFAI-RESEARCH-012");
 
     expect(missing).toHaveLength(1);
-    expect(missing[0]?.severity).toBe("warning");
+    expect(missing[0]?.severity).toBe("error");
     expect(missing[0]?.file).toContain("discussion-20260101000000000");
   });
 
@@ -560,6 +683,58 @@ describe("uiux validators", () => {
     const codes = (await validateResearchSummary(root, defaultConfig)).map((item) => item.code);
 
     expect(codes).toContain("QFAI-RESEARCH-012");
+  });
+
+  it("does not read a non-YAML fence in the section as its payload", async () => {
+    // The section carries no `yaml` fence, so the reader falls back to the
+    // section text. Reading an illustration's body there made a `sources:`
+    // line written inside ```markdown into the section's own data, and the
+    // pack then passed on a schema it never declared.
+    const root = await newTempDir();
+    const packDir = path.join(root, ".qfai", "discussion", "discussion-20260101000000000");
+    await mkdir(packDir, { recursive: true });
+    await writeFile(
+      path.join(packDir, "04_Sources.md"),
+      [
+        "# 04 Sources",
+        "",
+        "## Source Registry",
+        "",
+        "- SRC-0001",
+        "",
+        "## Research Summary",
+        "",
+        "Fill this in. The shape is:",
+        "",
+        "```markdown",
+        "sources:",
+        "  - id: SRC-0001",
+        "    title: Example",
+        "    url: https://example.com",
+        "    published: 2026-01-01",
+        "best_practices:",
+        "  - practice",
+        "anti_patterns:",
+        "  - anti",
+        "reflection:",
+        "  - action: apply",
+        "    reason: relevant",
+        "```",
+        "",
+      ].join("\n"),
+      "utf-8",
+    );
+
+    const codes = (await validateResearchSummary(root, defaultConfig)).map((item) => item.code);
+
+    // The section exists, so the absence rule stays quiet; it declares nothing,
+    // so the schema rules fire. Read as data, the illustration satisfies all
+    // four of them and the run reports on its example source instead.
+    expect(codes).not.toContain("QFAI-RESEARCH-012");
+    expect(codes).toContain("QFAI-RESEARCH-001");
+    expect(codes).toContain("QFAI-RESEARCH-007");
+    expect(codes).toContain("QFAI-RESEARCH-008");
+    expect(codes).toContain("QFAI-RESEARCH-011");
   });
 
   it("validates the real Research Summary that follows a fenced example heading", async () => {

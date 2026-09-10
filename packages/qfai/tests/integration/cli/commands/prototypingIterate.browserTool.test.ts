@@ -8,8 +8,7 @@
  *     `playwright` default; the doctor probe reports `D-DEPRECATED-PROBE`
  *     at `error` with the `sunset: 1.10.0` substring on its message.
  *
- * Integration scope: config loader + probe-order pin. The window-side
- * behaviour is a unit concern now — see `tests/core/sunsetEnforcement`.
+ * Integration scope: config loader + probe-order pin.
  */
 
 // QFAI:SPEC-0012:TC-0012-0439

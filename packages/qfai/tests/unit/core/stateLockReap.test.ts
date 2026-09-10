@@ -111,7 +111,7 @@ describe("TC-0010-0012: state lock reaper identity check", () => {
       control.skew = false;
       await rm(lockPath, { force: true });
     }
-  }, 20_000);
+  });
 });
 
 /**
@@ -145,7 +145,7 @@ describe("TC-0010-0012: the reaper is serialized and the write is revalidated", 
       await rm(reapPath, { force: true });
       await rm(lockPath, { force: true });
     }
-  }, 20_000);
+  });
 
   it("clears its own reap lock so the next run can reap", async () => {
     const lockPath = await plantAbandonedLock(root);

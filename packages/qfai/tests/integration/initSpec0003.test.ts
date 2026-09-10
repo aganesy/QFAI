@@ -141,10 +141,14 @@ describe("TC-0003-0013: --force refreshes instructions", () => {
   it("init gates the instructions skip on the force flag", async () => {
     const content = await readFile(INIT_CLI, "utf-8");
     expect(content).toMatch(/instructions/i);
-    // The Step 3.5 loop must consult --force, not skip unconditionally.
-    expect(content).toMatch(/Step 3\.5[\s\S]*?if \(alreadyExists && \(!options\.force \|\|/);
+    // The review-instructions loop must consult --force, not skip unconditionally.
+    expect(content).toMatch(
+      /Step 3: Distribute Copilot review instructions[\s\S]*?if \(alreadyExists && \(!options\.force \|\|/,
+    );
     // …and a refresh must still refuse an entry that resolves out of the project.
-    expect(content).toMatch(/Step 3\.5[\s\S]*?await resolvesOutsideProject\(destRoot, dest\)/);
+    expect(content).toMatch(
+      /Step 3: Distribute Copilot review instructions[\s\S]*?await resolvesOutsideProject\(destRoot, dest\)/,
+    );
   });
 });
 
@@ -237,9 +241,8 @@ describe("TC-0003-0024: migration memo authoring", () => {
     const content = await readFile(INIT_CLI, "utf-8");
     expect(content).toContain("buildMigrationMemo");
     expect(content).toContain("joinMigrationMemo");
-    // Sunset version is sourced from SUNSETS.legacyAssistantSteering
-    // SSOT in assistantPaths.ts (shared with the validator's severity
-    // escalation point), NOT from a release-relative computation.
+    // The retirement label comes from the SSOT in `assistantPaths.ts`, shared
+    // with the validator, NOT from a release-relative computation.
     expect(content).toContain("legacyAssistantSteeringSunsetLabel");
   });
 });
@@ -263,9 +266,9 @@ describe("TC-0003-0026: legacy backward-compat + sunset warning", () => {
     const content = await readFile(INIT_CLI, "utf-8");
     expect(content).toContain("D-DEPRECATED-PATH");
     expect(content).toContain("emitLegacyAssistantSteeringSunset");
-    // The actual `sunset: vX.Y.Z` literal is sourced from
-    // legacyAssistantSteeringSunsetLabel() (SSOT in assistantPaths.ts)
-    // — runtime assertion lives in tests/cli/init.test.ts (TC-0003-0026).
-    expect(content).toMatch(/sunset:\s*v\$\{sunset\}/);
+    // The version in the message comes from legacyAssistantSteeringSunsetLabel()
+    // rather than a literal here; the runtime assertion lives in
+    // tests/cli/init.test.ts.
+    expect(content).toMatch(/announced sunset \(v\$\{sunset\}\)/);
   });
 });

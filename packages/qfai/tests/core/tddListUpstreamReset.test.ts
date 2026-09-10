@@ -205,8 +205,8 @@ const flat = (s: string): string => s.replace(/\s+/g, " ");
 describe("the DR-ID column definition covers the reset row", () => {
   for (const tree of QFAI_TREES) {
     it(`${tree}: the column definition is not "exception items only"`, async () => {
-      // The ledger schema and its transitions moved out of SKILL.md into this
-      // reference under the progressive-disclosure budget (#414); SKILL.md now
+      // The ledger schema and its transitions live outside SKILL.md in this
+      // reference under the progressive-disclosure budget; SKILL.md
       // carries a summary and points here, so the rules are asserted here.
       const skill = flat(
         await readFile(
@@ -236,8 +236,8 @@ describe("the DR-ID column definition covers the reset row", () => {
       // Drift Protocol step 5 requires sweeping every invalidated row; a reset
       // limited to green/refactor/done left `red` and `exception` rows with no
       // legal way back to `todo`.
-      // The ledger schema and its transitions moved out of SKILL.md into this
-      // reference under the progressive-disclosure budget (#414); SKILL.md now
+      // The ledger schema and its transitions live outside SKILL.md in this
+      // reference under the progressive-disclosure budget; SKILL.md
       // carries a summary and points here, so the rules are asserted here.
       const skill = flat(
         await readFile(

@@ -205,8 +205,10 @@ call:
    path under create-only install).
 
 Dimension 5 has a subject in exactly one shipped file: `qfai-validate.yml`,
-where it resolves to subcommand `validate`, profile `full`, threshold `error`.
-Those three values are asserted today as ad-hoc strings in
+where its lane runs the validate subcommand twice — the wide scan, and the
+drift gate the wide scan does not evaluate. A lane's runs are pinned together,
+in order, so a run that is added or removed is drift whichever one it is.
+Those values are asserted today as ad-hoc strings in
 `packages/qfai/tests/assets/assets.test.ts` (`DTC-26`); the gate **subsumes and
 replaces** those assertions rather than running alongside them, and the moved
 assertions keep their test-case annotation.
@@ -285,10 +287,10 @@ By that discriminator these two error-class codes **belong in** the catalog,
 following the `R-PACK-LOCATION-DRIFT` precedent. Registering them is deliberately
 **deferred, not waived**: the catalog header states that adding a code extends a
 closed requirement contract and must move in lockstep with the owning spec and
-the reviewer SSOTs, which is outside this change's atomic slice. Until that
-lockstep change lands, the gate surfacing them without a justification demand is
-a **known temporary divergence, not a principle**. The owning spec records the
-deferral and names every SSOT that must move together; see `spec-0015`.
+the reviewer SSOTs — a lockstep change not yet made. Until it lands, the gate
+surfacing them without a justification demand is a **known temporary
+divergence, not a principle**. The owning spec records the deferral and names
+every SSOT that must move together; see `spec-0015`.
 
 ## 7. Detection surface
 

@@ -3,26 +3,34 @@
  *
  * `tsconfig.tests.json#include` is an ENUMERATION rather than `tests/**\/*.ts`, and its own
  * `$comment` gives the measured reason: a whole-tree glob reports hundreds of pre-existing errors in
- * suites this change never touched. So the list is the boundary between what this change owns and
- * what it does not — and a boundary that nothing checks drifts.
+ * suites the enumeration never touched. So the list is the boundary between what is checked and
+ * what is not — and a boundary that nothing checks drifts.
  *
- * Review finding [120] is the second time a file this change owns was left off it. The first was a
- * newly added suite; the second was `workflowHygieneRequiredContext.test.ts`, SPLIT out of an
- * enumerated file when that file grew too slow to run in one worker. `pnpm check-types` reads only
- * this config for the test tree and Vitest does not type-check at runtime, so most of the
- * required-context guard could carry a type error and the required job would still be green.
+ * A suite SPLIT out of an enumerated file (e.g. when that file grows too slow to run in one
+ * worker) can be left off the enumeration just as easily as a newly added one. `pnpm check-types`
+ * reads only this config for the test tree and Vitest does not type-check at runtime, so a suite
+ * left off carries no type check at all and the required job would still be green.
  *
- * What these rows pin is narrow on purpose. A census of all 490 test files, split into checked and
- * unchecked, would make every addition a visible diff — but it is 426 lines of inventory that goes
- * stale on its own, and it is not what this change owns. The split case IS checkable without one: a
- * file named for an enumerated sibling in the same directory is a piece of that sibling, and it
- * belongs wherever the sibling belongs.
+ * The tree is now split in two and both halves are stated: what `include` covers, and what
+ * `typeCheckEnumeration.allowlist.ts` records as knowingly uncovered. A suite in neither is one
+ * somebody forgot, and that is the case this file could not see before — an omission read exactly
+ * like a file that does not exist.
+ *
+ * The uncovered list is a ratchet rather than an inventory. It is compared in both directions, so a
+ * line whose file is covered or gone fails as loudly as a missing one, and it can only shrink. That
+ * is the difference from a census: a census goes stale silently, which is the failure this whole
+ * file exists to report.
+ *
+ * The narrower rows below stay. They name a suite that must be covered rather than merely accounted
+ * for, so they keep failing even while its line sits in the uncovered list.
  */
 import { existsSync, readFileSync, readdirSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { describe, expect, it } from "vitest";
+
+import { TYPE_CHECK_UNENUMERATED } from "./typeCheckEnumeration.allowlist.js";
 
 const PACKAGE_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
 const CONFIG_REL = "tsconfig.tests.json";
@@ -40,6 +48,25 @@ function enumeratedTests(): string[] {
   return include.filter((entry): entry is string => typeof entry === "string");
 }
 
+const ALLOWLIST_REL = "tests/scripts/typeCheckEnumeration.allowlist.ts";
+
+/** Every `*.test.ts` under `tests/`, as the paths the config's entries are written in. */
+function suitesInTree(): string[] {
+  const found: string[] = [];
+  const walk = (dir: string): void => {
+    for (const entry of readdirSync(path.join(PACKAGE_ROOT, dir), { withFileTypes: true })) {
+      const rel = `${dir}/${entry.name}`;
+      if (entry.isDirectory()) {
+        walk(rel);
+      } else if (entry.name.endsWith(".test.ts")) {
+        found.push(rel);
+      }
+    }
+  };
+  walk("tests");
+  return found.sort();
+}
+
 describe("the test tree's type-check enumeration", () => {
   it("names only files that exist", () => {
     // The other direction, and it costs nothing: a renamed or deleted suite leaves an entry behind
@@ -49,9 +76,11 @@ describe("the test tree's type-check enumeration", () => {
   });
 
   it("holds every sibling split out of a file it already names", () => {
-    // Review finding [120]. `workflowHygiene.test.ts` was enumerated and
-    // `workflowHygieneRequiredContext.test.ts` — split out of it in the same change — was not, so the
-    // required type-check job read none of it.
+    // A suite split out of an already-enumerated file needs its own entry:
+    // splitting `workflowHygiene.test.ts` into a second file such as
+    // `workflowHygieneRequiredContext.test.ts` without adding that file to
+    // the enumeration would leave the required type-check job reading none
+    // of the split-off half.
     //
     // A split sibling is recognised by NAME: same directory, and a basename that extends an
     // enumerated basename. That is what a split produces, in this repository and in general, and it
@@ -87,10 +116,9 @@ describe("the test tree's type-check enumeration", () => {
     ).toEqual([]);
   });
   it("holds every suite that enforces a shipped-asset budget", () => {
-    // #1066: `assets.test.ts` owns the 500-line shipped-asset ceiling and was
-    // itself outside the enumeration, so the guard that keeps the shipped
-    // surface honest was the one thing nothing type-checked. Enumerating it
-    // surfaced a real `TS2345` it had been carrying.
+    // `assets.test.ts` owns the 500-line shipped-asset ceiling. Left outside
+    // the enumeration, the guard that keeps the shipped surface honest would
+    // be the one thing nothing type-checks.
     //
     // The rule is decidable from the tree without an inventory: a suite that
     // imports the budget helper is enforcing the budget, and a budget guard
@@ -122,7 +150,38 @@ describe("the test tree's type-check enumeration", () => {
     expect(
       unchecked.sort(),
       `${CONFIG_REL} leaves a shipped-asset budget guard un-type-checked, which is how the suite ` +
-        "that polices the 500-line ceiling came to carry a TS2345 of its own (#1066)",
+        "that polices the 500-line ceiling came to carry a TS2345 of its own",
+    ).toEqual([]);
+  });
+
+  it("accounts for every suite in the tree, as covered or as knowingly uncovered", () => {
+    // The case the rows above cannot see: a suite that is simply absent from
+    // both. Vitest does not type-check at run time, so such a file is typed by
+    // nothing and every required job stays green over a type error in it.
+    const enumerated = new Set(enumeratedTests());
+    const accounted = new Set([...enumerated, ...TYPE_CHECK_UNENUMERATED]);
+
+    expect(
+      suitesInTree().filter((rel) => !accounted.has(rel)),
+      `${CONFIG_REL} does not name these suites and ${ALLOWLIST_REL} does not record them as ` +
+        "uncovered, so nothing type-checks them and nothing says so. Add the line to the config, " +
+        "or the path to the list with the rest of the backlog",
+    ).toEqual([]);
+  });
+
+  it("keeps the uncovered list to files that are still uncovered", () => {
+    // The direction that makes the list shrink. An entry whose suite has since
+    // been enumerated, renamed or deleted reads as a standing exemption and
+    // holds a slot a new omission could take.
+    const enumerated = new Set(enumeratedTests());
+    const present = new Set(suitesInTree());
+
+    const stale = TYPE_CHECK_UNENUMERATED.filter((rel) => enumerated.has(rel) || !present.has(rel));
+
+    expect(
+      stale.sort(),
+      `${ALLOWLIST_REL} records these as uncovered, and each is now covered or gone. Strike them ` +
+        "in the change that covered them — the list may only shrink",
     ).toEqual([]);
   });
 });

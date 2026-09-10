@@ -18,8 +18,8 @@ export type CanonicalScreenContract = {
    * screen entry (regardless of whether the resulting list is empty).
    * False when the slot is entirely absent (legacy contracts predating the
    * primary_tasks lane). Consumers use this flag to distinguish a
-   * deliberate empty-slot violation (severity=error) from a legacy
-   * slot-less contract (severity=info under deprecation window).
+   * deliberate empty-slot violation from a legacy slot-less contract; both
+   * report at `error`, under different rules.
    */
   primaryTasksKeyPresent: boolean;
   sourceRef: string;
@@ -91,22 +91,19 @@ export async function readUiContractScreenContracts(
   root: string,
   contractsDirRelative = ".qfai/contracts",
 ): Promise<CanonicalScreenContract[]> {
-  // codex r3271787723 (P1, architecture-reviewer, 48th-wave): consistency
-  // companion to the wave-45 / wave-47 `path.join → path.resolve` fixes
-  // in `specDirExists` (specsDir) and `readPerSpecScreens` (per-spec
-  // contractsDir). This project-wide screen reader runs in parallel
-  // with the per-spec reader; keeping `path.join` here would have the
-  // two paths produce different discovery results when
-  // `qfai.config.yaml` carries an absolute `paths.contractsDir`
+  // `path.resolve`, not `path.join`, for consistency with `specDirExists`
+  // (specsDir) and `readPerSpecScreens` (per-spec contractsDir). This
+  // project-wide screen reader runs in parallel with the per-spec reader;
+  // `path.join` here would have the two paths produce different discovery
+  // results when `qfai.config.yaml` carries an absolute `paths.contractsDir`
   // override — a least-astonishment violation that would silently
-  // break certify's per-(spec × screen) gate even after wave-47.
-  // The other call sites flagged in the same review thread (lockAbs,
-  // designContractReadiness, designToken, uiDefinitionConsistency,
-  // bpApDb, designAudit, doctor) are tracked as a deferred follow-up
-  // — see CHANGELOG / 09_delta wave-48 narrative for the deferral
-  // record. This site is fixed in-PR because it directly partners
-  // with `readPerSpecScreens` and would otherwise produce divergent
-  // contract-discovery behaviour between CLI paths.
+  // break certify's per-(spec × screen) gate.
+  // Other call sites (lockAbs, designContractReadiness, designToken,
+  // uiDefinitionConsistency, bpApDb, designAudit, doctor) still use
+  // `path.join` and remain a deferred follow-up. This site is fixed here
+  // because it directly partners with `readPerSpecScreens` and would
+  // otherwise produce divergent contract-discovery behaviour between CLI
+  // paths.
   const uiDir = path.resolve(root, contractsDirRelative, "ui");
   // Accept both `.yaml` and `.yml` extensions. Pre-fix the glob only matched `.yaml`, so repositories
   // that author UI contracts with the `.yml` extension auto-derived
