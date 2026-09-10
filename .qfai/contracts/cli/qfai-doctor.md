@@ -82,10 +82,10 @@ names a destination file, see its bullet):
   accepted and means "report, always exit 0" — the same outcome as
   omitting the flag, spelled explicitly for a lane that wants the
   intent recorded in the command line.
-- `qfai.config.yaml#prototyping.execution.browserTool` — only
-  `"playwright"` is accepted. `"playwright-cli"` is retired: the config
-  loader rejects the value and the probe reports `D-DEPRECATED-PROBE`
-  at `error` (REQ-0108).
+- `qfai.config.yaml#prototyping.execution.browserTool` — accepted
+  values during the deprecation window: `"playwright"` (canonical)
+  OR `"playwright-cli"` (legacy, emits `D-DEPRECATED-PROBE`
+  warning). After sunset, only `"playwright"` is accepted (REQ-0108).
 - `qfai.config.yaml#review.staleTtlDays` — the calendar-day TTL the
   `--clean` archive decision uses. Defaults to 14 when unset.
 - `qfai.config.yaml#report.staleTtlDays` — the calendar-day TTL the
@@ -270,20 +270,25 @@ Per REQ-0107, the probe order is:
 2. **Fallback**: `npx --no-install playwright --version`. The
    `--no-install` flag is required so the probe never silently
    triggers an install on a CI checkout.
-3. **Retired fallback**: `playwright-cli` (and on Windows
+3. **Deprecation-window fallback**: `playwright-cli` (and on Windows
    `playwright-cli.cmd` / `playwright-cli.bat`). When found, doctor
-   accepts the probe AND emits `D-DEPRECATED-PROBE` at `error`.
+   accepts the probe AND emits `D-DEPRECATED-PROBE` (severity:
+   warning during the window; error at sunset).
 4. **Final failure**: when none of the above resolve, doctor emits
    `E-PROBE-PLAYWRIGHT-NOT-FOUND` (severity: error, blocks the
    active profile) with install hint text: `npm i -D playwright`.
 
-### `D-DEPRECATED-PROBE`
+### `D-DEPRECATED-PROBE` lifecycle
 
-Severity **error**. The message names the release the probe was retired
-in — qfai 1.10.0 — per spec-0003 REQ-0023, and the config loader refuses
-the value, so a project still resolving through a
-`scripts/playwright-cli.cmd` wrapper is told by both. The candidates
-stay in the probe order so the finding can say which one answered.
+- **During the window** (current minor): severity **warning**. The
+  warning text MUST name the sunset version per spec-0003 REQ-0023.
+  Downstream projects that already have `scripts/playwright-cli.cmd`
+  wrappers continue to PASS, with the warning indicating the
+  migration target.
+- **At sunset**: severity **error**. The `playwright-cli` /
+  `playwright-cli.cmd` / `playwright-cli.bat` candidates are removed
+  from the probe order in the following minor. The sunset version
+  is qfai 1.10.0 (canonical npm `package.json#version` pin).
 
 ### Probe-failure error text
 
