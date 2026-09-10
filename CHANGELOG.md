@@ -4,6 +4,31 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ## [Unreleased]
 
+### Fixed
+
+- **A writer dispossessed inside the section no longer overwrites a committed
+  entry** (#1442). The lock was checked once, immediately after it was
+  published. Nothing asked again before the write, so a holder that lost the
+  lock while it was working never found out: it wrote content it had computed
+  from a read taken before the writer that displaced it committed, and the entry
+  that writer had already recorded was gone. Both calls returned successfully,
+  which is why it surfaced as a missing entry rather than an error, and a lost
+  provenance entry does not heal — the file stays on disk with nothing recorded
+  and reads as `adopter-owned` from then on.
+
+  `rename` is the arbitration and it fails only onto a non-empty directory, so
+  an empty one at the lock name lets the next writer in while the first is still
+  working. A holder that died between its `unlink` and its `rmdir` leaves
+  exactly that, and so does anything else with write access to `.qfai/`.
+
+  The same question the read-back asks is now asked once more, in the section
+  and immediately before the write. A writer that no longer holds the lock takes
+  the retry that already exists for losing it instead of writing. Nothing was
+  written when that happens, so the bound on those retries is unchanged.
+
+  A lock name swapped for a link is now refused rather than written through. The
+  write was previously carried out against a lock the writer did not hold.
+
 ### Changed
 
 - **`W-STALE-REFERENCE` carries the severity it means, instead of reading the

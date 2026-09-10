@@ -499,9 +499,9 @@ export async function updateInstallProvenance(
     // something else keeps reclaiming, and spending twenty patience windows to say so helps
     // nobody. The original failure is what surfaces then, so a persistent loss still reports
     // exactly what it reported before.
-    let release: (() => Promise<void>) | undefined;
+    let lock: RecordLock;
     try {
-      release = await acquireRecordLock(recordDir);
+      lock = await acquireRecordLock(recordDir);
     } catch (error) {
       if (!(error instanceof LockReplacedError)) {
         throw error;
@@ -518,10 +518,31 @@ export async function updateInstallProvenance(
       if (next === undefined) {
         return;
       }
+      // Asked here because `next` was derived from a read taken under the lock, and it is only
+      // worth writing while that lock is still this writer's. A holder dispossessed after the
+      // acquisition read-back used to find out never: it wrote content computed before the
+      // writer that displaced it committed, so a record that already held that writer's entry
+      // was replaced by one that did not. Both calls then returned successfully, and the entry
+      // was gone from a file no later run puts back.
+      //
+      // Not a narrower window than the one at acquisition — the same question, asked at the
+      // point where the answer still changes what happens.
+      if (!(await lock.stillHeld())) {
+        throw new LockReplacedError(recordDir);
+      }
       await writeInstallProvenance(rootDir, next);
       written = serializeForComparison(next);
+    } catch (error) {
+      if (!(error instanceof LockReplacedError)) {
+        throw error;
+      }
+      lockLost += 1;
+      if (lockLost >= LOCK_LOST_ATTEMPTS) {
+        throw error;
+      }
+      continue;
     } finally {
-      await release();
+      await lock.release();
     }
 
     // Read OUTSIDE the lock on purpose: the question is what any other writer can now see, and
@@ -621,26 +642,40 @@ const LOCK_DIR_NAME = ".install-provenance.lock.d";
  * `clearAbandonedLock` could not put it back — so somebody else holds the lock, and the writer
  * that lost is the writer that was supposed to lose.
  *
- * Nothing was written when this is raised: the lock is given back first, and the section it
- * guards never ran. So the answer is the same as for any other contended attempt — go round
- * again — and `updateInstallProvenance` already has the loop for that. Raising it as a plain
- * `Error` put a contention outcome above the loop built to absorb contention, which is how a
- * writer that lost one race ended up losing its entry.
+ * Nothing was written when this is raised: it is raised only where the record has not been
+ * touched yet, and the lock is given back before it leaves. So the answer is the same as for any
+ * other contended attempt — go round again — and `updateInstallProvenance` already has the loop
+ * for that. Raising it as a plain `Error` put a contention outcome above the loop built to absorb
+ * contention, which is how a writer that lost one race ended up losing its entry.
+ *
+ * Dispossession is asked about twice, because there are two windows and only the first used to be
+ * covered: once when the lock is published, and again in the section immediately before the write.
  */
 class LockReplacedError extends Error {
   readonly lockDir: string;
 
   constructor(lockDir: string) {
-    super(
-      "qfai: the provenance lock was replaced between publishing it and reading it back. " +
-        "Nothing was written.",
-    );
+    super("qfai: the provenance lock was replaced while this writer held it. Nothing was written.");
     this.name = "LockReplacedError";
     this.lockDir = lockDir;
   }
 }
 
-async function acquireRecordLock(recordDir: string): Promise<() => Promise<void>> {
+/**
+ * A held record lock: how to give it back, and how to ask whether it is still held.
+ */
+type RecordLock = {
+  readonly release: () => Promise<void>;
+  /**
+   * Whether the object standing at the lock name is still the one this holder published.
+   *
+   * The identity, not the name — the same comparison the read-back makes at acquisition, asked
+   * again at the point where the answer decides whether a write may happen.
+   */
+  readonly stillHeld: () => Promise<boolean>;
+};
+
+async function acquireRecordLock(recordDir: string): Promise<RecordLock> {
   const lockDir = path.join(recordDir, LOCK_DIR_NAME);
   const marker = randomUUID();
   const staging = path.join(recordDir, `${LOCK_DIR_NAME}.${randomUUID()}.staging`);
@@ -687,6 +722,36 @@ async function acquireRecordLock(recordDir: string): Promise<() => Promise<void>
    * somebody else put there is the same class of act this is guarding against, and the next run
    * stops on it with a message naming the path.
    */
+  /**
+   * Whether the lock name still refers to the object this holder published.
+   *
+   * The read-back at acquisition asks this once, and for a long time that was the only time it was
+   * asked. It closes the window between publishing the lock and claiming it, and nothing watched
+   * the window after: a holder dispossessed while it was inside the section ran to completion
+   * believing it held the lock.
+   *
+   * That window is the one that costs an entry, because `rename` is the arbitration and it fails
+   * only onto a NON-EMPTY directory. Whatever leaves an empty one at the name — a holder that died
+   * between its `unlink` and its `rmdir`, or anything else with write access to `.qfai/` — lets
+   * the next writer's `rename` land while the first is still working, and then two writers are in
+   * the section with two reads taken at different times. The one that writes last wins, and the
+   * entry the other committed is gone from a file that never records it again.
+   *
+   * Identity rather than existence, for the reason the read-back compares identity: a directory is
+   * standing at the name in both the held case and the dispossessed one.
+   */
+  const stillHeld = async (): Promise<boolean> => {
+    if (held === undefined) return false;
+    const standing = await lstat(lockDir).catch(() => undefined);
+    return (
+      standing !== undefined &&
+      !standing.isSymbolicLink() &&
+      standing.isDirectory() &&
+      standing.dev === held.dev &&
+      standing.ino === held.ino
+    );
+  };
+
   const release = async (): Promise<void> => {
     clearInterval(heartbeat);
     if (held === undefined) return; // never published, so nothing under that name is ours
@@ -804,7 +869,7 @@ async function acquireRecordLock(recordDir: string): Promise<() => Promise<void>
       throw new LockReplacedError(lockDir);
     }
     held = { dev: staged.dev, ino: staged.ino };
-    return release;
+    return { release, stillHeld };
   } catch (error) {
     clearInterval(heartbeat);
     throw error;
