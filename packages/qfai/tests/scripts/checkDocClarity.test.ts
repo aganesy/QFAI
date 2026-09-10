@@ -149,7 +149,8 @@ describe("scripts/check-doc-clarity.mjs", () => {
     // product vocabulary in this repository, not a citation. A citation
     // token always carries at least one digit.
     const dir = await newRepo({
-      "src/thing.ts": "// the codex agent reads this file, and codex review runs it\nexport const a = 1;\n",
+      "src/thing.ts":
+        "// the codex agent reads this file, and codex review runs it\nexport const a = 1;\n",
     });
 
     const result = runGuard(dir, ["--scope", "all"]);
