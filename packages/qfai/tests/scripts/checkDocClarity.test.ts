@@ -120,6 +120,41 @@ describe("scripts/check-doc-clarity.mjs", () => {
     expect(result.stderr).toContain("docs/guide.md:1");
   });
 
+  it("leaves a quoted hex color alone", async () => {
+    // `#111827` is a color value, not an issue number. Without a boundary
+    // check after the digits, the pattern cannot tell them apart.
+    const dir = await newRepo({ "src/theme.ts": 'export const ink = "#111827";\n' });
+
+    const result = runGuard(dir, ["--scope", "all"]);
+
+    expect(result.status).toBe(0);
+  });
+
+  it("reports a review shortcode list joined by a slash", async () => {
+    const dir = await newRepo({
+      "src/thing.ts": "// fixed in review AB12/CD34\nexport const a = 1;\n",
+    });
+
+    const result = runGuard(dir, ["--scope", "all"]);
+
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain("review-shortcode-list");
+  });
+
+  it("leaves ordinary prose that happens to say 'review' before a comma alone", async () => {
+    // A four-letter word after "review", followed by a comma and another
+    // four-letter word, is ordinary English — not a shortcode list. The
+    // pattern's separator is a slash for this reason: this codebase's real
+    // shortcode lists never use a comma.
+    const dir = await newRepo({
+      "src/thing.ts": "// see the review gate, which runs after build\nexport const a = 1;\n",
+    });
+
+    const result = runGuard(dir, ["--scope", "all"]);
+
+    expect(result.status).toBe(0);
+  });
+
   describe("the files whose subject is the forbidden shapes", () => {
     it("exempts the rule document, which has to name what it forbids", async () => {
       const dir = await newRepo({
