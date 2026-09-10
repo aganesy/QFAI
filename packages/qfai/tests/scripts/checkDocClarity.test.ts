@@ -180,10 +180,10 @@ describe("scripts/check-doc-clarity.mjs", () => {
   });
 
   it("leaves ordinary prose that happens to say 'review' before a comma alone", async () => {
-    // A four-letter word after "review", followed by a comma and another
-    // four-letter word, is ordinary English — not a shortcode list. The
-    // pattern's separator is a slash for this reason: this codebase's real
-    // shortcode lists never use a comma.
+    // A four-letter word right after "review" reads like a shortcode's
+    // first code, but the pattern needs a slash-joined second code too, and
+    // ordinary prose has none. The separator is a slash, not a comma,
+    // because that is what this codebase's real shortcode lists use.
     const dir = await newRepo({
       "src/thing.ts": "// see the review gate, which runs after build\nexport const a = 1;\n",
     });

@@ -2516,10 +2516,10 @@ describe("the workflow walk refuses a root it did not open, and is bounded", () 
     }
   });
   it("tells the caller it stopped early, so a short walk is not read as a finished one", () => {
-    // A ceiling that ends the recursion and says nothing would let five thousand
-    // irrelevant entries followed by an unpinned action report PASS from every rule over the part
-    // that was read. A partial scan has to be distinguishable from a whole one, and the out-param
-    // is how the caller learns which of the two it was handed.
+    // A ceiling that ends the recursion and says nothing would hide an unpinned action behind
+    // five thousand irrelevant entries: every rule would report PASS over the part that was read,
+    // with the action itself never reached. A partial scan has to be distinguishable from a whole
+    // one, and the out-param is how the caller learns which of the two it was handed.
     const dir = mkdtempSync(path.join(tmpdir(), "qfai-walk-truncation-"));
     try {
       mkdirSync(path.join(dir, "root"), { recursive: true });

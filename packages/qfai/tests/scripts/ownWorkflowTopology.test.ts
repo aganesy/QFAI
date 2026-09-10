@@ -521,7 +521,7 @@ describe("TC-0017-0029 (TDD-0029): the shared definition keeps its four-step ord
     // first shim was activated against, so a re-shim that ran BEFORE the Node
     // setup would be a no-op and the install would use the wrong pnpm.
     //
-    // The fifth step: the install runs with
+    // The fifth step installs with
     // `--ignore-scripts`, because a dependency's manifest is not in this tree —
     // it arrives inside a tarball, and its `postinstall` ran before every guard
     // in the job. What may build is named in `.github/dependency-builds.txt`,
@@ -903,9 +903,8 @@ describe("TC-0017-0073 (TDD-0073): the folded run joins the enumerated verificat
       // The declaration names NINE items and this row restates six, and the difference is not
       // drift: the other three belong to jobs other than `build` — the verdict step to the
       // declared job itself, and two to `lint`. The pre-flight refusal of the local composite
-      // actions has to run before that job invokes one; `pnpm ci:lint`
-      // is the lint job's own work, pinned by body because being in the aggregate is not the
-      // same claim as still doing the
+      // actions has to run before that job invokes one; `pnpm ci:lint` is the lint job's own work,
+      // pinned by body because being in the aggregate is not the same claim as still doing the
       // work. Composed here rather than added to `REQUIRED`, which is checked against
       // `buildJobSteps()` above and would then be looking for steps that job does not have.
       .toEqual([
@@ -1590,10 +1589,10 @@ describe("TC-0017-0041 (TDD-0041): layer separation adds no workflow file and no
  * a `run:` body.
  *
  * BOTH, because the gate's deferred-registration exemption names two codes and is required to
- * ingest both. Rows written for the hygiene lane alone would keep passing if
- * the shape gate grew a producer of its own that wrote its
- * artifact only into the `lint` job's checkout — while the self-validates below run here, on a
- * fresh one. Half the exemption would then reach no reviewer, with nothing saying so.
+ * ingest both. Rows written for the hygiene lane alone would keep passing if the shape gate grew
+ * a producer of its own that wrote its artifact only into the `lint` job's checkout — while the
+ * self-validates below run here, on a fresh one. Half the exemption would then reach no
+ * reviewer, with nothing saying so.
  */
 const REVIEWER_GATE_PRODUCERS: readonly { what: string; needles: readonly string[] }[] = [
   {
@@ -1874,8 +1873,8 @@ const VERIFICATION_SET = [
   // not.
   "Classify the change against the enumerated directory lists",
   // First, and in `lint` rather than in the declared job: the pre-flight refusal of the local
-  // composite actions has to run before any job invokes one: a step at
-  // the top of `./.github/actions/setup` writing `BASH_ENV` would make every later `shell: bash`
+  // composite actions has to run before any job invokes one: a step at the top of
+  // `./.github/actions/setup` writing `BASH_ENV` would make every later `shell: bash`
   // step exit 0 without running its body, the hygiene lane included, so the lane cannot be the
   // thing that catches it.
   "Verify the toolchain action before running it",
@@ -1886,8 +1885,8 @@ const VERIFICATION_SET = [
   "QFAI self-validate this repo (dogfooding — SDD gates)",
   "QFAI self-validate this repo (dogfooding — full profile)",
   "Run qfai validate gate (fail on error)",
-  // Last, and in `lint`: `pnpm ci:lint` is that job's own work. A declared dependency pins only
-  // the name and the condition on its own, and nothing about
+  // Last, and in `lint`: `pnpm ci:lint` is that job's own work. A declared
+  // dependency pins only the name and the condition on its own, and nothing about
   // whether the step still does anything.
   "Run lint gate",
 ] as const;
