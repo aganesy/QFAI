@@ -47,8 +47,8 @@ const CONFIG_TS = path.resolve(SRC_ROOT, "core/config.ts");
  * - `validation.testStrategy.requireLayerTags` / `requireSizeTags` — no
  *   validator reads them.
  * - `validation.require.specSections` — parsed and shipped but no section
- *   requirement is enforced from it; same class as #408 and left to that
- *   thread rather than fixed here.
+ *   requirement is enforced from it; the same class of shipped-but-inert
+ *   config surface as the two keys above, not fixed here.
  */
 const KNOWN_UNWIRED: ReadonlyMap<string, string> = new Map([
   ["validation.testStrategy.requireLayerTags", "#408"],
