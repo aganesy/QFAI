@@ -170,7 +170,7 @@ describe("TC-0010-0012: confirming a freshly published provenance lock", () => {
     control.forgery = { kind: "foreign" };
 
     await expect(write(root, "qfai-lost.yml")).rejects.toThrow(
-      /the provenance lock was replaced between publishing it and reading it back/,
+      /the provenance lock was replaced while this writer held it/,
     );
   });
 
