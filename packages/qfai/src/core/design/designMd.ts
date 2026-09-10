@@ -349,13 +349,13 @@ function buildDesignMd(raw: unknown): BuildResult {
     brand: brand.value,
     visual: visual.value,
   };
-  // codex AHcvl: reject present-but-non-record `audience`. Same
-  // SSOT-divergence pattern as accessibility (AHHiE) / visual.spacing
-  // (AHHiH) / typography token blocks (AG08u): pre-fix
-  // `if (isRecord(raw.audience))` silently skipped scalars / arrays
-  // (`audience: "..."`, `audience: ["foo"]`), letting the invalid
-  // value hash into the lock while downstream iterate / certify
-  // saw `audience: undefined` and lost the brand-context tokens.
+  // Reject present-but-non-record `audience`. Same SSOT-divergence
+  // pattern as accessibility / visual.spacing / typography token
+  // blocks: checking only `isRecord(raw.audience)` would silently skip
+  // scalars / arrays (`audience: "..."`, `audience: ["foo"]`), letting
+  // the invalid value hash into the lock while downstream iterate /
+  // certify would see `audience: undefined` and lose the brand-context
+  // tokens.
   if ("audience" in raw && raw.audience !== undefined && !isRecord(raw.audience)) {
     return {
       error: {
@@ -402,12 +402,12 @@ function buildDesignMd(raw: unknown): BuildResult {
     }
     data.audience = aud;
   }
-  // codex AHHiE: reject present-but-non-record `accessibility`. Pre-fix
-  // `if (isRecord(raw.accessibility))` silently skipped a scalar/array
+  // Reject present-but-non-record `accessibility`. Checking only
+  // `isRecord(raw.accessibility)` would silently skip a scalar/array
   // (`accessibility: false`, `accessibility: "wcag-aa"`), letting the
   // invalid value hash into the lock while downstream iterate / certify
-  // saw `accessibility: undefined` — the same SSOT-divergence pattern
-  // the typography token-block fix (AG08u) closed.
+  // would see `accessibility: undefined` — the same SSOT-divergence
+  // pattern the typography token-block check guards against.
   if ("accessibility" in raw && raw.accessibility !== undefined && !isRecord(raw.accessibility)) {
     return {
       error: {
@@ -437,7 +437,6 @@ function buildDesignMd(raw: unknown): BuildResult {
     // instead of number) or `motion: false` (boolean instead of
     // string) hashed into DESIGN.md.lock while iterate / certify saw
     // a clean DesignMd with the accessibility constraint missing.
-    // codex 9KB8.
     if ("contrast_ratio_min" in raw.accessibility) {
       const v = raw.accessibility.contrast_ratio_min;
       if (v !== undefined) {
@@ -493,8 +492,8 @@ function readBrand(raw: unknown): { value: DesignMd["brand"] } | { error: ParseE
   // non-string entries and accepted scalars / dropped non-arrays,
   // letting malformed authoring hash into the DESIGN.md lock while
   // downstream consumers saw a different brand context. Symmetric
-  // with `parseDesignMdStringArrayField` (codex 8A6f) and the typography
-  // / spacing strict-parse paths. codex 9R4e.
+  // with `parseDesignMdStringArrayField` and the typography
+  // / spacing strict-parse paths.
   let voice: string[] | undefined;
   if ("voice" in raw && raw.voice !== undefined) {
     const voiceParsed = parseDesignMdStringArrayField(raw.voice, "brand.voice");
@@ -608,12 +607,12 @@ function readVisual(raw: unknown): { value: DesignMd["visual"] } | { error: Pars
   // does not freeze into the lock while iteration / certify ignore it.
   const TYPOGRAPHY_SCALE_ALLOWED_KEYS = new Set(["xs", "sm", "base", "lg", "xl", "2xl", "3xl"]);
   const TYPOGRAPHY_WEIGHT_ALLOWED_KEYS = new Set(["regular", "medium", "bold"]);
-  // codex AG08u: reject present-but-non-record `scale` / `weight` blocks.
-  // Pre-fix `if (isRecord(typographyRaw.scale))` silently skipped a
+  // Reject present-but-non-record `scale` / `weight` blocks. Checking
+  // only `isRecord(typographyRaw.scale)` would silently skip a
   // string / array authored under `scale:` (`scale: "1rem"` or
-  // `scale: [1, 2]`), so an invalid DESIGN.md hashed into the lock
-  // while `designTokens.typography.scale` was missing for downstream
-  // consumers. Same fix below for `weight`.
+  // `scale: [1, 2]`), so an invalid DESIGN.md would hash into the lock
+  // while `designTokens.typography.scale` is missing for downstream
+  // consumers. Same check below for `weight`.
   if (
     "scale" in typographyRaw &&
     typographyRaw.scale !== undefined &&
@@ -716,14 +715,14 @@ function readVisual(raw: unknown): { value: DesignMd["visual"] } | { error: Pars
     radius: radius as DesignMdRadius,
     shadow: shadow as DesignMdShadow,
   };
-  // codex AHHiH: reject present-but-non-record `visual.spacing`. Pre-fix
-  // `if (isRecord(raw.spacing))` silently skipped a scalar/array
+  // Reject present-but-non-record `visual.spacing`. Checking only
+  // `isRecord(raw.spacing)` would silently skip a scalar/array
   // (`spacing: "0.25rem"`, `spacing: [0,4,8]`), letting the invalid
-  // value hash into the lock while the parsed DesignMd had no spacing
+  // value hash into the lock while the parsed DesignMd has no spacing
   // tokens — the mirror cross-check would then accept a handoff that
-  // omitted spacing entirely. Same SSOT-divergence pattern the
-  // typography token-block fix (AG08u) and accessibility section fix
-  // (AHHiE) close.
+  // omits spacing entirely. Same SSOT-divergence pattern the
+  // typography token-block check and accessibility section check
+  // guard against.
   if ("spacing" in raw && raw.spacing !== undefined && !isRecord(raw.spacing)) {
     return {
       error: {
@@ -829,12 +828,11 @@ function readVisual(raw: unknown): { value: DesignMd["visual"] } | { error: Pars
  * while downstream consumers saw a different brand context.
  *
  * Used by:
- *   - `audience.emotion` / `audience.do_not_look_like` (codex 8A6f)
- *   - `brand.voice` (codex 9R4e)
+ *   - `audience.emotion` / `audience.do_not_look_like`
+ *   - `brand.voice`
  *
  * The helper deliberately ignores the field's semantic role; any
  * future `string[]` field on DesignMd can call this directly.
- * codex 9vcp.
  */
 function parseDesignMdStringArrayField(
   raw: unknown,
@@ -882,7 +880,7 @@ function describeValueShape(value: unknown): string {
  * letting validate pass on a parsed token that differed from the raw
  * DESIGN.md bytes frozen in the lock. This rejects non-strings with
  * `invalid-type` at parse-time so the brand SSOT enforces the
- * contract upstream of the lock. codex AHcvm.
+ * contract upstream of the lock.
  */
 function readStringRecordStrict(
   raw: unknown,

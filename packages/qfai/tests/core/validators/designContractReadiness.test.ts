@@ -631,7 +631,7 @@ describe("validateSddDesignContractReadiness (TC-3.8.x)", () => {
   });
 
   it("design-system.yaml mirror with diverging color value → DCON-005 with diff diagnostic", async () => {
-    // Codex 5zDx: the mirror is contractually a verbatim DESIGN.md
+    // The mirror is contractually a verbatim DESIGN.md
     // copy. A hand-authored mirror that disagrees with DESIGN.md must
     // be rejected so downstream `/qfai-implement` cannot bind to a
     // tampered identity.
@@ -763,7 +763,7 @@ describe("validateSddDesignContractReadiness (TC-3.8.x)", () => {
   });
 
   it("optional visual.spacing in DESIGN.md must be mirrored verbatim → DCON-005 on divergence", async () => {
-    // Codex 696D: optional DESIGN.md tokens are also part of the
+    // Optional DESIGN.md tokens are also part of the
     // verbatim-mirror contract when DESIGN.md authors them. A
     // mirror that diverges on `visual.spacing.base` must surface
     // as DCON-005.
@@ -820,8 +820,8 @@ describe("validateSddDesignContractReadiness (TC-3.8.x)", () => {
     ).toBe(true);
   });
 
-  it("mirror authors visual.spacing.scale that DESIGN.md never authored → DCON-005 (codex 89xl)", async () => {
-    // Codex 89xl: pre-fix the reverse spacing-key check only rejected
+  it("mirror authors visual.spacing.scale that DESIGN.md never authored → DCON-005", async () => {
+    // Pre-fix the reverse spacing-key check only rejected
     // keys outside the schema-defined `{base, scale}` set, which let
     // an author add `spacing.scale` to design-system.yaml even though
     // DESIGN.md only authored `spacing.base`. Post-fix that case
@@ -880,14 +880,15 @@ describe("validateSddDesignContractReadiness (TC-3.8.x)", () => {
     ).toBe(true);
   });
 
-  it("symmetric: mirror authors visual.spacing.base that DESIGN.md never authored → DCON-005 (codex 9Vbc)", async () => {
-    // Reverse direction of the codex 89xl test: DESIGN.md authors only
-    // `spacing.scale` (no `base`), mirror fabricates `base`. The fix's
-    // reverse loop iterates mirror keys, so the `base` branch and the
-    // `scale` branch share the same code path; without this symmetric
-    // pin, a future special-case for `expected.scale !== undefined`
-    // (typography helpers split by sub-key, so it's plausible) could
-    // silently regress one direction while the 89xl test stays green.
+  it("symmetric: mirror authors visual.spacing.base that DESIGN.md never authored → DCON-005", async () => {
+    // Reverse direction of the mirror-authors-an-extra-spacing-key case
+    // above: DESIGN.md authors only `spacing.scale` (no `base`), mirror
+    // fabricates `base`. The fix's reverse loop iterates mirror keys, so
+    // the `base` branch and the `scale` branch share the same code path;
+    // without this symmetric pin, a future special-case for
+    // `expected.scale !== undefined` (typography helpers split by
+    // sub-key, so it's plausible) could silently regress one direction
+    // while the test above stays green.
     const root = await newTempDir();
     await seedUiBearingProject(root);
     const designMdSpacingScaleOnly = VALID_DESIGN_MD.replace(
@@ -1077,7 +1078,7 @@ describe("validateSddDesignContractReadiness (TC-3.8.x)", () => {
   });
 
   it("malformed root DESIGN.md WITHOUT lock yaml still surfaces DCON-033 (parse error)", async () => {
-    // Codex 668Z: pre-fix, parseDesignMd was nested under
+    // Pre-fix, parseDesignMd was nested under
     // `designMdText !== null && lockText !== null`, so a project
     // with a malformed DESIGN.md and no lock yet (the common
     // initial state) saw only DCON-031 and missed the parse error.
@@ -1129,7 +1130,7 @@ describe("validateSddDesignContractReadiness (TC-3.8.x)", () => {
   });
 
   it("prototype-handoff.yaml designMdPath !== root DESIGN.md → DCON-013", async () => {
-    // Codex 55GV: a handoff that points at an alternate file must be
+    // A handoff that points at an alternate file must be
     // rejected so downstream `/qfai-implement` cannot bind to a
     // non-SSOT design identity.
     const root = await newTempDir();
@@ -1215,7 +1216,7 @@ describe("validateSddDesignContractReadiness (TC-3.8.x)", () => {
   });
 
   it("prototype-handoff.yaml designMdSha256 stale (valid hex but != lock) → DCON-013", async () => {
-    // Codex 55GV second arm: a syntactically-valid-but-wrong sha must
+    // Companion to the designMdPath-mismatch case above: a syntactically-valid-but-wrong sha must
     // be cross-checked against DESIGN.md.lock.yaml#designMdSha256.
     const root = await newTempDir();
     await seedUiBearingProject(root);

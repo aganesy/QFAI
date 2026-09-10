@@ -108,7 +108,7 @@ describe("TDD coverage resolution across duplicate TC rows", () => {
     expect(spec.openCount).toBe(0);
   });
 
-  it("reports a still-in-review row as in-review, not done (#386)", async () => {
+  it("reports a still-in-review row as in-review, not done", async () => {
     // `refactor` used to count toward `done`, so this printed `done: 1`.
     const spec = await coverageFor(
       tddTable([

@@ -195,7 +195,7 @@ describe("validateIntegrationSurface read errors", () => {
 
 describe("a structurally broken target is a finding, not a crash", () => {
   it("reports EPERM instead of propagating it", async () => {
-    // #1095. `git worktree add` on Windows materialises every
+    // `git worktree add` on Windows materialises every
     // `.claude/skills/*` link as a FILE symlink pointing at a directory —
     // because at the moment git writes it the target does not yet exist in the
     // new worktree and it has no reftype hint — and Windows will not follow

@@ -33,7 +33,7 @@ function isRecord(value: unknown): value is Record<string, unknown> {
  * For the multi-spec cycle-0 frozen full UI-bearing set, use
  * {@link readFrozenSpecsCoveredMultiSpec}.
  *
- * Disambiguation cheat-sheet for call sites (codex r3264482141):
+ * Disambiguation cheat-sheet for call sites:
  *   - `readFrozenSpecsCovered(record)`          → record.specsCovered          (legacy single-spec field)
  *   - `readFrozenSpecsCoveredMultiSpec(record)` → record.frozenSpecsCovered    (multi-spec field; SSOT)
  *   - `readFrozenSpecsCoveredField(record)`     → record.frozenSpecsCovered    (iterate-local copy)
@@ -68,7 +68,7 @@ export function readFrozenSpecsCovered(record: unknown): string[] | null {
  * Same validation contract as `readFrozenSpecsCovered`: returns `null`
  * when the field is missing, empty, non-array, or carries non-string /
  * empty-string entries. Callers fall back to `readFrozenSpecsCovered`
- * (legacy single-spec field) when this returns `null` so pre-Wave-3
+ * (legacy single-spec field) when this returns `null` so legacy
  * evidence still loads.
  */
 export function readFrozenSpecsCoveredMultiSpec(record: unknown): string[] | null {
@@ -89,7 +89,7 @@ export function readFrozenSpecsCoveredMultiSpec(record: unknown): string[] | nul
  *
  *   - `absent` — the `frozenSpecsCovered` key is missing on the record
  *     (or the record itself is invalid). Caller MAY fall back to the
- *     legacy `specsCovered` field for pre-Wave-3 evidence compatibility.
+ *     legacy `specsCovered` field for legacy evidence compatibility.
  *   - `malformed` — the key IS present on the record but the value
  *     fails the validation contract (not an array, empty array, contains
  *     a non-string or empty-string entry). Caller MUST fail closed
@@ -114,7 +114,7 @@ export type FrozenSpecsCoveredClassification =
  * frozen set to the legacy single-spec `specsCovered` field. In
  * multi-spec runs that downgrade certificates to the primary-spec scope
  * and lets missing secondary-spec review evidence ship a sealed
- * certificate (codex r3270861808 P1 — chatgpt-codex-connector).
+ * certificate.
  *
  * This classifier preserves the validation contract of the reader but
  * exposes the absent/malformed distinction so the certify call sites
@@ -129,14 +129,14 @@ export function classifyFrozenSpecsCoveredMultiSpec(
   if (!Object.prototype.hasOwnProperty.call(record, "frozenSpecsCovered")) {
     return { kind: "absent" };
   }
-  // codex r3270923641 (P1, chatgpt-codex-connector): an explicit `null`
+  // An explicit `null`
   // (or `undefined`) value on a present `frozenSpecsCovered` key is NOT
   // the same as the key being absent. A hand-edited
   // `"frozenSpecsCovered": null` is a corrupt edit that means "the
   // operator wrote the field but it carries no valid scope" — falling
   // back to legacy `specsCovered` here would silently downgrade
   // certification scope and re-open the same multi-spec evidence-gap
-  // vector the wave-33 absent-vs-malformed discrimination was meant to
+  // the absent-vs-malformed discrimination exists to
   // close. Treat both `null` and `undefined` on a present key as
   // malformed so certify fails closed.
   const raw = record.frozenSpecsCovered;

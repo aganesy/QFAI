@@ -261,7 +261,7 @@ describe("validateContractConsistency (QFAI-CONTRACT-040)", () => {
   });
 
   it("raises an ENUM-backed contradiction to error", async () => {
-    // The severity is the point of #1100. A Postgres ENUM rejects an
+    // The severity is the point. A Postgres ENUM rejects an
     // out-of-domain value at insert time, so the two contracts cannot both be
     // implemented — and every gate qfai prescribes is `--fail-on error`, so at
     // `warning` this never blocked anything and Postgres found it first.
@@ -313,7 +313,7 @@ describe("validateContractConsistency (QFAI-CONTRACT-040)", () => {
    * bindings before that attribution let a `status` ENUM on an unrelated table
    * decide the severity of a `status` column bounded by a plain CHECK — and
    * the message asserted `insert 時に拒絶される物理制約` of a field that has no
-   * such constraint (#1162, reported against published 1.10.2).
+   * such constraint.
    */
   describe("a field name several contracts declare", () => {
     const SIM_LINE_API = [
@@ -423,7 +423,7 @@ describe("validateContractConsistency (QFAI-CONTRACT-040)", () => {
 
     it("still raises to error when every candidate binding is an ENUM", async () => {
       // The mix is what removes the claim. Where nothing can store the value,
-      // the finding #1100 raised is unchanged.
+      // the finding stays the same.
       const OTHER_ENUM_DB = [
         "CREATE TYPE sim_line_status AS ENUM ('active', 'inactive', 'in_call', 'error');",
         "",
@@ -538,7 +538,7 @@ describe("validateContractConsistency (QFAI-CONTRACT-040)", () => {
     });
 
     it("still raises to error when the redundant CHECK is on the only table", async () => {
-      // #1100's case, and the reason the tie is broken on the table count
+      // The reason the tie is broken on the table count
       // rather than on the mere presence of both forms: with one table there is
       // one column of that name, so the CHECK is redundant on the ENUM column
       // and the value is refused at insert time either way.
@@ -582,10 +582,9 @@ describe("validateContractConsistency (QFAI-CONTRACT-040)", () => {
     });
 
     /**
-     * A value computed at read time is not a contradiction, and until it could
-     * be declared the finding had no valid remedy: widening the domain makes it
-     * possible to STORE a value the contract forbids storing, and deleting it
-     * from the API removes a value the UI requires (#1203).
+     * A value computed at read time is not a contradiction: widening the domain
+     * would make it possible to STORE a value the contract forbids storing, and
+     * deleting it from the API would remove a value the UI requires.
      */
     describe("a value the DB contract declares derived", () => {
       const DERIVED_DB = [

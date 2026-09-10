@@ -178,7 +178,7 @@ describe("classifyAgainstDeclaration", () => {
   const at = (...segments: string[]): string => path.resolve(path.join(...segments));
 
   it("reports the worktree hazard: declared here, running from the enclosing checkout", () => {
-    // The case #1096 was filed for, and the one resolution nobody chose. The
+    // The important case, and the one resolution nobody chose. The
     // worktree declares qfai; `npx` walked parents and found the enclosing
     // checkout's copy, so another lockfile decided what gated this project.
     const declaring = at("repo", ".claude", "worktrees", "w");

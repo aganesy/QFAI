@@ -951,17 +951,16 @@ describe("TC-0017-0059 (TDD-0059): skippable-through-a-dependency and a shrunk s
     }
   });
 
-  // Review finding [24]. The [03] repair compared a pinned body against the step's — and skipped
-  // the comparison entirely when no digest was pinned. So the whole repair came undone in one
-  // move: hollow the step out AND delete its key from `verificationBodies`. Done to the verdict
-  // step, the aggregate job every required context depends on would succeed while the lanes under
-  // it failed.
+  // A repair that compares a pinned body against the step's must not skip the comparison when no
+  // digest is pinned — otherwise hollowing the step out AND deleting its key from
+  // `verificationBodies` undoes the whole repair in one move. Done to the verdict step, the
+  // aggregate job every required context depends on would succeed while the lanes under it
+  // failed.
   it("rejects a hollowed step even when a same-named copy is pasted into a dependency", () => {
-    // The second escape review finding [24] named, measured against the lane: `needsClosure`
-    // yields the declaring job first, and the digest map was keyed by step NAME with
-    // last-write-wins. So hollowing `ci-pass`'s verdict step and pasting the original — same
-    // name — into a job it depends on restored the pinned digest, with no edit to the
-    // declaration at all. The lane exited 0.
+    // A second escape: `needsClosure` yields the declaring job first, and the digest map is keyed
+    // by step NAME with last-write-wins. So hollowing `ci-pass`'s verdict step and pasting the
+    // original — same name — into a job it depends on would restore the pinned digest, with no
+    // edit to the declaration at all, and the lane would exit 0.
     //
     // A name is not a step: every step wearing the item's name has to carry the pinned body.
     const dir = plantedTree((d) => {
@@ -998,13 +997,12 @@ describe("TC-0017-0059 (TDD-0059): skippable-through-a-dependency and a shrunk s
   });
 
   it("rejects a dependency job made skippable, even though the declared job is always()", () => {
-    // Review finding [37]. `always()` on the declared job stands property 2 down for the whole
-    // `needs` closure — correctly, because a skipped dependency is the state `always()` exists
-    // to classify — and property 3 then went on counting a skipped dependency's steps as
-    // performed. Measured against the lane: `if: false` on `build` left all six build-side
-    // verification items reading as performed, and since the aggregate verdict accepts
-    // `skipped`, the required context went green with the pack verification and all three
-    // self-validates never run.
+    // `always()` on the declared job stands property 2 down for the whole `needs` closure —
+    // correctly, because a skipped dependency is the state `always()` exists to classify — but
+    // property 3 would go on counting a skipped dependency's steps as performed. Measured against
+    // the lane: `if: false` on `build` leaves all six build-side verification items reading as
+    // performed, and since the aggregate verdict accepts `skipped`, the required context would go
+    // green with the pack verification and all three self-validates never run.
     //
     // `if: false` rather than a plausible condition: the lane evaluates no GitHub expressions,
     // so the plant has to be a condition and not a FALSE one — this one just makes the
@@ -1040,11 +1038,11 @@ describe("TC-0017-0059 (TDD-0059): skippable-through-a-dependency and a shrunk s
   });
 
   it("rejects a step whose invoked package script was hollowed, with the workflow untouched", () => {
-    // Review finding [36]. `run: pnpm ci:build-verify` is a REFERENCE, and a digest over the
+    // `run: pnpm ci:build-verify` is a REFERENCE, and a digest over the
     // `run:` text pins the pointer rather than the work: deleting
-    // `node ./scripts/check-publish-dry-run.mjs` from that script in the root manifest left the
-    // step's digest and its declaration in perfect agreement while the pack verification stopped
-    // happening, and the required context still went green.
+    // `node ./scripts/check-publish-dry-run.mjs` from that script in the root manifest would leave
+    // the step's digest and its declaration in perfect agreement while the pack verification
+    // stopped happening, and the required context would still go green.
     //
     // The workflow file is NOT edited here. That is the whole point of the row: every other
     // required-context plant reaches the lane through `.github/**`, and this one proves the
@@ -1144,7 +1142,7 @@ ${run.output}`,
   });
 
   it("rejects a command-template shell on a verification step, and names it", () => {
-    // Review finding [41]. `shell:` is a command template — GitHub substitutes the step body for
+    // `shell:` is a command template — GitHub substitutes the step body for
     // `{0}` and runs the WHOLE line — so `bash {0} || true` performs the step's name and reports
     // its own status, 0, whatever the body did. `Run build & pack verification` would then fail
     // silently and `build` and the required `ci-pass` would both go green.
@@ -1201,10 +1199,10 @@ ${run.output}`,
   });
 
   it("resolves invoked scripts from the step's working directory, not from the root", () => {
-    // Review finding [41], second half. `working-directory` changes which manifest
+    // `working-directory` changes which manifest
     // `pnpm ci:build-verify` resolves against, so pointing a verification step at a package whose
-    // manifest defines a SHORTER `ci:build-verify` ran different work while the pin over the root
-    // manifest still matched exactly.
+    // manifest defines a SHORTER `ci:build-verify` would run different work while the pin over the
+    // root manifest still matched exactly.
     //
     // Asserted on the digest rather than through the lane, because the lane can only say "this
     // step changed" — which it would say for any edit at all. What has to hold is narrower: the
@@ -1246,11 +1244,11 @@ ${run.output}`,
         "the script must be resolved against the manifest in the working directory",
       ).toEqual([
         ["pkg#ci:build-verify", "node a.mjs"],
-        // The LIFECYCLE SIBLINGS, recorded as absent. Review finding [104]: `pnpm run x` runs
-        // `prex` before it and `postx` after, and neither was resolved — so a `preci:lint` added
-        // beside the script a verification invokes ran in the required lane while every pinned
-        // digest stayed equal. Absent is recorded rather than skipped for the reason every other
-        // name is: an ADDED one has to move the digest.
+        // The LIFECYCLE SIBLINGS, recorded as absent. `pnpm run x` runs
+        // `prex` before it and `postx` after; leaving them unresolved would let a `preci:lint`
+        // added beside the script a verification invokes run in the required lane while every
+        // pinned digest stayed equal. Absent is recorded rather than skipped for the reason every
+        // other name is: an ADDED one has to move the digest.
         ["pkg#postci:build-verify", null],
         ["pkg#preci:build-verify", null],
       ]);
@@ -1305,10 +1303,11 @@ ${run.output}`,
   });
 
   it("rejects a hollowed guard script the step runs, with the workflow untouched", () => {
-    // Review finding [42]. `run: bash packages/qfai/scripts/check-no-internal-version-leakage.sh`
-    // is a reference too, and replacing that file's body with `exit 0` left the step's name, its
-    // `run` and its digest all unchanged — so the same neutered guard went green in `lint` and in
-    // `build`, and the leakage rule the distributed-surface contract rests on checked nothing.
+    // `run: bash packages/qfai/scripts/check-no-internal-version-leakage.sh`
+    // is a reference too, and replacing that file's body with `exit 0` would leave the step's
+    // name, its `run` and its digest all unchanged — so the same neutered guard would go green in
+    // `lint` and in `build`, and the leakage rule the distributed-surface contract rests on would
+    // check nothing.
     //
     // The workflow file is NOT edited: the digest's subject has to reach past `.github/**`.
     const dir = plantedTree((d) => {
@@ -1365,11 +1364,11 @@ ${run.output}`,
   });
 
   it("rejects an environment inherited from the job that replaces what the shell runs", () => {
-    // Review finding [51]. `BASH_ENV` is sourced by the non-interactive bash GitHub runs BEFORE the
+    // `BASH_ENV` is sourced by the non-interactive bash GitHub runs BEFORE the
     // step body, so a file it names that ends in `exit 0` means the body never runs and the step
     // reports success — with `run`, `shell`, `working-directory` and every pinned digest untouched.
-    // Declared at JOB level it is invisible from the step object, which is where the digest was
-    // looking, so two lines elsewhere in the file turned every declared verification into a no-op.
+    // Declared at JOB level it is invisible from the step object, which is where the digest looks,
+    // so two lines elsewhere in the file would turn every declared verification into a no-op.
     const dir = plantedTree((d) => {
       editWorkflow(d, firstContext(d).workflow, (text) => {
         const anchor = "  build:\n    runs-on: ubuntu-latest\n";
@@ -1391,12 +1390,12 @@ ${run.output}`,
     }
   });
   it("rejects a PATH that decides which shell receives the step body", () => {
-    // Review finding [60]. `PATH` is not a preload, but it decides WHICH program receives the
+    // `PATH` is not a preload, but it decides WHICH program receives the
     // body: a workspace directory holding an executable named `bash`, put first, hands every `run:`
     // in the closure to a shell the pull request wrote, which can return 0 having run nothing.
     //
-    // In the refused set rather than only in the digest, for the reason the finding gives: the pin
-    // tool is committed, so a pull request that adds the variable can land the new digest in the
+    // In the refused set rather than only in the digest, because the pin
+    // tool is committed, so a pull request that adds the variable could land the new digest in the
     // same commit.
     const dir = plantedTree((d) => {
       editWorkflow(d, firstContext(d).workflow, (text) => {
@@ -1417,9 +1416,9 @@ ${run.output}`,
     }
   });
   it("rejects a step that sets the environment of the steps after it", () => {
-    // Review finding [69]. The env checks read what the YAML DECLARES — workflow, job and step —
+    // The env checks read what the YAML DECLARES — workflow, job and step —
     // and a step can set a variable for every step after it by appending to `$GITHUB_ENV`.
-    // `echo "BASH_ENV=…/noop.sh" >> "$GITHUB_ENV"` before the verdict step neuters it with no
+    // `echo "BASH_ENV=…/noop.sh" >> "$GITHUB_ENV"` before the verdict step would neuter it with no
     // declared env anywhere and no pinned digest moved: the same capability arriving through a
     // file instead of a key.
     const dir = plantedTree((d) => {
@@ -1445,11 +1444,11 @@ ${run.output}`,
   });
 
   it("refuses the ordinary brace spelling of the same command file", () => {
-    // Review finding [72]: the detection enumerated two spellings — `$GITHUB_ENV` and
-    // `${{ env.GITHUB_ENV }}` — and `>> "${GITHUB_ENV}"`, the form a shell author writes without
-    // thinking about it, went straight through. There is no end to that list: a variable holding the
-    // path, `printenv`, a here-doc. So the NAME anywhere in the body is what the lane refuses now,
-    // and this row is the spelling the enumeration missed.
+    // Enumerating only two spellings — `$GITHUB_ENV` and
+    // `${{ env.GITHUB_ENV }}` — would let `>> "${GITHUB_ENV}"`, the form a shell author writes
+    // without thinking about it, go straight through. There is no end to that list: a variable
+    // holding the path, `printenv`, a here-doc. So the NAME anywhere in the body is what the lane
+    // refuses, catching the spelling a fixed enumeration would miss.
     const dir = plantedTree((d) => {
       editWorkflow(d, firstContext(d).workflow, (text) => {
         const anchor = "      - name: Run build & pack verification\n";
@@ -1483,9 +1482,9 @@ ${run.output}`,
     ],
   ] as const) {
     it(`refuses ${label}, which never appears in the run: text`, () => {
-      // Review finding [79]. A `with:` value reaches a composite action's own `run:` through
+      // A `with:` value reaches a composite action's own `run:` through
       // `${{ inputs.… }}`, and an `env:` value can hand the path to a body that appends to it
-      // under another name. Neither is in the `run:` text the check used to search, and both
+      // under another name. Neither is in the `run:` text alone, and both
       // write the same file — so the search covers the whole surface the step supplies.
       const dir = plantedTree((d) => {
         editWorkflow(d, firstContext(d).workflow, (text) => {
@@ -1506,9 +1505,9 @@ ${run.output}`,
     });
   }
   it("refuses a command-file write from a step with no name at all", () => {
-    // Review finding [78]. Everything in property 3 keys on `step.name`, because a declaration
-    // names the item it declares — so the loop skipped unnamed steps before any check ran, and
-    // `- run: echo "BASH_ENV=…" >> "$GITHUB_ENV"` with no `name:` went past the writer check
+    // Everything in property 3 keys on `step.name`, because a declaration
+    // names the item it declares — so a loop that skips unnamed steps before any check runs would
+    // let `- run: echo "BASH_ENV=…" >> "$GITHUB_ENV"` with no `name:` go past the writer check
     // untouched. A step needs no name to set the environment of every step after it.
     //
     // Found while testing the composite-action scan: `ci.yml`'s seven
@@ -1537,12 +1536,12 @@ ${run.output}`,
     }
   });
   it("refuses a local action that is not composite, whose entrypoint it cannot scan", () => {
-    // Review finding [84]. A local action need not be a list of steps: `runs: { using: node20,
+    // A local action need not be a list of steps: `runs: { using: node20,
     // main: index.js }` is a JavaScript action, and GitHub runs that entrypoint in the job like
     // any other step. `index.js` appending `BASH_ENV` to the environment file sets the
-    // environment of every step after it — and the scan found no `runs.steps` array, reported
-    // nothing, and left the lane green. The `uses:` string never changed, so no digest moved
-    // either.
+    // environment of every step after it — and a scan that finds no `runs.steps` array would
+    // report nothing and leave the lane green, with the `uses:` string unchanged and no digest
+    // moved either.
     //
     // Refused rather than scanned: reading a JavaScript entrypoint for what it writes would be a
     // second and worse parser. The planted `index.js` DOES write the file, which is the point —
@@ -1581,12 +1580,12 @@ ${run.output}`,
     }
   });
   it("refuses a command-file write inside a local composite action the closure invokes", () => {
-    // Review finding [77]. `.github/actions/**` is not inside `VERIFIED_SOURCE_ROOTS`, so a
+    // `.github/actions/**` is not inside `VERIFIED_SOURCE_ROOTS`, so a
     // composite action's bytes are in no pinned verification digest — the `uses:` string is all
-    // the digest records — and its steps were scanned by nothing. Every toolchain job in `ci.yml`
-    // opens with `uses: ./.github/actions/setup`, so one write in there sets the environment of
-    // every step after it in every job. Same capability as the step-level row above, through the
-    // one door the step scan does not open.
+    // the digest records — and nothing scans its steps unless this rule does. Every toolchain job
+    // in `ci.yml` opens with `uses: ./.github/actions/setup`, so one write in there sets the
+    // environment of every step after it in every job. Same capability as the step-level row
+    // above, through the one door the step scan does not open.
     const dir = plantedTree((d) => {
       const action = path.join(d, ".github", "actions", "setup", "action.yml");
       const before = readFileSync(action, "utf-8");
@@ -1687,10 +1686,11 @@ ${run.output}`,
     }
   });
   it("pins the artifact directory's inode across the whole write, in both producers", async () => {
-    // Review finding [71]: comparing only `dev` proves the staging file and the verified directory
+    // Comparing only `dev` proves the staging file and the verified directory
     // are on ONE FILESYSTEM, which a checkout and any sibling directory on the same volume already
-    // are — so swapping the report directory for a link to a sibling passed the test and the
-    // rename replaced an artifact over there. The inode is what says it is the same directory.
+    // are — so that alone would let swapping the report directory for a link to a sibling pass the
+    // test while the rename replaced an artifact over there. The inode is what says it is the
+    // same directory.
     //
     // Asserted on the SOURCE of both writers. The interleaving it closes is between two processes,
     // and Node has no `openat` or `renameat`, so what the code can do is compare identities around
@@ -1734,13 +1734,13 @@ ${run.output}`,
     }
   });
   it("rejects a preload variable that makes node exit before it runs anything", () => {
-    // Review finding [57]. `NODE_OPTIONS=--require=<file>` preloads that file before the entry
+    // `NODE_OPTIONS=--require=<file>` preloads that file before the entry
     // point, so a preload calling `process.exit(0)` makes every `node` — and every `pnpm`, which
     // is node — in the closure succeed without running. It is `BASH_ENV` one layer down.
     //
-    // A REFUSAL rather than only a digest input, and that distinction is the finding's real point:
-    // the pin tool is committed, so a pull request that adds one of these can recompute the pin in
-    // the same commit and the lane would stay green on the digest alone.
+    // A REFUSAL rather than only a digest input, because the pin tool is committed: a pull request
+    // that adds one of these could otherwise recompute the pin in the same commit and the lane
+    // would stay green on the digest alone.
     const dir = plantedTree((d) => {
       editWorkflow(d, firstContext(d).workflow, (text) => {
         const anchor = "  build:\n    runs-on: ubuntu-latest\n";
@@ -1781,8 +1781,8 @@ ${run.output}`,
   });
 
   it("rejects a job whose own failure is discarded, not only a step whose failure is", () => {
-    // Review finding [52]. A job-level `continue-on-error: true` discards that job's failure the
-    // way a step-level one discards a step's, and only steps were checked. On `ci-pass` — the one
+    // A job-level `continue-on-error: true` discards that job's failure the
+    // way a step-level one discards a step's, so both must be checked. On `ci-pass` — the one
     // aggregate the required context sits on — the verdict can exit 1 and the context still passes,
     // with every pinned digest and every other rule unchanged.
     const dir = plantedTree((d) => {
@@ -1822,9 +1822,9 @@ ${run.output}`,
       const run = runLane(dir);
       expect.soft(run.exitCode, `a rewritten step env must exit 1:\n${run.output}`).toBe(1);
       // The VERDICT step, named — not whichever item happens to be first in the declaration.
-      // This row plants into one specific step's `env:`, and the positional helper was a
-      // coincidence that held only while that step led the list: adding the pre-flight refusal
-      // ahead of it (review finding [82]) made the row demand a name it had not planted into.
+      // This row plants into one specific step's `env:`, so naming it by position rather than by
+      // name would only work while that step happened to lead the list — the pre-flight refusal
+      // ahead of it moved that position, which is why the row names the step directly.
       expect
         .soft(run.output, "and the finding must name the item whose body moved")
         .toContain("Derive the verdict from the serialized needs map");
@@ -1873,9 +1873,9 @@ ${run.output}`,
     }
   });
 
-  // Review finding [03]. Membership in the verification set was decided by the step's NAME alone,
-  // so a step keeping its name and losing its body satisfied the lane while the required context
-  // verified nothing. The declaration pins what each step DOES.
+  // Membership in the verification set must not be decided by the step's NAME alone,
+  // or a step that keeps its name and loses its body would satisfy the lane while the required
+  // context verified nothing. The declaration pins what each step DOES.
   it("rejects a declared verification item whose body was hollowed out", () => {
     const dir = plantedTree((d) => {
       const declared = firstContext(d);
@@ -1908,7 +1908,7 @@ ${run.output}`,
     }
   });
 
-  // Review finding [05]. This lane runs on a pull request, over paths the pull request adds.
+  // This lane runs on a pull request, over paths the pull request adds.
   it("reports a workflow path that is not a readable regular file rather than following it", () => {
     const dir = plantedTree((d) => {
       const target = path.join(d, ".github", "workflows", "planted-oversize.yml");
@@ -1931,12 +1931,12 @@ ${run.output}`,
     }
   });
 
-  // Review finding [30]. The lane used to compare `continue-on-error` against the boolean `true`,
-  // and an expression reaches the YAML parser as a STRING — so `continue-on-error: ${{ true }}`
-  // and `${{ matrix.experimental }}` both slipped past it and the step was recorded as performed.
-  // At runtime the expression decides, the step's failure is discarded, and the required context
-  // stays green over a verification that established nothing. Two shapes, because the second is the
-  // one an author would write without meaning anything by it.
+  // Comparing `continue-on-error` against only the boolean `true` would miss that
+  // an expression reaches the YAML parser as a STRING — so `continue-on-error: ${{ true }}`
+  // and `${{ matrix.experimental }}` would both slip past it and the step would be recorded as
+  // performed. At runtime the expression decides, the step's failure is discarded, and the
+  // required context stays green over a verification that established nothing. Two shapes,
+  // because the second is the one an author would write without meaning anything by it.
   for (const expression of ["${{ true }}", "${{ matrix.experimental }}"]) {
     it(`treats continue-on-error: ${expression} as shrinking the set`, () => {
       const dir = plantedTree((d) => {
@@ -2175,14 +2175,13 @@ const PLANTS: {
   },
 ];
 
-// ── [10] ────────────────────────────────────────────────
 describe("a version marker in a shipped file is rejected wherever it sits", () => {
   it("catches one in a trailing comment, which every parsing gate is blind to", () => {
     // `.agents/rules/distributed-surface.md` forbids `vN.M[.P]` across the whole distributed
     // surface, and this lane is the rule the shipped-workflows contract nominates for the comment
     // case: `lint:shipping` skips comment lines before its shipped-runtime rules apply, and the
-    // shape gate loses comments at parse time. Review finding [10] measured the consequence —
-    // `# v9.9.9` appended to a shipped workflow left `pnpm ci:lint` green with no finding at all.
+    // shape gate loses comments at parse time — so appending
+    // `# v9.9.9` to a shipped workflow would leave `pnpm ci:lint` green with no finding at all.
     const dir = plantedTree((d) => {
       const target = path.join(d, path.join(SHIPPED_WORKFLOWS_REL, "qfai-tests.yml"));
       writeFileSync(target, `${readFileSync(target, "utf-8")}# v9.9.9\n`, "utf-8");
@@ -2220,7 +2219,6 @@ describe("a version marker in a shipped file is rejected wherever it sits", () =
   });
 });
 
-// ── [14] ────────────────────────────────────────────────
 describe("a shipped runner label literal must be a public GitHub-hosted runner", () => {
   it("rejects self-hosted, which does not resolve in an adopter's repository", () => {
     const dir = plantedTree((d) => {
@@ -2262,13 +2260,12 @@ describe("a shipped runner label literal must be a public GitHub-hosted runner",
   });
 });
 
-// ── [15] ────────────────────────────────────────────────
 describe("the reviewer artifact is written to its name, never through it", () => {
-  // Review finding [48]. `.qfai/review/**` is gitignored but not unwritable, and a pull request
+  // `.qfai/review/**` is gitignored but not unwritable, and a pull request
   // can force-add a path under it. This producer runs on an untrusted checkout — from `ci:lint`
   // and again from the `build` bridge — so a `writeFileSync` onto a name the pull request made a
-  // symlink truncates whatever it points at: a file outside the repository on the runner, or the
-  // input of a later gate.
+  // symlink would truncate whatever it points at: a file outside the repository on the runner, or
+  // the input of a later gate.
 
   /** A junction on Windows, an ordinary symlink elsewhere; neither needs privilege. */
   function link(target: string, at: string, type: "junction" | "file"): boolean {
@@ -2333,11 +2330,11 @@ describe("the reviewer artifact is written to its name, never through it", () =>
   });
 });
 describe("a root this lane refuses to walk is reported, not silently empty", () => {
-  // Review finding [63]. `yamlFilesUnder` answers the empty list for BOTH "absent" and
-  // "refused", which is right for a walk and wrong for a report — and the empty-tree check that
-  // would have noticed was applied to the workflow roots only. `ci.yml`'s toolchain jobs all run
-  // `./.github/actions/setup`, so a link at `.github/actions` pointing at a fake composite action
-  // inside the repository IS the whole toolchain, and the scan said nothing at all.
+  // `yamlFilesUnder` answers the empty list for BOTH "absent" and
+  // "refused", which is right for a walk and wrong for a report — so an empty-tree check applied
+  // to the workflow roots only would miss that `ci.yml`'s toolchain jobs all run
+  // `./.github/actions/setup`: a link at `.github/actions` pointing at a fake composite action
+  // inside the repository IS the whole toolchain, and the scan would say nothing at all.
 
   function linkDir(target: string, at: string): boolean {
     try {
@@ -2375,10 +2372,10 @@ describe("a root this lane refuses to walk is reported, not silently empty", () 
 
 describe("the required context may not choose the machine its verifications run on", () => {
   it("rejects a container on a job in the declared closure", () => {
-    // Review finding [65]. A `container:` replaces the machine every `run:` in that job executes
-    // on, so an image whose shell returns 0 having done nothing makes every step succeed — with
-    // `run`, `shell`, `env` and every pinned digest untouched, because the digest describes the
-    // step and this describes where it runs.
+    // A `container:` replaces the machine every `run:` in that job executes
+    // on, so an image whose shell returns 0 having done nothing would make every step succeed —
+    // with `run`, `shell`, `env` and every pinned digest untouched, because the digest describes
+    // the step and this describes where it runs.
     const dir = plantedTree((d) => {
       editWorkflow(d, firstContext(d).workflow, (text) => {
         const anchor = "  build:\n    runs-on: ubuntu-latest\n";
@@ -2401,10 +2398,10 @@ describe("the required context may not choose the machine its verifications run 
 
 describe("the declaration is read the way the workflows are", () => {
   it("reports a declaration that is not a readable regular file rather than following it", () => {
-    // Review finding [64]. This was a plain `readFileSync`, which follows a link: the declaration
-    // replaced by a symlink to `/dev/zero` or a FIFO made the read never return, and this required
-    // lane held the runner until the job timed out without reaching the missing-or-malformed
-    // branch. A lane that can be made to hang blocks nothing.
+    // A plain `readFileSync` follows a link: the declaration
+    // replaced by a symlink to `/dev/zero` or a FIFO would make the read never return, and this
+    // required lane would hold the runner until the job timed out without reaching the
+    // missing-or-malformed branch. A lane that can be made to hang blocks nothing.
     //
     // Planted as a link to a DIRECTORY rather than to `/dev/zero`, which does not exist on every
     // platform this suite runs on. The reader refuses both by the same descriptor test, and the
@@ -2433,12 +2430,12 @@ describe("the declaration is read the way the workflows are", () => {
 });
 
 describe("the workflow walk refuses a root it did not open, and is bounded", () => {
-  // Review finding [45]. This lane runs on a pull request, over paths the pull request itself
+  // This lane runs on a pull request, over paths the pull request itself
   // controls, and `readdirSync` follows a link — so replacing `.github/workflows` (or
   // `.github/actions`, or the shipped root) with a symlink to `/proc` or to a huge external tree
-  // started an unbounded traversal. Every guard downstream is per-FILE and descriptor-based, and
-  // none of them is reached until the walk finishes: a required lane that can be made to hang or
-  // throw instead of producing a finding blocks nothing.
+  // would start an unbounded traversal. Every guard downstream is per-FILE and descriptor-based,
+  // and none of them is reached until the walk finishes: a required lane that can be made to hang
+  // or throw instead of producing a finding blocks nothing.
 
   /** A junction on Windows, an ordinary symlink elsewhere; neither needs privilege. */
   function linkDir(target: string, at: string): boolean {
@@ -2519,10 +2516,10 @@ describe("the workflow walk refuses a root it did not open, and is bounded", () 
     }
   });
   it("tells the caller it stopped early, so a short walk is not read as a finished one", () => {
-    // Review finding [74]. The ceiling used to end the recursion and say nothing: five thousand
-    // irrelevant entries followed by an unpinned action, and every rule reported PASS over the part
-    // that was read. A partial scan has to be distinguishable from a whole one, and the out-param is
-    // how the caller learns which of the two it was handed.
+    // A ceiling that ends the recursion and says nothing would hide an unpinned action behind
+    // five thousand irrelevant entries: every rule would report PASS over the part that was read,
+    // with the action itself never reached. A partial scan has to be distinguishable from a whole
+    // one, and the out-param is how the caller learns which of the two it was handed.
     const dir = mkdtempSync(path.join(tmpdir(), "qfai-walk-truncation-"));
     try {
       mkdirSync(path.join(dir, "root"), { recursive: true });
@@ -2595,10 +2592,10 @@ describe("the workflow walk refuses a root it did not open, and is bounded", () 
 
 describe("the lane writes the artifact the Reviewer Gate ingests", () => {
   it("emits gate-shaped JSON carrying every finding, on a dirty tree", () => {
-    // Review finding [15]: the lane wrote prose to stderr, the gate ingests
-    // `{ findings: [...] }` JSON under `.qfai/review/**`, and no production bridge existed between
-    // them anywhere — the E2E that demonstrates the ingestion parsed stderr and built the JSON
-    // itself. So a hygiene violation failed the CI log and never reached a reviewer.
+    // The lane must write `{ findings: [...] }` JSON under `.qfai/review/**`, the shape the gate
+    // ingests, rather than prose to stderr with no production bridge between the two — the E2E
+    // that demonstrates the ingestion would otherwise have to parse stderr and build the JSON
+    // itself, and a hygiene violation would fail the CI log without ever reaching a reviewer.
     const dir = plantedTree((d) => {
       const target = path.join(d, path.join(SHIPPED_WORKFLOWS_REL, "qfai-tests.yml"));
       writeFileSync(target, `${readFileSync(target, "utf-8")}# v9.9.9\n`, "utf-8");
@@ -2737,8 +2734,8 @@ describe("TC-0017-0046 (TDD-0046): a green run names every rule it evaluated", (
     // This test file already knew about the hazard from the other side: `plantedTree` copies
     // BOTH roots, and the comment there says copying only the own tree "would make every
     // shipped-tree row prove nothing ... which is indistinguishable from a passing shipped
-    // tree". The production lane had no such protection, which is implementation-review
-    // finding M2 — a hazard recognised in the fixture and never enforced in the thing shipped.
+    // tree". The production lane carries no such protection: a hazard the fixture recognizes
+    // but the thing shipped never enforces.
     const gutted = plantedTree((d) => {
       const shipped = path.join(d, SHIPPED_WORKFLOWS_REL);
       for (const entry of readdirSync(shipped)) {
@@ -2949,7 +2946,7 @@ PLANTS.push({
   },
 });
 
-// The two shipped rules review findings [10] and [14] added, registered here for the same
+// The two shipped rules registered here, for the same
 // reason the third-party plant above was: `TC-0017-0047` derives the evaluated set from this
 // table, so a rule printed by every green run and demonstrated by nothing is exactly the hole
 // that check exists to find.
@@ -2980,11 +2977,10 @@ PLANTS.push({
   },
 });
 
-// The declaration-scope plant, appended for the same reason and after the same mistake.
-// `TC-0017-0047` read only the workflow and shipped scopes, while its own comment claimed
-// "EVERY printed scope" — so `required-context` was printed by every green run and
-// demonstrated by nothing, which is precisely the hole the shipped plant above was added to
-// close one scope earlier. Implementation-review finding L4.
+// The declaration-scope plant, appended for the same reason: without it,
+// `TC-0017-0047` would read only the workflow and shipped scopes, while its own comment claims
+// "EVERY printed scope" — so `required-context` would be printed by every green run and
+// demonstrated by nothing, the same hole the shipped plant above closes one scope earlier.
 //
 // The plant renames the declared job in the workflow, so the declaration keeps pointing at a
 // job that no longer exists. Same shape as `TC-0017-0058`'s, reached through the table so

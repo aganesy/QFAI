@@ -55,7 +55,7 @@ export type ResolvedSpec = {
    *                           located via a matching `.qfai/contracts/ui/<spec-id>*.yaml`
    *                           contract file (extends the multi-spec
    *                           `resolveAllUiBearingSpecs` fallback to the single-spec
-   *                           primary resolver). 10th-wave Fix I.
+   *                           primary resolver).
    */
   source: "config" | "marker-scan" | "contract-fallback";
 };
@@ -140,9 +140,9 @@ export async function resolvePrimaryPrototypingSpec(
         specId: entry.specNumber,
         specDir: entry.dir,
         specMdPath: path.join(entry.dir, "01_Spec.md"),
-        // 10th-wave Fix I: this branch locates the spec via UI contract
-        // scan, not via spec-side marker scan; relabel to keep the
-        // discriminant honest (architecture-reviewer r3265261917).
+        // This branch locates the spec via UI contract
+        // scan, not via spec-side marker scan; the label keeps the
+        // discriminant honest.
         source: "contract-fallback",
       };
     }
@@ -260,11 +260,11 @@ export async function resolveTitleMarkerSpecs(root: string, specsDir: string): P
 async function hasMatchingUiContract(contractsRoot: string, specId: string): Promise<boolean> {
   const uiDir = path.join(contractsRoot, "ui");
   const direct = path.join(uiDir, `${specId}.yaml`);
-  // codex r3271969283 (P2, 50th-wave): use `stat().isFile()` instead of
+  // Use `stat().isFile()` instead of
   // `access()` so a directory (or symlink to non-file) named like
-  // `<specId>.yaml` does NOT falsely classify the spec as UI-bearing.
-  // Pre-fix `access()` only checked existence; a misauthored project
-  // with `<contractsDir>/ui/0007.yaml/` (directory) would have made
+  // `<specId>.yaml` does NOT falsely classify the spec as UI-bearing:
+  // `access()` alone only checks existence, so a misauthored project
+  // with `<contractsDir>/ui/0007.yaml/` (directory) would make
   // `resolveSurfaceUnion` / `resolvePrimaryPrototypingSpec` report a
   // phantom UI surface and drive `prototyping iterate` / drift gates
   // against it instead of the expected no-op path. The downstream
@@ -365,25 +365,23 @@ async function hasMatchingUiContract(contractsRoot: string, specId: string): Pro
  * semantic instead, and propagates
  * every other errno.
  *
- * 19th-wave Fix (codex r3270055214, MAJOR — architecture-reviewer):
- * moved here from `cli/commands/prototypingIterate.ts` together with
- * {@link resolveSurfaceUnion} so the CLI → CLI sideways import (which
- * `prototypingCertify.ts` had to take to align with iterate's drift
- * gate) is replaced by both CLI commands importing the union resolver
- * from a single core module. The dependency DAG (CLI → core) is
- * restored.
+ * Lives here, alongside
+ * {@link resolveSurfaceUnion}, so both CLI commands import the union
+ * resolver from a single core module rather than `prototypingCertify.ts`
+ * taking a CLI → CLI sideways import to align with iterate's drift
+ * gate. The dependency DAG (CLI → core) stays one-directional.
  */
 async function specDirExists(root: string, specsDir: string, specId: string): Promise<boolean> {
   const dirName = `spec-${specId}`;
-  // codex r3271656121 (P1, chatgpt-codex-connector): use `path.resolve`
+  // Use `path.resolve`
   // instead of `path.join` so an absolute `paths.specsDir` override in
   // `qfai.config.yaml` (e.g. `/tmp/specs`) resolves to the absolute
-  // path directly. Pre-fix `path.join(root, "/tmp/specs", "spec-0001")`
-  // produced `<root>/tmp/specs/spec-0001` (string concatenation, no
-  // absolute-segment reset), so the probe missed the real spec dir
-  // and `resolveSurfaceUnion` failed to include a valid
+  // path directly: `path.join(root, "/tmp/specs", "spec-0001")` alone
+  // produces `<root>/tmp/specs/spec-0001` (string concatenation, no
+  // absolute-segment reset), so the probe would miss the real spec dir
+  // and `resolveSurfaceUnion` would fail to include a valid
   // `prototyping.primarySpecId` pin — `prototyping iterate --cycle 0`
-  // then hit the zero-UI short-circuit (exit 0) for explicit-primary
+  // would then hit the zero-UI short-circuit (exit 0) for explicit-primary
   // workflows relying on absolute path overrides. `path.resolve`
   // correctly resets to the latter absolute segment when one is
   // supplied (relative `specsDir` still composes against `root` the
@@ -421,12 +419,10 @@ async function specDirExists(root: string, specsDir: string, specId: string): Pr
  * `liveUiBearing` so the live scope reported by show-spec is
  * apples-to-apples with what iterate actually enforces.
  *
- * 19th-wave Fix (codex r3270055214, MAJOR — architecture-reviewer):
- * moved here from `cli/commands/prototypingIterate.ts` so both CLI
- * commands import this resolver from the core layer instead of
+ * Lives in the core layer so both CLI
+ * commands import this resolver from there instead of
  * `prototypingCertify.ts` taking a sideways import on
- * `prototypingIterate.ts`. The original location was a leftover from
- * the 8th-wave extraction; this wave finishes the layer cleanup.
+ * `prototypingIterate.ts`.
  *
  * @internal Exported for direct unit-testing of the union composition
  * rule and so consumers across the CLI layer can re-resolve the live

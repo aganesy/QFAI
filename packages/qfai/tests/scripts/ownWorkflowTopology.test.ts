@@ -521,7 +521,7 @@ describe("TC-0017-0029 (TDD-0029): the shared definition keeps its four-step ord
     // first shim was activated against, so a re-shim that ran BEFORE the Node
     // setup would be a no-op and the install would use the wrong pnpm.
     //
-    // The fifth step is review finding [127]. The install now runs with
+    // The fifth step installs with
     // `--ignore-scripts`, because a dependency's manifest is not in this tree —
     // it arrives inside a tarball, and its `postinstall` ran before every guard
     // in the job. What may build is named in `.github/dependency-builds.txt`,
@@ -545,10 +545,7 @@ describe("TC-0017-0029 (TDD-0029): the shared definition keeps its four-step ord
       .toContain("corepack prepare");
     expect.soft(runOf(3), "step 4 installs with a frozen lockfile").toContain(FROZEN_INSTALL);
     expect
-      .soft(
-        runOf(3),
-        "and runs none of the install scripts a dependency ships — review finding [127]",
-      )
+      .soft(runOf(3), "and runs none of the install scripts a dependency ships")
       .toContain("--ignore-scripts");
     expect
       .soft(runOf(3), "and rebuilds only what the pinned allow-list names, in the same step")
@@ -875,7 +872,7 @@ describe("TC-0017-0073 (TDD-0073): the folded run joins the enumerated verificat
 
     // And this list is pinned to the DECLARATION, which is the copy production reads.
     //
-    // Implementation-review finding M3: the same six literals exist in three places — this
+    // The same six literals exist in three places — this
     // `REQUIRED`, `TC-0017-0036`'s `VERIFICATION_SET`, and
     // `.github/required-status-contexts.json`. `TC-0017-0036` CLAIM 4 pins its copy to the
     // declaration. This one was pinned to nothing, so it could drift from both while every
@@ -906,9 +903,8 @@ describe("TC-0017-0073 (TDD-0073): the folded run joins the enumerated verificat
       // The declaration names NINE items and this row restates six, and the difference is not
       // drift: the other three belong to jobs other than `build` — the verdict step to the
       // declared job itself, and two to `lint`. The pre-flight refusal of the local composite
-      // actions has to run before that job invokes one (review finding [82]); `pnpm ci:lint`
-      // is the lint job's own work, pinned by body for the reason review finding [89] gives
-      // about a gated lane — being in the aggregate is not the same claim as still doing the
+      // actions has to run before that job invokes one; `pnpm ci:lint` is the lint job's own work,
+      // pinned by body because being in the aggregate is not the same claim as still doing the
       // work. Composed here rather than added to `REQUIRED`, which is checked against
       // `buildJobSteps()` above and would then be looking for steps that job does not have.
       .toEqual([
@@ -1500,8 +1496,8 @@ const OWN_WORKFLOW_FILES = [
  * side.
  *
  * `node-floor` was added deliberately, which is what this pin is for: it made the addition a
- * failing test naming the new member rather than a diff to interpret. Review finding [13] —
- * every toolchain job resolves `engines.node` (`>=20.19.0`, no ceiling), so `setup-node`
+ * failing test naming the new member rather than a diff to interpret. Every toolchain job
+ * resolves `engines.node` (`>=20.19.0`, no ceiling), so `setup-node`
  * gives all of them the newest satisfying release and nothing runs on the floor the package
  * promises; an API present in Node 24 and absent in 20.19 passes every gate and breaks
  * exactly the supported users.
@@ -1593,10 +1589,10 @@ describe("TC-0017-0041 (TDD-0041): layer separation adds no workflow file and no
  * a `run:` body.
  *
  * BOTH, because the gate's deferred-registration exemption names two codes and is required to
- * ingest both. Review finding [38]: these rows were written for the hygiene lane alone, so when
- * the shape gate grew a producer of its own the rows kept passing while that producer wrote its
- * artifact only into the `lint` job's checkout — and the self-validates below run here, on a
- * fresh one. Half the exemption reached no reviewer, and nothing said so.
+ * ingest both. Rows written for the hygiene lane alone would keep passing if the shape gate grew
+ * a producer of its own that wrote its artifact only into the `lint` job's checkout — while the
+ * self-validates below run here, on a fresh one. Half the exemption would then reach no
+ * reviewer, with nothing saying so.
  */
 const REVIEWER_GATE_PRODUCERS: readonly { what: string; needles: readonly string[] }[] = [
   {
@@ -1624,10 +1620,10 @@ describe("both producers' findings reach the job that runs the Reviewer Gate", (
 
   for (const producer of REVIEWER_GATE_PRODUCERS) {
     it(`writes ${producer.what}'s artifact in the same job as the dogfooding validate, and before it`, () => {
-      // Review finding [26], then [38]. A lane writes `{ findings: [...] }` under
+      // A lane writes `{ findings: [...] }` under
       // `.qfai/review/**` and the gate ingests it — but the lanes run in `lint`, on that job's
       // checkout, and the dogfooding validate runs in `build` on a fresh one. With nothing
-      // transferring the file, a violation reddened `lint` and reached no reviewer, which is the
+      // transferring the file, a violation would redden `lint` and reach no reviewer, breaking the
       // whole promise the shipped-workflows contract makes for those codes.
       //
       // Asserted as ONE JOB and an ORDER, because either alone is the defect: an artifact written
@@ -1696,7 +1692,7 @@ describe("both producers' findings reach the job that runs the Reviewer Gate", (
 });
 describe("one lane runs on the floor `engines.node` declares", () => {
   it("asks the shared definition for the floor, and checks it got it", () => {
-    // Review finding [13]. Every other toolchain job resolves the range, so `setup-node` gives
+    // Every other toolchain job resolves the range, so `setup-node` gives
     // them all the newest satisfying release and nothing ever runs on the floor the package
     // promises — an API present in Node 24 and absent in the floor passes every gate, release
     // gate included, and breaks exactly the supported users.
@@ -1877,8 +1873,8 @@ const VERIFICATION_SET = [
   // not.
   "Classify the change against the enumerated directory lists",
   // First, and in `lint` rather than in the declared job: the pre-flight refusal of the local
-  // composite actions has to run before any job invokes one. Review finding [82] — a step at
-  // the top of `./.github/actions/setup` writing `BASH_ENV` makes every later `shell: bash`
+  // composite actions has to run before any job invokes one: a step at the top of
+  // `./.github/actions/setup` writing `BASH_ENV` would make every later `shell: bash`
   // step exit 0 without running its body, the hygiene lane included, so the lane cannot be the
   // thing that catches it.
   "Verify the toolchain action before running it",
@@ -1889,8 +1885,8 @@ const VERIFICATION_SET = [
   "QFAI self-validate this repo (dogfooding — SDD gates)",
   "QFAI self-validate this repo (dogfooding — full profile)",
   "Run qfai validate gate (fail on error)",
-  // Last, and in `lint`: `pnpm ci:lint` is that job's own work. Review finding [89] measured
-  // what a declared dependency pins on its own — the name and the condition, and nothing about
+  // Last, and in `lint`: `pnpm ci:lint` is that job's own work. A declared
+  // dependency pins only the name and the condition on its own, and nothing about
   // whether the step still does anything.
   "Run lint gate",
 ] as const;
@@ -2426,19 +2422,19 @@ describe("the release job installs no floating version of anything", () => {
 });
 
 describe("the rebuild allow-list is reachable on a tag that predates it", () => {
-  // Review finding [131]. `release.yml` re-publishes an existing tag by checking out the TAG's
+  // `release.yml` re-publishes an existing tag by checking out the TAG's
   // tree and then fetching only `.github/actions` from the current revision — a tag cut before
   // the composite action existed has no action in its tree, which is why that second checkout
   // is there at all.
   //
-  // With the allow-list at the repository root it was NOT part of that fetch. An older tag saw
-  // it missing, the refusal fired, and both `gate` and `gate-floor` stopped: a re-publish route
-  // the workflow documents, broken by a guard added to protect it.
+  // If the allow-list lived at the repository root, it would NOT be part of that fetch: an older
+  // tag would see it missing, the refusal would fire, and both `gate` and `gate-floor` would
+  // stop — breaking a re-publish route the workflow documents, from a guard meant to protect it.
   //
-  // It now lives beside the action, so it travels with every fetch of it — and
+  // It lives beside the action instead, so it travels with every fetch of it — and
   // `.github/pinned-bytes.txt` covers everything under `.github/actions`, so the pre-flight
   // verifies its bytes and refuses a file that tree holds and the list does not name. It is
-  // pinned MORE tightly there than it was at the root, not less.
+  // pinned MORE tightly there than it would be at the root, not less.
 
   it("keeps the list inside the action directory the gate jobs fetch", () => {
     const listed = readFileSync(path.join(REPO_ROOT, ".github", "pinned-bytes.txt"), "utf-8");
@@ -2499,7 +2495,7 @@ describe("the rebuild allow-list is reachable on a tag that predates it", () => 
 });
 
 describe("a permitted rebuild is verified against where the package comes from", () => {
-  // Review finding [135]. Installation runs with `--ignore-scripts` and the step beside it then
+  // Installation runs with `--ignore-scripts` and the step beside it then
   // rebuilds exactly the packages the allow-list names — which runs their `postinstall`. The
   // list names `esbuild`, so it permits *the package called esbuild*, whatever that turns out
   // to be. A pull request that resolves that name to a local `.tgz`, a directory or a git
@@ -3173,7 +3169,7 @@ describe("release automation performs decisions rather than making them", () => 
     }
   });
 
-  describe("the tag gate reads the field the REST response actually carries (#1155)", () => {
+  describe("the tag gate reads the field the REST response actually carries", () => {
     /**
      * The shipped association check, cut out of `tag-release.yml` and made
      * runnable.

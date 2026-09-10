@@ -206,12 +206,12 @@ describe("collectTestSources", () => {
   });
 });
 
-// ── [01] ─────────────────────────────────────────
 describe("the corpus is the extension the runner runs, not every extension", () => {
   it("ignores a .test.js or .test.mjs sitting beside the real suites", async () => {
-    // Review finding [01]. The E2E project includes `*.test.ts`, so these files are executed by
-    // nobody — and while the pattern accepted any alphabetic extension, deleting the real
-    // TypeScript test and moving its annotation into one of them kept the ledger green.
+    // The E2E project includes `*.test.ts`, so these files are executed by
+    // nobody — and a pattern that accepts any alphabetic extension would let
+    // deleting the real TypeScript test and moving its annotation into one of them keep the
+    // ledger green.
     const dir = await temp();
     await writeFile(path.join(dir, "real.test.ts"), `// ${tag("0017", "0017-0001")}\n`, "utf8");
     for (const name of [
@@ -231,14 +231,14 @@ describe("the corpus is the extension the runner runs, not every extension", () 
   });
 });
 
-// ── [09] ─────────────────────────────────────────
 describe("the corpus walk stays inside the root it was given", () => {
-  // Review finding [61]. Following a linked directory is deliberate and was itself a repair — this
-  // repository tracks 83 symlinks, and a walk that skipped one read a claim backed only inside it
-  // as unbacked. What was missing is where the link may point: `seen` is keyed by `realpath`, which
-  // stops a CYCLE and nothing else, so a directory symlink to `/proc` or to any large tree outside
-  // the corpus was enumerated without bound and the required `ci:lint` exhausted memory or timed
-  // out before reporting a single ledger finding. A guard that can be made to hang refuses nothing.
+  // Following a linked directory is deliberate: this
+  // repository tracks 83 symlinks, and a walk that skipped one would read a claim backed only
+  // inside it as unbacked. Where the link may point still needs a bound: `seen` is keyed by
+  // `realpath`, which stops a CYCLE and nothing else, so a directory symlink to `/proc` or to any
+  // large tree outside the corpus would be enumerated without bound and the required `ci:lint`
+  // would exhaust memory or time out before reporting a single ledger finding. A guard that can
+  // be made to hang refuses nothing.
 
   it("does not follow a directory link that resolves outside the root", async () => {
     const dir = await temp();
@@ -345,8 +345,9 @@ describe("runnerCorpusRoots", () => {
     // hand-kept pair the production change removed, and it would agree with a wrong answer.
     //
     // Derived by IMPORTING the configuration, though, not by re-running the pattern under test.
-    // Review finding [43]: this row used the same regex over the same raw text, so a defect in
-    // that pattern produced the same wrong answer on both sides and the row agreed with it. The
+    // A row that re-runs the same regex over the same raw text would share any defect in that
+    // pattern: it would produce the same wrong answer on both sides, so the row would agree
+    // with it. The
     // import goes through the runner's own loader, which is the only reading of this file that is
     // authoritative — it is what Vitest itself does with it.
     const workspace: unknown = (
@@ -396,10 +397,10 @@ describe("runnerCorpusRoots", () => {
   it("refuses an include whose extension the corpus would skip", async () => {
     // The two halves of one fact: what Vitest opens, and what counts as backing. If the runner
     // is switched to `*.spec.ts` and this guard keeps collecting `*.test.ts`, every real test
-    // reads as no test at all — review finding [01] pointing the other way. The first version of
-    // this check was unreachable, because the shape pattern beside it spelled `.test.ts` out and
-    // rejected the glob before anything compared the two; a plant removing the comparison changed
-    // no behaviour, which is how that was found.
+    // reads as no test at all — the reverse direction from the extension check above. This row
+    // only holds if the shape pattern beside it does not reject the glob before anything compares
+    // the two; a plant removing the comparison must still change behaviour, or this row verifies
+    // nothing.
     const dir = await temp();
     await mkdir(path.join(dir, "packages", "qfai"), { recursive: true });
     await writeFile(
@@ -426,15 +427,15 @@ describe("runnerCorpusRoots", () => {
   });
 
   it("reads only the exported project, whatever a decoy elsewhere in the file looks like", async () => {
-    // Review findings [43] and [44], which are one finding measured twice. Every text-level
-    // reading of this configuration was shadowable, and each repair moved the hole:
+    // Every text-level
+    // reading of this configuration is shadowable, in more than one way:
     //
     // - a bare regex over the raw file: a COMMENT declaring an `e2e` project above the real one
-    //   matched first;
-    // - the same regex with comments blanked: a declaration inside an unused STRING still matched
-    //   — and because the pattern spelled `"e2e"` with double quotes, the decoy became the ONLY
-    //   candidate the moment the real project wrote its name as a template literal;
-    // - and throughout, an object literal nothing exports counted the same as the exported one.
+    //   would match first;
+    // - the same regex with comments blanked: a declaration inside an unused STRING would still
+    //   match — and because the pattern spells `"e2e"` with double quotes, the decoy would become
+    //   the ONLY candidate the moment the real project writes its name as a template literal;
+    // - and throughout, an object literal nothing exports would count the same as the exported one.
     //
     // So all five decoy shapes are planted against a real project that is exported, and some of
     // them write that project's name as a template literal — the spelling the last escape needed.
@@ -496,9 +497,9 @@ describe("runnerCorpusRoots", () => {
   });
 
   it("refuses a default export wrapped in a call it cannot identify", async () => {
-    // Review finding [70]: any call expression had its first argument taken as the workspace,
-    // so `export default choose(decoy, real)` — a helper returning its SECOND argument — had
-    // this guard read the decoy while Vitest ran the real one. The whole point of parsing was
+    // Taking any call expression's first argument as the workspace would have this guard read
+    // the decoy in `export default choose(decoy, real)` — a helper returning its SECOND
+    // argument — while Vitest runs the real one. The whole point of parsing is
     // that the corpus comes from what the runner uses, and taking argument zero of an
     // unidentified function is a guess about that again.
     //
@@ -530,7 +531,7 @@ describe("runnerCorpusRoots", () => {
   });
 
   it("still unwraps defineWorkspace, so the check is an identification and not a ban", async () => {
-    // The fixture IMPORTS it, as the real configuration does. Review finding [96] made that
+    // The fixture IMPORTS it, as the real configuration does. This is
     // load-bearing: the identifier alone is not an identification, so the import is what says
     // this call is Vitest's own.
     const dir = await temp();
@@ -551,10 +552,11 @@ describe("runnerCorpusRoots", () => {
   });
 
   it("refuses a defineWorkspace a local declaration shadows", async () => {
-    // Review finding [96], as filed: `const defineWorkspace = (decoy, real) => real` has Vitest
-    // run the SECOND argument while a guard reading argument zero takes the first — a fake tree
-    // whose annotation-only files certify every claim. The callee check refused an unidentified
-    // callee and not a shadowed identified one, which is the same substitution one level down.
+    // `const defineWorkspace = (decoy, real) => real` has Vitest
+    // run the SECOND argument while a guard reading argument zero would take the first — a fake
+    // tree whose annotation-only files certify every claim. The callee check must refuse a
+    // shadowed identified callee too, not only an unidentified one, which is the same
+    // substitution one level down.
     const dir = await temp();
     await mkdir(path.join(dir, "packages", "qfai"), { recursive: true });
     await writeFile(
@@ -593,10 +595,10 @@ describe("runnerCorpusRoots", () => {
   });
 
   it("refuses a trailing spread that decides the include list", async () => {
-    // Review finding [100]. `{ name: "e2e", include: [decoy], ...actual }` is evaluated by
-    // Vitest with `actual.include` winning, and a scan reading property assignments takes the
-    // decoy — an annotation-only tree certifying every claim. Third time the runner's own
-    // configuration has been the substitution channel, after the comment and the shadowed callee.
+    // `{ name: "e2e", include: [decoy], ...actual }` is evaluated by
+    // Vitest with `actual.include` winning, so a scan that reads property assignments would take
+    // the decoy — an annotation-only tree certifying every claim. This is a third channel for
+    // the same substitution, after the comment and the shadowed callee.
     const dir = await temp();
     await mkdir(path.join(dir, "packages", "qfai"), { recursive: true });
     await writeFile(
@@ -668,10 +670,10 @@ describe("runnerCorpusRoots", () => {
   });
 
   it("refuses a spread source the module mutates after declaring it", async () => {
-    // Review finding [103]. The keys a literal is WRITTEN with are not the keys it HAS:
+    // The keys a literal is WRITTEN with are not the keys it HAS:
     // `Object.assign(projectKnobs, { exclude: [...] })` three lines down adds one at runtime.
-    // Vitest would skip a whole tree of E2E tests while this guard, reading the initializer
-    // alone, called the spread harmless and counted annotations in files the runner never opens
+    // Vitest would skip a whole tree of E2E tests while a guard that reads only the initializer
+    // would call the spread harmless and count annotations in files the runner never opens
     // — the E2E lane and the ledger both green over user stories nobody verified.
     const dir = await temp();
     await mkdir(path.join(dir, "packages", "qfai"), { recursive: true });
@@ -732,10 +734,10 @@ describe("runnerCorpusRoots", () => {
   });
 
   it("refuses a computed key it would have to evaluate", async () => {
-    // Review finding [111]. `["in" + "clude"]: [...]` evaluates to `include` and overrides an
-    // earlier literal one; the key extraction skipped it, because a computed name is neither an
-    // identifier nor a string literal. The decoy was read while Vitest ran the real corpus — the
-    // same override the trailing spread achieved, spelled differently.
+    // `["in" + "clude"]: [...]` evaluates to `include` and overrides an
+    // earlier literal one; a key extraction that skips it, because a computed name is neither an
+    // identifier nor a string literal, would read the decoy while Vitest runs the real corpus — the
+    // same override the trailing spread achieves, spelled differently.
     const dir = await temp();
     await mkdir(path.join(dir, "packages", "qfai"), { recursive: true });
     await writeFile(
@@ -770,7 +772,7 @@ describe("runnerCorpusRoots", () => {
   });
 
   it("subtracts an excluded file, which the runner does not open", async () => {
-    // Review finding [85]. Reading `include` alone let an `exclude` entry keep a file in the
+    // Reading `include` alone would let an `exclude` entry keep a file in the
     // backing corpus that Vitest never runs — an annotation-only file discharging a required
     // ledger claim, which is exactly the substitution this guard exists to refuse, arriving
     // through the runner's own configuration rather than through a markdown suffix.
@@ -954,10 +956,9 @@ describe("the CLI entry point", () => {
     const copied = path.join(dir, "scripts", basename);
     const { copyFile, symlink } = await import("node:fs/promises");
     await copyFile(SCRIPT, copied);
-    // And the shared bounded reader it imports. Review finding [76] moved the posture out of both
-    // root guards into one module, and these rows measured it immediately: a copy of the script
-    // alone died on ERR_MODULE_NOT_FOUND, and six pre-existing rows failed with a resolver trace
-    // instead of the exit code they assert.
+    // And the shared bounded reader it imports: both root guards import this posture from one
+    // module, so a copy of the script alone dies on ERR_MODULE_NOT_FOUND, and every row here would
+    // fail with a resolver trace instead of the exit code it asserts.
     await copyFile(
       path.resolve(__dirname, "../../../../../scripts/lib/bounded-read.mjs"),
       path.join(dir, "scripts", "lib", "bounded-read.mjs"),
@@ -976,14 +977,13 @@ describe("the CLI entry point", () => {
   }
 
   it("fails a scoped run when the ledger is missing, and passes an unscoped one", async () => {
-    // Review finding [27]. `ci:lint` runs this with `--spec 0017`, and the missing-ledger branch
-    // returned 0 without consulting the scope — so deleting or renaming the ledger left the guard
-    // green while it examined nothing, for a spec it was configured to hold at zero. The
-    // scoped-selected-nothing branch that would have caught it sat further down and was never
-    // reached.
+    // `ci:lint` runs this with `--spec 0017`, so a missing-ledger branch
+    // that returns 0 without consulting the scope would leave the guard
+    // green while it examines nothing, for a spec it is configured to hold at zero. The
+    // scoped-selected-nothing branch below is what has to catch that instead.
     //
-    // Unscoped, an absent ledger really is nothing to check, and that half is asserted too: the
-    // repair is a scope distinction, not a new refusal.
+    // Unscoped, an absent ledger really is nothing to check, and that half is asserted too: this
+    // is a scope distinction, not a blanket refusal.
     const dir = await temp();
     await mkdir(path.join(dir, "packages", "qfai", "tests", "e2e"), { recursive: true });
     await writeFile(
@@ -1010,12 +1010,12 @@ describe("the CLI entry point", () => {
   });
 
   it("does not count a root-tree test the runner never executes", async () => {
-    // Review finding [09], end to end. `runnerCorpusRoots` being right is not the same as `main()`
-    // USING it: a plant reverting the wiring back to the two hand-listed trees left every direct
-    // row on the helper green, which is how this gap was found.
+    // End to end. `runnerCorpusRoots` being right is not the same as `main()`
+    // USING it: a plant reverting the wiring back to the two hand-listed trees would leave every
+    // direct row on the helper green while only this end-to-end row catches it.
     //
     // The script resolves its root from its own location, so it is COPIED into a synthetic tree
-    // rather than pointed at one. The tree is the exact shape the finding describes: the ledger
+    // rather than pointed at one. The tree is the exact shape that gap describes: the ledger
     // claims a story, the only annotation for it sits in the repository-root `tests/e2e` — which
     // `pnpm -C packages/qfai test:e2e` never opens — and the package tree has nothing.
     const dir = await temp();
@@ -1163,9 +1163,9 @@ describe("the CLI entry point", () => {
   });
 
   it("does not count a claim backed only by a file the runner excludes", async () => {
-    // The WIRING, which the unit rows above cannot reach. Review finding [85] is only closed if
-    // `main` subtracts what `runnerCorpusRoots` reports — and a plant that dropped the
-    // subtraction there left every one of those rows green, because they call the reader
+    // The WIRING, which the unit rows above cannot reach: the exclusion above only holds if
+    // `main` subtracts what `runnerCorpusRoots` reports — a plant that drops the
+    // subtraction there would leave every one of those rows green, because they call the reader
     // directly. This one runs the guard.
     //
     // Both directions in one fixture: with the exclusion the claim is unbacked and the guard
@@ -1222,9 +1222,9 @@ describe("the CLI entry point", () => {
     expect(output, "and the finding must name the claim left unbacked").toContain(claim);
   });
   it("does not count a claim backed only by a test the runner will not execute", async () => {
-    // The WIRING for review finding [115], which the rows calling `redactDisabledTests` directly
-    // cannot reach: a plant that removed the redaction from `main` left every one of them green.
-    // This one runs the guard.
+    // The WIRING for the disabled-test exclusion below, which the rows calling
+    // `redactDisabledTests` directly cannot reach: a plant that removes the redaction from `main`
+    // would leave every one of them green. This one runs the guard.
     //
     // Both directions from one fixture, differing only in `describe` versus `describe.skip`.
     const claim = tag("0017", "0017-0001");
@@ -1300,10 +1300,10 @@ describe("the CLI entry point", () => {
     expect(child.stdout ?? "").toMatch(/no ledger at tests\/e2e — nothing to check/);
   });
   it("refuses a ledger that exists but is not a readable regular file", async () => {
-    // Review finding [76]. The markdown was read with a plain `readFile`, which follows a symlink:
+    // A plain `readFile` follows a symlink: if
     // `tests/e2e/qfai-traceability.md` pointed at `/dev/zero`, or at a FIFO nothing ever writes to,
-    // and this required `ci:lint` member hung until the job timed out. A lane that can be made to
-    // hang blocks nothing — and this one exists precisely because the gate beside it fails open.
+    // this required `ci:lint` member would hang until the job timed out. A lane that can be made
+    // to hang blocks nothing — and this one exists precisely because the gate beside it fails open.
     //
     // Planted as a junction to a DIRECTORY rather than to `/dev/zero`, which does not exist on every
     // platform this suite runs on; the reader refuses both by the same descriptor test. A hang would
@@ -1437,15 +1437,16 @@ describe("the guard against this repository's own ledger", () => {
 });
 
 describe("a test the runner will not execute backs nothing", () => {
-  // Review finding [115]. The backing corpus was the TEXT of every file the runner's include
+  // The backing corpus is the TEXT of every file the runner's include
   // picks up, so an annotation inside `describe.skip`, `it.skip`, `it.todo` or a body that always
-  // calls `ctx.skip()` counted exactly as much as one inside a test that ran. Vitest reports those
-  // as skipped rather than passed and the project still exits 0 on its other tests, so the
-  // required ledger guard certified a user story no executed acceptance test covered.
+  // calls `ctx.skip()` would count exactly as much as one inside a test that ran, unless it is
+  // stripped first. Vitest reports those as skipped rather than passed and the project still
+  // exits 0 on its other tests, so a ledger guard that missed this would certify a user story no
+  // executed acceptance test covered.
   //
   // `redactDisabledTests` blanks those constructs before the corpus is compared. Every row below
-  // asks it for a count, because a row asserting on the SOURCE of the guard would have passed
-  // against the version that had this defect.
+  // asks it for a count, because a row asserting on the SOURCE of the guard would pass whether or
+  // not the redaction actually ran.
 
   const annotations = (text: string): number =>
     (text.match(/QFAI:SPEC-\d{4}:US-\d{4}-\d{4}/g) ?? []).length;

@@ -1084,7 +1084,7 @@ describe("QFAI-TDDLIST-008", () => {
     // The wiring row. `evidenceRevisionStale.test.ts` covers the decision and
     // the git question as seams; nothing there proves `validateSpecTddList`
     // calls them, and a dead call site would leave every one of those rows
-    // green (#1146). It found exactly that on its first run.
+    // green.
     //
     // The revision is seeded, not rewritten afterwards: `materializeEvidence`
     // computes an audit hash over the evidence text, so a later edit breaks the
@@ -1961,7 +1961,7 @@ ${REVERIFY_FIELDS.replace("{{PROOF_RESULT}}", options.proofResult ?? "1 failed")
   // portable did not make it blind.
   // POSIX only: Windows has no executable bit, and `fs.chmod` there only
   // toggles the read-only attribute — so the hash input never changes and the
-  // row could only ever report `expected false to be true` (#1133).
+  // row could only ever report `expected false to be true`.
   it.skipIf(process.platform === "win32")(
     "stales the RED test hash when the executable bit changes",
     async () => {

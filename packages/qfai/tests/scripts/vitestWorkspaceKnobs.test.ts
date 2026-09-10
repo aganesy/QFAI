@@ -360,7 +360,7 @@ describe("the knob set stays portable, because a fixture spreads it into a forei
       missing,
       "the annotation suppressor patches `process.stdout` per FILE, and `pool: forks` with " +
         "`isolate: true` gives every file its own process — a project without it leaks real " +
-        "GitHub annotations from whatever fixture it validates (#1160)",
+        "GitHub annotations from whatever fixture it validates",
     ).toEqual([]);
   });
 });

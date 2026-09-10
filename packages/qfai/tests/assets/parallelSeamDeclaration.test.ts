@@ -340,11 +340,11 @@ describe("declared seam", () => {
 });
 
 /**
- * The declaring half of #391 shipped without its producing half: every column
- * the policy adjudicates on is authored by `/qfai-sdd` Phase 2b, and that
- * skill had never heard of `Owning module`. A seeded ledger therefore hit
+ * The declaring half must not ship without its producing half: every column
+ * the policy adjudicates on is authored by `/qfai-sdd` Phase 2b, and if that
+ * skill has never heard of `Owning module`, a seeded ledger would hit
  * "the allow conditions cannot be evaluated at all" in every project the
- * tooling creates, silently — the column is optional, so nothing warns.
+ * tooling creates, silently — the column is optional, so nothing would warn.
  */
 describe("declared seam has a producer", () => {
   for (const tree of QFAI_TREES) {

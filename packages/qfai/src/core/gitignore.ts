@@ -812,13 +812,13 @@ export function negationsOutrankLaterIgnores(
 
       // Direction 2: a path the later ignore covers, matched by this negation.
       //
-      // Review finding [E1]. One direction decides overlap from ONE instance of the negation,
-      // and two globs can overlap without that instance being in the intersection. Measured:
-      // the negation `!.qfai/evidence/coverage-depth-*.md` instantiates as
-      // `coverage-depth-sample.md`, and a project line `.qfai/evidence/coverage-depth-spec-*.md`
-      // does not match it — while a real matrix, whose name carries a spec number, is matched
-      // by both. The conflict went unseen, the block was left where it was, and the Coverage
-      // Depth Matrix — a record this repository requires in version control — stayed ignored.
+      // Direction 1 alone decides overlap from ONE instance of the negation, and two globs can
+      // overlap without that instance being in the intersection: the negation
+      // `!.qfai/evidence/coverage-depth-*.md` instantiates as `coverage-depth-sample.md`, and a
+      // project line `.qfai/evidence/coverage-depth-spec-*.md` does not match it — while a real
+      // matrix, whose name carries a spec number, is matched by both. Missing that overlap would
+      // leave the Coverage Depth Matrix — a record this repository requires in version control —
+      // ignored, with nothing left to flag it.
       //
       // Instantiating the LATER pattern and asking whether the negation covers it closes that
       // case: `coverage-depth-spec-sample.md` is matched by `coverage-depth-*.md`. Neither

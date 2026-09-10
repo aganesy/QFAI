@@ -206,8 +206,8 @@ describe("parseDesignMd (TC-1.1.x)", () => {
     const result = parseDesignMd(
       // The BOM is the SUBJECT here, so it is written as an escape rather
       // than typed: a literal one is invisible in a diff, and the guard that
-      // now scans the whole tree for exactly this character would report the
-      // fixture as a finding (#1202).
+      // scans the whole tree for exactly this character would report the
+      // fixture as a finding.
       "\uFEFF" + VALID_SAMPLE,
     );
     expect("error" in result).toBe(false);
@@ -337,7 +337,7 @@ describe("parseDesignMd (TC-1.1.x)", () => {
     expect(result.error.path).toBe("accessibility.focus_ring");
   });
 
-  it("visual.typography.scale as a scalar string is rejected at parse-time (codex AG08u)", () => {
+  it("visual.typography.scale as a scalar string is rejected at parse-time", () => {
     // Pre-fix `if (isRecord(scale))` silently skipped a non-mapping
     // value, so `scale: "1rem"` hashed into DESIGN.md.lock while
     // designTokens.typography.scale stayed missing for downstream
@@ -351,7 +351,7 @@ describe("parseDesignMd (TC-1.1.x)", () => {
     expect(result.error.path).toBe("visual.typography.scale");
   });
 
-  it("visual.typography.weight as an array is rejected at parse-time (codex AG08u)", () => {
+  it("visual.typography.weight as an array is rejected at parse-time", () => {
     const familyMonoLine = '    family_mono:    "JetBrains Mono, ui-monospace, monospace"';
     const text = VALID_FRONT_MATTER.replace(
       familyMonoLine,
@@ -364,7 +364,7 @@ describe("parseDesignMd (TC-1.1.x)", () => {
     expect(result.error.path).toBe("visual.typography.weight");
   });
 
-  it("audience as a scalar is rejected at parse-time (codex AHcvl)", () => {
+  it("audience as a scalar is rejected at parse-time", () => {
     // Pre-fix `if (isRecord(raw.audience))` silently skipped a
     // present-but-non-record value. Same SSOT-divergence pattern as
     // accessibility / spacing.
@@ -379,7 +379,7 @@ describe("parseDesignMd (TC-1.1.x)", () => {
     expect(result.error.path).toBe("audience");
   });
 
-  it("visual.shadow.sm as a numeric literal is rejected at parse-time (codex AHcvm)", () => {
+  it("visual.shadow.sm as a numeric literal is rejected at parse-time", () => {
     // Pre-fix readStringRecord coerced `0` → `"0"`. Now reject so the
     // parsed token can never disagree with the raw DESIGN.md bytes
     // frozen in the lock.
@@ -391,7 +391,7 @@ describe("parseDesignMd (TC-1.1.x)", () => {
     expect(result.error.path).toBe("visual.shadow.sm");
   });
 
-  it("visual.radius.sm as a numeric literal is rejected at parse-time (codex AHcvm)", () => {
+  it("visual.radius.sm as a numeric literal is rejected at parse-time", () => {
     const text = VALID_FRONT_MATTER.replace('    sm:   "0.25rem"', "    sm: 0");
     const result = parseDesignMd(text);
     expect("error" in result).toBe(true);
@@ -400,7 +400,7 @@ describe("parseDesignMd (TC-1.1.x)", () => {
     expect(result.error.path).toBe("visual.radius.sm");
   });
 
-  it("accessibility as a scalar is rejected at parse-time (codex AHHiE)", () => {
+  it("accessibility as a scalar is rejected at parse-time", () => {
     // Pre-fix `if (isRecord(raw.accessibility))` silently skipped a
     // present-but-non-record value, so `accessibility: false` hashed
     // into DESIGN.md.lock while downstream consumers got
@@ -417,7 +417,7 @@ describe("parseDesignMd (TC-1.1.x)", () => {
     expect(result.error.path).toBe("accessibility");
   });
 
-  it("visual.spacing as a scalar is rejected at parse-time (codex AHHiH)", () => {
+  it("visual.spacing as a scalar is rejected at parse-time", () => {
     // Pre-fix `if (isRecord(raw.spacing))` silently skipped a
     // present-but-non-record value, so `spacing: "0.25rem"` hashed
     // into DESIGN.md.lock while downstream consumers got no spacing
@@ -435,7 +435,7 @@ describe("parseDesignMd (TC-1.1.x)", () => {
     expect(result.error.path).toBe("visual.spacing");
   });
 
-  it("accessibility.contrast_ratio_min as a string literal is rejected at parse-time (codex 9KB8)", () => {
+  it("accessibility.contrast_ratio_min as a string literal is rejected at parse-time", () => {
     // Pre-fix the type-mismatch branch silently dropped the authored
     // value, so `contrast_ratio_min: "4.5"` hashed into the lock while
     // iterate / certify saw a clean DesignMd with the constraint
@@ -452,7 +452,7 @@ describe("parseDesignMd (TC-1.1.x)", () => {
     expect(result.error.path).toBe("accessibility.contrast_ratio_min");
   });
 
-  it("accessibility.motion as a boolean literal is rejected at parse-time (codex 9KB8)", () => {
+  it("accessibility.motion as a boolean literal is rejected at parse-time", () => {
     const lastShadowLine = '    lg: "0 12px 24px rgba(15,23,42,0.10)"';
     const text = VALID_FRONT_MATTER.replace(
       lastShadowLine,
@@ -534,7 +534,7 @@ describe("parseDesignMd (TC-1.1.x)", () => {
   });
 
   it("audience.emotion as a non-array (scalar string) is rejected at parse-time", () => {
-    // Codex 8A6f: pre-fix, only `Array.isArray` gated assignment, so
+    // Pre-fix, only `Array.isArray` gated assignment, so
     // a scalar value silently dropped. Post-fix this returns
     // invalid-type so the brand SSOT enforces the contract upstream
     // of DESIGN.md.lock hashing.
@@ -594,7 +594,7 @@ describe("parseDesignMd (TC-1.1.x)", () => {
     expect(result.error.path).toBe("audience.emotion");
   });
 
-  it("brand.voice as a scalar string is rejected at parse-time (codex 9R4e)", () => {
+  it("brand.voice as a scalar string is rejected at parse-time", () => {
     // Pre-fix the parser silently dropped non-arrays / filtered non-string
     // entries. A scalar `voice: "calm"` slipped through and the lock
     // hash baked in raw bytes that downstream consumers never saw.
@@ -607,7 +607,7 @@ describe("parseDesignMd (TC-1.1.x)", () => {
     expect(result.error.path).toBe("brand.voice");
   });
 
-  it("brand.voice array with non-string entry is rejected at parse-time (codex 9R4e)", () => {
+  it("brand.voice array with non-string entry is rejected at parse-time", () => {
     const text = VALID_FRONT_MATTER.replace('  voice: ["calm", "sharp"]', '  voice: ["calm", 1]');
     const result = parseDesignMd(text);
     expect("error" in result).toBe(true);
@@ -649,7 +649,7 @@ describe("parseDesignMd (TC-1.1.x)", () => {
   });
 
   it("visual.typography.scale with non-string value (number 1) is rejected at parse-time", () => {
-    // Codex 7TIR: pre-fix, readStringRecord silently coerced numbers
+    // Pre-fix, readStringRecord silently coerced numbers
     // to strings; post-fix this rejects with invalid-type.
     const text = VALID_FRONT_MATTER.replace(
       '    family_mono:    "JetBrains Mono, ui-monospace, monospace"',
@@ -675,7 +675,7 @@ describe("parseDesignMd (TC-1.1.x)", () => {
   });
 
   it("visual.typography.weight with non-number value (string '400') is rejected at parse-time", () => {
-    // Codex 7TIV: pre-fix, `parseDesignMd` silently dropped
+    // Pre-fix, `parseDesignMd` silently dropped
     // non-number weight entries, leaving the resulting weight
     // record empty/partial. The mirror cross-check would then
     // accept a handoff that lost authored weight tokens (because
@@ -706,7 +706,7 @@ describe("parseDesignMd (TC-1.1.x)", () => {
   });
 
   it("visual.spacing.base with leading whitespace is rejected at parse-time", () => {
-    // Codex 6Iri: `" 0.25rem "` is structurally a CSS-invalid token
+    // `" 0.25rem "` is structurally a CSS-invalid token
     // (every CSS engine rejects `padding: " 0.25rem ";`). Catching
     // the padding here prevents an invalid value from freezing into
     // DESIGN.md.lock and design-system.yaml mirror.
@@ -736,7 +736,7 @@ describe("parseDesignMd (TC-1.1.x)", () => {
   });
 
   it("visual.spacing.scale with mixed number/string entries is rejected", () => {
-    // Codex 6Iri: design-md-spec.md declares `spacing.scale: number[]`.
+    // design-md-spec.md declares `spacing.scale: number[]`.
     // Mixed-type arrays (`[0, "wide"]`) cannot freeze through to the
     // mirror as validated content.
     const lastShadowLine = '    lg: "0 12px 24px rgba(15,23,42,0.10)"';

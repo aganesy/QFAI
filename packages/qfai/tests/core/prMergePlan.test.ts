@@ -99,7 +99,7 @@ afterEach(async () => {
  *
  * Both declared 30 s, a quarter of the project's `testTimeout`, on a file that
  * genuinely spawns: its four `runPrMerge` calls each `spawn("pwsh", …)` to drive
- * the `run-pr-merge` script (#1233). `vitest.knobs.ts` raised that value to
+ * the `run-pr-merge` script. `vitest.knobs.ts` raised that value to
  * 120 s over the same class of cost — its measurement is of the qfai binary
  * rather than of `pwsh`, but its conclusion is the one that applies: "15 s was
  * never a budget for this workload. It was a budget for in-process tests,

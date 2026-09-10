@@ -1,10 +1,10 @@
 /**
  * `htmlMockTimeout` is a budget for PARSING mock blocks, and it was charged jsdom's load.
  *
- * Review finding [59]. Moving the jsdom-backed import off module scope stopped every `qfai` command
- * paying its 910 ms — but the import then landed AFTER the clock started, so the one-off cost of
- * loading it was measured against a budget that is about parsing every block. A project configuring
- * anything under a second was reported over budget on every run however fast its blocks parsed.
+ * Moving the jsdom-backed import off module scope stops every `qfai` command
+ * paying its 910 ms — but the import landing AFTER the clock starts would measure the one-off cost of
+ * loading it against a budget that is about parsing every block. A project configuring
+ * anything under a second would be reported over budget on every run however fast its blocks parsed.
  *
  * The comment where the static import used to sit predicted exactly this, and the code was arranged
  * the other way round.

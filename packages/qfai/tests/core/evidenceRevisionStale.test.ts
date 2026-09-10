@@ -1,5 +1,5 @@
 /**
- * `Revision` is compared against the tree, not just read (#1146).
+ * `Revision` is compared against the tree, not just read.
  *
  * `evidence-revision.md#what-makes-evidence-stale` has always defined staleness
  * mechanically — "a commit that changes any file the observation covered
@@ -105,12 +105,10 @@ const section = (revision: string): string =>
 /**
  * The shape completed evidence actually writes: the field is ROUND-SCOPED.
  *
- * The first draft of this check read `rowEvidenceFieldValue(section,
- * "Revision")`, which filters `round === null` and so reads only the bare
- * form — making the whole check a SILENT NO-OP on every real evidence file.
- * That is the failure class #1146 is about, reproduced inside the check
- * written to end it, and it survived a green suite because the fixtures here
- * used the bare form too.
+ * A check reading `rowEvidenceFieldValue(section, "Revision")` would filter
+ * `round === null` and so read only the bare form — making the whole check
+ * a SILENT NO-OP on every real evidence file, undetectable by a suite whose
+ * fixtures use the bare form too.
  */
 const roundSection = (...revisions: string[]): string =>
   [
@@ -146,8 +144,7 @@ describe("changedFilesSince", () => {
     // The whole reason this is three-valued. `getChangedFilesAgainstBase`
     // collapses every failure into an empty set, which its caller reads as
     // "nothing to check"; here that same collapse would read as "the evidence
-    // is fresh" — the silent pass #1146 is about, reproduced inside the check
-    // meant to detect it.
+    // is fresh" — a silent pass this check exists to prevent.
     const { root } = await repoAtOneCommit();
     expect(changedFilesSince(root, "0".repeat(40), ["src"]).kind).toBe("unresolvable");
   });
@@ -346,7 +343,7 @@ describe("staleEvidenceFiles", () => {
     // Two-dot and three-dot agree on a straight line, so every other row here
     // would pass either way. They differ when the recorded revision is not an
     // ancestor of HEAD — which is what a rebase leaves behind, and routine in
-    // this workflow (#1149).
+    // this workflow.
     //
     // Two-dot compares the trees: the one the observation ran against is not
     // this one, so it is stale. Three-dot would compare from the merge base

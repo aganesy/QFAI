@@ -94,7 +94,7 @@ function normalizeForLegacyMatch(p: string): string {
 
 /**
  * True when the configured validate JSON path is the legacy
- * `.qfai/output/validate.json` SSOT (post-PR-#207 the canonical path
+ * `.qfai/output/validate.json` SSOT (the canonical path has since
  * moved to `.qfai/report/validate.json`). Absolute paths are never
  * treated as legacy — the legacy SSOT is the relative repo-rooted
  * literal only; operators who deliberately point at an absolute path
@@ -177,7 +177,7 @@ export async function runValidate(options: ValidateOptions): Promise<number> {
   // Wrapped, because an unhandled rejection here left the operator with one
   // stderr line and no verdict — no `counts:`, no `run-log:`, no
   // `validate.json` — and every shipped skill pipes validate through `| tail`,
-  // so that line was all an agent saw (#1104). Enumerating the `stat` sites
+  // so that line was all an agent saw. Enumerating the `stat` sites
   // that can raise reduces the ways in; this is what answers when the next one
   // appears.
   //
@@ -523,7 +523,7 @@ export const GATE_GROUP_FAMILIES = {
   "research-summary": ["QFAI-RESEARCH-*"],
   // Enumerated. This entry WAS `["UIX-VAL-*"]`, and that glob is a PREFIX of
   // every `UIX-VAL-SKILL-*` code, which `prototyping-skill` owns — so all
-  // twelve belonged to two groups at once until this list replaced it (#1215).
+  // twelve belonged to two groups at once until this list replaced it.
   //
   // **No profile misreports them today**, and that was worth establishing
   // before changing anything. `unevaluatedGates` walks the groups a profile
@@ -772,7 +772,7 @@ export const GATE_GROUP_FAMILIES = {
   //
   // Absent from this map entirely, the family could not even be REPORTED as
   // unevaluated, so a `full` PASS looked drift-checked to an operator following
-  // `QFAI-PROFILE-001`'s own advice (#1122). Stage-only: see
+  // `QFAI-PROFILE-001`'s own advice. Stage-only: see
   // `STAGE_ONLY_GATE_GROUPS`.
   drift: ["QFAI-DRIFT-*"],
   // The remaining ledger codes report execution state that only exists after
@@ -868,7 +868,7 @@ const ALL_GATE_GROUPS = Object.keys(GATE_GROUP_FAMILIES) as GateGroup[];
  * never composes `runSaasPackageProfile` at all. Listing any of them under
  * `full` made the notice tell a partial profile to run a scan that never
  * evaluates them, while `full` itself, showing no notice, read as complete
- * coverage (#1122). Both halves are fixed by excluding them from `full` and
+ * coverage. Both halves are fixed by excluding them from `full` and
  * naming their owning profile in the notice.
  */
 const STAGE_ONLY_GATE_GROUPS: Partial<Record<GateGroup, ValidationProfile>> = {
@@ -1111,7 +1111,7 @@ function unevaluatedGates(
  * `full` / `verify` get their own wording rather than silence: they evaluate
  * every gate a full scan covers, but three groups are stage-only, and a run
  * that says nothing at all reads as complete coverage of every gate in the
- * tool (#1122).
+ * tool.
  *
  * All of that describes what the requested profile *would* evaluate, which is
  * only what it did evaluate when its validators actually ran.
@@ -1154,7 +1154,7 @@ function buildPartialProfileNotice(
   // A stage-only gate is unreachable from a full scan, so it is named with the
   // profile that does run it instead of being folded into the "run full" list.
   // Sending the reader to `--fail-on error` for one of them would repeat the
-  // advice that produced the false PASS (#1122).
+  // advice that produced the false PASS.
   const stageOnlySentence =
     stageOnly.length === 0
       ? ""
@@ -1326,7 +1326,7 @@ function emitTextRunLog(runLogPath: string): void {
  * which the README calls internal and not a stable external contract. So an
  * `npx qfai` that resolved three directories up, against another branch's
  * lockfile, was indistinguishable in the transcript from one that resolved
- * locally (#1096).
+ * locally.
  *
  * **Before the work, and in every format.** Printed beside `run-log:` it was
  * absent from `--format github`, which is the format the shipped SDD loop
@@ -1447,7 +1447,7 @@ export function gitHubLevel(issue: Issue): GitHubLevel {
 function emitGitHub(issue: Issue, failOn: FailOn): void {
   const level = gitHubLevel(issue);
   // The location metadata is ESCAPED, and by the property rules rather than the message
-  // ones. Review finding [40]: `issue.file` can come from a finding the reviewer gate
+  // ones. `issue.file` can come from a finding the reviewer gate
   // ingested out of `.qfai/review/**`, which is a directory a pull request writes — so a
   // `file` of `x\n::stop-commands::token` split this line in two and let a fork's pull
   // request inject a workflow command, suppressing or forging every annotation after it.

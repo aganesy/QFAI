@@ -363,11 +363,9 @@ type PrototypingJsonShape = {
  * verify every `imageSources[]` entry. Hard-coded here as the initial
  * baseline.
  *
- * TODO (codex review — tracked as a follow-up, not blocking
- * this release; see the spec's open-questions log): expose
- * `qfai.config.yaml#prototyping.licenseCatalog` so consumer projects
- * can register additional allowlisted sources (e.g. `pixabay`)
- * without forking QFAI. Today consumers are bound to the
+ * TODO: expose `qfai.config.yaml#prototyping.licenseCatalog` so
+ * consumer projects can register additional allowlisted sources (e.g.
+ * `pixabay`) without forking QFAI. Today consumers are bound to the
  * `unsplash` + `pexels` baseline. The wire-in path is (1) extend
  * `QfaiConfig` with an optional `prototyping.licenseCatalog?: { ... }`
  * field, (2) honour it in `writeSeedMetadata` (the cycle-0 frozen
@@ -381,7 +379,7 @@ const DEFAULT_LICENSE_CATALOG: LicenseCatalog = {
     unsplash: ["unsplash-license", "free"],
     pexels: ["pexels-free"],
   },
-  // 10th-wave Fix G (codex r3265260657, P1): bind each allowlisted
+  // Bind each allowlisted
   // source to acceptable URL hosts so an `imageSources[]` entry that
   // claims `source: "unsplash"` while pointing at an unapproved host
   // is rejected with `license-host-mismatch` instead of being silently
@@ -519,9 +517,7 @@ export async function runPrototypingIterate(
   //    no spec has a UI surface to drive. See `evaluateZeroUiBearingPrecheck`
   //    for the full contract.
   //
-  // 15th-wave Fix (codex r3269453276, P1) + 17th-wave refinement
-  // (codex r3270050451, MINOR) + 19th-wave polish (codex r3270092241
-  // / r3270093043 / r3270095015, MINOR + NIT): the precheck
+  // The precheck
   // short-circuit MUST NOT bypass the cycle ≥ 1 drift gate. The
   // cycle ≥ 1 branch always returns `exit 2`; it never falls through
   // to `evaluateCycleGteOneGate`. Two diagnostics are surfaced based
@@ -580,11 +576,9 @@ export async function runPrototypingIterate(
   // cycle 0 persists it as `frozenSurfaceUnion` in prototyping.json and
   // the cycle ≥ 1 drift gate compares the live UNION against THAT
   // frozen UNION (apples-to-apples) instead of against the single-spec
-  // `frozenSpecsCovered`. Pre-fix (10th wave) the drift gate compared a
-  // single-spec frozen set with the multi-spec live union, which
-  // false-positive-fired `added=[secondaries...]` for any project
-  // whose baseline already carried ≥ 2 UI-bearing specs. See 11th-wave
-  // Fix (codex r3265480688, MAJOR/P1).
+  // `frozenSpecsCovered` — comparing a single-spec frozen set against the
+  // multi-spec live union would false-positive-fire `added=[secondaries...]`
+  // for any project whose baseline already carries ≥ 2 UI-bearing specs.
   const { earlyConfig, unionSpecs: cycleZeroUnion } = precheck;
 
   // 1) Read + hash root DESIGN.md FIRST (before any per-cycle plumbing).
@@ -835,17 +829,15 @@ export async function runPrototypingIterate(
       // multi-spec UNION is still computed in
       // `evaluateZeroUiBearingPrecheck` for the no-op short-circuit
       // signal, and at the cycle ≥ 1 drift gate via `resolveSurfaceUnion`
-      // re-resolution against `frozenSurfaceUnion`; we just do not
-      // freeze it as the multi-spec scope here (per Fix B + 11th-wave
-      // Fix below).
+      // re-resolution against `frozenSurfaceUnion`; only the multi-spec
+      // scope stays unfrozen here (below).
       frozenSpecsCovered: specs,
       // cycle-0 SSOT for the multi-spec UI-bearing UNION. The drift
       // gate at cycle ≥ 1 compares the live UNION against THIS field
       // (apples-to-apples). Without this field the drift gate would
       // compare the single-spec frozen scope against the live UNION
       // and false-positive any project whose baseline already carries
-      // ≥ 2 UI-bearing specs. See 12th-wave Fix (codex r3265480688,
-      // MAJOR/P1).
+      // ≥ 2 UI-bearing specs.
       frozenSurfaceUnion: [...cycleZeroUnion],
       // cycle-0 SSOT for the license-class catalog. Recording it here
       // means cycle >= 1 license-verify reads the FROZEN catalog
@@ -861,12 +853,12 @@ export async function runPrototypingIterate(
     // but deleting the on-disk dirs guarantees no resolver can stumble
     // into them.
     //
-    // codex AHzR5: fail closed when rm fails. Pre-fix this swallowed
-    // the error and continued; the new loop reuses iter-NN/ and any
-    // surviving subfile (Windows file lock / EACCES / EBUSY) gets
-    // sealed into the next certificate's evidenceDigests. Surfacing
-    // the failed dir + cause lets the operator clear the lock before
-    // iterate writes the new plan.
+    // Fail closed when rm fails: surface the failed dir + cause instead
+    // of swallowing the error and continuing, so the operator can clear
+    // the lock before iterate writes the new plan. The new loop reuses
+    // iter-NN/, so silently continuing would let any surviving subfile
+    // (Windows file lock / EACCES / EBUSY) get sealed into the next
+    // certificate's evidenceDigests.
     const rmResult = await clearEvidenceIterDirs(
       path.join(options.root, PROTOTYPING_EVIDENCE_REL),
       options.root,
@@ -913,10 +905,9 @@ export async function runPrototypingIterate(
     options.cycle === 0 ? null : await readPrototypingJson(protoJsonAbs);
   const collected = collectImageSources(protoRecordForLicense);
   if (!collected.ok) {
-    // 10th-wave Fix H (codex r3265260665, P2): hard-stop on malformed
-    // `imageSources[]`. Pre-fix the malformed entries were silently
-    // dropped and an all-malformed array reduced to `[]`, which then
-    // skipped the exit-66 license gate entirely. Surface each
+    // Hard-stop on malformed `imageSources[]`: silently dropping the
+    // malformed entries would reduce an all-malformed array to `[]` and
+    // skip the exit-66 license gate entirely. Surface each
     // offending index + field so the operator can fix the typo
     // (typically a misspelled `license` / `licence` swap) before the
     // cycle proceeds.
@@ -930,11 +921,11 @@ export async function runPrototypingIterate(
     );
     return 2;
   }
-  // 13th-wave Fix (codex r3265947252, P2): detect cycle ≥ 1 drift of the
+  // Detect cycle ≥ 1 drift of the
   // cycle-0 frozen license catalog against the in-memory SSOT
-  // (`DEFAULT_LICENSE_CATALOG`). Pre-fix the verifier used the on-disk
-  // `frozenLicenseCatalog` directly (or silently fell back to
-  // `DEFAULT_LICENSE_CATALOG` when the field was malformed), which let
+  // (`DEFAULT_LICENSE_CATALOG`): trusting the on-disk
+  // `frozenLicenseCatalog` directly (or silently falling back to
+  // `DEFAULT_LICENSE_CATALOG` when the field is malformed) would let
   // an operator who added e.g. `pinterest` to `allowedSources` pass an
   // otherwise-unallowed `imageSources[]` entry with exit 0. The CLI
   // contract pins `frozenLicenseCatalog` drift to exit 2 (lock drift);
@@ -954,7 +945,7 @@ export async function runPrototypingIterate(
       return 2;
     }
   }
-  // Option A (Codex P1 wave-4): the in-memory effective catalog is
+  // Option A: the in-memory effective catalog is
   // derived from the frozen DEFAULT baseline + accumulated audit-ledger
   // additions on every cycle. The cycle-0 frozen catalog stays equal to
   // `DEFAULT_LICENSE_CATALOG` (the drift gate above continues to enforce
@@ -1047,11 +1038,11 @@ export async function runPrototypingIterate(
   // operator drives `--capture` from the CLI without DI, derive the
   // screens list from the project's UI contracts via
   // `collectScreensForCapture` so both the plan emission AND the
-  // capture invocation read from a single source of truth. Pre-fix
-  // (Codex P1) the CLI wiring only set `capture: true` and never
-  // populated `screens`, so `runCapturePath` short-circuited with a
-  // warning and produced zero PNG/HTML artifacts — the operator-facing
-  // flag was a silent no-op. Derivation is gated on
+  // capture invocation read from a single source of truth. CLI wiring that
+  // only set `capture: true` without populating `screens` would make
+  // `runCapturePath` short-circuit with a warning and produce zero
+  // PNG/HTML artifacts — the operator-facing flag would be a silent no-op.
+  // Derivation is gated on
   // `options.capture === true` so the default-OFF posture
   // (no PNG/HTML written when --capture is absent) remains
   // byte-equivalent.
@@ -1334,7 +1325,7 @@ async function runCapturePath(
   for (const screen of screens) {
     const pngPath = path.join(dir, `${screen.id}.png`);
     const htmlPath = path.join(dir, `${screen.id}.html`);
-    // Capture URL composition (Codex P2 wave-8): UI contracts store
+    // UI contracts store
     // route-relative paths like `/orders/new`; the default Playwright
     // runner calls `page.goto(args.url)` which rejects relative paths
     // and aborts capture. Compose route-relative URLs against
@@ -1529,12 +1520,12 @@ type ComposeCaptureUrlResult = { ok: true; url: string | null } | { ok: false; r
 /**
  * Compose the navigation URL passed to {@link CaptureScreenFn}.
  *
- * Codex P2 wave-8 fix: UI contracts persist route-relative paths
+ * UI contracts persist route-relative paths
  * (e.g. `/orders/new`); the default Playwright runner forwards the
  * value to `page.goto(args.url)`, which rejects non-absolute URLs
  * with an `ERR_INVALID_URL`-class navigation error and aborts capture
- * with exit 2. Pre-fix, `screen.url ?? options.targetUrl ?? null`
- * preferred the route verbatim and dropped the operator-supplied
+ * with exit 2. `screen.url ?? options.targetUrl ?? null` alone would
+ * prefer the route verbatim and drop the operator-supplied
  * base URL on the floor.
  *
  * Composition rules:
@@ -1593,12 +1584,12 @@ export function composeCaptureUrl(
  * contracts when the operator drives `--capture` from the CLI without
  * supplying a `screens[]` DI hook.
  *
- * Codex P1 wave-8 fix: pre-fix, `qfai prototyping iterate --capture`
- * silently no-op'd because the CLI wiring only sets `capture: true`
- * and never threaded the discovered UI contract screens into
- * `options.screens`. The `runCapturePath` early-return on an empty
- * screens list converted the operator-facing flag into a no-op (a
- * warning + exit 0 with zero PNG/HTML written).
+ * CLI wiring that only sets `capture: true` without threading the
+ * discovered UI contract screens into `options.screens` would make
+ * `qfai prototyping iterate --capture` silently no-op: the
+ * `runCapturePath` early-return on an empty screens list converts the
+ * operator-facing flag into a no-op (a warning + exit 0 with zero
+ * PNG/HTML written).
  *
  * Source of truth: `readUiContractScreenContracts` (the same reader
  * used by certify's per-(spec × screen) gate). Each canonical
@@ -1745,16 +1736,13 @@ function isRecord(value: unknown): value is Record<string, unknown> {
  * the field is missing, malformed, **or empty** (zero-length array).
  * Post-condition: a non-null return value is always a `string[]` of
  * length ≥ 1 with non-empty string entries — callers can branch on
- * `!== null` alone without re-checking `length > 0` (codex r3270095015
- * NIT, 19th-wave).
+ * `!== null` alone without re-checking `length > 0`.
  *
- * 13th-wave Fix (codex r3265953324, MAJOR/P1): the cycle ≥ 1 drift gate
- * no longer falls back to `frozenSpecsCovered` when this field is
- * absent — pre-12th-wave records had a single-spec `frozenSpecsCovered`
- * that, compared against the live multi-spec UNION, produced the
- * original MAJOR/P1 false-positive (TC-0012-0415 / codex r3265480688).
- * The fallback documented "the prior — buggy — baseline" silently
- * restored the bug. Callers must now hard-fail at cycle ≥ 1 when
+ * The cycle ≥ 1 drift gate must not fall back to `frozenSpecsCovered`
+ * when this field is absent: a legacy single-spec `frozenSpecsCovered`,
+ * compared against the live multi-spec UNION, produces a false
+ * positive (TC-0012-0415). Falling back would silently restore that
+ * bug. Callers must instead hard-fail at cycle ≥ 1 when
  * `null` is returned and instruct the operator to re-seed via
  * `--cycle 0` so a fresh UNION snapshot is written.
  */
@@ -1779,7 +1767,7 @@ function readFrozenSurfaceUnionField(record: PrototypingJsonShape): string[] | n
  * cycle ≥ 1 to detect drift of the on-disk `frozenLicenseCatalog`
  * field against the in-memory SSOT (`DEFAULT_LICENSE_CATALOG`).
  *
- * 13th-wave Fix (codex r3265947252, P2): order-insensitive within each
+ * Order-insensitive within each
  * string[] (allowedSources, licenseTiers[*], sourceHosts[*]) so a
  * legitimate cycle-0 snapshot whose JSON serialization reordered the
  * entries deterministically still compares equal.
@@ -1849,7 +1837,7 @@ function readLicensePatchAuditRows(
  * Derive the runtime license catalog from a frozen baseline plus the
  * accumulated `licensePatchAudit[]` rows.
  *
- * Option A (Codex P1 wave-4): the cycle-0 frozen catalog is the
+ * Option A: the cycle-0 frozen catalog is the
  * immutable baseline (always equal to `DEFAULT_LICENSE_CATALOG`); the
  * canonical record of mid-loop additions lives in the audit ledger.
  * Reads union the audit rows' `addedSources` into the frozen
@@ -1928,7 +1916,7 @@ function readFrozenLicenseCatalog(record: PrototypingJsonShape | null): LicenseC
     }
     licenseTiers[k] = list;
   }
-  // 10th-wave Fix G: parse the optional `sourceHosts` block. Treat a
+  // Parse the optional `sourceHosts` block. Treat a
   // missing / malformed block as "host check disabled" (backward-compat
   // with pre-host-pinning catalogs). A malformed entry whose value is
   // not a string[] returns `null` from the whole reader so the caller
@@ -1969,14 +1957,14 @@ type CollectImageSourcesResult =
  * but empty (caller also skips); `{ok: true, sources: <non-empty>}`
  * when every entry validates.
  *
- * 10th-wave Fix H (codex r3265260665, P2): malformed entries are no
- * longer silently dropped. Pre-fix, an `imageSources[]` whose entries
- * all carried e.g. a misspelled `licence:` field reduced to an empty
- * narrowed array, and the caller skipped the exit-66 license gate
- * entirely. Now any non-record entry, missing field, or non-string
- * field returns `{ok: false, errors}` listing the offending index +
- * field; the caller surfaces a hard error and exits non-zero so the
- * operator fixes the typo before the cycle proceeds.
+ * Malformed entries must not be silently dropped: an `imageSources[]`
+ * whose entries all carry e.g. a misspelled `licence:` field would
+ * otherwise reduce to an empty narrowed array, and the caller would skip
+ * the exit-66 license gate entirely. Instead any non-record entry,
+ * missing field, or non-string field returns `{ok: false, errors}`
+ * listing the offending index + field; the caller surfaces a hard error
+ * and exits non-zero so the operator fixes the typo before the cycle
+ * proceeds.
  */
 function collectImageSources(record: PrototypingJsonShape | null): CollectImageSourcesResult {
   if (!record) return { ok: true, sources: null };
@@ -2011,11 +1999,11 @@ function collectImageSources(record: PrototypingJsonShape | null): CollectImageS
       );
       return;
     }
-    // 12th-wave Fix (codex r3265482144, P2): promote `attribution`
+    // Promote `attribution`
     // into the runtime ImageSource. Missing / non-string attribution
     // is intentionally NOT treated as an input-shape (exit 2) error
     // — the CLI contract puts "missing attribution" under exit 66
-    // (license-verify rejection), so we default to "" here and let
+    // (license-verify rejection), so this defaults to "" here and lets
     // `licenseVerify` emit the structured `license-missing-attribution`
     // diagnostic. This keeps the runtime gate's exit code aligned
     // with the contract surface.
@@ -2046,7 +2034,6 @@ type SeedMetadata = {
    * Cycle-0 UI-bearing UNION snapshot. Persisted in prototyping.json
    * as `frozenSurfaceUnion` and consumed by the cycle ≥ 1 drift gate
    * as the apples-to-apples baseline for the live UNION comparison.
-   * See 12th-wave Fix (codex r3265480688, MAJOR/P1).
    */
   frozenSurfaceUnion: readonly string[];
   frozenLicenseCatalog: LicenseCatalog;
@@ -2256,7 +2243,7 @@ async function writeSeedMetadata(protoJsonAbs: string, seed: SeedMetadata): Prom
     licenseTiers: Object.fromEntries(
       Object.entries(seed.frozenLicenseCatalog.licenseTiers).map(([k, v]) => [k, [...v]]),
     ),
-    // 10th-wave Fix G: persist the per-source host allowlist when
+    // Persist the per-source host allowlist when
     // present so cycle ≥1 license-verify reads the FROZEN host
     // binding (immutable through the loop). Older catalogs without
     // sourceHosts round-trip cleanly (the field is omitted).
@@ -2401,17 +2388,16 @@ async function clearEvidenceIterDirs(
     try {
       await rm(abs, { recursive: true, force: true });
     } catch (err) {
-      // codex AHzR5: pre-fix this only logged and continued, but the
-      // new loop reuses the same iter-NN/ dir. `certify` only treats
-      // dirs whose index is >= iterations.length as stale; files that
-      // survive INSIDE a reused iter-00/ (because capture writes only
-      // the screens it knows about and any extra files persist) get
-      // sealed into the new certificate's evidenceDigests. The fix is
-      // to fail closed: surface the rm failure as a hard error so the
-      // operator clears the lock (Windows file lock / EACCES / EBUSY)
-      // before iterate writes the new plan. The hint at the call site
-      // names the offending dir + cause so the operator can act
-      // immediately.
+      // Fails closed here: surface the rm failure as a hard error so
+      // the operator clears the lock (Windows file lock / EACCES /
+      // EBUSY) before iterate writes the new plan. The hint at the
+      // call site names the offending dir + cause so the operator can
+      // act immediately. Logging and continuing instead would not help
+      // — the new loop reuses the same iter-NN/ dir, `certify` only
+      // treats dirs whose index is >= iterations.length as stale, and
+      // any file that survives INSIDE a reused iter-00/ (capture writes
+      // only the screens it knows about, so extra files persist) would
+      // get sealed into the new certificate's evidenceDigests.
       return { ok: false, failedDir: abs, cause: err };
     }
   }
@@ -2443,12 +2429,12 @@ async function deleteStaleCompletionCertificate(certAbs: string): Promise<void> 
   }
 }
 
-// 19th-wave Fix (codex r3270055214, MAJOR): `specDirExists` and
-// `resolveSurfaceUnion` (below) were moved to
-// `core/prototyping/specResolution.ts` so the CLI → CLI sideways
-// import that `prototypingCertify.ts` had to take (to align with
-// iterate's drift gate) is replaced by both CLI commands importing
-// the union resolver from a single core module.
+// `specDirExists` and
+// `resolveSurfaceUnion` (below) live in
+// `core/prototyping/specResolution.ts` so both CLI commands import
+// the union resolver from a single core module, rather than
+// `prototypingCertify.ts` taking a CLI → CLI sideways import to align
+// with iterate's drift gate.
 
 function buildRunId(designMdSha: string): string {
   return `loop-${designMdSha.slice(0, 12)}-${Date.now().toString(36)}`;
@@ -2458,7 +2444,7 @@ function buildRunId(designMdSha: string): string {
  * Re-run the runtime DESIGN.md drift scanner against every `*.html`
  * file in the accepted iteration's evidence dir.
  *
- * codex 8thM: shouldStop honors the reviewer-recorded
+ * `shouldStop` honors the reviewer-recorded
  * `designMdViolations: []` at face value, but the shipped reviewer
  * prompt instructs reviewers NOT to author that field directly — only
  * runtime gates inject findings. Without this re-scan, a prototype with
@@ -2871,7 +2857,7 @@ async function applyLicensePatchFromFile(
   const audit: unknown[] = isUnknownArray(existing) ? [...existing] : [];
   audit.push(applied.auditRow);
   body.licensePatchAudit = audit;
-  // Option A (Codex P1 wave-4): `frozenLicenseCatalog` is NOT rewritten
+  // Option A: `frozenLicenseCatalog` is NOT rewritten
   // here. The frozen field is the immutable cycle-0 baseline (equal to
   // `DEFAULT_LICENSE_CATALOG`); the drift gate at cycle >= 1 compares
   // it against `DEFAULT_LICENSE_CATALOG` and would exit 2 if we mutated
@@ -2982,8 +2968,7 @@ type ZeroUiBearingPrecheckResult =
        * so the caller can persist it as `frozenSurfaceUnion` in
        * prototyping.json — the cycle ≥ 1 drift gate then compares the
        * live UNION against this frozen UNION (apples-to-apples) instead
-       * of against the single-spec `frozenSpecsCovered`. See 11th-wave
-       * Fix (codex r3265480688, MAJOR/P1).
+       * of against the single-spec `frozenSpecsCovered`.
        */
       unionSpecs: readonly string[];
     };
@@ -3028,16 +3013,12 @@ async function evaluateZeroUiBearingPrecheck(root: string): Promise<ZeroUiBearin
 
 /**
  * @internal Back-compat re-export only. The canonical export lives at
- * `core/prototyping/specResolution.ts` (moved there in the 19th-wave
- * architecture cleanup, codex r3270055214). New call sites MUST import
- * from the core module directly; this re-export only exists so the
- * wave-8/10/13 unit tests in `tests/cli/commands/prototypingIterate.test.ts`
- * keep resolving against the previous CLI-layer path while we let the
- * test-side import migration land in a focused follow-up wave (tracked
- * implicitly by removing this re-export once those tests update).
+ * `core/prototyping/specResolution.ts`. New call sites MUST import
+ * from the core module directly; this re-export exists only so the
+ * unit tests in `tests/cli/commands/prototypingIterate.test.ts` that
+ * still resolve against the CLI-layer path keep working.
  * `prototypingCertify.ts` already imports from the core module
- * directly, restoring the CLI → core dependency DAG. (21st-wave
- * @internal annotation per codex r3270215675 / r3270214114 MINOR.)
+ * directly, keeping the CLI → core dependency DAG one-directional.
  */
 export { resolveSurfaceUnion };
 
@@ -3086,7 +3067,7 @@ async function evaluateCycleGteOneGate(
     return { shortCircuit: true, exitCode: 2 };
   }
   if (protoRecord.designMd.sha256 !== input.currentSha) {
-    // codex AHM3: phrase the error so both the legacy "sha256 mismatch"
+    // Phrase the error so both the legacy "sha256 mismatch"
     // text AND the canonical mid-loop-drift regex
     // /DESIGN\.md hash mismatch.*re-run from cycle 0/ match.
     // Reviewers (and the prototyping orchestrator) parse stderr for
@@ -3109,16 +3090,14 @@ async function evaluateCycleGteOneGate(
     );
     return { shortCircuit: true, exitCode: 2 };
   }
-  // 30th-wave Fix (codex r3270687650, P1 — chatgpt-codex-connector):
-  // run the cycle ≥ 1 lock-drift gates BEFORE `shouldStop()` so a
-  // converged / max-budget loop cannot mask a `frozenSurfaceUnion`
-  // missing-or-malformed record or a live-vs-frozen spec-set drift.
-  // Pre-fix the drift checks lived AFTER `shouldStop`, which meant a
-  // run that satisfied `shouldStop` (axes-exceptional or
-  // max-iterations) exited 64/65 immediately and the drift gate
-  // never fired — a mid-loop UI-marker removal or contract edit was
+  // The cycle ≥ 1 lock-drift gates MUST run BEFORE `shouldStop()`, or a
+  // converged / max-budget loop could mask a `frozenSurfaceUnion`
+  // missing-or-malformed record or a live-vs-frozen spec-set drift:
+  // a run that satisfies `shouldStop` (axes-exceptional or
+  // max-iterations) would exit 64/65 immediately with the drift gate
+  // never firing — a mid-loop UI-marker removal or contract edit
   // silently accepted as a successful convergence / exhaustion. The
-  // ordering now mirrors the DESIGN.md hash check above: lock-drift
+  // ordering mirrors the DESIGN.md hash check above: lock-drift
   // classes (designMd, frozenSurfaceUnion presence + drift) gate the
   // run first; convergence / budget signals come after.
   const recordedIterations = asIterations(protoRecord);
@@ -3126,9 +3105,9 @@ async function evaluateCycleGteOneGate(
   if (frozenUnion === null) {
     // Split the diagnostic into primary CTA + justification so the
     // recovery action is the headline and the rationale follows on a
-    // visually-separated indented line. 24th-wave refinement: insert a
-    // blank `error("")` between the two so narrow-terminal wrap does
-    // not visually fuse the CTA's last line with the `Reason:` line.
+    // visually-separated indented line. A blank `error("")` between the
+    // two keeps narrow-terminal wrap from visually fusing the CTA's
+    // last line with the `Reason:` line.
     error(
       "qfai prototyping iterate: prototyping.json#frozenSurfaceUnion is missing or " +
         "malformed. Re-run with `--cycle 0 --target-url <url>` to refreeze " +
@@ -3166,7 +3145,7 @@ async function evaluateCycleGteOneGate(
   }
   const stop = shouldStop(recordedIterations);
   if (stop !== null) {
-    // codex 8thM: shouldStop accepts the reviewer-recorded
+    // `shouldStop` accepts the reviewer-recorded
     // `designMdViolations: []` at face value, but the shipped reviewer
     // prompt instructs reviewers to leave that field empty unless a
     // runtime gate injects findings — and the only runtime scanner
@@ -3184,7 +3163,7 @@ async function evaluateCycleGteOneGate(
       );
       const first = recomputed[0];
       if (first !== undefined) {
-        // codex AG08r: max-budget drift edge case. If the last iter is
+        // Max-budget drift edge case: if the last iter is
         // already at MAX_ITERATION_INDEX (cycle 9), there is no valid
         // next cycle (--cycle is capped at 9). Falling through to the
         // expectedNextCycle gate would then exit 2 with a cycle-mismatch

@@ -1,10 +1,10 @@
 /**
- * `### Change Type` printed `decision entries: 0` for a tree full of deltas.
+ * `### Change Type` must not print `decision entries: 0` for a tree full of deltas.
  *
  * `parseDeltaV1` reads one shape only (`## Decision Log` / `### DL-` /
- * `#### Meta`), and the shipped template did not carry it, so every populated
- * `09_delta.md` parsed to nothing and the whole section reported zeros while
- * `delta coverage: ok (issues=0)` sat underneath it (#545).
+ * `#### Meta`). If the shipped template did not carry it, every populated
+ * `09_delta.md` would parse to nothing and the whole section would report
+ * zeros while `delta coverage: ok (issues=0)` sits underneath it.
  *
  * A count has to name the input it counted: "no delta was classified" and
  * "deltas were read and could not be counted" are different claims, and only

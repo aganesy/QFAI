@@ -22,7 +22,7 @@ const implementSkillPath = path.join(
  * Deliberately no `{ timeout: … }`.
  *
  * It declared 15 s — the value `vitest.knobs.ts` raised `testTimeout` away from,
- * having measured THIS project (#1233):
+ * having measured THIS project:
  *
  * > In a run of the `e2e` project ALONE, five tests already exceed 15 s and the
  * > slowest takes 47.3 s; under the full suite the same files take longer again.

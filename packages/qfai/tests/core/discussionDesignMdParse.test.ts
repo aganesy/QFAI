@@ -1,5 +1,5 @@
 /**
- * The `discussion` profile can see whether the root DESIGN.md parses (#1098).
+ * The `discussion` profile must be able to see whether the root DESIGN.md parses.
  *
  * `qfai-discussion` MUSTs a parsable root DESIGN.md and prescribes
  * `--profile discussion` as its gate. That profile ran five validators —

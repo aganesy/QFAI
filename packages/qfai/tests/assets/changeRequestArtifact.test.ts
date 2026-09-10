@@ -198,14 +198,14 @@ describe("a Change Request is a defined artifact", () => {
       // The normal loop starts at the first `todo` row and exits on all-`done`,
       // so without a preflight an approved reset would never be reached.
       const skill = await read(tree, "assistant/skills/qfai-implement/SKILL.md");
-      // #371 folded the Stage-0 steering refresh into the same first phase and
-      // #658 the routed `plan` phase, so the heading names all three. The
+      // The Stage-0 steering refresh and the routed `plan` phase fold into the
+      // same first phase, so the heading names all three. The
       // preflight is still first and still mandatory, which is what this case
       // is about.
       const preflightHeading = "### Phase: Stage 0 + Preflight + Plan — MANDATORY, runs first";
       expect(skill).toContain(preflightHeading);
       // The all-terminal exit bullet also carries the spec-level checkpoint
-      // obligation added by #304, so assert the preflight clause rather than
+      // obligation, so assert the preflight clause rather than
       // the whole sentence.
       expect(skill).toContain(
         "**and the mandatory Change Request\n  preflight (see Required Process) reset nothing**",
@@ -255,9 +255,9 @@ describe("a Change Request is a defined artifact", () => {
       expect(flat(drift)).toContain(
         "written there by the owner skill in step 4, never before approval",
       );
-      // #373 made step 4 name the invocation and the rerun mode. The claim this
+      // Step 4 names the invocation and the rerun mode. The claim this
       // case pins — the reference lands upstream only via that rerun — is
-      // unchanged, so it is asserted flattened: the wrap column is not the rule.
+      // asserted flattened: the wrap column is not the rule.
       expect(flat(drift)).toContain("That rerun is what records the CR reference");
       const step2 = drift.slice(drift.indexOf("2. Create a Change Request"), drift.indexOf("3. "));
       expect(step2).not.toContain("Reference it from `09_delta.md`");
@@ -474,9 +474,9 @@ describe("a Change Request is a defined artifact", () => {
     it(`${tree}: the template carries the contents the protocol mandates`, async () => {
       const template = await read(tree, TEMPLATE);
       for (const heading of [
-        // "Context (what conflicts)" lost its parenthetical in #378: a defect
-        // -drift CR conflicts with nothing external, so the heading had to
-        // stop presuming a conflict of intent.
+        // "## Context" carries no parenthetical: a defect-drift CR conflicts
+        // with nothing external, so the heading must not presume a conflict
+        // of intent.
         "## Context",
         "## Reproduction",
         "## Proposed change",

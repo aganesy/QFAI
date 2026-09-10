@@ -204,9 +204,9 @@ describe("assets guardrails", () => {
       "### Delegation Failure (Hard Stop)",
       "Do not simulate roles",
       "## Work Orders Summary",
-      // #248 review: the reviewer-budget branch mandates recording an
+      // The reviewer-budget branch mandates recording an
       // un-runnable gate as `PENDING`, so the status vocabulary each skill
-      // declares has to admit it. `PASS/REVISE` is now a prefix of the
+      // declares has to admit it. `PASS/REVISE` is a prefix of the
       // required value rather than the whole of it.
       "Status (PASS/REVISE/PENDING)",
       "### Reviewer Gate (MUST)",
@@ -244,7 +244,7 @@ describe("assets guardrails", () => {
     const requiredHardStopPayload = [
       "Attempt the first required delegation at stage start using the platform's native delegation mechanism.",
       "Treat that first real delegation attempt as the capability check. Do not gate execution on preflight availability questions or synthetic probe-only checks.",
-      // #248 splits delegation failure into unavailable vs saturated, so the
+      // Delegation failure splits into unavailable vs saturated, so the
       // response is class-dependent; the invariant that survives is that a
       // failure is never answered by simulating roles or self-executing.
       "If the delegation fails, classify the failure first",
@@ -278,13 +278,13 @@ describe("assets guardrails", () => {
       "fix skill-owned artifacts and code/test defects autonomously",
       "rerun the same failing gate after each fix batch",
       "do not weaken profiles, lower `--fail-on`, waive errors, invent evidence, or skip required reviewers",
-      // #231 added a second stop condition (reviewer round count), so the
-      // list is no longer exhaustive and "only" was dropped.
-      // #381 inserted `**any upstream spec/contract finding**` into the stop
-      // list so it is closed over the five-class classification; the routing
+      // A second stop condition (reviewer round count) means the
+      // list is not exhaustive, so "only" does not appear.
+      // The stop list includes `**any upstream spec/contract finding**` so it
+      // is closed over the five-class classification; the routing
       // itself is pinned in `gateFailureClassRouting.test.ts`.
       "stop for destructive changes, **any upstream spec/contract finding**, ambiguous product/spec decisions, missing permissions/tools, or repeated no-progress failures",
-      // #381 appended the work counts: an agent that can report "21 complete,
+      // The work counts matter: an agent that can report "21 complete,
       // 5 blocked" has a credible alternative to repairing upstream.
       "cause, attempted fixes, remaining blocker, user action, retry gate, and **the work counts",
     ];
@@ -2265,11 +2265,11 @@ describe("assets guardrails", () => {
   });
 
   it("keeps 05_Contracts example rows aligned with their own table header", async () => {
-    // #653: the three commented example rows carried 5 cells under a 6-column
-    // header, so an author who did what the comment asks — copy the row into
-    // the table — tripped QFAI-TABLE-001 and parked a purpose string in
-    // `Depends On`. Copying a shipped example row under its own header must
-    // produce a well-formed row.
+    // The three commented example rows must carry the full column count:
+    // dropping a cell would trip QFAI-TABLE-001 for an author who does what
+    // the comment asks — copies the row into the table — and parks a purpose
+    // string in `Depends On`. Copying a shipped example row under its own
+    // header must produce a well-formed row.
     const contractsTemplatePath = path.join(
       templateQfaiDir,
       "assistant",
@@ -2323,10 +2323,10 @@ describe("assets guardrails", () => {
       readFile(workflowPath, "utf-8"),
     ]);
 
-    // #373 added the contract-scoped target the Drift Protocol's rerun step
-    // names; the two existing modes are unchanged. Its placeholder widened to
-    // `<CON-ID-or-path>` once `.qfai/contracts/design/**` — which declares no
-    // `QFAI-CONTRACT-ID` — needed an addressable rerun.
+    // The Drift Protocol's rerun step names a contract-scoped target, in
+    // addition to the two existing modes. Its placeholder is
+    // `<CON-ID-or-path>` because `.qfai/contracts/design/**` — which declares
+    // no `QFAI-CONTRACT-ID` — needs an addressable rerun.
     expect(skill).toContain(
       'argument-hint: "[<spec-id-or-name>] [--contract <CON-ID-or-path>] [--auto]"',
     );
@@ -2505,8 +2505,8 @@ describe("assets guardrails", () => {
 
   it("ensures v1.4.36 layered spec templates exist for sdd", async () => {
     const expected = [
-      // #394 added the four _policies templates and spec/10_Plan.md that were
-      // Mandatory Outputs with no shipped skeleton. Coverage against the
+      // The four _policies templates and spec/10_Plan.md are Mandatory
+      // Outputs with a shipped skeleton. Coverage against the
       // required-file registry is pinned in sddTemplateCoverage.test.ts.
       "_policies/01_Objective.md",
       "_policies/02_Initiative.md",
