@@ -47,7 +47,7 @@ describe("readFrozenSpecsCovered (SSOT)", () => {
   });
 });
 
-describe("classifyFrozenSpecsCoveredMultiSpec (codex r3270861808 P1 — absent vs malformed)", () => {
+describe("classifyFrozenSpecsCoveredMultiSpec (absent vs malformed)", () => {
   // Pins the contract: `absent` lets the certify caller fall back to
   // the legacy single-spec `specsCovered`; `malformed` MUST fail closed
   // so a partial / corrupt edit cannot silently downgrade certification
@@ -70,12 +70,12 @@ describe("classifyFrozenSpecsCoveredMultiSpec (codex r3270861808 P1 — absent v
   });
 
   it("returns `malformed` when the key is present but value is explicitly null", () => {
-    // A hand-edited
-    // `"frozenSpecsCovered": null` is a corrupt edit, NOT a "field
-    // omitted" record — falling back to legacy `specsCovered` here
-    // would silently downgrade multi-spec certification scope. The
-    // classifier must distinguish "key absent on record" from "key
-    // present with invalid value" and fail closed for the latter.
+    // A hand-edited `"frozenSpecsCovered": null` is a corrupt edit,
+    // not a "field omitted" record — falling back to legacy
+    // `specsCovered` here would silently downgrade multi-spec
+    // certification scope. The classifier distinguishes "key absent
+    // on record" from "key present with invalid value", and fails
+    // closed for the latter.
     const r = classifyFrozenSpecsCoveredMultiSpec({ frozenSpecsCovered: null });
     expect(r.kind).toBe("malformed");
     if (r.kind === "malformed") expect(r.reason).toContain("null");
