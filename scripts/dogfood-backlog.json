@@ -24,7 +24,6 @@
       "packages/qfai/tests/integration/spec0014SaasPackageCertify.test.ts": 1
     },
     "sdd": {
-      ".qfai/specs/_policies/10_delta.md": 1,
       ".qfai/specs/spec-0002/tdd/test-list.md": 1,
       ".qfai/specs/spec-0003/tdd/test-list.md": 2,
       ".qfai/specs/spec-0004/09_delta.md": 1,
@@ -32,7 +31,6 @@
       ".qfai/specs/spec-0006/tdd/test-list.md": 2,
       ".qfai/specs/spec-0008/09_delta.md": 1,
       ".qfai/specs/spec-0010/tdd/test-list.md": 2,
-      ".qfai/specs/spec-0012/09_delta.md": 1,
       ".qfai/specs/spec-0012/tdd/test-list.md": 89,
       ".qfai/specs/spec-0013/09_delta.md": 1,
       ".qfai/specs/spec-0015/09_delta.md": 1
@@ -44,7 +42,6 @@
       ".qfai/assistant/catalog/tech.md": 1,
       ".qfai/discussion/discussion-20260418170937652": 2,
       ".qfai/evidence/atdd-spec-0012.md": 1,
-      ".qfai/specs/_policies/10_delta.md": 1,
       ".qfai/specs/spec-0001": 1,
       ".qfai/specs/spec-0002": 1,
       ".qfai/specs/spec-0002/tdd/test-list.md": 13,
@@ -66,7 +63,6 @@
       ".qfai/specs/spec-0010/tdd/test-list.md": 28,
       ".qfai/specs/spec-0011": 1,
       ".qfai/specs/spec-0012": 1,
-      ".qfai/specs/spec-0012/09_delta.md": 1,
       ".qfai/specs/spec-0012/tdd/test-list.md": 453,
       ".qfai/specs/spec-0013": 1,
       ".qfai/specs/spec-0013/09_delta.md": 1,
