@@ -265,11 +265,11 @@ describe("TC-0003-0052 (TDD-0052): pruneMatchingEntries is exported and receives
     expect(workflowsSites.length, "expected the retired-name prune call site").toBe(1);
 
     // The record change is INSIDE the call, as the argument that runs while the files are still
-    // recoverable. If it stood after the call as its own statement, a
-    // read-only `.qfai`, a full disk or a lock the run could not take would leave the files gone and
-    // their entries standing — and the next run reads such a name as one the adopter
-    // deliberately removed, and never installs it again. That is the poisoned name this prune
-    // exists to avoid, reached by the code meant to avoid it.
+    // recoverable. If it stood after the call as its own statement, a read-only `.qfai`, a full
+    // disk or a lock the run could not take would leave the files gone and their entries
+    // standing — and the next run reads such a name as one the adopter deliberately removed,
+    // and never installs it again. That is the poisoned name this prune exists to avoid, reached
+    // by the code meant to avoid it.
     expect(
       workflowsSites[0] ?? "",
       "the provenance entry removal must be the prune's commit, not a step after it",
@@ -1305,9 +1305,9 @@ describe("TC-0003-0048 (TDD-0048): write and removal path contains no filesystem
 });
 
 describe("the workflows parent is pinned across the copy, not only before it", () => {
-  // `workflowAncestorsAreRealDirectories` must not run only ONCE, before a copy that
-  // performs many asynchronous filesystem operations, with nothing holding the answer still
-  // afterward. A concurrent process swapping `.github` or `.github/workflows` for a link
+  // Running `workflowAncestorsAreRealDirectories` only ONCE, before a copy that
+  // performs many asynchronous filesystem operations, would leave nothing holding the answer
+  // still afterward. A concurrent process swapping `.github` or `.github/workflows` for a link
   // between the check and a write would have the shipped workflow created outside the repository
   // — `COPYFILE_EXCL` refuses an existing destination and follows a linked PARENT without
   // complaint — and a later re-check would stop the provenance record without unwriting anything.
@@ -1360,12 +1360,12 @@ describe("the workflows parent is pinned across the copy, not only before it", (
     ).not.toMatch(/\b(rm|unlink|rmdir)\(/);
   });
   it("excludes the written workflows by comparing paths, not leading path segments", () => {
-    // `copyTemplateTree` reports ABSOLUTE
-    // destinations, so a filter that splits one and takes its first two
-    // segments — `/tmp` for `/tmp/repo/.github/workflows/qfai-tests.yml` — would exclude
-    // nothing. The identity mismatch would be detected and reported, and then `recordInstalledWorkflows`
-    // would write provenance for every workflow anyway. The next run reads those names as `declined`
-    // and never writes them again, so the swap costs the adopter the workflows permanently.
+    // `copyTemplateTree` reports ABSOLUTE destinations, so a filter that splits one and takes
+    // its first two segments — `/tmp` for `/tmp/repo/.github/workflows/qfai-tests.yml` — would
+    // exclude nothing. The identity mismatch would be detected and reported, and then
+    // `recordInstalledWorkflows` would write provenance for every workflow anyway. The next run
+    // reads those names as `declined` and never writes them again, so the swap costs the adopter
+    // the workflows permanently.
     //
     // A predicate, so the row can hand it the absolute paths the defect was made of. Asserting
     // the lambda's shape on the source would have passed against the broken one.
@@ -1396,10 +1396,10 @@ describe("the workflows parent is pinned across the copy, not only before it", (
   });
 
   it("stops the retired prune too, not only the provenance record", async () => {
-    // If `workflowsDirIsOwn` is computed BEFORE the copy and stays `true`
-    // after a swap is detected, `resolvePrunableRetiredWorkflows` would go on to enumerate the
-    // swapped directory — and a retired workflow over there whose bytes match a recorded digest
-    // would be quarantined and deleted. That is the removal-through-a-refused-parent this file already
+    // If `workflowsDirIsOwn` is computed BEFORE the copy and stays `true` after a swap is
+    // detected, `resolvePrunableRetiredWorkflows` would go on to enumerate the swapped
+    // directory — and a retired workflow over there whose bytes match a recorded digest would be
+    // quarantined and deleted. That is the removal-through-a-refused-parent this file already
     // ruled out for the copy, reached by the other route in the same run.
     //
     // Asserted on the SOURCE for the reason the rows above give: the swap is between two
@@ -1417,12 +1417,12 @@ describe("the workflows parent is pinned across the copy, not only before it", (
     );
   });
   it("establishes the workflow directory identity rather than observing it after the copy", async () => {
-    // A component absent before the copy has no identity to compare
-    // against, so a comparison that returns `true` for it and stops looking would, on a first
-    // `init`, where `.github` and `.github/workflows` are both created by the copy, accept ANY real
-    // directory standing there afterward. The record would then name workflows that are
-    // not where the record says they are, and the next run would read those names as `declined`
-    // and never write them again.
+    // A component absent before the copy has no identity to compare against, so a comparison
+    // that returns `true` for it and stops looking would accept ANY real directory standing
+    // there afterward — on a first `init`, where `.github` and `.github/workflows` are both
+    // created by the copy. The record would then name workflows that are not where the record
+    // says they are, and the next run would read those names as `declined` and never write them
+    // again.
     //
     // Asserted on the SOURCE, for the reason the rows above give: the swap is between two
     // processes and there is no in-process seam to drive it from a fixture. What a row can pin is
@@ -1491,12 +1491,11 @@ describe("the workflows parent is pinned across the copy, not only before it", (
   });
 
   it("copies the workflows and records them before the rest of the root is touched", async () => {
-    // If the workflows rode along in the root copy and the record followed
-    // it, a permission, I/O or disk error anywhere else in that copy — `DESIGN.md`,
-    // `qfai.config.yaml`, any of it — would throw before the record ran and leave the workflows on
-    // disk with no entry. That state would be permanent: an unrecorded shipped workflow reads as
-    // `adopter-owned` on every later run, so it is never recorded, never drift-checked, and never
-    // prunable.
+    // If the workflows rode along in the root copy and the record followed it, a permission,
+    // I/O or disk error anywhere else in that copy — `DESIGN.md`, `qfai.config.yaml`, any of
+    // it — would throw before the record ran and leave the workflows on disk with no entry.
+    // That state would be permanent: an unrecorded shipped workflow reads as `adopter-owned` on
+    // every later run, so it is never recorded, never drift-checked, and never prunable.
     const source = await readInitSource();
 
     const workflowCopy = source.indexOf("const workflowResult = await copyTemplatePaths(");

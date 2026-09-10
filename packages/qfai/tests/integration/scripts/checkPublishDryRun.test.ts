@@ -187,10 +187,10 @@ describe("check-publish-dry-run tolerates an already-published version and nothi
     // tarball in existence — and the required `build` context would then go green over a pack
     // that never happened.
     //
-    // Reading npm's `=== Tarball Details ===` banner
-    // out of the SAME child's output is not enough either, since the same lifecycle script can
-    // print it. The stdout here carries that banner deliberately — a row that omitted it would
-    // pass a check that ignores this case too, and prove nothing about what this test targets.
+    // Reading npm's `=== Tarball Details ===` banner out of the SAME child's output is not
+    // enough either, since the same lifecycle script can print it. The stdout here carries that
+    // banner deliberately: a row without it would still refuse, but for the uninteresting reason
+    // that no evidence exists at all, proving nothing about this specific case.
     const verdict = classifyDryRun({
       status: 1,
       stdout: "npm notice === Tarball Details ===\nnpm notice total files: 205\n",
@@ -230,8 +230,7 @@ describe("the npm it proves anything with is the toolchain's, not the one on PAT
   // This guard runs through a `pnpm` script, so its PATH begins with
   // `node_modules/.bin` — a directory a pull request fills by adding a dependency. A workspace
   // package declaring an `npm` bin would replace every call here with a program that exits 0, and
-  // the independent tarball and registry proofs would never run: a fake `npm`
-  // first on PATH makes the whole script exit 0 with no output.
+  // the independent tarball and registry proofs would never run.
 
   it("resolves npm beside the running Node and never through PATH", () => {
     const source = readFileSync(
