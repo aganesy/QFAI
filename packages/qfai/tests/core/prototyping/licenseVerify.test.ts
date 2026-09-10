@@ -229,8 +229,8 @@ describe("licenseVerify — non-https URL guard", () => {
   });
 });
 
-// When the catalog declares
-// `sourceHosts`, the URL host must match the per-source allowlist.
+// When the catalog declares `sourceHosts`, the URL host must match the
+// per-source allowlist.
 // QFAI:SPEC-0012:TC-0012-0411
 describe("licenseVerify — per-source URL host binding (TC-0012-0411)", () => {
   const hostBoundCatalog: LicenseCatalog = {
@@ -295,10 +295,10 @@ describe("licenseVerify — per-source URL host binding (TC-0012-0411)", () => {
     expect(licenseVerify(sources, hostBoundCatalog)).toEqual({ ok: true });
   });
 
-  // The catalog side is also
-  // compared case-insensitively so a user catalog with a capitalized
-  // host (e.g. `"Images.Unsplash.com"`) does not false-positive reject
-  // a valid URL. RFC 3986 §3.2.2: host is case-insensitive.
+  // The catalog side is also compared case-insensitively so a user
+  // catalog with a capitalized host (e.g. `"Images.Unsplash.com"`)
+  // does not false-positive reject a valid URL. RFC 3986 §3.2.2: host
+  // is case-insensitive.
   it("host comparison case-insensitive on the catalog side too", () => {
     const mixedCaseHostCatalog: LicenseCatalog = {
       allowedSources: ["unsplash"],
@@ -320,8 +320,8 @@ describe("licenseVerify — per-source URL host binding (TC-0012-0411)", () => {
   });
 });
 
-// Backward-compat: catalogs that pre-date the
-// `sourceHosts` field continue to work — the host check is skipped.
+// Backward-compat: catalogs that pre-date the `sourceHosts` field
+// continue to work — the host check is skipped.
 // QFAI:SPEC-0012:TC-0012-0412
 describe("licenseVerify — backward compat: catalog without sourceHosts (TC-0012-0412)", () => {
   it("does not run the host check when sourceHosts is undefined", () => {
@@ -340,10 +340,9 @@ describe("licenseVerify — backward compat: catalog without sourceHosts (TC-001
   });
 });
 
-// Attribution is required at the
-// runtime license gate. Undefined and empty-string both surface as the
-// new `license-missing-attribution` error → exit 66 per the CLI
-// contract's exit-code class table.
+// Attribution is required at the runtime license gate. Undefined and
+// empty-string both surface as the new `license-missing-attribution`
+// error → exit 66 per the CLI contract's exit-code class table.
 // QFAI:SPEC-0012:TC-0012-0414
 describe("licenseVerify — attribution is required (TC-0012-0414)", () => {
   it("emits license-missing-attribution when attribution is undefined", () => {
@@ -394,10 +393,10 @@ describe("licenseVerify — attribution is required (TC-0012-0414)", () => {
     ]);
   });
 
-  // Whitespace-only attribution
-  // (spaces / tabs / newlines / ideographic-space) is semantically the
-  // same class as "missing"; rejecting only `undefined`
-  // / empty-string would let `"   "` slip through.
+  // Whitespace-only attribution (spaces / tabs / newlines /
+  // ideographic-space) is semantically the same class as
+  // "missing"; rejecting only `undefined` / empty-string would
+  // let `"   "` slip through.
   it.each([
     ["spaces", "   "],
     ["tab + newline", "\t\n"],

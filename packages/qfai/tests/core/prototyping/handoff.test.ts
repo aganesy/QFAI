@@ -95,9 +95,9 @@ describe("validateImageSources — closed schema (TC-0012-0372)", () => {
     expect(result.entries).toEqual([]);
   });
 
-  // Closed-schema validation also enforces the
-  // contract's `url(https)` rule so plain `http://` URLs are rejected
-  // at the handoff layer (mirroring licenseVerify's non-https guard).
+  // Closed-schema validation also enforces the contract's `url(https)`
+  // rule so plain `http://` URLs are rejected at the handoff layer
+  // (mirroring licenseVerify's non-https guard).
   it("rejects http:// URLs with a named-field error (https required)", () => {
     const result = validateImageSources([fullEntry({ url: "http://insecure.example/x" })]);
     expect(result.ok).toBe(false);

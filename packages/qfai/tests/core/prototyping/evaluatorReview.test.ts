@@ -908,10 +908,9 @@ describe("parseEvaluatorReview — new required fields (cycle / retryCount / wal
     expect(stringy.ok).toBe(false);
   });
 
-  // The CLI contract
-  // pins `cycle: 0..MAX_ITERATION_INDEX` (currently 0..9); the parser must
-  // reject `cycle > 9` so reviewer-emitted payloads cannot bypass the
-  // closed-schema contract via the upper-bound gap.
+  // The CLI contract pins `cycle: 0..MAX_ITERATION_INDEX` (currently 0..9);
+  // the parser must reject `cycle > 9` so reviewer-emitted payloads cannot
+  // bypass the closed-schema contract via the upper-bound gap.
   it("rejects when cycle exceeds MAX_ITERATION_INDEX (10 / 99 / 100)", () => {
     for (const bad of [10, 99, 100]) {
       const result = parseEvaluatorReview(baseReviewerPayload({ cycle: bad }));
