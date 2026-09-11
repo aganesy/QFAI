@@ -16,6 +16,7 @@ tools: [Read, Write, Edit, Glob, Grep, Bash]
 - Harvest undefined decisions and maintain the OQ backlog.
 - Produce multiple solution options with a recommendation.
 - Map requirements to impacted downstream artifacts.
+- Apply `.agents/rules/minimal-implementation.md`: the first rung is this stage's — whether the thing needs to exist. After a spec row is agreed, that question is a Change Request.
 
 ## Inputs you must read
 
