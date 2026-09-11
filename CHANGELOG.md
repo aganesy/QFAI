@@ -32,6 +32,24 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **Two spec packs mandated a prose-critique floor the code does not have**
+  (#1503). QFAI-PROT-002 applies a cap and selects the unit from the text: a
+  critique carrying CJK is measured in CJK characters, anything else in
+  whitespace-separated words, and neither unit has a lower bound.
+
+  `spec-0012` and `spec-0004` stated the band
+  `200..500 words OR 600..2500 characters` as a requirement, in a requirement,
+  a user story, an acceptance criterion, two business rules, an example and two
+  test cases. That is wrong twice over. The lower bound was removed, and the OR
+  was never how the unit is chosen — an English critique carries no CJK
+  characters, so a rule passing on either unit would pass every English text
+  however long.
+
+  `DR-0277` records the cap and the selected unit, and supersedes
+  `DR-0001-0003`, whose rejected alternative was argued against on the strength
+  of the floor. The boundary rows now match the cases that run: only the upper
+  edge of each unit rejects.
+
 - **Thirty-two files told an agent which language to answer in** (#1500).
   Every document under `.instruction/` opened with a block fixing output to one
   language, which the constitution's Absolute Rule — answer in the user's
@@ -48,6 +66,20 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   `.instruction/` with the same matcher that guards the shipped tree.
 
 ### Added
+
+- **A project can say which user-interface stack it adopted** (#1476).
+  `catalog/tech.md` gains a Frontend section naming the CSS framework, the
+  catalogue components are taken from, and the published theme the tokens
+  resolve from. `qfai.config.yaml` gains `uiux.registries`, the machine
+  half: component registries as name to URL template, in the shape a
+  `components.json` already carries, so a project that has one restates it
+  rather than translating it. A template without the `{name}` placeholder
+  resolves no component and is rejected.
+
+  Neither is required, and a project with no user interface leaves both out.
+  Nothing read either before, so an instruction to use the project's design
+  system named nothing and a screen got hand-drawn because that was the only
+  option left.
 
 - **A ruling on what `.instruction/` may say** (#1500). Nothing said what
   belonged in the directory `AGENTS.md` routes an agent into, so a rule could
@@ -155,6 +187,58 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   are replaced by a reference to the master.
 
 ### Fixed
+
+- **The SDD instructions agree with the validator and with each other** (#1519).
+  Three places in the `/qfai-sdd` assets stated something the tooling does not
+  do, or something a sibling document contradicts. None of them stopped a run.
+  Each made an agent pick a reading and then defend it in review, which is the
+  most expensive way for a document to be wrong.
+
+  | Where                                       | Stated                                     | Actual                                                       |
+  | ------------------------------------------- | ------------------------------------------ | ------------------------------------------------------------ |
+  | Both delta templates, the Phase 4 checklist | Only the first `## Triage` heading is read | Every `## Triage` section is validated                       |
+  | The spec evidence template                  | A fixed 6-column Work Orders table         | The shared schema has 7 columns and admits `PENDING`         |
+  | `SKILL.md` role lists                       | "UI-bearing", with no definition           | The target spec's surface decides, not the files a run edits |
+
+  The Triage claim was the costly one. An agent that followed it merged
+  headings in an append-only ledger — rewriting past entries and conflicting
+  with parallel branches — and a reviewer who read the template flagged a
+  correct file. The rule is now the one the validator holds: a re-run appends a
+  run sub-section under the existing heading, or opens a second H2 that names
+  its round in parentheses. Any other trailer is read by no Triage validator and
+  is reported as such.
+
+  The dropped Work Orders column was `Agent instance`, which is what makes an
+  author-reviewer collision detectable from the evidence alone. The narrowed
+  status vocabulary left an unrun gate no honest value: the baseline says as
+  much in its own text, so the template was arguing with its cited source.
+
+  UI-bearing is now stated once, as a property of the target spec rather than of
+  the files a run edited, and both role sites point at it. This skill authors
+  the contracts that define the screens, so a run against a spec with a surface
+  owes the UI roles whether or not it touched a screen. The routing manifest
+  carries the same condition beside the key it governs.
+
+  The fourth contradiction the report named — the `slice-and-scope` rerun policy
+  — is already reconciled, and a test holds it.
+
+- **The update bot stops offering releases the declared Node floor cannot run**
+  (#1522). Dependency updates merge on a green `ci-pass` and nothing else, which
+  works because that check runs this repository against the new dependency. It
+  cannot judge one narrowing: a release that raises its own `engines.node` above
+  the floor declared here. Every lane runs on the newest Node the range allows,
+  and the one lane pinned to the floor runs the package test suite rather than the
+  lint set, so such a release goes green and lands — and the narrowing surfaces
+  later as a local failure for whoever is on the oldest supported Node.
+
+  `markdownlint-cli2@0.23.2` is the measured case: it declares `>=22` against a
+  floor of `>=20.19.0`, and its update reached a passing check.
+
+  The bot now filters by the declared constraints, against the floor the published
+  package promises. This is not a pin and nothing stops receiving fixes —
+  `markdownlint-cli2@0.22.1` declares `>=20` and is still offered. The floor is
+  read from the package manifest rather than written twice, and a test holds the
+  two together.
 
 - **The floor lane stops failing runs in which nothing failed** (#1523). That lane
   runs the whole suite in one process pool, and each fork reports progress to the
