@@ -48,16 +48,16 @@ describe("buildBlockedSummary: literal header + 3 category lines", () => {
     expect(lines[0]?.text).toContain("color=#fff");
     // layoutAntiPatternsDetected: first offender surfaced as the code.
     expect(lines[1]?.text).toContain("lap-009");
-    // blockingFindings: first non-exceptional axis named.
-    expect(lines[2]?.text).toContain("informationArchitecture");
-    expect(lines[2]?.text).toContain("weak");
+    // blockingFindings: the first line the reviewer wrote is named.
+    expect(lines[2]?.text).toContain("home: the empty state is not represented");
+    expect(lines[2]?.count).toBe(1);
   });
 
   it("emits zero-count category lines when there is no offender (no top: prefix)", () => {
     const lines = buildBlockedCategoryLines({
       designMdViolations: [],
       layoutAntiPatternsDetected: [],
-      blockingFindings: ["home: the empty state is not represented"],
+      blockingFindings: ["home: no way back", "settings: the error state is unreachable"],
     });
     expect(lines[0]?.text).toBe("0 designMdViolations");
     expect(lines[1]?.text).toBe("0 layoutAntiPatternsDetected");

@@ -19,12 +19,7 @@ import {
 
 const canonical = {
   priorCycle: 3,
-  priorScores: {
-    informationArchitecture: "acceptable",
-    navigationFlow: "exceptional",
-    usability: "exceptional",
-    functionality: "exceptional",
-  },
+  priorScores: { blockingFindings: ["home: the empty state is not represented"] },
   openBlockers: ["lap-009 on home/dashboard"],
   priorTailwindContract: "phase-1",
 } as const;
@@ -69,17 +64,13 @@ describe("isIterateContext: exact 4-key schema lockdown", () => {
     ).toBe(false);
   });
 
-  it("rejects missing axis in priorScores", () => {
+  it("rejects priorScores without blockingFindings", () => {
+    expect(isIterateContext({ ...canonical, priorScores: {} })).toBe(false);
+  });
+
+  it("rejects a non-string blockingFindings entry", () => {
     expect(
-      isIterateContext({
-        ...canonical,
-        priorScores: {
-          informationArchitecture: "acceptable",
-          navigationFlow: "exceptional",
-          usability: "exceptional",
-          // functionality missing
-        },
-      }),
+      isIterateContext({ ...canonical, priorScores: { blockingFindings: [42] } }),
     ).toBe(false);
   });
 });
