@@ -171,6 +171,7 @@ describe("output language is stated in one place only", () => {
     ]) {
       expect(text).toMatch(clause);
     }
+  });
 
   // The surface the sweep could not reach. `AGENTS.md` is the root entry point
   // every agent in this repository reads, and it opened with the same rule in
