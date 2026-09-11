@@ -24,7 +24,7 @@ tools: [Read, Glob, Grep, Bash]
 - Review UI changes at the surface layer: avoid needless states, controls, flows, animations, and configuration that are not justified by the product goal.
 - Check naming, structure, and responsibility split of UI components for clarity, cohesion, and minimal surprise.
 - Validate docs/UX consistency so usage text, labels, error states, and user flows match the intended product behavior.
-- Apply `.agents/rules/minimal-implementation.md`: report excess against it, naming what to cut and what replaces it.
+- Apply `.agents/rules/minimal-implementation.md`: tag excess `delete`, `stdlib`, `native`, `yagni` or `shrink`, and name what to cut and what replaces it.
 
 ## Inputs you must read
 

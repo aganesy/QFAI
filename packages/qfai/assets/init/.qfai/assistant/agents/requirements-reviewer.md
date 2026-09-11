@@ -15,7 +15,7 @@ tools: [Read, Glob, Grep, Bash]
 - Audit option sets for missing alternatives and weak recommendation rationale.
 - Review OQ candidates for completeness, neutrality, and safe deferral.
 - Ensure unresolved requirement ambiguity is explicit and actionable.
-- Apply `.agents/rules/minimal-implementation.md`: report excess against it, naming what to cut and what replaces it.
+- Apply `.agents/rules/minimal-implementation.md`: tag excess `delete`, `stdlib`, `native`, `yagni` or `shrink`, and name what to cut and what replaces it.
 
 ## Inputs you must read
 
