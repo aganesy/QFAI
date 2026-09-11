@@ -48,6 +48,12 @@ The mirror also records `source: DESIGN.md` and the
 `DESIGN.md.lock.yaml` sha256 so downstream tooling can detect drift.
 LLM assistance is not used here; the mirror is byte-deterministic.
 
+When `DESIGN.md` names a `brand.theme`, the mirror copies it too. That
+name is the instruction: install the theme, rather than reproduce
+thirty-two values by hand and hope they match. The values stay in the
+mirror because the gates read them, not because anyone should type
+them.
+
 ### `.qfai/contracts/design/prototype-handoff.yaml`
 
 ```yaml
