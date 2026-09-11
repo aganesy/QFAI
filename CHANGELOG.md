@@ -47,6 +47,22 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **The design-drift scanner cites nothing a reader cannot resolve** (#1496).
+  Nine comment lines in the scanner named a code review tool's internal comment
+  identifier. They pointed at something no reader outside this repository can
+  open, which is what the writing rule forbids. The engineering reason each
+  comment carried is kept; only the identifier is gone.
+
+  Nothing in the tree cites one now: the clarity guard reports no local
+  identifier over the whole tree, where it reported eight.
+
+  The scanner and the generator prompt are a pair that must change together, so
+  the prompt gains what the scanner comments had learned and it had not: a
+  screen that shows markup as sample text has that markup scanned as if it were
+  live, because the gate reads class attributes with a regular expression rather
+  than a parser. The note says what to do about it, and why the trade is a false
+  positive rather than a missed violation.
+
 - **The forbidden-legacy manifest names every retired sidecar** (#1498). A
   discussion pack rejects eight families of sidecar file. The manifest an author
   is sent to listed four of them, so the other four could be created in good
