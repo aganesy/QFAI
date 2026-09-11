@@ -16,6 +16,16 @@
  * Pure / deterministic. The CLI passes the per-screen capture md5 map
  * (lap-009) or the per-screen captured HTML map (lap-010); the helpers
  * decide whether a finding is emitted.
+ *
+ * These two share a prefix with the layout anti-pattern registry and are not
+ * part of it. Neither describes a layout: one reports two screens whose
+ * captures are byte-identical, the other a declared route the capture never
+ * reached. They carry their own payload shapes and reach the operator as
+ * warnings, never as entries in `layoutAntiPatternsDetected`.
+ *
+ * Keep it that way. A finding written into that array is checked against the
+ * registry, so one of these would be reported as a code no entry declares —
+ * loudly, but naming the wrong problem.
  */
 
 import { md5Buffer } from "./captureMd5.js";
