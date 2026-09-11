@@ -6,6 +6,32 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **A concurrency guard that passed because the filesystem undid what it
+  staged** (#1477). `provenanceHostileTree` has a row asserting that a holder
+  reclaimed mid-section leaves its successor's lock alone. It failed about once
+  in thirty-five runs on a loaded machine, and passed the rest — for the wrong
+  reason.
+
+  The fixture removed the lock and published a different directory at the same
+  name. Every identity check in the primitive reads `dev`/`ino`, and a
+  directory inode freed one syscall earlier is handed straight back to the next
+  `mkdir`: measured at 25 reuses in 25 runs. At the filesystem level the
+  successor was the same object, so the release took its _this is mine_ branch
+  and the row exercised the opposite of what it is named for.
+
+  On the rare run where the inode was not reused, the code behaved correctly —
+  it reported the dispossession, retried, and reclaimed a planted lock nobody
+  was renewing — and the assertions, written for the other branch, failed.
+
+  The fixture now stages the successor before removing the lock, so the freed
+  inode cannot be handed to it, and asserts the two differ. It renews the
+  successor's marker for the duration, because a lock with no holder behind it
+  is reclaimable by design. The row's outcome is now the honest one: the
+  dispossessed holder reports the loss instead of writing, and the successor's
+  lock is untouched.
+
+### Fixed
+
 - **A declared contrast floor is now the one a prototype is measured against**
   (#1481). `accessibility.contrast_ratio_min` is a required key in `DESIGN.md`,
   and nothing read it as a threshold. It was parsed, checked for finiteness and

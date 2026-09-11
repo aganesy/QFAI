@@ -15,6 +15,7 @@ import {
   readdirSync,
   renameSync,
   rmSync,
+  statSync,
   symlinkSync,
   utimesSync,
   writeFileSync,
@@ -1282,52 +1283,95 @@ describe("a holder that was reclaimed does not disturb the lock that replaced it
     // Driven from inside A's section, which is where the takeover happens in the scenario. The
     // mutator stands in for the reclaim: it removes A's lock and publishes a DIFFERENT directory
     // at the same name, which is exactly what `clearAbandonedLock` plus B's rename produce.
+    //
+    // **Different has to mean a different OBJECT.** The identity every check here reads is
+    // `dev`/`ino`, and a directory inode freed one syscall earlier is handed straight back to the
+    // next `mkdir` — measured at 25 reuses in 25 runs. Staged BEFORE the removal, so the
+    // successor cannot be given the inode the lock is about to free, and asserted, so a
+    // filesystem that defeats the ordering is reported rather than quietly turning this row into
+    // a holder releasing its own lock — which is the opposite of what it is named for.
+    //
+    // **And it has to look alive.** A lock with no holder renewing it is reclaimable by design:
+    // `acquireRecordLock` polls it, finds the marker older than `LOCK_STALE_MS`, and publishes
+    // over it. That is correct behaviour, so the successor is renewed for the duration of the
+    // assertions, the way the marginally-ahead row above renews its own.
     const root = await tempRoot();
     await writeInstallProvenance(root, { workflows: {} });
 
     const lockDir = path.join(root, ".qfai", ".install-provenance.lock.d");
     const successorMarker = "successor-marker";
+    const staging = path.join(root, ".qfai", ".successor.staging");
     let replaced = false;
+    let heldInode = -1;
+    let successorInode = -1;
+    let alive: ReturnType<typeof setInterval> | undefined;
 
-    await updateInstallProvenance(root, (current) => {
-      // Inside A's section. Take A's lock away and publish B's in its place.
-      try {
-        for (const entry of readdirSync(lockDir)) {
-          rmSync(path.join(lockDir, entry), { force: true });
-        }
-        rmSync(lockDir, { recursive: true, force: true });
-        const staging = path.join(root, ".qfai", ".successor.staging");
-        mkdirSync(staging, { recursive: true });
-        writeFileSync(path.join(staging, successorMarker), "", "utf-8");
-        renameSync(staging, lockDir);
-        replaced = true;
-      } catch {
-        // the fixture could not be built here; the assertions below skip
-      }
-      return {
-        ...current,
-        workflows: { ...current.workflows, "qfai-tests.yml": entryTyped() },
-      };
-    });
+    try {
+      // A's write does not land, and that is the outcome rather than a flaw in the fixture: B
+      // holds the lock and never gives it up, so A — dispossessed mid-section — re-acquires,
+      // waits out its patience against a live holder, and reports it. What this row is about is
+      // what A leaves behind on the way out.
+      await expect(
+        updateInstallProvenance(root, (current) => {
+          // Inside A's section. Take A's lock away and publish B's in its place.
+          try {
+            heldInode = statSync(lockDir).ino;
+            // Staged first: the inode is claimed while the lock still holds its own.
+            mkdirSync(staging, { recursive: true });
+            writeFileSync(path.join(staging, successorMarker), "", "utf-8");
+            successorInode = statSync(staging).ino;
+            for (const entry of readdirSync(lockDir)) {
+              rmSync(path.join(lockDir, entry), { force: true });
+            }
+            rmSync(lockDir, { recursive: true, force: true });
+            renameSync(staging, lockDir);
+            replaced = true;
+            alive = setInterval(() => {
+              const now = new Date();
+              try {
+                utimesSync(path.join(lockDir, successorMarker), now, now);
+              } catch {
+                // the row is finishing and the tree is going away
+              }
+            }, 250);
+          } catch {
+            // the fixture could not be built here; the assertions below skip
+          }
+          return {
+            ...current,
+            workflows: { ...current.workflows, "qfai-tests.yml": entryTyped() },
+          };
+        }),
+        "a holder whose lock was taken must report the loss, not write over the successor",
+      ).rejects.toThrow(/another process is writing the record/i);
 
-    if (!replaced) return;
+      if (!replaced) return;
 
-    // A has now released. B's lock must be untouched — same directory, same marker inside.
-    expect(
-      existsSync(lockDir),
-      "the resumed holder removed or moved the lock that replaced it",
-    ).toBe(true);
-    expect(readdirSync(lockDir), "and its marker must still be the successor's").toEqual([
-      successorMarker,
-    ]);
+      expect(
+        successorInode,
+        "the successor took the inode the lock freed, so every identity check reads it as the " +
+          "holder's own and this row tests nothing",
+      ).not.toBe(heldInode);
 
-    // …and nothing was left lying around under a released name, which would mean the rename
-    // happened and only the cleanup was skipped.
-    expect(
-      readdirSync(path.join(root, ".qfai")).filter((name) => name.includes(".released-")),
-      "the canonical name must never have been freed at all",
-    ).toEqual([]);
-  });
+      // A has now released. B's lock must be untouched — same directory, same marker inside.
+      expect(
+        existsSync(lockDir),
+        "the resumed holder removed or moved the lock that replaced it",
+      ).toBe(true);
+      expect(readdirSync(lockDir), "and its marker must still be the successor's").toEqual([
+        successorMarker,
+      ]);
+
+      // …and nothing was left lying around under a released name, which would mean the rename
+      // happened and only the cleanup was skipped.
+      expect(
+        readdirSync(path.join(root, ".qfai")).filter((name) => name.includes(".released-")),
+        "the canonical name must never have been freed at all",
+      ).toEqual([]);
+    } finally {
+      if (alive !== undefined) clearInterval(alive);
+    }
+  }, 120_000);
 
   it("never moves the canonical name, so it cannot free another holder's", async () => {
     // The row above pins the OUTCOME. This one pins the mechanism, and the mechanism changed.
