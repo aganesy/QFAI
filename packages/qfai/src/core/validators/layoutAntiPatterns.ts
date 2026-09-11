@@ -1,17 +1,19 @@
 /**
- * Layout anti-pattern (lap-*) registry.
+ * Layout anti-pattern registry.
  *
- * The lap-* registry replaces the legacy slop registry. Patterns are
- * applied to iter HTML output (not discussion-pack markdown). Each entry
- * is either:
+ * Patterns are applied to iteration HTML, not to discussion-pack markdown.
+ * Each entry is either:
  *
- *   - `scope: "layout"` — regex is matched against the HTML string;
- *   - `scope: "semantic"` — regex is a no-op (`(?!).*`) and judgment is
- *     deferred to the reviewer LLM.
+ *   - `scope: "layout"` — the regex is matched against the HTML string;
+ *   - `scope: "semantic"` — the regex is a no-op (`(?!).*`) and the
+ *     judgement is left to the reviewer.
  *
- * The 8 entries (lap-001..lap-008) are FIXED by the Phase 3 plan and
- * MUST NOT be added to or removed from the JSON without the orchestrator
- * regenerating the plan.
+ * An entry describes a defect, not a shape. A layout being common is not
+ * evidence of anything, and a detection blocks convergence, so an entry
+ * that reports a familiar shape stops an ordinary product finishing the
+ * loop.
+ *
+ * The registry is data. An entry is added by naming the defect it catches.
  */
 
 import { existsSync, readFileSync } from "node:fs";

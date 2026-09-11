@@ -87,6 +87,17 @@ async function newRepoWithHistory(files: Record<string, string>): Promise<string
 
 const CITATION = "an issue number a consuming repository cannot resolve";
 
+/**
+ * The forbidden shapes, assembled from parts.
+ *
+ * A fixture that carried one whole would make this file one of the guard's own
+ * findings — twice already, an example written to illustrate a pattern matched
+ * it. Interpolating the half that carries the digits keeps every line here below
+ * every pattern, and the fixture the same string once it is built.
+ */
+const REVIEW_ID = `codex ${"AG08r"}`;
+const WRAPPED_REVIEW_ID = ["// as raised in the codex", `// ${"r3264500818"} thread`].join("\n");
+
 describe("scripts/check-doc-clarity.mjs", () => {
   it("reports an issue number in a source comment", async () => {
     const dir = await newRepo({
@@ -109,6 +120,79 @@ describe("scripts/check-doc-clarity.mjs", () => {
 
     expect(result.status).toBe(0);
     expect(result.stdout).toContain("no local identifiers found");
+  });
+
+  it("reports a review reference in a test title, which ships in the run output", async () => {
+    const dir = await newRepo({ "tests/a.test.ts": `it("fixed in ${REVIEW_ID}", () => {});\n` });
+
+    const result = runGuard(dir, ["--scope", "all"]);
+
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain("tests/a.test.ts:1");
+    expect(result.stderr).toContain("codex-review-id");
+  });
+
+  it("reports a review reference in an operator-facing message", async () => {
+    const dir = await newRepo({ "src/run.ts": `console.error("refused — ${REVIEW_ID}");\n` });
+
+    const result = runGuard(dir, ["--scope", "all"]);
+
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain("src/run.ts:1");
+  });
+
+  it("leaves a fixture inside a test body alone, where the string is data", async () => {
+    // The window is the call line and the strings wrapped under it. A body that
+    // ran to the closing bracket would read every fixture in the case as prose,
+    // and a CSS colour in one of them as an issue number.
+    const dir = await newRepo({
+      "tests/b.test.ts": [
+        'it("renders", () => {',
+        `  const css = "color:${"#"}222222";`,
+        "});",
+        "",
+      ].join("\n"),
+    });
+
+    const result = runGuard(dir, ["--scope", "all"]);
+
+    expect(result.status).toBe(0);
+    expect(result.stdout).toContain("no local identifiers found");
+  });
+
+  it("reports a citation a line wrap split across two comments", async () => {
+    const dir = await newRepo({
+      "src/wrapped.ts": `${WRAPPED_REVIEW_ID}\nexport const a = 1;\n`,
+    });
+
+    const result = runGuard(dir, ["--scope", "all"]);
+
+    expect(result.status).toBe(1);
+    // Reported at the first of the two, which is where the citation starts.
+    expect(result.stderr).toContain("src/wrapped.ts:1");
+    expect(result.stderr).toContain("codex-review-id");
+  });
+
+  it("does not invent a citation across two comment lines that carry none", async () => {
+    const dir = await newRepo({
+      "src/pair.ts": ["// the codex is a book", "// and 1234 pages long", "", ""].join("\n"),
+    });
+
+    const result = runGuard(dir, ["--scope", "all"]);
+
+    expect(result.status).toBe(0);
+    expect(result.stdout).toContain("no local identifiers found");
+  });
+
+  it("counts a citation once when it sits on one line inside the window", async () => {
+    const dir = await newRepo({
+      "src/single.ts": `// ${REVIEW_ID} fixed it\n// and the next line is prose\nexport const a = 1;\n`,
+    });
+
+    const result = runGuard(dir, ["--scope", "all"]);
+
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain("1 local identifier(s) found");
   });
 
   it("reports an issue number in Markdown prose", async () => {
