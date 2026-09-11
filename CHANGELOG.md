@@ -52,6 +52,18 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **Prototype captures are checked for accessibility** (#1485). The
+  accessibility phase — image alternatives, document language, skip link,
+  heading hierarchy — was reachable only from `validate`, and the loop writes
+  exactly the artifact it wants: one capture per screen per cycle. Nothing
+  read them with it, so every screen went unchecked.
+
+  It now runs over the accepted iteration's captures beside the token re-scan,
+  and reports what it finds, naming the screen. Reported, never blocking:
+  replacing "any layout shape stops the loop" with "any accessibility finding
+  stops the loop" would repeat the mistake with better sources. The reviewer
+  reads them and decides what belongs in `blockingFindings`.
+
 - **The shipped-document version guard read every triple of numbers as a
   version** (#1551). `WCAG 3.3.2` failed the same check as `qfai 1.11.1`, so an
   init-template document could not cite an accessibility criterion by its
