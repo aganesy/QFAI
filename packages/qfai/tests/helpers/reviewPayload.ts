@@ -17,7 +17,7 @@
 export type ReviewPayloadOverrides = {
   readonly cycle?: number;
   readonly sessionStatus?: "ok" | "retryExhausted" | "launchFailed";
-  readonly axis?: "weak" | "acceptable" | "strong" | "exceptional";
+  readonly blockingFindings?: readonly string[];
   readonly layoutAntiPatternsDetected?: readonly string[];
   readonly designMdViolations?: ReadonlyArray<{ kind: string; found: string }>;
 };
@@ -27,19 +27,13 @@ export function reviewPayload(
   screenId: string,
   overrides: ReviewPayloadOverrides = {},
 ): string {
-  const axis = overrides.axis ?? "exceptional";
   return JSON.stringify({
     specId,
     screenId,
     cycle: overrides.cycle ?? 1,
     sessionStatus: overrides.sessionStatus ?? "ok",
     retryCount: 0,
-    ordinalAxes: {
-      informationArchitecture: axis,
-      navigationFlow: axis,
-      usability: axis,
-      functionality: axis,
-    },
+    blockingFindings: overrides.blockingFindings ?? [],
     impressions: {
       operability: "Controls respond predictably.",
       transitionFeel: "Transitions are calm.",

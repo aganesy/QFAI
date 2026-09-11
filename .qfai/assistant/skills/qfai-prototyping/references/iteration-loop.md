@@ -86,7 +86,7 @@ start `/qfai-prototyping` from cycle 0.
 ## Sealed loop
 
 A loop is **sealed** once `prototyping.json` records
-`stopReason: "axes-exceptional"` together with an `acceptedIterationIndex`.
+`stopReason: "converged"` together with an `acceptedIterationIndex`.
 That is the converged state — the only one `--check-convergence` reports as
 converged and the only one `npx qfai prototyping certify` will seal. On a sealed
 loop `npx qfai prototyping iterate --cycle N` refuses with exit `2` for any `N`
@@ -122,7 +122,7 @@ Re-running the accepted cycle itself (`--cycle <acceptedIterationIndex>`)
 is not refused by the sealed-loop guard — that would be a redo of recorded
 work, not an extension past the seal — but it does not re-run the cycle
 either: the convergence gate reads the same recorded iteration, reports
-`axes-exceptional` and exits `64` without assigning paths or writing
+`converged` and exits `64` without assigning paths or writing
 anything. Treat it as a state read, and prefer
 `npx qfai prototyping iterate --check-convergence`, which reports the recorded
 `stopReason` / `acceptedIterationIndex` without the exit-code ambiguity.

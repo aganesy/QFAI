@@ -66,7 +66,7 @@ async function loadJsonObject(filePath: string): Promise<Record<string, unknown>
  *
  * Sole criterion: `stopReason === null`.
  *
- * A completed loop sets `stopReason` to one of "axes-exceptional",
+ * A completed loop sets `stopReason` to one of "converged",
  * "max-iterations", "license-verify-fail", "input-error", etc. While
  * iterating (including cycle-0 seed where `writeSeedMetadata`
  * persists `acceptedIterationIndex = 0` even though no real
