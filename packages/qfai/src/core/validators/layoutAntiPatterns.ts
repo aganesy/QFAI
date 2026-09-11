@@ -5,8 +5,13 @@
  * Each entry is either:
  *
  *   - `scope: "layout"` — the regex is matched against the HTML string;
- *   - `scope: "semantic"` — the regex is a no-op (`(?!).*`) and the
- *     judgement is left to the reviewer.
+ *   - `scope: "semantic"` — the regex is a no-op (`(?!).*`), and something
+ *     other than a regex over the HTML decides it. For most entries that is
+ *     the reviewer. Two — `lap-009` and `lap-010` — are computed by
+ *     `iterate --capture` from the capture itself, and reach the same
+ *     `layoutAntiPatternsDetected[]` the reviewer writes into. Both kinds are
+ *     registered here because the array has one vocabulary: a code in it that
+ *     no entry declares is `QFAI-PROT-002`, whoever put it there.
  *
  * An entry describes a defect, not a shape. A layout being common is not
  * evidence of anything, and a detection blocks convergence, so an entry

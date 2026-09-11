@@ -334,3 +334,46 @@ file, so an entry here is what makes that citation checkable.
   alone rather than swept up.
 - Related: AC-0017-0028, AC-0017-0029, BR-0017-0030, BR-0017-0031, BR-0017-0048, BR-0017-0050,
   BR-0017-0051, EX-0017-0050, EX-0017-0051, TC-0017-0066, TC-0017-0067, `CR-20260820-0005`
+
+### DR-0017-0010: the declared ten stands, and is held to the cores the machine has
+
+- Status: accepted
+- Context: `BR-0017-0048` fixes the declared starting value at ten on the worker axis, and
+  `DR-0017-0009` records that it stood against a measurement that made it look flakier. Both
+  settled the number. Neither settled what the number means on a machine that cannot hold it.
+  `ubuntu-latest` gives four logical CPUs. A fifth fork there does not run — it waits for a core —
+  and the waiting is charged to the fork, so the suite reports as though it were ten-way parallel
+  while running four-way.
+- Decision, the measurement, because `BR-0017-0030` forbids a parallelism claim landing on
+  argument. Whole package suite, four cores, one full run per setting, back to back:
+  - ten forks — **307.4 s** wall, 347.8 s collect and 1999.2 s tests summed across forks;
+  - four forks — **253.0 s** wall, 109.6 s collect and 703.6 s tests summed.
+    The summed figures are what the wall clock understates: at ten, most of each fork's measured
+    time was spent waiting rather than working. Summed test time falls to a third while the same
+    11 338 cases run with the same outcomes. On the wall clock ten is 21.5% slower, outside the ten
+    percent `EX-0017-0049` allows — where the fourteen-core comparison in
+    `.qfai/evidence/timing-workers-spec-0017.md` put it at 3.48%, inside it. An independent pair on
+    the same core count gave 299 s and 269 s, an 11.2% spread and the same verdict. The sign of that
+    verdict flipping on the core count is the fact this entry rests on.
+- Decision, what was NOT done: the declared value was not revised. `BR-0017-0051` reserves that
+  revision to the user, and this is not it — `DECLARED_START` is still ten and both axes are still
+  overridable, which is the whole of what `BR-0017-0048` requires. What changed is the value handed
+  to the runner: `Math.min(DECLARED_START, availableParallelism())`. A machine with ten cores or
+  more is unaffected, so the fourteen-core comparison that adopted ten still describes what that
+  machine runs.
+- Decision, the shape chosen, and the one refused: lowering the declaration to four was available
+  and is wrong in the other direction — it would under-use a large developer machine, and it would
+  revise a value that is not this file's to revise. The cap keeps one number and makes it true
+  everywhere.
+- Decision, what stays uncapped: the override. A comparison that could not oversubscribe could not
+  measure what oversubscribing costs, which is the measurement above. `QFAI_TEST_MAX_WORKERS` is
+  therefore honoured as asked, and a row pins that. The within-file concurrency axis is uncapped
+  too, for a different reason: it bounds concurrent cases inside one process, which are not forks,
+  and no measurement has been taken on it.
+- Consequences: on four cores the suite runs at four forks rather than ten, and the reported
+  collect and test totals stop overstating the work by the time spent waiting. One cost is accepted
+  and named: a run on a small machine no longer reproduces the fork count a large one uses, so a
+  race that needs ten forks to surface now needs the override to reproduce. The floor lane already
+  sets the override to the machine's own count and is unaffected.
+- Related: AC-0017-0026, AC-0017-0028, BR-0017-0030, BR-0017-0048, BR-0017-0049, BR-0017-0051,
+  EX-0017-0049, TC-0017-0061, TC-0017-0065, DR-0017-0009

@@ -69,6 +69,36 @@ it. So the case for 10 rests on the instruction and on the margin — 3.48%, 3.7
 longer on a claim that the setting does not matter. Anyone lowering the ten-percent allowance should
 re-read this table first: the old one would have survived any threshold, and this one would not.
 
+## The same question on four cores
+
+The table above was taken on fourteen logical CPUs, where ten forks fit. `ubuntu-latest` gives
+four, and there the declared value asks for more forks than there are cores. Whole package suite,
+four cores, one full run per setting, back to back on the same machine:
+
+| machine    | forks | wall    | collect (summed) | tests (summed) |
+| ---------- | ----- | ------- | ---------------- | -------------- |
+| four cores | 10    | 307.4 s | 347.8 s          | 1999.2 s       |
+| four cores | 4     | 253.0 s | 109.6 s          | 703.6 s        |
+
+The collect and test figures are summed across forks, and their collapse is what the wall clock
+understates: at ten forks on four cores most of each fork's measured time is spent waiting for a
+core rather than working. Summed test time falls to a third while the same 11 338 cases run with
+the same outcomes. The suite is not ten-way parallel on that machine; it only reports as though it
+were. On the wall clock ten is 21.5% slower, well outside the ten percent `EX-0017-0049` allows —
+where on fourteen cores it was 3.48%, inside it.
+
+An independent pair of runs on the same core count gave 299 s and 269 s, a 11.2% spread. Both pairs
+put ten outside the allowance and four ahead, so the conclusion does not rest on either one alone.
+
+Deliberately in its own table. The rows above are one machine's comparison and the arithmetic
+`TC-0017-0065` re-does; mixing a second machine's runs into them would make "fastest measured" a
+number from no single machine.
+
+**What this changed.** Not the declared value, which is still ten. `vitest.knobs.ts` now hands the
+runner `Math.min(DECLARED_START, availableParallelism())`, so the declaration is held to the cores
+the machine has. A machine with ten or more is unaffected, and the fourteen-core table above is
+where ten was adopted in the first place. `DR-0017-0010` records the decision.
+
 What this table does NOT say, because the measurement was not taken: that 10 is the right value for
 every project. It compares settings on the largest one, which is what the rule asks for.
 `BR-0017-0053` governs per-project tuning and requires one project per pull request behind three

@@ -1,8 +1,15 @@
 /**
  * TC-3.3.x — layout anti-pattern (lap-*) registry.
  *
- * The 8 lap entries are FIXED per the Phase 3 plan; tests pin both
- * cardinality and id ordering, plus the semantic-scope no-op contract.
+ * The membership is pinned here as a literal, not read from the file under
+ * test: an entry added or removed on one side alone is what this row exists to
+ * report. Cardinality, ids and the semantic-scope no-op contract all hang off
+ * the same list.
+ *
+ * Two of the entries are written by `iterate --capture` rather than judged by
+ * the reviewer. They are registered alongside the rest because
+ * `layoutAntiPatternsDetected[]` has one vocabulary, and a code in it that no
+ * entry declares is `QFAI-PROT-002` whichever writer put it there.
  */
 
 import { existsSync } from "node:fs";
@@ -35,7 +42,12 @@ async function newTempDir(): Promise<string> {
   return dir;
 }
 
-const EXPECTED_IDS = ["lap-007-state-not-represented", "lap-008-no-back-affordance"] as const;
+const EXPECTED_IDS = [
+  "lap-007-state-not-represented",
+  "lap-008-no-back-affordance",
+  "lap-009",
+  "lap-010",
+] as const;
 
 describe("loadLayoutAntiPatterns", () => {
   it("TC-3.3.1: reads every entry from layoutAntiPatterns.json", () => {
@@ -56,9 +68,9 @@ describe("loadLayoutAntiPatterns", () => {
   it("TC-3.3.4: semantic-scope regex `(?!).*` matches nothing", () => {
     const patterns = loadLayoutAntiPatterns();
     const semantic = patterns.filter((p) => p.scope === "semantic");
-    expect(semantic.map((p) => p.id).sort()).toEqual(
-      ["lap-007-state-not-represented", "lap-008-no-back-affordance"].sort(),
-    );
+    // The same list as above rather than a second copy: two literals that must
+    // agree are two literals that can stop agreeing.
+    expect(semantic.map((p) => p.id).sort()).toEqual([...EXPECTED_IDS].sort());
     for (const p of semantic) {
       const re = new RegExp(p.regex, "gi");
       expect(re.test("")).toBe(false);

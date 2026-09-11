@@ -10,5 +10,17 @@
     "regex": "(?!).*",
     "scope": "semantic",
     "source": "Nielsen usability heuristic 3, user control and freedom: a user in a nested view needs a marked way out"
+  },
+  {
+    "id": "lap-009",
+    "regex": "(?!).*",
+    "scope": "semantic",
+    "source": "the screen contract's declared screen set: two declared screens whose captures are byte-identical are one screen, so one of them was never rendered"
+  },
+  {
+    "id": "lap-010",
+    "regex": "(?!).*",
+    "scope": "semantic",
+    "source": "the screen contract's route: a route the contract declares and the capture could not reach"
   }
 ]

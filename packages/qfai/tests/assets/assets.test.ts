@@ -768,6 +768,51 @@ describe("assets guardrails", () => {
     expect(scannerProse).toContain("skips a file it cannot stat or read");
   });
 
+  it("states the procurement posture on both halves of the same pair", async () => {
+    // What the single-file envelope cannot carry is a runtime dependency. Put
+    // as a ban on component libraries, the constraint also refused a
+    // transposed catalogue block, which installs nothing and is an ordinary
+    // way to build a screen.
+    for (const tree of [templateQfaiDir, path.join(repoRoot, ".qfai")]) {
+      const generatorRef = await readFile(
+        path.join(
+          tree,
+          "assistant",
+          "skills",
+          "qfai-prototyping",
+          "references",
+          "generator-prompt.md",
+        ),
+        "utf-8",
+      );
+      expect(generatorRef).not.toContain("No component library");
+      expect(generatorRef).toContain("No runtime dependency beyond");
+      expect(generatorRef).toContain("Markup is not a dependency");
+      // The load-bearing half stays: CSS behind a `<link>` is outside the
+      // scan, so the authoring side is the only place it can be refused.
+      expect(generatorRef).toContain('`<link rel="stylesheet">`');
+    }
+
+    // The scanner half says why the permission is safe — it judges the values
+    // a document states, and has no way to read where the markup came from.
+    const scanner = await readFile(
+      path.join(
+        repoRoot,
+        "packages",
+        "qfai",
+        "src",
+        "core",
+        "prototyping",
+        "designMdViolations.ts",
+      ),
+      "utf-8",
+    );
+    const scannerProse = scanner.replace(/^\s*\*\s?/gm, "").replace(/\s+/g, " ");
+    expect(scannerProse).toContain("never their provenance");
+    expect(scannerProse).toContain("transposed from a component catalogue");
+    expect(scannerProse).toContain("a stylesheet behind a `<link>`");
+  });
+
   it("keeps the generator's --auto-serve routing guidance in step with the server", async () => {
     // `--auto-serve` gained an SPA route fallback: a document request that
     // matches no file on disk is served `index.html`. generator-prompt.md is
