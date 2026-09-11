@@ -227,6 +227,42 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **The project layer describes the repository it is in** (#1531). The files
+  under `.instruction/02_project/` summarise this repository for an agent
+  `AGENTS.md` routes there, and nothing compared a summary against the thing it
+  described. The Node floor moved twice and three directories were removed with
+  none of them failing.
+
+  What an agent read was a repository that no longer exists.
+
+  | Stated                                                     | Actual                                        |
+  | ---------------------------------------------------------- | --------------------------------------------- |
+  | `engines` is `>=18.0.0`                                    | `>=20.19.0`                                   |
+  | `docs/` at the repository root                             | No such directory                             |
+  | `.qfai/require/` is the requirements root                  | No such directory                             |
+  | `.qfai/assistant/prompts/`, `.../instructions/`            | No such directories                           |
+  | A spec pack is `spec.md` / `delta.md` / `scenario.feature` | `01_Spec.md` through `10_Plan.md`             |
+  | ID types are `SPEC` / `SC` / `UI` / `API` / `DB`           | `US` / `AC` / `BR` / `EX` / `TC`, and `CON-*` |
+
+  The pack shape was the one that cost. An agent following it created three
+  files with names no validator reads, while `naming.md` one directory over said
+  otherwise — so the layer contradicted the tree and itself.
+
+  Each fact is now handled according to what kind of fact it is. A value a
+  machine-readable file already states, and that moves on its own schedule,
+  names that file instead of restating it: the Node range and the pnpm version
+  are read from `package.json`. A shape an agent acts on is stated here and
+  correct, because an instruction you have to look up is not an instruction.
+
+  `naming.md` was missing `10_Plan.md` and `11_Slice-Policy.md` from the two
+  required sets, and two paths were written from the package root in prose that
+  named no package. Both are fixed.
+
+  The class no longer goes stale silently: a repository-relative path this layer
+  names must exist, and a Node floor it states must be the declared one. The
+  check goes quiet if the layer is ever removed rather than standing in the way
+  of removing it.
+
 - **A reference is consulted to differ from, or to adopt from, and the two
   are no longer the same instruction** (#1475). The intake asked an author to
   treat templates as seeds rather than winners, to name what must feel unlike
