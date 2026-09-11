@@ -1,11 +1,17 @@
 # 09 Delta
 
 <!-- Multi-run layout. `/qfai-sdd` is re-run against the same spec, so this
-     file grows. Keep exactly one H2 per section for the file's lifetime and
-     append inside it. Never open a second `## Change Summary` / `## Triage`
-     H2 (dated variants such as `## Triage — 2026-01-01` included): the
-     `QFAI-TRIAGE-*` checks read the first `## Triage` heading only, so rows
-     parked under a duplicate heading are never validated. -->
+     file grows: a run appends, and never replaces what is already here.
+
+     A re-run's Triage rows go either in another `### DELTA-NNNN (YYYY-MM-DD)`
+     sub-section under the `## Triage` below, or under a second H2 that names
+     its round in parentheses — `## Triage (2026-01-01)`. Every `## Triage`
+     section in the file is validated, and the parenthesised qualifier is the
+     only form that keeps two of them distinct. Any other trailer
+     (`## Triage — 2026-01-01`, `## Triage Table`) or a demoted `### Triage` is
+     read by no Triage validator; `QFAI-TRIAGE-008` reports it.
+
+     `## Change Summary` has no such qualifier. Keep one and append inside it. -->
 
 ## Change Summary
 
@@ -23,9 +29,10 @@
 ## Triage
 
 > Stage 1 Triage SSOT for this spec. One row per incoming REQ/NFR.
-> One `### DELTA-NNNN (YYYY-MM-DD)` sub-section per run; a re-run appends a new
-> sub-section under this heading and never opens a second `## Triage` H2.
-> See `references/sdd-triage.md` for the operation algorithm.
+> One `### DELTA-NNNN (YYYY-MM-DD)` sub-section per run, appended under this
+> heading or under a `## Triage (<round>)` H2 of its own.
+> See `references/sdd-triage.md` for the heading grammar and the operation
+> algorithm.
 > Operation: CREATE | UPDATE | DELETE | SPLIT | MERGE | SUPERSEDE.
 > Sub-op (UPDATE only): APPEND | MODIFY | REMOVE.
 > Approved By: required for CREATE / DELETE / SPLIT / MERGE / SUPERSEDE / UPDATE:REMOVE.
