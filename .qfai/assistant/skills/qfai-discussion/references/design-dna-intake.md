@@ -37,11 +37,43 @@ the screen.
 - Record template usage policy as `none`, `reference-only`, or
   `implementation-seed`.
 
+## Asking for the direction
+
+One decision sets how the product looks, and only the user can make it:
+which published theme the product is built on. Nothing downstream asks
+again — `/qfai-sdd` Phase 0 authors tokens from whatever is recorded — so
+an unasked question becomes an invented brand.
+
+Route the ask through
+`.qfai/assistant/constitution/shared-skill-operating-baseline.md#user-questions-askuserquestion-protocol`.
+Do not open a second path for it. The question budget is not the obstacle:
+non-discussion commands are what the cap constrains, and a question whose
+subject is a decision the skill declares mandatory is an approval, which is
+exempt.
+
+**Offer candidates, not adjectives.** "Which of these three" is a choice a
+user can make from a page; "how would you describe the brand" asks them to
+specify a thing they are hiring the product to produce. Name each candidate,
+say what it looks like, and say what adopting it settles.
+
+**Bias the candidates toward the ordinary.** A recognisable product with one
+distinctive element beats a distinctive product. Novelty in structure costs
+the user their existing knowledge and buys nothing a brand can hold — the
+brand lives on the accent, which is where the next question goes.
+
+Then ask what departs from the theme. Keep it to the primary hue and the
+typeface pairing unless the user asks for more; everything else stays as the
+theme shipped it, which is how a screen keeps looking like one thing.
+
+With no user present, take the most conventional candidate, record it as
+`chosen_by: assumption`, and open it in `11_OQ-Register.md`. Do not block.
+
 ## Where the answers go
 
 The interview is recorded, not rendered. Its answers go into the pack:
-the classification into `01_Context.md`, both reference registries into
-`04_Sources.md`, and the screen-level decisions into `uiux/`.
+the classification and the chosen direction into `01_Context.md`, both
+reference registries into `04_Sources.md`, and the screen-level decisions
+into `uiux/`.
 
 Root `DESIGN.md` is written later, by `/qfai-sdd` Phase 0, which reads
 those records. The mapping from answer to field is

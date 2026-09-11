@@ -4,6 +4,33 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ## [Unreleased]
 
+### Changed
+
+- **The user picks the brand direction, at the one stage that asks** (#1473).
+  `/qfai-discussion` now puts candidate themes to the user and records the
+  choice in `01_Context.md#Design Direction`: the adopted theme, what departs
+  from it, and what stays ordinary. `/qfai-sdd` Phase 0 authors `DESIGN.md`
+  from that record, and a UI-bearing pack without one stops rather than
+  picking a brand.
+
+  An assistant used to choose one of eight archetypes from its own reading of
+  the product, and the user first met the result as twelve hex values in a
+  file. Nothing downstream asked, so the decision with the largest effect on
+  how the product looks was the one nobody was consulted about.
+
+  The candidates are named themes rather than adjectives, because the user is
+  choosing rather than specifying, and they lean conventional: novelty in the
+  shape of a screen costs the user what they already know and buys nothing a
+  brand can hold. The brand lives on the accent — the primary hue and the
+  typeface pairing.
+
+  Planner-first is unchanged for what it was about. The screen explorations
+  are still carried unranked; the prototype loop is what ranks them. A
+  cli-only pack is asked for no direction, since nothing downstream reads a
+  theme for a surface that renders no tokens. An unattended run records the
+  most conventional candidate as an assumption and opens it as a question
+  rather than blocking.
+
 ### Added
 
 - **`DESIGN.md` says where its numbers came from** (#1474). `brand.theme`
@@ -33,6 +60,35 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   existed is not wrong, it just does not say. The handoff mirror copies the
   name, so an implementer installs the theme instead of reproducing
   thirty-two values by hand.
+
+- **Each captured screen arrives counted** (#1493). `iterate --capture` now
+  writes `iter-NN/<screen>.signals.json` beside the capture and prints the
+  same numbers.
+
+  | Field                        | What it counts                                        |
+  | ---------------------------- | ----------------------------------------------------- |
+  | `interactiveControls`        | elements the user can operate, disabled ones excluded |
+  | `words`                      | every rendered word                                   |
+  | `explanatoryWords`           | words that name nothing                               |
+  | `controlsPerTask`            | controls over the contract's declared `primary_tasks` |
+  | `explanatoryWordsPerControl` | explanatory words over controls                       |
+  | `maxDepth`                   | deepest nesting                                       |
+  | `distinctElementTypes`       | how many kinds of element the screen uses             |
+
+  Two of the review criteria ask whether a screen is restrained, and the
+  reviewer had to count by eye to answer. An introduction above the form, a
+  line under every field and a dump of every available parameter each move one
+  of the two ratios, and both are contract-relative — a screen declaring one
+  task and carrying forty controls is wrong where the same forty elsewhere are
+  not — so no global threshold has to be invented.
+
+  A count is not a score. Nothing weights, aggregates or thresholds them: the
+  reviewer cites a number in a finding, and the finding is what gates. A
+  denominator the contract does not supply reads `null`, which means unknown
+  rather than zero. The counts are written rather than only printed because
+  the review happens in a later step, and they are computed rather than
+  recorded by the reviewer because a hand-written number is the one nobody can
+  reproduce.
 
 ### Fixed
 

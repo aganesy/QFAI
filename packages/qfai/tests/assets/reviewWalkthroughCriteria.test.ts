@@ -81,6 +81,21 @@ describe("the prototype review asks eight answerable questions", () => {
       expect(text).toContain("Labels stay.");
     });
 
+    // Criteria 6 to 8 read counts. A reviewer told to consider the counts and
+    // not told where they are counts by eye, which is the number nobody can
+    // reproduce — so the prompt names the file and forbids recounting.
+    it(`${tree}: the counts are read from the capture's sidecar, not recounted`, async () => {
+      const text = flat(await read(tree, REVIEWER_PROMPT));
+
+      expect(text).toContain("iter-NN/<screen>.signals.json");
+      expect(text).toContain("Read them; do not recount.");
+      // An absent denominator is unknown. Reading it as zero turns "no task
+      // declared" into "no controls", which is the opposite of the capture.
+      expect(text).toContain("`null`, which means unknown, not zero");
+      // And a count still gates nothing on its own.
+      expect(text).toContain("write no finding a number alone would make");
+    });
+
     // Criteria 1 to 4 are the ladder. If the reviewer's copy drifts from the
     // ladder's own file, a screen passes review by a standard nobody built to.
     it(`${tree}: criteria 1 to 4 cite the procurement ladder`, async () => {

@@ -20,6 +20,22 @@ Notes:
 - Prototyping **execution** surfaces (used in `prototyping.yaml`) are a strict subset: `web|mobile|desktop|mixed`.
 - `cli` and `non-ui` are classification-only values and never appear in `prototyping.yaml`. `/qfai-prototyping` rejects them, so a cli-only pack emits none.
 
+## Design Direction
+
+Required when a classified surface is `web`, `mobile`, `desktop` or `mixed`. Omit for cli-only and non-ui.
+
+The user chooses this; `references/design-dna-intake.md` says how to put the choice to them. `/qfai-sdd` Phase 0 authors root `DESIGN.md` from it, and asks nothing further.
+
+- adopted_theme: [the published theme or design system this product is built on]
+- brand_accent: [what departs from it — typically the primary hue and the typeface pairing]
+- conventions_kept: [what stays ordinary on purpose]
+- chosen_by: [user|assumption]
+
+Notes:
+
+- `chosen_by: assumption` records a direction taken without the user, which is what `--auto` does. It is a labelled assumption, not a decision, and belongs in `11_OQ-Register.md` until someone confirms it.
+- Name a theme, not an adjective. "Calm and modern" is not something `/qfai-sdd` can resolve tokens from.
+
 ## Metadata
 
 | Key           | Value                        |
