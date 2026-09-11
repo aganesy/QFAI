@@ -74,6 +74,27 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   under this defect a pack could go from tens of errors to zero on headings
   alone.
 
+- **Three skills read the shared directories as a set** (#1460).
+  `Inputs Priority` is the section that makes a skill open
+  `.qfai/assistant/constitution/` and `.qfai/assistant/catalog/` as directories
+  rather than as a list of file names. `qfai-sdd`, `qfai-atdd`, `qfai-verify`
+  and `qfai-configure` carried it; `qfai-discussion`, `qfai-implement` and
+  `qfai-prototyping` did not, and named individual documents instead.
+
+  So every invariant added to either directory reached specification,
+  acceptance tests, verification and configuration, and missed the three stages
+  that produce the most: the one that settles direction with the user, the one
+  that writes production code, and the one that builds the screens. Nothing
+  reported the gap, because a closed list is a valid section.
+
+  The three now carry the section in the same form as the other four. The
+  individual paths they already named stay — they point at specific sections
+  and remain useful. `tests/assets/skillInputsPriority.test.ts` reads the skills
+  off the directory and holds each one, so a skill added later is asked the same
+  question, and it reads the section rather than the file: every skill mentions
+  some document under `constitution/` somewhere, and a whole-file search would
+  pass on exactly the state this replaces.
+
 ### Changed
 
 - **`W-STALE-REFERENCE` carries the severity it means, instead of reading the
