@@ -1,3 +1,4 @@
+import { availableParallelism } from "node:os";
 import process from "node:process";
 
 /**
@@ -53,7 +54,37 @@ export const CONCURRENCY_ENV = "QFAI_TEST_MAX_CONCURRENCY";
 export const DECLARED_START = 10;
 
 /**
- * A positive integer from `name`, or the declared starting value.
+ * The worker ceiling handed to the runner: the declared value, held to the cores the
+ * machine actually has.
+ *
+ * The declaration stays ten. What it stops being is a promise the hardware cannot keep.
+ * A fork over the core count does not run — it waits for a core — and the waiting is
+ * charged to the fork, so the suite reports as though it were ten-way parallel while
+ * running four-way.
+ *
+ * Measured on the whole package suite on four cores, the same count `ubuntu-latest`
+ * gives:
+ *
+ * ```text
+ * forks  wall      collect (summed)  tests (summed)
+ * 10     307.4 s   347.8 s           1999.2 s
+ * 4      253.0 s   109.6 s            703.6 s
+ * ```
+ *
+ * The summed figures are what the wall clock understates: most of each fork's measured
+ * time at ten was spent waiting rather than working. A machine with ten cores or more is
+ * unaffected, and the fourteen-core comparison in
+ * `.qfai/evidence/timing-workers-spec-0017.md` is where ten was adopted in the first
+ * place — this cap never lowers the value on a machine that can hold it. `DR-0017-0010`
+ * carries the decision and the rest of the numbers.
+ *
+ * The within-file concurrency axis is not capped. It bounds `it.concurrent` cases inside
+ * one process, which are not forks, and no measurement has been taken on it.
+ */
+export const DECLARED_WORKERS = Math.min(DECLARED_START, availableParallelism());
+
+/**
+ * A positive integer from `name`, or `declared`.
  *
  * Deliberately strict. `Number("")` and `Number(" ")` are both 0 — the shape a shell
  * produces from an unset variable — so a lenient parse would silently reconfigure the
@@ -62,19 +93,21 @@ export const DECLARED_START = 10;
  *
  * The override is what lets the measurement rules coexist with the declared value. A
  * timing run can be taken at any setting without editing a declaration, so taking a
- * measurement never looks like adopting one.
+ * measurement never looks like adopting one. It is deliberately NOT held to the core
+ * count: a comparison that could not oversubscribe could not measure what
+ * oversubscribing costs, which is the measurement the cap above rests on.
  */
-export function tunable(name: string): number {
+export function tunable(name: string, declared: number = DECLARED_START): number {
   const raw = process.env[name];
   if (raw === undefined) {
-    return DECLARED_START;
+    return declared;
   }
   const trimmed = raw.trim();
   if (!/^[0-9]+$/.test(trimmed)) {
-    return DECLARED_START;
+    return declared;
   }
   const parsed = Number(trimmed);
-  return Number.isSafeInteger(parsed) && parsed > 0 ? parsed : DECLARED_START;
+  return Number.isSafeInteger(parsed) && parsed > 0 ? parsed : declared;
 }
 
 /**
@@ -84,7 +117,7 @@ export function tunable(name: string): number {
  * than an inherited one; it is not tunable, because the obligation is about the ceiling.
  */
 export const rootKnobs = {
-  maxWorkers: tunable(WORKERS_ENV),
+  maxWorkers: tunable(WORKERS_ENV, DECLARED_WORKERS),
   minWorkers: 1,
   fileParallelism: true,
 } as const;
