@@ -102,7 +102,7 @@
 - EX-Ref: EX-0012-0111
 - AC-Refs: AC-0012-0024
 - Test file: `packages/qfai/tests/core/prototyping/iteration.test.ts`
-- Verify `shouldStop([iter])` returns `null` when all 4 UX axes are `exceptional` but `layoutAntiPatternsDetected: ["lap-001-orphan-page"]` is non-empty.
+- Verify `shouldStop([iter])` returns `null` when `layoutAntiPatternsDetected: ["lap-007-state-not-represented"]` is non-empty.
 
 ## TC-0012-0321
 
@@ -182,7 +182,7 @@
 - EX-Ref: EX-0012-0111
 - AC-Refs: AC-0012-0025
 - Test file: `packages/qfai/tests/core/validators/layoutAntiPatterns.test.ts`
-- Verify `layoutAntiPatternsDetected[]` schema enforces the `lap-001..008` whitelist; unknown tokens raise `QFAI-PROT-025`.
+- Verify `layoutAntiPatternsDetected[]` schema accepts only identifiers the registry declares; a token it does not declare raises `QFAI-PROT-002`.
 
 ## TC-0012-0332
 
