@@ -110,7 +110,7 @@ describe("TC-0004-0018: canonical sidecar family filename expectations", () => {
     // screen-level sidecars + the legacy-format guards.
     // The legacy 33_exploration_rubric.md / 34_evaluator_calibration.md
     // sidecars were retired when DESIGN.md became the brand SSOT and the
-    // evaluator axes were fixed (`ORDINAL_AXES`); they are no longer in
+    // review contract moved to `evaluatorReview.ts`; they are no longer in
     // the canonical family. The shipped init assets do not generate them.
     expect(validatorSrc).toContain("00_index.md");
     expect(validatorSrc).toContain("40_screen_contracts.md");

@@ -502,8 +502,32 @@ jobs:
       # gets un-required or "fixed" by dropping the pin. Same step, same reason, as the `test` job's.
       - name: Build qfai (the floor lane runs the slices that read dist/)
         run: pnpm -C packages/qfai build
+      # One process pool, the whole suite, on the slowest lane — and the only lane
+      # that has ever exited 1 with every test passing. The runner reports progress
+      # from each fork to the single main process over an RPC call with a sixty-second
+      # budget; when that call does not come back the worker throws, the throw is
+      # counted as an unhandled error, and the run fails having broken nothing.
+      #
+      # The budget itself is not reachable: `ForksOptions` carries no timeout,
+      # `createForksRpcOptions` sets none, and the default lives in the RPC library.
+      # So the lever is the contention rather than the deadline. The declared ten
+      # forks are 2.5x the cores of this runner, which is what leaves the main
+      # process unable to answer in time.
+      #
+      # Taking the count from the runner is also faster. Whole suite, four cores:
+      #
+      #   ten forks    299 s wall   collect 343 s   tests 1972 s
+      #   four forks   269 s wall   collect 113 s   tests  743 s
+      #
+      # The collect and test figures are summed across forks, so their collapse is
+      # the oversubscription: at ten forks most of each fork's measured time is spent
+      # waiting for a core. Fewer forks is quieter AND quicker, so this buys the
+      # headroom at no cost.
+      #
+      # `QFAI_TEST_MAX_WORKERS` is the override `vitest.knobs.ts` declares for exactly
+      # this. The declared starting value is untouched: this lane states its own.
       - name: Run the package test suite on the floor
-        run: pnpm -C packages/qfai test
+        run: QFAI_TEST_MAX_WORKERS="$(nproc)" pnpm -C packages/qfai test
 
   # ── 4. Tests (matrix: test slices) ──────────────────────────────
   test:

@@ -7,7 +7,7 @@
  * + token-driven `var(--font-sans)` + CSS-wide keywords + `--*-shadow*:`
  * rgba declarations) MUST produce zero `designMdViolations[]` across
  * all four scanners, and the synthesised iteration chain MUST converge
- * with `iterations.length <= 3 AND stopReason === "axes-exceptional"`.
+ * with `iterations.length <= 3 AND stopReason === "converged"`.
  *
  * The test composes the SSOT machinery end-to-end (scanner +
  * `shouldStop`) without requiring the CLI harness, so the assertion
@@ -19,11 +19,7 @@ import { describe, expect, it } from "vitest";
 
 import type { DesignMd } from "../../../src/core/design/designMd.js";
 import { findDesignMdViolations } from "../../../src/core/prototyping/designMdViolations.js";
-import {
-  type Iteration,
-  type OrdinalScore,
-  shouldStop,
-} from "../../../src/core/prototyping/iteration.js";
+import { type Iteration, shouldStop } from "../../../src/core/prototyping/iteration.js";
 
 const dm: DesignMd = {
   brand: { name: "Sample", archetype: "tech" },
@@ -92,17 +88,10 @@ const FAITHFUL_HTML = `<!doctype html>
   </body>
 </html>`;
 
-const exceptional: OrdinalScore = "exceptional";
-
-const exceptionalIteration = (index: number): Iteration => ({
+const convergedIteration = (index: number): Iteration => ({
   index,
   commitSha: `${index.toString().padStart(40, "0")}`,
-  scores: {
-    informationArchitecture: exceptional,
-    navigationFlow: exceptional,
-    usability: exceptional,
-    functionality: exceptional,
-  },
+  blockingFindings: [],
   proseCritique: "ok",
   layoutAntiPatternsDetected: [],
   designMdViolations: [],
@@ -119,13 +108,13 @@ describe("TC-0012-0434: Tailwind contract convergence within 3 cycles", () => {
     expect(out).toEqual([]);
   });
 
-  it("synthesised iteration chain converges within 3 cycles with stopReason=axes-exceptional", () => {
+  it("synthesised iteration chain converges within 3 cycles with stopReason=converged", () => {
     const iterations: Iteration[] = [
-      exceptionalIteration(0),
-      exceptionalIteration(1),
-      exceptionalIteration(2),
+      convergedIteration(0),
+      convergedIteration(1),
+      convergedIteration(2),
     ];
     expect(iterations.length).toBeLessThanOrEqual(3);
-    expect(shouldStop(iterations)).toBe("axes-exceptional");
+    expect(shouldStop(iterations)).toBe("converged");
   });
 });

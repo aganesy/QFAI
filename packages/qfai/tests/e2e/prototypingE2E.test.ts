@@ -6,7 +6,7 @@
  *   cycle 0 (seed)        -> exit 0, iter-00/iterate-plan.json written
  *   cycle 1..2 (continue) -> exit 0
  *   cycle 3 (convergence) -> exit 64 once a prototyping.json with a
- *                            fully-exceptional last iter is in place
+ *                            last iter with nothing open is in place
  */
 
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
@@ -142,19 +142,7 @@ async function seedIterations(
       iterations: iters.map((it) => ({
         index: it.index,
         commitSha: "a".repeat(40),
-        scores: it.allEx
-          ? {
-              informationArchitecture: "exceptional",
-              navigationFlow: "exceptional",
-              usability: "exceptional",
-              functionality: "exceptional",
-            }
-          : {
-              informationArchitecture: "acceptable",
-              navigationFlow: "acceptable",
-              usability: "acceptable",
-              functionality: "acceptable",
-            },
+        blockingFindings: it.allEx ? [] : ["home: the empty state is not represented"],
         proseCritique: "x".repeat(1500),
         layoutAntiPatternsDetected: it.lap ?? [],
         designMdViolations: [],
@@ -199,7 +187,7 @@ describe("/qfai-prototyping end-to-end", () => {
     const c2 = await runPrototypingIterate({ root, cycle: 2 });
     expect(c2).toBe(0);
 
-    // Add iter-02 with all-exceptional scores and no slop -> convergence.
+    // Add iter-02 with nothing open and no slop -> convergence.
     await seedIterations(root, [{ index: 0 }, { index: 1 }, { index: 2, allEx: true }]);
 
     // Cycle 3 — must short-circuit with convergence (exit 64).
@@ -207,7 +195,7 @@ describe("/qfai-prototyping end-to-end", () => {
     expect(c3).toBe(64);
   });
 
-  it("exit 65 fires when last iter index === 9 even with weak scores", async () => {
+  it("exit 65 fires when last iter index === 9 even with a finding open", async () => {
     const root = await newTempDir();
     await seedRepo(root);
 
@@ -220,7 +208,7 @@ describe("/qfai-prototyping end-to-end", () => {
     expect(code).toBe(65);
   });
 
-  it("convergence is suppressed when layoutAntiPatternsDetected is non-empty even if all 4 axes are exceptional", async () => {
+  it("convergence is suppressed when layoutAntiPatternsDetected is non-empty even with nothing else open", async () => {
     const root = await newTempDir();
     await seedRepo(root);
     await seedIterations(root, [
@@ -231,7 +219,7 @@ describe("/qfai-prototyping end-to-end", () => {
       },
     ]);
 
-    // Latest iter is "all exceptional but with a layout anti-pattern" —
+    // Latest iter has nothing open but carries a layout anti-pattern —
     // the IA cap denies convergence; iterate continues.
     const code = await runPrototypingIterate({ root, cycle: 1 });
     expect(code).toBe(0);

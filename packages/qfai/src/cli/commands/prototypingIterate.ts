@@ -18,7 +18,7 @@
  *
  * Exit codes:
  *   0   continue to this cycle
- *   64  STOP: all 4 axes exceptional + lap=0 + dmv=0 in the latest iter
+ *   64  STOP: blockingFindings=[] + lap=[] + dmv=[] in the latest iter
  *   65  STOP: latest iter index === MAX_ITERATION_INDEX (9)
  *   2   input error (--cycle out of range, missing --target-url at cycle 0,
  *       no UI-bearing specs found, DESIGN.md missing/malformed/changed,
@@ -72,6 +72,7 @@ import {
 import {
   MAX_ITERATIONS,
   MAX_ITERATION_INDEX,
+  SEED_BLOCKING_FINDING,
   SEED_COMMIT_SHA,
   SEED_PROSE_CRITIQUE_PLACEHOLDER,
   SEED_REVIEWER_ID,
@@ -79,9 +80,7 @@ import {
   iterationReviewPath,
   iterationHtmlPath,
   iterationScreenshotPath,
-  isOrdinalScore,
   shouldStop,
-  type OrdinalScore,
   type StopReason,
 } from "../../core/prototyping/iteration.js";
 import {
@@ -155,7 +154,7 @@ export type RunPrototypingIterateOptions = {
    * reads `stopReason` + `acceptedIterationIndex` from disk and reports
    * convergence WITHOUT invoking the iterate loop, capture, serve,
    * license-verify, or validate paths. Exit 0 when converged
-   * (`stopReason === "axes-exceptional"` AND `acceptedIterationIndex`
+   * (`stopReason === "converged"` AND `acceptedIterationIndex`
    * is a non-null number); exit 2 otherwise (including when the state
    * file is missing).
    *
@@ -1206,8 +1205,8 @@ export async function runPrototypingIterate(
   }
 
   // [BLOCKED] exit-64 summary: when the latest iteration is recorded
-  // but did NOT converge (axes < exceptional OR lap[] non-empty OR
-  // designMdViolations[] non-empty), emit the top-3 blockers summary so
+  // but did NOT converge (blockingFindings[], layoutAntiPatternsDetected[]
+  // or designMdViolations[] non-empty), emit the top-3 blockers summary so
   // the operator sees what is preventing exit-64. The literal header is
   // anchored by the unit ledger.
   if (options.cycle >= 1) {
@@ -1229,10 +1228,7 @@ function isConverged(input: BlockedSummaryInput): boolean {
   return (
     input.designMdViolations.length === 0 &&
     input.layoutAntiPatternsDetected.length === 0 &&
-    input.scores.informationArchitecture === "exceptional" &&
-    input.scores.navigationFlow === "exceptional" &&
-    input.scores.usability === "exceptional" &&
-    input.scores.functionality === "exceptional"
+    input.blockingFindings.length === 0
   );
 }
 
@@ -1243,18 +1239,10 @@ function buildBlockedSummaryInputFromRecord(
   const iterations = asIterations(record);
   if (iterations.length === 0) return null;
   const last = iterations[iterations.length - 1];
-  if (!isRecord(last) || !isRecord(last.scores)) return null;
-  const lastScores = last.scores;
-  const pickScore = (key: string): OrdinalScore => {
-    const v = lastScores[key];
-    return isOrdinalScore(v) ? v : "weak";
-  };
-  const scores = {
-    informationArchitecture: pickScore("informationArchitecture"),
-    navigationFlow: pickScore("navigationFlow"),
-    usability: pickScore("usability"),
-    functionality: pickScore("functionality"),
-  };
+  if (!isRecord(last)) return null;
+  const findings = Array.isArray(last.blockingFindings)
+    ? last.blockingFindings.filter((v): v is string => typeof v === "string")
+    : [];
   const lap = Array.isArray(last.layoutAntiPatternsDetected)
     ? last.layoutAntiPatternsDetected.filter((v): v is string => typeof v === "string")
     : [];
@@ -1272,7 +1260,7 @@ function buildBlockedSummaryInputFromRecord(
   return {
     designMdViolations: dmv,
     layoutAntiPatternsDetected: lap,
-    scores,
+    blockingFindings: findings,
   };
 }
 
@@ -2059,7 +2047,7 @@ type SeedMetadata = {
  * iteration record whose shape passes `validatePrototypingEvidence`
  * AND `validatePrototypingArtifactRefIntegrity` out of the box.
  * Scores are intentionally all `weak` so `shouldStop` cannot
- * accidentally classify the seed as `axes-exceptional`; the reviewer
+ * accidentally classify the seed as `converged`; the reviewer
  * overwrites scores on the first review pass.
  *
  * **The seed cites no evidence, and that is the fix for the window it
@@ -2089,12 +2077,7 @@ function buildSeedIterations(mode?: "convergence" | "exploration"): unknown[] {
       index: 0,
       commitSha: SEED_COMMIT_SHA,
       proseCritique: SEED_PROSE_CRITIQUE_PLACEHOLDER,
-      scores: {
-        informationArchitecture: "weak",
-        navigationFlow: "weak",
-        usability: "weak",
-        functionality: "weak",
-      },
+      blockingFindings: [SEED_BLOCKING_FINDING],
       layoutAntiPatternsDetected: [],
       designMdViolations: [],
       pivotDirective: "continue",
@@ -2155,8 +2138,8 @@ function reportIterateDryRun(input: {
 async function writeSeedMetadata(protoJsonAbs: string, seed: SeedMetadata): Promise<void> {
   // Cycle 0 is a hard reset of the loop. Stale state from a prior run
   // (iterations[], reviewerGate, the prior runId) MUST NOT survive into
-  // the new loop, otherwise shouldStop() can short-circuit on stale
-  // exceptional scores and certify can reuse a stale reviewerGate to
+  // the new loop, otherwise shouldStop() can short-circuit on a stale
+  // empty finding set and certify can reuse a stale reviewerGate to
   // seal a run that has no fresh evidence for the just-frozen DESIGN.md.
   // Preserve only operator-defined keys that have no per-loop semantics
   // (mode, surface, etc.); explicitly reset the per-loop state slots.
@@ -2580,7 +2563,7 @@ function buildDesignTokens(dm: DesignMd): DesignTokens {
  * and reports convergence WITHOUT invoking the iterate loop.
  *
  * Exit codes:
- *   0  converged: `stopReason === "axes-exceptional"` AND
+ *   0  converged: `stopReason === "converged"` AND
  *      `acceptedIterationIndex` is a non-null number.
  *   2  not converged (any other state, including missing state file).
  *
@@ -2610,7 +2593,7 @@ function buildDesignTokens(dm: DesignMd): DesignTokens {
  * `null` when the cycle is legal and iterate should proceed.
  *
  * Predicate — all three must hold:
- *   1. `prototyping.json` records `stopReason === "axes-exceptional"`.
+ *   1. `prototyping.json` records `stopReason === "converged"`.
  *      That is the only SEALED state: the only one
  *      `--check-convergence` reports as converged and the only one
  *      `qfai prototyping certify` will seal. The other members of the
@@ -2642,7 +2625,7 @@ function buildDesignTokens(dm: DesignMd): DesignTokens {
  * finished. `--check-convergence` reports only this as converged, and only a
  * loop in this state can be sealed by `qfai prototyping certify`.
  */
-const SEALED_STOP_REASON = "axes-exceptional";
+const SEALED_STOP_REASON = "converged";
 
 async function refuseWhenLoopConverged(root: string, cycle: number): Promise<number | null> {
   // Cycle 0 is the documented escape hatch out of every terminal state and is
@@ -2722,8 +2705,8 @@ async function runCheckConvergencePeek(root: string, cycle: number): Promise<num
   // stays visible to the operator instead of being reported as `null`.
   info(`  acceptedIterationIndex: ${acceptedIsInteger ? String(acceptedRaw) : "null"}`);
   info(`  iterations: ${iterations.length}`);
-  if (stopReason === "axes-exceptional" && acceptedIterationIndex !== null) {
-    info("  Converged: axes-exceptional with accepted iteration recorded.");
+  if (stopReason === "converged" && acceptedIterationIndex !== null) {
+    info("  Converged: converged with accepted iteration recorded.");
     return 0;
   }
   // Build a precise diagnostic for the not-converged branch so the
@@ -2739,13 +2722,13 @@ async function runCheckConvergencePeek(root: string, cycle: number): Promise<num
   } else if (stopReason === null || stopReason === undefined) {
     reason =
       "stopReason is null and no acceptedIterationIndex was recorded; the loop has not yet reached a terminal state.";
-  } else if (stopReason === "axes-exceptional") {
+  } else if (stopReason === "converged") {
     // Reachable only when the seal is present but the accepted index is not a
     // non-negative integer, which is the state the guard also refuses to treat
     // as sealed. Naming it beats falling through to "is not a converged state",
     // which would blame the stopReason the record actually carries.
     reason =
-      'stopReason="axes-exceptional" but acceptedIterationIndex is ' +
+      'stopReason="converged" but acceptedIterationIndex is ' +
       `${acceptedIsInteger ? String(acceptedRaw) : JSON.stringify(acceptedRaw)}, which records no ` +
       "accepted iteration; the seal has no accepted work behind it.";
   } else {
@@ -2756,9 +2739,9 @@ async function runCheckConvergencePeek(root: string, cycle: number): Promise<num
 }
 
 function emitStop(reason: StopReason): number {
-  if (reason === "axes-exceptional") {
+  if (reason === "converged") {
     info(
-      "qfai prototyping iterate: convergence reached (all 4 axes exceptional, " +
+      "qfai prototyping iterate: convergence reached (blockingFindings=[], " +
         "layoutAntiPatternsDetected=[], designMdViolations=[]). " +
         "Run `qfai prototyping certify` to seal the run.",
     );
@@ -2901,23 +2884,15 @@ function buildIterateContextFromRecord(record: PrototypingJsonShape | null): Ite
   const last = iterations[iterations.length - 1];
   if (!isRecord(last)) return null;
   if (typeof last.index !== "number") return null;
-  if (!isRecord(last.scores)) return null;
-  const scores = last.scores;
-  const get = (k: string): OrdinalScore => {
-    const v = scores[k];
-    return isOrdinalScore(v) ? v : "weak";
-  };
+  const priorFindings = Array.isArray(last.blockingFindings)
+    ? last.blockingFindings.filter((v): v is string => typeof v === "string")
+    : [];
   const lap = Array.isArray(last.layoutAntiPatternsDetected)
     ? last.layoutAntiPatternsDetected.filter((v): v is string => typeof v === "string")
     : [];
   return {
     priorCycle: last.index,
-    priorScores: {
-      informationArchitecture: get("informationArchitecture"),
-      navigationFlow: get("navigationFlow"),
-      usability: get("usability"),
-      functionality: get("functionality"),
-    },
+    priorScores: { blockingFindings: priorFindings },
     openBlockers: lap,
     // Tailwind contract phase tag is informational; Phase 1 of the
     // Tailwind scanner work shipped a multi-phase contract surface
@@ -3092,7 +3067,7 @@ async function evaluateCycleGteOneGate(
   // The cycle ≥ 1 lock-drift gates MUST run BEFORE `shouldStop()`, or a
   // converged / max-budget loop could mask a `frozenSurfaceUnion`
   // missing-or-malformed record or a live-vs-frozen spec-set drift:
-  // a run that satisfies `shouldStop` (axes-exceptional or
+  // a run that satisfies `shouldStop` (converged or
   // max-iterations) would exit 64/65 immediately with the drift gate
   // never firing — a mid-loop UI-marker removal or contract edit
   // silently accepted as a successful convergence / exhaustion. The
@@ -3149,12 +3124,12 @@ async function evaluateCycleGteOneGate(
     // prompt instructs reviewers to leave that field empty unless a
     // runtime gate injects findings — and the only runtime scanner
     // historically lived in `certify`. So a prototype with DESIGN.md
-    // drift could converge here ("axes-exceptional") and only fail
+    // drift could converge here ("converged") and only fail
     // later at certification. Re-run the runtime scanner against the
     // accepted iteration's HTML before honoring the stop, so iterate
     // continues another iteration to fix the drift instead of
     // pretending the loop converged.
-    if (stop === "axes-exceptional") {
+    if (stop === "converged") {
       const recomputed = await recomputeFinalIterDesignMdViolations(
         input.root,
         recordedIterations.length - 1,
