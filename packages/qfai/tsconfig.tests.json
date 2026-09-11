@@ -250,6 +250,7 @@
     "tests/core/tddListBrRefKey.test.ts",
     "tests/unit/changelogLanguage.test.ts",
     "tests/unit/cli/commands/handoffUpgrade.concurrency.test.ts",
+    "tests/unit/cli/commands/prototypingIterate.accessibilityScan.test.ts",
     "tests/unit/cli/initWorkflowOwnership.test.ts",
     "tests/unit/cli/lib/warnings.truncatedScanIssue.test.ts",
     "tests/unit/cli/repairIntegrationWrappers.test.ts",

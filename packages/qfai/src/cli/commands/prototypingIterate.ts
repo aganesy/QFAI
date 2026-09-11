@@ -104,6 +104,7 @@ import {
 } from "../../core/prototyping/layoutAntiPatternsAdvisory.js";
 import { parsePrimarySpecId } from "../../core/prototyping/primarySpecIdParse.js";
 import { readUiContractScreenContracts } from "../../core/contracts/screenContracts.js";
+import { runAccessibilityPhase } from "../../core/browserQa/phases/accessibility.js";
 
 /**
  * Per-screen descriptor consumed by the opt-in `--capture` flag.
@@ -2509,11 +2510,17 @@ async function mirrorAcceptedIterToAggregateDirs(
   }
 }
 
-async function recomputeFinalIterDesignMdViolations(
+/**
+ * The captured HTML of one iteration, as `{ name, html }` in name order.
+ *
+ * A file that cannot be stat'd or read is skipped rather than failing the
+ * pass: a partial capture must not stop the cycle, and the gates that decide
+ * convergence read the same set.
+ */
+async function readFinalIterCaptures(
   root: string,
   iterationIndex: number,
-  designMd: DesignMd,
-): Promise<DesignMdViolation[]> {
+): Promise<{ readonly name: string; readonly html: string }[]> {
   if (iterationIndex < 0) return [];
   const iterDirAbs = path.join(
     root,
@@ -2527,24 +2534,68 @@ async function recomputeFinalIterDesignMdViolations(
     if (isEnoent(err)) return [];
     throw err;
   }
-  const out: DesignMdViolation[] = [];
+  const out: { name: string; html: string }[] = [];
   for (const name of names.sort()) {
     if (!name.toLowerCase().endsWith(".html")) continue;
     const abs = path.join(iterDirAbs, name);
-    let s: Awaited<ReturnType<typeof stat>>;
+    let entry: Awaited<ReturnType<typeof stat>>;
     try {
-      s = await stat(abs);
+      entry = await stat(abs);
     } catch {
       continue;
     }
-    if (!s.isFile()) continue;
-    let html: string;
+    if (!entry.isFile()) continue;
     try {
-      html = await readFile(abs, "utf-8");
+      out.push({ name, html: await readFile(abs, "utf-8") });
     } catch {
       continue;
     }
-    out.push(...findDesignMdViolations(html, designMd));
+  }
+  return out;
+}
+
+async function recomputeFinalIterDesignMdViolations(
+  root: string,
+  iterationIndex: number,
+  designMd: DesignMd,
+): Promise<DesignMdViolation[]> {
+  const out: DesignMdViolation[] = [];
+  for (const capture of await readFinalIterCaptures(root, iterationIndex)) {
+    out.push(...findDesignMdViolations(capture.html, designMd));
+  }
+  return out;
+}
+
+/**
+ * Run the accessibility phase over the same captures.
+ *
+ * The phase existed and nothing read the captures with it, so every screen
+ * the loop produced went unchecked for the four things it does check. The
+ * criteria are WCAG's, not this project's, which is what an entry in the
+ * anti-pattern registry now has to be able to say
+ * (`.qfai/assistant/catalog/ui-procurement.md` for the surrounding
+ * discipline).
+ *
+ * Reported, never blocking. Replacing "any layout shape stops the loop" with
+ * "any accessibility finding stops the loop" would repeat the mistake with
+ * better sources; the reviewer reads these and decides what belongs in
+ * `blockingFindings`.
+ */
+export async function scanFinalIterAccessibility(
+  root: string,
+  iterationIndex: number,
+): Promise<{ readonly screen: string; readonly summary: string }[]> {
+  const out: { screen: string; summary: string }[] = [];
+  for (const capture of await readFinalIterCaptures(root, iterationIndex)) {
+    // SIMPLIFIED: passes a fixed surface, which this phase never reads — it
+    // takes `htmlContent` and, for a screen id, `screenContracts`, neither
+    // of which depends on it.
+    // Lift when: the phase reads `surface`, or wants a screen id, at which
+    // point the caller threads the run's real surface and contracts through.
+    const phase = await runAccessibilityPhase({ htmlContent: capture.html, surface: "web" });
+    for (const finding of phase.findings) {
+      out.push({ screen: capture.name.replace(/\.html$/i, ""), summary: finding.summary });
+    }
   }
   return out;
 }
@@ -3136,9 +3187,16 @@ async function evaluateCycleGteOneGate(
     // continues another iteration to fix the drift instead of
     // pretending the loop converged.
     if (stop === "converged") {
+      const acceptedIndex = recordedIterations.length - 1;
+      for (const finding of await scanFinalIterAccessibility(input.root, acceptedIndex)) {
+        warn(
+          `qfai prototyping iterate: accessibility — ${finding.screen}: ${finding.summary} ` +
+            "(reported, not blocking; raise it as a blocking finding if the screen ships wrong).",
+        );
+      }
       const recomputed = await recomputeFinalIterDesignMdViolations(
         input.root,
-        recordedIterations.length - 1,
+        acceptedIndex,
         input.designMd,
       );
       const first = recomputed[0];

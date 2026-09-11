@@ -52,6 +52,18 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **Prototype captures are checked for accessibility** (#1485). The
+  accessibility phase — image alternatives, document language, skip link,
+  heading hierarchy — was reachable only from `validate`, and the loop writes
+  exactly the artifact it wants: one capture per screen per cycle. Nothing
+  read them with it, so every screen went unchecked.
+
+  It now runs over the accepted iteration's captures beside the token re-scan,
+  and reports what it finds, naming the screen. Reported, never blocking:
+  replacing "any layout shape stops the loop" with "any accessibility finding
+  stops the loop" would repeat the mistake with better sources. The reviewer
+  reads them and decides what belongs in `blockingFindings`.
+
 - **Two codes shared the `lap-` prefix with a registry that did not declare
   them** (#1499). `layoutAntiPatternsDetected[]` has one vocabulary and two
   writers: the reviewer writes the codes it judges, and `iterate --capture`
