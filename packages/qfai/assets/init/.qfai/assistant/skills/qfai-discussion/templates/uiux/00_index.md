@@ -35,6 +35,10 @@ report a cli-only pack as incomplete for a missing `DESIGN.md`.
 
 The following files are NOT part of the canonical family and must NOT be created in new packs:
 
+- `10_implementation_strategy.md` — discussion carries directions unranked, so it selects no strategy
+- `11_design_taste_interview.md` — brand signals live in root `DESIGN.md`
+- `12_design_system.md` — replaced by root `DESIGN.md` and the design contracts under `.qfai/contracts/design/`
+- the `20`–`24` design-evaluation family — the evaluator axes are fixed by the CLI, not authored here
 - `30_option_comparison.md` — replaced by root `DESIGN.md`
 - `31_selected_anchor_screen.md` — replaced by root `DESIGN.md`
 - `33_exploration_rubric.md` — replaced by the fixed evaluator axes (`.qfai/assistant/skills/qfai-prototyping/references/reviewer-prompt.md`)

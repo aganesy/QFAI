@@ -173,6 +173,25 @@ describe("discussion skill template integration", () => {
     }
   });
 
+  it("the forbidden-legacy manifest names every family the validator rejects", async () => {
+    // `ui_ux_best_practices.md` sends an author to `00_index.md#Forbidden Legacy
+    // Files` for the whole set, so a family the validator rejects and the
+    // manifest omits is a file an author creates in good faith and validation
+    // then refuses. The two lists above are already tied to the validator, so
+    // reading the manifest against them closes the last hop.
+    const index = await readFile(
+      path.join(templateBase, "templates", "uiux", "00_index.md"),
+      "utf-8",
+    );
+    const section = index.slice(index.indexOf("## Forbidden Legacy Files"));
+    const missing = FORBIDDEN_SIDECAR_NAMES.filter((name) => !section.includes(name));
+
+    // The `20`–`24` family is named as a range rather than one filename, the
+    // way the best-practices reference names it.
+    expect(missing).toEqual(["20_design_eval_invariant.md"]);
+    expect(section).toContain("`20`–`24`");
+  });
+
   // The shipped skill must not tell an agent to produce a sidecar that
   // `validators/uix/threeLayer.ts#FORBIDDEN_LEGACY_PATTERNS` rejects.
   // Following such guidance creates the file and then fails validation,
