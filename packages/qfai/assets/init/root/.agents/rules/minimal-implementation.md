@@ -76,3 +76,5 @@ the standard library has one is not a simplification; it is rung 2.
 - Writing standard for the comment you leave: `documentation-clarity.md`
 - Scope of a single change, and how an expansion is declared:
   Article VII of `.qfai/assistant/constitution/constitution.md`
+- The same ladder for a screen's components and layouts:
+  `.qfai/assistant/catalog/ui-procurement.md`
