@@ -46,12 +46,16 @@ const PATH_CITATION =
  * Path shapes that name a kind rather than a file: a placeholder to fill in, a
  * glob, or a directory a run creates. Checking these would report a project's
  * own naming convention as a missing file.
+ *
+ * The run-created three are the ones a clean checkout does not have. `report/`
+ * and `evidence/` hold tracked files and the directory survives; `review/`
+ * holds none, so it exists only where a review has run. All three are real
+ * parts of the layout and belong in a description of it.
  */
 const NOT_A_PATH = [
   /[<>*]/, // `spec-XXXX`'s siblings, `skills/*`, `<spec-id>`
   /[A-Z]{3,}/, // `spec-NNNN`, `CON-API-*`
-  /^\.qfai\/report\//, // written by a run, absent in a clean tree
-  /^\.qfai\/evidence\//, // same
+  /^\.qfai\/(?:report|evidence|review)\//,
 ];
 
 async function layerFiles(): Promise<string[]> {
