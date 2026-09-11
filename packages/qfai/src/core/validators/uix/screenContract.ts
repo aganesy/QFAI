@@ -1,8 +1,11 @@
 /**
  * UIX-VAL screen contract schema validator.
  *
- * Validates multi-screen contract array: 10 required fields per screen,
- * unique screen_ids, and mandatory state coverage.
+ * Validates multi-screen contract array: the eleven required fields per
+ * screen, unique screen_ids, and mandatory state coverage.
+ *
+ * Three of the eleven are answered by being declared rather than by
+ * holding an entry — see {@link OPTIONAL_WHEN_EMPTY}.
  */
 import path from "node:path";
 
@@ -24,6 +27,21 @@ const REQUIRED_FIELDS = [
   "notes_for_verify",
   "notes_for_reviewer",
 ] as const;
+
+/**
+ * Nested keys a screen answers by declaring, whether or not the list that
+ * follows holds anything.
+ *
+ * Most focused screens genuinely have no secondary task, and narrower sets
+ * of them have no transition or no outcome beyond the one the primary task
+ * produces. `primary_tasks` and `required_states` are not here: both are
+ * required to hold something.
+ */
+const OPTIONAL_WHEN_EMPTY: ReadonlySet<string> = new Set([
+  "secondary_tasks",
+  "transitions",
+  "observable_outcomes",
+]);
 
 const MANDATORY_STATES = ["default", "loading", "empty", "error"] as const;
 
@@ -68,6 +86,15 @@ type ScreenBlock = {
   transitions: string[];
   /** Nested: observable_outcomes list. */
   observableOutcomes: string[];
+  /**
+   * The nested keys this screen wrote a `- <key>:` line for.
+   *
+   * An empty list and an absent key both parse to `[]`, and they are not
+   * the same answer: one says this screen has none, the other says nobody
+   * filled it in. Recording the key separately from its entries is what
+   * lets the two be told apart.
+   */
+  declaredNestedFields: Set<string>;
   /** Legacy flat nested fields that must now be rejected. */
   invalidInlineNestedFields: string[];
 };
@@ -81,6 +108,7 @@ function newScreenBlock(name: string): ScreenBlock {
     requiredStates: {},
     transitions: [],
     observableOutcomes: [],
+    declaredNestedFields: new Set(),
     invalidInlineNestedFields: [],
   };
 }
@@ -127,7 +155,10 @@ function parseScreenBlocks(content: string): ScreenBlock[] {
       const inlineValue = (fieldMatch[2] ?? "").trim();
 
       if (NESTED_FIELD_NAMES.includes(key) && inlineValue === "") {
-        // Nested bullet list: collect indented children
+        // Nested bullet list: collect indented children. The key is recorded
+        // before them, so a list that turns out to be empty is still an
+        // answer the screen gave.
+        current.declaredNestedFields.add(key);
         i += 1;
         while (i < lines.length) {
           const child = lines[i] ?? "";
@@ -243,11 +274,16 @@ export async function validateScreenContractSchema(
 
     // Check required fields (dispatch to typed properties for nested fields)
     const missing = REQUIRED_FIELDS.filter((f) => {
+      // Two keys are required to hold something. A screen with no primary
+      // task is not a screen, and an unrepresented empty or error state is
+      // a real defect — `lap-007` catches that one at the prototype.
       if (f === "primary_tasks") return screen.primaryTasks.length === 0;
-      if (f === "secondary_tasks") return screen.secondaryTasks.length === 0;
       if (f === "required_states") return Object.keys(screen.requiredStates).length === 0;
-      if (f === "transitions") return screen.transitions.length === 0;
-      if (f === "observable_outcomes") return screen.observableOutcomes.length === 0;
+      // The rest are answered by being declared. Treating an empty list as
+      // absent made every screen owe at least one secondary task, so a
+      // screen that does one thing could not be declared at all and the
+      // author's only way through was to invent one.
+      if (OPTIONAL_WHEN_EMPTY.has(f)) return !screen.declaredNestedFields.has(f);
       return !screen.fields[f];
     });
     if (missing.length > 0) {
