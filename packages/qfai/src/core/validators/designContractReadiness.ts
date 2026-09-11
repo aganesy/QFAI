@@ -496,7 +496,7 @@ async function isCliOnlyPack(packDir: string): Promise<boolean> {
  * `.qfai/assistant/skills/qfai-prototyping/templates/DESIGN.md.sample` as a
  * starting point, or
  * seeded by a release back when `qfai init` wrote one. Init writes none
- * now — `/qfai-discussion` emits the draft, and only for a
+ * now — `/qfai-sdd` Phase 0 authors it, and only for a
  * visual-prototyping surface — so this gate no longer reports a file the
  * tool itself had just written.
  *
@@ -538,7 +538,7 @@ async function validateRootDesignMdSample(root: string, uiBearing: boolean): Pro
       "designContractReadiness.rootDesignMdSample",
       undefined,
       "canonical",
-      "Replace root DESIGN.md with this product's brand SSOT (run /qfai-discussion, which emits the draft, or author it from `.qfai/assistant/skills/qfai-prototyping/templates/DESIGN.md.sample`) and delete the sample marker comment if present. Do this BEFORE /qfai-sdd Phase 0 freezes its sha256.",
+      "Replace root DESIGN.md with this product's brand SSOT (run /qfai-sdd, whose Phase 0 authors it from the design direction the discussion pack recorded, or author it from `.qfai/assistant/skills/qfai-prototyping/templates/DESIGN.md.sample`) and delete the sample marker comment if present. Phase 0 refuses to freeze a sample.",
     ),
   ];
 }
@@ -575,7 +575,7 @@ async function validateRootDesignMdAndLock(
         "designContractReadiness.rootDesignMd",
         undefined,
         "canonical",
-        "Create root DESIGN.md from the project root with the canonical front-matter (see qfai-discussion / qfai-sdd skills).",
+        "Create root DESIGN.md at the project root with the canonical front-matter, or run /qfai-sdd, whose Phase 0 authors it (see the qfai-sdd skill).",
       ),
     );
   }
