@@ -5,10 +5,6 @@ dependencies: [00_universal/thinking.md, 00_universal/quality.md]
 version: 1.0.0
 ---
 
-> **言語指示（厳守）**
->
-> - 報告・出力: 日本語（Plan も含む）
-
 # 設計レビュー指針
 
 UI/UX・情報設計・API 設計などの確認ポイント。

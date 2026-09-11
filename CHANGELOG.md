@@ -4,7 +4,37 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ## [Unreleased]
 
+### Fixed
+
+- **Thirty-two files told an agent which language to answer in** (#1500).
+  Every document under `.instruction/` opened with a block fixing output to one
+  language, which the constitution's Absolute Rule — answer in the user's
+  working language — already decides.
+
+  This is the same block, in the directory it was copied out of. It reached
+  `constitution/agent-selection.md` that way, overrode the Absolute Rule for
+  every operator working in another language, and was removed there. The guard
+  written with that removal swept only what ships, so the originals stayed, and
+  a comment naming the removal cannot stop a re-port from a directory nobody
+  sweeps.
+
+  The blocks are gone and `outputLanguageSingleSource.test.ts` now sweeps
+  `.instruction/` with the same matcher that guards the shipped tree.
+
 ### Added
+
+- **A ruling on what `.instruction/` may say** (#1500). Nothing said what
+  belonged in the directory `AGENTS.md` routes an agent into, so a rule could
+  live there in a second copy and drift from its master unread.
+
+  `.instruction/README.md` states it: the directory holds operating guidance,
+  it is repository-only, it states no rule that a rule master, the
+  constitution, the root entry points or the review policy owns, and on any
+  disagreement the owner wins. A new file earns its place by saying something
+  none of them says.
+
+  The `02_project/` layer summarises facts a live file states — layout, stack,
+  commands — so the ruling says to read the live source before acting on one.
 
 - **A lane that collects every deliberate simplification** (#1466).
   `.agents/rules/minimal-implementation.md` asks an author who takes a shortcut

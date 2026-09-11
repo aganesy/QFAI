@@ -9,10 +9,6 @@ dependencies:
 version: 1.0.0
 ---
 
-> **言語指示（厳守）**
->
-> - 報告・出力: 日本語（Plan も含む）
-
 # MCP（Model Context Protocol）運用ガイド
 
 QFAI のドキュメント整備・実装・検証を効率化するための MCP 活用ポイントを整理する。
