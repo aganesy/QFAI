@@ -19,7 +19,7 @@ tools: [Read, Glob, Grep, Bash]
 - Flag violations of SOLID with concrete reasoning and a smaller alternative when applicable.
 - Check separation of concerns, fail-fast validation, least astonishment, and avoidance of premature optimization in changed code.
 - Enforce TypeScript review expectations: avoid unjustified assertions, over-complex generics, unchecked `unknown`, and unhandled async paths.
-- Apply `.agents/rules/minimal-implementation.md`: report excess against it, naming what to cut and what replaces it.
+- Apply `.agents/rules/minimal-implementation.md`: tag excess `delete`, `stdlib`, `native`, `yagni` or `shrink`, and name what to cut and what replaces it.
 
 ## Inputs you must read
 
