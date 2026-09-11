@@ -76,7 +76,9 @@ async function parseSource(file: string): Promise<ts.SourceFile> {
   try {
     content = await readFile(file, "utf-8");
   } catch (error) {
-    throw new Error(`cannot read ${file} for the issue-catalog scan: ${String(error)}`);
+    throw new Error(`cannot read ${file} for the issue-catalog scan: ${String(error)}`, {
+      cause: error,
+    });
   }
   return ts.createSourceFile(file, content, ts.ScriptTarget.Latest, true);
 }
