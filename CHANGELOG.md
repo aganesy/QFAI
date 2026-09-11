@@ -6,6 +6,43 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **spec-0008's ledger rows point at evidence instead of describing it** (#1436).
+  Both `Integration` rows sat at `done` carrying prose — `RED→GREEN 2026-06-01
+(W4 c1acb533); reviewers PASS×3` — written before the `Evidence` cell became a
+  pointer. That was four errors: `QFAI-TDDLIST-007` and `-011`, twice each.
+
+  The route out is the one the issue sets: re-run what the row names, record what
+  it produced, then rewrite the cell. Both tests were re-run at the current
+  revision and both oracles re-established by mutation, which is what decided the
+  two `ORACLE:` tokens rather than a guess:
+
+  | Row      | Green     | Killing mutation                         | Oracle              |
+  | -------- | --------- | ---------------------------------------- | ------------------- |
+  | TDD-0013 | 13 passed | both `TODO:` marker sites → 1 failed     | `equivalent-mutant` |
+  | TDD-0014 | 8 passed  | `attempts >= threshold` → `>` → 3 failed | `proved`            |
+
+  `TDD-0013` is the weaker of the two on purpose: the emitted body writes its
+  marker at two sites and the test reads presence in the body, so stripping one
+  site alone leaves all 13 green. Calling that `proved` would overstate it.
+
+  The cells carry `RED:falsifiability`, not `RED:fail`. The implementation is
+  present, so the RED leg was re-established by mutating it — nothing here
+  observed a test failing before its code existed.
+
+  Both entries declare `Run output retained: no`, so the reviewer-pack and seal
+  fields are not required of them. The reviewer passes the old cells recorded are
+  not disclaimed; what is gone is the means to verify them, which is what
+  `QFAI-TDDLIST-019` now reports against both rows.
+
+  New alongside them: `.qfai/evidence/coverage-depth-spec-0008.md`, scoring both
+  obligations across the seven depth dimensions from their actual cases, and
+  naming each `❌` and `⚠️` cell rather than scoring low without saying why.
+
+  The ratchet moves down only: `tdd` 1029 → 1025 across 19 files, `full`
+  1052 → 1047 across 40. Nothing newly pinned. The pack's two `describe.skip`
+  findings stay pinned — why a test was parked is not recorded in the skip, which
+  the issue names as its own decision.
+
 - **The remediation for an unreplaced `DESIGN.md` names a step that exists.**
   `QFAI-DCON-034` told an operator to run `/qfai-discussion`, "which emits the
   draft". That stage stopped emitting it when authoring moved to `/qfai-sdd`
