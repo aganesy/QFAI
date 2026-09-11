@@ -323,7 +323,7 @@ describe("runPrototypingIterate convergence (exit 64)", () => {
       {
         index: 0,
         blockingFindings: [],
-        layoutAntiPatternsDetected: ["lap-006-overcrowded-sidebar"],
+        layoutAntiPatternsDetected: ["lap-008-no-back-affordance"],
         designMdViolations: [],
       },
     ]);

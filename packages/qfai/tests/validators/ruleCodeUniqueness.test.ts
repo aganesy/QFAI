@@ -96,6 +96,12 @@ const RETIRED_CODES: readonly string[] = [
   "QFAI-REQCTX-010",
   "QFAI-REQCTX-020",
   "QFAI-REQCTX-021",
+  // validators/uix/designSystemPresence.ts — deleted rather than stubbed: it
+  // required a file the three-layer validator reports as a forbidden legacy
+  // sidecar, and nothing dispatched it.
+  "UIX-VAL-DS-READ-ERROR",
+  "UIX-VAL-DS01",
+  "UIX-VAL-DS02",
 ];
 
 /**
@@ -242,8 +248,8 @@ const ISSUE_TERNARY_FIRST_ARG =
 /**
  * `code: "..."` / `ruleId: "..."` / `code: CONST` on an object literal that is
  * (or becomes) an `Issue`. Several validators build the object directly instead
- * of calling `issue()` — `skillsIntegrity.ts`, `uix/designSystemPresence.ts`,
- * `justificationCatalog.ts` — and a scan that only follows `issue()` records no
+ * of calling `issue()` — `skillsIntegrity.ts`, `justificationCatalog.ts` — and
+ * a scan that only follows `issue()` records no
  * owner for those codes at all. `ruleId` is the same declaration on
  * `designAudit.ts`'s `DesignFinding`, whose codes reach `issue()` only through
  * `findingToIssue(finding)`.
@@ -445,9 +451,10 @@ describe("validate rule codes are owned by exactly one module", () => {
     // Neither of these modules calls `issue()`; both return the `Issue` object
     // directly, so a call-site-only scan gave them no owner at all.
     expect(sorted(owners.get("QFAI-SKILLS-001") ?? [])).toEqual(["validators/skillsIntegrity.ts"]);
-    expect(sorted(owners.get("UIX-VAL-DS01") ?? [])).toEqual([
-      "validators/uix/designSystemPresence.ts",
-    ]);
+    // The `ruleId` spelling of the same shape. It reaches `issue()` only
+    // through `findingToIssue(finding)`, so a call-site scan sees the variable
+    // and never the code.
+    expect(sorted(owners.get("QFAI-AUD-020") ?? [])).toEqual(["validators/designAudit.ts"]);
   });
 
   it("covers the Issue sources outside `validators/` that validate also returns", async () => {
