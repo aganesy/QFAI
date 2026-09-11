@@ -8,7 +8,8 @@
  *   - .qfai/output/verify.json exists with status === "PASS"
  *   - prototyping.json.reviewerGate.result === "PASS"
  *   - root DESIGN.md parses, and the latest iteration HTML contains zero
- *     DESIGN.md violations (color / font / radius / shadow drift)
+ *     DESIGN.md violations (color / font / radius / shadow drift, and
+ *     text below the declared contrast floor)
  *   - every `<screen>.review.json` required by the frozen set EXISTS,
  *     parses against the shipped reviewer payload schema (closed
  *     schema), carries the `(specId, screenId, cycle)` of the pair and

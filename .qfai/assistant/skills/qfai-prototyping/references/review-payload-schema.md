@@ -51,7 +51,7 @@ type ReviewerPayload = {
   layoutAntiPatternsDetected: string[]; // ids from the layout anti-pattern registry
   designMdViolations: {
     // closed too: `kind` + `found` only, no extra key per element
-    kind: "color" | "font" | "radius" | "shadow";
+    kind: "color" | "font" | "radius" | "shadow" | "contrast";
     found: string;
   }[];
   wallTimeSec: number; // non-negative finite; Reviewer-measured

@@ -600,3 +600,39 @@ describe("the presets other repositories extend still resolve to the files they 
     ).toBe(true);
   });
 });
+
+describe("the bot is told the one floor CI cannot check for it", () => {
+  const PACKAGE_MANIFEST_REL = "packages/qfai/package.json";
+
+  // `ci-pass` judges a dependency by running this repository against it, and every lane runs on
+  // the newest Node the declared range allows. A release that raises its own `engines.node` above
+  // the floor therefore breaks nobody in CI and breaks everyone on the oldest supported Node — so
+  // it reaches green and, under the automerge block above, lands. Filtering is where that
+  // narrowing can be caught, because no lane is in a position to.
+  it("drops releases whose engines fall outside the declared floor", () => {
+    expect(
+      tokenFromConfig("constraintsFiltering"),
+      `${CONFIG_REL} must filter by the declared constraints. Without it the automerge policy ` +
+        "accepts a release that raises its own Node floor above this repository's, which is the " +
+        "one narrowing `ci-pass` is structurally unable to report",
+    ).toBe('"strict"');
+  });
+
+  // The floor it filters against is the one the PUBLISHED package promises, read from that
+  // manifest rather than restated here. Two numbers for one floor is how they drift: raising the
+  // promise without this would leave the bot holding back releases the repository now supports,
+  // and lowering it would leave the bot offering releases the repository no longer runs.
+  it("filters against the floor the package manifest declares", () => {
+    const engines = readJson(PACKAGE_MANIFEST_REL)["engines"];
+    const node = isRecord(engines) ? engines["node"] : undefined;
+    expect(
+      typeof node,
+      `${PACKAGE_MANIFEST_REL} must declare engines.node — it is the floor the filter is set to`,
+    ).toBe("string");
+    expect(
+      tokenFromConfig("constraints"),
+      `the node constraint in ${CONFIG_REL} must be the floor ${PACKAGE_MANIFEST_REL} promises, ` +
+        "so the two cannot drift apart",
+    ).toContain(String(node));
+  });
+});
