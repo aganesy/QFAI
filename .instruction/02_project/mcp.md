@@ -37,7 +37,7 @@ QFAI のドキュメント整備・実装・検証を効率化するための MC
 
 ### `markitdown`（PDF/Office → Markdown）
 
-- 目的: 要件資料の取り込み（`.qfai/require` の入力準備）
+- 目的: 要件資料の取り込み（discussion pack の入力準備）
 - 典型ユースケース: 仕様化の前段として要件を Markdown 化
 
 ### `vibe-pdf-read`（PDF → 画像） + `ocr`（画像 → 文字）
@@ -51,11 +51,12 @@ QFAI のドキュメント整備・実装・検証を効率化するための MC
 
 ## 代表レシピ
 
-### レシピA: 要件資料 → `.qfai/require` へ取り込み
+### レシピA: 要件資料 → discussion pack へ取り込み
 
 1. テキスト PDF なら `markitdown` で Markdown 化
 2. スキャン PDF なら `vibe-pdf-read` → `ocr` で文字起こし
-3. `.qfai/require/` に保存し、Spec 作成の入力にする
+3. Save it under `.qfai/discussion/` as a source of the pack, and use the pack
+   as the input to the spec.
 
 ### レシピB: 影響範囲調査は Serena を起点にする
 

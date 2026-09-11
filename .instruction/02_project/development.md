@@ -13,8 +13,8 @@ version: 1.0.0
 
 ## 前提
 
-- Node.js >= 18（`package.json#engines`）
-- pnpm（`package.json#packageManager`）
+- Node.js — the supported range is `package.json#engines`. Read it there; it moves.
+- pnpm — the pinned version is `package.json#packageManager`.
 
 ## セットアップ
 

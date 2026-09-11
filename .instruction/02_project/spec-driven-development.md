@@ -25,11 +25,11 @@ QFAI は `.qfai/` 配下の成果物を SSOT として扱い、検証とレポ�
 ## 全体フロー（成果物ベース）
 
 ```text
-.qfai/require（上流要件）
+.qfai/discussion（任意の上流入力）
         ↓
-.qfai/specs（Spec Pack: spec/delta/scenario）
+.qfai/specs（_policies + spec-NNNN）
         ↓
-.qfai/contracts（UI/API/DB）
+.qfai/contracts（ui / api / db / design）
         ↓
 qfai validate → .qfai/report/validate.json
         ↓
@@ -40,21 +40,26 @@ qfai report → .qfai/report/report.md
 
 ### Phase 0: 要件の取り込み
 
-- `.qfai/require/` に要件資料を集約する
-- 取り込み後は Spec 作成の入力として参照する
+- A discussion pack under `.qfai/discussion/` is the usual input, and it is
+  optional. A spec set taken in without one is recorded as import-lite evidence
+  instead.
 
 ### Phase 1: Spec Pack 作成
 
-- 配置: `.qfai/specs/spec-0001/`
-- 必須ファイル: `spec.md` / `delta.md` / `scenario.feature`
-- 命名規約は `02_project/naming.md` に従う
-- `delta.md` には変更内容/影響/受入観点を記録する
+- 配置: `.qfai/specs/spec-NNNN/`
+- The required files are `01_Spec.md` through `09_delta.md`, plus `10_Plan.md`.
+  `_policies/` requires `01_Objective.md` through `11_Slice-Policy.md`. Both sets
+  are listed in `02_project/naming.md`, and `E_SPEC_MISSING_FILESET` reports a
+  missing one.
+- `09_delta.md` is append-only. It records what changed, and the Triage table
+  records which requirement drove it and who approved the operation.
 
 ### Phase 2: Contracts の作成
 
-- UI/API/DB の契約を `.qfai/contracts/` に配置する
-- Spec の QFAI-CONTRACT-REF を必須にする（none 可）
-- Scenario からの契約 ID 参照は任意（未知参照の severity は設定で制御）
+- Place each contract under its kind's directory in `.qfai/contracts/`, with
+  `QFAI-CONTRACT-ID: CON-<TYPE>-<NUMBER>` at the top of the file.
+- Keep the Contract Index in `_policies/05_Contracts.md` current. An indexed
+  file that does not exist stops the run.
 
 ### Phase 3: 検証とレポート
 
@@ -64,10 +69,10 @@ qfai report → .qfai/report/report.md
 ## 品質ゲート（最低限）
 
 - Spec Pack が 1 つ以上存在する
-- Spec/Scenario/Contracts の ID 形式が正しい
-- BR → SC のトレーサビリティが成立する
-- Spec → Contract のトレーサビリティが成立する
-- SC → Test のトレーサビリティが成立する
+- Every required file of each pack is present
+- ID の形式が正しい（`spec-NNNN` / `US` / `AC` / `BR` / `EX` / `TC` / `CON-*`）
+- The `AC → BR → EX → TC` chain resolves, with no reference to an unregistered ID
+- Each spec declares its contract references
 - `validate` の error が 0
 
 ## 実装に進む前の確認

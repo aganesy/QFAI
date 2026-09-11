@@ -13,9 +13,9 @@ version: 1.0.0
 
 ## ランタイム/言語
 
-- Node.js（`package.json#engines` は `>=18.0.0`）
+- Node.js — the supported range is `package.json#engines`. Read it there; it moves.
 - TypeScript（ESM）
-- pnpm（`package.json#packageManager`）
+- pnpm — the pinned version is `package.json#packageManager`.
 
 ## ビルド/パッケージ
 
