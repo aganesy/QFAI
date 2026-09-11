@@ -4,6 +4,28 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ## [Unreleased]
 
+### Added
+
+- **A rule for how much code implements a behaviour** (#1458).
+  `.agents/rules/minimal-implementation.md` states one ladder — does this need
+  to exist, does the standard library do it, does the platform, does an
+  installed dependency, can it be one line, and only then the least code that
+  works — and says what the ladder never removes: validation at a trust
+  boundary, error handling that prevents data loss, security, accessibility,
+  and anything the spec asks for. Tests are in that second list: the ladder
+  shapes how a test is built, never how many obligations are verified.
+
+  A shortcut taken on purpose is marked where it is taken, with its ceiling and
+  the condition that lifts it. Both halves are required, because a ceiling with
+  no lifting condition cannot be told from an oversight.
+
+  `qfai init` ships the rule and cites it from the entry points it writes, so
+  an adopter's repository carries it the way it carries the writing standard.
+
+  What existed before was one line in this repository's `AGENTS.md`, written in
+  a vocabulary nothing defined, and a checklist nothing loaded on its own. Both
+  are replaced by a reference to the master.
+
 ### Fixed
 
 - **A second hook group now reaches a project that already has the first**
