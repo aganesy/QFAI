@@ -7,6 +7,18 @@
  * `04_Sources.md`, and every registered reference must populate all three
  * mandatory fields. Setting the knob to `0` opts out of the count gate only —
  * references that are registered are still checked for completeness.
+ *
+ * A reference is consulted for one of two opposite reasons, and the registry
+ * it belongs in follows that: a competitor is read to differ from, a
+ * component catalogue to adopt from. Both registries take the same three
+ * fields — what was adopted, what was rejected, how it was translated — and
+ * are counted separately, so competitor entries cannot satisfy a catalogue
+ * requirement or the reverse.
+ *
+ * The catalogue count is off unless a project sets `uiux.catalogue_refs_min`.
+ * A gate that fires on every pack written before the registry existed is one
+ * people switch off rather than satisfy; completeness is checked either way,
+ * so an entry that IS registered is held to the same three fields.
  */
 import path from "node:path";
 
@@ -46,10 +58,10 @@ const H2_PREFIX = String.raw`^ {0,3}##(?!#)`;
  * `: UI-bearing packs`, `— UI-bearing packs`, or an ATX closing `##`. Another
  * WORD directly after the phrase names a different section, not this one.
  */
-const REGISTRY_HEADING_RE = new RegExp(
-  `${H2_PREFIX}\\s+competitive reference registry(?![\\w-])\\s*(?:[^\\w\\s].*)?$`,
-  "i",
-);
+function registryHeadingRe(heading: string): RegExp {
+  const phrase = heading.toLowerCase().replace(/\s+/g, "\\s+");
+  return new RegExp(`${H2_PREFIX}\\s+${phrase}(?![\\w-])\\s*(?:[^\\w\\s].*)?$`, "i");
+}
 
 /** Any H2 — the line at which the registry section ends. */
 const H2_BOUNDARY_RE = new RegExp(`${H2_PREFIX}(?:\\s|$)`);
@@ -180,9 +192,10 @@ function isPopulated(value: string | undefined): boolean {
   );
 }
 
-function extractRegistrySection(content: string): string | null {
+function extractRegistrySection(content: string, heading: string): string | null {
+  const headingRe = registryHeadingRe(heading);
   const lines = content.split("\n");
-  const start = lines.findIndex((line) => REGISTRY_HEADING_RE.test(line));
+  const start = lines.findIndex((line) => headingRe.test(line));
   if (start === -1) {
     return null;
   }
@@ -375,6 +388,22 @@ function resolveMinimum(config: QfaiConfig): number {
   return configured === undefined ? DEFAULT_COMPETITIVE_REFS_MIN : configured;
 }
 
+/** The two registries, each with its heading, its knob and its wording. */
+const REGISTRIES = [
+  {
+    heading: "Competitive Reference Registry",
+    noun: "competitive",
+    minimum: (config: QfaiConfig): number => resolveMinimum(config),
+    knob: "uiux.competitive_refs_min",
+  },
+  {
+    heading: "Component Catalogue Registry",
+    noun: "catalogue",
+    minimum: (config: QfaiConfig): number => config.uiux?.catalogue_refs_min ?? 0,
+    knob: "uiux.catalogue_refs_min",
+  },
+] as const;
+
 /**
  * Validate the Competitive Reference Registry of a UI-bearing discussion pack.
  *
@@ -396,35 +425,41 @@ export async function validateCompetitiveReferences(
   // Fenced samples and HTML comments are documentation, not registry entries:
   // three complete examples in a fence would otherwise satisfy the minimum on
   // an empty registry, and an unedited sample would raise a false incomplete.
-  const references = content
-    ? parseReferences(extractRegistrySection(maskNonSpecRegions(content)))
-    : [];
+  const masked = content ? maskNonSpecRegions(content) : null;
 
   const issues: Issue[] = [];
-  for (const reference of references) {
-    if (reference.missingFields.length === 0) {
-      continue;
+  for (const registry of REGISTRIES) {
+    const references = masked
+      ? parseReferences(extractRegistrySection(masked, registry.heading))
+      : [];
+    let incomplete = 0;
+    for (const reference of references) {
+      if (reference.missingFields.length === 0) {
+        continue;
+      }
+      incomplete += 1;
+      issues.push(
+        competitiveIssue(
+          "QFAI-RESEARCH-014",
+          `${registry.noun === "catalogue" ? "Catalogue" : "Competitive"} reference '${reference.label}' is missing or placeholders '${reference.missingFields.join(", ")}'.`,
+          "error",
+          `Populate ${reference.missingFields.join(", ")} for '${reference.label}' in the ${registry.heading} of 04_Sources.md.`,
+        ),
+      );
     }
-    issues.push(
-      competitiveIssue(
-        "QFAI-RESEARCH-014",
-        `Competitive reference '${reference.label}' is missing or placeholders '${reference.missingFields.join(", ")}'.`,
-        "error",
-        `Populate ${reference.missingFields.join(", ")} for '${reference.label}' in the Competitive Reference Registry of 04_Sources.md.`,
-      ),
-    );
-  }
 
-  const complete = references.length - issues.length;
-  if (minimum > 0 && complete < minimum) {
-    issues.push(
-      competitiveIssue(
-        "QFAI-RESEARCH-013",
-        `UI-bearing packs need at least ${minimum} complete competitive references in 04_Sources.md; found ${complete}.`,
-        "error",
-        `Add competitive references with ${MANDATORY_FIELDS.join(", ")} under '## Competitive Reference Registry', or lower uiux.competitive_refs_min.`,
-      ),
-    );
+    const required = registry.noun === "catalogue" ? registry.minimum(config) : minimum;
+    const complete = references.length - incomplete;
+    if (required > 0 && complete < required) {
+      issues.push(
+        competitiveIssue(
+          "QFAI-RESEARCH-013",
+          `UI-bearing packs need at least ${required} complete ${registry.noun} references in 04_Sources.md; found ${complete}.`,
+          "error",
+          `Add ${registry.noun} references with ${MANDATORY_FIELDS.join(", ")} under '## ${registry.heading}', or lower ${registry.knob}.`,
+        ),
+      );
+    }
   }
 
   return issues;

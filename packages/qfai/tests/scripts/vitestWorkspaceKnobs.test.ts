@@ -69,6 +69,7 @@
 // QFAI:SPEC-0017:TC-0017-0068
 
 import { readFileSync, readdirSync } from "node:fs";
+import { availableParallelism } from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -100,6 +101,16 @@ const CONCURRENCY_ENV = "QFAI_TEST_MAX_CONCURRENCY";
 
 /** The user's declared starting value on both tunable axes. */
 const DECLARED_START = 10;
+
+/**
+ * The worker ceiling the declaration resolves to on this machine.
+ *
+ * Re-derived here rather than imported, for the same reason the value above is a literal:
+ * a row that reads the number out of the file it is checking agrees with any edit to that
+ * file. `availableParallelism()` is read, because the machine is not a constant — a row
+ * asserting four would pass on the runner and fail on a developer's laptop.
+ */
+const DECLARED_WORKERS = Math.min(DECLARED_START, availableParallelism());
 
 /**
  * The options this runner refuses to scope to a project.
@@ -242,12 +253,14 @@ describe("TC-0017-0060 (TDD-0060): every runner project declares the full knob s
 });
 
 describe("TC-0017-0061 (TDD-0061): the declared starting value is ten on both axes", () => {
-  it("defaults both tunable axes to ten", async () => {
+  it("defaults both tunable axes to ten, with the worker axis held to the machine", async () => {
     const { projects, root } = await load();
 
     const offAxis: string[] = [];
-    if (root["maxWorkers"] !== DECLARED_START) {
-      offAxis.push(`root: maxWorkers is ${String(root["maxWorkers"])}`);
+    if (root["maxWorkers"] !== DECLARED_WORKERS) {
+      offAxis.push(
+        `root: maxWorkers is ${String(root["maxWorkers"])}, expected ${String(DECLARED_WORKERS)}`,
+      );
     }
     for (const project of projects) {
       if (project["maxConcurrency"] !== DECLARED_START) {
@@ -257,6 +270,28 @@ describe("TC-0017-0061 (TDD-0061): the declared starting value is ten on both ax
     expect
       .soft(offAxis, `both tunable axes start at ${DECLARED_START} — the user's declared value`)
       .toEqual([]);
+  });
+
+  it("never asks for more forks than the machine has cores", async () => {
+    // The point of the cap, stated without restating the formula. A fork beyond the core
+    // count does not run — it waits for a core — and the waiting is charged to the fork,
+    // so the suite reports as though it were ten-way parallel while running four-way.
+    const { root } = await load();
+    expect(
+      root["maxWorkers"],
+      "the declared ceiling is held to the cores the machine has",
+    ).toBeLessThanOrEqual(availableParallelism());
+  });
+
+  it("leaves an explicit override uncapped, so a comparison can oversubscribe", async () => {
+    // The measurement rules need a run at a setting the machine cannot hold: a comparison
+    // that could not oversubscribe could not measure what oversubscribing costs, which is
+    // the measurement the cap rests on.
+    const over = availableParallelism() * 2;
+    const { root } = await load({ [WORKERS_ENV]: String(over) });
+    expect(root["maxWorkers"], `${WORKERS_ENV}=${String(over)} must be honoured as asked`).toBe(
+      over,
+    );
   });
 
   it("resolves each axis through its own override rather than a fixed literal", async () => {
@@ -281,14 +316,14 @@ describe("TC-0017-0061 (TDD-0061): the declared starting value is ten on both ax
       .toEqual([]);
   });
 
-  it("falls back to ten when an override is absent, empty or not a positive integer", async () => {
+  it("falls back to the declared value when an override is absent, empty or not a positive integer", async () => {
     // A tuning aid must not be able to reconfigure the suite by accident. `Number("")` and
     // `Number(" ")` are both 0 — the shape a shell produces from an unset variable — so a
     // lenient parse would run the suite at zero workers.
     for (const bad of ["", "   ", "0", "-4", "2.5", "ten", "1e2"]) {
       const { projects, root } = await load({ [WORKERS_ENV]: bad, [CONCURRENCY_ENV]: bad });
       const wrong: string[] = [];
-      if (root["maxWorkers"] !== DECLARED_START) {
+      if (root["maxWorkers"] !== DECLARED_WORKERS) {
         wrong.push(`root: ${JSON.stringify(bad)} gave ${String(root["maxWorkers"])}`);
       }
       for (const project of projects) {
@@ -299,7 +334,11 @@ describe("TC-0017-0061 (TDD-0061): the declared starting value is ten on both ax
         }
       }
       expect
-        .soft(wrong, `an override of ${JSON.stringify(bad)} must fall back to ${DECLARED_START}`)
+        .soft(
+          wrong,
+          `an override of ${JSON.stringify(bad)} must fall back to the declared value — ` +
+            `${DECLARED_WORKERS} workers, ${DECLARED_START} concurrent`,
+        )
         .toEqual([]);
     }
   });

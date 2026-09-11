@@ -18,6 +18,9 @@ tools: [Read, Glob, Grep, Bash]
 - Reconcile sidecar artifacts (screen contracts), design tokens, mermaid flows, and rendered output consistency.
   HTML mock is optional fallback evidence only. Design tokens are supporting input.
 - For UI implementation, compare rendered output against `<contractsDir>/design/prototype-handoff.yaml`, canonical prototype screenshots, HTML snapshots, and `.qfai/prototypes/winner/index.html`.
+- Check the implementation against `prototype-handoff.yaml` `procurement` before judging
+  resemblance: a region the manifest says was procured and the code rebuilt is a finding
+  with a name, and an authored region the manifest does not list is one too.
 - Reject prototype parity when implementation loses CTA hierarchy, spacing rhythm, information density,
   surface framing intent, transition clarity, state coverage, or component character captured by the winning
   prototype.
