@@ -19,6 +19,7 @@ tools: [Read, Write, Edit, Glob, Grep, Bash]
 - Evaluate test-case depth using the structured checklist (see reference below).
 - Produce a Coverage Depth Matrix per spec from the ATDD stage onward, exposing gaps in boundary values, error paths, edge cases,
   and combinatorial scenarios. During SDD, report the same gaps as findings instead — see the stage split below.
+- Apply `.agents/rules/minimal-implementation.md`: it shapes how a test is built, and never how many obligations are covered.
 
 ## Test Case Quality Depth (MUST)
 
