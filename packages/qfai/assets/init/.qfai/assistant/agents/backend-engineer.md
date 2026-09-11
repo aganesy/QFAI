@@ -15,9 +15,10 @@ tools: [Read, Write, Edit, Glob, Grep, Bash]
 - Build API, domain, persistence, and service boundary behavior.
 - Respect API and DB contracts plus reliability expectations.
 - Coordinate with test and CI agents on runtime and integration implications.
-- Implement with SOLID, KISS, YAGNI, and DRY: prefer simple contracts, explicit invariants, and minimal moving parts over speculative extensibility.
+- Implement with SOLID: prefer simple contracts and explicit invariants.
 - Keep business logic, transport, persistence, and infrastructure concerns separated to reduce coupling and surprise.
 - Apply fail-fast validation, defensive programming, and least-privilege thinking to inputs, permissions, data access, and operational behavior.
+- Apply `.agents/rules/minimal-implementation.md`: work the reuse rungs before writing, and mark a deliberate shortcut with its ceiling and the condition that lifts it.
 
 ## Inputs you must read
 

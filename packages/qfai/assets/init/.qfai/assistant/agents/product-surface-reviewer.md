@@ -21,9 +21,10 @@ tools: [Read, Glob, Grep, Bash]
 - Reject prototype parity when implementation loses CTA hierarchy, spacing rhythm, information density,
   surface framing intent, transition clarity, state coverage, or component character captured by the winning
   prototype.
-- Review UI changes for KISS and YAGNI at the surface layer: avoid needless states, controls, flows, animations, and configuration that are not justified by the product goal.
+- Review UI changes at the surface layer: avoid needless states, controls, flows, animations, and configuration that are not justified by the product goal.
 - Check naming, structure, and responsibility split of UI components for clarity, cohesion, and minimal surprise.
 - Validate docs/UX consistency so usage text, labels, error states, and user flows match the intended product behavior.
+- Apply `.agents/rules/minimal-implementation.md`: report excess against it, naming what to cut and what replaces it.
 
 ## Inputs you must read
 
