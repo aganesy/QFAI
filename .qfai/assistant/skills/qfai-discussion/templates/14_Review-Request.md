@@ -41,8 +41,8 @@
   - Acceptance criteria are consistent with flows/state transitions
   - Security/operations risks are reflected in diagrams where relevant
 - Mermaid diagrams use ` ```mermaid ` fences only
-- Root `DESIGN.md` completeness and differentiation clarity — it parses, and its `# Brand Philosophy` body carries do/don't, brand signals, and exploration references framed as **deviate-from** inputs (when a visual-prototyping surface — `web`/`mobile`/`desktop`/`mixed` — is classified as primary or secondary; a cli-only pack authors no root `DESIGN.md`, so skip this line for it)
-- Reference pool freshness and translation quality — into root `DESIGN.md` when a visual-prototyping surface is classified, otherwise into `uiux/40_screen_contracts.md` — and Trend Scan freshness and evidence traceability at `04_Sources.md#Trend Scan` (when UI-bearing)
+- Design direction completeness — `04_Sources.md` carries both reference registries, each entry naming its adopted points, rejected points and local translation, with competitor references framed as **deviate-from** inputs (visual-prototyping surfaces only — `web`/`mobile`/`desktop`/`mixed`, primary or secondary; skip on a cli-only pack)
+- Reference pool freshness and translation quality — into the `04_Sources.md` registries when a visual-prototyping surface is classified, otherwise into `uiux/40_screen_contracts.md` — and Trend Scan freshness and evidence traceability at `04_Sources.md#Trend Scan` (when UI-bearing)
 - Canonical `uiux/` family complete — `00_index.md`, `40_screen_contracts.md`, `50_review_input_bundle.md` — with no forbidden legacy sidecar (when UI-bearing)
 - Evaluator scoring covers all four canonical UX axes — information architecture / navigation flow / usability / functionality, fixed by the review validation the QFAI CLI applies (restated in `.qfai/assistant/skills/qfai-prototyping/references/reviewer-prompt.md`) (when UI-bearing)
 - Evaluator critique skepticism and blandness rejection quality applied against the four axes (when UI-bearing)
@@ -54,17 +54,17 @@
 
 ## Exploration Direction Consistency
 
-<!-- Required for UI-bearing packs. Verifies brand SSOT and sidecar alignment. -->
+<!-- Required for UI-bearing packs. Verifies design direction and sidecar alignment. -->
 
-- Brand SSOT (skip on a cli-only pack; required as soon as `web`/`mobile`/`desktop`/`mixed` appears as primary or secondary surface): verify root `DESIGN.md` defines `brand`, `audience`, and `visual.*` tokens, and that `# Brand Philosophy` body documents product intent, must-preserve interactions, brand signals, and differentiation targets
+- Design direction (skip on a cli-only pack; required as soon as `web`/`mobile`/`desktop`/`mixed` appears as primary or secondary surface): verify `04_Sources.md` records brand personality, audience emotion, product intent, must-preserve interactions, brand signals and differentiation targets, and that every registry entry names its adopted points, rejected points and local translation
 - Evaluator axes: confirm reviewers will score against the four canonical UX axes (information architecture / navigation flow / usability / functionality) — these are fixed by the review validation the QFAI CLI applies (restated in `.qfai/assistant/skills/qfai-prototyping/references/reviewer-prompt.md`) and no longer authored as sidecar files
 - History handling: verify `uiux/50_review_input_bundle.md` matches the one-lineage rule in `qfai-prototyping/SKILL.md` — no parallel candidates, no best-of-history, the latest iteration is accepted
 
 ## Sidecar Artifact Review Scope
 
-<!-- Required for UI-bearing packs. Reviews root DESIGN.md (visual-prototyping surfaces) + uiux/ sidecar artifacts (every UI-bearing surface, cli included). -->
+<!-- Required for UI-bearing packs. Reviews the recorded design direction (visual-prototyping surfaces) + uiux/ sidecar artifacts (every UI-bearing surface, cli included). -->
 
-- Verify root `DESIGN.md` is specific enough (skip on a cli-only pack, which authors none) to support divergent exploration (front-matter populated, `# Brand Philosophy` body written, do/don't and reference notes framed as deviate-from inputs)
+- Verify the recorded design direction is specific enough (skip on a cli-only pack, which records none) to support divergent exploration — both registries populated, do/don't captured, reference notes framed as deviate-from inputs
 - Verify `uiux/50_review_input_bundle.md` states the one-lineage handling (latest iteration accepted, no best-of-history)
 - Verify screen contracts use nested strong schema with all 4 required states (default/loading/empty/error) and treat `uiux/40_screen_contracts.md` as the state SSOT
 

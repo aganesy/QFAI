@@ -1,6 +1,6 @@
 # 09 Constraints
 
-<!-- UX-INTENT: If UI-bearing, see root DESIGN.md (top-level `accessibility`) and uiux/40_screen_contracts.md for accessibility constraints -->
+<!-- UX-INTENT: If UI-bearing, capture accessibility constraints here and in uiux/40_screen_contracts.md -->
 
 ## Technical Constraints
 

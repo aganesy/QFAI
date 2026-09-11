@@ -56,6 +56,6 @@ Use one convention per surface consistently across the whole file so downstream
 
 ## Cross-references
 
-- Brand SSOT (product intent, brand signals, anti-goals): root `DESIGN.md` — visual-prototyping surfaces only; a cli-only pack has none
+- Design direction (product intent, brand signals, anti-goals): `../04_Sources.md` — visual-prototyping surfaces only; a cli-only pack records none
 - Sidecar manifest: `00_index.md`
 - Review handoff: `50_review_input_bundle.md`

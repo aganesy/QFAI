@@ -93,13 +93,14 @@ Move volatile or bulky detail into the `ui_ux/` sidecar references and research 
 
 ## QFAI-Specific Authoring Guidance
 
-### Use root `DESIGN.md` plus the canonical sidecar family as the design SSOT for UI-bearing work
+### Use the recorded design direction plus the canonical sidecar family as the design SSOT for UI-bearing work
 
-Brand-level direction is no longer authored as sidecars. For UI-bearing
-packs it resolves through:
+Brand-level direction is not authored as a sidecar. For UI-bearing packs it
+resolves through:
 
-- brand SSOT (product intent, brand signals, anti-goals, deviate-from reference pool):
-  `<consuming-project-root>/DESIGN.md` (front-matter tokens + `# Brand Philosophy` body)
+- design direction (product intent, brand signals, anti-goals, deviate-from reference pool):
+  the two reference registries in `04_Sources.md`, which `/qfai-sdd` Phase 0 turns into
+  root `DESIGN.md`
 - sidecar manifest: `uiux/00_index.md`
 - screen behavior contracts: `uiux/40_screen_contracts.md`
 - review handoff: `uiux/50_review_input_bundle.md`

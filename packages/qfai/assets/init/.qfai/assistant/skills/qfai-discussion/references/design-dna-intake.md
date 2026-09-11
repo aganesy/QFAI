@@ -37,39 +37,12 @@ the screen.
 - Record template usage policy as `none`, `reference-only`, or
   `implementation-seed`.
 
-## Output Mapping (new SSOT path)
+## Where the answers go
 
-The interview produces **one root `DESIGN.md`** at
-`<consuming-project-root>/DESIGN.md`. This file is the brand SSOT
-consumed by `/qfai-sdd` (which freezes its sha256) and by
-`/qfai-prototyping` (which iterates under its tokens).
+The interview is recorded, not rendered. Its answers go into the pack:
+the classification into `01_Context.md`, both reference registries into
+`04_Sources.md`, and the screen-level decisions into `uiux/`.
 
-Map the interview answers into `DESIGN.md` as follows:
-
-- Brand personality → `brand.voice` (1..N short trait words) and the
-  `# Brand Philosophy` body.
-- Brand archetype → `brand.archetype`. Allowed values are the
-  8-archetype catalog in `design-md-brand-catalog.md`
-  (`minimal | bold | corporate | playful | organic | tech | elegant |
-casual`). Use `aesthetic_properties` from the catalog as defaults:
-  `color_tendency` / `typography` / `spacing` seed `visual.*`, and the
-  `interaction` default seeds `accessibility.motion` — `visual.*` accepts
-  only `colors | typography | radius | shadow | spacing`, so a
-  `visual.motion` / `visual.interaction` key fails DESIGN.md validation.
-- Audience emotion → `audience.emotion`.
-- Rejected competitor references → `audience.do_not_look_like` and the
-  **Don't** subsection of the `# Brand Philosophy` body. This field names
-  identities to avoid, not conventions.
-- Visual decisions (color, typography, radius, shadow) → the
-  `visual.*` token tree. Schema and validation rules live in
-  `.qfai/assistant/skills/qfai-prototyping/references/design-md-spec.md`.
-- Adopted reference points → the **Do** subsection of
-  `# Brand Philosophy`.
-
-For the schema (12 colors, 3 fonts, 4 radii, 3 shadows, 8 archetypes),
-read `qfai-prototyping/references/design-md-spec.md` and use the
-sample at `qfai-prototyping/templates/DESIGN.md.sample` as a starting
-shape.
-
-Evaluation axes are global constants (4-step ordinal: weak / acceptable
-/ strong / exceptional) and are not authored as discussion sidecars.
+Root `DESIGN.md` is written later, by `/qfai-sdd` Phase 0, which reads
+those records. The mapping from answer to field is
+`qfai-sdd/references/design-md-authoring.md`.
