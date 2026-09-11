@@ -1,7 +1,7 @@
 /**
  * Integration acceptance for spec-0013 CHG-006 test cases
  * TC-0013-0028..0035 (active-pack resolver, surface_type frontmatter
- * auto-populate + D-SURFACE-TYPE-MISSING, primary_tasks band + shape).
+ * auto-populate + D-SURFACE-TYPE-MISSING, primary_tasks ceiling + shape).
  *
  * Converted from `.skip` test-first skeletons to deterministic temp-dir
  * fixtures invoking the production helpers directly. Each block sets
@@ -141,13 +141,13 @@ describe("spec-0013 surface_type frontmatter CHG-006", () => {
   });
 });
 
-describe("spec-0013 primary_tasks band + shape CHG-006", () => {
+describe("spec-0013 primary_tasks ceiling + shape CHG-006", () => {
   async function withinBandIssues(uiContract: string) {
     await makeUiContract("sample.yaml", uiContract);
     return validateDesignAudit(root, defaultConfig);
   }
 
-  it("QFAI:SPEC-0013:TC-0013-0032 — normal: QFAI-AUD-020 warning text names the band 3..7 when count is 9", async () => {
+  it("QFAI:SPEC-0013:TC-0013-0032 — normal: QFAI-AUD-020 warning text names the ceiling when count is 9", async () => {
     const tasks = Array.from({ length: 9 }, (_, i) => `      - task_${i + 1}`).join("\n");
     const issues = await withinBandIssues(
       [
@@ -162,14 +162,14 @@ describe("spec-0013 primary_tasks band + shape CHG-006", () => {
     );
     const warning = issues.find((issue) => issue.code === "QFAI-AUD-020");
     expect(warning, "expected QFAI-AUD-020 warning").toBeDefined();
-    // QFAI-AUD-020 is a count-band finding, not a deprecation — it has no
+    // QFAI-AUD-020 is a count finding, not a deprecation — it has no
     // sunset and stays a warning.
     expect(warning?.severity).toBe("warning");
-    expect(warning?.message ?? "").toMatch(/3\.\.7|3 to 7/);
+    expect(warning?.message ?? "").toMatch(/at most 7/);
   });
 
-  it("QFAI:SPEC-0013:TC-0013-0033 — boundary: counts 2 and 8 warn; 3 and 7 do not", async () => {
-    // count == 2: warn
+  it("QFAI:SPEC-0013:TC-0013-0033 — boundary: count 8 warns; 2, 3 and 7 do not", async () => {
+    // count == 2: silent, because there is no floor
     {
       const issues = await withinBandIssues(
         [
@@ -183,7 +183,7 @@ describe("spec-0013 primary_tasks band + shape CHG-006", () => {
           "",
         ].join("\n"),
       );
-      expect(issues.find((issue) => issue.code === "QFAI-AUD-020")).toBeDefined();
+      expect(issues.filter((issue) => issue.code === "QFAI-AUD-020")).toEqual([]);
     }
     // Reset workspace for an isolated assertion (count == 3 / 7 / 8).
     await rm(root, { recursive: true, force: true });
