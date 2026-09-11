@@ -1,8 +1,8 @@
 # DESIGN.md Specification
 
 `DESIGN.md` lives at the **consuming-project root** and is the single
-source of truth for brand identity. It is generated as a draft by
-`/qfai-discussion` and frozen by `/qfai-sdd` Phase 0 into
+source of truth for brand identity. `/qfai-sdd` Phase 0 authors it when
+the project has none, then freezes it into
 `.qfai/contracts/design/DESIGN.md.lock.yaml` (sha256 record).
 
 `/qfai-prototyping` reads it as read-only context. The compliance gate
