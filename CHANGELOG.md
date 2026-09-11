@@ -123,9 +123,10 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   | The topic-marker form was missed                                             | The plainest way to write the rule read as prose        |
   | A statement of the repository's own written language was read as a directive | Two correct lines were reported, in two different files |
 
-  Every Japanese shape expected the language before a particle or beside a
-  colon. `報告/Plan/最終出力は日本語` puts it last, which is both ordinary and
-  what the entry point used. A shape for it is added.
+  Every Japanese shape expected the language named before a particle or beside
+  a colon. The topic-marker form names the output first and the language last,
+  which is both the ordinary way to write it and what the entry point used. A
+  shape for it is added.
 
   The second is a collision between two rules that own different things.
   `repository-language.md` decides what this repository stores and says in so
