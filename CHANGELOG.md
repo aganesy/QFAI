@@ -134,6 +134,29 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   an output. A carve-out now names the repository as the thing written. It is
   narrow: a sentence about what an agent writes is untouched.
 
+- **The prototyping loop converges on open findings, not on a rating** (#1488).
+  The stop test required all four review axes at `exceptional` — a value the
+  scale itself defines as best-in-class and tells the reviewer to use
+  sparingly — aggregated as the worst verdict across every screen, and
+  `certify` re-derived the same condition. A review that rated honestly never
+  satisfied it, so the gate measured the reviewer's willingness to call four
+  axes best-in-class rather than measuring the prototype.
+
+  The four ordinal axes are gone. The reviewer writes `blockingFindings`, one
+  line per thing that must be fixed, and convergence is that array empty
+  alongside `layoutAntiPatternsDetected` and `designMdViolations`. Anything
+  worth saying that does not block goes in the prose critique, where it
+  informs the next cycle without stopping this one.
+
+  Nothing else in this project scored: the shared reviewer contract is a
+  verdict plus graded findings, and `/qfai-implement` already ran a binary
+  checklist. Prototyping now uses the same shape.
+
+  `pivotDirective` compares how many findings are open across cycles, because
+  a count is reproducible where a verdict is not. `stopReason` records
+  `converged`. The cycle-0 seed carries one finding, so an iteration nobody
+  has reviewed cannot satisfy the stop test by never having been looked at.
+
 - **The design-drift scanner cites nothing a reader cannot resolve** (#1496).
   Nine comment lines in the scanner named a code review tool's internal comment
   identifier. They pointed at something no reader outside this repository can

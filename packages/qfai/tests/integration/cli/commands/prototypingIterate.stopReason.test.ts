@@ -102,7 +102,7 @@ async function seedProject(root: string): Promise<void> {
 describe("stopReason enum: 4 values, validator accepts each", () => {
   it("STOP_REASONS pins the 4-value enum", () => {
     expect([...STOP_REASONS]).toEqual([
-      "axes-exceptional",
+      "converged",
       "max-iterations",
       "license-verify-fail",
       "input-error",
@@ -111,7 +111,7 @@ describe("stopReason enum: 4 values, validator accepts each", () => {
   });
 
   it("isStopReason narrows all 4 values", () => {
-    expect(isStopReason("axes-exceptional")).toBe(true);
+    expect(isStopReason("converged")).toBe(true);
     expect(isStopReason("max-iterations")).toBe(true);
     expect(isStopReason("license-verify-fail")).toBe(true);
     expect(isStopReason("input-error")).toBe(true);
@@ -136,7 +136,7 @@ describe("stopReason enum: 4 values, validator accepts each", () => {
       // consistency rule, so the value alone passes the enum check).
       const protoPath = path.join(root, ".qfai/evidence/prototyping/prototyping.json");
       const body = JSON.parse(await readFile(protoPath, "utf-8"));
-      // For axes-exceptional / max-iterations the consistency gate
+      // For converged / max-iterations the consistency gate
       // requires an accompanying iter shape — skip the persistence
       // test there; what we really pin is the validator-side accept.
       // license-verify-fail / input-error have no extra consistency
