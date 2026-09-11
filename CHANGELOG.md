@@ -6,6 +6,25 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Added
 
+- **A lane that collects every deliberate simplification** (#1466).
+  `.agents/rules/minimal-implementation.md` asks an author who takes a shortcut
+  on purpose to write it down where it is taken, with the ceiling it stops at
+  and the condition that lifts it. Nothing collected those markers, and a marker
+  nobody collects is worth less than no marker, because it reads as tracked.
+
+  `scripts/check-simplification-ledger.mjs` runs in `ci:lint`. It prints every
+  marker grouped by file, with both halves, and exits non-zero on one that names
+  no lifting condition — because a ceiling with no way out cannot be told from
+  an oversight, and the deferral then becomes permanent with nobody deciding it
+  should.
+
+  It does not fail on the count. That would make the guard an argument against
+  marking a shortcut at all: the author who writes the marker would redden the
+  build and the author who takes the same shortcut silently would not.
+
+  Comment lines in source files only. Markdown is out, so the rule's own worked
+  example is not collected as a finding.
+
 - **A rule for how much code implements a behaviour** (#1458).
   `.agents/rules/minimal-implementation.md` states one ladder — does this need
   to exist, does the standard library do it, does the platform, does an
@@ -51,6 +70,23 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
   One citation turned up in the tree the moment the wrap gap closed, in a comment
   nobody had to change since. It is removed here.
+
+- **The forbidden-legacy manifest names every retired sidecar** (#1498). A
+  discussion pack rejects eight families of sidecar file. The manifest an author
+  is sent to listed four of them, so the other four could be created in good
+  faith and refused by validation afterwards.
+
+  The four that were missing are named now, each with what replaced it:
+
+  | File                            | Why it is retired                                                 |
+  | ------------------------------- | ----------------------------------------------------------------- |
+  | `10_implementation_strategy.md` | Discussion carries directions unranked, so it selects no strategy |
+  | `11_design_taste_interview.md`  | Brand signals live in root `DESIGN.md`                            |
+  | `12_design_system.md`           | Replaced by root `DESIGN.md` and the design contracts             |
+  | the `20`–`24` family            | The evaluator axes are fixed by the CLI, not authored in a pack   |
+
+  A test reads the manifest against the validator, so a family added to one and
+  not the other fails rather than waiting for an author to meet it.
 
 - **A screen with one primary task no longer reads as weakening its own focus**
   (#1490). `QFAI-AUD-020` recommended a band of 3 to 7 primary tasks per screen
