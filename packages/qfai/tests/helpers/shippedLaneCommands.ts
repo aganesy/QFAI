@@ -1421,13 +1421,18 @@ export const ALLOWED_INIT_CONTENT: ReadonlyMap<string, string> = new Map([
   ["AGENTS.md", "22af72ddb35cc3ac22deeae00f4b054d8741022a74eb4e8ab29491707dae4afe"],
   ["CLAUDE.md", "3f9ad00f487adb3fe5d1e5b82172aafb5155a3dab497568b5b36afb0552f349d"],
   // Inside `.claude/`, and pinned anyway — see the paragraph above the path set.
-  // These are the hooks that restate the writing rule when a pull request, issue
-  // or review is posted through the GitHub tools, and after a Markdown file is
-  // written. Each entry runs `node` in exec form — no shell, no file reads, no
-  // network — and prints one constant JSON envelope, which
+  // These are the hooks that restate a rule at the moment it applies: the writing
+  // rule when a pull request, issue or review is posted through the GitHub tools
+  // and after a Markdown file is written, and the implementation rule after any
+  // file is written or edited. Each entry runs `node` in exec form — no shell, no
+  // file reads, no network — and prints one constant JSON envelope, which
   // `tests/assets/documentationClarityHooks.test.ts` executes and parses. The
   // bytes are what an adopter's agent runs, so the bytes are the pin.
-  [".claude/settings.json", "b13d4081b4e4e404656858ff2bc365f36887b93321c0003394a89d918f7911d1"],
+  //
+  // Re-pinned for the implementation-rule group. Derived by running `qfai init`
+  // into a temp root and hashing what it wrote; dropping that one group
+  // reproduces `b13d4081…` byte for byte.
+  [".claude/settings.json", "6be452d2cf1e63bb742d699e2e934531e770f87c98d2c79f23bf185b2cbc9786"],
   // Re-derived for the MERGED file, which carries both sides' edits: the three
   // retired `validation.traceability` knobs are gone (`brMustHaveSc`,
   // `scNoTestSeverity`, `orphanContractsPolicy`), the `forbidTestTodoStubs`
