@@ -116,6 +116,24 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
+- **The constitution reaches the rule about how much code to write** (#1459).
+  Article VII settles which behaviours a change carries and Article IX asks a
+  preflight to look for work already done. Neither said anything about the
+  amount of code that answers a requirement once it is accepted, so the ladder
+  in `.agents/rules/minimal-implementation.md` was reachable from the rule
+  register and from nowhere an agent passes through on its way to writing code.
+
+  Each article now points at it, and the ladder itself stays in one file:
+
+  | Article | What it gains                                                                       |
+  | ------- | ----------------------------------------------------------------------------------- |
+  | VII     | The first rung — whether a thing needs to exist — while the scope is still open     |
+  | IX      | The reuse rungs: the standard library, the platform, and the installed dependencies |
+
+  Article IX's preflight looked for duplicate implementations inside the
+  repository only. A helper the standard library already ships was outside
+  anything it asked about.
+
 - **Every Triage section in a delta ledger names the round it records**
   (#1467). Seven ledgers disabled `MD024/no-duplicate-heading` per file, because
   a ledger recording several rounds needed several identical `## Triage`
