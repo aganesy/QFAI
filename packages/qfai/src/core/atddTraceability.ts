@@ -23,7 +23,6 @@ import {
 } from "./specPackParsers.js";
 import { UNIT_COMPONENT_LAYERS } from "./tddHelpers.js";
 import { DEFAULT_TEST_FILE_EXCLUDE_GLOBS } from "./traceability.js";
-import { collectMarkdownItems, uniqueMatches } from "./validators/utils.js";
 import { maskJsNonCode } from "./validators/jsSourceMask.js";
 
 // The short form carries `(?!-)`; the long form does not.
@@ -149,8 +148,6 @@ const API_TEST_ANNOTATION_RE = /\bQFAI:CON-API-(\d+)\b/g;
  */
 const DB_TEST_ANNOTATION_RE = /\bQFAI:CON-DB-(\d+)\b/g;
 
-const US_ID_RE = /^US-\d{4}(?:-\d{4})?$/;
-const TC_ID_RE = /^TC-\d{4}(?:-\d{4})?$/;
 /** Heading form of a test case, e.g. `## TC-0001-0002: title`. */
 const TC_HEADING_RE = /^##\s+(TC-\d{4}(?:-\d{4})?)(?:\s*[:：]\s*.*)?$/;
 /** `- Level: L4` meta line inside a heading-form test case block. */
@@ -845,13 +842,13 @@ async function collectSpecRefs(specsRoot: string): Promise<{
       readSafe(entry.testCasesPath),
     ]);
 
-    const usIds = collectShortIds(maskNonSpecRegions(usText), "US");
+    const usIds = collectDeclaredUsIds(usText);
     // From the same authoritative shapes `collectTcLevels` reads, not from the
     // whole document. Two ways that diverged: an id that appears only in a
     // fenced sample or an HTML comment (masking fixes that), and an id in an
     // appendix or illustrative table written as ordinary markdown *outside*
     // `## Test Case Table` — which `resolveTestCaseTables` does not read but
-    // `collectShortIds` did. Either way the id landed in the declared set with
+    // the loose scan did. Either way the id landed in the declared set with
     // no `Level`, fell through to the integration default, and
     // `QFAI-ATDD-112` raised a hard error against a TC that does not exist.
     const tcIds = collectDeclaredTcIds(tcText);
@@ -1516,7 +1513,7 @@ const PLANNED_DB_CONTRACT_RE = new RegExp(
  * leave every real project's stories unable to carry the marker below.
  *
  * Any depth from `##` down is a story heading, because the declaring collector
- * ({@link collectShortIds}) accepts an id at any depth via its loose scan — real
+ * ({@link collectDeclaredUsIds}) accepts an id at any depth — real
  * packs write `### US-…` far more often than `## US-…`. Recognising only `##`
  * here left those stories unable to defer at all, and in an H2/H3 document it
  * also mis-attributed an H3 story's marker to the preceding H2 story, because
@@ -1658,7 +1655,7 @@ const ORDERED_MARKER = "\\d{1,9}[.)]";
 /**
  * Catalog form of a user story, e.g. `- US-0001: summary`.
  *
- * {@link collectShortIds} declares an id from this line too, so a pack whose
+ * {@link collectDeclaredUsIds} declares an id from this line too, so a pack whose
  * stories live only in the `## US Catalog` list — no per-story heading — owed
  * `QFAI-ATDD-111` with no way to defer. The id must *open* the item, not merely
  * appear in it: `- Goal: as described in US-0002` is prose about another story,
@@ -1750,7 +1747,7 @@ function indentColumn(line: string): number {
  * {@link collectTcLevels}: an illustrative block showing the marker must not
  * silently drop a real story's obligation.
  *
- * A block opens at either shape {@link collectShortIds} declares an id from — a
+ * A block opens at either shape {@link collectDeclaredUsIds} declares an id from — a
  * `##`-or-deeper heading ({@link US_HEADING_RE}) or a catalog list entry
  * ({@link US_LIST_ITEM_RE}) — and closes at the next opener or any heading, so
  * every declared story can carry the marker and none inherits a neighbour's.
@@ -1822,6 +1819,47 @@ export function collectPlannedUsIds(rawUsText: string): Set<string> {
 }
 
 /**
+ * The `US-*` ids a spec pack declares, read from the entries that declare them.
+ *
+ * An entry is a `##`-or-deeper heading ({@link US_HEADING_RE}) or a catalog
+ * list item ({@link US_LIST_ITEM_RE}) — the two shapes
+ * {@link collectPlannedUsIds} already opens a block at. A mention anywhere else
+ * is prose about a story, not a declaration of one.
+ *
+ * What this replaces took the union of those entries and every loose
+ * `US-NNNN` in the file, so any sentence naming an id declared it. A note
+ * reserving a deleted story's id — the id is retired, do not reuse it — made
+ * the story live again, and `QFAI-ATDD-111` then demanded an E2E reference
+ * for something with no entry, no acceptance criteria and no behaviour. The
+ * three ways out all cost something: an annotation with nothing behind it, the
+ * note hidden in an HTML comment where the people it warns cannot read it, or
+ * the id spelled so the scan misses it.
+ *
+ * This is the rule {@link collectDeclaredTcIds} already applies one document
+ * over, for the same reason: an id read from somewhere other than its
+ * declaration carries an obligation nobody wrote.
+ *
+ * Fenced samples and HTML comments are masked first, so an illustrative block
+ * showing the entry shape declares nothing.
+ */
+export function collectDeclaredUsIds(rawUsText: string): Set<string> {
+  const ids = new Set<string>();
+  const lines = maskNonSpecRegions(rawUsText).replace(/\r\n/g, "\n").split("\n");
+  for (const line of lines) {
+    const heading = US_HEADING_RE.exec(line.trim());
+    if (heading?.[1]) {
+      ids.add(heading[1].toUpperCase());
+      continue;
+    }
+    const listItem = US_LIST_ITEM_RE.exec(line);
+    if (listItem?.[2]) {
+      ids.add(listItem[2].toUpperCase());
+    }
+  }
+  return ids;
+}
+
+/**
  * True when a DB contract declares itself not yet implemented.
  *
  * The counterpart of `isPlannedApiContract`, and deliberately a different rule:
@@ -1889,23 +1927,6 @@ async function resolveUiBearingScope(
     );
     return null;
   }
-}
-
-function collectShortIds(text: string, prefix: "US" | "TC"): Set<string> {
-  const ids = new Set<string>();
-  const headingIds = collectMarkdownItems(text, prefix).map((item) => item.id);
-  const pattern = prefix === "US" ? /\bUS-\d{4}(?:-\d{4})?\b/g : /\bTC-\d{4}(?:-\d{4})?\b/g;
-  const looseIds = uniqueMatches(text, pattern);
-  for (const id of [...headingIds, ...looseIds]) {
-    const normalized = id.toUpperCase();
-    if (
-      (prefix === "US" && US_ID_RE.test(normalized)) ||
-      (prefix === "TC" && TC_ID_RE.test(normalized))
-    ) {
-      ids.add(normalized);
-    }
-  }
-  return ids;
 }
 
 /**
