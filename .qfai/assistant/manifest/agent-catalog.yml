@@ -1169,7 +1169,7 @@ agents:
       - Return only PASS or REVISE, with actionable rework instructions on REVISE.
       - Enforce validate evidence, required coverage obligations, and no self-approval.
       - Verify rejected options are not reintroduced without RE-OPEN.
-      - Apply `.agents/rules/minimal-implementation.md`: report excess against it, naming what to cut and what replaces it.
+      - Apply `.agents/rules/minimal-implementation.md`: tag excess `delete`, `stdlib`, `native`, `yagni` or `shrink`, and name what to cut and what replaces it.
 
       ## Inputs you must read
 
@@ -1279,7 +1279,7 @@ agents:
       - Audit option sets for missing alternatives and weak recommendation rationale.
       - Review OQ candidates for completeness, neutrality, and safe deferral.
       - Ensure unresolved requirement ambiguity is explicit and actionable.
-      - Apply `.agents/rules/minimal-implementation.md`: report excess against it, naming what to cut and what replaces it.
+      - Apply `.agents/rules/minimal-implementation.md`: tag excess `delete`, `stdlib`, `native`, `yagni` or `shrink`, and name what to cut and what replaces it.
 
       ## Inputs you must read
 
@@ -1429,7 +1429,7 @@ agents:
       - Flag violations of SOLID with concrete reasoning and a smaller alternative when applicable.
       - Check separation of concerns, fail-fast validation, least astonishment, and avoidance of premature optimization in changed code.
       - Enforce TypeScript review expectations: avoid unjustified assertions, over-complex generics, unchecked `unknown`, and unhandled async paths.
-      - Apply `.agents/rules/minimal-implementation.md`: report excess against it, naming what to cut and what replaces it.
+      - Apply `.agents/rules/minimal-implementation.md`: tag excess `delete`, `stdlib`, `native`, `yagni` or `shrink`, and name what to cut and what replaces it.
 
       ## Inputs you must read
 
@@ -1545,7 +1545,7 @@ agents:
       - Review UI changes at the surface layer: avoid needless states, controls, flows, animations, and configuration that are not justified by the product goal.
       - Check naming, structure, and responsibility split of UI components for clarity, cohesion, and minimal surprise.
       - Validate docs/UX consistency so usage text, labels, error states, and user flows match the intended product behavior.
-      - Apply `.agents/rules/minimal-implementation.md`: report excess against it, naming what to cut and what replaces it.
+      - Apply `.agents/rules/minimal-implementation.md`: tag excess `delete`, `stdlib`, `native`, `yagni` or `shrink`, and name what to cut and what replaces it.
 
       ## Inputs you must read
 
@@ -1633,7 +1633,7 @@ agents:
       - Treat density or volume smells as review signals, not standalone hard gates.
       - Verify test-case quality depth using the Coverage Depth Matrix (see below).
       - Own RED/GREEN **observation** evidence in a TDD micro-cycle: did the test fail (or pass) for the expected reason.
-      - Apply `.agents/rules/minimal-implementation.md`: report excess against it, naming what to cut and what replaces it.
+      - Apply `.agents/rules/minimal-implementation.md`: tag excess `delete`, `stdlib`, `native`, `yagni` or `shrink`, and name what to cut and what replaces it.
 
       ## Ownership boundaries
 

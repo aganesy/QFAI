@@ -6,6 +6,30 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Added
 
+- **A shape for a review finding about excess** (#1463). `REVIEW.md` listed
+  simplification opportunities among the categories a reviewer must always flag
+  and said nothing about what such a finding looks like, so what came back was
+  hedged and unactionable. A sentence asking whether all of this is really
+  needed says neither what to cut nor what would stand in its place.
+
+  A finding is one line — where it is, what to cut, what replaces it — tagged
+  with the reason:
+
+  | Tag      | Means                                                                               | What replaces it      |
+  | -------- | ----------------------------------------------------------------------------------- | --------------------- |
+  | `delete` | Dead code, unused flexibility, a speculative feature                                | Nothing               |
+  | `stdlib` | A hand-rolled thing the standard library ships                                      | Name the function     |
+  | `native` | Code or a dependency doing what the platform already does                           | Name the feature      |
+  | `yagni`  | An abstraction with one implementation, config nobody sets, a layer with one caller | Inline it             |
+  | `shrink` | The same logic, fewer lines                                                         | Show the shorter form |
+
+  The five reviewer agent cards carry the tags too. `REVIEW.md` is this
+  repository's own and is not shipped, so a card pointing at it would name a
+  file no project has.
+
+  Correctness, security and performance findings keep the shape they had. This
+  is only about excess.
+
 - **A rule for how much code implements a behaviour** (#1458).
   `.agents/rules/minimal-implementation.md` states one ladder — does this need
   to exist, does the standard library do it, does the platform, does an
