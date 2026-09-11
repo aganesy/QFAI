@@ -4,6 +4,28 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ## [Unreleased]
 
+### Changed
+
+- **The prototyping envelope bans runtime dependencies, not markup** (#1479).
+  `generator-prompt.md` opened its envelope constraints with "No component
+  library beyond Tailwind + Lucide", which also refused transposing a block
+  from a component catalogue — an operation that installs nothing.
+
+  The real constraint is the line beside it: one self-contained file loaded
+  from a CDN, which has no package manager to run an install with. The clause
+  now says that, and names the one authoring path the gate genuinely cannot
+  see — CSS behind a `<link>`, whose href is never fetched, so a literal
+  inside it is drift nobody reports.
+
+  It also states the permission plainly: transposing a catalogue block and
+  re-binding its palette classes to `DESIGN.md` tokens is the expected way to
+  build a screen. `designMdViolations.ts` judges the values a document states
+  and has no way to read where the markup came from, so a transposed block
+  passes once `bg-blue-500` becomes `bg-primary`. Both halves of the
+  scanner / prompt pair now say so, and
+  `designMdViolationsTransposition.test.ts` runs a catalogue block through the
+  gate in both bindings.
+
 ### Fixed
 
 - **Two codes shared the `lap-` prefix with a registry that did not declare
@@ -23,7 +45,20 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   the capture pass and fails when one is unregistered, so a third code cannot
   be added on one side alone.
 
-### Fixed
+- **The handoff says what to install, not to rebuild** (#1480). It handed an
+  implementer a screenshot and a paragraph and said "reimplement with
+  project-native patterns", which is an instruction to rebuild by hand at the
+  exact point a component could be installed.
+
+  `prototype-handoff.yaml` now carries `procurement`: what realises each
+  screen region, and for an authored region, what was looked for and did not
+  serve. The reviewer checks the implementation against it instead of judging
+  a resemblance.
+
+  It also settles what the prototype never showed. Responsive behaviour, dark
+  mode, focus states and the detail of an empty state come from the adopted
+  design system's default, which answers them consistently with each other.
+  `implementationNotes` keeps what is genuinely prose.
 
 - **Every layout anti-pattern names what makes it a defect** (#1484). An
   entry now carries a `source`, and the loader drops one that does not: a
@@ -122,6 +157,21 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   `.instruction/` with the same matcher that guards the shipped tree.
 
 ### Added
+
+- **A discussion pack can record the catalogues it adopted from** (#1482).
+  The reference registry knew one kind: a competitor, consulted to differ
+  from. A component catalogue is consulted for the opposite reason and had
+  nowhere to be recorded.
+
+  `04_Sources.md` gains a Component Catalogue Registry beside the competitive
+  one. Both take the same three fields — what was adopted, what was rejected,
+  how it was translated — and are counted apart, so a catalogue entry cannot
+  satisfy the competitive minimum or the reverse.
+
+  The catalogue count is off unless a project sets `uiux.catalogue_refs_min`.
+  A gate that fires on every pack written before the registry existed is one
+  people switch off rather than satisfy. An entry that IS registered is held
+  to all three fields either way.
 
 - **A ladder for where a screen's components come from** (#1478).
   `.qfai/assistant/catalog/ui-procurement.md` states the order: does the
