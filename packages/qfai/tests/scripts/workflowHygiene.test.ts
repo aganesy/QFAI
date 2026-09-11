@@ -2769,7 +2769,7 @@ describe("TC-0017-0047 (TDD-0047): an unevaluated rule is absent, not implied by
     // call while leaving it printed reddened nothing here, because the shipped section was
     // never read.
     const clean = plantedTree(() => {});
-    let printed: string[] = [];
+    let printed: string[];
     try {
       const output = runLane(clean).output;
       printed = [

@@ -266,7 +266,7 @@ describe("--check-convergence CLI flag wiring (REQ-0012-0078)", () => {
     expect(afterBytes).toBe(beforeBytes);
     // b) No iter-NN dir for the peeked cycle.
     const iterDir = path.join(root, ".qfai/evidence/prototyping/iter-09");
-    let iterExists = false;
+    let iterExists: boolean;
     try {
       const s = await stat(iterDir);
       iterExists = s.isDirectory();
@@ -280,7 +280,7 @@ describe("--check-convergence CLI flag wiring (REQ-0012-0078)", () => {
         root,
         `.qfai/evidence/prototyping/iter-${String(i).padStart(2, "0")}/iterate-plan.json`,
       );
-      let planExists = false;
+      let planExists: boolean;
       try {
         await stat(planPath);
         planExists = true;

@@ -388,9 +388,9 @@ async function validateReviewPack(
   //
   // Two questions, and they are NOT the same one. `declaresZeroReviewers` asks whether the pack
   // makes a valid zero-response declaration — v2, empty list, `FAIL` — and it is the right test
-  // for excusing a missing report set. It is the WRONG test for the contradiction: review finding
-  // [27] showed a v2 pack declaring `reviewers: []` with `overall_status: "PASS"` beside a full
-  // set of `Rxx_*.md` answering `false` here, so neither branch fired and the pack was accepted.
+  // for excusing a missing report set. It is the WRONG test for the contradiction: a v2 pack
+  // declaring `reviewers: []` with `overall_status: "PASS"`, beside a full set of `Rxx_*.md`
+  // answering `false` here, fired neither branch and was accepted.
   // The contradiction only needs the empty list, whatever else the summary says.
   const summary = await readSummaryRecord(summaryPath);
   const declaredZero = declaresZeroReviewers(summary);

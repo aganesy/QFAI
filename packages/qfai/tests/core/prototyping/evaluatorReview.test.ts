@@ -2,8 +2,8 @@ import { describe, expect, it } from "vitest";
 import {
   FEEL_FIELDS,
   FEEL_FIELD_MAX_WORDS,
+  PROSE_CRITIQUE_MAX_CJK_CHARS,
   PROSE_CRITIQUE_MAX_WORDS,
-  PROSE_CRITIQUE_MIN_WORDS,
   REVIEWER_TIME_BUDGET_SEC,
   buildEvaluatorReview,
   countWords,
@@ -175,18 +175,28 @@ describe("buildEvaluatorReview — prose word-count gate (TC-3.1.21..25)", () =>
     expect(review.proseCritique.split(/\s+/).length).toBe(300);
   });
 
-  // TC-3.1.22
-  it("rejects prose with 199 words (lower boundary)", () => {
-    expect(() =>
-      buildEvaluatorReview(baseInput({ proseCritique: Array(199).fill("word").join(" ") })),
-    ).toThrow(/proseCritique must be 200..500 words/);
+  // TC-3.1.22 — the rule has no lower boundary. A critique reporting one
+  // finding is complete, and rejecting it only taught a reviewer to pad.
+  it("accepts prose with 199 words", () => {
+    const review = buildEvaluatorReview(
+      baseInput({ proseCritique: Array(199).fill("word").join(" ") }),
+    );
+    expect(countWords(review.proseCritique)).toBe(199);
   });
 
   // TC-3.1.23
   it("rejects prose with 501 words (upper boundary)", () => {
     expect(() =>
       buildEvaluatorReview(baseInput({ proseCritique: Array(501).fill("word").join(" ") })),
-    ).toThrow(/proseCritique must be 200..500 words/);
+    ).toThrow(/proseCritique 501 words over the 500-word cap/);
+  });
+
+  // The constructor used to carry its own English-only copy of the rule,
+  // so a Japanese critique the on-disk validator accepted threw here.
+  // Both now call the same function.
+  it("accepts a Japanese critique the on-disk validator accepts", () => {
+    const review = buildEvaluatorReview(baseInput({ proseCritique: "あ".repeat(800) }));
+    expect(review.proseCritique).toHaveLength(800);
   });
 
   // TC-3.1.24
@@ -257,11 +267,11 @@ describe("buildEvaluatorReview — auxiliary input checks", () => {
 });
 
 describe("constants", () => {
-  it("PROSE_CRITIQUE_MIN_WORDS is 200", () => {
-    expect(PROSE_CRITIQUE_MIN_WORDS).toBe(200);
-  });
   it("PROSE_CRITIQUE_MAX_WORDS is 500", () => {
     expect(PROSE_CRITIQUE_MAX_WORDS).toBe(500);
+  });
+  it("PROSE_CRITIQUE_MAX_CJK_CHARS is 2500", () => {
+    expect(PROSE_CRITIQUE_MAX_CJK_CHARS).toBe(2500);
   });
   it("FEEL_FIELD_MAX_WORDS is 200", () => {
     expect(FEEL_FIELD_MAX_WORDS).toBe(200);

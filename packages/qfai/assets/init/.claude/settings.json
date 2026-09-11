@@ -41,6 +41,20 @@
             ]
           }
         ]
+      },
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "statusMessage": "QFAI minimal-implementation reminder",
+            "command": "node",
+            "args": [
+              "-e",
+              "console.log(JSON.stringify({hookSpecificOutput:{hookEventName:'PostToolUse',additionalContext:'QFAI minimal implementation (.agents/rules/minimal-implementation.md). For the file just changed, if it is source: could it not exist at all, or does the standard library, the platform or an already-installed dependency do it? Otherwise the least code that works. Mark a deliberate shortcut with both its ceiling and the condition that lifts it. The ladder never removes validation at a trust boundary, error handling that prevents data loss, security, accessibility, or anything the spec asks for.'}}))"
+            ]
+          }
+        ]
       }
     ]
   }

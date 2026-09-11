@@ -422,7 +422,7 @@ async function loadIndex(
 ): Promise<ModuleIndex | null> {
   const cached = cache.get(file);
   if (cached !== undefined) return cached;
-  let index: ModuleIndex | null = null;
+  let index: ModuleIndex | null;
   try {
     index = indexModule(parseSource(file, await readFile(file, "utf-8")));
   } catch {

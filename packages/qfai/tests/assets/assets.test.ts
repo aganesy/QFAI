@@ -1357,7 +1357,6 @@ describe("assets guardrails", () => {
       ),
       path.resolve(templateQfaiDir, "assistant", "catalog", "cli-ux-guidelines.md"),
       path.resolve(templateQfaiDir, "assistant", "constitution", "research-first-protocol.md"),
-      path.resolve(templateQfaiDir, "assistant", "catalog", "ui-definition-protocol.md"),
     ]);
     const matches: string[] = [];
     for (const filePath of markdownFiles) {

@@ -707,7 +707,7 @@ async function collectEmittedRuleCodes(srcDir, outputFile) {
       try {
         raw = await readFile(file, "utf-8");
       } catch (error) {
-        throw new Error(`failed to read ${file}: ${toMessage(error)}`);
+        throw new Error(`failed to read ${file}: ${toMessage(error)}`, { cause: error });
       }
       const { sanitized, literals } = sanitizeSource(raw);
       postWaiver.push({ file, raw, sanitized, literals });
@@ -717,7 +717,7 @@ async function collectEmittedRuleCodes(srcDir, outputFile) {
     try {
       raw = await readFile(file, "utf-8");
     } catch (error) {
-      throw new Error(`failed to read ${file}: ${toMessage(error)}`);
+      throw new Error(`failed to read ${file}: ${toMessage(error)}`, { cause: error });
     }
     const { sanitized, literals } = sanitizeSource(raw);
     sources.push({ file, raw, sanitized, literals });
@@ -1046,7 +1046,7 @@ async function listTypeScriptFiles(dir) {
   try {
     entries = await readdir(dir, { withFileTypes: true });
   } catch (error) {
-    throw new Error(`failed to list ${dir}: ${toMessage(error)}`);
+    throw new Error(`failed to list ${dir}: ${toMessage(error)}`, { cause: error });
   }
   const files = [];
   for (const entry of entries.sort((a, b) => a.name.localeCompare(b.name, "en"))) {

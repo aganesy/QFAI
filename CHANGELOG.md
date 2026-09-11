@@ -6,6 +6,25 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Added
 
+- **A lane that collects every deliberate simplification** (#1466).
+  `.agents/rules/minimal-implementation.md` asks an author who takes a shortcut
+  on purpose to write it down where it is taken, with the ceiling it stops at
+  and the condition that lifts it. Nothing collected those markers, and a marker
+  nobody collects is worth less than no marker, because it reads as tracked.
+
+  `scripts/check-simplification-ledger.mjs` runs in `ci:lint`. It prints every
+  marker grouped by file, with both halves, and exits non-zero on one that names
+  no lifting condition — because a ceiling with no way out cannot be told from
+  an oversight, and the deferral then becomes permanent with nobody deciding it
+  should.
+
+  It does not fail on the count. That would make the guard an argument against
+  marking a shortcut at all: the author who writes the marker would redden the
+  build and the author who takes the same shortcut silently would not.
+
+  Comment lines in source files only. Markdown is out, so the rule's own worked
+  example is not collected as a finding.
+
 - **A rule for how much code implements a behaviour** (#1458).
   `.agents/rules/minimal-implementation.md` states one ladder — does this need
   to exist, does the standard library do it, does the platform, does an
@@ -66,6 +85,109 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
   The identifiers the specifications name have never matched the ones that
   shipped, and still do not (#1517).
+
+- **The clarity guard reads test titles, messages, and wrapped lines** (#1497).
+  `scripts/check-doc-clarity.mjs` reported a clean tree while two shapes of the
+  thing it looks for sat in plain sight.
+
+  | Shape                                             | Why it was invisible                                             |
+  | ------------------------------------------------- | ---------------------------------------------------------------- |
+  | A citation in a test title or an operator message | Only comment lines were read in a source file                    |
+  | A citation a line wrap split in two               | Each line was matched on its own, and neither half is a citation |
+
+  Both are surfaces a reader meets. A test title ships in the run output and a
+  message ships in the terminal, more often than the comment above either.
+
+  The string scope is the **call**, not the quote character. A fragment in an
+  assignment or a fixture is data the program uses, and rewriting it would change
+  behaviour, so the window is the call line and the string literals wrapped under
+  it — and a call that also opens a callback ends the window where it starts,
+  because the body of a test is not prose.
+
+  A wrapped citation is reported at the line it starts on, and a shape that
+  already fired on one of the two halves is not counted twice.
+
+  One citation turned up in the tree the moment the wrap gap closed, in a comment
+  nobody had to change since. It is removed here.
+
+- **The forbidden-legacy manifest names every retired sidecar** (#1498). A
+  discussion pack rejects eight families of sidecar file. The manifest an author
+  is sent to listed four of them, so the other four could be created in good
+  faith and refused by validation afterwards.
+
+  The four that were missing are named now, each with what replaced it:
+
+  | File                            | Why it is retired                                                 |
+  | ------------------------------- | ----------------------------------------------------------------- |
+  | `10_implementation_strategy.md` | Discussion carries directions unranked, so it selects no strategy |
+  | `11_design_taste_interview.md`  | Brand signals live in root `DESIGN.md`                            |
+  | `12_design_system.md`           | Replaced by root `DESIGN.md` and the design contracts             |
+  | the `20`–`24` family            | The evaluator axes are fixed by the CLI, not authored in a pack   |
+
+  A test reads the manifest against the validator, so a family added to one and
+  not the other fails rather than waiting for an author to meet it.
+
+- **A screen with one primary task no longer reads as weakening its own focus**
+  (#1490). `QFAI-AUD-020` recommended a band of 3 to 7 primary tasks per screen
+  and reported anything under it, saying the count "weakens screen focus" and
+  telling the author to bring it into the band — that is, to add tasks.
+
+  Seven tasks on one screen weakens focus. One task on one screen is focus, so
+  the lower bound argued against the thing the rule exists to protect. It is
+  gone; the ceiling of 7 stands, and the finding now says which way it was
+  crossed and where the surplus should go.
+
+  `QFAI-AUD-001` still reports a `primary_tasks` list with nothing in it, so a
+  screen that declares no task at all is caught as before. One and two, the
+  range the band invented a problem for, are the range a focused screen
+  occupies.
+
+  Severity was `warning` throughout, so nothing blocked. It still pushed every
+  screen toward the middle of a range, and a finding generally gets resolved.
+
+- **A screen that does one thing can be declared** (#1491). The screen contract
+  counted an empty list as a missing field, so every screen owed at least one
+  secondary task. A screen with a single primary task could not be written down,
+  and the author's only way through was to invent one.
+
+  An explicit empty list is an answer; a missing key is not. The two parsed
+  identically before, and the validator now records which nested keys a screen
+  declared, separately from what they hold.
+
+  `secondary_tasks`, `transitions` and `observable_outcomes` are answered by
+  being declared. `primary_tasks` and `required_states` still have to hold
+  something: a screen with no primary task is not a screen, and an
+  unrepresented empty or error state is a real defect.
+
+  The `requirements-analyst` card described the shipped UI contract sample as
+  exposing an empty `primary_tasks` slot to fill. The sample ships filled
+  entries, and the card says so.
+
+- **A prototyping review may report one finding and stop** (#1492).
+  `proseCritique` carried a lower bound — 200 English words, or 600
+  Japanese/Chinese characters — per screen, per cycle. A reviewer who had one
+  clear thing to say had to write another hundred and eighty words around it,
+  and on the next cycle that padding reads as work to do.
+
+  There is no minimum now. The cap stays, because a reviewer writing far past
+  the point still costs the loop something.
+
+  Removing the floor also removes a way a review could fail on its script.
+  The character count recognises Hiragana, Katakana and Han; everything else
+  fell to the word count, so a critique in Korean, Cyrillic or Thai was
+  measured in words those scripts do not separate with spaces. A count that
+  is too low is no longer a reason to reject anything.
+
+  The cap that remains selects its unit rather than accepting whichever unit
+  fits: a critique carrying CJK is measured in characters, anything else in
+  words. Accepting either would have left every English critique under the
+  character cap by construction, and so under no cap at all.
+
+  Two things follow. `buildEvaluatorReview` now calls the same function the
+  on-disk validator does, instead of carrying its own English-only copy that
+  threw on a Japanese critique the validator accepted. And the cycle-0 seed
+  critique is one sentence rather than that sentence ten times over, which is
+  what the floor had asked of a placeholder with nothing to say.
 
 - **The layout anti-pattern registry has one copy** (#1486).
   `layoutAntiPatterns.json` existed twice — once beside the loader under
@@ -195,6 +317,54 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
+- **The constitution reaches the rule about how much code to write** (#1459).
+  Article VII settles which behaviours a change carries and Article IX asks a
+  preflight to look for work already done. Neither said anything about the
+  amount of code that answers a requirement once it is accepted, so the ladder
+  in `.agents/rules/minimal-implementation.md` was reachable from the rule
+  register and from nowhere an agent passes through on its way to writing code.
+
+  Each article now points at it, and the ladder itself stays in one file:
+
+  | Article | What it gains                                                                       |
+  | ------- | ----------------------------------------------------------------------------------- |
+  | VII     | The first rung — whether a thing needs to exist — while the scope is still open     |
+  | IX      | The reuse rungs: the standard library, the platform, and the installed dependencies |
+
+  Article IX's preflight looked for duplicate implementations inside the
+  repository only. A helper the standard library already ships was outside
+  anything it asked about.
+
+- **The lint toolchain leaves the end-of-life eslint 9 line** (#1450). Every
+  release in that line is marked deprecated by the registry, and 9.39.5 is the
+  last one there will be, so no update inside the declared `^9.8.0` range could
+  clear it. The range is `^10.10.0` now, alongside `@eslint/js` at `^10.0.1`
+  and `typescript-eslint` at `^8.70.0` — the first of its line to accept
+  eslint 10 as a peer.
+
+  The new major adds two rules to `eslint:recommended`, and both reported
+  defects rather than style:
+
+  | Rule                    | Sites | What it names                                                   |
+  | ----------------------- | ----- | --------------------------------------------------------------- |
+  | `no-useless-assignment` | 34    | an initializer that every path overwrites before reading it     |
+  | `preserve-caught-error` | 22    | a `throw` inside a `catch` that dropped the error it reports on |
+
+  Every site is fixed rather than suppressed. A dead initializer becomes a type
+  annotation, so the compiler proves the variable is assigned on each path
+  instead of a placeholder standing in for a path that assigns nothing. A
+  rethrow carries `{ cause }`, so the original error survives in the one that
+  replaces it and a stack trace still reaches the failure.
+
+  `typescript-eslint` also names six type assertions its earlier release could
+  not see as unnecessary. Five are removed. The sixth becomes a return type on
+  the callback that builds the value, which is what the assertion stood in for.
+
+  eslint 10 runs on `^20.19.0 || ^22.13.0 || >=24`, narrower than the
+  `>=20.19.0` this repository declares. It is a development dependency, so the
+  floor the published package promises is unchanged. The cost is that a
+  contributor on Node 21, or on 22.0 through 22.12, cannot run the lint lane.
+
 - **Every Triage section in a delta ledger names the round it records**
   (#1467). Seven ledgers disabled `MD024/no-duplicate-heading` per file, because
   a ledger recording several rounds needed several identical `## Triage`
@@ -298,6 +468,73 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   unchanged, and both delta templates ship it. The two delta schemas accept the
   qualifier as well, so the shape lane and the triage rules read the same
   heading.
+
+- **The UI definition consumption protocol is in English** (#1501). The document
+  ships in `catalog/`, so it is read by adopters with no connection to this
+  repository's history, and four of its sentences were Japanese. They say what
+  they said.
+
+  The file is struck from the approved-Japanese list in the asset guard rather
+  than left there. A translated entry that stays on the list is a slot the next
+  untranslated document can take.
+
+- **A written or edited file restates the implementation rule** (#1465).
+  `.claude/settings.json` carried three hook entries, all restating
+  documentation clarity and all matching Markdown. An agent that wrote Markdown
+  was reminded how to write it; an agent that wrote source was reminded of
+  nothing. A rule read once at the start of a long session is the one that
+  drifts.
+
+  A fourth entry restates `.agents/rules/minimal-implementation.md` after every
+  `Write` and `Edit`: the reuse questions, the marker a deliberate shortcut
+  carries, and the list the ladder never trims — validation at a trust boundary,
+  error handling, security, accessibility, and anything the spec asks for.
+
+  It carries no path condition. The condition is a permission-rule scope matched
+  against the path, so naming source by extension means enumerating a language
+  set, and a language left out is a hook that is silently absent exactly where
+  the rule is needed. The cost is one extra line on a Markdown edit.
+
+  The entry ships in the `qfai init` template as well, and it reaches a project
+  that already carries the clarity hooks, because the merge decides per group.
+
+- **Two review documents stop restating how much code to write** (#1461). The
+  Copilot review instructions and the universal development checklist each held
+  their own KISS, YAGNI and DRY section. Neither was the source, both were
+  written separately, and they already said different things about the same
+  question.
+
+  Both now point at `.agents/rules/minimal-implementation.md` and state no
+  ladder of their own. What was not in the ladder stays where it was: cognitive
+  load, which is a finding whatever the amount of code, and the Rule of Three,
+  which is a floor on sharing rather than a rung.
+
+  SOLID, separation of concerns, fail-fast and the rest are untouched. They are
+  a different subject from how much code answers a requirement.
+
+- **Every agent card carries a minimal-implementation obligation** (#1462).
+  Seven of the nineteen cards said something about simplicity, each in its own
+  words. Twelve said nothing — among them every test-stage role and every
+  planning role, which is why the ladder reached neither stage.
+
+  All nineteen now point at `.agents/rules/minimal-implementation.md`, and what
+  the line asks of the role depends on the stage:
+
+  | Stage                   | What the role owes                                                              |
+  | ----------------------- | ------------------------------------------------------------------------------- |
+  | Requirements and design | The first rung, whether the thing needs to exist, while the scope is still open |
+  | Implementation          | The reuse rungs, and the marker on a deliberate shortcut                        |
+  | Tests                   | How a test is built — never how many obligations are covered                    |
+  | Review                  | A finding that names what to cut and what replaces it                           |
+  | Documentation           | Scripts and workflows the role changes; prose keeps its own standard            |
+
+  The test-stage wording is the one that had to be written down. A rule that
+  says "write less", reaching the role that decides coverage, is a way to lose
+  tests.
+
+  The seven cards that carried prose keep everything that was not the ladder —
+  SOLID, separation of concerns, fail-fast and the rest are a different subject,
+  and only the restated rungs are struck.
 
 ## [1.11.1] - 2026-09-10
 

@@ -155,7 +155,7 @@ export async function validateForbiddenLegacyFiles(
 ): Promise<Issue[]> {
   if (!(await isUiBearingSpec(root))) return [];
 
-  let entries: string[] = [];
+  let entries: string[];
   try {
     entries = await readdir(path.join(root, "uiux"));
   } catch {

@@ -237,11 +237,11 @@ describe("validatePrototypingEvidence", () => {
     ).toBe(true);
   });
 
-  it("emits QFAI-PROT-002 when proseCritique is outside the 200-500 word range", async () => {
+  it("emits QFAI-PROT-002 when proseCritique is over the word cap", async () => {
     const root = await newTempDir();
     await seedPrototypingJson(root, {
       specsCovered: ["0001"],
-      iterations: [{ ...validIter(0), proseCritique: "too short" }],
+      iterations: [{ ...validIter(0), proseCritique: Array(501).fill("word").join(" ") }],
       acceptedIterationIndex: 0,
       stopReason: null,
     });
@@ -251,9 +251,42 @@ describe("validatePrototypingEvidence", () => {
         (i) =>
           i.code === "QFAI-PROT-002" &&
           i.message.includes("proseCritique") &&
-          i.message.includes("200-500"),
+          i.message.includes("over the 500-word cap"),
       ),
     ).toBe(true);
+  });
+
+  // The rule has no floor. A reviewer with one finding reports one
+  // finding, and what a floor produced instead was padding — which the
+  // next cycle then reads as work to do.
+  it("emits no QFAI-PROT-002 for a one-sentence proseCritique", async () => {
+    const root = await newTempDir();
+    const iter = { ...validIter(0), proseCritique: "The empty state is missing." };
+    await seedPrototypingJson(root, {
+      specsCovered: ["0001"],
+      iterations: [iter],
+      acceptedIterationIndex: 0,
+      stopReason: null,
+    });
+    await seedReviewJson(root, 0, reviewFrom(iter));
+    const issues = await validatePrototypingEvidence(root, makeConfig());
+    expect(issues.filter((i) => i.code === "QFAI-PROT-002")).toEqual([]);
+  });
+
+  // Emptiness is still refused. The floor is gone; the requirement that a
+  // review say something is not.
+  it("still emits QFAI-PROT-002 for an empty proseCritique", async () => {
+    const root = await newTempDir();
+    await seedPrototypingJson(root, {
+      specsCovered: ["0001"],
+      iterations: [{ ...validIter(0), proseCritique: "   " }],
+      acceptedIterationIndex: 0,
+      stopReason: null,
+    });
+    const issues = await validatePrototypingEvidence(root, makeConfig());
+    expect(issues.some((i) => i.code === "QFAI-PROT-002" && i.message.includes("non-empty"))).toBe(
+      true,
+    );
   });
 
   it("emits no QFAI-PROT-002 when proseCritique is a 600-character Japanese critique", async () => {
@@ -272,12 +305,12 @@ describe("validatePrototypingEvidence", () => {
     expect(issues.filter((i) => i.code === "QFAI-PROT-002")).toEqual([]);
   });
 
-  it("emits QFAI-PROT-002 naming the CJK band when a Japanese proseCritique is too short", async () => {
+  it("emits QFAI-PROT-002 naming the character cap when a Japanese proseCritique is over it", async () => {
     const root = await newTempDir();
-    const shortJapanese = "情報設計は弱い。".repeat(10);
+    const longJapanese = "情報設計は弱い。".repeat(400);
     await seedPrototypingJson(root, {
       specsCovered: ["0001"],
-      iterations: [{ ...validIter(0), proseCritique: shortJapanese }],
+      iterations: [{ ...validIter(0), proseCritique: longJapanese }],
       acceptedIterationIndex: 0,
       stopReason: null,
     });
@@ -287,29 +320,29 @@ describe("validatePrototypingEvidence", () => {
         (i) =>
           i.code === "QFAI-PROT-002" &&
           i.message.includes("proseCritique") &&
-          i.message.includes("characters outside band 600..2500"),
+          i.message.includes("over the 2500-character cap"),
       ),
     ).toBe(true);
   });
 
-  // The character band counts Hiragana / Katakana / Han only, so a Hangul
-  // critique is measured on the word path — which is what the shipped
-  // reviewer prompt now tells a Korean-writing reviewer to target.
-  it("measures a Hangul proseCritique on the word band, not the character band", async () => {
+  // The character cap counts Hiragana / Katakana / Han only, so a Hangul
+  // critique is measured in whitespace-separated words. Under a floor that
+  // rejected a Korean review for lacking words it does not write, which is
+  // a review failing on its script rather than on its content. A cap
+  // cannot do that: the word count being low is never a reason to reject.
+  it("emits no QFAI-PROT-002 for a Hangul proseCritique", async () => {
     const root = await newTempDir();
     const koreanCritique = "정보설계와동선은대체로양호하다.".repeat(50);
+    const iter = { ...validIter(0), proseCritique: koreanCritique };
     await seedPrototypingJson(root, {
       specsCovered: ["0001"],
-      iterations: [{ ...validIter(0), proseCritique: koreanCritique }],
+      iterations: [iter],
       acceptedIterationIndex: 0,
       stopReason: null,
     });
+    await seedReviewJson(root, 0, reviewFrom(iter));
     const issues = await validatePrototypingEvidence(root, makeConfig());
-    expect(
-      issues.some(
-        (i) => i.code === "QFAI-PROT-002" && i.message.includes("words outside band 200..500"),
-      ),
-    ).toBe(true);
+    expect(issues.filter((i) => i.code === "QFAI-PROT-002")).toEqual([]);
   });
 
   it("emits QFAI-PROT-006 when iterations.length > 15", async () => {
@@ -978,7 +1011,7 @@ describe("validatePrototypingEvidence — iter-NN/review.json", () => {
     expect(rules).toContain("prototypingEvidence.review.layoutAntiPatternsDetected");
   });
 
-  it("emits QFAI-PROT-002 for an out-of-band review.json proseCritique", async () => {
+  it("emits QFAI-PROT-002 for an over-cap review.json proseCritique", async () => {
     const root = await newTempDir();
     const iter = validIter(0);
     await seedPrototypingJson(root, {
@@ -987,7 +1020,11 @@ describe("validatePrototypingEvidence — iter-NN/review.json", () => {
       acceptedIterationIndex: 0,
       stopReason: null,
     });
-    await seedReviewJson(root, 0, reviewFrom(iter, { proseCritique: "far too short" }));
+    await seedReviewJson(
+      root,
+      0,
+      reviewFrom(iter, { proseCritique: Array(600).fill("word").join(" ") }),
+    );
 
     const issues = await validatePrototypingEvidence(root, makeConfig());
     expect(
