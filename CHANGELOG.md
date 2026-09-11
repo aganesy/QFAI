@@ -118,6 +118,27 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   read from the package manifest rather than written twice, and a test holds the
   two together.
 
+- **The floor lane stops failing runs in which nothing failed** (#1523). That lane
+  runs the whole suite in one process pool, and each fork reports progress to the
+  single main process over a call with a fixed budget. When the main process could
+  not answer in time the fork threw, the throw was counted as an unhandled error,
+  and a run with every test green exited 1.
+
+  The budget is not reachable: the runner's fork options carry no timeout, its
+  options builder sets none, and the default lives inside the message library. So
+  the lever is the contention instead. The lane now takes its fork count from the
+  runner rather than inheriting the declared ceiling, which on a four-core machine
+  was 2.5 times oversubscribed.
+
+  That is also faster. Whole suite on four cores, ten forks against four: 299 s
+  against 269 s of wall clock, with the summed collect and test figures falling
+  from 343 s to 113 s and from 1972 s to 743 s. Those sums are taken across forks,
+  so their collapse is the oversubscription — at ten forks most of each fork's
+  measured time was spent waiting for a core.
+
+  The declared starting value is unchanged. This is the override the knob set
+  already defines, used by the one lane that needed it.
+
 - **The prototyping loop converges on open findings, not on a rating** (#1488).
   The stop test required all four review axes at `exceptional` — a value the
   scale itself defines as best-in-class and tells the reviewer to use
