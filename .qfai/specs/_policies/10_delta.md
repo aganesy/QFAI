@@ -896,3 +896,9 @@ No `UPDATE:REMOVE` row exists in this change. Verified: the vitest `compatibilit
 - Approval: not approval-gated. `_policies/11_Slice-Policy.md` §Triage puts only CREATE / DELETE / SPLIT / MERGE / SUPERSEDE / UPDATE:REMOVE behind AskUserQuestion, so an UPDATE:MODIFY does not raise the template.
 - ID stability: DR-0269 keeps its number and only its statement is revised. The AC and BR on the spec-0015 side keep their IDs as well; `spec-0015/09_delta.md` has the detail.
 - Distributed surface: prose only, in `assets/init/.qfai/assistant/skills/qfai-*/SKILL.md`. No internal ID or version marker is added or removed.
+
+## Triage (2026-09-11)
+
+| Source       | Subject                                                        | Existing Spec | Operation | Sub-op | Approved By | Rationale                                                                                                                              |
+| ------------ | -------------------------------------------------------------- | ------------- | --------- | ------ | ----------- | -------------------------------------------------------------------------------------------------------------------------------------- |
+| DR-0001-0003 | The decision that mandated the band is superseded by `DR-0277` | \_policies    | UPDATE    | MODIFY | -           | Policy-only: the record's rejected option was argued against on the strength of the floor, so it needs a successor rather than an edit |
