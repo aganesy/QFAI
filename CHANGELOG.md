@@ -36,6 +36,30 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   The `02_project/` layer summarises facts a live file states — layout, stack,
   commands — so the ruling says to read the live source before acting on one.
 
+- **A shape for a review finding about excess** (#1463). `REVIEW.md` listed
+  simplification opportunities among the categories a reviewer must always flag
+  and said nothing about what such a finding looks like, so what came back was
+  hedged and unactionable. A sentence asking whether all of this is really
+  needed says neither what to cut nor what would stand in its place.
+
+  A finding is one line — where it is, what to cut, what replaces it — tagged
+  with the reason:
+
+  | Tag      | Means                                                                               | What replaces it      |
+  | -------- | ----------------------------------------------------------------------------------- | --------------------- |
+  | `delete` | Dead code, unused flexibility, a speculative feature                                | Nothing               |
+  | `stdlib` | A hand-rolled thing the standard library ships                                      | Name the function     |
+  | `native` | Code or a dependency doing what the platform already does                           | Name the feature      |
+  | `yagni`  | An abstraction with one implementation, config nobody sets, a layer with one caller | Inline it             |
+  | `shrink` | The same logic, fewer lines                                                         | Show the shorter form |
+
+  The five reviewer agent cards carry the tags too. `REVIEW.md` is this
+  repository's own and is not shipped, so a card pointing at it would name a
+  file no project has.
+
+  Correctness, security and performance findings keep the shape they had. This
+  is only about excess.
+
 - **A lane that collects every deliberate simplification** (#1466).
   `.agents/rules/minimal-implementation.md` asks an author who takes a shortcut
   on purpose to write it down where it is taken, with the ceiling it stops at
@@ -76,6 +100,22 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   are replaced by a reference to the master.
 
 ### Fixed
+
+- **The design-drift scanner cites nothing a reader cannot resolve** (#1496).
+  Nine comment lines in the scanner named a code review tool's internal comment
+  identifier. They pointed at something no reader outside this repository can
+  open, which is what the writing rule forbids. The engineering reason each
+  comment carried is kept; only the identifier is gone.
+
+  Nothing in the tree cites one now: the clarity guard reports no local
+  identifier over the whole tree, where it reported eight.
+
+  The scanner and the generator prompt are a pair that must change together, so
+  the prompt gains what the scanner comments had learned and it had not: a
+  screen that shows markup as sample text has that markup scanned as if it were
+  live, because the gate reads class attributes with a regular expression rather
+  than a parser. The note says what to do about it, and why the trade is a false
+  positive rather than a missed violation.
 
 - **A user story is declared by its entry, not by a sentence naming it**
   (#1512). The declared set was the entries plus every loose `US-NNNN` in
