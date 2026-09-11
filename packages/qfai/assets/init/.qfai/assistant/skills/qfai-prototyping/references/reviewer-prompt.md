@@ -136,20 +136,19 @@ non-waivable — see `generator-prompt.md`.
 
 ## Layout anti-pattern matching (`lap-*`)
 
-The static loader runs `lap-001..006` regex against iter HTML and
-fills `layoutAntiPatternsDetected[]`. You **must** evaluate `lap-007`
-and `lap-008` semantically and append their IDs when matched.
+The static loader runs the `layout` regex against iter HTML and fills
+`layoutAntiPatternsDetected[]`. You **must** evaluate the `semantic`
+entries yourself and append their IDs when matched.
 
-| ID                              | Scope    | Detection                                  |
-| ------------------------------- | -------- | ------------------------------------------ |
-| `lap-001-saas-dashboard`        | layout   | static regex (sidebar + main + KPI/metric) |
-| `lap-002-card-grid-sidebar`     | layout   | static regex (grid + aside)                |
-| `lap-003-saas-table-tabs`       | layout   | static regex (role="tab" + table)          |
-| `lap-004-bento-grid`            | layout   | static regex (grid-cols-12 + grid-rows-)   |
-| `lap-005-centered-hero`         | layout   | static regex (text-center + h1)            |
-| `lap-006-overcrowded-sidebar`   | layout   | static regex (aside with 10+ links)        |
-| `lap-007-state-not-represented` | semantic | reviewer judgement (criterion below)       |
-| `lap-008-no-back-affordance`    | semantic | reviewer judgement (criterion below)       |
+| ID                              | Scope    | Detection                            |
+| ------------------------------- | -------- | ------------------------------------ |
+| `lap-006-overcrowded-sidebar`   | layout   | static regex (aside with 10+ links)  |
+| `lap-007-state-not-represented` | semantic | reviewer judgement (criterion below) |
+| `lap-008-no-back-affordance`    | semantic | reviewer judgement (criterion below) |
+
+A conventional layout is not an entry here. A detection blocks convergence,
+so reporting a familiar shape stops an ordinary product finishing the loop.
+Report what fails, not what is familiar.
 
 ### `lap-007-state-not-represented`
 
