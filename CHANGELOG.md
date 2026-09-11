@@ -6,6 +6,18 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **Prototype captures are checked for accessibility** (#1485). The
+  accessibility phase — image alternatives, document language, skip link,
+  heading hierarchy — was reachable only from `validate`, and the loop writes
+  exactly the artifact it wants: one capture per screen per cycle. Nothing
+  read them with it, so every screen went unchecked.
+
+  It now runs over the accepted iteration's captures beside the token re-scan,
+  and reports what it finds, naming the screen. Reported, never blocking:
+  replacing "any layout shape stops the loop" with "any accessibility finding
+  stops the loop" would repeat the mistake with better sources. The reviewer
+  reads them and decides what belongs in `blockingFindings`.
+
 - **Every layout anti-pattern names what makes it a defect** (#1484). An
   entry now carries a `source`, and the loader drops one that does not: a
   published heuristic, an accessibility criterion, or the contract the screen
