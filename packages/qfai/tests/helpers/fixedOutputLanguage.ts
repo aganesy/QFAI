@@ -202,6 +202,17 @@ const DIRECTIVE_SHAPES: readonly DirectiveShape[] = [
     pattern: new RegExp(`(?:${JA_OUTPUT_VERB}|言語|表記)[^。\\n]{0,20}?[:：]\\s*(?:\\*\\*)?${JA}`),
   },
   {
+    // 「報告/Plan/最終出力は日本語」 — the same key/value with a topic marker
+    // where the colon would be, and no verb after the language name.
+    //
+    // `ja/key-value` needs the colon and `ja/language-de-verb` needs a verb
+    // following `で`, so a nominal predicate carried neither. That is not an
+    // exotic phrasing: it is how a bullet in a rule list is written, and it is
+    // the form the root entry point stated the pin in.
+    name: "ja/topic-is-language",
+    pattern: new RegExp(`(?:${JA_OUTPUT_VERB}|言語|表記)[^。\\n]{0,20}?は[^。\\n]{0,10}?${JA}`),
+  },
+  {
     // 「日本語に統一」「英語で固定」「日本語とすること」「日本語厳守」
     name: "ja/exclusive",
     pattern: new RegExp(
@@ -234,6 +245,24 @@ const PERMITTED_DISCLAIMER_SHAPES: readonly RegExp[] = [
   /固定しない|固定されない|固定はしない/,
   /\b(?:pins no|does not pin|do not pin|never pins)\b/i,
 ];
+
+/**
+ * Carve-out 3: a statement about the language this repository's own text is
+ * stored in.
+ *
+ * `.agents/rules/repository-language.md` draws the line the matcher otherwise
+ * cannot see: "text this repository stores and ships, which is English" against
+ * "text a user writes or receives, which is theirs". Every entry point cites
+ * that rule, and the citation names a language and a writing verb — so
+ * `en/verb-in-language` reads a statement about stored source as a directive
+ * about output, and the sweep would fail on the two documents that state the
+ * distinction correctly.
+ *
+ * Narrow on purpose: the subject has to be the repository and the verb has to
+ * be `is written in`. `In this repository, always respond in English` carries
+ * neither, so it stays caught.
+ */
+const REPOSITORY_TEXT_STATEMENT = /\brepository is written in\b/i;
 
 /**
  * The condition clause a user-conditional unit opens with, or `null`.
@@ -344,9 +373,11 @@ export function toLogicalUnits(text: string): LogicalUnit[] {
   return units;
 }
 
-/** True when the unit is one of the two permitted ways to name a language. */
+/** True when the unit is one of the three permitted ways to name a language. */
 const isPermittedReference = (unit: string): boolean =>
-  isUserLanguageConditional(unit) || PERMITTED_DISCLAIMER_SHAPES.some((shape) => shape.test(unit));
+  isUserLanguageConditional(unit) ||
+  PERMITTED_DISCLAIMER_SHAPES.some((shape) => shape.test(unit)) ||
+  REPOSITORY_TEXT_STATEMENT.test(unit);
 
 /**
  * Every unit of `text` that pins output to a named language.

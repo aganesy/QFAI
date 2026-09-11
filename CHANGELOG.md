@@ -6,6 +6,28 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **The root entry point fixed the output language the constitution decides**
+  (#1530). `AGENTS.md` opened with its own section pinning reports, plans and
+  final output to one language, and told an agent to prefer that rule unless the
+  user named another — which is the constitution's Absolute Rule inverted.
+
+  It survived every earlier pass for two reasons. The sweep read only the
+  shipped assistant trees and `.instruction/`, and the matcher could not see
+  the sentence: the pin was a nominal predicate (`…は日本語`), which carries
+  neither the colon `ja/key-value` needs nor the verb `ja/language-de-verb`
+  needs. Both gaps are closed. The section is now a pointer at the Absolute
+  Rule, the matcher reads the topic-marker form, and the sweep covers
+  `AGENTS.md`, `CLAUDE.md` and `.github/copilot-instructions.md`.
+
+  Extending the sweep needed one carve-out. Every root entry point cites
+  `repository-language.md`, and that citation names a language beside a
+  writing verb — a statement about the text this repository stores, which the
+  rule itself distinguishes from what an agent writes back. The carve-out turns
+  on `repository is written in` rather than on the repository being mentioned,
+  so a directive that merely names the repository stays caught.
+
+### Fixed
+
 - **Thirty-two files told an agent which language to answer in** (#1500).
   Every document under `.instruction/` opened with a block fixing output to one
   language, which the constitution's Absolute Rule — answer in the user's

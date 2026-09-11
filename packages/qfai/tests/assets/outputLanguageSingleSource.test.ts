@@ -149,6 +149,31 @@ describe("output language is stated in one place only", () => {
     expect(offenders).toEqual([]);
   });
 
+  // The last surface outside the sweep, and the one an agent reads first.
+  //
+  // `AGENTS.md` opened with its own section fixing output to one language, and
+  // said to prefer that rule unless the user named another — which is the
+  // Absolute Rule inverted. It survived every pass because the matcher looked
+  // only at what ships and at `.instruction/`, and because the section stated
+  // the pin as a nominal predicate (`…は日本語`) that neither the colon shape
+  // nor the verb shape reached. Both gaps are closed: the shape is matched, and
+  // the files are swept.
+  it.each(["AGENTS.md", "CLAUDE.md", ".github/copilot-instructions.md"])(
+    "%s binds output to no named language",
+    async (rel) => {
+      const text = await readFile(path.join(repoRoot, rel), "utf-8");
+      expect(fixedLanguageOffenders(rel, text)).toEqual([]);
+    },
+  );
+
+  it("AGENTS.md points at the Absolute Rule instead", async () => {
+    const text = flat(await readFile(path.join(repoRoot, "AGENTS.md"), "utf-8"));
+    expect(text).toContain(
+      "`.qfai/assistant/constitution/constitution.md` の Absolute Rule — Output Language に従う",
+    );
+    expect(text).toContain("このファイルは出力言語を固定しない");
+  });
+
   // The ruling those files are held to. Without it the sweep above says what
   // may not be written and nothing says what may, which is the state that let
   // thirty-two copies of a rule the constitution owns accumulate unread.
@@ -201,6 +226,16 @@ describe("fixed-language directive matcher", () => {
       "a Japanese fallback to a fixed language",
       "ユーザーが言語を指定しない場合は必ず英語で回答すること。",
     ],
+    // The nominal predicate. No colon for `ja/key-value` and no verb for
+    // `ja/language-de-verb`, which is how it sat in the root entry point
+    // unreported while every shipped copy of the same pin was being removed.
+    ["a Japanese pin written as a topic", "- 報告/Plan/最終出力は日本語。"],
+    ["a Japanese pin written as a topic, spaced", "使用言語 は 英語"],
+    // Carve-out 3 wearing the repository's clothes. It names the repository and
+    // it names a language, and it is still a directive about output — which is
+    // why the carve-out turns on `repository is written in` rather than on the
+    // repository being mentioned.
+    ["a directive that merely mentions the repository", "In this repository, respond in English."],
   ];
 
   for (const [label, sample] of CAUGHT) {
@@ -236,6 +271,20 @@ describe("fixed-language directive matcher", () => {
     // confused with: the condition names 日本語, so the directive echoing it is
     // the user's language and not a fixed one.
     ["the rule restated per language (ja)", "- ユーザーが日本語で書く場合は日本語で回答する。"],
+    // Carve-out 3. Every root entry point cites the repository-language rule,
+    // and the citation names a language beside a writing verb — which is a
+    // statement about the text this repository stores, not about what an agent
+    // writes back. `repository-language.md` states that distinction itself.
+    [
+      "the repository's own written language",
+      "- `repository-language.md` (this repository is written in English)",
+    ],
+    [
+      "the repository's own written language, with its scope",
+      "This repository is written in English: source, comments, Markdown, `CHANGELOG.md`, " +
+        "commit messages, and pull request and issue text. It does not fix the language an " +
+        "assistant replies in.",
+    ],
   ];
 
   for (const [label, sample] of PERMITTED) {

@@ -7,8 +7,10 @@ wins when it disagrees with one.
 
 ## 言語
 
-- 報告/Plan/最終出力は日本語。
-- ユーザーが明示しない限り、この言語ルールを優先する。
+> **出力言語**: ユーザの作業言語で書く。
+> `.qfai/assistant/constitution/constitution.md` の Absolute Rule — Output Language に従う。
+> このファイルは出力言語を固定しない（本文が日本語であることは記述言語であって、
+> エージェントの出力に対する指示ではない）。
 
 ## 本リポジトリの構造に関する重要な前提
 
