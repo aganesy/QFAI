@@ -35,11 +35,7 @@ export type Iteration = {
   };
 };
 
-export type StopReason =
-  | "converged"
-  | "max-iterations"
-  | "license-verify-fail"
-  | "input-error";
+export type StopReason = "converged" | "max-iterations" | "license-verify-fail" | "input-error";
 
 export const STOP_REASONS: readonly StopReason[] = [
   "converged",

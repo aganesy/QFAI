@@ -28,6 +28,29 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **The prototyping loop converges on open findings, not on a rating** (#1488).
+  The stop test required all four review axes at `exceptional` — a value the
+  scale itself defines as best-in-class and tells the reviewer to use
+  sparingly — aggregated as the worst verdict across every screen, and
+  `certify` re-derived the same condition. A review that rated honestly never
+  satisfied it, so the gate measured the reviewer's willingness to call four
+  axes best-in-class rather than measuring the prototype.
+
+  The four ordinal axes are gone. The reviewer writes `blockingFindings`, one
+  line per thing that must be fixed, and convergence is that array empty
+  alongside `layoutAntiPatternsDetected` and `designMdViolations`. Anything
+  worth saying that does not block goes in the prose critique, where it
+  informs the next cycle without stopping this one.
+
+  Nothing else in this project scored: the shared reviewer contract is a
+  verdict plus graded findings, and `/qfai-implement` already ran a binary
+  checklist. Prototyping now uses the same shape.
+
+  `pivotDirective` compares how many findings are open across cycles, because
+  a count is reproducible where a verdict is not. `stopReason` records
+  `converged`. The cycle-0 seed carries one finding, so an iteration nobody
+  has reviewed cannot satisfy the stop test by never having been looked at.
+
 - **A conventional screen can finish the prototyping loop** (#1471).
   Five registry entries reported a dashboard with a sidebar and a KPI row, a
   card grid beside an aside, tabs over a table, a bento grid and a centred

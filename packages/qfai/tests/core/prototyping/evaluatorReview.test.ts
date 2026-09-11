@@ -82,9 +82,7 @@ describe("buildEvaluatorReview — blockingFindings (TC-3.1.1..7)", () => {
       expect(() =>
         buildEvaluatorReview(
           baseInput({
-            blockingFindings: [
-              invalid,
-            ] as unknown as BuildEvaluatorReviewInput["blockingFindings"],
+            blockingFindings: [invalid] as unknown as BuildEvaluatorReviewInput["blockingFindings"],
           }),
         ),
       ).toThrow(/blockingFindings\[0\]/);
@@ -322,9 +320,7 @@ describe("parseEvaluatorReview — full payload acceptance (TC-0012-0364)", () =
     expect(result.review.specId).toBe("spec-0012");
     expect(result.review.screenId).toBe("home");
     expect(result.review.sessionStatus).toBe("ok");
-    expect(result.review.blockingFindings).toEqual([
-      "home: the empty state is not represented",
-    ]);
+    expect(result.review.blockingFindings).toEqual(["home: the empty state is not represented"]);
     expect(result.review.impressions.operability.length).toBeGreaterThan(0);
     expect(result.review.impressions.transitionFeel.length).toBeGreaterThan(0);
     expect(result.review.impressions.crossScreenContinuity.length).toBeGreaterThan(0);

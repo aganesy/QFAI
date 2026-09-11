@@ -69,9 +69,7 @@ describe("isIterateContext: exact 4-key schema lockdown", () => {
   });
 
   it("rejects a non-string blockingFindings entry", () => {
-    expect(
-      isIterateContext({ ...canonical, priorScores: { blockingFindings: [42] } }),
-    ).toBe(false);
+    expect(isIterateContext({ ...canonical, priorScores: { blockingFindings: [42] } })).toBe(false);
   });
 });
 

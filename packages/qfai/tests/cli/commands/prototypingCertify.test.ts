@@ -473,7 +473,9 @@ describe("qfai prototyping certify (per-screen payload identity + convergence)",
       "spec-0012",
       "settings",
       1,
-      reviewPayload("spec-0012", "settings", { blockingFindings: ["settings: the empty state is not represented"] }),
+      reviewPayload("spec-0012", "settings", {
+        blockingFindings: ["settings: the empty state is not represented"],
+      }),
     );
 
     const logger = await import("../../../src/cli/lib/logger.js");
@@ -564,7 +566,9 @@ describe("qfai prototyping certify (per-screen payload identity + convergence)",
       "spec-0012",
       "old",
       1,
-      reviewPayload("spec-0012", "old", { blockingFindings: ["settings: the empty state is not represented"] }),
+      reviewPayload("spec-0012", "old", {
+        blockingFindings: ["settings: the empty state is not represented"],
+      }),
     );
 
     const logger = await import("../../../src/cli/lib/logger.js");
@@ -696,7 +700,9 @@ describe("qfai prototyping certify (recursive payload sweep + --check re-audit)"
     await seedPayloadAt(
       root,
       "misc/old.review.json",
-      reviewPayload("spec-0012", "old", { blockingFindings: ["settings: the empty state is not represented"] }),
+      reviewPayload("spec-0012", "old", {
+        blockingFindings: ["settings: the empty state is not represented"],
+      }),
     );
 
     const logger = await import("../../../src/cli/lib/logger.js");
@@ -783,7 +789,10 @@ describe("qfai prototyping certify (recursive payload sweep + --check re-audit)"
       "spec-0012",
       "home",
       0,
-      reviewPayload("spec-0012", "home", { cycle: 0, blockingFindings: ["home: the empty state is not represented"] }),
+      reviewPayload("spec-0012", "home", {
+        cycle: 0,
+        blockingFindings: ["home: the empty state is not represented"],
+      }),
     );
 
     expect(await runPrototypingCertify({ root, check: false })).toBe(0);

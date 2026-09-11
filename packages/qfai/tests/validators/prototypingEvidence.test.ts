@@ -218,7 +218,6 @@ describe("validatePrototypingEvidence", () => {
     expect(issues.some((i) => i.code === "QFAI-PROT-005")).toBe(true);
   });
 
-
   it("emits QFAI-PROT-002 when designMdViolations contains a malformed entry", async () => {
     const root = await newTempDir();
     await seedPrototypingJson(root, {
@@ -728,8 +727,6 @@ describe("validatePrototypingEvidence — iter-NN/review.json", () => {
     // raised by 60% without the case noticing.
     expect(mismatch?.message.length).toBeLessThan(iter.proseCritique.length);
   });
-
-
 
   // The reviewer is fed the prior cycle's review.json as an input, so a
   // misspelled key added while editing it leaves a payload that is complete,

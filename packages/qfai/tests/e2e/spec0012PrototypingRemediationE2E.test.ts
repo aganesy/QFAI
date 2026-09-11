@@ -531,7 +531,7 @@ describe("US-0012-0132: [BLOCKED] top-3 exit-64 blockers + first-offender", () =
     expect(lines.length).toBe(4);
     expect(text).toContain("color=#fff");
     expect(text).toContain("lap-009");
-    expect(text).toContain("informationArchitecture");
+    expect(text).toContain("home: the empty state is not represented");
     expect([...BLOCKED_CATEGORIES]).toEqual([
       "designMdViolations",
       "layoutAntiPatternsDetected",

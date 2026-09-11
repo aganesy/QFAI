@@ -19,7 +19,6 @@
  * additive field requires a spec amendment + ledger entry.
  */
 
-
 export type IterateContextScores = {
   readonly blockingFindings: readonly string[];
 };
