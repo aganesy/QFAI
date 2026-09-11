@@ -20,10 +20,7 @@ import path from "node:path";
 export type PlaywrightLauncherStage = "primary" | "npx-fallback" | "deprecated-cli";
 
 export type PlaywrightLauncherOrigin =
-  | "project-wrapper"
-  | "node_modules/.bin"
-  | "PATH"
-  | "npx --no-install";
+  "project-wrapper" | "node_modules/.bin" | "PATH" | "npx --no-install";
 
 export type PlaywrightLauncherCandidate = {
   stage: PlaywrightLauncherStage;

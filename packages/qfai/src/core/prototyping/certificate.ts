@@ -275,8 +275,7 @@ function normalizeCompletionCertificate(value: unknown): CompletionCertificate |
 }
 
 export type CertifyCheckResult =
-  | { readonly ok: true }
-  | { readonly ok: false; readonly reasons: readonly string[] };
+  { readonly ok: true } | { readonly ok: false; readonly reasons: readonly string[] };
 
 /**
  * Re-compute evidence digests and compare against the stored certificate.

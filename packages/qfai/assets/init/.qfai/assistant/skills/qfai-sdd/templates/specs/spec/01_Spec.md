@@ -3,6 +3,7 @@
 - Spec: <spec-id>
 - Parent: CAP-XXXX
 - Status: active
+
 <!-- When Status changes, add the matching companion bullet on a new line:
      - Status: superseded  → add `- Superseded-by: spec-NNNN`
      - Status: deprecated  → add `- Deprecated-at: YYYY-MM-DD`

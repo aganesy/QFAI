@@ -4154,8 +4154,7 @@ async function pruneOrphanCodexProfiles(
 }
 
 type CodexAgentProfilePlan =
-  | { status: "render"; toml: string }
-  | { status: "unavailable"; reason: string };
+  { status: "render"; toml: string } | { status: "unavailable"; reason: string };
 
 /** Renders one profile, or says why the agent cannot get one. */
 async function planCodexAgentProfile(
@@ -4407,9 +4406,7 @@ async function readCanonicalAgentMarkdown(
 }
 
 type BoundedRead =
-  | { status: "ok"; content: string }
-  | { status: "absent" }
-  | { status: "rejected"; reason: string };
+  { status: "ok"; content: string } | { status: "absent" } | { status: "rejected"; reason: string };
 
 /**
  * A canonical agent document is a few kilobytes of markdown; a catalog is

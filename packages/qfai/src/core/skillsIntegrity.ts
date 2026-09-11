@@ -6,10 +6,7 @@ import type { QfaiConfig } from "./config.js";
 import { collectFiles } from "./fs.js";
 
 export type SkillsIntegrityStatus =
-  | "ok"
-  | "modified"
-  | "skipped_missing_skills"
-  | "skipped_missing_assets";
+  "ok" | "modified" | "skipped_missing_skills" | "skipped_missing_assets";
 
 export type SkillsIntegrityDiff = {
   status: SkillsIntegrityStatus;

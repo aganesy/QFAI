@@ -127,8 +127,7 @@ export type CleanRunLogsResult = {
 
 /** Why an irreversible run-log prune must not start. */
 export type RunLogPrunePrecheck =
-  | { readonly blocked: false }
-  | { readonly blocked: true; readonly reason: string };
+  { readonly blocked: false } | { readonly blocked: true; readonly reason: string };
 
 /**
  * Preconditions for the irreversible half of `doctor --clean`.

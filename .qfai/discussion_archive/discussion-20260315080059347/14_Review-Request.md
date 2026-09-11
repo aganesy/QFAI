@@ -63,6 +63,6 @@ This review cycle covers drift additions from 2026-03-16:
 - 5 specialist sub-agents (UI/UX Expert, Design Expert, Screen Transition Expert, Navigation Expert, Integrated UI/UX Reviewer)
 - Research-First Protocol for all specialists
 - New OQ-0011~OQ-0013 (all resolved)
-- New REQ-0019~REQ-0025, NFR-0011~NFR-0012
+- New REQ-0019~~REQ-0025, NFR-0011~~NFR-0012
 - New US-D009~US-D010 with Example Seeds
 - Updated Stakeholders, Team composition, Scope, Glossary

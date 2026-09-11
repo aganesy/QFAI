@@ -60,9 +60,7 @@ function toPosixRelative(root: string, targetPath: string): string {
 }
 
 type YamlReadResult =
-  | { kind: "missing" }
-  | { kind: "invalid" }
-  | { kind: "ok"; value: Record<string, unknown> };
+  { kind: "missing" } | { kind: "invalid" } | { kind: "ok"; value: Record<string, unknown> };
 
 export async function validateSddDesignContractReadiness(
   root: string,
@@ -801,9 +799,11 @@ async function validateDesignSystem(
   // until they regenerate their design-system.yaml from the new mirror.
   const checklist = parsed.value.checklist;
   for (const key of REQUIRED_DESIGN_SYSTEM_CHECKLIST_KEYS) {
-    if (
-      !(checklist && typeof checklist === "object" && key in (checklist as Record<string, unknown>))
-    ) {
+    if (!(
+      checklist &&
+      typeof checklist === "object" &&
+      key in (checklist as Record<string, unknown>)
+    )) {
       issues.push(
         issue(
           "QFAI-DCON-005",

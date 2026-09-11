@@ -15,12 +15,7 @@ import type {
 } from "../browserQa/types.js";
 
 export type ProviderCapability =
-  | "screenshot"
-  | "viewport"
-  | "dom"
-  | "interaction"
-  | "visual"
-  | "accessibility";
+  "screenshot" | "viewport" | "dom" | "interaction" | "visual" | "accessibility";
 
 /** Browser QA and capture provider. */
 export type BrowserProvider = {
@@ -43,5 +38,4 @@ export type { CanonicalBrowserQaProvider as BrowserQaProvider };
 export type { BrowserQaInput, BrowserQaPhaseResult };
 
 export type ProviderLookupResult =
-  | { status: "available"; provider: BrowserProvider }
-  | { status: "skipped"; provider: undefined };
+  { status: "available"; provider: BrowserProvider } | { status: "skipped"; provider: undefined };

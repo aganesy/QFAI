@@ -741,7 +741,7 @@ describe("a ceiling below the declared testTimeout", () => {
       names.add(name);
       return true;
     };
-    for (let grew = true; grew; ) {
+    for (let grew = true; grew;) {
       grew = false;
       const visit = (node: ts.Node): void => {
         if (ts.isImportSpecifier(node) && names.has((node.propertyName ?? node.name).text)) {

@@ -42,8 +42,7 @@ export type PatchZone = {
 };
 
 export type ParsePatchZoneResult =
-  | { readonly ok: true; readonly zone: PatchZone }
-  | { readonly ok: false; readonly reason: string };
+  { readonly ok: true; readonly zone: PatchZone } | { readonly ok: false; readonly reason: string };
 
 type FrontMatterSplit =
   | { readonly ok: true; readonly yaml: string; readonly body: string }
