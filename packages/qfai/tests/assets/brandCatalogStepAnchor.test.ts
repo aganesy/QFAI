@@ -142,6 +142,9 @@ describe("brand catalog step anchor", () => {
     // discussion step must still tell the author to fill it — and must name
     // the recorded direction it is filled from, or the author invents one.
     const authoring = await readFile(authoringPath, "utf-8");
+    // The answer comes from the theme the user chose, not from the assistant
+    // scoring the product's prose. Scoring survives as the fallback for a pack
+    // that recorded no theme, and the reference says whose answer that is.
     expect(authoring).toMatch(/Brand archetype → `brand\.archetype`/);
     expect(authoring).toContain("design-md-brand-catalog.md");
     expect(authoring).toContain("04_Sources.md");

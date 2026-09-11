@@ -4,6 +4,33 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ## [Unreleased]
 
+### Changed
+
+- **The user picks the brand direction, at the one stage that asks** (#1473).
+  `/qfai-discussion` now puts candidate themes to the user and records the
+  choice in `01_Context.md#Design Direction`: the adopted theme, what departs
+  from it, and what stays ordinary. `/qfai-sdd` Phase 0 authors `DESIGN.md`
+  from that record, and a UI-bearing pack without one stops rather than
+  picking a brand.
+
+  An assistant used to choose one of eight archetypes from its own reading of
+  the product, and the user first met the result as twelve hex values in a
+  file. Nothing downstream asked, so the decision with the largest effect on
+  how the product looks was the one nobody was consulted about.
+
+  The candidates are named themes rather than adjectives, because the user is
+  choosing rather than specifying, and they lean conventional: novelty in the
+  shape of a screen costs the user what they already know and buys nothing a
+  brand can hold. The brand lives on the accent — the primary hue and the
+  typeface pairing.
+
+  Planner-first is unchanged for what it was about. The screen explorations
+  are still carried unranked; the prototype loop is what ranks them. A
+  cli-only pack is asked for no direction, since nothing downstream reads a
+  theme for a surface that renders no tokens. An unattended run records the
+  most conventional candidate as an assumption and opens it as a question
+  rather than blocking.
+
 ### Added
 
 - **Each captured screen arrives counted** (#1493). `iterate --capture` now
