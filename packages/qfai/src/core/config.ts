@@ -117,6 +117,16 @@ export type QfaiUiuxAuditConfig = {
 
 export type QfaiUiuxConfig = {
   platform?: string;
+  /**
+   * Component registries the project can procure from, as name to URL
+   * template. The shape mirrors the `registries` map a `components.json`
+   * already carries, so a project that has one restates it rather than
+   * translating it.
+   *
+   * Which registry is primary is prose, and lives in
+   * `.qfai/assistant/catalog/tech.md`. Nothing here ranks them.
+   */
+  registries?: Record<string, string>;
   designTokensDir?: string;
   htmlMockTimeout?: number;
   qualityProfile?: "strict" | "high" | "default";
@@ -1232,6 +1242,12 @@ function normalizeUiux(
       );
     }
   }
+  if (raw.registries !== undefined) {
+    const registries = normalizeUiuxRegistries(raw.registries, configPath, issues);
+    if (registries) {
+      result.registries = registries;
+    }
+  }
   if (raw.renderEvidence !== undefined) {
     const renderEvidence = normalizeRenderEvidence(raw.renderEvidence, configPath, issues);
     if (renderEvidence) {
@@ -1243,6 +1259,41 @@ function normalizeUiux(
     if (audit) {
       result.audit = audit;
     }
+  }
+  return Object.keys(result).length > 0 ? result : undefined;
+}
+
+/**
+ * A registry entry resolves one component name, so the template has to say
+ * where the name goes. A URL without the placeholder resolves nothing and is
+ * the typo this catches; everything else about the URL is the registry's
+ * business, including its scheme, because a private one may sit on localhost.
+ */
+function normalizeUiuxRegistries(
+  raw: unknown,
+  configPath: string,
+  issues: Issue[],
+): Record<string, string> | undefined {
+  if (!isRecord(raw)) {
+    issues.push(configIssue(configPath, "uiux.registries must be an object."));
+    return undefined;
+  }
+  const result: Record<string, string> = {};
+  for (const [name, url] of Object.entries(raw)) {
+    if (typeof url !== "string" || url.trim().length === 0) {
+      issues.push(configIssue(configPath, `uiux.registries.${name} must be a non-empty string.`));
+      continue;
+    }
+    if (!url.includes("{name}")) {
+      issues.push(
+        configIssue(
+          configPath,
+          `uiux.registries.${name} must contain the {name} placeholder, or it resolves no component.`,
+        ),
+      );
+      continue;
+    }
+    result[name] = url;
   }
   return Object.keys(result).length > 0 ? result : undefined;
 }

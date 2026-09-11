@@ -6,6 +6,20 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Added
 
+- **A project can say which user-interface stack it adopted** (#1476).
+  `catalog/tech.md` gains a Frontend section naming the CSS framework, the
+  catalogue components are taken from, and the published theme the tokens
+  resolve from. `qfai.config.yaml` gains `uiux.registries`, the machine
+  half: component registries as name to URL template, in the shape a
+  `components.json` already carries, so a project that has one restates it
+  rather than translating it. A template without the `{name}` placeholder
+  resolves no component and is rejected.
+
+  Neither is required, and a project with no user interface leaves both out.
+  Nothing read either before, so an instruction to use the project's design
+  system named nothing and a screen got hand-drawn because that was the only
+  option left.
+
 - **A rule for what may appear on an interface** (#1495).
   `.agents/rules/interface-clarity.md` is the counterpart of
   `documentation-clarity.md` one surface over: that rule settles what an agent
