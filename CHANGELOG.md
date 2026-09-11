@@ -100,6 +100,40 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **One document decides output language** (#1530). The constitution states an
+  Absolute Rule — write every output in the language the user is working in —
+  and says it overrides all other stylistic preferences. `AGENTS.md`, the first
+  document every agent in this repository reads, opened with its own rule
+  fixing that language to one, and told the reader to prefer it.
+
+  So the document that overrode the Absolute Rule for every operator who works
+  in another language was the one they were sent to first. It now points at the
+  rule and says it pins nothing.
+
+  The sweep written when the same block was removed from a shipped file covers
+  the trees that ship. `AGENTS.md`, `CLAUDE.md` and
+  `.github/copilot-instructions.md` are none of them, so nothing looked at the
+  root entry points. They are swept now.
+
+  Extending it exposed two defects in the matcher, both of which the root entry
+  points hit on the first run.
+
+  | Defect                                                                       | Effect                                                  |
+  | ---------------------------------------------------------------------------- | ------------------------------------------------------- |
+  | The topic-marker form was missed                                             | The plainest way to write the rule read as prose        |
+  | A statement of the repository's own written language was read as a directive | Two correct lines were reported, in two different files |
+
+  Every Japanese shape expected the language before a particle or beside a
+  colon. `報告/Plan/最終出力は日本語` puts it last, which is both ordinary and
+  what the entry point used. A shape for it is added.
+
+  The second is a collision between two rules that own different things.
+  `repository-language.md` decides what this repository stores and says in so
+  many words that it does not decide what an assistant replies in — but
+  `written` is an output verb, and the matcher could not tell a repository from
+  an output. A carve-out now names the repository as the thing written. It is
+  narrow: a sentence about what an agent writes is untouched.
+
 - **The design-drift scanner cites nothing a reader cannot resolve** (#1496).
   Nine comment lines in the scanner named a code review tool's internal comment
   identifier. They pointed at something no reader outside this repository can

@@ -5,8 +5,13 @@
 
 ## 言語
 
-- 報告/Plan/最終出力は日本語。
-- ユーザーが明示しない限り、この言語ルールを優先する。
+Output language is decided by the Absolute Rule in
+`.qfai/assistant/constitution/constitution.md`: write every output in the
+language the user is working in for this session. This file pins no language,
+and neither may any other.
+
+That is the rule for what an agent says. What this repository stores is a
+separate question, settled by `.agents/rules/repository-language.md`.
 
 ## 本リポジトリの構造に関する重要な前提
 
