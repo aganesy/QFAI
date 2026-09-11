@@ -242,8 +242,8 @@ const ISSUE_TERNARY_FIRST_ARG =
 /**
  * `code: "..."` / `ruleId: "..."` / `code: CONST` on an object literal that is
  * (or becomes) an `Issue`. Several validators build the object directly instead
- * of calling `issue()` — `skillsIntegrity.ts`, `uix/designSystemPresence.ts`,
- * `justificationCatalog.ts` — and a scan that only follows `issue()` records no
+ * of calling `issue()` — `skillsIntegrity.ts`, `justificationCatalog.ts` — and a
+ * scan that only follows `issue()` records no
  * owner for those codes at all. `ruleId` is the same declaration on
  * `designAudit.ts`'s `DesignFinding`, whose codes reach `issue()` only through
  * `findingToIssue(finding)`.
@@ -442,12 +442,9 @@ describe("validate rule codes are owned by exactly one module", () => {
 
   it("records codes built as an object literal, not only `issue()` calls", async () => {
     const { owners } = await scanIssueSources();
-    // Neither of these modules calls `issue()`; both return the `Issue` object
-    // directly, so a call-site-only scan gave them no owner at all.
+    // This module does not call `issue()`; it returns the `Issue` object
+    // directly, so a call-site-only scan gave its codes no owner at all.
     expect(sorted(owners.get("QFAI-SKILLS-001") ?? [])).toEqual(["validators/skillsIntegrity.ts"]);
-    expect(sorted(owners.get("UIX-VAL-DS01") ?? [])).toEqual([
-      "validators/uix/designSystemPresence.ts",
-    ]);
   });
 
   it("covers the Issue sources outside `validators/` that validate also returns", async () => {

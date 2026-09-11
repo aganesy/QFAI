@@ -100,6 +100,17 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **A retired sidecar's validator no longer asks for the file** (#1538).
+  `uiux/12_design_system.md` is listed as legacy in the template manifest, so
+  a new pack must not author it. `designSystemPresence.ts` was still here,
+  and its remedy told an author to create exactly that file. The module was
+  unwired, so nothing fired — and nothing would have, until someone
+  reconnected it.
+
+  The module, its test, the `UIX-VAL-DS*` expected-state entry and the
+  allowlist rows that parked it are gone. The rows named a tracking item that
+  had already been closed, which is how the retirement came to be half-done.
+
 - **The prototyping loop converges on open findings, not on a rating** (#1488).
   The stop test required all four review axes at `exceptional` — a value the
   scale itself defines as best-in-class and tells the reviewer to use
