@@ -47,6 +47,22 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **A conventional screen can finish the prototyping loop** (#1471).
+  Five registry entries reported a dashboard with a sidebar and a KPI row, a
+  card grid beside an aside, tabs over a table, a bento grid and a centred
+  hero. A detection is not a score penalty: convergence requires the detection
+  array to be empty and `certify` re-derives the same condition, so a product
+  built the way products are built could not finish the loop at all. It spent
+  every cycle and failed.
+
+  The three entries that name a defect stay — an overcrowded sidebar, a state
+  nothing represents, and no way back. An entry now has to describe a defect
+  rather than a shape, because a layout being common is not evidence of
+  anything.
+
+  The identifiers the specifications name have never matched the ones that
+  shipped, and still do not (#1517).
+
 - **The clarity guard reads test titles, messages, and wrapped lines** (#1497).
   `scripts/check-doc-clarity.mjs` reported a clean tree while two shapes of the
   thing it looks for sat in plain sight.

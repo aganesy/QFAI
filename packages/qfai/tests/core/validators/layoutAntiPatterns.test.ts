@@ -36,20 +36,15 @@ async function newTempDir(): Promise<string> {
 }
 
 const EXPECTED_IDS = [
-  "lap-001-saas-dashboard",
-  "lap-002-card-grid-sidebar",
-  "lap-003-saas-table-tabs",
-  "lap-004-bento-grid",
-  "lap-005-centered-hero",
   "lap-006-overcrowded-sidebar",
   "lap-007-state-not-represented",
   "lap-008-no-back-affordance",
 ] as const;
 
 describe("loadLayoutAntiPatterns", () => {
-  it("TC-3.3.1: reads 8 entries from layoutAntiPatterns.json", () => {
+  it("TC-3.3.1: reads every entry from layoutAntiPatterns.json", () => {
     const patterns = loadLayoutAntiPatterns();
-    expect(patterns).toHaveLength(8);
+    expect(patterns).toHaveLength(EXPECTED_IDS.length);
   });
 
   it("TC-3.3.2: missing JSON file → loader throws (caller swallows)", async () => {
@@ -57,7 +52,7 @@ describe("loadLayoutAntiPatterns", () => {
     expect(() => loadLayoutAntiPatterns(path.join(dir, "no-such.json"))).toThrow();
   });
 
-  it("TC-3.3.3: each of the 8 lap-* ids is present", () => {
+  it("TC-3.3.3: each declared id is present", () => {
     const patterns = loadLayoutAntiPatterns();
     expect(patterns.map((p) => p.id).sort()).toEqual([...EXPECTED_IDS].sort());
   });
@@ -81,16 +76,20 @@ describe("loadLayoutAntiPatterns", () => {
 describe("findLayoutAntiPatterns (TC-3.3.5..8)", () => {
   const patterns = loadLayoutAntiPatterns();
 
-  it("TC-3.3.5: lap-001 hits on aside + main + KPI", () => {
-    const html = "<aside>nav</aside><main><div>Total KPI is 4.5</div></main>";
-    expect(findLayoutAntiPatterns(html, patterns)).toContain("lap-001-saas-dashboard");
+  // A detection blocks convergence, so reporting a shape rather than a
+  // defect stops an ordinary product finishing the loop. These five are the
+  // layouts that work.
+  it.each<[string, string]>([
+    ["a dashboard", "<aside>nav</aside><main><div>Total KPI is 4.5</div></main>"],
+    ["a card grid beside an aside", '<div class="grid"><aside>nav</aside></div>'],
+    ["tabs over a table", '<div role="tab">a</div><table><tr><td>x</td></tr></table>'],
+    ["a bento grid", '<div class="grid-cols-12 grid-rows-3">x</div>'],
+    ["a centred hero", '<section class="text-center"><h1>x</h1></section>'],
+  ])("TC-3.3.5: %s is not reported", (_name, html) => {
+    expect(findLayoutAntiPatterns(html, patterns)).toEqual([]);
   });
 
   it.each<[string, string]>([
-    ["lap-002-card-grid-sidebar", '<div class="grid"><aside>nav</aside></div>'],
-    ["lap-003-saas-table-tabs", '<div role="tab">a</div><table><tr><td>x</td></tr></table>'],
-    ["lap-004-bento-grid", '<div class="grid-cols-12 grid-rows-3">x</div>'],
-    ["lap-005-centered-hero", '<section class="text-center"><h1>x</h1></section>'],
     [
       "lap-006-overcrowded-sidebar",
       `<aside>${Array.from({ length: 12 }, (_, i) => `<a href="#${i}">l${i}</a>`).join("")}</aside>`,
@@ -113,11 +112,15 @@ describe("findLayoutAntiPatterns (TC-3.3.5..8)", () => {
     }
   });
 
-  it("TC-3.3.8: multiple lap-* are returned for HTML matching several", () => {
-    const html = '<div class="grid"><aside>nav</aside><main><div>KPI sum</div></main></div>';
-    const ids = findLayoutAntiPatterns(html, patterns);
-    expect(ids).toContain("lap-001-saas-dashboard");
-    expect(ids).toContain("lap-002-card-grid-sidebar");
+  it("TC-3.3.8: multiple ids are returned for HTML matching several", () => {
+    // Against a synthetic pair, so the property holds however many entries
+    // the registry carries.
+    const pair = [
+      { id: "first", regex: "<aside", scope: "layout" },
+      { id: "second", regex: "<table", scope: "layout" },
+    ] as const;
+    const html = "<aside>nav</aside><table><tr><td>x</td></tr></table>";
+    expect(findLayoutAntiPatterns(html, [...pair])).toEqual(["first", "second"]);
   });
 });
 
