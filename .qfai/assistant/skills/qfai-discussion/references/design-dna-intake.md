@@ -19,10 +19,10 @@ Use this reference only for UI-bearing discussion packs.
 A reference is read for one of two opposite reasons, and which one
 decides everything else about how it is used.
 
-| Reference | Consulted to | Lands in |
-| --- | --- | --- |
-| A competitor product | Differ from it | `DESIGN.md`: brand and tokens |
-| A component catalogue | Adopt from it | `.qfai/contracts/ui/*.yaml`: screen structure |
+| Reference             | Consulted to   | Lands in                                      |
+| --------------------- | -------------- | --------------------------------------------- |
+| A competitor product  | Differ from it | `DESIGN.md`: brand and tokens                 |
+| A component catalogue | Adopt from it  | `.qfai/contracts/ui/*.yaml`: screen structure |
 
 A product that looks like its competitor has no brand. A settings screen
 that does not look like a settings screen has no users. Resembling a
