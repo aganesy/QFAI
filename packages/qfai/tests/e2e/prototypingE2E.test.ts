@@ -215,7 +215,7 @@ describe("/qfai-prototyping end-to-end", () => {
       {
         index: 0,
         allEx: true,
-        lap: ["lap-006-overcrowded-sidebar"],
+        lap: ["lap-008-no-back-affordance"],
       },
     ]);
 

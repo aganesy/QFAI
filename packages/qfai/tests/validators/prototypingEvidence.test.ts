@@ -569,7 +569,10 @@ describe("validatePrototypingEvidence — iter-NN/review.json", () => {
 
   it("accepts every lap-* code the registry declares", async () => {
     const root = await newTempDir();
-    const iter = validIter(0, false, ["lap-006-overcrowded-sidebar", "lap-008-no-back-affordance"]);
+    const iter = validIter(0, false, [
+      "lap-007-state-not-represented",
+      "lap-008-no-back-affordance",
+    ]);
     await seedPrototypingJson(root, {
       specsCovered: ["0001"],
       iterations: [iter],
@@ -698,7 +701,7 @@ describe("validatePrototypingEvidence — iter-NN/review.json", () => {
   // transcription no longer mirrors the file it cites.
   it("emits QFAI-PROT-002 when the mirror reorders layoutAntiPatternsDetected", async () => {
     const root = await newTempDir();
-    const codes = ["lap-006-overcrowded-sidebar", "lap-008-no-back-affordance"];
+    const codes = ["lap-007-state-not-represented", "lap-008-no-back-affordance"];
     const iter = validIter(0, false, codes);
     await seedPrototypingJson(root, {
       specsCovered: ["0001"],

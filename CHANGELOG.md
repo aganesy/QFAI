@@ -6,6 +6,21 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **Every layout anti-pattern names what makes it a defect** (#1484). An
+  entry now carries a `source`, and the loader drops one that does not: a
+  published heuristic, an accessibility criterion, or the contract the screen
+  is built to — never this project deciding it dislikes something. A rule with
+  no authority behind it cannot be argued with, only obeyed, which is how the
+  registry came to hold five conventional layouts.
+
+  `lap-006-overcrowded-sidebar` is retired with them. It reported a sidebar
+  carrying ten or more links, and no published source states a navigation
+  count as a defect; the threshold was this repository's own.
+
+  Definitions are pinned rather than researched per run. `certify` re-scans
+  the captures, so a check whose answer depends on what a search returned that
+  morning cannot agree with itself.
+
 - **A concurrency guard that passed because the filesystem undid what it
   staged** (#1477). `provenanceHostileTree` has a row asserting that a holder
   reclaimed mid-section leaves its successor's lock alone. It failed about once
@@ -237,6 +252,90 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   The module, its test, the `UIX-VAL-DS*` expected-state entry and the
   allowlist rows that parked it are gone. The rows named a tracking item that
   had already been closed, which is how the retirement came to be half-done.
+
+- **One document decides output language** (#1530). The constitution states an
+  Absolute Rule — write every output in the language the user is working in —
+  and says it overrides all other stylistic preferences. `AGENTS.md`, the first
+  document every agent in this repository reads, opened with its own rule
+  fixing that language to one, and told the reader to prefer it.
+
+  So the document that overrode the Absolute Rule for every operator who works
+  in another language was the one they were sent to first. It now points at the
+  rule and says it pins nothing.
+
+  The sweep written when the same block was removed from a shipped file covers
+  the trees that ship. `AGENTS.md`, `CLAUDE.md` and
+  `.github/copilot-instructions.md` are none of them, so nothing looked at the
+  root entry points. They are swept now.
+
+  Extending it exposed two defects in the matcher, both of which the root entry
+  points hit on the first run.
+
+  | Defect                                                                       | Effect                                                  |
+  | ---------------------------------------------------------------------------- | ------------------------------------------------------- |
+  | The topic-marker form was missed                                             | The plainest way to write the rule read as prose        |
+  | A statement of the repository's own written language was read as a directive | Two correct lines were reported, in two different files |
+
+  Every Japanese shape expected the language named before a particle or beside
+  a colon. The topic-marker form names the output first and the language last,
+  which is both the ordinary way to write it and what the entry point used. A
+  shape for it is added.
+
+  The second is a collision between two rules that own different things.
+  `repository-language.md` decides what this repository stores and says in so
+  many words that it does not decide what an assistant replies in — but
+  `written` is an output verb, and the matcher could not tell a repository from
+  an output. A carve-out now names the repository as the thing written. It is
+  narrow: a sentence about what an agent writes is untouched.
+
+- **The project layer describes the repository it is in** (#1531). The files
+  under `.instruction/02_project/` summarise this repository for an agent
+  `AGENTS.md` routes there, and nothing compared a summary against the thing it
+  described. The Node floor moved twice and three directories were removed with
+  none of them failing.
+
+  What an agent read was a repository that no longer exists.
+
+  | Stated                                                     | Actual                                        |
+  | ---------------------------------------------------------- | --------------------------------------------- |
+  | `engines` is `>=18.0.0`                                    | `>=20.19.0`                                   |
+  | `docs/` at the repository root                             | No such directory                             |
+  | `.qfai/require/` is the requirements root                  | No such directory                             |
+  | `.qfai/assistant/prompts/`, `.../instructions/`            | No such directories                           |
+  | A spec pack is `spec.md` / `delta.md` / `scenario.feature` | `01_Spec.md` through `10_Plan.md`             |
+  | ID types are `SPEC` / `SC` / `UI` / `API` / `DB`           | `US` / `AC` / `BR` / `EX` / `TC`, and `CON-*` |
+
+  The pack shape was the one that cost. An agent following it created three
+  files with names no validator reads, while `naming.md` one directory over said
+  otherwise — so the layer contradicted the tree and itself.
+
+  Each fact is now handled according to what kind of fact it is. A value a
+  machine-readable file already states, and that moves on its own schedule,
+  names that file instead of restating it: the Node range and the pnpm version
+  are read from `package.json`. A shape an agent acts on is stated here and
+  correct, because an instruction you have to look up is not an instruction.
+
+  `naming.md` was missing `10_Plan.md` and `11_Slice-Policy.md` from the two
+  required sets, and two paths were written from the package root in prose that
+  named no package. Both are fixed.
+
+  The class no longer goes stale silently: a repository-relative path this layer
+  names must exist, and a Node floor it states must be the declared one. The
+  check goes quiet if the layer is ever removed rather than standing in the way
+  of removing it.
+
+- **A reference is consulted to differ from, or to adopt from, and the two
+  are no longer the same instruction** (#1475). The intake asked an author to
+  treat templates as seeds rather than winners, to name what must feel unlike
+  generic products, and to list default visual patterns that must not survive
+  into prototyping. Every reference was framed as something to move away from.
+
+  That is right for a competitor and wrong for a component catalogue. A
+  product that looks like its competitor has no brand; a settings screen that
+  does not look like a settings screen has no users. The intake now separates
+  the two, and `audience.do_not_look_like` holds identities to avoid rather
+  than conventions — the shipped sample seeded it with a layout, which is the
+  one thing that field is not for.
 
 - **The SDD instructions agree with the validator and with each other** (#1519).
   Three places in the `/qfai-sdd` assets stated something the tooling does not

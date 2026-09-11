@@ -54,6 +54,13 @@ const WORKFLOW = `${CONSTITUTION_DIR}/workflow.md`;
 const ABSOLUTE_RULE =
   "**All outputs MUST be written in the user’s working language for this session.**";
 
+/**
+ * The documents an agent reads before anything else in this repository. None
+ * is shipped, and none was swept, which is how the one that decided output
+ * language for every session went unnoticed the longest.
+ */
+const ROOT_ENTRY_POINTS = ["AGENTS.md", "CLAUDE.md", ".github/copilot-instructions.md"];
+
 const read = (tree: string, rel: string): Promise<string> =>
   readFile(path.join(repoRoot, tree, rel), "utf-8");
 
@@ -165,6 +172,29 @@ describe("output language is stated in one place only", () => {
       expect(text).toMatch(clause);
     }
   });
+
+  // The surface the sweep could not reach. `AGENTS.md` is the root entry point
+  // every agent in this repository reads, and it opened with the same rule in
+  // its own words — so the one document that overrode the Absolute Rule for
+  // every operator was the first one they were sent to. It is neither a
+  // shipped tree nor `.instruction/`, so nothing looked at it.
+  //
+  // Checked once rather than per tree: none of these is shipped.
+  for (const entryPoint of ROOT_ENTRY_POINTS) {
+    it(`${entryPoint} binds output to no named language`, async () => {
+      const text = await readFile(path.join(repoRoot, entryPoint), "utf-8");
+      expect(fixedLanguageOffenders(entryPoint, text)).toEqual([]);
+    });
+  }
+
+  it("AGENTS.md sends the question to the Absolute Rule", async () => {
+    const text = flat(await readFile(path.join(repoRoot, "AGENTS.md"), "utf-8"));
+
+    expect(text).toContain("`.qfai/assistant/constitution/constitution.md`");
+    // Naming the absence is what stops the block being re-added as a section
+    // someone notices is missing.
+    expect(text).toContain("This file pins no language");
+  });
 });
 
 /**
@@ -201,6 +231,12 @@ describe("fixed-language directive matcher", () => {
       "a Japanese fallback to a fixed language",
       "ユーザーが言語を指定しない場合は必ず英語で回答すること。",
     ],
+    // The topic marker, with the language last. Every other Japanese shape
+    // expects the language before a particle or beside a colon, so the plainest
+    // way of writing the rule was the one the matcher read as prose — and it is
+    // the wording the root entry point used.
+    ["a Japanese topic-marker directive", "報告/Plan/最終出力は日本語。"],
+    ["the same, with the noun further from the marker", "ユーザーへの最終報告は英語。"],
   ];
 
   for (const [label, sample] of CAUGHT) {
@@ -211,6 +247,18 @@ describe("fixed-language directive matcher", () => {
 
   const PERMITTED: ReadonlyArray<readonly [string, string]> = [
     ["the Absolute Rule itself", ABSOLUTE_RULE],
+    // The repository's own written language. A different rule, a different
+    // owner, and one that says in so many words that it does not decide what
+    // an assistant replies in. `written` is an output verb and a repository is
+    // not an output, which is the whole of the confusion.
+    [
+      "the repository-language rule",
+      "This repository is written in English: source, comments, Markdown, commit messages, and the title and body of every pull request and issue.",
+    ],
+    [
+      "a pointer at that rule",
+      "See `.agents/rules/repository-language.md` (this repository is written in English).",
+    ],
     ["the rule restated per language", "- If the user writes in Japanese, output Japanese."],
     ["the rule restated per language (en)", "- If the user writes in English, output English."],
     [
