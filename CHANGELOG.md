@@ -4,6 +4,32 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ## [Unreleased]
 
+### Changed
+
+- **The test runner stops asking for more forks than the machine has** (#1528).
+  `DECLARED_START` is ten, and on a four-core runner that asked for ten forks
+  where four fit. A fifth fork does not run — it waits for a core — and the
+  waiting is charged to the fork, so the suite reported as though it were
+  ten-way parallel while running four-way.
+
+  Whole package suite, four cores, back to back:
+
+  | forks | wall    | collect (summed) | tests (summed) |
+  | ----- | ------- | ---------------- | -------------- |
+  | 10    | 307.4 s | 347.8 s          | 1999.2 s       |
+  | 4     | 253.0 s | 109.6 s          | 703.6 s        |
+
+  Summed test time falls to a third while the same 11 338 cases run with the
+  same outcomes. On the wall clock ten is 21.5% slower, outside the ten percent
+  the adoption rule allows — where the fourteen-core comparison that adopted ten
+  put it at 3.48%, inside it.
+
+  The declaration is unchanged and still ten. What the runner is handed is
+  `Math.min(DECLARED_START, availableParallelism())`, so a machine with ten
+  cores or more is unaffected. `QFAI_TEST_MAX_WORKERS` stays uncapped: a
+  comparison that could not oversubscribe could not measure what
+  oversubscribing costs. `DR-0017-0010` records the decision.
+
 ### Fixed
 
 - **A concurrency guard that passed because the filesystem undid what it
