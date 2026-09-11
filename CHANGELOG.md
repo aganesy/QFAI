@@ -47,6 +47,24 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **A screen that does one thing can be declared** (#1491). The screen contract
+  counted an empty list as a missing field, so every screen owed at least one
+  secondary task. A screen with a single primary task could not be written down,
+  and the author's only way through was to invent one.
+
+  An explicit empty list is an answer; a missing key is not. The two parsed
+  identically before, and the validator now records which nested keys a screen
+  declared, separately from what they hold.
+
+  `secondary_tasks`, `transitions` and `observable_outcomes` are answered by
+  being declared. `primary_tasks` and `required_states` still have to hold
+  something: a screen with no primary task is not a screen, and an
+  unrepresented empty or error state is a real defect.
+
+  The `requirements-analyst` card described the shipped UI contract sample as
+  exposing an empty `primary_tasks` slot to fill. The sample ships filled
+  entries, and the card says so.
+
 - **A prototyping review may report one finding and stop** (#1492).
   `proseCritique` carried a lower bound — 200 English words, or 600
   Japanese/Chinese characters — per screen, per cycle. A reviewer who had one
@@ -352,6 +370,26 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   unchanged, and both delta templates ship it. The two delta schemas accept the
   qualifier as well, so the shape lane and the triage rules read the same
   heading.
+
+- **A written or edited file restates the implementation rule** (#1465).
+  `.claude/settings.json` carried three hook entries, all restating
+  documentation clarity and all matching Markdown. An agent that wrote Markdown
+  was reminded how to write it; an agent that wrote source was reminded of
+  nothing. A rule read once at the start of a long session is the one that
+  drifts.
+
+  A fourth entry restates `.agents/rules/minimal-implementation.md` after every
+  `Write` and `Edit`: the reuse questions, the marker a deliberate shortcut
+  carries, and the list the ladder never trims — validation at a trust boundary,
+  error handling, security, accessibility, and anything the spec asks for.
+
+  It carries no path condition. The condition is a permission-rule scope matched
+  against the path, so naming source by extension means enumerating a language
+  set, and a language left out is a hook that is silently absent exactly where
+  the rule is needed. The cost is one extra line on a Markdown edit.
+
+  The entry ships in the `qfai init` template as well, and it reaches a project
+  that already carries the clarity hooks, because the merge decides per group.
 
 - **Two review documents stop restating how much code to write** (#1461). The
   Copilot review instructions and the universal development checklist each held
