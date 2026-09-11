@@ -28,6 +28,25 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **The layout anti-pattern registry has one copy** (#1486).
+  `layoutAntiPatterns.json` existed twice — once beside the loader under
+  `src/core/validators/`, once under `assets/validators/`, which
+  `package.json#files` ships. The loader tries each entry point's depth in turn
+  and stops at the first file that exists, so the nearer copy won wherever both
+  were reachable. Editing one meant this repository and an adopting project
+  enforcing different rules.
+
+  A byte-equality test held the two together, which reports a divergence rather
+  than preventing one: it fires only once someone has already edited a copy,
+  and it cannot say which of the two is the one that ships.
+
+  The copy under `src/` is gone. The shipped copy is the only one, and the
+  loader already carried the candidate that reaches it from `src/` — so the
+  candidate list now holds one entry per entry point and nothing else.
+  `layoutAntiPatternsCandidates` is exported for the test that pins those three
+  depths, alongside one that fails on any second copy, whether or not its bytes
+  match.
+
 - **A second hook group now reaches a project that already has the first**
   (#1464). `qfai init` merges its Claude Code hooks into a project that already
   has a `.claude/settings.json`. The merge decided whether to do anything from
@@ -113,6 +132,27 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   those findings print is to write the pointer and the section it names, and
   under this defect a pack could go from tens of errors to zero on headings
   alone.
+
+- **Three skills read the shared directories as a set** (#1460).
+  `Inputs Priority` is the section that makes a skill open
+  `.qfai/assistant/constitution/` and `.qfai/assistant/catalog/` as directories
+  rather than as a list of file names. `qfai-sdd`, `qfai-atdd`, `qfai-verify`
+  and `qfai-configure` carried it; `qfai-discussion`, `qfai-implement` and
+  `qfai-prototyping` did not, and named individual documents instead.
+
+  So every invariant added to either directory reached specification,
+  acceptance tests, verification and configuration, and missed the three stages
+  that produce the most: the one that settles direction with the user, the one
+  that writes production code, and the one that builds the screens. Nothing
+  reported the gap, because a closed list is a valid section.
+
+  The three now carry the section in the same form as the other four. The
+  individual paths they already named stay — they point at specific sections
+  and remain useful. `tests/assets/skillInputsPriority.test.ts` reads the skills
+  off the directory and holds each one, so a skill added later is asked the same
+  question, and it reads the section rather than the file: every skill mentions
+  some document under `constitution/` somewhere, and a whole-file search would
+  pass on exactly the state this replaces.
 
 ### Changed
 
