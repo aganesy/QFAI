@@ -5,10 +5,6 @@ dependencies: [00_universal/*, 02_project/mcp.md]
 version: 2.0.0
 ---
 
-> **言語指示（厳守）**
->
-> - 報告・出力: 日本語（Plan も含む）
-
 # オーケストレータ運用ガイド（QFAI Toolkit）
 
 サブエージェントを使う場合の分担と合流ルールを定義する。

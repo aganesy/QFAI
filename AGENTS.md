@@ -2,6 +2,8 @@
 
 このファイルは全AIエージェント共通の作業ルール。  
 詳細は `.instruction/` 配下の各ドキュメントを参照し、必要に応じて読み直す。
+`.instruction/README.md` states what that directory may say and which document
+wins when it disagrees with one.
 
 ## 言語
 
