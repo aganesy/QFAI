@@ -18,20 +18,19 @@ excludeAgent: "coding-agent"
 - **ISP（インターフェース分離）**: クライアントが使わないメソッドへの依存を強要していないか。インターフェースは小さく役割別に分割されているか。
 - **DIP（依存性逆転）**: 高水準モジュールが低水準の具象に直接依存していないか。モジュール境界では抽象（インターフェース）に依存しているか。
 
-### KISS（Keep It Simple）
+### How much code — KISS, YAGNI, DRY
 
-- 不必要に複雑な実装になっていないか。標準ライブラリや既存ユーティリティで代替可能な自前実装がないか。
-- 認知負荷を下げる書き方か（深いネスト、過度な抽象化、暗黙の挙動を避ける）。
+The ladder is in `.agents/rules/minimal-implementation.md`. Read it there and
+report against it. It is not restated here, so there is one wording to disagree
+with.
 
-### YAGNI（You Aren't Gonna Need It）
+Two things the ladder does not decide, which stay a finding here:
 
-- 現時点で不要な機能・設定・拡張ポイントを先回りして実装していないか。
-- 「将来必要になるかも」で追加されたコードがないか。
-
-### DRY（Don't Repeat Yourself）
-
-- 同一または類似のロジックが複数箇所に重複していないか。共通化・ユーティリティ化の余地がないか。
-- ただし過度な共通化（shotgun surgery を招く）は避け、Rule of Three を意識する。
+- Cognitive load. Deep nesting, excess abstraction and implicit behaviour are
+  worth reporting whatever the amount of code.
+- The limit on sharing. Extract on the third occurrence. Earlier than that, code
+  pulled in different directions by several callers costs more than the
+  repetition did.
 
 ## モジュール間関係の原則
 
