@@ -52,14 +52,27 @@ describe("countWords / validateProseCritiqueBand — English fixture (350 words)
   });
 });
 
-describe("countWords / validateProseCritiqueBand — out-of-band Japanese (3000 chars)", () => {
-  it("rejects with error text naming count form (characters), band (600..2500), and actual count (3000)", () => {
+describe("countWords / validateProseCritiqueBand — over-cap Japanese (3000 chars)", () => {
+  it("rejects with error text naming count form (characters), the cap (2500), and actual count (3000)", () => {
     const text = repeatChars("あ", 3000);
     const result = validateProseCritiqueBand(text);
     expect(result.ok).toBe(false);
     if (result.ok) throw new Error("expected ok=false");
     expect(result.error).toContain("characters");
-    expect(result.error).toContain("600..2500");
+    expect(result.error).toContain("2500");
     expect(result.error).toContain("3000");
+  });
+
+  // The unit is selected by the text rather than tried in turn. A rule
+  // that passed on whichever unit happened to fit would pass every
+  // English critique however long, since English carries no CJK
+  // characters and so sits under the character cap by construction.
+  it("measures an over-cap English critique in words, not characters", () => {
+    const result = validateProseCritiqueBand(buildEnglishWords(900));
+    expect(result.ok).toBe(false);
+    if (result.ok) throw new Error("expected ok=false");
+    expect(result.error).toContain("words");
+    expect(result.error).toContain("500");
+    expect(result.measuredCharacters).toBe(0);
   });
 });
