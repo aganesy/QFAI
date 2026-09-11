@@ -406,11 +406,8 @@ async function hashHandleWithNormalisedNewlines(handle: FileHandle): Promise<str
       break;
     }
     const chunk = buffer.subarray(0, bytesRead);
-    if (pendingCarriageReturn) {
-      pendingCarriageReturn = false;
-      if (chunk[0] !== LINE_FEED) {
-        digest.update(CARRIAGE_RETURN_BYTES);
-      }
+    if (pendingCarriageReturn && chunk[0] !== LINE_FEED) {
+      digest.update(CARRIAGE_RETURN_BYTES);
     }
     // A trailing `\r` is deferred: only the next chunk knows whether it opens
     // a `\r\n` pair or stands on its own.

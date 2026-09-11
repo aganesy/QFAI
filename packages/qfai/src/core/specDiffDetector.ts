@@ -241,7 +241,7 @@ export async function detectSpecChanges(
       entries: allSpecIds.map((id) => ({
         specId: id,
         sources: [] as SpecDiffSource[],
-        status: "changed" as SpecDiffStatus,
+        status: "changed",
       })),
       allSpecs: allSpecIds,
       fullScan: true,
@@ -315,7 +315,7 @@ export async function detectSpecChanges(
       entries: allSpecIds.map((id) => ({
         specId: id,
         sources: [] as SpecDiffSource[],
-        status: "changed" as SpecDiffStatus,
+        status: "changed",
       })),
       allSpecs: allSpecIds,
       fullScan: true,
@@ -323,11 +323,13 @@ export async function detectSpecChanges(
   }
 
   const entries: SpecDiffEntry[] = [...specSourceMap.entries()]
-    .map(([specId, sources]) => ({
-      specId,
-      sources: [...sources] as SpecDiffSource[],
-      status: (sources.has("timestamp") ? "stale" : "changed") as SpecDiffStatus,
-    }))
+    .map(
+      ([specId, sources]): SpecDiffEntry => ({
+        specId,
+        sources: [...sources],
+        status: sources.has("timestamp") ? "stale" : "changed",
+      }),
+    )
     .sort((a, b) => a.specId.localeCompare(b.specId));
 
   return {

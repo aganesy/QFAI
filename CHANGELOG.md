@@ -4,6 +4,28 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ## [Unreleased]
 
+### Added
+
+- **A rule for how much code implements a behaviour** (#1458).
+  `.agents/rules/minimal-implementation.md` states one ladder — does this need
+  to exist, does the standard library do it, does the platform, does an
+  installed dependency, can it be one line, and only then the least code that
+  works — and says what the ladder never removes: validation at a trust
+  boundary, error handling that prevents data loss, security, accessibility,
+  and anything the spec asks for. Tests are in that second list: the ladder
+  shapes how a test is built, never how many obligations are verified.
+
+  A shortcut taken on purpose is marked where it is taken, with its ceiling and
+  the condition that lifts it. Both halves are required, because a ceiling with
+  no lifting condition cannot be told from an oversight.
+
+  `qfai init` ships the rule and cites it from the entry points it writes, so
+  an adopter's repository carries it the way it carries the writing standard.
+
+  What existed before was one line in this repository's `AGENTS.md`, written in
+  a vocabulary nothing defined, and a checklist nothing loaded on its own. Both
+  are replaced by a reference to the master.
+
 ### Fixed
 
 - **A prototyping review may report one finding and stop** (#1492).
@@ -137,7 +159,58 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   under this defect a pack could go from tens of errors to zero on headings
   alone.
 
+- **Three skills read the shared directories as a set** (#1460).
+  `Inputs Priority` is the section that makes a skill open
+  `.qfai/assistant/constitution/` and `.qfai/assistant/catalog/` as directories
+  rather than as a list of file names. `qfai-sdd`, `qfai-atdd`, `qfai-verify`
+  and `qfai-configure` carried it; `qfai-discussion`, `qfai-implement` and
+  `qfai-prototyping` did not, and named individual documents instead.
+
+  So every invariant added to either directory reached specification,
+  acceptance tests, verification and configuration, and missed the three stages
+  that produce the most: the one that settles direction with the user, the one
+  that writes production code, and the one that builds the screens. Nothing
+  reported the gap, because a closed list is a valid section.
+
+  The three now carry the section in the same form as the other four. The
+  individual paths they already named stay — they point at specific sections
+  and remain useful. `tests/assets/skillInputsPriority.test.ts` reads the skills
+  off the directory and holds each one, so a skill added later is asked the same
+  question, and it reads the section rather than the file: every skill mentions
+  some document under `constitution/` somewhere, and a whole-file search would
+  pass on exactly the state this replaces.
+
 ### Changed
+
+- **The lint toolchain leaves the end-of-life eslint 9 line** (#1450). Every
+  release in that line is marked deprecated by the registry, and 9.39.5 is the
+  last one there will be, so no update inside the declared `^9.8.0` range could
+  clear it. The range is `^10.10.0` now, alongside `@eslint/js` at `^10.0.1`
+  and `typescript-eslint` at `^8.70.0` — the first of its line to accept
+  eslint 10 as a peer.
+
+  The new major adds two rules to `eslint:recommended`, and both reported
+  defects rather than style:
+
+  | Rule                    | Sites | What it names                                                   |
+  | ----------------------- | ----- | --------------------------------------------------------------- |
+  | `no-useless-assignment` | 34    | an initializer that every path overwrites before reading it     |
+  | `preserve-caught-error` | 22    | a `throw` inside a `catch` that dropped the error it reports on |
+
+  Every site is fixed rather than suppressed. A dead initializer becomes a type
+  annotation, so the compiler proves the variable is assigned on each path
+  instead of a placeholder standing in for a path that assigns nothing. A
+  rethrow carries `{ cause }`, so the original error survives in the one that
+  replaces it and a stack trace still reaches the failure.
+
+  `typescript-eslint` also names six type assertions its earlier release could
+  not see as unnecessary. Five are removed. The sixth becomes a return type on
+  the callback that builds the value, which is what the assertion stood in for.
+
+  eslint 10 runs on `^20.19.0 || ^22.13.0 || >=24`, narrower than the
+  `>=20.19.0` this repository declares. It is a development dependency, so the
+  floor the published package promises is unchanged. The cost is that a
+  contributor on Node 21, or on 22.0 through 22.12, cannot run the lint lane.
 
 - **Every Triage section in a delta ledger names the round it records**
   (#1467). Seven ledgers disabled `MD024/no-duplicate-heading` per file, because

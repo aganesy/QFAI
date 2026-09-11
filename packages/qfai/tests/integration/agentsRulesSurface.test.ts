@@ -225,4 +225,69 @@ describe("cross-AI rules surface (.agents/rules/ master)", () => {
       expect(text).toContain("documentation-clarity.md");
     });
   });
+
+  // The ladder governs how much code implements a behaviour, which is a
+  // question an adopter's repository asks as often as this one — so the master
+  // is shipped, and both copies are held to the same clauses.
+  describe("minimal-implementation rule", () => {
+    const MASTERS = [
+      ".agents/rules/minimal-implementation.md",
+      "packages/qfai/assets/init/root/.agents/rules/minimal-implementation.md",
+    ];
+
+    it.each(MASTERS)("%s states every clause", async (rel) => {
+      const text = await readFile(path.join(ROOT, rel), "utf-8");
+      // One token per clause that no other clause in the file carries, so a
+      // clause cannot be dropped and still leave the master looking complete.
+      for (const clause of [
+        /standard library/i,
+        /already-installed dependency/i,
+        /trust boundary/i,
+        /accessibility/i,
+        /SIMPLIFIED:/,
+        /Lift when:/,
+        /Change Request/i,
+      ]) {
+        expect(text).toMatch(clause);
+      }
+    });
+
+    // The two halves of the marker are one obligation. A ceiling with no
+    // lifting condition reads as an oversight, which is the state the marker
+    // exists to keep a deliberate shortcut out of — so a master that named only
+    // the ceiling would leave the rule saying nothing the reader must do.
+    it.each(MASTERS)("%s requires both halves of the marker", async (rel) => {
+      const text = await readFile(path.join(ROOT, rel), "utf-8");
+      expect(text).toMatch(/[Bb]oth halves are required/);
+    });
+
+    it.each([
+      "AGENTS.md",
+      "CLAUDE.md",
+      ".github/copilot-instructions.md",
+      "packages/qfai/assets/init/root/AGENTS.md",
+      "packages/qfai/assets/init/root/CLAUDE.md",
+      // The list `qfai init` appends to a project that already has an entry
+      // point. A project with its own `AGENTS.md` keeps it, so this is the only
+      // rule list that population ever sees.
+      "packages/qfai/src/cli/commands/init.ts",
+    ])("%s cites the rule master", async (rel) => {
+      const text = await readFile(path.join(ROOT, rel), "utf-8");
+      expect(text).toContain("minimal-implementation.md");
+    });
+
+    // The one-line version that stood in `AGENTS.md` said the same thing in a
+    // different vocabulary and in a language the repository does not write in,
+    // and pointed at a checklist nothing loaded on its own. Two statements of
+    // one rule is what this master replaces, so neither comes back beside it.
+    //
+    // Named by full path. A second checklist under `01_specialties/` is a
+    // different document that this rule does not speak for, and a bare filename
+    // would claim it.
+    it("AGENTS.md carries no second statement of the rule", async () => {
+      const text = await readFile(path.join(ROOT, "AGENTS.md"), "utf-8");
+      expect(text).not.toMatch(/SOLID\/KISS\/YAGNI\/DRY/);
+      expect(text).not.toContain(".instruction/00_universal/development-principles-checklist.md");
+    });
+  });
 });

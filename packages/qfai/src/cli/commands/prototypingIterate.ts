@@ -2296,7 +2296,7 @@ async function dirExists(absPath: string): Promise<boolean> {
 async function collectFilesRecursively(absDir: string): Promise<string[]> {
   const out: string[] = [];
   const visit = async (current: string): Promise<void> => {
-    let entries: Dirent[] = [];
+    let entries: Dirent[];
     try {
       entries = await readdir(current, { withFileTypes: true });
     } catch (cause) {

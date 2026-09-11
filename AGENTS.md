@@ -72,6 +72,8 @@ QFAI パッケージの版番号 (`X.Y.Z`) は AI が選ばない。ユーザが
   `packages/qfai/assets/mdschema/**` が SSOT)
 - `documentation-clarity.md` (PR / issue / コメント / Markdown の記述基準)
 - `repository-language.md` (this repository is written in English)
+- `minimal-implementation.md` (the order to try solutions in, once a
+  behaviour is agreed, and how a deliberate shortcut is marked)
 
 `.claude/rules/` はこれらへの symlink。Windows では Git の `core.symlinks=true` と
 Developer Mode が必要で、無い場合は `.claude/rules/*.md` がパス文字列だけの
@@ -132,7 +134,9 @@ Planテンプレート:
 
 - 既存の型/ユーティリティ/実装パターンを最優先で再利用する。
 - 変更は小さく段階的に。局所修正→検証→次の順で進める。
-- SOLID/KISS/YAGNI/DRY を自己レビュー基準にする。
+- Try solutions in the order `.agents/rules/minimal-implementation.md` sets
+  out, and mark a deliberate shortcut with its ceiling and the condition
+  that lifts it.
 - 型安全を徹底し `any`・型無効化（`@ts-ignore`等）を原則禁止する。
 - 入力は型とバリデーションで検証し、失敗パスを先に書く。
 - 早期 return でネストを浅くし、読みやすさと責務を守る。
@@ -204,7 +208,7 @@ Planテンプレート:
 - 思考・分析の型: `.instruction/00_universal/thinking.md`
 - 品質基準/自信度/レビュー報告: `.instruction/00_universal/quality.md`
 - 質問/確認/進捗/完了報告の型: `.instruction/00_universal/communication.md`
-- SOLID/KISS/YAGNI/DRY チェック: `.instruction/00_universal/development-principles-checklist.md`
+- How much code implements a behaviour: `.agents/rules/minimal-implementation.md`
 
 ### 計画/設計系
 
