@@ -5,7 +5,7 @@ brand:
   voice: ["calm", "sharp"]
 audience:
   emotion: ["confident comparison"]
-  do_not_look_like: ["generic SaaS dashboard"]
+  do_not_look_like: ["a direct competitor's identity"]
 visual:
   colors:
     primary:        "#1F2937"

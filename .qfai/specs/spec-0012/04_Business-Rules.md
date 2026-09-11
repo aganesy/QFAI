@@ -84,7 +84,7 @@
 - Status: superseded by BR-0012-0031 (per spec × screen `<screen>.review.json` with 4 ordinal axes + six `*Feel` prose fields, ≤ 200 words each; no global `critique` length rule). See `09_delta.md` CHG-002 OP-PURGE-079.
 - AC-Refs: AC-0012-0021, AC-0012-0022, AC-0012-0023
 - Each `iter-NN/review.json` MUST contain `scores: {informationArchitecture, navigationFlow, usability, functionality}` with ordinal values in `{weak, acceptable, strong, exceptional}`.
-- `critique` is a single 200..500 word string. `pivotDirective` is one of `"continue" | "refine" | "pivot"`.
+- `critique` is a single string, capped and not floored — see BR-0012-0045. `pivotDirective` is one of `"continue" | "refine" | "pivot"`.
 - Schema violations raise `QFAI-PROT-020` / `QFAI-PROT-022` / `QFAI-PROT-023` per AC.
 
 ## BR-0012-0020: Layout-Anti-Pattern Catalog and IA Cap
@@ -259,12 +259,13 @@ No other path triggers stop. LLM subjective DONE is forbidden.
 - `SHADOW_DECL_STRIP_RE` MUST match the broader `--*-shadow*:` pattern (any custom property whose name contains `shadow`) when the value contains `rgba()` / `rgb()` literals.
 - The strip MUST execute BEFORE `scanColors` evaluates the input.
 
-## BR-0012-0045: CJK proseCritique (Intl.Segmenter primary + OR-fallback)
+## BR-0012-0045: proseCritique cap, unit selected by the text
 
 - AC-Refs: AC-0012-0057
-- `countWords` MUST use `Intl.Segmenter('ja', { granularity: 'word' })` for primary word counting on CJK-detected text AND MUST apply the OR-condition `200..500 words OR 600..2500 characters` band for QFAI-PROT-002.
-- Error text on out-of-band input MUST name (a) measured count form (words vs characters), (b) band used, (c) actual count.
-- No regression on English fixtures (200–500 words band) is required.
+- QFAI-PROT-002 MUST select the unit from the text: CJK present is measured in CJK characters, anything else in whitespace-separated words. Only the selected unit's cap applies.
+- The rule is a cap. Neither unit carries a lower bound, so a critique of any length up to its cap passes.
+- Selecting the unit rather than accepting whichever fits is what keeps the cap a cap: an English critique carries no CJK characters, so a rule passing on either unit would pass every English text however long.
+- Error text over the cap MUST name (a) the count form measured (words or characters), (b) the cap, (c) the actual count.
 
 ## BR-0012-0046: `browserTool` config compatibility window
 

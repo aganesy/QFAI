@@ -111,3 +111,5 @@ Cutting stops here. None of these is excess at any size.
 - How much code implements it, whatever the medium: `minimal-implementation.md`
 - Where the UI definition a screen implements is read from:
   `.qfai/assistant/catalog/ui-definition-protocol.md`
+- Where a screen's components and layouts come from:
+  `.qfai/assistant/catalog/ui-procurement.md`

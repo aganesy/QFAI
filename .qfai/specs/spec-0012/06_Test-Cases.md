@@ -1033,7 +1033,7 @@
 - AC-Refs: AC-0012-0057
 - Type: unit
 - Test file: `packages/qfai/tests/unit/core/prototyping/proseCritique/countWords.cjk.test.ts`
-- Verify OQ-0105 (Intl.Segmenter + OR-fallback): Japanese-only fixture (1200 chars, no whitespace) passes; English fixture (350 words) continues to pass with no regression; out-of-band Japanese (3000 chars) error text contains the count form ("characters"), band ("600..2500"), and actual count (3000). Uses `new Intl.Segmenter('ja', { granularity: 'word' })`; absence of the global is gracefully caught (Node ≥ 16 guarantees it; fallback diagnostic emitted otherwise).
+- Verify the unit selection and the cap: a Japanese-only fixture (1200 chars, no whitespace) passes, an English fixture (350 words) passes, and an over-cap Japanese critique (3000 chars) is rejected with error text naming the count form ("characters"), the cap ("2500") and the actual count (3000). An over-cap English critique is measured in words, not characters, which is what selecting the unit rather than accepting either one buys.
 
 ## TC-0012-0439
 
@@ -1209,7 +1209,7 @@
 - AC-Refs: AC-0012-0057
 - Type: unit
 - Test file: `packages/qfai/tests/unit/core/prototyping/proseCritique/countWords.boundary.test.ts`
-- Verify REQ-0012-0059 boundary: 4 `it.each` rows cover `199 words` (fail), `200 words` (pass), `500 words` (pass), `501 words` (fail) for English path AND `599 chars` (fail), `600 chars` (pass), `2500 chars` (pass), `2501 chars` (fail) for CJK path.
+- Verify REQ-0012-0059 boundary: 4 `it.each` rows cover `199 words` (pass), `200 words` (pass), `500 words` (pass), `501 words` (fail) for the word-measured path AND `599 chars` (pass), `600 chars` (pass), `2500 chars` (pass), `2501 chars` (fail) for the character-measured path. Only the upper edge of each unit rejects; the rows below the old floor pass, and so do a one-sentence critique and an empty string.
 
 ## TC-0012-0461
 
