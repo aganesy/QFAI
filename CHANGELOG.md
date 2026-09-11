@@ -89,6 +89,49 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Added
 
+- **Review criteria that walk every declared task** (#1489). The prototype loop
+  used to rate four axes. Rating went because a number painted on a judgement
+  is not evidence, and what replaces it has to be answerable: eight yes/no
+  criteria, each `no` becoming one line in `blockingFindings`. No axis, no
+  rating, no aggregate — a count is evidence a finding cites, and the finding
+  is what gates.
+
+  | #   | Answer yes or no                                | Source            |
+  | --- | ----------------------------------------------- | ----------------- |
+  | 1-4 | The procurement ladder, read as questions       | procurement rules |
+  | 5   | No catalogued anti-pattern is present           | the `lap-*` set   |
+  | 6   | Conformant, procured, restrained and consistent | below             |
+  | 7   | Every declared `primary_task` walks             | below             |
+  | 8   | No text on the screen explains the interface    | interface rules   |
+
+  Two of the eight carry method rather than opinion.
+
+  **Criterion 7** is the streamlined cognitive walkthrough: step through each
+  declared task and ask, at every step, whether the user will know what to do
+  and whether the response tells them they did the right thing. It tests
+  learnability — whether someone who arrives untold can get through. The task
+  list it needs was already declared on every screen, counted and shape-checked
+  and never walked.
+
+  **Criterion 8** separates a label from an explanation, and the distinction
+  matters because getting it backwards breaks accessibility. Labels stay: WCAG
+  requires one for every form input, and a placeholder standing in for one is a
+  documented failure. What goes is the sentence under the label, the tooltip on
+  a button whose text already says what it does, and the paragraph introducing
+  the page. The finding names the control to fix, not the sentence to delete —
+  copy that explains a control is evidence the control is wrong.
+
+  Criterion 6 stands in for "is it stylish", which is not answerable as asked.
+  Four checkable things replace it, and a screen with all four looks
+  deliberate.
+
+  The four subjects stay as the areas to ask the questions of. They carry what
+  the eight do not: whether the artifact satisfies the spec at all, and whether
+  a user can move between screens.
+
+  Each role that applies the criteria carries one line saying so, so they reach
+  the stage that acts on them rather than living only in the loop.
+
 - **A ladder for where a screen's components come from** (#1478).
   `.qfai/assistant/catalog/ui-procurement.md` states the order: does the
   region need to exist, does the installed design system have it, does a

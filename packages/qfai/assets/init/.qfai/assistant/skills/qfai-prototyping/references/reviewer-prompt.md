@@ -112,7 +112,82 @@ that seal, run `npx qfai prototyping certify --check` first: it
 recomputes the evidence digests and reports the mismatch. The gate is
 non-waivable — see `generator-prompt.md`.
 
+## The eight criteria
+
+Answer each one yes or no. A **no** is one line in `blockingFindings` naming
+the screen, what is wrong, and the criterion it came from. Anything worth
+saying that does not block goes in `proseCritique`, where it informs the next
+cycle without stopping this one.
+
+No axis, no rating, no aggregate. A count is evidence a finding cites; the
+finding is what gates.
+
+| #   | Answer yes or no                                                      | Source                                      |
+| --- | --------------------------------------------------------------------- | ------------------------------------------- |
+| 1   | Catalogues and templates were used where they cover the need          | `.qfai/assistant/catalog/ui-procurement.md` |
+| 2   | Components were taken from a package or plugin rather than written    | the same ladder, rungs 2 and 3              |
+| 3   | Where nothing provided it, the language or framework standard is used | the same ladder, rung 4                     |
+| 4   | Authoring was the last resort, and each authored region records why   | the same ladder, rung 5                     |
+| 5   | No catalogued anti-pattern is present                                 | `lap-*`, below                              |
+| 6   | Conformant, procured, restrained and consistent                       | below                                       |
+| 7   | Every declared `primary_task` walks                                   | below                                       |
+| 8   | No text on the screen explains the interface                          | `.agents/rules/interface-clarity.md`        |
+
+Criteria 1 to 4 are the procurement ladder read as questions, so a screen
+cannot pass by a standard it was not built to.
+
+### Criterion 6 — what "looks deliberate" decomposes into
+
+Whether a screen is stylish is not answerable, and an agent rating beauty
+produces noise. Four checkable things stand in for it, and a screen with all
+four looks deliberate.
+
+- **Conformant** — every visual value resolves to a `DESIGN.md` token, which
+  the scanner clauses already enforce.
+- **Procured** — the composition came from a block someone designed.
+- **Restrained** — the counts under criteria 7 and 8.
+- **Consistent** — the same component type does the same job on every screen.
+
+### Criterion 7 — walk the tasks
+
+The screen contract declares `primary_tasks`. Walk each one against the
+capture, step by step, and ask two questions at every step.
+
+1. Will the user know what to do here?
+2. Will the response tell them they did the right thing and made progress?
+
+Both are yes or no. A step where either answer is no is a finding naming the
+task, the step, and which question failed.
+
+This is the streamlined cognitive walkthrough, and what it tests is
+learnability — whether someone who arrives without being told anything can get
+through the task. The task list it needs is already declared on every screen.
+
+### Criterion 8 — a label is not an explanation
+
+Copy that explains how to work a control is evidence the control is wrong. The
+finding names the control to fix, not the sentence to delete.
+
+Labels stay. WCAG requires a label for every form input, and a placeholder
+standing in for one is a documented failure; `.agents/rules/interface-clarity.md`
+cites the success criterion. What goes is the
+sentence under the label, the tooltip on a button whose text already says what
+it does, the paragraph introducing the page, and decorative filler that
+displaces signal.
+
+Hint text survives only where a need was demonstrated, the control was
+improved first and the need remained, and it is one sentence at most. Longer
+means the question needs clarifying or splitting.
+
+The counts are contract-relative. A screen declaring one primary task and
+carrying forty controls is wrong; the same forty elsewhere may be right. The
+denominator is in the contract, so no global threshold has to be invented.
+
 ## 4 subjects
+
+The criteria above are the questions. These are the areas to ask them of, and
+they carry what the eight do not: whether the artifact satisfies the spec at
+all, and whether a user can move between screens.
 
 Examine each one. Where it fails, write one line in `blockingFindings`
 naming the screen and what is wrong. Where it holds, say so in
@@ -120,7 +195,7 @@ naming the screen and what is wrong. Where it holds, say so in
 
 - **informationArchitecture** — priority, grouping, density, visual
   hierarchy. Does the most important answer arrive first? Sections
-  scannable? Free of decorative filler that displaces signal?
+  scannable?
 - **navigationFlow** — screen-to-screen traversal, back/return paths,
   current-location indication, deep-link consistency. Can the user
   always tell where they are and how to retreat?
