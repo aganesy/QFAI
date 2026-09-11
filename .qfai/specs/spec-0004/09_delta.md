@@ -1,9 +1,5 @@
 # 09 Delta
 
-<!-- markdownlint-disable MD024 -->
-<!-- Each round records its own `## Triage`, and the triage rules read a section
-     only under that exact heading, so the repeated heading is the shape. -->
-
 ## 2026-09-04
 
 - `CR-20260904-0003` (`confirm-only`, `/qfai-sdd 0004`): this spec's
@@ -82,7 +78,7 @@
 - Posture: additive append; no purge in spec-0004. Backward compatibility for existing validators retained.
 - Approved By: yusuke_senaga
 
-## Triage
+## Triage (CHG-001)
 
 | Source                       | Subject                                     | Existing Spec | Operation | Sub-op | Approved By   | Rationale                                  |
 | ---------------------------- | ------------------------------------------- | ------------- | --------- | ------ | ------------- | ------------------------------------------ |
@@ -172,7 +168,7 @@
 - Posture: additive append; preserves all existing AC/BR/EX/TC numbering. NFR-0101 (SSOT-sync mirror) and NFR-0103 (validate warning names sunset version) absorbed into BR layer via BR-0004-0026 / BR-0004-0027.
 - Approved By: yusuke_senaga
 
-## Triage
+## Triage (CHG-005)
 
 | Source                                  | Subject                                                                                                                                        | Existing Spec | Operation | Sub-op | Approved By   | Rationale                                                                                                                    |
 | --------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- | ------------- | --------- | ------ | ------------- | ---------------------------------------------------------------------------------------------------------------------------- |
@@ -225,3 +221,15 @@
   - REQ-0167: `packages/qfai/scripts/check-pack-locations.mjs` is a NEW lint script (to be created) wired into `pnpm ci:lint` (no contract file; recorded under `_policies/07_Constraints.md` OC-65). OQ-0167 lint-scope dimension resolved by DR-0274; the register's `sdd lint --fix` OQ-0167 remains separately deferred.
   - One-minor deprecation window per OC-63 applies to the new `D-*` findings.
 - Source: REQ-0166, REQ-0164, REQ-0167 (discussion-20260527075558258)
+
+## Triage (2026-09-11)
+
+| Source   | Subject                                                    | Existing Spec | Operation | Sub-op | Approved By | Rationale                                                                                                              |
+| -------- | ---------------------------------------------------------- | ------------- | --------- | ------ | ----------- | ---------------------------------------------------------------------------------------------------------------------- |
+| REQ-0028 | `proseCritique` schema check states a cap, not a word band | spec-0004     | UPDATE    | MODIFY | -           | Impact cascade from REQ-0012-0059: the validator spec restates the retired band in its requirement, criterion and rule |
+
+## Triage (2026-09-12)
+
+| Source   | Subject                                                                        | Existing Spec | Operation | Sub-op | Approved By      | Rationale                                                                                                                     |
+| -------- | ------------------------------------------------------------------------------ | ------------- | --------- | ------ | ---------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| REQ-0029 | The `layoutAntiPatternsDetected` whitelist is the registry, not a numeric band | spec-0004     | UPDATE    | MODIFY | CR-20260912-0001 | The acceptance criterion was already registry-anchored; the requirement, the rule and the example still stated `lap-001..008` |

@@ -5,16 +5,13 @@ dependencies: [quality.md]
 version: 1.0.0
 ---
 
-> **言語指示（厳守）**
->
-> - 報告・出力: 日本語（Plan も含む）
-
 # 開発原則チェックリスト（共通）
 
 SOLID / KISS / YAGNI / DRY を、すべての実装で同じ基準で適用するためのチェックリスト。
 
 ## 関連ドキュメント
 
+- How much code implements a behaviour: `.agents/rules/minimal-implementation.md`
 - 品質基準: [quality.md](./quality.md)
 - Claude Code ベストプラクティス: [../03_ai-agents/claude-code/best-practices.md](../03_ai-agents/claude-code/best-practices.md)
 - プロジェクト実装パターン: [../02_project/patterns.md](../02_project/patterns.md)
@@ -27,17 +24,14 @@ SOLID / KISS / YAGNI / DRY を、すべての実装で同じ基準で適用す�
 - **ISP**: インターフェースは小さく役割別に分割されているか。不要なメソッドを強要していないか。
 - **DIP**: 具象に依存せず抽象に依存しているか。モジュール境界でインターフェースを用意する。
 
-## KISS
+## How much code — KISS, YAGNI, DRY
 
-- 簡潔で読みやすい実装か。複雑さを足さず、標準ライブラリや既存ユーティリティを優先する。
+The ladder is in `.agents/rules/minimal-implementation.md`. Apply it from there
+rather than from a copy here.
 
-## YAGNI
-
-- 未来の要件を先読みして機能や設定を増やしていないか。必要になった時点で追加する。
-
-## DRY
-
-- ロジックを重複させず共通化する。コピペした場合は共通ユーティリティ化を検討。
+Sharing has a floor the ladder does not set: extract on the third occurrence.
+Earlier than that, code pulled in different directions by several callers costs
+more than the repetition did.
 
 ## 実装チェック（抜粋）
 

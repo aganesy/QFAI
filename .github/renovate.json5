@@ -105,6 +105,28 @@
   // it stale fails every lane.
   postUpdateOptions: ["pnpmDedupe"],
 
+  // ── The one narrowing CI cannot judge ────────────────────────────────────────────────────────
+  //
+  // The automerge block above rests on `ci-pass` being able to tell a dependency that breaks this
+  // repository from one that does not. It cannot tell that about a release which raises its own
+  // `engines.node` above the floor declared here: every lane runs on the newest Node satisfying
+  // the range, and the one lane pinned to the floor runs the package test suite rather than the
+  // lint set. So such a release goes green and merges, and the narrowing surfaces later as a
+  // local failure for whoever is on the oldest Node this repository supports.
+  //
+  // Measured on `markdownlint-cli2`: `0.23.2` declares `>=22` against a floor of `>=20.19.0`, and
+  // its update reached `ci-pass=success`.
+  //
+  // `strict` is what makes Renovate drop those releases instead of offering them. It also keeps
+  // the line followable rather than frozen — `0.22.1` declares `>=20` and is still offered — so
+  // this is not a pin, and nothing stops receiving fixes.
+  //
+  // The floor itself is STATED rather than left for Renovate to infer from `engines`. Inference
+  // is per manifest, this workspace has several, and the value that must bound a devDependency is
+  // the one the published package promises — which is the package manifest's, not the root's.
+  constraints: { node: ">=20.19.0" },
+  constraintsFiltering: "strict",
+
   packageRules: [
     {
       // The shipped workflows under `assets/init/root/.github/workflows/**` are what `qfai init`

@@ -176,7 +176,7 @@
   - `iterationReviewPathPerSpec` and `dispatchReviewerToPair` have zero production callers today. This is NOT evidence the layout is unreachable: `cli/commands/prototypingCertify.ts` composes per-spec paths from a template string and imports neither helper, so the layout is reachable with the caller count at zero.
   - `prototypingIterate.ts` freezes `frozenSpecsCovered` **single-spec on purpose**, and its inline comment cites this contradiction as the reason. That freeze is NOT a mitigation for it: `certify` reads and validates the frozen set BEFORE it reaches the layout branch, and a well-formed single-spec set passes that check and reaches it.
   - Field correspondence between the two payloads: `scores` **is** `ordinalAxes` — the same four axes (`informationArchitecture`, `navigationFlow`, `usability`, `functionality`) on the same `{weak, acceptable, strong, exceptional}` scale — and `layoutAntiPatternsDetected` / `designMdViolations` are identical. `iterIndex` maps to `cycle`. (An earlier framing claimed the axes were not the same information; that claim is corrected here.)
-  - Not derivable: `proseCritique` is one 200..500-word string, `impressions` is `Record<FeelField, string>` over six bounded fields; composing one from the other fabricates a critique.
+  - Not derivable: `proseCritique` is one capped string, `impressions` is `Record<FeelField, string>` over six bounded fields; composing one from the other fabricates a critique.
   - **Absent from `ReviewerPayload` entirely**: `pivotDirective`, `evidenceRefs`, `reviewerId`. `pivotDirective` is the reviewer's verdict and `iterate` acts on it, so any option that keeps the flat gate's obligations while adopting the per-spec layout has to EXTEND the contract's closed schema, not map onto it.
 - Options:
   - A) Per-spec canonical — the reviewer-deliverable gate reads the layout `certify`'s `hasPerSpecSubdir` does and validates `ReviewerPayload` (already parsed as a closed schema by `parseEvaluatorReview`); the flat `EvaluatorReview` sunsets. Requires adding `pivotDirective` to `ReviewerPayload` and deciding whether `impressions` replaces `proseCritique`. Cheapest of the three on the numbers above.
@@ -186,3 +186,50 @@
 - Mitigation while deferred: none automated. The single-spec freeze in `prototypingIterate.ts` and `TC-0012-0388` do NOT cover this — see Reachability above. `CR-20260904-0002` records the decision and points to the seven refuted guard drafts and the requirements a correct guard must satisfy, including the negative cases (dual-write, unrecorded working directories, cleanup-helper wire-ins). The guard needs a fixture exercising the `(spec, screen)` dispatch path, which does not exist until the wire-in lands.
 - Next decision point: the OQ-0012-0006 / 0007 wire-in, which is also when the specified guard becomes writable.
 - Evidence: `prototypingCertify.ts` multi-spec branch; `prototypingIterate.ts` freeze comment; `validators/prototypingEvidence.ts` flat read path; `prototypingCertify.ts:286-319` (the stale-`validate.json` path); `prototypingEvidence.ts:472-485` (the index-skew `continue` that bounds the trigger).
+
+### OQ-0012-0014: seven navigation and state defects are named by no detector
+
+- Gate: prototyping
+- Disposition: open
+- Owner: product-experience-architect
+- Due: 2026-11-30
+- Severity: medium
+- Source: reconciling this pack against the shipped layout anti-pattern registry.
+  - The registry declares four identifiers: `lap-007-state-not-represented`,
+    `lap-008-no-back-affordance`, `lap-009` and `lap-010`. Each names an
+    authority — a published heuristic, or the screen contract it is measured
+    against.
+  - Two earlier revisions of this pack named eight identifiers between them,
+    describing an orphan page, a dead-end flow, a hidden state, a broken back
+    link, unlabelled navigation, a missing empty state and a missing error
+    state. Every one is a defect a user meets. Nothing detects any of them.
+  - The registry once held six layout SHAPES instead — a dashboard, a card
+    grid, tabs over a table, a bento grid, a centred hero. Those are the
+    layouts that work, and detecting them blocked convergence for any product
+    built to convention, so they were retired. That retirement moved the
+    implementation toward the defect framing; it did not supply the detectors.
+- Options:
+  - A) Detect what a static capture can see. A missing empty state and a
+    missing error state are `required_states` the screen contract already
+    declares, which is the authority `lap-007-state-not-represented` uses.
+    Unlabelled navigation is
+    an accessible-name check the accessibility phase is already shaped for.
+    Smallest step, and it reuses two mechanisms that exist.
+  - B) Detect the navigation family too — orphan page, dead-end flow, broken
+    back link. Each needs the navigation graph, and a per-screen capture does
+    not carry one. Needs a crawl or a declared graph in the screen contract,
+    which is a contract change.
+  - C) Detect none, and retire the framing. The four declared entries are what
+    the loop checks, and the rest is the reviewer's judgement under criterion 5.
+- Recommendation: Option A, then B only if a run shows the navigation family
+  reaching implementation. B's cost is a contract change and a crawl; A's is
+  two checks over inputs already on disk.
+- Mitigation while open: criterion 5 asks the reviewer whether any catalogued
+  anti-pattern is present, and criterion 7 walks every declared task, which is
+  where a dead-end flow surfaces as a step whose response tells the user
+  nothing. Both are judgement, and neither is recorded as a `lap-*` code.
+- Next decision point: the first prototyping run whose reviewer raises one of
+  the seven families as a blocking finding.
+- Evidence: `packages/qfai/assets/validators/layoutAntiPatterns.json`;
+  `03_Acceptance-Criteria.md` (the registry-anchored whitelist);
+  `.qfai/decisions/CR-20260912-0001-the-layout-anti-pattern-registry-is-specified-twice-and-shipped-a-third-way.md`.

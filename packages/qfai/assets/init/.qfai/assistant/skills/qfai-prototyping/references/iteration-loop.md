@@ -13,7 +13,7 @@
 
 ```
 .qfai/prototypes/iter-NN/index.html
-.qfai/evidence/prototyping/iter-NN/{<screen>.png, <screen>.html, review.json}
+.qfai/evidence/prototyping/iter-NN/{<screen>.png, <screen>.html, <screen>.signals.json, review.json}
 .qfai/evidence/prototyping/iter-NN/<spec-id>/<screen>.review.json
 ```
 
@@ -33,10 +33,9 @@ one-line summary at each iter's end.
 Exit codes for `npx qfai prototyping iterate --cycle <n+1>`:
 
 - `0` — continue.
-- `64` — convergence: latest iter has all 4 UX axes
-  (`informationArchitecture`, `navigationFlow`, `usability`,
-  `functionality`) at `exceptional` AND `layoutAntiPatternsDetected`
-  is empty AND `designMdViolations` is empty.
+- `64` — convergence: on the latest iter, `designMdViolations`,
+  `layoutAntiPatternsDetected` and `blockingFindings` are all empty.
+  Nothing the reviewer left open, and nothing a scan found.
 - `65` — max-iterations: latest iter `index === 9`.
 - `2` — input error, including:
   - root `DESIGN.md` missing or unparseable;
@@ -86,7 +85,7 @@ start `/qfai-prototyping` from cycle 0.
 ## Sealed loop
 
 A loop is **sealed** once `prototyping.json` records
-`stopReason: "axes-exceptional"` together with an `acceptedIterationIndex`.
+`stopReason: "converged"` together with an `acceptedIterationIndex`.
 That is the converged state — the only one `--check-convergence` reports as
 converged and the only one `npx qfai prototyping certify` will seal. On a sealed
 loop `npx qfai prototyping iterate --cycle N` refuses with exit `2` for any `N`
@@ -122,7 +121,7 @@ Re-running the accepted cycle itself (`--cycle <acceptedIterationIndex>`)
 is not refused by the sealed-loop guard — that would be a redo of recorded
 work, not an extension past the seal — but it does not re-run the cycle
 either: the convergence gate reads the same recorded iteration, reports
-`axes-exceptional` and exits `64` without assigning paths or writing
+`converged` and exits `64` without assigning paths or writing
 anything. Treat it as a state read, and prefer
 `npx qfai prototyping iterate --check-convergence`, which reports the recorded
 `stopReason` / `acceptedIterationIndex` without the exit-code ambiguity.

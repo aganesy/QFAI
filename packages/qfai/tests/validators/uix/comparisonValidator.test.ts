@@ -40,7 +40,7 @@ describe("comparisonValidator", () => {
     await createUiBearingPack(root);
     // The legacy 33_exploration_rubric.md / 34_evaluator_calibration.md
     // sidecars are no longer required (DESIGN.md is the brand SSOT and
-    // ORDINAL_AXES is the evaluator-axes constant). Only the review
+    // the review contract lives there). Only the review
     // bundle's best-of-history wording is validated here.
     await writeFile(
       path.join(root, "uiux", "50_review_input_bundle.md"),

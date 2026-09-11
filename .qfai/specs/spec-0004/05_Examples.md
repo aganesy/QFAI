@@ -72,7 +72,7 @@
 - BR-Ref: BR-0004-0012
 - Given `iter-05/review.json#layoutAntiPatternsDetected` contains `["lap-099-mystery-pattern"]`
 - When `qfai validate --fail-on error` runs
-- Then validator emits `QFAI-PROT-002` (lap-whitelist-violation) at error severity, citing `lap-099-mystery-pattern` as not in `{lap-001..008}`
+- Then validator emits `QFAI-PROT-002` (lap-whitelist-violation) at error severity, citing `lap-099-mystery-pattern` as an identifier the registry does not declare
 
 ## EX-0004-0012
 

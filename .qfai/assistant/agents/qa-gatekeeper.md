@@ -18,6 +18,7 @@ tools: [Read, Glob, Grep, Bash]
 - Treat density or volume smells as review signals, not standalone hard gates.
 - Verify test-case quality depth using the Coverage Depth Matrix (see below).
 - Own RED/GREEN **observation** evidence in a TDD micro-cycle: did the test fail (or pass) for the expected reason.
+- Apply `.agents/rules/minimal-implementation.md`: tag excess `delete`, `stdlib`, `native`, `yagni` or `shrink`, and name what to cut and what replaces it.
 
 ## Ownership boundaries
 

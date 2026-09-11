@@ -144,7 +144,7 @@ describe("operator-facing CLI message language", () => {
    * addition stops being an invisible edit inside a 700-line data file and
    * becomes a line a reviewer is asked about.
    */
-  const ALLOWLISTED_MESSAGE_COUNT = 756;
+  const ALLOWLISTED_MESSAGE_COUNT = 755;
 
   it("holds the allowlist to a count that only a reviewed change moves", () => {
     const counted = Object.values(SRC_JAPANESE_ALLOWLIST).reduce(

@@ -43,7 +43,7 @@ Always translate a reference into:
 
 - whether it fits the product's users and task frequency;
 - whether it improves or harms clarity;
-- whether it changes the brand direction recorded in root `DESIGN.md`;
+- whether it changes the brand direction recorded in `04_Sources.md`;
 - whether it affects the screen contracts in `uiux/40_screen_contracts.md`;
 - whether it should be adopted, adapted, or rejected.
 

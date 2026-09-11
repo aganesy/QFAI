@@ -178,9 +178,21 @@ Stage minimum roles:
 - `requirements-analyst` drafts requirement-aligned spec content.
 - `solution-architect` drafts structural / contract / architecture sections.
 - `test-design-analyst` drafts traceability, examples, and test-design.
-- `product-experience-architect` is added when the target is UI-bearing.
+- `product-experience-architect` is added when the target spec is UI-bearing (below).
 - `orchestrator` integrates outputs and presents for confirmation; never drafts the primary artifact and never self-approves.
 - `completion-reviewer` is delegated independently. Required field: `Status (PASS/REVISE/PENDING)`; `PENDING` marks an unrun gate and never counts as `PASS`.
+
+UI-bearing (MUST) is a property of the **target spec**, never of what a run happens to edit. It is
+the surface union `/qfai-prototyping` resolves, and any one signal is enough: `surface_type:
+ui-bearing` frontmatter in `01_Spec.md`, a matching contract under `.qfai/contracts/ui/`, a legacy
+prototyping title marker, or the spec `qfai.config.yaml#prototyping.primarySpecId` pins. Run
+`npx qfai doctor --profile prototyping` to read the resolved set rather than judging it.
+
+So a run against such a spec owes `product-experience-architect` and the `product-surface-reviewer`
+of the Reviewer Gate below even when it edits no screen and no UI contract. This skill authors the
+contracts that define the screens, so the target's surface is what it is changing. The ledger-row
+test in `.qfai/assistant/skills/qfai-implement/references/ui-affecting.md` is a different predicate
+for a different skill: it grades one execution-ledger row, and this skill has none.
 
 Author↔reviewer separation (MUST): drafting roles and reviewing roles above are routed from one
 list, but no sub-agent may review an artifact it drafted or edited in this run. `independent` is
@@ -202,7 +214,7 @@ before the span's last entry is left.
 ### Reviewer Gate (MUST)
 
 - Default: `completion-reviewer`.
-- Conditional: `architecture-reviewer` (structural / contract / CLI), `product-surface-reviewer` (UI-bearing), `qa-gatekeeper` (validate / coverage / runtime / prototyping evidence affected).
+- Conditional: `architecture-reviewer` (structural / contract / CLI), `product-surface-reviewer` (the target spec is UI-bearing, as `Stage minimum roles` above defines it), `qa-gatekeeper` (validate / coverage / runtime / prototyping evidence affected).
 - Drift Protocol compliance is mandatory; reviewers MUST verify no rejected option was reintroduced and no drift from prior decisions.
 - Test-layer policy is checked against `.qfai/assistant/catalog/test-layers.md`; annotation routing is enforced by `.qfai/assistant/catalog/test-layers.md#annotation-routing`, which owns the US / TC / CON-API mapping. A `TC-*`'s `Level` is **not** a constant: derive it per TC with `.qfai/assistant/catalog/test-layers.md#layer-derivation-procedure-normative`, keeping the row inside L1–L3 and defaulting to Integration only when the derivation is genuinely indeterminate. A missing `tests/integration/**` trace never rewrites a derived `Level`.
 - Coverage floors / ratios are planning signals, not gates; reviewers must not block on them.
@@ -266,7 +278,7 @@ Follow `.qfai/assistant/constitution/shared-skill-operating-baseline.md#delta-re
 ## Critical Constraints
 
 1. Use only templates under `.qfai/assistant/skills/qfai-sdd/templates/` — the whole directory, not an enumerated subset, so a new template directory is covered on the day it ships.
-   - Named cross-skill exception: `.qfai/assistant/skills/qfai-prototyping/templates/DESIGN.md.sample` (Phase 0 DESIGN.md Freeze). It is an exception, not a licence to read other skills' templates.
+   - Named cross-skill exception: `.qfai/assistant/skills/qfai-prototyping/templates/DESIGN.md.sample`, the starting shape Phase 0 authors root `DESIGN.md` from. The sample stays with `qfai-prototyping/references/design-md-spec.md`, which is the DESIGN.md schema SSOT and the thing `/qfai-prototyping` validates against; splitting the pair would leave the shape and its schema able to disagree. It is an exception, not a licence to read other skills' templates.
    - Never invent a layout for an artifact a template already covers.
 2. Always run `npx qfai sdd preflight --fail-on error` before generating shared/spec artifacts. The command selects the active discussion-pack, counts the imported `REQ-*`, resolves the blockers and writes the summary itself. It writes it **run-scoped**, at `<paths.outDir>/preflight/run-<timestamp>/preflight_summary.md` with a `- run id:` line — `.qfai/report/preflight/run-<timestamp>/preflight_summary.md` unless `qfai.config.yaml` moves `paths.outDir` — and copies the same body to `<paths.outDir>/preflight_summary.md` as the latest-run pointer. **Evidence cites the run-scoped path**: the pointer is rewritten by every rerun, so a citation to it stops naming the preflight the cycle actually saw. Take that path from the run itself (`summary:` in the text output, `preflightSummaryPath` under `--format json`) and use it everywhere below, so a project with a relocated `outDir` cites the summary that was actually written. Never hand-author the machine-computed part (`status` / `run id` / selected pack / REQ count): a typed `status: ready` is not evidence that a discussion-pack was actually found. Findings the command cannot compute — e.g. a `W-PENDING-PROMOTION` decision still to promote in Stage 1 — belong in `Open Questions (Carry-over)`: pass them as `--assume "<finding>"`, or append them to that section **of the latest-run pointer** (a re-run reads its carry-over back from the pointer, so they survive step 3 below; a note appended only to a run-scoped copy is never read again).
 3. Contracts-first is mandatory; UI-bearing targets must be normalized into `.qfai/contracts/design/**` and `.qfai/contracts/ui/**` per `references/ui-design-contract-normalization.md`, and each UI contract YAML authored per `references/ui-contract-guide.md` (`primary_tasks` shape, the closed structured schema, and the `QFAI-AUD-001` / `QFAI-AUD-020` count-to-behavior table). UI-bearing targets on a **visual-prototyping surface** MUST also validate the consuming-project root `DESIGN.md` and freeze its sha256 into `.qfai/contracts/design/DESIGN.md.lock.yaml` (see Phase 0 DESIGN.md Freeze below). A **cli-only** target has no root `DESIGN.md` to freeze — see the same section.
@@ -482,11 +494,11 @@ completion reviewer treats an absent entry as unfinished work.
 When the target spec is UI-bearing **and the discussion classification
 names a visual-prototyping surface** (`web`, `mobile`, `desktop` or
 `mixed`, as `primary_surface` or in `secondary_surfaces`), Phase 0 MUST
-freeze the brand SSOT.
+author the brand SSOT if it does not exist, then freeze it.
 
 **Skip this whole section for a cli-only target** (`primary_surface: cli`
-with no visual secondary surface). `/qfai-discussion` authors no root
-`DESIGN.md` for such a pack, `/qfai-prototyping` rejects `cli`, and
+with no visual secondary surface). Such a project has no root `DESIGN.md`,
+`/qfai-prototyping` rejects `cli`, and
 `validators/designContractReadiness.ts` skips `QFAI-DCON-030` / `-031` on
 the same condition — so demanding a freeze here would only re-block the
 pack on a token tree nothing reads. Read the classification from the
@@ -498,10 +510,13 @@ the freeze: a project whose only surface is a CLI cannot produce a root
 `DESIGN.md`, a design contract or a prototype, so assuming visual leaves it
 with no way forward at all.
 
-1. Read root `DESIGN.md` at `<consuming-project-root>/DESIGN.md`. If
-   missing, stop and ask the user to run `/qfai-discussion` (which
-   emits the draft) or to author it manually using the sample at
-   `.qfai/assistant/skills/qfai-prototyping/templates/DESIGN.md.sample`.
+1. Read root `DESIGN.md` at `<consuming-project-root>/DESIGN.md`. If missing,
+   author it here per `references/design-md-authoring.md`, from the design
+   direction the discussion pack this spec's provenance names already
+   recorded — the classification in `01_Context.md` and the reference
+   registries in `04_Sources.md`. A spec taken in through import-lite has no
+   pack and therefore no recorded direction: stop and ask for it rather than
+   inventing a brand.
 2. Call `isUnreplacedDesignMdSample(text)`. If it returns `true`, the file
    is still a qfai sample brand and MUST NOT be frozen: stop and ask the
    user to author this product's own brand SSOT, deleting the
@@ -547,9 +562,9 @@ canonical layout for this artifact — copy it, keep every `##` heading in order
 Required sections, in order (the template is authoritative if the two ever disagree): Objective,
 Inputs reviewed, Preflight summary path, Triage decisions (op + approver per row), Open questions,
 Decisions made, Work performed, Contract executability, Commands executed, Validate evidence paths,
-Work Orders Summary, Gaps / Open risks, Final status. Work Orders Summary uses the fixed 6-column
-schema from `.qfai/assistant/constitution/shared-skill-delegation-baseline.md`; its `Status` and `Final status` accept only
-`PASS` or `REVISE`. Contract executability carries one `- Executability: CON-DB-NNNN — …` line per
+Work Orders Summary, Gaps / Open risks, Final status. Work Orders Summary uses the shared schema
+from `.qfai/assistant/constitution/shared-skill-delegation-baseline.md#work-orders-summary`; its
+`Status` accepts `PASS`, `REVISE` or `PENDING`, and `Final status` accepts only `PASS` or `REVISE`. Contract executability carries one `- Executability: CON-DB-NNNN — …` line per
 `db/` contract this cycle authored or changed (`QFAI-CONTRACT-031`), or `- none`.
 
 ### Import-lite evidence (imported spec sets only)

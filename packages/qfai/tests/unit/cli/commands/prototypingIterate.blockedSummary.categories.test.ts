@@ -18,14 +18,14 @@ describe("BLOCKED_CATEGORIES: stable + additive-only snapshot", () => {
     expect([...BLOCKED_CATEGORIES]).toEqual([
       "designMdViolations",
       "layoutAntiPatternsDetected",
-      "axes-below-exceptional",
+      "blockingFindings",
     ]);
   });
 
   it("rejects re-ordering of the category list", () => {
     expect(BLOCKED_CATEGORIES[0]).toBe("designMdViolations");
     expect(BLOCKED_CATEGORIES[1]).toBe("layoutAntiPatternsDetected");
-    expect(BLOCKED_CATEGORIES[2]).toBe("axes-below-exceptional");
+    expect(BLOCKED_CATEGORIES[2]).toBe("blockingFindings");
   });
 
   it("pins the category count to 3 (additive-only invariant)", () => {

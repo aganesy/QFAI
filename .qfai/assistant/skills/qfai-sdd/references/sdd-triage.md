@@ -223,12 +223,14 @@ Required columns: `Source`, `Subject`, `Existing Spec`, `Operation`.
 Conditional: `Sub-op` (UPDATE only), `Approved By` (approval-required
 ops), `Rationale` (recommended for every row).
 
-The heading must be exactly `## Triage` (H2). Every such section in the
-file is validated, so a re-run may append another `## Triage` section
-instead of extending the first table. A decorated heading
-(`## Triage — 2026-07-26`) or a demoted one (`### Triage`) is read by no
-Triage validator; put the date or the note in the section body, not in
-the heading.
+The heading is `## Triage` (H2), which may name the round it records in
+parentheses: `## Triage (2026-07-26)`. Every such section in the file is
+validated, so a re-run may append another one instead of extending the
+first table, and the qualifier keeps those headings distinct.
+
+Parentheses are the only accepted form. Any other trailer
+(`## Triage Table`, `## Triage — 2026-07-26`) or a demoted heading
+(`### Triage`) is read by no Triage validator.
 
 ### `Existing Spec` grammar
 

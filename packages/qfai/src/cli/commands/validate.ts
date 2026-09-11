@@ -553,9 +553,6 @@ export const GATE_GROUP_FAMILIES = {
     "UIX-VAL-3LAYER-*",
     "UIX-VAL-CLASSIFICATION-*",
     "UIX-VAL-DIRECTION-*",
-    // Covers `UIX-VAL-DS-READ-ERROR`, `UIX-VAL-DS01` and `UIX-VAL-DS02`: the
-    // two numbered ones carry no separator, so a `-*` form would miss them.
-    "UIX-VAL-DS*",
     "UIX-VAL-OQ-*",
     "UIX-VAL-SCREEN-*",
     "UIX-VAL-SIDECAR-*",
@@ -1635,7 +1632,7 @@ export const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
   "QFAI-TRIAGE-007":
     "SPLIT / MERGE / SUPERSEDE / DELETE are spec-scoped; item decomposition is UPDATE:MODIFY + UPDATE:APPEND and item removal is UPDATE:REMOVE.",
   "QFAI-TRIAGE-008":
-    "Every Triage section is introduced by the canonical `## Triage` H2, so the triage rules read the rows under it.",
+    "Every Triage section is introduced by the canonical `## Triage` H2, optionally naming its round in parentheses, so the triage rules read the rows under it.",
   "QFAI-TRIAGE-009":
     "`Existing Spec` names its target in one grammar: `spec-NNNN` (multiple joined by `+`), `_policies` for a policy-only row, or `-` on a CREATE row. Every named spec must exist on disk; ranges are not a form.",
   "QFAI-SPLIT-106":

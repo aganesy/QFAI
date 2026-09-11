@@ -10,12 +10,7 @@
  *
  *     {
  *       priorCycle: number,
- *       priorScores: {
- *         informationArchitecture: string,
- *         navigationFlow: string,
- *         usability: string,
- *         functionality: string,
- *       },
+ *       priorScores: { blockingFindings: string[] },
  *       openBlockers: string[],
  *       priorTailwindContract: string,
  *     }
@@ -24,13 +19,8 @@
  * additive field requires a spec amendment + ledger entry.
  */
 
-import type { OrdinalScore } from "./iteration.js";
-
 export type IterateContextScores = {
-  readonly informationArchitecture: OrdinalScore;
-  readonly navigationFlow: OrdinalScore;
-  readonly usability: OrdinalScore;
-  readonly functionality: OrdinalScore;
+  readonly blockingFindings: readonly string[];
 };
 
 export type IterateContext = {
@@ -65,10 +55,8 @@ export function isIterateContext(value: unknown): value is IterateContext {
   }
   if (typeof value.priorCycle !== "number" || !Number.isInteger(value.priorCycle)) return false;
   if (!isRecord(value.priorScores)) return false;
-  const scoreKeys = ["informationArchitecture", "navigationFlow", "usability", "functionality"];
-  for (const k of scoreKeys) {
-    if (typeof value.priorScores[k] !== "string") return false;
-  }
+  if (!Array.isArray(value.priorScores.blockingFindings)) return false;
+  if (!value.priorScores.blockingFindings.every((v) => typeof v === "string")) return false;
   if (!Array.isArray(value.openBlockers)) return false;
   if (!value.openBlockers.every((v) => typeof v === "string")) return false;
   if (typeof value.priorTailwindContract !== "string") return false;
@@ -82,12 +70,7 @@ export function isIterateContext(value: unknown): value is IterateContext {
 export function canonicalIterateContext(ctx: IterateContext): IterateContext {
   return {
     priorCycle: ctx.priorCycle,
-    priorScores: {
-      informationArchitecture: ctx.priorScores.informationArchitecture,
-      navigationFlow: ctx.priorScores.navigationFlow,
-      usability: ctx.priorScores.usability,
-      functionality: ctx.priorScores.functionality,
-    },
+    priorScores: { blockingFindings: [...ctx.priorScores.blockingFindings] },
     openBlockers: [...ctx.openBlockers],
     priorTailwindContract: ctx.priorTailwindContract,
   };

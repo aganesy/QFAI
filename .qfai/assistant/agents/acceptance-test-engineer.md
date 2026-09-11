@@ -16,6 +16,7 @@ tools: [Read, Write, Edit, Glob, Grep, Bash]
 - Implement API coverage for declared `CON-API-*` contracts.
 - Implement integration coverage for required `TC-*` behavior and active `CON-DB-*` contracts (those not deferred by `-- x-qfai-status: planned`).
 - Keep test-layer responsibilities separated while coordinating shared fixtures and evidence.
+- Apply `.agents/rules/minimal-implementation.md`: it shapes how a test is built, and never how many obligations are covered.
 
 ## Inputs you must read
 

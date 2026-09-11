@@ -9,6 +9,13 @@ Quality-First AI (QFAI) — specification-driven development の検証フレー�
 - TypeScript: avoid bare `as` type assertions; prefer type narrowing.
 - TypeScript: every async path must have explicit error handling.
 - Keep functions focused; extract when a function exceeds ~50 lines.
+- Try solutions in the order `.claude/rules/minimal-implementation.md`
+  (master: `.agents/rules/minimal-implementation.md`) sets out, and mark a
+  deliberate shortcut with its ceiling and the condition that lifts it.
+- What may appear on a screen or in terminal output is settled by
+  `.claude/rules/interface-clarity.md` (master:
+  `.agents/rules/interface-clarity.md`). Text explaining how to work a control
+  is a defect report against that control.
 - All temporary/scratch files go in `tmp/` — working-tree files only; a test's `mkdtemp` sandbox under `os.tmpdir()` is out of scope (see `.claude/rules/temporary-files.md`, master: `.agents/rules/temporary-files.md`).
 - Do not create new directories or files at the repository root without explicit user approval; editing existing root files is allowed (see `.claude/rules/root-additions-policy.md`, master: `.agents/rules/root-additions-policy.md`).
 - Traceability chain (REQ -> Spec -> Code -> Test) must be maintained; TDD-IDs and TC-Refs must not collide or reference unregistered entries.

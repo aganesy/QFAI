@@ -1,9 +1,5 @@
 # 09 Delta
 
-<!-- markdownlint-disable MD024 -->
-<!-- Each round records its own `## Triage`, and the triage rules read a section
-     only under that exact heading, so the repeated heading is the shape. -->
-
 ## 2026-09-04
 
 - `CR-20260904-0002` (`confirm-only`, `/qfai-sdd 0012`): recorded
@@ -80,7 +76,7 @@
 - Trigger: spec-0017 violates `_policies/11_Slice-Policy.md` (1 spec = 1 CAP, 1 skill = 1 spec); content fully decomposed into spec-0012 (primary) + spec-0004 / 0010 / 0011 / 0013 / 0014 / 0015 / 0007 (cascade).
 - Posture: destructive. Backward compatibility / existing-user impact intentionally disregarded per user instruction.
 
-## Triage
+## Triage (CHG-001)
 
 | Source                   | Subject                                                                | Existing Spec | Operation | Sub-op | Approved By   | Rationale                                                                            |
 | ------------------------ | ---------------------------------------------------------------------- | ------------- | --------- | ------ | ------------- | ------------------------------------------------------------------------------------ |
@@ -139,7 +135,7 @@
 - Trigger: User directive 2026-05-16 (SRC-0001) and follow-up SRC-0007 redefine the skill to a single-command, project-wide, autonomous loop with reviewer-driven Playwright per spec × screen and qualitative-only convergence. Discussion pack `discussion-20260516144141078` resolved OQ-0001..0009 (OQ-0003 deferred to ops).
 - Posture: destructive. Backward compatibility with the v2.0 / UX-loop posture (single-spec, 15-cycle, PNG/HTML capture, quantitative AC-pass thresholds, flat iter dirs) is intentionally broken per user instruction 2026-05-18. The triage closes the QFAI-TRIAGE-001 warning previously raised against this file.
 
-## Triage
+## Triage (CHG-002)
 
 | Source   | Subject                                                  | Existing Spec | Operation | Sub-op | Approved By     | Existing rows touched                                                                                                                 | New rows added                                                       | Approved-at |
 | -------- | -------------------------------------------------------- | ------------- | --------- | ------ | --------------- | ------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------- | ----------- |
@@ -328,7 +324,7 @@ Late-review fixes on PR #208:
 - 9 OQ decisions pinned by the orchestrator: OQ-0103 = β + γ (preflight allowlist + body-scope), OQ-0104 = Option B (`--*-shadow*:` pattern), OQ-0105 = Intl.Segmenter + OR-fallback, OQ-0107 = Option B (`verify.json#scope`), OQ-0108 = Option A (SKILL.md realign to single-spec), OQ-0109 = advisory-failing (lap-009 / lap-010), OQ-0110 = Option A (underscore casing), OQ-0112 = SHOULD normalisation, OQ-0115 = `lap-009` / `lap-010` finding-code namespace.
 - `DR-0012-0029` ("No PNG / HTML / interaction.json capture") is amended (not rejected) by a parallel agent — placeholder `DR-0012-0031` cited in AC-0012-0059 / AC-0012-0060 / BR-0012-0047 / BR-0012-0048; orchestrator reconciles the actual DR ID post-merge. Default-OFF posture of `--capture` / `--auto-serve` preserves the original DR-0012-0029 stance.
 
-## Triage
+## Triage (CHG-005)
 
 | Source        | Subject                                        | Existing Spec | Operation | Sub-op | Approved By                        | New rows added                                                                                                           | Approved-At |
 | ------------- | ---------------------------------------------- | ------------- | --------- | ------ | ---------------------------------- | ------------------------------------------------------------------------------------------------------------------------ | ----------- |
@@ -401,7 +397,7 @@ Late-review fixes on PR #208:
 
 Second-Wave Defect Remediation per `_policies/05_Contracts.md` § CHG-006 and `_policies/10_delta.md` § CHG-006. All operations are UPDATE:APPEND under pinned-branch authorization (`feature/v1.9.2`). Cross-spec decisions cited from `_policies/08_Decisions.md` DR-0261/0262/0263/0273. New local IDs continue from the true max +1: US-0012-0138..0142, AC-0012-0072..0081, BR-0012-0060..0064, EX-0012-0181..0185, TC-0012-0471..0480.
 
-## Triage
+## Triage (2026-05-27 second wave)
 
 | Source   | Subject                                                               | Existing Spec | Operation | Sub-op | Approved By | Rationale (incl. impact cascade verified)                                                                                                                                                                                                                                                                                                                                                                                                                                                      | DR-Ref           | Status    |
 | -------- | --------------------------------------------------------------------- | ------------- | --------- | ------ | ----------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------- | --------- |
@@ -410,3 +406,28 @@ Second-Wave Defect Remediation per `_policies/05_Contracts.md` § CHG-006 and `_
 | REQ-0152 | `prototyping.mode` (convergence / exploration) with `--mode` override | spec-0012     | UPDATE    | APPEND | pin-implied | `prototyping.mode` (convergence\|exploration); `--mode` overrides config, default convergence; medium gate-relaxation. Certify rejects exploration-mode iterations (`R-EXPLORATION-CERTIFY-ATTEMPT`); `prototyping.json#mode` per-iteration; `acceptedIterationIndex` convergence-only. Impact cascade verified: US-0012-0140 → AC-0012-0076/0077 → BR-0012-0062 → EX-0012-0183 → TC-0012-0475/0476.                                                                                           | DR-0263          | PASS→PASS |
 | REQ-0162 | `taskFidelity` required-keyword docs + template emission              | spec-0012     | UPDATE    | APPEND | pin-implied | `taskFidelity` required-keyword docs + template emission. `QFAI-CRIT-009` names every keyword (`cta_visibility`, `four_state_check`, +others); `references/evidence-requirements.md` enumerates them; `iterate --capture` emits template skeleton with placeholders. Straight MUST (no DR). Impact cascade verified: US-0012-0141 → AC-0012-0078/0079 → BR-0012-0063 → EX-0012-0184 → TC-0012-0477/0478.                                                                                       | (straight MUST)  | PASS→PASS |
 | REQ-0165 | iter-NN evidence-mutation audit log                                   | spec-0012     | UPDATE    | APPEND | pin-implied | iter-NN evidence-mutation audit-log at `.qfai/evidence/prototyping/mutation-log.jsonl` shaped `{ts,caller,path,action,priorSize,newSize}` for every destructive mutation under `iter-NN/*` (incl. `--cycle 0 --force` moves); git-ignored; `R-EVIDENCE-MUTATION-UNLOGGED` (error) on unlogged paths. Straight MUST. Impact cascade verified: US-0012-0142 → AC-0012-0080/0081 → BR-0012-0064 → EX-0012-0185 → TC-0012-0479/0480.                                                               | (straight MUST)  | PASS→PASS |
+
+## Triage (2026-09-11)
+
+| Source        | Subject                                                                                                          | Existing Spec | Operation | Sub-op | Approved By | Rationale                                                                                                                                           |
+| ------------- | ---------------------------------------------------------------------------------------------------------------- | ------------- | --------- | ------ | ----------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
+| REQ-0012-0059 | `proseCritique` length is a cap, and the unit is selected                                                        | spec-0012     | UPDATE    | MODIFY | -           | The requirement states a lower bound the rule does not apply, and an OR the rule never used to choose the unit. `DR-0277` supersedes `DR-0001-0003` |
+| REQ-0012-0059 | AC-0012-0057 / BR-0012-0045 / EX-0012-0166 / US-0012-0123 / TC-0012-0438 / TC-0012-0460 restated against the cap | spec-0012     | UPDATE    | MODIFY | -           | Impact cascade: each states the same band, and a superseded requirement with conforming downstream rows still reads as the contract                 |
+
+## Triage (2026-09-12)
+
+| Source        | Subject                                                                                | Existing Spec | Operation | Sub-op | Approved By      | Rationale                                                                                                                              |
+| ------------- | -------------------------------------------------------------------------------------- | ------------- | --------- | ------ | ---------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
+| REQ-0012-0070 | The layout anti-pattern whitelist is the registry, not a numeric band                  | spec-0012     | UPDATE    | MODIFY | CR-20260912-0001 | The pack listed eight identifiers, seven of which the shipped gate rejects, while separately requiring two the same whitelist excludes |
+| REQ-0012-0070 | An unregistered token raises `QFAI-PROT-002`                                           | spec-0012     | UPDATE    | MODIFY | CR-20260912-0001 | `QFAI-PROT-025` is emitted by nothing; the code the validator reports has been `QFAI-PROT-002` throughout                              |
+| REQ-0012-0070 | US-0012-0102 / AC / BR / EX / TC restated against the registry                         | spec-0012     | UPDATE    | MODIFY | CR-20260912-0001 | Impact cascade: each cited a retired identifier, so a conforming row still read as the contract                                        |
+| OQ-0012-0014  | The seven navigation and state defects the earlier lists named are detected by nothing | spec-0012     | UPDATE    | APPEND | CR-20260912-0001 | Recording the gap keeps it reviewable; naming detections nothing performs reads as coverage                                            |
+
+## Triage (2026-09-12, convergence)
+
+| Source        | Subject                                                                           | Existing Spec | Operation | Sub-op | Approved By      | Rationale                                                                                                                  |
+| ------------- | --------------------------------------------------------------------------------- | ------------- | --------- | ------ | ---------------- | -------------------------------------------------------------------------------------------------------------------------- |
+| REQ-0012-0063 | `stopReason` on convergence is `converged`                                        | spec-0012     | UPDATE    | MODIFY | CR-20260912-0002 | `axes-exceptional` is recorded by no run, and `--check-convergence` was specified to read it                               |
+| REQ-0012-0063 | The stop condition is three empty arrays, not an axis score                       | spec-0012     | UPDATE    | MODIFY | CR-20260912-0002 | `iterationConverged` reads `blockingFindings`, `layoutAntiPatternsDetected` and `designMdViolations`; no axis is consulted |
+| REQ-0012-0068 | The third blocked-cause category is `blockingFindings`                            | spec-0012     | UPDATE    | MODIFY | CR-20260912-0002 | The summary prints it; `axes-below-exceptional` sends an operator after a cause nothing checked                            |
+| REQ-0012-0063 | The hash-mismatch path records `input-error`, and the terminator is `index === 9` | spec-0012     | UPDATE    | MODIFY | CR-20260912-0002 | A fifth `stopReason` value nothing declares, and a cycle budget retired with the 15-cycle loop                             |

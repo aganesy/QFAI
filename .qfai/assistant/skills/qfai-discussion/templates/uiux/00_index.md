@@ -7,11 +7,11 @@ Manifest of all UI/UX sidecar artifacts produced during a UI-bearing discussion.
 ## File Inventory
 
 Brand-level intent (product intent, brand signals, anti-goals,
-reference pool framed as deviate-from inputs) lives in root
-`DESIGN.md` (front-matter + `# Brand Philosophy` body), not in this
-sidecar family — on a visual-prototyping surface (`web`, `mobile`,
-`desktop`, `mixed`). A cli-only pack has no root `DESIGN.md` at all,
-so it has no brand-level intent layer either.
+reference pool framed as deviate-from inputs) is recorded in
+`04_Sources.md`, not in this sidecar family. `/qfai-sdd` Phase 0 turns
+that record into root `DESIGN.md` — on a visual-prototyping surface
+(`web`, `mobile`, `desktop`, `mixed`) only. A cli-only pack has no
+brand-level intent layer at all.
 
 | File                      | Purpose                                  | Required |
 | ------------------------- | ---------------------------------------- | -------- |
@@ -24,17 +24,21 @@ so it has no brand-level intent layer either.
 All three required files above MUST be present for every UI-bearing pack.
 Partial generation is not permitted.
 
-Root `DESIGN.md` sits alongside them **only** on a visual-prototyping surface
-(`web`, `mobile`, `desktop`, `mixed`). A cli-only pack — `primary_surface: cli`
-with no visual surface in `secondary_surfaces` — is complete without it:
-`/qfai-discussion` authors no root `DESIGN.md` for such a pack, `/qfai-sdd`
-Phase 0 skips the freeze, and `/qfai-prototyping` does not run on `cli`. Do not
-report a cli-only pack as incomplete for a missing `DESIGN.md`.
+Root `DESIGN.md` is not one of them. `/qfai-sdd` Phase 0 authors it, and only
+on a visual-prototyping surface (`web`, `mobile`, `desktop`, `mixed`). A
+cli-only pack — `primary_surface: cli` with no visual surface in
+`secondary_surfaces` — never gets one: Phase 0 skips the freeze, and
+`/qfai-prototyping` does not run on `cli`. Do not report any pack as
+incomplete for a missing `DESIGN.md`.
 
 ## Forbidden Legacy Files
 
 The following files are NOT part of the canonical family and must NOT be created in new packs:
 
+- `10_implementation_strategy.md` — discussion carries directions unranked, so it selects no strategy
+- `11_design_taste_interview.md` — brand signals are recorded in `04_Sources.md`
+- `12_design_system.md` — replaced by root `DESIGN.md` and the design contracts under `.qfai/contracts/design/`
+- the `20`–`24` design-evaluation family — the evaluator axes are fixed by the CLI, not authored here
 - `30_option_comparison.md` — replaced by root `DESIGN.md`
 - `31_selected_anchor_screen.md` — replaced by root `DESIGN.md`
 - `33_exploration_rubric.md` — replaced by the fixed evaluator axes (`.qfai/assistant/skills/qfai-prototyping/references/reviewer-prompt.md`)

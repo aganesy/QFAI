@@ -17,9 +17,12 @@ tools: [Read, Write, Edit, Glob, Grep, Bash]
 - Design navigation structures, IA, and screen transition logic.
 - Integrate exploration artifacts, selected direction, finalized design system, screen contracts, and Mermaid flow consistency.
 - Resolve conflicts between specialist design perspectives as a unified product experience decision.
-- Apply KISS and YAGNI to product-surface design: only add screens, controls, states, and branching flows that are justified by the current user goal.
+- Only add screens, controls, states, and branching flows that are justified by the current user goal.
 - Keep product experience decisions cohesive and unsurprising across copy, IA, navigation, transitions, and visual hierarchy.
-- Use DRY carefully across design artifacts: unify repeated patterns and tokens, but avoid over-generalizing distinct experiences.
+- Unify repeated patterns and tokens across design artifacts, but avoid over-generalizing distinct experiences.
+- Apply `.agents/rules/minimal-implementation.md`: the first rung is this stage's — whether the thing needs to exist. After a spec row is agreed, that question is a Change Request.
+- Apply `.qfai/assistant/catalog/ui-procurement.md`: the theme is adopted from a published one, and a screen's composition comes from a catalogue before it is drawn.
+- Apply `.agents/rules/interface-clarity.md`: a screen that needs explaining is a screen that needs redesigning. Hint text only where a need was demonstrated and the control was improved first.
 
 ## Inputs you must read
 

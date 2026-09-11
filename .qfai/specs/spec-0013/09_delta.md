@@ -1,9 +1,5 @@
 # 09 Delta (Migration Record)
 
-<!-- markdownlint-disable MD024 -->
-<!-- Each round records its own `## Triage`, and the triage rules read a section
-     only under that exact heading, so the repeated heading is the shape. -->
-
 ## Origin
 
 - Consolidates: old spec-0011 (Spec Diff Protocol), spec-0038 (Auto-Discovery)
@@ -73,7 +69,7 @@
 - Approved By: yusuke_senaga
 - Notes: subjects originated from former spec-0017 (Prototyping v2.0 / UX-loop redesign decomposition). Validator-side enforcement of the lock and mirror invariants is owned by spec-0004; this spec only declares Phase 0 emission semantics.
 
-## Triage
+## Triage (CHG-001)
 
 | Source                                                                         | Subject                                                                                                                                                       | Existing Spec | Operation | Sub-op | Approved By | Rationale                                                                |
 | ------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------- | --------- | ------ | ----------- | ------------------------------------------------------------------------ |
@@ -94,7 +90,7 @@
 - Posture: additive append; preserves existing AC/BR/EX/TC numbering. NFR-0110 (testability of scanner + countWords as pure functions) naturally pairs with spec-0012 for the function-purity side; spec-0013's piece is the UI contract template `primary_tasks:` slot + the new validate lane gating `/qfai-prototyping`.
 - Approved By: yusuke_senaga
 
-## Triage
+## Triage (CHG-005)
 
 Rows owned by this spec.
 

@@ -21,7 +21,7 @@ structure:
         allow_additional: true
 
       - heading:
-          pattern: "^## Triage$"
+          pattern: "^## Triage( \\([^()]+\\))?$"
           regex: true
         description: >-
           Cross-spec triage — the SPLIT / MERGE / SUPERSEDE rows that touch more

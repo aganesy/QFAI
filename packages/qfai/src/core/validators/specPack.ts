@@ -685,8 +685,20 @@ async function validateTriageSectionForEntry(
   return issues;
 }
 
-/** canonical な Triage 見出し = 完全一致の H2 (`## Triage`)。 */
-const CANONICAL_TRIAGE_HEADING_RE = /^##[ \t]+triage[ \t]*$/i;
+/**
+ * A canonical Triage heading: the H2 `## Triage`, optionally naming the round
+ * it records in parentheses (`## Triage (2026-05-24)`).
+ *
+ * A delta ledger is append-only and carries one Triage section per round, so
+ * requiring the bare form made every section in such a file identical. The
+ * qualifier gives each one a name, which also keeps the headings distinct for
+ * anything that reads a document's outline or links to a section by anchor.
+ *
+ * Parentheses are the only accepted form, and they must hold something. Any
+ * other trailer — `## Triage Table`, `## Triage-Table` — stays outside the
+ * grammar, which is what `QFAI-TRIAGE-008` exists to report.
+ */
+const CANONICAL_TRIAGE_HEADING_RE = /^##[ \t]+triage(?:[ \t]+\([^()]+\))?[ \t]*$/i;
 
 /** H1 / H2 は canonical Triage セクションを終端する (H3 以下は本文扱い)。 */
 const TRIAGE_SECTION_BOUNDARY_RE = /^#{1,2}[ \t]+\S/;
@@ -792,7 +804,7 @@ function validateTriageHeadings(text: string, deltaPath: string): Issue[] {
       "triage.headingCanonical",
       unchecked,
       "canonical",
-      "見出しを `## Triage` (H2 / 完全一致) に揃えてください。再実行のたびに追記する場合も `## Triage` を複数置けば全セクションが検査されます。日付などの注記は見出しではなく本文に書いてください。",
+      "Write the heading as the H2 `## Triage`, optionally naming the round it records in parentheses: `## Triage (2026-05-24)`. A ledger that carries several rounds gives each section its own name, and every named section is checked. Anything else after `Triage` — `## Triage Table`, `## Triage — 2026-05-24` — is not read as a Triage section.",
     ),
   ];
 }

@@ -2,7 +2,8 @@
  * Pure scanner for DESIGN.md compliance violations in iter HTML.
  *
  * Scans an HTML string for color / font / radius / shadow values and
- * compares them against the allowed token set in a DesignMd record.
+ * compares them against the allowed token set in a DesignMd record, and
+ * reads the declared contrast floor against the pairs the page states.
  * Returns one violation per distinct `{kind, found}` pair (no
  * short-circuit): a token that drifts on every one of a thousand CSS
  * occurrences is one finding, not a thousand, so the operator sees the
@@ -16,7 +17,9 @@
  * until one of two checkpoints runs. `prototypingIterate` re-scans the
  * accepted iteration's HTML before honouring a CONVERGENCE stop, so a
  * Reviewer-recorded empty `designMdViolations` is discarded rather than
- * trusted (the recomputed list drives the stop decision only; it is not
+ * trusted (the recomputed list is one of the three arrays the stop reads —
+ * `layoutAntiPatternsDetected` and `blockingFindings` are the others — and
+ * it drives that decision only; it is not
  * written back into `prototyping.json`); a `max-iterations` stop skips
  * that re-scan and simply ends the loop. That re-scan reaches the
  * captured HTML that is PRESENT AND READABLE:
@@ -45,6 +48,19 @@
  * and their writers are documented in
  * `generator-prompt.md#output-layout--two-trees-two-shapes`; this file and
  * that prompt are an SSOT-sync pair (see `../validators/promptScannerPairs.ts`).
+ *
+ * The judged set is the values a document states, never their provenance.
+ * These scanners read `<style>` bodies, body-scoped inline `style="..."`
+ * attributes and `class="..."` attributes out of the HTML they are handed,
+ * and nothing in that surface records where the markup was authored. Markup
+ * transposed from a component catalogue is therefore judged exactly as
+ * hand-written markup is: it passes once its palette classes are re-bound to
+ * `DESIGN.md` tokens, and it fails on `bg-blue-500` whoever typed it. One
+ * authoring path escapes the scan entirely — a stylesheet behind a `<link>`,
+ * whose href is never fetched, so no declaration inside it is ever judged.
+ * That gap is closed on the authoring side rather than here:
+ * `generator-prompt.md` bans the external stylesheet and permits the
+ * transposition, and as the paired halves of that SSOT the two move together.
  *
  * The capture fan-out is not the only writer of the scanned tree:
  * `--emit-skeletons` also writes `<screenId>.html` into the SAME
@@ -83,9 +99,10 @@
  */
 
 import type { DesignMd } from "../design/designMd.js";
+import { computeContrastRatio } from "../uiux/contrastRatio.js";
 
 export type DesignMdViolation = {
-  readonly kind: "color" | "font" | "radius" | "shadow";
+  readonly kind: "color" | "font" | "radius" | "shadow" | "contrast";
   readonly found: string;
 };
 
@@ -415,8 +432,8 @@ function collectAllowedColors(dm: DesignMd): Set<string> {
 // registered shadow value would either (a) be flagged spuriously
 // when scanColors recognized the rgba/hex inside the shadow value
 // but not the box-shadow property anchor, or (b) require a global
-// shadow-color allow that bleeds into unrelated declarations (the
-// pre-1.8.9 behavior caught by codex 6r-e). scanShadow continues to
+// shadow-color allow that bleeds into unrelated declarations, which
+// is what the earlier behaviour did. scanShadow continues to
 // validate the full shadow value against `dm.visual.shadow` tokens
 // independently, so legitimate registered shadows still pass.
 //
@@ -641,7 +658,6 @@ function scanColors(html: string, dm: DesignMd, out: DesignMdViolation[]): void 
     // slipped past the scanner. Splitting on the broader
     // CSS-grammar set `[\s,()!;]+` extracts each identifier even
     // inside CSS functions / `!important` markers / nested commas.
-    // codex 9R4j.
     for (const token of value.split(/[\s,()!;]+/)) {
       if (token.length === 0) continue;
       if (SAFE_LITERALS.has(token)) continue;
@@ -775,6 +791,97 @@ function normalizeDimensionValue(value: string): string {
   );
 }
 
+// The floor for a DESIGN.md that declares none. WCAG 2.x AA for body
+// text, which is the level `accessibility.contrast_ratio_min` is written
+// against.
+const WCAG_AA_CONTRAST = 4.5;
+
+// A declaration block that sets a text color and a background states a
+// pair whose ratio can be judged. Blocks are the two shapes a rendered
+// prototype carries one in: a rule body inside `<style>`, and one inline
+// `style="…"` attribute.
+//
+// `[^{}]*` keeps a body flat, so an at-rule wrapper (`@media { .a { … } }`)
+// contributes its inner rules and not the wrapper — which is what a
+// nested body would otherwise pair across.
+const CSS_RULE_BODY_RE = /\{([^{}]*)\}/g;
+const FOREGROUND_DECL_RE = /(?:^|;)\s*color\s*:\s*([^;]+)/i;
+// `background` and `background-color`, never `background-image`: after
+// `background` the pattern requires `-color` or the colon, and `-image`
+// is neither.
+const BACKGROUND_DECL_RE = /(?:^|;)\s*background(?:-color)?\s*:\s*([^;]+)/i;
+
+/**
+ * A color `computeContrastRatio` can read, or `null`.
+ *
+ * It accepts `#rrggbb` and `rgb(r, g, b)` and nothing else, so the
+ * three-digit hex an author writes by hand is expanded here rather than
+ * discarded. Everything else — a named color, `hsl()`, the space-separated
+ * `rgb(r g b)`, a value carrying alpha, a shorthand with more than a color
+ * in it — is not judged. A ratio computed from a color this scanner
+ * guessed at would be a finding the author cannot reproduce.
+ */
+function colorForRatio(value: string): string | null {
+  const v = value.trim().toLowerCase();
+  const short = /^#([0-9a-f])([0-9a-f])([0-9a-f])$/.exec(v);
+  if (short) return `#${short[1]}${short[1]}${short[2]}${short[2]}${short[3]}${short[3]}`;
+  if (/^#[0-9a-f]{6}$/.test(v)) return v;
+  if (/^rgb\(\s*\d{1,3}\s*,\s*\d{1,3}\s*,\s*\d{1,3}\s*\)$/.test(v)) return v;
+  return null;
+}
+
+/** Every declaration block on the rendered page, structure kept. */
+function declarationBlocks(html: string): string[] {
+  const blocks: string[] = [];
+  for (const style of html.matchAll(STYLE_BLOCK_RE)) {
+    const css = style[1];
+    if (!css || isTailwindPreflightBlock(css)) continue;
+    for (const body of css.matchAll(CSS_RULE_BODY_RE)) {
+      if (body[1]) blocks.push(body[1]);
+    }
+  }
+  // Inline attributes are body-scoped for the reason `extractCssRegions`
+  // gives: a `style="…"` in the head is not on the rendered DOM.
+  for (const inline of narrowToBody(html).matchAll(INLINE_STYLE_RE)) {
+    const value = inline[1] ?? inline[2];
+    if (value) blocks.push(value);
+  }
+  return blocks;
+}
+
+/**
+ * Text that fails the contrast floor the project declared.
+ *
+ * `accessibility.contrast_ratio_min` was parsed, type-checked and hashed
+ * into the lock, and no check read it as a threshold — a project could
+ * declare a stricter ratio than AA and be measured against AA, or declare
+ * AA and have no capture measured at all. This is the clause that reads
+ * it, on the same captures the other five clauses scan.
+ */
+function scanContrast(html: string, dm: DesignMd, out: DesignMdViolation[]): void {
+  const declared = dm.accessibility?.contrast_ratio_min;
+  const floor = typeof declared === "number" && declared > 0 ? declared : WCAG_AA_CONTRAST;
+  if (!Number.isFinite(floor)) return;
+
+  const rootDeclarations = parseRootDeclarations(allCssRegions(html));
+  for (const block of declarationBlocks(html)) {
+    const fgDecl = FOREGROUND_DECL_RE.exec(block);
+    const bgDecl = BACKGROUND_DECL_RE.exec(block);
+    if (!fgDecl?.[1] || !bgDecl?.[1]) continue;
+
+    const fg = colorForRatio(unwrapVarReference(fgDecl[1], rootDeclarations));
+    const bg = colorForRatio(unwrapVarReference(bgDecl[1], rootDeclarations));
+    if (fg === null || bg === null) continue;
+
+    const ratio = computeContrastRatio(fg, bg);
+    if (ratio === null || ratio >= floor) continue;
+    out.push({
+      kind: "contrast",
+      found: `${ratio.toFixed(2)}:1 below ${floor}:1 (${fg} on ${bg})`,
+    });
+  }
+}
+
 function scanRadius(html: string, dm: DesignMd, out: DesignMdViolation[]): void {
   const allowed = new Set<string>(
     Object.values(dm.visual.radius).map((token) => normalizeDimensionValue(token)),
@@ -906,7 +1013,7 @@ const TAILWIND_FONT_PREFIXES: ReadonlySet<string> = new Set(["font"]);
 // Numeric (100..900 in Tailwind's stepped form) and the named-weight
 // keywords below are weight tokens — NOT font-family drift. Anything
 // else routed through `font-[X]` is treated as a font-family
-// candidate and compared against DESIGN.md's family stacks. codex 9Ify.
+// candidate and compared against DESIGN.md's family stacks..
 const TAILWIND_FONT_WEIGHT_KEYWORDS: ReadonlySet<string> = new Set([
   "thin",
   "extralight",
@@ -929,7 +1036,7 @@ function isFontWeightArbitrary(value: string): boolean {
 // resolves to a Tailwind built-in color, NOT a DESIGN.md token. Since
 // the shipped prototype generator uses the Tailwind CDN (no theme
 // override possible), every palette+scale class on the rendered DOM
-// is by definition drift from DESIGN.md. codex AHzR7.
+// is by definition drift from DESIGN.md..
 const TAILWIND_PALETTE_NAMES: ReadonlySet<string> = new Set([
   "slate",
   "gray",
@@ -990,7 +1097,7 @@ const TAILWIND_PALETTE_SCALES: ReadonlySet<string> = new Set([
 //
 // Bare `rounded` / `shadow` (no suffix) resolve to Tailwind's `DEFAULT`
 // theme key, which the DESIGN.md schema cannot declare, so they remain
-// unconditional drift and are matched separately below. codex AHzR7.
+// unconditional drift and are matched separately below..
 const TAILWIND_RADIUS_SCALE_ALIASES: ReadonlySet<string> = new Set([
   "none",
   "sm",
@@ -1067,7 +1174,7 @@ function scanTailwindArbitraryColor(
   // so mixed-syntax shorthands like `border-[#ff0000_rgb(0_0_0)]`
   // (decoded: `#ff0000 rgb(0 0 0)`) flag BOTH `#ff0000` (per-token)
   // AND `rgb(0 0 0)` (matchAll) instead of dropping the L4 syntax
-  // when per-token already pushed something. codex 9vcu.
+  // when per-token already pushed something..
   //
   // RGB_RE / HSL_RE are global-flagged by design (used by the CSS
   // region scanner). Reusing them here keeps the L4 detection
@@ -1109,7 +1216,7 @@ function scanTailwindArbitraryColor(
 // missed violation — and the runtime certify gate's contract is
 // "tokens that the rendered DOM uses must come from DESIGN.md", so
 // the tutorial-content edge case is rare in practice. Swap in a
-// parse5-class HTML parser if it becomes load-bearing. codex 9If2.
+// parse5-class HTML parser if it becomes load-bearing..
 function scanTailwindArbitrary(html: string, dm: DesignMd, out: DesignMdViolation[]): void {
   const allowedColors = collectAllowedColors(dm);
   const allowedRadii = new Set<string>(Object.values(dm.visual.radius));
@@ -1156,7 +1263,6 @@ function scanTailwindArbitrary(html: string, dm: DesignMd, out: DesignMdViolatio
         // a known font-weight keyword → weight (silently skipped — out
         // of scope); anything else is treated as a font-family
         // candidate and compared against DESIGN.md's family stacks.
-        // codex 9Ify.
         if (isFontWeightArbitrary(value)) continue;
         if (SAFE_LITERALS.has(value.toLowerCase())) continue;
         const stripped = stripQuotes(value).trim();
@@ -1177,7 +1283,7 @@ function scanTailwindArbitrary(html: string, dm: DesignMd, out: DesignMdViolatio
 // They resolve to Tailwind's default theme, NOT to DESIGN.md tokens —
 // the shipped prototype generator uses the CDN with no theme
 // override, so every such class is by definition drift from
-// DESIGN.md. This scanner closes that gap. codex AHzR7.
+// DESIGN.md. This scanner closes that gap..
 //
 // Scope is intentionally narrow:
 //   - color palette+scale: `<prefix>-<palette>-<scale>` (e.g.
@@ -1463,6 +1569,10 @@ export function findDesignMdViolations(html: string, dm: DesignMd): DesignMdViol
   // `rounded-xl`, etc.) carry no CSS literal in the rendered HTML
   // and would otherwise slip past every other scanner above.
   scanTailwindUtility(html, dm, out);
+  // Every other required token in DESIGN.md is enforced against the
+  // captures. The declared contrast floor was not, so it read as
+  // decoration next to five clauses that gate.
+  scanContrast(html, dm, out);
   // The doc contract above promises one entry per distinct {kind, found}
   // pair; without this call the helper was dead code and the promise was
   // not kept.

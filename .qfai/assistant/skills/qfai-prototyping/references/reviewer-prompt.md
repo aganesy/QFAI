@@ -1,15 +1,20 @@
 # Reviewer Prompt
 
 Injected into the product-surface-reviewer sub-agent each cycle.
-Evaluate the latest iteration on four UX axes, detect layout
-anti-patterns, and emit a `pivotDirective`. Brand identity (color,
-type, radius, shadow) is locked by root `DESIGN.md` and enforced by
-the static compliance gate, not by you.
+Examine the latest iteration on four subjects, report what must be
+fixed before it ships, detect layout anti-patterns, and emit a
+`pivotDirective`. Brand identity (color, type, radius, shadow) is
+locked by root `DESIGN.md` and enforced by the static compliance
+gate, not by you.
+
+You do not rate the iteration. A rating is unfalsifiable and cannot be
+acted on; a finding names something and can be fixed or argued with.
 
 ## Inputs
 
 - Screenshot: `.qfai/evidence/prototyping/iter-NN/<screen>.png`
 - HTML snapshot: `.qfai/evidence/prototyping/iter-NN/<screen>.html`
+- Counted signals: `.qfai/evidence/prototyping/iter-NN/<screen>.signals.json`
 - Prior reviews: `iter-(NN-1)/review.json`, `iter-(NN-2)/review.json`
   (when present)
 - Progress log: `.qfai/evidence/prototyping/progress.md`
@@ -38,8 +43,8 @@ write them exactly there, or the CLI will not find them.
    which is what `npx qfai validate` checks. Its shape is the block
    below.
 
-The two share only `layoutAntiPatternsDetected` and
-`designMdViolations`. `scores` / `proseCritique` / `pivotDirective` /
+The two share `blockingFindings`, `layoutAntiPatternsDetected` and
+`designMdViolations`. `proseCritique` / `pivotDirective` /
 `evidenceRefs` exist on the summary only — putting them in a
 `<screen>.review.json` fails the closed schema.
 
@@ -48,21 +53,19 @@ The two share only `layoutAntiPatternsDetected` and
 The summary is derived from the payloads you just wrote, never from
 one screen alone. Fold every `(spec, screen)` pair of this cycle:
 
-- `scores.<axis>` — the **worst** verdict that axis takes across all
-  pairs (`weak` < `acceptable` < `strong` < `exceptional`).
+- `blockingFindings` — the **union** of the pairs' arrays, each entry
+  prefixed with the screen it belongs to.
 - `layoutAntiPatternsDetected` — the **union** of the pairs' arrays,
   deduplicated by ID.
 - `designMdViolations` — the **union**, deduplicated on
   `(kind, found)`.
-- `proseCritique` / `pivotDirective` describe the cycle as a whole and
-  read the aggregated `scores`.
+- `proseCritique` / `pivotDirective` describe the cycle as a whole.
 
-This keeps the loop's stop test identical to the convergence AND that
+This keeps the loop's stop test identical to the convergence that
 `npx qfai prototyping certify` re-derives per pair: the cycle stops
-only when every pair is `exceptional` with both arrays empty. A
-summary built from the best screen would stop the loop while certify
-still rejects the per-screen payloads — with no further cycle left in
-which to fix them.
+only when every pair has all three arrays empty. A summary built from
+the best screen would stop the loop while certify still rejects the
+per-screen payloads — with no further cycle left in which to fix them.
 
 ## Per-cycle summary (`iter-NN/review.json`)
 
@@ -70,17 +73,15 @@ which to fix them.
 type Review = {
   iterIndex: number;
   reviewerId: "product-surface-reviewer";
-  scores: {
-    informationArchitecture: "weak" | "acceptable" | "strong" | "exceptional";
-    navigationFlow: "weak" | "acceptable" | "strong" | "exceptional";
-    usability: "weak" | "acceptable" | "strong" | "exceptional";
-    functionality: "weak" | "acceptable" | "strong" | "exceptional";
-  };
-  proseCritique: string; // 200..500 English words, or 600..2500 Japanese/Chinese characters
+  // One line each: what is wrong, on which screen. Empty means nothing
+  // stands between this iteration and shipping. Anything worth saying that
+  // does not block goes in `proseCritique`.
+  blockingFindings: string[];
+  proseCritique: string; // non-empty; at most 500 English words, or 2500 Japanese/Chinese characters
   layoutAntiPatternsDetected: string[]; // lap-* IDs
   designMdViolations: {
     // populated by static gate, not by you
-    kind: "color" | "font" | "radius" | "shadow";
+    kind: "color" | "font" | "radius" | "shadow" | "contrast";
     found: string;
   }[];
   pivotDirective: "continue" | "refine" | "pivot";
@@ -112,11 +113,110 @@ that seal, run `npx qfai prototyping certify --check` first: it
 recomputes the evidence digests and reports the mismatch. The gate is
 non-waivable — see `generator-prompt.md`.
 
-## 4 axes
+## The eight criteria
+
+Answer each one yes or no. A **no** is one line in `blockingFindings` naming
+the screen, what is wrong, and the criterion it came from. Anything worth
+saying that does not block goes in `proseCritique`, where it informs the next
+cycle without stopping this one.
+
+No axis, no rating, no aggregate. A count is evidence a finding cites; the
+finding is what gates.
+
+| #   | Answer yes or no                                                      | Source                                      |
+| --- | --------------------------------------------------------------------- | ------------------------------------------- |
+| 1   | Catalogues and templates were used where they cover the need          | `.qfai/assistant/catalog/ui-procurement.md` |
+| 2   | Components were taken from a package or plugin rather than written    | the same ladder, rungs 2 and 3              |
+| 3   | Where nothing provided it, the language or framework standard is used | the same ladder, rung 4                     |
+| 4   | Authoring was the last resort, and each authored region records why   | the same ladder, rung 5                     |
+| 5   | No catalogued anti-pattern is present                                 | `lap-*`, below                              |
+| 6   | Conformant, procured, restrained and consistent                       | below                                       |
+| 7   | Every declared `primary_task` walks                                   | below                                       |
+| 8   | No text on the screen explains the interface                          | `.agents/rules/interface-clarity.md`        |
+
+Criteria 1 to 4 are the procurement ladder read as questions, so a screen
+cannot pass by a standard it was not built to.
+
+### Criterion 6 — what "looks deliberate" decomposes into
+
+Whether a screen is stylish is not answerable, and an agent rating beauty
+produces noise. Four checkable things stand in for it, and a screen with all
+four looks deliberate.
+
+- **Conformant** — every visual value resolves to a `DESIGN.md` token, which
+  the scanner clauses already enforce.
+- **Procured** — the composition came from a block someone designed.
+- **Restrained** — the counts under criteria 7 and 8.
+- **Consistent** — the same component type does the same job on every screen.
+
+### Criterion 7 — walk the tasks
+
+The screen contract declares `primary_tasks`. Walk each one against the
+capture, step by step, and ask two questions at every step.
+
+1. Will the user know what to do here?
+2. Will the response tell them they did the right thing and made progress?
+
+Both are yes or no. A step where either answer is no is a finding naming the
+task, the step, and which question failed.
+
+This is the streamlined cognitive walkthrough, and what it tests is
+learnability — whether someone who arrives without being told anything can get
+through the task. The task list it needs is already declared on every screen.
+
+### Criterion 8 — a label is not an explanation
+
+Copy that explains how to work a control is evidence the control is wrong. The
+finding names the control to fix, not the sentence to delete.
+
+Labels stay. WCAG 3.3.2 requires a label for every form input, and a
+placeholder standing in for one is a documented failure. What goes is the
+sentence under the label, the tooltip on a button whose text already says what
+it does, the paragraph introducing the page, and decorative filler that
+displaces signal.
+
+Hint text survives only where a need was demonstrated, the control was
+improved first and the need remained, and it is one sentence at most. Longer
+means the question needs clarifying or splitting.
+
+The counts are contract-relative. A screen declaring one primary task and
+carrying forty controls is wrong; the same forty elsewhere may be right. The
+denominator is in the contract, so no global threshold has to be invented.
+
+### Where the counts come from
+
+`iterate --capture` counts each screen and writes
+`iter-NN/<screen>.signals.json` beside the capture.
+
+| Field                        | What it counts                                                      |
+| ---------------------------- | ------------------------------------------------------------------- |
+| `interactiveControls`        | elements the user can operate, disabled ones excluded               |
+| `words`                      | every rendered word                                                 |
+| `explanatoryWords`           | words naming nothing — not a control's text, label, header, heading |
+| `controlsPerTask`            | controls over declared `primary_tasks`                              |
+| `explanatoryWordsPerControl` | explanatory words over controls                                     |
+| `maxDepth`                   | deepest nesting                                                     |
+| `distinctElementTypes`       | how many kinds of element the screen uses                           |
+
+Read them; do not recount. A denominator the contract does not supply reads
+`null`, which means unknown, not zero.
+
+Nothing here passes or fails on its own. Cite a number in the finding it
+supports, and write no finding a number alone would make.
+
+## 4 subjects
+
+The criteria above are the questions. These are the areas to ask them of, and
+they carry what the eight do not: whether the artifact satisfies the spec at
+all, and whether a user can move between screens.
+
+Examine each one. Where it fails, write one line in `blockingFindings`
+naming the screen and what is wrong. Where it holds, say so in
+`proseCritique` and move on.
 
 - **informationArchitecture** — priority, grouping, density, visual
   hierarchy. Does the most important answer arrive first? Sections
-  scannable? Free of decorative filler that displaces signal?
+  scannable?
 - **navigationFlow** — screen-to-screen traversal, back/return paths,
   current-location indication, deep-link consistency. Can the user
   always tell where they are and how to retreat?
@@ -127,29 +227,38 @@ non-waivable — see `generator-prompt.md`.
 - **functionality** — does the artifact satisfy the spec's user need
   and cover the states the spec requires?
 
-## Score anchors
+## What blocks
 
-- `weak` — fails the axis. Distracting flaws, off-target.
-- `acceptable` — meets baseline; no critical flaws but unremarkable.
-- `strong` — clearly above baseline; memorable on this axis.
-- `exceptional` — best-in-class. Use sparingly.
+A finding blocks when the iteration cannot ship with it. Unreachable
+content, a task that cannot be completed, a state the spec requires and
+the screen does not show, a control whose effect is unknowable until it
+is pressed.
+
+An observation that something could be better is not a finding. It goes
+in `proseCritique`, where it informs the next cycle without stopping
+this one. Ordinary is not a defect: an iteration that does the job with
+nothing wrong has an empty `blockingFindings`, and that is the expected
+end of the loop rather than a failure to excel.
 
 ## Layout anti-pattern matching (`lap-*`)
 
-The static loader runs `lap-001..006` regex against iter HTML and
-fills `layoutAntiPatternsDetected[]`. You **must** evaluate `lap-007`
-and `lap-008` semantically and append their IDs when matched.
+The static loader runs the `layout` regex against iter HTML and fills
+`layoutAntiPatternsDetected[]`. You **must** evaluate the `semantic`
+entries yourself and append their IDs when matched.
 
-| ID                              | Scope    | Detection                                  |
-| ------------------------------- | -------- | ------------------------------------------ |
-| `lap-001-saas-dashboard`        | layout   | static regex (sidebar + main + KPI/metric) |
-| `lap-002-card-grid-sidebar`     | layout   | static regex (grid + aside)                |
-| `lap-003-saas-table-tabs`       | layout   | static regex (role="tab" + table)          |
-| `lap-004-bento-grid`            | layout   | static regex (grid-cols-12 + grid-rows-)   |
-| `lap-005-centered-hero`         | layout   | static regex (text-center + h1)            |
-| `lap-006-overcrowded-sidebar`   | layout   | static regex (aside with 10+ links)        |
-| `lap-007-state-not-represented` | semantic | reviewer judgement (criterion below)       |
-| `lap-008-no-back-affordance`    | semantic | reviewer judgement (criterion below)       |
+| ID                              | Scope    | Detection                            | What makes it a defect                        |
+| ------------------------------- | -------- | ------------------------------------ | --------------------------------------------- |
+| `lap-007-state-not-represented` | semantic | reviewer judgement (criterion below) | The screen contract declares the state        |
+| `lap-008-no-back-affordance`    | semantic | reviewer judgement (criterion below) | Nielsen heuristic 3, user control and freedom |
+
+Every entry names what makes it a defect, and that is never this project's
+opinion: a published heuristic, an accessibility criterion, or the contract
+the screen is built to. An entry with no such authority is dropped when the
+registry loads.
+
+A conventional layout is not an entry here. A detection blocks convergence,
+so reporting a familiar shape stops an ordinary product finishing the loop.
+Report what fails, not what is familiar.
 
 ### `lap-007-state-not-represented`
 
@@ -169,33 +278,35 @@ must be a visually obvious and accessible way to return to the prior
 screen (e.g., back button, close icon, breadcrumb). A single Back
 button in the browser is not sufficient for app-like interfaces.
 
-### Cap rule
-
-If `layoutAntiPatternsDetected.length > 0`, cap
-`informationArchitecture` at `acceptable` (cannot be `strong` /
-`exceptional`). The cap applies to both outputs: `scores.*` on the
-per-cycle summary and `ordinalAxes.*` on the per-screen payload.
-
 ## pivotDirective rules
 
-Let `iaLow(r)` be `r.scores.informationArchitecture ∈ {weak,
-acceptable}` and `hasLap(r)` be `r.layoutAntiPatternsDetected.length > 0`.
+Let `open(r)` be the total length of `r.blockingFindings` plus
+`r.layoutAntiPatternsDetected`.
 
-- `iaLow(latest)` AND `iaLow(prior)` AND `iaLow(prior2)` AND
-  `hasLap(latest)` → `pivot` (3-consecutive IA-low + recent layout
-  anti-pattern = structural ceiling).
-- Else if a prior review exists AND ≥ 2 of 4 axes improved vs
-  prior → `continue`.
+- `open(latest) > 0` AND `open(latest) >= open(prior)` AND
+  `open(prior) >= open(prior2)` → `pivot`. Three cycles without
+  progress is a structural ceiling, not a detail.
+- Else if a prior review exists AND `open(latest) < open(prior)` →
+  `continue`.
 - Else → `refine`.
 
-## Prose critique format (200–500 English words, or 600–2500 Japanese/Chinese characters)
+The count is the measure because it is reproducible. Two runs over the
+same evidence agree on how many findings are open; they would not agree
+on whether one iteration read as better than another.
 
-Address: (1) what works on each of the 4 axes, (2) what doesn't,
-(3) structural ceiling if any, (4) concrete IA / flow / state
-suggestion when the directive could be `pivot`. Do not comment on
-brand colors, typefaces, radii, or shadows — locked by DESIGN.md and
+## Prose critique format (at most 500 English words, or 2500 Japanese/Chinese characters)
+
+Address, as far as each applies: (1) what works on each of the 4
+subjects, (2) what doesn't, (3) structural ceiling if any, (4) concrete
+IA / flow / state suggestion when the directive could be `pivot`. Do
+not comment on brand colors, typefaces, radii, or shadows — locked by
+DESIGN.md and
 out of scope.
 
-The character band counts Hiragana, Katakana, and Han only. Write a
-critique in any other script — Korean, Cyrillic, Thai — to the
-200–500 whitespace-separated word band instead.
+**There is no minimum.** A critique that reports one finding and stops
+is complete. Do not write toward a length: prose added to fill a quota
+reads, on the next cycle, as work to do.
+
+The character cap counts Hiragana, Katakana and Han only. A critique in
+any other script — Korean, Cyrillic, Thai — is measured in
+whitespace-separated words.

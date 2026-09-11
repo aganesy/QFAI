@@ -14,10 +14,26 @@
  * whole file rather than guess whenever a value has an unexpected shape: a
  * settings file is the project's own configuration, and a half-understood merge
  * into it is worse than leaving it alone and saying so.
+ *
+ * The decision is taken per group, not per file. A file-wide one would mean
+ * that the moment a project carries any group, every group added afterwards
+ * reaches it no longer — and a project that installed an earlier set is exactly
+ * the one an upgrade is for.
  */
 
 /** Identity of the hook entries seeded here, carried in each entry's spinner label. */
 export const DOCUMENTATION_CLARITY_HOOK_MARKER = "QFAI documentation-clarity reminder";
+
+/**
+ * Identity of the group that restates the implementation rule after a file is
+ * written or edited.
+ *
+ * A second marker rather than a second meaning for the first: the merge decides
+ * per group, and it tells one group from another by the markers its entries
+ * carry. Two groups sharing a marker would be one group to it, so a project
+ * holding either would be told it has both.
+ */
+export const MINIMAL_IMPLEMENTATION_HOOK_MARKER = "QFAI minimal-implementation reminder";
 
 /** Where both the template and the project keep the file, relative to the root. */
 export const CLAUDE_SETTINGS_RELATIVE_PATH = ".claude/settings.json";
@@ -31,7 +47,7 @@ export type HookMergeResult =
       readonly settings: ClaudeSettings;
       readonly events: readonly string[];
     }
-  /** The project already carries the marker, from an earlier run or by hand. */
+  /** The project already carries every group the template declares. */
   | { readonly outcome: "already-present" }
   /** Nothing was changed; `reason` says what could not be read. */
   | { readonly outcome: "unreadable"; readonly reason: string };
@@ -71,7 +87,13 @@ function hooksTable(settings: ClaudeSettings): Record<string, unknown> | null | 
   return isRecord(hooks) ? hooks : null;
 }
 
-/** Whether any entry anywhere under `hooks` already carries the marker. */
+/**
+ * Whether any entry anywhere under `hooks` carries the marker.
+ *
+ * A question about the file, answered for callers that want one. It is not how
+ * the merge decides what to add: a file can carry one group and be missing the
+ * next, and this would say yes to both.
+ */
 export function carriesDocumentationClarityHooks(settings: ClaudeSettings): boolean {
   const hooks = hooksTable(settings);
   if (hooks === undefined || hooks === null) {
@@ -89,6 +111,44 @@ export function carriesDocumentationClarityHooks(settings: ClaudeSettings): bool
     }
   }
   return false;
+}
+
+/**
+ * A hook group's identity for the merge: the `statusMessage` values its entries
+ * carry, sorted, as a string that can be compared.
+ *
+ * Identity rests on the markers rather than on the group's whole content
+ * because the rest of a group is the part a project may reasonably have
+ * touched — the reminder text is prose, and re-appending a group whose wording
+ * someone adjusted would leave the project running two of them. The markers are
+ * the part that says which group this is.
+ *
+ * `null` when the group carries no marker at all, which is a group this merge
+ * cannot recognise on a later run.
+ */
+function groupIdentity(group: unknown): string | null {
+  if (!isRecord(group) || !isUnknownArray(group.hooks)) {
+    return null;
+  }
+  const markers: string[] = [];
+  for (const entry of group.hooks) {
+    if (isRecord(entry) && typeof entry.statusMessage === "string") {
+      markers.push(entry.statusMessage);
+    }
+  }
+  return markers.length === 0 ? null : JSON.stringify([...markers].sort());
+}
+
+/** The identities of the groups already under one event. */
+function carriedIdentities(groups: readonly unknown[]): Set<string> {
+  const carried = new Set<string>();
+  for (const group of groups) {
+    const identity = groupIdentity(group);
+    if (identity !== null) {
+      carried.add(identity);
+    }
+  }
+  return carried;
 }
 
 /** The hook groups the template declares, by event, or `null` when the template is malformed. */
@@ -131,9 +191,6 @@ export function mergeDocumentationClarityHooks(
   if (existing === null) {
     return { outcome: "unreadable", reason: "the project settings file is not a JSON object" };
   }
-  if (carriesDocumentationClarityHooks(existing)) {
-    return { outcome: "already-present" };
-  }
 
   const existingHooks = hooksTable(existing);
   if (existingHooks === null) {
@@ -152,10 +209,30 @@ export function mergeDocumentationClarityHooks(
     if (current !== undefined && !isUnknownArray(current)) {
       return { outcome: "unreadable", reason: `\`hooks.${event}\` is not an array` };
     }
-    mergedHooks[event] = [...(current ?? []), ...structuredClone(groups)];
+    const carried = carriedIdentities(current ?? []);
+    const missing: unknown[] = [];
+    for (const group of groups) {
+      const identity = groupIdentity(group);
+      if (identity === null) {
+        return {
+          outcome: "unreadable",
+          reason: `a \`hooks.${event}\` group in the shipped template carries no status message`,
+        };
+      }
+      if (!carried.has(identity)) {
+        missing.push(structuredClone(group));
+      }
+    }
+    if (missing.length === 0) {
+      continue;
+    }
+    mergedHooks[event] = [...(current ?? []), ...missing];
     events.push(event);
   }
 
+  if (events.length === 0) {
+    return { outcome: "already-present" };
+  }
   merged.hooks = mergedHooks;
   return { outcome: "merged", settings: merged, events };
 }

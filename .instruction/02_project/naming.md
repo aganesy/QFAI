@@ -5,10 +5,6 @@ dependencies: none
 version: 1.0.0
 ---
 
-> **言語指示（厳守）**
->
-> - 報告・出力: 日本語（Plan も含む）
-
 # 命名規約
 
 ## 原則
@@ -32,6 +28,7 @@ version: 1.0.0
   08_Decisions.md
   09_Open-questions.md
   10_delta.md
+  11_Slice-Policy.md
 
 .qfai/specs/spec-XXXX/
   01_Spec.md
@@ -43,7 +40,12 @@ version: 1.0.0
   07_Decisions.md
   08_Open-questions.md
   09_delta.md
+  10_Plan.md
 ```
+
+The two lists above are the required sets `E_SPEC_MISSING_FILESET` reports
+against. A pack carries other files as well — `16_Traceability-ledger.md` and
+`tdd/test-list.md` among them — and they are not part of this gate.
 
 ## ID 形式
 

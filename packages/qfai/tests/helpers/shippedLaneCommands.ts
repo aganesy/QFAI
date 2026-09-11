@@ -1314,11 +1314,19 @@ export const ALLOWED_INIT_CONTENT: ReadonlyMap<string, string> = new Map([
     // (`df81d579…`) byte for byte, which is what makes this a review of five lines rather than a
     // re-blessing of the whole file.
     //
-    // The current digest adds one more line to that same block: the bullet naming
+    // The digest before this one added one line to that same block: the bullet naming
     // `.agents/rules/documentation-clarity.md`, the writing rule the run seeds beside the other
     // masters. Dropping that bullet reproduces `439cbe67…`.
+    //
+    // The digest before this one added one more, on the same footing: the bullet naming
+    // `.agents/rules/minimal-implementation.md`. Derived by running `qfai init` into a temp root
+    // and hashing what it wrote; dropping that bullet reproduces `2a264d5e…`.
+    //
+    // The current digest adds the bullet naming `.agents/rules/interface-clarity.md`, the rule the
+    // same run seeds beside the other masters. Derived the same way, and checked the same way:
+    // dropping that one bullet reproduces `3978847f…` byte for byte.
     ".github/copilot-instructions.md",
-    "2a264d5ee6cfc2d05df27d8bb30a878414b7ea48b07f2315138160b2044181c6",
+    "f3cfb74268079edceea5d97c27b5dfdf4c2b63b72bfa62f16cac756c5590f9a1",
   ],
   // `qfai init` copies this file verbatim, so it is pinned like every other
   // adopter-facing file here — and for one reason none of the others has: it
@@ -1407,16 +1415,32 @@ export const ALLOWED_INIT_CONTENT: ReadonlyMap<string, string> = new Map([
   // `documentation-clarity.md` master that the same run seeds beside them.
   // Removing that line from both files reproduces the previous digests
   // (`04061092…` and `040faf04…`), so this is a review of one line per file.
-  ["AGENTS.md", "a832e27c327ece55e502f6ad50c84f35be5edb2a07bfb1a9e83e9036cdbdd7a5"],
-  ["CLAUDE.md", "20040ab0f55a6ee346af40d1d143a96b38d1c7d541aa649c6042eab99c63a295"],
+  //
+  // Re-pinned for a second bullet in the same block, naming
+  // `.agents/rules/minimal-implementation.md` — the rule the run now seeds
+  // beside the other masters. Derived by running `qfai init` into a temp root
+  // and hashing what it wrote, not read off a failure message, and checked the
+  // way the note above asks: dropping that one bullet reproduces `a832e27c…`
+  // and `20040ab0…` byte for byte.
+  //
+  // Re-pinned for a third, naming `.agents/rules/interface-clarity.md`, seeded
+  // by the same run. Derived and checked the same way: dropping that one bullet
+  // reproduces `22af72dd…` and `3f9ad00f…` byte for byte.
+  ["AGENTS.md", "60340a757d161e7d39cf988c5b222a12964c77759dc486b8162b66e5dad9aa47"],
+  ["CLAUDE.md", "f83493c5ca396a49822bbbf08aa72c451ce5ea24326ec7ebe4fda2c7b5298de5"],
   // Inside `.claude/`, and pinned anyway — see the paragraph above the path set.
-  // These are the hooks that restate the writing rule when a pull request, issue
-  // or review is posted through the GitHub tools, and after a Markdown file is
-  // written. Each entry runs `node` in exec form — no shell, no file reads, no
-  // network — and prints one constant JSON envelope, which
+  // These are the hooks that restate a rule at the moment it applies: the writing
+  // rule when a pull request, issue or review is posted through the GitHub tools
+  // and after a Markdown file is written, and the implementation rule after any
+  // file is written or edited. Each entry runs `node` in exec form — no shell, no
+  // file reads, no network — and prints one constant JSON envelope, which
   // `tests/assets/documentationClarityHooks.test.ts` executes and parses. The
   // bytes are what an adopter's agent runs, so the bytes are the pin.
-  [".claude/settings.json", "b13d4081b4e4e404656858ff2bc365f36887b93321c0003394a89d918f7911d1"],
+  //
+  // Re-pinned for the implementation-rule group. Derived by running `qfai init`
+  // into a temp root and hashing what it wrote; dropping that one group
+  // reproduces `b13d4081…` byte for byte.
+  [".claude/settings.json", "6be452d2cf1e63bb742d699e2e934531e770f87c98d2c79f23bf185b2cbc9786"],
   // Re-derived for the MERGED file, which carries both sides' edits: the three
   // retired `validation.traceability` knobs are gone (`brMustHaveSc`,
   // `scNoTestSeverity`, `orphanContractsPolicy`), the `forbidTestTodoStubs`
@@ -1439,7 +1463,16 @@ export const ALLOWED_INIT_CONTENT: ReadonlyMap<string, string> = new Map([
   // keeps the empty list the template ships. That is also the case the comment
   // calls a fact about the repository rather than about the default, so the pin
   // covers the shipped text and the empty-tree behaviour at once.
-  ["qfai.config.yaml", "b2e38829ba21be13029c5983a7b0dfdaa861c75bbdf8d5ba60e2ac85a2846d26"],
+  //
+  // Re-pinned for the commented `uiux.registries` block, which gives a project
+  // one place to declare the component registries a tool can resolve a name
+  // against. The whole delta is that comment: every key the file sets is
+  // unchanged, and deleting the block reproduces `b2e38829…` byte for byte.
+  //
+  // It ships commented out because a project with no user interface declares
+  // nothing here, and a live empty map would read as a project that had
+  // considered the question and answered none.
+  ["qfai.config.yaml", "543f96466f42d2060c7ff63941b9036bc5694ab6d58b579c6a1a8af08fab6e1b"],
 ]);
 
 /**
@@ -1553,6 +1586,8 @@ export const INERT_DECORATIONS: ReadonlyArray<string> = [
 export const ALLOWED_INIT_SOURCE_ASSETS: ReadonlySet<string> = new Set([
   "root/.agents/rules/distributed-surface.md",
   "root/.agents/rules/documentation-clarity.md",
+  "root/.agents/rules/interface-clarity.md",
+  "root/.agents/rules/minimal-implementation.md",
   "root/.agents/rules/root-additions-policy.md",
   "root/.agents/rules/temporary-files.md",
   "root/.agents/rules/version-discipline.md",

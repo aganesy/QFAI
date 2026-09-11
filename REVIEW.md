@@ -14,7 +14,7 @@ Do not suppress any actionable finding.
 - Import ordering or unused imports
 - Potential typos in strings, comments, or identifiers
 - Minor performance improvements
-- Simplification opportunities
+- Simplification opportunities (see **Findings about excess** below for the shape)
 - Inconsistency with existing codebase patterns
 - Missing error handling or incomplete error messages
 - Type safety improvements (e.g., unnecessary `as` assertions)
@@ -24,6 +24,30 @@ Do not suppress any actionable finding.
 - Regex or pattern contract mismatches between test and production code
 - Cross-file reference errors (broken paths, wrong anchors)
 - Distributed surface leaks (internal spec IDs, internal version markers, schemaVersion fields appearing under paths listed in `packages/qfai/package.json#files`; see `.claude/rules/distributed-surface.md`)
+
+## Findings about excess
+
+A finding about code that should not exist is one line: **where it is, what to
+cut, and what replaces it**. Tag it with the reason.
+
+| Tag      | Means                                                                               | What replaces it      |
+| -------- | ----------------------------------------------------------------------------------- | --------------------- |
+| `delete` | Dead code, unused flexibility, a speculative feature                                | Nothing               |
+| `stdlib` | A hand-rolled thing the standard library ships                                      | Name the function     |
+| `native` | Code or a dependency doing what the platform already does                           | Name the feature      |
+| `yagni`  | An abstraction with one implementation, config nobody sets, a layer with one caller | Inline it             |
+| `shrink` | The same logic, fewer lines                                                         | Show the shorter form |
+
+The ladder these tags read against is
+`.agents/rules/minimal-implementation.md`. It is not restated here.
+
+A finding that names no replacement is not actionable: the author cannot act on
+it and the reviewer cannot be held to it. "This might be more complex than
+necessary, have you considered whether all of this is needed" says neither what
+to cut nor what would stand in its place.
+
+Applies to findings about excess only. Correctness, security and performance
+keep the shape the rest of this document describes.
 
 ## Severity Prefixes
 

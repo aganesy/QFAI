@@ -2,32 +2,22 @@ import { describe, expect, it } from "vitest";
 import {
   FEEL_FIELDS,
   FEEL_FIELD_MAX_WORDS,
-  ORDINAL_AXES,
+  PROSE_CRITIQUE_MAX_CJK_CHARS,
   PROSE_CRITIQUE_MAX_WORDS,
-  PROSE_CRITIQUE_MIN_WORDS,
   REVIEWER_TIME_BUDGET_SEC,
   buildEvaluatorReview,
   countWords,
   parseEvaluatorReview,
   type BuildEvaluatorReviewInput,
   type FeelField,
-  type OrdinalAxis,
 } from "../../../src/core/prototyping/evaluatorReview.js";
-import type { OrdinalScore } from "../../../src/core/prototyping/iteration.js";
-
-const ORDINAL_SCORE_VALUES: OrdinalScore[] = ["weak", "acceptable", "strong", "exceptional"];
 
 const baseInput = (
   overrides: Partial<BuildEvaluatorReviewInput> = {},
 ): BuildEvaluatorReviewInput => ({
   iterIndex: 0,
   reviewerId: "product-surface-reviewer",
-  scores: {
-    informationArchitecture: "acceptable",
-    navigationFlow: "acceptable",
-    usability: "acceptable",
-    functionality: "acceptable",
-  },
+  blockingFindings: ["home: the empty state is not represented"],
   proseCritique: Array(250).fill("word").join(" "),
   layoutAntiPatternsDetected: [],
   designMdViolations: [],
@@ -39,289 +29,78 @@ const baseInput = (
   ...overrides,
 });
 
-describe("ORDINAL_AXES (rename)", () => {
-  it("exposes the 4 new UX axes in fixed order", () => {
-    expect([...ORDINAL_AXES]).toEqual([
-      "informationArchitecture",
-      "navigationFlow",
-      "usability",
-      "functionality",
-    ]);
-  });
-});
-
-describe("buildEvaluatorReview — 4 new axes (TC-3.1.1..7)", () => {
+describe("buildEvaluatorReview — blockingFindings (TC-3.1.1..7)", () => {
   // TC-3.1.1
-  it("accepts a Review with all 4 new axes set to strong", () => {
+  it("accepts a review carrying findings and preserves them", () => {
     const review = buildEvaluatorReview(
       baseInput({
-        scores: {
-          informationArchitecture: "strong",
-          navigationFlow: "strong",
-          usability: "strong",
-          functionality: "strong",
-        },
+        blockingFindings: ["home: the empty state is not represented"],
       }),
     );
-    expect(review.scores.informationArchitecture).toBe("strong");
-    expect(review.scores.navigationFlow).toBe("strong");
-    expect(review.scores.usability).toBe("strong");
-    expect(review.scores.functionality).toBe("strong");
+    expect(review.blockingFindings).toEqual(["home: the empty state is not represented"]);
     expect(review.layoutAntiPatternsDetected).toEqual([]);
     expect(review.designMdViolations).toEqual([]);
   });
 
-  // TC-3.1.2
-  it("rejects the legacy axis name 'originality' (no informationArchitecture key)", () => {
-    expect(() =>
-      buildEvaluatorReview(
-        baseInput({
-          scores: {
-            originality: "strong",
-            navigationFlow: "acceptable",
-            usability: "acceptable",
-            functionality: "acceptable",
-          } as unknown as BuildEvaluatorReviewInput["scores"],
-        }),
-      ),
-    ).toThrow(/scores\.informationArchitecture/);
+  // TC-3.1.2 — the converged shape. Nothing open is the expected end of the
+  // loop, so it has to be constructible.
+  it("accepts a review with no findings", () => {
+    const review = buildEvaluatorReview(baseInput({ blockingFindings: [] }));
+    expect(review.blockingFindings).toEqual([]);
   });
 
   // TC-3.1.3
-  it.each(["designQuality", "craft"])(
-    "rejects the legacy axis name '%s' (missing new axis raises required error)",
-    (legacy) => {
-      const scores: Record<string, OrdinalScore> = {
-        informationArchitecture: "acceptable",
-        navigationFlow: "acceptable",
-        usability: "acceptable",
-        functionality: "acceptable",
-      };
-      // Drop one canonical axis and add the legacy axis name in its place.
-      // The first missing-axis check that fires references one of the canonical axes.
-      delete scores.informationArchitecture;
-      scores[legacy] = "strong";
-      expect(() =>
-        buildEvaluatorReview(
-          baseInput({
-            scores: scores as unknown as BuildEvaluatorReviewInput["scores"],
-          }),
-        ),
-      ).toThrow(/scores\.informationArchitecture/);
-    },
-  );
+  it("preserves the order the reviewer wrote", () => {
+    const findings = ["home: no way back", "settings: the error state is unreachable"];
+    const review = buildEvaluatorReview(baseInput({ blockingFindings: findings }));
+    expect(review.blockingFindings).toEqual(findings);
+  });
 
   // TC-3.1.4
-  it.each([["medium"], ["great"], [""], [null], [undefined], [5]])(
-    "rejects invalid score value %p on each axis",
-    (invalid) => {
-      for (const axis of ORDINAL_AXES) {
-        const scores: Record<OrdinalAxis, OrdinalScore> = {
-          informationArchitecture: "acceptable",
-          navigationFlow: "acceptable",
-          usability: "acceptable",
-          functionality: "acceptable",
-        };
-        (scores as Record<string, unknown>)[axis] = invalid;
-        expect(() =>
-          buildEvaluatorReview(
-            baseInput({
-              scores: scores as unknown as BuildEvaluatorReviewInput["scores"],
-            }),
-          ),
-        ).toThrow(new RegExp(`scores\\.${axis}`));
-      }
-    },
-  );
+  it("copies the array instead of aliasing the caller's", () => {
+    const findings = ["home: no way back"];
+    const review = buildEvaluatorReview(baseInput({ blockingFindings: findings }));
+    findings.push("mutated after the fact");
+    expect(review.blockingFindings).toEqual(["home: no way back"]);
+  });
 
   // TC-3.1.5
-  it("accepts each ordinal score on each of the 4 axes (cartesian)", () => {
-    for (const axis of ORDINAL_AXES) {
-      for (const score of ORDINAL_SCORE_VALUES) {
-        const scores: Record<OrdinalAxis, OrdinalScore> = {
-          informationArchitecture: "acceptable",
-          navigationFlow: "acceptable",
-          usability: "acceptable",
-          functionality: "acceptable",
-        };
-        scores[axis] = score;
-        expect(() => buildEvaluatorReview(baseInput({ scores }))).not.toThrow();
-      }
-    }
+  it.each([["no"], [null], [undefined], [5], [{}]])("rejects a non-array %p", (invalid) => {
+    expect(() =>
+      buildEvaluatorReview(
+        baseInput({
+          blockingFindings: invalid as unknown as BuildEvaluatorReviewInput["blockingFindings"],
+        }),
+      ),
+    ).toThrow(/blockingFindings/);
   });
 
   // TC-3.1.6
-  it.each(["informationArchitecture", "navigationFlow", "usability", "functionality"])(
-    "rejects when axis '%s' key is missing",
-    (axis) => {
-      const scores: Record<string, OrdinalScore> = {
-        informationArchitecture: "acceptable",
-        navigationFlow: "acceptable",
-        usability: "acceptable",
-        functionality: "acceptable",
-      };
-      Reflect.deleteProperty(scores, axis);
+  it.each([[""], ["   "], [null], [undefined], [5]])(
+    "rejects %p as an entry — a finding with no text names nothing",
+    (invalid) => {
       expect(() =>
         buildEvaluatorReview(
           baseInput({
-            scores: scores as unknown as BuildEvaluatorReviewInput["scores"],
+            blockingFindings: [invalid] as unknown as BuildEvaluatorReviewInput["blockingFindings"],
           }),
         ),
-      ).toThrow(new RegExp(`scores\\.${axis}`));
+      ).toThrow(/blockingFindings\[0\]/);
     },
   );
 
   // TC-3.1.7
-  it("accepts mixed cross-axis scores", () => {
-    const review = buildEvaluatorReview(
-      baseInput({
-        scores: {
-          informationArchitecture: "weak",
-          navigationFlow: "strong",
-          usability: "acceptable",
-          functionality: "exceptional",
-        },
-      }),
-    );
-    expect(review.scores.informationArchitecture).toBe("weak");
-    expect(review.scores.functionality).toBe("exceptional");
-  });
-});
-
-describe("buildEvaluatorReview — IA cap on layoutAntiPatternsDetected (TC-3.1.8..15)", () => {
-  // TC-3.1.8
-  it("does not cap when layoutAntiPatternsDetected is empty (IA=exceptional allowed)", () => {
-    const review = buildEvaluatorReview(
-      baseInput({
-        scores: {
-          informationArchitecture: "exceptional",
-          navigationFlow: "exceptional",
-          usability: "exceptional",
-          functionality: "exceptional",
-        },
-        layoutAntiPatternsDetected: [],
-      }),
-    );
-    expect(review.scores.informationArchitecture).toBe("exceptional");
-  });
-
-  // TC-3.1.9
-  it("rejects IA=strong when a layout anti-pattern is detected", () => {
+  it("names the offending index when a later entry is empty", () => {
     expect(() =>
       buildEvaluatorReview(
         baseInput({
-          scores: {
-            informationArchitecture: "strong",
-            navigationFlow: "acceptable",
-            usability: "acceptable",
-            functionality: "acceptable",
-          },
-          layoutAntiPatternsDetected: ["lap-001-saas-dashboard"],
+          blockingFindings: [
+            "home: no way back",
+            "",
+          ] as unknown as BuildEvaluatorReviewInput["blockingFindings"],
         }),
       ),
-    ).toThrow(/informationArchitecture.*acceptable/);
-  });
-
-  // TC-3.1.10
-  it("rejects IA=exceptional when a layout anti-pattern is detected", () => {
-    expect(() =>
-      buildEvaluatorReview(
-        baseInput({
-          scores: {
-            informationArchitecture: "exceptional",
-            navigationFlow: "exceptional",
-            usability: "exceptional",
-            functionality: "exceptional",
-          },
-          layoutAntiPatternsDetected: ["lap-002-card-grid-sidebar"],
-        }),
-      ),
-    ).toThrow(/informationArchitecture/);
-  });
-
-  // TC-3.1.11
-  it("allows IA=acceptable with non-empty layoutAntiPatternsDetected", () => {
-    const review = buildEvaluatorReview(
-      baseInput({
-        scores: {
-          informationArchitecture: "acceptable",
-          navigationFlow: "exceptional",
-          usability: "exceptional",
-          functionality: "exceptional",
-        },
-        layoutAntiPatternsDetected: ["lap-001-saas-dashboard"],
-      }),
-    );
-    expect(review.layoutAntiPatternsDetected).toEqual(["lap-001-saas-dashboard"]);
-  });
-
-  // TC-3.1.12
-  it("allows IA=weak with non-empty layoutAntiPatternsDetected", () => {
-    const review = buildEvaluatorReview(
-      baseInput({
-        scores: {
-          informationArchitecture: "weak",
-          navigationFlow: "acceptable",
-          usability: "acceptable",
-          functionality: "acceptable",
-        },
-        layoutAntiPatternsDetected: ["lap-004-bento-grid"],
-      }),
-    );
-    expect(review.scores.informationArchitecture).toBe("weak");
-  });
-
-  // TC-3.1.13
-  it("does not cap other axes — only informationArchitecture is bounded", () => {
-    const review = buildEvaluatorReview(
-      baseInput({
-        scores: {
-          informationArchitecture: "acceptable",
-          navigationFlow: "exceptional",
-          usability: "exceptional",
-          functionality: "exceptional",
-        },
-        layoutAntiPatternsDetected: ["lap-001-saas-dashboard"],
-      }),
-    );
-    expect(review.scores.navigationFlow).toBe("exceptional");
-    expect(review.scores.usability).toBe("exceptional");
-    expect(review.scores.functionality).toBe("exceptional");
-  });
-
-  // TC-3.1.14
-  it("cap is purely a function of layoutAntiPatternsDetected presence", () => {
-    const okInput = baseInput({
-      scores: {
-        informationArchitecture: "strong",
-        navigationFlow: "acceptable",
-        usability: "acceptable",
-        functionality: "acceptable",
-      },
-      layoutAntiPatternsDetected: [],
-    });
-    expect(() => buildEvaluatorReview(okInput)).not.toThrow();
-    const badInput = { ...okInput, layoutAntiPatternsDetected: ["lap-001-saas-dashboard"] };
-    expect(() => buildEvaluatorReview(badInput)).toThrow(/informationArchitecture/);
-  });
-
-  // TC-3.1.15
-  it("error message lists multiple lap ids when more than one is present", () => {
-    expect(() =>
-      buildEvaluatorReview(
-        baseInput({
-          scores: {
-            informationArchitecture: "strong",
-            navigationFlow: "acceptable",
-            usability: "acceptable",
-            functionality: "acceptable",
-          },
-          layoutAntiPatternsDetected: ["lap-001-saas-dashboard", "lap-004-bento-grid"],
-        }),
-      ),
-    ).toThrow(
-      /lap-001-saas-dashboard.*lap-004-bento-grid|lap-004-bento-grid.*lap-001-saas-dashboard/,
-    );
+    ).toThrow(/blockingFindings\[1\]/);
   });
 });
 
@@ -374,20 +153,15 @@ describe("buildEvaluatorReview — designMdViolations field (TC-3.1.16..20)", ()
   });
 
   // TC-3.1.20
-  it("designMdViolations does NOT cap any axis (no error when IA=exceptional + dmv non-empty)", () => {
+  it("a designMdViolation does not become a blocking finding on its own", () => {
     const review = buildEvaluatorReview(
       baseInput({
-        scores: {
-          informationArchitecture: "exceptional",
-          navigationFlow: "exceptional",
-          usability: "exceptional",
-          functionality: "exceptional",
-        },
+        blockingFindings: [],
         layoutAntiPatternsDetected: [],
         designMdViolations: [{ kind: "color", found: "#000" }],
       }),
     );
-    expect(review.scores.informationArchitecture).toBe("exceptional");
+    expect(review.blockingFindings).toEqual([]);
     expect(review.designMdViolations).toEqual([{ kind: "color", found: "#000" }]);
   });
 });
@@ -401,18 +175,28 @@ describe("buildEvaluatorReview — prose word-count gate (TC-3.1.21..25)", () =>
     expect(review.proseCritique.split(/\s+/).length).toBe(300);
   });
 
-  // TC-3.1.22
-  it("rejects prose with 199 words (lower boundary)", () => {
-    expect(() =>
-      buildEvaluatorReview(baseInput({ proseCritique: Array(199).fill("word").join(" ") })),
-    ).toThrow(/proseCritique must be 200..500 words/);
+  // TC-3.1.22 — the rule has no lower boundary. A critique reporting one
+  // finding is complete, and rejecting it only taught a reviewer to pad.
+  it("accepts prose with 199 words", () => {
+    const review = buildEvaluatorReview(
+      baseInput({ proseCritique: Array(199).fill("word").join(" ") }),
+    );
+    expect(countWords(review.proseCritique)).toBe(199);
   });
 
   // TC-3.1.23
   it("rejects prose with 501 words (upper boundary)", () => {
     expect(() =>
       buildEvaluatorReview(baseInput({ proseCritique: Array(501).fill("word").join(" ") })),
-    ).toThrow(/proseCritique must be 200..500 words/);
+    ).toThrow(/proseCritique 501 words over the 500-word cap/);
+  });
+
+  // The constructor used to carry its own English-only copy of the rule,
+  // so a Japanese critique the on-disk validator accepted threw here.
+  // Both now call the same function.
+  it("accepts a Japanese critique the on-disk validator accepts", () => {
+    const review = buildEvaluatorReview(baseInput({ proseCritique: "あ".repeat(800) }));
+    expect(review.proseCritique).toHaveLength(800);
   });
 
   // TC-3.1.24
@@ -483,11 +267,11 @@ describe("buildEvaluatorReview — auxiliary input checks", () => {
 });
 
 describe("constants", () => {
-  it("PROSE_CRITIQUE_MIN_WORDS is 200", () => {
-    expect(PROSE_CRITIQUE_MIN_WORDS).toBe(200);
-  });
   it("PROSE_CRITIQUE_MAX_WORDS is 500", () => {
     expect(PROSE_CRITIQUE_MAX_WORDS).toBe(500);
+  });
+  it("PROSE_CRITIQUE_MAX_CJK_CHARS is 2500", () => {
+    expect(PROSE_CRITIQUE_MAX_CJK_CHARS).toBe(2500);
   });
   it("FEEL_FIELD_MAX_WORDS is 200", () => {
     expect(FEEL_FIELD_MAX_WORDS).toBe(200);
@@ -523,12 +307,7 @@ const baseReviewerPayload = (overrides: Record<string, unknown> = {}): Record<st
   cycle: 0,
   sessionStatus: "ok",
   retryCount: 0,
-  ordinalAxes: {
-    informationArchitecture: "acceptable",
-    navigationFlow: "acceptable",
-    usability: "acceptable",
-    functionality: "acceptable",
-  },
+  blockingFindings: ["home: the empty state is not represented"],
   impressions: { ...BASE_IMPRESSIONS },
   layoutAntiPatternsDetected: [],
   designMdViolations: [],
@@ -539,10 +318,10 @@ const baseReviewerPayload = (overrides: Record<string, unknown> = {}): Record<st
 
 // QFAI:SPEC-0012:TC-0012-0364
 describe("parseEvaluatorReview — full payload acceptance (TC-0012-0364)", () => {
-  it("accepts a payload with nested ordinalAxes + impressions and the top-level discriminators", () => {
+  it("accepts a payload with blockingFindings, impressions and the top-level discriminators", () => {
     const result = parseEvaluatorReview(
       baseReviewerPayload({
-        layoutAntiPatternsDetected: ["lap-001-saas-dashboard"],
+        layoutAntiPatternsDetected: ["lap-008-no-back-affordance"],
         designMdViolations: [{ kind: "color", found: "#FF00FF" }],
       }),
     );
@@ -551,17 +330,14 @@ describe("parseEvaluatorReview — full payload acceptance (TC-0012-0364)", () =
     expect(result.review.specId).toBe("spec-0012");
     expect(result.review.screenId).toBe("home");
     expect(result.review.sessionStatus).toBe("ok");
-    expect(result.review.ordinalAxes.informationArchitecture).toBe("acceptable");
-    expect(result.review.ordinalAxes.navigationFlow).toBe("acceptable");
-    expect(result.review.ordinalAxes.usability).toBe("acceptable");
-    expect(result.review.ordinalAxes.functionality).toBe("acceptable");
+    expect(result.review.blockingFindings).toEqual(["home: the empty state is not represented"]);
     expect(result.review.impressions.operability.length).toBeGreaterThan(0);
     expect(result.review.impressions.transitionFeel.length).toBeGreaterThan(0);
     expect(result.review.impressions.crossScreenContinuity.length).toBeGreaterThan(0);
     expect(result.review.impressions.userStoryFeel.length).toBeGreaterThan(0);
     expect(result.review.impressions.acceptanceCriteriaFeel.length).toBeGreaterThan(0);
     expect(result.review.impressions.menuReachabilityFeel.length).toBeGreaterThan(0);
-    expect(result.review.layoutAntiPatternsDetected).toEqual(["lap-001-saas-dashboard"]);
+    expect(result.review.layoutAntiPatternsDetected).toEqual(["lap-008-no-back-affordance"]);
     expect(result.review.designMdViolations).toEqual([{ kind: "color", found: "#FF00FF" }]);
   });
 });
@@ -581,23 +357,14 @@ describe("parseEvaluatorReview — rejection with named field path (TC-0012-0365
     },
   );
 
-  it.each(ORDINAL_AXES as readonly OrdinalAxis[])(
-    "rejects when ordinalAxes.'%s' is missing",
-    (axis) => {
-      const axes: Partial<Record<OrdinalAxis, "acceptable">> = {
-        informationArchitecture: "acceptable",
-        navigationFlow: "acceptable",
-        usability: "acceptable",
-        functionality: "acceptable",
-      };
-      Reflect.deleteProperty(axes, axis);
-      const payload = baseReviewerPayload({ ordinalAxes: axes });
-      const result = parseEvaluatorReview(payload);
-      expect(result.ok).toBe(false);
-      if (result.ok) return;
-      expect(result.errors).toContain(`missing field: ordinalAxes.${axis}`);
-    },
-  );
+  it("rejects when blockingFindings is missing", () => {
+    const payload = baseReviewerPayload();
+    Reflect.deleteProperty(payload, "blockingFindings");
+    const result = parseEvaluatorReview(payload);
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.errors).toContain("missing field: blockingFindings");
+  });
 
   it("rejects when an unknown top-level key is present", () => {
     const result = parseEvaluatorReview(baseReviewerPayload({ extraneousKey: "nope" }));
@@ -617,23 +384,6 @@ describe("parseEvaluatorReview — rejection with named field path (TC-0012-0365
     expect(result.errors.some((e) => /unknown field: impressions\.extraImpression/.test(e))).toBe(
       true,
     );
-  });
-
-  it("rejects when an unknown nested key under ordinalAxes is present", () => {
-    const result = parseEvaluatorReview(
-      baseReviewerPayload({
-        ordinalAxes: {
-          informationArchitecture: "acceptable",
-          navigationFlow: "acceptable",
-          usability: "acceptable",
-          functionality: "acceptable",
-          extraAxis: "strong",
-        },
-      }),
-    );
-    expect(result.ok).toBe(false);
-    if (result.ok) return;
-    expect(result.errors.some((e) => /unknown field: ordinalAxes\.extraAxis/.test(e))).toBe(true);
   });
 
   it("rejects when input is not a JSON object", () => {
@@ -701,11 +451,18 @@ describe("parseEvaluatorReview — rejection with named field path (TC-0012-0365
     }
   });
 
-  it("rejects when ordinalAxes is not a record", () => {
-    const result = parseEvaluatorReview(baseReviewerPayload({ ordinalAxes: "nope" }));
+  it("rejects when blockingFindings is not an array", () => {
+    const result = parseEvaluatorReview(baseReviewerPayload({ blockingFindings: "nope" }));
     expect(result.ok).toBe(false);
     if (result.ok) return;
-    expect(result.errors).toContain("ordinalAxes must be an object");
+    expect(result.errors).toContain("blockingFindings must be an array of strings");
+  });
+
+  it("rejects a blockingFindings entry that is not a string", () => {
+    const result = parseEvaluatorReview(baseReviewerPayload({ blockingFindings: [5] }));
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.errors.some((e) => /blockingFindings\[0\]/.test(e))).toBe(true);
   });
 
   it("rejects when impressions is not a record", () => {

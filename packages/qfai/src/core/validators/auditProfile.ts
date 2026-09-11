@@ -14,9 +14,8 @@
  */
 
 export {
-  PRIMARY_TASKS_BAND_MIN,
-  PRIMARY_TASKS_BAND_MAX,
-  PRIMARY_TASKS_BAND_LABEL,
+  PRIMARY_TASKS_MAX,
+  PRIMARY_TASKS_MAX_LABEL,
   resolveAuditConfig,
   mapSeverity,
   findingToIssue,

@@ -27,7 +27,7 @@
   - waiver handling
   - design-md / design-md-lock / design-system-mirror validators (DCON-030 / DCON-031 / DCON-032)
   - prototyping evidence v3 validator (4 UX axes ordinal + layoutAntiPatternsDetected + designMdViolations + pivotDirective schema)
-  - layoutAntiPatternsDetected schema validator (`lap-001..008` whitelist)
+  - layoutAntiPatternsDetected schema validator (the identifiers declared in `packages/qfai/assets/validators/layoutAntiPatterns.json`)
   - designMdViolations schema validator (`{category: color|font|radius|shadow, expected, found, location}` shape)
   - `findDesignMdViolations(html, designMd)` purity / determinism contract
   - SaaS-package validate profile (REQ-0166 validate side): `qfai validate --profile saas-package` gates on prototyping-profile PASS + DCON-005 attestation + CLI-HANDOFF schema; ATDD / implement-class gates SKIPPED with `D-SAAS-PACKAGE-VERIFY-SKIPPED` (info)
@@ -97,8 +97,8 @@
 - REQ-0025: `qfai validate --fail-on error` の DCON-030 が root `DESIGN.md` の存在 / 構造 (color / typography / radius / shadow token tables) を検証する
 - REQ-0026: DCON-031 が `.qfai/contracts/design/DESIGN.md.lock.yaml#sha256` と on-disk `DESIGN.md` sha256 の一致を検証する
 - REQ-0027: DCON-032 が `.qfai/contracts/design/design-system.yaml` の token tables が `DESIGN.md` のそれと byte-equivalent であることを検証する
-- REQ-0028: prototypingEvidenceV3 validator が `.qfai/evidence/prototyping/iter-NN/review.json` の 4 UX axes (informationArchitecture / navigationFlow / usability / functionality) ordinal score / 200..500 word prose critique / pivotDirective enum を schema 検証する
-- REQ-0029: `layoutAntiPatternsDetected` 配列が `lap-001-orphan-page` から `lap-008-no-back-affordance` の whitelist 外トークンを含む場合、validator は `QFAI-PROT-002` を error 重大度で報告する
+- REQ-0028: prototypingEvidenceV3 validator が `.qfai/evidence/prototyping/iter-NN/review.json` の 4 UX axes (informationArchitecture / navigationFlow / usability / functionality) ordinal score / prose critique / pivotDirective enum を schema 検証する。prose critique length is a cap whose unit is selected by the text, with no lower bound — see `DR-0277`.
+- REQ-0029: `layoutAntiPatternsDetected` が `packages/qfai/assets/validators/layoutAntiPatterns.json` の宣言にないトークンを含む場合、validator は `QFAI-PROT-002` を error 重大度で報告する
 - REQ-0030: `designMdViolations` 配列が `{category: "color"|"font"|"radius"|"shadow", expected: string, found: string, location: string}` 形状のみを許容する
 - REQ-0031: `findDesignMdViolations(html, designMd)` は I/O / clock 依存を持たず、同一入力に対し同一出力を返す pure function である
 - REQ-0166: `qfai validate --profile saas-package` PASSes on prototyping-profile + DCON-005 design-system attestation + CLI-HANDOFF schema; ATDD / implement-class gates SKIPPED with `D-SAAS-PACKAGE-VERIFY-SKIPPED` (info) naming each skip (certify side owned by spec-0014)

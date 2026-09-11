@@ -117,11 +117,27 @@ export type QfaiUiuxAuditConfig = {
 
 export type QfaiUiuxConfig = {
   platform?: string;
+  /**
+   * Component registries the project can procure from, as name to URL
+   * template. The shape mirrors the `registries` map a `components.json`
+   * already carries, so a project that has one restates it rather than
+   * translating it.
+   *
+   * Which registry is primary is prose, and lives in
+   * `.qfai/assistant/catalog/tech.md`. Nothing here ranks them.
+   */
+  registries?: Record<string, string>;
   designTokensDir?: string;
   htmlMockTimeout?: number;
   qualityProfile?: "strict" | "high" | "default";
   requireResearchSummary?: boolean;
   competitive_refs_min?: number;
+  /**
+   * Minimum complete component-catalogue references a UI-bearing pack must
+   * register. Absent means the count is not gated; entries that are
+   * registered are still held to the same three fields.
+   */
+  catalogue_refs_min?: number;
   warning_as_error_override?: string[];
   renderEvidence?: RenderEvidenceConfig;
   audit?: QfaiUiuxAuditConfig;
@@ -159,7 +175,7 @@ export type QfaiPrototypingConfig = {
    *   - `convergence` (default): every prototyping gate applies at the
    *     declared severity (today's behavior).
    *   - `exploration`: medium gate relaxation — soft-rubric gates
-   *     (axes-exceptional, design-compliance drift) downgrade error →
+   *     (loop completion, design-compliance drift) downgrade error →
    *     warning. Schema / path / license (exit 66) gates stay hard
    *     error.
    *
@@ -1217,6 +1233,20 @@ function normalizeUiux(
       );
     }
   }
+
+  if (raw.catalogue_refs_min !== undefined) {
+    if (
+      typeof raw.catalogue_refs_min === "number" &&
+      Number.isInteger(raw.catalogue_refs_min) &&
+      raw.catalogue_refs_min >= 0
+    ) {
+      result.catalogue_refs_min = raw.catalogue_refs_min;
+    } else {
+      issues.push(
+        configIssue(configPath, "uiux.catalogue_refs_min must be an integer of 0 or more."),
+      );
+    }
+  }
   if (raw.warning_as_error_override !== undefined) {
     if (
       Array.isArray(raw.warning_as_error_override) &&
@@ -1232,6 +1262,12 @@ function normalizeUiux(
       );
     }
   }
+  if (raw.registries !== undefined) {
+    const registries = normalizeUiuxRegistries(raw.registries, configPath, issues);
+    if (registries) {
+      result.registries = registries;
+    }
+  }
   if (raw.renderEvidence !== undefined) {
     const renderEvidence = normalizeRenderEvidence(raw.renderEvidence, configPath, issues);
     if (renderEvidence) {
@@ -1243,6 +1279,41 @@ function normalizeUiux(
     if (audit) {
       result.audit = audit;
     }
+  }
+  return Object.keys(result).length > 0 ? result : undefined;
+}
+
+/**
+ * A registry entry resolves one component name, so the template has to say
+ * where the name goes. A URL without the placeholder resolves nothing and is
+ * the typo this catches; everything else about the URL is the registry's
+ * business, including its scheme, because a private one may sit on localhost.
+ */
+function normalizeUiuxRegistries(
+  raw: unknown,
+  configPath: string,
+  issues: Issue[],
+): Record<string, string> | undefined {
+  if (!isRecord(raw)) {
+    issues.push(configIssue(configPath, "uiux.registries must be an object."));
+    return undefined;
+  }
+  const result: Record<string, string> = {};
+  for (const [name, url] of Object.entries(raw)) {
+    if (typeof url !== "string" || url.trim().length === 0) {
+      issues.push(configIssue(configPath, `uiux.registries.${name} must be a non-empty string.`));
+      continue;
+    }
+    if (!url.includes("{name}")) {
+      issues.push(
+        configIssue(
+          configPath,
+          `uiux.registries.${name} must contain the {name} placeholder, or it resolves no component.`,
+        ),
+      );
+      continue;
+    }
+    result[name] = url;
   }
   return Object.keys(result).length > 0 ? result : undefined;
 }

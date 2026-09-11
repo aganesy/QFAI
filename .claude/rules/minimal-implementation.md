@@ -1,0 +1,1 @@
+../../.agents/rules/minimal-implementation.md

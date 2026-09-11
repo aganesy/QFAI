@@ -95,14 +95,14 @@
 - EX-Ref: EX-0012-0110
 - AC-Refs: AC-0012-0028
 - Test file: `packages/qfai/tests/core/prototyping/iteration.test.ts`
-- Verify `shouldStop([iter])` returns `"axes-exceptional"` when the latest iter has all 4 UX axes `exceptional`, `layoutAntiPatternsDetected.length === 0`, and `designMdViolations.length === 0`.
+- Verify `shouldStop([iter])` returns `"converged"` when the latest iter has `blockingFindings.length === 0`, `layoutAntiPatternsDetected.length === 0`, and `designMdViolations.length === 0`.
 
 ## TC-0012-0320
 
 - EX-Ref: EX-0012-0111
 - AC-Refs: AC-0012-0024
 - Test file: `packages/qfai/tests/core/prototyping/iteration.test.ts`
-- Verify `shouldStop([iter])` returns `null` when all 4 UX axes are `exceptional` but `layoutAntiPatternsDetected: ["lap-001-orphan-page"]` is non-empty.
+- Verify `shouldStop([iter])` returns `null` when `layoutAntiPatternsDetected: ["lap-007-state-not-represented"]` is non-empty.
 
 ## TC-0012-0321
 
@@ -167,7 +167,7 @@
 - EX-Ref: EX-0012-0113
 - AC-Refs: AC-0012-0028
 - Test file: `packages/qfai/tests/core/prototyping/iteration.test.ts`
-- Verify convergence is blocked when `designMdViolations.length > 0` even if all 4 axes are `exceptional` and `layoutAntiPatternsDetected: []`.
+- Verify convergence is blocked when `designMdViolations.length > 0` even with `blockingFindings: []` and `layoutAntiPatternsDetected: []`.
 
 ## TC-0012-0330
 
@@ -182,7 +182,7 @@
 - EX-Ref: EX-0012-0111
 - AC-Refs: AC-0012-0025
 - Test file: `packages/qfai/tests/core/validators/layoutAntiPatterns.test.ts`
-- Verify `layoutAntiPatternsDetected[]` schema enforces the `lap-001..008` whitelist; unknown tokens raise `QFAI-PROT-025`.
+- Verify `layoutAntiPatternsDetected[]` schema accepts only identifiers the registry declares; a token it does not declare raises `QFAI-PROT-002`.
 
 ## TC-0012-0332
 
@@ -458,7 +458,7 @@
 - AC-Refs: AC-0012-0042
 - Type: unit
 - Test file: `packages/qfai/tests/core/prototyping/iteration.test.ts`
-- Verify global convergence requires AND across every spec × screen pair: when 2 of 3 pairs are `exceptional` on all 4 axes and the 3rd is `strong` on one axis, `shouldStop` returns `null`; when all 3 pairs are `exceptional` (axes + lap=0 + designMdViolations=0), `shouldStop` returns `"axes-exceptional"`.
+- Verify global convergence requires AND across every spec × screen pair: when 2 of 3 pairs have all three arrays empty and the 3rd carries one blocking finding, `shouldStop` returns `null`; when all 3 pairs have all three arrays empty, `shouldStop` returns `"converged"`.
 
 ## TC-0012-0368
 
@@ -1001,7 +1001,7 @@
 - AC-Refs: AC-0012-0053
 - Type: integration
 - Test file: `packages/qfai/tests/integration/prototyping/tailwindContractConvergence.test.ts`
-- Verify NFR-0102: with the v1.9.1 generator-prompt + scanner pair, the canonical fixture pack converges within 3 cycles on the p95 lane. Asserts `iterations.length ≤ 3 AND stopReason === "axes-exceptional"`. Integration-level because it spans iterate + scanner + generator-prompt SSOT pair.
+- Verify NFR-0102: with the v1.9.1 generator-prompt + scanner pair, the canonical fixture pack converges within 3 cycles on the p95 lane. Asserts `iterations.length ≤ 3 AND stopReason === "converged"`. Integration-level because it spans iterate + scanner + generator-prompt SSOT pair.
 
 ## TC-0012-0435
 
@@ -1033,7 +1033,7 @@
 - AC-Refs: AC-0012-0057
 - Type: unit
 - Test file: `packages/qfai/tests/unit/core/prototyping/proseCritique/countWords.cjk.test.ts`
-- Verify OQ-0105 (Intl.Segmenter + OR-fallback): Japanese-only fixture (1200 chars, no whitespace) passes; English fixture (350 words) continues to pass with no regression; out-of-band Japanese (3000 chars) error text contains the count form ("characters"), band ("600..2500"), and actual count (3000). Uses `new Intl.Segmenter('ja', { granularity: 'word' })`; absence of the global is gracefully caught (Node ≥ 16 guarantees it; fallback diagnostic emitted otherwise).
+- Verify the unit selection and the cap: a Japanese-only fixture (1200 chars, no whitespace) passes, an English fixture (350 words) passes, and an over-cap Japanese critique (3000 chars) is rejected with error text naming the count form ("characters"), the cap ("2500") and the actual count (3000). An over-cap English critique is measured in words, not characters, which is what selecting the unit rather than accepting either one buys.
 
 ## TC-0012-0439
 
@@ -1209,7 +1209,7 @@
 - AC-Refs: AC-0012-0057
 - Type: unit
 - Test file: `packages/qfai/tests/unit/core/prototyping/proseCritique/countWords.boundary.test.ts`
-- Verify REQ-0012-0059 boundary: 4 `it.each` rows cover `199 words` (fail), `200 words` (pass), `500 words` (pass), `501 words` (fail) for English path AND `599 chars` (fail), `600 chars` (pass), `2500 chars` (pass), `2501 chars` (fail) for CJK path.
+- Verify REQ-0012-0059 boundary: 4 `it.each` rows cover `199 words` (pass), `200 words` (pass), `500 words` (pass), `501 words` (fail) for the word-measured path AND `599 chars` (pass), `600 chars` (pass), `2500 chars` (pass), `2501 chars` (fail) for the character-measured path. Only the upper edge of each unit rejects; the rows below the old floor pass, and so do a one-sentence critique and an empty string.
 
 ## TC-0012-0461
 
@@ -1233,7 +1233,7 @@
 - AC-Refs: AC-0012-0061
 - Type: integration
 - Test file: `packages/qfai/tests/integration/cli/commands/prototypingIterate.stopReason.test.ts`
-- Verify REQ-0012-0063 stopReason coverage: 4 `it` blocks exercise each `stopReason` value (`axes-exceptional` / `max-iterations` / `license-verify-fail` / `input-error`); each fixture writes the corresponding top-level field and passes `qfai validate --profile prototyping`.
+- Verify REQ-0012-0063 stopReason coverage: 4 `it` blocks exercise each `stopReason` value (`converged` / `max-iterations` / `license-verify-fail` / `input-error`); each fixture writes the corresponding top-level field and passes `qfai validate --profile prototyping`.
 
 ## TC-0012-0464
 
@@ -1257,7 +1257,7 @@
 - AC-Refs: AC-0012-0066
 - Type: unit
 - Test file: `packages/qfai/tests/unit/cli/commands/prototypingIterate.blockedSummary.categories.test.ts`
-- Verify NFR-0103 category-name stability: snapshot test pins the exact identifier set `["designMdViolations", "layoutAntiPatternsDetected", "axes-below-exceptional"]`; additive-only invariant enforced via the snapshot mismatch on accidental rename.
+- Verify NFR-0103 category-name stability: snapshot test pins the exact identifier set `["designMdViolations", "layoutAntiPatternsDetected", "blockingFindings"]`; additive-only invariant enforced via the snapshot mismatch on accidental rename.
 
 ## TC-0012-0467
 

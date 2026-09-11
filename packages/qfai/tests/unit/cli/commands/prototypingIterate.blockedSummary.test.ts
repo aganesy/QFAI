@@ -20,13 +20,8 @@ describe("buildBlockedSummary: literal header + 3 category lines", () => {
   it("emits the literal `[BLOCKED] exit-64 prevented by:` header followed by 3 category lines", () => {
     const text = buildBlockedSummary({
       designMdViolations: [{ kind: "color", found: "#fff" }],
-      layoutAntiPatternsDetected: ["lap-001"],
-      scores: {
-        informationArchitecture: "acceptable",
-        navigationFlow: "exceptional",
-        usability: "exceptional",
-        functionality: "exceptional",
-      },
+      layoutAntiPatternsDetected: ["lap-006"],
+      blockingFindings: ["home: the empty state is not represented"],
     });
     const lines = text.split("\n");
     expect(lines[0]).toBe(BLOCKED_SUMMARY_HEADER);
@@ -42,37 +37,27 @@ describe("buildBlockedSummary: literal header + 3 category lines", () => {
         { kind: "color", found: "#000" },
       ],
       layoutAntiPatternsDetected: ["lap-009"],
-      scores: {
-        informationArchitecture: "weak",
-        navigationFlow: "exceptional",
-        usability: "exceptional",
-        functionality: "exceptional",
-      },
+      blockingFindings: ["home: the empty state is not represented"],
     });
     expect(lines.map((l) => l.category)).toEqual([
       "designMdViolations",
       "layoutAntiPatternsDetected",
-      "axes-below-exceptional",
+      "blockingFindings",
     ]);
     // designMdViolations: first offender surfaced as `color=#fff`.
     expect(lines[0]?.text).toContain("color=#fff");
     // layoutAntiPatternsDetected: first offender surfaced as the code.
     expect(lines[1]?.text).toContain("lap-009");
-    // axes-below-exceptional: first non-exceptional axis named.
-    expect(lines[2]?.text).toContain("informationArchitecture");
-    expect(lines[2]?.text).toContain("weak");
+    // blockingFindings: the first line the reviewer wrote is named.
+    expect(lines[2]?.text).toContain("home: the empty state is not represented");
+    expect(lines[2]?.count).toBe(1);
   });
 
   it("emits zero-count category lines when there is no offender (no top: prefix)", () => {
     const lines = buildBlockedCategoryLines({
       designMdViolations: [],
       layoutAntiPatternsDetected: [],
-      scores: {
-        informationArchitecture: "weak",
-        navigationFlow: "weak",
-        usability: "exceptional",
-        functionality: "exceptional",
-      },
+      blockingFindings: ["home: no way back", "settings: the error state is unreachable"],
     });
     expect(lines[0]?.text).toBe("0 designMdViolations");
     expect(lines[1]?.text).toBe("0 layoutAntiPatternsDetected");
@@ -85,7 +70,7 @@ describe("BLOCKED_CATEGORIES set (additive-only invariant)", () => {
     expect([...BLOCKED_CATEGORIES]).toEqual([
       "designMdViolations",
       "layoutAntiPatternsDetected",
-      "axes-below-exceptional",
+      "blockingFindings",
     ]);
   });
 });

@@ -7,7 +7,7 @@
  * without re-running the iterate loop.
  *
  * Exit codes:
- *   0  converged (stopReason === "axes-exceptional" AND
+ *   0  converged (stopReason === "converged" AND
  *      acceptedIterationIndex is a non-null number)
  *   2  not converged (any other state, including missing prototyping.json)
  *
@@ -62,10 +62,10 @@ async function seedPrototypingJson(root: string, body: Record<string, unknown>):
 }
 
 describe("--check-convergence CLI flag wiring (REQ-0012-0078)", () => {
-  it("Test 1: cycle 9 + converged loop (axes-exceptional + accepted) -> exit 0 + report", async () => {
+  it("Test 1: cycle 9 + converged loop (converged + accepted) -> exit 0 + report", async () => {
     const root = await newTempDir();
     await seedPrototypingJson(root, {
-      stopReason: "axes-exceptional",
+      stopReason: "converged",
       acceptedIterationIndex: 3,
       iterations: [{ index: 0 }, { index: 1 }, { index: 2 }, { index: 3 }],
     });
@@ -78,14 +78,14 @@ describe("--check-convergence CLI flag wiring (REQ-0012-0078)", () => {
       });
       expect(exit).toBe(0);
       const out = captured.lines.join("");
-      expect(out).toMatch(/stopReason:\s*axes-exceptional/);
+      expect(out).toMatch(/stopReason:\s*converged/);
       expect(out).toMatch(/acceptedIterationIndex:\s*3/);
     } finally {
       captured.restore();
     }
   });
 
-  it("axes-exceptional with a negative acceptedIterationIndex is NOT converged", async () => {
+  it("converged with a negative acceptedIterationIndex is NOT converged", async () => {
     // The peek and the sealed-loop guard must agree on what counts as an
     // accepted iteration. `refuseWhenLoopConverged` treats a negative index as
     // a corrupt / pre-format record and lets `--cycle N` proceed; reporting
@@ -93,7 +93,7 @@ describe("--check-convergence CLI flag wiring (REQ-0012-0078)", () => {
     // file, and they would choose the wrong recovery path.
     const root = await newTempDir();
     await seedPrototypingJson(root, {
-      stopReason: "axes-exceptional",
+      stopReason: "converged",
       acceptedIterationIndex: -1,
       iterations: [{ index: 0 }],
     });
@@ -179,7 +179,7 @@ describe("--check-convergence CLI flag wiring (REQ-0012-0078)", () => {
   it("Test 5: --cycle 5 --check-convergence reports the requested cycle (not 9)", async () => {
     const root = await newTempDir();
     await seedPrototypingJson(root, {
-      stopReason: "axes-exceptional",
+      stopReason: "converged",
       acceptedIterationIndex: 5,
       iterations: [
         { index: 0 },
@@ -220,7 +220,7 @@ describe("--check-convergence CLI flag wiring (REQ-0012-0078)", () => {
     //    runPrototypingIterate entry directly with cycle omitted.
     const root = await newTempDir();
     await seedPrototypingJson(root, {
-      stopReason: "axes-exceptional",
+      stopReason: "converged",
       acceptedIterationIndex: 7,
       iterations: [{ index: 7 }],
     });
@@ -235,7 +235,7 @@ describe("--check-convergence CLI flag wiring (REQ-0012-0078)", () => {
       expect(exit).toBe(0);
       const out = captured.lines.join("");
       expect(out).toMatch(/cycle\s*9/);
-      expect(out).toMatch(/stopReason:\s*axes-exceptional/);
+      expect(out).toMatch(/stopReason:\s*converged/);
     } finally {
       captured.restore();
     }
@@ -244,7 +244,7 @@ describe("--check-convergence CLI flag wiring (REQ-0012-0078)", () => {
   it("Test 7: --check-convergence does NOT invoke iterate (no iter-NN/iterate-plan.json written)", async () => {
     const root = await newTempDir();
     await seedPrototypingJson(root, {
-      stopReason: "axes-exceptional",
+      stopReason: "converged",
       acceptedIterationIndex: 4,
       iterations: [{ index: 4 }],
     });
@@ -266,7 +266,7 @@ describe("--check-convergence CLI flag wiring (REQ-0012-0078)", () => {
     expect(afterBytes).toBe(beforeBytes);
     // b) No iter-NN dir for the peeked cycle.
     const iterDir = path.join(root, ".qfai/evidence/prototyping/iter-09");
-    let iterExists = false;
+    let iterExists: boolean;
     try {
       const s = await stat(iterDir);
       iterExists = s.isDirectory();
@@ -280,7 +280,7 @@ describe("--check-convergence CLI flag wiring (REQ-0012-0078)", () => {
         root,
         `.qfai/evidence/prototyping/iter-${String(i).padStart(2, "0")}/iterate-plan.json`,
       );
-      let planExists = false;
+      let planExists: boolean;
       try {
         await stat(planPath);
         planExists = true;

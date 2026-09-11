@@ -365,7 +365,7 @@ jobs:
           # body, which `verificationBodies` pins and a reviewer reads in the diff.
           sha256sum -c --quiet <<'PINNED_INPUTS'
           fff07d335dc0d74e7c2e6eca7683abd21ae87f7b68e2e39e83467647cc89e180  scripts/check-toolchain-action.sh
-          2258db7bd182cd27471b832386fd239326bd74ce30f6338c67c20ad967c5781b  .github/pinned-bytes.txt
+          9b719766301392c6225928b4a0a77b346833f25fbf3135e7337a1d1f83cbc149  .github/pinned-bytes.txt
           bb649cb2684f9db02bdbe3872f029571a8e52c4c6e2ab95e8c8fcf804370af41  .github/lifecycle-manifests.txt
           43d2586975550f5062b4af23112223068cc5676f0906c04fce2bc231df471a9e  .github/command-files.txt
           PINNED_INPUTS
@@ -502,8 +502,32 @@ jobs:
       # gets un-required or "fixed" by dropping the pin. Same step, same reason, as the `test` job's.
       - name: Build qfai (the floor lane runs the slices that read dist/)
         run: pnpm -C packages/qfai build
+      # One process pool, the whole suite, on the slowest lane — and the only lane
+      # that has ever exited 1 with every test passing. The runner reports progress
+      # from each fork to the single main process over an RPC call with a sixty-second
+      # budget; when that call does not come back the worker throws, the throw is
+      # counted as an unhandled error, and the run fails having broken nothing.
+      #
+      # The budget itself is not reachable: `ForksOptions` carries no timeout,
+      # `createForksRpcOptions` sets none, and the default lives in the RPC library.
+      # So the lever is the contention rather than the deadline. The declared ten
+      # forks are 2.5x the cores of this runner, which is what leaves the main
+      # process unable to answer in time.
+      #
+      # Taking the count from the runner is also faster. Whole suite, four cores:
+      #
+      #   ten forks    299 s wall   collect 343 s   tests 1972 s
+      #   four forks   269 s wall   collect 113 s   tests  743 s
+      #
+      # The collect and test figures are summed across forks, so their collapse is
+      # the oversubscription: at ten forks most of each fork's measured time is spent
+      # waiting for a core. Fewer forks is quieter AND quicker, so this buys the
+      # headroom at no cost.
+      #
+      # `QFAI_TEST_MAX_WORKERS` is the override `vitest.knobs.ts` declares for exactly
+      # this. The declared starting value is untouched: this lane states its own.
       - name: Run the package test suite on the floor
-        run: pnpm -C packages/qfai test
+        run: QFAI_TEST_MAX_WORKERS="$(nproc)" pnpm -C packages/qfai test
 
   # ── 4. Tests (matrix: test slices) ──────────────────────────────
   test:
