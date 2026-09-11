@@ -38,6 +38,16 @@ Skill-specific examples:
 - hard-required inputs absent at cycle 0 (brand intent — see the
   hard-required bucket under `## Default Autopilot Policy`)
 
+## Inputs Priority (Preflight)
+
+When unsure, read inputs in this order:
+
+- P1: `.qfai/assistant/constitution/*`
+- P2: `.qfai/assistant/manifest/agent-routing.yml` + `.qfai/assistant/manifest/review-profiles.yml` + `.qfai/assistant/catalog/*`; from `.qfai/assistant/manifest/agent-catalog.yml` read the acting `orchestrator`'s and each routed role's entry (`owned_artifacts` / `tool_profile` / `permission_profile` / `specialization_tags`), not the whole file — its `developer_instructions` bodies mirror the agent cards (`.qfai/assistant/constitution/constitution.md` Article III)
+- P3: root `DESIGN.md` + `.qfai/contracts/design/DESIGN.md.lock.yaml` — the locked brand identity, which the loop refuses to run against a mismatched hash
+- P4: the rest of `## Required Contracts` (`.qfai/contracts/ui/*.yaml`, `.qfai/specs/spec-*/{01_Spec.md, 03_Acceptance-Criteria.md}`) and this skill's `## Required References`
+- P5: evidence from earlier cycles under `.qfai/evidence/prototyping/`
+
 ## Goal
 
 One final prototype satisfying the spec under a locked brand identity, with all four UX axes `exceptional`, no layout anti-patterns, and no DESIGN.md violations.
