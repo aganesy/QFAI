@@ -109,8 +109,8 @@ describe("a declared contrast floor governs", () => {
   });
 
   it("expands a three-digit hex rather than discarding the pair", () => {
-    // `#999` is what an author types; dropping it would leave the clause
-    // reading only machine-generated markup.
+    // Three-digit hex is what an author types; dropping it would leave the
+    // clause reading only machine-generated markup.
     const html = `<body><p style="color:#999;background-color:#fff">text</p></body>`;
     expect(contrast(html, designMd())).toHaveLength(1);
   });
