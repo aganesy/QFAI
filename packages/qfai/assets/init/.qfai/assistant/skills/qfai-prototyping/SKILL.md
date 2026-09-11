@@ -58,7 +58,7 @@ One final prototype satisfying the spec under a locked brand identity, with all 
 - `references/generator-prompt.md` — generator system prompt + Tailwind
   CDN + DESIGN.md token injection rules
 - `references/reviewer-prompt.md` — reviewer schema, 4 UX axes,
-  layout anti-patterns (`lap-001..006` static regex + `lap-007..008` semantic),
+  layout anti-patterns (static regex and reviewer-judged entries),
   `designMdViolations`, pivot rules
 - `references/handoff.md` — post-loop `design-system.yaml` (DESIGN.md
   token mirror) and `prototype-handoff.yaml`

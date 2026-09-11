@@ -51,7 +51,7 @@ type ReviewerPayload = {
     acceptanceCriteriaFeel: string;
     menuReachabilityFeel: string;
   };
-  layoutAntiPatternsDetected: string[]; // lap-001..lap-008 ids
+  layoutAntiPatternsDetected: string[]; // ids from the layout anti-pattern registry
   designMdViolations: {
     // closed too: `kind` + `found` only, no extra key per element
     kind: "color" | "font" | "radius" | "shadow";
