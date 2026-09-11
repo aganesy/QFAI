@@ -71,6 +71,24 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **The update bot stops offering releases the declared Node floor cannot run**
+  (#1522). Dependency updates merge on a green `ci-pass` and nothing else, which
+  works because that check runs this repository against the new dependency. It
+  cannot judge one narrowing: a release that raises its own `engines.node` above
+  the floor declared here. Every lane runs on the newest Node the range allows,
+  and the one lane pinned to the floor runs the package test suite rather than the
+  lint set, so such a release goes green and lands — and the narrowing surfaces
+  later as a local failure for whoever is on the oldest supported Node.
+
+  `markdownlint-cli2@0.23.2` is the measured case: it declares `>=22` against a
+  floor of `>=20.19.0`, and its update reached a passing check.
+
+  The bot now filters by the declared constraints, against the floor the published
+  package promises. This is not a pin and nothing stops receiving fixes —
+  `markdownlint-cli2@0.22.1` declares `>=20` and is still offered. The floor is
+  read from the package manifest rather than written twice, and a test holds the
+  two together.
+
 - **A user story is declared by its entry, not by a sentence naming it**
   (#1512). The declared set was the entries plus every loose `US-NNNN` in
   `02_User-stories.md`, so any prose that named an id declared it.
