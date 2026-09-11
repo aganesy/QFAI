@@ -3365,3 +3365,129 @@ describe("QFAI-TDDLIST-014", () => {
     });
   });
 });
+
+/**
+ * The backfill shape `execution-ledger.md` sanctions, and the gate that reads it.
+ *
+ * The contract says that where a `done` row's original run is genuinely gone,
+ * the loss is itself the thing to record: an evidence entry stating what was run
+ * and that its output was not retained. `QFAI-TDDLIST-008` then judged that entry
+ * against a completed-evidence set that includes three seals and two review packs.
+ * A gone run produced no review pack, so there was no seal to record and none that
+ * could honestly be written — the sanctioned shape and the gate could not both be
+ * satisfied, and the backfill was unreachable.
+ *
+ * These rows fix the boundary in both directions: what a backfilled entry stops
+ * owing, and what it still owes.
+ */
+describe("a backfilled entry whose run output was not retained", () => {
+  const POINTER =
+    "RED:fail GREEN:pass ORACLE:proved REV:abc1230 -> `.qfai/evidence/implement-spec-0001.md#tdd-0001`";
+
+  /** Everything a re-run of the test can produce, and nothing a review would. */
+  function backfilledEntry(extra = "", retained = "no"): string {
+    return `# Evidence
+
+### TDD-0001
+
+- TDD-ID: TDD-0001
+- Layer: Unit
+- Test file: tests/unit/sample.test.ts
+- Selector: sample
+- TC-ref: TC-0001
+- Round 1: Revision: abc1230000000000000000000000000000000000
+- Round 1: RED revision: def4560000000000000000000000000000000000
+- RED failure mode: assertion
+- Round 1: RED command: npm test
+- Round 1: RED result: 1 failed
+- Round 1: GREEN command: npm test
+- Round 1: GREEN result: 1 passed
+- Oracle proof: equivalent-mutant — TC-0001 permits any non-empty result
+- Refactor verify command: npm test
+- Refactor verify result: 1 passed
+- Checkpoint verification command: npm test
+- Checkpoint verification result: PASS
+- Run output retained: ${retained}
+- Backfill note: re-run at this revision; the original cycle's output was not retained
+${extra}`;
+  }
+
+  const run = async (entry: string): Promise<Array<{ code: string; message: string }>> => {
+    let issues: Array<{ code: string; message: string }> = [];
+    await withProject(async (root) => {
+      issues = await runIssuesOn(root, ledger([{ status: "done", evidence: POINTER }]), {
+        ".qfai/evidence/implement-spec-0001.md": entry,
+      });
+    });
+    return issues;
+  };
+
+  it("is accepted without the reviewer-pack and seal fields", async () => {
+    const issues = await run(backfilledEntry());
+    expect(
+      issues.filter((issue) => issue.code === "QFAI-TDDLIST-008"),
+      "the sanctioned shape must be reachable",
+    ).toEqual([]);
+  });
+
+  it("would not be accepted without the declaration", async () => {
+    // Falsifiability for the row above: the same entry, minus the one line that
+    // declares the loss, is the case the gate has always rejected.
+    const issues = await run(backfilledEntry("", "yes"));
+    const unresolved = issues.find((issue) => issue.code === "QFAI-TDDLIST-008");
+    expect(unresolved, "an ordinary entry still owes the full set").toBeDefined();
+    expect(unresolved?.message).toContain("Spec review pack seal");
+  });
+
+  it("reads only the exact declaration, not anything that mentions retention", async () => {
+    // The switch is a value, not a topic. Prose that happens to discuss the run's
+    // output must not exempt a row from the verdicts.
+    const issues = await run(backfilledEntry("", "partially, see the note"));
+    expect(
+      issues.some((issue) => issue.code === "QFAI-TDDLIST-008"),
+      "only `no` declares the loss",
+    ).toBe(true);
+  });
+
+  it("still owes everything a re-run produces", async () => {
+    // The exemption covers what a gone run cannot yield, and nothing else.
+    for (const field of [
+      "- RED failure mode: assertion",
+      "- Refactor verify result: 1 passed",
+      "- Checkpoint verification result: PASS",
+      "- Selector: sample",
+    ]) {
+      const issues = await run(backfilledEntry().replace(`${field}\n`, ""));
+      const unresolved = issues.find((issue) => issue.code === "QFAI-TDDLIST-008");
+      expect(unresolved, `dropping "${field}" must still fail`).toBeDefined();
+    }
+  });
+
+  it("owes a note saying what was run and what was lost", async () => {
+    const issues = await run(
+      backfilledEntry().replace(
+        "- Backfill note: re-run at this revision; the original cycle's output was not retained\n",
+        "",
+      ),
+    );
+    const unresolved = issues.find((issue) => issue.code === "QFAI-TDDLIST-008");
+    expect(unresolved, "a declared loss with no account of it is not a record").toBeDefined();
+    expect(unresolved?.message).toContain("Backfill note");
+  });
+
+  it("is reported, so the exemption is counted rather than silent", async () => {
+    // `done` is read as reviewed. A row exempt from the verdicts must not be
+    // indistinguishable, in the output an operator reads, from one that has them.
+    const issues = await run(backfilledEntry());
+    const reported = issues.find((issue) => issue.code === "QFAI-TDDLIST-019");
+    expect(reported, "a silent exemption is one nobody reviews").toBeDefined();
+    expect(reported?.message).toContain("cannot be verified from artifacts");
+  });
+
+  it("says nothing about an entry that carries its verdicts", async () => {
+    // Over-correction pin: the report must key on the declaration, not fire on
+    // every completed row.
+    const issues = await run(backfilledEntry("", "yes"));
+    expect(issues.some((issue) => issue.code === "QFAI-TDDLIST-019")).toBe(false);
+  });
+});
