@@ -47,6 +47,19 @@
  * `generator-prompt.md#output-layout--two-trees-two-shapes`; this file and
  * that prompt are an SSOT-sync pair (see `../validators/promptScannerPairs.ts`).
  *
+ * The judged set is the values a document states, never their provenance.
+ * These scanners read `<style>` bodies, body-scoped inline `style="..."`
+ * attributes and `class="..."` attributes out of the HTML they are handed,
+ * and nothing in that surface records where the markup was authored. Markup
+ * transposed from a component catalogue is therefore judged exactly as
+ * hand-written markup is: it passes once its palette classes are re-bound to
+ * `DESIGN.md` tokens, and it fails on `bg-blue-500` whoever typed it. One
+ * authoring path escapes the scan entirely — a stylesheet behind a `<link>`,
+ * whose href is never fetched, so no declaration inside it is ever judged.
+ * That gap is closed on the authoring side rather than here:
+ * `generator-prompt.md` bans the external stylesheet and permits the
+ * transposition, and as the paired halves of that SSOT the two move together.
+ *
  * The capture fan-out is not the only writer of the scanned tree:
  * `--emit-skeletons` also writes `<screenId>.html` into the SAME
  * `.qfai/evidence/prototyping/iter-00/` directory (`iterationDir(0)`), not

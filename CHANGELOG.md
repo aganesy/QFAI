@@ -4,6 +4,28 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ## [Unreleased]
 
+### Changed
+
+- **The prototyping envelope bans runtime dependencies, not markup** (#1479).
+  `generator-prompt.md` opened its envelope constraints with "No component
+  library beyond Tailwind + Lucide", which also refused transposing a block
+  from a component catalogue — an operation that installs nothing.
+
+  The real constraint is the line beside it: one self-contained file loaded
+  from a CDN, which has no package manager to run an install with. The clause
+  now says that, and names the one authoring path the gate genuinely cannot
+  see — CSS behind a `<link>`, whose href is never fetched, so a literal
+  inside it is drift nobody reports.
+
+  It also states the permission plainly: transposing a catalogue block and
+  re-binding its palette classes to `DESIGN.md` tokens is the expected way to
+  build a screen. `designMdViolations.ts` judges the values a document states
+  and has no way to read where the markup came from, so a transposed block
+  passes once `bg-blue-500` becomes `bg-primary`. Both halves of the
+  scanner / prompt pair now say so, and
+  `designMdViolationsTransposition.test.ts` runs a catalogue block through the
+  gate in both bindings.
+
 ### Fixed
 
 - **A concurrency guard that passed because the filesystem undid what it
