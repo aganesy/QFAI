@@ -592,12 +592,12 @@ describe("assets guardrails", () => {
       // The re-scan guarantee is scoped to the CONVERGENCE stop:
       // `prototypingIterate` only calls
       // `recomputeFinalIterDesignMdViolations` when `shouldStop()`
-      // returned "axes-exceptional", so a max-iterations stop must not be
+      // returned "converged", so a max-iterations stop must not be
       // advertised as re-scanned. `certify` is what closes that path.
       expect(generatorRef).toMatch(/\*\*convergence\*\* stop/);
       expect(generatorRef).toMatch(/re-scanned before the stop\s+is honoured/);
       expect(generatorRef).toMatch(/\*\*max-iterations\*\* stop skips that re-scan/);
-      // `allFourAxesExceptional` is not what its name says: it also requires
+      // `iterationConverged` is not what its name says: it also requires
       // `layoutAntiPatternsDetected.length === 0` and
       // `designMdViolations.length === 0`. A prompt that defines the stop as
       // the four scores alone leaves the generator unable to explain why a

@@ -815,12 +815,7 @@ describe("report", () => {
             {
               index: 0,
               commitSha: "a".repeat(40),
-              scores: {
-                informationArchitecture: "acceptable",
-                navigationFlow: "acceptable",
-                usability: "acceptable",
-                functionality: "acceptable",
-              },
+              blockingFindings: ["home: the empty state is not represented"],
               proseCritique: VALID_PROSE_CRITIQUE,
               layoutAntiPatternsDetected: [],
               designMdViolations: [],
@@ -890,12 +885,7 @@ describe("report", () => {
             {
               index: 0,
               commitSha: "a".repeat(40),
-              scores: {
-                informationArchitecture: "acceptable",
-                navigationFlow: "acceptable",
-                usability: "acceptable",
-                functionality: "acceptable",
-              },
+              blockingFindings: ["home: the empty state is not represented"],
               proseCritique: VALID_PROSE_CRITIQUE,
               layoutAntiPatternsDetected: [],
               designMdViolations: [],

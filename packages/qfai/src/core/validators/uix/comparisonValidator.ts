@@ -31,8 +31,8 @@ export async function validateExplorationArtifacts(
   const issues: Issue[] = [];
   // The legacy `33_exploration_rubric.md` and `34_evaluator_calibration.md`
   // sidecars were removed when DESIGN.md became the brand SSOT and the
-  // evaluator axes were fixed in `core/prototyping/evaluatorReview.ts`
-  // (`ORDINAL_AXES`). Validating discussion packs against those deleted
+  // review contract moved to `core/prototyping/evaluatorReview.ts`.
+  // Validating discussion packs against those deleted
   // template files would fail every freshly-generated pack from the
   // current workflow.
   const reviewBundlePath = path.join(root, "uiux", "50_review_input_bundle.md");
