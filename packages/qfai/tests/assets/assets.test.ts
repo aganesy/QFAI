@@ -604,7 +604,7 @@ describe("assets guardrails", () => {
       expect(generatorRef).toMatch(
         /`blockingFindings`, `layoutAntiPatternsDetected` and\s+`designMdViolations`/,
       );
-      expect(generatorRef).toMatch(/one\s+surviving `lap-\*` keeps the loop running/);
+      expect(generatorRef).toMatch(/one\s+surviving `lap-\*` keeps the loop\s+running/);
       // And the re-scan is not a proof of inspection.
       // `recomputeFinalIterDesignMdViolations` returns `[]` for an ENOENT
       // directory and `continue`s past a file it cannot stat or read, so an
