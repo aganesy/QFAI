@@ -1251,7 +1251,13 @@ function buildBlockedSummaryInputFromRecord(
   for (const v of dmvRaw) {
     if (!isRecord(v)) continue;
     const kind = v.kind;
-    if (kind !== "color" && kind !== "font" && kind !== "radius" && kind !== "shadow") {
+    if (
+      kind !== "color" &&
+      kind !== "font" &&
+      kind !== "radius" &&
+      kind !== "shadow" &&
+      kind !== "contrast"
+    ) {
       continue;
     }
     const found = typeof v.found === "string" ? v.found : "";

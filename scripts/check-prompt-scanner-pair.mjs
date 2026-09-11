@@ -38,12 +38,14 @@ const PROMPT_REL =
  * in lock-step with `packages/qfai/src/core/validators/promptScannerPairs.ts`
  * (PROMPT_SCANNER_PAIRS). The script does not require the source file
  * at runtime — it just names the clauses for the operator. The pair
- * tracks every Tailwind compliance clause (color / font / radius /
- * shadow); the path-pair semantics of this guard are clause-agnostic
- * (touching either half without the other is drift regardless of
- * which clause the diff actually modifies).
+ * tracks every compliance clause the scanner applies to a capture
+ * (color / font / radius / shadow / contrast); the path-pair semantics
+ * of this guard are clause-agnostic (touching either half without the
+ * other is drift regardless of which clause the diff actually
+ * modifies).
  */
-const TRACKED_CLAUSES = "color-literal-ban|font-family-ban|radius-literal-ban|shadow-rgba-ban";
+const TRACKED_CLAUSES =
+  "color-literal-ban|font-family-ban|radius-literal-ban|shadow-rgba-ban|contrast-floor";
 
 function parseArgs(argv) {
   const out = { base: undefined, changed: undefined };

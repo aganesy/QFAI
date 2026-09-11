@@ -55,4 +55,13 @@ export const PROMPT_SCANNER_PAIRS: readonly PromptScannerPair[] = [
     // Prompt forbids raw box-shadow declarations outside DESIGN.md.
     promptTokens: ["box-shadow:"],
   },
+  {
+    clause: "contrast-floor",
+    // Scanner enumerates `"contrast"` as a DesignMdViolation kind.
+    scannerTokens: ['"contrast"'],
+    // Prompt names the declared floor the gate reads, so a generator
+    // pairs each foreground with the background it is drawn on rather
+    // than leaving the ratio uncheckable.
+    promptTokens: ["contrast_ratio_min"],
+  },
 ];

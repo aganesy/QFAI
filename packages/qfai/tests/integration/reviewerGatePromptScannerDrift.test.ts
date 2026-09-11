@@ -123,13 +123,20 @@ describe("TC-0015-0019: Reviewer Gate emits R-PROMPT-SCANNER-DRIFT with 3-part j
     expect(findings[0]?.message).toMatch(/un-paired=/);
   });
 
-  it("PROMPT_SCANNER_PAIRS manifest enumerates all 4 prototyping compliance clauses (color/font/radius/shadow)", () => {
-    // CHG-005 Phase 1 follow-up: the manifest must cover every
-    // DesignMdViolation kind enumerated by the scanner (color / font /
-    // radius / shadow) — not only the proof-of-concept color clause.
+  it("PROMPT_SCANNER_PAIRS manifest enumerates every compliance clause the scanner applies", () => {
+    // The manifest must cover every DesignMdViolation kind the scanner
+    // enumerates — not only the proof-of-concept color clause. A kind added
+    // without its entry is a gate the generator prompt never learns about, so
+    // the generator keeps writing captures that now fail.
     const clauses = PROMPT_SCANNER_PAIRS.map((p) => p.clause).sort();
     expect(clauses).toEqual(
-      ["color-literal-ban", "font-family-ban", "radius-literal-ban", "shadow-rgba-ban"].sort(),
+      [
+        "color-literal-ban",
+        "contrast-floor",
+        "font-family-ban",
+        "radius-literal-ban",
+        "shadow-rgba-ban",
+      ].sort(),
     );
   });
 
