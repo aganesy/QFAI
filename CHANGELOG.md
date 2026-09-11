@@ -6,6 +6,17 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **The shipped-document version guard read every triple of numbers as a
+  version** (#1551). `WCAG 3.3.2` failed the same check as `qfai 1.11.1`, so an
+  init-template document could not cite an accessibility criterion by its
+  number — the one form of it a reader can look up.
+
+  A version is now a number something names as one: a leading `v`, or a tool
+  or package name in front of it. A bare triple is left alone, which is what a
+  published standard's clause number is. The guard still rejects a real pin,
+  and a second case asserts both columns so the narrowing cannot be widened
+  back by accident.
+
 - **Every layout anti-pattern names what makes it a defect** (#1484). An
   entry now carries a `source`, and the loader drops one that does not: a
   published heuristic, an accessibility criterion, or the contract the screen
