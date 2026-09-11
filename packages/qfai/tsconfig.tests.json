@@ -61,6 +61,7 @@
     "tests/assets/coverageDepthMatrixSections.test.ts",
     "tests/assets/decisionRecordIdGrammar.test.ts",
     "tests/assets/deltaTemplateParses.test.ts",
+    "tests/assets/designDirectionInterview.test.ts",
     "tests/assets/finalChecklistGateParity.test.ts",
     "tests/assets/gateCommandHome.test.ts",
     "tests/assets/implementCheckpointVerification.test.ts",

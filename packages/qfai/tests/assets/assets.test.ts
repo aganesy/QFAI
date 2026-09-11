@@ -2869,7 +2869,12 @@ describe("assets guardrails", () => {
     expect(content).not.toContain("backward compatible");
 
     expect(content).toMatch(/planner-first|exploration-first/i);
-    expect(content).toMatch(/do not select a single visual winner/i);
+    // Planner-first governs the screen explorations, which the prototype loop
+    // ranks by iterating. It never governed the brand direction: the user picks
+    // the theme here because no later stage asks them, and a rule reading "no
+    // visual winner" without that carve-out forbids the one ask that exists.
+    expect(content).toMatch(/carry the screen explorations unranked/i);
+    expect(content).toMatch(/brand direction is the exception/i);
   });
 
   it("artifact rules and SKILL.md share namespaced-only semantics for prototyping.yaml", async () => {
