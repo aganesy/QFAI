@@ -1,6 +1,6 @@
 # 01 Context
 
-<!-- UX-INTENT: If UI-bearing, see root DESIGN.md for brand intent and product context -->
+<!-- UX-INTENT: If UI-bearing, record brand intent and product context here and in 04_Sources.md -->
 
 ## UI-bearing Classification
 
@@ -16,7 +16,7 @@ Notes:
 
 - `primary_surface` is a classification field. Valid values: `web|mobile|desktop|cli|mixed|non-ui`.
 - `non-ui` is only valid when `ui_bearing: false`. It is a classification value, not a prototyping surface.
-- `cli` is a UI-bearing surface. When classified as `cli`, set `ui_bearing: true`. `cli` is not a visual-prototyping surface, so a **cli-only** pack — `primary_surface: cli` with no `web`/`mobile`/`desktop`/`mixed` entry in `secondary_surfaces` — does not author root `DESIGN.md` (see `references/ui-bearing-playbook.md#visual-prototyping-surfaces-vs-cli`). A visual `secondary_surfaces` entry still requires it.
+- `cli` is a UI-bearing surface. When classified as `cli`, set `ui_bearing: true`. `cli` is not a visual-prototyping surface, so a **cli-only** pack — `primary_surface: cli` with no `web`/`mobile`/`desktop`/`mixed` entry in `secondary_surfaces` — gets no root `DESIGN.md` (see `references/ui-bearing-playbook.md#visual-prototyping-surfaces-vs-cli`). A visual `secondary_surfaces` entry still requires one.
 - Prototyping **execution** surfaces (used in `prototyping.yaml`) are a strict subset: `web|mobile|desktop|mixed`.
 - `cli` and `non-ui` are classification-only values and never appear in `prototyping.yaml`. `/qfai-prototyping` rejects them, so a cli-only pack emits none.
 

@@ -48,7 +48,7 @@ const sddExecutionPlaybookPath = path.join(
 // Shared vocabulary between the matrix and the Reviewer Gate templates. The
 // matrix wraps the phrase across two lines, so match on whitespace not a space.
 const EXPLORATION_REFERENCE_PHRASE =
-  /exploration references\s+framed as \*\*deviate-from\*\* inputs/i;
+  /competitor references\s+framed as \*\*deviate-from\*\* inputs/i;
 
 // The retired completion conditions the matrix used to carry. The matrix body
 // still names these sidecars to declare them forbidden, so their presence is
@@ -282,16 +282,17 @@ describe("discussion skill template integration", () => {
     const matrix = await readFile(completionMatrixPath, "utf-8");
     const cliSection = matrix.split(/^## /m).find((section) => section.startsWith("CLI Packs"));
     expect(cliSection).toBeDefined();
-    expect(cliSection).toMatch(/No root `DESIGN\.md` required/i);
+    expect(cliSection).toMatch(/no root `DESIGN\.md`/i);
     const uiBearingConditions = collectOrderedList(
       matrix.split(/^## /m).find((section) => section.startsWith("UI-bearing Packs")) ?? "",
     );
     expect(uiBearingConditions).toMatch(/Visual-prototyping surfaces/i);
 
     // SKILL.md states the same requirement independently; if it still demands
-    // root DESIGN.md for every UI-bearing pack the carve-out is unreachable.
+    // brand answers from every UI-bearing pack the carve-out is unreachable.
     const skill = await readFile(skillPath, "utf-8");
-    expect(skill).toMatch(/Root `DESIGN\.md` is required only on the visual-prototyping surfaces/);
+    expect(skill).toMatch(/authored by `\/qfai-sdd` Phase 0/);
+    expect(skill).toMatch(/the brand questions do not apply to it/);
     expect(skill).toMatch(/skip for cli-only and non-ui targets/);
 
     // `route` remains a required field for every surface
@@ -416,10 +417,10 @@ describe("discussion skill template integration", () => {
     }
   });
 
-  // Half a carve-out is worse than none: if the Reviewer Gate still demands a
-  // root DESIGN.md from `cli`, the pack discussion just exempted is bounced at
-  // review instead of at completion.
-  it("Reviewer Gate と review bundle が cli pack を DESIGN.md 要求から外している", async () => {
+  // Root DESIGN.md is written at `/qfai-sdd` Phase 0, after discussion ends.
+  // A discussion review line that asks for it can be satisfied by no pack at
+  // all, so the gates check the direction record the pack does produce.
+  it("Reviewer Gate と review bundle が DESIGN.md ではなく記録された設計方針を見ている", async () => {
     const gatePaths = [
       path.join(templateBase, "templates", "14_Review-Request.md"),
       path.join(templateBase, "templates", "review", "review_request.md"),
@@ -429,14 +430,21 @@ describe("discussion skill template integration", () => {
     for (const gatePath of gatePaths) {
       const body = await readFile(gatePath, "utf-8");
       const name = path.basename(gatePath);
-      // Every DESIGN.md-bearing checklist line must carry the exemption.
-      const designLines = body
-        .split("\n")
-        .filter((line) => /^[-|]/.test(line) && line.includes("DESIGN.md"));
-      expect(designLines.length, `${name} has no DESIGN.md checklist line`).toBeGreaterThan(0);
-      for (const line of designLines) {
-        expect(line, `${name}: unconditional DESIGN.md requirement -> ${line}`).toMatch(
-          /cli-only|visual-prototyping/i,
+      const checklist = body.split("\n").filter((line) => /^[-|]/.test(line));
+
+      // The positive half: dropping the brand lines outright would leave the
+      // pack's own design record unreviewed, and this test passing. The line
+      // also has to name a surface, since a cli-only pack records none.
+      const directionLines = checklist.filter(
+        (line) =>
+          line.includes("04_Sources.md") && /cli-only|visual-prototyping|UI-bearing/i.test(line),
+      );
+      expect(directionLines.length, `${name} reviews no design direction`).toBeGreaterThan(0);
+
+      // The negative half: no line may demand the artifact itself.
+      for (const line of checklist) {
+        expect(line, `${name}: discussion gate still requires DESIGN.md -> ${line}`).not.toContain(
+          "DESIGN.md",
         );
       }
     }
@@ -562,7 +570,7 @@ describe("discussion skill template integration", () => {
       for (const pattern of RETIRED_CONCEPT_PATTERNS) {
         expect(content).not.toMatch(pattern);
       }
-      expect(content).toMatch(/DESIGN\.md/);
+      expect(content).toMatch(/04_Sources\.md/);
       expect(content).toMatch(/unranked/i);
       expect(content).toMatch(/canonical `uiux\/` family/i);
       expect(content).toMatch(/forbidden legacy sidecar/i);

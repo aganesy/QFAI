@@ -4,6 +4,25 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ## [Unreleased]
 
+### Changed
+
+- **Root `DESIGN.md` is authored where it is frozen** (#1472). `/qfai-sdd`
+  Phase 0 now writes the file if it is missing, from the design direction the
+  discussion pack recorded; `/qfai-discussion` interviews for that direction
+  and records it, and writes nothing outside its own pack.
+
+  Phase 0 used to stop and send the user back to `/qfai-discussion` for a file
+  it then froze, so the brand was decided one skill before the gate that
+  checks it. The interview questions stay in
+  `qfai-discussion/references/design-dna-intake.md`; the mapping from answer
+  to field moves to the new `qfai-sdd/references/design-md-authoring.md`,
+  beside the archetype catalog.
+
+  Discussion's completion and review gates now check the two reference
+  registries in `04_Sources.md` — the input Phase 0 reads — instead of a file
+  that does not exist yet. A cli-only pack is unaffected: it records no brand
+  direction and gets no `DESIGN.md`.
+
 ### Fixed
 
 - **Every layout anti-pattern names what makes it a defect** (#1484). An

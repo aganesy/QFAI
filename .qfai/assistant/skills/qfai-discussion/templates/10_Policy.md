@@ -1,6 +1,6 @@
 # 10 Policy
 
-<!-- UX-INTENT: If UI-bearing, see root DESIGN.md for design policy alignment (brand SSOT) -->
+<!-- UX-INTENT: If UI-bearing, align design policy with the direction recorded in 04_Sources.md -->
 
 ## Security Policy
 
