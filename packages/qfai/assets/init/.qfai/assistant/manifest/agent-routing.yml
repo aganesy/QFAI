@@ -94,12 +94,22 @@ routing:
         # Phase 2 Slice work inside this span, after Phase 0 froze the
         # contracts. Span membership is a floor, not an exclusive assignment.
         mandatory_agents: [solution-architect, test-design-analyst, requirements-analyst]
+        # The condition for `product-experience-architect` is not free judgement
+        # and does not live here: it joins exactly when the TARGET SPEC is
+        # UI-bearing, per `skills/qfai-sdd/SKILL.md` `Stage minimum roles`,
+        # which reads the surface union `/qfai-prototyping` resolves. It is the
+        # spec's surface that decides, never which files the run edited — this
+        # skill authors the contracts that define the screens. This key says
+        # which agent may join, never whether it may be skipped.
         conditional_agents: [qa-strategist, product-experience-architect]
         parallel_groups: []
         blocking_agents: [solution-architect]
         rerun_policy: changed-scope-dependents
       - id: review
         mandatory_agents: [completion-reviewer]
+        # `product-surface-reviewer` fires on the same target-spec condition as
+        # `product-experience-architect` in `design` above, so a UI-bearing
+        # target that owed the architect owes the reviewer too.
         conditional_agents: [architecture-reviewer, product-surface-reviewer, qa-gatekeeper]
         parallel_groups: []
         blocking_agents: [completion-reviewer]

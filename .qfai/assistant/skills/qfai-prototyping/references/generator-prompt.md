@@ -187,6 +187,28 @@ Authored forms caught:
   strips them before scanning. A literal `box-shadow:` value or an
   `rgba(...)` slot next to one of them is still caught.
 
+### 5. contrast floor
+
+Text must meet `DESIGN.md.accessibility.contrast_ratio_min` against the
+background it sits on, or WCAG AA where the pack declares no floor.
+
+The gate reads a pair from any declaration block that states both a text
+colour and a background — a rule body inside `<style>`, or one inline
+`style="..."` attribute — resolving `:root` tokens first. So a block
+setting `color:` without a `background-color:` is judged against
+nothing, which is not permission: the colour it inherits still has to
+carry the ratio, and the reviewer walks it.
+
+- Pair every foreground with the background it is actually drawn on,
+  in the same block, so the ratio is checkable.
+- Pick both from `DESIGN.md.visual.colors`. A pair of tokens that fails
+  the declared floor is a defect in the palette, not a licence to write
+  a literal.
+- A pair the gate cannot read is not judged: a named colour, `hsl()`,
+  the space-separated `rgb(r g b)` form, a value carrying alpha, or a
+  shorthand with more than a colour in it. Prefer `#rrggbb` and
+  `rgb(r, g, b)` so the check binds.
+
 ### Markup shown as sample text
 
 The gate reads class attributes with a regular expression rather than a

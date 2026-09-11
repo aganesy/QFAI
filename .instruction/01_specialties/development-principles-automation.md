@@ -5,10 +5,6 @@ dependencies: [development-principles-checklist.md, development-principles-metri
 version: 1.0.0
 ---
 
-> **言語指示（厳守）**
->
-> - 報告・出力: 日本語（Plan も含む）
-
 # 品質自動化ガイド
 
 開発原則の測定・自動化で見るポイント。

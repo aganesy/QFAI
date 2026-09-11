@@ -142,7 +142,13 @@ export const FEEL_FIELDS = [
 
 export type FeelField = (typeof FEEL_FIELDS)[number];
 
-const VIOLATION_KINDS: ReadonlySet<string> = new Set(["color", "font", "radius", "shadow"]);
+const VIOLATION_KINDS: ReadonlySet<string> = new Set([
+  "color",
+  "font",
+  "radius",
+  "shadow",
+  "contrast",
+]);
 
 export type EvaluatorReview = {
   readonly iterIndex: number;
@@ -206,7 +212,7 @@ function validateDesignMdViolations(input: BuildEvaluatorReviewInput): void {
     }
     if (typeof entry.kind !== "string" || !VIOLATION_KINDS.has(entry.kind)) {
       throw new Error(
-        `buildEvaluatorReview: designMdViolations[${i}].kind must be one of color|font|radius|shadow (got ${String(entry.kind)})`,
+        `buildEvaluatorReview: designMdViolations[${i}].kind must be one of color|font|radius|shadow|contrast (got ${String(entry.kind)})`,
       );
     }
     if (typeof entry.found !== "string") {
@@ -505,7 +511,7 @@ function pushDmvErrors(
     const kindValue = entry.kind;
     if (typeof kindValue !== "string" || !isDesignMdViolationKind(kindValue)) {
       errors.push(
-        `designMdViolations[${i}].kind must be one of color|font|radius|shadow (got ${String(kindValue)})`,
+        `designMdViolations[${i}].kind must be one of color|font|radius|shadow|contrast (got ${String(kindValue)})`,
       );
       continue;
     }

@@ -20,6 +20,23 @@
 - Test runner: <test runner>
 - Lint / format: <lint and formatter>
 
+## Frontend
+
+Leave this out for a project with no user interface.
+
+- CSS framework: `<e.g. Tailwind, vanilla CSS, ...>`
+- Component source: `<the catalogue components are taken from>`
+- Adopted theme: `<the published theme the tokens resolve from>`
+
+Every stage reads this to answer "what do we procure from". Without it,
+an instruction to use the project's design system names nothing, and a
+screen gets hand-drawn because that is the only option left.
+
+The machine-readable half is `uiux.registries` in `qfai.config.yaml`: the
+registries a tool can resolve a component name against. This section says
+which one is primary and what the look comes from; that one says where to
+fetch.
+
 ## Dependencies (runtime)
 
 - <dependency 1>

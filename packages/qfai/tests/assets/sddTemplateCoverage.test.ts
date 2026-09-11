@@ -136,16 +136,19 @@ describe("qfai-sdd ships a template for every required spec file", () => {
     it(`${tree}: the delta templates state their multi-run layout`, async () => {
       // `/qfai-sdd` re-runs against an existing spec, but the templates were
       // single-shot, so operators invented dated `## Triage — <date>` headings.
-      // `QFAI-TRIAGE-*` binds to the first `## Triage` only, and every row under
-      // a duplicate heading is therefore never checked. The templates must state
-      // the per-run shape themselves.
+      // That trailer is read by no Triage validator and every row under it goes
+      // unchecked, while a parenthesised round is graded like any other section.
+      // The templates must state that grammar themselves, and ship one heading
+      // of each kind so a first run starts from the shape it describes.
       for (const rel of ["spec/09_delta.md", "_policies/10_delta.md"]) {
         const text = await readTemplate(tree, rel);
 
         expect(text.match(/^## Triage\s*$/gm) ?? [], rel).toHaveLength(1);
         expect(text.match(/^## Change Summary\s*$/gm) ?? [], rel).toHaveLength(1);
         expect(text, rel).toMatch(/^### DELTA-\d{4} \(YYYY-MM-DD\)$/m);
-        expect(text, rel).toContain("never opens a second `## Triage` H2");
+        expect(text, rel).toMatch(/[Ee]very `## Triage`\s+section in the file is validated/);
+        expect(text, rel).toMatch(/`## Triage \(\d{4}-\d{2}-\d{2}\)`/);
+        expect(text, rel).not.toMatch(/first `## Triage`/);
       }
     });
 
@@ -173,9 +176,9 @@ describe("qfai-sdd ships a template for every required spec file", () => {
     it(`${tree}: Phase 4 states the re-run append rule`, async () => {
       const checklist = await readSkillFile(tree, "references/sdd-phase-checklists.md");
 
-      expect(checklist).toContain(
-        "A re-run appends to the existing `## Triage`; never open a second `## Triage` H2.",
-      );
+      expect(checklist).toContain("A re-run appends one `### DELTA-NNNN (YYYY-MM-DD)` sub-section");
+      expect(checklist).toMatch(/[Ee]very `## Triage` section is validated/);
+      expect(checklist).not.toMatch(/first `## Triage`/);
     });
   }
 });
