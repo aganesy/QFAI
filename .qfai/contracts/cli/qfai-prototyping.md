@@ -287,7 +287,7 @@ schema:
     navigationFlow: enum [weak, acceptable, strong, exceptional]
     usability: enum [weak, acceptable, strong, exceptional]
     functionality: enum [weak, acceptable, strong, exceptional]
-  layoutAntiPatternsDetected: string[] # lap-001..lap-008 ids; empty list required for convergence
+  layoutAntiPatternsDetected: string[] # ids the lap-* registry declares; empty list required for convergence
   designMdViolations: object[] # output of findDesignMdViolations(); empty required for convergence
   impressions: # short-prose fields, each ≤ 200 words; NOT asserted for exact equality
     operability: string
@@ -418,6 +418,13 @@ advisory band is `lap-009` (md5 duplicate, REQ-0124) and `lap-010`
 and counted in `layoutAntiPatternsDetected[]`. Higher `lap-011` /
 `lap-012` codes are reserved but not currently emitted.
 
+These two are computed by the capture pass rather than judged by the
+reviewer, and they are declared in the same `lap-*` registry as the
+codes the reviewer judges. That array has one vocabulary: a code in it
+that no registry entry declares is `QFAI-PROT-002`, whichever writer
+put it there. A new advisory code is therefore registered at the same
+time it is emitted.
+
 ### `--auto-serve`
 
 When passed, `iterate` manages a local HTTP server lifecycle bound to
@@ -495,7 +502,7 @@ iterations:
       navigationFlow: enum [weak, acceptable, strong, exceptional]
       usability: enum [weak, acceptable, strong, exceptional]
       functionality: enum [weak, acceptable, strong, exceptional]
-    layoutAntiPatternsDetected: string[] # lap-001..lap-010 (implemented band); empty required for convergence
+    layoutAntiPatternsDetected: string[] # ids the lap-* registry declares; empty required for convergence
     designMdViolations: object[] # findDesignMdViolations() output; empty required for convergence
     pivotDirective: string # reviewer's next-cycle directive; empty allowed only at converged-cycle
     reviewerId:
