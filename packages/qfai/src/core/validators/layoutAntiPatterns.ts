@@ -36,27 +36,42 @@ function isValidLayoutAntiPattern(rule: unknown): rule is LayoutAntiPattern {
   );
 }
 
-function defaultPatternsPath(): string {
-  const base = import.meta.url;
-  const basePath = base.startsWith("file:") ? fileURLToPath(base) : base;
-  const baseDir = path.dirname(basePath);
-  // Candidates for each place this module is loaded from. The depth differs
-  // per entry point, and a missing candidate is not a loud failure: the
-  // caller fails soft, so an unresolvable registry silently drops the
-  // unknown-code obligation. `../assets/...` is the one that resolves from
-  // `dist/index.mjs` — the `exports["."]` import path a library consumer
-  // reaches `validateProject` through. Without it all three candidates
-  // missed there, so `qfai-prototyping/SKILL.md`'s unconditional promise
-  // that an unknown `lap-*` code fails validate was true only for the `bin`.
-  //   src/core/validators/       -> layoutAntiPatterns.json  (dev, colocated)
-  //   dist/cli/index.mjs         -> ../../assets/validators/...
-  //   dist/index.mjs             -> ../assets/validators/...
-  const candidates = [
-    path.join(baseDir, "layoutAntiPatterns.json"),
+/**
+ * `assets/validators/layoutAntiPatterns.json` candidates for a module sitting
+ * at `baseDir`.
+ *
+ * One registry file, three depths, because this module is loaded from three
+ * places and each sits a different distance below the package root:
+ *
+ * | Loaded from          | Depth below the package root |
+ * | -------------------- | ---------------------------- |
+ * | `src/core/validators/` | three                      |
+ * | `dist/cli/index.mjs`   | two                        |
+ * | `dist/index.mjs`       | one                        |
+ *
+ * `dist/index.mjs` is the `exports["."]` path a library consumer reaches
+ * `validateProject` through, and it is one level up rather than two. Without
+ * its candidate the registry resolved only for the `bin`, and the promise that
+ * an unknown `lap-*` code fails validate held only there — a missing candidate
+ * is not a loud failure, because the caller fails soft and an unresolvable
+ * registry silently drops the obligation.
+ *
+ * Exported for the test that pins those depths; `loadLayoutAntiPatterns` is
+ * the API.
+ */
+export function layoutAntiPatternsCandidates(baseDir: string): string[] {
+  return [
     path.resolve(baseDir, "../../../assets/validators/layoutAntiPatterns.json"),
     path.resolve(baseDir, "../../assets/validators/layoutAntiPatterns.json"),
     path.resolve(baseDir, "../assets/validators/layoutAntiPatterns.json"),
   ];
+}
+
+function defaultPatternsPath(): string {
+  const base = import.meta.url;
+  const basePath = base.startsWith("file:") ? fileURLToPath(base) : base;
+  const baseDir = path.dirname(basePath);
+  const candidates = layoutAntiPatternsCandidates(baseDir);
   for (const c of candidates) {
     if (existsSync(c)) return c;
   }

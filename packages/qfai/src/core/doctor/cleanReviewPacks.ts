@@ -122,6 +122,7 @@ export async function cleanStaleReviewPacks(
       // the doctor command catches and converts to a finding.
       throw new Error(
         `failed to archive review pack ${entry.name}: ${error instanceof Error ? error.message : String(error)}`,
+        { cause: error },
       );
     }
   }
