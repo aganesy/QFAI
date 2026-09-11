@@ -81,6 +81,7 @@ export async function findIterationReviewFiles(root: string, index: number): Pro
   } catch (err) {
     throw new Error(
       `findIterationReviewFiles: glob failed for iter-${padded}: ${(err as Error).message}`,
+      { cause: err },
     );
   }
 
@@ -109,7 +110,9 @@ export async function findStaleIterDirs(root: string): Promise<string[]> {
     if (code === "ENOENT") {
       return [];
     }
-    throw new Error(`findStaleIterDirs: readdir failed for ${baseDir}: ${(err as Error).message}`);
+    throw new Error(`findStaleIterDirs: readdir failed for ${baseDir}: ${(err as Error).message}`, {
+      cause: err,
+    });
   }
 
   const matches: string[] = [];
@@ -118,7 +121,7 @@ export async function findStaleIterDirs(root: string): Promise<string[]> {
       continue;
     }
     const full = path.join(baseDir, name);
-    let isDir = false;
+    let isDir: boolean;
     try {
       const st = await stat(full);
       isDir = st.isDirectory();
@@ -159,7 +162,9 @@ export async function deleteStaleIterDirs(root: string): Promise<{ deleted: stri
       await rm(dir, { recursive: true, force: true });
       deleted.push(dir);
     } catch (err) {
-      throw new Error(`deleteStaleIterDirs: failed to remove ${dir}: ${(err as Error).message}`);
+      throw new Error(`deleteStaleIterDirs: failed to remove ${dir}: ${(err as Error).message}`, {
+        cause: err,
+      });
     }
   }
   return { deleted };

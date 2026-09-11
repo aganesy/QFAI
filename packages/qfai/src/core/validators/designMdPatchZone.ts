@@ -105,8 +105,8 @@ export async function validateDesignMdPatchZone(
   const backupPath = path.join(root, DESIGN_MD_BACKUP_REL);
   if (!(await exists(livePath))) return [];
   if (!(await exists(backupPath))) return [];
-  let before = "";
-  let after = "";
+  let before: string;
+  let after: string;
   try {
     before = await readFile(backupPath, "utf-8");
     after = await readFile(livePath, "utf-8");

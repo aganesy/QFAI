@@ -392,7 +392,7 @@ async function buildMissingSectionIssue(
   root: string,
   discussionRoot: string,
 ): Promise<Issue | null> {
-  let latestPackDir: string | null = null;
+  let latestPackDir: string | null;
   try {
     latestPackDir = await findLatestDiscussionPackDir(discussionRoot);
   } catch {
@@ -616,7 +616,7 @@ async function resolveResearchSummaryScanTarget(
     }
   }
 
-  let packs: LocatedPack[] = [];
+  let packs: LocatedPack[];
   try {
     packs = await findPacks(discussionRoot, "discussion");
   } catch {
@@ -627,7 +627,7 @@ async function resolveResearchSummaryScanTarget(
     return { ...base, files: [storageFileOf(lone.path)], activePackDir: lone.path };
   }
 
-  let latest: string | null = null;
+  let latest: string | null;
   try {
     latest = await findLatestDiscussionPackDir(discussionRoot);
   } catch {
@@ -650,7 +650,7 @@ function storageFileOf(packDir: string): string {
  * else, so this gate has to cover its storage file itself.
  */
 async function isLatestDiscussionPack(discussionRoot: string, packDir: string): Promise<boolean> {
-  let latest: string | null = null;
+  let latest: string | null;
   try {
     latest = await findLatestDiscussionPackDir(discussionRoot);
   } catch {
