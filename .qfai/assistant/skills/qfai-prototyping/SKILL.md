@@ -130,7 +130,7 @@ the help text wins and this section is stale.
   requests (`.css`, `.png`, `fetch()`) still 404 when genuinely
   missing, and the path-traversal 403 guard runs first.
 - `--check-convergence` — read-only peek of `prototyping.json`.
-  Exits `0` when converged (`stopReason === "axes-exceptional"` with
+  Exits `0` when converged (`stopReason === "converged"` with
   `acceptedIterationIndex` set), exits `2` otherwise. No writes,
   no Playwright launches. Use at cycle 9 before recovery.
 - `--target-url <url>` — base URL the capture / review steps drive.
@@ -331,7 +331,7 @@ an unconverged iter-09.
 
 ### Continuing or resetting a converged loop
 
-Only `stopReason: "axes-exceptional"` + `acceptedIterationIndex` seals a loop; `iterate --cycle N`
+Only `stopReason: "converged"` + `acceptedIterationIndex` seals a loop; `iterate --cycle N`
 then refuses with exit `2` past the accepted index, writing nothing. `license-verify-fail` /
 `input-error` do NOT seal — fix the cause and re-run the same cycle.
 `max-iterations` does not seal either, but iter-09 still stops every `--cycle N >= 1` at exit `65`.
