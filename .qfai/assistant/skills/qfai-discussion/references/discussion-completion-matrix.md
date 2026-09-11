@@ -27,7 +27,6 @@ Completion is blocked until all are true:
 2. The canonical `uiux/` family is complete: `00_index.md`, `40_screen_contracts.md`,
    `50_review_input_bundle.md`.
 3. Every screen contract in `40_screen_contracts.md` carries the full template schema.
-<<<<<<< HEAD
 4. Exploration directions are carried unranked — no single screen exploration is selected and the
    design system is not finalized here (discussion is planner-first).
 5. `01_Context.md#Design Direction` names an adopted theme, what departs from it, and what stays
@@ -35,13 +34,8 @@ Completion is blocked until all are true:
    it: `/qfai-sdd` Phase 0 authors tokens from whatever is recorded. A direction taken without the
    user carries `chosen_by: assumption` and an open entry in `11_OQ-Register.md`.
 6. No forbidden legacy sidecar exists under `uiux/` (see
-=======
-4. Exploration directions are carried unranked — no single visual winner is selected and the
-   design system is not finalized here (discussion is planner-first).
-5. No forbidden legacy sidecar exists under `uiux/` (see
->>>>>>> origin/main
    `templates/uiux/00_index.md#Forbidden Legacy Files`).
-6. `Disposition: open` count is zero in `11_OQ-Register.md`.
+7. `Disposition: open` count is zero in `11_OQ-Register.md`.
 
 Evaluation axes are global constants (4-step ordinal: weak / acceptable / strong /
 exceptional) and are NOT authored as discussion sidecars, so no scoring, override, strategy,
@@ -51,27 +45,17 @@ taste-interview, option-comparison or selected-anchor sidecar is required or per
 
 A **cli-only** pack — `primary_surface: cli` with no `web`/`mobile`/`desktop`/`mixed`
 entry in `secondary_surfaces` — is UI-bearing but is not a visual-prototyping surface,
-<<<<<<< HEAD
 so conditions 1 and 5 above do not apply to it:
-=======
-so condition 1 above does not apply to it:
->>>>>>> origin/main
 
 - No brand registries required, and no root `DESIGN.md` downstream. `/qfai-prototyping`
   rejects `cli`, so nothing ever reads a `visual.*` token value. `/qfai-sdd` Phase 0
   skips the DESIGN.md freeze for a cli-only project, and
   `validators/designContractReadiness.ts` skips `QFAI-DCON-030`/`-031` for it.
-<<<<<<< HEAD
 - No design direction either: nothing downstream reads a theme for a surface that renders
   no tokens.
 - Conditions 2, 3, 4, 6 and 7 apply unchanged: all three canonical `uiux/` sidecars, the
   full screen-contract schema, unranked exploration directions, no forbidden legacy
   sidecar, and zero open OQs.
-=======
-- Conditions 2-6 apply unchanged: all three canonical `uiux/` sidecars, the full
-  screen-contract schema, unranked exploration directions, no forbidden legacy sidecar,
-  and zero open OQs.
->>>>>>> origin/main
 - `route:` on a `cli` screen contract names the command invocation, not a web path (see
   `ui-bearing-playbook.md#visual-prototyping-surfaces-vs-cli`).
 - No `prototyping.yaml`: `cli` is not a valid prototyping execution surface.

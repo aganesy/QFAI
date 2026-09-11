@@ -37,7 +37,6 @@ the screen.
 - Record template usage policy as `none`, `reference-only`, or
   `implementation-seed`.
 
-<<<<<<< HEAD
 ## Asking for the direction
 
 One decision sets how the product looks, and only the user can make it:
@@ -76,14 +75,6 @@ the classification and the chosen direction into `01_Context.md`, both
 reference registries into `04_Sources.md`, and the screen-level decisions
 into `uiux/`.
 
-=======
-## Where the answers go
-
-The interview is recorded, not rendered. Its answers go into the pack:
-the classification into `01_Context.md`, both reference registries into
-`04_Sources.md`, and the screen-level decisions into `uiux/`.
-
->>>>>>> origin/main
 Root `DESIGN.md` is written later, by `/qfai-sdd` Phase 0, which reads
 those records. The mapping from answer to field is
 `qfai-sdd/references/design-md-authoring.md`.
