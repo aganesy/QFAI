@@ -1314,11 +1314,15 @@ export const ALLOWED_INIT_CONTENT: ReadonlyMap<string, string> = new Map([
     // (`df81d579…`) byte for byte, which is what makes this a review of five lines rather than a
     // re-blessing of the whole file.
     //
-    // The current digest adds one more line to that same block: the bullet naming
+    // The digest before this one added one line to that same block: the bullet naming
     // `.agents/rules/documentation-clarity.md`, the writing rule the run seeds beside the other
     // masters. Dropping that bullet reproduces `439cbe67…`.
+    //
+    // The current digest adds one more, on the same footing: the bullet naming
+    // `.agents/rules/minimal-implementation.md`. Derived by running `qfai init` into a temp root
+    // and hashing what it wrote; dropping that bullet reproduces `2a264d5e…`.
     ".github/copilot-instructions.md",
-    "2a264d5ee6cfc2d05df27d8bb30a878414b7ea48b07f2315138160b2044181c6",
+    "3978847fe1ab3aa79c9c1652a0420fc0ecd0e5f07bd5c8a48fe87ca66e2d0b88",
   ],
   // `qfai init` copies this file verbatim, so it is pinned like every other
   // adopter-facing file here — and for one reason none of the others has: it
@@ -1407,8 +1411,15 @@ export const ALLOWED_INIT_CONTENT: ReadonlyMap<string, string> = new Map([
   // `documentation-clarity.md` master that the same run seeds beside them.
   // Removing that line from both files reproduces the previous digests
   // (`04061092…` and `040faf04…`), so this is a review of one line per file.
-  ["AGENTS.md", "a832e27c327ece55e502f6ad50c84f35be5edb2a07bfb1a9e83e9036cdbdd7a5"],
-  ["CLAUDE.md", "20040ab0f55a6ee346af40d1d143a96b38d1c7d541aa649c6042eab99c63a295"],
+  //
+  // Re-pinned for a second bullet in the same block, naming
+  // `.agents/rules/minimal-implementation.md` — the rule the run now seeds
+  // beside the other masters. Derived by running `qfai init` into a temp root
+  // and hashing what it wrote, not read off a failure message, and checked the
+  // way the note above asks: dropping that one bullet reproduces `a832e27c…`
+  // and `20040ab0…` byte for byte.
+  ["AGENTS.md", "22af72ddb35cc3ac22deeae00f4b054d8741022a74eb4e8ab29491707dae4afe"],
+  ["CLAUDE.md", "3f9ad00f487adb3fe5d1e5b82172aafb5155a3dab497568b5b36afb0552f349d"],
   // Inside `.claude/`, and pinned anyway — see the paragraph above the path set.
   // These are the hooks that restate the writing rule when a pull request, issue
   // or review is posted through the GitHub tools, and after a Markdown file is
@@ -1553,6 +1564,7 @@ export const INERT_DECORATIONS: ReadonlyArray<string> = [
 export const ALLOWED_INIT_SOURCE_ASSETS: ReadonlySet<string> = new Set([
   "root/.agents/rules/distributed-surface.md",
   "root/.agents/rules/documentation-clarity.md",
+  "root/.agents/rules/minimal-implementation.md",
   "root/.agents/rules/root-additions-policy.md",
   "root/.agents/rules/temporary-files.md",
   "root/.agents/rules/version-discipline.md",

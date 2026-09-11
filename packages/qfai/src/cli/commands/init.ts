@@ -6886,6 +6886,7 @@ function buildCopilotInstructions(): string {
     "- `.agents/rules/distributed-surface.md` — keep internal identifiers and version markers out of published files.",
     "- `.agents/rules/version-discipline.md` — never choose a release version number on your own; the user decides.",
     "- `.agents/rules/documentation-clarity.md` — plain, minimal writing in pull requests, issues, comments and Markdown; no local identifiers, no account of how the work went.",
+    "- `.agents/rules/minimal-implementation.md` — the order to try solutions in once a behaviour is agreed; mark a deliberate shortcut with its ceiling and the condition that lifts it.",
     "",
   ].join("\n");
 }
