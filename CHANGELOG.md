@@ -6,6 +6,25 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **The layout anti-pattern registry has one copy** (#1486).
+  `layoutAntiPatterns.json` existed twice — once beside the loader under
+  `src/core/validators/`, once under `assets/validators/`, which
+  `package.json#files` ships. The loader tries each entry point's depth in turn
+  and stops at the first file that exists, so the nearer copy won wherever both
+  were reachable. Editing one meant this repository and an adopting project
+  enforcing different rules.
+
+  A byte-equality test held the two together, which reports a divergence rather
+  than preventing one: it fires only once someone has already edited a copy,
+  and it cannot say which of the two is the one that ships.
+
+  The copy under `src/` is gone. The shipped copy is the only one, and the
+  loader already carried the candidate that reaches it from `src/` — so the
+  candidate list now holds one entry per entry point and nothing else.
+  `layoutAntiPatternsCandidates` is exported for the test that pins those three
+  depths, alongside one that fails on any second copy, whether or not its bytes
+  match.
+
 - **A second hook group now reaches a project that already has the first**
   (#1464). `qfai init` merges its Claude Code hooks into a project that already
   has a `.claude/settings.json`. The merge decided whether to do anything from
