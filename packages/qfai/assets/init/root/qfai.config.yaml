@@ -67,6 +67,19 @@ validation:
     unknownContractIdSeverity: error
 output:
   validateJsonPath: .qfai/report/validate.json
+# uiux:
+#   # Component registries a tool can resolve a name against, as name to URL
+#   # template. The shape is the `registries` map a `components.json` already
+#   # carries, so a project that has one restates it here rather than
+#   # translating it. The `{name}` placeholder is where the component name
+#   # goes; a URL without it resolves nothing and is rejected.
+#   #
+#   # Which registry is primary, and what the look comes from, is prose in
+#   # `.qfai/assistant/catalog/tech.md`. Nothing here ranks them.
+#   #
+#   # Left out entirely by a project with no user interface.
+#   registries:
+#     "@acme": https://acme.example/r/{name}.json
 prototyping:
   calibration:
     packPath: .qfai/evidence/calibration.yaml

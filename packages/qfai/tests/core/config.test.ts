@@ -395,6 +395,56 @@ describe("uiux.competitive_refs_min", () => {
   });
 });
 
+describe("uiux.registries", () => {
+  async function loadWith(body: string): Promise<Awaited<ReturnType<typeof loadConfig>>> {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-config-registries-"));
+    try {
+      await writeFile(path.join(root, "qfai.config.yaml"), body, "utf-8");
+      return await loadConfig(root);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  }
+
+  it("accepts the map shape a components.json already carries", async () => {
+    const { config, issues } = await loadWith(
+      'uiux:\n  registries:\n    "@acme": https://acme.example/r/{name}.json\n    "@internal": https://internal.example/{name}\n',
+    );
+    expect(issues).toEqual([]);
+    expect(config.uiux?.registries).toEqual({
+      "@acme": "https://acme.example/r/{name}.json",
+      "@internal": "https://internal.example/{name}",
+    });
+  });
+
+  it("rejects a template with no place to put the component name", async () => {
+    // Such a URL resolves nothing, so accepting it would leave a registry
+    // that is declared, looks configured, and can never answer.
+    const { config, issues } = await loadWith(
+      'uiux:\n  registries:\n    "@acme": https://acme.example/registry.json\n',
+    );
+    expect(issues.map((issue) => issue.message)).toEqual([
+      expect.stringContaining("uiux.registries.@acme must contain the {name} placeholder"),
+    ]);
+    expect(config.uiux?.registries).toBeUndefined();
+  });
+
+  it("keeps the entries it can use when one is malformed", async () => {
+    const { config, issues } = await loadWith(
+      'uiux:\n  registries:\n    "@good": https://good.example/{name}.json\n    "@bad": ""\n',
+    );
+    expect(issues).toHaveLength(1);
+    expect(config.uiux?.registries).toEqual({ "@good": "https://good.example/{name}.json" });
+  });
+
+  it("does not care about the scheme, because a private registry may be local", async () => {
+    const { issues } = await loadWith(
+      'uiux:\n  registries:\n    "@dev": http://localhost:4000/{name}.json\n',
+    );
+    expect(issues).toEqual([]);
+  });
+});
+
 describe("retired validation.traceability keys", () => {
   it("reports every retired key still present as deprecated and inert", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-config-retired-"));
