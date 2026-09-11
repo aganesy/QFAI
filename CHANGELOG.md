@@ -6,6 +6,21 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **The handoff says what to install, not to rebuild** (#1480). It handed an
+  implementer a screenshot and a paragraph and said "reimplement with
+  project-native patterns", which is an instruction to rebuild by hand at the
+  exact point a component could be installed.
+
+  `prototype-handoff.yaml` now carries `procurement`: what realises each
+  screen region, and for an authored region, what was looked for and did not
+  serve. The reviewer checks the implementation against it instead of judging
+  a resemblance.
+
+  It also settles what the prototype never showed. Responsive behaviour, dark
+  mode, focus states and the detail of an empty state come from the adopted
+  design system's default, which answers them consistently with each other.
+  `implementationNotes` keeps what is genuinely prose.
+
 - **Every layout anti-pattern names what makes it a defect** (#1484). An
   entry now carries a `source`, and the loader drops one that does not: a
   published heuristic, an accessibility criterion, or the contract the screen
