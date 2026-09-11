@@ -25,6 +25,7 @@ tools: [Read, Glob, Grep, Bash]
 - Check naming, structure, and responsibility split of UI components for clarity, cohesion, and minimal surprise.
 - Validate docs/UX consistency so usage text, labels, error states, and user flows match the intended product behavior.
 - Apply `.agents/rules/minimal-implementation.md`: report excess against it, naming what to cut and what replaces it.
+- Apply `.agents/rules/interface-clarity.md`: report copy that explains the interface as a finding against the control under it, and name the control to fix.
 
 ## Inputs you must read
 

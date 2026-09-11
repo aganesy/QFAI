@@ -6,6 +6,35 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Added
 
+- **A rule for what may appear on an interface** (#1495).
+  `.agents/rules/interface-clarity.md` is the counterpart of
+  `documentation-clarity.md` one surface over: that rule settles what an agent
+  writes about the work, this one settles what it puts in front of a user.
+  Nothing said the second, and an agent left to build a screen produced the
+  failure the first rule exists to stop, in a different medium — a paragraph
+  introducing the page, a hint under every field, a tooltip on a button whose
+  label already says what it does, and every parameter the thing underneath
+  happens to expose.
+
+  Six clauses, one per clause of the prose rule: do not surface the mechanism,
+  do not explain the interface, cut, use the conventional pattern, show the
+  structure, walk every task the surface declares.
+
+  The clause that decides the hard cases is quoted from the GOV.UK Design
+  System: help text that explains the interface means the service is too
+  complicated. Text explaining how to work a control is a defect report against
+  that control.
+
+  Cutting stops at the label. WCAG 3.3.2 requires a label for every form input
+  and a placeholder standing in for one is a documented failure, so the rule
+  deletes the explanation and protects the label — written the other way round
+  it would trade one defect for an accessibility failure.
+
+  Not the web alone: a command-line tool has an interface, so
+  `catalog/cli-ux-guidelines.md` reads as one of its consumers, beside the
+  experience, frontend and surface-review agent cards. The master ships to
+  adopters with the other cross-AI rules.
+
 - **A lane that collects every deliberate simplification** (#1466).
   `.agents/rules/minimal-implementation.md` asks an author who takes a shortcut
   on purpose to write it down where it is taken, with the ceiling it stops at

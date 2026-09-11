@@ -470,6 +470,7 @@ agents:
       - Keep product experience decisions cohesive and unsurprising across copy, IA, navigation, transitions, and visual hierarchy.
       - Unify repeated patterns and tokens across design artifacts, but avoid over-generalizing distinct experiences.
       - Apply `.agents/rules/minimal-implementation.md`: the first rung is this stage's — whether the thing needs to exist. After a spec row is agreed, that question is a Change Request.
+      - Apply `.agents/rules/interface-clarity.md`: a screen that needs explaining is a screen that needs redesigning. Hint text only where a need was demonstrated and the control was improved first.
 
       ## Inputs you must read
 
@@ -550,6 +551,7 @@ agents:
       - Keep UI code cohesive and readable: isolate concerns, minimize hidden coupling, avoid duplication, and use existing patterns/utilities before inventing new ones.
       - Apply fail-fast validation and least-astonishment behavior to form handling, loading states, error states, and interaction flows.
       - Apply `.agents/rules/minimal-implementation.md`: work the reuse rungs before writing, and mark a deliberate shortcut with its ceiling and the condition that lifts it.
+      - Apply `.agents/rules/interface-clarity.md`: label a control in the user's words, never the parameter's. The label stays; the sentence explaining it goes.
 
       ## Inputs you must read
 
@@ -1546,6 +1548,7 @@ agents:
       - Check naming, structure, and responsibility split of UI components for clarity, cohesion, and minimal surprise.
       - Validate docs/UX consistency so usage text, labels, error states, and user flows match the intended product behavior.
       - Apply `.agents/rules/minimal-implementation.md`: report excess against it, naming what to cut and what replaces it.
+      - Apply `.agents/rules/interface-clarity.md`: report copy that explains the interface as a finding against the control under it, and name the control to fix.
 
       ## Inputs you must read
 
