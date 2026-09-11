@@ -14,6 +14,7 @@ acted on; a finding names something and can be fixed or argued with.
 
 - Screenshot: `.qfai/evidence/prototyping/iter-NN/<screen>.png`
 - HTML snapshot: `.qfai/evidence/prototyping/iter-NN/<screen>.html`
+- Counted signals: `.qfai/evidence/prototyping/iter-NN/<screen>.signals.json`
 - Prior reviews: `iter-(NN-1)/review.json`, `iter-(NN-2)/review.json`
   (when present)
 - Progress log: `.qfai/evidence/prototyping/progress.md`
@@ -182,6 +183,27 @@ means the question needs clarifying or splitting.
 The counts are contract-relative. A screen declaring one primary task and
 carrying forty controls is wrong; the same forty elsewhere may be right. The
 denominator is in the contract, so no global threshold has to be invented.
+
+### Where the counts come from
+
+`iterate --capture` counts each screen and writes
+`iter-NN/<screen>.signals.json` beside the capture.
+
+| Field                        | What it counts                                                      |
+| ---------------------------- | ------------------------------------------------------------------- |
+| `interactiveControls`        | elements the user can operate, disabled ones excluded               |
+| `words`                      | every rendered word                                                 |
+| `explanatoryWords`           | words naming nothing — not a control's text, label, header, heading |
+| `controlsPerTask`            | controls over declared `primary_tasks`                              |
+| `explanatoryWordsPerControl` | explanatory words over controls                                     |
+| `maxDepth`                   | deepest nesting                                                     |
+| `distinctElementTypes`       | how many kinds of element the screen uses                           |
+
+Read them; do not recount. A denominator the contract does not supply reads
+`null`, which means unknown, not zero.
+
+Nothing here passes or fails on its own. Cite a number in the finding it
+supports, and write no finding a number alone would make.
 
 ## 4 subjects
 
