@@ -231,7 +231,7 @@ QFAI includes a small set of custom skills (stored under `.qfai/assistant/skills
   only), then iterates each `spec × screen` pair through up to 10 cycles
   (`cycle 0..9`) of generate → capture → review with a 4-axis ordinal
   rubric, 6 `*Feel` short-prose impressions (200-word bounded), explicit
-  layout anti-pattern detection (`lap-001..lap-008`), DESIGN.md token
+  layout anti-pattern detection, DESIGN.md token
   violation detection, and explicit pivot permission. Stops
   deterministically when every `spec × screen` pair satisfies the AND
   convergence condition (all four ordinal axes `exceptional` AND

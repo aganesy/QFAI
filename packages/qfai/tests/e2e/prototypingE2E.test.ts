@@ -227,7 +227,7 @@ describe("/qfai-prototyping end-to-end", () => {
       {
         index: 0,
         allEx: true,
-        lap: ["lap-001-saas-dashboard"],
+        lap: ["lap-006-overcrowded-sidebar"],
       },
     ]);
 
