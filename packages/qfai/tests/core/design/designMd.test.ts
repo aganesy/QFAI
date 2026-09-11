@@ -625,6 +625,48 @@ describe("parseDesignMd (TC-1.1.x)", () => {
     expect(result.error.path).toBe("brand.voice");
   });
 
+  it("brand.theme carries the name the values came from", () => {
+    const text = VALID_FRONT_MATTER.replace(
+      '  voice: ["calm", "sharp"]',
+      '  voice: ["calm", "sharp"]\n  theme: "Acme Base / slate"',
+    );
+    const result = parseDesignMd(text);
+    expect("error" in result).toBe(false);
+    if ("error" in result) return;
+    expect(result.data.brand.theme).toBe("Acme Base / slate");
+  });
+
+  it("a DESIGN.md that names no theme still parses", () => {
+    // A project authored its own file before the field existed. That file is
+    // not wrong — it does not say where its values came from, which is a
+    // different thing from saying something false.
+    const result = parseDesignMd(VALID_FRONT_MATTER);
+    expect("error" in result).toBe(false);
+    if ("error" in result) return;
+    expect(result.data.brand.theme).toBeUndefined();
+  });
+
+  for (const [label, literal] of [
+    ["a scalar number", "  theme: 3"],
+    ["an empty string", '  theme: ""'],
+    ["a null literal", "  theme: null"],
+  ] as const) {
+    it(`brand.theme as ${label} is rejected at parse-time`, () => {
+      // Same reason `brand.voice` is strict-parsed: a value the parser drops
+      // still hashes into the lock, so the document and its lock agree while
+      // neither matches what was authored.
+      const text = VALID_FRONT_MATTER.replace(
+        '  voice: ["calm", "sharp"]',
+        `  voice: ["calm", "sharp"]\n${literal}`,
+      );
+      const result = parseDesignMd(text);
+      expect("error" in result).toBe(true);
+      if (!("error" in result)) return;
+      expect(result.error.code).toBe("invalid-type");
+      expect(result.error.path).toBe("brand.theme");
+    });
+  }
+
   it("audience.do_not_look_like as null literal is rejected at parse-time", () => {
     const text = VALID_FRONT_MATTER.replace(
       '  do_not_look_like: ["generic SaaS dashboard"]',

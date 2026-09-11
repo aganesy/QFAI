@@ -55,7 +55,7 @@ Produce a unified 15-file discussion pack plus exploration-first UI sidecars so 
 - Completion requires `Disposition: open` count to be zero in `11_OQ-Register.md`.
 - If UI requirements exist, behavior obligations are primary and HTML+CSS mock is optional fallback only.
 - When an HTML+CSS mock includes links, author them in anchor-form (`<a href="#name">`); external `http(s)://` links are also allowed. Do NOT use same-origin absolute paths (`/orders/`) — a static mock cannot serve them and the validator rejects them (QFAI-MOCK-010).
-- Discussion is planner-first: do not select a single visual winner and do not finalize the design system here.
+- Discussion is planner-first: carry the screen explorations unranked and do not finalize the design system here. The brand direction is the exception — which published theme the product is built on is the user's decision, and there is no later stage where they are asked.
 - Use artifact files, not conversational summaries, as the downstream handoff.
 
 ## UI-bearing Canonical Sidecar Family
@@ -78,7 +78,7 @@ A **cli-only** pack (`primary_surface: cli`, no visual secondary surface) stays 
 6. Run Example Mapping per `references/example-mapping-guide.md` and capture `Example Seeds`.
 7. Update `11_OQ-Register.md`, resolve OQs until open count is zero, and move deferred items to `13_Deferred.md`; take the canonical field definitions for both files from `references/oq-and-deferred-rules.md`.
 8. Generate the exploration-first sidecar family for UI-bearing targets.
-9. Interview for the design direction per `references/design-dna-intake.md` and record the answers in the pack. Required when any classified surface — primary or secondary — is `web`, `mobile`, `desktop` or `mixed`; skip for cli-only and non-ui targets. The answers, not a rendered brand file, are the handoff: `/qfai-sdd` Phase 0 authors root `DESIGN.md` from them.
+9. Interview for the design direction per `references/design-dna-intake.md`, ask the user to choose one of the candidate themes, and record the choice in `01_Context.md#Design Direction`. Required when any classified surface — primary or secondary — is `web`, `mobile`, `desktop` or `mixed`; skip for cli-only and non-ui targets. The answers, not a rendered brand file, are the handoff: `/qfai-sdd` Phase 0 authors root `DESIGN.md` from them.
 10. Generate `prototyping.yaml` only when the latest discussion pack targets a prototyping execution surface (`web`, `mobile`, `desktop`, `mixed`) and an explicit prototyping recommendation is useful. A cli-only pack emits none — `/qfai-prototyping` rejects `cli`.
 11. Request review and record the Reviewer result, following `references/review-cycle-playbook.md` for pack layout, cycle rules, and the `summary.json` fields. It owns the write paths under `.qfai/review/review-YYYYMMDDhhmmssSSS/`, which is the only tree `npx qfai validate` reads.
 

@@ -3,6 +3,7 @@ brand:
   name: "Acme Ledger"
   archetype: tech
   voice: ["calm", "sharp"]
+  theme: "the published theme these values came from, named so it can be installed"
 audience:
   emotion: ["confident comparison"]
   do_not_look_like: ["a direct competitor's identity"]

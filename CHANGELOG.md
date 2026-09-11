@@ -4,6 +4,33 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ## [Unreleased]
 
+### Changed
+
+- **The user picks the brand direction, at the one stage that asks** (#1473).
+  `/qfai-discussion` now puts candidate themes to the user and records the
+  choice in `01_Context.md#Design Direction`: the adopted theme, what departs
+  from it, and what stays ordinary. `/qfai-sdd` Phase 0 authors `DESIGN.md`
+  from that record, and a UI-bearing pack without one stops rather than
+  picking a brand.
+
+  An assistant used to choose one of eight archetypes from its own reading of
+  the product, and the user first met the result as twelve hex values in a
+  file. Nothing downstream asked, so the decision with the largest effect on
+  how the product looks was the one nobody was consulted about.
+
+  The candidates are named themes rather than adjectives, because the user is
+  choosing rather than specifying, and they lean conventional: novelty in the
+  shape of a screen costs the user what they already know and buys nothing a
+  brand can hold. The brand lives on the accent — the primary hue and the
+  typeface pairing.
+
+  Planner-first is unchanged for what it was about. The screen explorations
+  are still carried unranked; the prototype loop is what ranks them. A
+  cli-only pack is asked for no direction, since nothing downstream reads a
+  theme for a surface that renders no tokens. An unattended run records the
+  most conventional candidate as an assumption and opens it as a question
+  rather than blocking.
+
 ### Fixed
 
 - **The layout anti-pattern vocabulary is one list again** (#1517). The specs
@@ -30,6 +57,34 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   than a shipped promise.
 
 ### Added
+
+- **`DESIGN.md` says where its numbers came from** (#1474). `brand.theme`
+  names the published theme the token values were taken from, in a form a
+  reader can install, and `/qfai-sdd` Phase 0 takes the twelve colours, three
+  families, four radii and three shadows from that theme rather than composing
+  them.
+
+  Everything downstream is exact about those values: the lock hashes them,
+  `certify` re-scans them, and every literal in every capture is checked
+  against them. Until now there was nothing under the exactness — the chain
+  from archetype to tokens ran through a sentence of prose about a colour
+  tendency, so the numbers were an assistant's invention.
+
+  The two vocabularies do not line up, so the authoring reference carries the
+  crosswalk by role, along with a rule for each gap: a role the theme does not
+  publish is derived from the theme's own palette and checked against the
+  contrast floor, and a role the theme publishes that this schema has no name
+  for is not added. The schema stays closed, and the installed theme supplies
+  the rest at implementation time.
+
+  `brand.archetype` keeps a job. It seeds `accessibility.motion`, which no
+  theme publishes, and it seeds the tokens for a file that names no theme. It
+  no longer overrules a theme that is named.
+
+  The field is optional: a project that authored its own `DESIGN.md` before it
+  existed is not wrong, it just does not say. The handoff mirror copies the
+  name, so an implementer installs the theme instead of reproducing
+  thirty-two values by hand.
 
 - **Each captured screen arrives counted** (#1493). `iterate --capture` now
   writes `iter-NN/<screen>.signals.json` beside the capture and prints the
