@@ -25,9 +25,7 @@ export type DirectoryPin = {
 };
 
 type RealpathOutcome =
-  | { kind: "resolved"; real: string }
-  | { kind: "missing" }
-  | { kind: "unresolvable" };
+  { kind: "resolved"; real: string } | { kind: "missing" } | { kind: "unresolvable" };
 
 /**
  * `true` when `dir` is inside `destRoot` once every symlink on the way to both

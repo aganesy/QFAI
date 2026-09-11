@@ -541,10 +541,7 @@ export type WideLineAssistantAsset = { path: string; widest: number; allowed: nu
 export type ExemptAssistantAsset = { path: string; reason: string };
 
 export type AssistantAssetBudgetStatus =
-  | "ok"
-  | "over_budget"
-  | "incomplete"
-  | "skipped_missing_assistant";
+  "ok" | "over_budget" | "incomplete" | "skipped_missing_assistant";
 
 export type AssistantAssetBudgetReport = {
   status: AssistantAssetBudgetStatus;

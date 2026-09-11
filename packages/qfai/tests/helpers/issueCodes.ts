@@ -365,8 +365,7 @@ function readObjectSites(source: string, constants: Map<string, string>): Emissi
  * or an expression the census cannot evaluate; both read the same downstream).
  */
 type ValueBinding =
-  | { kind: "arg"; index: number; property?: string }
-  | { kind: "token"; token: string };
+  { kind: "arg"; index: number; property?: string } | { kind: "token"; token: string };
 
 /** How a file-local helper maps its parameters onto the `Issue` it produces. */
 type IssueTemplate = {

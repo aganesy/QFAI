@@ -1676,8 +1676,7 @@ async function collectScreensForCapture(
 }
 
 type DesignMdReadResult =
-  | { ok: true; text: string; data: DesignMd }
-  | { ok: false; message: string };
+  { ok: true; text: string; data: DesignMd } | { ok: false; message: string };
 
 type LockGateResult =
   | { kind: "ok"; sha256: string }
@@ -2011,8 +2010,7 @@ function readFrozenLicenseCatalog(record: PrototypingJsonShape | null): LicenseC
 }
 
 type CollectImageSourcesResult =
-  | { ok: true; sources: ImageSource[] | null }
-  | { ok: false; errors: string[] };
+  { ok: true; sources: ImageSource[] | null } | { ok: false; errors: string[] };
 
 /**
  * Read `imageSources` from prototyping.json and narrow each entry
@@ -2391,8 +2389,8 @@ async function clearEvidenceIterDirs(
   // funnels through the mutation-log writer. Lazy import keeps the
   // helper out of the hot path when no iter-NN dirs exist.
   let logEvidenceDelete:
-    | ((root: string, caller: string, relPath: string, priorSize: number) => Promise<void>)
-    | null = null;
+    ((root: string, caller: string, relPath: string, priorSize: number) => Promise<void>) | null =
+    null;
   if (root !== undefined) {
     try {
       const mod = await import("../../core/prototyping/mutationLog.js");
@@ -2918,8 +2916,7 @@ async function persistStopReason(protoJsonAbs: string, reason: StopReason): Prom
 }
 
 type ApplyLicensePatchFromFileResult =
-  | { ok: true; nextCatalog: LicenseCatalog }
-  | { ok: false; error: string };
+  { ok: true; nextCatalog: LicenseCatalog } | { ok: false; error: string };
 
 /**
  * Read + apply an add-only license-patch file and append the audit row

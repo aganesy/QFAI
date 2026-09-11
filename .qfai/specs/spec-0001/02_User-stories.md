@@ -71,6 +71,6 @@
 ## US-0001-0009: Steering & Governance フレームワーク定義
 
 - Parent: CAP-0001
-- Goal: Steering 文書（5 ファイル）、Instructions 文書（5 ファイル）、Review Roster（10 reviewers）、Constitution（Article I~X）、Canonical Workflow Stages（Stage 0~6）の設計仕様を定義する
+- Goal: Steering 文書（5 ファイル）、Instructions 文書（5 ファイル）、Review Roster（10 reviewers）、Constitution（Article I~~X）、Canonical Workflow Stages（Stage 0~~6）の設計仕様を定義する
 - Non-goals: 各文書の逐語的複製（SSOT は steering/_.md, instructions/_.md）
 - Notes: REQ-0009 準拠。統合元由来

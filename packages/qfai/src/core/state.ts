@@ -592,9 +592,7 @@ export async function writeStateFile(root: string, state: Record<string, unknown
  * selected, which is how a stale/broken pointer silently drops a gate.
  */
 export type DiscussionCurrentIdRead =
-  | { kind: "set"; currentId: string }
-  | { kind: "unset" }
-  | { kind: "corrupt"; detail: string };
+  { kind: "set"; currentId: string } | { kind: "unset" } | { kind: "corrupt"; detail: string };
 
 /**
  * Read `discussion.currentId` from `.qfai/state.json`, discriminating
@@ -669,8 +667,7 @@ export async function readDiscussionCurrentId(root: string): Promise<string | nu
  * wrong shape.
  */
 export type DiscussionPointerRead =
-  | { ok: true; currentId: string | null }
-  | { ok: false; reason: string };
+  { ok: true; currentId: string | null } | { ok: false; reason: string };
 
 export async function readDiscussionPointer(root: string): Promise<DiscussionPointerRead> {
   // Ported to the `loadState` discriminated result main replaced

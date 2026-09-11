@@ -323,13 +323,11 @@ export async function detectSpecChanges(
   }
 
   const entries: SpecDiffEntry[] = [...specSourceMap.entries()]
-    .map(
-      ([specId, sources]): SpecDiffEntry => ({
-        specId,
-        sources: [...sources],
-        status: sources.has("timestamp") ? "stale" : "changed",
-      }),
-    )
+    .map(([specId, sources]): SpecDiffEntry => ({
+      specId,
+      sources: [...sources],
+      status: sources.has("timestamp") ? "stale" : "changed",
+    }))
     .sort((a, b) => a.specId.localeCompare(b.specId));
 
   return {
