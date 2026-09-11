@@ -28,6 +28,24 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **A screen that does one thing can be declared** (#1491). The screen contract
+  counted an empty list as a missing field, so every screen owed at least one
+  secondary task. A screen with a single primary task could not be written down,
+  and the author's only way through was to invent one.
+
+  An explicit empty list is an answer; a missing key is not. The two parsed
+  identically before, and the validator now records which nested keys a screen
+  declared, separately from what they hold.
+
+  `secondary_tasks`, `transitions` and `observable_outcomes` are answered by
+  being declared. `primary_tasks` and `required_states` still have to hold
+  something: a screen with no primary task is not a screen, and an
+  unrepresented empty or error state is a real defect.
+
+  The `requirements-analyst` card described the shipped UI contract sample as
+  exposing an empty `primary_tasks` slot to fill. The sample ships filled
+  entries, and the card says so.
+
 - **A prototyping review may report one finding and stop** (#1492).
   `proseCritique` carried a lower bound — 200 English words, or 600
   Japanese/Chinese characters — per screen, per cycle. A reviewer who had one
