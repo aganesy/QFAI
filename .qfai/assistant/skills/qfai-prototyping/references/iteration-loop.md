@@ -13,7 +13,7 @@
 
 ```
 .qfai/prototypes/iter-NN/index.html
-.qfai/evidence/prototyping/iter-NN/{<screen>.png, <screen>.html, review.json}
+.qfai/evidence/prototyping/iter-NN/{<screen>.png, <screen>.html, <screen>.signals.json, review.json}
 .qfai/evidence/prototyping/iter-NN/<spec-id>/<screen>.review.json
 ```
 

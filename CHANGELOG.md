@@ -4,6 +4,37 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ## [Unreleased]
 
+### Added
+
+- **Each captured screen arrives counted** (#1493). `iterate --capture` now
+  writes `iter-NN/<screen>.signals.json` beside the capture and prints the
+  same numbers.
+
+  | Field                        | What it counts                                        |
+  | ---------------------------- | ----------------------------------------------------- |
+  | `interactiveControls`        | elements the user can operate, disabled ones excluded |
+  | `words`                      | every rendered word                                   |
+  | `explanatoryWords`           | words that name nothing                               |
+  | `controlsPerTask`            | controls over the contract's declared `primary_tasks` |
+  | `explanatoryWordsPerControl` | explanatory words over controls                       |
+  | `maxDepth`                   | deepest nesting                                       |
+  | `distinctElementTypes`       | how many kinds of element the screen uses             |
+
+  Two of the review criteria ask whether a screen is restrained, and the
+  reviewer had to count by eye to answer. An introduction above the form, a
+  line under every field and a dump of every available parameter each move one
+  of the two ratios, and both are contract-relative — a screen declaring one
+  task and carrying forty controls is wrong where the same forty elsewhere are
+  not — so no global threshold has to be invented.
+
+  A count is not a score. Nothing weights, aggregates or thresholds them: the
+  reviewer cites a number in a finding, and the finding is what gates. A
+  denominator the contract does not supply reads `null`, which means unknown
+  rather than zero. The counts are written rather than only printed because
+  the review happens in a later step, and they are computed rather than
+  recorded by the reviewer because a hand-written number is the one nobody can
+  reproduce.
+
 ### Fixed
 
 - **Exit 64 is explained by what the loop reads** (#1560). `isConverged` stops

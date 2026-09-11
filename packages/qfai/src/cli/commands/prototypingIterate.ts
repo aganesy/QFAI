@@ -103,6 +103,11 @@ import {
   type Lap010Input,
 } from "../../core/prototyping/layoutAntiPatternsAdvisory.js";
 import { parsePrimarySpecId } from "../../core/prototyping/primarySpecIdParse.js";
+import {
+  buildScreenSignals,
+  formatScreenSignalsBlock,
+  type ScreenSignals,
+} from "../../core/prototyping/screenSignals.js";
 import { readUiContractScreenContracts } from "../../core/contracts/screenContracts.js";
 import { runAccessibilityPhase } from "../../core/browserQa/phases/accessibility.js";
 
@@ -1271,6 +1276,70 @@ function buildBlockedSummaryInputFromRecord(
   };
 }
 
+/**
+ * Count each captured screen and leave the numbers beside the capture.
+ *
+ * The reviewer's next act is to answer the eight criteria, two of which are
+ * about restraint. Making it count controls and words by eye is what produces
+ * a made-up number, so the tool counts and the reviewer cites.
+ *
+ * Written as well as printed: the review happens in a later step than this
+ * command, and a number only in a scrollback is one nobody reads.
+ *
+ * Best-effort throughout. A screen whose capture cannot be read or parsed is
+ * skipped with a warning rather than failing the cycle — the capture itself
+ * already reported its own failures, and a missing count blocks nothing.
+ */
+async function writeScreenSignals(
+  root: string,
+  dir: string,
+  screens: readonly IterateCaptureScreen[],
+): Promise<void> {
+  const contracts = await readUiContractScreenContracts(root);
+  const tasksByScreen = new Map(contracts.map((c) => [c.screenId, c.primaryTasks.length]));
+
+  const { countScreenElements } = await import("../../core/uiux/htmlMockDom.js");
+  const signals: ScreenSignals[] = [];
+  for (const screen of screens) {
+    const htmlPath = path.join(dir, `${screen.id}.html`);
+    let html: string;
+    try {
+      html = await readFile(htmlPath, "utf-8");
+    } catch (err) {
+      warn(
+        `qfai prototyping iterate --capture: could not read ${htmlPath} (${String(err)}); ` +
+          `no counted signals for screen ${screen.id}.`,
+      );
+      continue;
+    }
+    const counts = await countScreenElements(html);
+    for (const parseError of counts.parseErrors) {
+      warn(
+        `qfai prototyping iterate --capture: ${parseError}; ` +
+          `counted signals for screen ${screen.id} are zero.`,
+      );
+    }
+    const built = buildScreenSignals(screen.id, counts, tasksByScreen.get(screen.id) ?? 0);
+    signals.push(built);
+    try {
+      await writeFile(
+        path.join(dir, `${screen.id}.signals.json`),
+        `${JSON.stringify(built, null, 2)}\n`,
+        "utf-8",
+      );
+    } catch (err) {
+      warn(
+        `qfai prototyping iterate --capture: could not write counted signals for ` +
+          `screen ${screen.id} (${String(err)}).`,
+      );
+    }
+  }
+
+  if (signals.length > 0) {
+    info(formatScreenSignalsBlock(signals));
+  }
+}
+
 async function runCapturePath(
   options: RunPrototypingIterateOptions,
   dir: string,
@@ -1425,6 +1494,7 @@ async function runCapturePath(
         "supply Reviewer justification to override).",
     );
   }
+  await writeScreenSignals(options.root, dir, screens);
   // Mirror the accepted iteration's per-screen evidence into the
   // project-wide aggregate dirs once the capture pass completes.
   // Best-effort copy; missing files are skipped so a partial capture
