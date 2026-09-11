@@ -166,12 +166,13 @@ export const SEED_COMMIT_SHA = "uncommitted" as const;
  * Lives here rather than beside the writer because two validators now
  * have to recognise an untouched seed, and the only honest way to do
  * that is to compare against the exact text the writer emits.
+ *
+ * One sentence. It was the same sentence ten times over, which is what a
+ * minimum word count asks of anything that has to satisfy it and nothing
+ * to say. There is no minimum now.
  */
-export const SEED_PROSE_CRITIQUE_PLACEHOLDER = (() => {
-  const sentence =
-    "Seed iteration placeholder critique authored by qfai prototyping iterate at cycle 0 to keep prototyping.json validate-conformant before the reviewer runs.";
-  return Array.from({ length: 10 }, () => sentence).join(" ");
-})();
+export const SEED_PROSE_CRITIQUE_PLACEHOLDER =
+  "Seed iteration placeholder critique authored by qfai prototyping iterate at cycle 0 to keep prototyping.json validate-conformant before the reviewer runs.";
 
 /**
  * True when `iterations[index]` is still the untouched cycle-0 seed.
@@ -206,8 +207,8 @@ export const SEED_PROSE_CRITIQUE_PLACEHOLDER = (() => {
  *   3. `proseCritique` is still the placeholder, byte for byte.
  *
  * (3) is what makes the exemption self-clearing: a review replaces the
- * critique with 200-500 words of its own, so the waiver lifts on the
- * first real review even when `reviewerId` is left stale.
+ * critique with its own, so the waiver lifts on the first real review
+ * even when `reviewerId` is left stale.
  */
 export function isUntouchedCycleZeroSeed(iterations: readonly unknown[], index: number): boolean {
   if (index !== 0 || iterations.length !== 1) return false;
