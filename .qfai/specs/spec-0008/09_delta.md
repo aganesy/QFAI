@@ -1,9 +1,5 @@
 # 09 Delta (Migration Record)
 
-<!-- markdownlint-disable MD024 -->
-<!-- Each round records its own `## Triage`, and the triage rules read a section
-     only under that exact heading, so the repeated heading is the shape. -->
-
 ## Origin
 
 - Consolidates: old spec-0013 (UI/UX review -- ATDD-relevant parts)
@@ -57,7 +53,7 @@
 - Operation: UPDATE:APPEND (additive; preserves existing US/AC/BR/EX/TC numbering)
 - Local ID ranges added: US-0008-0007, AC-0008-0010..0011, BR-0008-0008..0009, EX-0008-0009..0010, TC-0008-0013..0014
 
-## Triage
+## Triage (2026-05-27 second wave)
 
 Rows owned by this spec. `Approved By` is `-` throughout: every row is append-first, so no operation here is approval-gated.
 

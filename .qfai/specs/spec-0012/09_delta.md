@@ -1,9 +1,5 @@
 # 09 Delta
 
-<!-- markdownlint-disable MD024 -->
-<!-- Each round records its own `## Triage`, and the triage rules read a section
-     only under that exact heading, so the repeated heading is the shape. -->
-
 ## 2026-09-04
 
 - `CR-20260904-0002` (`confirm-only`, `/qfai-sdd 0012`): recorded
@@ -80,7 +76,7 @@
 - Trigger: spec-0017 violates `_policies/11_Slice-Policy.md` (1 spec = 1 CAP, 1 skill = 1 spec); content fully decomposed into spec-0012 (primary) + spec-0004 / 0010 / 0011 / 0013 / 0014 / 0015 / 0007 (cascade).
 - Posture: destructive. Backward compatibility / existing-user impact intentionally disregarded per user instruction.
 
-## Triage
+## Triage (CHG-001)
 
 | Source                   | Subject                                                                | Existing Spec | Operation | Sub-op | Approved By   | Rationale                                                                            |
 | ------------------------ | ---------------------------------------------------------------------- | ------------- | --------- | ------ | ------------- | ------------------------------------------------------------------------------------ |
@@ -139,7 +135,7 @@
 - Trigger: User directive 2026-05-16 (SRC-0001) and follow-up SRC-0007 redefine the skill to a single-command, project-wide, autonomous loop with reviewer-driven Playwright per spec × screen and qualitative-only convergence. Discussion pack `discussion-20260516144141078` resolved OQ-0001..0009 (OQ-0003 deferred to ops).
 - Posture: destructive. Backward compatibility with the v2.0 / UX-loop posture (single-spec, 15-cycle, PNG/HTML capture, quantitative AC-pass thresholds, flat iter dirs) is intentionally broken per user instruction 2026-05-18. The triage closes the QFAI-TRIAGE-001 warning previously raised against this file.
 
-## Triage
+## Triage (CHG-002)
 
 | Source   | Subject                                                  | Existing Spec | Operation | Sub-op | Approved By     | Existing rows touched                                                                                                                 | New rows added                                                       | Approved-at |
 | -------- | -------------------------------------------------------- | ------------- | --------- | ------ | --------------- | ------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------- | ----------- |
@@ -328,7 +324,7 @@ Late-review fixes on PR #208:
 - 9 OQ decisions pinned by the orchestrator: OQ-0103 = β + γ (preflight allowlist + body-scope), OQ-0104 = Option B (`--*-shadow*:` pattern), OQ-0105 = Intl.Segmenter + OR-fallback, OQ-0107 = Option B (`verify.json#scope`), OQ-0108 = Option A (SKILL.md realign to single-spec), OQ-0109 = advisory-failing (lap-009 / lap-010), OQ-0110 = Option A (underscore casing), OQ-0112 = SHOULD normalisation, OQ-0115 = `lap-009` / `lap-010` finding-code namespace.
 - `DR-0012-0029` ("No PNG / HTML / interaction.json capture") is amended (not rejected) by a parallel agent — placeholder `DR-0012-0031` cited in AC-0012-0059 / AC-0012-0060 / BR-0012-0047 / BR-0012-0048; orchestrator reconciles the actual DR ID post-merge. Default-OFF posture of `--capture` / `--auto-serve` preserves the original DR-0012-0029 stance.
 
-## Triage
+## Triage (CHG-005)
 
 | Source        | Subject                                        | Existing Spec | Operation | Sub-op | Approved By                        | New rows added                                                                                                           | Approved-At |
 | ------------- | ---------------------------------------------- | ------------- | --------- | ------ | ---------------------------------- | ------------------------------------------------------------------------------------------------------------------------ | ----------- |
@@ -401,7 +397,7 @@ Late-review fixes on PR #208:
 
 Second-Wave Defect Remediation per `_policies/05_Contracts.md` § CHG-006 and `_policies/10_delta.md` § CHG-006. All operations are UPDATE:APPEND under pinned-branch authorization (`feature/v1.9.2`). Cross-spec decisions cited from `_policies/08_Decisions.md` DR-0261/0262/0263/0273. New local IDs continue from the true max +1: US-0012-0138..0142, AC-0012-0072..0081, BR-0012-0060..0064, EX-0012-0181..0185, TC-0012-0471..0480.
 
-## Triage
+## Triage (2026-05-27 second wave)
 
 | Source   | Subject                                                               | Existing Spec | Operation | Sub-op | Approved By | Rationale (incl. impact cascade verified)                                                                                                                                                                                                                                                                                                                                                                                                                                                      | DR-Ref           | Status    |
 | -------- | --------------------------------------------------------------------- | ------------- | --------- | ------ | ----------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------- | --------- |
