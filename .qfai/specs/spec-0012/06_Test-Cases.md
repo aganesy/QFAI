@@ -95,7 +95,7 @@
 - EX-Ref: EX-0012-0110
 - AC-Refs: AC-0012-0028
 - Test file: `packages/qfai/tests/core/prototyping/iteration.test.ts`
-- Verify `shouldStop([iter])` returns `"axes-exceptional"` when the latest iter has all 4 UX axes `exceptional`, `layoutAntiPatternsDetected.length === 0`, and `designMdViolations.length === 0`.
+- Verify `shouldStop([iter])` returns `"converged"` when the latest iter has `blockingFindings.length === 0`, `layoutAntiPatternsDetected.length === 0`, and `designMdViolations.length === 0`.
 
 ## TC-0012-0320
 
@@ -167,7 +167,7 @@
 - EX-Ref: EX-0012-0113
 - AC-Refs: AC-0012-0028
 - Test file: `packages/qfai/tests/core/prototyping/iteration.test.ts`
-- Verify convergence is blocked when `designMdViolations.length > 0` even if all 4 axes are `exceptional` and `layoutAntiPatternsDetected: []`.
+- Verify convergence is blocked when `designMdViolations.length > 0` even with `blockingFindings: []` and `layoutAntiPatternsDetected: []`.
 
 ## TC-0012-0330
 
@@ -458,7 +458,7 @@
 - AC-Refs: AC-0012-0042
 - Type: unit
 - Test file: `packages/qfai/tests/core/prototyping/iteration.test.ts`
-- Verify global convergence requires AND across every spec × screen pair: when 2 of 3 pairs are `exceptional` on all 4 axes and the 3rd is `strong` on one axis, `shouldStop` returns `null`; when all 3 pairs are `exceptional` (axes + lap=0 + designMdViolations=0), `shouldStop` returns `"axes-exceptional"`.
+- Verify global convergence requires AND across every spec × screen pair: when 2 of 3 pairs have all three arrays empty and the 3rd carries one blocking finding, `shouldStop` returns `null`; when all 3 pairs have all three arrays empty, `shouldStop` returns `"converged"`.
 
 ## TC-0012-0368
 
@@ -1001,7 +1001,7 @@
 - AC-Refs: AC-0012-0053
 - Type: integration
 - Test file: `packages/qfai/tests/integration/prototyping/tailwindContractConvergence.test.ts`
-- Verify NFR-0102: with the v1.9.1 generator-prompt + scanner pair, the canonical fixture pack converges within 3 cycles on the p95 lane. Asserts `iterations.length ≤ 3 AND stopReason === "axes-exceptional"`. Integration-level because it spans iterate + scanner + generator-prompt SSOT pair.
+- Verify NFR-0102: with the v1.9.1 generator-prompt + scanner pair, the canonical fixture pack converges within 3 cycles on the p95 lane. Asserts `iterations.length ≤ 3 AND stopReason === "converged"`. Integration-level because it spans iterate + scanner + generator-prompt SSOT pair.
 
 ## TC-0012-0435
 
@@ -1233,7 +1233,7 @@
 - AC-Refs: AC-0012-0061
 - Type: integration
 - Test file: `packages/qfai/tests/integration/cli/commands/prototypingIterate.stopReason.test.ts`
-- Verify REQ-0012-0063 stopReason coverage: 4 `it` blocks exercise each `stopReason` value (`axes-exceptional` / `max-iterations` / `license-verify-fail` / `input-error`); each fixture writes the corresponding top-level field and passes `qfai validate --profile prototyping`.
+- Verify REQ-0012-0063 stopReason coverage: 4 `it` blocks exercise each `stopReason` value (`converged` / `max-iterations` / `license-verify-fail` / `input-error`); each fixture writes the corresponding top-level field and passes `qfai validate --profile prototyping`.
 
 ## TC-0012-0464
 
@@ -1257,7 +1257,7 @@
 - AC-Refs: AC-0012-0066
 - Type: unit
 - Test file: `packages/qfai/tests/unit/cli/commands/prototypingIterate.blockedSummary.categories.test.ts`
-- Verify NFR-0103 category-name stability: snapshot test pins the exact identifier set `["designMdViolations", "layoutAntiPatternsDetected", "axes-below-exceptional"]`; additive-only invariant enforced via the snapshot mismatch on accidental rename.
+- Verify NFR-0103 category-name stability: snapshot test pins the exact identifier set `["designMdViolations", "layoutAntiPatternsDetected", "blockingFindings"]`; additive-only invariant enforced via the snapshot mismatch on accidental rename.
 
 ## TC-0012-0467
 

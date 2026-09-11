@@ -61,7 +61,7 @@ exploration-mode iteration (`detectExplorationCertifyAttempt`).
 
 `--check-convergence` is a read-only peek path: it reads
 `.qfai/evidence/prototyping/prototyping.json`, exits `0` when
-`stopReason === "axes-exceptional"` with `acceptedIterationIndex`
+`stopReason === "converged"` with `acceptedIterationIndex`
 non-null (the run converged), and exits `2` otherwise. The peek
 performs no writes, no Playwright launches, and does not require
 `--target-url`. `--cycle` may be omitted under `--check-convergence`
@@ -263,7 +263,7 @@ Per `qfai-prototyping.md`, iterate writes per cycle:
 
 ## Convergence + handoff (REQ-0116)
 
-On convergence (exit 64 path with `stopReason: "axes-exceptional"`),
+On convergence (exit 64 path with `stopReason: "converged"`),
 iterate mirrors the accepted-iter content into the aggregate-dir
 SSOT for every `screens[].id`:
 
@@ -285,14 +285,14 @@ offenders:
 - `designMdViolations` — count + first offender
   `kind=color,...,path,line`.
 - `layoutAntiPatternsDetected` — count + first lap code.
-- `axes-below-exceptional` — axis name + current score.
+- `blockingFindings` — count + the first line the reviewer wrote.
 
 Example wording:
 
 ```
 [BLOCKED] exit-64 prevented by: 1023 designMdViolations (top:
-color=#fff at iter-NN/scr_001.html:97), 0 anti-patterns, 1 axis
-below exceptional (aesthetics: passing).
+color=#fff at iter-NN/scr_001.html:97), 0 anti-patterns, 1
+blockingFindings (top: the checkout step gives no confirmation).
 ```
 
 ## Determinism posture

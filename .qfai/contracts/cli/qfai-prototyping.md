@@ -121,7 +121,8 @@ per-spec iter-dir migration in `prototypingIterate.ts`) lands.
 
 Convergence (evaluated at cycle ≥1 after Reviewer payloads land):
 the AND across every spec × screen pair of
-`(all 4 axes == exceptional) AND layoutAntiPatternsDetected.empty AND designMdViolations.empty`.
+`blockingFindings.empty AND layoutAntiPatternsDetected.empty AND designMdViolations.empty`.
+The four UX axes are reported and do not gate.
 Quantitative AC-pass% and transition-pass% thresholds are NOT used.
 
 Exit codes:
@@ -536,7 +537,7 @@ On convergence (exit 64), `iterate` MUST set on the top-level
 ```yaml
 acceptedIterationIndex: integer # 0..9; index into iterations[]
 stopReason: enum
-  - axes-exceptional # all (spec,screen) pairs reached exceptional + empty laps + empty designMdViolations
+  - converged # every (spec,screen) pair has all three finding arrays empty
   - max-iterations # exit 65 path (budget exhausted without convergence)
   - license-verify-fail # exit 66 path
   - input-error # exit 2 path

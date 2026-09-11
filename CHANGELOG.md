@@ -4,6 +4,30 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ## [Unreleased]
 
+### Fixed
+
+- **The specs decide convergence the way the loop does** (#1565). The prototype
+  loop stops when the latest iteration has `blockingFindings`,
+  `layoutAntiPatternsDetected` and `designMdViolations` all empty, and records
+  `stopReason: "converged"`. `spec-0012` and two CLI contracts stated it as all
+  four UX axes at `exceptional` and named `stopReason: "axes-exceptional"` —
+  a value no run has ever written.
+
+  That one bites a consumer: `--check-convergence` was specified to exit 0 on
+  it, so anyone building from the contract built for a state the tool cannot
+  produce. The blocked-cause summary was specified with `axes-below-exceptional`
+  as its third category, where the command prints `blockingFindings`.
+
+  The four axes are still scored by the reviewer and still reported. They
+  stopped deciding the stop, and the rows that made them gate are gone while
+  the rows describing them as reported remain.
+
+  A guard reads `STOP_REASONS` out of the source and fails on any spec or CLI
+  contract naming a value that enum does not carry. It found two more than a
+  read-through had: the DESIGN.md hash-mismatch path was given a fifth
+  `stopReason` nothing declares, and the max-iterations terminator was still
+  stated at the retired 15-cycle budget's `index === 14`.
+
 ### Changed
 
 - **The user picks the brand direction, at the one stage that asks** (#1473).

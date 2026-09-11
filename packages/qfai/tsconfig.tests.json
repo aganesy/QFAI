@@ -105,6 +105,7 @@
     "tests/assets/skillReferenceReachability.test.ts",
     "tests/assets/skillUserQuestionsSection.test.ts",
     "tests/assets/stageEvidenceCounts.test.ts",
+    "tests/assets/stopReasonSpecAlignment.test.ts",
     "tests/assets/tddIdAllocation.test.ts",
     "tests/assets/traceabilityChainLayered.test.ts",
     "tests/assets/triageColonShorthand.test.ts",

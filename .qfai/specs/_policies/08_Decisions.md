@@ -1734,7 +1734,7 @@ These rows pin the specific implementation contract the per-spec slices (Spec A�
 #### DR-0263: exploration-mode gate-relaxation table — medium (OQ-0154 resolved)
 
 - Date: 2026-05-27
-- Statement: Under `prototyping.mode: exploration`, downgrade `QFAI-CRIT-008` (axes-exceptional) AND the design-compliance error (DESIGN.md compliance / `designMdViolations`) from error → warning. Structural gates (schema / required-field / path) and license gates (exit 66) remain hard error. This is the medium relaxation between option A (only `QFAI-CRIT-008`) and option C (entire `QFAI-CRIT-*` family). `certify` rejects sealing any iteration produced under exploration mode regardless of the table (`R-EXPLORATION-CERTIFY-ATTEMPT`).
+- Statement: Under `prototyping.mode: exploration`, downgrade `QFAI-CRIT-008` (convergence) AND the design-compliance error (DESIGN.md compliance / `designMdViolations`) from error → warning. Structural gates (schema / required-field / path) and license gates (exit 66) remain hard error. This is the medium relaxation between option A (only `QFAI-CRIT-008`) and option C (entire `QFAI-CRIT-*` family). `certify` rejects sealing any iteration produced under exploration mode regardless of the table (`R-EXPLORATION-CERTIFY-ATTEMPT`).
 - Chosen option: medium (`QFAI-CRIT-008` + design-compliance → warning; structural/license hard).
 - Rejected option A — only `QFAI-CRIT-008`: design-compliance error still blocks shallow exploration loops, which is the second-most-cited blocker; too narrow to make exploration usable.
   - DO NOT: relax only the axes gate. Temptation: safest minimal step.
