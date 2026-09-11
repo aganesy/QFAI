@@ -5,10 +5,6 @@ dependencies: [00_universal/quality.md]
 version: 1.0.0
 ---
 
-> **言語指示（厳守）**
->
-> - 報告・出力: 日本語（Plan も含む）
-
 # テスト指針
 
 テスト設計と実行の基本ルール。

@@ -4,7 +4,37 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ## [Unreleased]
 
+### Fixed
+
+- **Thirty-two files told an agent which language to answer in** (#1500).
+  Every document under `.instruction/` opened with a block fixing output to one
+  language, which the constitution's Absolute Rule — answer in the user's
+  working language — already decides.
+
+  This is the same block, in the directory it was copied out of. It reached
+  `constitution/agent-selection.md` that way, overrode the Absolute Rule for
+  every operator working in another language, and was removed there. The guard
+  written with that removal swept only what ships, so the originals stayed, and
+  a comment naming the removal cannot stop a re-port from a directory nobody
+  sweeps.
+
+  The blocks are gone and `outputLanguageSingleSource.test.ts` now sweeps
+  `.instruction/` with the same matcher that guards the shipped tree.
+
 ### Added
+
+- **A ruling on what `.instruction/` may say** (#1500). Nothing said what
+  belonged in the directory `AGENTS.md` routes an agent into, so a rule could
+  live there in a second copy and drift from its master unread.
+
+  `.instruction/README.md` states it: the directory holds operating guidance,
+  it is repository-only, it states no rule that a rule master, the
+  constitution, the root entry points or the review policy owns, and on any
+  disagreement the owner wins. A new file earns its place by saying something
+  none of them says.
+
+  The `02_project/` layer summarises facts a live file states — layout, stack,
+  commands — so the ruling says to read the live source before acting on one.
 
 - **A rule for what may appear on an interface** (#1495).
   `.agents/rules/interface-clarity.md` is the counterpart of
@@ -135,6 +165,24 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   names must exist, and a Node floor it states must be the declared one. The
   check goes quiet if the layer is ever removed rather than standing in the way
   of removing it.
+
+- **The update bot stops offering releases the declared Node floor cannot run**
+  (#1522). Dependency updates merge on a green `ci-pass` and nothing else, which
+  works because that check runs this repository against the new dependency. It
+  cannot judge one narrowing: a release that raises its own `engines.node` above
+  the floor declared here. Every lane runs on the newest Node the range allows,
+  and the one lane pinned to the floor runs the package test suite rather than the
+  lint set, so such a release goes green and lands — and the narrowing surfaces
+  later as a local failure for whoever is on the oldest supported Node.
+
+  `markdownlint-cli2@0.23.2` is the measured case: it declares `>=22` against a
+  floor of `>=20.19.0`, and its update reached a passing check.
+
+  The bot now filters by the declared constraints, against the floor the published
+  package promises. This is not a pin and nothing stops receiving fixes —
+  `markdownlint-cli2@0.22.1` declares `>=20` and is still offered. The floor is
+  read from the package manifest rather than written twice, and a test holds the
+  two together.
 
 - **The floor lane stops failing runs in which nothing failed** (#1523). That lane
   runs the whole suite in one process pool, and each fork reports progress to the
