@@ -28,6 +28,9 @@
  *    reported (`If the user does not specify a language, respond in English.`).
  * 2. **Explicitly non-directive** — the unit disclaims pinning in so many
  *    words (`このファイルは出力言語を固定しない…`, `pins no language`).
+ * 3. **About stored text** — the unit names the repository as the thing
+ *    written (`this repository is written in English`). That is a rule about
+ *    source and Markdown, not about what an agent says.
  *
  * Anything else that names a language in an output-binding context is
  * reported. Prose that merely mentions a language ("critiques pass trivially
@@ -41,7 +44,8 @@
  * - A language outside {@link LANGUAGE_NAMES_EN} / {@link LANGUAGE_NAMES_JA}
  *   is invisible. Extend the rosters rather than loosening the shapes.
  * - A unit that both disclaims pinning and issues a directive is exempted by
- *   carve-out 2.
+ *   carve-out 2. A unit that states the repository's written language and then
+ *   pins an output language is exempted by carve-out 3 the same way.
  *
  * The shapes are deliberately wide and the carve-outs deliberately narrow, so
  * the failure mode is a false positive a contributor can read and rebut, not a
@@ -219,6 +223,13 @@ const DIRECTIVE_SHAPES: readonly DirectiveShape[] = [
     pattern: new RegExp(`${JA}(?:のみ|だけ)(?:を|で)?(?:使用|使う|用いる)`),
   },
   {
+    // 「報告/Plan/最終出力は日本語」— the topic marker, with the language last.
+    // Every other Japanese shape expects the language before the particle or
+    // beside a colon, so the most ordinary way to state the rule read as prose.
+    name: "ja/topic-language",
+    pattern: new RegExp(`(?:${JA_OUTPUT_VERB})[^。\\n]{0,20}?は[^。\\n]{0,10}?${JA}`),
+  },
+  {
     // The header that shipped the original defect, whatever follows it.
     name: "ja/language-instruction-header",
     pattern: /言語指示/,
@@ -234,6 +245,26 @@ const PERMITTED_DISCLAIMER_SHAPES: readonly RegExp[] = [
   /固定しない|固定されない|固定はしない/,
   /\b(?:pins no|does not pin|do not pin|never pins)\b/i,
 ];
+
+/**
+ * Carve-out 3: the subject is the text this repository stores, not an output.
+ *
+ * "This repository is written in English" is a rule about source, comments and
+ * Markdown — `.agents/rules/repository-language.md` owns it, and it says in so
+ * many words that it does not decide the language an assistant replies in. The
+ * `en/verb-in-language` shape cannot tell the two apart: `written` is an output
+ * verb, and a repository is not an output.
+ *
+ * Narrow on purpose. The unit has to name the repository as the thing written,
+ * so a sentence about what an agent writes is untouched.
+ */
+const STORED_TEXT_SHAPES: readonly RegExp[] = [
+  /\brepositor(?:y|ies)\b[^.]{0,60}?\bwritten in\b/i,
+  /リポジトリ[^。\n]{0,30}?(?:で書く|で書き|で書かれ|で記述)/,
+];
+
+const describesStoredText = (unit: string): boolean =>
+  STORED_TEXT_SHAPES.some((shape) => shape.test(unit));
 
 /**
  * The condition clause a user-conditional unit opens with, or `null`.
@@ -344,9 +375,11 @@ export function toLogicalUnits(text: string): LogicalUnit[] {
   return units;
 }
 
-/** True when the unit is one of the two permitted ways to name a language. */
+/** True when the unit is one of the three permitted ways to name a language. */
 const isPermittedReference = (unit: string): boolean =>
-  isUserLanguageConditional(unit) || PERMITTED_DISCLAIMER_SHAPES.some((shape) => shape.test(unit));
+  isUserLanguageConditional(unit) ||
+  PERMITTED_DISCLAIMER_SHAPES.some((shape) => shape.test(unit)) ||
+  describesStoredText(unit);
 
 /**
  * Every unit of `text` that pins output to a named language.
