@@ -120,11 +120,19 @@ function isRecord(value: unknown): value is Record<string, unknown> {
  * The knob values are computed, and an override path is exactly what a regex cannot see
  * through. `vi.resetModules()` before each import is what makes the override claim
  * possible at all: the modules read their environment once, at evaluation.
+ *
+ * Both knobs are cleared first, so a case reads the environment it declares rather than
+ * the one the suite happens to be running under. The floor lane sets the worker knob for
+ * the whole run, and without this the default case measures that lane instead of the
+ * default.
  */
 async function load(
   env: Readonly<Record<string, string>> = {},
 ): Promise<{ projects: Record<string, unknown>[]; root: Record<string, unknown> }> {
   vi.resetModules();
+  for (const key of [WORKERS_ENV, CONCURRENCY_ENV]) {
+    vi.stubEnv(key, undefined);
+  }
   for (const [key, value] of Object.entries(env)) {
     vi.stubEnv(key, value);
   }
@@ -905,5 +913,56 @@ describe("a ceiling below the declared testTimeout", () => {
     // duration for a fixture field or a table column that happens to be named
     // `timeout`, which is a failure nobody can act on.
     expect(ceilingsIn(code)).toEqual([]);
+  });
+});
+
+describe("the floor lane bounds its forks by the runner it is on", () => {
+  /**
+   * The lane that runs the whole suite in one process pool is the only one that
+   * has exited 1 with every test passing: each fork reports progress to the
+   * single main process over an RPC call with a fixed budget, and a main process
+   * that cannot answer in time turns a healthy run red.
+   *
+   * The budget is not configurable — `ForksOptions` carries no timeout and the
+   * default lives inside the RPC library — so what this pins is the other side:
+   * the lane states a fork count taken from the machine instead of inheriting the
+   * declared ceiling, which on a four-core runner is 2.5x oversubscribed.
+   */
+  const floorLaneRun = (): string => {
+    const doc: unknown = parseYaml(
+      readFileSync(path.join(REPO_ROOT, ".github", "workflows", "ci.yml"), "utf-8"),
+    );
+    const jobs = isRecord(doc) && isRecord(doc["jobs"]) ? doc["jobs"] : {};
+    const floor = jobs["node-floor"];
+    const steps = isRecord(floor) && Array.isArray(floor["steps"]) ? floor["steps"] : [];
+    const runs = steps
+      .map((step) => (isRecord(step) ? step["run"] : undefined))
+      .filter((run): run is string => typeof run === "string")
+      .filter((run) => /pnpm -C packages\/qfai test\b/.test(run));
+    expect(runs, "the floor lane must run the package suite").toHaveLength(1);
+    return runs[0] ?? "";
+  };
+
+  it("passes the declared override, so the count is not inherited", () => {
+    expect(floorLaneRun()).toContain(WORKERS_ENV);
+  });
+
+  // From the machine, not a literal. A number written here would be right for
+  // one runner size and silently wrong for the next.
+  it("takes the count from the runner rather than writing one", () => {
+    const run = floorLaneRun();
+    expect(run).toMatch(new RegExp(`${WORKERS_ENV}="\\$\\(nproc\\)"`));
+    expect(
+      new RegExp(`${WORKERS_ENV}=["']?\\d`).test(run),
+      "a literal fork count is right for one runner and wrong for the next",
+    ).toBe(false);
+  });
+
+  // The declared starting value is the user's to revise. This lane overriding it
+  // is not that, and the two must not be confused: if the override ever equals
+  // the declaration the lane has stopped bounding anything.
+  it("leaves the declared starting value alone", () => {
+    const knobs = readFileSync(path.join(PACKAGE_ROOT, "vitest.knobs.ts"), "utf-8");
+    expect(knobs).toContain(`export const DECLARED_START = ${DECLARED_START}`);
   });
 });
