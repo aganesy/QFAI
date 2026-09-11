@@ -63,6 +63,10 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   and a second case asserts both columns so the narrowing cannot be widened
   back by accident.
 
+  The prototype review criterion on labels now names `WCAG 3.3.2` where it
+  previously pointed at a rule file that carries the number, so the reader of
+  the criterion has the citation in front of them.
+
 - **Two codes shared the `lap-` prefix with a registry that did not declare
   them** (#1499). `layoutAntiPatternsDetected[]` has one vocabulary and two
   writers: the reviewer writes the codes it judges, and `iterate --capture`

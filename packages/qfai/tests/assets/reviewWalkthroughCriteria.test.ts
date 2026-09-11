@@ -76,7 +76,7 @@ describe("the prototype review asks eight answerable questions", () => {
       const text = flat(await read(tree, REVIEWER_PROMPT));
 
       expect(text).toContain("a label is not an explanation");
-      expect(text).toContain("WCAG requires a label for every form input");
+      expect(text).toContain("WCAG 3.3.2 requires a label for every form input");
       expect(text).toContain("names the control to fix, not the sentence to delete");
       expect(text).toContain("Labels stay.");
     });
