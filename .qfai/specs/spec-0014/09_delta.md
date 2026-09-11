@@ -224,10 +224,11 @@ The v1.7.16 slice recorded a historical validator contract that made the legacy 
 - Notes: REQ-0166 is the certify side (SaaS-package scope seal). The validate-profile side (`qfai validate --profile saas-package`) is owned by spec-0004 (same Source REQ, file-local IDs). Certificate carries `scope: "saas-package"` + `notes:`; never claims full DONE; `--upgrade-scope full` gated on missing gates landing. Contract reference: `_policies/05_Contracts.md` §CHG-006 DCON-005 / CLI-VAL; glossary `saas-package profile`. One-minor deprecation window per OC-63.
 - Source: REQ-0166 (discussion-20260527075558258)
 
-## Triage
+## 2026-09-11 — design-system-presence retirement (spec-0014)
 
-| Operation | Change | Target                                            | Source Ref | Cascade | DR-ID        | Gate |
-| --------- | ------ | ------------------------------------------------- | ---------- | ------- | ------------ | ---- |
-| UPDATE    | MODIFY | tdd/test-list.md (TDD-0026 / TDD-0027 / TDD-0032) | —          | none    | DR-0014-0002 | PASS |
+| Operation | Sub-op | Target                                            | Source (REQ) | Rationale        | DR-Ref       | Status |
+| --------- | ------ | ------------------------------------------------- | ------------ | ---------------- | ------------ | ------ |
+| UPDATE    | MODIFY | tdd/test-list.md (TDD-0026 / TDD-0027 / TDD-0032) | —            | cascade verified | DR-0014-0002 | PASS   |
 
 - Notes: the design-system-presence validator is retired together with the document it required, so the three rows whose test file it owned are parked at `exception` beside TDD-0028 and TDD-0029, which the same decision already parked for the same reason.
+- Source: the retirement of `uiux/12_design_system.md` in the discussion template manifest
