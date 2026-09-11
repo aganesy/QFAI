@@ -81,7 +81,7 @@ async function collectSuspiciousTemplatePaths(root: string): Promise<string[]> {
     if (!current) {
       continue;
     }
-    let entries: Dirent[] = [];
+    let entries: Dirent[];
     try {
       entries = await readdir(current, {
         withFileTypes: true,

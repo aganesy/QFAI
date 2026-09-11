@@ -3535,6 +3535,7 @@ async function configureGitSymlinks(destRoot: string, dryRun: boolean): Promise<
         "  git config --local core.symlinks true",
         `Cause: ${detail}`,
       ].join("\n"),
+      { cause: err },
     );
   }
 
@@ -3708,6 +3709,7 @@ async function syncIntegrationWrappers(
           throw new Error(
             `Failed to read the instructions template: ${templateSrc}` +
               ` (${code ?? detail}). Check that the package is installed correctly.`,
+            { cause: err },
           );
         }
         await replaceWithRegularFile(dest, content);
@@ -4829,6 +4831,7 @@ async function ensureSymlink(
             "  Settings > System > For developers > Developer Mode: ON",
             "Details: https://learn.microsoft.com/windows/apps/get-started/enable-your-device-for-development",
           ].join("\n"),
+          { cause: err },
         );
       }
       throw err;
@@ -5121,6 +5124,7 @@ async function recreateFlattenedLink(
           "  Settings > System > For developers > Developer Mode: ON",
           "Details: https://learn.microsoft.com/windows/apps/get-started/enable-your-device-for-development",
         ].join("\n"),
+        { cause: err },
       );
     }
     if (restoreError !== undefined) {

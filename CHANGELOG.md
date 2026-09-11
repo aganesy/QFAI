@@ -47,6 +47,25 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **The layout anti-pattern registry has one copy** (#1486).
+  `layoutAntiPatterns.json` existed twice — once beside the loader under
+  `src/core/validators/`, once under `assets/validators/`, which
+  `package.json#files` ships. The loader tries each entry point's depth in turn
+  and stops at the first file that exists, so the nearer copy won wherever both
+  were reachable. Editing one meant this repository and an adopting project
+  enforcing different rules.
+
+  A byte-equality test held the two together, which reports a divergence rather
+  than preventing one: it fires only once someone has already edited a copy,
+  and it cannot say which of the two is the one that ships.
+
+  The copy under `src/` is gone. The shipped copy is the only one, and the
+  loader already carried the candidate that reaches it from `src/` — so the
+  candidate list now holds one entry per entry point and nothing else.
+  `layoutAntiPatternsCandidates` is exported for the test that pins those three
+  depths, alongside one that fails on any second copy, whether or not its bytes
+  match.
+
 - **A second hook group now reaches a project that already has the first**
   (#1464). `qfai init` merges its Claude Code hooks into a project that already
   has a `.claude/settings.json`. The merge decided whether to do anything from
@@ -155,6 +174,36 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   pass on exactly the state this replaces.
 
 ### Changed
+
+- **The lint toolchain leaves the end-of-life eslint 9 line** (#1450). Every
+  release in that line is marked deprecated by the registry, and 9.39.5 is the
+  last one there will be, so no update inside the declared `^9.8.0` range could
+  clear it. The range is `^10.10.0` now, alongside `@eslint/js` at `^10.0.1`
+  and `typescript-eslint` at `^8.70.0` — the first of its line to accept
+  eslint 10 as a peer.
+
+  The new major adds two rules to `eslint:recommended`, and both reported
+  defects rather than style:
+
+  | Rule                    | Sites | What it names                                                   |
+  | ----------------------- | ----- | --------------------------------------------------------------- |
+  | `no-useless-assignment` | 34    | an initializer that every path overwrites before reading it     |
+  | `preserve-caught-error` | 22    | a `throw` inside a `catch` that dropped the error it reports on |
+
+  Every site is fixed rather than suppressed. A dead initializer becomes a type
+  annotation, so the compiler proves the variable is assigned on each path
+  instead of a placeholder standing in for a path that assigns nothing. A
+  rethrow carries `{ cause }`, so the original error survives in the one that
+  replaces it and a stack trace still reaches the failure.
+
+  `typescript-eslint` also names six type assertions its earlier release could
+  not see as unnecessary. Five are removed. The sixth becomes a return type on
+  the callback that builds the value, which is what the assertion stood in for.
+
+  eslint 10 runs on `^20.19.0 || ^22.13.0 || >=24`, narrower than the
+  `>=20.19.0` this repository declares. It is a development dependency, so the
+  floor the published package promises is unchanged. The cost is that a
+  contributor on Node 21, or on 22.0 through 22.12, cannot run the lint lane.
 
 - **Every Triage section in a delta ledger names the round it records**
   (#1467). Seven ledgers disabled `MD024/no-duplicate-heading` per file, because

@@ -5,7 +5,8 @@
  * cardinality and id ordering, plus the semantic-scope no-op contract.
  */
 
-import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { existsSync } from "node:fs";
+import { mkdtemp, readdir, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -14,6 +15,7 @@ import { afterEach, describe, expect, it } from "vitest";
 
 import {
   findLayoutAntiPatterns,
+  layoutAntiPatternsCandidates,
   loadLayoutAntiPatterns,
   type LayoutAntiPattern,
 } from "../../../src/core/validators/layoutAntiPatterns.js";
@@ -119,19 +121,45 @@ describe("findLayoutAntiPatterns (TC-3.3.5..8)", () => {
   });
 });
 
-describe("layoutAntiPatterns.json SSOT byte-equality", () => {
-  // The lap registry exists in two locations so the loader can resolve it
-  // both from src/ (during tests) and from assets/ (after `qfai init`
-  // copies the asset tree to a consuming project). They MUST stay
-  // byte-identical; this test fails when one is updated without the
-  // other.
-  it("src and assets copies are byte-identical", async () => {
-    const here = path.dirname(fileURLToPath(import.meta.url));
-    const packageRoot = path.resolve(here, "..", "..", "..");
-    const srcCopy = path.join(packageRoot, "src", "core", "validators", "layoutAntiPatterns.json");
-    const assetCopy = path.join(packageRoot, "assets", "validators", "layoutAntiPatterns.json");
-    const [srcBytes, assetBytes] = await Promise.all([readFile(srcCopy), readFile(assetCopy)]);
-    expect(srcBytes.equals(assetBytes)).toBe(true);
+describe("the registry has one copy", () => {
+  const packageRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "..");
+  const shipped = path.join(packageRoot, "assets", "validators", "layoutAntiPatterns.json");
+
+  /** Every `layoutAntiPatterns.json` under `dir`, as paths relative to it. */
+  async function registryCopies(dir: string, prefix = ""): Promise<string[]> {
+    const found: string[] = [];
+    for (const entry of await readdir(dir, { withFileTypes: true })) {
+      // Neither is authored: one is installed, the other is build output, and
+      // both legitimately hold a copy of the file that ships.
+      if (entry.name === "node_modules" || entry.name === "dist") continue;
+      const rel = path.join(prefix, entry.name);
+      if (entry.isDirectory())
+        found.push(...(await registryCopies(path.join(dir, entry.name), rel)));
+      else if (entry.name === "layoutAntiPatterns.json") found.push(rel);
+    }
+    return found.sort();
+  }
+
+  // A second copy is precisely what the resolver cannot report. It takes the
+  // first candidate that exists, so a copy nearer the caller wins silently,
+  // and this repository and an adopting project then enforce different rules.
+  // Byte-equality between two copies only reports the divergence after
+  // someone has already edited one of them.
+  it("holds exactly one layoutAntiPatterns.json", async () => {
+    expect(await registryCopies(packageRoot)).toEqual([
+      path.join("assets", "validators", "layoutAntiPatterns.json"),
+    ]);
+  });
+
+  // That one copy is under `assets/`, which `package.json#files` ships, so it
+  // is the file an adopter runs against as well as the one this repository
+  // reads. The depths below are the three places this module is loaded from.
+  it.each([
+    ["src/core/validators", path.join(packageRoot, "src", "core", "validators")],
+    ["dist/cli", path.join(packageRoot, "dist", "cli")],
+    ["dist", path.join(packageRoot, "dist")],
+  ])("resolves to it from %s", (_entryPoint, baseDir) => {
+    expect(layoutAntiPatternsCandidates(baseDir).find((c) => existsSync(c))).toBe(shipped);
   });
 });
 
