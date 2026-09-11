@@ -721,3 +721,61 @@ describe("uiux.competitive_refs_min reaches the canonical UIX run", () => {
     }
   });
 });
+
+/**
+ * A reference is consulted for one of two opposite reasons — a competitor to
+ * differ from, a catalogue to adopt from — so the two registries are counted
+ * apart. Entries in either are held to the same three fields.
+ */
+describe("the component catalogue registry", () => {
+  const CATALOGUE = "## Component Catalogue Registry";
+
+  async function packWith(body: string[], heading: string): Promise<string> {
+    const root = await newTempDir();
+    await createPack(root, true);
+    await writeFile(path.join(root, "04_Sources.md"), sourcesWithRegistry(body, heading), "utf-8");
+    return root;
+  }
+
+  it("is not counted unless the project asks for it", async () => {
+    const root = await packWith([], CATALOGUE);
+    const issues = await validateCompetitiveReferences(root, withUiux({ competitive_refs_min: 0 }));
+    expect(issues).toEqual([]);
+  });
+
+  it("reports a registry short of the minimum the project set", async () => {
+    const root = await packWith([referenceBlock("Origin UI")], CATALOGUE);
+    const issues = await validateCompetitiveReferences(
+      root,
+      withUiux({ competitive_refs_min: 0, catalogue_refs_min: 2 }),
+    );
+    expect(issues).toHaveLength(1);
+    expect(issues[0]?.message).toContain("at least 2 complete catalogue references");
+    expect(issues[0]?.message).toContain("found 1");
+  });
+
+  it("holds a registered entry to all three fields even when uncounted", async () => {
+    const root = await packWith(
+      [referenceBlock("Origin UI", { adopted_points: "TBD" })],
+      CATALOGUE,
+    );
+    const issues = await validateCompetitiveReferences(root, withUiux({ competitive_refs_min: 0 }));
+    expect(issues).toHaveLength(1);
+    expect(issues[0]?.message).toContain("Catalogue reference");
+    expect(issues[0]?.message).toContain("adopted_points");
+  });
+
+  // The two are not interchangeable: adopting from a catalogue is not
+  // evidence that a competitor was studied, and the reverse is the claim the
+  // split exists to stop.
+  it("does not let catalogue entries satisfy the competitive minimum", async () => {
+    const root = await packWith(
+      [referenceBlock("Origin UI"), referenceBlock("Magic UI"), referenceBlock("Kibo UI")],
+      CATALOGUE,
+    );
+    const issues = await validateCompetitiveReferences(root, withUiux({ competitive_refs_min: 3 }));
+    expect(issues).toHaveLength(1);
+    expect(issues[0]?.message).toContain("complete competitive references");
+    expect(issues[0]?.message).toContain("found 0");
+  });
+});
