@@ -145,6 +145,24 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   reach zero and leave the pins, which the five ledgers above have already
   taken to 98 and 1060: `sdd` 98 errors to 96, `full` 1060 to 1058.
 
+- **A canonical Triage heading may name the round it records** (#1447).
+  `QFAI-TRIAGE-008` required the heading to be exactly `## Triage`, and its
+  remedy told authors to write one such heading per round. A delta ledger is
+  append-only and records several rounds, so following that produced a file of
+  identical H2s — which `markdownlint`'s `MD024` rejects in its default
+  configuration, and which leaves every section anchor pointing at the first.
+
+  The heading may now carry a parenthesised qualifier: `## Triage (2026-05-24)`
+  is canonical and its rows are read exactly as an unqualified section's are.
+  Parentheses are the only accepted form, so `## Triage Table`,
+  `## Triage-Table` and `## Triage — 2026-05-24` still report, which is what the
+  rule exists to catch.
+
+  Nothing that conformed before stops conforming: the bare `## Triage` is
+  unchanged, and both delta templates ship it. The two delta schemas accept the
+  qualifier as well, so the shape lane and the triage rules read the same
+  heading.
+
 ## [1.11.1] - 2026-09-10
 
 ### Removed
