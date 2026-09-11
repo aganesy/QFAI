@@ -193,3 +193,10 @@ operator に実行させるコマンドの綴りは、**その文章を誰が読
 
 - jsdom v26+ は CSS レイアウトをサポートしないため、タッチターゲットサイズチェックはインライン `style` 属性のみ対象
 - クラスベースまたはスタイルシートベースのサイズ指定は、現実装では未検証としてスキップ（追加 info は未出力）
+
+## Related
+
+`.agents/rules/interface-clarity.md` decides what may appear in this output at
+all. A terminal is an interface, so the rule reads `usage()`, prompts, progress
+and every message above the same way it reads a screen: a sentence explaining
+how to work the command is a defect report against the command.

@@ -4,8 +4,8 @@
  * `qfai.config.yaml#prototyping.mode` defaults to `convergence`. The
  * `qfai prototyping iterate --mode <convergence|exploration>` flag
  * overrides config. Under `exploration` the prototyping profile
- * applies a *medium* relaxation: soft-rubric findings (axes-exceptional
- * loop completion + design-compliance drift) downgrade error →
+ * applies a *medium* relaxation: soft-rubric findings (loop
+ * completion + design-compliance drift) downgrade error →
  * warning while structural / schema / path / license (exit 66) gates
  * stay hard error.
  *
