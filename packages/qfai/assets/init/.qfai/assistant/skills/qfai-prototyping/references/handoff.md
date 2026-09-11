@@ -56,14 +56,35 @@ finalArtifact: ".qfai/prototypes/final/index.html"
 designMdPath: "DESIGN.md"
 designMdSha256: "<hex from DESIGN.md.lock.yaml>"
 designSystemMirror: ".qfai/contracts/design/design-system.yaml"
+procurement:
+  # What realises each screen region, so the implementer installs rather
+  # than reconstructs. Omit both lists for a screen drawn entirely from
+  # what the project already had.
+  procured:
+    - screen: "<screen id>"
+      region: "<what part of the screen>"
+      item: "<catalogue item, or the project component it already had>"
+  authored:
+    - screen: "<screen id>"
+      region: "<what part of the screen>"
+      why: "<what was looked for and did not serve>"
 implementationNotes: |
-  Plain prose. Information-architecture summary, navigation patterns,
-  state coverage, and any usability decisions worth carrying into
-  /qfai-implement. Do not restate brand identity — read DESIGN.md.
+  Plain prose, for what is genuinely prose: why a flow is ordered as it
+  is, and usability decisions worth carrying into /qfai-implement. Not a
+  carrier for decisions that have a structured form above. Do not restate
+  brand identity — read DESIGN.md.
 ```
 
-The artifact itself is the SSOT for component structure. DESIGN.md is
-the SSOT for brand identity. There is no preserve / adapt / copy split.
+`procurement` is the SSOT for component structure: the implementer reads
+it to install, and the reviewer reads it to check rather than to judge a
+resemblance. DESIGN.md is the SSOT for brand identity.
+
+What the prototype never showed — responsive behaviour, dark mode, focus
+and hover states, keyboard order, the detail of an empty or error state —
+is not in either. A static capture cannot carry it. Take the adopted
+design system's default, which has already answered each one and answers
+them consistently with each other
+(`.qfai/assistant/catalog/ui-procurement.md`).
 
 ## Cert
 

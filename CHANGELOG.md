@@ -4,7 +4,85 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ## [Unreleased]
 
+### Changed
+
+- **The test runner stops asking for more forks than the machine has** (#1528).
+  `DECLARED_START` is ten, and on a four-core runner that asked for ten forks
+  where four fit. A fifth fork does not run — it waits for a core — and the
+  waiting is charged to the fork, so the suite reported as though it were
+  ten-way parallel while running four-way.
+
+  Whole package suite, four cores, back to back:
+
+  | forks | wall    | collect (summed) | tests (summed) |
+  | ----- | ------- | ---------------- | -------------- |
+  | 10    | 307.4 s | 347.8 s          | 1999.2 s       |
+  | 4     | 253.0 s | 109.6 s          | 703.6 s        |
+
+  Summed test time falls to a third while the same 11 338 cases run with the
+  same outcomes. On the wall clock ten is 21.5% slower, outside the ten percent
+  the adoption rule allows — where the fourteen-core comparison that adopted ten
+  put it at 3.48%, inside it.
+
+  The declaration is unchanged and still ten. What the runner is handed is
+  `Math.min(DECLARED_START, availableParallelism())`, so a machine with ten
+  cores or more is unaffected. `QFAI_TEST_MAX_WORKERS` stays uncapped: a
+  comparison that could not oversubscribe could not measure what
+  oversubscribing costs. `DR-0017-0010` records the decision.
+
+- **The prototyping envelope bans runtime dependencies, not markup** (#1479).
+  `generator-prompt.md` opened its envelope constraints with "No component
+  library beyond Tailwind + Lucide", which also refused transposing a block
+  from a component catalogue — an operation that installs nothing.
+
+  The real constraint is the line beside it: one self-contained file loaded
+  from a CDN, which has no package manager to run an install with. The clause
+  now says that, and names the one authoring path the gate genuinely cannot
+  see — CSS behind a `<link>`, whose href is never fetched, so a literal
+  inside it is drift nobody reports.
+
+  It also states the permission plainly: transposing a catalogue block and
+  re-binding its palette classes to `DESIGN.md` tokens is the expected way to
+  build a screen. `designMdViolations.ts` judges the values a document states
+  and has no way to read where the markup came from, so a transposed block
+  passes once `bg-blue-500` becomes `bg-primary`. Both halves of the
+  scanner / prompt pair now say so, and
+  `designMdViolationsTransposition.test.ts` runs a catalogue block through the
+  gate in both bindings.
+
 ### Fixed
+
+- **Two codes shared the `lap-` prefix with a registry that did not declare
+  them** (#1499). `layoutAntiPatternsDetected[]` has one vocabulary and two
+  writers: the reviewer writes the codes it judges, and `iterate --capture`
+  computes `lap-009` (two declared screens whose captures are byte-identical)
+  and `lap-010` (a declared route the capture could not reach).
+
+  Only the first writer's codes were registered. The specification, the CLI
+  contract and the command's own warning all say the other two are counted in
+  that array, so a reviewer recording one — as the warning tells it to —
+  produced `QFAI-PROT-002` for a code the tool itself printed.
+
+  Both are now declared in `layoutAntiPatterns.json`, each naming the screen
+  contract as its authority, which is the same authority
+  `lap-007-state-not-represented` names. A row reads the emitted codes out of
+  the capture pass and fails when one is unregistered, so a third code cannot
+  be added on one side alone.
+
+- **The handoff says what to install, not to rebuild** (#1480). It handed an
+  implementer a screenshot and a paragraph and said "reimplement with
+  project-native patterns", which is an instruction to rebuild by hand at the
+  exact point a component could be installed.
+
+  `prototype-handoff.yaml` now carries `procurement`: what realises each
+  screen region, and for an authored region, what was looked for and did not
+  serve. The reviewer checks the implementation against it instead of judging
+  a resemblance.
+
+  It also settles what the prototype never showed. Responsive behaviour, dark
+  mode, focus states and the detail of an empty state come from the adopted
+  design system's default, which answers them consistently with each other.
+  `implementationNotes` keeps what is genuinely prose.
 
 - **Every layout anti-pattern names what makes it a defect** (#1484). An
   entry now carries a `source`, and the loader drops one that does not: a
@@ -146,6 +224,21 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
   Each role that applies the criteria carries one line saying so, so they reach
   the stage that acts on them rather than living only in the loop.
+
+- **A discussion pack can record the catalogues it adopted from** (#1482).
+  The reference registry knew one kind: a competitor, consulted to differ
+  from. A component catalogue is consulted for the opposite reason and had
+  nowhere to be recorded.
+
+  `04_Sources.md` gains a Component Catalogue Registry beside the competitive
+  one. Both take the same three fields — what was adopted, what was rejected,
+  how it was translated — and are counted apart, so a catalogue entry cannot
+  satisfy the competitive minimum or the reverse.
+
+  The catalogue count is off unless a project sets `uiux.catalogue_refs_min`.
+  A gate that fires on every pack written before the registry existed is one
+  people switch off rather than satisfy. An entry that IS registered is held
+  to all three fields either way.
 
 - **A ladder for where a screen's components come from** (#1478).
   `.qfai/assistant/catalog/ui-procurement.md` states the order: does the
