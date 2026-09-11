@@ -14,8 +14,8 @@
  *     parses against the shipped reviewer payload schema (closed
  *     schema), carries the `(specId, screenId, cycle)` of the pair and
  *     accepted iteration it is stored under, and is itself converged
- *     (4 axes `exceptional`, no layout anti-patterns, no DESIGN.md
- *     violations). All four failures are the same coverage rejection
+ *     (no blocking finding, no layout anti-pattern, no DESIGN.md
+ *     violation). All four failures are the same coverage rejection
  *     (exit 64) as a missing payload. The gate applies to single-spec
  *     and multi-spec frozen sets alike.
  *
@@ -69,7 +69,6 @@ import {
   type DesignMdViolation,
 } from "../../core/prototyping/designMdViolations.js";
 import {
-  ORDINAL_AXES,
   parseEvaluatorReview,
   type ReviewerPayload,
 } from "../../core/prototyping/evaluatorReview.js";
@@ -961,10 +960,10 @@ export async function runPrototypingCertify(
       // `reviewerGate.result === "PASS"` is a summary claim (gated
       // above); the per-screen payloads are the evidence behind it.
       // Convergence is an AND over every (spec, screen) pair — a
-      // completed Reviewer session (`sessionStatus: "ok"`), all 4
-      // ordinal axes `exceptional`, `layoutAntiPatternsDetected` and
-      // `designMdViolations` both empty (see
-      // `core/prototyping/iteration.ts::allFourAxesExceptional` /
+      // completed Reviewer session (`sessionStatus: "ok"`) and
+      // `blockingFindings`, `layoutAntiPatternsDetected` and
+      // `designMdViolations` all empty (see
+      // `core/prototyping/iteration.ts::iterationConverged` /
       // `shouldStopAcrossSpecs`) — so a payload that fails it
       // contradicts the summary, and sealing the certificate on top of
       // that contradiction is exactly the drift certify exists to stop.
@@ -973,7 +972,7 @@ export async function runPrototypingCertify(
           "qfai prototyping certify: prototyping.json#reviewerGate.result is PASS but accepted " +
             `iteration ${acceptedIterDir} has ${unconvergedPayloads.length} review.json ` +
             "payload(s) that contradict convergence (every (spec, screen) pair needs " +
-            '`sessionStatus: "ok"` and all 4 ordinal axes `exceptional` with ' +
+            '`sessionStatus: "ok"` with blockingFindings, ' +
             "layoutAntiPatternsDetected and designMdViolations empty):",
           unconvergedPayloads,
         );
@@ -2535,17 +2534,16 @@ function collectIdentityMismatches(
 
 /**
  * Re-derive per-pair convergence from the payload itself, mirroring
- * `core/prototyping/iteration.ts::allFourAxesExceptional`: all 4
- * ordinal axes `exceptional`, no layout anti-patterns, no DESIGN.md
- * violations. Every returned string names one reason this pair is not
- * converged.
+ * `core/prototyping/iteration.ts::iterationConverged`: no blocking
+ * finding, no layout anti-pattern, no DESIGN.md violation. Every
+ * returned string names one reason this pair is not converged.
  *
  * `sessionStatus` gates all of that: the shipped reference declares
  * `retryExhausted` / `launchFailed` as the Reviewer Playwright
  * hard-stop — every attempt failed, or the Reviewer never started —
  * and such a pair is supposed to leave NO payload behind. A file that
- * nonetheless carries a failed status reviewed nothing, so whatever
- * axes it claims are not evidence; only `ok` describes a session that
+ * nonetheless carries a failed status reviewed nothing, so whatever it
+ * claims is not evidence; only `ok` describes a session that
  * actually ran.
  */
 function collectConvergenceContradictions(review: ReviewerPayload): string[] {
@@ -2556,11 +2554,8 @@ function collectConvergenceContradictions(review: ReviewerPayload): string[] {
         "complete, so this payload is not evidence of a review",
     );
   }
-  for (const axis of ORDINAL_AXES) {
-    const verdict = review.ordinalAxes[axis];
-    if (verdict !== "exceptional") {
-      errors.push(`ordinalAxes.${axis} is "${verdict}", not "exceptional"`);
-    }
+  if (review.blockingFindings.length > 0) {
+    errors.push(`blockingFindings is non-empty: ${review.blockingFindings.join("; ")}`);
   }
   if (review.layoutAntiPatternsDetected.length > 0) {
     errors.push(

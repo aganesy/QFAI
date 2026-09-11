@@ -66,22 +66,10 @@ async function seedPrototypingJson(root: string, body: unknown): Promise<void> {
   await writeFile(path.join(dir, "prototyping.json"), JSON.stringify(body), "utf-8");
 }
 
-const validIter = (index: number, allExceptional = false, lap: string[] = []) => ({
+const validIter = (index: number, converged = false, lap: string[] = []) => ({
   index,
   commitSha: "a".repeat(40),
-  scores: allExceptional
-    ? {
-        informationArchitecture: "exceptional" as const,
-        navigationFlow: "exceptional" as const,
-        usability: "exceptional" as const,
-        functionality: "exceptional" as const,
-      }
-    : {
-        informationArchitecture: "acceptable" as const,
-        navigationFlow: "acceptable" as const,
-        usability: "acceptable" as const,
-        functionality: "acceptable" as const,
-      },
+  blockingFindings: converged ? [] : ["home: the empty state is not represented"],
   proseCritique: VALID_PROSE_CRITIQUE,
   layoutAntiPatternsDetected: lap,
   designMdViolations: [],
@@ -117,7 +105,7 @@ async function seedReviewJson(root: string, index: number, body: unknown): Promi
 function reviewFrom(
   iter: {
     index: number;
-    scores: Record<string, string>;
+    blockingFindings: readonly string[];
     proseCritique: string;
     layoutAntiPatternsDetected: readonly string[];
     designMdViolations: readonly { kind: string; found: string }[];
@@ -129,7 +117,7 @@ function reviewFrom(
   return {
     iterIndex: iter.index,
     reviewerId: "product-surface-reviewer",
-    scores: iter.scores,
+    blockingFindings: iter.blockingFindings,
     proseCritique: iter.proseCritique,
     layoutAntiPatternsDetected: iter.layoutAntiPatternsDetected,
     designMdViolations: iter.designMdViolations,
@@ -205,57 +193,29 @@ describe("validatePrototypingEvidence", () => {
     expect(issues.some((i) => i.code === "QFAI-PROT-005")).toBe(true);
   });
 
-  it("emits QFAI-PROT-005 when stopReason=axes-exceptional but last iter not all exceptional", async () => {
+  it("emits QFAI-PROT-005 when stopReason=converged but last iter not all exceptional", async () => {
     const root = await newTempDir();
     await seedPrototypingJson(root, {
       specsCovered: ["0001"],
       iterations: [validIter(0, false)],
       acceptedIterationIndex: 0,
-      stopReason: "axes-exceptional",
+      stopReason: "converged",
     });
     const issues = await validatePrototypingEvidence(root, makeConfig());
     expect(issues.some((i) => i.code === "QFAI-PROT-005")).toBe(true);
   });
 
-  it("emits structured issues instead of throwing when stopReason=axes-exceptional and the last iter is malformed", async () => {
+  it("emits structured issues instead of throwing when stopReason=converged and the last iter is malformed", async () => {
     const root = await newTempDir();
     await seedPrototypingJson(root, {
       specsCovered: ["0001"],
-      iterations: [validIter(0), { index: 1, commitSha: "b".repeat(40), scores: null }],
+      iterations: [validIter(0), { index: 1, commitSha: "b".repeat(40), blockingFindings: null }],
       acceptedIterationIndex: 1,
-      stopReason: "axes-exceptional",
+      stopReason: "converged",
     });
     const issues = await validatePrototypingEvidence(root, makeConfig());
     expect(issues.some((i) => i.code === "QFAI-PROT-002")).toBe(true);
     expect(issues.some((i) => i.code === "QFAI-PROT-005")).toBe(true);
-  });
-
-  it("emits QFAI-PROT-002 when a layout anti-pattern is present but informationArchitecture exceeds acceptable", async () => {
-    const root = await newTempDir();
-    const iter = validIter(0, false, ["lap-006-overcrowded-sidebar"]);
-    await seedPrototypingJson(root, {
-      specsCovered: ["0001"],
-      iterations: [
-        {
-          ...iter,
-          scores: {
-            ...iter.scores,
-            informationArchitecture: "strong",
-          },
-        },
-      ],
-      acceptedIterationIndex: 0,
-      stopReason: null,
-    });
-    const issues = await validatePrototypingEvidence(root, makeConfig());
-    expect(
-      issues.some(
-        (i) =>
-          i.code === "QFAI-PROT-002" &&
-          i.message.includes("scores.informationArchitecture") &&
-          i.message.includes("layoutAntiPatternsDetected"),
-      ),
-    ).toBe(true);
   });
 
   it("emits QFAI-PROT-002 when designMdViolations contains a malformed entry", async () => {
@@ -418,7 +378,7 @@ describe("validatePrototypingEvidence", () => {
       specsCovered: ["0001"],
       iterations: [first, second],
       acceptedIterationIndex: 1,
-      stopReason: "axes-exceptional",
+      stopReason: "converged",
     });
     // A record whose reviewer artifacts are absent is no longer valid: the
     // mirror is a transcription, and there is nothing on disk it transcribes.
@@ -527,7 +487,7 @@ describe("validatePrototypingEvidence — iter-NN/review.json", () => {
   // the orchestrator to overwrite it while updating the record in place), and
   // writing the string into any row waived that row. Measured before the fix:
   // three iterations, all four axes `exceptional`, `stopReason:
-  // "axes-exceptional"` and no review.json anywhere -> zero findings.
+  // "converged"` and no review.json anywhere -> zero findings.
   it("does not waive the gate for a reviewed record that kept the seed stamp", async () => {
     const root = await newTempDir();
     const stale = (index: number) => ({
@@ -538,7 +498,7 @@ describe("validatePrototypingEvidence — iter-NN/review.json", () => {
       specsCovered: ["0001"],
       iterations: [stale(0), stale(1), stale(2)],
       acceptedIterationIndex: 2,
-      stopReason: "axes-exceptional",
+      stopReason: "converged",
     });
 
     const issues = await validatePrototypingEvidence(root, makeConfig());
@@ -637,7 +597,7 @@ describe("validatePrototypingEvidence — iter-NN/review.json", () => {
       reviewFrom(iter, {
         designMdViolations: [{ kind: "not-a-kind", found: "x" }],
         pivotDirective: "stop",
-        scores: { ...iter.scores, usability: "catastrophic" },
+        blockingFindings: [5],
       }),
     );
 
@@ -645,7 +605,7 @@ describe("validatePrototypingEvidence — iter-NN/review.json", () => {
     const rules = issues.filter((i) => i.code === "QFAI-PROT-002").map((i) => i.rule);
     expect(rules).toContain("prototypingEvidence.review.designMdViolations");
     expect(rules).toContain("prototypingEvidence.review.pivotDirective");
-    expect(rules).toContain("prototypingEvidence.review.scores.usability");
+    expect(rules).toContain("prototypingEvidence.review.blockingFindings");
   });
 
   it("emits QFAI-PROT-002 when review.json iterIndex does not match its directory", async () => {
@@ -690,12 +650,12 @@ describe("validatePrototypingEvidence — iter-NN/review.json", () => {
 
   // Both files are internally consistent here. Only comparing them finds the
   // transcription error, which is why neither surface caught it alone.
-  it("emits QFAI-PROT-002 when the mirror disagrees with review.json on a score", async () => {
+  it("emits QFAI-PROT-002 when the mirror disagrees with review.json on a finding", async () => {
     const root = await newTempDir();
     const iter = validIter(0);
     await seedPrototypingJson(root, {
       specsCovered: ["0001"],
-      iterations: [{ ...iter, scores: { ...iter.scores, usability: "strong" } }],
+      iterations: [{ ...iter, blockingFindings: ["home: a different finding"] }],
       acceptedIterationIndex: 0,
       stopReason: null,
     });
@@ -707,7 +667,7 @@ describe("validatePrototypingEvidence — iter-NN/review.json", () => {
         (i) =>
           i.code === "QFAI-PROT-002" &&
           i.rule === "prototypingEvidence.review.mirrorMismatch" &&
-          i.message.includes("scores.usability"),
+          i.message.includes("blockingFindings"),
       ),
     ).toBe(true);
   });
@@ -801,67 +761,6 @@ describe("validatePrototypingEvidence — iter-NN/review.json", () => {
     expect(mismatch?.message.length).toBeLessThan(iter.proseCritique.length);
   });
 
-  // A leaf missing on one side is that side's own shape defect, reported by the
-  // pass that owns it. Restating it here as "disagrees with undefined" would
-  // report one gap twice.
-  it("does not report an absent score leaf as a disagreement", async () => {
-    const root = await newTempDir();
-    const iter = validIter(0);
-    const { usability: _dropped, ...partialScores } = iter.scores;
-    await seedPrototypingJson(root, {
-      specsCovered: ["0001"],
-      iterations: [{ ...iter, scores: partialScores }],
-      acceptedIterationIndex: 0,
-      stopReason: null,
-    });
-    await seedReviewJson(root, 0, reviewFrom(iter));
-
-    const issues = await validatePrototypingEvidence(root, makeConfig());
-    // The mirror's own shape check reports the missing axis...
-    expect(
-      issues.some(
-        (i) => i.rule === "prototypingEvidence.scores.usability" && i.message.includes("undefined"),
-      ),
-    ).toBe(true);
-    // ...and the mirror comparison stays silent about it.
-    expect(issues.some((i) => i.rule === "prototypingEvidence.review.mirrorMismatch")).toBe(false);
-  });
-
-  // The cap rule is the most consequential invariant in the reviewer contract,
-  // and it was checked only on the mirror — so a cap-violating review.json was
-  // reported through its own faithful transcription, producing a pair of
-  // findings no edit could satisfy: lower IA in prototyping.json, then match
-  // review.json again. Neither named the file the defect lives in.
-  it("reports a cap-violating review.json against review.json", async () => {
-    const root = await newTempDir();
-    const codes = ["lap-006-overcrowded-sidebar"];
-    // The mirror is capped correctly; only the reviewer's file breaks the rule.
-    const iter = validIter(0, false, codes);
-    await seedPrototypingJson(root, {
-      specsCovered: ["0001"],
-      iterations: [iter],
-      acceptedIterationIndex: 0,
-      stopReason: null,
-    });
-    await seedReviewJson(
-      root,
-      0,
-      reviewFrom(iter, {
-        scores: { ...iter.scores, informationArchitecture: "exceptional" },
-      }),
-    );
-
-    const issues = await validatePrototypingEvidence(root, makeConfig());
-    const capFinding = issues.find(
-      (i) =>
-        i.rule === "prototypingEvidence.review.scores.informationArchitecture.layoutAntiPatternCap",
-    );
-    expect(capFinding).toBeDefined();
-    // The file to edit is the reviewer's, and the message says so.
-    expect(capFinding?.file).toBe(".qfai/evidence/prototyping/iter-00/review.json");
-    expect(capFinding?.message).toContain("re-transcribe");
-  });
-
   // The reviewer is fed the prior cycle's review.json as an input, so a
   // misspelled key added while editing it leaves a payload that is complete,
   // in-enum, faithfully transcribed and silent — while the loop acts on the
@@ -925,7 +824,7 @@ describe("validatePrototypingEvidence — iter-NN/review.json", () => {
     // single generic complaint.
     const rules = new Set(issues.map((i) => i.rule));
     for (const key of [
-      "scores",
+      "blockingFindings",
       "proseCritique",
       "pivotDirective",
       "layoutAntiPatternsDetected",
@@ -1091,7 +990,7 @@ describe("validatePrototypingEvidence — iter-NN/review.json", () => {
     expect(issues.some((i) => i.rule === "prototypingEvidence.review.shape")).toBe(true);
   });
 
-  it("emits QFAI-PROT-002 for a non-object scores and a non-array lap list", async () => {
+  it("emits QFAI-PROT-002 for a non-array blockingFindings and a non-array lap list", async () => {
     const root = await newTempDir();
     const iter = validIter(0);
     await seedPrototypingJson(root, {
@@ -1103,12 +1002,12 @@ describe("validatePrototypingEvidence — iter-NN/review.json", () => {
     await seedReviewJson(
       root,
       0,
-      reviewFrom(iter, { scores: "acceptable", layoutAntiPatternsDetected: "lap-006" }),
+      reviewFrom(iter, { blockingFindings: "nope", layoutAntiPatternsDetected: "lap-006" }),
     );
 
     const issues = await validatePrototypingEvidence(root, makeConfig());
     const rules = issues.map((i) => i.rule);
-    expect(rules).toContain("prototypingEvidence.review.scores");
+    expect(rules).toContain("prototypingEvidence.review.blockingFindings");
     expect(rules).toContain("prototypingEvidence.review.layoutAntiPatternsDetected");
   });
 

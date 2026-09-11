@@ -127,6 +127,44 @@ describe("output language is stated in one place only", () => {
       expect(offenders).toEqual([]);
     });
   }
+
+  // The tree the block was copied OUT of. `agent-selection.md` above is one
+  // file's worth of the defect; this is where the thirty-two originals sat,
+  // each opening with the same three lines, for as long as the guard above
+  // looked only at what ships. A comment naming the removal cannot stop a
+  // re-port from a directory nobody sweeps, so the sweep now covers it.
+  //
+  // Not shipped, so it is checked once rather than per tree.
+  it(".instruction/ binds output to no named language either", async () => {
+    const instructionDir = path.join(repoRoot, ".instruction");
+    const files = await collectMarkdown(instructionDir);
+    expect(files.length, ".instruction/ holds no markdown").toBeGreaterThan(0);
+
+    const offenders: string[] = [];
+    for (const rel of files) {
+      const text = await readFile(path.join(instructionDir, rel), "utf-8");
+      offenders.push(...fixedLanguageOffenders(rel, text));
+    }
+
+    expect(offenders).toEqual([]);
+  });
+
+  // The ruling those files are held to. Without it the sweep above says what
+  // may not be written and nothing says what may, which is the state that let
+  // thirty-two copies of a rule the constitution owns accumulate unread.
+  it(".instruction/README.md rules on the directory", async () => {
+    const text = await readFile(path.join(repoRoot, ".instruction/README.md"), "utf-8");
+    // One token per clause that no other clause carries.
+    for (const clause of [
+      /Absolute Rule/,
+      /pins none/,
+      /agentSelectionReferenceTargets/,
+      /the owner wins/,
+      /Adding a file/,
+    ]) {
+      expect(text).toMatch(clause);
+    }
+  });
 });
 
 /**

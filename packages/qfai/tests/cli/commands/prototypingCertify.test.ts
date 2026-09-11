@@ -462,7 +462,7 @@ describe("qfai prototyping certify (per-screen payload identity + convergence)",
     }
   });
 
-  it("exits 64 when reviewerGate says PASS but a payload's axes are below exceptional", async () => {
+  it("exits 64 when reviewerGate says PASS but a payload has a finding open", async () => {
     const root = await newTempDir();
     await seedMinimalProject(root);
     await seedAllGatesPass(root, { specsCovered: ["0012"] });
@@ -473,7 +473,9 @@ describe("qfai prototyping certify (per-screen payload identity + convergence)",
       "spec-0012",
       "settings",
       1,
-      reviewPayload("spec-0012", "settings", { axis: "weak" }),
+      reviewPayload("spec-0012", "settings", {
+        blockingFindings: ["settings: the empty state is not represented"],
+      }),
     );
 
     const logger = await import("../../../src/cli/lib/logger.js");
@@ -483,20 +485,20 @@ describe("qfai prototyping certify (per-screen payload identity + convergence)",
       expect(exit).toBe(64);
       const messages = errorSpy.mock.calls.map((c) => String(c[0]));
       expect(messages.some((m) => m.includes("contradict convergence"))).toBe(true);
-      expect(messages.some((m) => m.includes("ordinalAxes.usability"))).toBe(true);
+      expect(messages.some((m) => m.includes("blockingFindings is non-empty"))).toBe(true);
     } finally {
       errorSpy.mockRestore();
     }
   });
 
   it.each(["retryExhausted", "launchFailed"] as const)(
-    "exits 64 when a payload reports sessionStatus '%s' even with all axes exceptional",
+    "exits 64 when a payload reports sessionStatus '%s' even with nothing open",
     async (status) => {
       // `retryExhausted` / `launchFailed` are the Reviewer Playwright
       // hard-stop: every attempt failed, or the Reviewer never
       // started. Such a pair is supposed to leave no payload at all,
-      // so a file that carries a failed status reviewed nothing — its
-      // `exceptional` axes are not evidence and must not seal a
+      // so a file that carries a failed status reviewed nothing — an
+      // empty finding list there is not evidence and must not seal a
       // certificate.
       const root = await newTempDir();
       await seedMinimalProject(root);
@@ -564,7 +566,9 @@ describe("qfai prototyping certify (per-screen payload identity + convergence)",
       "spec-0012",
       "old",
       1,
-      reviewPayload("spec-0012", "old", { axis: "weak" }),
+      reviewPayload("spec-0012", "old", {
+        blockingFindings: ["settings: the empty state is not represented"],
+      }),
     );
 
     const logger = await import("../../../src/cli/lib/logger.js");
@@ -696,7 +700,9 @@ describe("qfai prototyping certify (recursive payload sweep + --check re-audit)"
     await seedPayloadAt(
       root,
       "misc/old.review.json",
-      reviewPayload("spec-0012", "old", { axis: "weak" }),
+      reviewPayload("spec-0012", "old", {
+        blockingFindings: ["settings: the empty state is not represented"],
+      }),
     );
 
     const logger = await import("../../../src/cli/lib/logger.js");
@@ -783,7 +789,10 @@ describe("qfai prototyping certify (recursive payload sweep + --check re-audit)"
       "spec-0012",
       "home",
       0,
-      reviewPayload("spec-0012", "home", { cycle: 0, axis: "weak" }),
+      reviewPayload("spec-0012", "home", {
+        cycle: 0,
+        blockingFindings: ["home: the empty state is not represented"],
+      }),
     );
 
     expect(await runPrototypingCertify({ root, check: false })).toBe(0);

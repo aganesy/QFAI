@@ -5,10 +5,6 @@ dependencies: [00_universal/thinking.md]
 version: 1.0.0
 ---
 
-> **言語指示（厳守）**
->
-> - 報告・出力: 日本語（Plan も含む）
-
 # 調査・デバッグ手順
 
 問題を特定し解決するための型。

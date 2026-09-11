@@ -8,8 +8,7 @@
  *
  *   - designMdViolations     — count + first offender `{kind}={found}`
  *   - layoutAntiPatternsDetected — count + first offender code/id
- *   - axes-below-exceptional — count of axes not at exceptional + first
- *     offender axis name + current ordinal
+ *   - blockingFindings       — count + the first line the reviewer wrote
  *
  * Pure / deterministic. No I/O; the caller supplies the iteration shape
  * directly.
@@ -20,7 +19,7 @@ import type { DesignMdViolation } from "./designMdViolations.js";
 export const BLOCKED_CATEGORIES = [
   "designMdViolations",
   "layoutAntiPatternsDetected",
-  "axes-below-exceptional",
+  "blockingFindings",
 ] as const;
 
 export type BlockedCategory = (typeof BLOCKED_CATEGORIES)[number];
@@ -28,12 +27,7 @@ export type BlockedCategory = (typeof BLOCKED_CATEGORIES)[number];
 export type BlockedSummaryInput = {
   readonly designMdViolations: readonly DesignMdViolation[];
   readonly layoutAntiPatternsDetected: readonly string[];
-  readonly scores: {
-    readonly informationArchitecture: string;
-    readonly navigationFlow: string;
-    readonly usability: string;
-    readonly functionality: string;
-  };
+  readonly blockingFindings: readonly string[];
 };
 
 export type BlockedCategoryLine = {
@@ -41,16 +35,6 @@ export type BlockedCategoryLine = {
   readonly count: number;
   readonly text: string;
 };
-
-const AXIS_LABELS: readonly {
-  readonly key: keyof BlockedSummaryInput["scores"];
-  readonly label: string;
-}[] = [
-  { key: "informationArchitecture", label: "informationArchitecture" },
-  { key: "navigationFlow", label: "navigationFlow" },
-  { key: "usability", label: "usability" },
-  { key: "functionality", label: "functionality" },
-];
 
 function firstDesignMdViolationOffender(violations: readonly DesignMdViolation[]): string {
   const first = violations[0];
@@ -64,28 +48,12 @@ function firstLayoutAntiPatternOffender(lap: readonly string[]): string {
   return first;
 }
 
-function axesBelowExceptional(scores: BlockedSummaryInput["scores"]): {
-  count: number;
-  first: { axis: string; current: string } | null;
-} {
-  let count = 0;
-  let first: { axis: string; current: string } | null = null;
-  for (const { key, label } of AXIS_LABELS) {
-    const v = scores[key];
-    if (v !== "exceptional") {
-      count += 1;
-      if (first === null) first = { axis: label, current: v };
-    }
-  }
-  return { count, first };
-}
-
 export function buildBlockedCategoryLines(
   input: BlockedSummaryInput,
 ): readonly BlockedCategoryLine[] {
   const dmvCount = input.designMdViolations.length;
   const lapCount = input.layoutAntiPatternsDetected.length;
-  const axes = axesBelowExceptional(input.scores);
+  const findingCount = input.blockingFindings.length;
   return [
     {
       category: "designMdViolations",
@@ -104,12 +72,12 @@ export function buildBlockedCategoryLines(
           : `${lapCount} layoutAntiPatternsDetected (top: ${firstLayoutAntiPatternOffender(input.layoutAntiPatternsDetected)})`,
     },
     {
-      category: "axes-below-exceptional",
-      count: axes.count,
+      category: "blockingFindings",
+      count: findingCount,
       text:
-        axes.count === 0
-          ? "0 axesBelowExceptional"
-          : `${axes.count} axesBelowExceptional (${axes.first?.axis ?? "n/a"}: ${axes.first?.current ?? "n/a"})`,
+        findingCount === 0
+          ? "0 blockingFindings"
+          : `${findingCount} blockingFindings (top: ${input.blockingFindings[0] ?? "none"})`,
     },
   ];
 }

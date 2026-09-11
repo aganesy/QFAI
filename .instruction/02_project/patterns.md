@@ -5,10 +5,6 @@ dependencies: [02_project/architecture.md]
 version: 1.0.0
 ---
 
-> **言語指示（厳守）**
->
-> - 報告・出力: 日本語（Plan も含む）
-
 # 実装パターン（QFAI Toolkit）
 
 QFAI Toolkit の実装は CLI とコア検証エンジンを分離し、最小の責務で追加できるように設計する。

@@ -28,7 +28,35 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   computation accepts, so a named colour, `hsl()`, a value carrying alpha or a
   shorthand with more than a colour in it is skipped rather than guessed at.
 
+- **Thirty-two files told an agent which language to answer in** (#1500).
+  Every document under `.instruction/` opened with a block fixing output to one
+  language, which the constitution's Absolute Rule — answer in the user's
+  working language — already decides.
+
+  This is the same block, in the directory it was copied out of. It reached
+  `constitution/agent-selection.md` that way, overrode the Absolute Rule for
+  every operator working in another language, and was removed there. The guard
+  written with that removal swept only what ships, so the originals stayed, and
+  a comment naming the removal cannot stop a re-port from a directory nobody
+  sweeps.
+
+  The blocks are gone and `outputLanguageSingleSource.test.ts` now sweeps
+  `.instruction/` with the same matcher that guards the shipped tree.
+
 ### Added
+
+- **A ruling on what `.instruction/` may say** (#1500). Nothing said what
+  belonged in the directory `AGENTS.md` routes an agent into, so a rule could
+  live there in a second copy and drift from its master unread.
+
+  `.instruction/README.md` states it: the directory holds operating guidance,
+  it is repository-only, it states no rule that a rule master, the
+  constitution, the root entry points or the review policy owns, and on any
+  disagreement the owner wins. A new file earns its place by saying something
+  none of them says.
+
+  The `02_project/` layer summarises facts a live file states — layout, stack,
+  commands — so the ruling says to read the live source before acting on one.
 
 - **A rule for what may appear on an interface** (#1495).
   `.agents/rules/interface-clarity.md` is the counterpart of
@@ -123,6 +151,68 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   are replaced by a reference to the master.
 
 ### Fixed
+
+- **The update bot stops offering releases the declared Node floor cannot run**
+  (#1522). Dependency updates merge on a green `ci-pass` and nothing else, which
+  works because that check runs this repository against the new dependency. It
+  cannot judge one narrowing: a release that raises its own `engines.node` above
+  the floor declared here. Every lane runs on the newest Node the range allows,
+  and the one lane pinned to the floor runs the package test suite rather than the
+  lint set, so such a release goes green and lands — and the narrowing surfaces
+  later as a local failure for whoever is on the oldest supported Node.
+
+  `markdownlint-cli2@0.23.2` is the measured case: it declares `>=22` against a
+  floor of `>=20.19.0`, and its update reached a passing check.
+
+  The bot now filters by the declared constraints, against the floor the published
+  package promises. This is not a pin and nothing stops receiving fixes —
+  `markdownlint-cli2@0.22.1` declares `>=20` and is still offered. The floor is
+  read from the package manifest rather than written twice, and a test holds the
+  two together.
+
+- **The floor lane stops failing runs in which nothing failed** (#1523). That lane
+  runs the whole suite in one process pool, and each fork reports progress to the
+  single main process over a call with a fixed budget. When the main process could
+  not answer in time the fork threw, the throw was counted as an unhandled error,
+  and a run with every test green exited 1.
+
+  The budget is not reachable: the runner's fork options carry no timeout, its
+  options builder sets none, and the default lives inside the message library. So
+  the lever is the contention instead. The lane now takes its fork count from the
+  runner rather than inheriting the declared ceiling, which on a four-core machine
+  was 2.5 times oversubscribed.
+
+  That is also faster. Whole suite on four cores, ten forks against four: 299 s
+  against 269 s of wall clock, with the summed collect and test figures falling
+  from 343 s to 113 s and from 1972 s to 743 s. Those sums are taken across forks,
+  so their collapse is the oversubscription — at ten forks most of each fork's
+  measured time was spent waiting for a core.
+
+  The declared starting value is unchanged. This is the override the knob set
+  already defines, used by the one lane that needed it.
+
+- **The prototyping loop converges on open findings, not on a rating** (#1488).
+  The stop test required all four review axes at `exceptional` — a value the
+  scale itself defines as best-in-class and tells the reviewer to use
+  sparingly — aggregated as the worst verdict across every screen, and
+  `certify` re-derived the same condition. A review that rated honestly never
+  satisfied it, so the gate measured the reviewer's willingness to call four
+  axes best-in-class rather than measuring the prototype.
+
+  The four ordinal axes are gone. The reviewer writes `blockingFindings`, one
+  line per thing that must be fixed, and convergence is that array empty
+  alongside `layoutAntiPatternsDetected` and `designMdViolations`. Anything
+  worth saying that does not block goes in the prose critique, where it
+  informs the next cycle without stopping this one.
+
+  Nothing else in this project scored: the shared reviewer contract is a
+  verdict plus graded findings, and `/qfai-implement` already ran a binary
+  checklist. Prototyping now uses the same shape.
+
+  `pivotDirective` compares how many findings are open across cycles, because
+  a count is reproducible where a verdict is not. `stopReason` records
+  `converged`. The cycle-0 seed carries one finding, so an iteration nobody
+  has reviewed cannot satisfy the stop test by never having been looked at.
 
 - **The design-drift scanner cites nothing a reader cannot resolve** (#1496).
   Nine comment lines in the scanner named a code review tool's internal comment
