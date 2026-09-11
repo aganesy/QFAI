@@ -553,9 +553,6 @@ export const GATE_GROUP_FAMILIES = {
     "UIX-VAL-3LAYER-*",
     "UIX-VAL-CLASSIFICATION-*",
     "UIX-VAL-DIRECTION-*",
-    // Covers `UIX-VAL-DS-READ-ERROR`, `UIX-VAL-DS01` and `UIX-VAL-DS02`: the
-    // two numbered ones carry no separator, so a `-*` form would miss them.
-    "UIX-VAL-DS*",
     "UIX-VAL-OQ-*",
     "UIX-VAL-SCREEN-*",
     "UIX-VAL-SIDECAR-*",

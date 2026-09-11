@@ -272,7 +272,6 @@ const PENDING_WIRING: ReadonlyMap<string, string> = new Map<string, string>([
     "validateOptionComparison",
     "2026-08-22 — validators/uix/comparisonValidator.ts, `export { … as … }` alias reached only from the unwired uix/nonUiOverfire.ts, see #670",
   ],
-  ["validateDesignSystemPresence", "2026-08-22 — validators/uix/designSystemPresence.ts, see #403"],
 ]);
 
 /**

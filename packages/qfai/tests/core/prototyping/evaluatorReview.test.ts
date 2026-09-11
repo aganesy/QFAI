@@ -321,7 +321,7 @@ describe("parseEvaluatorReview — full payload acceptance (TC-0012-0364)", () =
   it("accepts a payload with blockingFindings, impressions and the top-level discriminators", () => {
     const result = parseEvaluatorReview(
       baseReviewerPayload({
-        layoutAntiPatternsDetected: ["lap-006-overcrowded-sidebar"],
+        layoutAntiPatternsDetected: ["lap-008-no-back-affordance"],
         designMdViolations: [{ kind: "color", found: "#FF00FF" }],
       }),
     );
@@ -337,7 +337,7 @@ describe("parseEvaluatorReview — full payload acceptance (TC-0012-0364)", () =
     expect(result.review.impressions.userStoryFeel.length).toBeGreaterThan(0);
     expect(result.review.impressions.acceptanceCriteriaFeel.length).toBeGreaterThan(0);
     expect(result.review.impressions.menuReachabilityFeel.length).toBeGreaterThan(0);
-    expect(result.review.layoutAntiPatternsDetected).toEqual(["lap-006-overcrowded-sidebar"]);
+    expect(result.review.layoutAntiPatternsDetected).toEqual(["lap-008-no-back-affordance"]);
     expect(result.review.designMdViolations).toEqual([{ kind: "color", found: "#FF00FF" }]);
   });
 });

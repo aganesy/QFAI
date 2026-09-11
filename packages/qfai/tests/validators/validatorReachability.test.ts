@@ -42,7 +42,6 @@ const KNOWN_UNREACHABLE = new Map<string, string>([
   ["validators/requireIndex.ts", "unfiled — QFAI-REQINDEX-* cannot fire; no importer left"],
   ["validators/skill/phaseOrdering.ts", "unfiled — same class as #402"],
   ["validators/skill/sidecarFlowOrdering.ts", "unfiled — same class as #402"],
-  ["validators/uix/designSystemPresence.ts", "#403 — retired uix/ validators"],
   ["validators/uix/fixtureCoverage.ts", "#403 — retired uix/ validators"],
   ["validators/uix/nonUiOverfire.ts", "#403 — retired uix/ validators"],
 ]);

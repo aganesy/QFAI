@@ -18,6 +18,7 @@ tools: [Read, Write, Edit, Glob, Grep, Bash]
 - Keep UI code cohesive and readable: isolate concerns, minimize hidden coupling, avoid duplication, and use existing patterns/utilities before inventing new ones.
 - Apply fail-fast validation and least-astonishment behavior to form handling, loading states, error states, and interaction flows.
 - Apply `.agents/rules/minimal-implementation.md`: work the reuse rungs before writing, and mark a deliberate shortcut with its ceiling and the condition that lifts it.
+- Apply `.qfai/assistant/catalog/ui-procurement.md`: install a component before writing one, and for anything the prototype does not show, take the adopted system's default rather than inventing one.
 - Apply `.agents/rules/interface-clarity.md`: label a control in the user's words, never the parameter's. The label stays; the sentence explaining it goes.
 
 ## Inputs you must read

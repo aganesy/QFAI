@@ -466,7 +466,6 @@ export const TYPE_CHECK_UNENUMERATED: readonly string[] = [
   "tests/validators/uiEvidenceArtifacts.test.ts",
   "tests/validators/uix/classification.test.ts",
   "tests/validators/uix/comparisonValidator.test.ts",
-  "tests/validators/uix/designSystemPresence.test.ts",
   "tests/validators/uix/fixtureCoverage.test.ts",
   "tests/validators/uix/nonUiOverfire.test.ts",
   "tests/validators/uix/nonUiSafety.test.ts",
