@@ -119,6 +119,21 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Added
 
+- **A discussion pack can record the catalogues it adopted from** (#1482).
+  The reference registry knew one kind: a competitor, consulted to differ
+  from. A component catalogue is consulted for the opposite reason and had
+  nowhere to be recorded.
+
+  `04_Sources.md` gains a Component Catalogue Registry beside the competitive
+  one. Both take the same three fields — what was adopted, what was rejected,
+  how it was translated — and are counted apart, so a catalogue entry cannot
+  satisfy the competitive minimum or the reverse.
+
+  The catalogue count is off unless a project sets `uiux.catalogue_refs_min`.
+  A gate that fires on every pack written before the registry existed is one
+  people switch off rather than satisfy. An entry that IS registered is held
+  to all three fields either way.
+
 - **A ladder for where a screen's components come from** (#1478).
   `.qfai/assistant/catalog/ui-procurement.md` states the order: does the
   region need to exist, does the installed design system have it, does a
