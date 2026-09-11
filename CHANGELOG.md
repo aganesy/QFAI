@@ -89,6 +89,23 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Added
 
+- **A ladder for where a screen's components come from** (#1478).
+  `.qfai/assistant/catalog/ui-procurement.md` states the order: does the
+  region need to exist, does the installed design system have it, does a
+  catalogue have it, can it be composed from what is present — and only then
+  author it and record why. The theme is adopted from a published one rather
+  than chosen colour by colour.
+
+  It also settles the part a static capture cannot show. Responsive
+  behaviour, dark mode, focus states and the detail of an empty state come
+  from the adopted system's defaults, which agree with each other in a way
+  per-screen invention does not.
+
+  Delivered by placing the file: every skill and every agent card already
+  reads `catalog/**` as a set. The three roles that build or review a
+  surface carry the obligation explicitly, beside the one they already carry
+  for code.
+
 - **A project can say which user-interface stack it adopted** (#1476).
   `catalog/tech.md` gains a Frontend section naming the CSS framework, the
   catalogue components are taken from, and the published theme the tokens
