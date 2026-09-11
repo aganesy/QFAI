@@ -7,7 +7,7 @@
  *   - US-0013-0013: surface_type auto-populate on a UI-companion spec;
  *     D-SURFACE-TYPE-MISSING warns when frontmatter is absent.
  *   - US-0013-0014: structured primary_tasks `{id,label,acceptance}`
- *     shape accepted; recommended count band 3..7 named in
+ *     shape accepted; recommended ceiling of 7 named in
  *     QFAI-AUD-020 warning text.
  *
  * Converted from `.skip` test-first skeletons to deterministic
@@ -133,13 +133,13 @@ describe("spec-0013 US-0013-0013 surface_type auto-populate", () => {
   });
 });
 
-describe("spec-0013 US-0013-0014 primary_tasks band + shape", () => {
+describe("spec-0013 US-0013-0014 primary_tasks ceiling + shape", () => {
   async function seedUi(uiContract: string) {
     await seedUiCompanion("sample.yaml", uiContract);
     return validateDesignAudit(root, defaultConfig);
   }
 
-  it("QFAI:SPEC-0013:US-0013-0014 — normal: structured items accepted and band 3..7 named in warning when count out-of-band", async () => {
+  it("QFAI:SPEC-0013:US-0013-0014 — normal: structured items accepted and the ceiling named in the warning when count is over it", async () => {
     const tasks = Array.from({ length: 9 }, (_, i) => `      - task_${i + 1}`).join("\n");
     const issues = await seedUi(
       [
@@ -154,10 +154,10 @@ describe("spec-0013 US-0013-0014 primary_tasks band + shape", () => {
     );
     const warning = issues.find((issue) => issue.code === "QFAI-AUD-020");
     expect(warning, "expected QFAI-AUD-020 for count=9").toBeDefined();
-    expect(warning?.message ?? "").toMatch(/3\.\.7|3 to 7/);
+    expect(warning?.message ?? "").toMatch(/at most 7/);
   });
 
-  it("QFAI:SPEC-0013:US-0013-0014 — error/boundary: count below 3 warns; incomplete structured item rejected", async () => {
+  it("QFAI:SPEC-0013:US-0013-0014 — error/boundary: a two-task screen does not warn; incomplete structured item rejected", async () => {
     const issues = await seedUi(
       [
         "screens:",
@@ -174,7 +174,10 @@ describe("spec-0013 US-0013-0014 primary_tasks band + shape", () => {
         "",
       ].join("\n"),
     );
-    expect(issues.find((issue) => issue.code === "QFAI-AUD-020")).toBeDefined();
+    // Two tasks is under the ceiling, so the count says nothing. The shape
+    // finding below is what this case is about, and it used to arrive
+    // alongside a count warning that told the author to add a third task.
+    expect(issues.filter((issue) => issue.code === "QFAI-AUD-020")).toEqual([]);
     const shape = issues.find((issue) => issue.code === "QFAI-AUD-021");
     expect(shape, "expected QFAI-AUD-021 for incomplete structured item").toBeDefined();
     expect(shape?.severity).toBe("error");
