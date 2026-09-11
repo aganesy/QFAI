@@ -22,7 +22,10 @@ import { promisify } from "node:util";
 
 import { beforeAll, describe, expect, it } from "vitest";
 
-import { DOCUMENTATION_CLARITY_HOOK_MARKER } from "../../src/core/claudeCodeHooks.js";
+import {
+  DOCUMENTATION_CLARITY_HOOK_MARKER,
+  MINIMAL_IMPLEMENTATION_HOOK_MARKER,
+} from "../../src/core/claudeCodeHooks.js";
 
 const run = promisify(execFile);
 
@@ -116,12 +119,26 @@ describe.each(SETTINGS_PATHS)("%s", (rel) => {
     }
 
     const postToolUse = hooks.get("PostToolUse") ?? [];
-    expect(postToolUse).toHaveLength(1);
-    expect(postToolUse[0].matcher).toBe("Write|Edit");
+    expect(postToolUse).toHaveLength(2);
+    expect(postToolUse.map((group) => group.matcher)).toEqual(["Write|Edit", "Write|Edit"]);
     expect(postToolUse[0].hooks.map((entry) => entry.if)).toEqual([
       "Write(**/*.md)",
       "Edit(**/*.md)",
     ]);
+  });
+
+  it("restates the implementation rule on every write, with no path condition", () => {
+    const postToolUse = hooks.get("PostToolUse") ?? [];
+    const group = postToolUse[1];
+
+    expect(group.hooks).toHaveLength(1);
+    expect(group.hooks[0].statusMessage).toBe(MINIMAL_IMPLEMENTATION_HOOK_MARKER);
+    // No `if`, deliberately. The condition is a permission-rule scope matched
+    // against the path, so naming source by extension means enumerating a
+    // language set — and a language left out is a hook that is silently absent
+    // exactly where the rule is needed. The cost of the broader match is one
+    // extra line on a Markdown edit, beside the clarity reminder already there.
+    expect(group.hooks[0].if).toBeUndefined();
   });
 
   it("runs a program directly, with no shell and no arguments of its own", () => {
@@ -133,7 +150,9 @@ describe.each(SETTINGS_PATHS)("%s", (rel) => {
           // so quoting cannot differ between platforms.
           expect(entry.command).toBe("node");
           expect(entry.args[0]).toBe("-e");
-          expect(entry.statusMessage).toBe(DOCUMENTATION_CLARITY_HOOK_MARKER);
+          expect([DOCUMENTATION_CLARITY_HOOK_MARKER, MINIMAL_IMPLEMENTATION_HOOK_MARKER]).toContain(
+            entry.statusMessage,
+          );
         }
       }
     }
@@ -158,7 +177,11 @@ describe.each(SETTINGS_PATHS)("%s", (rel) => {
           if (typeof context !== "string") return;
           // The reminder names the rule it restates, and stays short enough to
           // sit in front of the model on every fire.
-          expect(context).toContain("documentation-clarity.md");
+          expect(context).toContain(
+            entry.statusMessage === MINIMAL_IMPLEMENTATION_HOOK_MARKER
+              ? "minimal-implementation.md"
+              : "documentation-clarity.md",
+          );
           expect(context.length).toBeLessThan(1000);
         }
       }

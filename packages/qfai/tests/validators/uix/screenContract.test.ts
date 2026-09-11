@@ -240,3 +240,88 @@ describe("screen contract validator", () => {
     expect(stateIssue?.message).toContain("error");
   });
 });
+
+describe("a screen that does one thing", () => {
+  /**
+   * The minimum screen the contract permits: one primary task, no
+   * secondary task, four declared states, and no transition or outcome
+   * beyond what the one task produces.
+   *
+   * Every nested key is present. What varies is whether a list under it
+   * holds anything, which is the distinction the validator has to make —
+   * an explicit empty list is an answer, a missing key is not.
+   */
+  function simpleScreen(id: string): string {
+    return [
+      `### Screen: ${id}`,
+      "",
+      `- screen_id: ${id}`,
+      `- route: /app/${id}`,
+      `- purpose: Confirm the pending action`,
+      `- actor: end-user`,
+      "- primary_tasks:",
+      "  - Confirm: click confirm → the action is applied",
+      "- secondary_tasks:",
+      "- required_states:",
+      "  - default: the action is described and confirm is enabled",
+      "  - loading: confirm is disabled while the action runs",
+      "  - empty: there is nothing pending to confirm",
+      "  - error: the action failed and can be retried",
+      "- transitions:",
+      "- observable_outcomes:",
+      `- notes_for_verify: Confirm is the only control`,
+      `- notes_for_reviewer: Nothing else belongs on this screen`,
+    ].join("\n");
+  }
+
+  async function issuesFor(
+    content: string,
+  ): Promise<Awaited<ReturnType<typeof validateScreenContractSchema>>> {
+    const root = await newTempDir();
+    await createUiBearingPack(root);
+    await writeFile(
+      path.join(root, "uiux", "40_screen_contracts.md"),
+      ["# Screen Contracts", "", content].join("\n"),
+      "utf-8",
+    );
+    return validateScreenContractSchema(root, defaultConfig);
+  }
+
+  it("validates", async () => {
+    expect(await issuesFor(simpleScreen("confirm"))).toEqual([]);
+  });
+
+  // The three keys answered by being declared, each dropped on its own, so
+  // one of them silently becoming optional-when-absent is reported rather
+  // than covered by the other two.
+  it.each(["secondary_tasks", "transitions", "observable_outcomes"])(
+    "still reports %s when the key is absent rather than empty",
+    async (key) => {
+      const content = simpleScreen("confirm")
+        .split("\n")
+        .filter((line) => line !== `- ${key}:`)
+        .join("\n");
+      const incomplete = (await issuesFor(content)).find(
+        (i) => i.code === "UIX-VAL-SCREEN-CONTRACT-SCHEMA-INCOMPLETE",
+      );
+      expect(incomplete?.message).toContain(key);
+    },
+  );
+
+  // These two are required to hold something. A screen with no primary
+  // task is not a screen, and an unrepresented empty or error state is a
+  // real defect rather than an answer.
+  it.each(["primary_tasks", "required_states"])(
+    "still reports %s when the list is empty",
+    async (key) => {
+      const lines = simpleScreen("confirm").split("\n");
+      const start = lines.indexOf(`- ${key}:`);
+      const end = lines.findIndex((line, i) => i > start && line.startsWith("- "));
+      const content = [...lines.slice(0, start + 1), ...lines.slice(end)].join("\n");
+      const incomplete = (await issuesFor(content)).find(
+        (i) => i.code === "UIX-VAL-SCREEN-CONTRACT-SCHEMA-INCOMPLETE",
+      );
+      expect(incomplete?.message).toContain(key);
+    },
+  );
+});

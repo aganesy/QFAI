@@ -24,6 +24,17 @@
 /** Identity of the hook entries seeded here, carried in each entry's spinner label. */
 export const DOCUMENTATION_CLARITY_HOOK_MARKER = "QFAI documentation-clarity reminder";
 
+/**
+ * Identity of the group that restates the implementation rule after a file is
+ * written or edited.
+ *
+ * A second marker rather than a second meaning for the first: the merge decides
+ * per group, and it tells one group from another by the markers its entries
+ * carry. Two groups sharing a marker would be one group to it, so a project
+ * holding either would be told it has both.
+ */
+export const MINIMAL_IMPLEMENTATION_HOOK_MARKER = "QFAI minimal-implementation reminder";
+
 /** Where both the template and the project keep the file, relative to the root. */
 export const CLAUDE_SETTINGS_RELATIVE_PATH = ".claude/settings.json";
 
