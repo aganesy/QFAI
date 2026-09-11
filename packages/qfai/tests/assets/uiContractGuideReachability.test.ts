@@ -43,12 +43,13 @@ describe("ui-contract-guide.md is reachable from the /qfai-sdd skill", () => {
     it(`${tree}: the guide the read-list points at exists`, async () => {
       const guide = await readFile(path.join(repoRoot, tree, GUIDE), "utf-8");
       // The three facts that live only in the guide: the count-to-behavior
-      // table, the closed-schema rejection, and the rationale for 3..7.
+      // table, the closed-schema rejection, and the rationale for the
+      // ceiling.
       expect(guide).toContain("`QFAI-AUD-001` error (empty primary_tasks)");
       expect(unwrap(guide)).toContain(
         "carrying any extra key (e.g. `priority`, `owner`), is rejected at validate time",
       );
-      expect(guide).toMatch(/3\.\.7|3 to 7/);
+      expect(guide).toMatch(/at most 7/);
     });
 
     it(`${tree}: the FORMAT SSOT read-list names the guide`, async () => {
