@@ -260,6 +260,15 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   qualifier as well, so the shape lane and the triage rules read the same
   heading.
 
+- **The UI definition consumption protocol is in English** (#1501). The document
+  ships in `catalog/`, so it is read by adopters with no connection to this
+  repository's history, and four of its sentences were Japanese. They say what
+  they said.
+
+  The file is struck from the approved-Japanese list in the asset guard rather
+  than left there. A translated entry that stays on the list is a slot the next
+  untranslated document can take.
+
 ## [1.11.1] - 2026-09-10
 
 ### Removed
