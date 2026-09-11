@@ -3,12 +3,12 @@
  *
  * The prototyping skill runs one prototype through up to MAX_ITERATIONS
  * iterations, in a single design lineage. Each iteration captures
- * screenshot+html and produces a reviewer review.json with 4-axis
- * ordinal scores, prose critique, layout-anti-pattern detection,
- * DESIGN.md compliance violations, and a pivot directive. Stop is
- * deterministic: either all 4 axes hit `exceptional` with no
- * layout-anti-patterns and no DESIGN.md violations, or the iteration
- * index reaches the budget.
+ * screenshot+html and produces a reviewer review.json carrying the
+ * findings that block it, prose critique, layout-anti-pattern
+ * detection, DESIGN.md compliance violations, and a pivot directive.
+ * Stop is deterministic: either nothing is open against the iteration —
+ * no blocking finding, no layout anti-pattern, no DESIGN.md violation —
+ * or the iteration index reaches the budget.
  */
 
 import type { DesignMdViolation } from "./designMdViolations.js";
@@ -36,13 +36,13 @@ export type Iteration = {
 };
 
 export type StopReason =
-  | "axes-exceptional"
+  | "converged"
   | "max-iterations"
   | "license-verify-fail"
   | "input-error";
 
 export const STOP_REASONS: readonly StopReason[] = [
-  "axes-exceptional",
+  "converged",
   "max-iterations",
   "license-verify-fail",
   "input-error",
@@ -57,7 +57,7 @@ export function shouldStop(iterations: readonly unknown[]): StopReason | null {
   if (iterations.length === 0) return null;
   const last = iterations[iterations.length - 1];
   if (last === undefined) return null;
-  if (allFourAxesExceptional(last)) return "axes-exceptional";
+  if (iterationConverged(last)) return "converged";
   if (isRecord(last) && typeof last.index === "number" && last.index >= MAX_ITERATION_INDEX) {
     return "max-iterations";
   }
@@ -77,8 +77,8 @@ export type MultiSpecStopResult = {
 
 /**
  * Decide global prototyping convergence across multiple (spec × screen)
- * pairs. Convergence is an AND across every pair: a single pair below
- * `allFourAxesExceptional` blocks the global stop. When convergence is
+ * pairs. Convergence is an AND across every pair: a single pair with
+ * anything open blocks the global stop. When convergence is
  * not achieved, `laggingSpecs` lists every spec ID (unique, sorted) that
  * has at least one non-converged pair, so the orchestrator can route the
  * next iteration at spec granularity.
@@ -93,26 +93,30 @@ export function shouldStopAcrossSpecs(pairs: readonly PerSpecScreenIter[]): Mult
   }
   const laggingSet = new Set<string>();
   for (const pair of pairs) {
-    if (!allFourAxesExceptional(pair.latestIteration)) {
+    if (!iterationConverged(pair.latestIteration)) {
       laggingSet.add(pair.specId);
     }
   }
   if (laggingSet.size === 0) {
-    return { stopReason: "axes-exceptional", laggingSpecs: [] };
+    return { stopReason: "converged", laggingSpecs: [] };
   }
   const laggingSpecs = Array.from(laggingSet).sort();
   return { stopReason: null, laggingSpecs };
 }
 
-export function allFourAxesExceptional(iter: unknown): boolean {
-  if (!isRecord(iter) || !isRecord(iter.scores)) return false;
+/**
+ * Whether an iteration record has nothing open against it.
+ *
+ * Reads an `unknown` record because it also runs against on-disk
+ * evidence reloaded as JSON, where the type is gone.
+ */
+export function iterationConverged(iter: unknown): boolean {
+  if (!isRecord(iter)) return false;
+  if (!Array.isArray(iter.blockingFindings)) return false;
   if (!Array.isArray(iter.layoutAntiPatternsDetected)) return false;
   if (!Array.isArray(iter.designMdViolations)) return false;
   return (
-    iter.scores.informationArchitecture === "exceptional" &&
-    iter.scores.navigationFlow === "exceptional" &&
-    iter.scores.usability === "exceptional" &&
-    iter.scores.functionality === "exceptional" &&
+    iter.blockingFindings.length === 0 &&
     iter.layoutAntiPatternsDetected.length === 0 &&
     iter.designMdViolations.length === 0
   );
@@ -148,6 +152,15 @@ export const SEED_REVIEWER_ID = "iterate-seed" as const;
 export const SEED_COMMIT_SHA = "uncommitted" as const;
 
 /**
+ * The finding the cycle-0 seed carries so it cannot read as converged.
+ *
+ * Convergence is "nothing is open", and a seed has been reviewed by
+ * nobody. Without an entry here the seed would satisfy the stop test on
+ * the strength of never having been looked at.
+ */
+export const SEED_BLOCKING_FINDING = "Awaiting the first review." as const;
+
+/**
  * The placeholder critique `prototyping iterate --cycle 0` writes.
  *
  * Lives here rather than beside the writer because two validators now
@@ -174,8 +187,8 @@ export const SEED_PROSE_CRITIQUE_PLACEHOLDER = (() => {
  *     reviewed `iterations[0]` kept the seed stamp and stayed exempt for
  *     the life of the loop — and for a loop that converges at cycle 0
  *     that is the iteration `certify` seals. Measured before this
- *     change: three iterations with all four axes `exceptional`,
- *     `stopReason: "axes-exceptional"` and no `review.json` anywhere on
+ *     change: three iterations with nothing open,
+ *     `stopReason: "converged"` and no `review.json` anywhere on
  *     disk validated at `error=0`.
  *   - **It applied at any index.** The waiver was one string in the file
  *     the gate exists to distrust, so writing it into `iterations[7]`

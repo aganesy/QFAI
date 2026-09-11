@@ -15,8 +15,8 @@
  *   QFAI-PROT-004  iterations[i].index must equal i (contiguous from 0)
  *   QFAI-PROT-005  stopReason consistency:
  *                    stopReason="max-iterations" requires last iter.index===9
- *                    stopReason="axes-exceptional" requires latest iter to
- *                      have all 4 axes exceptional,
+ *                    stopReason="converged" requires latest iter to
+ *                      have blockingFindings=[],
  *                      layoutAntiPatternsDetected=[] AND
  *                      designMdViolations=[]
  *   QFAI-PROT-006  iterations.length exceeds MAX_ITERATIONS (10)
@@ -34,32 +34,19 @@ import {
   EVIDENCE_REF_KINDS,
   MAX_ITERATIONS,
   MAX_ITERATION_INDEX,
-  isOrdinalScore,
   isPivotDirective,
   isStopReason,
   isUntouchedCycleZeroSeed,
   iterationReviewPath,
 } from "../prototyping/iteration.js";
 
-import { ORDINAL_AXES, validateProseCritiqueBand } from "../prototyping/evaluatorReview.js";
+import { validateProseCritiqueBand } from "../prototyping/evaluatorReview.js";
 import { PROTOTYPING_JSON_REL } from "../prototyping/paths.js";
 import { hasErrnoCode, isEnoent } from "../fs/errno.js";
 import { loadLayoutAntiPatterns } from "./layoutAntiPatterns.js";
 import { SAFE_SCREEN_ID_PATTERN } from "./uiEvidenceArtifacts.js";
 
 const PROTO_JSON_REL = PROTOTYPING_JSON_REL;
-
-/**
- * The four ordinal UX axes, read from the module that owns the reviewer
- * schema rather than restated here.
- *
- * A local copy shipped briefly and was a third encoding of the same
- * list: `evaluatorReview.ts` exports it and derives `OrdinalAxis` from
- * it, and two `validators/uix/` modules already name it as the SSOT. A
- * fifth axis added there would have left this validator checking four —
- * the shape of hole this gate exists to close.
- */
-const ORDINAL_AXIS_NAMES = ORDINAL_AXES;
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
@@ -88,15 +75,13 @@ function isViolationArray(value: unknown): value is ReadonlyArray<{ kind: string
   return true;
 }
 
-function hasExceptionalStopShape(value: unknown): boolean {
-  if (!isRecord(value) || !isRecord(value.scores)) return false;
+function hasConvergedStopShape(value: unknown): boolean {
+  if (!isRecord(value)) return false;
+  if (!isStringArray(value.blockingFindings)) return false;
   if (!isStringArray(value.layoutAntiPatternsDetected)) return false;
   if (!Array.isArray(value.designMdViolations)) return false;
   return (
-    value.scores.informationArchitecture === "exceptional" &&
-    value.scores.navigationFlow === "exceptional" &&
-    value.scores.usability === "exceptional" &&
-    value.scores.functionality === "exceptional" &&
+    value.blockingFindings.length === 0 &&
     value.layoutAntiPatternsDetected.length === 0 &&
     value.designMdViolations.length === 0
   );
@@ -267,30 +252,17 @@ export async function validatePrototypingEvidence(
         );
       }
     }
-    if (!isRecord(it.scores)) {
+    if (!isStringArray(it.blockingFindings)) {
       issues.push(
         issue(
           "QFAI-PROT-002",
-          `iterations[${i}].scores must be an object.`,
+          `iterations[${i}].blockingFindings must be a string array.`,
           "error",
           PROTO_JSON_REL,
-          "prototypingEvidence.scores",
+          "prototypingEvidence.blockingFindings",
         ),
       );
       continue;
-    }
-    for (const axis of ORDINAL_AXIS_NAMES) {
-      if (!isOrdinalScore(it.scores[axis])) {
-        issues.push(
-          issue(
-            "QFAI-PROT-002",
-            `iterations[${i}].scores.${axis} must be one of weak|acceptable|strong|exceptional (got ${JSON.stringify(it.scores[axis])}).`,
-            "error",
-            PROTO_JSON_REL,
-            `prototypingEvidence.scores.${axis}`,
-          ),
-        );
-      }
     }
     if (!isPivotDirective(it.pivotDirective)) {
       issues.push(
@@ -311,20 +283,6 @@ export async function validatePrototypingEvidence(
           "error",
           PROTO_JSON_REL,
           "prototypingEvidence.layoutAntiPatternsDetected",
-        ),
-      );
-    } else if (
-      it.layoutAntiPatternsDetected.length > 0 &&
-      (it.scores.informationArchitecture === "strong" ||
-        it.scores.informationArchitecture === "exceptional")
-    ) {
-      issues.push(
-        issue(
-          "QFAI-PROT-002",
-          `iterations[${i}].scores.informationArchitecture must be weak|acceptable when layoutAntiPatternsDetected[] is non-empty.`,
-          "error",
-          PROTO_JSON_REL,
-          "prototypingEvidence.scores.informationArchitecture.layoutAntiPatternCap",
         ),
       );
     }
@@ -378,7 +336,7 @@ export async function validatePrototypingEvidence(
     issues.push(
       issue(
         "QFAI-PROT-005",
-        'stopReason field is required: set null while running, "axes-exceptional" | "max-iterations" | "license-verify-fail" | "input-error" once stopped.',
+        'stopReason field is required: set null while running, "converged" | "max-iterations" | "license-verify-fail" | "input-error" once stopped.',
         "error",
         PROTO_JSON_REL,
         "prototypingEvidence.stopReasonRequired",
@@ -388,7 +346,7 @@ export async function validatePrototypingEvidence(
     issues.push(
       issue(
         "QFAI-PROT-005",
-        `stopReason must be null | "axes-exceptional" | "max-iterations" | "license-verify-fail" | "input-error" (got ${JSON.stringify(stopReason)}).`,
+        `stopReason must be null | "converged" | "max-iterations" | "license-verify-fail" | "input-error" (got ${JSON.stringify(stopReason)}).`,
         "error",
         PROTO_JSON_REL,
         "prototypingEvidence.stopReason",
@@ -409,12 +367,12 @@ export async function validatePrototypingEvidence(
       );
     }
   }
-  if (stopReason === "axes-exceptional" && last) {
-    if (!hasExceptionalStopShape(last)) {
+  if (stopReason === "converged" && last) {
+    if (!hasConvergedStopShape(last)) {
       issues.push(
         issue(
           "QFAI-PROT-005",
-          `stopReason="axes-exceptional" requires the latest iter to have all 4 axes exceptional, layoutAntiPatternsDetected=[] AND designMdViolations=[].`,
+          `stopReason="converged" requires the latest iter to have blockingFindings=[], layoutAntiPatternsDetected=[] AND designMdViolations=[].`,
           "error",
           PROTO_JSON_REL,
           "prototypingEvidence.stopReasonConsistency",
@@ -622,10 +580,9 @@ function reviewSchemaIssues(
   if (typeof review.reviewerId !== "string" || review.reviewerId.trim().length === 0) {
     report("reviewerId must be a non-empty string.", "prototypingEvidence.review.reviewerId");
   }
-  reportReviewScores(review.scores, report);
+  reportReviewBlockingFindings(review.blockingFindings, report);
   reportReviewProse(review.proseCritique, report);
   reportReviewAntiPatterns(review.layoutAntiPatternsDetected, knownLapIds, report);
-  reportReviewAntiPatternCap(review, report);
   reportUnknownReviewKeys(review, report);
   if (!isViolationArray(review.designMdViolations)) {
     report(
@@ -643,18 +600,12 @@ function reviewSchemaIssues(
   return issues;
 }
 
-function reportReviewScores(scores: unknown, report: ReportReviewIssue): void {
-  if (!isRecord(scores)) {
-    report("scores must be an object.", "prototypingEvidence.review.scores");
-    return;
-  }
-  for (const axis of ORDINAL_AXIS_NAMES) {
-    if (!isOrdinalScore(scores[axis])) {
-      report(
-        `scores.${axis} must be one of weak|acceptable|strong|exceptional (got ${JSON.stringify(scores[axis])}).`,
-        `prototypingEvidence.review.scores.${axis}`,
-      );
-    }
+function reportReviewBlockingFindings(findings: unknown, report: ReportReviewIssue): void {
+  if (!isStringArray(findings)) {
+    report(
+      "blockingFindings must be an array of strings.",
+      "prototypingEvidence.review.blockingFindings",
+    );
   }
 }
 
@@ -699,35 +650,6 @@ function reportReviewAntiPatterns(
 }
 
 /**
- * The cap rule, checked on the reviewer's own file.
- *
- * `references/reviewer-prompt.md` states it under "Cap rule" and
- * `buildEvaluatorReview` refuses to construct a review that breaks it,
- * but the on-disk gate did not check it — so a cap-violating
- * `review.json` was reported only through its own faithful
- * transcription. That produced a pair of findings no edit could satisfy:
- * the mirror's cap check asked for `informationArchitecture` to be
- * lowered in `prototyping.json`, and the mirror-agreement check then
- * asked for it to match `review.json` again. Neither named the reviewer's
- * file, which is the only place the defect can actually be fixed.
- */
-function reportReviewAntiPatternCap(
-  review: Record<string, unknown>,
-  report: ReportReviewIssue,
-): void {
-  const detected = review.layoutAntiPatternsDetected;
-  if (!isStringArray(detected) || detected.length === 0) return;
-  const scores = review.scores;
-  if (!isRecord(scores)) return;
-  const ia = scores.informationArchitecture;
-  if (ia !== "strong" && ia !== "exceptional") return;
-  report(
-    `scores.informationArchitecture must be weak|acceptable when layoutAntiPatternsDetected[] is non-empty (got ${JSON.stringify(ia)} with ${String(detected.length)} detected). Fix this file, then re-transcribe iterations[] from it.`,
-    "prototypingEvidence.review.scores.informationArchitecture.layoutAntiPatternCap",
-  );
-}
-
-/**
  * Reject an unknown top-level key.
  *
  * The sibling per-screen payload in `evaluatorReview.ts` is a closed
@@ -755,7 +677,7 @@ function reportUnknownReviewKeys(review: Record<string, unknown>, report: Report
 const REVIEW_KNOWN_KEYS: ReadonlySet<string> = new Set<string>([
   "iterIndex",
   "reviewerId",
-  "scores",
+  "blockingFindings",
   "proseCritique",
   "layoutAntiPatternsDetected",
   "designMdViolations",
@@ -783,9 +705,9 @@ function reportReviewEvidenceRefs(refs: unknown, report: ReportReviewIssue): voi
  * Top-level fields the orchestrator transcribes verbatim from
  * `review.json` into `prototyping.json#iterations[N]`.
  *
- * `scores` and `evidenceRefs` are compared leaf by leaf instead (see
- * {@link mirrorAgreementIssues}) so the finding names the exact axis or
- * ref kind that diverged rather than dumping both objects.
+ * `evidenceRefs` is compared leaf by leaf instead (see
+ * {@link mirrorAgreementIssues}) so the finding names the exact ref kind
+ * that diverged rather than dumping both objects.
  */
 const MIRRORED_REVIEW_FIELDS = [
   // `reviewerId` is here because the gate's own control flow reads it.
@@ -797,6 +719,7 @@ const MIRRORED_REVIEW_FIELDS = [
   // treat `iterations[]` as the audit trail of who reviewed what, so
   // provenance has to be mirrored like the verdicts are.
   "reviewerId",
+  "blockingFindings",
   "proseCritique",
   "pivotDirective",
   "layoutAntiPatternsDetected",
@@ -805,13 +728,9 @@ const MIRRORED_REVIEW_FIELDS = [
 
 /**
  * The nested reviewer objects, compared leaf by leaf so a finding names
- * the exact axis or ref kind that diverged instead of dumping both
- * objects.
+ * the exact ref kind that diverged instead of dumping both objects.
  */
-const NESTED_MIRRORED_FIELDS = [
-  ["scores", ORDINAL_AXIS_NAMES],
-  ["evidenceRefs", EVIDENCE_REF_KINDS],
-] as const;
+const NESTED_MIRRORED_FIELDS = [["evidenceRefs", EVIDENCE_REF_KINDS]] as const;
 
 /**
  * `value` rendered with object keys in a stable order, recursively.
