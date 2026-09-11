@@ -121,8 +121,7 @@ describe("TC-0006-0012: playwright primary probe detects node_modules/.bin/playw
     expect(playwrightCheck).toBeDefined();
     expect(playwrightCheck?.severity).toBe("ok");
     const details = playwrightCheck?.details as
-      | { resolvedStage?: string; executable?: string; deprecated?: boolean }
-      | undefined;
+      { resolvedStage?: string; executable?: string; deprecated?: boolean } | undefined;
     expect(details?.resolvedStage).toBe("primary");
     expect(details?.deprecated ?? false).toBe(false);
     expect(String(details?.executable ?? "")).toMatch(/playwright(\.cmd)?$/u);

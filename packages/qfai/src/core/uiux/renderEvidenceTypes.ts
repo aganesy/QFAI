@@ -28,9 +28,7 @@ export type RenderEvidenceFailed = {
 };
 
 export type RenderEvidenceEntry =
-  | RenderEvidenceCaptured
-  | RenderEvidenceSkipped
-  | RenderEvidenceFailed;
+  RenderEvidenceCaptured | RenderEvidenceSkipped | RenderEvidenceFailed;
 
 export type RenderEvidenceSummary = {
   status: RenderEvidenceStatus;

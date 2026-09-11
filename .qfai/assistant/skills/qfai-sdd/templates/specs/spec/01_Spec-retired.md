@@ -4,6 +4,7 @@
 - Parent: CAP-XXXX
 - Status: superseded
 - Superseded-by: spec-NNNN
+
 <!-- The companion bullet depends on the status:
      - Status: superseded  → - Superseded-by: spec-NNNN
      - Status: deprecated  → - Deprecated-at: YYYY-MM-DD

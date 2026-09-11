@@ -50,7 +50,7 @@
 
 ## v1.8.1 (2026-04-22) — Preflight Side Artifact Neutrality
 
-- updated: REQ-0014~0015 / US-0013-0008 / AC-0013-0008~0010 を current implementation に再同期
+- updated: REQ-0014~~0015 / US-0013-0008 / AC-0013-0008~~0010 を current implementation に再同期
 - removed: prototyping.yaml 必須 preflight blocker 前提
 - rationale: `packages/qfai/src/core/discussionPack.ts` が side artifact requiredness を廃止し、`packages/qfai/src/core/preflight/sddPreflight.ts` は markdown readiness を主 blocker として扱うため
 

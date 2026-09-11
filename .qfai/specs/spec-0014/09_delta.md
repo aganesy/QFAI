@@ -84,7 +84,7 @@ US-0014-0009 → AC-0014-0011 → BR-0014-0009 → EX-0014-0012, EX-0014-0013 �
 ## v1.7.13 (2026-04-04) — Canonical Sidecar Convergence
 
 - adopted: REQ-0013~0014 (canonical UIX validators, removed compatibility surface) 追加
-- adopted: US-0014-0010~0011, AC-0014-0012~0013 追加
+- adopted: US-0014-0010~~0011, AC-0014-0012~~0013 追加
 - rationale: production path は runCanonicalUixValidators のみを使用し、互換性判定は package surface removal と canonical validators 側の migration errors に収束した。
 
 ### v1.7.13 補完 (2026-04-04)
