@@ -366,7 +366,7 @@ async function checkTokenDrift(
     ? path.resolve(root, configuredDir)
     : path.join(root, cfg.paths.contractsDir, "design");
 
-  let hasTokenFiles = false;
+  let hasTokenFiles: boolean;
   try {
     const entries = await readdir(tokensDir);
     hasTokenFiles = entries.some((e) => /\.ya?ml$/i.test(e));
@@ -376,7 +376,7 @@ async function checkTokenDrift(
   if (!hasTokenFiles) return findings;
 
   const contractsUiDir = path.join(root, cfg.paths.contractsDir, "ui");
-  let htmlFiles: string[] = [];
+  let htmlFiles: string[];
   try {
     const entries = await readdir(contractsUiDir);
     htmlFiles = entries.filter((e) => /\.html?$/i.test(e));

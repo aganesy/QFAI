@@ -9,7 +9,9 @@ export function assertConcreteArtifactRefs(fieldPath: string, refs: string[]): v
     try {
       assertConcreteArtifactRef(ref);
     } catch (error) {
-      throw new Error(`${fieldPath} contains a non-concrete artifact ref: ${formatError(error)}`);
+      throw new Error(`${fieldPath} contains a non-concrete artifact ref: ${formatError(error)}`, {
+        cause: error,
+      });
     }
   }
 }
@@ -32,6 +34,7 @@ export function assertBrowserQaEvidenceRefs(fieldPath: string, refs: string[]): 
     } catch (error) {
       throw new Error(
         `${fieldPath} contains a non-concrete artifact ref and is not a Browser QA scheme ref: ${formatError(error)}`,
+        { cause: error },
       );
     }
   }
