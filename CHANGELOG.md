@@ -47,6 +47,26 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **A user story is declared by its entry, not by a sentence naming it**
+  (#1512). The declared set was the entries plus every loose `US-NNNN` in
+  `02_User-stories.md`, so any prose that named an id declared it.
+
+  A retired id is where that costs. A deleted story keeps its number reserved,
+  and a pack writes the reservation down so nobody reuses it — which made the
+  story live again, and `QFAI-ATDD-111` then demanded an E2E reference for
+  something with no entry, no acceptance criteria and no behaviour. Every way
+  out was worse than the note: an annotation with nothing behind it, the note
+  hidden in an HTML comment where the people it warns cannot read it, or the id
+  spelled so the scan missed it.
+
+  An id is declared by a heading (`##` down to `######`) or a catalog list item,
+  which are the two shapes the deferral marker already opens a block at. A
+  mention anywhere else is prose about a story rather than a declaration of one.
+
+  This is the rule the test-case side already applies, and for the same reason:
+  an id read from somewhere other than its declaration carries an obligation
+  nobody wrote.
+
 - **A conventional screen can finish the prototyping loop** (#1471).
   Five registry entries reported a dashboard with a sidebar and a KPI row, a
   card grid beside an aside, tabs over a table, a bento grid and a centred
