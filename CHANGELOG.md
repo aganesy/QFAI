@@ -64,6 +64,21 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   stops the loop" would repeat the mistake with better sources. The reviewer
   reads them and decides what belongs in `blockingFindings`.
 
+- **The shipped-document version guard read every triple of numbers as a
+  version** (#1551). `WCAG 3.3.2` failed the same check as `qfai 1.11.1`, so an
+  init-template document could not cite an accessibility criterion by its
+  number — the one form of it a reader can look up.
+
+  A version is now a number something names as one: a leading `v`, or a tool
+  or package name in front of it. A bare triple is left alone, which is what a
+  published standard's clause number is. The guard still rejects a real pin,
+  and a second case asserts both columns so the narrowing cannot be widened
+  back by accident.
+
+  The prototype review criterion on labels now names `WCAG 3.3.2` where it
+  previously pointed at a rule file that carries the number, so the reader of
+  the criterion has the citation in front of them.
+
 - **Two codes shared the `lap-` prefix with a registry that did not declare
   them** (#1499). `layoutAntiPatternsDetected[]` has one vocabulary and two
   writers: the reviewer writes the codes it judges, and `iterate --capture`
