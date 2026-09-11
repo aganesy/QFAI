@@ -28,6 +28,7 @@ agents:
       - Issue bounded work orders to workers and reviewers with explicit gates and evidence expectations.
       - Integrate subagent outputs into a single repository-safe outcome without bypassing validation.
       - Stop completion when required review, validation, or evidence obligations remain open.
+      - Apply `.agents/rules/minimal-implementation.md`: the first rung is this stage's — whether the thing needs to exist. After a spec row is agreed, that question is a Change Request.
 
       ## Inputs you must read
 
@@ -128,6 +129,7 @@ agents:
         adds, removes or re-scopes a row, so raise a Change Request per
         `.qfai/assistant/constitution/drift-protocol.md#when-drift-is-detected` naming the uncovered obligation
         and hand it to that phase.
+      - Apply `.agents/rules/minimal-implementation.md`: the first rung is this stage's — whether the thing needs to exist. After a spec row is agreed, that question is a Change Request.
 
       ## Ownership boundaries
 
@@ -219,6 +221,7 @@ agents:
       - Design high-value questions that reduce ambiguity quickly.
       - Facilitate discussions, trade-off framing, and boundary clarification.
       - Surface missing assumptions before requirements or architecture work starts.
+      - Apply `.agents/rules/minimal-implementation.md`: the first rung is this stage's — whether the thing needs to exist. After a spec row is agreed, that question is a Change Request.
 
       ## Inputs you must read
 
@@ -294,6 +297,7 @@ agents:
       - Harvest undefined decisions and maintain the OQ backlog.
       - Produce multiple solution options with a recommendation.
       - Map requirements to impacted downstream artifacts.
+      - Apply `.agents/rules/minimal-implementation.md`: the first rung is this stage's — whether the thing needs to exist. After a spec row is agreed, that question is a Change Request.
 
       ## Inputs you must read
 
@@ -374,9 +378,10 @@ agents:
       - Design UI, API, and DB contracts that make requirements executable.
       - Prevent rejected options from being reintroduced without RE-OPEN.
       - Align architecture and contract decisions with implementation and test strategy.
-      - Apply SOLID, KISS, YAGNI, DRY, separation of concerns, coupling/cohesion, and fail-fast principles to structural decisions.
+      - Apply SOLID, separation of concerns, coupling/cohesion, and fail-fast principles to structural decisions.
       - Prefer the simplest architecture that satisfies the accepted requirements; avoid speculative extension points, premature generalization, and needless indirection.
       - Make contracts explicit, small, and intention-revealing so implementers and reviewers can verify them without hidden assumptions.
+      - Apply `.agents/rules/minimal-implementation.md`: the first rung is this stage's — whether the thing needs to exist. After a spec row is agreed, that question is a Change Request.
 
       ## Inputs you must read
 
@@ -461,9 +466,10 @@ agents:
       - Design navigation structures, IA, and screen transition logic.
       - Integrate exploration artifacts, selected direction, finalized design system, screen contracts, and Mermaid flow consistency.
       - Resolve conflicts between specialist design perspectives as a unified product experience decision.
-      - Apply KISS and YAGNI to product-surface design: only add screens, controls, states, and branching flows that are justified by the current user goal.
+      - Only add screens, controls, states, and branching flows that are justified by the current user goal.
       - Keep product experience decisions cohesive and unsurprising across copy, IA, navigation, transitions, and visual hierarchy.
-      - Use DRY carefully across design artifacts: unify repeated patterns and tokens, but avoid over-generalizing distinct experiences.
+      - Unify repeated patterns and tokens across design artifacts, but avoid over-generalizing distinct experiences.
+      - Apply `.agents/rules/minimal-implementation.md`: the first rung is this stage's — whether the thing needs to exist. After a spec row is agreed, that question is a Change Request.
 
       ## Inputs you must read
 
@@ -541,9 +547,9 @@ agents:
       - Build UI components, states, interactions, and user-facing flows.
       - Respect the selected direction, finalized design system, screen contracts, optional design tokens, optional fallback HTML/CSS mock, and screen flow constraints.
       - Coordinate with backend changes without breaking surface contracts.
-      - Implement with KISS and YAGNI: prefer the simplest component/state structure that satisfies the current contract, and do not add speculative hooks, props, flags, or abstraction layers.
       - Keep UI code cohesive and readable: isolate concerns, minimize hidden coupling, avoid duplication, and use existing patterns/utilities before inventing new ones.
       - Apply fail-fast validation and least-astonishment behavior to form handling, loading states, error states, and interaction flows.
+      - Apply `.agents/rules/minimal-implementation.md`: work the reuse rungs before writing, and mark a deliberate shortcut with its ceiling and the condition that lifts it.
 
       ## Inputs you must read
 
@@ -627,9 +633,10 @@ agents:
       - Build API, domain, persistence, and service boundary behavior.
       - Respect API and DB contracts plus reliability expectations.
       - Coordinate with test and CI agents on runtime and integration implications.
-      - Implement with SOLID, KISS, YAGNI, and DRY: prefer simple contracts, explicit invariants, and minimal moving parts over speculative extensibility.
+      - Implement with SOLID: prefer simple contracts and explicit invariants.
       - Keep business logic, transport, persistence, and infrastructure concerns separated to reduce coupling and surprise.
       - Apply fail-fast validation, defensive programming, and least-privilege thinking to inputs, permissions, data access, and operational behavior.
+      - Apply `.agents/rules/minimal-implementation.md`: work the reuse rungs before writing, and mark a deliberate shortcut with its ceiling and the condition that lifts it.
 
       ## Inputs you must read
 
@@ -718,6 +725,7 @@ agents:
       - Implement API coverage for declared `CON-API-*` contracts.
       - Implement integration coverage for required `TC-*` behavior and active `CON-DB-*` contracts (those not deferred by `-- x-qfai-status: planned`).
       - Keep test-layer responsibilities separated while coordinating shared fixtures and evidence.
+      - Apply `.agents/rules/minimal-implementation.md`: it shapes how a test is built, and never how many obligations are covered.
 
       ## Inputs you must read
 
@@ -807,6 +815,7 @@ agents:
       - Evaluate test-case depth using the structured checklist (see reference below).
       - Produce a Coverage Depth Matrix per spec from the ATDD stage onward, exposing gaps in boundary values, error paths, edge cases,
         and combinatorial scenarios. During SDD, report the same gaps as findings instead — see the stage split below.
+      - Apply `.agents/rules/minimal-implementation.md`: it shapes how a test is built, and never how many obligations are covered.
 
       ## Test Case Quality Depth (MUST)
 
@@ -945,6 +954,7 @@ agents:
       - Define QA priorities, risk posture, and evidence expectations.
       - Audit coverage, traceability, and failure handling from a strategy perspective.
       - Coordinate quality expectations across test layers, runtime proof, and validate outputs.
+      - Apply `.agents/rules/minimal-implementation.md`: it shapes how a test is built, and never how many obligations are covered.
 
       ## Inputs you must read
 
@@ -1017,6 +1027,7 @@ agents:
       - Execute build, lint, typecheck, test, validate, and report workflows.
       - Record commands, key outputs, environment assumptions, and reproducibility notes.
       - Surface CI/runtime blockers with minimal ambiguity.
+      - Apply `.agents/rules/minimal-implementation.md`: work the reuse rungs before writing, and mark a deliberate shortcut with its ceiling and the condition that lifts it.
 
       ## Inputs you must read
 
@@ -1087,6 +1098,7 @@ agents:
       - Update README, CHANGELOG, docs, prompt references, and migration notes.
       - Keep documentation synchronized with catalog, routing, and skill changes.
       - Prevent duplicate or conflicting documentation sources.
+      - Apply `.agents/rules/minimal-implementation.md` to any script or workflow this role changes. The prose keeps `.agents/rules/documentation-clarity.md`.
 
       ## Inputs you must read
 
@@ -1157,6 +1169,7 @@ agents:
       - Return only PASS or REVISE, with actionable rework instructions on REVISE.
       - Enforce validate evidence, required coverage obligations, and no self-approval.
       - Verify rejected options are not reintroduced without RE-OPEN.
+      - Apply `.agents/rules/minimal-implementation.md`: report excess against it, naming what to cut and what replaces it.
 
       ## Inputs you must read
 
@@ -1266,6 +1279,7 @@ agents:
       - Audit option sets for missing alternatives and weak recommendation rationale.
       - Review OQ candidates for completeness, neutrality, and safe deferral.
       - Ensure unresolved requirement ambiguity is explicit and actionable.
+      - Apply `.agents/rules/minimal-implementation.md`: report excess against it, naming what to cut and what replaces it.
 
       ## Inputs you must read
 
@@ -1334,9 +1348,10 @@ agents:
       - Audit architecture boundaries, trade-offs, and technical consistency.
       - Audit contract decisions across UI, API, and DB surfaces.
       - Block reintroduction of rejected architecture options without RE-OPEN.
-      - Review design against SOLID, KISS, YAGNI, DRY, separation of concerns, coupling/cohesion, and composition-over-inheritance where relevant.
+      - Review design against SOLID, separation of concerns, coupling/cohesion, and composition-over-inheritance where relevant.
       - Check that extensions are justified by current requirements and do not introduce speculative abstraction or over-engineering.
       - Verify contracts, module boundaries, and public interfaces obey least astonishment and design-by-contract expectations.
+      - Apply `.agents/rules/minimal-implementation.md`: the first rung is this stage's — whether the thing needs to exist. After a spec row is agreed, that question is a Change Request.
 
       ## Inputs you must read
 
@@ -1361,7 +1376,7 @@ agents:
       - Review decision with findings
       - Required changes to architecture or contracts
       - Evidence summary and unresolved technical risks
-      - Explicit trade-off notes when principles conflict (for example KISS vs OCP, DRY vs YAGNI)
+      - Explicit trade-off notes when principles conflict (for example simplicity against an open extension point)
 
       ## Stop conditions
 
@@ -1411,9 +1426,10 @@ agents:
       - Audit backend/API/data behavior for correctness and operational risk.
       - Ensure implementation remains actionable from specs and contracts.
       - Review using the repository PR review checklist: design fit, correctness, security/privacy, performance, maintainability, tests, docs/UX, and consistency.
-      - Flag violations of SOLID, KISS, YAGNI, and DRY with concrete reasoning and a smaller/simpler alternative when applicable.
+      - Flag violations of SOLID with concrete reasoning and a smaller alternative when applicable.
       - Check separation of concerns, fail-fast validation, least astonishment, and avoidance of premature optimization in changed code.
       - Enforce TypeScript review expectations: avoid unjustified assertions, over-complex generics, unchecked `unknown`, and unhandled async paths.
+      - Apply `.agents/rules/minimal-implementation.md`: report excess against it, naming what to cut and what replaces it.
 
       ## Inputs you must read
 
@@ -1526,9 +1542,10 @@ agents:
       - Reject prototype parity when implementation loses CTA hierarchy, spacing rhythm, information density,
         surface framing intent, transition clarity, state coverage, or component character captured by the winning
         prototype.
-      - Review UI changes for KISS and YAGNI at the surface layer: avoid needless states, controls, flows, animations, and configuration that are not justified by the product goal.
+      - Review UI changes at the surface layer: avoid needless states, controls, flows, animations, and configuration that are not justified by the product goal.
       - Check naming, structure, and responsibility split of UI components for clarity, cohesion, and minimal surprise.
       - Validate docs/UX consistency so usage text, labels, error states, and user flows match the intended product behavior.
+      - Apply `.agents/rules/minimal-implementation.md`: report excess against it, naming what to cut and what replaces it.
 
       ## Inputs you must read
 
@@ -1616,6 +1633,7 @@ agents:
       - Treat density or volume smells as review signals, not standalone hard gates.
       - Verify test-case quality depth using the Coverage Depth Matrix (see below).
       - Own RED/GREEN **observation** evidence in a TDD micro-cycle: did the test fail (or pass) for the expected reason.
+      - Apply `.agents/rules/minimal-implementation.md`: report excess against it, naming what to cut and what replaces it.
 
       ## Ownership boundaries
 

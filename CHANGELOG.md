@@ -46,6 +46,32 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   exposing an empty `primary_tasks` slot to fill. The sample ships filled
   entries, and the card says so.
 
+- **A prototyping review may report one finding and stop** (#1492).
+  `proseCritique` carried a lower bound — 200 English words, or 600
+  Japanese/Chinese characters — per screen, per cycle. A reviewer who had one
+  clear thing to say had to write another hundred and eighty words around it,
+  and on the next cycle that padding reads as work to do.
+
+  There is no minimum now. The cap stays, because a reviewer writing far past
+  the point still costs the loop something.
+
+  Removing the floor also removes a way a review could fail on its script.
+  The character count recognises Hiragana, Katakana and Han; everything else
+  fell to the word count, so a critique in Korean, Cyrillic or Thai was
+  measured in words those scripts do not separate with spaces. A count that
+  is too low is no longer a reason to reject anything.
+
+  The cap that remains selects its unit rather than accepting whichever unit
+  fits: a critique carrying CJK is measured in characters, anything else in
+  words. Accepting either would have left every English critique under the
+  character cap by construction, and so under no cap at all.
+
+  Two things follow. `buildEvaluatorReview` now calls the same function the
+  on-disk validator does, instead of carrying its own English-only copy that
+  threw on a Japanese critique the validator accepted. And the cycle-0 seed
+  critique is one sentence rather than that sentence ten times over, which is
+  what the floor had asked of a placeholder with nothing to say.
+
 - **The layout anti-pattern registry has one copy** (#1486).
   `layoutAntiPatterns.json` existed twice — once beside the loader under
   `src/core/validators/`, once under `assets/validators/`, which
@@ -173,6 +199,24 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   pass on exactly the state this replaces.
 
 ### Changed
+
+- **The constitution reaches the rule about how much code to write** (#1459).
+  Article VII settles which behaviours a change carries and Article IX asks a
+  preflight to look for work already done. Neither said anything about the
+  amount of code that answers a requirement once it is accepted, so the ladder
+  in `.agents/rules/minimal-implementation.md` was reachable from the rule
+  register and from nowhere an agent passes through on its way to writing code.
+
+  Each article now points at it, and the ladder itself stays in one file:
+
+  | Article | What it gains                                                                       |
+  | ------- | ----------------------------------------------------------------------------------- |
+  | VII     | The first rung — whether a thing needs to exist — while the scope is still open     |
+  | IX      | The reuse rungs: the standard library, the platform, and the installed dependencies |
+
+  Article IX's preflight looked for duplicate implementations inside the
+  repository only. A helper the standard library already ships was outside
+  anything it asked about.
 
 - **The lint toolchain leaves the end-of-life eslint 9 line** (#1450). Every
   release in that line is marked deprecated by the registry, and 9.39.5 is the
@@ -307,6 +351,30 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   unchanged, and both delta templates ship it. The two delta schemas accept the
   qualifier as well, so the shape lane and the triage rules read the same
   heading.
+
+- **Every agent card carries a minimal-implementation obligation** (#1462).
+  Seven of the nineteen cards said something about simplicity, each in its own
+  words. Twelve said nothing — among them every test-stage role and every
+  planning role, which is why the ladder reached neither stage.
+
+  All nineteen now point at `.agents/rules/minimal-implementation.md`, and what
+  the line asks of the role depends on the stage:
+
+  | Stage                   | What the role owes                                                              |
+  | ----------------------- | ------------------------------------------------------------------------------- |
+  | Requirements and design | The first rung, whether the thing needs to exist, while the scope is still open |
+  | Implementation          | The reuse rungs, and the marker on a deliberate shortcut                        |
+  | Tests                   | How a test is built — never how many obligations are covered                    |
+  | Review                  | A finding that names what to cut and what replaces it                           |
+  | Documentation           | Scripts and workflows the role changes; prose keeps its own standard            |
+
+  The test-stage wording is the one that had to be written down. A rule that
+  says "write less", reaching the role that decides coverage, is a way to lose
+  tests.
+
+  The seven cards that carried prose keep everything that was not the ladder —
+  SOLID, separation of concerns, fail-fast and the rest are a different subject,
+  and only the restated rungs are struck.
 
 ## [1.11.1] - 2026-09-10
 
