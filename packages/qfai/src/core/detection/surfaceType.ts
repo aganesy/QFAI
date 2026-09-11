@@ -293,7 +293,7 @@ export function readValidatedClassificationBlock(content: string): UiBearingClas
     if (!DISCUSSION_UI_BEARING_SURFACES.has(parsed.primarySurface)) {
       return null;
     }
-    if (parsed.secondarySurfaces.includes("non-ui" as SurfaceType)) {
+    if (parsed.secondarySurfaces.includes("non-ui")) {
       return null;
     }
     if (parsed.secondarySurfaces.includes(parsed.primarySurface)) {
