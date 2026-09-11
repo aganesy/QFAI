@@ -35,7 +35,40 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   recorded by the reviewer because a hand-written number is the one nobody can
   reproduce.
 
+### Fixed
+
+- **Exit 64 is explained by what the loop reads** (#1560). `isConverged` stops
+  the prototype loop when `designMdViolations`, `layoutAntiPatternsDetected`
+  and `blockingFindings` are all empty. Six places still described the same
+  exit as all four UX axes at `exceptional` — the goal, the stop-condition
+  table, the loop reference, the generator prompt and the `--help` text.
+
+  The four axes are still scored and still reported. They stopped deciding the
+  stop, so an agent told to keep iterating until they read `exceptional` would
+  work past a run that had already converged, and an operator reading the help
+  would look for a cause nothing checked.
+
+  A sweep holds it: no paragraph in the prototyping skill may state the stop
+  and a score from the axis ordinal together.
+
 ### Changed
+
+- **Root `DESIGN.md` is authored where it is frozen** (#1472). `/qfai-sdd`
+  Phase 0 now writes the file if it is missing, from the design direction the
+  discussion pack recorded; `/qfai-discussion` interviews for that direction
+  and records it, and writes nothing outside its own pack.
+
+  Phase 0 used to stop and send the user back to `/qfai-discussion` for a file
+  it then froze, so the brand was decided one skill before the gate that
+  checks it. The interview questions stay in
+  `qfai-discussion/references/design-dna-intake.md`; the mapping from answer
+  to field moves to the new `qfai-sdd/references/design-md-authoring.md`,
+  beside the archetype catalog.
+
+  Discussion's completion and review gates now check the two reference
+  registries in `04_Sources.md` — the input Phase 0 reads — instead of a file
+  that does not exist yet. A cli-only pack is unaffected: it records no brand
+  direction and gets no `DESIGN.md`.
 
 - **The test runner stops asking for more forks than the machine has** (#1528).
   `DECLARED_START` is ten, and on a four-core runner that asked for ten forks
@@ -94,6 +127,21 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   replacing "any layout shape stops the loop" with "any accessibility finding
   stops the loop" would repeat the mistake with better sources. The reviewer
   reads them and decides what belongs in `blockingFindings`.
+
+- **The shipped-document version guard read every triple of numbers as a
+  version** (#1551). `WCAG 3.3.2` failed the same check as `qfai 1.11.1`, so an
+  init-template document could not cite an accessibility criterion by its
+  number — the one form of it a reader can look up.
+
+  A version is now a number something names as one: a leading `v`, or a tool
+  or package name in front of it. A bare triple is left alone, which is what a
+  published standard's clause number is. The guard still rejects a real pin,
+  and a second case asserts both columns so the narrowing cannot be widened
+  back by accident.
+
+  The prototype review criterion on labels now names `WCAG 3.3.2` where it
+  previously pointed at a rule file that carries the number, so the reader of
+  the criterion has the citation in front of them.
 
 - **Two codes shared the `lap-` prefix with a registry that did not declare
   them** (#1499). `layoutAntiPatternsDetected[]` has one vocabulary and two

@@ -116,6 +116,25 @@ describe("qfai --help exit-code section", () => {
     expect(iterateRow).toContain("--capture");
   });
 
+  it("explains iterate's 64 by what the loop actually reads", async () => {
+    const help = await captureHelp();
+    const section = help.slice(help.indexOf("Exit codes:"));
+    const iterateRow = section.slice(
+      section.indexOf("prototyping iterate"),
+      section.indexOf("prototyping iterate --check-convergence"),
+    );
+
+    // `isConverged` reads three arrays. The four UX axes are still scored and
+    // still reported, and they no longer decide the stop — an operator given
+    // an axis value here would look for a cause the loop never consulted.
+    expect(iterateRow).toMatch(
+      new RegExp(`${EXIT_CODES.prototypingStop} = STOP: converged[^]*?no blocking finding`),
+    );
+    expect(iterateRow).toContain("DESIGN.md violation");
+    expect(iterateRow).toContain("anti-pattern");
+    expect(iterateRow).not.toMatch(/axis|axes|exceptional/i);
+  });
+
   it("names the certify layout incompatibility that also returns 64", async () => {
     const help = await captureHelp();
     const section = help.slice(help.indexOf("Exit codes:"));
