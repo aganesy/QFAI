@@ -4,6 +4,22 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ## [Unreleased]
 
+### Fixed
+
+- **Exit 64 is explained by what the loop reads** (#1560). `isConverged` stops
+  the prototype loop when `designMdViolations`, `layoutAntiPatternsDetected`
+  and `blockingFindings` are all empty. Six places still described the same
+  exit as all four UX axes at `exceptional` — the goal, the stop-condition
+  table, the loop reference, the generator prompt and the `--help` text.
+
+  The four axes are still scored and still reported. They stopped deciding the
+  stop, so an agent told to keep iterating until they read `exceptional` would
+  work past a run that had already converged, and an operator reading the help
+  would look for a cause nothing checked.
+
+  A sweep holds it: no paragraph in the prototyping skill may state the stop
+  and a score from the axis ordinal together.
+
 ### Changed
 
 - **The test runner stops asking for more forks than the machine has** (#1528).

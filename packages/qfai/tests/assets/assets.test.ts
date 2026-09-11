@@ -597,14 +597,14 @@ describe("assets guardrails", () => {
       expect(generatorRef).toMatch(/\*\*convergence\*\* stop/);
       expect(generatorRef).toMatch(/re-scanned before the stop\s+is honoured/);
       expect(generatorRef).toMatch(/\*\*max-iterations\*\* stop skips that re-scan/);
-      // `iterationConverged` is not what its name says: it also requires
-      // `layoutAntiPatternsDetected.length === 0` and
-      // `designMdViolations.length === 0`. A prompt that defines the stop as
-      // the four scores alone leaves the generator unable to explain why a
-      // run with four `exceptional` axes did not stop, or what to fix next.
-      expect(generatorRef).toMatch(/\*\*and both finding arrays empty\*\*/);
-      expect(generatorRef).toMatch(/`layoutAntiPatternsDetected` and `designMdViolations`/);
-      expect(generatorRef).toMatch(/one\s+surviving `lap-\*` keeps the loop running/);
+      // The stop is decided by three arrays, and by nothing else: a prompt
+      // that named any subset of them would leave the generator unable to
+      // explain why a well-reviewed run did not stop, or what to fix next.
+      expect(generatorRef).toMatch(/\*\*all three finding arrays empty\*\*/);
+      expect(generatorRef).toMatch(
+        /`designMdViolations`, `layoutAntiPatternsDetected` and\s+`blockingFindings`/,
+      );
+      expect(generatorRef).toMatch(/one\s+surviving `lap-\*` keeps the loop\s+running/);
       // And the re-scan is not a proof of inspection.
       // `recomputeFinalIterDesignMdViolations` returns `[]` for an ENOENT
       // directory and `continue`s past a file it cannot stat or read, so an
@@ -687,6 +687,41 @@ describe("assets guardrails", () => {
       expect(generatorRef).toMatch(/Only the \*\*evidence\*\* tree is\s+backed up/);
       expect(generatorRef).toMatch(/copy that\s+directory aside yourself/);
     }
+  });
+
+  it("never explains the convergence stop by an axis value", async () => {
+    // `isConverged` reads `designMdViolations`, `layoutAntiPatternsDetected`
+    // and `blockingFindings`. The four UX axes are still scored and still
+    // reported; they stopped deciding the stop. An agent reading that exit 64
+    // needs an axis at `exceptional` would keep iterating a run that already
+    // converged, and could not explain one that did not.
+    //
+    // Pinned as a sweep rather than per sentence: the claim had been restated
+    // in the goal, the stop-condition table, the loop reference and the
+    // generator prompt, so a rule that names the files it knows about is one
+    // paragraph away from being wrong again.
+    //
+    // The subject is an axis VALUE, not the axes. Naming an axis near the stop
+    // is fine — the reviewer still scores four of them and the loop still
+    // reports them — so the vocabulary that must not appear is the ordinal a
+    // score is drawn from. A paraphrase of it ("all four at their best") is
+    // out of reach here and is left to review.
+    const AXIS_VALUES = /\b(weak|acceptable|strong|exceptional)\b/i;
+    const offenders: string[] = [];
+    for (const tree of [templateQfaiDir, path.join(repoRoot, ".qfai")]) {
+      const skillDir = path.join(tree, "assistant", "skills", "qfai-prototyping");
+      const files = await fg("**/*.md", { cwd: skillDir, absolute: true, dot: false });
+      for (const file of files) {
+        const text = await readFile(file, "utf-8");
+        for (const paragraph of text.split(/\n\s*\n/)) {
+          if (!/converg/i.test(paragraph) && !/\b64\b/.test(paragraph)) continue;
+          if (!AXIS_VALUES.test(paragraph)) continue;
+          offenders.push(`${path.relative(repoRoot, file)}: ${paragraph.trim().slice(0, 120)}`);
+        }
+      }
+    }
+
+    expect(offenders).toEqual([]);
   });
 
   it("keeps the DESIGN.md scanner doc in sync with the non-waivable prompt wording", async () => {
