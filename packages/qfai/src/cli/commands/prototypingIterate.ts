@@ -2050,10 +2050,9 @@ type SeedMetadata = {
 /**
  * Placeholder proseCritique used by the cycle-0 seed iteration so
  * `prototyping.json` is validate-conformant out of the box. The
- * validator requires 200..500 words; the orchestrator / reviewer
- * overwrites this with a real critique on the first reviewer pass.
- * The text is a single deterministic sentence repeated to land
- * inside the band.
+ * validator requires a non-empty critique under its cap; the
+ * orchestrator / reviewer overwrites this with a real one on the first
+ * reviewer pass.
  */
 /**
  * Build the cycle-0 seed `iterations[]` array. Emits exactly one

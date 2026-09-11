@@ -5,7 +5,7 @@
  * to `iter-NN/review.json`. The schema enforces:
  *   - 4 ordinal axes (weak / acceptable / strong / exceptional):
  *     informationArchitecture, navigationFlow, usability, functionality
- *   - 200..500 word prose critique
+ *   - a prose critique, non-empty and under its cap
  *   - Layout-anti-pattern detection cap: if
  *     `layoutAntiPatternsDetected.length > 0`, `informationArchitecture`
  *     is bounded above by `acceptable` (cannot be `strong` or
@@ -15,9 +15,10 @@
  *     dmv — dmv enforces a separate certify gate at convergence time.
  *   - Explicit `pivotDirective: continue | refine | pivot`
  *
- * The cap rule and word-count rule are enforced at construction time so
- * downstream consumers can rely on the type. The on-disk evidence
- * validator re-checks the same invariants.
+ * The anti-pattern bound and the critique length are checked at
+ * construction time so downstream consumers can rely on the type. The
+ * on-disk evidence validator re-checks the same invariants, through the
+ * same functions.
  */
 
 import type { DesignMdViolation } from "./designMdViolations.js";
@@ -29,33 +30,28 @@ import {
   type PivotDirective,
 } from "./iteration.js";
 
-export const PROSE_CRITIQUE_MIN_WORDS = 200;
-export const PROSE_CRITIQUE_MAX_WORDS = 500;
-
 /**
- * QFAI-PROT-002 CJK character band. Japanese-only proseCritique
- * (no whitespace) is accepted when its CJK character count falls in
- * `600..2500`.
+ * QFAI-PROT-002 upper bounds on `proseCritique`, one per unit of measure.
  *
- * The band is enforced via {@link validateProseCritiqueBand} as the
- * OR-fallback half of the bilingual rule: a critique passes when EITHER
- * its English word count is in `200..500` words OR its CJK character
- * count is in `600..2500` characters.
+ * There is no lower bound. A critique that reports one finding and nothing
+ * else is complete, and a floor turns that review into padding — which the
+ * next cycle then reads as work to do.
+ *
+ * The cap remains because a reviewer writing far past the point still costs
+ * the loop something, and it is free to state.
  */
-export const PROSE_CRITIQUE_MIN_CJK_CHARS = 600;
+export const PROSE_CRITIQUE_MAX_WORDS = 500;
 export const PROSE_CRITIQUE_MAX_CJK_CHARS = 2500;
 
 // CJK Unified Ideographs (U+4E00..U+9FFF), Hiragana (U+3040..U+309F),
-// Katakana (U+30A0..U+30FF). Used to discriminate the CJK-only path
-// from whitespace-tokenised English in `validateProseCritiqueBand`.
+// Katakana (U+30A0..U+30FF). Selects the character-counted path over the
+// whitespace-tokenised one in `validateProseCritiqueBand`.
 //
-// Coverage note: this regex covers Hiragana / Katakana / CJK Unified
-// Ideographs (BMP only). CJK Unified Ideographs Extension A
-// (U+3400..U+4DBF) and Extension B+ (surrogate-pair ideographs like
-// 𠮷 at U+20BB7) are intentionally out of scope for prototyping
-// critique heuristics — the bands target everyday Japanese prose,
-// which sits inside the BMP. Revisit if Japanese proseCritique
-// false-positives appear with rare-kanji-heavy text.
+// Coverage note: BMP only. Extension A (U+3400..U+4DBF) and Extension B+
+// (surrogate-pair ideographs like 𠮷 at U+20BB7) are not matched, which
+// targets everyday Japanese prose. Since the rule is a cap and not a
+// floor, an uncounted ideograph can only make the cap bind later than it
+// should, never reject a critique that should pass.
 const CJK_CHAR_RE = /[぀-ヿ一-鿿]/u;
 
 function countCjkCharacters(text: string): number {
@@ -80,53 +76,52 @@ export type ProseCritiqueValidationResult =
     };
 
 /**
- * Validate a proseCritique against the bilingual QFAI-PROT-002 band:
- *   - English path: 200..500 whitespace-separated words.
- *   - CJK path: 600..2500 CJK characters.
+ * Check a proseCritique against the QFAI-PROT-002 cap.
  *
- * Returns `ok: true` when EITHER band is satisfied. When neither is
- * satisfied, returns `ok: false` with an error message that names:
- *   - the count form measured (`characters` when the text contains CJK,
- *     otherwise `words`),
- *   - the band used (`600..2500` or `200..500`),
- *   - the actual measured count.
+ * The unit is **selected** by the text, not tried in turn: a critique
+ * carrying CJK is measured in characters, because those scripts do not
+ * separate words with spaces; anything else is measured in whitespace-
+ * separated words. Only the selected unit's cap applies.
  *
- * Uses `Intl.Segmenter('ja', { granularity: 'word' })` when available
- * to obtain a more accurate Japanese word count for diagnostic
- * purposes; the CJK character count is the authoritative band check.
+ * Selecting rather than accepting whichever unit happens to fit is what
+ * keeps the cap a cap. A rule that passed on either unit would pass every
+ * English text however long, since an English critique holds no CJK
+ * characters and so is under the character cap by construction.
+ *
+ * Returns `ok: false` only for a critique over its cap, with an error that
+ * names the unit measured, the cap, and the count. Both counts are returned
+ * either way, because a caller reporting the finding wants the one the cap
+ * was not written in as well.
+ *
+ * **What the cap does not reach.** A script that writes without spaces and
+ * is not CJK — Thai is the clearest case — counts as very few words, so the
+ * word cap never binds on it. That is a cap which does not apply, not a
+ * critique rejected for the wrong reason: nothing fails that should pass.
+ * Binding the cap for those scripts needs per-script segmentation and is a
+ * separate question from the one this function answers.
  */
 export function validateProseCritiqueBand(text: string): ProseCritiqueValidationResult {
   const wordCount = countWords(text);
   const cjkCount = countCjkCharacters(text);
-  const looksCjk = cjkCount > 0;
+  const counts = { measuredWords: wordCount, measuredCharacters: cjkCount };
 
-  const wordInBand = wordCount >= PROSE_CRITIQUE_MIN_WORDS && wordCount <= PROSE_CRITIQUE_MAX_WORDS;
-  const cjkInBand =
-    cjkCount >= PROSE_CRITIQUE_MIN_CJK_CHARS && cjkCount <= PROSE_CRITIQUE_MAX_CJK_CHARS;
-
-  if (wordInBand || cjkInBand) {
-    return { ok: true, measuredWords: wordCount, measuredCharacters: cjkCount };
+  if (cjkCount > 0) {
+    return cjkCount <= PROSE_CRITIQUE_MAX_CJK_CHARS
+      ? { ok: true, ...counts }
+      : {
+          ok: false,
+          ...counts,
+          error: `proseCritique ${cjkCount} characters over the ${PROSE_CRITIQUE_MAX_CJK_CHARS}-character cap`,
+        };
   }
 
-  if (looksCjk) {
-    return {
-      ok: false,
-      measuredWords: wordCount,
-      measuredCharacters: cjkCount,
-      error:
-        `proseCritique ${cjkCount} characters outside band ` +
-        `${PROSE_CRITIQUE_MIN_CJK_CHARS}..${PROSE_CRITIQUE_MAX_CJK_CHARS}`,
-    };
-  }
-
-  return {
-    ok: false,
-    measuredWords: wordCount,
-    measuredCharacters: cjkCount,
-    error:
-      `proseCritique ${wordCount} words outside band ` +
-      `${PROSE_CRITIQUE_MIN_WORDS}..${PROSE_CRITIQUE_MAX_WORDS}`,
-  };
+  return wordCount <= PROSE_CRITIQUE_MAX_WORDS
+    ? { ok: true, ...counts }
+    : {
+        ok: false,
+        ...counts,
+        error: `proseCritique ${wordCount} words over the ${PROSE_CRITIQUE_MAX_WORDS}-word cap`,
+      };
 }
 
 /**
@@ -267,11 +262,14 @@ export function buildEvaluatorReview(input: BuildEvaluatorReviewInput): Evaluato
     );
   }
 
-  const wordCount = countWords(input.proseCritique);
-  if (wordCount < PROSE_CRITIQUE_MIN_WORDS || wordCount > PROSE_CRITIQUE_MAX_WORDS) {
-    throw new Error(
-      `buildEvaluatorReview: proseCritique must be ${PROSE_CRITIQUE_MIN_WORDS}..${PROSE_CRITIQUE_MAX_WORDS} words (got ${wordCount})`,
-    );
+  // Through the same function the on-disk validator calls, rather than a
+  // second copy of the rule here. The copy that stood here counted words
+  // only, so a Japanese critique the validator accepted threw at
+  // construction — one rule, two answers, depending on which door you came
+  // through.
+  const band = validateProseCritiqueBand(input.proseCritique);
+  if (!band.ok) {
+    throw new Error(`buildEvaluatorReview: ${band.error}`);
   }
 
   validateDesignMdViolations(input);
