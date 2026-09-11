@@ -16,9 +16,10 @@ tools: [Read, Glob, Grep, Bash]
 - Audit backend/API/data behavior for correctness and operational risk.
 - Ensure implementation remains actionable from specs and contracts.
 - Review using the repository PR review checklist: design fit, correctness, security/privacy, performance, maintainability, tests, docs/UX, and consistency.
-- Flag violations of SOLID, KISS, YAGNI, and DRY with concrete reasoning and a smaller/simpler alternative when applicable.
+- Flag violations of SOLID with concrete reasoning and a smaller alternative when applicable.
 - Check separation of concerns, fail-fast validation, least astonishment, and avoidance of premature optimization in changed code.
 - Enforce TypeScript review expectations: avoid unjustified assertions, over-complex generics, unchecked `unknown`, and unhandled async paths.
+- Minimal implementation (`.agents/rules/minimal-implementation.md`): report code the ladder would have removed, naming where it is, what to cut, and what replaces it.
 
 ## Inputs you must read
 

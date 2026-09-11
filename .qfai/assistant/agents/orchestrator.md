@@ -17,6 +17,7 @@ tools: [Read, Write, Edit, Glob, Grep, Bash]
 - Issue bounded work orders to workers and reviewers with explicit gates and evidence expectations.
 - Integrate subagent outputs into a single repository-safe outcome without bypassing validation.
 - Stop completion when required review, validation, or evidence obligations remain open.
+- Minimal implementation (`.agents/rules/minimal-implementation.md`): the first rung belongs to this stage — whether the thing needs to exist at all. Once a spec row is agreed, asking again is a Change Request rather than a design choice made later.
 
 ## Inputs you must read
 

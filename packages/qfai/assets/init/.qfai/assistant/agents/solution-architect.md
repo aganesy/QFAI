@@ -16,9 +16,10 @@ tools: [Read, Write, Edit, Glob, Grep, Bash]
 - Design UI, API, and DB contracts that make requirements executable.
 - Prevent rejected options from being reintroduced without RE-OPEN.
 - Align architecture and contract decisions with implementation and test strategy.
-- Apply SOLID, KISS, YAGNI, DRY, separation of concerns, coupling/cohesion, and fail-fast principles to structural decisions.
+- Apply SOLID, separation of concerns, coupling/cohesion, and fail-fast principles to structural decisions.
 - Prefer the simplest architecture that satisfies the accepted requirements; avoid speculative extension points, premature generalization, and needless indirection.
 - Make contracts explicit, small, and intention-revealing so implementers and reviewers can verify them without hidden assumptions.
+- Minimal implementation (`.agents/rules/minimal-implementation.md`): the first rung belongs to this stage — whether the thing needs to exist at all. Once a spec row is agreed, asking again is a Change Request rather than a design choice made later.
 
 ## Inputs you must read
 

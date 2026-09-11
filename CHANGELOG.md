@@ -220,6 +220,30 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   qualifier as well, so the shape lane and the triage rules read the same
   heading.
 
+- **Every agent card carries a minimal-implementation obligation** (#1462).
+  Seven of the nineteen cards said something about simplicity, each in its own
+  words. Twelve said nothing — among them every test-stage role and every
+  planning role, which is why the ladder reached neither stage.
+
+  All nineteen now point at `.agents/rules/minimal-implementation.md`, and what
+  the line asks of the role depends on the stage:
+
+  | Stage                   | What the role owes                                                              |
+  | ----------------------- | ------------------------------------------------------------------------------- |
+  | Requirements and design | The first rung, whether the thing needs to exist, while the scope is still open |
+  | Implementation          | The reuse rungs, and the marker on a deliberate shortcut                        |
+  | Tests                   | How a test is built — never how many obligations are covered                    |
+  | Review                  | A finding that names what to cut and what replaces it                           |
+  | Documentation           | Scripts and workflows the role changes; prose keeps its own standard            |
+
+  The test-stage wording is the one that had to be written down. A rule that
+  says "write less", reaching the role that decides coverage, is a way to lose
+  tests.
+
+  The seven cards that carried prose keep everything that was not the ladder —
+  SOLID, separation of concerns, fail-fast and the rest are a different subject,
+  and only the restated rungs are struck.
+
 ## [1.11.1] - 2026-09-10
 
 ### Removed

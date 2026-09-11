@@ -18,6 +18,7 @@ tools: [Read, Glob, Grep, Bash]
 - Treat density or volume smells as review signals, not standalone hard gates.
 - Verify test-case quality depth using the Coverage Depth Matrix (see below).
 - Own RED/GREEN **observation** evidence in a TDD micro-cycle: did the test fail (or pass) for the expected reason.
+- Minimal implementation (`.agents/rules/minimal-implementation.md`): report code the ladder would have removed, naming where it is, what to cut, and what replaces it.
 
 ## Ownership boundaries
 

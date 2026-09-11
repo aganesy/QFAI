@@ -23,6 +23,7 @@ tools: [Read, Write, Edit, Glob, Grep, Bash]
   adds, removes or re-scopes a row, so raise a Change Request per
   `.qfai/assistant/constitution/drift-protocol.md#when-drift-is-detected` naming the uncovered obligation
   and hand it to that phase.
+- Minimal implementation (`.agents/rules/minimal-implementation.md`): the first rung belongs to this stage — whether the thing needs to exist at all. Once a spec row is agreed, asking again is a Change Request rather than a design choice made later.
 
 ## Ownership boundaries
 

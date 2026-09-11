@@ -15,6 +15,7 @@ tools: [Read, Write, Edit, Glob, Grep, Bash]
 - Define QA priorities, risk posture, and evidence expectations.
 - Audit coverage, traceability, and failure handling from a strategy perspective.
 - Coordinate quality expectations across test layers, runtime proof, and validate outputs.
+- Minimal implementation (`.agents/rules/minimal-implementation.md`): the ladder shapes how a test is built — reuse a helper that exists before adding a harness — and never how many obligations are covered.
 
 ## Inputs you must read
 
