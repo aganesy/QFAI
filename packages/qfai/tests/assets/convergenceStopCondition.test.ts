@@ -97,6 +97,19 @@ describe("the convergence stop condition is stated as the three finding arrays",
     });
   }
 
+  // The scanner and the generator prompt are a declared SSOT pair, and the
+  // pair's contract is that both state the same posture. A scanner header that
+  // stops at "an empty list" invites the reading its own gate refuses: that a
+  // clean scan is the stop.
+  it("the scanner says its own empty list is not the stop", async () => {
+    const text = flat(await read("packages/qfai/src/core/prototyping/designMdViolations.ts"));
+
+    expect(text).toContain("necessary for a convergence stop and never sufficient");
+    for (const array of ["blockingFindings", "layoutAntiPatternsDetected"]) {
+      expect(text, `the scanner header omits ${array}`).toContain(`\`${array}\``);
+    }
+  });
+
   it("the operator's exit-64 line names what is empty, not what scored", () => {
     const help = formatExitCodesSection();
     const iterate = help.slice(

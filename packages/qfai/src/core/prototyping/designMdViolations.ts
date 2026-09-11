@@ -19,8 +19,11 @@
  * Reviewer-recorded empty `designMdViolations` is discarded rather than
  * trusted (the recomputed list drives the stop decision only; it is not
  * written back into `prototyping.json`); a `max-iterations` stop skips
- * that re-scan and simply ends the loop. That re-scan reaches the
- * captured HTML that is PRESENT AND READABLE:
+ * that re-scan and simply ends the loop. An empty `designMdViolations`
+ * is necessary for a convergence stop and never sufficient: the stop
+ * also requires `blockingFindings` and `layoutAntiPatternsDetected`
+ * empty, so a clean scan on its own never ends the loop. That re-scan
+ * reaches the captured HTML that is PRESENT AND READABLE:
  * `recomputeFinalIterDesignMdViolations` returns an empty list for a
  * missing iteration directory and skips a file it cannot stat or read,
  * so an empty result means "nothing found in what was read" and not
