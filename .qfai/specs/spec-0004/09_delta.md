@@ -1,9 +1,5 @@
 # 09 Delta
 
-<!-- markdownlint-disable MD024 -->
-<!-- Each round records its own `## Triage`, and the triage rules read a section
-     only under that exact heading, so the repeated heading is the shape. -->
-
 ## 2026-09-04
 
 - `CR-20260904-0003` (`confirm-only`, `/qfai-sdd 0004`): this spec's
@@ -82,7 +78,7 @@
 - Posture: additive append; no purge in spec-0004. Backward compatibility for existing validators retained.
 - Approved By: yusuke_senaga
 
-## Triage
+## Triage (CHG-001)
 
 | Source                       | Subject                                     | Existing Spec | Operation | Sub-op | Approved By   | Rationale                                  |
 | ---------------------------- | ------------------------------------------- | ------------- | --------- | ------ | ------------- | ------------------------------------------ |
@@ -172,7 +168,7 @@
 - Posture: additive append; preserves all existing AC/BR/EX/TC numbering. NFR-0101 (SSOT-sync mirror) and NFR-0103 (validate warning names sunset version) absorbed into BR layer via BR-0004-0026 / BR-0004-0027.
 - Approved By: yusuke_senaga
 
-## Triage
+## Triage (CHG-005)
 
 | Source                                  | Subject                                                                                                                                        | Existing Spec | Operation | Sub-op | Approved By   | Rationale                                                                                                                    |
 | --------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- | ------------- | --------- | ------ | ------------- | ---------------------------------------------------------------------------------------------------------------------------- |

@@ -94,6 +94,23 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
+- **Every Triage section in a delta ledger names the round it records**
+  (#1467). Seven ledgers disabled `MD024/no-duplicate-heading` per file, because
+  a ledger recording several rounds needed several identical `## Triage`
+  headings and the rule rejects those. The heading may name its round now, so
+  each section is `## Triage (CHG-005)` or the like and nothing collides. One
+  section per file stays bare: the file's own table, which belongs to no round.
+
+  The same applies to a round's other parts in `_policies/10_delta.md`. Sixteen
+  headings — `Impact-Cascade Verification`, `ID Stability`,
+  `Distributed-Surface Impact` and the rest — repeated once per round, and each
+  now carries its round the way the spec ledgers' operations and notes sections
+  already do.
+
+  No file disables `MD024` any more, and the three dogfooding lanes are
+  unmoved, which is what says every renamed heading is still one the triage
+  rules read.
+
 - **`W-STALE-REFERENCE` carries the severity it means, instead of reading the
   calendar** (#1433). The rule reported `warning` before `2026-12-01` and
   `error` from that date, so the same tree graded differently according to the

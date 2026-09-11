@@ -1,9 +1,5 @@
 # 10 Delta
 
-<!-- markdownlint-disable MD024 -->
-<!-- Each round records its own `## Triage`, and the triage rules read a section
-     only under that exact heading, so the repeated heading is the shape. -->
-
 ## Change Summary
 
 | Date       | Change Type | Section                         | Summary                                                                                                                                                                                     | Rationale                                                                                                                       |
@@ -622,7 +618,7 @@
 - Stage 1 approval requirement: all operations are UPDATE:APPEND / UPDATE:MODIFY — no AskUserQuestion-gated rows. Append-first fan-out across active specs per `_policies/11_Slice-Policy.md` §APPEND vs CREATE.
 - No new CAP. The work-log surface and assistant-tree re-cut are realized through existing capabilities (CAP-0003 init, CAP-0004 validate, skill capabilities, CAP-0015 agents).
 
-## Triage
+## Triage (CHG-003)
 
 | Source                                                                                             | Subject                                                                                                     | Existing Spec                  | Operation | Sub-op | Approved By | Rationale                                                                                                                        |
 | -------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------- | ------------------------------ | --------- | ------ | ----------- | -------------------------------------------------------------------------------------------------------------------------------- |
@@ -641,18 +637,18 @@
 | REQ-0009                                                                                           | Contract Index entry for `assistantPaths.ts` module + CLI contract updates                                  | `_policies/05_Contracts.md`    | UPDATE    | APPEND | pin-implied | Cross-spec contract index addition.                                                                                              |
 | (no source)                                                                                        | CAP success-metrics tightening for CAP-0003 / CAP-0004 (new responsibilities)                               | `_policies/03_Capabilities.md` | UPDATE    | MODIFY | pin-implied | Success-metric cells gain assistant-tree-recut + worklog enforcement language. No new CAP rows; APPEND-style modification only.  |
 
-## Impact-Cascade Verification
+## CHG-003 Impact-Cascade Verification
 
 - All companion rows above are derived from REQ/NFR Source IDs declared by the discussion pack's `06_REQ.md` and `07_NFR.md`. Cross-spec impact is intrinsic (e.g., REQ-0009 affects both init and validate spec rows).
 - No row is approval-gated (UPDATE:APPEND / UPDATE:MODIFY only). `_policies/11_Slice-Policy.md` §AskUserQuestion テンプレート is therefore not triggered.
 - Deferred OQs from the pack (`OQ-0007` AGENTS.md, `OQ-0008` auto-archival) are mirrored to the touched specs' `08_Open-questions.md` files referencing the deferred row in `13_Deferred.md`.
 
-## ID Stability
+## CHG-003 ID Stability
 
 - No CAP / spec / REQ / AC / BR / EX / TC ID is renumbered.
 - New spec-level append IDs follow the per-spec `09_delta.md` append rules.
 
-## Distributed-Surface Impact
+## CHG-003 Distributed-Surface Impact
 
 - `.qfai/steering/` (work-log surface, project-root) is NOT in `packages/qfai/package.json#files`. Only the seeded `README.md` / `.gitkeep` / `_templates/entry.md` (generic content, no internal IDs) is shipped, and not as files under `assets/`: all three bodies are built by `packages/qfai/src/cli/commands/init.ts` and reach the distributed surface as string literals inside `dist/` — `.gitkeep`'s body is the empty string.
 - All relocation under `.qfai/assistant/**` continues to ship as today; the layer 1/2/3 leakage scan covers the new layout because `package.json#files` is the input.
@@ -665,7 +661,7 @@
 - Approved By: `yusuke_senaga` via pinned branch `feature/v1.9.1` per `.agents/rules/version-discipline.md` (the branch pin acts as user authorization for changes that converge on the pinned `packages/qfai/package.json#version`). No `AskUserQuestion` rows because all triage operations are append-only.
 - No new CAP: remediation reuses CAP-0004 (validate), CAP-0006 (doctor / preflight), CAP-0012 (prototyping), CAP-0013 (sdd / contract conformance), CAP-0015 (agents / reviewer-gate).
 
-## Triage
+## Triage (CHG-005)
 
 > Per-spec rows are owned by each `<spec>/09_delta.md` `## Triage`. The table below only lists the policy-layer rows that affect `.qfai/specs/_policies/**` directly.
 
@@ -675,7 +671,7 @@
 | REQ-0126 | Backwards-compatibility adapter contract: validators / probes / readers accept BOTH old and new forms (legacy `playwright-cli` wrapper, legacy `prototyping.json` shape, legacy `validate.json` path) during a one-minor-release deprecation window with `D-DEPRECATED-*` warnings; hard-fail at sunset                                                   | `_policies`   | UPDATE    | APPEND | yusuke_senaga | Adapter rule cross-cuts spec-0004 (validate finding codes), spec-0006 (doctor probe), and spec-0012 (prototyping reader). The window/sunset policy is shared and belongs in `_policies/07_Constraints.md` so no spec re-invents it.           |
 | REQ-0127 | Migration memo authored at `.qfai/assistant/process/migrations/<pinned-version>-prototyping-defect-remediation.md` describing old→new per capability, deprecation window, sunset version, and downstream recovery steps                                                                                                                                   | `_policies`   | UPDATE    | APPEND | yusuke_senaga | Memo lives outside any single spec; precedent (`v1.4.27-atdd-alignment.md`) is anchored from `_policies`. Append-first row records the authoring obligation and immutability constraint (see `OC-NN` Migration memo immutability constraint). |
 
-## Distribution by spec (REQ counts)
+## CHG-005 Distribution by spec (REQ counts)
 
 | Spec        | REQ count | Notes                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
 | ----------- | --------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -687,12 +683,12 @@
 | `_policies` | 3         | REQ-0124 (doc realignment) / REQ-0126 (backwards-compat adapter window) / REQ-0127 (migration memo).                                                                                                                                                                                                                                                                                                                                                             |
 | (deferred)  | 1         | REQ-0130 deferred — re-evaluation trigger: next prototyping discussion-pack refresh or first downstream consumer raising a concrete requirement. Tracked in the touched specs' `08_Open-questions.md` per `_policies/11_Slice-Policy.md` deferred mirroring rule.                                                                                                                                                                                                |
 
-## ID Stability
+## CHG-005 ID Stability
 
 - No CAP / spec / REQ / AC / BR / EX / TC / TDD ID is renumbered.
 - New spec-level append IDs follow the per-spec `09_delta.md` append rules.
 
-## Distributed-Surface Impact
+## CHG-005 Distributed-Surface Impact
 
 - `.qfai/assistant/process/migrations/<pinned-version>-prototyping-defect-remediation.md` is the operational memo only. The seeded distributed copy at `packages/qfai/assets/init/.qfai/assistant/process/migrations/` MUST NOT contain internal IDs (`spec-NNNN`, `CAP-NNNN`, `DR-NNNN`, `DEC-NNNN-NNNN`, `OQ-NNNN-NNNN`) or `vN.M[.P]` markers per `.agents/rules/distributed-surface.md`. Only the canonical npm version (`packages/qfai/package.json#version`) is referenceable in the seeded copy.
 - New contract files under `.qfai/contracts/cli/` (`qfai-doctor.md`, `qfai-prototyping-iterate.md`) are authoring-zone and NOT in `package.json#files`.
@@ -720,7 +716,7 @@
 - superseded: any-byte DESIGN.md edit invalidating all prior cycle evidence (replaced by patch-zone semantic)
 - superseded: timestamp-inference as the way to find the active discussion session across 19+ dirs
 
-## Triage
+## Triage (CHG-006)
 
 > Per-spec rows are owned by each `<spec>/09_delta.md` `## Triage`. The table below only lists the policy-layer rows that affect `.qfai/specs/_policies/**` directly. All operations are `UPDATE:APPEND` — no `CREATE`, no new `CAP`, no `MODIFY` rewrites of accepted text.
 
@@ -732,7 +728,7 @@
 | REQ-0170 | Migration memo authored at `.qfai/assistant/process/migrations/1.9.2-second-wave-defect-remediation.md` (old→new per capability, window, sunset, recovery, spec cross-links)                   | `_policies`   | UPDATE    | APPEND | yusuke_senaga | Memo lives outside any single spec; precedent (`v1.9.1-prototyping-defect-remediation.md`) anchored from `_policies`. Records authoring + immutability obligation.    |
 | REQ-0173 | Documentation realignment of `references/iteration-loop.md` / `generator-prompt.md` / `handoff.md` / `evidence-requirements.md` + each SKILL.md to the OQ-0152..0157 outcomes                  | `_policies`   | UPDATE    | APPEND | yusuke_senaga | Doc realignment cross-cuts every touched skill; the cross-skill rewording rule + `W-SKILL-DOC-BROKEN-REF` zero-stale-ref obligation are shared (extends OC-62).       |
 
-## OQ → DR resolution log
+## CHG-006 OQ → DR resolution log
 
 > Architect-resolved at this slice. The per-spec slices (Spec A–K) cite these DR IDs. OQ-0161 / OQ-0164 / OQ-0165 remain `deferred` (ops); the register's OQ-0167 `sdd lint --fix` autofix question (Spec I) remains `deferred`.
 
@@ -753,20 +749,20 @@
 | OQ-0159    | DR-0268 | `primary_tasks` structured schema = `{id,label,acceptance}` closed           | I    |
 | OQ-0167    | DR-0274 | pack-location lint scope = staged/changed dirs vs allowed roots              | K    |
 
-## New contracts / finding codes introduced
+## CHG-006 New contracts / finding codes introduced
 
 - Contract index (`_policies/05_Contracts.md` § CHG-006): `CLI-HANDOFF` (handoff schema), `CLI-MANIFEST` (per-skill runtimeDependencies manifest schema), `CLI-AUDIT` (`qfai audit log`). DCON-005 (design-system) referenced for the saas-package attestation requirement (no new DCON).
 - Reviewer-Gate finding codes (REQ-0168 catalog; severity error + mandatory `justification:` per TC-71): `R-AUTOPILOT-POLICY-MISSING`, `R-HANDOFF-SCHEMA-DRIFT`, `R-EVIDENCE-MUTATION-UNLOGGED`, `R-DESIGN-MD-PATCH-OUT-OF-ZONE` (severity warning per REQ-0151), `R-PACK-LOCATION-DRIFT`, `R-SKILL-MANIFEST-DRIFT`, `R-EXPLORATION-CERTIFY-ATTEMPT`, `R-MOCK-HREF-DRIFT`.
 - `qfai validate` / lint findings: `D-SCAFFOLD-PLACEHOLDER`, `D-SURFACE-TYPE-MISSING`, `D-HANDOFF-LEGACY-FORMAT`, `D-SAAS-PACKAGE-VERIFY-SKIPPED` (info).
 - New SSOT-sync pairs (mirror v1.9.1 `R-PROMPT-SCANNER-DRIFT`; pair labels per the discussion pack `09_Constraints.md` C-4): Pair III per-skill `manifest.json` ↔ `qfai doctor` probe (`R-SKILL-MANIFEST-DRIFT`); Pair IV canonical `handoff.ts` schema ↔ all skill handoff writers (`R-HANDOFF-SCHEMA-DRIFT`); Pair V `qfai-discussion` mock template ↔ `QFAI-MOCK-010` validator (`R-MOCK-HREF-DRIFT`).
 
-## Impact-Cascade Verification
+## CHG-006 Impact-Cascade Verification
 
 - All companion rows above derive from REQ Source IDs declared in `discussion-20260527075558258/06_REQ.md`. The 8-spec distribution (spec-0012 / spec-0006 / spec-0010 / spec-0008 / spec-0015 / spec-0013 / spec-0014 / spec-0004) is recorded in the Distribution-by-spec table below; those rows are authored per-spec by a later wave.
 - No row is approval-gated (UPDATE:APPEND only). `_policies/11_Slice-Policy.md` §AskUserQuestion テンプレート is not triggered.
 - Deferred OQs (OQ-0161 / OQ-0164 / OQ-0165, and register OQ-0167 autofix) are mirrored to `13_Deferred.md` and the touched specs' `08_Open-questions.md`; this pack does not modify their disposition.
 
-## Distribution by spec (REQ counts)
+## CHG-006 Distribution by spec (REQ counts)
 
 > Authored by the per-spec wave; recorded here as the cross-spec triage SSOT. All UPDATE:APPEND, no CREATE, no new CAP.
 
@@ -782,13 +778,13 @@
 | spec-0004   | CAP-0004 | REQ-0164 (validator), 0166, 0167       | `auditProfile.ts` shape accept, `--profile saas-package`, pack-location validator integration                           |
 | `_policies` | (none)   | REQ-0167, 0168, 0169, 0170, 0173       | pack-location CI lane, finding-code catalog SSOT, deprecation window, migration memo, doc realignment                   |
 
-## ID Stability
+## CHG-006 ID Stability
 
 - No CAP / spec / REQ / AC / BR / EX / TC / TDD ID is renumbered.
 - New plain `DR-NNNN` IDs begin at DR-0261 (DR-0258/0259/0260 were consumed by CHG-003); see `_policies/08_Decisions.md` § DR-0261..0274.
 - New spec-level append IDs follow each per-spec `09_delta.md` append rules.
 
-## Distributed-Surface Impact
+## CHG-006 Distributed-Surface Impact
 
 - The operational migration memo `.qfai/assistant/process/migrations/1.9.2-second-wave-defect-remediation.md` lives under the distributed asset tree shape; its prose MUST NOT contain internal IDs (`spec-NNNN` cross-links and the filename version slot are the structurally-required exceptions) or `vN.M[.P]` markers beyond the npm version per `.agents/rules/distributed-surface.md`.
 - New / updated shipped surfaces (SKILL.md `## Default Autopilot Policy` sections, `references/*.md` realignments, `handoff.ts` schema doc) MUST pass the layer 1/2/3 leakage guard. Per-skill `manifest.json` is consumer-authored (under the consuming project's `.qfai/assistant/skills/<skill>/manifest.json`); `skillManifestProbe.ts` reads it from the consumer tree, so it is NOT bundled under `assets/init/...`.
@@ -827,7 +823,7 @@
   - Reason: `spec-0009` scopes **adopter** repository config discovery, not QFAI's own workspace; `spec-0011`'s parallelism is agent/worktree-level, not CI-worker-level. All three would be scope escapes, and one design would be fragmented across three packs.
   - DO NOT: distribute one cohesive design across three specs. Temptation: every fragment individually looks like an append to something that already exists.
 
-## Triage
+## Triage (CHG-007)
 
 > Per-spec rows are owned by each `<spec>/09_delta.md` `## Triage`. This table carries the policy-layer rows and the single approval-required `CREATE`.
 
@@ -844,7 +840,7 @@
 | REQ-0023                 | per-layer tool rationale gains a cross-reference to the CI lane map                               | spec-0009     | UPDATE    | MODIFY | -               | Cascade. `spec-0009` owns Tool selection rationale per test layer for adopter repos; the mapping doc must not grow the vocabulary (NFR-0015)                                                                                                                                                                                                                                     |
 | REQ-0013, REQ-0022       | reviewer-gate ingestion of the new hygiene and drift finding codes                                | spec-0015     | UPDATE    | APPEND | -               | Cascade, following the established precedent that `spec-0004` emits and `spec-0015` defines ingestion (`R-PROMPT-SCANNER-DRIFT`)                                                                                                                                                                                                                                                 |
 
-## Impact-Cascade Verification
+## CHG-007 Impact-Cascade Verification
 
 Every active spec was scanned. Specs with **no** companion row, and the reason:
 
@@ -861,14 +857,14 @@ Every active spec was scanned. Specs with **no** companion row, and the reason:
 
 No `UPDATE:REMOVE` row exists in this change. Verified: the vitest `compatibility` project and the repository's duplicate `.github/workflows/qfai-validate.yml` (removed by REQ-0011 and REQ-0025 respectively) are referenced by **zero** spec items, so neither removal cuts a downstream reference.
 
-## ID Stability
+## CHG-007 ID Stability
 
 - `CAP-0017` and `spec-0017` are renumbered per DR-0275; no other CAP or spec ID changes.
 - Active range becomes `spec-0001..spec-0017`, contiguous, satisfying `QFAI-SPLIT-102..105`.
 - No AC / BR / EX / TC / TDD ID in any existing spec is renumbered; all per-spec changes append.
 - New plain `DR-NNNN` IDs begin at DR-0275.
 
-## New Open Questions
+## CHG-007 New Open Questions
 
 | OQ      | Subject                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              | Owner              | Severity | Disposition |
 | ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------ | -------- | ----------- |
@@ -879,7 +875,7 @@ No `UPDATE:REMOVE` row exists in this change. Verified: the vitest `compatibilit
 | OQ-0027 | Duplicate item-ID definitions inside one spec are undetected by every validator. Measured 2026-08-05: one skill spec defines three acceptance criteria twice each, with different titles and different parents, and the full-profile validate still passes. An ID that is not a key makes downstream references resolve ambiguously and lets the traceability chain report coverage it does not have. Detection is cheap and lexical                                                                                                 | qa-strategist      | high     | deferred    |
 | OQ-0028 | No validator reconciles a delta's declared ID ranges against the pack's actual contents. Measured 2026-08-05: one pack's delta omitted four items this change added, and the full-profile validate passed; ten reviewer verdicts missed it. Detection is mechanical — diff new IDs against declared ranges per pack                                                                                                                                                                                                                  | qa-strategist      | medium   | deferred    |
 
-## Distributed-Surface Impact
+## CHG-007 Distributed-Surface Impact
 
 - `spec-0017` is repository-internal by construction: `.github/workflows/**`, root `scripts/**` and `packages/qfai/scripts/**` are **not** in `package.json#files`, so nothing it owns is distributed.
 - The shipped rows (REQ-0014..0021, spec-0003) do touch the distributed surface. Two guards bind them: a conventional pin-version comment trailer is forbidden in shipped files by the comment-blind internal-version regex in `check-no-internal-version-leakage.sh`, and `verify-pack.mjs` permits only `workflows` under the shipped `.github/`, so composite-action templates cannot ship.

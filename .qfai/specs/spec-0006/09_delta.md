@@ -1,9 +1,5 @@
 # 09 Delta
 
-<!-- markdownlint-disable MD024 -->
-<!-- Each round records its own `## Triage`, and the triage rules read a section
-     only under that exact heading, so the repeated heading is the shape. -->
-
 ## Change Summary
 
 - Change ID: DELTA-0001
@@ -40,7 +36,7 @@
 - Posture: additive append; preserves existing AC/BR/EX/TC numbering. NFR-0112 (fresh init + playwright install yields zero error lines) absorbed into AC-0006-0012 / TC-0006-0016.
 - Approved By: yusuke_senaga
 
-## Triage
+## Triage (CHG-005)
 
 Rows owned by this spec.
 
@@ -79,7 +75,7 @@ Rows owned by this spec.
 - Operation: UPDATE:APPEND (additive; preserves existing US/AC/BR/EX/TC numbering)
 - Local ID ranges added: US-0006-0008..0010, AC-0006-0015..0020, BR-0006-0012..0017, EX-0006-0015..0020, TC-0006-0019..0026
 
-## Triage
+## Triage (2026-05-27 second wave)
 
 Rows owned by this spec. `Approved By` is `-` throughout: every row is append-first, so no operation here is approval-gated.
 
