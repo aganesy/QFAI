@@ -6,6 +6,29 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **The sanctioned ledger backfill can now satisfy the gate that reads it**
+  (#1574). `execution-ledger.md` sanctions backfilling a `done` row whose
+  original run is gone: record the loss in the evidence file and point the cell
+  at that entry. `QFAI-TDDLIST-008` then judged that entry against an
+  unconditional set of 22 fields, three of which are seals recomputed from
+  artifacts on disk.
+
+  A gone run produced no review pack, so there was no seal to record and none
+  that could honestly be written. The sanctioned shape and the gate could not
+  both be satisfied, and the backfill was unreachable.
+
+  An entry now declares the loss with two fields — `Run output retained: no`,
+  read as an exact value, and `Backfill note` saying what was run. That drops
+  the reviewer-pack and seal fields from the required set and nothing else:
+  identity, the RED failure mode, the round block, and the verify and checkpoint
+  commands with their results are all reproducible by re-running the test.
+
+  The exemption is reported rather than applied quietly. `done` is read as
+  reviewed, so a row exempt from the verdicts emits
+  `QFAI-TDDLIST-019` at `warning` and is visible in the same output
+  an operator already reads. A project that will carry no unreviewed row treats
+  warnings as failures and gets the unconditional set back.
+
 - **The review payload schema stops citing a field it has never had**
   (#1560). It said a payload that reviewed nothing is rejected "no matter what
   its axes claim". The payload carries eleven required fields and none of them

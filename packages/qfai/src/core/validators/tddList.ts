@@ -2412,6 +2412,45 @@ function entryOwnFields(section: string): string {
   return kept.join("\n");
 }
 
+/**
+ * Whether the entry declares its original run's output unretained.
+ *
+ * `execution-ledger.md` sanctions backfilling a `done` row "where the run is
+ * genuinely gone", by recording the loss in the evidence file and pointing the
+ * cell at that entry. This is the field that records it, and the exact value
+ * `no` is the whole switch: free prose would make the exemption something an
+ * entry could fall into while describing something else.
+ */
+function declaresRunOutputLost(section: string): boolean {
+  return rowEvidenceFieldValue(section, "Run output retained")?.trim().toLowerCase() === "no";
+}
+
+/**
+ * The fields a backfilled entry does not owe.
+ *
+ * Each certifies a review or seals an artifact that the lost run did not
+ * produce. A gone run produced no review pack, so there is no seal to record —
+ * and none that may be written, because writing one would be a false audit
+ * record rather than a missing one. Everything else stays owed: identity, the
+ * RED failure mode, and the verify and checkpoint commands with their results
+ * are all reproducible by re-running the test, which is what the backfill
+ * entry states was done.
+ */
+const BACKFILL_EXEMPT_FIELDS: ReadonlySet<string> = new Set([
+  "qa-gatekeeper",
+  "Spec review",
+  "Spec reviewed revision",
+  "Spec audited evidence hash",
+  "Spec review pack",
+  "Spec review pack seal",
+  "Code quality review",
+  "Code quality reviewed revision",
+  "Code quality audited evidence hash",
+  "Code quality review pack",
+  "Code quality review pack seal",
+  "Checkpoint verification seal",
+]);
+
 /** Minimum phase and review evidence required once a row reaches `done`. */
 function missingCompletedEvidenceFields(
   entrySection: string,
@@ -2419,6 +2458,7 @@ function missingCompletedEvidenceFields(
 ): string[] {
   const section = entryOwnFields(entrySection);
   const normalizedLayer = expected.layer.toLowerCase();
+  const backfilled = declaresRunOutputLost(section);
   const requiredRowFields = [
     "TDD-ID",
     "Layer",
@@ -2442,7 +2482,11 @@ function missingCompletedEvidenceFields(
     "Checkpoint verification command",
     "Checkpoint verification result",
     "Checkpoint verification seal",
-  ];
+    // Only a backfilled entry owes this, and it owes it precisely because the
+    // exemption above is otherwise invisible at the pointer: the note is what
+    // a reader following the anchor finds in place of the verdicts.
+    ...(backfilled ? ["Backfill note"] : []),
+  ].filter((field) => !(backfilled && BACKFILL_EXEMPT_FIELDS.has(field)));
   const missing = requiredRowFields.filter(
     (field) => rowEvidenceFieldValue(section, field) === null,
   );
@@ -3372,6 +3416,25 @@ export const EVIDENCE_ANCHOR_MISSING_CODE = "QFAI-TDDLIST-007";
 
 /** Finding code for an evidence anchor that does not resolve. */
 export const EVIDENCE_ANCHOR_UNRESOLVED_CODE = "QFAI-TDDLIST-008";
+
+/**
+ * Finding code for a `done` row backfilled after its run was lost.
+ *
+ * `execution-ledger.md` sanctions the shape: where the original run is gone,
+ * the loss itself is what the evidence entry records. The entry then cannot
+ * carry the reviewer-pack and seal fields, because a gone run produced no
+ * review pack — so the completed-evidence set drops those fields for it, and
+ * this is what says so out loud.
+ *
+ * Reported at `warning` rather than `error` or nothing at all. Not an error:
+ * the entry is the sanctioned shape, so there is nothing for its author to
+ * fix, and erroring would leave the sanction unreachable — which is the state
+ * this code exists to end. Not silence: `done` is read as reviewed, and a row
+ * exempt from the verdicts must not be indistinguishable, in the output an
+ * operator actually reads, from one that has them. A project that will carry
+ * no unreviewed row treats warnings as failures and gets the old behaviour.
+ */
+export const EVIDENCE_BACKFILLED_CODE = "QFAI-TDDLIST-019";
 
 /**
  * `Revision` names a tree that files the observation covered have moved past.
@@ -5465,6 +5528,27 @@ async function validateSpecTddList(
           obligationValue: cell(ref, obligationColumn),
           preSplit: usesPreSplitEvidence(layer, evidence),
         } satisfies CompletedEvidenceExpectation;
+        // A backfilled row is exempt from the reviewer-pack fields, and the
+        // exemption is reported rather than applied silently. The gate's whole
+        // value is that a `done` row means a reviewed one, so a row that is
+        // done without the verdicts has to be visible in the same output an
+        // operator already reads — otherwise it is indistinguishable there from
+        // one that was reviewed, which is the claim it must not make.
+        if (declaresRunOutputLost(entryOwnFields(section))) {
+          issues.push(
+            issue(
+              EVIDENCE_BACKFILLED_CODE,
+              `Evidence for spec-${specNumber} ${rowLabel} declares its original run's output unretained, so the reviewer-pack and seal fields are not required of it. The row is complete but not reviewed.`,
+              // `warning`: the entry is the shape the execution-ledger contract
+              // sanctions, so it is not a defect to fix. It is a loss to count,
+              // and a project that will not carry any unreviewed row raises it
+              // by treating warnings as failures.
+              "warning",
+              relPath,
+              "tddList.evidenceBackfilled",
+            ),
+          );
+        }
         const missing = [
           ...missingCompletedEvidenceFields(section, expectation),
           ...(await invalidCompletedEvidenceArtifacts(
