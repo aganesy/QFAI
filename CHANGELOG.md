@@ -136,6 +136,50 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   check goes quiet if the layer is ever removed rather than standing in the way
   of removing it.
 
+- **The floor lane stops failing runs in which nothing failed** (#1523). That lane
+  runs the whole suite in one process pool, and each fork reports progress to the
+  single main process over a call with a fixed budget. When the main process could
+  not answer in time the fork threw, the throw was counted as an unhandled error,
+  and a run with every test green exited 1.
+
+  The budget is not reachable: the runner's fork options carry no timeout, its
+  options builder sets none, and the default lives inside the message library. So
+  the lever is the contention instead. The lane now takes its fork count from the
+  runner rather than inheriting the declared ceiling, which on a four-core machine
+  was 2.5 times oversubscribed.
+
+  That is also faster. Whole suite on four cores, ten forks against four: 299 s
+  against 269 s of wall clock, with the summed collect and test figures falling
+  from 343 s to 113 s and from 1972 s to 743 s. Those sums are taken across forks,
+  so their collapse is the oversubscription — at ten forks most of each fork's
+  measured time was spent waiting for a core.
+
+  The declared starting value is unchanged. This is the override the knob set
+  already defines, used by the one lane that needed it.
+
+- **The prototyping loop converges on open findings, not on a rating** (#1488).
+  The stop test required all four review axes at `exceptional` — a value the
+  scale itself defines as best-in-class and tells the reviewer to use
+  sparingly — aggregated as the worst verdict across every screen, and
+  `certify` re-derived the same condition. A review that rated honestly never
+  satisfied it, so the gate measured the reviewer's willingness to call four
+  axes best-in-class rather than measuring the prototype.
+
+  The four ordinal axes are gone. The reviewer writes `blockingFindings`, one
+  line per thing that must be fixed, and convergence is that array empty
+  alongside `layoutAntiPatternsDetected` and `designMdViolations`. Anything
+  worth saying that does not block goes in the prose critique, where it
+  informs the next cycle without stopping this one.
+
+  Nothing else in this project scored: the shared reviewer contract is a
+  verdict plus graded findings, and `/qfai-implement` already ran a binary
+  checklist. Prototyping now uses the same shape.
+
+  `pivotDirective` compares how many findings are open across cycles, because
+  a count is reproducible where a verdict is not. `stopReason` records
+  `converged`. The cycle-0 seed carries one finding, so an iteration nobody
+  has reviewed cannot satisfy the stop test by never having been looked at.
+
 - **The design-drift scanner cites nothing a reader cannot resolve** (#1496).
   Nine comment lines in the scanner named a code review tool's internal comment
   identifier. They pointed at something no reader outside this repository can

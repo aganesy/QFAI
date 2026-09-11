@@ -524,23 +524,18 @@ describe("US-0012-0132: [BLOCKED] top-3 exit-64 blockers + first-offender", () =
     const text = buildBlockedSummary({
       designMdViolations: [{ kind: "color", found: "#fff" }],
       layoutAntiPatternsDetected: ["lap-009"],
-      scores: {
-        informationArchitecture: "acceptable",
-        navigationFlow: "exceptional",
-        usability: "exceptional",
-        functionality: "exceptional",
-      },
+      blockingFindings: ["home: the empty state is not represented"],
     });
     const lines = text.split("\n");
     expect(lines[0]).toBe("[BLOCKED] exit-64 prevented by:");
     expect(lines.length).toBe(4);
     expect(text).toContain("color=#fff");
     expect(text).toContain("lap-009");
-    expect(text).toContain("informationArchitecture");
+    expect(text).toContain("home: the empty state is not represented");
     expect([...BLOCKED_CATEGORIES]).toEqual([
       "designMdViolations",
       "layoutAntiPatternsDetected",
-      "axes-below-exceptional",
+      "blockingFindings",
     ]);
   });
 });

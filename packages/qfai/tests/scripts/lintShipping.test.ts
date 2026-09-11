@@ -137,7 +137,7 @@ describe("lint-shipping fixture — detection rules", () => {
       path.join(root, "assets/init/.qfai/assistant/skills/x/SKILL.md"),
       [
         "The SSOT lives at `packages/qfai/src/core/validators/taskFidelityKeywords.ts`.",
-        "Evaluator axes are fixed in `core/prototyping/evaluatorReview.ts#ORDINAL_AXES`.",
+        "The review contract lives in `core/prototyping/evaluatorReview.ts`.",
         "The classifier (`src/core/sddTriage.ts::classifyTriage`) appends first.",
         "- `cli`: commands implemented under `packages/qfai/src/cli/commands/`.",
         "",
