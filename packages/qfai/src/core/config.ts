@@ -169,7 +169,7 @@ export type QfaiPrototypingConfig = {
    *   - `convergence` (default): every prototyping gate applies at the
    *     declared severity (today's behavior).
    *   - `exploration`: medium gate relaxation — soft-rubric gates
-   *     (axes-exceptional, design-compliance drift) downgrade error →
+   *     (loop completion, design-compliance drift) downgrade error →
    *     warning. Schema / path / license (exit 66) gates stay hard
    *     error.
    *

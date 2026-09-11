@@ -3,7 +3,7 @@ import path from "node:path";
 
 import { describe, expect, it } from "vitest";
 
-import { FEEL_FIELDS, ORDINAL_AXES } from "../../src/core/prototyping/evaluatorReview.js";
+import { FEEL_FIELDS } from "../../src/core/prototyping/evaluatorReview.js";
 
 const repoRoot = path.resolve(process.cwd(), "..", "..");
 
@@ -39,7 +39,7 @@ const REQUIRED_TOP_LEVEL_FIELDS = [
   "cycle",
   "sessionStatus",
   "retryCount",
-  "ordinalAxes",
+  "blockingFindings",
   "impressions",
   "layoutAntiPatternsDetected",
   "designMdViolations",
@@ -79,9 +79,6 @@ describe("shipped reviewer payload schema", () => {
     for (const schema of await readShipped(SCHEMA_REL)) {
       for (const field of REQUIRED_TOP_LEVEL_FIELDS) {
         expect(schema, `missing field ${field}`).toContain(field);
-      }
-      for (const axis of ORDINAL_AXES) {
-        expect(schema, `missing ordinal axis ${axis}`).toContain(axis);
       }
       for (const feel of FEEL_FIELDS) {
         expect(schema, `missing impressions field ${feel}`).toContain(feel);
