@@ -3,31 +3,35 @@
 This file is written by every `qfai validate` run and always points at the newest
 run-log directory. Do not edit it by hand; do not pipe stdout into it.
 
-- run_id: run-20260824102916641
-- started_at: 2026-08-24T01:29:16.641Z
+- run_id: run-20260911114303832
+- started_at: 2026-09-11T11:43:03.832Z
 - command: /qfai-validate
 - status: pass
-- errors: 0
-- warnings: 465
-- run_log: .qfai/report/run-20260824102916641
+- errors: 1029
+- warnings: 375
+- run_log: .qfai/report/run-20260911114303832
 
 # Validate Run Summary
 
-- run_id: run-20260824102916641
-- started_at: 2026-08-24T01:29:16.641Z
+- run_id: run-20260911114303832
+- started_at: 2026-09-11T11:43:03.832Z
 - status: pass
-- report_dir: .qfai/report/run-20260824102916641
-- errors: 0
-- warnings: 465
+- report_dir: .qfai/report/run-20260911114303832
+- errors: 1029
+- warnings: 375
 
 ## Top Errors
 
-- none
+- QFAI-TDDLIST-017 (.qfai/specs/spec-0002/tdd/test-list.md): TC-0002-0009 holds 2 rows in tdd/test-list.md for spec-0002, and 2 of them name no Boundary (TDD-0009, TDD-0010). Sibling rows repeat their obligation identically and carry serial ids, so a reseed that cannot read a boundary from the row falls back to Selector — a cell the executing stage rewrites — and can pair a row's Status and Evidence with a boundary they never described.
+- QFAI-TDDLIST-011 (.qfai/specs/spec-0002/tdd/test-list.md): Evidence for spec-0002 TDD-0001 (row 1) does not match the pointer grammar "RED:<fail|falsifiability> GREEN:pass ORACLE:<proved|equivalent-mutant> [TIER:<T1|T2|T3>] REV:<rev|working-tree+<sha256>> -> .qfai/evidence/atdd-spec-0002.md#tdd-0001": "current asset test pass"
+- QFAI-TDDLIST-007 (.qfai/specs/spec-0002/tdd/test-list.md): Evidence for spec-0002 TDD-0001 (row 1) carries no evidence anchor (Status=done): "current asset test pass". A completed row's Evidence cell is a pointer into .qfai/evidence/atdd-spec-0002.md.
+- QFAI-TDDLIST-011 (.qfai/specs/spec-0002/tdd/test-list.md): Evidence for spec-0002 TDD-0008 (row 2) does not match the pointer grammar "RED:<fail|falsifiability> GREEN:pass ORACLE:<proved|equivalent-mutant> [TIER:<T1|T2|T3>] REV:<rev|working-tree+<sha256>> -> .qfai/evidence/atdd-spec-0002.md#tdd-0008": "current template integration test pass"
+- QFAI-TDDLIST-007 (.qfai/specs/spec-0002/tdd/test-list.md): Evidence for spec-0002 TDD-0008 (row 2) carries no evidence anchor (Status=done): "current template integration test pass". A completed row's Evidence cell is a pointer into .qfai/evidence/atdd-spec-0002.md.
 
 ## Top Warnings
 
-- QFAI-EX-105 (.qfai/specs/spec-0001/06_Test-Cases.md): 06_Test-Cases.md の Level が test-layer policy 外です: L-struct。policy が許可する層: api, component, e2e, integration, unit
-- QFAI-TRIAGE-001 (.qfai/specs/spec-0002/09_delta.md): delta.md に `## Change Summary` があるが `## Triage` セクションがありません。
-- QFAI-EX-105 (.qfai/specs/spec-0004/06_Test-Cases.md): 06_Test-Cases.md の Level が test-layer policy 外です: ssot-guard, validators。policy が許可する層: api, component, e2e, integration, unit
-- QFAI-TRIAGE-001 (.qfai/specs/spec-0005/09_delta.md): delta.md に `## Change Summary` があるが `## Triage` セクションがありません。
-- QFAI-TRIAGE-001 (.qfai/specs/spec-0007/09_delta.md): delta.md に `## Change Summary` があるが `## Triage` セクションがありません。
+- TDDLIST_UNKNOWN_LEVEL (.qfai/specs/spec-0001/06_Test-Cases.md): Unrecognized Level value(s) in 06_Test-Cases.md for spec-0001: L-struct. Accepted — coverage targets: L1, L2, component, unit; non-coverage: L3, L4, L5, acceptance, api, e2e, integration, system. Unrecognized values are treated as coverage targets, so every such TC becomes a mandatory ledger row
+- TDDLIST_EXCEPTION_PARKED (.qfai/specs/spec-0001/tdd/test-list.md): TDD item "TDD-0001" in spec-0001 is parked at Status=exception (DR-ID DR-0001-0002). Resolve it (`exception -> todo` — see .qfai/assistant/skills/qfai-implement/references/execution-ledger.md#allowed-transitions — which needs no Change Request **only when the anomaly did not change an approved obligation**; if it did, that is drift and the approved upstream reset applies instead), or record the accepted risk as a `TDDLIST_EXCEPTION_PARKED` waiver in `.qfai/waivers.yml` naming this row in `match.dl_ids`
+- TDDLIST_EXCEPTION_PARKED (.qfai/specs/spec-0001/tdd/test-list.md): TDD item "TDD-0002" in spec-0001 is parked at Status=exception (DR-ID DR-0001-0002). Resolve it (`exception -> todo` — see .qfai/assistant/skills/qfai-implement/references/execution-ledger.md#allowed-transitions — which needs no Change Request **only when the anomaly did not change an approved obligation**; if it did, that is drift and the approved upstream reset applies instead), or record the accepted risk as a `TDDLIST_EXCEPTION_PARKED` waiver in `.qfai/waivers.yml` naming this row in `match.dl_ids`
+- TDDLIST_EXCEPTION_PARKED (.qfai/specs/spec-0001/tdd/test-list.md): TDD item "TDD-0003" in spec-0001 is parked at Status=exception (DR-ID DR-0001-0002). Resolve it (`exception -> todo` — see .qfai/assistant/skills/qfai-implement/references/execution-ledger.md#allowed-transitions — which needs no Change Request **only when the anomaly did not change an approved obligation**; if it did, that is drift and the approved upstream reset applies instead), or record the accepted risk as a `TDDLIST_EXCEPTION_PARKED` waiver in `.qfai/waivers.yml` naming this row in `match.dl_ids`
+- TDDLIST_EXCEPTION_PARKED (.qfai/specs/spec-0001/tdd/test-list.md): TDD item "TDD-0004" in spec-0001 is parked at Status=exception (DR-ID DR-0001-0002). Resolve it (`exception -> todo` — see .qfai/assistant/skills/qfai-implement/references/execution-ledger.md#allowed-transitions — which needs no Change Request **only when the anomaly did not change an approved obligation**; if it did, that is drift and the approved upstream reset applies instead), or record the accepted risk as a `TDDLIST_EXCEPTION_PARKED` waiver in `.qfai/waivers.yml` naming this row in `match.dl_ids`
