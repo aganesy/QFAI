@@ -26,7 +26,7 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   The exemption is reported rather than applied quietly. `done` is read as
   reviewed, so a row exempt from the verdicts emits
   `QFAI-TDDLIST-019` at `warning` and is visible in the same output
-  an operator already reads. A project that will carry no unreviewed row treats
+  an operator already reads. A project that will carry no row whose review it cannot verify treats
   warnings as failures and gets the unconditional set back.
 
 - **The review payload schema stops citing a field it has never had**

@@ -3432,7 +3432,8 @@ export const EVIDENCE_ANCHOR_UNRESOLVED_CODE = "QFAI-TDDLIST-008";
  * this code exists to end. Not silence: `done` is read as reviewed, and a row
  * exempt from the verdicts must not be indistinguishable, in the output an
  * operator actually reads, from one that has them. A project that will carry
- * no unreviewed row treats warnings as failures and gets the old behaviour.
+ * no row whose review it cannot verify treats warnings as failures and gets
+ * the old behaviour.
  */
 export const EVIDENCE_BACKFILLED_CODE = "QFAI-TDDLIST-019";
 
@@ -5538,10 +5539,10 @@ async function validateSpecTddList(
           issues.push(
             issue(
               EVIDENCE_BACKFILLED_CODE,
-              `Evidence for spec-${specNumber} ${rowLabel} declares its original run's output unretained, so the reviewer-pack and seal fields are not required of it. The row is complete but not reviewed.`,
+              `Evidence for spec-${specNumber} ${rowLabel} declares its original run's output unretained, so the reviewer-pack and seal fields are not required of it. Its review cannot be verified from artifacts.`,
               // `warning`: the entry is the shape the execution-ledger contract
               // sanctions, so it is not a defect to fix. It is a loss to count,
-              // and a project that will not carry any unreviewed row raises it
+              // and a project that will not carry a row whose review it cannot verify
               // by treating warnings as failures.
               "warning",
               relPath,

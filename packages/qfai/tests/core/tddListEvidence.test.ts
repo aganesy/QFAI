@@ -3481,7 +3481,7 @@ ${extra}`;
     const issues = await run(backfilledEntry());
     const reported = issues.find((issue) => issue.code === "QFAI-TDDLIST-019");
     expect(reported, "a silent exemption is one nobody reviews").toBeDefined();
-    expect(reported?.message).toContain("not reviewed");
+    expect(reported?.message).toContain("cannot be verified from artifacts");
   });
 
   it("says nothing about an entry that carries its verdicts", async () => {

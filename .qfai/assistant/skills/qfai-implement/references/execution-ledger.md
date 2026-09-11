@@ -319,8 +319,11 @@ The exemption is reported rather than applied quietly:
 | `QFAI-TDDLIST-019` | a `done` row's entry declares its run output unretained | warning  |
 
 `done` is read as reviewed, so a row exempt from the verdicts has to be visible in
-the same output an operator already reads. A project that will carry no unreviewed
-row treats warnings as failures and gets the unconditional set back.
+the same output an operator already reads. The claim is about the artifacts, not
+about what happened: the original reviews may well have passed, and the entry says
+so where it can. What is gone is the means to verify it. A project that will carry
+no row whose review it cannot verify treats warnings as failures and gets the
+unconditional set back.
 
 `QFAI-TDDLIST-007` is an error for the same reason. Every completion check
 hangs off the anchor, so a `done` row whose cell is only an outcome —
