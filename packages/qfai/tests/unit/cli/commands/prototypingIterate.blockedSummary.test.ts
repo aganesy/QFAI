@@ -21,12 +21,7 @@ describe("buildBlockedSummary: literal header + 3 category lines", () => {
     const text = buildBlockedSummary({
       designMdViolations: [{ kind: "color", found: "#fff" }],
       layoutAntiPatternsDetected: ["lap-006"],
-      scores: {
-        informationArchitecture: "acceptable",
-        navigationFlow: "exceptional",
-        usability: "exceptional",
-        functionality: "exceptional",
-      },
+      blockingFindings: ["home: the empty state is not represented"],
     });
     const lines = text.split("\n");
     expect(lines[0]).toBe(BLOCKED_SUMMARY_HEADER);
@@ -42,12 +37,7 @@ describe("buildBlockedSummary: literal header + 3 category lines", () => {
         { kind: "color", found: "#000" },
       ],
       layoutAntiPatternsDetected: ["lap-009"],
-      scores: {
-        informationArchitecture: "weak",
-        navigationFlow: "exceptional",
-        usability: "exceptional",
-        functionality: "exceptional",
-      },
+      blockingFindings: ["home: the empty state is not represented"],
     });
     expect(lines.map((l) => l.category)).toEqual([
       "designMdViolations",
@@ -67,12 +57,7 @@ describe("buildBlockedSummary: literal header + 3 category lines", () => {
     const lines = buildBlockedCategoryLines({
       designMdViolations: [],
       layoutAntiPatternsDetected: [],
-      scores: {
-        informationArchitecture: "weak",
-        navigationFlow: "weak",
-        usability: "exceptional",
-        functionality: "exceptional",
-      },
+      blockingFindings: ["home: the empty state is not represented"],
     });
     expect(lines[0]?.text).toBe("0 designMdViolations");
     expect(lines[1]?.text).toBe("0 layoutAntiPatternsDetected");

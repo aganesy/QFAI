@@ -240,12 +240,7 @@ describe("runPrototypingIterate convergence (exit 64)", () => {
     await seedPrototypingJson(root, [
       {
         index: 0,
-        scores: {
-          informationArchitecture: "exceptional",
-          navigationFlow: "exceptional",
-          usability: "exceptional",
-          functionality: "exceptional",
-        },
+        blockingFindings: [],
         layoutAntiPatternsDetected: [],
         designMdViolations: [],
       },
@@ -310,12 +305,7 @@ describe("runPrototypingIterate convergence (exit 64)", () => {
     await seedPrototypingJson(root, [
       {
         index: 0,
-        scores: {
-          informationArchitecture: "exceptional",
-          navigationFlow: "exceptional",
-          usability: "exceptional",
-          functionality: "exceptional",
-        },
+        blockingFindings: [],
         layoutAntiPatternsDetected: [],
         designMdViolations: [],
       },
@@ -342,12 +332,7 @@ describe("runPrototypingIterate convergence (exit 64)", () => {
     await seedPrototypingJson(root, [
       {
         index: 0,
-        scores: {
-          informationArchitecture: "exceptional",
-          navigationFlow: "exceptional",
-          usability: "exceptional",
-          functionality: "exceptional",
-        },
+        blockingFindings: [],
         layoutAntiPatternsDetected: ["lap-006-overcrowded-sidebar"],
         designMdViolations: [],
       },
@@ -365,12 +350,7 @@ describe("runPrototypingIterate max-iterations (exit 65)", () => {
     await seedMinimalProject(root);
     const iterations = Array.from({ length: 10 }, (_, i) => ({
       index: i,
-      scores: {
-        informationArchitecture: "acceptable",
-        navigationFlow: "acceptable",
-        usability: "acceptable",
-        functionality: "acceptable",
-      },
+      blockingFindings: ["home: the empty state is not represented"],
     }));
     await seedPrototypingJson(root, iterations);
 
@@ -596,12 +576,7 @@ describe("runPrototypingIterate continue (exit 0)", () => {
     await seedPrototypingJson(root, [
       {
         index: 0,
-        scores: {
-          informationArchitecture: "acceptable",
-          navigationFlow: "acceptable",
-          usability: "acceptable",
-          functionality: "acceptable",
-        },
+        blockingFindings: ["home: the empty state is not represented"],
       },
     ]);
 
@@ -659,12 +634,7 @@ describe("runPrototypingIterate continue (exit 0)", () => {
     // capture/review is recorded in iterations[]).
     const seededIterations = Array.from({ length: 9 }, (_, i) => ({
       index: i,
-      scores: {
-        informationArchitecture: "acceptable",
-        navigationFlow: "acceptable",
-        usability: "acceptable",
-        functionality: "acceptable",
-      },
+      blockingFindings: ["home: the empty state is not represented"],
     }));
     await seedPrototypingJson(root, seededIterations);
 
@@ -801,12 +771,7 @@ describe("runPrototypingIterate cycle 0 DESIGN.md ingestion (TC-3.5.x)", () => {
     await seedPrototypingJson(root, [
       {
         index: 0,
-        scores: {
-          informationArchitecture: "acceptable",
-          navigationFlow: "acceptable",
-          usability: "acceptable",
-          functionality: "acceptable",
-        },
+        blockingFindings: ["home: the empty state is not represented"],
       },
     ]);
     expect(await runPrototypingIterate({ root, cycle: 1 })).toBe(0);
@@ -826,12 +791,7 @@ describe("runPrototypingIterate cycle N hash gate (TC-3.5.x)", () => {
     await seedPrototypingJson(root, [
       {
         index: 0,
-        scores: {
-          informationArchitecture: "acceptable",
-          navigationFlow: "acceptable",
-          usability: "acceptable",
-          functionality: "acceptable",
-        },
+        blockingFindings: ["home: the empty state is not represented"],
       },
     ]);
     expect(await runPrototypingIterate({ root, cycle: 1 })).toBe(0);
@@ -845,12 +805,7 @@ describe("runPrototypingIterate cycle N hash gate (TC-3.5.x)", () => {
       [
         {
           index: 0,
-          scores: {
-            informationArchitecture: "acceptable",
-            navigationFlow: "acceptable",
-            usability: "acceptable",
-            functionality: "acceptable",
-          },
+          blockingFindings: ["home: the empty state is not represented"],
         },
       ],
       { designMd: { path: "DESIGN.md", sha256: "0".repeat(64) } },
@@ -866,12 +821,7 @@ describe("runPrototypingIterate cycle N hash gate (TC-3.5.x)", () => {
       [
         {
           index: 0,
-          scores: {
-            informationArchitecture: "acceptable",
-            navigationFlow: "acceptable",
-            usability: "acceptable",
-            functionality: "acceptable",
-          },
+          blockingFindings: ["home: the empty state is not represented"],
         },
       ],
       { designMd: null },
@@ -885,12 +835,7 @@ describe("runPrototypingIterate cycle N hash gate (TC-3.5.x)", () => {
     await seedPrototypingJson(root, [
       {
         index: 0,
-        scores: {
-          informationArchitecture: "acceptable",
-          navigationFlow: "acceptable",
-          usability: "acceptable",
-          functionality: "acceptable",
-        },
+        blockingFindings: ["home: the empty state is not represented"],
       },
     ]);
     // Rewrite DESIGN.md with CRLF — same logical content, different bytes.
@@ -915,33 +860,18 @@ describe("runPrototypingIterate cycle N hash gate (TC-3.5.x)", () => {
     await seedPrototypingJson(root, [
       {
         index: 0,
-        scores: {
-          informationArchitecture: "acceptable",
-          navigationFlow: "acceptable",
-          usability: "acceptable",
-          functionality: "acceptable",
-        },
+        blockingFindings: ["home: the empty state is not represented"],
       },
     ]);
     expect(await runPrototypingIterate({ root, cycle: 1 })).toBe(0);
     await seedPrototypingJson(root, [
       {
         index: 0,
-        scores: {
-          informationArchitecture: "acceptable",
-          navigationFlow: "acceptable",
-          usability: "acceptable",
-          functionality: "acceptable",
-        },
+        blockingFindings: ["home: the empty state is not represented"],
       },
       {
         index: 1,
-        scores: {
-          informationArchitecture: "strong",
-          navigationFlow: "strong",
-          usability: "strong",
-          functionality: "strong",
-        },
+        blockingFindings: ["home: the empty state is not represented"],
       },
     ]);
     expect(await runPrototypingIterate({ root, cycle: 2 })).toBe(0);
@@ -1082,12 +1012,7 @@ describe("runPrototypingIterate cycle N hash gate (TC-3.5.x)", () => {
     await seedPrototypingJson(root, [
       {
         index: 0,
-        scores: {
-          informationArchitecture: "acceptable",
-          navigationFlow: "acceptable",
-          usability: "acceptable",
-          functionality: "acceptable",
-        },
+        blockingFindings: ["home: the empty state is not represented"],
       },
     ]);
     // iterations.length === 1, expected next cycle === 1, but call cycle 3.
@@ -1486,12 +1411,7 @@ describe("runPrototypingIterate cycle >= 1 lock drift stderr (TC-0012-0373)", ()
       [
         {
           index: 0,
-          scores: {
-            informationArchitecture: "acceptable",
-            navigationFlow: "acceptable",
-            usability: "acceptable",
-            functionality: "acceptable",
-          },
+          blockingFindings: ["home: the empty state is not represented"],
         },
       ],
       // Cycle-0-recorded sha256 set to a value that cannot match the
@@ -1631,12 +1551,7 @@ describe("runPrototypingIterate autonomous run (TC-0012-0375)", () => {
       await seedPrototypingJson(root1, [
         {
           index: 0,
-          scores: {
-            informationArchitecture: "acceptable",
-            navigationFlow: "acceptable",
-            usability: "acceptable",
-            functionality: "acceptable",
-          },
+          blockingFindings: ["home: the empty state is not represented"],
         },
       ]);
       const exit1 = await runPrototypingIterate({ root: root1, cycle: 1 });
@@ -1750,12 +1665,7 @@ describe("runPrototypingIterate license verify hard-stop (TC-0012-0371)", () => 
     await seedPrototypingJson(root, [
       {
         index: 0,
-        scores: {
-          informationArchitecture: "acceptable",
-          navigationFlow: "acceptable",
-          usability: "acceptable",
-          functionality: "acceptable",
-        },
+        blockingFindings: ["home: the empty state is not represented"],
       },
     ]);
     // Inject a non-allowlisted image source ("pinterest") into the
@@ -1810,12 +1720,7 @@ describe("runPrototypingIterate license verify hard-stop (TC-0012-0371)", () => 
     await seedPrototypingJson(root, [
       {
         index: 0,
-        scores: {
-          informationArchitecture: "acceptable",
-          navigationFlow: "acceptable",
-          usability: "acceptable",
-          functionality: "acceptable",
-        },
+        blockingFindings: ["home: the empty state is not represented"],
       },
     ]);
     const protoJsonPath = path.join(root, ".qfai/evidence/prototyping/prototyping.json");
@@ -1865,12 +1770,7 @@ describe("runPrototypingIterate license verify hard-stop (TC-0012-0371)", () => 
     await seedPrototypingJson(root, [
       {
         index: 0,
-        scores: {
-          informationArchitecture: "acceptable",
-          navigationFlow: "acceptable",
-          usability: "acceptable",
-          functionality: "acceptable",
-        },
+        blockingFindings: ["home: the empty state is not represented"],
       },
     ]);
     const protoJsonPath = path.join(root, ".qfai/evidence/prototyping/prototyping.json");
@@ -1948,12 +1848,7 @@ describe("runPrototypingIterate cycle >= 1 spec-set drift (TC-0012-0385)", () =>
     await seedPrototypingJson(root, [
       {
         index: 0,
-        scores: {
-          informationArchitecture: "acceptable",
-          navigationFlow: "acceptable",
-          usability: "acceptable",
-          functionality: "acceptable",
-        },
+        blockingFindings: ["home: the empty state is not represented"],
       },
     ]);
     const protoJsonPath = path.join(root, ".qfai/evidence/prototyping/prototyping.json");
@@ -2704,12 +2599,7 @@ describe("runPrototypingIterate cycle >= 1 spec-set drift — new larger-id seco
     await seedPrototypingJson(root, [
       {
         index: 0,
-        scores: {
-          informationArchitecture: "acceptable",
-          navigationFlow: "acceptable",
-          usability: "acceptable",
-          functionality: "acceptable",
-        },
+        blockingFindings: ["home: the empty state is not represented"],
       },
     ]);
     const protoJsonPath = path.join(root, ".qfai/evidence/prototyping/prototyping.json");
@@ -2779,12 +2669,7 @@ describe("runPrototypingIterate cycle >= 1 spec-set drift — multi-UI-bearing b
     await seedPrototypingJson(root, [
       {
         index: 0,
-        scores: {
-          informationArchitecture: "acceptable",
-          navigationFlow: "acceptable",
-          usability: "acceptable",
-          functionality: "acceptable",
-        },
+        blockingFindings: ["home: the empty state is not represented"],
       },
     ]);
     const protoJsonPath = path.join(root, ".qfai/evidence/prototyping/prototyping.json");
@@ -3005,12 +2890,7 @@ describe("runPrototypingIterate cycle >= 1 — malformed imageSources hard-stop 
     await seedPrototypingJson(root, [
       {
         index: 0,
-        scores: {
-          informationArchitecture: "acceptable",
-          navigationFlow: "acceptable",
-          usability: "acceptable",
-          functionality: "acceptable",
-        },
+        blockingFindings: ["home: the empty state is not represented"],
       },
     ]);
     const protoJsonPath = path.join(root, ".qfai/evidence/prototyping/prototyping.json");
@@ -3061,12 +2941,7 @@ describe("runPrototypingIterate cycle >= 1 — malformed imageSources hard-stop 
     await seedPrototypingJson(root, [
       {
         index: 0,
-        scores: {
-          informationArchitecture: "acceptable",
-          navigationFlow: "acceptable",
-          usability: "acceptable",
-          functionality: "acceptable",
-        },
+        blockingFindings: ["home: the empty state is not represented"],
       },
     ]);
     const protoJsonPath = path.join(root, ".qfai/evidence/prototyping/prototyping.json");
@@ -3271,12 +3146,7 @@ describe("runPrototypingIterate cycle >= 1 — drift gates run before shouldStop
           {
             index: 0,
             commitSha: "a".repeat(40),
-            scores: {
-              informationArchitecture: "exceptional",
-              navigationFlow: "exceptional",
-              usability: "exceptional",
-              functionality: "exceptional",
-            },
+            blockingFindings: [],
             proseCritique: "x".repeat(1500),
             layoutAntiPatternsDetected: [],
             designMdViolations: [],
@@ -3343,12 +3213,7 @@ describe("runPrototypingIterate cycle >= 1 — drift gates run before shouldStop
           {
             index: 0,
             commitSha: "a".repeat(40),
-            scores: {
-              informationArchitecture: "exceptional",
-              navigationFlow: "exceptional",
-              usability: "exceptional",
-              functionality: "exceptional",
-            },
+            blockingFindings: [],
             proseCritique: "x".repeat(1500),
             layoutAntiPatternsDetected: [],
             designMdViolations: [],

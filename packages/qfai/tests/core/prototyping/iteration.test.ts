@@ -17,12 +17,7 @@ import {
 const baseIter = (overrides: Partial<Iteration> = {}): Iteration => ({
   index: 0,
   commitSha: "a".repeat(40),
-  scores: {
-    informationArchitecture: "acceptable",
-    navigationFlow: "acceptable",
-    usability: "acceptable",
-    functionality: "acceptable",
-  },
+  blockingFindings: ["home: the empty state is not represented"],
   proseCritique: "x".repeat(1500),
   layoutAntiPatternsDetected: [],
   designMdViolations: [],
@@ -151,12 +146,7 @@ describe("shouldStop — convergence (TC-3.4.x)", () => {
   it("max-iterations takes priority over weak scores at last index", () => {
     const iter = baseIter({
       index: MAX_ITERATION_INDEX,
-      scores: {
-        informationArchitecture: "weak",
-        navigationFlow: "weak",
-        usability: "weak",
-        functionality: "weak",
-      },
+      blockingFindings: ["home: the empty state is not represented"],
     });
     expect(shouldStop([iter])).toBe("max-iterations");
   });

@@ -524,12 +524,7 @@ describe("US-0012-0132: [BLOCKED] top-3 exit-64 blockers + first-offender", () =
     const text = buildBlockedSummary({
       designMdViolations: [{ kind: "color", found: "#fff" }],
       layoutAntiPatternsDetected: ["lap-009"],
-      scores: {
-        informationArchitecture: "acceptable",
-        navigationFlow: "exceptional",
-        usability: "exceptional",
-        functionality: "exceptional",
-      },
+      blockingFindings: ["home: the empty state is not represented"],
     });
     const lines = text.split("\n");
     expect(lines[0]).toBe("[BLOCKED] exit-64 prevented by:");
