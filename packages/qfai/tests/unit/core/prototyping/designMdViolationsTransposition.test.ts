@@ -25,10 +25,17 @@ const designMd = (): DesignMd => ({
   visual: {
     colors: {
       primary: "#1f2937",
+      secondary: "#374151",
+      accent: "#2563eb",
       surface: "#ffffff",
+      surface_muted: "#f3f4f6",
       text: "#111827",
       text_muted: "#6b7280",
+      danger: "#b91c1c",
+      warning: "#b45309",
+      success: "#15803d",
       border: "#e5e7eb",
+      overlay: "rgba(17,24,39,0.5)",
     },
     typography: {
       family_sans: "Inter, system-ui, sans-serif",
