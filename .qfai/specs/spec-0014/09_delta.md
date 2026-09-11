@@ -223,3 +223,35 @@ The v1.7.16 slice recorded a historical validator contract that made the legacy 
 
 - Notes: REQ-0166 is the certify side (SaaS-package scope seal). The validate-profile side (`qfai validate --profile saas-package`) is owned by spec-0004 (same Source REQ, file-local IDs). Certificate carries `scope: "saas-package"` + `notes:`; never claims full DONE; `--upgrade-scope full` gated on missing gates landing. Contract reference: `_policies/05_Contracts.md` §CHG-006 DCON-005 / CLI-VAL; glossary `saas-package profile`. One-minor deprecation window per OC-63.
 - Source: REQ-0166 (discussion-20260527075558258)
+
+## Triage (2026-09-11)
+
+### DELTA-0007 (2026-09-11)
+
+| Source   | Subject                                                      | Existing Spec | Operation | Sub-op | Approved By        | Rationale                                                                                                                             |
+| -------- | ------------------------------------------------------------ | ------------- | --------- | ------ | ------------------ | ------------------------------------------------------------------------------------------------------------------------------------- |
+| REQ-0018 | Retire the design-system presence validator and its coverage | spec-0014     | UPDATE    | REMOVE | aganesy@2026-09-11 | The validator required a file `UIX-VAL-3LAYER-FORBIDDEN-FILE` refuses, so no pack satisfied both, and it was dispatched from nowhere. |
+
+## 2026-09-11 — Design-system presence validator retired
+
+`validators/uix/designSystemPresence.ts` reported `UIX-VAL-DS01` when a
+UI-bearing pack had no `uiux/12_design_system.md`, and `UIX-VAL-DS02` when its
+sections were empty.
+
+Two things made it dead weight rather than a gate.
+
+- `validators/uix/threeLayer.ts` reports `UIX-VAL-3LAYER-FORBIDDEN-FILE` for
+  that same file, so one validator required what another refused and no pack
+  could satisfy both. The integration suite for this pack states which side is
+  current: the file is a forbidden legacy sidecar.
+- Nothing dispatched it. It was absent from the validator index and from
+  `runCanonicalUixValidators`, and listed as unwired and unreachable in two
+  test allowlists, so the contradiction never fired.
+
+| Operation | Sub-op | Target                                    | Source (REQ) | Rationale                       | Status |
+| --------- | ------ | ----------------------------------------- | ------------ | ------------------------------- | ------ |
+| UPDATE    | REMOVE | 06_Test-Cases.md (TC-0014-0026/0027/0032) | REQ-0018     | the code under test is retired  | PASS   |
+| UPDATE    | REMOVE | tdd/test-list.md (TDD-0026/0027/0032)     | REQ-0018     | same, and the test file is gone | PASS   |
+
+`AC-0014-0004` stays: `TC-0014-0028` and `TC-0014-0029` cover the prototyping
+design-system validator, which is a different module and still runs.

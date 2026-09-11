@@ -49,7 +49,7 @@ describe("shouldStop — convergence (TC-3.4.x)", () => {
   it("returns null when layoutAntiPatternsDetected is non-empty (other conditions met)", () => {
     const iter = baseIter({
       blockingFindings: [],
-      layoutAntiPatternsDetected: ["lap-006-overcrowded-sidebar"],
+      layoutAntiPatternsDetected: ["lap-008-no-back-affordance"],
     });
     expect(shouldStop([iter])).toBeNull();
   });
@@ -90,7 +90,7 @@ describe("shouldStop — convergence (TC-3.4.x)", () => {
     {
       label: "lap non-empty",
       blockingFindings: [],
-      lap: ["lap-006-overcrowded-sidebar"],
+      lap: ["lap-008-no-back-affordance"],
       dmv: [],
     },
     {
@@ -102,7 +102,7 @@ describe("shouldStop — convergence (TC-3.4.x)", () => {
     {
       label: "a blocking finding + lap",
       blockingFindings: ["home: the empty state is not represented"],
-      lap: ["lap-006-overcrowded-sidebar"],
+      lap: ["lap-008-no-back-affordance"],
       dmv: [],
     },
     {
@@ -114,13 +114,13 @@ describe("shouldStop — convergence (TC-3.4.x)", () => {
     {
       label: "lap + dmv",
       blockingFindings: [],
-      lap: ["lap-006-overcrowded-sidebar"],
+      lap: ["lap-008-no-back-affordance"],
       dmv: [{ kind: "color" as const, found: "#abcdef" }],
     },
     {
       label: "all three trip-wires",
       blockingFindings: ["home: the empty state is not represented"],
-      lap: ["lap-006-overcrowded-sidebar"],
+      lap: ["lap-008-no-back-affordance"],
       dmv: [{ kind: "color" as const, found: "#abcdef" }],
     },
   ])("returns null for trip-wire combination: $label", ({ blockingFindings, lap, dmv }) => {
@@ -280,7 +280,7 @@ describe("iterationConverged", () => {
   it("requires layoutAntiPatternsDetected to be empty", () => {
     const iter = baseIter({
       blockingFindings: [],
-      layoutAntiPatternsDetected: ["lap-006-overcrowded-sidebar"],
+      layoutAntiPatternsDetected: ["lap-008-no-back-affordance"],
     });
     expect(iterationConverged(iter)).toBe(false);
   });

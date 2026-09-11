@@ -6,6 +6,21 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **Every layout anti-pattern names what makes it a defect** (#1484). An
+  entry now carries a `source`, and the loader drops one that does not: a
+  published heuristic, an accessibility criterion, or the contract the screen
+  is built to — never this project deciding it dislikes something. A rule with
+  no authority behind it cannot be argued with, only obeyed, which is how the
+  registry came to hold five conventional layouts.
+
+  `lap-006-overcrowded-sidebar` is retired with them. It reported a sidebar
+  carrying ten or more links, and no published source states a navigation
+  count as a defect; the threshold was this repository's own.
+
+  Definitions are pinned rather than researched per run. `certify` re-scans
+  the captures, so a check whose answer depends on what a search returned that
+  morning cannot agree with itself.
+
 - **A concurrency guard that passed because the filesystem undid what it
   staged** (#1477). `provenanceHostileTree` has a row asserting that a holder
   reclaimed mid-section leaves its successor's lock alone. It failed about once
@@ -267,6 +282,32 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   What existed before was one line in this repository's `AGENTS.md`, written in
   a vocabulary nothing defined, and a checklist nothing loaded on its own. Both
   are replaced by a reference to the master.
+
+### Removed
+
+- **The design-system presence validator** (#1516). It reported `UIX-VAL-DS01`
+  when a UI-bearing pack had no design-system sidecar, and `UIX-VAL-DS02` when
+  that file's sections were empty. Two things made it dead weight rather than a
+  gate.
+
+  | Fact                                                         | Effect                        |
+  | ------------------------------------------------------------ | ----------------------------- |
+  | The three-layer validator reports the same file as forbidden | No pack could satisfy both    |
+  | Nothing dispatched it                                        | The contradiction never fired |
+
+  The integration suite for that pack already states which side is current: the
+  file is a forbidden legacy sidecar. So one validator required what another
+  refused, and the only reason nobody hit it is that the module was absent from
+  the validator index, from the canonical dispatcher, and from every re-export
+  — listed instead in two allowlists of things known not to run.
+
+  Its three codes are gone with it, and the retired-code register keeps their
+  numbers reserved so a future rule cannot take one back.
+
+  The pack that owned the requirement retires the three test cases and their
+  ledger rows in the same change. `AC-0014-0004` stays: two of its test cases
+  cover the prototyping design-system validator, which is a different module
+  and still runs.
 
 ### Fixed
 

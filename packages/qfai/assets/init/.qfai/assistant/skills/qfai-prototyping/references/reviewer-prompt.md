@@ -225,11 +225,15 @@ The static loader runs the `layout` regex against iter HTML and fills
 `layoutAntiPatternsDetected[]`. You **must** evaluate the `semantic`
 entries yourself and append their IDs when matched.
 
-| ID                              | Scope    | Detection                            |
-| ------------------------------- | -------- | ------------------------------------ |
-| `lap-006-overcrowded-sidebar`   | layout   | static regex (aside with 10+ links)  |
-| `lap-007-state-not-represented` | semantic | reviewer judgement (criterion below) |
-| `lap-008-no-back-affordance`    | semantic | reviewer judgement (criterion below) |
+| ID                              | Scope    | Detection                            | What makes it a defect                        |
+| ------------------------------- | -------- | ------------------------------------ | --------------------------------------------- |
+| `lap-007-state-not-represented` | semantic | reviewer judgement (criterion below) | The screen contract declares the state        |
+| `lap-008-no-back-affordance`    | semantic | reviewer judgement (criterion below) | Nielsen heuristic 3, user control and freedom |
+
+Every entry names what makes it a defect, and that is never this project's
+opinion: a published heuristic, an accessibility criterion, or the contract
+the screen is built to. An entry with no such authority is dropped when the
+registry loads.
 
 A conventional layout is not an entry here. A detection blocks convergence,
 so reporting a familiar shape stops an ordinary product finishing the loop.

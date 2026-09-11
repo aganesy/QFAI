@@ -13,7 +13,16 @@
  * that reports a familiar shape stops an ordinary product finishing the
  * loop.
  *
- * The registry is data. An entry is added by naming the defect it catches.
+ * The registry is data, and every entry names what makes it a defect. The
+ * authority is a published heuristic, an accessibility criterion, or the
+ * project's own declared contract — never this repository deciding it
+ * dislikes something. Searching for a catalogue of bad layouts finds none,
+ * because common layouts are not defects; what is catalogued is
+ * accessibility failures, deceptive patterns and heuristic violations.
+ *
+ * Definitions are pinned rather than researched per run: `certify` re-scans
+ * the captures, so a check whose answer depends on what a search returned
+ * that morning cannot agree with itself.
  */
 
 import { existsSync, readFileSync } from "node:fs";
@@ -26,6 +35,16 @@ export type LayoutAntiPattern = {
   readonly id: string;
   readonly regex: string;
   readonly scope: LayoutAntiPatternScope;
+  /**
+   * What makes this a defect, in one line, naming something other than this
+   * repository's opinion: a published heuristic, an accessibility criterion,
+   * or the project's own declared contract.
+   *
+   * An entry with none is dropped at load. That is the whole guard against
+   * the registry filling up with shapes somebody disliked — a rule with no
+   * authority behind it cannot be argued with, only obeyed.
+   */
+  readonly source: string;
 };
 
 function isValidLayoutAntiPattern(rule: unknown): rule is LayoutAntiPattern {
@@ -34,7 +53,9 @@ function isValidLayoutAntiPattern(rule: unknown): rule is LayoutAntiPattern {
   return (
     typeof r.id === "string" &&
     typeof r.regex === "string" &&
-    (r.scope === "layout" || r.scope === "semantic")
+    (r.scope === "layout" || r.scope === "semantic") &&
+    typeof r.source === "string" &&
+    r.source.trim().length > 0
   );
 }
 
@@ -95,7 +116,12 @@ export function loadLayoutAntiPatterns(jsonPath?: string): LayoutAntiPattern[] {
   const result: LayoutAntiPattern[] = [];
   for (const entry of parsed) {
     if (isValidLayoutAntiPattern(entry)) {
-      result.push({ id: entry.id, regex: entry.regex, scope: entry.scope });
+      result.push({
+        id: entry.id,
+        regex: entry.regex,
+        scope: entry.scope,
+        source: entry.source,
+      });
     }
   }
   return result;
