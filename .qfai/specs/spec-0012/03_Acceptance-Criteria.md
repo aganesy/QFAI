@@ -87,7 +87,7 @@
 
 - Given any `iter-NN/review.json`,
 - When validated,
-- Then every entry in `layoutAntiPatternsDetected[]` is one of `lap-001-orphan-page`, `lap-002-deadend-flow`, `lap-003-hidden-state`, `lap-004-broken-back`, `lap-005-mystery-meat-nav`, `lap-006-no-empty-state`, `lap-007-no-error-state`, `lap-008-no-back-affordance`. Unknown tokens raise `QFAI-PROT-025`.
+- Then every entry in `layoutAntiPatternsDetected[]` is an identifier declared in `packages/qfai/assets/validators/layoutAntiPatterns.json`, which is what `loadKnownLapIds` reads. A token no entry declares raises `QFAI-PROT-002`. The registry is the list: writing it out here is a second copy that goes stale the next time an entry is added or retired.
 
 ## AC-0012-0026: pivotDirective Rule — pivot
 
@@ -422,7 +422,7 @@
 - REQ-Refs: REQ-0012-0068
 - Given a non-converged cycle,
 - When `iterate` emits its cycle-end summary,
-- Then stdout MUST contain a one-screen `[BLOCKED]` line naming the top-3 categories (`designMdViolations` / `layoutAntiPatternsDetected` / `axes-below-exceptional`) with concrete counts AND first-offender details (e.g. `color=#fff at iter-NN/scr_001.html:97`, `lap-002`, `aesthetics: passing`).
+- Then stdout MUST contain a one-screen `[BLOCKED]` line naming the top-3 categories (`designMdViolations` / `layoutAntiPatternsDetected` / `axes-below-exceptional`) with concrete counts AND first-offender details (e.g. `color=#fff at iter-NN/scr_001.html:97`, `lap-008-no-back-affordance`, `aesthetics: passing`).
 - And category names MUST be stable identifiers — additive only across versions.
 
 ## AC-0012-0067: `primarySpecId` error text + (SHOULD) input normalisation

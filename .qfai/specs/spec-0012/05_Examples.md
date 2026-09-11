@@ -41,7 +41,7 @@
 - BR-Ref: BR-0012-0005
 - Given screenshots and HTML snapshots are captured
 - And root `DESIGN.md` is available as brand SSOT
-- And the `lap-001..008` catalog is available
+- And the layout anti-pattern registry is available
 - And prior reviewer review.json context exists from a previous iter
 - Then the reviewer (product-surface-reviewer) receives all input classes before scoring
 
@@ -93,7 +93,7 @@
 ## EX-0012-0111: Pivot triggered by 3-low-IA + latest lap-\*
 
 - BR-Ref: BR-0012-0021
-- Given iter-05/06/07 each with `informationArchitecture: "acceptable"` and iter-07 with `layoutAntiPatternsDetected: ["lap-002-deadend-flow"]`.
+- Given iter-05/06/07 each with `informationArchitecture: "acceptable"` and iter-07 with `layoutAntiPatternsDetected: ["lap-008-no-back-affordance"]`.
 - When `computePivotDirective(history)` runs.
 - Then it returns `"pivot"`. With latest `layoutAntiPatternsDetected: []`, returns `"refine"`.
 
@@ -144,7 +144,7 @@
 ## EX-0012-0118: lap-\* whitelist and IA acceptable cap
 
 - BR-Ref: BR-0012-0020
-- Given `iter-NN/review.json` with `layoutAntiPatternsDetected: ["lap-001-orphan-page"]` and `informationArchitecture: "strong"`.
+- Given `iter-NN/review.json` with `layoutAntiPatternsDetected: ["lap-007-state-not-represented"]` and `informationArchitecture: "strong"`.
 - When validate runs.
 - Then `QFAI-PROT-021` is raised because the lap detection caps `informationArchitecture` at `acceptable`. With `informationArchitecture: "acceptable"` the finding is not raised.
 

@@ -90,7 +90,7 @@
 ## BR-0012-0020: Layout-Anti-Pattern Catalog and IA Cap
 
 - AC-Refs: AC-0012-0024, AC-0012-0025
-- `layoutAntiPatternsDetected[]` entries MUST come from `lap-001..008` whitelist.
+- `layoutAntiPatternsDetected[]` entries MUST be identifiers declared in `packages/qfai/assets/validators/layoutAntiPatterns.json`. The capture pass writes into the same array, so the declared set covers what the reviewer judges and what the tool computes alike.
 - Detection caps `informationArchitecture` at `acceptable`. Higher score raises `QFAI-PROT-021`.
 
 ## BR-0012-0021: pivotDirective Rules
@@ -167,7 +167,7 @@ No other path triggers stop. LLM subjective DONE is forbidden.
 
 - AC-Refs: AC-0012-0041
 - Each `<screen>.review.json` MUST contain the 4 ordinal UX axes (informationArchitecture / navigationFlow / usability / functionality, each in `{weak, acceptable, strong, exceptional}`) AND six `*Feel` short-prose fields (`operability`, `transitionFeel`, `crossScreenContinuity`, `userStoryFeel`, `acceptanceCriteriaFeel`, `menuReachabilityFeel`), each ≤ 200 words.
-- `layoutAntiPatternsDetected[]` (lap-001..008) and `designMdViolations[]` remain present and govern convergence; quantitative AC-pass / transition-pass thresholds are NOT recorded.
+- `layoutAntiPatternsDetected[]` and `designMdViolations[]` remain present and govern convergence; quantitative AC-pass / transition-pass thresholds are NOT recorded.
 
 ## BR-0012-0032: Convergence is AND across spec × screen
 
