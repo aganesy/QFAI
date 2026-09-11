@@ -2,7 +2,8 @@
  * Pure scanner for DESIGN.md compliance violations in iter HTML.
  *
  * Scans an HTML string for color / font / radius / shadow values and
- * compares them against the allowed token set in a DesignMd record.
+ * compares them against the allowed token set in a DesignMd record, and
+ * reads the declared contrast floor against the pairs the page states.
  * Returns one violation per distinct `{kind, found}` pair (no
  * short-circuit): a token that drifts on every one of a thousand CSS
  * occurrences is one finding, not a thousand, so the operator sees the
@@ -83,9 +84,10 @@
  */
 
 import type { DesignMd } from "../design/designMd.js";
+import { computeContrastRatio } from "../uiux/contrastRatio.js";
 
 export type DesignMdViolation = {
-  readonly kind: "color" | "font" | "radius" | "shadow";
+  readonly kind: "color" | "font" | "radius" | "shadow" | "contrast";
   readonly found: string;
 };
 
@@ -772,6 +774,97 @@ function normalizeDimensionValue(value: string): string {
       // a leading `-`), so `10.5rem` and `1.5rem` are untouched.
       .replace(/(^|[\s,(/-])0+\.(\d)/g, "$1.$2")
   );
+}
+
+// The floor for a DESIGN.md that declares none. WCAG 2.x AA for body
+// text, which is the level `accessibility.contrast_ratio_min` is written
+// against.
+const WCAG_AA_CONTRAST = 4.5;
+
+// A declaration block that sets a text color and a background states a
+// pair whose ratio can be judged. Blocks are the two shapes a rendered
+// prototype carries one in: a rule body inside `<style>`, and one inline
+// `style="…"` attribute.
+//
+// `[^{}]*` keeps a body flat, so an at-rule wrapper (`@media { .a { … } }`)
+// contributes its inner rules and not the wrapper — which is what a
+// nested body would otherwise pair across.
+const CSS_RULE_BODY_RE = /\{([^{}]*)\}/g;
+const FOREGROUND_DECL_RE = /(?:^|;)\s*color\s*:\s*([^;]+)/i;
+// `background` and `background-color`, never `background-image`: after
+// `background` the pattern requires `-color` or the colon, and `-image`
+// is neither.
+const BACKGROUND_DECL_RE = /(?:^|;)\s*background(?:-color)?\s*:\s*([^;]+)/i;
+
+/**
+ * A color `computeContrastRatio` can read, or `null`.
+ *
+ * It accepts `#rrggbb` and `rgb(r, g, b)` and nothing else, so the
+ * three-digit hex an author writes by hand is expanded here rather than
+ * discarded. Everything else — a named color, `hsl()`, the space-separated
+ * `rgb(r g b)`, a value carrying alpha, a shorthand with more than a color
+ * in it — is not judged. A ratio computed from a color this scanner
+ * guessed at would be a finding the author cannot reproduce.
+ */
+function colorForRatio(value: string): string | null {
+  const v = value.trim().toLowerCase();
+  const short = /^#([0-9a-f])([0-9a-f])([0-9a-f])$/.exec(v);
+  if (short) return `#${short[1]}${short[1]}${short[2]}${short[2]}${short[3]}${short[3]}`;
+  if (/^#[0-9a-f]{6}$/.test(v)) return v;
+  if (/^rgb\(\s*\d{1,3}\s*,\s*\d{1,3}\s*,\s*\d{1,3}\s*\)$/.test(v)) return v;
+  return null;
+}
+
+/** Every declaration block on the rendered page, structure kept. */
+function declarationBlocks(html: string): string[] {
+  const blocks: string[] = [];
+  for (const style of html.matchAll(STYLE_BLOCK_RE)) {
+    const css = style[1];
+    if (!css || isTailwindPreflightBlock(css)) continue;
+    for (const body of css.matchAll(CSS_RULE_BODY_RE)) {
+      if (body[1]) blocks.push(body[1]);
+    }
+  }
+  // Inline attributes are body-scoped for the reason `extractCssRegions`
+  // gives: a `style="…"` in the head is not on the rendered DOM.
+  for (const inline of narrowToBody(html).matchAll(INLINE_STYLE_RE)) {
+    const value = inline[1] ?? inline[2];
+    if (value) blocks.push(value);
+  }
+  return blocks;
+}
+
+/**
+ * Text that fails the contrast floor the project declared.
+ *
+ * `accessibility.contrast_ratio_min` was parsed, type-checked and hashed
+ * into the lock, and no check read it as a threshold — a project could
+ * declare a stricter ratio than AA and be measured against AA, or declare
+ * AA and have no capture measured at all. This is the clause that reads
+ * it, on the same captures the other five clauses scan.
+ */
+function scanContrast(html: string, dm: DesignMd, out: DesignMdViolation[]): void {
+  const declared = dm.accessibility?.contrast_ratio_min;
+  const floor = typeof declared === "number" && declared > 0 ? declared : WCAG_AA_CONTRAST;
+  if (!Number.isFinite(floor)) return;
+
+  const rootDeclarations = parseRootDeclarations(allCssRegions(html));
+  for (const block of declarationBlocks(html)) {
+    const fgDecl = FOREGROUND_DECL_RE.exec(block);
+    const bgDecl = BACKGROUND_DECL_RE.exec(block);
+    if (!fgDecl?.[1] || !bgDecl?.[1]) continue;
+
+    const fg = colorForRatio(unwrapVarReference(fgDecl[1], rootDeclarations));
+    const bg = colorForRatio(unwrapVarReference(bgDecl[1], rootDeclarations));
+    if (fg === null || bg === null) continue;
+
+    const ratio = computeContrastRatio(fg, bg);
+    if (ratio === null || ratio >= floor) continue;
+    out.push({
+      kind: "contrast",
+      found: `${ratio.toFixed(2)}:1 below ${floor}:1 (${fg} on ${bg})`,
+    });
+  }
 }
 
 function scanRadius(html: string, dm: DesignMd, out: DesignMdViolation[]): void {
@@ -1461,6 +1554,10 @@ export function findDesignMdViolations(html: string, dm: DesignMd): DesignMdViol
   // `rounded-xl`, etc.) carry no CSS literal in the rendered HTML
   // and would otherwise slip past every other scanner above.
   scanTailwindUtility(html, dm, out);
+  // Every other required token in DESIGN.md is enforced against the
+  // captures. The declared contrast floor was not, so it read as
+  // decoration next to five clauses that gate.
+  scanContrast(html, dm, out);
   // The doc contract above promises one entry per distinct {kind, found}
   // pair; without this call the helper was dead code and the promise was
   // not kept.

@@ -257,6 +257,7 @@
     "tests/unit/core/doctor/cleanRunLogsPartialFailure.test.ts",
     "tests/unit/core/doctor/integrationLinks.test.ts",
     "tests/unit/core/instructionLanguageRules.test.ts",
+    "tests/unit/core/prototyping/designMdViolationsContrast.test.ts",
     "tests/unit/issueCatalogHasEmitters.test.ts",
     "tests/unit/shared/provenanceHostileTree.test.ts",
     "tests/unit/shared/text.test.ts",

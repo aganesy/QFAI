@@ -74,6 +74,7 @@ const DESIGN_MD_VIOLATION_KINDS: ReadonlySet<string> = new Set([
   "font",
   "radius",
   "shadow",
+  "contrast",
 ]);
 
 function isViolationArray(value: unknown): value is ReadonlyArray<{ kind: string; found: string }> {
@@ -332,7 +333,7 @@ export async function validatePrototypingEvidence(
       issues.push(
         issue(
           "QFAI-PROT-002",
-          `iterations[${i}].designMdViolations must be an array of {kind, found} records with kind in color|font|radius|shadow.`,
+          `iterations[${i}].designMdViolations must be an array of {kind, found} records with kind in color|font|radius|shadow|contrast.`,
           "error",
           PROTO_JSON_REL,
           "prototypingEvidence.designMdViolations",
@@ -629,7 +630,7 @@ function reviewSchemaIssues(
   reportUnknownReviewKeys(review, report);
   if (!isViolationArray(review.designMdViolations)) {
     report(
-      "designMdViolations must be an array of {kind, found} records with kind in color|font|radius|shadow.",
+      "designMdViolations must be an array of {kind, found} records with kind in color|font|radius|shadow|contrast.",
       "prototypingEvidence.review.designMdViolations",
     );
   }

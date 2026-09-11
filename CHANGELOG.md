@@ -4,6 +4,30 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ## [Unreleased]
 
+### Fixed
+
+- **A declared contrast floor is now the one a prototype is measured against**
+  (#1481). `accessibility.contrast_ratio_min` is a required key in `DESIGN.md`,
+  and nothing read it as a threshold. It was parsed, checked for finiteness and
+  hashed into the lock, and that was all.
+
+  The one check that computed contrast, `QFAI-MOCK-008`, compared against a
+  hard-coded AA constant and read HTML blocks inside documents rather than
+  iteration captures. So a project declaring a stricter ratio than AA was
+  measured against AA, and a project declaring AA had no capture measured at
+  all — while every other required token in `DESIGN.md` was enforced against the
+  captures.
+
+  `findDesignMdViolations` gains a sixth clause, on the same captures as the
+  other five, with a new violation kind `contrast`. A pair is read from a
+  declaration block that states both a text colour and a background, in a rule
+  body or an inline attribute, with `:root` tokens resolved. Where a pack
+  declares no floor, WCAG AA stands in.
+
+  A pair is judged only when both sides resolve to a colour the ratio
+  computation accepts, so a named colour, `hsl()`, a value carrying alpha or a
+  shorthand with more than a colour in it is skipped rather than guessed at.
+
 ### Added
 
 - **A shape for a review finding about excess** (#1463). `REVIEW.md` listed
