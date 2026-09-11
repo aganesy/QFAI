@@ -76,6 +76,7 @@ export class CalibrationLoader {
         throw new Error(
           `Calibration pack not found at ${this.packPath}. ` +
             `A valid calibration pack file is required.`,
+          { cause: error },
         );
       }
       throw error;

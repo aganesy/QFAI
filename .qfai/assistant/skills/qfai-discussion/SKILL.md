@@ -34,6 +34,15 @@ Skill-specific examples:
 - ask-user bucket decisions (CREATE / DELETE / SPLIT / MERGE / SUPERSEDE / UPDATE:REMOVE triage operations)
 - destructive operations and scope expansions outside the active envelope
 
+## Inputs Priority (Preflight)
+
+When unsure, read inputs in this order:
+
+- P1: `.qfai/assistant/constitution/*`
+- P2: `.qfai/assistant/manifest/agent-routing.yml` + `.qfai/assistant/manifest/review-profiles.yml` + `.qfai/assistant/catalog/*`; from `.qfai/assistant/manifest/agent-catalog.yml` read the acting `orchestrator`'s and each routed role's entry (`owned_artifacts` / `tool_profile` / `permission_profile` / `specialization_tags`), not the whole file — its `developer_instructions` bodies mirror the agent cards (`.qfai/assistant/constitution/constitution.md` Article III)
+- P3: the pack under work — `.qfai/discussion/discussion-YYYYMMDDhhmmssSSS/**`, and root `DESIGN.md` for a UI-bearing target
+- P4: what the project already settled (`.qfai/specs/_policies/**`, active `.qfai/specs/*/01_Spec.md`, `.qfai/contracts/**`, `qfai.config.yaml`)
+
 ## Goal
 
 Produce a unified 15-file discussion pack plus exploration-first UI sidecars so `/qfai-sdd` and `/qfai-prototyping` can operate without forcing an early visual direction decision.
