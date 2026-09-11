@@ -17,7 +17,9 @@
  * until one of two checkpoints runs. `prototypingIterate` re-scans the
  * accepted iteration's HTML before honouring a CONVERGENCE stop, so a
  * Reviewer-recorded empty `designMdViolations` is discarded rather than
- * trusted (the recomputed list drives the stop decision only; it is not
+ * trusted (the recomputed list is one of the three arrays the stop reads —
+ * `layoutAntiPatternsDetected` and `blockingFindings` are the others — and
+ * it drives that decision only; it is not
  * written back into `prototyping.json`); a `max-iterations` stop skips
  * that re-scan and simply ends the loop. That re-scan reaches the
  * captured HTML that is PRESENT AND READABLE:

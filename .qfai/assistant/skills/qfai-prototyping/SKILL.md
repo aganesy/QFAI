@@ -50,7 +50,7 @@ When unsure, read inputs in this order:
 
 ## Goal
 
-One final prototype satisfying the spec under a locked brand identity, with all four UX axes `exceptional`, no layout anti-patterns, and no DESIGN.md violations.
+One final prototype satisfying the spec under a locked brand identity, with no blocking review finding, no layout anti-pattern, and no DESIGN.md violation.
 
 ## Required References
 
@@ -214,9 +214,9 @@ Two specifics that are easy to get wrong:
   exemption now requires the record to still BE the untouched seed — so a
   stale stamp is reported rather than obeyed, but it is still wrong.
 
-**Exit codes**: `0` continue (read `pivotDirective`); `64` convergence (4
-axes `exceptional` AND `layoutAntiPatternsDetected` empty AND
-`designMdViolations` empty); `65` 10 cycles reached; `66` license-verify
+**Exit codes**: `0` continue (read `pivotDirective`); `64` convergence
+(`designMdViolations`, `layoutAntiPatternsDetected` and `blockingFindings`
+all empty); `65` 10 cycles reached; `66` license-verify
 failure (`imageSources[]` resolved to a non-allowlisted source, unknown
 license tier, non-HTTPS URL, host mismatch vs the frozen
 `sourceHosts` (host pinning is never patched — see below), or
