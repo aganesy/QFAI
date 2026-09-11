@@ -132,6 +132,12 @@ export type QfaiUiuxConfig = {
   qualityProfile?: "strict" | "high" | "default";
   requireResearchSummary?: boolean;
   competitive_refs_min?: number;
+  /**
+   * Minimum complete component-catalogue references a UI-bearing pack must
+   * register. Absent means the count is not gated; entries that are
+   * registered are still held to the same three fields.
+   */
+  catalogue_refs_min?: number;
   warning_as_error_override?: string[];
   renderEvidence?: RenderEvidenceConfig;
   audit?: QfaiUiuxAuditConfig;
@@ -1224,6 +1230,20 @@ function normalizeUiux(
     } else {
       issues.push(
         configIssue(configPath, "uiux.competitive_refs_min は0以上の整数である必要があります。"),
+      );
+    }
+  }
+
+  if (raw.catalogue_refs_min !== undefined) {
+    if (
+      typeof raw.catalogue_refs_min === "number" &&
+      Number.isInteger(raw.catalogue_refs_min) &&
+      raw.catalogue_refs_min >= 0
+    ) {
+      result.catalogue_refs_min = raw.catalogue_refs_min;
+    } else {
+      issues.push(
+        configIssue(configPath, "uiux.catalogue_refs_min must be an integer of 0 or more."),
       );
     }
   }

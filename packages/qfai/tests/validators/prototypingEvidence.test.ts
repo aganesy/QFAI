@@ -1,16 +1,24 @@
-import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 
 import { afterEach, describe, expect, it } from "vitest";
 
 import { validatePrototypingEvidence } from "../../src/core/validators/prototypingEvidence.js";
+import { loadLayoutAntiPatterns } from "../../src/core/validators/layoutAntiPatterns.js";
+import {
+  findMd5DuplicateCaptures,
+  findMissingRoutes,
+} from "../../src/core/prototyping/layoutAntiPatternsAdvisory.js";
 import {
   SEED_COMMIT_SHA,
   SEED_PROSE_CRITIQUE_PLACEHOLDER,
   SEED_REVIEWER_ID,
 } from "../../src/core/prototyping/iteration.js";
 import type { QfaiConfig } from "../../src/core/config.js";
+
+const PACKAGE_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
 
 const tempDirs: string[] = [];
 const VALID_PROSE_CRITIQUE = Array.from(
@@ -568,11 +576,14 @@ describe("validatePrototypingEvidence — iter-NN/review.json", () => {
   });
 
   it("accepts every lap-* code the registry declares", async () => {
+    // Read from the registry rather than listing codes here. A hardcoded pair
+    // says nothing about an entry added later, and the claim being made is
+    // about the whole vocabulary.
+    const registered = loadLayoutAntiPatterns().map((pattern) => pattern.id);
+    expect(registered.length, "the registry must be readable and non-empty").toBeGreaterThan(0);
+
     const root = await newTempDir();
-    const iter = validIter(0, false, [
-      "lap-007-state-not-represented",
-      "lap-008-no-back-affordance",
-    ]);
+    const iter = validIter(0, false, registered);
     await seedPrototypingJson(root, {
       specsCovered: ["0001"],
       iterations: [iter],
@@ -583,6 +594,50 @@ describe("validatePrototypingEvidence — iter-NN/review.json", () => {
 
     const issues = await validatePrototypingEvidence(root, makeConfig());
     expect(issues.filter((i) => i.code === "QFAI-PROT-002")).toEqual([]);
+  });
+
+  it("registers every code the capture pass can put in the array", async () => {
+    // `layoutAntiPatternsDetected[]` has one vocabulary and two writers. The
+    // reviewer writes the codes it judges; `iterate --capture` computes
+    // `lap-009` and `lap-010` from the capture and reports them under the same
+    // prefix. A code the capture pass emits that the registry does not declare
+    // is QFAI-PROT-002 against the reviewer's file, for a code the reviewer
+    // did not choose.
+    //
+    // The emitted set is read out of the module's own source, so a third code
+    // added there without a registry entry fails this row rather than waiting
+    // for a run that happens to produce it.
+    const advisorySource = await readFile(
+      path.join(PACKAGE_ROOT, "src", "core", "prototyping", "layoutAntiPatternsAdvisory.ts"),
+      "utf-8",
+    );
+    const emitted = [...advisorySource.matchAll(/\bcode:\s*"(lap-[^"]+)"/g)].map((m) => m[1]);
+    expect(emitted, "the capture pass must emit at least one code").not.toEqual([]);
+
+    const registered = new Set(loadLayoutAntiPatterns().map((pattern) => pattern.id));
+    expect(emitted.filter((code) => code !== undefined && !registered.has(code))).toEqual([]);
+  });
+
+  it("computes those codes rather than only naming them", async () => {
+    // Non-vacuity for the row above: the literals it scans are the values the
+    // helpers actually return, so a rename that missed one surface is caught.
+    const identical = Buffer.from("same bytes");
+    const duplicates = findMd5DuplicateCaptures(
+      new Map([
+        ["home", identical],
+        ["dashboard", identical],
+      ]),
+    );
+    const missing = findMissingRoutes([
+      { screenId: "settings", route: "/settings", html: "<html><body>no route</body></html>" },
+    ]);
+
+    const registered = new Set(loadLayoutAntiPatterns().map((pattern) => pattern.id));
+    for (const finding of [...duplicates, ...missing]) {
+      expect(registered.has(finding.code), `${finding.code} must be registered`).toBe(true);
+    }
+    expect(duplicates.map((f) => f.code)).toEqual(["lap-009"]);
+    expect(missing.map((f) => f.code)).toEqual(["lap-010"]);
   });
 
   it("emits QFAI-PROT-002 for wrong-enum review.json fields", async () => {

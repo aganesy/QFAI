@@ -171,6 +171,23 @@ research_summary:
 - local_translation: [How the guideline changes this project's local design decisions]
 - evidence: [Concrete note, screenshot, or doc excerpt reference supporting the translation]
 
+## Component Catalogue Registry
+
+A competitor is consulted to differ from. A component catalogue is consulted
+to adopt from, and the catalogues a screen's structure came from go here.
+
+Registered entries take the same three fields and are counted separately, so
+a competitor cannot satisfy this registry or the reverse. The count is not
+gated unless the project sets `uiux.catalogue_refs_min`; an entry that is
+registered is held to all three fields either way.
+
+### Reference: [Catalogue or block name]
+
+- reference: [Catalogue name or URL]
+- adopted_points: [What was taken from it — a page, a block, a component]
+- rejected_points: [What was not taken and why]
+- local_translation: [How it was re-bound to this project's tokens]
+
 ## Competitive Reference Registry
 
 UI-bearing packs must register at least `uiux.competitive_refs_min` complete

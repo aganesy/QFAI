@@ -264,8 +264,17 @@ The generator MUST express every styled surface as one of:
 
 ### Other envelope constraints
 
-- No component library beyond Tailwind + Lucide. No external CSS, no
-  design-system imports.
+- No runtime dependency beyond the Tailwind and Lucide tags the
+  envelope declares: no package install, no `<link rel="stylesheet">`,
+  no further script tag. A single file loaded from a CDN has no package
+  manager to run an install with, and CSS behind a `<link>` is never
+  fetched by the gate, so a literal there is drift nobody sees.
+- Markup is not a dependency. Transposing a block from a component
+  catalogue and re-binding its palette classes to `DESIGN.md` tokens is
+  the expected way to build a screen. The gate reads the values a class
+  carries, not where the markup came from, so a transposed block passes
+  once `bg-blue-500` becomes `bg-primary` and `rounded-xl` becomes
+  `rounded-md`. Take the structure; re-bind the palette.
 - One self-contained HTML file; embedded CSS / JS minimal.
 - All declared spec screens reachable; loading / empty / error /
   success states representable.
