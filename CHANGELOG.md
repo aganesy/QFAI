@@ -6,6 +6,35 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Added
 
+- **A rule for what may appear on an interface** (#1495).
+  `.agents/rules/interface-clarity.md` is the counterpart of
+  `documentation-clarity.md` one surface over: that rule settles what an agent
+  writes about the work, this one settles what it puts in front of a user.
+  Nothing said the second, and an agent left to build a screen produced the
+  failure the first rule exists to stop, in a different medium — a paragraph
+  introducing the page, a hint under every field, a tooltip on a button whose
+  label already says what it does, and every parameter the thing underneath
+  happens to expose.
+
+  Six clauses, one per clause of the prose rule: do not surface the mechanism,
+  do not explain the interface, cut, use the conventional pattern, show the
+  structure, walk every task the surface declares.
+
+  The clause that decides the hard cases is quoted from the GOV.UK Design
+  System: help text that explains the interface means the service is too
+  complicated. Text explaining how to work a control is a defect report against
+  that control.
+
+  Cutting stops at the label. WCAG 3.3.2 requires a label for every form input
+  and a placeholder standing in for one is a documented failure, so the rule
+  deletes the explanation and protects the label — written the other way round
+  it would trade one defect for an accessibility failure.
+
+  Not the web alone: a command-line tool has an interface, so
+  `catalog/cli-ux-guidelines.md` reads as one of its consumers, beside the
+  experience, frontend and surface-review agent cards. The master ships to
+  adopters with the other cross-AI rules.
+
 - **A shape for a review finding about excess** (#1463). `REVIEW.md` listed
   simplification opportunities among the categories a reviewer must always flag
   and said nothing about what such a finding looks like, so what came back was
@@ -91,6 +120,29 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
   The declared starting value is unchanged. This is the override the knob set
   already defines, used by the one lane that needed it.
+
+- **The prototyping loop converges on open findings, not on a rating** (#1488).
+  The stop test required all four review axes at `exceptional` — a value the
+  scale itself defines as best-in-class and tells the reviewer to use
+  sparingly — aggregated as the worst verdict across every screen, and
+  `certify` re-derived the same condition. A review that rated honestly never
+  satisfied it, so the gate measured the reviewer's willingness to call four
+  axes best-in-class rather than measuring the prototype.
+
+  The four ordinal axes are gone. The reviewer writes `blockingFindings`, one
+  line per thing that must be fixed, and convergence is that array empty
+  alongside `layoutAntiPatternsDetected` and `designMdViolations`. Anything
+  worth saying that does not block goes in the prose critique, where it
+  informs the next cycle without stopping this one.
+
+  Nothing else in this project scored: the shared reviewer contract is a
+  verdict plus graded findings, and `/qfai-implement` already ran a binary
+  checklist. Prototyping now uses the same shape.
+
+  `pivotDirective` compares how many findings are open across cycles, because
+  a count is reproducible where a verdict is not. `stopReason` records
+  `converged`. The cycle-0 seed carries one finding, so an iteration nobody
+  has reviewed cannot satisfy the stop test by never having been looked at.
 
 - **The design-drift scanner cites nothing a reader cannot resolve** (#1496).
   Nine comment lines in the scanner named a code review tool's internal comment

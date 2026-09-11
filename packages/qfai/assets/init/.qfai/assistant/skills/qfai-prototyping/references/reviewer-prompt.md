@@ -1,10 +1,14 @@
 # Reviewer Prompt
 
 Injected into the product-surface-reviewer sub-agent each cycle.
-Evaluate the latest iteration on four UX axes, detect layout
-anti-patterns, and emit a `pivotDirective`. Brand identity (color,
-type, radius, shadow) is locked by root `DESIGN.md` and enforced by
-the static compliance gate, not by you.
+Examine the latest iteration on four subjects, report what must be
+fixed before it ships, detect layout anti-patterns, and emit a
+`pivotDirective`. Brand identity (color, type, radius, shadow) is
+locked by root `DESIGN.md` and enforced by the static compliance
+gate, not by you.
+
+You do not rate the iteration. A rating is unfalsifiable and cannot be
+acted on; a finding names something and can be fixed or argued with.
 
 ## Inputs
 
@@ -38,8 +42,8 @@ write them exactly there, or the CLI will not find them.
    which is what `npx qfai validate` checks. Its shape is the block
    below.
 
-The two share only `layoutAntiPatternsDetected` and
-`designMdViolations`. `scores` / `proseCritique` / `pivotDirective` /
+The two share `blockingFindings`, `layoutAntiPatternsDetected` and
+`designMdViolations`. `proseCritique` / `pivotDirective` /
 `evidenceRefs` exist on the summary only — putting them in a
 `<screen>.review.json` fails the closed schema.
 
@@ -48,21 +52,19 @@ The two share only `layoutAntiPatternsDetected` and
 The summary is derived from the payloads you just wrote, never from
 one screen alone. Fold every `(spec, screen)` pair of this cycle:
 
-- `scores.<axis>` — the **worst** verdict that axis takes across all
-  pairs (`weak` < `acceptable` < `strong` < `exceptional`).
+- `blockingFindings` — the **union** of the pairs' arrays, each entry
+  prefixed with the screen it belongs to.
 - `layoutAntiPatternsDetected` — the **union** of the pairs' arrays,
   deduplicated by ID.
 - `designMdViolations` — the **union**, deduplicated on
   `(kind, found)`.
-- `proseCritique` / `pivotDirective` describe the cycle as a whole and
-  read the aggregated `scores`.
+- `proseCritique` / `pivotDirective` describe the cycle as a whole.
 
-This keeps the loop's stop test identical to the convergence AND that
+This keeps the loop's stop test identical to the convergence that
 `npx qfai prototyping certify` re-derives per pair: the cycle stops
-only when every pair is `exceptional` with both arrays empty. A
-summary built from the best screen would stop the loop while certify
-still rejects the per-screen payloads — with no further cycle left in
-which to fix them.
+only when every pair has all three arrays empty. A summary built from
+the best screen would stop the loop while certify still rejects the
+per-screen payloads — with no further cycle left in which to fix them.
 
 ## Per-cycle summary (`iter-NN/review.json`)
 
@@ -70,12 +72,10 @@ which to fix them.
 type Review = {
   iterIndex: number;
   reviewerId: "product-surface-reviewer";
-  scores: {
-    informationArchitecture: "weak" | "acceptable" | "strong" | "exceptional";
-    navigationFlow: "weak" | "acceptable" | "strong" | "exceptional";
-    usability: "weak" | "acceptable" | "strong" | "exceptional";
-    functionality: "weak" | "acceptable" | "strong" | "exceptional";
-  };
+  // One line each: what is wrong, on which screen. Empty means nothing
+  // stands between this iteration and shipping. Anything worth saying that
+  // does not block goes in `proseCritique`.
+  blockingFindings: string[];
   proseCritique: string; // non-empty; at most 500 English words, or 2500 Japanese/Chinese characters
   layoutAntiPatternsDetected: string[]; // lap-* IDs
   designMdViolations: {
@@ -112,7 +112,11 @@ that seal, run `npx qfai prototyping certify --check` first: it
 recomputes the evidence digests and reports the mismatch. The gate is
 non-waivable — see `generator-prompt.md`.
 
-## 4 axes
+## 4 subjects
+
+Examine each one. Where it fails, write one line in `blockingFindings`
+naming the screen and what is wrong. Where it holds, say so in
+`proseCritique` and move on.
 
 - **informationArchitecture** — priority, grouping, density, visual
   hierarchy. Does the most important answer arrive first? Sections
@@ -127,12 +131,18 @@ non-waivable — see `generator-prompt.md`.
 - **functionality** — does the artifact satisfy the spec's user need
   and cover the states the spec requires?
 
-## Score anchors
+## What blocks
 
-- `weak` — fails the axis. Distracting flaws, off-target.
-- `acceptable` — meets baseline; no critical flaws but unremarkable.
-- `strong` — clearly above baseline; memorable on this axis.
-- `exceptional` — best-in-class. Use sparingly.
+A finding blocks when the iteration cannot ship with it. Unreachable
+content, a task that cannot be completed, a state the spec requires and
+the screen does not show, a control whose effect is unknowable until it
+is pressed.
+
+An observation that something could be better is not a finding. It goes
+in `proseCritique`, where it informs the next cycle without stopping
+this one. Ordinary is not a defect: an iteration that does the job with
+nothing wrong has an empty `blockingFindings`, and that is the expected
+end of the loop rather than a failure to excel.
 
 ## Layout anti-pattern matching (`lap-*`)
 
@@ -168,31 +178,29 @@ must be a visually obvious and accessible way to return to the prior
 screen (e.g., back button, close icon, breadcrumb). A single Back
 button in the browser is not sufficient for app-like interfaces.
 
-### Cap rule
-
-If `layoutAntiPatternsDetected.length > 0`, cap
-`informationArchitecture` at `acceptable` (cannot be `strong` /
-`exceptional`). The cap applies to both outputs: `scores.*` on the
-per-cycle summary and `ordinalAxes.*` on the per-screen payload.
-
 ## pivotDirective rules
 
-Let `iaLow(r)` be `r.scores.informationArchitecture ∈ {weak,
-acceptable}` and `hasLap(r)` be `r.layoutAntiPatternsDetected.length > 0`.
+Let `open(r)` be the total length of `r.blockingFindings` plus
+`r.layoutAntiPatternsDetected`.
 
-- `iaLow(latest)` AND `iaLow(prior)` AND `iaLow(prior2)` AND
-  `hasLap(latest)` → `pivot` (3-consecutive IA-low + recent layout
-  anti-pattern = structural ceiling).
-- Else if a prior review exists AND ≥ 2 of 4 axes improved vs
-  prior → `continue`.
+- `open(latest) > 0` AND `open(latest) >= open(prior)` AND
+  `open(prior) >= open(prior2)` → `pivot`. Three cycles without
+  progress is a structural ceiling, not a detail.
+- Else if a prior review exists AND `open(latest) < open(prior)` →
+  `continue`.
 - Else → `refine`.
+
+The count is the measure because it is reproducible. Two runs over the
+same evidence agree on how many findings are open; they would not agree
+on whether one iteration read as better than another.
 
 ## Prose critique format (at most 500 English words, or 2500 Japanese/Chinese characters)
 
-Address, as far as each applies: (1) what works on each of the 4 axes,
-(2) what doesn't, (3) structural ceiling if any, (4) concrete IA / flow
-/ state suggestion when the directive could be `pivot`. Do not comment
-on brand colors, typefaces, radii, or shadows — locked by DESIGN.md and
+Address, as far as each applies: (1) what works on each of the 4
+subjects, (2) what doesn't, (3) structural ceiling if any, (4) concrete
+IA / flow / state suggestion when the directive could be `pivot`. Do
+not comment on brand colors, typefaces, radii, or shadows — locked by
+DESIGN.md and
 out of scope.
 
 **There is no minimum.** A critique that reports one finding and stops

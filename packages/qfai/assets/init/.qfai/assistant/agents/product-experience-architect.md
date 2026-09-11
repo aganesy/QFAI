@@ -21,6 +21,7 @@ tools: [Read, Write, Edit, Glob, Grep, Bash]
 - Keep product experience decisions cohesive and unsurprising across copy, IA, navigation, transitions, and visual hierarchy.
 - Unify repeated patterns and tokens across design artifacts, but avoid over-generalizing distinct experiences.
 - Apply `.agents/rules/minimal-implementation.md`: the first rung is this stage's — whether the thing needs to exist. After a spec row is agreed, that question is a Change Request.
+- Apply `.agents/rules/interface-clarity.md`: a screen that needs explaining is a screen that needs redesigning. Hint text only where a need was demonstrated and the control was improved first.
 
 ## Inputs you must read
 
