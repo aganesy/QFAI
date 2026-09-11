@@ -6,6 +6,59 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Added
 
+- **A rule for what may appear on an interface** (#1495).
+  `.agents/rules/interface-clarity.md` is the counterpart of
+  `documentation-clarity.md` one surface over: that rule settles what an agent
+  writes about the work, this one settles what it puts in front of a user.
+  Nothing said the second, and an agent left to build a screen produced the
+  failure the first rule exists to stop, in a different medium — a paragraph
+  introducing the page, a hint under every field, a tooltip on a button whose
+  label already says what it does, and every parameter the thing underneath
+  happens to expose.
+
+  Six clauses, one per clause of the prose rule: do not surface the mechanism,
+  do not explain the interface, cut, use the conventional pattern, show the
+  structure, walk every task the surface declares.
+
+  The clause that decides the hard cases is quoted from the GOV.UK Design
+  System: help text that explains the interface means the service is too
+  complicated. Text explaining how to work a control is a defect report against
+  that control.
+
+  Cutting stops at the label. WCAG 3.3.2 requires a label for every form input
+  and a placeholder standing in for one is a documented failure, so the rule
+  deletes the explanation and protects the label — written the other way round
+  it would trade one defect for an accessibility failure.
+
+  Not the web alone: a command-line tool has an interface, so
+  `catalog/cli-ux-guidelines.md` reads as one of its consumers, beside the
+  experience, frontend and surface-review agent cards. The master ships to
+  adopters with the other cross-AI rules.
+
+- **A shape for a review finding about excess** (#1463). `REVIEW.md` listed
+  simplification opportunities among the categories a reviewer must always flag
+  and said nothing about what such a finding looks like, so what came back was
+  hedged and unactionable. A sentence asking whether all of this is really
+  needed says neither what to cut nor what would stand in its place.
+
+  A finding is one line — where it is, what to cut, what replaces it — tagged
+  with the reason:
+
+  | Tag      | Means                                                                               | What replaces it      |
+  | -------- | ----------------------------------------------------------------------------------- | --------------------- |
+  | `delete` | Dead code, unused flexibility, a speculative feature                                | Nothing               |
+  | `stdlib` | A hand-rolled thing the standard library ships                                      | Name the function     |
+  | `native` | Code or a dependency doing what the platform already does                           | Name the feature      |
+  | `yagni`  | An abstraction with one implementation, config nobody sets, a layer with one caller | Inline it             |
+  | `shrink` | The same logic, fewer lines                                                         | Show the shorter form |
+
+  The five reviewer agent cards carry the tags too. `REVIEW.md` is this
+  repository's own and is not shipped, so a card pointing at it would name a
+  file no project has.
+
+  Correctness, security and performance findings keep the shape they had. This
+  is only about excess.
+
 - **A lane that collects every deliberate simplification** (#1466).
   `.agents/rules/minimal-implementation.md` asks an author who takes a shortcut
   on purpose to write it down where it is taken, with the ceiling it stops at
@@ -69,6 +122,42 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   a count is reproducible where a verdict is not. `stopReason` records
   `converged`. The cycle-0 seed carries one finding, so an iteration nobody
   has reviewed cannot satisfy the stop test by never having been looked at.
+
+- **The design-drift scanner cites nothing a reader cannot resolve** (#1496).
+  Nine comment lines in the scanner named a code review tool's internal comment
+  identifier. They pointed at something no reader outside this repository can
+  open, which is what the writing rule forbids. The engineering reason each
+  comment carried is kept; only the identifier is gone.
+
+  Nothing in the tree cites one now: the clarity guard reports no local
+  identifier over the whole tree, where it reported eight.
+
+  The scanner and the generator prompt are a pair that must change together, so
+  the prompt gains what the scanner comments had learned and it had not: a
+  screen that shows markup as sample text has that markup scanned as if it were
+  live, because the gate reads class attributes with a regular expression rather
+  than a parser. The note says what to do about it, and why the trade is a false
+  positive rather than a missed violation.
+
+- **A user story is declared by its entry, not by a sentence naming it**
+  (#1512). The declared set was the entries plus every loose `US-NNNN` in
+  `02_User-stories.md`, so any prose that named an id declared it.
+
+  A retired id is where that costs. A deleted story keeps its number reserved,
+  and a pack writes the reservation down so nobody reuses it — which made the
+  story live again, and `QFAI-ATDD-111` then demanded an E2E reference for
+  something with no entry, no acceptance criteria and no behaviour. Every way
+  out was worse than the note: an annotation with nothing behind it, the note
+  hidden in an HTML comment where the people it warns cannot read it, or the id
+  spelled so the scan missed it.
+
+  An id is declared by a heading (`##` down to `######`) or a catalog list item,
+  which are the two shapes the deferral marker already opens a block at. A
+  mention anywhere else is prose about a story rather than a declaration of one.
+
+  This is the rule the test-case side already applies, and for the same reason:
+  an id read from somewhere other than its declaration carries an obligation
+  nobody wrote.
 
 - **A conventional screen can finish the prototyping loop** (#1471).
   Five registry entries reported a dashboard with a sidebar and a KPI row, a

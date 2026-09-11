@@ -290,4 +290,92 @@ describe("cross-AI rules surface (.agents/rules/ master)", () => {
       expect(text).not.toContain(".instruction/00_universal/development-principles-checklist.md");
     });
   });
+
+  // What may appear on an interface is a question an adopter's product asks
+  // more often than this repository does, so the master is shipped and both
+  // copies are held to the same clauses.
+  describe("interface-clarity rule", () => {
+    const MASTERS = [
+      ".agents/rules/interface-clarity.md",
+      "packages/qfai/assets/init/root/.agents/rules/interface-clarity.md",
+    ];
+
+    it.each(MASTERS)("%s states every clause", async (rel) => {
+      const text = await readFile(path.join(ROOT, rel), "utf-8");
+      // One token per clause that no other clause in the file carries, so a
+      // clause cannot be dropped and still leave the master looking complete.
+      for (const clause of [
+        /surface the mechanism/i,
+        /help text to explain the interface/,
+        /displaces signal/,
+        /One primary purpose per view/,
+        /disclosure/,
+        /perform every task it declares/,
+      ]) {
+        expect(text).toMatch(clause);
+      }
+    });
+
+    // The rule cuts text off an interface, and the one piece of text it must
+    // never cut is the label: WCAG 3.3.2 requires one, and a placeholder
+    // standing in for it is a documented failure. A master that stated the
+    // cutting without the exemption would trade one defect for an
+    // accessibility failure, which is the single way this rule can do harm.
+    it.each(MASTERS)("%s protects the label it never removes", async (rel) => {
+      const text = await readFile(path.join(ROOT, rel), "utf-8");
+      expect(text).toMatch(/WCAG 3\.3\.2/);
+      expect(text).toMatch(/placeholder/i);
+    });
+
+    // A terminal is an interface. Without that sentence the rule reads as a
+    // web rule, and a command-line surface — which is the only interface this
+    // repository itself has — falls outside the only rule written for it.
+    it.each(MASTERS)("%s covers a command-line surface too", async (rel) => {
+      const text = await readFile(path.join(ROOT, rel), "utf-8");
+      expect(text).toMatch(/command-line tool has an interface/);
+      expect(text).toMatch(/Terminal output/);
+    });
+
+    // Three documents answer three questions about one screen: where a thing
+    // comes from, how much code implements it, and what may appear on it. The
+    // `## Related` section is what keeps a reader who arrives at one of them
+    // from answering a question the other two own.
+    it.each(MASTERS)("%s names the neighbouring documents", async (rel) => {
+      const text = await readFile(path.join(ROOT, rel), "utf-8");
+      for (const neighbour of [
+        "documentation-clarity.md",
+        "minimal-implementation.md",
+        ".qfai/assistant/catalog/ui-definition-protocol.md",
+      ]) {
+        expect(text).toContain(neighbour);
+      }
+    });
+
+    it.each([
+      "AGENTS.md",
+      "CLAUDE.md",
+      ".github/copilot-instructions.md",
+      "packages/qfai/assets/init/root/AGENTS.md",
+      "packages/qfai/assets/init/root/CLAUDE.md",
+      // The list `qfai init` appends to a project that already has an entry
+      // point, and the only rule list a populated project ever sees.
+      "packages/qfai/src/cli/commands/init.ts",
+    ])("%s cites the rule master", async (rel) => {
+      const text = await readFile(path.join(ROOT, rel), "utf-8");
+      expect(text).toContain("interface-clarity.md");
+    });
+
+    // The consumers. An entry point makes the rule loadable; these are the
+    // places an agent is already reading when it is about to write the
+    // sentence, which is where a rule it has not opened still reaches it.
+    it.each([
+      "packages/qfai/assets/init/.qfai/assistant/catalog/cli-ux-guidelines.md",
+      "packages/qfai/assets/init/.qfai/assistant/agents/product-experience-architect.md",
+      "packages/qfai/assets/init/.qfai/assistant/agents/frontend-engineer.md",
+      "packages/qfai/assets/init/.qfai/assistant/agents/product-surface-reviewer.md",
+    ])("%s cites the rule master", async (rel) => {
+      const text = await readFile(path.join(ROOT, rel), "utf-8");
+      expect(text).toContain(".agents/rules/interface-clarity.md");
+    });
+  });
 });
