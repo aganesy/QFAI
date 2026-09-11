@@ -11,27 +11,37 @@ QFAI は「要件 → 仕様 → 契約 → 検証/レポート」の流れを�
 
 ## 主な構成要素
 
-- `.qfai/require/`: 上流要件の集約（入力 SSOT、validate の対象外）
-- `.qfai/specs/`: Spec Pack（`spec.md` / `delta.md` / `scenario.feature`）
-- `.qfai/contracts/`: UI/API/DB 契約（`UI-xxxx` / `API-xxxx` / `DB-xxxx`）
-- `.qfai/assistant/prompts/`: AI プロンプト資産（SSOT）
-- `.qfai/assistant/instructions/`: 非交渉ルール/標準ワークフロー
-- `.qfai/assistant/catalog/`: プロジェクト固有情報
-- `.qfai/report/`: `validate.json` と report の出力先
+- `.qfai/specs/`: the spec packs. `_policies/` carries the cross-spec layer and
+  each `spec-NNNN/` its own; both file sets are listed in `02_project/naming.md`.
+- `.qfai/contracts/`: the contracts, one directory per kind. A contract file
+  declares `QFAI-CONTRACT-ID: CON-<TYPE>-<NUMBER>`.
+- `.qfai/discussion/`: discussion packs, the optional upstream input to a spec.
+- `.qfai/assistant/`: the assistant tree — `constitution/`, `manifest/`,
+  `catalog/`, `skills/`, `agents/`, `process/`.
+- `.qfai/evidence/`: the per-run evidence a skill is required to write.
+- `.qfai/decisions/`, `.qfai/steering/`, `.qfai/review/`: decision records,
+  steering input, and review packs.
+- `.qfai/report/`: where `validate` and `report` write.
 - `qfai.config.yaml`: パス/検証ルール/出力設定
 
 ## ID とトレーサビリティ
 
-- ID 種別: `SPEC` / `BR` / `SC` / `UI` / `API` / `DB`（参考 ID として `ADR`）
-- Spec は `SPEC-xxxx` と `BR-xxxx` を定義する
-- Spec は `QFAI-CONTRACT-REF` で契約 ID を宣言する（none 可）
-- Scenario は `@SPEC-xxxx` / `@SC-xxxx` / `@BR-xxxx` を持つ
-- Traceability は **Spec → Contract / BR → SC / SC → Test** を基本とする
+The chain is `REQ → US → AC → BR → EX → TC`, each link declared by the
+downstream item.
 
-## 参照ルール（要点）
+| ID          | Declared in                    | Carries                     |
+| ----------- | ------------------------------ | --------------------------- |
+| `CAP-NNNN`  | `_policies/03_Capabilities.md` | the spec that implements it |
+| `spec-NNNN` | `01_Spec.md`                   | `Parent: CAP-NNNN`          |
+| `US-NNNN`   | `02_User-stories.md`           | `Parent: CAP-NNNN`          |
+| `AC-NNNN`   | `03_Acceptance-Criteria.md`    | —                           |
+| `BR-NNNN`   | `04_Business-Rules.md`         | `AC-Refs`                   |
+| `EX-NNNN`   | `05_Examples.md`               | `BR-Ref`                    |
+| `TC-NNNN`   | `06_Test-Cases.md`             | `AC-Refs`, `EX-Ref`         |
 
-- `.qfai/require` は上流 SSOT として参照される側であり、下流を参照しない
-- Spec は Scenario を参照しない（検証ルールで警告）
-- Contract ID の形式・重複は validate で検証される
+Contract IDs are `CON-UI-*`, `CON-API-*` and `CON-DB-*`, one per contract file.
+`validate` checks their shape and reports duplicates.
+
+Full grammar: `02_project/naming.md`.
 
 詳細な命名規約は `02_project/naming.md` を参照してください。

@@ -31,7 +31,7 @@ QFAI Toolkit の実装は CLI とコア検証エンジンを分離し、最小�
 ## テンプレート（`packages/qfai/assets/init`）
 
 - `init` テンプレートは assets が SSOT
-- テンプレート変更時は `tests/cli/init.test.ts` を更新する
+- テンプレート変更時は `packages/qfai/tests/cli/init.test.ts` を更新する
 
 ## テスト
 
