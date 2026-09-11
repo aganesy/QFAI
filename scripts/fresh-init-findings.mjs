@@ -136,6 +136,7 @@ export function parseValidateReport(text, where = "validate.json") {
   } catch (error) {
     throw new Error(
       `${where} is not JSON: ${error instanceof Error ? error.message : String(error)}`,
+      { cause: error },
     );
   }
 }
@@ -212,6 +213,7 @@ export function parseBaseline(text, where = BASELINE_PATH) {
   } catch (error) {
     throw new Error(
       `${where} is not JSON: ${error instanceof Error ? error.message : String(error)}`,
+      { cause: error },
     );
   }
   if (typeof parsed !== "object" || parsed === null || !Array.isArray(parsed.findings)) {

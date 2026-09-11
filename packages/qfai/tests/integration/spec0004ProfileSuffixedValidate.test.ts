@@ -323,7 +323,7 @@ describe("TC-0004-0065: certify profile-mismatch surfaces recovery command", () 
       errs.push(typeof chunk === "string" ? chunk : Buffer.from(chunk).toString("utf-8"));
       return true;
     };
-    let exitCode = 0;
+    let exitCode: number;
     try {
       exitCode = await runPrototypingCertify({ root, check: false });
     } finally {

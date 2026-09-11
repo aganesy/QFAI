@@ -38,7 +38,7 @@ const SCHEMA_TOKEN = "HANDOFF_MINIMUM_FIELDS";
 export async function detectHandoffSchemaDrift(root: string): Promise<Issue[]> {
   const schemaAbs = path.join(root, HANDOFF_SCHEMA_REL);
   if (!(await exists(schemaAbs))) return [];
-  let schemaText = "";
+  let schemaText: string;
   try {
     schemaText = await readFile(schemaAbs, "utf-8");
   } catch {
@@ -51,7 +51,7 @@ export async function detectHandoffSchemaDrift(root: string): Promise<Issue[]> {
   for (const pair of HANDOFF_WRITER_PAIRS) {
     const writerAbs = path.join(root, pair.writerRel);
     if (!(await exists(writerAbs))) continue;
-    let writerText = "";
+    let writerText: string;
     try {
       writerText = await readFile(writerAbs, "utf-8");
     } catch {

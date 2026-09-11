@@ -221,7 +221,7 @@ interface WorkflowTree {
  */
 async function loadWorkflowTree(rootDir: string): Promise<WorkflowTree> {
   const dir = path.join(rootDir, ".github", "workflows");
-  let names: string[] = [];
+  let names: string[];
   try {
     names = (await readdir(dir)).sort();
   } catch {
