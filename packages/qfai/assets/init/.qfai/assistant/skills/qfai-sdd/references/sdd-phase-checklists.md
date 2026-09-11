@@ -108,11 +108,14 @@ Use these checklists as the detailed operational guide for `/qfai-sdd`.
 ## Phase 4: Delta update
 
 - Update `09_delta.md` or `*_delta.md`.
-- A re-run appends to the existing `## Triage`; never open a second `## Triage` H2.
-  Add one `### DELTA-NNNN (YYYY-MM-DD)` sub-section per run and put that run's rows
-  in it. The same holds for `## Change Summary`: append an entry, do not duplicate
-  the heading. `QFAI-TRIAGE-*` reads the first `## Triage` heading only, so rows
-  under a dated duplicate heading go unchecked.
+- A re-run appends one `### DELTA-NNNN (YYYY-MM-DD)` sub-section and puts that
+  run's rows in it. The sub-section goes under the existing `## Triage`, or under
+  a second H2 that names its round in parentheses — `## Triage (2026-01-01)`.
+  Every `## Triage` section is validated. A trailer in any other form
+  (`## Triage — 2026-01-01`) or a demoted `### Triage` is read by none of them,
+  and `QFAI-TRIAGE-008` reports it.
+- `## Change Summary` has no such qualifier: append an entry, do not duplicate
+  the heading.
 - Record adoption and rejection rationale.
 - When rejections exist, include `DO NOT` and `Temptation`.
 - When an approved Change Request ordered this rerun, add one row to that
