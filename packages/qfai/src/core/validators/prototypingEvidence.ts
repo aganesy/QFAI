@@ -247,7 +247,7 @@ export async function validatePrototypingEvidence(
       issues.push(
         issue(
           "QFAI-PROT-002",
-          `iterations[${i}].proseCritique must be a non-empty 200-500 English word (or 600-2500 Japanese/Chinese character) string.`,
+          `iterations[${i}].proseCritique must be a non-empty string.`,
           "error",
           PROTO_JSON_REL,
           "prototypingEvidence.proseCritique",
@@ -259,7 +259,7 @@ export async function validatePrototypingEvidence(
         issues.push(
           issue(
             "QFAI-PROT-002",
-            `iterations[${i}].proseCritique must be 200-500 English words or 600-2500 Japanese/Chinese characters (${band.error}).`,
+            `iterations[${i}].proseCritique is over its length cap (${band.error}).`,
             "error",
             PROTO_JSON_REL,
             "prototypingEvidence.proseCritique.wordCount",
@@ -660,16 +660,13 @@ function reportReviewScores(scores: unknown, report: ReportReviewIssue): void {
 
 function reportReviewProse(proseCritique: unknown, report: ReportReviewIssue): void {
   if (typeof proseCritique !== "string" || proseCritique.trim().length === 0) {
-    report(
-      "proseCritique must be a non-empty 200-500 English word (or 600-2500 Japanese/Chinese character) string.",
-      "prototypingEvidence.review.proseCritique",
-    );
+    report("proseCritique must be a non-empty string.", "prototypingEvidence.review.proseCritique");
     return;
   }
   const band = validateProseCritiqueBand(proseCritique);
   if (!band.ok) {
     report(
-      `proseCritique must be 200-500 English words or 600-2500 Japanese/Chinese characters (${band.error}).`,
+      `proseCritique is over its length cap (${band.error}).`,
       "prototypingEvidence.review.proseCritique.wordCount",
     );
   }
@@ -856,7 +853,7 @@ const MIRROR_VALUE_RENDER_MAX = 120;
  * which they differ.
  *
  * Keeping the LEADING characters was wrong for the field the elision was
- * written for. `proseCritique` runs 200-500 words and a transcription
+ * written for. `proseCritique` runs to hundreds of words and a transcription
  * paraphrase is essentially never inside the first 120 characters, so
  * both sides rendered byte-identically and the finding could not show
  * the divergence it asserted; for an equal-length substitution — a typo
@@ -928,7 +925,7 @@ function mirrorAgreementIssues(
     if (!(field in review) || !(field in mirror)) continue;
     // Primitives answer for free, and the mirrored set is mostly
     // primitives: string equality implies canonical equality, so the
-    // happy path does not canonicalise a 200-500 word critique twice
+    // happy path does not canonicalise a several-hundred-word critique twice
     // per field only to discard both renderings.
     if (review[field] === mirror[field]) continue;
     const reviewJson = canonicalJson(review[field]);
