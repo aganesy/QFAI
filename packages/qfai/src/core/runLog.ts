@@ -184,7 +184,7 @@ async function writeLatestValidateLog(
     return;
   }
   const filePath = path.join(outDir, "validate.log");
-  let existingRunId: string | null = null;
+  let existingRunId: string | null;
   try {
     existingRunId = RUN_ID_LINE_RE.exec(await readFile(filePath, "utf-8"))?.[1] ?? null;
   } catch {

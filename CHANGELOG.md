@@ -173,6 +173,36 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
+- **The lint toolchain leaves the end-of-life eslint 9 line** (#1450). Every
+  release in that line is marked deprecated by the registry, and 9.39.5 is the
+  last one there will be, so no update inside the declared `^9.8.0` range could
+  clear it. The range is `^10.10.0` now, alongside `@eslint/js` at `^10.0.1`
+  and `typescript-eslint` at `^8.70.0` — the first of its line to accept
+  eslint 10 as a peer.
+
+  The new major adds two rules to `eslint:recommended`, and both reported
+  defects rather than style:
+
+  | Rule                    | Sites | What it names                                                   |
+  | ----------------------- | ----- | --------------------------------------------------------------- |
+  | `no-useless-assignment` | 34    | an initializer that every path overwrites before reading it     |
+  | `preserve-caught-error` | 22    | a `throw` inside a `catch` that dropped the error it reports on |
+
+  Every site is fixed rather than suppressed. A dead initializer becomes a type
+  annotation, so the compiler proves the variable is assigned on each path
+  instead of a placeholder standing in for a path that assigns nothing. A
+  rethrow carries `{ cause }`, so the original error survives in the one that
+  replaces it and a stack trace still reaches the failure.
+
+  `typescript-eslint` also names six type assertions its earlier release could
+  not see as unnecessary. Five are removed. The sixth becomes a return type on
+  the callback that builds the value, which is what the assertion stood in for.
+
+  eslint 10 runs on `^20.19.0 || ^22.13.0 || >=24`, narrower than the
+  `>=20.19.0` this repository declares. It is a development dependency, so the
+  floor the published package promises is unchanged. The cost is that a
+  contributor on Node 21, or on 22.0 through 22.12, cannot run the lint lane.
+
 - **Every Triage section in a delta ledger names the round it records**
   (#1467). Seven ledgers disabled `MD024/no-duplicate-heading` per file, because
   a ledger recording several rounds needed several identical `## Triage`

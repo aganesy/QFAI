@@ -224,7 +224,7 @@ describe("cli root discovery", () => {
 
     const previousExitCode = process.exitCode;
     process.exitCode = undefined;
-    let output = "";
+    let output: string;
     try {
       output = await captureStdout(async () => {
         await run(["guardrails", "extract", "--max", "abc", "--format", "json"], cwd);
@@ -248,7 +248,7 @@ describe("cli root discovery", () => {
 
     const previousExitCode = process.exitCode;
     process.exitCode = undefined;
-    let output = "";
+    let output: string;
     try {
       output = await captureStdout(async () => {
         await run(["guardrails", "extract", "--max", "abc"], cwd);
