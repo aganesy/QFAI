@@ -28,6 +28,32 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **A prototyping review may report one finding and stop** (#1492).
+  `proseCritique` carried a lower bound — 200 English words, or 600
+  Japanese/Chinese characters — per screen, per cycle. A reviewer who had one
+  clear thing to say had to write another hundred and eighty words around it,
+  and on the next cycle that padding reads as work to do.
+
+  There is no minimum now. The cap stays, because a reviewer writing far past
+  the point still costs the loop something.
+
+  Removing the floor also removes a way a review could fail on its script.
+  The character count recognises Hiragana, Katakana and Han; everything else
+  fell to the word count, so a critique in Korean, Cyrillic or Thai was
+  measured in words those scripts do not separate with spaces. A count that
+  is too low is no longer a reason to reject anything.
+
+  The cap that remains selects its unit rather than accepting whichever unit
+  fits: a critique carrying CJK is measured in characters, anything else in
+  words. Accepting either would have left every English critique under the
+  character cap by construction, and so under no cap at all.
+
+  Two things follow. `buildEvaluatorReview` now calls the same function the
+  on-disk validator does, instead of carrying its own English-only copy that
+  threw on a Japanese critique the validator accepted. And the cycle-0 seed
+  critique is one sentence rather than that sentence ten times over, which is
+  what the floor had asked of a placeholder with nothing to say.
+
 - **The layout anti-pattern registry has one copy** (#1486).
   `layoutAntiPatterns.json` existed twice — once beside the loader under
   `src/core/validators/`, once under `assets/validators/`, which
