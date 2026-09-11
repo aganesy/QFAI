@@ -19,9 +19,8 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { defaultConfig } from "../../../../src/core/config.js";
 import {
-  PRIMARY_TASKS_BAND_LABEL,
-  PRIMARY_TASKS_BAND_MAX,
-  PRIMARY_TASKS_BAND_MIN,
+  PRIMARY_TASKS_MAX,
+  PRIMARY_TASKS_MAX_LABEL,
   runAuditProfile,
 } from "../../../../src/core/validators/auditProfile.js";
 
@@ -64,8 +63,8 @@ afterEach(async () => {
   await rm(root, { recursive: true, force: true });
 });
 
-describe("TC-0004-0070: QFAI-AUD-020 band 3..7 warn + missing acceptance reject (error/boundary)", () => {
-  it("9 primary_tasks fires QFAI-AUD-020 (warning) naming the 3..7 band", async () => {
+describe("TC-0004-0070: QFAI-AUD-020 ceiling warn + missing acceptance reject (error/boundary)", () => {
+  it("9 primary_tasks fires QFAI-AUD-020 (warning) naming the ceiling", async () => {
     const tasks = Array.from({ length: 9 }, (_, i) => `      - task_${i + 1}`).join("\n");
     const ui = [
       "screens:",
@@ -82,11 +81,11 @@ describe("TC-0004-0070: QFAI-AUD-020 band 3..7 warn + missing acceptance reject 
     const band = issues.find((i) => i.code === "QFAI-AUD-020");
     expect(band, "expected QFAI-AUD-020 finding for 9 tasks").toBeDefined();
     expect(band?.severity).toBe("warning");
-    expect(band?.message ?? "").toMatch(/3\.\.7|3 to 7/);
-    // The shipped band label constant is sourced from the production
-    // module so any band drift surfaces here as a failing assertion.
-    expect(PRIMARY_TASKS_BAND_LABEL).toBe(`${PRIMARY_TASKS_BAND_MIN}..${PRIMARY_TASKS_BAND_MAX}`);
-    expect(band?.message ?? "").toContain(PRIMARY_TASKS_BAND_LABEL);
+    expect(band?.message ?? "").toMatch(/at most 7/);
+    // The label constant is read from the production module, so a change
+    // to the ceiling surfaces here rather than in a string written twice.
+    expect(PRIMARY_TASKS_MAX_LABEL).toBe(`at most ${PRIMARY_TASKS_MAX}`);
+    expect(band?.message ?? "").toContain(PRIMARY_TASKS_MAX_LABEL);
   });
 
   it("structured primary_task missing 'acceptance' is rejected (QFAI-AUD-021 error)", async () => {
@@ -116,21 +115,38 @@ describe("TC-0004-0070: QFAI-AUD-020 band 3..7 warn + missing acceptance reject 
     expect(shape?.message ?? "").toMatch(/refund-order/);
   });
 
-  it("count exactly 3 (lower inclusive bound) does NOT trigger QFAI-AUD-020", async () => {
+  it("count exactly 7 (the ceiling) does NOT trigger QFAI-AUD-020", async () => {
+    const tasks = Array.from({ length: 7 }, (_, i) => `      - task_${i + 1}`).join("\n");
     const ui = [
       "screens:",
       "  - id: dashboard",
       "    title: Dashboard",
       "    route: /dashboard",
       "    primary_tasks:",
-      "      - View orders",
-      "      - Refund an order",
-      "      - Open order detail",
+      tasks,
       "",
     ].join("\n");
-    await writeUiContract("in-band.yaml", ui);
+    await writeUiContract("at-ceiling.yaml", ui);
 
     const issues = await runAuditProfile(root, defaultConfig);
     expect(issues.find((i) => i.code === "QFAI-AUD-020")).toBeUndefined();
+  });
+
+  // There is no floor. A screen that does one thing was reported as
+  // weakening its own focus, and told to add tasks to fix it.
+  it("a single primary_task does NOT trigger QFAI-AUD-020", async () => {
+    const ui = [
+      "screens:",
+      "  - id: confirm",
+      "    title: Confirm",
+      "    route: /confirm",
+      "    primary_tasks:",
+      "      - Confirm the pending action",
+      "",
+    ].join("\n");
+    await writeUiContract("single-task.yaml", ui);
+
+    const issues = await runAuditProfile(root, defaultConfig);
+    expect(issues.filter((i) => i.code === "QFAI-AUD-020")).toEqual([]);
   });
 });

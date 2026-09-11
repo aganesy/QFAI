@@ -47,6 +47,24 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **A screen with one primary task no longer reads as weakening its own focus**
+  (#1490). `QFAI-AUD-020` recommended a band of 3 to 7 primary tasks per screen
+  and reported anything under it, saying the count "weakens screen focus" and
+  telling the author to bring it into the band — that is, to add tasks.
+
+  Seven tasks on one screen weakens focus. One task on one screen is focus, so
+  the lower bound argued against the thing the rule exists to protect. It is
+  gone; the ceiling of 7 stands, and the finding now says which way it was
+  crossed and where the surplus should go.
+
+  `QFAI-AUD-001` still reports a `primary_tasks` list with nothing in it, so a
+  screen that declares no task at all is caught as before. One and two, the
+  range the band invented a problem for, are the range a focused screen
+  occupies.
+
+  Severity was `warning` throughout, so nothing blocked. It still pushed every
+  screen toward the middle of a range, and a finding generally gets resolved.
+
 - **A screen that does one thing can be declared** (#1491). The screen contract
   counted an empty list as a missing field, so every screen owed at least one
   secondary task. A screen with a single primary task could not be written down,
@@ -370,6 +388,15 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   unchanged, and both delta templates ship it. The two delta schemas accept the
   qualifier as well, so the shape lane and the triage rules read the same
   heading.
+
+- **The UI definition consumption protocol is in English** (#1501). The document
+  ships in `catalog/`, so it is read by adopters with no connection to this
+  repository's history, and four of its sentences were Japanese. They say what
+  they said.
+
+  The file is struck from the approved-Japanese list in the asset guard rather
+  than left there. A translated entry that stays on the list is a slot the next
+  untranslated document can take.
 
 - **A written or edited file restates the implementation rule** (#1465).
   `.claude/settings.json` carried three hook entries, all restating
