@@ -6,6 +6,25 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **Two codes shared the `lap-` prefix with a registry that did not declare
+  them** (#1499). `layoutAntiPatternsDetected[]` has one vocabulary and two
+  writers: the reviewer writes the codes it judges, and `iterate --capture`
+  computes `lap-009` (two declared screens whose captures are byte-identical)
+  and `lap-010` (a declared route the capture could not reach).
+
+  Only the first writer's codes were registered. The specification, the CLI
+  contract and the command's own warning all say the other two are counted in
+  that array, so a reviewer recording one — as the warning tells it to —
+  produced `QFAI-PROT-002` for a code the tool itself printed.
+
+  Both are now declared in `layoutAntiPatterns.json`, each naming the screen
+  contract as its authority, which is the same authority
+  `lap-007-state-not-represented` names. A row reads the emitted codes out of
+  the capture pass and fails when one is unregistered, so a third code cannot
+  be added on one side alone.
+
+### Fixed
+
 - **Every layout anti-pattern names what makes it a defect** (#1484). An
   entry now carries a `source`, and the loader drops one that does not: a
   published heuristic, an accessibility criterion, or the contract the screen
