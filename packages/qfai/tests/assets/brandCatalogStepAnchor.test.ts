@@ -115,6 +115,37 @@ describe("brand catalog step anchor", () => {
     expect(discussionSkill).not.toMatch(/root `DESIGN\.md` draft exists/);
   });
 
+  // The same claim one layer down. Moving the step in the skills left the
+  // source saying the old thing, and one of those sentences is not a comment:
+  // `QFAI-DCON-034`'s remediation told an operator to run `/qfai-discussion`
+  // to get a draft it no longer emits, which is an instruction that cannot be
+  // followed.
+  it("no source file attributes root DESIGN.md authoring to the discussion stage", async () => {
+    const files = await fg("**/*.ts", {
+      cwd: path.join(repoRoot, "packages", "qfai", "src"),
+      absolute: true,
+    });
+    expect(files.length, "the sweep must have found source to be about").toBeGreaterThan(0);
+
+    const offenders: string[] = [];
+    for (const file of files) {
+      const lines = (await readFile(file, "utf-8")).split("\n");
+      for (let i = 0; i < lines.length; i += 1) {
+        const line = lines[i] ?? "";
+        // The SKILL name, not the stage. A remediation may say the direction
+        // came from "the discussion pack" — that is where it was recorded, and
+        // recording is not authoring — so the pattern is the invocable name.
+        // No exemption beyond that: these strings run to a couple of hundred
+        // characters, and a phrase-level carve-out would exempt the whole line.
+        if (!/qfai-discussion/.test(line)) continue;
+        if (!/DESIGN\.md|brand intent/i.test(line)) continue;
+        offenders.push(`${path.relative(repoRoot, file).replace(/\\/g, "/")}:${i + 1}`);
+      }
+    }
+
+    expect(offenders, "source naming the discussion stage as DESIGN.md's author").toEqual([]);
+  });
+
   it("the archetype `interaction` default is routed to `accessibility.motion`", async () => {
     // `visual` rejects unknown keys (`readVisual` in
     // `src/core/design/designMd.ts` allows only

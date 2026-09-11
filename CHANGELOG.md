@@ -6,6 +6,21 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **The remediation for an unreplaced `DESIGN.md` names a step that exists.**
+  `QFAI-DCON-034` told an operator to run `/qfai-discussion`, "which emits the
+  draft". That stage stopped emitting it when authoring moved to `/qfai-sdd`
+  Phase 0, so the instruction could not be followed. It now names the stage
+  that writes the file, and says Phase 0 refuses to freeze a sample.
+
+  `QFAI-DCON-030`'s remediation and three source comments carried the same
+  stale attribution.
+
+  A sweep holds it: no source file may name `/qfai-discussion` on a line that
+  also names `DESIGN.md` or brand intent. Naming the discussion pack as where
+  the direction was recorded still passes — recording is not authoring.
+
+### Fixed
+
 - **The review payload schema stops citing a field it has never had**
   (#1560). It said a payload that reviewed nothing is rejected "no matter what
   its axes claim". The payload carries eleven required fields and none of them
