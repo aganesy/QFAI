@@ -3,31 +3,35 @@
 This file is written by every `qfai validate` run and always points at the newest
 run-log directory. Do not edit it by hand; do not pipe stdout into it.
 
-- run_id: run-20260824102916641
-- started_at: 2026-08-24T01:29:16.641Z
+- run_id: run-20260911091000146
+- started_at: 2026-09-11T09:10:00.146Z
 - command: /qfai-validate
 - status: pass
-- errors: 0
-- warnings: 465
-- run_log: .qfai/report/run-20260824102916641
+- errors: 1058
+- warnings: 402
+- run_log: .qfai/report/run-20260911091000146
 
 # Validate Run Summary
 
-- run_id: run-20260824102916641
-- started_at: 2026-08-24T01:29:16.641Z
+- run_id: run-20260911091000146
+- started_at: 2026-09-11T09:10:00.146Z
 - status: pass
-- report_dir: .qfai/report/run-20260824102916641
-- errors: 0
-- warnings: 465
+- report_dir: .qfai/report/run-20260911091000146
+- errors: 1058
+- warnings: 402
 
 ## Top Errors
 
-- none
+- QFAI-ASSETS-003 (.qfai/assistant/catalog/manifest.md): Stage 0 steering ファイル .qfai/assistant/catalog/manifest.md に未置換のテンプレート値が 19 件残っています（該当セクション: Product / Mission (3), Axioms (Non-negotiable) (4), Compatibility vs Change Rubric (3), Governance (Ownership / Review / Evidence) (4), Evidence (2), Non-goals / Not-now (Optional) (3)）。
+- QFAI-ASSETS-003 (.qfai/assistant/catalog/product.md): Stage 0 steering ファイル .qfai/assistant/catalog/product.md に未置換のテンプレート値が 15 件残っています（該当セクション: What are we building? (2), Who is the user? (3), What is "success"? (3), Non-goals (3), Milestones (2), Open questions (2)）。
+- QFAI-ASSETS-003 (.qfai/assistant/catalog/structure.md): Stage 0 steering ファイル .qfai/assistant/catalog/structure.md に未置換のテンプレート値が 13 件残っています（該当セクション: Repo layout (high level) (1), Key packages / entrypoints (4), Architecture constraints (4), UI surface paths (SSOT) (3), How to run locally (1)）。
+- QFAI-ASSETS-003 (.qfai/assistant/catalog/tech.md): Stage 0 steering ファイル .qfai/assistant/catalog/tech.md に未置換のテンプレート値が 22 件残っています（該当セクション: Runtime / platform (3), Package manager (1), Language / framework (4), Dependencies (runtime) (2), Constraints (3), Standard commands (copy-paste) (9)）。
+- QFAI-RESEARCH-012 (.qfai/discussion/discussion-20260418170937652): Discussion pack has no "Research Summary" section, so the research-first protocol is never checked. While the section is absent, these rules report nothing; each becomes an error as soon as the section exists: QFAI-RESEARCH-005 (sources[].url), QFAI-RESEARCH-006 (sources[].published (YYYY-MM-DD)), QFAI-RESEARCH-007 (best_practices (non-empty)), QFAI-RESEARCH-008 (anti_patterns (non-empty)), QFAI-RESEARCH-011 (reflection (non-empty)). The two source rules apply per source.
 
 ## Top Warnings
 
+- QFAI-REVIEW-002 (.qfai/review): review 成果物が見つかりません。`review-YYYYMMDDhhmmssSSS/` が未生成のため、このチェックは warning 扱いです。
 - QFAI-EX-105 (.qfai/specs/spec-0001/06_Test-Cases.md): 06_Test-Cases.md の Level が test-layer policy 外です: L-struct。policy が許可する層: api, component, e2e, integration, unit
 - QFAI-TRIAGE-001 (.qfai/specs/spec-0002/09_delta.md): delta.md に `## Change Summary` があるが `## Triage` セクションがありません。
 - QFAI-EX-105 (.qfai/specs/spec-0004/06_Test-Cases.md): 06_Test-Cases.md の Level が test-layer policy 外です: ssot-guard, validators。policy が許可する層: api, component, e2e, integration, unit
 - QFAI-TRIAGE-001 (.qfai/specs/spec-0005/09_delta.md): delta.md に `## Change Summary` があるが `## Triage` セクションがありません。
-- QFAI-TRIAGE-001 (.qfai/specs/spec-0007/09_delta.md): delta.md に `## Change Summary` があるが `## Triage` セクションがありません。

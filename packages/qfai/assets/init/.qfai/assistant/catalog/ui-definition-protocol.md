@@ -50,4 +50,4 @@ A downstream skill reads the UI definition in this order.
 - Do not infer downstream UI behavior from discussion-pack sidecars.
 - Do not use retired design contract files.
 - Do not use HTML mock sections as downstream source of truth.
-- Do not treat a template reference as a selected design direction.
+- Do not treat a competitor reference as a selected design direction.

@@ -80,7 +80,7 @@ type Review = {
   layoutAntiPatternsDetected: string[]; // lap-* IDs
   designMdViolations: {
     // populated by static gate, not by you
-    kind: "color" | "font" | "radius" | "shadow";
+    kind: "color" | "font" | "radius" | "shadow" | "contrast";
     found: string;
   }[];
   pivotDirective: "continue" | "refine" | "pivot";

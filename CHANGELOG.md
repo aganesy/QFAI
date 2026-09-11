@@ -6,6 +6,72 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **A concurrency guard that passed because the filesystem undid what it
+  staged** (#1477). `provenanceHostileTree` has a row asserting that a holder
+  reclaimed mid-section leaves its successor's lock alone. It failed about once
+  in thirty-five runs on a loaded machine, and passed the rest — for the wrong
+  reason.
+
+  The fixture removed the lock and published a different directory at the same
+  name. Every identity check in the primitive reads `dev`/`ino`, and a
+  directory inode freed one syscall earlier is handed straight back to the next
+  `mkdir`: measured at 25 reuses in 25 runs. At the filesystem level the
+  successor was the same object, so the release took its _this is mine_ branch
+  and the row exercised the opposite of what it is named for.
+
+  On the rare run where the inode was not reused, the code behaved correctly —
+  it reported the dispossession, retried, and reclaimed a planted lock nobody
+  was renewing — and the assertions, written for the other branch, failed.
+
+  The fixture now stages the successor before removing the lock, so the freed
+  inode cannot be handed to it, and asserts the two differ. It renews the
+  successor's marker for the duration, because a lock with no holder behind it
+  is reclaimable by design. The row's outcome is now the honest one: the
+  dispossessed holder reports the loss instead of writing, and the successor's
+  lock is untouched.
+
+### Fixed
+
+- **A declared contrast floor is now the one a prototype is measured against**
+  (#1481). `accessibility.contrast_ratio_min` is a required key in `DESIGN.md`,
+  and nothing read it as a threshold. It was parsed, checked for finiteness and
+  hashed into the lock, and that was all.
+
+  The one check that computed contrast, `QFAI-MOCK-008`, compared against a
+  hard-coded AA constant and read HTML blocks inside documents rather than
+  iteration captures. So a project declaring a stricter ratio than AA was
+  measured against AA, and a project declaring AA had no capture measured at
+  all — while every other required token in `DESIGN.md` was enforced against the
+  captures.
+
+  `findDesignMdViolations` gains a sixth clause, on the same captures as the
+  other five, with a new violation kind `contrast`. A pair is read from a
+  declaration block that states both a text colour and a background, in a rule
+  body or an inline attribute, with `:root` tokens resolved. Where a pack
+  declares no floor, WCAG AA stands in.
+
+  A pair is judged only when both sides resolve to a colour the ratio
+  computation accepts, so a named colour, `hsl()`, a value carrying alpha or a
+  shorthand with more than a colour in it is skipped rather than guessed at.
+
+- **Two spec packs mandated a prose-critique floor the code does not have**
+  (#1503). QFAI-PROT-002 applies a cap and selects the unit from the text: a
+  critique carrying CJK is measured in CJK characters, anything else in
+  whitespace-separated words, and neither unit has a lower bound.
+
+  `spec-0012` and `spec-0004` stated the band
+  `200..500 words OR 600..2500 characters` as a requirement, in a requirement,
+  a user story, an acceptance criterion, two business rules, an example and two
+  test cases. That is wrong twice over. The lower bound was removed, and the OR
+  was never how the unit is chosen — an English critique carries no CJK
+  characters, so a rule passing on either unit would pass every English text
+  however long.
+
+  `DR-0277` records the cap and the selected unit, and supersedes
+  `DR-0001-0003`, whose rejected alternative was argued against on the strength
+  of the floor. The boundary rows now match the cases that run: only the upper
+  edge of each unit rejects.
+
 - **Thirty-two files told an agent which language to answer in** (#1500).
   Every document under `.instruction/` opened with a block fixing output to one
   language, which the constitution's Absolute Rule — answer in the user's
@@ -22,6 +88,37 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   `.instruction/` with the same matcher that guards the shipped tree.
 
 ### Added
+
+- **A ladder for where a screen's components come from** (#1478).
+  `.qfai/assistant/catalog/ui-procurement.md` states the order: does the
+  region need to exist, does the installed design system have it, does a
+  catalogue have it, can it be composed from what is present — and only then
+  author it and record why. The theme is adopted from a published one rather
+  than chosen colour by colour.
+
+  It also settles the part a static capture cannot show. Responsive
+  behaviour, dark mode, focus states and the detail of an empty state come
+  from the adopted system's defaults, which agree with each other in a way
+  per-screen invention does not.
+
+  Delivered by placing the file: every skill and every agent card already
+  reads `catalog/**` as a set. The three roles that build or review a
+  surface carry the obligation explicitly, beside the one they already carry
+  for code.
+
+- **A project can say which user-interface stack it adopted** (#1476).
+  `catalog/tech.md` gains a Frontend section naming the CSS framework, the
+  catalogue components are taken from, and the published theme the tokens
+  resolve from. `qfai.config.yaml` gains `uiux.registries`, the machine
+  half: component registries as name to URL template, in the shape a
+  `components.json` already carries, so a project that has one restates it
+  rather than translating it. A template without the `{name}` placeholder
+  resolves no component and is rejected.
+
+  Neither is required, and a project with no user interface leaves both out.
+  Nothing read either before, so an instruction to use the project's design
+  system named nothing and a screen got hand-drawn because that was the only
+  option left.
 
 - **A ruling on what `.instruction/` may say** (#1500). Nothing said what
   belonged in the directory `AGENTS.md` routes an agent into, so a rule could
@@ -165,6 +262,19 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   names must exist, and a Node floor it states must be the declared one. The
   check goes quiet if the layer is ever removed rather than standing in the way
   of removing it.
+
+- **A reference is consulted to differ from, or to adopt from, and the two
+  are no longer the same instruction** (#1475). The intake asked an author to
+  treat templates as seeds rather than winners, to name what must feel unlike
+  generic products, and to list default visual patterns that must not survive
+  into prototyping. Every reference was framed as something to move away from.
+
+  That is right for a competitor and wrong for a component catalogue. A
+  product that looks like its competitor has no brand; a settings screen that
+  does not look like a settings screen has no users. The intake now separates
+  the two, and `audience.do_not_look_like` holds identities to avoid rather
+  than conventions — the shipped sample seeded it with a layout, which is the
+  one thing that field is not for.
 
 - **The SDD instructions agree with the validator and with each other** (#1519).
   Three places in the `/qfai-sdd` assets stated something the tooling does not

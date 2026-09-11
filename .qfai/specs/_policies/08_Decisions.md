@@ -1625,6 +1625,7 @@ These rows resolve the 9 OQ rows the requirements-analyst left `deferred` for th
 
 #### DR-0001-0003: CJK-aware `countWords` — Intl.Segmenter primary + OR-condition fallback (OQ-0105 resolved)
 
+- **Status**: SUPERSEDED by `DR-0277`. The lower bound this record mandates is gone, and the OR it chose is not how the unit is selected.
 - Date: 2026-05-24
 - Statement: `countWords` (consumed by QFAI-PROT-002) MUST use `Intl.Segmenter(undefined, { granularity: "word" })` with the `isWordLike` filter as primary; when `Intl.Segmenter` is unavailable (Node < 18 or stripped runtime) the fallback is the OR-condition `200..500 words OR 600..2500 characters`. Error text on out-of-band MUST name (a) the count form actually measured, (b) the band used. Acceptance signal: Japanese 800–1500-char fixture passes, English 200–500-word fixture continues to pass.
 - Chosen option: Intl.Segmenter primary + OR-condition fallback.
@@ -1899,3 +1900,33 @@ The sixth is `OQ-0028`: no validator reconciles a delta's declared ID ranges aga
   - DO NOT: distribute one cohesive design across three specs. Temptation: every fragment individually looks like an append to something that already exists.
 - Consequences: `toolchain` is a collective category like `agent` — toolchain constituents do not each get their own spec. The category is repository-internal by construction, so nothing `spec-0017` owns is distributed; conversely every shipped-template requirement stays outside it and inside `CAP-0003`.
 - Related: `CAP-0017`, `spec-0017`, `spec-0003`, `_policies/11_Slice-Policy.md` §スライスカテゴリ. Source REQ: REQ-0001..0013, REQ-0023, REQ-0025 (own-CI / toolchain rows); REQ-0014..0022, REQ-0024 stay on the distributed side. Trace: discussion-20260804173914356 OQ-0015.
+
+### DR-0277: `proseCritique` is a cap, and the unit is selected by the text
+
+- Status: accepted
+- Date: 2026-09-11
+- Context: `DR-0001-0003` mandated the band `200..500 words OR 600..2500 characters`.
+  Two things in that statement are wrong about the rule QFAI-PROT-002 applies.
+  The lower bound was removed: it failed a review for being short, which is a
+  length a reviewer pads to reach, and it failed a review on the length of its
+  own script rather than on what the script said. The OR was never how the unit
+  is chosen, and choosing that way cannot work — an English critique carries no
+  CJK characters, so it is under any character cap by construction, and a rule
+  that passed on either unit would pass every English text however long.
+- Decision: `validateProseCritiqueBand` applies a **cap**, and **selects** the
+  unit from the text. Text carrying CJK is measured in CJK characters against
+  `PROSE_CRITIQUE_MAX_CJK_CHARS`; anything else is measured in whitespace-
+  separated words against `PROSE_CRITIQUE_MAX_WORDS`. Only the selected unit's
+  cap applies, and there is no lower bound in either unit. The error names the
+  unit measured, the cap and the count.
+- Consequences: a critique of any length up to its cap passes, so a spec,
+  acceptance criterion or test case stating a floor states something the code
+  does not do. It also forecloses the English word semantic `DR-0001-0003`
+  protected: a short English critique is no longer distinguishable from a
+  short filler one by length, and nothing measures that. A script whose
+  writing system separates no words and is not CJK — Thai is the clearest
+  case — counts as very few words, so the word cap does not bind on it. That
+  is a cap that does not apply rather than a text rejected wrongly, and
+  binding it needs per-script segmentation.
+- Related: supersedes `DR-0001-0003`. `spec-0012` REQ-0012-0059, `spec-0004`
+  REQ-0028, QFAI-PROT-002.
