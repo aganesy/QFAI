@@ -462,7 +462,7 @@ async function isCliOnlySurfaceProject(
 }
 
 async function isCliOnlyPack(packDir: string): Promise<boolean> {
-  let classification: UiBearingClassification | null = null;
+  let classification: UiBearingClassification | null;
   try {
     classification = await readValidatedClassification(packDir);
   } catch {

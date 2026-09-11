@@ -108,7 +108,7 @@ export async function resolvePrimaryPrototypingSpec(
   const sorted = [...entries].sort((a, b) => a.specNumber.localeCompare(b.specNumber));
   for (const entry of sorted) {
     const specMdPath = path.join(entry.dir, "01_Spec.md");
-    let body = "";
+    let body: string;
     try {
       body = await readFile(specMdPath, "utf-8");
     } catch {

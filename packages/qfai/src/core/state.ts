@@ -985,7 +985,9 @@ async function acquireStateLock(lockPath: string): Promise<StateLock> {
       handle = await open(lockPath, "wx");
     } catch (error) {
       if (!(await exclusiveCreateWasContended(lockPath, error))) {
-        throw new Error(`qfai: cannot create state lock ${lockPath}: ${describeError(error)}`);
+        throw new Error(`qfai: cannot create state lock ${lockPath}: ${describeError(error)}`, {
+          cause: error,
+        });
       }
       contendedBy = errorCode(error) === "EEXIST" ? null : error;
     }
@@ -1087,7 +1089,9 @@ async function stampLockOwner(
     await handle.writeFile(`${JSON.stringify(owner)}\n`, "utf-8");
   } catch (error) {
     await releaseStateLock(lockPath, lock);
-    throw new Error(`qfai: cannot stamp state lock ${lockPath}: ${describeError(error)}`);
+    throw new Error(`qfai: cannot stamp state lock ${lockPath}: ${describeError(error)}`, {
+      cause: error,
+    });
   }
   return lock;
 }

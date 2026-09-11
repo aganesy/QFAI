@@ -132,7 +132,7 @@ describe("TC-0012-0472: opt-in default + --skeleton-mode full escalation", () =>
     const outDir = path.join(root, ".qfai", "prototypes", "iter-00");
     await mkdir(outDir, { recursive: true });
     // Simulate the "did NOT call the renderer" path.
-    let entries: string[] = [];
+    let entries: string[];
     try {
       entries = await readdir(outDir);
     } catch {

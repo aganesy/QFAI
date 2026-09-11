@@ -124,7 +124,7 @@ const RUN_LOG_DIR_RE = /^run-\d{17}$/u;
 const RUN_LOG_ADVISORY_COUNT = 50;
 
 async function buildRunLogVolumeCheck(root: string, outDirAbs: string): Promise<DoctorCheck> {
-  let count = 0;
+  let count: number;
   try {
     const names = await readdir(outDirAbs);
     count = names.filter((name) => RUN_LOG_DIR_RE.test(name)).length;
@@ -1624,7 +1624,7 @@ async function buildPrototypingDesignMdChecks(
   const lockAbs = path.join(root, lockRel);
 
   const checks: DoctorCheck[] = [];
-  let designMdText: string | null = null;
+  let designMdText: string | null;
   try {
     designMdText = await readFile(designMdAbs, "utf-8");
   } catch {
@@ -1679,7 +1679,7 @@ async function buildPrototypingDesignMdChecks(
     }
   }
 
-  let lockText: string | null = null;
+  let lockText: string | null;
   try {
     lockText = await readFile(lockAbs, "utf-8");
   } catch {

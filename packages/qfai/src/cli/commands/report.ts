@@ -177,7 +177,7 @@ export async function runReport(options: ReportOptions): Promise<number> {
     return 2;
   }
   let validation: ValidationResult;
-  let ranNarrowProfileInCi = false;
+  let ranNarrowProfileInCi: boolean;
   if (options.runValidate) {
     if (options.inputPath) {
       warn("report: --in is ignored because --run-validate was given.");

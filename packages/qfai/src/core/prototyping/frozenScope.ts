@@ -84,7 +84,7 @@ async function readPrototypingRecord(root: string): Promise<PrototypingRecord | 
   }
   try {
     const parsed: unknown = JSON.parse(raw);
-    return typeof parsed === "object" && parsed !== null ? (parsed as PrototypingRecord) : null;
+    return typeof parsed === "object" && parsed !== null ? parsed : null;
   } catch {
     return null;
   }
