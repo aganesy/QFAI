@@ -5,10 +5,6 @@ dependencies: [development-principles-checklist.md, 00_universal/quality.md]
 version: 1.0.0
 ---
 
-> **言語指示（厳守）**
->
-> - 報告・出力: 日本語（Plan も含む）
-
 # 開発原則の測定指標
 
 品質を定量的に見るための目安。

@@ -5,10 +5,6 @@ dependencies: none
 version: 1.0.0
 ---
 
-> **言語指示（厳守）**
->
-> - 報告・出力: 日本語（Plan も含む）
-
 # プロジェクト構成（QFAI Toolkit）
 
 QFAI Toolkit は CLI と検証エンジンを単一パッケージとして配布するモノレポです。
