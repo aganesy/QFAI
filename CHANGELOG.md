@@ -6,6 +6,29 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **The stable type gate runs the stable compiler** (#1449). Two packages here
+  ship a `tsc` — `typescript`, and `typescript-future`, an alias for the next
+  major. One wins the bin name and the alias did, so `check-types`, spelled
+  `tsc -b` with the bare name, graded every run against a release candidate.
+
+  Three things followed. The range the package declares support for was checked
+  by nothing, so a break under it went unreported. `check-types:future` became a
+  second copy of the same lane rather than early warning of the next major. And
+  neither lane named the compiler it had used, which is why it stood.
+
+  The lane names its compiler by path now, and `scripts/check-tsc-compiler.mjs`
+  runs first: it prints the version and refuses when that major is not the one
+  `devDependencies.typescript` declares. Link order cannot decide it, and a
+  later change to the bin set cannot return this silently.
+
+  The compiler stays in the script body rather than moving into the guard.
+  `tests/helpers/buildCommand.ts` resolves script bodies and cannot see inside a
+  Node program, and this lane emits into `packages/qfai/dist` — so hiding the
+  `tsc -b` would have traded a wrong compiler for a build scan that is wrong
+  about a lane that still builds.
+
+  The tree is clean under both compilers, so nothing else moves.
+
 - **A writer dispossessed inside the section no longer overwrites a committed
   entry** (#1442). The lock was checked once, immediately after it was
   published. Nothing asked again before the write, so a holder that lost the
@@ -28,6 +51,28 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
   A lock name swapped for a link is now refused rather than written through. The
   write was previously carried out against a lock the writer did not hold.
+
+- **A completed row's evidence is read again** (#1440). `QFAI-TDDLIST-008`
+  verifies that a `done` row's evidence section says what the row says and
+  carries the fields a completion record owes. It verified that the section's
+  heading existed, and nothing else: a section with no fields was accepted, and
+  so was one naming a different row.
+
+  The guard that keeps the status-only rule off a conforming pointer left the
+  row entirely rather than skipping that one rule, and every check below it —
+  the file and fragment binding, and the completed-evidence field set — went
+  with it. So the one cell shape the grammar mandates was the one shape nothing
+  read.
+
+  Nothing noticed because no ledger row carries a conforming pointer yet. Every
+  `Evidence` cell still holding prose stops earlier, at `QFAI-TDDLIST-007` or
+  `-011`, so the first row written the way the findings ask is the first to
+  reach this path.
+
+  That matters while the ledger backlog is being worked off: the remediation
+  those findings print is to write the pointer and the section it names, and
+  under this defect a pack could go from tens of errors to zero on headings
+  alone.
 
 ### Changed
 

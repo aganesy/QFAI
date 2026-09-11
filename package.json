@@ -26,7 +26,7 @@
     "lint:doc-clarity": "node ./scripts/check-doc-clarity.mjs",
     "format": "prettier -w .",
     "format:check": "prettier -c .",
-    "check-types": "tsc -b && tsc -p packages/qfai/tsconfig.tests.json",
+    "check-types": "node ./scripts/check-tsc-compiler.mjs && node ./node_modules/typescript/bin/tsc -b && node ./node_modules/typescript/bin/tsc -p packages/qfai/tsconfig.tests.json",
     "check-types:future": "node ./scripts/check-types-future.mjs",
     "test:assets": "pnpm -C packages/qfai test:assets",
     "verify:pack": "node ./scripts/verify-pack.mjs",
@@ -35,7 +35,7 @@
   "devDependencies": {
     "@asamuzakjp/css-color": "3.2.0",
     "@eslint/js": "^9.8.0",
-    "@jackchuka/mdschema": "0.15.2",
+    "@jackchuka/mdschema": "0.15.3",
     "@types/node": "^18.19.41",
     "eslint": "^9.8.0",
     "eslint-config-prettier": "^10.1.8",
