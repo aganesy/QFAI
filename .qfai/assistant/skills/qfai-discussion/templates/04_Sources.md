@@ -171,6 +171,24 @@ research_summary:
 - local_translation: [How the guideline changes this project's local design decisions]
 - evidence: [Concrete note, screenshot, or doc excerpt reference supporting the translation]
 
+## Design Direction
+
+The visual direction the user chose. `/qfai-sdd` Phase 0 authors root
+`DESIGN.md` from it, so an unfilled block here becomes an invented brand
+there.
+
+Visual-prototyping surfaces only (`web`, `mobile`, `desktop`, `mixed`, as
+primary or secondary). A cli-only pack has none — delete this section for it.
+
+Interview rules: `references/design-dna-intake.md#design-direction-interview`.
+
+- adopted_theme: [the published theme or design system the tokens come from]
+- theme_source: [the registry name or URL it is procured from]
+- brand_accent: [the one thing that departs from the theme — typically the
+  primary hue, sometimes the typeface pairing]
+- kept_conventions: [the category conventions deliberately kept as they are]
+- decided_by: [user | assumed: <what the assumption was read off>]
+
 ## Component Catalogue Registry
 
 A competitor is consulted to differ from. A component catalogue is consulted

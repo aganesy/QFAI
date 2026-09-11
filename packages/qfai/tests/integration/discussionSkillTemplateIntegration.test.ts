@@ -577,6 +577,58 @@ describe("discussion skill template integration", () => {
       expect(content).toMatch(EXPLORATION_REFERENCE_PHRASE);
     }
   });
+
+  // The archetype used to be picked from an agent's own reading of the product,
+  // and the user first saw the result as twelve hex values. The decision now has
+  // a slot, a question and a completion condition; losing any one of the three
+  // puts it back where it was.
+  it("設計方針がユーザに問われ、04_Sources.md に記録される", async () => {
+    const sources = await readFile(path.join(templateBase, "templates", "04_Sources.md"), "utf-8");
+    const section = sources.split(/^## /m).find((part) => part.startsWith("Design Direction"));
+    expect(section, "04_Sources.md has no Design Direction section").toBeDefined();
+    for (const field of [
+      "adopted_theme:",
+      "theme_source:",
+      "brand_accent:",
+      "kept_conventions:",
+      "decided_by:",
+    ]) {
+      expect(section ?? "", `Design Direction omits ${field}`).toContain(field);
+    }
+
+    // The interview rules, and the two things that keep it answerable: named
+    // candidates rather than adjectives, and a stated fallback that is evidence
+    // rather than invention.
+    const intake = await readFile(
+      path.join(templateBase, "references", "design-dna-intake.md"),
+      "utf-8",
+    );
+    expect(intake).toMatch(/^## Design Direction Interview$/m);
+    expect(intake).toContain("user-questions-askuserquestion-protocol");
+    expect(intake).toMatch(/catalog\/tech\.md#Frontend/);
+    expect(intake).toMatch(/uiux\.registries/);
+    expect(intake).toMatch(/decided_by: assumed/);
+
+    // The skill body must carry the ask itself: a reference nobody is told to
+    // open changes no run.
+    const skill = await readFile(skillPath, "utf-8");
+    const step9 = skill.split("\n").find((line) => line.startsWith("9. ")) ?? "";
+    expect(step9).toMatch(/Ask the user which theme/);
+    expect(step9).toContain("04_Sources.md#Design Direction");
+    expect(skill).toMatch(/hard-required:[\s\S]{0,400}?brand intent — the design direction/);
+
+    // And a completion condition, or an unanswered direction ships as complete.
+    const matrix = await readFile(completionMatrixPath, "utf-8");
+    const conditions = collectOrderedList(
+      matrix.split(/^## /m).find((part) => part.startsWith("UI-bearing Packs")) ?? "",
+    );
+    expect(conditions).toMatch(/04_Sources\.md#Design Direction/);
+    // cli has no theme to adopt, so the carve-out has to cover this condition
+    // too — half a carve-out blocks the pack it just exempted.
+    const cliSection = matrix.split(/^## /m).find((part) => part.startsWith("CLI Packs")) ?? "";
+    expect(cliSection).toMatch(/conditions 1 and 2 above do not apply/);
+    expect(cliSection).toMatch(/no design direction required/i);
+  });
 });
 
 async function collectMarkdownFiles(dir: string): Promise<string[]> {

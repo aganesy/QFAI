@@ -145,6 +145,12 @@ describe("brand catalog step anchor", () => {
     expect(authoring).toMatch(/Brand archetype → `brand\.archetype`/);
     expect(authoring).toContain("design-md-brand-catalog.md");
     expect(authoring).toContain("04_Sources.md");
+
+    // A user who chose a theme has already answered this. Re-scoring over the
+    // top of that answer can land on an archetype that contradicts it, and the
+    // user never sees the disagreement — only the tokens it produces.
+    expect(authoring).toMatch(/take the archetype that\s+theme fits/);
+    expect(authoring).toMatch(/only when no theme was\s+recorded/);
   });
 
   it("discussion still records what Phase 0 authors from", async () => {

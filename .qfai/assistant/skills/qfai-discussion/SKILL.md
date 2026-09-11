@@ -64,7 +64,7 @@ Decide whether the target is UI-bearing with `references/ui-bearing-playbook.md`
 
 Every UI-bearing pack must produce, as primary truth: `uiux/00_index.md`, `uiux/40_screen_contracts.md`, `uiux/50_review_input_bundle.md`. That is the whole family, on every UI-bearing surface including `cli`.
 
-Discussion writes no file outside its own pack. The brand SSOT — root `DESIGN.md` — is authored by `/qfai-sdd` Phase 0 from what this pack records: the classification in `01_Context.md`, the reference registries in `04_Sources.md`, and the `uiux/` sidecars. Interview for it here, in the depth `references/design-dna-intake.md` sets out, and record the answers; do not write the file.
+Discussion writes no file outside its own pack. The brand SSOT — root `DESIGN.md` — is authored by `/qfai-sdd` Phase 0 from what this pack records: the classification in `01_Context.md`, the design direction and reference registries in `04_Sources.md`, and the `uiux/` sidecars. Interview for it here, in the depth `references/design-dna-intake.md` sets out, and record the answers; do not write the file.
 
 A **cli-only** pack (`primary_surface: cli`, no visual secondary surface) stays `ui_bearing: true` and keeps all three sidecars, but the brand questions do not apply to it: `/qfai-prototyping` rejects `cli`, so no downstream reader consumes a `visual.*` token tree, and `/qfai-sdd` Phase 0 skips the freeze. The test is the whole classified surface set — `primary_surface` **and** every `secondary_surfaces` entry. See `references/ui-bearing-playbook.md#visual-prototyping-surfaces-vs-cli`.
 
@@ -78,7 +78,7 @@ A **cli-only** pack (`primary_surface: cli`, no visual secondary surface) stays 
 6. Run Example Mapping per `references/example-mapping-guide.md` and capture `Example Seeds`.
 7. Update `11_OQ-Register.md`, resolve OQs until open count is zero, and move deferred items to `13_Deferred.md`; take the canonical field definitions for both files from `references/oq-and-deferred-rules.md`.
 8. Generate the exploration-first sidecar family for UI-bearing targets.
-9. Interview for the design direction per `references/design-dna-intake.md` and record the answers in the pack. Required when any classified surface — primary or secondary — is `web`, `mobile`, `desktop` or `mixed`; skip for cli-only and non-ui targets. The answers, not a rendered brand file, are the handoff: `/qfai-sdd` Phase 0 authors root `DESIGN.md` from them.
+9. Interview for the design direction per `references/design-dna-intake.md`, and record the answers in the pack. Required when any classified surface — primary or secondary — is `web`, `mobile`, `desktop` or `mixed`; skip for cli-only and non-ui targets. Ask the user which theme the product adopts, offering named candidates rather than adjectives, and record it at `04_Sources.md#Design Direction`. `/qfai-sdd` Phase 0 authors root `DESIGN.md` from these answers.
 10. Generate `prototyping.yaml` only when the latest discussion pack targets a prototyping execution surface (`web`, `mobile`, `desktop`, `mixed`) and an explicit prototyping recommendation is useful. A cli-only pack emits none — `/qfai-prototyping` rejects `cli`.
 11. Request review and record the Reviewer result, following `references/review-cycle-playbook.md` for pack layout, cycle rules, and the `summary.json` fields. It owns the write paths under `.qfai/review/review-YYYYMMDDhhmmssSSS/`, which is the only tree `npx qfai validate` reads.
 
@@ -86,7 +86,8 @@ For UI-bearing targets, follow `references/design-dna-intake.md` while authoring
 
 ## UI-bearing Authoring Requirements
 
-- On a visual-prototyping surface, `04_Sources.md` must carry both reference registries, each entry naming what was adopted, what was rejected, and how it was translated. Competitor references are **deviate-from** inputs, not imitate-this; catalogue references are adopt-from. Together they are what `/qfai-sdd` Phase 0 turns into root `DESIGN.md` front-matter and its `# Brand Philosophy` body, so an entry left blank leaves a brand field with nothing behind it.
+- On a visual-prototyping surface, `04_Sources.md` must carry the Design Direction block: the adopted theme, where it is procured from, the accent that departs from it, and who decided.
+- It must also carry both reference registries, each entry naming what was adopted, what was rejected, and how it was translated. Competitor references are **deviate-from** inputs, not imitate-this; catalogue references are adopt-from. `/qfai-sdd` Phase 0 turns both into root `DESIGN.md`, so a blank entry leaves a brand field with nothing behind it.
 - `40_screen_contracts.md` defines each screen contract per the template schema; `50_review_input_bundle.md` documents review inputs for downstream skills.
 - Evaluation axes are global constants (4-step ordinal: weak / acceptable / strong / exceptional) and are not authored as discussion sidecars.
 
@@ -106,7 +107,7 @@ Before declaring completion, you MUST:
 - ensure every deferred item has full metadata in `13_Deferred.md`;
 - ensure `02_Inception-Deck.md` and `03_Story-Workshop.md` include Mermaid diagrams;
 - ensure the `## Research Summary` section of `04_Sources.md` is filled from an actual protocol run (`sources`, `best_practices`, `anti_patterns`, and `reflection` with at least one `action: apply`);
-- ensure the UI-bearing sidecar family is complete, and — when any classified surface (primary or secondary) is `web`, `mobile`, `desktop` or `mixed` — that both reference registries in `04_Sources.md` are complete;
+- ensure the UI-bearing sidecar family is complete, and — when any classified surface (primary or secondary) is `web`, `mobile`, `desktop` or `mixed` — that both reference registries and the Design Direction block in `04_Sources.md` are complete;
 - run `npx qfai validate --profile discussion --fail-on error` and fix discussion-owned findings;
 - avoid selecting a single visual winner in discussion artifacts.
 
@@ -166,7 +167,7 @@ The skill collapses avoidable per-session prompts to 0-1 by classifying every de
   - version-pin changes (`package.json#version`, branch pin)
   - scope expansions outside the active envelope
 - hard-required:
-  - brand intent
+  - brand intent — the design direction: which theme the product adopts, and the one accent that departs from it. Read it off `catalog/tech.md#Frontend` or an installed design system where either names one; otherwise ask. With neither a user nor evidence, stop.
   - `primarySpecId` (when absent from inputs)
 
 A skill MAY narrow any of the three buckets (drop an entry the skill cannot reach), and MAY instantiate a category entry — `approval-required governance operations` — with the operations its own run cannot authorize for itself. It MUST NOT introduce an entry outside the prototype's categories. Widening triggers a Reviewer-Gate finding.

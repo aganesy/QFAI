@@ -11,11 +11,11 @@ Applies only to a UI-bearing target — one whose classified surface set names
 The interview is `/qfai-discussion`'s, and its record is the discussion pack
 this spec's provenance names:
 
-| Source                                            | Carries                    |
-| ------------------------------------------------- | -------------------------- |
-| `01_Context.md`                                   | the surface classification |
-| `04_Sources.md`                                   | both reference registries  |
-| `uiux/00_index.md`, `uiux/40_screen_contracts.md` | the screen-level sidecars  |
+| Source                                            | Carries                                             |
+| ------------------------------------------------- | --------------------------------------------------- |
+| `01_Context.md`                                   | the surface classification                          |
+| `04_Sources.md`                                   | the design direction, and both reference registries |
+| `uiux/00_index.md`, `uiux/40_screen_contracts.md` | the screen-level sidecars                           |
 
 Each registry entry carries what was adopted, what was rejected, and how it
 was translated. The competitor registry feeds brand and tokens; the component
@@ -43,11 +43,14 @@ three intent fields, so those come first.
 - Adopted reference points → the **Do** subsection of `# Brand Philosophy`.
 - Brand archetype → `brand.archetype`. Allowed values are the 8-archetype
   catalog in `design-md-brand-catalog.md`
-  (`minimal | bold | corporate | playful | organic | tech | elegant | casual`);
-  its Selection Guide carries the scoring and the tie-break. Take the chosen
-  archetype's `aesthetic_properties` as defaults: `color_tendency` /
-  `typography` / `spacing` seed `visual.*`, and the `interaction` default
-  seeds `accessibility.motion`. `visual.*` accepts only
+  (`minimal | bold | corporate | playful | organic | tech | elegant | casual`).
+  Where the design direction names an adopted theme, take the archetype that
+  theme fits; the user already made this choice, and re-deriving it can
+  contradict them. Score against the intent fields only when no theme was
+  recorded — the catalog's Selection Guide carries the scoring and the
+  tie-break. Take the chosen archetype's `aesthetic_properties` as defaults:
+  `color_tendency` / `typography` / `spacing` seed `visual.*`, and the
+  `interaction` default seeds `accessibility.motion`. `visual.*` accepts only
   `colors | typography | radius | shadow | spacing`, so a `visual.motion` or
   `visual.interaction` key fails DESIGN.md validation.
 - Visual decisions (color, typography, radius, shadow) → the `visual.*` token

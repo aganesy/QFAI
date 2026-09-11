@@ -6,6 +6,23 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
+- **The person who owns the brand chooses the theme** (#1473). `/qfai-discussion`
+  now asks which theme the product adopts and records the answer at
+  `04_Sources.md#Design Direction`: the theme, where it is procured from, the
+  one accent that departs from it, the conventions kept, and who decided.
+
+  The question offers named candidates the project can actually procure —
+  from `catalog/tech.md#Frontend`, `uiux.registries` and the registered
+  catalogues — rather than asking for adjectives. Until now an agent read the
+  product, picked one of eight archetypes alone, and the user first saw the
+  result as twelve hex values.
+
+  Completion blocks on the block being filled. Where no user answers, the
+  direction is read off evidence and labelled with its source; with neither a
+  user nor evidence the run stops rather than inventing a brand. Phase 0 takes
+  the archetype the adopted theme fits and re-scores only when no theme was
+  recorded. A cli-only pack adopts no theme and is not asked.
+
 - **Root `DESIGN.md` is authored where it is frozen** (#1472). `/qfai-sdd`
   Phase 0 now writes the file if it is missing, from the design direction the
   discussion pack recorded; `/qfai-discussion` interviews for that direction
