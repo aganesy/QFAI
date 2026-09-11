@@ -19,6 +19,7 @@
  */
 // QFAI:SPEC-0010:TC-0010-0012
 
+import { writeFileSync } from "node:fs";
 import type * as FsPromises from "node:fs/promises";
 import { mkdir, mkdtemp, readFile, rm, stat, utimes, writeFile } from "node:fs/promises";
 import os from "node:os";
@@ -160,10 +161,14 @@ describe("TC-0010-0012: the reaper is serialized and the write is revalidated", 
   it("refuses to write when the lock it holds was taken over", async () => {
     // The holder's lock is replaced while its mutation runs, which is what a
     // wrong reap looks like from the inside.
+    //
+    // The takeover is written synchronously because `mutate` is synchronous:
+    // an unawaited promise here is only scheduled, so whether it lands before
+    // the revalidating read is a matter of how fast the machine is.
     const lockPath = await lockPathFor(root);
     await expect(
       updateState(root, (existing) => {
-        void writeFile(lockPath, `${JSON.stringify({ pid: 1, token: "someone-else" })}\n`, "utf-8");
+        writeFileSync(lockPath, `${JSON.stringify({ pid: 1, token: "someone-else" })}\n`, "utf-8");
         return { next: { ...existing, counter: 1 }, result: 1 };
       }),
     ).rejects.toThrow(/was taken over while this update ran/);
