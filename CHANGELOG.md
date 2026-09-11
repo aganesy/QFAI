@@ -6,6 +6,21 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **Every layout anti-pattern names what makes it a defect** (#1484). An
+  entry now carries a `source`, and the loader drops one that does not: a
+  published heuristic, an accessibility criterion, or the contract the screen
+  is built to — never this project deciding it dislikes something. A rule with
+  no authority behind it cannot be argued with, only obeyed, which is how the
+  registry came to hold five conventional layouts.
+
+  `lap-006-overcrowded-sidebar` is retired with them. It reported a sidebar
+  carrying ten or more links, and no published source states a navigation
+  count as a defect; the threshold was this repository's own.
+
+  Definitions are pinned rather than researched per run. `certify` re-scans
+  the captures, so a check whose answer depends on what a search returned that
+  morning cannot agree with itself.
+
 - **A concurrency guard that passed because the filesystem undid what it
   staged** (#1477). `provenanceHostileTree` has a row asserting that a holder
   reclaimed mid-section leaves its successor's lock alone. It failed about once

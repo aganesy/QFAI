@@ -635,7 +635,7 @@ describe("qfai prototyping certify (per-screen payload identity + convergence)",
       "home",
       1,
       reviewPayload("spec-0012", "home", {
-        layoutAntiPatternsDetected: ["lap-006-overcrowded-sidebar"],
+        layoutAntiPatternsDetected: ["lap-008-no-back-affordance"],
       }),
     );
     await seedReviewJson(
@@ -654,7 +654,7 @@ describe("qfai prototyping certify (per-screen payload identity + convergence)",
       const exit = await runPrototypingCertify({ root, check: false });
       expect(exit).toBe(64);
       const messages = errorSpy.mock.calls.map((c) => String(c[0]));
-      expect(messages.some((m) => m.includes("lap-006-overcrowded-sidebar"))).toBe(true);
+      expect(messages.some((m) => m.includes("lap-008-no-back-affordance"))).toBe(true);
       expect(messages.some((m) => m.includes("designMdViolations is non-empty"))).toBe(true);
     } finally {
       errorSpy.mockRestore();

@@ -35,11 +35,7 @@ async function newTempDir(): Promise<string> {
   return dir;
 }
 
-const EXPECTED_IDS = [
-  "lap-006-overcrowded-sidebar",
-  "lap-007-state-not-represented",
-  "lap-008-no-back-affordance",
-] as const;
+const EXPECTED_IDS = ["lap-007-state-not-represented", "lap-008-no-back-affordance"] as const;
 
 describe("loadLayoutAntiPatterns", () => {
   it("TC-3.3.1: reads every entry from layoutAntiPatterns.json", () => {
@@ -89,13 +85,12 @@ describe("findLayoutAntiPatterns (TC-3.3.5..8)", () => {
     expect(findLayoutAntiPatterns(html, patterns)).toEqual([]);
   });
 
-  it.each<[string, string]>([
-    [
-      "lap-006-overcrowded-sidebar",
-      `<aside>${Array.from({ length: 12 }, (_, i) => `<a href="#${i}">l${i}</a>`).join("")}</aside>`,
-    ],
-  ])("TC-3.3.6: %s minimal positive match", (id, html) => {
-    expect(findLayoutAntiPatterns(html, patterns)).toContain(id);
+  // Every entry is reviewer-judged today, so the static pass reports nothing
+  // whatever it is handed. A layout-scope entry would be matched here.
+  it("TC-3.3.6: the static pass reports nothing while no entry is layout-scoped", () => {
+    const crowded = `<aside>${Array.from({ length: 12 }, (_, i) => `<a href="#${i}">l${i}</a>`).join("")}</aside>`;
+    expect(patterns.some((entry) => entry.scope === "layout")).toBe(false);
+    expect(findLayoutAntiPatterns(crowded, patterns)).toEqual([]);
   });
 
   it("TC-3.3.7: lap-007 / lap-008 NOT triggered by any HTML via regex", () => {
@@ -167,11 +162,34 @@ describe("the registry has one copy", () => {
 });
 
 describe("LayoutAntiPattern type contract", () => {
+  // An entry with no authority behind it cannot be argued with, only obeyed,
+  // which is how the registry filled up with shapes somebody disliked.
+  it("drops an entry that names nothing making it a defect", async () => {
+    const dir = await newTempDir();
+    const file = path.join(dir, "patterns.json");
+    await writeFile(
+      file,
+      JSON.stringify([
+        { id: "lap-sourced", regex: ".*", scope: "layout", source: "a published heuristic" },
+        { id: "lap-unsourced", regex: ".*", scope: "layout" },
+        { id: "lap-blank", regex: ".*", scope: "layout", source: "   " },
+      ]),
+      "utf-8",
+    );
+    expect(loadLayoutAntiPatterns(file).map((entry) => entry.id)).toEqual(["lap-sourced"]);
+  });
+
+  it("carries the source through to the caller", () => {
+    for (const entry of loadLayoutAntiPatterns()) {
+      expect(entry.source.trim().length).toBeGreaterThan(0);
+    }
+  });
+
   it("rejects rules with unknown scope at load time", async () => {
     const dir = await newTempDir();
     const file = path.join(dir, "patterns.json");
-    const malformed: Array<{ id: string; regex: string; scope: string }> = [
-      { id: "lap-X", regex: ".*", scope: "bogus" },
+    const malformed: Array<{ id: string; regex: string; scope: string; source: string }> = [
+      { id: "lap-X", regex: ".*", scope: "bogus", source: "a published heuristic" },
     ];
     await writeFile(file, JSON.stringify(malformed), "utf-8");
     const out: LayoutAntiPattern[] = loadLayoutAntiPatterns(file);

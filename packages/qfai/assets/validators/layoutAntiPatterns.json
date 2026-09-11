@@ -1,17 +1,14 @@
 [
   {
-    "id": "lap-006-overcrowded-sidebar",
-    "regex": "<aside[\\s\\S]{0,1500}(<a[\\s\\S]*?){10,}",
-    "scope": "layout"
-  },
-  {
     "id": "lap-007-state-not-represented",
     "regex": "(?!).*",
-    "scope": "semantic"
+    "scope": "semantic",
+    "source": "the screen contract's required_states: a state the contract declares and the screen does not show"
   },
   {
     "id": "lap-008-no-back-affordance",
     "regex": "(?!).*",
-    "scope": "semantic"
+    "scope": "semantic",
+    "source": "Nielsen usability heuristic 3, user control and freedom: a user in a nested view needs a marked way out"
   }
 ]
