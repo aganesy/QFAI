@@ -33,10 +33,9 @@ one-line summary at each iter's end.
 Exit codes for `npx qfai prototyping iterate --cycle <n+1>`:
 
 - `0` — continue.
-- `64` — convergence: latest iter has all 4 UX axes
-  (`informationArchitecture`, `navigationFlow`, `usability`,
-  `functionality`) at `exceptional` AND `layoutAntiPatternsDetected`
-  is empty AND `designMdViolations` is empty.
+- `64` — convergence: on the latest iter, `designMdViolations`,
+  `layoutAntiPatternsDetected` and `blockingFindings` are all empty.
+  Nothing the reviewer left open, and nothing a scan found.
 - `65` — max-iterations: latest iter `index === 9`.
 - `2` — input error, including:
   - root `DESIGN.md` missing or unparseable;

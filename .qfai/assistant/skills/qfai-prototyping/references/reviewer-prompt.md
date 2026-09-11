@@ -168,9 +168,8 @@ through the task. The task list it needs is already declared on every screen.
 Copy that explains how to work a control is evidence the control is wrong. The
 finding names the control to fix, not the sentence to delete.
 
-Labels stay. WCAG requires a label for every form input, and a placeholder
-standing in for one is a documented failure; `.agents/rules/interface-clarity.md`
-cites the success criterion. What goes is the
+Labels stay. WCAG 3.3.2 requires a label for every form input, and a
+placeholder standing in for one is a documented failure. What goes is the
 sentence under the label, the tooltip on a button whose text already says what
 it does, the paragraph introducing the page, and decorative filler that
 displaces signal.

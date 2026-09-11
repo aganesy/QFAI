@@ -133,6 +133,43 @@ function findBudgetRestatements(content: string): string[] {
   );
 }
 
+// --- hard-coded versions in shipped documents ------------------------------
+// A shipped document must not pin the version of anything it runs on: the
+// number goes stale in the adopter's tree, where nobody is watching it.
+//
+// A published standard's clause number has the same shape and none of that
+// problem — `WCAG 3.3.2` will mean the same thing for as long as the standard
+// exists. What separates them is not the digits but whether something names
+// the number as a version, so that is what the patterns below require: a
+// leading `v`, or a name in front of it.
+
+/** Names whose number is a version of something this repository ships or runs on. */
+const VERSION_BEARING = [
+  "qfai",
+  "node\\.js",
+  "node",
+  "pnpm",
+  "npm",
+  "typescript",
+  "vitest",
+  "tsup",
+  "eslint",
+  "prettier",
+  "version",
+].join("|");
+
+const VERSION_SHAPES: readonly RegExp[] = [
+  // `v2.0.1`, `v1.11` — the prefix says it is a version on its own.
+  /\bv\d+\.\d+(?:\.\d+)?\b/g,
+  // `qfai 1.11.1`, `pnpm@9.12.3`, `version: 1.4.0` — the name says it.
+  new RegExp(String.raw`\b(?:${VERSION_BEARING})[\s@:]+v?\d+\.\d+(?:\.\d+)?\b`, "gi"),
+];
+
+/** Every version a document pins, as written. Empty means it pins none. */
+function hardCodedVersions(markdown: string): string[] {
+  return VERSION_SHAPES.flatMap((shape) => [...markdown.matchAll(shape)].map((match) => match[0]));
+}
+
 describe("assets guardrails", () => {
   it("checks relative path references in markdown", async () => {
     const markdownFiles = await fg(
@@ -597,14 +634,14 @@ describe("assets guardrails", () => {
       expect(generatorRef).toMatch(/\*\*convergence\*\* stop/);
       expect(generatorRef).toMatch(/re-scanned before the stop\s+is honoured/);
       expect(generatorRef).toMatch(/\*\*max-iterations\*\* stop skips that re-scan/);
-      // `iterationConverged` is not what its name says: it also requires
-      // `layoutAntiPatternsDetected.length === 0` and
-      // `designMdViolations.length === 0`. A prompt that defines the stop as
-      // the four scores alone leaves the generator unable to explain why a
-      // run with four `exceptional` axes did not stop, or what to fix next.
-      expect(generatorRef).toMatch(/\*\*and both finding arrays empty\*\*/);
-      expect(generatorRef).toMatch(/`layoutAntiPatternsDetected` and `designMdViolations`/);
-      expect(generatorRef).toMatch(/one\s+surviving `lap-\*` keeps the loop running/);
+      // The stop is decided by three arrays, and by nothing else: a prompt
+      // that named any subset of them would leave the generator unable to
+      // explain why a well-reviewed run did not stop, or what to fix next.
+      expect(generatorRef).toMatch(/\*\*all three finding arrays empty\*\*/);
+      expect(generatorRef).toMatch(
+        /`designMdViolations`, `layoutAntiPatternsDetected` and\s+`blockingFindings`/,
+      );
+      expect(generatorRef).toMatch(/one\s+surviving `lap-\*` keeps the loop\s+running/);
       // And the re-scan is not a proof of inspection.
       // `recomputeFinalIterDesignMdViolations` returns `[]` for an ENOENT
       // directory and `continue`s past a file it cannot stat or read, so an
@@ -687,6 +724,41 @@ describe("assets guardrails", () => {
       expect(generatorRef).toMatch(/Only the \*\*evidence\*\* tree is\s+backed up/);
       expect(generatorRef).toMatch(/copy that\s+directory aside yourself/);
     }
+  });
+
+  it("never explains the convergence stop by an axis value", async () => {
+    // `isConverged` reads `designMdViolations`, `layoutAntiPatternsDetected`
+    // and `blockingFindings`. The four UX axes are still scored and still
+    // reported; they stopped deciding the stop. An agent reading that exit 64
+    // needs an axis at `exceptional` would keep iterating a run that already
+    // converged, and could not explain one that did not.
+    //
+    // Pinned as a sweep rather than per sentence: the claim had been restated
+    // in the goal, the stop-condition table, the loop reference and the
+    // generator prompt, so a rule that names the files it knows about is one
+    // paragraph away from being wrong again.
+    //
+    // The subject is an axis VALUE, not the axes. Naming an axis near the stop
+    // is fine — the reviewer still scores four of them and the loop still
+    // reports them — so the vocabulary that must not appear is the ordinal a
+    // score is drawn from. A paraphrase of it ("all four at their best") is
+    // out of reach here and is left to review.
+    const AXIS_VALUES = /\b(weak|acceptable|strong|exceptional)\b/i;
+    const offenders: string[] = [];
+    for (const tree of [templateQfaiDir, path.join(repoRoot, ".qfai")]) {
+      const skillDir = path.join(tree, "assistant", "skills", "qfai-prototyping");
+      const files = await fg("**/*.md", { cwd: skillDir, absolute: true, dot: false });
+      for (const file of files) {
+        const text = await readFile(file, "utf-8");
+        for (const paragraph of text.split(/\n\s*\n/)) {
+          if (!/converg/i.test(paragraph) && !/\b64\b/.test(paragraph)) continue;
+          if (!AXIS_VALUES.test(paragraph)) continue;
+          offenders.push(`${path.relative(repoRoot, file)}: ${paragraph.trim().slice(0, 120)}`);
+        }
+      }
+    }
+
+    expect(offenders).toEqual([]);
   });
 
   it("keeps the DESIGN.md scanner doc in sync with the non-waivable prompt wording", async () => {
@@ -1346,17 +1418,39 @@ describe("assets guardrails", () => {
       cwd: templateQfaiDir,
       absolute: true,
     });
-    const versionPattern = /\b(?:v)?\d+\.\d+\.\d+\b/;
 
     const matches: string[] = [];
     for (const filePath of markdownFiles) {
-      const content = await readFile(filePath, "utf-8");
-      if (versionPattern.test(content)) {
-        matches.push(path.relative(repoRoot, filePath));
+      const found = hardCodedVersions(await readFile(filePath, "utf-8"));
+      if (found.length > 0) {
+        matches.push(`${path.relative(repoRoot, filePath)}: ${found.join(", ")}`);
       }
     }
 
-    expect(matches).toEqual([]);
+    expect(matches, "a shipped document pins a version that will go stale").toEqual([]);
+  });
+
+  // The guard reads a version, not every triple of numbers. Both columns are
+  // asserted because narrowing it is only safe if a real pin still fails.
+  it("tells a version from a standard's clause number", () => {
+    for (const pinned of [
+      "requires qfai 1.11.1",
+      "install v2.0.1",
+      "node 20.19.0 or later",
+      "`pnpm@9.12.3`",
+      "version: 1.4.0",
+    ]) {
+      expect(hardCodedVersions(pinned), pinned).not.toEqual([]);
+    }
+
+    for (const cited of [
+      "WCAG 3.3.2 requires a label for every form input",
+      "RFC 2119 section 1.2.3",
+      "ISO 9241-210 clause 6.5.1",
+      "the ratio is 4.5:1",
+    ]) {
+      expect(hardCodedVersions(cited), cited).toEqual([]);
+    }
   });
 
   it("keeps init template markdown free of Japanese characters except approved files", async () => {
