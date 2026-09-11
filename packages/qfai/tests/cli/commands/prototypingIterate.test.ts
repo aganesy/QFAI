@@ -127,12 +127,7 @@ async function seedPrototypingJson(
   root: string,
   iterations: Array<{
     index: number;
-    scores: {
-      informationArchitecture: string;
-      navigationFlow: string;
-      usability: string;
-      functionality: string;
-    };
+    blockingFindings: string[];
     layoutAntiPatternsDetected?: string[];
     designMdViolations?: Array<{ kind: string; found: string }>;
   }>,
@@ -162,7 +157,7 @@ async function seedPrototypingJson(
     iterations: iterations.map((it) => ({
       index: it.index,
       commitSha: "a".repeat(40),
-      scores: it.scores,
+      blockingFindings: it.blockingFindings,
       proseCritique: "x".repeat(1500),
       layoutAntiPatternsDetected: it.layoutAntiPatternsDetected ?? [],
       designMdViolations: it.designMdViolations ?? [],
@@ -234,7 +229,7 @@ describe("runPrototypingIterate cycle 0", () => {
 
 // QFAI:SPEC-0012:TC-0012-0324
 describe("runPrototypingIterate convergence (exit 64)", () => {
-  it("returns 64 when latest iter has all 4 axes exceptional and no anti-patterns", async () => {
+  it("returns 64 when the latest iter has nothing open and no anti-patterns", async () => {
     const root = await newTempDir();
     await seedMinimalProject(root);
     await seedPrototypingJson(root, [
@@ -259,17 +254,12 @@ describe("runPrototypingIterate convergence (exit 64)", () => {
     // present.
     const root = await newTempDir();
     await seedMinimalProject(root);
-    const allExceptional = {
-      informationArchitecture: "exceptional",
-      navigationFlow: "exceptional",
-      usability: "exceptional",
-      functionality: "exceptional",
-    };
+
     // 10 iterations (index 0..9) all reporting converged with
     // empty dmv. Last one at index 9 is the budget-exhausted candidate.
     const iters = Array.from({ length: 10 }, (_, i) => ({
       index: i,
-      scores: allExceptional,
+      blockingFindings: [],
       layoutAntiPatternsDetected: [],
       designMdViolations: [],
     }));
@@ -291,7 +281,7 @@ describe("runPrototypingIterate convergence (exit 64)", () => {
     expect(exit).toBe(65);
   });
 
-  it("does NOT exit 64 when accepted iter HTML still has DESIGN.md drift, even with all-exceptional scores + dmv:[]", async () => {
+  it("does NOT exit 64 when accepted iter HTML still has DESIGN.md drift, even with nothing open + dmv:[]", async () => {
     // The shipped reviewer prompt instructs reviewers to leave
     // designMdViolations empty unless a runtime gate injects findings,
     // and the runtime scanner historically lived in certify only. Pre-
@@ -324,7 +314,7 @@ describe("runPrototypingIterate convergence (exit 64)", () => {
     expect(exit).toBe(0);
   });
 
-  it("does NOT exit 64 when a layout anti-pattern is present even with all-exceptional scores", async () => {
+  it("does NOT exit 64 when a layout anti-pattern is present even with nothing else open", async () => {
     const root = await newTempDir();
     await seedMinimalProject(root);
     // Note: invariant-violating fixture intentionally bypasses
@@ -368,32 +358,27 @@ describe("runPrototypingIterate max-iterations (exit 65)", () => {
     // test below in the "continue (exit 0)" describe block. This test
     // explicitly pins BOTH halves under the TC-0012-0358 annotation so a
     // future regression in either direction is captured by spec lineage.
-    const acceptable = {
-      informationArchitecture: "acceptable",
-      navigationFlow: "acceptable",
-      usability: "acceptable",
-      functionality: "acceptable",
-    };
+
     // Half 1: latest iter index === 9 (10 entries, indices 0..9) → exit 65.
     {
       const root = await newTempDir();
       await seedMinimalProject(root);
       const iterations = Array.from({ length: 10 }, (_, i) => ({
         index: i,
-        scores: acceptable,
+        blockingFindings: ["home: the empty state is not represented"],
       }));
       await seedPrototypingJson(root, iterations);
       const exit = await runPrototypingIterate({ root, cycle: 9 });
       expect(exit).toBe(65);
     }
     // Half 2: latest iter index === 8 (9 entries, indices 0..8), no
-    // convergence (acceptable scores), cycle 9 → exit 0 (continue).
+    // convergence (a finding is open), cycle 9 → exit 0 (continue).
     {
       const root = await newTempDir();
       await seedMinimalProject(root);
       const iterations = Array.from({ length: 9 }, (_, i) => ({
         index: i,
-        scores: acceptable,
+        blockingFindings: ["home: the empty state is not represented"],
       }));
       await seedPrototypingJson(root, iterations);
       const exit = await runPrototypingIterate({ root, cycle: 9 });
@@ -415,15 +400,10 @@ describe("runPrototypingIterate max-iterations (exit 65)", () => {
     // manifest as `candidates/<n>/...` siblings to `iter-NN/`.)
     const root = await newTempDir();
     await seedMinimalProject(root);
-    const acceptable = {
-      informationArchitecture: "acceptable",
-      navigationFlow: "acceptable",
-      usability: "acceptable",
-      functionality: "acceptable",
-    };
+
     const iterations = Array.from({ length: 10 }, (_, i) => ({
       index: i,
-      scores: acceptable,
+      blockingFindings: ["home: the empty state is not represented"],
     }));
     await seedPrototypingJson(root, iterations);
     const exit = await runPrototypingIterate({ root, cycle: 9 });
@@ -466,19 +446,14 @@ describe("runPrototypingIterate max-iterations (exit 65)", () => {
   it("TC-0012-0416 (TDD-0436): --cycle 9 on iterations.length === 10 non-converged → exit 65 directly (no cycle-mismatch path)", async () => {
     const root = await newTempDir();
     await seedMinimalProject(root);
-    // Non-converged 10-iter lineage: every iter "acceptable" (not all four
-    // axes "exceptional"), indices 0..9. shouldStop returns
+    // Non-converged 10-iter lineage: every iter has a finding open,
+    // indices 0..9. shouldStop returns
     // "max-iterations" because last.index === 9 (>= MAX_ITERATION_INDEX),
     // not because converged fired.
-    const acceptable = {
-      informationArchitecture: "acceptable",
-      navigationFlow: "acceptable",
-      usability: "acceptable",
-      functionality: "acceptable",
-    };
+
     const iterations = Array.from({ length: 10 }, (_, i) => ({
       index: i,
-      scores: acceptable,
+      blockingFindings: ["home: the empty state is not represented"],
     }));
     await seedPrototypingJson(root, iterations);
 
@@ -570,7 +545,7 @@ describe("runPrototypingIterate input validation", () => {
 });
 
 describe("runPrototypingIterate continue (exit 0)", () => {
-  it("returns 0 at cycle 1 when prior iter is acceptable (no convergence, not at max)", async () => {
+  it("returns 0 at cycle 1 when the prior iter has a finding open (no convergence, not at max)", async () => {
     const root = await newTempDir();
     await seedMinimalProject(root);
     await seedPrototypingJson(root, [
@@ -1037,8 +1012,8 @@ describe("runPrototypingIterate cycle 0 hard reset", () => {
     await seedMinimalProject(root);
     await seedRawPrototypingJson(root, {
       iterations: [
-        { index: 0, scores: { informationArchitecture: "exceptional" } },
-        { index: 1, scores: { informationArchitecture: "strong" } },
+        { index: 0, blockingFindings: [] },
+        { index: 1, blockingFindings: ["stale"] },
       ],
       runId: "stale-prior-run",
       designMd: { path: "DESIGN.md", sha256: hashDesignMd(CANONICAL_DESIGN_MD) },
@@ -1054,7 +1029,7 @@ describe("runPrototypingIterate cycle 0 hard reset", () => {
     const body = await readProtoJson(root);
     expect(body.iterations).toHaveLength(1);
     expect(body.iterations[0].index).toBe(0);
-    expect(body.iterations[0].scores.informationArchitecture).toBe("weak");
+    expect(body.iterations[0].blockingFindings).toEqual(["Awaiting the first review."]);
   });
 
   it("re-seeds acceptedIterationIndex / stopReason and deletes reviewerGate / fullHarness / executionPlan on cycle 0", async () => {
@@ -1560,15 +1535,10 @@ describe("runPrototypingIterate autonomous run (TC-0012-0375)", () => {
       // Cycle 9 with 10 prior iters — max-iterations terminator (65).
       const root9 = await newTempDir();
       await seedMinimalProject(root9);
-      const acceptable = {
-        informationArchitecture: "acceptable",
-        navigationFlow: "acceptable",
-        usability: "acceptable",
-        functionality: "acceptable",
-      };
+
       const iters = Array.from({ length: 10 }, (_, i) => ({
         index: i,
-        scores: acceptable,
+        blockingFindings: ["home: the empty state is not represented"],
       }));
       await seedPrototypingJson(root9, iters);
       const exit9 = await runPrototypingIterate({ root: root9, cycle: 9 });
