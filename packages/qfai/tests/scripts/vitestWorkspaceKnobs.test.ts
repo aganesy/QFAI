@@ -907,3 +907,54 @@ describe("a ceiling below the declared testTimeout", () => {
     expect(ceilingsIn(code)).toEqual([]);
   });
 });
+
+describe("the floor lane bounds its forks by the runner it is on", () => {
+  /**
+   * The lane that runs the whole suite in one process pool is the only one that
+   * has exited 1 with every test passing: each fork reports progress to the
+   * single main process over an RPC call with a fixed budget, and a main process
+   * that cannot answer in time turns a healthy run red.
+   *
+   * The budget is not configurable — `ForksOptions` carries no timeout and the
+   * default lives inside the RPC library — so what this pins is the other side:
+   * the lane states a fork count taken from the machine instead of inheriting the
+   * declared ceiling, which on a four-core runner is 2.5x oversubscribed.
+   */
+  const floorLaneRun = (): string => {
+    const doc: unknown = parseYaml(
+      readFileSync(path.join(REPO_ROOT, ".github", "workflows", "ci.yml"), "utf-8"),
+    );
+    const jobs = isRecord(doc) && isRecord(doc["jobs"]) ? doc["jobs"] : {};
+    const floor = jobs["node-floor"];
+    const steps = isRecord(floor) && Array.isArray(floor["steps"]) ? floor["steps"] : [];
+    const runs = steps
+      .map((step) => (isRecord(step) ? step["run"] : undefined))
+      .filter((run): run is string => typeof run === "string")
+      .filter((run) => /pnpm -C packages\/qfai test\b/.test(run));
+    expect(runs, "the floor lane must run the package suite").toHaveLength(1);
+    return runs[0] ?? "";
+  };
+
+  it("passes the declared override, so the count is not inherited", () => {
+    expect(floorLaneRun()).toContain(WORKERS_ENV);
+  });
+
+  // From the machine, not a literal. A number written here would be right for
+  // one runner size and silently wrong for the next.
+  it("takes the count from the runner rather than writing one", () => {
+    const run = floorLaneRun();
+    expect(run).toMatch(new RegExp(`${WORKERS_ENV}="\\$\\(nproc\\)"`));
+    expect(
+      new RegExp(`${WORKERS_ENV}=["']?\\d`).test(run),
+      "a literal fork count is right for one runner and wrong for the next",
+    ).toBe(false);
+  });
+
+  // The declared starting value is the user's to revise. This lane overriding it
+  // is not that, and the two must not be confused: if the override ever equals
+  // the declaration the lane has stopped bounding anything.
+  it("leaves the declared starting value alone", () => {
+    const knobs = readFileSync(path.join(PACKAGE_ROOT, "vitest.knobs.ts"), "utf-8");
+    expect(knobs).toContain(`export const DECLARED_START = ${DECLARED_START}`);
+  });
+});
