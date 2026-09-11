@@ -221,3 +221,9 @@
   - REQ-0167: `packages/qfai/scripts/check-pack-locations.mjs` is a NEW lint script (to be created) wired into `pnpm ci:lint` (no contract file; recorded under `_policies/07_Constraints.md` OC-65). OQ-0167 lint-scope dimension resolved by DR-0274; the register's `sdd lint --fix` OQ-0167 remains separately deferred.
   - One-minor deprecation window per OC-63 applies to the new `D-*` findings.
 - Source: REQ-0166, REQ-0164, REQ-0167 (discussion-20260527075558258)
+
+## Triage (2026-09-11)
+
+| Source   | Subject                                                    | Existing Spec | Operation | Sub-op | Approved By | Rationale                                                                                                              |
+| -------- | ---------------------------------------------------------- | ------------- | --------- | ------ | ----------- | ---------------------------------------------------------------------------------------------------------------------- |
+| REQ-0028 | `proseCritique` schema check states a cap, not a word band | spec-0004     | UPDATE    | MODIFY | -           | Impact cascade from REQ-0012-0059: the validator spec restates the retired band in its requirement, criterion and rule |

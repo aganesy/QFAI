@@ -1463,7 +1463,16 @@ export const ALLOWED_INIT_CONTENT: ReadonlyMap<string, string> = new Map([
   // keeps the empty list the template ships. That is also the case the comment
   // calls a fact about the repository rather than about the default, so the pin
   // covers the shipped text and the empty-tree behaviour at once.
-  ["qfai.config.yaml", "b2e38829ba21be13029c5983a7b0dfdaa861c75bbdf8d5ba60e2ac85a2846d26"],
+  //
+  // Re-pinned for the commented `uiux.registries` block, which gives a project
+  // one place to declare the component registries a tool can resolve a name
+  // against. The whole delta is that comment: every key the file sets is
+  // unchanged, and deleting the block reproduces `b2e38829…` byte for byte.
+  //
+  // It ships commented out because a project with no user interface declares
+  // nothing here, and a live empty map would read as a project that had
+  // considered the question and answered none.
+  ["qfai.config.yaml", "543f96466f42d2060c7ff63941b9036bc5694ab6d58b579c6a1a8af08fab6e1b"],
 ]);
 
 /**

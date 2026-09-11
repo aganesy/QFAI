@@ -484,12 +484,12 @@
 - When `SHADOW_DECL_STRIP_RE` (matching `--*-shadow*:`) preprocesses the input,
 - Then both declarations are stripped before `scanColors` sees them; `designMdViolations[]` contains no entries naming those rgba values. Pre-fix the strip regex matched only `--shadow-*:`, leaving `--card-shadow:` / `--btn-shadow-hover:` color literals surfacing as violations.
 
-## EX-0012-0166: Japanese 1200-Character Critique Passes via Intl.Segmenter (OQ-0105)
+## EX-0012-0166: A Japanese 1200-Character Critique Is Measured in Characters
 
 - BR-Ref: BR-0012-0045
 - Given a Japanese-only `proseCritique` of 1200 characters (no whitespace word boundaries),
-- When `countWords(prose)` runs with `Intl.Segmenter('ja', { granularity: 'word' })` and applies the OR-condition `200..500 words OR 600..2500 characters`,
-- Then the prose passes (1200 chars is inside the OR-fallback band). An English critique of 350 words also passes via the primary word-count band. Pre-fix `countWords` used `/\s+/`-split-and-count, returning `1` for a Japanese-only critique and emitting `QFAI-PROT-002 (count 1 below band 200..500 words)`.
+- When QFAI-PROT-002 evaluates it, selecting CJK characters as the unit because the text carries CJK,
+- Then the prose passes: 1200 is under the character cap, and no lower bound applies. An English critique of 350 words passes the same way, measured in words. A critique too short to have been measured in words at all — which is what a whitespace split returns for Japanese prose — passes rather than failing, because the rule is a cap.
 
 ## EX-0012-0167: `browserTool: "playwright-cli"` Accepted with D-DEPRECATED-PROBE Warning
 
