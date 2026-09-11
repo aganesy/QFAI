@@ -34,3 +34,4 @@ Key rules to follow:
 - `.agents/rules/distributed-surface.md` — no internal QFAI IDs or version markers in shipped files.
 - `.agents/rules/version-discipline.md` — release version numbers are the project maintainer's call; never select or bump one independently.
 - `.agents/rules/documentation-clarity.md` — plain, minimal writing in PRs, issues, comments and Markdown; no local identifiers, no account of how the work went.
+- `.agents/rules/minimal-implementation.md` — the order to try solutions in once a behaviour is agreed; mark a deliberate shortcut with its ceiling and the condition that lifts it.
