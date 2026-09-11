@@ -12,7 +12,7 @@ are active and all twelve own a row.
 
 **Most cells are `❌` for a reason worth stating precisely, because it is not the obvious one.**
 Sixteen of the eighteen obligations do have a passing annotated test — only `TC-0008-0009` and
-`TC-0008-0010` have none. What twelve of those sixteen do not have is a test that exercises a
+`TC-0008-0010` have none. What ten of those sixteen do not have is a test that exercises a
 behaviour. `TC-0008-0001` … `-0008`, `-0011` and `-0012` are discharged by assertions that read a
 Markdown or TypeScript **source file** and check that a substring is present in it: that `SKILL.md`
 contains the words `Raw count`, that `atddTraceability.ts` contains the identifier
@@ -23,11 +23,11 @@ document about the behaviour, no category beyond `Normal path` has anything to s
 strength` has nothing to certify. That is the shape of rows 1-8, 11 and 12, and it is why they
 carry eight `❌` each rather than two or three.
 
-The remaining four rows are the opposite case and are scored on their merits: `TC-0008-0013` and
+The remaining six rows are the opposite case and are scored on their merits: `TC-0008-0013` and
 `TC-0008-0014` exercise `qfai atdd scaffold` against temp-directory fixtures, and `TC-0008-0015` …
 `-0018` run real predicates over the shipped guidance artifact with a planted-violation control.
 
-Committed, because it is a governance record. Section "Every `❌` cell, named" enumerates all 128 of
+Committed, because it is a governance record. Section "Every `❌` cell, named" enumerates all 135 of
 them so that "one justification per `❌`" is checkable rather than asserted, and section "Every `⚠️`
 cell, named" does the same for the partial scores, which the PASS criterion also requires a rationale
 for.
@@ -92,9 +92,9 @@ cases cite, not from the rule's number.
 | BR ID        | Positive case | Negative case | Conditional branches | Covering TC                              | Status |
 | ------------ | ------------- | ------------- | -------------------- | ---------------------------------------- | ------ |
 | BR-0008-0001 | ⚠️            | ❌            | ⚠️                   | TC-0008-0002, TC-0008-0003, TC-0008-0004 | ❌     |
-| BR-0008-0002 | ⚠️            | ❌            | ⚠️                   | TC-0008-0005                             | ❌     |
-| BR-0008-0003 | ⚠️            | ❌            | n/a                  | TC-0008-0001                             | ❌     |
-| BR-0008-0004 | ⚠️            | ⚠️            | n/a                  | TC-0008-0008                             | ⚠️     |
+| BR-0008-0002 | ⚠️            | ❌            | ⚠️                   | TC-0008-0003, TC-0008-0005               | ❌     |
+| BR-0008-0003 | ⚠️            | ❌            | n/a                  | TC-0008-0001, TC-0008-0007               | ❌     |
+| BR-0008-0004 | ⚠️            | ⚠️            | n/a                  | TC-0008-0006, TC-0008-0008               | ⚠️     |
 | BR-0008-0005 | ❌            | ❌            | n/a                  | TC-0008-0009                             | ❌     |
 | BR-0008-0006 | ⚠️            | ❌            | n/a                  | TC-0008-0010, TC-0008-0007               | ❌     |
 | BR-0008-0007 | ⚠️            | ⚠️            | n/a                  | TC-0008-0011, TC-0008-0012               | ⚠️     |
@@ -118,7 +118,8 @@ states.
 
 ## Every ❌ cell, named
 
-116 depth cells are `❌`, plus 12 in `Status` — 128 in all. Each is named below with its own reason.
+The matrix carries 116 `❌` depth cells plus 12 in `Status`, and the business rule table below it
+carries 7 more — 135 in all. Each is named below with its own reason.
 A row's `Status` is `❌` when the obligation is not discharged at the depth the case describes; that
 verdict is stated once per row and is not repeated per cell.
 
