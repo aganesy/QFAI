@@ -57,11 +57,11 @@ non-waivable**: any finding blocks convergence, and there is no
 Reviewer override. Ordinary cycles carry no scanner output —
 `designMdViolations` stays `[]` in every Reviewer report — because the
 scan runs at the two checkpoints below, not once per cycle. A
-**convergence** stop takes more than the four scores: it needs all
-four axes `exceptional` **and both finding arrays empty** —
-`layoutAntiPatternsDetected` and `designMdViolations` alike — so one
-surviving `lap-*` keeps the loop running on four exceptional scores,
-and clearing it is the next cycle's work. On that stop the accepted
+**convergence** stop needs **all three finding arrays empty** —
+`blockingFindings`, `layoutAntiPatternsDetected` and
+`designMdViolations` alike — so one surviving `lap-*` keeps the loop
+running with nothing else outstanding, and clearing it is the next
+cycle's work. On that stop the accepted
 iteration's HTML is re-scanned before the stop is honoured, so a
 hand-written `[]` in the Reviewer report is discarded and the loop
 keeps iterating (the re-scan drives that decision only; it is not

@@ -6,6 +6,21 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
+- **One statement of when the prototype loop stops** (#1560). The loop stops
+  when the latest iteration has `blockingFindings`, `layoutAntiPatternsDetected`
+  and `designMdViolations` all empty. Six places still described that exit as
+  all four UX axes rated `exceptional` — a rating the payload no longer carries
+  and the code no longer reads.
+
+  The prose is what an agent reads before deciding whether to keep iterating,
+  and the `--help` line is what an operator reads to interpret the exit, so a
+  run that stopped was explained by a gate nobody applied and a run that kept
+  going looked unexplained. The skill, the loop reference, the generator prompt
+  and the exit-code help now all name the three arrays.
+
+  A check holds them there: it reads the stop condition out of each document
+  and fails on a rating word anywhere in the shipped prototyping tree.
+
 - **The test runner stops asking for more forks than the machine has** (#1528).
   `DECLARED_START` is ten, and on a four-core runner that asked for ten forks
   where four fit. A fifth fork does not run — it waits for a core — and the

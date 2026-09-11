@@ -201,7 +201,7 @@ describe("validatePrototypingEvidence", () => {
     expect(issues.some((i) => i.code === "QFAI-PROT-005")).toBe(true);
   });
 
-  it("emits QFAI-PROT-005 when stopReason=converged but last iter not all exceptional", async () => {
+  it("emits QFAI-PROT-005 when stopReason=converged but last iter has findings open", async () => {
     const root = await newTempDir();
     await seedPrototypingJson(root, {
       specsCovered: ["0001"],
@@ -494,7 +494,7 @@ describe("validatePrototypingEvidence — iter-NN/review.json", () => {
   // (it is absent from the `Iteration` type and no shipped instruction tells
   // the orchestrator to overwrite it while updating the record in place), and
   // writing the string into any row waived that row. Measured before the fix:
-  // three iterations, all four axes `exceptional`, `stopReason:
+  // three iterations with every finding array empty, `stopReason:
   // "converged"` and no review.json anywhere -> zero findings.
   it("does not waive the gate for a reviewed record that kept the seed stamp", async () => {
     const root = await newTempDir();

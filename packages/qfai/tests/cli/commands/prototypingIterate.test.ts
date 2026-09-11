@@ -285,8 +285,8 @@ describe("runPrototypingIterate convergence (exit 64)", () => {
     // The shipped reviewer prompt instructs reviewers to leave
     // designMdViolations empty unless a runtime gate injects findings,
     // and the runtime scanner historically lived in certify only. Pre-
-    // fix, a prototype with DESIGN.md drift could converge here ('all 4
-    // axes exceptional + dmv:[]'), exit 64, and only fail later at
+    // fix, a prototype with DESIGN.md drift could converge here (every
+    // finding array empty), exit 64, and only fail later at
     // certification. Post-fix, iterate re-runs findDesignMdViolations
     // against the accepted iter HTML before honoring 'converged'
     // and falls through to the next-cycle plan when drift is found.
@@ -3078,7 +3078,7 @@ describe("runPrototypingIterate cycle >= 1 — drift gates run before shouldStop
     // zero-UI precheck does NOT short-circuit), spec-0002 had its
     // marker removed mid-loop. `frozenSurfaceUnion` records both
     // ["0001", "0002"]; live `resolveSurfaceUnion` returns ["0001"]
-    // only. The recorded iter is fully converged (axes exceptional +
+    // only. The recorded iter is fully converged (no blocking findings,
     // no lap + no dmv) so `shouldStop` would return
     // "converged" if the drift gate ran AFTER it (the pre-29th
     // ordering). Post-29th the drift gate runs first → exit 2.

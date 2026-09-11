@@ -597,13 +597,13 @@ describe("assets guardrails", () => {
       expect(generatorRef).toMatch(/\*\*convergence\*\* stop/);
       expect(generatorRef).toMatch(/re-scanned before the stop\s+is honoured/);
       expect(generatorRef).toMatch(/\*\*max-iterations\*\* stop skips that re-scan/);
-      // `iterationConverged` is not what its name says: it also requires
-      // `layoutAntiPatternsDetected.length === 0` and
-      // `designMdViolations.length === 0`. A prompt that defines the stop as
-      // the four scores alone leaves the generator unable to explain why a
-      // run with four `exceptional` axes did not stop, or what to fix next.
-      expect(generatorRef).toMatch(/\*\*and both finding arrays empty\*\*/);
-      expect(generatorRef).toMatch(/`layoutAntiPatternsDetected` and `designMdViolations`/);
+      // The stop test is three arrays, and naming fewer than three leaves the
+      // generator unable to explain why a run with nothing else outstanding
+      // did not stop, or what to fix next.
+      expect(generatorRef).toMatch(/\*\*all three finding arrays empty\*\*/);
+      expect(generatorRef).toMatch(
+        /`blockingFindings`, `layoutAntiPatternsDetected` and\s+`designMdViolations`/,
+      );
       expect(generatorRef).toMatch(/one\s+surviving `lap-\*` keeps the loop running/);
       // And the re-scan is not a proof of inspection.
       // `recomputeFinalIterDesignMdViolations` returns `[]` for an ENOENT
