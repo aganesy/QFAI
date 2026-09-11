@@ -5,10 +5,6 @@ dependencies: [00_universal/thinking.md, 00_universal/communication.md]
 version: 1.0.0
 ---
 
-> **言語指示（厳守）**
->
-> - 報告・出力: 日本語（Plan も含む）
-
 # 相談・レビューの進め方
 
 設計や仕様の確認を効率よく行うための型。

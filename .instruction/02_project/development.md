@@ -5,10 +5,6 @@ dependencies: [02_project/tech-stack.md]
 version: 1.0.0
 ---
 
-> **言語指示（厳守）**
->
-> - 報告・出力: 日本語（Plan も含む）
-
 # 開発手順とコマンド（QFAI Toolkit）
 
 ## 前提

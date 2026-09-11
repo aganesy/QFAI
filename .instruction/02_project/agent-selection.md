@@ -7,10 +7,6 @@ dependencies:
 version: 2.0.0
 ---
 
-> **言語指示（厳守）**
->
-> - 報告・出力: 日本語（Plan も含む）
-
 # エージェント選択ガイド（QFAI Toolkit）
 
 QFAI のサブエージェントは、**agent-catalog + agent-routing + review-profiles** を SSOT とする（SSOT 実体パス: `.qfai/assistant/manifest/agent-catalog.yml`, `.qfai/assistant/manifest/agent-routing.yml`, `.qfai/assistant/manifest/review-profiles.yml`）。  
