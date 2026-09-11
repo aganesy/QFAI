@@ -187,6 +187,24 @@ Authored forms caught:
   strips them before scanning. A literal `box-shadow:` value or an
   `rgba(...)` slot next to one of them is still caught.
 
+### Markup shown as sample text
+
+The gate reads class attributes with a regular expression rather than a
+real HTML parser, so it cannot tell a class the page **uses** from one
+the page **shows**. A screen that displays markup as sample text —
+`<code>&lt;div class="bg-[#abcdef]"&gt;</code>` in a tutorial or a
+documentation panel — has that class scanned as if it were live, and the
+literal inside it is reported as drift.
+
+Escape the sample, or keep it out of the rendered HTML. A finding on a
+sample cannot be waived, and rewriting the sample to satisfy the gate
+would leave the screen showing markup nobody writes.
+
+The trade is deliberate: the gate's contract is that every token the
+rendered DOM uses comes from `DESIGN.md`, and a scanner that parsed
+properly could still be wrong about which nodes are rendered. What it
+costs is this one false positive, never a missed violation.
+
 ### Safelisted CSS-wide keywords
 
 The following values are **not** treated as drift by any of the four
