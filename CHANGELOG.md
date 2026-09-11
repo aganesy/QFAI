@@ -6,6 +6,17 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **The review payload schema stops citing a field it has never had**
+  (#1560). It said a payload that reviewed nothing is rejected "no matter what
+  its axes claim". The payload carries eleven required fields and none of them
+  is a score, so the sentence named something that does not exist.
+
+  A guard pins every statement of the stop condition to the three finding
+  arrays: each named document is checked for all three, and no prototyping
+  document may write a value off the axis ordinal in code-span form. The axes
+  themselves stay nameable — the reviewer still scores four of them and the
+  transcription row still records them.
+
 - **The specs decide convergence the way the loop does** (#1565). The prototype
   loop stops when the latest iteration has `blockingFindings`,
   `layoutAntiPatternsDetected` and `designMdViolations` all empty, and records
