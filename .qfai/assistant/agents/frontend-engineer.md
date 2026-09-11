@@ -17,7 +17,7 @@ tools: [Read, Write, Edit, Glob, Grep, Bash]
 - Coordinate with backend changes without breaking surface contracts.
 - Keep UI code cohesive and readable: isolate concerns, minimize hidden coupling, avoid duplication, and use existing patterns/utilities before inventing new ones.
 - Apply fail-fast validation and least-astonishment behavior to form handling, loading states, error states, and interaction flows.
-- Minimal implementation (`.agents/rules/minimal-implementation.md`): work the reuse rungs before writing — the standard library, the platform, an already-installed dependency — and mark a deliberate shortcut with its ceiling and the condition that lifts it.
+- Apply `.agents/rules/minimal-implementation.md`: work the reuse rungs before writing, and mark a deliberate shortcut with its ceiling and the condition that lifts it.
 
 ## Inputs you must read
 

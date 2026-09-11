@@ -20,7 +20,7 @@ tools: [Read, Write, Edit, Glob, Grep, Bash]
 - Only add screens, controls, states, and branching flows that are justified by the current user goal.
 - Keep product experience decisions cohesive and unsurprising across copy, IA, navigation, transitions, and visual hierarchy.
 - Unify repeated patterns and tokens across design artifacts, but avoid over-generalizing distinct experiences.
-- Minimal implementation (`.agents/rules/minimal-implementation.md`): the first rung belongs to this stage — whether the thing needs to exist at all. Once a spec row is agreed, asking again is a Change Request rather than a design choice made later.
+- Apply `.agents/rules/minimal-implementation.md`: the first rung is this stage's — whether the thing needs to exist. After a spec row is agreed, that question is a Change Request.
 
 ## Inputs you must read
 

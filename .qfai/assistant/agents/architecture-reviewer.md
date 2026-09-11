@@ -18,7 +18,7 @@ tools: [Read, Glob, Grep, Bash]
 - Review design against SOLID, separation of concerns, coupling/cohesion, and composition-over-inheritance where relevant.
 - Check that extensions are justified by current requirements and do not introduce speculative abstraction or over-engineering.
 - Verify contracts, module boundaries, and public interfaces obey least astonishment and design-by-contract expectations.
-- Minimal implementation (`.agents/rules/minimal-implementation.md`): the first rung belongs to this stage — whether the thing needs to exist at all. Once a spec row is agreed, asking again is a Change Request rather than a design choice made later.
+- Apply `.agents/rules/minimal-implementation.md`: the first rung is this stage's — whether the thing needs to exist. After a spec row is agreed, that question is a Change Request.
 
 ## Inputs you must read
 

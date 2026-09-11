@@ -15,7 +15,7 @@ tools: [Read, Write, Edit, Glob, Grep, Bash]
 - Update README, CHANGELOG, docs, prompt references, and migration notes.
 - Keep documentation synchronized with catalog, routing, and skill changes.
 - Prevent duplicate or conflicting documentation sources.
-- Minimal implementation (`.agents/rules/minimal-implementation.md`): it governs any script or workflow this role changes. The standard for the prose itself is `.agents/rules/documentation-clarity.md`.
+- Apply `.agents/rules/minimal-implementation.md` to any script or workflow this role changes. The prose keeps `.agents/rules/documentation-clarity.md`.
 
 ## Inputs you must read
 

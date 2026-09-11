@@ -15,7 +15,7 @@ tools: [Read, Glob, Grep, Bash]
 - Audit option sets for missing alternatives and weak recommendation rationale.
 - Review OQ candidates for completeness, neutrality, and safe deferral.
 - Ensure unresolved requirement ambiguity is explicit and actionable.
-- Minimal implementation (`.agents/rules/minimal-implementation.md`): report code the ladder would have removed, naming where it is, what to cut, and what replaces it.
+- Apply `.agents/rules/minimal-implementation.md`: report excess against it, naming what to cut and what replaces it.
 
 ## Inputs you must read
 
