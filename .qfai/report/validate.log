@@ -3,35 +3,35 @@
 This file is written by every `qfai validate` run and always points at the newest
 run-log directory. Do not edit it by hand; do not pipe stdout into it.
 
-- run_id: run-20260912023459081
-- started_at: 2026-09-11T17:34:59.081Z
+- run_id: run-20260911091000146
+- started_at: 2026-09-11T09:10:00.146Z
 - command: /qfai-validate
 - status: pass
-- errors: 139
-- warnings: 115
-- run_log: .qfai/report/run-20260912023459081
+- errors: 1058
+- warnings: 402
+- run_log: .qfai/report/run-20260911091000146
 
 # Validate Run Summary
 
-- run_id: run-20260912023459081
-- started_at: 2026-09-11T17:34:59.081Z
+- run_id: run-20260911091000146
+- started_at: 2026-09-11T09:10:00.146Z
 - status: pass
-- report_dir: .qfai/report/run-20260912023459081
-- errors: 139
-- warnings: 115
+- report_dir: .qfai/report/run-20260911091000146
+- errors: 1058
+- warnings: 402
 
 ## Top Errors
 
-- QFAI-TDDLIST-017 (.qfai/specs/spec-0002/tdd/test-list.md): TC-0002-0009 holds 2 rows in tdd/test-list.md for spec-0002, and 2 of them name no Boundary (TDD-0009, TDD-0010). Sibling rows repeat their obligation identically and carry serial ids, so a reseed that cannot read a boundary from the row falls back to Selector — a cell the executing stage rewrites — and can pair a row's Status and Evidence with a boundary they never described.
-- QFAI-TDDLIST-017 (.qfai/specs/spec-0003/tdd/test-list.md): TC-0003-0028 holds 2 rows in tdd/test-list.md for spec-0003, and 2 of them name no Boundary (TDD-0028, TDD-0055). Sibling rows repeat their obligation identically and carry serial ids, so a reseed that cannot read a boundary from the row falls back to Selector — a cell the executing stage rewrites — and can pair a row's Status and Evidence with a boundary they never described.
-- QFAI-TDDLIST-017 (.qfai/specs/spec-0003/tdd/test-list.md): TC-0003-0033 holds 2 rows in tdd/test-list.md for spec-0003, and 2 of them name no Boundary (TDD-0033, TDD-0056). Sibling rows repeat their obligation identically and carry serial ids, so a reseed that cannot read a boundary from the row falls back to Selector — a cell the executing stage rewrites — and can pair a row's Status and Evidence with a boundary they never described.
-- QFAI-TDDLIST-017 (.qfai/specs/spec-0006/tdd/test-list.md): TC-0006-0029 holds 2 rows in tdd/test-list.md for spec-0006, and 2 of them name no Boundary (TDD-0031, TDD-0040). Sibling rows repeat their obligation identically and carry serial ids, so a reseed that cannot read a boundary from the row falls back to Selector — a cell the executing stage rewrites — and can pair a row's Status and Evidence with a boundary they never described.
-- QFAI-TDDLIST-017 (.qfai/specs/spec-0006/tdd/test-list.md): TC-0006-0030 holds 3 rows in tdd/test-list.md for spec-0006, and 3 of them name no Boundary (TDD-0032, TDD-0038, TDD-0039). Sibling rows repeat their obligation identically and carry serial ids, so a reseed that cannot read a boundary from the row falls back to Selector — a cell the executing stage rewrites — and can pair a row's Status and Evidence with a boundary they never described.
+- QFAI-ASSETS-003 (.qfai/assistant/catalog/manifest.md): Stage 0 steering ファイル .qfai/assistant/catalog/manifest.md に未置換のテンプレート値が 19 件残っています（該当セクション: Product / Mission (3), Axioms (Non-negotiable) (4), Compatibility vs Change Rubric (3), Governance (Ownership / Review / Evidence) (4), Evidence (2), Non-goals / Not-now (Optional) (3)）。
+- QFAI-ASSETS-003 (.qfai/assistant/catalog/product.md): Stage 0 steering ファイル .qfai/assistant/catalog/product.md に未置換のテンプレート値が 15 件残っています（該当セクション: What are we building? (2), Who is the user? (3), What is "success"? (3), Non-goals (3), Milestones (2), Open questions (2)）。
+- QFAI-ASSETS-003 (.qfai/assistant/catalog/structure.md): Stage 0 steering ファイル .qfai/assistant/catalog/structure.md に未置換のテンプレート値が 13 件残っています（該当セクション: Repo layout (high level) (1), Key packages / entrypoints (4), Architecture constraints (4), UI surface paths (SSOT) (3), How to run locally (1)）。
+- QFAI-ASSETS-003 (.qfai/assistant/catalog/tech.md): Stage 0 steering ファイル .qfai/assistant/catalog/tech.md に未置換のテンプレート値が 22 件残っています（該当セクション: Runtime / platform (3), Package manager (1), Language / framework (4), Dependencies (runtime) (2), Constraints (3), Standard commands (copy-paste) (9)）。
+- QFAI-RESEARCH-012 (.qfai/discussion/discussion-20260418170937652): Discussion pack has no "Research Summary" section, so the research-first protocol is never checked. While the section is absent, these rules report nothing; each becomes an error as soon as the section exists: QFAI-RESEARCH-005 (sources[].url), QFAI-RESEARCH-006 (sources[].published (YYYY-MM-DD)), QFAI-RESEARCH-007 (best_practices (non-empty)), QFAI-RESEARCH-008 (anti_patterns (non-empty)), QFAI-RESEARCH-011 (reflection (non-empty)). The two source rules apply per source.
 
 ## Top Warnings
 
-- TDDLIST_UNKNOWN_LEVEL (.qfai/specs/spec-0001/06_Test-Cases.md): Unrecognized Level value(s) in 06_Test-Cases.md for spec-0001: L-struct. Accepted — coverage targets: L1, L2, component, unit; non-coverage: L3, L4, L5, acceptance, api, e2e, integration, system. Unrecognized values are treated as coverage targets, so every such TC becomes a mandatory ledger row
-- TDDLIST_UNKNOWN_LAYER (.qfai/specs/spec-0002/tdd/test-list.md): Unknown Layer "validators" in tdd/test-list.md for spec-0002 (row 5). Legal values: Unit, Component, Integration, API, E2E
-- TDDLIST_UNKNOWN_LAYER (.qfai/specs/spec-0002/tdd/test-list.md): Unknown Layer "validators" in tdd/test-list.md for spec-0002 (row 6). Legal values: Unit, Component, Integration, API, E2E
-- TDDLIST_COVERAGE_LAYER_MISMATCH (.qfai/specs/spec-0003/tdd/test-list.md): TC "TC-0003-0010" declares Level=unit but is only referenced from Layer=INTEGRATION row(s) in tdd/test-list.md for spec-0003. The row still counts as coverage today; this escalates to error in a later release
-- TDDLIST_UNKNOWN_LEVEL (.qfai/specs/spec-0004/06_Test-Cases.md): Unrecognized Level value(s) in 06_Test-Cases.md for spec-0004: ssot-guard, validators. Accepted — coverage targets: L1, L2, component, unit; non-coverage: L3, L4, L5, acceptance, api, e2e, integration, system. Unrecognized values are treated as coverage targets, so every such TC becomes a mandatory ledger row
+- QFAI-REVIEW-002 (.qfai/review): review 成果物が見つかりません。`review-YYYYMMDDhhmmssSSS/` が未生成のため、このチェックは warning 扱いです。
+- QFAI-EX-105 (.qfai/specs/spec-0001/06_Test-Cases.md): 06_Test-Cases.md の Level が test-layer policy 外です: L-struct。policy が許可する層: api, component, e2e, integration, unit
+- QFAI-TRIAGE-001 (.qfai/specs/spec-0002/09_delta.md): delta.md に `## Change Summary` があるが `## Triage` セクションがありません。
+- QFAI-EX-105 (.qfai/specs/spec-0004/06_Test-Cases.md): 06_Test-Cases.md の Level が test-layer policy 外です: ssot-guard, validators。policy が許可する層: api, component, e2e, integration, unit
+- QFAI-TRIAGE-001 (.qfai/specs/spec-0005/09_delta.md): delta.md に `## Change Summary` があるが `## Triage` セクションがありません。
