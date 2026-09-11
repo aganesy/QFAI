@@ -28,6 +28,23 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **The forbidden-legacy manifest names every retired sidecar** (#1498). A
+  discussion pack rejects eight families of sidecar file. The manifest an author
+  is sent to listed four of them, so the other four could be created in good
+  faith and refused by validation afterwards.
+
+  The four that were missing are named now, each with what replaced it:
+
+  | File                            | Why it is retired                                                 |
+  | ------------------------------- | ----------------------------------------------------------------- |
+  | `10_implementation_strategy.md` | Discussion carries directions unranked, so it selects no strategy |
+  | `11_design_taste_interview.md`  | Brand signals live in root `DESIGN.md`                            |
+  | `12_design_system.md`           | Replaced by root `DESIGN.md` and the design contracts             |
+  | the `20`–`24` family            | The evaluator axes are fixed by the CLI, not authored in a pack   |
+
+  A test reads the manifest against the validator, so a family added to one and
+  not the other fails rather than waiting for an author to meet it.
+
 - **The layout anti-pattern registry has one copy** (#1486).
   `layoutAntiPatterns.json` existed twice — once beside the loader under
   `src/core/validators/`, once under `assets/validators/`, which
