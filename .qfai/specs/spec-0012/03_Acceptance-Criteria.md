@@ -331,14 +331,14 @@
 - When the input filter into `scanColors` runs,
 - Then the broader `--*-shadow*:` pattern MUST strip both declarations before color scanning and `designMdViolations[]` MUST NOT contain entries naming those rgba values.
 
-## AC-0012-0057: CJK-aware proseCritique (Intl.Segmenter + OR-fallback)
+## AC-0012-0057: proseCritique cap, unit selected by the text
 
 - US-Refs: US-0012-0123
 - REQ-Refs: REQ-0012-0059
-- Given a Japanese-only `proseCritique` of 800–1500 characters AND an English critique of 200–500 words,
-- When `countWords` (or its replacement) evaluates the prose against QFAI-PROT-002 using `Intl.Segmenter('ja', { granularity: 'word' })` AND the OR-condition `200..500 words OR 600..2500 characters`,
-- Then both fixtures MUST pass with no regression.
-- And on out-of-band input the error text MUST name (a) the count form measured (words vs characters), (b) the band used, (c) the actual count.
+- Given a Japanese-only `proseCritique` of 800–1500 characters, an English critique of 200–500 words, and a short critique in either language,
+- When QFAI-PROT-002 evaluates the prose, selecting CJK characters as the unit where the text carries CJK and whitespace-separated words otherwise,
+- Then all three MUST pass: the cap binds only above it, and neither unit has a lower bound.
+- And over the cap the error text MUST name (a) the count form measured (words or characters), (b) the cap, (c) the actual count.
 
 ## AC-0012-0058: `browserTool` accepts `"playwright"` and `"playwright-cli"`
 

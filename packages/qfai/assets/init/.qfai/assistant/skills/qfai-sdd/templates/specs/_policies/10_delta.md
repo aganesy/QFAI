@@ -1,11 +1,17 @@
 # 10 Delta
 
 <!-- Multi-run layout. `/qfai-sdd` is re-run against the same tree, so this
-     file grows. Keep exactly one H2 per section for the file's lifetime and
-     append inside it. Never open a second `## Change Summary` / `## Triage`
-     H2 (dated variants such as `## Triage — 2026-01-01` included): the
-     `QFAI-TRIAGE-*` checks read the first `## Triage` heading only, so rows
-     parked under a duplicate heading are never validated. -->
+     file grows: a run appends, and never replaces what is already here.
+
+     A re-run's Triage rows go either in another `### DELTA-NNNN (YYYY-MM-DD)`
+     sub-section under the `## Triage` below, or under a second H2 that names
+     its round in parentheses — `## Triage (2026-01-01)`. Every `## Triage`
+     section in the file is validated, and the parenthesised qualifier is the
+     only form that keeps two of them distinct. Any other trailer
+     (`## Triage — 2026-01-01`, `## Triage Table`) or a demoted `### Triage` is
+     read by no Triage validator; `QFAI-TRIAGE-008` reports it.
+
+     `## Change Summary` has no such qualifier. Keep one and append inside it. -->
 
 ## Change Summary
 
@@ -20,8 +26,8 @@
 > requirement spans multiple specs (SPLIT / MERGE / SUPERSEDE) or when a
 > policy file (`_policies/**`) itself changes. Per-spec triage rows
 > belong in `<spec>/09_delta.md`.
-> One `### DELTA-NNNN (YYYY-MM-DD)` sub-section per run; a re-run appends a new
-> sub-section under this heading and never opens a second `## Triage` H2.
+> One `### DELTA-NNNN (YYYY-MM-DD)` sub-section per run, appended under this
+> heading or under a `## Triage (<round>)` H2 of its own.
 
 ### DELTA-0001 (YYYY-MM-DD)
 

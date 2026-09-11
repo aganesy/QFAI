@@ -34,7 +34,7 @@
 - US-0012-0120: `scanFonts` / `scanRadius` / `scanShadow` to resolve `var(--token)` references against `:root` before judging…
 - US-0012-0121: `inherit` / `initial` / `unset` / `revert` / `currentColor` to be treated as safe across every scanner
 - US-0012-0122: `--*-shadow*:` custom-property declarations carrying `rgba()` literals to be stripped before color scanning
-- US-0012-0123: `countWords` to accept a Japanese-only `proseCritique` of 800–1500 characters and a parallel English critique…
+- US-0012-0123: a `proseCritique` to be measured in the unit its own writing system uses, and capped rather than bounded below
 - US-0012-0124: `prototyping.execution.browserTool` to accept both `"playwright"` (primary) and `"playwright-cli"` (deprecatio…
 - US-0012-0125: an opt-in `qfai prototyping iterate --capture` flag (default OFF)
 - US-0012-0126: an opt-in `qfai prototyping iterate --auto-serve` flag (default OFF)
@@ -189,7 +189,7 @@ As a designer, I want `--*-shadow*:` custom-property declarations carrying `rgba
 
 ## US-0012-0123
 
-As a Japanese-language reviewer, I want `countWords` to accept a Japanese-only `proseCritique` of 800–1500 characters and a parallel English critique of 200–500 words within the same QFAI-PROT-002 band, so that bilingual review payloads converge without artificial length errors. (REQ-0012-0059)
+As a Japanese-language reviewer, I want a Japanese-only `proseCritique` measured in characters and an English one measured in words, each against its own cap and neither against a floor, so that bilingual review payloads converge without a length error on prose that says what it needs to. (REQ-0012-0059)
 
 ## US-0012-0124
 

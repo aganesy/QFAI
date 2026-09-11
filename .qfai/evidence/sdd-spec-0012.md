@@ -1369,3 +1369,114 @@ All five deferred; none blocking for SDD completion. They block the implementati
 
 PASS — both routed blocking reviewers returned `PASS`. SDD DONE.
 
+
+---
+
+## 2026-09-11 Section (appended)
+
+### Objective
+
+Bring the `proseCritique` length statements in `spec-0012` and `spec-0004` in
+line with the rule `validateProseCritiqueBand` applies. The artifacts stated a
+band with a lower bound and an OR between the two units; the rule is a cap, and
+it selects the unit from the text.
+
+### Inputs reviewed
+
+| Priority | Path                                                         | Purpose                                     |
+| -------- | ------------------------------------------------------------ | ------------------------------------------- |
+| P1       | `.qfai/assistant/constitution/*`                             | Normative invariants                        |
+| P3       | `_policies/11_Slice-Policy.md`, `_policies/08_Decisions.md`   | Triage operations, the record being replaced |
+| P4       | `.qfai/specs/spec-0012/**`, `.qfai/specs/spec-0004/**`        | The statements to correct                   |
+| —        | `packages/qfai/src/core/prototyping/evaluatorReview.ts`       | The implemented rule                        |
+| —        | `packages/qfai/tests/unit/core/prototyping/proseCritique/**`  | What the boundary cases assert today        |
+
+### Preflight summary path
+
+`.qfai/report/preflight/run-20260911090607227/preflight_summary.md` — status
+`ready`, source `discussion-pack`.
+
+### Triage decisions
+
+| Source        | Operation | Sub-op | Approver | Note                                            |
+| ------------- | --------- | ------ | -------- | ----------------------------------------------- |
+| REQ-0012-0059 | UPDATE    | MODIFY | —        | Approval-free per `11_Slice-Policy.md`          |
+| REQ-0028      | UPDATE    | MODIFY | —        | Impact cascade onto `spec-0004`                 |
+| DR-0001-0003  | UPDATE    | MODIFY | —        | Policy-only; successor recorded as `DR-0277`    |
+
+No CREATE / DELETE / SPLIT / MERGE / SUPERSEDE / UPDATE:REMOVE row, so no row
+required approval.
+
+### Open questions
+
+None opened. `08_Open-questions.md` line about `proseCritique` being one
+"200..500-word string" is corrected to "one capped string"; the question it sits
+in is about payload shape and is unaffected.
+
+### Decisions made
+
+`DR-0277` records the cap and the selected unit, and supersedes `DR-0001-0003`.
+The superseded record keeps its statement and gains a `Status` line, because its
+rejected option was argued against on the strength of the floor.
+
+### Work performed
+
+| File                                      | Change                                                        |
+| ----------------------------------------- | ------------------------------------------------------------- |
+| `_policies/08_Decisions.md`               | `DR-0001-0003` marked superseded; `DR-0277` added             |
+| `_policies/10_delta.md`                   | Triage row for the policy change                              |
+| `spec-0012/01_Spec.md`                    | REQ-0012-0059 restated as a cap with a selected unit          |
+| `spec-0012/02_User-stories.md`            | US-0012-0123 and its catalog line                             |
+| `spec-0012/03_Acceptance-Criteria.md`     | AC-0012-0057                                                  |
+| `spec-0012/04_Business-Rules.md`          | BR-0012-0045, and the `critique` line under AC-0012-0021..23  |
+| `spec-0012/05_Examples.md`                | EX-0012-0166                                                  |
+| `spec-0012/06_Test-Cases.md`              | TC-0012-0438 and TC-0012-0460 boundary descriptions           |
+| `spec-0012/08_Open-questions.md`          | The payload-shape note                                        |
+| `spec-0012/09_delta.md`                   | Triage rows                                                   |
+| `spec-0004/01_Spec.md`                    | REQ-0028                                                      |
+| `spec-0004/03_Acceptance-Criteria.md`     | The schema-v3 criterion                                       |
+| `spec-0004/04_Business-Rules.md`          | The schema-v3 rule                                            |
+| `spec-0004/09_delta.md`                   | Triage row                                                    |
+
+No file under `packages/qfai/src/**` or `packages/qfai/tests/**` changed. The
+code is what the artifacts now describe.
+
+### Contract executability
+
+- none — no `db/` contract was authored or changed.
+
+### Commands executed
+
+| Command                                             | Result                                                    |
+| --------------------------------------------------- | ---------------------------------------------------------- |
+| `qfai sdd preflight --fail-on error`                | `status: ready`, 7 imported REQ                            |
+| `qfai validate --profile sdd --fail-on error`       | Errors reported, all pre-existing — see the ratchet below  |
+| `check-dogfood-backlog --profile sdd`               | 96 errors across 5 files, all within the pinned backlog    |
+| `check-dogfood-backlog --profile tdd`               | 1035 across 20, all within the pinned backlog              |
+| `check-dogfood-backlog --profile full`              | 1058 across 42, all within the pinned backlog              |
+
+`--profile sdd` does not reach zero on this repository and has not for some
+time; the backlog ratchet is what holds it, and this change moves no number in
+it.
+
+### Validate evidence paths
+
+`.qfai/report/validate-sdd.json`, `.qfai/report/preflight/run-20260911090607227/preflight_summary.md`
+
+### Work Orders Summary
+
+| WO  | Role                | Scope                                 | Deliverable                       | Status | Notes                            |
+| --- | ------------------- | ------------------------------------- | --------------------------------- | ------ | -------------------------------- |
+| 1   | requirements-analyst | REQ-0012-0059 / REQ-0028 restatement  | The two requirement statements    | PASS   | Read against the implemented rule |
+| 2   | test-design-analyst  | AC / EX / TC / US cascade             | The downstream rows               | PASS   | Boundary rows read off the tests  |
+| 3   | solution-architect   | `DR-0277` and the supersession        | The decision records              | PASS   | Successor, not an edit            |
+
+### Gaps / Open risks
+
+`DR-0277` records what the cap forecloses: a short English critique is no longer
+distinguishable from a short filler one by length, and nothing measures that.
+That is the cost of removing the floor, not a defect introduced here.
+
+### Final status
+
+PASS.
