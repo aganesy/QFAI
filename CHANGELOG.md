@@ -6,6 +6,24 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **A second hook group now reaches a project that already has the first**
+  (#1464). `qfai init` merges its Claude Code hooks into a project that already
+  has a `.claude/settings.json`. The merge decided whether to do anything from
+  one status message found anywhere in the file, so once a project carried any
+  group it was treated as done. A project that installed an earlier set
+  therefore received nothing later — and that is the population an upgrade is
+  for.
+
+  The decision is per group now. A group the file does not carry is merged in;
+  one it carries is left alone, and the run names only the events it actually
+  added to.
+
+  A group is recognised by the status messages its entries carry, not by its
+  whole content. The reminder body is prose a project may reasonably have
+  adjusted, and matching on the whole group would re-append it and leave two of
+  the same hook running. A template group carrying no status message is refused
+  rather than merged, because nothing would recognise it on the next run.
+
 - **The stable type gate runs the stable compiler** (#1449). Two packages here
   ship a `tsc` — `typescript`, and `typescript-future`, an alias for the next
   major. One wins the bin name and the alias did, so `check-types`, spelled

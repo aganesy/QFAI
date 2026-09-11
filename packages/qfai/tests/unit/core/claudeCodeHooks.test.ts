@@ -123,7 +123,53 @@ describe("mergeDocumentationClarityHooks", () => {
     expect(again.outcome).toBe("already-present");
   });
 
-  it("treats a marker written by hand as already present", () => {
+  it("adds a group the project is missing to a file that carries the other one", () => {
+    // The population an upgrade is for: a project that installed an earlier
+    // template. Deciding per file would see the first group, call the file
+    // done, and withhold every group added after it.
+    const first = groupsFor(mergedSettings("{}"), "PreToolUse")[0];
+    const settings = mergedSettings(JSON.stringify({ hooks: { PreToolUse: [first] } }));
+
+    expect(groupsFor(settings, "PreToolUse")).toHaveLength(1);
+    expect(groupsFor(settings, "PostToolUse")).toHaveLength(1);
+    expect(JSON.stringify(groupsFor(settings, "PostToolUse")[0])).toContain("Write(**/*.md)");
+  });
+
+  it("names only the events it actually added to", () => {
+    const first = groupsFor(mergedSettings("{}"), "PreToolUse")[0];
+    const result = mergeDocumentationClarityHooks(
+      JSON.stringify({ hooks: { PreToolUse: [first] } }),
+      TEMPLATE,
+    );
+
+    expect(result.outcome).toBe("merged");
+    if (result.outcome !== "merged") return;
+    expect(result.events).toEqual(["PostToolUse"]);
+  });
+
+  it("recognises a group whose reminder text the project has reworded", () => {
+    // Identity is the status message, not the whole group. The reminder body is
+    // prose a project may reasonably adjust, and re-appending it would leave two
+    // of the same hook running.
+    const reworded = {
+      matcher: "mcp__github__(create_pull_request)",
+      hooks: [
+        {
+          type: "command",
+          statusMessage: DOCUMENTATION_CLARITY_HOOK_MARKER,
+          command: "node",
+          args: ["-e", "console.log('our own wording')"],
+        },
+      ],
+    };
+    const settings = mergedSettings(JSON.stringify({ hooks: { PreToolUse: [reworded] } }));
+
+    expect(groupsFor(settings, "PreToolUse")).toEqual([reworded]);
+  });
+
+  it("treats a marker written by hand as carrying that group", () => {
+    // The hand-written group answers for the event it is under. The other event
+    // has nothing, so it is still added.
     const byHand = JSON.stringify({
       hooks: {
         PreToolUse: [
@@ -135,7 +181,24 @@ describe("mergeDocumentationClarityHooks", () => {
       },
     });
 
-    expect(mergeDocumentationClarityHooks(byHand, TEMPLATE).outcome).toBe("already-present");
+    const result = mergeDocumentationClarityHooks(byHand, TEMPLATE);
+    expect(result.outcome).toBe("merged");
+    if (result.outcome !== "merged") return;
+    expect(result.events).toEqual(["PostToolUse"]);
+    expect(groupsFor(result.settings, "PreToolUse")).toHaveLength(1);
+  });
+
+  it("refuses a template group that carries no status message", () => {
+    // Without one there is nothing to recognise the group by, so the next run
+    // would append it again.
+    const anonymous = JSON.stringify({
+      hooks: { PreToolUse: [{ matcher: "Bash", hooks: [{ type: "command", command: "./x.sh" }] }] },
+    });
+
+    const result = mergeDocumentationClarityHooks("{}", anonymous);
+    expect(result.outcome).toBe("unreadable");
+    if (result.outcome !== "unreadable") return;
+    expect(result.reason).toContain("status message");
   });
 
   it.each([
