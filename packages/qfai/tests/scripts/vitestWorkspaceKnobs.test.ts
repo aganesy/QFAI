@@ -120,11 +120,19 @@ function isRecord(value: unknown): value is Record<string, unknown> {
  * The knob values are computed, and an override path is exactly what a regex cannot see
  * through. `vi.resetModules()` before each import is what makes the override claim
  * possible at all: the modules read their environment once, at evaluation.
+ *
+ * Both knobs are cleared first, so a case reads the environment it declares rather than
+ * the one the suite happens to be running under. The floor lane sets the worker knob for
+ * the whole run, and without this the default case measures that lane instead of the
+ * default.
  */
 async function load(
   env: Readonly<Record<string, string>> = {},
 ): Promise<{ projects: Record<string, unknown>[]; root: Record<string, unknown> }> {
   vi.resetModules();
+  for (const key of [WORKERS_ENV, CONCURRENCY_ENV]) {
+    vi.stubEnv(key, undefined);
+  }
   for (const [key, value] of Object.entries(env)) {
     vi.stubEnv(key, value);
   }
