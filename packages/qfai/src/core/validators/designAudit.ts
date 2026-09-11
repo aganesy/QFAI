@@ -50,15 +50,21 @@ export type DesignFinding = {
 const COSMETIC_CATEGORIES = ["generic-shell", "stock-imagery", "placeholder-copy"];
 
 /**
- * Recommended count band for `screens[].primary_tasks`: 3..7 inclusive.
- * Counts outside the band raise `QFAI-AUD-020` at severity=warning.
- * The band wording is surfaced both in the shipped UI contract template
- * comments and in the accompanying authoring guide so authors learn
- * the band from the same string that the validator finally cites.
+ * Recommended ceiling on `screens[].primary_tasks`: at most 7.
+ * A count above it raises `QFAI-AUD-020` at severity=warning.
+ *
+ * There is no floor. Seven tasks on one screen weakens focus; one task on
+ * one screen is focus, and a rule that reported it as weak told the author
+ * to add tasks to a screen that needed none. `QFAI-AUD-001` still reports a
+ * `primary_tasks` list with nothing in it, so a screen that declares no task
+ * at all is caught.
+ *
+ * The wording is surfaced in the shipped UI contract template comments and
+ * in the authoring guide, so authors learn the ceiling from the same string
+ * the validator finally cites.
  */
-export const PRIMARY_TASKS_BAND_MIN = 3;
-export const PRIMARY_TASKS_BAND_MAX = 7;
-export const PRIMARY_TASKS_BAND_LABEL = `${PRIMARY_TASKS_BAND_MIN}..${PRIMARY_TASKS_BAND_MAX}`;
+export const PRIMARY_TASKS_MAX = 7;
+export const PRIMARY_TASKS_MAX_LABEL = `at most ${PRIMARY_TASKS_MAX}`;
 
 // ---------------------------------------------------------------------------
 // Config Resolution
@@ -239,17 +245,17 @@ function bandFindingFor(
   fileForFinding: string,
 ): DesignFinding | null {
   const count = primaryTasks.length;
-  if (count >= PRIMARY_TASKS_BAND_MIN && count <= PRIMARY_TASKS_BAND_MAX) {
+  if (count <= PRIMARY_TASKS_MAX) {
     return null;
   }
   return {
     ruleId: "QFAI-AUD-020",
     dimension: "visualHierarchy",
     severityTier: 2,
-    message: `[QFAI-AUD-020] ${file}: screen '${screenId}' primary_tasks count ${count} is outside the recommended band ${PRIMARY_TASKS_BAND_LABEL}`,
-    why: `primary_tasks count outside the recommended band ${PRIMARY_TASKS_BAND_LABEL} weakens screen focus`,
+    message: `[QFAI-AUD-020] ${file}: screen '${screenId}' primary_tasks count ${count} is over the recommended ${PRIMARY_TASKS_MAX_LABEL}`,
+    why: `more than ${PRIMARY_TASKS_MAX} primary tasks on one screen weakens its focus`,
     evidence: primaryTasks,
-    guidance: `Adjust the screen primary_tasks list so the count falls within the recommended band ${PRIMARY_TASKS_BAND_LABEL}.`,
+    guidance: `Move some of screen '${screenId}' primary_tasks to another screen, or fold them into fewer tasks, until ${PRIMARY_TASKS_MAX_LABEL} remain.`,
     file: fileForFinding,
   };
 }
