@@ -4,6 +4,26 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ## [Unreleased]
 
+### Fixed
+
+- **Two spec packs mandated a prose-critique floor the code does not have**
+  (#1503). QFAI-PROT-002 applies a cap and selects the unit from the text: a
+  critique carrying CJK is measured in CJK characters, anything else in
+  whitespace-separated words, and neither unit has a lower bound.
+
+  `spec-0012` and `spec-0004` stated the band
+  `200..500 words OR 600..2500 characters` as a requirement, in a requirement,
+  a user story, an acceptance criterion, two business rules, an example and two
+  test cases. That is wrong twice over. The lower bound was removed, and the OR
+  was never how the unit is chosen — an English critique carries no CJK
+  characters, so a rule passing on either unit would pass every English text
+  however long.
+
+  `DR-0277` records the cap and the selected unit, and supersedes
+  `DR-0001-0003`, whose rejected alternative was argued against on the strength
+  of the floor. The boundary rows now match the cases that run: only the upper
+  edge of each unit rejects.
+
 ### Added
 
 - **A rule for what may appear on an interface** (#1495).
