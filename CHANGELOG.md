@@ -240,6 +240,32 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   a vocabulary nothing defined, and a checklist nothing loaded on its own. Both
   are replaced by a reference to the master.
 
+### Removed
+
+- **The design-system presence validator** (#1516). It reported `UIX-VAL-DS01`
+  when a UI-bearing pack had no design-system sidecar, and `UIX-VAL-DS02` when
+  that file's sections were empty. Two things made it dead weight rather than a
+  gate.
+
+  | Fact                                                         | Effect                        |
+  | ------------------------------------------------------------ | ----------------------------- |
+  | The three-layer validator reports the same file as forbidden | No pack could satisfy both    |
+  | Nothing dispatched it                                        | The contradiction never fired |
+
+  The integration suite for that pack already states which side is current: the
+  file is a forbidden legacy sidecar. So one validator required what another
+  refused, and the only reason nobody hit it is that the module was absent from
+  the validator index, from the canonical dispatcher, and from every re-export
+  — listed instead in two allowlists of things known not to run.
+
+  Its three codes are gone with it, and the retired-code register keeps their
+  numbers reserved so a future rule cannot take one back.
+
+  The pack that owned the requirement retires the three test cases and their
+  ledger rows in the same change. `AC-0014-0004` stays: two of its test cases
+  cover the prototyping design-system validator, which is a different module
+  and still runs.
+
 ### Fixed
 
 - **One document decides output language** (#1530). The constitution states an
