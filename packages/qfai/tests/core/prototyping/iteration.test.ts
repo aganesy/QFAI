@@ -65,7 +65,7 @@ describe("shouldStop — convergence (TC-3.4.x)", () => {
   it("returns null when layoutAntiPatternsDetected is non-empty (other conditions met)", () => {
     const iter = baseIter({
       scores: allExceptional,
-      layoutAntiPatternsDetected: ["lap-001-saas-dashboard"],
+      layoutAntiPatternsDetected: ["lap-006-overcrowded-sidebar"],
     });
     expect(shouldStop([iter])).toBeNull();
   });
@@ -106,7 +106,7 @@ describe("shouldStop — convergence (TC-3.4.x)", () => {
     {
       label: "lap non-empty",
       scores: allExceptional,
-      lap: ["lap-001-saas-dashboard"],
+      lap: ["lap-006-overcrowded-sidebar"],
       dmv: [],
     },
     {
@@ -118,7 +118,7 @@ describe("shouldStop — convergence (TC-3.4.x)", () => {
     {
       label: "axis weak + lap",
       scores: { ...allExceptional, usability: "weak" as const },
-      lap: ["lap-001-saas-dashboard"],
+      lap: ["lap-006-overcrowded-sidebar"],
       dmv: [],
     },
     {
@@ -130,13 +130,13 @@ describe("shouldStop — convergence (TC-3.4.x)", () => {
     {
       label: "lap + dmv",
       scores: allExceptional,
-      lap: ["lap-001-saas-dashboard"],
+      lap: ["lap-006-overcrowded-sidebar"],
       dmv: [{ kind: "color" as const, found: "#abcdef" }],
     },
     {
       label: "all three trip-wires",
       scores: { ...allExceptional, usability: "weak" as const },
-      lap: ["lap-001-saas-dashboard"],
+      lap: ["lap-006-overcrowded-sidebar"],
       dmv: [{ kind: "color" as const, found: "#abcdef" }],
     },
   ])("returns null for trip-wire combination: $label", ({ scores, lap, dmv }) => {
@@ -309,7 +309,7 @@ describe("allFourAxesExceptional", () => {
   it("requires layoutAntiPatternsDetected to be empty", () => {
     const iter = baseIter({
       scores: allExceptional,
-      layoutAntiPatternsDetected: ["lap-001-saas-dashboard"],
+      layoutAntiPatternsDetected: ["lap-006-overcrowded-sidebar"],
     });
     expect(allFourAxesExceptional(iter)).toBe(false);
   });
