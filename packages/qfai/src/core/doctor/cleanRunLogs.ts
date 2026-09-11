@@ -269,6 +269,7 @@ async function listRunLogDirs(reportRoot: string): Promise<CleanRunLogEntry[]> {
     }
     throw new Error(
       `failed to read run log directory ${reportRoot}: ${error instanceof Error ? error.message : String(error)}`,
+      { cause: error },
     );
   }
   const results: CleanRunLogEntry[] = [];
@@ -322,6 +323,7 @@ async function readPointerRunIds(reportRoot: string): Promise<ReadonlySet<string
         `failed to read the validate.log run pointer in ${reportRoot}: ${
           error instanceof Error ? error.message : String(error)
         }`,
+        { cause: error },
       );
     }
     return runIds;

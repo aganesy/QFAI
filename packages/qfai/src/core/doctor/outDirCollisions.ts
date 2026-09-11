@@ -97,6 +97,7 @@ async function canonicalizeOutDir(outDirAbs: string): Promise<string> {
       if (!isEnoent(error)) {
         throw new Error(
           `failed to resolve outDir ${absolute}: ${error instanceof Error ? error.message : String(error)}`,
+          { cause: error },
         );
       }
       const parent = path.dirname(current);
