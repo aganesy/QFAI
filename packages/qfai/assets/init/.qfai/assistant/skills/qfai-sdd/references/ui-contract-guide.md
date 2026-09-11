@@ -45,23 +45,23 @@ reads `label` for the empty-slot and count-band lanes, and requires
 tests from them yet — requiring them now is what lets a generator be
 added later without re-authoring every contract.
 
-## Recommended count band: 3..7
+## Recommended ceiling: at most 7
 
-The recommended count band for `screens[].primary_tasks` is **3..7
-entries per screen** (inclusive bounds). Outside the band, validate
-emits `QFAI-AUD-020` at severity=warning, naming the band 3..7
-explicitly:
+`screens[].primary_tasks` holds **at most 7 entries per screen**. Above
+that, validate emits `QFAI-AUD-020` at severity=warning:
 
 | count | validate behavior                          |
 | ----- | ------------------------------------------ |
 | 0     | `QFAI-AUD-001` error (empty primary_tasks) |
-| 1..2  | `QFAI-AUD-020` warning (below 3..7 band)   |
-| 3..7  | passes silently                            |
-| 8+    | `QFAI-AUD-020` warning (above 3..7 band)   |
+| 1..7  | passes silently                            |
+| 8+    | `QFAI-AUD-020` warning (over the ceiling)  |
 
-The 3..7 band reflects multi-screen SaaS / dashboard workloads where
-5–6 primary tasks per surface is common; tighter ceilings (e.g. 1..3
-or "single primary CTA") over-flag legitimate productivity surfaces.
+There is no lower bound. Seven tasks on one screen weakens focus; one
+task on one screen is focus. A screen that does one thing is the shape
+this ceiling exists to protect, so it passes silently like any other.
+
+The ceiling of 7 reflects multi-screen SaaS and dashboard workloads,
+where 5 or 6 primary tasks per surface is common.
 
 ## Per-spec contract resolution
 
@@ -214,8 +214,8 @@ action coverage can be traced rather than asserted.
 
 The shipped UI contract template at
 `templates/contracts/ui-contract.sample.yaml` includes inline comments
-that re-state the 3..7 band and the structured-shape schema, so an
-author who reads only the template still learns the contract.
+that re-state the ceiling and the structured-shape schema, so an author
+who reads only the template still learns the contract.
 
 ## Typical failures
 

@@ -28,6 +28,24 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **A screen with one primary task no longer reads as weakening its own focus**
+  (#1490). `QFAI-AUD-020` recommended a band of 3 to 7 primary tasks per screen
+  and reported anything under it, saying the count "weakens screen focus" and
+  telling the author to bring it into the band — that is, to add tasks.
+
+  Seven tasks on one screen weakens focus. One task on one screen is focus, so
+  the lower bound argued against the thing the rule exists to protect. It is
+  gone; the ceiling of 7 stands, and the finding now says which way it was
+  crossed and where the surplus should go.
+
+  `QFAI-AUD-001` still reports a `primary_tasks` list with nothing in it, so a
+  screen that declares no task at all is caught as before. One and two, the
+  range the band invented a problem for, are the range a focused screen
+  occupies.
+
+  Severity was `warning` throughout, so nothing blocked. It still pushed every
+  screen toward the middle of a range, and a finding generally gets resolved.
+
 - **A screen that does one thing can be declared** (#1491). The screen contract
   counted an empty list as a missing field, so every screen owed at least one
   secondary task. A screen with a single primary task could not be written down,
