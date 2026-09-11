@@ -141,13 +141,13 @@ describe("R-CERTIFY-VERIFY-CIRCULAR — canonical-path regression coverage", () 
   // for in-flight loops and stays silent for any terminal / absent
   // state.
 
-  it("does NOT emit when the loop converged (stopReason=axes-exceptional, acceptedIterationIndex=3)", async () => {
+  it("does NOT emit when the loop converged (stopReason=converged, acceptedIterationIndex=3)", async () => {
     const root = await newTempDir();
     await writeVerify(root, "atdd");
     await writeCanonicalPrototyping(root, {
       runId: "completed-converged",
       iterations: [{}, {}, {}, {}],
-      stopReason: "axes-exceptional",
+      stopReason: "converged",
       acceptedIterationIndex: 3,
     });
     const issues = await validateReviewerGate(root, STUB_CONFIG);

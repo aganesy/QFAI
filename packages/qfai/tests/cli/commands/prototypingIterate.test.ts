@@ -265,7 +265,7 @@ describe("runPrototypingIterate convergence (exit 64)", () => {
       usability: "exceptional",
       functionality: "exceptional",
     };
-    // 10 iterations (index 0..9) all reporting axes-exceptional with
+    // 10 iterations (index 0..9) all reporting converged with
     // empty dmv. Last one at index 9 is the budget-exhausted candidate.
     const iters = Array.from({ length: 10 }, (_, i) => ({
       index: i,
@@ -282,7 +282,7 @@ describe("runPrototypingIterate convergence (exit 64)", () => {
       '<div class="bg-[#abcdef]">drift</div>',
       "utf-8",
     );
-    // Even though shouldStop says axes-exceptional, the recompute finds
+    // Even though shouldStop says converged, the recompute finds
     // drift; with index 9 we cannot continue, so we return 65 (max-iter).
     // (cycle 10 would fail the cycle-input gate; 9 is the highest
     // valid input and shouldStop short-circuits before the cycle-gap
@@ -298,7 +298,7 @@ describe("runPrototypingIterate convergence (exit 64)", () => {
     // fix, a prototype with DESIGN.md drift could converge here ('all 4
     // axes exceptional + dmv:[]'), exit 64, and only fail later at
     // certification. Post-fix, iterate re-runs findDesignMdViolations
-    // against the accepted iter HTML before honoring 'axes-exceptional'
+    // against the accepted iter HTML before honoring 'converged'
     // and falls through to the next-cycle plan when drift is found.
     const root = await newTempDir();
     await seedMinimalProject(root);
@@ -469,7 +469,7 @@ describe("runPrototypingIterate max-iterations (exit 65)", () => {
     // Non-converged 10-iter lineage: every iter "acceptable" (not all four
     // axes "exceptional"), indices 0..9. shouldStop returns
     // "max-iterations" because last.index === 9 (>= MAX_ITERATION_INDEX),
-    // not because axes-exceptional fired.
+    // not because converged fired.
     const acceptable = {
       informationArchitecture: "acceptable",
       navigationFlow: "acceptable",
@@ -1064,7 +1064,7 @@ describe("runPrototypingIterate cycle 0 hard reset", () => {
       iterations: [{ index: 0 }],
       reviewerGate: { result: "PASS", signoff: { reviewerId: "stale" } },
       acceptedIterationIndex: 0,
-      stopReason: "axes-exceptional",
+      stopReason: "converged",
       fullHarness: {
         runId: "legacy-prior-run",
         status: "complete",
@@ -3110,7 +3110,7 @@ describe("runPrototypingIterate cycle >= 1 — drift gates run before shouldStop
     // ["0001", "0002"]; live `resolveSurfaceUnion` returns ["0001"]
     // only. The recorded iter is fully converged (axes exceptional +
     // no lap + no dmv) so `shouldStop` would return
-    // "axes-exceptional" if the drift gate ran AFTER it (the pre-29th
+    // "converged" if the drift gate ran AFTER it (the pre-29th
     // ordering). Post-29th the drift gate runs first → exit 2.
     await seedMinimalProject(root);
     // spec-0001 stays UI-bearing (from seedMinimalProject). spec-0002
@@ -3185,7 +3185,7 @@ describe("runPrototypingIterate cycle >= 1 — drift gates run before shouldStop
     // first `it` block above pins (2). Without this second `it` a
     // future refactor that re-orders only (1) back behind `shouldStop`
     // would silently regress: a converged loop with a missing
-    // `frozenSurfaceUnion` would then return exit 64 (axes-exceptional)
+    // `frozenSurfaceUnion` would then return exit 64 (converged)
     // instead of the documented exit 2 lock-drift. Fixture mirrors the
     // first test but OMITS `frozenSurfaceUnion` from prototyping.json.
     const root = await newTempDir();
@@ -3286,7 +3286,7 @@ describe("runPrototypingIterate sealed-loop guard", () => {
 
   it("refuses a cycle past the accepted index on a converged loop", async () => {
     const root = await newTempDir();
-    await seedSealedLoop(root, "axes-exceptional");
+    await seedSealedLoop(root, "converged");
 
     const logger = await import("../../../src/cli/lib/logger.js");
     const errorSpy = vi.spyOn(logger, "error").mockImplementation(() => {});
@@ -3340,7 +3340,7 @@ describe("runPrototypingIterate sealed-loop guard", () => {
       designMd: { path: "DESIGN.md", sha256: hashDesignMd(CANONICAL_DESIGN_MD) },
       iterations: [{ index: 0 }],
       acceptedIterationIndex: -1,
-      stopReason: "axes-exceptional",
+      stopReason: "converged",
     });
 
     const messages = (await refusalMessages(root, 0)).join("\n");
@@ -3351,14 +3351,14 @@ describe("runPrototypingIterate sealed-loop guard", () => {
 
   it("exempts cycle 0 on a normally sealed loop too", async () => {
     const root = await newTempDir();
-    await seedSealedLoop(root, "axes-exceptional");
+    await seedSealedLoop(root, "converged");
 
     expect((await refusalMessages(root, 0)).join("\n")).not.toContain("refusing --cycle");
   });
 
   it("names --force in the reset hint and no internal symbol", async () => {
     const root = await newTempDir();
-    await seedSealedLoop(root, "axes-exceptional");
+    await seedSealedLoop(root, "converged");
 
     const messages = (await refusalMessages(root, 2)).join("\n");
     expect(messages).toContain("--cycle 0 --target-url <url> --force");

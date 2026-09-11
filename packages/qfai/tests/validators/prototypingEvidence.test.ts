@@ -205,25 +205,25 @@ describe("validatePrototypingEvidence", () => {
     expect(issues.some((i) => i.code === "QFAI-PROT-005")).toBe(true);
   });
 
-  it("emits QFAI-PROT-005 when stopReason=axes-exceptional but last iter not all exceptional", async () => {
+  it("emits QFAI-PROT-005 when stopReason=converged but last iter not all exceptional", async () => {
     const root = await newTempDir();
     await seedPrototypingJson(root, {
       specsCovered: ["0001"],
       iterations: [validIter(0, false)],
       acceptedIterationIndex: 0,
-      stopReason: "axes-exceptional",
+      stopReason: "converged",
     });
     const issues = await validatePrototypingEvidence(root, makeConfig());
     expect(issues.some((i) => i.code === "QFAI-PROT-005")).toBe(true);
   });
 
-  it("emits structured issues instead of throwing when stopReason=axes-exceptional and the last iter is malformed", async () => {
+  it("emits structured issues instead of throwing when stopReason=converged and the last iter is malformed", async () => {
     const root = await newTempDir();
     await seedPrototypingJson(root, {
       specsCovered: ["0001"],
       iterations: [validIter(0), { index: 1, commitSha: "b".repeat(40), scores: null }],
       acceptedIterationIndex: 1,
-      stopReason: "axes-exceptional",
+      stopReason: "converged",
     });
     const issues = await validatePrototypingEvidence(root, makeConfig());
     expect(issues.some((i) => i.code === "QFAI-PROT-002")).toBe(true);
@@ -385,7 +385,7 @@ describe("validatePrototypingEvidence", () => {
       specsCovered: ["0001"],
       iterations: [first, second],
       acceptedIterationIndex: 1,
-      stopReason: "axes-exceptional",
+      stopReason: "converged",
     });
     // A record whose reviewer artifacts are absent is no longer valid: the
     // mirror is a transcription, and there is nothing on disk it transcribes.
@@ -494,7 +494,7 @@ describe("validatePrototypingEvidence — iter-NN/review.json", () => {
   // the orchestrator to overwrite it while updating the record in place), and
   // writing the string into any row waived that row. Measured before the fix:
   // three iterations, all four axes `exceptional`, `stopReason:
-  // "axes-exceptional"` and no review.json anywhere -> zero findings.
+  // "converged"` and no review.json anywhere -> zero findings.
   it("does not waive the gate for a reviewed record that kept the seed stamp", async () => {
     const root = await newTempDir();
     const stale = (index: number) => ({
@@ -505,7 +505,7 @@ describe("validatePrototypingEvidence — iter-NN/review.json", () => {
       specsCovered: ["0001"],
       iterations: [stale(0), stale(1), stale(2)],
       acceptedIterationIndex: 2,
-      stopReason: "axes-exceptional",
+      stopReason: "converged",
     });
 
     const issues = await validatePrototypingEvidence(root, makeConfig());

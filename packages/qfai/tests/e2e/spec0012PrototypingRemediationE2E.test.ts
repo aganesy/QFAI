@@ -535,7 +535,7 @@ describe("US-0012-0132: [BLOCKED] top-3 exit-64 blockers + first-offender", () =
     expect([...BLOCKED_CATEGORIES]).toEqual([
       "designMdViolations",
       "layoutAntiPatternsDetected",
-      "axes-below-exceptional",
+      "blockingFindings",
     ]);
   });
 });

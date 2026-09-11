@@ -42,13 +42,13 @@ describe("buildBlockedSummary: literal header + 3 category lines", () => {
     expect(lines.map((l) => l.category)).toEqual([
       "designMdViolations",
       "layoutAntiPatternsDetected",
-      "axes-below-exceptional",
+      "blockingFindings",
     ]);
     // designMdViolations: first offender surfaced as `color=#fff`.
     expect(lines[0]?.text).toContain("color=#fff");
     // layoutAntiPatternsDetected: first offender surfaced as the code.
     expect(lines[1]?.text).toContain("lap-009");
-    // axes-below-exceptional: first non-exceptional axis named.
+    // blockingFindings: first non-exceptional axis named.
     expect(lines[2]?.text).toContain("informationArchitecture");
     expect(lines[2]?.text).toContain("weak");
   });
@@ -70,7 +70,7 @@ describe("BLOCKED_CATEGORIES set (additive-only invariant)", () => {
     expect([...BLOCKED_CATEGORIES]).toEqual([
       "designMdViolations",
       "layoutAntiPatternsDetected",
-      "axes-below-exceptional",
+      "blockingFindings",
     ]);
   });
 });

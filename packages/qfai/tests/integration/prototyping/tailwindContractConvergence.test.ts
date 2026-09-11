@@ -7,7 +7,7 @@
  * + token-driven `var(--font-sans)` + CSS-wide keywords + `--*-shadow*:`
  * rgba declarations) MUST produce zero `designMdViolations[]` across
  * all four scanners, and the synthesised iteration chain MUST converge
- * with `iterations.length <= 3 AND stopReason === "axes-exceptional"`.
+ * with `iterations.length <= 3 AND stopReason === "converged"`.
  *
  * The test composes the SSOT machinery end-to-end (scanner +
  * `shouldStop`) without requiring the CLI harness, so the assertion
@@ -119,13 +119,13 @@ describe("TC-0012-0434: Tailwind contract convergence within 3 cycles", () => {
     expect(out).toEqual([]);
   });
 
-  it("synthesised iteration chain converges within 3 cycles with stopReason=axes-exceptional", () => {
+  it("synthesised iteration chain converges within 3 cycles with stopReason=converged", () => {
     const iterations: Iteration[] = [
       exceptionalIteration(0),
       exceptionalIteration(1),
       exceptionalIteration(2),
     ];
     expect(iterations.length).toBeLessThanOrEqual(3);
-    expect(shouldStop(iterations)).toBe("axes-exceptional");
+    expect(shouldStop(iterations)).toBe("converged");
   });
 });
