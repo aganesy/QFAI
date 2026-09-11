@@ -216,7 +216,7 @@ describe("buildEvaluatorReview — IA cap on layoutAntiPatternsDetected (TC-3.1.
             usability: "acceptable",
             functionality: "acceptable",
           },
-          layoutAntiPatternsDetected: ["lap-001-saas-dashboard"],
+          layoutAntiPatternsDetected: ["lap-006-overcrowded-sidebar"],
         }),
       ),
     ).toThrow(/informationArchitecture.*acceptable/);
@@ -233,7 +233,7 @@ describe("buildEvaluatorReview — IA cap on layoutAntiPatternsDetected (TC-3.1.
             usability: "exceptional",
             functionality: "exceptional",
           },
-          layoutAntiPatternsDetected: ["lap-002-card-grid-sidebar"],
+          layoutAntiPatternsDetected: ["lap-007-state-not-represented"],
         }),
       ),
     ).toThrow(/informationArchitecture/);
@@ -249,10 +249,10 @@ describe("buildEvaluatorReview — IA cap on layoutAntiPatternsDetected (TC-3.1.
           usability: "exceptional",
           functionality: "exceptional",
         },
-        layoutAntiPatternsDetected: ["lap-001-saas-dashboard"],
+        layoutAntiPatternsDetected: ["lap-006-overcrowded-sidebar"],
       }),
     );
-    expect(review.layoutAntiPatternsDetected).toEqual(["lap-001-saas-dashboard"]);
+    expect(review.layoutAntiPatternsDetected).toEqual(["lap-006-overcrowded-sidebar"]);
   });
 
   // TC-3.1.12
@@ -265,7 +265,7 @@ describe("buildEvaluatorReview — IA cap on layoutAntiPatternsDetected (TC-3.1.
           usability: "acceptable",
           functionality: "acceptable",
         },
-        layoutAntiPatternsDetected: ["lap-004-bento-grid"],
+        layoutAntiPatternsDetected: ["lap-008-no-back-affordance"],
       }),
     );
     expect(review.scores.informationArchitecture).toBe("weak");
@@ -281,7 +281,7 @@ describe("buildEvaluatorReview — IA cap on layoutAntiPatternsDetected (TC-3.1.
           usability: "exceptional",
           functionality: "exceptional",
         },
-        layoutAntiPatternsDetected: ["lap-001-saas-dashboard"],
+        layoutAntiPatternsDetected: ["lap-006-overcrowded-sidebar"],
       }),
     );
     expect(review.scores.navigationFlow).toBe("exceptional");
@@ -301,7 +301,7 @@ describe("buildEvaluatorReview — IA cap on layoutAntiPatternsDetected (TC-3.1.
       layoutAntiPatternsDetected: [],
     });
     expect(() => buildEvaluatorReview(okInput)).not.toThrow();
-    const badInput = { ...okInput, layoutAntiPatternsDetected: ["lap-001-saas-dashboard"] };
+    const badInput = { ...okInput, layoutAntiPatternsDetected: ["lap-006-overcrowded-sidebar"] };
     expect(() => buildEvaluatorReview(badInput)).toThrow(/informationArchitecture/);
   });
 
@@ -316,11 +316,11 @@ describe("buildEvaluatorReview — IA cap on layoutAntiPatternsDetected (TC-3.1.
             usability: "acceptable",
             functionality: "acceptable",
           },
-          layoutAntiPatternsDetected: ["lap-001-saas-dashboard", "lap-004-bento-grid"],
+          layoutAntiPatternsDetected: ["lap-006-overcrowded-sidebar", "lap-008-no-back-affordance"],
         }),
       ),
     ).toThrow(
-      /lap-001-saas-dashboard.*lap-004-bento-grid|lap-004-bento-grid.*lap-001-saas-dashboard/,
+      /lap-006-overcrowded-sidebar.*lap-008-no-back-affordance|lap-008-no-back-affordance.*lap-006-overcrowded-sidebar/,
     );
   });
 });
@@ -552,7 +552,7 @@ describe("parseEvaluatorReview — full payload acceptance (TC-0012-0364)", () =
   it("accepts a payload with nested ordinalAxes + impressions and the top-level discriminators", () => {
     const result = parseEvaluatorReview(
       baseReviewerPayload({
-        layoutAntiPatternsDetected: ["lap-001-saas-dashboard"],
+        layoutAntiPatternsDetected: ["lap-006-overcrowded-sidebar"],
         designMdViolations: [{ kind: "color", found: "#FF00FF" }],
       }),
     );
@@ -571,7 +571,7 @@ describe("parseEvaluatorReview — full payload acceptance (TC-0012-0364)", () =
     expect(result.review.impressions.userStoryFeel.length).toBeGreaterThan(0);
     expect(result.review.impressions.acceptanceCriteriaFeel.length).toBeGreaterThan(0);
     expect(result.review.impressions.menuReachabilityFeel.length).toBeGreaterThan(0);
-    expect(result.review.layoutAntiPatternsDetected).toEqual(["lap-001-saas-dashboard"]);
+    expect(result.review.layoutAntiPatternsDetected).toEqual(["lap-006-overcrowded-sidebar"]);
     expect(result.review.designMdViolations).toEqual([{ kind: "color", found: "#FF00FF" }]);
   });
 });

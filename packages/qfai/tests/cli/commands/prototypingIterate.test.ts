@@ -348,7 +348,7 @@ describe("runPrototypingIterate convergence (exit 64)", () => {
           usability: "exceptional",
           functionality: "exceptional",
         },
-        layoutAntiPatternsDetected: ["lap-001-saas-dashboard"],
+        layoutAntiPatternsDetected: ["lap-006-overcrowded-sidebar"],
         designMdViolations: [],
       },
     ]);

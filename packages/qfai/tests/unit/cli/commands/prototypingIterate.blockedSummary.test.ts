@@ -20,7 +20,7 @@ describe("buildBlockedSummary: literal header + 3 category lines", () => {
   it("emits the literal `[BLOCKED] exit-64 prevented by:` header followed by 3 category lines", () => {
     const text = buildBlockedSummary({
       designMdViolations: [{ kind: "color", found: "#fff" }],
-      layoutAntiPatternsDetected: ["lap-001"],
+      layoutAntiPatternsDetected: ["lap-006"],
       scores: {
         informationArchitecture: "acceptable",
         navigationFlow: "exceptional",

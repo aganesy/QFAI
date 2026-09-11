@@ -5,8 +5,13 @@
  * ordinal "wave" labels an earlier review process used. See
  * `.agents/rules/documentation-clarity.md`.
  *
- * Scoped to comment lines in source files and to prose in Markdown files,
- * the same surfaces the rule covers. Deliberately narrower than the rule's
+ * Scoped to the prose of a source file and to Markdown, the same surfaces
+ * the rule covers. Prose in a source file is its comments, plus the string
+ * arguments of a call that prints them — a test title and an operator
+ * message are read more often than the comment above them, and a citation
+ * there is the same defect in a more visible place. A citation broken by a
+ * line wrap is matched across the break, because it matches nothing on
+ * either half. Deliberately narrower than the rule's
  * full scope (which also asks for plain wording and no process narration):
  * those are judgment calls a human or an LLM review makes well and a
  * regex makes badly. What a regex makes well is a small set of shapes
@@ -146,11 +151,57 @@ function inScope(rel) {
 }
 
 /** For source and shell files, only comment lines carry the rule's obligation. */
-function isCheckedLine(rel, line) {
+function isSourceComment(trimmed) {
+  return trimmed.startsWith("//") || trimmed.startsWith("*") || trimmed.startsWith("/*");
+}
+
+/**
+ * A call whose string arguments are prose rather than data.
+ *
+ * A test title ships in the run output and an operator message ships in the
+ * terminal, so both are surfaces a reader meets more often than the comment
+ * above them. A citation there is the same defect in a more visible place.
+ *
+ * Not every string literal. A fragment in an assignment or a fixture is data the
+ * program uses, and rewriting it would change behaviour — which is why the scope
+ * is the CALL rather than the quote character.
+ */
+const PROSE_CALL_RE =
+  /\b(?:describe|it|test)\s*(?:\.\s*[A-Za-z]+\s*)*\(|\bconsole\s*\.\s*(?:log|info|warn|error|debug|trace)\s*\(|\bnew\s+[A-Za-z_$][\w$]*Error\s*\(/;
+
+/**
+ * The window is the call line and the string literals wrapped under it, and
+ * nothing else.
+ *
+ * The body of a test is not prose. `it("name", () => {` opens a bracket that
+ * closes many lines later, so a window that ran to the closing bracket would
+ * cover every fixture in the case — and a CSS colour in one of them reads as an
+ * issue number. Two rules close it: a line joins the window only while it opens
+ * with a string literal, and a call line that also opens a callback ends the
+ * window where it starts.
+ */
+const STRING_CONTINUATION_RE = /^(?:\+\s*)?["'`]/;
+const CALLBACK_OPENER_RE = /=>|\bfunction\b/;
+
+function isCheckedLine(rel, line, inProseCall) {
   if (MARKDOWN_EXTENSIONS.has(path.extname(rel))) return true;
   const trimmed = line.trim();
   if (SHELL_EXTENSIONS.has(path.extname(rel))) return trimmed.startsWith("#");
-  return trimmed.startsWith("//") || trimmed.startsWith("*") || trimmed.startsWith("/*");
+  return isSourceComment(trimmed) || inProseCall;
+}
+
+/**
+ * The prose of a checked line, with the comment marker removed.
+ *
+ * The marker has to go before two lines are joined: a citation split by a wrap
+ * resumes after it, and leaving `//` in the middle of the joined text would put
+ * a token between the halves that no pattern expects.
+ */
+function proseOf(rel, line) {
+  const trimmed = line.trim();
+  if (MARKDOWN_EXTENSIONS.has(path.extname(rel))) return trimmed;
+  if (SHELL_EXTENSIONS.has(path.extname(rel))) return trimmed.replace(/^#+\s*/, "");
+  return isSourceComment(trimmed) ? trimmed.replace(/^(?:\/\/+|\/\*+|\*+)\s*/, "") : trimmed;
 }
 
 /**
@@ -257,15 +308,49 @@ for (const rel of trackedFiles()) {
     continue;
   }
   const lines = text.split(/\r?\n/);
+  const checked = [];
   let inFence = false;
+  let proseWindow = false;
   lines.forEach((line, i) => {
     const lineNo = i + 1;
     if (/^\s*```/.test(line)) inFence = !inFence;
     if (inFence) return;
-    if (linesInScope !== null && !linesInScope.has(lineNo)) return;
-    if (!isCheckedLine(rel, line)) return;
-    for (const hit of findLineHits(rel, line)) {
-      findings.push({ file: rel, line: lineNo, ...hit, text: line.trim() });
+    const inProseCall =
+      PROSE_CALL_RE.test(line) || (proseWindow && STRING_CONTINUATION_RE.test(line.trim()));
+    proseWindow = inProseCall && !CALLBACK_OPENER_RE.test(line);
+    if (!isCheckedLine(rel, line, inProseCall)) return;
+    checked.push({ lineNo, prose: proseOf(rel, line), text: line.trim() });
+  });
+
+  const inScopeLine = (lineNo) => linesInScope === null || linesInScope.has(lineNo);
+
+  checked.forEach((entry, index) => {
+    const own = findLineHits(rel, entry.prose);
+    if (inScopeLine(entry.lineNo)) {
+      for (const hit of own) {
+        findings.push({ file: rel, line: entry.lineNo, ...hit, text: entry.text });
+      }
+    }
+    // The wrapped citation. A reference broken across a line break matches
+    // nothing on either half, so each checked line is also matched joined to the
+    // next one — reported at the first, which is where the citation starts.
+    // Only a pattern that did not already fire on either half alone, so a hit is
+    // not counted twice for being inside the window as well as on its own line.
+    const next = checked[index + 1];
+    if (next === undefined || next.lineNo !== entry.lineNo + 1) return;
+    if (!inScopeLine(entry.lineNo) && !inScopeLine(next.lineNo)) return;
+    const alone = new Set([
+      ...own.map((hit) => hit.name),
+      ...findLineHits(rel, next.prose).map((hit) => hit.name),
+    ]);
+    for (const hit of findLineHits(rel, `${entry.prose} ${next.prose}`)) {
+      if (alone.has(hit.name)) continue;
+      findings.push({
+        file: rel,
+        line: entry.lineNo,
+        ...hit,
+        text: `${entry.text} ⏎ ${next.text}`,
+      });
     }
   });
 }
