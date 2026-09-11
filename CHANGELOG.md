@@ -6,6 +6,27 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
+- **`DESIGN.md` is authored by `/qfai-sdd`, not by `/qfai-discussion`** (#1472).
+  A discussion writes to `.qfai/discussion/discussion-<timestamp>/`. One
+  artifact escaped that directory: root `DESIGN.md`, which is git-tracked and
+  is the one downstream stages actually depend on.
+
+  That contradicted the boundary the pipeline already sets, where `/qfai-sdd`
+  is the single stage that reads discussion sidecars and turns them into
+  specs and contracts. Every other UI artifact took that path.
+
+  The authoring step and its two references — `design-dna-intake.md` and
+  `design-md-brand-catalog.md` — now belong to `/qfai-sdd`. Phase 0 step 1
+  read the file and stopped when it was missing; it now authors it from the
+  brand intent the pack's `uiux/` sidecars record, then runs the same sample
+  check, parse and validation it always ran. A cli-only pack still gets no
+  `DESIGN.md` at all.
+
+  Two things follow. The discussion completion matrix no longer blocks on a
+  file the discussion does not write, and the skill's template constraint no
+  longer carries a cross-skill exception, because Phase 0 now authors from
+  this skill's own reference rather than a sibling's template.
+
 - **The prototyping envelope bans runtime dependencies, not markup** (#1479).
   `generator-prompt.md` opened its envelope constraints with "No component
   library beyond Tailwind + Lucide", which also refused transposing a block

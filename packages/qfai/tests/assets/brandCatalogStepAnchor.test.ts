@@ -15,8 +15,27 @@ describe("brand catalog step anchor", () => {
     "skills",
     "qfai-discussion",
   );
-  const catalogPath = path.join(discussionSkillDir, "references", "design-md-brand-catalog.md");
-  const skillMdPath = path.join(discussionSkillDir, "SKILL.md");
+  const sddSkillDir = path.join(assetsRoot, "init", ".qfai", "assistant", "skills", "qfai-sdd");
+  const catalogPath = path.join(sddSkillDir, "references", "design-md-brand-catalog.md");
+  const skillMdPath = path.join(sddSkillDir, "SKILL.md");
+
+  /**
+   * Phase 0's DESIGN.md step, as one string.
+   *
+   * The step is a numbered item spanning several paragraphs, so a line lookup
+   * would read only its first sentence. Sliced between the step's opening and
+   * the step that follows it, with both ends asserted: an `indexOf` miss
+   * returns -1, and `slice(-1, -1)` is an empty string every assertion below
+   * would pass vacuously against.
+   */
+  async function readAuthoringStep(): Promise<string> {
+    const skillMd = await readFile(skillMdPath, "utf-8");
+    const start = skillMd.indexOf("1. Read root `DESIGN.md` at");
+    const end = skillMd.indexOf("2. Call `isUnreplacedDesignMdSample(text)`");
+    expect(start, "Phase 0's DESIGN.md step opening moved").toBeGreaterThanOrEqual(0);
+    expect(end, "the step after Phase 0's DESIGN.md step moved").toBeGreaterThan(start);
+    return skillMd.slice(start, end);
+  }
 
   it("no discussion-skill asset routes work to the retired `Step 11.3` address", async () => {
     // `/qfai-discussion`'s Required Process is a flat 11-item list with
@@ -86,24 +105,19 @@ describe("brand catalog step anchor", () => {
     }
   });
 
-  it("the catalog routes archetype selection to Required Process step 9", async () => {
+  it("the catalog routes archetype selection to Phase 0 step 1", async () => {
     const catalog = await readFile(catalogPath, "utf-8");
     // Opening line and Selection Guide must both name the step that
     // actually writes `brand.archetype`.
-    expect(catalog).toMatch(/Required Process\s+step 9[^\n]*Phase A/);
-    expect(catalog).toMatch(/Use this catalog during Required Process step 9[^\n]*Phase A/);
-    expect(catalog).toMatch(/Phase B of step 9/);
+    expect(catalog).toMatch(/Phase 0\s+step 1[^\n]*Phase A/);
+    expect(catalog).toMatch(/Use this catalog during Phase 0 step 1[^\n]*Phase A/);
+    expect(catalog).toMatch(/Phase B then customizes/);
     // The output mapping the catalog defers to must exist by anchor.
     expect(catalog).toContain("design-dna-intake.md#output-mapping-new-ssot-path");
   });
 
-  it("SKILL.md step 9 defines the Phase A → Phase B split the catalog cites", async () => {
-    const skillMd = await readFile(skillMdPath, "utf-8");
-    const step9 = skillMd
-      .split("\n")
-      .find((line) => line.startsWith("9. ") && line.includes("DESIGN.md"));
-    expect(step9).toBeDefined();
-    const line = step9 ?? "";
+  it("SKILL.md Phase 0 defines the Phase A → Phase B split the catalog cites", async () => {
+    const line = await readAuthoringStep();
     const phaseAIdx = line.indexOf("Phase A");
     const phaseBIdx = line.indexOf("Phase B");
     expect(phaseAIdx).toBeGreaterThan(-1);
@@ -118,23 +132,20 @@ describe("brand catalog step anchor", () => {
     // to fold every `aesthetic_properties` entry into `visual.*` would
     // emit `visual.motion` / `visual.interaction` and fail DESIGN.md
     // parsing. Each Phase B instruction must name the split explicitly.
-    const skillMd = await readFile(skillMdPath, "utf-8");
-    const step9 =
-      skillMd.split("\n").find((line) => line.startsWith("9. ") && line.includes("DESIGN.md")) ??
-      "";
-    expect(step9).toContain("visual.*");
-    expect(step9).toContain("accessibility.motion");
+    const step = await readAuthoringStep();
+    expect(step).toContain("visual.*");
+    expect(step).toContain("accessibility.motion");
 
     const catalog = await readFile(catalogPath, "utf-8");
     const catalogStep5 =
-      catalog.split("\n").find((line) => line.includes("Phase B of step 9")) ?? "";
+      catalog.split("\n").find((line) => line.includes("Phase B then customizes")) ?? "";
     expect(catalogStep5).toContain("visual.*");
     expect(catalogStep5).toContain("accessibility.motion");
 
     // The intake reference is the mapping SSOT the catalog defers to, so
     // the same split has to be written there too.
     const intake = await readFile(
-      path.join(discussionSkillDir, "references", "design-dna-intake.md"),
+      path.join(sddSkillDir, "references", "design-dna-intake.md"),
       "utf-8",
     );
     expect(intake).toContain("accessibility.motion");
@@ -150,16 +161,13 @@ describe("brand catalog step anchor", () => {
     // archetype-driven design-system generation that discussion no longer
     // does. `discussion-completion-matrix.md` carries both halves at once:
     // the full `visual.*` tree is required, AND directions stay unranked.
-    const skillMd = await readFile(skillMdPath, "utf-8");
-    const step9 =
-      skillMd.split("\n").find((line) => line.startsWith("9. ") && line.includes("DESIGN.md")) ??
-      "";
-    expect(step9).toMatch(/required `brand\.archetype`/);
-    expect(step9).toMatch(/draft brand SSOT only/);
-    expect(step9).toMatch(/exploration directions stay unranked/);
-    expect(step9).toMatch(/design system is not finalized here/);
-    // The word discussion never earns: an autonomous winner pick.
-    expect(step9).not.toMatch(/autonomous/i);
+    const step = await readAuthoringStep();
+    expect(step).toMatch(/required `brand\.archetype`/);
+    expect(step).toMatch(/draft brand SSOT only/);
+    expect(step).toMatch(/exploration directions stay unranked/);
+    expect(step).toMatch(/design system is not finalized here/);
+    // The word no stage earns here: an autonomous winner pick.
+    expect(step).not.toMatch(/autonomous/i);
 
     // The catalog is read standalone during Phase A, so the same boundary
     // has to be legible there and must not resurrect the retired framing.
@@ -170,18 +178,26 @@ describe("brand catalog step anchor", () => {
     expect(catalog).not.toMatch(/autonomous/i);
   });
 
-  it("the completion matrix still requires the DESIGN.md front-matter step 9 fills", async () => {
-    // Over-correction pin. Deleting archetype selection from step 9 would
-    // strand this obligation: the matrix blocks completion until root
-    // DESIGN.md parses with `brand` present, and `brand.archetype` is
-    // required inside it. The unranked-directions rule below it is a
-    // separate axis, not a licence to drop the field.
+  it("both halves of the obligation survive the move to the authoring stage", async () => {
+    // Over-correction pin, in two places because the obligation now spans two
+    // skills. Deleting archetype selection from the authoring step would
+    // strand the field: `brand.archetype` is required inside the `brand`
+    // front-matter the step fills. And the discussion still owes the intent
+    // that step reads, plus the unranked-directions rule — a separate axis,
+    // not a licence to drop either.
+    const step = await readAuthoringStep();
+    expect(step).toMatch(/`brand\.archetype`/);
+
     const matrix = await readFile(
       path.join(discussionSkillDir, "references", "discussion-completion-matrix.md"),
       "utf-8",
     );
-    expect(matrix).toMatch(/Root `DESIGN\.md` exists[\s\S]*?`brand`/);
+    expect(matrix).toMatch(/The brand intent is captured in the `uiux\/` sidecars/);
     expect(matrix).toMatch(/Exploration directions are carried unranked/);
+    // And the discussion must not have kept a root-level obligation it no
+    // longer owns: a matrix still blocking on the file would re-block every
+    // pack the move was meant to unblock.
+    expect(matrix).not.toMatch(/Root `DESIGN\.md` exists/);
   });
 
   it("keeps the tie-break decidable from the inputs Phase A actually has", async () => {
@@ -201,7 +217,7 @@ describe("brand catalog step anchor", () => {
 
   it("the intake reference still carries the anchor the catalog links to", async () => {
     const intake = await readFile(
-      path.join(discussionSkillDir, "references", "design-dna-intake.md"),
+      path.join(sddSkillDir, "references", "design-dna-intake.md"),
       "utf-8",
     );
     expect(intake).toContain("## Output Mapping (new SSOT path)");

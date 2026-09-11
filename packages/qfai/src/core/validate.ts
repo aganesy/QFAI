@@ -600,9 +600,9 @@ async function runDiscussionValidators(
   reviewPackProducers: ReviewPackProducers = DISCUSSION_PACK_PRODUCERS,
 ): Promise<Issue[]> {
   return [
-    // `qfai-discussion` MUSTs a parsable root DESIGN.md and prescribes this
-    // profile as its gate, so the gate has to be able to see whether the file
-    // it mandates parses. Only the parse half — the lock comparison is
+    // A project reaching this profile may already carry a root DESIGN.md, and
+    // the gate has to be able to see whether it parses before a later stage
+    // freezes it. Only the parse half — the lock comparison is
     // `/qfai-sdd` Phase 0's to clear, and the UI-contract checks belong to
     // later stages.
     ...(await validateRootDesignMdParse(root)),

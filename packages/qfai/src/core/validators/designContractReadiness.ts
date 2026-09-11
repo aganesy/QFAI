@@ -77,13 +77,14 @@ export async function validateSddDesignContractReadiness(
 /**
  * Whether the root DESIGN.md parses — and nothing else.
  *
- * Split out because the stage that AUTHORS the file could not see whether it
- * parses. `qfai-discussion` mandates a parsable root DESIGN.md and prescribes
- * `--profile discussion`, whose validators read discussion packs, mermaid,
- * visuals, research summaries and review artifacts — none of them DESIGN.md.
+ * Split out so the earliest profile that can see the file also checks it.
+ * `--profile discussion`'s validators read discussion packs, mermaid, visuals,
+ * research summaries and review artifacts — none of them DESIGN.md — so
  * `QFAI-DCON-033` reached a run only through the sdd or prototyping readiness
- * gates, so a malformed file surfaced a review round later, under a different
- * skill, with the earlier gate having passed.
+ * gates, and a malformed file surfaced a review round later, under a different
+ * skill, with the earlier gate having passed. A project on its second pass
+ * already carries the file `/qfai-sdd` Phase 0 authored, and this is where a
+ * hand-edit that broke it is caught.
  *
  * The parse half only. The readiness validator also compares DESIGN.md against
  * its lock, requires UI contracts and rejects premature ones — all of which
@@ -161,10 +162,10 @@ async function validateDesignContractReadinessForStage(
   const uiBearingSpecs = await scanUiBearingSpecs(root, config);
   const uiBearing = hasUiContracts || (uiBearingSpecs.ok && uiBearingSpecs.specIds.length > 0);
   // `cli` is discussion UI-bearing but is NOT a visual-prototyping surface:
-  // `/qfai-discussion` authors no root DESIGN.md for a cli-only pack and
+  // no root DESIGN.md is ever authored for a cli-only pack and
   // `/qfai-prototyping` rejects `cli`, so the `visual.*` token tree has no
   // reader at all. Demanding the brand SSOT here would re-block a pack the
-  // discussion skill deliberately exempted.
+  // pipeline deliberately exempts.
   //
   // `uiBearing` above is repo-wide, so the carve-out must be too: it is
   // withdrawn unless EVERY classification this repo's UI-bearing specs are
@@ -427,10 +428,10 @@ async function readSpecProvenancePackDirs(
  * `web` / `mobile` / `desktop` / `mixed` entry in `secondary_surfaces`.
  *
  * `cli` is discussion UI-bearing, so it reaches every gate in this file, but
- * it is not a visual-prototyping surface: `/qfai-discussion` deliberately
- * authors no root DESIGN.md for such a pack and `/qfai-prototyping` rejects
+ * it is not a visual-prototyping surface: no root DESIGN.md is ever authored
+ * for such a pack, and `/qfai-prototyping` rejects
  * `cli`, leaving the `visual.*` token tree with no reader. Without this the
- * DESIGN.md requirement the discussion skill dropped would simply reappear as
+ * DESIGN.md requirement the pipeline drops for such a pack would simply reappear as
  * a hard `qfai validate --profile sdd` error.
  *
  * Each classification is read from a pack's `01_Context.md` via the strict
@@ -497,7 +498,7 @@ async function isCliOnlyPack(packDir: string): Promise<boolean> {
  * `.qfai/assistant/skills/qfai-prototyping/templates/DESIGN.md.sample` as a
  * starting point, or
  * seeded by a release back when `qfai init` wrote one. Init writes none
- * now — `/qfai-discussion` emits the draft, and only for a
+ * now — `/qfai-sdd` Phase 0 authors it, and only for a
  * visual-prototyping surface — so this gate no longer reports a file the
  * tool itself had just written.
  *
@@ -539,7 +540,7 @@ async function validateRootDesignMdSample(root: string, uiBearing: boolean): Pro
       "designContractReadiness.rootDesignMdSample",
       undefined,
       "canonical",
-      "Replace root DESIGN.md with this product's brand SSOT (run /qfai-discussion, which emits the draft, or author it from `.qfai/assistant/skills/qfai-prototyping/templates/DESIGN.md.sample`) and delete the sample marker comment if present. Do this BEFORE /qfai-sdd Phase 0 freezes its sha256.",
+      "Replace root DESIGN.md with this product's brand SSOT (run /qfai-sdd, whose Phase 0 authors it from the discussion's brand intent, or author it from `.qfai/assistant/skills/qfai-prototyping/templates/DESIGN.md.sample`) and delete the sample marker comment if present. /qfai-sdd Phase 0 will not freeze a sample.",
     ),
   ];
 }
@@ -576,7 +577,7 @@ async function validateRootDesignMdAndLock(
         "designContractReadiness.rootDesignMd",
         undefined,
         "canonical",
-        "Create root DESIGN.md from the project root with the canonical front-matter (see qfai-discussion / qfai-sdd skills).",
+        "Create root DESIGN.md from the project root with the canonical front-matter (see the qfai-sdd skill, whose Phase 0 authors it).",
       ),
     );
   }

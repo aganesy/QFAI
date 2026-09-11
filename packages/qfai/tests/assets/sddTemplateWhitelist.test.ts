@@ -77,17 +77,20 @@ describe("qfai-sdd's template whitelist covers what the skill ships", () => {
       );
     });
 
-    it(`${tree}: the one cross-skill template reference is a stated exception`, async () => {
-      // `Phase 0 DESIGN.md Freeze` points the user at a qfai-prototyping
-      // template, which "use only templates under qfai-sdd/templates/" does
-      // not cover. Left unstated, it read as a licence to browse other skills.
+    it(`${tree}: the constraint states that it has no cross-skill exception`, async () => {
+      // Phase 0 once pointed the user at a qfai-prototyping template, which
+      // "use only templates under qfai-sdd/templates/" does not cover, and an
+      // exception stood beside the constraint to say so. Phase 0 now authors
+      // root `DESIGN.md` from this skill's own reference, so there is no
+      // sibling template to reach for. The absence is stated rather than
+      // left to be inferred: a constraint that simply stopped naming an
+      // exception reads the same as one that never had a reason to.
       const skill = await read(tree, SKILL);
-      expect(flat(skill)).toContain(
-        "Named cross-skill exception: `.qfai/assistant/skills/qfai-prototyping/templates/DESIGN.md.sample`",
-      );
-      expect(flat(skill)).toContain("It is an exception, not a licence to read other skills");
-      // The reference the exception exists for must still be there.
-      expect(skill).toContain(
+      expect(flat(skill)).toContain("No cross-skill exception");
+      expect(flat(skill)).toContain("there is no sibling skill's template to reach into");
+      // And the reference the exception existed for must be gone from every
+      // template constraint, not merely unmentioned in the sentence above.
+      expect(skill).not.toContain(
         "`.qfai/assistant/skills/qfai-prototyping/templates/DESIGN.md.sample`",
       );
     });

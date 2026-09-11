@@ -40,7 +40,7 @@ When unsure, read inputs in this order:
 
 - P1: `.qfai/assistant/constitution/*`
 - P2: `.qfai/assistant/manifest/agent-routing.yml` + `.qfai/assistant/manifest/review-profiles.yml` + `.qfai/assistant/catalog/*`; from `.qfai/assistant/manifest/agent-catalog.yml` read the acting `orchestrator`'s and each routed role's entry (`owned_artifacts` / `tool_profile` / `permission_profile` / `specialization_tags`), not the whole file — its `developer_instructions` bodies mirror the agent cards (`.qfai/assistant/constitution/constitution.md` Article III)
-- P3: the pack under work — `.qfai/discussion/discussion-YYYYMMDDhhmmssSSS/**`, and root `DESIGN.md` for a UI-bearing target
+- P3: the pack under work — `.qfai/discussion/discussion-YYYYMMDDhhmmssSSS/**`
 - P4: what the project already settled (`.qfai/specs/_policies/**`, active `.qfai/specs/*/01_Spec.md`, `.qfai/contracts/**`, `qfai.config.yaml`)
 
 ## Goal
@@ -62,11 +62,9 @@ Produce a unified 15-file discussion pack plus exploration-first UI sidecars so 
 
 Decide whether the target is UI-bearing with `references/ui-bearing-playbook.md` (surface mapping plus detection signals) before applying any UI-bearing branch in this file.
 
-Every UI-bearing pack must produce, as primary truth: `uiux/00_index.md`, `uiux/40_screen_contracts.md`, `uiux/50_review_input_bundle.md`. Only a pack on a **visual-prototyping surface** (`web`, `mobile`, `desktop` or `mixed`, as `primary_surface` or in `secondary_surfaces`) MUST additionally emit a draft brand SSOT at the **consuming-project root**; a cli-only pack MUST NOT author it:
+Every UI-bearing pack must produce, as primary truth: `uiux/00_index.md`, `uiux/40_screen_contracts.md`, `uiux/50_review_input_bundle.md`. That is the whole output set, and all of it lives inside the pack directory.
 
-- `<consuming-project-root>/DESIGN.md` — **visual-prototyping surfaces only.** Brand SSOT consumed by `/qfai-sdd` (freezes its sha256 in `.qfai/contracts/design/DESIGN.md.lock.yaml`) and by `/qfai-prototyping` (iterates against locked tokens). Brand intent (product intent, brand signals, anti-goals, reference pool framed as deviate-from inputs) lives in front-matter + `# Brand Philosophy` body — no separate per-aspect sidecar.
-
-Root `DESIGN.md` is required only on the visual-prototyping surfaces (`web`, `mobile`, `desktop`, `mixed`), and the test is the whole classified surface set — `primary_surface` **and** every `secondary_surfaces` entry. Only a **cli-only** pack (`primary_surface: cli`, no visual secondary surface) skips it: it stays `ui_bearing: true` and keeps all three screen-level sidecars, but does NOT author root `DESIGN.md`, because `/qfai-prototyping` rejects `cli` and no downstream reader consumes its `visual.*` tokens. `/qfai-sdd` Phase 0 skips the freeze for the same packs. See `references/ui-bearing-playbook.md#visual-prototyping-surfaces-vs-cli`.
+Brand intent — product intent, brand signals, anti-goals, and a reference pool framed as deviate-from inputs — is captured in those sidecars. `/qfai-sdd` Phase 0 reads them and authors root `DESIGN.md` from what they record, on a **visual-prototyping surface** (`web`, `mobile`, `desktop` or `mixed`, as `primary_surface` or in `secondary_surfaces`) and not for a **cli-only** pack: `/qfai-prototyping` rejects `cli` and no downstream reader consumes its `visual.*` tokens. A cli-only pack stays `ui_bearing: true` and keeps all three screen-level sidecars. See `references/ui-bearing-playbook.md#visual-prototyping-surfaces-vs-cli`.
 
 ## Required Process
 
@@ -78,16 +76,16 @@ Root `DESIGN.md` is required only on the visual-prototyping surfaces (`web`, `mo
 6. Run Example Mapping per `references/example-mapping-guide.md` and capture `Example Seeds`.
 7. Update `11_OQ-Register.md`, resolve OQs until open count is zero, and move deferred items to `13_Deferred.md`; take the canonical field definitions for both files from `references/oq-and-deferred-rules.md`.
 8. Generate the exploration-first sidecar family for UI-bearing targets.
-9. **Emit root `DESIGN.md` draft** per `references/design-dna-intake.md`. Required when any classified surface — primary or secondary — is `web`, `mobile`, `desktop` or `mixed`; skip for cli-only and non-ui targets. Fill its required `brand.archetype` field in two phases: **Phase A** picks the closest-fitting archetype from `references/design-md-brand-catalog.md` and takes its `aesthetic_properties` as draft defaults; **Phase B** routes each default to its own home: `color_tendency` / `typography` / `spacing` into the `visual.*` token tree, and the `interaction` default into `accessibility.motion` (`visual.*` accepts only `colors | typography | radius | shadow | spacing`). This fills the draft brand SSOT only — exploration directions stay unranked and the design system is not finalized here.
-10. Generate `prototyping.yaml` only when the latest discussion pack targets a prototyping execution surface (`web`, `mobile`, `desktop`, `mixed`) and an explicit prototyping recommendation is useful. A cli-only pack emits none — `/qfai-prototyping` rejects `cli`.
-11. Request review and record the Reviewer result, following `references/review-cycle-playbook.md` for pack layout, cycle rules, and the `summary.json` fields. It owns the write paths under `.qfai/review/review-YYYYMMDDhhmmssSSS/`, which is the only tree `npx qfai validate` reads.
+9. Generate `prototyping.yaml` only when the latest discussion pack targets a prototyping execution surface (`web`, `mobile`, `desktop`, `mixed`) and an explicit prototyping recommendation is useful. A cli-only pack emits none — `/qfai-prototyping` rejects `cli`.
+10. Request review and record the Reviewer result, following `references/review-cycle-playbook.md` for pack layout, cycle rules, and the `summary.json` fields. It owns the write paths under `.qfai/review/review-YYYYMMDDhhmmssSSS/`, which is the only tree `npx qfai validate` reads.
 
-For UI-bearing targets, follow `references/design-dna-intake.md` while authoring the UI/UX sidecars, and apply the durable decision rules in `references/ui_ux_best_practices.md` (open only the `ui_ux/` appendix the current task needs). Keep this `SKILL.md` compact; put detailed interview prompts and examples in the reference file.
+A discussion writes nothing outside `.qfai/discussion/discussion-YYYYMMDDhhmmssSSS/`. Root `DESIGN.md` is authored by `/qfai-sdd` Phase 0 from the direction this pack records, which is the same path every other UI artifact already takes.
+
+For UI-bearing targets, apply the durable decision rules in `references/ui_ux_best_practices.md` (open only the `ui_ux/` appendix the current task needs). Keep this `SKILL.md` compact; put detailed interview prompts and examples in the reference file.
 
 ## UI-bearing Authoring Requirements
 
-- Root `DESIGN.md` front-matter must define `brand` (name, archetype, voice), `audience` (emotion, do_not_look_like), and the full `visual.*` token tree (colors, typography, spacing, radius, shadow). Visual-prototyping surfaces only — a cli-only pack omits root `DESIGN.md` entirely.
-- `# Brand Philosophy` body documents do/don't, brand signals, and exploration references framed as **deviate-from** inputs (not imitate-this) for the downstream `/qfai-prototyping` reviewer.
+- The sidecars carry the brand intent `/qfai-sdd` Phase 0 authors root `DESIGN.md` from: a brand name and voice, the emotion the audience should feel, what the product must not read as, and the do/don't and brand signals that become its `# Brand Philosophy` body. Exploration references are framed as **deviate-from** inputs, not imitate-this, for the downstream `/qfai-prototyping` reviewer.
 - `40_screen_contracts.md` defines each screen contract per the template schema; `50_review_input_bundle.md` documents review inputs for downstream skills.
 - Evaluation axes are global constants (4-step ordinal: weak / acceptable / strong / exceptional) and are not authored as discussion sidecars.
 
@@ -107,7 +105,7 @@ Before declaring completion, you MUST:
 - ensure every deferred item has full metadata in `13_Deferred.md`;
 - ensure `02_Inception-Deck.md` and `03_Story-Workshop.md` include Mermaid diagrams;
 - ensure the `## Research Summary` section of `04_Sources.md` is filled from an actual protocol run (`sources`, `best_practices`, `anti_patterns`, and `reflection` with at least one `action: apply`);
-- ensure the UI-bearing sidecar family is complete, and — when any classified surface (primary or secondary) is `web`, `mobile`, `desktop` or `mixed` — that the root `DESIGN.md` draft exists at the consuming-project root and parses as valid front-matter;
+- ensure the UI-bearing sidecar family is complete;
 - run `npx qfai validate --profile discussion --fail-on error` and fix discussion-owned findings;
 - avoid selecting a single visual winner in discussion artifacts.
 
@@ -176,6 +174,6 @@ Route every ask-user and hard-required item through the protocol in [User Questi
 
 project_memory:
 
-- 15-file mandatory output set is fixed; the UI-bearing sidecar family (00_index.md + 40_screen_contracts.md + 50_review_input_bundle.md) is required whenever the target is UI-bearing, cli included, and root DESIGN.md only when a visual-prototyping surface (web/mobile/desktop/mixed) appears as primary or secondary — never for a cli-only pack.
+- 15-file mandatory output set is fixed; the UI-bearing sidecar family (00_index.md + 40_screen_contracts.md + 50_review_input_bundle.md) is required whenever the target is UI-bearing, cli included. A discussion writes nothing outside its own pack directory; root DESIGN.md is authored by /qfai-sdd Phase 0.
 - Discussion is planner-first: never pick a single visual winner; carry exploration references as deviate-from inputs, not imitate-this.
 - Completion requires Disposition: open count = 0 in 11_OQ-Register.md; deferred items must move to 13_Deferred.md with full metadata.

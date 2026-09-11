@@ -288,11 +288,22 @@ describe("discussion skill template integration", () => {
     );
     expect(uiBearingConditions).toMatch(/Visual-prototyping surfaces/i);
 
-    // SKILL.md states the same requirement independently; if it still demands
-    // root DESIGN.md for every UI-bearing pack the carve-out is unreachable.
+    // Both skills state the carve-out independently. The discussion side says
+    // who authors the file and on which surfaces, and must no longer demand it
+    // as its own output; the authoring side states the skip that makes the
+    // carve-out reachable at the stage that would otherwise freeze it.
     const skill = await readFile(skillPath, "utf-8");
-    expect(skill).toMatch(/Root `DESIGN\.md` is required only on the visual-prototyping surfaces/);
-    expect(skill).toMatch(/skip for cli-only and non-ui targets/);
+    expect(skill).toMatch(/`\/qfai-sdd` Phase 0[\s\S]*?authors root `DESIGN\.md`/);
+    expect(skill).toMatch(/not for a \*\*cli-only\*\* pack/);
+    expect(skill, "the discussion must not keep an output it no longer writes").not.toMatch(
+      /Emit root `DESIGN\.md` draft/,
+    );
+
+    const sddSkill = await readFile(
+      path.join(repoRoot, "packages/qfai/assets/init/.qfai/assistant/skills/qfai-sdd/SKILL.md"),
+      "utf-8",
+    );
+    expect(sddSkill).toMatch(/\*\*Skip this whole section for a cli-only target\*\*/);
 
     // `route` remains a required field for every surface
     // (`validators/uix/screenContract.ts#REQUIRED_FIELDS`), so the template must

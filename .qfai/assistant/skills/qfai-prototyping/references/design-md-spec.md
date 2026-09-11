@@ -74,7 +74,7 @@ accessibility:
 ## `brand.archetype` allowed values
 
 The 8-archetype catalog is the SSOT in
-`.qfai/assistant/skills/qfai-discussion/references/design-md-brand-catalog.md`:
+`.qfai/assistant/skills/qfai-sdd/references/design-md-brand-catalog.md`:
 `minimal | bold | corporate | playful | organic | tech | elegant |
 casual`. Read that reference for archetype semantics, do not duplicate
 here.

@@ -1,7 +1,7 @@
 # Design-MD Brand Catalog
 
-Reference catalog of 8 canonical brand archetypes. Required Process step 9 (Phase A) of
-`qfai-discussion/SKILL.md` picks one to fill the required `brand.archetype` field of the root
+Reference catalog of 8 canonical brand archetypes. Phase 0 step 1 (Phase A) of
+`qfai-sdd/SKILL.md` picks one to fill the required `brand.archetype` field of the root
 `DESIGN.md` draft; each archetype supplies `aesthetic_properties` that Phase B turns into draft
 tokens, and `design-dna-intake.md#output-mapping-new-ssot-path` defines where each value is written.
 
@@ -83,13 +83,23 @@ tokens, and `design-dna-intake.md#output-mapping-new-ssot-path` defines where ea
 
 ## Selection Guide
 
-Use this catalog during Required Process step 9, Phase A (`qfai-discussion/SKILL.md`).
+Use this catalog during Phase 0 step 1, Phase A (`qfai-sdd/SKILL.md`).
 Picking an archetype fills a required field of the `DESIGN.md` **draft**. It does not rank the
 exploration directions and does not finalize the design system — both stay out of scope for
-discussion (`discussion-completion-matrix.md`).
+the discussion that recorded the direction (`qfai-discussion/references/discussion-completion-matrix.md`).
 
-1. Score each archetype against the brand intent captured in root `DESIGN.md` front-matter (`brand.voice`, `audience.emotion`, `audience.do_not_look_like`). The score is the fit between that intent and the archetype's `representative_brand` and `aesthetic_properties` above — the only archetype facts this catalog publishes.
-2. Break a tie with the inputs step 1 already read, in this order: (a) the archetype whose `aesthetic_properties` contradict fewer entries of `audience.do_not_look_like`, since that field is an explicit exclusion rather than a preference; (b) alphabetical archetype name. Both are decidable from what the intake captured, so the same discussion yields the same archetype for any agent. Do not weigh a "visual-theme weight": the catalog publishes no such number for an archetype, and a tie-break that needs one is not executable here.
+1. Score each archetype against the brand intent the discussion pack recorded — the three
+   values that become `brand.voice`, `audience.emotion`, `audience.do_not_look_like`. The
+   archetype is picked while the file is being written, so it is scored against the recorded
+   intent rather than against front-matter that does not exist yet. The score is the fit
+   between that intent and the archetype's `representative_brand` and `aesthetic_properties`
+   above — the only archetype facts this catalog publishes.
+2. Break a tie with the inputs step 1 already read, in this order: (a) the archetype whose
+   `aesthetic_properties` contradict fewer entries of `audience.do_not_look_like`, since that
+   is an explicit exclusion rather than a preference; (b) alphabetical archetype name. Both
+   are decidable from what the discussion captured, so the same pack yields the same
+   archetype for any agent. Do not weigh a "visual-theme weight": the catalog publishes no
+   such number for an archetype, and a tie-break that needs one is not executable here.
 3. Record the selected archetype in root `DESIGN.md` front-matter as `brand.archetype`.
 4. The selected archetype's `aesthetic_properties` become the defaults for Color Palette, Typography, Spacing, and Animation sections.
-5. Phase B of step 9 then customizes those defaults into project-specific overrides, split by destination: `color_tendency` / `typography` / `spacing` become `visual.*` tokens, while the `interaction` default becomes `accessibility.motion` — `visual.*` has no motion or interaction key.
+5. Phase B then customizes those defaults into project-specific overrides, split by destination: `color_tendency` / `typography` / `spacing` become `visual.*` tokens, while the `interaction` default becomes `accessibility.motion` — `visual.*` has no motion or interaction key.
