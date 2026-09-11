@@ -334,6 +334,20 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   qualifier as well, so the shape lane and the triage rules read the same
   heading.
 
+- **Two review documents stop restating how much code to write** (#1461). The
+  Copilot review instructions and the universal development checklist each held
+  their own KISS, YAGNI and DRY section. Neither was the source, both were
+  written separately, and they already said different things about the same
+  question.
+
+  Both now point at `.agents/rules/minimal-implementation.md` and state no
+  ladder of their own. What was not in the ladder stays where it was: cognitive
+  load, which is a finding whatever the amount of code, and the Rule of Three,
+  which is a floor on sharing rather than a rung.
+
+  SOLID, separation of concerns, fail-fast and the rest are untouched. They are
+  a different subject from how much code answers a requirement.
+
 - **Every agent card carries a minimal-implementation obligation** (#1462).
   Seven of the nineteen cards said something about simplicity, each in its own
   words. Twelve said nothing — among them every test-stage role and every
