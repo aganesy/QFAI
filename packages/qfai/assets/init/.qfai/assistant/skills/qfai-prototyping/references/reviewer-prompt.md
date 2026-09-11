@@ -76,7 +76,7 @@ type Review = {
     usability: "weak" | "acceptable" | "strong" | "exceptional";
     functionality: "weak" | "acceptable" | "strong" | "exceptional";
   };
-  proseCritique: string; // 200..500 English words, or 600..2500 Japanese/Chinese characters
+  proseCritique: string; // non-empty; at most 500 English words, or 2500 Japanese/Chinese characters
   layoutAntiPatternsDetected: string[]; // lap-* IDs
   designMdViolations: {
     // populated by static gate, not by you
@@ -188,14 +188,18 @@ acceptable}` and `hasLap(r)` be `r.layoutAntiPatternsDetected.length > 0`.
   prior → `continue`.
 - Else → `refine`.
 
-## Prose critique format (200–500 English words, or 600–2500 Japanese/Chinese characters)
+## Prose critique format (at most 500 English words, or 2500 Japanese/Chinese characters)
 
-Address: (1) what works on each of the 4 axes, (2) what doesn't,
-(3) structural ceiling if any, (4) concrete IA / flow / state
-suggestion when the directive could be `pivot`. Do not comment on
-brand colors, typefaces, radii, or shadows — locked by DESIGN.md and
+Address, as far as each applies: (1) what works on each of the 4 axes,
+(2) what doesn't, (3) structural ceiling if any, (4) concrete IA / flow
+/ state suggestion when the directive could be `pivot`. Do not comment
+on brand colors, typefaces, radii, or shadows — locked by DESIGN.md and
 out of scope.
 
-The character band counts Hiragana, Katakana, and Han only. Write a
-critique in any other script — Korean, Cyrillic, Thai — to the
-200–500 whitespace-separated word band instead.
+**There is no minimum.** A critique that reports one finding and stops
+is complete. Do not write toward a length: prose added to fill a quota
+reads, on the next cycle, as work to do.
+
+The character cap counts Hiragana, Katakana and Han only. A critique in
+any other script — Korean, Cyrillic, Thai — is measured in
+whitespace-separated words.
