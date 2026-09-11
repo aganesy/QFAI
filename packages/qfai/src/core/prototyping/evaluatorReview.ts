@@ -3,31 +3,25 @@
  *
  * The reviewer (product-surface-reviewer) writes one of these per iteration
  * to `iter-NN/review.json`. The schema enforces:
- *   - 4 ordinal axes (weak / acceptable / strong / exceptional):
- *     informationArchitecture, navigationFlow, usability, functionality
- *   - 200..500 word prose critique
- *   - Layout-anti-pattern detection cap: if
- *     `layoutAntiPatternsDetected.length > 0`, `informationArchitecture`
- *     is bounded above by `acceptable` (cannot be `strong` or
- *     `exceptional`).
+ *   - `blockingFindings`: what must be fixed before this iteration
+ *     ships, one non-empty line each. Empty is the converged state.
+ *   - 200..500 word prose critique, for what is worth saying and does
+ *     not block.
  *   - DESIGN.md compliance: `designMdViolations[]` must be a valid
- *     array of `{kind, found}` records. The cap rule does NOT apply to
- *     dmv — dmv enforces a separate certify gate at convergence time.
+ *     array of `{kind, found}` records.
  *   - Explicit `pivotDirective: continue | refine | pivot`
  *
- * The cap rule and word-count rule are enforced at construction time so
- * downstream consumers can rely on the type. The on-disk evidence
- * validator re-checks the same invariants.
+ * The review carries no rating. A rating is unfalsifiable, so a gate
+ * built on one is satisfied by overstating rather than by fixing; a
+ * finding names something and can be closed or argued with.
+ *
+ * The word-count rule is enforced at construction time so downstream
+ * consumers can rely on the type. The on-disk evidence validator
+ * re-checks the same invariants.
  */
 
 import type { DesignMdViolation } from "./designMdViolations.js";
-import {
-  isOrdinalScore,
-  isPivotDirective,
-  MAX_ITERATION_INDEX,
-  type OrdinalScore,
-  type PivotDirective,
-} from "./iteration.js";
+import { isPivotDirective, MAX_ITERATION_INDEX, type PivotDirective } from "./iteration.js";
 
 export const PROSE_CRITIQUE_MIN_WORDS = 200;
 export const PROSE_CRITIQUE_MAX_WORDS = 500;
@@ -138,15 +132,6 @@ export function validateProseCritiqueBand(text: string): ProseCritiqueValidation
  */
 export const FEEL_FIELD_MAX_WORDS = 200;
 
-export const ORDINAL_AXES = [
-  "informationArchitecture",
-  "navigationFlow",
-  "usability",
-  "functionality",
-] as const;
-
-export type OrdinalAxis = (typeof ORDINAL_AXES)[number];
-
 /**
  * Qualitative prose-feel fields surfaced by the reviewer on each
  * per-spec / per-screen review payload. Each field is bounded by
@@ -168,7 +153,12 @@ const VIOLATION_KINDS: ReadonlySet<string> = new Set(["color", "font", "radius",
 export type EvaluatorReview = {
   readonly iterIndex: number;
   readonly reviewerId: string;
-  readonly scores: Record<OrdinalAxis, OrdinalScore>;
+  /**
+   * What must be fixed before this iteration ships, one line each. Empty
+   * is the converged state: an iteration with nothing wrong is finished,
+   * not merely unremarkable.
+   */
+  readonly blockingFindings: readonly string[];
   readonly proseCritique: string;
   readonly layoutAntiPatternsDetected: readonly string[];
   readonly designMdViolations: readonly DesignMdViolation[];
@@ -191,23 +181,18 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
-function validateScores(input: BuildEvaluatorReviewInput): void {
-  // The static type promises a Record<OrdinalAxis, OrdinalScore>, but
-  // this validator also runs against on-disk evidence reloaded as JSON
-  // (where the type is gone). Read through `unknown` to keep the
-  // runtime checks honest without a bare `as` cast.
-  const scores: unknown = input.scores;
-  if (!isRecord(scores)) {
-    throw new Error("buildEvaluatorReview: scores must be an object");
+function validateBlockingFindings(input: BuildEvaluatorReviewInput): void {
+  // The static type promises a string array, but this validator also runs
+  // against on-disk evidence reloaded as JSON, where the type is gone.
+  const findings: unknown = input.blockingFindings;
+  if (!Array.isArray(findings)) {
+    throw new Error("buildEvaluatorReview: blockingFindings must be a string array");
   }
-  for (const axis of ORDINAL_AXES) {
-    if (!(axis in scores)) {
-      throw new Error(`buildEvaluatorReview: scores.${axis} is required`);
-    }
-    const score = scores[axis];
-    if (!isOrdinalScore(score)) {
+  for (let i = 0; i < findings.length; i += 1) {
+    const entry: unknown = findings[i];
+    if (typeof entry !== "string" || entry.trim().length === 0) {
       throw new Error(
-        `buildEvaluatorReview: scores.${axis} must be one of weak|acceptable|strong|exceptional (got ${String(score)})`,
+        `buildEvaluatorReview: blockingFindings[${i}] must be a non-empty string (got ${String(entry)})`,
       );
     }
   }
@@ -236,18 +221,9 @@ function validateDesignMdViolations(input: BuildEvaluatorReviewInput): void {
   }
 }
 
-function validateAntiPatternCap(input: BuildEvaluatorReviewInput): void {
+function validateLayoutAntiPatterns(input: BuildEvaluatorReviewInput): void {
   if (!Array.isArray(input.layoutAntiPatternsDetected)) {
     throw new Error("buildEvaluatorReview: layoutAntiPatternsDetected must be a string array");
-  }
-  if (input.layoutAntiPatternsDetected.length === 0) return;
-  const ia = input.scores.informationArchitecture;
-  if (ia === "strong" || ia === "exceptional") {
-    throw new Error(
-      "buildEvaluatorReview: informationArchitecture must be capped at acceptable when " +
-        `layoutAntiPatternsDetected[] is non-empty (current: ${ia}, ` +
-        `lap: [${input.layoutAntiPatternsDetected.join(", ")}])`,
-    );
   }
 }
 
@@ -259,7 +235,7 @@ export function buildEvaluatorReview(input: BuildEvaluatorReviewInput): Evaluato
     throw new Error("buildEvaluatorReview: reviewerId must be a non-empty string");
   }
 
-  validateScores(input);
+  validateBlockingFindings(input);
 
   if (!isPivotDirective(input.pivotDirective)) {
     throw new Error(
@@ -275,7 +251,7 @@ export function buildEvaluatorReview(input: BuildEvaluatorReviewInput): Evaluato
   }
 
   validateDesignMdViolations(input);
-  validateAntiPatternCap(input);
+  validateLayoutAntiPatterns(input);
 
   if (
     typeof input.evidenceRefs.screenshot !== "string" ||
@@ -290,7 +266,7 @@ export function buildEvaluatorReview(input: BuildEvaluatorReviewInput): Evaluato
   return {
     iterIndex: input.iterIndex,
     reviewerId: input.reviewerId,
-    scores: { ...input.scores },
+    blockingFindings: [...input.blockingFindings],
     proseCritique: input.proseCritique,
     layoutAntiPatternsDetected: [...input.layoutAntiPatternsDetected],
     designMdViolations: input.designMdViolations.map((v) => ({ kind: v.kind, found: v.found })),
@@ -319,7 +295,8 @@ export function buildEvaluatorReview(input: BuildEvaluatorReviewInput): Evaluato
  *     triple and the Reviewer Playwright session outcome (the
  *     `sessionStatus` enum mirrors {@link ReviewerSessionStatus} in
  *     `reviewerDispatch.ts`).
- *   - `ordinalAxes` nests the 4 canonical ordinal verdicts.
+ *   - `blockingFindings` lists what must be fixed before this screen
+ *     ships, one line each; empty is the converged state.
  *   - `impressions` nests the 6 bounded qualitative prose fields
  *     (each ≤ {@link FEEL_FIELD_MAX_WORDS} words).
  *   - `layoutAntiPatternsDetected` / `designMdViolations` carry the
@@ -348,8 +325,6 @@ export const REVIEWER_SESSION_STATUSES = ["ok", "retryExhausted", "launchFailed"
 
 export type ReviewerSessionStatus = (typeof REVIEWER_SESSION_STATUSES)[number];
 
-export type ReviewerOrdinalAxes = Record<OrdinalAxis, OrdinalScore>;
-
 export type ReviewerImpressions = Record<FeelField, string>;
 
 export type ReviewerSoftWarnings = {
@@ -362,7 +337,7 @@ export type ReviewerPayload = {
   readonly cycle: number;
   readonly sessionStatus: ReviewerSessionStatus;
   readonly retryCount: number;
-  readonly ordinalAxes: ReviewerOrdinalAxes;
+  readonly blockingFindings: readonly string[];
   readonly impressions: ReviewerImpressions;
   readonly layoutAntiPatternsDetected: readonly string[];
   readonly designMdViolations: readonly DesignMdViolation[];
@@ -380,7 +355,7 @@ const REVIEWER_PAYLOAD_KNOWN_KEYS: ReadonlySet<string> = new Set<string>([
   "cycle",
   "sessionStatus",
   "retryCount",
-  "ordinalAxes",
+  "blockingFindings",
   "impressions",
   "layoutAntiPatternsDetected",
   "designMdViolations",
@@ -455,43 +430,23 @@ function isCompleteFeelRecord(
   return FEEL_FIELDS.every((field) => typeof value[field] === "string");
 }
 
-function collectOrdinalAxes(
-  source: Record<string, unknown>,
-  errors: string[],
-): ReviewerOrdinalAxes | null {
-  const accepted: Partial<Record<OrdinalAxis, OrdinalScore>> = {};
+function collectBlockingFindings(source: unknown, errors: string[]): string[] | null {
+  if (!Array.isArray(source)) {
+    errors.push("blockingFindings must be an array of strings");
+    return null;
+  }
+  const accepted: string[] = [];
   let complete = true;
-  for (const axis of ORDINAL_AXES) {
-    if (!(axis in source)) {
-      errors.push(`missing field: ordinalAxes.${axis}`);
+  for (let i = 0; i < source.length; i += 1) {
+    const value: unknown = source[i];
+    if (typeof value !== "string" || value.trim().length === 0) {
+      errors.push(`blockingFindings[${i}] must be a non-empty string (got ${String(value)})`);
       complete = false;
       continue;
     }
-    const value = source[axis];
-    if (!isOrdinalScore(value)) {
-      errors.push(
-        `ordinalAxes.${axis} must be one of weak|acceptable|strong|exceptional (got ${String(value)})`,
-      );
-      complete = false;
-      continue;
-    }
-    accepted[axis] = value;
+    accepted.push(value);
   }
-  for (const key of Object.keys(source)) {
-    if (!(ORDINAL_AXES as readonly string[]).includes(key)) {
-      errors.push(`unknown field: ordinalAxes.${key}`);
-      complete = false;
-    }
-  }
-  if (!complete) return null;
-  if (!isCompleteAxisRecord(accepted)) return null;
-  return accepted;
-}
-
-function isCompleteAxisRecord(
-  value: Partial<Record<OrdinalAxis, OrdinalScore>>,
-): value is Record<OrdinalAxis, OrdinalScore> {
-  return ORDINAL_AXES.every((axis) => isOrdinalScore(value[axis]));
+  return complete ? accepted : null;
 }
 
 function pushLapErrors(
@@ -584,8 +539,7 @@ function pushDmvErrors(
  *   - `sessionStatus` required, one of `ok | retryExhausted | launchFailed`
  *     (mirrors {@link ReviewerSessionStatus} in `reviewerDispatch.ts`)
  *   - `retryCount` required as a non-negative integer
- *   - `ordinalAxes` required as a nested record with all 4 axes
- *     (must satisfy {@link isOrdinalScore})
+ *   - `blockingFindings` required as an array of non-empty strings
  *   - `impressions` required as a nested record with all 6 `*Feel`
  *     fields (each string, ≤ {@link FEEL_FIELD_MAX_WORDS} words)
  *   - `layoutAntiPatternsDetected` required as string[]
@@ -672,13 +626,11 @@ export function parseEvaluatorReview(input: unknown): ParseReviewerPayloadResult
     retryCount = input.retryCount;
   }
 
-  let axes: ReviewerOrdinalAxes | null = null;
-  if (!("ordinalAxes" in input)) {
-    errors.push("missing field: ordinalAxes");
-  } else if (!isRecord(input.ordinalAxes)) {
-    errors.push("ordinalAxes must be an object");
+  let blockingFindings: string[] | null = null;
+  if (!("blockingFindings" in input)) {
+    errors.push("missing field: blockingFindings");
   } else {
-    axes = collectOrdinalAxes(input.ordinalAxes, errors);
+    blockingFindings = collectBlockingFindings(input.blockingFindings, errors);
   }
 
   let impressions: ReviewerImpressions | null = null;
@@ -754,7 +706,7 @@ export function parseEvaluatorReview(input: unknown): ParseReviewerPayloadResult
     cycle === null ||
     sessionStatus === null ||
     retryCount === null ||
-    axes === null ||
+    blockingFindings === null ||
     impressions === null ||
     lap === null ||
     dmv === null ||
@@ -770,12 +722,7 @@ export function parseEvaluatorReview(input: unknown): ParseReviewerPayloadResult
     cycle,
     sessionStatus,
     retryCount,
-    ordinalAxes: {
-      informationArchitecture: axes.informationArchitecture,
-      navigationFlow: axes.navigationFlow,
-      usability: axes.usability,
-      functionality: axes.functionality,
-    },
+    blockingFindings: [...blockingFindings],
     impressions: {
       operability: impressions.operability,
       transitionFeel: impressions.transitionFeel,

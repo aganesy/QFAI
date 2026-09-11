@@ -16,15 +16,6 @@ import type { DesignMdViolation } from "./designMdViolations.js";
 export const MAX_ITERATIONS = 10;
 export const MAX_ITERATION_INDEX = MAX_ITERATIONS - 1;
 
-export type OrdinalScore = "weak" | "acceptable" | "strong" | "exceptional";
-
-export const ORDINAL_SCORES: readonly OrdinalScore[] = [
-  "weak",
-  "acceptable",
-  "strong",
-  "exceptional",
-] as const;
-
 export type PivotDirective = "continue" | "refine" | "pivot";
 
 export const PIVOT_DIRECTIVES: readonly PivotDirective[] = ["continue", "refine", "pivot"] as const;
@@ -32,12 +23,8 @@ export const PIVOT_DIRECTIVES: readonly PivotDirective[] = ["continue", "refine"
 export type Iteration = {
   readonly index: number;
   readonly commitSha: string;
-  readonly scores: {
-    readonly informationArchitecture: OrdinalScore;
-    readonly navigationFlow: OrdinalScore;
-    readonly usability: OrdinalScore;
-    readonly functionality: OrdinalScore;
-  };
+  /** What must be fixed before this iteration ships. Empty is converged. */
+  readonly blockingFindings: readonly string[];
   readonly proseCritique: string;
   readonly layoutAntiPatternsDetected: readonly string[];
   readonly designMdViolations: readonly DesignMdViolation[];
@@ -248,10 +235,6 @@ export function buildEvidenceRefs(iterIndex: number, screenIds: readonly string[
     out.push({ kind: "html", path: `${dir}/${id}.html` });
   }
   return out;
-}
-
-export function isOrdinalScore(value: unknown): value is OrdinalScore {
-  return typeof value === "string" && (ORDINAL_SCORES as readonly string[]).includes(value);
 }
 
 export function isPivotDirective(value: unknown): value is PivotDirective {
