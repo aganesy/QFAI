@@ -57,6 +57,16 @@ Skill-specific examples:
 - exception handling
 - scope confirmation
 
+## Inputs Priority (Preflight)
+
+When unsure, read inputs in this order:
+
+- P1: `.qfai/assistant/constitution/*`
+- P2: `.qfai/assistant/manifest/agent-routing.yml` + `.qfai/assistant/manifest/review-profiles.yml` + `.qfai/assistant/catalog/*`; from `.qfai/assistant/manifest/agent-catalog.yml` read the acting `orchestrator`'s and each routed role's entry (`owned_artifacts` / `tool_profile` / `permission_profile` / `specialization_tags`), not the whole file — its `developer_instructions` bodies mirror the agent cards (`.qfai/assistant/constitution/constitution.md` Article III)
+- P3: `.qfai/specs/<spec-id>/tdd/test-list.md` — the execution ledger, and the row this cycle is working
+- P4: the obligations that row names (`06_Test-Cases.md` through its `TC-Refs`, then `03_Acceptance-Criteria.md`, `05_Examples.md`, `01_Spec.md`, `.qfai/contracts/**`)
+- P5: `.qfai/specs/<spec-id>/07_Decisions.md` + `.qfai/specs/_policies/08_Decisions.md` (Decision Records, `DR-*`)
+
 ## CRITICAL CONSTRAINTS (Read First)
 
 - This skill processes **one test at a time** from `test-list.md`: at most one row is in `red` or `green` at any moment, except under an item-level parallel dispatch authorized by `## Parallelization Policy` below. A T1 row parked in `refactor` waiting for its review group (see Volume Policy) does not violate this.
