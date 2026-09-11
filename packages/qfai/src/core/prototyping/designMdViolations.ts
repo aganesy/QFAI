@@ -36,6 +36,13 @@
  * The shipped `generator-prompt.md` states the same posture on the
  * authoring side; the two must not drift apart.
  *
+ * What the envelope forbids is a runtime dependency: a package install, an
+ * external stylesheet, a script the file does not already load. It does not
+ * forbid taking markup from a catalogue. A transposed block carries palette
+ * classes the injected theme does not define, and those are what these
+ * scanners report — re-bound to `DESIGN.md` tokens, the same block passes.
+ * That is the intended route to a composition, not a loophole in one.
+ *
  * Input tree: both production call sites feed this scanner the CAPTURE
  * fan-out under `.qfai/evidence/prototyping/iter-NN/` — `prototypingCertify`
  * via `findIterationHtmlFiles(evidenceRoot, …)`, and

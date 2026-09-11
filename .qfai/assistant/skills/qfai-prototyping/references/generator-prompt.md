@@ -264,9 +264,14 @@ The generator MUST express every styled surface as one of:
 
 ### Other envelope constraints
 
-- No component library beyond Tailwind + Lucide. No external CSS, no
-  design-system imports.
-- One self-contained HTML file; embedded CSS / JS minimal.
+- No runtime dependency beyond Tailwind + Lucide: no package install, no
+  external stylesheet, no script the file does not already load. One
+  self-contained HTML file; embedded CSS / JS minimal.
+- Taking markup from a catalogue is expected, not forbidden. Transpose the
+  block and re-bind its palette classes to `DESIGN.md` tokens — that adds no
+  dependency, and the composition then comes from something someone designed
+  rather than from this file. See
+  `.qfai/assistant/catalog/ui-procurement.md`.
 - All declared spec screens reachable; loading / empty / error /
   success states representable.
 - The compliance gate reports **one finding per distinct offending value**, not

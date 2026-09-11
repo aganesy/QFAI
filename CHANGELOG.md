@@ -6,6 +6,18 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **Taking markup from a catalogue is expected, not forbidden** (#1479). The
+  prototype envelope said "no component library beyond Tailwind and Lucide,
+  no design-system imports", which also read as a ban on transposing a
+  catalogue block — an operation that adds no dependency at all.
+
+  What the envelope cannot carry is a runtime dependency: a package install,
+  an external stylesheet, a script the file does not already load. The clause
+  now says that, and says plainly that a transposed block with its palette
+  classes re-bound to `DESIGN.md` tokens is the intended way to build a
+  screen. The compliance gate needed no change: it already accepts exactly
+  that shape.
+
 - **Every layout anti-pattern names what makes it a defect** (#1484). An
   entry now carries a `source`, and the loader drops one that does not: a
   published heuristic, an accessibility criterion, or the contract the screen
