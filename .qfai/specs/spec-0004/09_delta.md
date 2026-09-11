@@ -227,3 +227,9 @@
 | Source   | Subject                                                    | Existing Spec | Operation | Sub-op | Approved By | Rationale                                                                                                              |
 | -------- | ---------------------------------------------------------- | ------------- | --------- | ------ | ----------- | ---------------------------------------------------------------------------------------------------------------------- |
 | REQ-0028 | `proseCritique` schema check states a cap, not a word band | spec-0004     | UPDATE    | MODIFY | -           | Impact cascade from REQ-0012-0059: the validator spec restates the retired band in its requirement, criterion and rule |
+
+## Triage (2026-09-12)
+
+| Source   | Subject                                                                        | Existing Spec | Operation | Sub-op | Approved By      | Rationale                                                                                                                     |
+| -------- | ------------------------------------------------------------------------------ | ------------- | --------- | ------ | ---------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| REQ-0029 | The `layoutAntiPatternsDetected` whitelist is the registry, not a numeric band | spec-0004     | UPDATE    | MODIFY | CR-20260912-0001 | The acceptance criterion was already registry-anchored; the requirement, the rule and the example still stated `lap-001..008` |

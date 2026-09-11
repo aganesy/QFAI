@@ -415,8 +415,9 @@ navigation timeout, screenshot write failure, etc.) iterate exits `2`
 with the operator-actionable reason on stderr. The implemented
 advisory band is `lap-009` (md5 duplicate, REQ-0124) and `lap-010`
 (missing route, REQ-0124); both are advisory-failing per DR-0001-0006
-and counted in `layoutAntiPatternsDetected[]`. Higher `lap-011` /
-`lap-012` codes are reserved but not currently emitted.
+and counted in `layoutAntiPatternsDetected[]`. A further code is added by
+declaring it in the registry, which is what the validator reads; no
+identifier is reserved ahead of an entry that detects something.
 
 These two are computed by the capture pass rather than judged by the
 reviewer, and they are declared in the same `lap-*` registry as the

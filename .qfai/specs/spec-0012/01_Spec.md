@@ -26,7 +26,7 @@
   - autonomous serial cycle execution `0..9` (max 10) with no per-cycle stdin prompt; `MAX_ITERATIONS = 10` / `MAX_ITERATION_INDEX = 9` is the sole SSOT in `core/prototyping/iteration.ts`
   - per spec × screen evaluation by a Reviewer sub-agent that **itself launches Playwright** and performs human-like operation (click / type / navigate / scroll) on the live prototype
   - qualitative review payload at `.qfai/evidence/prototyping/iter-NN/spec-NNNN/<screen>.review.json` carrying short-prose `operability` / `transitionFeel` / `crossScreenContinuity` / `userStoryFeel` / `acceptanceCriteriaFeel` / `menuReachabilityFeel` impressions plus the 4 UX ordinal axes (`informationArchitecture` / `navigationFlow` / `usability` / `functionality`) on the `{weak, acceptable, strong, exceptional}` scale
-  - layout-anti-pattern catalog (`lap-001-orphan-page`..`lap-008-no-back-affordance`); detection caps `informationArchitecture` at `acceptable`
+  - layout-anti-pattern catalog (the identifiers declared in `packages/qfai/assets/validators/layoutAntiPatterns.json`); a detection is a blocking finding
   - global convergence judged **per cycle by AND across all spec × screen pairs**: all 4 axes `exceptional` AND `layoutAntiPatternsDetected` empty AND `designMdViolations` empty; quantitative AC-pass% / transition-pass% thresholds are not used
   - root `DESIGN.md` as brand SSOT, sha256 frozen at the SDD Phase 0 step in `.qfai/contracts/design/DESIGN.md.lock.yaml`
   - cycle 0 records `prototyping.json#designMdSha256` AND freezes (a) resolved `specsCovered[]` and (b) stock-photo `frozenLicenseCatalog` (allowed sources + license tiers); cycle ≥1 fail-closed on hash drift (exit 2)

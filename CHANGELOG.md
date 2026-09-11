@@ -4,6 +4,31 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ## [Unreleased]
 
+### Fixed
+
+- **The layout anti-pattern vocabulary is one list again** (#1517). The specs
+  named it twice and the registry shipped a third set. One identifier out of
+  eight was the same in all three, and `spec-0012` required the capture pass to
+  emit two tokens its own whitelist rejected. It also named `QFAI-PROT-025` for
+  an unregistered token; nothing emits that code, and the validator has always
+  reported `QFAI-PROT-002`.
+
+  Every spec row now names
+  `packages/qfai/assets/validators/layoutAntiPatterns.json` instead of copying
+  its contents, so adding or retiring an entry no longer needs eleven rows
+  edited. The CLI contract stops reserving two identifiers against a detection
+  nobody has written.
+
+  A sweep holds it: no spec or CLI contract may cite an identifier the registry
+  does not declare, unless the same line says that is what it is. It found
+  thirteen references that a read-through had missed.
+
+  The seven navigation and state defects the old lists named — an orphan page,
+  a dead-end flow, a hidden state, a broken back link, unlabelled navigation, a
+  missing empty state, a missing error state — are detected by nothing. That is
+  now an open question on the pack with options and a recommendation, rather
+  than a shipped promise.
+
 ### Added
 
 - **Each captured screen arrives counted** (#1493). `iterate --capture` now
