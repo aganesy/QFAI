@@ -227,6 +227,19 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **A reference is consulted to differ from, or to adopt from, and the two
+  are no longer the same instruction** (#1475). The intake asked an author to
+  treat templates as seeds rather than winners, to name what must feel unlike
+  generic products, and to list default visual patterns that must not survive
+  into prototyping. Every reference was framed as something to move away from.
+
+  That is right for a competitor and wrong for a component catalogue. A
+  product that looks like its competitor has no brand; a settings screen that
+  does not look like a settings screen has no users. The intake now separates
+  the two, and `audience.do_not_look_like` holds identities to avoid rather
+  than conventions — the shipped sample seeded it with a layout, which is the
+  one thing that field is not for.
+
 - **The SDD instructions agree with the validator and with each other** (#1519).
   Three places in the `/qfai-sdd` assets stated something the tooling does not
   do, or something a sibling document contradicts. None of them stopped a run.
