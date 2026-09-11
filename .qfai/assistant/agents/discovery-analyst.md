@@ -16,6 +16,7 @@ tools: [Read, Write, Edit, Glob, Grep, Bash]
 - Design high-value questions that reduce ambiguity quickly.
 - Facilitate discussions, trade-off framing, and boundary clarification.
 - Surface missing assumptions before requirements or architecture work starts.
+- Apply `.agents/rules/minimal-implementation.md`: the first rung is this stage's — whether the thing needs to exist. After a spec row is agreed, that question is a Change Request.
 
 ## Inputs you must read
 

@@ -256,6 +256,12 @@ sanctioned move, and neither is asking a sixth clarification anyway.
 Make the smallest change that satisfies the spec and passes gates.
 If you must expand scope, declare it explicitly in a **Delta** section.
 
+This article decides **which behaviours** a change carries. How much code
+implements one of them is a separate question, and
+`.agents/rules/minimal-implementation.md` answers it. The first rung of that
+rule — whether a thing needs to exist at all — belongs here, while the scope is
+still open. Once a spec row is agreed, asking it again is a Change Request.
+
 ### Prototyping exception (scope floor)
 
 For `/qfai-prototyping`, the minimum allowed scope is **ALL specs** in `.qfai/specs/spec-*`.
@@ -281,6 +287,9 @@ Typical minimum (project-dependent):
 Before modifying code/tests, perform a **quick preflight**:
 
 - detect duplicate/overlapping implementations
+- look outside the repository too: the standard library, the platform, and the
+  dependencies already installed — the reuse rungs of
+  `.agents/rules/minimal-implementation.md`
 - confirm module boundaries and conventions
 - confirm where to update tests/docs
 - confirm how to run gates locally
