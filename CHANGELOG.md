@@ -57,6 +57,34 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Added
 
+- **`DESIGN.md` says where its numbers came from** (#1474). `brand.theme`
+  names the published theme the token values were taken from, in a form a
+  reader can install, and `/qfai-sdd` Phase 0 takes the twelve colours, three
+  families, four radii and three shadows from that theme rather than composing
+  them.
+
+  Everything downstream is exact about those values: the lock hashes them,
+  `certify` re-scans them, and every literal in every capture is checked
+  against them. Until now there was nothing under the exactness — the chain
+  from archetype to tokens ran through a sentence of prose about a colour
+  tendency, so the numbers were an assistant's invention.
+
+  The two vocabularies do not line up, so the authoring reference carries the
+  crosswalk by role, along with a rule for each gap: a role the theme does not
+  publish is derived from the theme's own palette and checked against the
+  contrast floor, and a role the theme publishes that this schema has no name
+  for is not added. The schema stays closed, and the installed theme supplies
+  the rest at implementation time.
+
+  `brand.archetype` keeps a job. It seeds `accessibility.motion`, which no
+  theme publishes, and it seeds the tokens for a file that names no theme. It
+  no longer overrules a theme that is named.
+
+  The field is optional: a project that authored its own `DESIGN.md` before it
+  existed is not wrong, it just does not say. The handoff mirror copies the
+  name, so an implementer installs the theme instead of reproducing
+  thirty-two values by hand.
+
 - **Each captured screen arrives counted** (#1493). `iterate --capture` now
   writes `iter-NN/<screen>.signals.json` beside the capture and prints the
   same numbers.
