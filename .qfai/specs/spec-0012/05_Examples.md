@@ -86,9 +86,9 @@
 
 - BR-Ref: BR-0012-0024
 - Status: superseded — see EX-0012-0124 (10-cycle terminator) and EX-0012-0130 (AND-across-spec×screen qualitative convergence). 15-cycle narrative retired.
-- Given the run produces 9 iters where iter-08 has all 4 UX axes `exceptional`, `layoutAntiPatternsDetected: []`, and `designMdViolations: []`.
+- Given the run produces 9 iters where iter-08 has `blockingFindings: []`, `layoutAntiPatternsDetected: []`, and `designMdViolations: []`.
 - When `qfai prototyping iterate --cycle 9` runs.
-- Then it returns exit 64. `prototyping.json#stopReason` is `"axes-exceptional"`. `acceptedIterationIndex === 8`.
+- Then it returns exit 64. `prototyping.json#stopReason` is `"converged"`. `acceptedIterationIndex === 8`.
 
 ## EX-0012-0111: Pivot triggered by 3-low-IA + latest lap-\*
 
@@ -107,7 +107,7 @@
 ## EX-0012-0113: convergence blocked by designMdViolations
 
 - BR-Ref: BR-0012-0024
-- Given iter-09 with all 4 UX axes `exceptional` and `layoutAntiPatternsDetected: []` but `designMdViolations: [{category: "shadow", expected: "0 1px 2px rgba(0,0,0,0.06)", found: "0 8px 24px rgba(0,0,0,0.20)", location: "card.tsx:32"}]`.
+- Given iter-09 with `blockingFindings: []` and `layoutAntiPatternsDetected: []` but `designMdViolations: [{category: "shadow", expected: "0 1px 2px rgba(0,0,0,0.06)", found: "0 8px 24px rgba(0,0,0,0.20)", location: "card.tsx:32"}]`.
 - When `qfai prototyping iterate --cycle 10` runs.
 - Then exit code is `0` (continue); convergence is not declared.
 
@@ -235,7 +235,7 @@
 - BR-Ref: BR-0012-0032
 - Given at cycle 7 every `(spec, screen)` pair has all 4 ordinal axes `exceptional`, `layoutAntiPatternsDetected: []`, and `designMdViolations: []`.
 - When the global convergence check runs.
-- Then the run converges, exits 64 with `stopReason: "axes-exceptional"`, and `acceptedIterationIndex === 7`.
+- Then the run converges, exits 64 with `stopReason: "converged"`, and `acceptedIterationIndex === 7`.
 
 ## EX-0012-0131: Convergence Blocked By One Lagging Spec
 
@@ -394,7 +394,7 @@
 ## EX-0012-0153: Drift Gate Wins Over Convergence Ordering
 
 - BR-Ref: BR-0012-0038
-- Given a recorded multi-UI project where cycle-0 captured `frozenSurfaceUnion = ["0001", "0002"]` and the most recent iteration is fully converged (all 4 UX axes scored `exceptional`, empty `layoutAntiPatternsDetected`, empty `designMdViolations`) — but the secondary spec's `surface_type: ui-bearing` marker was removed mid-loop so live `resolveSurfaceUnion()` now returns `["0001"]`.
+- Given a recorded multi-UI project where cycle-0 captured `frozenSurfaceUnion = ["0001", "0002"]` and the most recent iteration is fully converged (empty `blockingFindings`, empty `layoutAntiPatternsDetected`, empty `designMdViolations`) — but the secondary spec's `surface_type: ui-bearing` marker was removed mid-loop so live `resolveSurfaceUnion()` now returns `["0001"]`.
 - When `qfai prototyping iterate --cycle <N≥1>` runs.
 - Then the cycle ≥ 1 lock-drift gates fire BEFORE `shouldStop()`: certify exits 2 (lock-drift class) with `spec-set drift detected mid-loop` and `removed=[0002]` echoed in stderr, rather than letting the convergence check return exit 64 first and mask the freeze violation.
 
@@ -517,7 +517,7 @@
 - BR-Ref: BR-0012-0049
 - Given a converged `iterate` invocation,
 - When `iterate` writes `prototyping.json` with `iterations[0..N]` each carrying `commitSha: "abc123" | "uncommitted"`, non-empty `proseCritique`, `scores`, `layoutAntiPatternsDetected: []`, `designMdViolations: []`, `pivotDirective: "continue"`, `reviewerId: "rev-001"`, and `evidenceRefs[]` matching `screens[].id` set,
-- Then `qfai validate --profile prototyping --fail-on error` exits 0 without any orchestrator post-processing. Top-level carries `acceptedIterationIndex: N` and `stopReason: "axes-exceptional"`.
+- Then `qfai validate --profile prototyping --fail-on error` exits 0 without any orchestrator post-processing. Top-level carries `acceptedIterationIndex: N` and `stopReason: "converged"`.
 
 ## EX-0012-0171: `verify.json#scope: "prototyping"` Satisfies certify (OQ-0107 Option B)
 

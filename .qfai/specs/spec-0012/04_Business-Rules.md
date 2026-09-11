@@ -118,9 +118,9 @@
 
 `/qfai-prototyping` stops when one of:
 
-- All 4 UX axes (informationArchitecture / navigationFlow / usability / functionality) of the latest iter are `exceptional` AND `layoutAntiPatternsDetected.length === 0` AND `designMdViolations.length === 0` (`stopReason: "axes-exceptional"`, exit 64)
-- Latest iter `index === 14` (`stopReason: "max-iterations"`, exit 65)
-- DESIGN.md sha256 mismatch on cycle ≥ 1 (`stopReason: "design-md-hash-mismatch"`, exit 2; forces re-run from cycle 0)
+- The latest iter has `blockingFindings.length === 0` AND `layoutAntiPatternsDetected.length === 0` AND `designMdViolations.length === 0` (`stopReason: "converged"`, exit 64). The four UX axes are reported and do not gate.
+- Latest iter `index === 9` (`stopReason: "max-iterations"`, exit 65)
+- DESIGN.md sha256 mismatch on cycle ≥ 1 (`stopReason: "input-error"`, exit 2; forces re-run from cycle 0)
 
 No other path triggers stop. LLM subjective DONE is forbidden.
 
@@ -172,7 +172,7 @@ No other path triggers stop. LLM subjective DONE is forbidden.
 ## BR-0012-0032: Convergence is AND across spec × screen
 
 - AC-Refs: AC-0012-0042
-- Global convergence is the AND, across every `(spec, screen)` pair in the cycle-0 frozen spec set, of: `all 4 axes === exceptional AND layoutAntiPatternsDetected[] empty AND designMdViolations[] empty`.
+- Global convergence is the AND, across every `(spec, screen)` pair in the cycle-0 frozen spec set, of: `blockingFindings[] empty AND layoutAntiPatternsDetected[] empty AND designMdViolations[] empty`.
 - Quantitative AC-pass% / transition-pass% thresholds are explicitly NOT consulted (user direction 2026-05-18: design and operability are qualitative-only).
 - On hard-fail at cycle 9, the aggregator record MUST name every lagging spec ID.
 
@@ -296,7 +296,7 @@ No other path triggers stop. LLM subjective DONE is forbidden.
 
 - AC-Refs: AC-0012-0061
 - Every `iterations[i]` written by `iterate` MUST be `qfai validate --profile prototyping --fail-on error` conformant out of the box: non-null `commitSha` (sentinel `"uncommitted"` accepted), non-empty `proseCritique`, `scores`, `layoutAntiPatternsDetected`, `designMdViolations`, `pivotDirective`, `reviewerId`, and `evidenceRefs[]` (one entry per `screens[].id`).
-- On convergence, `acceptedIterationIndex` AND `stopReason ∈ {"axes-exceptional", "max-iterations", "license-verify-fail", "input-error"}` MUST be written at the top level.
+- On convergence, `acceptedIterationIndex` AND `stopReason ∈ {"converged", "max-iterations", "license-verify-fail", "input-error"}` MUST be written at the top level.
 
 ## BR-0012-0050: Self-completable certify via `verify.json#scope` (OQ-0107 Option B)
 

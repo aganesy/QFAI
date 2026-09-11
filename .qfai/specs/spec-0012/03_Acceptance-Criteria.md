@@ -132,7 +132,7 @@
 
 - Given `qfai prototyping iterate --cycle <n>` runs,
 - When the cycle completes,
-- Then exit code is one of `0` (continue, read pivotDirective), `64` (axes-exceptional convergence), `65` (max-iterations reached), `2` (input error or DESIGN.md hash mismatch). No other exit codes are emitted.
+- Then exit code is one of `0` (continue, read pivotDirective), `64` (convergence), `65` (max-iterations reached), `2` (input error or DESIGN.md hash mismatch). No other exit codes are emitted.
 
 ## AC-0012-0033: CLI certify exit codes
 
@@ -376,7 +376,7 @@
 - Given a converged `iterate` invocation,
 - When `iterate` writes `prototyping.json`,
 - Then `iterations[i]` MUST carry non-null `commitSha` (sentinel `"uncommitted"` permitted), non-empty `proseCritique`, `scores`, `layoutAntiPatternsDetected`, `designMdViolations`, `pivotDirective`, `reviewerId`, AND `evidenceRefs[]` with one entry per `screens[].id`.
-- And on convergence the top-level MUST carry `acceptedIterationIndex` AND `stopReason ∈ {"axes-exceptional", "max-iterations", "license-verify-fail", "input-error"}`.
+- And on convergence the top-level MUST carry `acceptedIterationIndex` AND `stopReason ∈ {"converged", "max-iterations", "license-verify-fail", "input-error"}`.
 - And `qfai validate --profile prototyping --fail-on error` MUST PASS without orchestrator post-processing.
 
 ## AC-0012-0062: Self-completable certify via verify.json#scope (OQ-0107 Option B)
@@ -422,7 +422,7 @@
 - REQ-Refs: REQ-0012-0068
 - Given a non-converged cycle,
 - When `iterate` emits its cycle-end summary,
-- Then stdout MUST contain a one-screen `[BLOCKED]` line naming the top-3 categories (`designMdViolations` / `layoutAntiPatternsDetected` / `axes-below-exceptional`) with concrete counts AND first-offender details (e.g. `color=#fff at iter-NN/scr_001.html:97`, `lap-008-no-back-affordance`, `aesthetics: passing`).
+- Then stdout MUST contain a one-screen `[BLOCKED]` line naming the top-3 categories (`designMdViolations` / `layoutAntiPatternsDetected` / `blockingFindings`) with concrete counts AND first-offender details (e.g. `color=#fff at iter-NN/scr_001.html:97`, `lap-008-no-back-affordance`, the first line the reviewer wrote).
 - And category names MUST be stable identifiers — additive only across versions.
 
 ## AC-0012-0067: `primarySpecId` error text + (SHOULD) input normalisation
@@ -513,7 +513,7 @@
 - When iterate resolves the effective mode,
 - Then `--mode` MUST override the config value; absence of both MUST default to `convergence` (backwards-compatible).
 - And `prototyping.json#mode` MUST record the per-iteration mode.
-- And under `mode: exploration`, `QFAI-CRIT-008` (axes-exceptional) AND the design-compliance error MUST downgrade error → warning while structural / schema / path / license (exit 66) gates remain hard error (medium relaxation per DR-0263).
+- And under `mode: exploration`, `QFAI-CRIT-008` (convergence) AND the design-compliance error MUST downgrade error → warning while structural / schema / path / license (exit 66) gates remain hard error (medium relaxation per DR-0263).
 
 ## AC-0012-0077: Certify rejects exploration-mode iterations (DR-0263)
 
