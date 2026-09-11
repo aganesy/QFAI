@@ -11,6 +11,7 @@ Applies only to a UI-bearing target — one whose classified surface set names
 The interview is `/qfai-discussion`'s, and its record is the discussion pack
 this spec's provenance names:
 
+<<<<<<< HEAD
 | Source                                            | Carries                                       |
 | ------------------------------------------------- | --------------------------------------------- |
 | `01_Context.md`                                   | the surface classification, and the direction |
@@ -21,6 +22,13 @@ this spec's provenance names:
 theme, what departs from it, and what stays ordinary. A UI-bearing pack that
 records none leaves the brand unchosen — stop and ask rather than pick one,
 which is the same rule a pack taken in through import-lite gets.
+=======
+| Source                                            | Carries                    |
+| ------------------------------------------------- | -------------------------- |
+| `01_Context.md`                                   | the surface classification |
+| `04_Sources.md`                                   | both reference registries  |
+| `uiux/00_index.md`, `uiux/40_screen_contracts.md` | the screen-level sidecars  |
+>>>>>>> origin/main
 
 Each registry entry carries what was adopted, what was rejected, and how it
 was translated. The competitor registry feeds brand and tokens; the component
@@ -46,6 +54,7 @@ three intent fields, so those come first.
   **Don't** subsection of the `# Brand Philosophy` body. This field names
   identities to avoid, not conventions.
 - Adopted reference points → the **Do** subsection of `# Brand Philosophy`.
+<<<<<<< HEAD
 - Adopted theme → `brand.archetype`. Allowed values are the 8-archetype
   catalog in `design-md-brand-catalog.md`
   (`minimal | bold | corporate | playful | organic | tech | elegant | casual`).
@@ -53,6 +62,12 @@ three intent fields, so those come first.
   Selection Guide's scoring is the fallback for a pack whose direction names
   no theme, and an answer arrived at that way is the assistant's, not the
   user's. Take the chosen
+=======
+- Brand archetype → `brand.archetype`. Allowed values are the 8-archetype
+  catalog in `design-md-brand-catalog.md`
+  (`minimal | bold | corporate | playful | organic | tech | elegant | casual`);
+  its Selection Guide carries the scoring and the tie-break. Take the chosen
+>>>>>>> origin/main
   archetype's `aesthetic_properties` as defaults: `color_tendency` /
   `typography` / `spacing` seed `visual.*`, and the `interaction` default
   seeds `accessibility.motion`. `visual.*` accepts only

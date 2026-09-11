@@ -1,5 +1,9 @@
 /**
- * The one part of HTML-mock parsing that needs a DOM.
+ * The parts of HTML analysis that need a DOM.
+ *
+ * They live in one module because the cost below is paid per process, not per
+ * function: a second module with its own `import("jsdom")` would carry its own
+ * cache and its own chance of being made static by a bundler, for no saving.
  *
  * Split out of `htmlMockParser.ts` under `CR-20260823-0001` (approved 2026-08-23, option 3).
  * `jsdom` costs **910 ms** to require — measured against an 87 ms node baseline, and against its
@@ -183,6 +187,127 @@ export async function parseHtmlMock(html: string): Promise<HtmlMockParseResult> 
 
   dom.window.close();
   return result;
+}
+
+/**
+ * What one screen holds, counted rather than judged.
+ *
+ * Each number is reproducible from the capture, so a reviewer citing one is
+ * citing an observation. None of them has a threshold: what is too much is
+ * relative to what the screen's contract asked for, and that division happens
+ * where the contract is read.
+ */
+export type ScreenElementCounts = {
+  /** Elements a user can operate: the denominator for prose, and the count criterion 7 reads against the declared tasks. */
+  readonly interactiveControls: number;
+  /** Every visible word, excluding script, style and template content. */
+  readonly words: number;
+  /**
+   * Words that are not naming anything: not a control's own text, not a label,
+   * legend, option, column header, caption or heading. A page introduction, a
+   * line under a field and a tooltip all land here; the text of a button does
+   * not.
+   */
+  readonly explanatoryWords: number;
+  /** Deepest element nesting under `body`, as a stand-in for structural complexity. */
+  readonly maxDepth: number;
+  /** Distinct element names under `body`, as a stand-in for how many kinds of thing the screen uses. */
+  readonly distinctElementTypes: number;
+  /** Non-empty when the document could not be parsed, in which case every count is zero. */
+  readonly parseErrors: readonly string[];
+};
+
+/** Elements whose text names something rather than explaining it. */
+const NAMING_TAGS = new Set([
+  "label",
+  "legend",
+  "option",
+  "optgroup",
+  "th",
+  "caption",
+  "summary",
+  "h1",
+  "h2",
+  "h3",
+  "h4",
+  "h5",
+  "h6",
+]);
+
+/** Elements whose text is never shown to a user. */
+const NON_RENDERED_TAGS = new Set(["script", "style", "template", "noscript", "head", "title"]);
+
+function countWords(text: string): number {
+  const trimmed = text.trim();
+  return trimmed === "" ? 0 : trimmed.split(/\s+/).length;
+}
+
+export async function countScreenElements(html: string): Promise<ScreenElementCounts> {
+  const empty = {
+    interactiveControls: 0,
+    words: 0,
+    explanatoryWords: 0,
+    maxDepth: 0,
+    distinctElementTypes: 0,
+  };
+
+  const { JSDOM } = await jsdom();
+  let dom: JsdomInstance;
+  try {
+    dom = new JSDOM(html);
+  } catch (error) {
+    return {
+      ...empty,
+      parseErrors: [`HTML parse error: ${error instanceof Error ? error.message : String(error)}`],
+    };
+  }
+
+  // jsdom builds `html`/`head`/`body` for any input it parses, including the
+  // empty string, so an empty document is an empty body and counts as zero.
+  const body = dom.window.document.body;
+
+  let interactiveControls = 0;
+  let words = 0;
+  let explanatoryWords = 0;
+  let maxDepth = 0;
+  const elementTypes = new Set<string>();
+
+  // One walk. `naming` is true once any ancestor names something, because the
+  // text of a button inside a label is still the button's name.
+  const visit = (el: Element, depth: number, naming: boolean): void => {
+    const tag = el.tagName.toLowerCase();
+    if (NON_RENDERED_TAGS.has(tag)) return;
+
+    elementTypes.add(tag);
+    if (depth > maxDepth) maxDepth = depth;
+
+    const interactive = isInteractiveElement(el);
+    if (interactive) interactiveControls += 1;
+    const namingHere = naming || interactive || NAMING_TAGS.has(tag);
+
+    for (const node of el.childNodes) {
+      if (node.nodeType === dom.window.Node.TEXT_NODE) {
+        const count = countWords(node.textContent ?? "");
+        words += count;
+        if (!namingHere) explanatoryWords += count;
+        continue;
+      }
+      if (node.nodeType === dom.window.Node.ELEMENT_NODE) {
+        visit(node as Element, depth + 1, namingHere);
+      }
+    }
+  };
+  visit(body, 0, false);
+
+  dom.window.close();
+  return {
+    interactiveControls,
+    words,
+    explanatoryWords,
+    maxDepth,
+    distinctElementTypes: elementTypes.size,
+    parseErrors: [],
+  };
 }
 
 function isInteractiveElement(el: Element): boolean {

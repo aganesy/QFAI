@@ -145,7 +145,7 @@ describe("brand catalog step anchor", () => {
     // The answer comes from the theme the user chose, not from the assistant
     // scoring the product's prose. Scoring survives as the fallback for a pack
     // that recorded no theme, and the reference says whose answer that is.
-    expect(authoring).toMatch(/Adopted theme → `brand\.archetype`/);
+    expect(authoring).toMatch(/Brand archetype → `brand\.archetype`/);
     expect(authoring).toContain("design-md-brand-catalog.md");
     expect(authoring).toContain("04_Sources.md");
   });
