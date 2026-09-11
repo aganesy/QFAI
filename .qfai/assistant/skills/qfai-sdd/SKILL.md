@@ -178,9 +178,21 @@ Stage minimum roles:
 - `requirements-analyst` drafts requirement-aligned spec content.
 - `solution-architect` drafts structural / contract / architecture sections.
 - `test-design-analyst` drafts traceability, examples, and test-design.
-- `product-experience-architect` is added when the target is UI-bearing.
+- `product-experience-architect` is added when the target spec is UI-bearing (below).
 - `orchestrator` integrates outputs and presents for confirmation; never drafts the primary artifact and never self-approves.
 - `completion-reviewer` is delegated independently. Required field: `Status (PASS/REVISE/PENDING)`; `PENDING` marks an unrun gate and never counts as `PASS`.
+
+UI-bearing (MUST) is a property of the **target spec**, never of what a run happens to edit. It is
+the surface union `/qfai-prototyping` resolves, and any one signal is enough: `surface_type:
+ui-bearing` frontmatter in `01_Spec.md`, a matching contract under `.qfai/contracts/ui/`, a legacy
+prototyping title marker, or the spec `qfai.config.yaml#prototyping.primarySpecId` pins. Run
+`npx qfai doctor --profile prototyping` to read the resolved set rather than judging it.
+
+So a run against such a spec owes `product-experience-architect` and the `product-surface-reviewer`
+of the Reviewer Gate below even when it edits no screen and no UI contract. This skill authors the
+contracts that define the screens, so the target's surface is what it is changing. The ledger-row
+test in `.qfai/assistant/skills/qfai-implement/references/ui-affecting.md` is a different predicate
+for a different skill: it grades one execution-ledger row, and this skill has none.
 
 Author↔reviewer separation (MUST): drafting roles and reviewing roles above are routed from one
 list, but no sub-agent may review an artifact it drafted or edited in this run. `independent` is
@@ -202,7 +214,7 @@ before the span's last entry is left.
 ### Reviewer Gate (MUST)
 
 - Default: `completion-reviewer`.
-- Conditional: `architecture-reviewer` (structural / contract / CLI), `product-surface-reviewer` (UI-bearing), `qa-gatekeeper` (validate / coverage / runtime / prototyping evidence affected).
+- Conditional: `architecture-reviewer` (structural / contract / CLI), `product-surface-reviewer` (the target spec is UI-bearing, as `Stage minimum roles` above defines it), `qa-gatekeeper` (validate / coverage / runtime / prototyping evidence affected).
 - Drift Protocol compliance is mandatory; reviewers MUST verify no rejected option was reintroduced and no drift from prior decisions.
 - Test-layer policy is checked against `.qfai/assistant/catalog/test-layers.md`; annotation routing is enforced by `.qfai/assistant/catalog/test-layers.md#annotation-routing`, which owns the US / TC / CON-API mapping. A `TC-*`'s `Level` is **not** a constant: derive it per TC with `.qfai/assistant/catalog/test-layers.md#layer-derivation-procedure-normative`, keeping the row inside L1–L3 and defaulting to Integration only when the derivation is genuinely indeterminate. A missing `tests/integration/**` trace never rewrites a derived `Level`.
 - Coverage floors / ratios are planning signals, not gates; reviewers must not block on them.
@@ -547,9 +559,9 @@ canonical layout for this artifact — copy it, keep every `##` heading in order
 Required sections, in order (the template is authoritative if the two ever disagree): Objective,
 Inputs reviewed, Preflight summary path, Triage decisions (op + approver per row), Open questions,
 Decisions made, Work performed, Contract executability, Commands executed, Validate evidence paths,
-Work Orders Summary, Gaps / Open risks, Final status. Work Orders Summary uses the fixed 6-column
-schema from `.qfai/assistant/constitution/shared-skill-delegation-baseline.md`; its `Status` and `Final status` accept only
-`PASS` or `REVISE`. Contract executability carries one `- Executability: CON-DB-NNNN — …` line per
+Work Orders Summary, Gaps / Open risks, Final status. Work Orders Summary uses the shared schema
+from `.qfai/assistant/constitution/shared-skill-delegation-baseline.md#work-orders-summary`; its
+`Status` accepts `PASS`, `REVISE` or `PENDING`, and `Final status` accepts only `PASS` or `REVISE`. Contract executability carries one `- Executability: CON-DB-NNNN — …` line per
 `db/` contract this cycle authored or changed (`QFAI-CONTRACT-031`), or `- none`.
 
 ### Import-lite evidence (imported spec sets only)
