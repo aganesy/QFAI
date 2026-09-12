@@ -2907,7 +2907,7 @@ async function ensureClaudeCodeHooks(
         ? "the shipped hook template is missing from this install"
         : `the shipped hook template could not be read (${template.reason})`;
     error(
-      `  WARNING: ${shown} was left unchanged: ${why}, so the documentation-clarity reminder is ` +
+      `  WARNING: ${shown} was left unchanged: ${why}, so the reminder hooks are ` +
         `not wired up.`,
     );
     return { copied: [], skipped: [target] };
@@ -2917,7 +2917,7 @@ async function ensureClaudeCodeHooks(
   if (existing.kind === "unreadable") {
     error(
       `  WARNING: ${shown} was left unchanged (${existing.reason}). Copy the \`hooks\` entries from ` +
-        `the shipped template by hand to enable the documentation-clarity reminder.`,
+        `the shipped template by hand to enable the reminder hooks.`,
     );
     return { copied: [], skipped: [target] };
   }
@@ -2938,20 +2938,18 @@ async function ensureClaudeCodeHooks(
   if (merged.outcome === "unreadable") {
     error(
       `  WARNING: ${shown} was left unchanged (${merged.reason}). Copy the \`hooks\` entries from ` +
-        `the shipped template by hand to enable the documentation-clarity reminder.`,
+        `the shipped template by hand to enable the reminder hooks.`,
     );
     return { copied: [], skipped: [target] };
   }
 
   const events = merged.events.join(", ");
   if (dryRun) {
-    info(`  would update: ${shown} (add documentation-clarity hooks: ${events})`);
+    info(`  would update: ${shown} (add reminder hooks: ${events})`);
     return { copied: [target], skipped: [] };
   }
   await writeFile(target, serializeClaudeSettings(merged.settings), "utf-8");
-  info(
-    `  updated: ${shown} (added documentation-clarity hooks: ${events}; existing settings kept)`,
-  );
+  info(`  updated: ${shown} (added reminder hooks: ${events}; existing settings kept)`);
   return { copied: [target], skipped: [] };
 }
 

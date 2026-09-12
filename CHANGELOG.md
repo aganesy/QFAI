@@ -4,6 +4,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ## [Unreleased]
 
+### Added
+
+- **A lint lane refuses a tracked file under the scratch directory.** `tmp/` is
+  the sole staging area for scratch output and nothing there is committed, but
+  an ignore rule does not stop tracking a file already in the index: a scratch
+  report sat on the default branch with `git status` clean. The report is
+  untracked and deleted, and the lane catches the next one.
+
 ### Changed
 
 - **A reviewer that recommended a decision the agents adopted cannot clear it**
@@ -50,6 +58,42 @@ series` — the reviewed artifact plus the role — carries the round budget
   A spec pack's open-question file is a record and not a gate. It carries open
   questions as a matter of course, so a decision the user must settle goes to
   the user during the stage rather than being written down and left.
+
+### Added
+
+- **Grilling reminders at the three moments a decision gets made quietly**
+  (#1606). Before a design artifact is written, before work is delegated, and
+  before a plan is fixed, a hook puts `.agents/rules/grilling.md` in front of
+  the agent. Each is a reminder: it emits context and never blocks, because
+  deciding whether a question should have been asked needs intent and a false
+  positive would stop work outright.
+
+  None of the three carries a path condition. A project moves its artifacts with
+  `paths.specsDir` and `paths.discussionDir`, so a scope naming the defaults is
+  silently absent in exactly the project that relocated, and deriving one at
+  `qfai init` holds only until the config next changes.
+
+  The reminder names the trigger and the file, and stops there. The method's
+  parts qualify each other, so a summary that drops one states the opposite of
+  what the rule says — a fact only the user holds takes no recommendation, a
+  frontier larger than the host takes goes in consecutive batches, a running
+  lookup keeps a session open past an empty frontier, and a session between
+  agents does end at a count.
+
+  They follow the pattern the writing-standard reminder set — `node` invoked
+  directly, printing fixed text, with no shell, no file reads and no network —
+  and ship to adopters with the settings file. A project that already has a
+  `.claude/settings.json` receives them on the next `qfai init`, through the
+  same per-group merge that carries the earlier reminders.
+
+### Changed
+
+- **Each reminder group carries a marker of its own** (#1606). The merge that
+  brings hooks into a project's existing settings tells one group from another
+  by the status messages its entries carry, so groups sharing a message are one
+  group to it — and a project holding either would be credited with both and
+  never receive the other. The run report now names the reminder hooks as a
+  set, rather than the one reminder that used to be the only one.
 
 ### Removed
 
