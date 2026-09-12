@@ -21,6 +21,7 @@ directory.
 | `document-schema.md`       | The structure of SDD documents is declared in `packages/qfai/assets/mdschema/**` and enforced by `pnpm lint:mdschema` and `pnpm lint:mermaid`.                                                                                                              |
 | `documentation-clarity.md` | Writing standard for PRs, issues, code comments and Markdown. The hooks in `.claude/settings.json` restate it.                                                                                                                                              |
 | `repository-language.md`   | This repository is written in English. Operator-facing strings are held by `packages/qfai/tests/unit/cliMessageLanguage.test.ts` and the changelog by `packages/qfai/tests/unit/changelogLanguage.test.ts`, each against an allowlist that may only shrink. |
+| `grilling.md`              | Interview the decision tree in rounds before a design is fixed. A session ends when the frontier is empty and the user confirms, never at a question count.                                                                                                 |
 
 ## Adding a rule
 
