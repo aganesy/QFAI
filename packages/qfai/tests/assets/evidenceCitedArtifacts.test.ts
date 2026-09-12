@@ -69,11 +69,22 @@ const GROUP_CLOSERS: Readonly<Record<string, string>> = { "(": ")", "{": "}", "[
  * than a longer one.
  */
 function opensACitation(line: string, from: number): boolean {
-  if (from >= 2 && line.slice(from - 2, from) === "./") {
-    return from === 2 || !CITATION_CHARACTER.test(line[from - 3] ?? "");
+  let start = from;
+  if (start >= 2 && line.slice(start - 2, start) === "./") start -= 2;
+  // Markdown emphasis around a path is not part of it. A run of `*` or `_` is
+  // emphasis where what comes before the run is itself a boundary; inside a
+  // path the same two characters are a wildcard and an ordinary name character,
+  // which is why the run is read rather than the one character before the root.
+  let opener = start;
+  while (opener > 0 && EMPHASIS_CHARACTER.test(line[opener - 1] ?? "")) opener -= 1;
+  if (opener < start && (opener === 0 || !CITATION_CHARACTER.test(line[opener - 1] ?? ""))) {
+    start = opener;
   }
-  return from === 0 || !CITATION_CHARACTER.test(line[from - 1] ?? "");
+  return start === 0 || !CITATION_CHARACTER.test(line[start - 1] ?? "");
 }
+
+/** The two characters Markdown wraps emphasis in. */
+const EMPHASIS_CHARACTER = /[*_]/;
 
 /**
  * Every citation a line carries, taken whole.
@@ -576,9 +587,17 @@ function globToRegExp(cited: string): RegExp {
   return new RegExp(`^${compileGlob(cited)}$`);
 }
 
-/** Whether a citation names a set rather than one path. */
+/**
+ * Whether a citation names a set rather than one path.
+ *
+ * A bracket expression is one of the ways, and reading it as literal characters
+ * sent `0[1]_Context.md` to an exact-path lookup and reported the tracked
+ * `01_Context.md` it names as missing.
+ */
 function namesASet(cited: string): boolean {
-  return /[*?]/.test(cited) || /[?*+@!]\(/.test(cited) || cited.includes("{");
+  return (
+    /[*?]/.test(cited) || /[?*+@!]\(/.test(cited) || cited.includes("{") || /\[.*\]/.test(cited)
+  );
 }
 
 /**

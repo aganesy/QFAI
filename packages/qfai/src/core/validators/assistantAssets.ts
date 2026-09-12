@@ -1,6 +1,6 @@
 import { constants } from "node:fs";
 import type { FileHandle } from "node:fs/promises";
-import { access, open, readFile, stat } from "node:fs/promises";
+import { access, lstat, open, readdir, readFile, realpath, stat } from "node:fs/promises";
 import path from "node:path";
 
 import {
@@ -23,8 +23,10 @@ import type {
 } from "../assistantAssetProvenance.js";
 import type { QfaiConfig } from "../config.js";
 import { resolvePath } from "../config.js";
+import { parseSkillFrontmatter, skillFrontmatterMapping } from "../agentFrontmatter.js";
 import { collectFiles } from "../fs.js";
-import { hasErrnoCode } from "../fs/errno.js";
+import { hasErrnoCode, isEnoent } from "../fs/errno.js";
+import { readBoundedRegularFile } from "../../shared/boundedRead.js";
 import { parseHeadings } from "../parse/markdown.js";
 import { ASSISTANT_DIR } from "../paths/assistantPaths.js";
 import { escapeRegExp } from "../regex.js";
@@ -310,6 +312,51 @@ export async function validateAssistantAssets(root: string, config: QfaiConfig):
         ),
       );
     }
+  }
+
+  // Registration is asked of the loader boundary, not of every file named
+  // SKILL.md: a template or an example copy below a skill is registered by
+  // nothing, and a skill in a directory the crawl ignores is registered all the
+  // same.
+  const crawled = new Set(skillFiles);
+  for (const entryPoint of await collectSkillEntryPoints(skillsDir)) {
+    if (crawled.has(entryPoint)) {
+      const content = documents.get(entryPoint);
+      // Absent from the map means the crawl could not read it, and has already
+      // said so. Reading it again here reports the same fault twice.
+      if (content !== undefined)
+        issues.push(...collectSkillRegistrationIssues(entryPoint, content));
+      continue;
+    }
+    // Outside the crawl — a directory on the shared ignore list — so nothing has
+    // reported this file, and a read that fails here is the only chance to say
+    // the skill cannot be loaded.
+    //
+    // Through the bounded reader rather than a bare read: the path is whatever
+    // the adopter's tree holds, and a FIFO does not fail on open — it blocks
+    // until somebody writes to it, which would hang the run instead of
+    // reporting the skill.
+    // Resolved first, because the host opens through a link and the bounded
+    // reader refuses one at the final component. What the reader then decides
+    // is what the host would find at the other end: a regular file, or not.
+    const resolved = await realpath(entryPoint).catch(() => entryPoint);
+    const bytes = await readBoundedRegularFile(resolved, SKILL_DOCUMENT_MAX_BYTES);
+    if (bytes === undefined) {
+      issues.push(
+        issue(
+          "QFAI-SKILLS-014",
+          `A skill's entry point is not an ordinary file this run can read within ${String(SKILL_DOCUMENT_MAX_BYTES)} bytes, so the host cannot load it either.`,
+          "error",
+          entryPoint,
+          "skills.documentReadable",
+          undefined,
+          "canonical",
+          "Make the entry point an ordinary readable file — grant read permission, repair a broken symlink, replace a directory or a device with the document — or delete it if it does not belong under `skills`.",
+        ),
+      );
+      continue;
+    }
+    issues.push(...collectSkillRegistrationIssues(entryPoint, bytes.toString("utf-8")));
   }
 
   issues.push(...collectReferenceGraphIssues(root, skillsDir, documents));
@@ -1122,6 +1169,71 @@ function isUnfilledValue(raw: string): boolean {
   return value.length > 0 && TODO_PLACEHOLDER_RE.test(value);
 }
 
+/**
+ * The `SKILL.md` of every direct subdirectory of `skillsDir`.
+ *
+ * The document crawl skips directories on the shared ignore list — `tmp`,
+ * `dist` and the rest — and those are ordinary names for a skill. The loader
+ * skips nothing: it opens one `SKILL.md` per direct subdirectory whatever the
+ * directory is called, so a skill in one of them is registered, or fails to be,
+ * with the crawl saying nothing about it either way.
+ */
+/**
+ * The ceiling on a skill entry point this pass reads.
+ *
+ * The bound is there for the kind rather than for the size: the reader that
+ * refuses a FIFO and a device takes one, and a document is refused only if it
+ * passes this.
+ *
+ * SIMPLIFIED: no host states a size limit, so this number is the reader's
+ * requirement rather than a rule about skills — and it applies only to the
+ * entry points the document crawl did not reach, which reads without a bound.
+ * Lift when: a host documents a limit of its own, or an adopter reports a
+ * `SKILL.md` refused for its size.
+ */
+const SKILL_DOCUMENT_MAX_BYTES = 8 * 1024 * 1024;
+
+async function collectSkillEntryPoints(skillsDir: string): Promise<string[]> {
+  const entries = await readdir(skillsDir, { withFileTypes: true }).catch(() => []);
+  const found: string[] = [];
+  for (const entry of entries) {
+    // A symlinked skill directory is a shape this CLI itself writes, and
+    // `isDirectory()` is false for the link. What matters is what it resolves
+    // to — and a link that resolves to nothing, or to something this process
+    // cannot traverse, is a skill path the host cannot load either. Excluding
+    // it here is the silence the guarded read exists to break, so it is kept
+    // and the read reports it.
+    const resolved = entry.isDirectory()
+      ? true
+      : entry.isSymbolicLink()
+        ? ((await stat(path.join(skillsDir, entry.name)).catch(() => null))?.isDirectory() ?? null)
+        : false;
+    if (resolved === false) continue;
+    const file = path.join(skillsDir, entry.name, "SKILL.md");
+    if (resolved === null) {
+      found.push(file);
+      continue;
+    }
+    // Absent is the ordinary answer for a directory that holds no skill.
+    // Anything else — a directory this process may not traverse, an I/O fault,
+    // a `SKILL.md` that is a directory or a device — is an entry point the host
+    // cannot load, and the read below is what says so.
+    const probe = await stat(file)
+      .then((stats) => (stats.isFile() ? "file" : "unusable"))
+      .catch(async (cause: unknown) => {
+        // A dangling symlink resolves to nothing and reports `ENOENT`, which is
+        // the same answer as a directory holding no skill. `lstat` tells them
+        // apart: the link is there, the host cannot load it, and the read below
+        // is what says so.
+        if (!isEnoent(cause)) return "unusable";
+        const link = await lstat(file).catch(() => null);
+        return link === null ? "absent" : "unusable";
+      });
+    if (probe !== "absent") found.push(file);
+  }
+  return found.sort((a, b) => a.localeCompare(b));
+}
+
 async function collectSkillFiles(dirs: string[]): Promise<string[]> {
   const files = await Promise.all(dirs.map((dir) => collectFiles(dir)));
   return files
@@ -1144,6 +1256,141 @@ function extractReviewerGateSection(content: string): string | null {
     return remainder;
   }
   return remainder.slice(0, nextHeadingMatch.index);
+}
+
+/**
+ * A skill whose `name:` a host cannot key it by.
+ *
+ * Its own finding rather than a clause in the description one: the two fields
+ * fail independently, and a document missing both should say so twice rather
+ * than name whichever was checked first.
+ */
+function collectSkillNameIssue(
+  skillFile: string,
+  frontMatter: Record<string, unknown> | undefined,
+): Issue[] {
+  const directory = path.basename(path.dirname(skillFile));
+  const name = frontMatter?.["name"];
+  const value = typeof name === "string" ? name.trim() : "";
+  const wrong = skillNameProblem(value, directory);
+  if (wrong === null) return [];
+  return [
+    issue(
+      "QFAI-SKILLS-015",
+      `SKILL.md carries no usable \`name:\`: ${wrong}. A host reads that field to key the skill, so the skill is not registered and the user cannot invoke it by name.`,
+      "error",
+      skillFile,
+      "skills.name",
+      undefined,
+      "change",
+      `Set \`name:\` to \`${directory}\` — the skill's own directory, which is what a host lists it under.`,
+    ),
+  ];
+}
+
+/**
+ * The characters a host accepts in a skill's name, and how many.
+ *
+ * Lowercase letters, digits and single hyphens between them, to 64 characters.
+ * A capital or a space is rejected by the loader outright, so a value carrying
+ * one names a skill nobody can invoke.
+ */
+const SKILL_NAME_FORM = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
+const SKILL_NAME_MAX_LENGTH = 64;
+
+/** Why a `name:` is unusable, or `null` where it is not. */
+function skillNameProblem(value: string, directory: string): string | null {
+  if (value === "") return "the field is missing, empty, or not text";
+  if (value.length > SKILL_NAME_MAX_LENGTH) {
+    return `it is ${value.length} characters, past the ${SKILL_NAME_MAX_LENGTH} a host accepts`;
+  }
+  if (!SKILL_NAME_FORM.test(value)) {
+    return `\`${value}\` is not lowercase letters, digits and single hyphens`;
+  }
+  // The directory is what a host lists the skill under, so a name that differs
+  // from it names one the user will not find under either spelling.
+  if (value !== directory) return `\`${value}\` is not the skill's directory, \`${directory}\``;
+  return null;
+}
+
+/**
+ * Whether a skill's front matter lets a host register it at all.
+ *
+ * A host reads `description:` for two jobs at once: whether to register the
+ * skill, and whether to offer it to the model. Leaving it out to stop the second
+ * loses the first on every host that requires the field — the skill is not
+ * loaded, and the user cannot invoke it by name either, which is the opposite of
+ * what the omission was for.
+ *
+ * A skill that should not be offered to the model says so with
+ * `disable-model-invocation: true`, and keeps its description. That flag is the
+ * Claude Code surface's, and the Codex surface this CLI also installs honours
+ * nothing like it — so the field is how a skill asks, and not a promise every
+ * host keeps. The rule is
+ * general: no skill is named here, and the one that opts out is the one most
+ * likely to lose the field to a contributor tidying front matter.
+ */
+function collectSkillRegistrationIssues(skillFile: string, content: string): Issue[] {
+  // The block is there and cannot be read. Adding a key to it leaves the syntax
+  // error in place, so nothing the operator writes clears this finding until the
+  // block parses.
+  const unreadable = parseSkillFrontmatter(content)?.parseError;
+  if (unreadable !== undefined) {
+    return [
+      issue(
+        "QFAI-SKILLS-015",
+        `SKILL.md has front matter a host cannot read: ${unreadable}. That block is where the host reads \`name:\` and \`description:\` to register the skill.`,
+        "error",
+        skillFile,
+        "skills.description",
+        undefined,
+        "change",
+        // Both fields, because the block is unreadable and neither has been
+        // looked at: told to repair one, the operator writes valid front matter
+        // that fails this same finding again on the other.
+        `Repair the front matter first, then make sure \`name:\` is \`${path.basename(path.dirname(skillFile))}\` and \`description:\` carries a sentence saying what the skill does.`,
+      ),
+    ];
+  }
+  const frontMatter = skillFrontmatterMapping(content);
+  // Both fields, because every host reads both: the name is what a user invokes
+  // and what a host keys the skill by, and the description is what it registers
+  // and offers. A document carrying one without the other is not loaded.
+  const missingName = collectSkillNameIssue(skillFile, frontMatter);
+  const description = frontMatter?.["description"];
+  if (typeof description === "string" && description.trim() !== "") {
+    return missingName;
+  }
+  const optsOut = frontMatter?.["disable-model-invocation"] === true;
+  // A key that is there and unusable is repaired by replacing its value. Told
+  // to add one, the operator writes a second `description:` into the same
+  // mapping, which is a document no host reads at all.
+  const declared = frontMatter !== undefined && "description" in frontMatter;
+  const problem = declared
+    ? "SKILL.md has a `description:` with nothing a host can use in it — it is empty, or it is not text."
+    : "SKILL.md has no `description:`.";
+  const why = optsOut
+    ? " `disable-model-invocation: true` asks the Claude Code surface not to fire the skill; every host reads `description:` to register it at all, so without the field the skill is not loaded and the user cannot invoke it by name either."
+    : " A host reads that field to register the skill. `disable-model-invocation: true` beside it asks the Claude Code surface not to fire the skill on its own — the Codex surface reads `name` and `description` and honours no such field, so a skill that must never run unattended needs a guard of its own rather than that flag.";
+  const repair = declared
+    ? "Replace the value of `description:` with a sentence saying what the skill does"
+    : "Add `description:` to the front matter";
+  const beside = optsOut
+    ? ", and keep `disable-model-invocation: true` beside it."
+    : ". To keep the model from firing it on the Claude Code surface, declare `disable-model-invocation: true` beside it — and where it must not run unattended anywhere, guard the skill itself, because the Codex surface honours no such field.";
+  return [
+    ...missingName,
+    issue(
+      "QFAI-SKILLS-015",
+      problem + why,
+      "error",
+      skillFile,
+      "skills.description",
+      undefined,
+      "change",
+      repair + beside,
+    ),
+  ];
 }
 
 function collectMissingReviewerGateTerms(section: string): string[] {

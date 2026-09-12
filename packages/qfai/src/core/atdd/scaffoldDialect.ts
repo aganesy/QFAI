@@ -436,17 +436,95 @@ export function compileGlob(pattern: string): string {
       // A bracket class, which fast-glob supports and an escape-everything
       // matcher reads as four literal characters. `[!a-z]` is the glob spelling
       // of a negated class; a regular expression spells it `[^a-z]`.
-      const close = pattern.indexOf("]", index + (pattern[index + 1] === "]" ? 2 : 1));
+      const close = findClassClose(pattern, index);
       if (close !== -1) {
         const body = pattern.slice(index + 1, close);
         const negated = body.startsWith("!") || body.startsWith("^");
-        const members = body.slice(negated ? 1 : 0).replace(/\\/g, "\\\\");
-        source += `[${negated ? "^" : ""}${members}]`;
+        source += `[${negated ? "^" : ""}${compileClassBody(body.slice(negated ? 1 : 0))}]`;
         index = close;
         continue;
       }
     }
     source += escapeRegExp(char);
+  }
+  return source;
+}
+
+/**
+ * Where the bracket expression opened at `open` ends, or `-1`.
+ *
+ * Two things make a `]` something other than the terminator: one written first
+ * in the class, where it is an ordinary member, and the `]` that closes a POSIX
+ * sub-expression. A scan for the first `]` stops inside `[[:digit:]]` and
+ * compiles a class over the characters of the word `digit`, which matches none
+ * of the names the pattern was written for.
+ */
+function findClassClose(pattern: string, open: number): number {
+  let index = open + 1;
+  if (pattern[index] === "!" || pattern[index] === "^") index += 1;
+  if (pattern[index] === "]") index += 1;
+  while (index < pattern.length) {
+    const char = pattern[index];
+    if (char === "]") return index;
+    const marker = char === "[" ? (pattern[index + 1] ?? "") : "";
+    if (marker === ":" || marker === "=" || marker === ".") {
+      const end = pattern.indexOf(`${marker}]`, index + 2);
+      if (end === -1) return -1;
+      index = end + 2;
+      continue;
+    }
+    index += 1;
+  }
+  return -1;
+}
+
+/**
+ * The named classes the matcher accepts, as regular-expression members.
+ *
+ * A regular expression has no POSIX class, so each is written out. Left as it
+ * stands, `[[:digit:]]` compiles to a class of `[`, `:` and the letters of
+ * `digit`.
+ */
+const POSIX_CLASS_MEMBERS: Readonly<Record<string, string>> = {
+  alnum: "A-Za-z0-9",
+  alpha: "A-Za-z",
+  ascii: "\\x00-\\x7F",
+  blank: " \\t",
+  cntrl: "\\x00-\\x1F\\x7F",
+  digit: "0-9",
+  graph: "\\x21-\\x7E",
+  lower: "a-z",
+  print: "\\x20-\\x7E",
+  punct: "!-/:-@\\[-`{-~",
+  space: " \\t\\r\\n\\v\\f",
+  upper: "A-Z",
+  word: "A-Za-z0-9_",
+  xdigit: "0-9A-Fa-f",
+};
+
+/**
+ * One bracket expression's members, as a regular expression writes them.
+ *
+ * Ranges pass through — `a-z` means the same on both sides — and only the two
+ * characters that would end the class early are escaped. A name this table does
+ * not carry is left as the characters it is, which is what an unknown class is.
+ */
+function compileClassBody(body: string): string {
+  let source = "";
+  let index = 0;
+  while (index < body.length) {
+    if (body.startsWith("[:", index)) {
+      const end = body.indexOf(":]", index + 2);
+      const members = end === -1 ? undefined : POSIX_CLASS_MEMBERS[body.slice(index + 2, end)];
+      if (members !== undefined) {
+        source += members;
+        index = (end as number) + 2;
+        continue;
+      }
+    }
+    const char = body[index] ?? "";
+    source += char === "\\" || char === "]" ? `\\${char}` : char;
+    index += 1;
   }
   return source;
 }

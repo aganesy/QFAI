@@ -138,6 +138,14 @@ to recommend: the agent does not hold the value, a guessed one is the corruption
 the tree warns about, and offering it invites the user to accept it. Name the
 fact, say what depends on it, and leave the answer to them.
 
+**A value with no candidates goes through the tool's free-text path.**
+`user-questions.md` § 2 names that path for exactly this shape. Where the round
+falls back to plain text the value is put as a plain request instead — for one
+of the three reasons above, never because the answer is a value. Reaching past a
+free-text path the tool has drops the structure for nothing. Where the
+candidates are listable the question is a choice, which the classifier above
+already settles.
+
 ## Facts are yours, decisions are theirs
 
 A fact the environment can settle is your job. Read the file, run the command,
