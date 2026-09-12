@@ -218,6 +218,35 @@ answer to a cell qfai cannot read, never a supported spelling: fix the cell
 (see [Obligation spanning more than one layer](#obligation-spanning-more-than-one-layer)).
 `TDDLIST_UNKNOWN_LEVEL` (`warning`) names such a cell on the ledger side.
 
+**Where that directory may be.** `paths.testsDir` holds one path, so a repository
+whose suites live one per package can name at most one of them there, and the
+acceptance tests of every other package sit outside the scan. The scan therefore
+also reads the project's own `validation.traceability.testFileGlobs`, minus its
+`testFileExcludeGlobs`, and a file collected that way is answered by the
+**outermost** `e2e` / `api` / `integration` directory in its path.
+`packages/checkout/tests/integration/pay.test.ts` answers an `L3` obligation
+exactly as `<testsDir>/integration/pay.test.ts` does.
+
+Three things that does not change.
+
+| Unchanged                                    | Why it matters                                        |
+| -------------------------------------------- | ----------------------------------------------------- |
+| The three directory names                    | Nothing new becomes a home; only where a home may sit |
+| A collected file in none of the three        | It answers nothing and is not reported as misplaced   |
+| `<testsDir>` as the home a single suite uses | `npx qfai atdd scaffold` still writes there           |
+
+The second row is the one to read twice. A unit suite owes ATDD nothing wherever
+it sits, so telling an author to move every collected file into `integration/`
+would be the all-integration collapse this file lists as an anti-pattern. Only a
+file **under `<testsDir>`** and in none of the three is reported that way
+(`QFAI-ATDD-105`, `info`), because that directory is the one qfai itself writes
+to.
+
+The project's globs are used as written. A base is never derived by slicing one:
+a glob whose directory part carries a wildcard slices to a base with the wildcard
+still in it, and a layer glob synthesized under that base addresses a directory
+the project never configured.
+
 Exactly one directory, never two: an annotation outside the one its `Level` names is both uncovered
 and rejected (`QFAI-ATDD-121` / `QFAI-ATDD-122` / `QFAI-ATDD-123`), and the rejection is symmetric —
 an annotation left in `<testsDir>/integration/**` after its TC moved to `L4`/`L5` is rejected the

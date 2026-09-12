@@ -5,6 +5,7 @@ import path from "node:path";
 import { describe, expect, it } from "vitest";
 
 import { defaultConfig } from "../../src/core/config.js";
+import type { QfaiConfig } from "../../src/core/config.js";
 import { evaluateAtddCodeTraceability } from "../../src/core/atddTraceability.js";
 import { validateAtddCodeTraceability } from "../../src/core/validators/atddCodeTraceability.js";
 
@@ -920,3 +921,138 @@ describe("QFAI-ATDD-124: coverage that rests on a suite bound at runtime", () =>
     });
   });
 });
+
+describe("acceptance tests outside paths.testsDir", () => {
+  // `paths.testsDir` holds one path, so a repository with a suite per package
+  // could name at most one of them. Every other package's acceptance tests sat
+  // outside the three globs built from it, their annotations counted towards
+  // nothing, and the coverage rules were satisfied by whatever remained under
+  // the configured root — in this repository, two prose carriers.
+  const withProjectGlobs = (globs: string[], excludeGlobs: string[] = []): QfaiConfig => ({
+    ...defaultConfig,
+    validation: {
+      ...defaultConfig.validation,
+      traceability: {
+        ...defaultConfig.validation.traceability,
+        testFileGlobs: globs,
+        testFileExcludeGlobs: excludeGlobs,
+      },
+    },
+  });
+
+  it("a suite outside testsDir answers from its own layer directory", async () => {
+    await withProject(async (root) => {
+      await seedSpec(root, "0001", ["US-0001"], ["TC-0001"]);
+      await seedPackageTest(root, "checkout", "integration", "pay.test.ts", [
+        "/* QFAI:SPEC-0001:TC-0001 */",
+      ]);
+      await seedPackageTest(root, "checkout", "e2e", "journey.test.ts", [
+        "/* QFAI:SPEC-0001:US-0001 */",
+      ]);
+
+      const result = await evaluateAtddCodeTraceability(
+        root,
+        withProjectGlobs(["packages/*/tests/**/*.test.ts"]),
+      );
+
+      expect(result.missing.us).toEqual([]);
+      expect(result.missing.tc).toEqual([]);
+      expect(result.scan.countedFileCount).toBe(2);
+    });
+  });
+
+  it("the outermost layer directory owns a file that sits under two", async () => {
+    await withProject(async (root) => {
+      await seedSpec(root, "0001", ["US-0001"], ["TC-0001"]);
+      // `e2e/api/` is within the E2E root under the testsDir containment check,
+      // so the path rule has to give the same answer or one layout would be read
+      // two ways depending on which package it is in.
+      await seedPackageTest(root, "checkout", "e2e/api", "journey.test.ts", [
+        "/* QFAI:SPEC-0001:US-0001 */",
+      ]);
+
+      const result = await evaluateAtddCodeTraceability(
+        root,
+        withProjectGlobs(["packages/*/tests/**/*.test.ts"]),
+      );
+
+      expect(result.missing.us).toEqual([]);
+    });
+  });
+
+  it("a collected file in no layer directory is neither counted nor reported as misplaced", async () => {
+    await withProject(async (root) => {
+      await seedSpec(root, "0001", ["US-0001"], ["TC-0001"]);
+      await seedTest(root, "e2e", "a.test.ts", "/* QFAI:SPEC-0001:US-0001 */");
+      await seedTest(root, "integration", "a.test.ts", "/* QFAI:SPEC-0001:TC-0001 */");
+      // A unit suite owes ATDD nothing wherever it sits. Reporting it as a file
+      // to move into `integration/` would be the all-integration collapse
+      // `catalog/test-layers.md` lists as an anti-pattern.
+      await seedPackageTest(root, "checkout", "unit", "pure.test.ts", ["/* no annotation */"]);
+
+      const result = await evaluateAtddCodeTraceability(
+        root,
+        withProjectGlobs(["packages/*/tests/**/*.test.ts"]),
+      );
+
+      expect(result.scan.countedFileCount).toBe(2);
+      expect(result.skippedTestFiles).toEqual([]);
+    });
+  });
+
+  it("a glob the project excludes is not read", async () => {
+    await withProject(async (root) => {
+      await seedSpec(root, "0001", ["US-0001"], ["TC-0001"]);
+      await seedTest(root, "e2e", "a.test.ts", "/* QFAI:SPEC-0001:US-0001 */");
+      await seedPackageTest(root, "legacy", "integration", "old.test.ts", [
+        "/* QFAI:SPEC-0001:TC-0001 */",
+      ]);
+
+      const result = await evaluateAtddCodeTraceability(
+        root,
+        withProjectGlobs(["packages/*/tests/**/*.test.ts"], ["packages/legacy/**"]),
+      );
+
+      // The annotation is real and the file is real; the project withdrew the
+      // path, so no lane may read it — least of all one that would then report
+      // the obligation as covered.
+      expect(result.missing.tc).toEqual(["SPEC-0001:TC-0001"]);
+    });
+  });
+
+  it("reports the matched and the counted file totals separately", async () => {
+    await withProject(async (root) => {
+      await seedSpec(root, "0001", ["US-0001"], ["TC-0001"]);
+      await seedTest(root, "e2e", "a.test.ts", "/* QFAI:SPEC-0001:US-0001 */");
+      await seedTest(root, "integration", "a.test.ts", "/* QFAI:SPEC-0001:TC-0001 */");
+      await seedPackageTest(root, "checkout", "unit", "pure.test.ts", ["/* no annotation */"]);
+
+      const result = await evaluateAtddCodeTraceability(
+        root,
+        withProjectGlobs(["packages/*/tests/**/*.test.ts"]),
+      );
+
+      // Three files match the globs and two are owned by a layer. One number
+      // cannot say both, and a reader taking the matched count for "acceptance
+      // tests scanned" reads a healthy scan as a broken one.
+      expect(result.scan.matchedFileCount).toBe(3);
+      expect(result.scan.countedFileCount).toBe(2);
+    });
+  });
+});
+
+async function seedPackageTest(
+  root: string,
+  packageName: string,
+  layerPath: string,
+  fileName: string,
+  lines: string[],
+): Promise<void> {
+  const dir = path.join(root, "packages", packageName, "tests", ...layerPath.split("/"));
+  await mkdir(dir, { recursive: true });
+  await writeFile(
+    path.join(dir, fileName),
+    [...lines, "describe('sample', () => {", "  it('works', () => {});", "});", ""].join("\n"),
+    "utf-8",
+  );
+}

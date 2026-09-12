@@ -165,6 +165,15 @@ Follow `.qfai/assistant/constitution/shared-skill-operating-baseline.md#delta-re
     to: `L3`/`Integration` -> `tests/integration/**`, `L4`/`API` ->
     `tests/api/**`, `L5`/`E2E` -> `tests/e2e/**`. Every other `Level` routes to
     `tests/integration/**` — blank, a spelling that names no layer, and `system` / `acceptance`. Route by the annotation's destination, not by whether the word is familiar: those last two are in the layer vocabulary, so a list phrased the other way drops them (`references/red-provenance.md`).
+  - **`tests/` above is `<testsDir>`, and it is not the only place those three
+    directories may sit.** The scan also reads the project's own
+    `validation.traceability.testFileGlobs` (minus `testFileExcludeGlobs`), and a
+    file collected that way is answered by the outermost `e2e` / `api` /
+    `integration` directory in its path — so in a repository with one suite per
+    package, `packages/<name>/tests/integration/**` answers an `L3` obligation
+    just as `<testsDir>/integration/**` does. Write new tests where that package's
+    suite already lives; do not move a package's tests to satisfy the gate
+    (`catalog/test-layers.md#annotation-routing`).
   - **`L1`/`Unit` and `L2`/`Component` owe nothing here** — out of this skill's
     scope, excluded from `QFAI-ATDD-112`, gated by `tdd/test-list.md` under
     `/qfai-implement`, and named on every run by `QFAI-ATDD-117` (`info`). Do

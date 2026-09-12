@@ -4,6 +4,39 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ## [Unreleased]
 
+### Fixed
+
+- **The ATDD traceability scan reads every package's acceptance tests, not only
+  the one under `paths.testsDir`** (#1588). That setting holds a single path, so
+  a repository whose suites live one per package could name at most one of them.
+  The three globs the scan built from it matched whatever was under the
+  configured root, and in this repository that was two prose annotation carriers
+  and no test at all. Every obligation was then satisfied by a list of IDs, and
+  `QFAI-ATDD-111` and `-112` could not report a coverage gap.
+
+  The scan now also collects from the project's own
+  `validation.traceability.testFileGlobs`, minus its `testFileExcludeGlobs`, and
+  a file collected that way is answered by the outermost `e2e` / `api` /
+  `integration` directory in its path. The globs are used as written: a base is
+  never derived by slicing one, because a glob whose directory part carries a
+  wildcard slices to a base with the wildcard still in it, and a layer glob
+  synthesized under that base addresses a directory the project never
+  configured.
+
+  Measured on this repository: obligations covered by an annotation carrier
+  alone fall from 781 to 384 — 93 user stories and 304 test cases move to a test
+  that exists and runs — with no new finding at any severity.
+
+  A collected file in none of the three directories answers nothing and is not
+  reported as misplaced. A unit suite owes ATDD nothing wherever it sits, so
+  `QFAI-ATDD-105` keeps its subject: a file under `paths.testsDir` that no layer
+  owns.
+
+  `summary.json` gains `scan.countedFileCount` beside `matchedFileCount`. The two
+  were the same number while only the layer directories were collected and are
+  not any more, and a reader taking the matched count for "acceptance tests
+  scanned" would read a healthy scan as a broken one.
+
 ### Removed
 
 - **`.qfai/report/validate.log` is no longer tracked** (#1582). Every local
