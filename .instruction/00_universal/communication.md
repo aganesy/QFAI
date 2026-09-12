@@ -25,19 +25,12 @@ version: 1.1.0
 
 ## 質問の書き方（型）
 
-```
-1. What is understood so far
-2. What is unclear, stated specifically
-3. The choices, where the answer has a listable set of candidates
-4. The recommended one and why, where a choice is being made
-5. What else would settle it
-```
+The shape of a question is owned by `.agents/rules/user-questions.md`: what parts
+it carries, when it offers choices, and when it recommends one. Follow that file.
 
-Rows 3 and 4 follow the answer's shape rather than being filled in every time.
-An answer with no listable set of candidates is a plain request for the value,
-and a question asking for a fact carries no recommendation at all:
-`.agents/rules/user-questions.md` settles both, and inventing candidates to fill
-a row is the guess it exists to prevent.
+A form restated here is a copy that drifts, and the drift is invisible until
+someone follows the copy — which is what this directory says about every rule it
+points at.
 
 ## 進捗報告
 

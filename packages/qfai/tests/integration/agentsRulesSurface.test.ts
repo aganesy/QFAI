@@ -731,7 +731,13 @@ describe("cross-AI rules surface (.agents/rules/ master)", () => {
     it.each(MASTERS)("%s resolves a no-question run to open questions", async (rel) => {
       const text = await readFile(path.join(ROOT, rel), "utf-8");
       expect(text).toMatch(/[Uu]nder\s+a\s+no-question\s+mode/);
-      expect(text).toMatch(/opens\s+every\s+decision\s+left\s+over\s*\n?\s*as\s+a\s+question/);
+      // Every node, not every decision: a fact only the user holds cannot be
+      // settled from evidence either, and a mode that opens the decisions and
+      // drops the facts loses the nodes no lookup could have reached.
+      expect(text).toMatch(/opens\s+\*\*every\s+node\s+left\s+over\*\*\s*\n?\s*as\s+a\s+question/);
+      expect(text).toMatch(/Every\s+node,\s+not\s+every\s*\n?\s*decision/);
+      // An undefaultable fact has no value to write down, so the run stops.
+      expect(text).toMatch(/fact\s+declared\s+undefaultable\s+stops\s+the\s+run/);
       expect(text).toMatch(
         /write\s+the\s+defaulted\s+value\s*\n?\s*and\s+label\s+it\s+an\s+assumption/,
       );
@@ -755,17 +761,37 @@ describe("cross-AI rules surface (.agents/rules/ master)", () => {
   });
 });
 
-describe("the question templates follow the answer's shape", () => {
-  // Two templates an agent reads at startup. Requiring options and a
-  // recommendation every time leaves an open value with no compliant form: the
-  // agent invents candidates, or breaks one of the two rules.
-  it.each([["AGENTS.md"], [".instruction/00_universal/communication.md"]])(
-    "%s branches rows 3 and 4 on the answer",
+describe("the question shape has one owner", () => {
+  // AGENTS.md carries the template an agent reads at startup, so its rows
+  // branch on the answer. The .instruction tree states no rule of its own, so
+  // it points instead — a second statement is a copy that drifts, and the drift
+  // is invisible until someone follows the copy.
+  it("AGENTS.md branches rows 3 and 4 on the answer", async () => {
+    const text = await readFile(path.join(ROOT, "AGENTS.md"), "utf-8");
+    expect(text).toMatch(/where\s+the\s+answer\s+has\s+a\s+listable\s+set\s+of\s+candidates/);
+    expect(text).toMatch(/where\s+a\s+choice\s+is\s+being\s+made/);
+    expect(text).toContain("user-questions.md");
+  });
+
+  it(".instruction/00_universal/communication.md points at the master", async () => {
+    const text = await readFile(
+      path.join(ROOT, ".instruction/00_universal/communication.md"),
+      "utf-8",
+    );
+    expect(text).toMatch(/is\s+owned\s+by/);
+    expect(text).toContain("user-questions.md");
+    // No copy of the form beside the pointer.
+    expect(text).not.toMatch(/The\s+recommended\s+one\s+and\s+why/);
+  });
+
+  // Every shipped surface that summarises the rule uses the same criterion, so
+  // an adopter is not told to enumerate a domain nobody can read.
+  it.each(["packages/qfai/assets/init/root/AGENTS.md", "packages/qfai/assets/init/root/CLAUDE.md"])(
+    "%s summarises it by what can be listed",
     async (rel) => {
       const text = await readFile(path.join(ROOT, rel), "utf-8");
-      expect(text).toMatch(/where\s+the\s+answer\s+has\s+a\s+listable\s+set\s+of\s+candidates/);
-      expect(text).toMatch(/where\s+a\s+choice\s+is\s+being\s+made/);
-      expect(text).toMatch(/user-questions\.md/);
+      expect(text).toMatch(/candidates\s+can\s+be\s+listed/);
+      expect(text).not.toMatch(/finite\s+candidates/);
     },
   );
 });

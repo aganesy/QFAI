@@ -206,13 +206,22 @@ between agents rather than of questions put to a user. The rules are in
 ## Under a no-question mode
 
 A run told not to ask the user does not ask, and a session inside it does not
-either. It settles what the evidence settles, and opens every decision left over
-as a question, where whatever gates the work will see it.
+either. It settles what the evidence settles, and opens **every node left over**
+as a question, where whatever gates the work will see it. Every node, not every
+decision: a fact only the user holds cannot be settled from evidence either, and
+a mode that opens the decisions and drops the facts loses exactly the nodes no
+lookup could have reached.
 
 Where a document requires the field to hold something, write the defaulted value
 and label it an assumption beside the open question. What is forbidden is the
 assumption on its own: unread, it is a decision nobody took, wearing the face of
 one somebody did.
+
+**A fact declared undefaultable stops the run.** There is no value to write
+down: the agent does not hold it, a guessed one is the corruption the tree warns
+about, and an open question beside a defaulted value is not available where the
+field admits no default. The run stops and names the fact, which is the same
+answer `user-questions.md` gives when a closure leaves one of these standing.
 
 ## What talking cannot settle
 
