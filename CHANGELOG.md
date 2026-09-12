@@ -297,6 +297,16 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **A ledger row observes the property it owns** (#1700). One prototyping-loop
+  test asserted five properties of the cycle-0 hard reset in a single case,
+  and a ledger row named it as the selector for one of them. A test function
+  fails once, so the four assertions behind the first were unobserved on every
+  run: a regression in any of them stopped the case before the row’s own
+  predicate was reached, and a mutation aimed at that predicate was killed by
+  an assertion the row does not own.
+
+  The case is five, one per property, over the same seeded state.
+
 - **The autopilot tailoring contract now covers every shipped skill** (#1642).
   It was held against a hardcoded list of seven, so the two grilling skills were
   outside it and nothing reported that they carried no tailoring rule at all.
