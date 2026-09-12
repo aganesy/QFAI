@@ -132,15 +132,16 @@ function withoutFences(text: string): string {
   const kept: string[] = [];
   let open: string | null = null;
   for (const line of text.split(/\r?\n/)) {
-    const fence = /^ {0,3}(`{3,}|~{3,})/.exec(line);
+    const marker = /^ {0,3}(`{3,}|~{3,})/.exec(line)?.[1];
     if (open === null) {
-      if (fence) open = fence[1];
-      else kept.push(line);
+      if (marker === undefined) kept.push(line);
+      else open = marker;
       continue;
     }
     // A fence closes on the same character, at least as long as the one that
     // opened it, which is what lets a longer fence quote a shorter one.
-    if (fence && fence[1][0] === open[0] && fence[1].length >= open.length) open = null;
+    if (marker !== undefined && marker.charAt(0) === open.charAt(0) && marker.length >= open.length)
+      open = null;
   }
   return kept.join("\n");
 }
