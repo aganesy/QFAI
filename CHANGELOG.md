@@ -4,6 +4,20 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ## [Unreleased]
 
+### Changed
+
+- **A rerun of `qfai init` cites a rule that shipped after the section was
+  written** (#1643). The cross-AI rules block is written once, so a later release
+  that adds a master copied the master into an existing adopter's tree with no
+  entry point pointing at it — a rule that ships and no agent loads.
+
+  A rerun inserts the citation for a master the file names nowhere, taking the
+  template's own bullet, and reports what it added. A line the project removed
+  stays removed, because the whole file is searched rather than the block. It
+  refuses rather than writing where the write would do harm: a symlinked entry
+  point, a file changed since it was read, a lost end marker, or a master whose
+  own copy did not land.
+
 ### Removed
 
 - **`.qfai/report/validate.log` is no longer tracked** (#1582). Every local
