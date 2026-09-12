@@ -313,8 +313,11 @@ This row has **five `❌` depth cells** plus `Status`.
 - **Combinatorial** — the case names an agreement between two artifacts and no test evaluates the
   pair. The two-tree loop repeats each predicate in a second location rather than combining two
   conditions, and the six predicates are never crossed with one another.
-- **Status** — half the artifacts the case names do not exist, and the half that does is covered by
-  wording checks against a rule with no runtime behind it.
+- **Status** — both artifacts the case names exist and both are read, so what caps the row is not a
+  missing surface. It is that the case's expected result is that requiredness "matches active rule",
+  and the rule has no runtime to match: `src/**` never reads `prototyping.yaml`, and
+  `isPrototypingRequiredForDiscussionPack` returns a constant `false` whatever it is given. Every
+  covering case checks a sentence for presence, and none compares the sentence with the behaviour.
 
 ### The ❌ cells of the business rule table
 

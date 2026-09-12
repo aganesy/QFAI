@@ -143,6 +143,16 @@ to do with. A row whose obligation is unchanged waits on nobody.
   `packages/qfai/tests/assets/sddStage0PrototypingOptional.test.ts`,
   `packages/qfai/tests/assets/assets.test.ts` and
   `packages/qfai/tests/core/sddPreflight.test.ts`.
+  **Two further files are edited and another spec owns them.**
+  `packages/qfai/tests/integration/discussionSkillTemplateIntegration.test.ts`
+  is named by `spec-0010/TDD-0006` and `TDD-0007`, and
+  `packages/qfai/tests/e2e/discussionHardeningE2E.test.ts` by
+  `spec-0010/TDD-0008` — three `done` rows whose recorded observations this
+  option's edits invalidate. The cross-spec ownership procedure
+  (`.qfai/assistant/skills/qfai-implement/references/cross-spec-ownership.md`)
+  runs before either file is written, and those three rows owe fresh
+  verification in the same change. Without it option 2 finishes with another
+  spec's rows attesting to behaviour the product no longer has.
 - Contracts: `none`
 - Schema: `none`
 - Upstream paths edited under this CR:
@@ -225,6 +235,16 @@ and refusing `3A/1B` for want of one would make a valid split unrecordable.
    withdrawing it at the requirement alone.
    - Reset to `todo`, recording this CR's ID in `DR-ID`:
      `spec-0002/TDD-0008`, `spec-0002/TDD-0009`, `spec-0002/TDD-0012`
+   - Re-scope `spec-0002/TDD-0012` in the same `/qfai-sdd` rerun, before the
+     reset is any use. Its `Test file` exists and its `Selector`,
+     `legacy 4-axis format is error`, resolves in it, so the ledger whitelist
+     permits changing neither: a reset alone returns the row to `todo` still
+     pointing at a case about `UIX-VAL-3LAYER-LEGACY-FORMAT`, and the only thing
+     it can then re-run is an assertion unrelated to `TC-0002-0011`. Row
+     identity is Phase 2b's to write, so the rerun either re-points the row at a
+     case that discharges the narrowed requiredness rule, or retires it and
+     seeds a new row for that rule. The same applies under option 2, where the
+     in-place repair path cannot touch identity either.
    - Retire: `spec-0002/TDD-0010` — `current preflight unit test pass`
 
    **Option 2 — restore the product to the spec.** `/qfai-sdd` is `confirm-only`:
@@ -235,7 +255,17 @@ and refusing `3A/1B` for want of one would make a valid split unrecordable.
    brand direction, `01_Context.md#Design Direction` records it, and `/qfai-sdd`
    Phase 0 reads that field and stops without it. All three go, or the product
    still selects a direction during discussion and the requirement is still
-   contradicted. Beside that: a validator that emits the single-winner violation
+   contradicted.
+
+   **Removing all three leaves nothing that authors `DESIGN.md`.** The shipped
+   `qfai-prototyping/references/design-md-spec.md` has Phase 0 author that file
+   and prototyping read it as read-only context, so a new UI project under this
+   option reaches prototyping with no brand contract and no stage that can
+   produce one. Option 2 therefore owes a producer as well as a removal: either
+   a downstream direction-selection and `DESIGN.md` authoring path with its
+   tests, or one of the three retained as that producer. Withdrawing the
+   interview without answering this makes the option unimplementable rather
+   than expensive. Beside that: a validator that emits the single-winner violation
    `TC-0002-0009` names, a preflight that blocks a UI-bearing pack missing
    `prototyping.yaml`, and the three shipped documents rewritten to say the
    artifact is required. This is the option with the largest blast radius, and

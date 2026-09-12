@@ -75,10 +75,16 @@ restoring the preflight check for `prototyping.yaml` edits
 `sddPreflight.test.ts`, the file that row's observation covers. Option 2 on A
 does not touch that file.
 
-Option 3 is answered as `3a` or `3b`. `3a` writes a new obligation for the
-legacy-format finding and registers the surviving case against it; `3b` deletes
-the case, and with it the only assertion that the finding is emitted. A `3`
-with no letter authorises neither, so the retirement cannot be applied from it.
+**Option 3 takes a letter when it settles statement B, and not otherwise.**
+`3a` writes a new obligation for the legacy-format finding and registers the
+surviving case against it; `3b` deletes the case, and with it the only
+assertion that the finding is emitted. That case's obligation is
+`TC-0002-0011`, which is statement B's, so `3bB` is complete and `3B` alone
+authorises neither.
+
+`3A` takes no letter. Statement A's retirement leaves the case owned by
+whatever settles B, so a letter there would authorise an action on the other
+statement — and rejecting `3A/1B` for want of one would refuse a valid answer.
 
 `TDD-0011` is in neither statement's list. It is **re-verified, not reset**,
 under every combination, because the annotation repairs edit the file its
