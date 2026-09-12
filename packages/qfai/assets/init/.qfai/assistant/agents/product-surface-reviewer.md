@@ -18,12 +18,18 @@ tools: [Read, Glob, Grep, Bash]
 - Reconcile sidecar artifacts (screen contracts), design tokens, mermaid flows, and rendered output consistency.
   HTML mock is optional fallback evidence only. Design tokens are supporting input.
 - For UI implementation, compare rendered output against `<contractsDir>/design/prototype-handoff.yaml`, canonical prototype screenshots, HTML snapshots, and `.qfai/prototypes/winner/index.html`.
+- Check the implementation against `prototype-handoff.yaml` `procurement` before judging
+  resemblance: a region the manifest says was procured and the code rebuilt is a finding
+  with a name, and an authored region the manifest does not list is one too.
 - Reject prototype parity when implementation loses CTA hierarchy, spacing rhythm, information density,
   surface framing intent, transition clarity, state coverage, or component character captured by the winning
   prototype.
-- Review UI changes for KISS and YAGNI at the surface layer: avoid needless states, controls, flows, animations, and configuration that are not justified by the product goal.
+- Review UI changes at the surface layer: avoid needless states, controls, flows, animations, and configuration that are not justified by the product goal.
 - Check naming, structure, and responsibility split of UI components for clarity, cohesion, and minimal surprise.
 - Validate docs/UX consistency so usage text, labels, error states, and user flows match the intended product behavior.
+- Apply `.agents/rules/minimal-implementation.md`: tag excess `delete`, `stdlib`, `native`, `yagni` or `shrink`, and name what to cut and what replaces it.
+- Apply `.qfai/assistant/catalog/ui-procurement.md`: report a region that was drawn where a catalogue had it, and name the item that would have served.
+- Apply `.agents/rules/interface-clarity.md`: report copy that explains the interface as a finding against the control under it, and name the control to fix.
 
 ## Inputs you must read
 

@@ -1,16 +1,16 @@
 # UI Definition Consumption Protocol
 
-QFAI が定義する、下流 skill が UI 定義を読み取る際の手順。
+How a downstream skill reads a UI definition, and what it may not read.
 
 ## Boundary
 
-`/qfai-sdd` だけが discussion sidecar artifacts (`discussion-*/uiux/`) を読み取り、下流実行用の specs/contracts に正規化する。
+`/qfai-sdd` alone reads the discussion sidecar artifacts (`discussion-*/uiux/`) and normalizes them into the specs and contracts that downstream execution runs against.
 
-`/qfai-prototyping`、`/qfai-atdd`、`/qfai-implement`、`/qfai-verify` は discussion-pack を読まない。UI/UX 定義は specs、contracts、evidence から読む。
+`/qfai-prototyping`, `/qfai-atdd`, `/qfai-implement` and `/qfai-verify` do not read a discussion pack. They read the UI and UX definition from specs, contracts and evidence.
 
 ## Reading Order
 
-下流 skill は以下の順序で UI 定義を読む。
+A downstream skill reads the UI definition in this order.
 
 1. **Specs** (`.qfai/specs/spec-*/`)
    - `01_Spec.md`
@@ -50,4 +50,4 @@ QFAI が定義する、下流 skill が UI 定義を読み取る際の手順。
 - Do not infer downstream UI behavior from discussion-pack sidecars.
 - Do not use retired design contract files.
 - Do not use HTML mock sections as downstream source of truth.
-- Do not treat a template reference as a selected design direction.
+- Do not treat a competitor reference as a selected design direction.

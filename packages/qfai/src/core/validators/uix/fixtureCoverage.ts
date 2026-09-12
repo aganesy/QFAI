@@ -18,7 +18,7 @@ export async function checkFixtureCoverage(
   testFilePath: string,
   validatorName: string,
 ): Promise<FixtureCoverageResult> {
-  let content = "";
+  let content: string;
   try {
     const { readFile } = await import("node:fs/promises");
     content = await readFile(testFilePath, "utf-8");

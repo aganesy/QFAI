@@ -59,6 +59,22 @@ export type DesignMd = {
      */
     archetype?: Archetype;
     voice?: string[];
+    /**
+     * The published theme the token values were taken from, named so a
+     * reader can install it.
+     *
+     * Everything downstream is exact about those values — the lock hashes
+     * them, `certify` re-scans them, every literal in every capture is
+     * checked against them — and until this field existed there was nothing
+     * under the exactness: twelve colours, three families, four radii and
+     * three shadows were written from a sentence of prose about the
+     * archetype.
+     *
+     * Optional, because a project may have authored its own `DESIGN.md`
+     * before this and that file is not wrong — it just does not say. A file
+     * Phase 0 writes names its theme.
+     */
+    theme?: string;
   };
   audience?: {
     emotion?: string[];
@@ -500,10 +516,28 @@ function readBrand(raw: unknown): { value: DesignMd["brand"] } | { error: ParseE
     if ("error" in voiceParsed) return { error: voiceParsed.error };
     voice = voiceParsed.value;
   }
+  // `brand.theme` is strict-parsed for the same reason `brand.voice` is: a
+  // non-string here would otherwise hash into the lock while every consumer
+  // saw nothing, which is the drift the lock exists to catch.
+  let theme: string | undefined;
+  if ("theme" in raw && raw.theme !== undefined) {
+    if (typeof raw.theme !== "string" || raw.theme.trim() === "") {
+      return {
+        error: {
+          path: "brand.theme",
+          code: "invalid-type",
+          message:
+            "'brand.theme' must be a non-empty string naming the theme the tokens came from.",
+        },
+      };
+    }
+    theme = raw.theme;
+  }
   const value: DesignMd["brand"] = archetype !== undefined ? { name, archetype } : { name };
   if (voice !== undefined) value.voice = voice;
+  if (theme !== undefined) value.theme = theme;
   // unknown extra keys
-  const BRAND_ALLOWED_KEYS = new Set(["name", "archetype", "voice"]);
+  const BRAND_ALLOWED_KEYS = new Set(["name", "archetype", "voice", "theme"]);
   const brandError = rejectUnknownKeys(raw, BRAND_ALLOWED_KEYS, {
     kind: "section",
     name: "brand",

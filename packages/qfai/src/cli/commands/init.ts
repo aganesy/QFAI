@@ -3535,6 +3535,7 @@ async function configureGitSymlinks(destRoot: string, dryRun: boolean): Promise<
         "  git config --local core.symlinks true",
         `Cause: ${detail}`,
       ].join("\n"),
+      { cause: err },
     );
   }
 
@@ -3708,6 +3709,7 @@ async function syncIntegrationWrappers(
           throw new Error(
             `Failed to read the instructions template: ${templateSrc}` +
               ` (${code ?? detail}). Check that the package is installed correctly.`,
+            { cause: err },
           );
         }
         await replaceWithRegularFile(dest, content);
@@ -4152,8 +4154,7 @@ async function pruneOrphanCodexProfiles(
 }
 
 type CodexAgentProfilePlan =
-  | { status: "render"; toml: string }
-  | { status: "unavailable"; reason: string };
+  { status: "render"; toml: string } | { status: "unavailable"; reason: string };
 
 /** Renders one profile, or says why the agent cannot get one. */
 async function planCodexAgentProfile(
@@ -4405,9 +4406,7 @@ async function readCanonicalAgentMarkdown(
 }
 
 type BoundedRead =
-  | { status: "ok"; content: string }
-  | { status: "absent" }
-  | { status: "rejected"; reason: string };
+  { status: "ok"; content: string } | { status: "absent" } | { status: "rejected"; reason: string };
 
 /**
  * A canonical agent document is a few kilobytes of markdown; a catalog is
@@ -4829,6 +4828,7 @@ async function ensureSymlink(
             "  Settings > System > For developers > Developer Mode: ON",
             "Details: https://learn.microsoft.com/windows/apps/get-started/enable-your-device-for-development",
           ].join("\n"),
+          { cause: err },
         );
       }
       throw err;
@@ -5121,6 +5121,7 @@ async function recreateFlattenedLink(
           "  Settings > System > For developers > Developer Mode: ON",
           "Details: https://learn.microsoft.com/windows/apps/get-started/enable-your-device-for-development",
         ].join("\n"),
+        { cause: err },
       );
     }
     if (restoreError !== undefined) {
@@ -6886,6 +6887,8 @@ function buildCopilotInstructions(): string {
     "- `.agents/rules/distributed-surface.md` — keep internal identifiers and version markers out of published files.",
     "- `.agents/rules/version-discipline.md` — never choose a release version number on your own; the user decides.",
     "- `.agents/rules/documentation-clarity.md` — plain, minimal writing in pull requests, issues, comments and Markdown; no local identifiers, no account of how the work went.",
+    "- `.agents/rules/minimal-implementation.md` — the order to try solutions in once a behaviour is agreed; mark a deliberate shortcut with its ceiling and the condition that lifts it.",
+    "- `.agents/rules/interface-clarity.md` — what may appear on a screen or in terminal output; text explaining how to work a control is a defect report against that control.",
     "",
   ].join("\n");
 }

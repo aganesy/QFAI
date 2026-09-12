@@ -275,8 +275,7 @@ function normalizeCompletionCertificate(value: unknown): CompletionCertificate |
 }
 
 export type CertifyCheckResult =
-  | { readonly ok: true }
-  | { readonly ok: false; readonly reasons: readonly string[] };
+  { readonly ok: true } | { readonly ok: false; readonly reasons: readonly string[] };
 
 /**
  * Re-compute evidence digests and compare against the stored certificate.
@@ -412,7 +411,7 @@ function sortedReplacer(): (key: string, value: unknown) => unknown {
   return (_key, value) => {
     if (value && typeof value === "object" && !Array.isArray(value)) {
       const sorted: Record<string, unknown> = {};
-      for (const k of Object.keys(value as Record<string, unknown>).sort()) {
+      for (const k of Object.keys(value).sort()) {
         sorted[k] = (value as Record<string, unknown>)[k];
       }
       return sorted;

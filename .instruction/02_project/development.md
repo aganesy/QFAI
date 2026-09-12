@@ -5,16 +5,12 @@ dependencies: [02_project/tech-stack.md]
 version: 1.0.0
 ---
 
-> **言語指示（厳守）**
->
-> - 報告・出力: 日本語（Plan も含む）
-
 # 開発手順とコマンド（QFAI Toolkit）
 
 ## 前提
 
-- Node.js >= 18（`package.json#engines`）
-- pnpm（`package.json#packageManager`）
+- Node.js — the supported range is `package.json#engines`. Read it there; it moves.
+- pnpm — the pinned version is `package.json#packageManager`.
 
 ## セットアップ
 

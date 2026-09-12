@@ -32,12 +32,10 @@ async function cardsIn(tree: string): Promise<[string, string][]> {
   const dir = path.join(repoRoot, tree, "assistant/agents");
   const names = (await readdir(dir)).filter((name) => name.endsWith(".md"));
   return Promise.all(
-    names.map(
-      async (name): Promise<[string, string]> => [
-        name,
-        await readFile(path.join(dir, name), "utf-8"),
-      ],
-    ),
+    names.map(async (name): Promise<[string, string]> => [
+      name,
+      await readFile(path.join(dir, name), "utf-8"),
+    ]),
   );
 }
 

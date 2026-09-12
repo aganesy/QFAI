@@ -235,7 +235,7 @@ async function publishPreflightSummary(run: PreflightRun, body: string): Promise
   if (await hasNewerRunDir(run.runRoot, run.runId)) {
     return;
   }
-  let existingRunId: string | null = null;
+  let existingRunId: string | null;
   try {
     existingRunId =
       PREFLIGHT_RUN_ID_LINE_RE.exec(await readFile(run.latestSummaryPath, "utf-8"))?.[1] ?? null;

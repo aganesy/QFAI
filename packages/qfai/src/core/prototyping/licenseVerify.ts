@@ -67,8 +67,7 @@ export type LicenseVerifyError =
   | { code: "license-missing-attribution"; source: string; url: string };
 
 export type LicenseVerifyResult =
-  | { ok: true }
-  | { ok: false; errors: readonly LicenseVerifyError[] };
+  { ok: true } | { ok: false; errors: readonly LicenseVerifyError[] };
 
 /**
  * Returns `true` when the URL parses as an HTTPS URL.

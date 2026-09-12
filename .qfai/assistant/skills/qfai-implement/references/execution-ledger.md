@@ -291,6 +291,40 @@ evidence file stating what was run and that its output was not retained, then po
 the cell at that entry. The cell stays a pointer — prose about a missing run is a
 payload, and the section above says why a payload in the cell corrupts the ledger.
 
+### What a backfill entry owes
+
+A backfill entry declares the loss with two fields, and the first is read as an
+exact value:
+
+| Field                 | Value                                                   |
+| --------------------- | ------------------------------------------------------- |
+| `Run output retained` | `no` — anything else is an ordinary entry               |
+| `Backfill note`       | what was run, and that the original output was not kept |
+
+Declaring it drops the reviewer-pack and seal fields from the completed-evidence
+set: the two `review`, `reviewed revision`, `audited evidence hash`, `review pack`
+and `review pack seal` fields, `qa-gatekeeper`, and `Checkpoint verification seal`.
+A gone run produced no review pack, so there is no seal to record — and none that
+may be written, because a seal for a review that did not happen is a false record
+rather than a missing one.
+
+Nothing else is dropped. Identity, the RED failure mode, the round block, and the
+verify and checkpoint commands with their results are all reproducible by re-running
+the test, which is what the note says was done.
+
+The exemption is reported rather than applied quietly:
+
+| Finding            | Fires when                                              | Severity |
+| ------------------ | ------------------------------------------------------- | -------- |
+| `QFAI-TDDLIST-019` | a `done` row's entry declares its run output unretained | warning  |
+
+`done` is read as reviewed, so a row exempt from the verdicts has to be visible in
+the same output an operator already reads. The claim is about the artifacts, not
+about what happened: the original reviews may well have passed, and the entry says
+so where it can. What is gone is the means to verify it. A project that will carry
+no row whose review it cannot verify treats warnings as failures and gets the
+unconditional set back.
+
 `QFAI-TDDLIST-007` is an error for the same reason. Every completion check
 hangs off the anchor, so a `done` row whose cell is only an outcome —
 command-shaped, so the status-only rule passes over it — claimed completion with

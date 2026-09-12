@@ -38,9 +38,19 @@ Skill-specific examples:
 - hard-required inputs absent at cycle 0 (brand intent — see the
   hard-required bucket under `## Default Autopilot Policy`)
 
+## Inputs Priority (Preflight)
+
+When unsure, read inputs in this order:
+
+- P1: `.qfai/assistant/constitution/*`
+- P2: `.qfai/assistant/manifest/agent-routing.yml` + `.qfai/assistant/manifest/review-profiles.yml` + `.qfai/assistant/catalog/*`; from `.qfai/assistant/manifest/agent-catalog.yml` read the acting `orchestrator`'s and each routed role's entry (`owned_artifacts` / `tool_profile` / `permission_profile` / `specialization_tags`), not the whole file — its `developer_instructions` bodies mirror the agent cards (`.qfai/assistant/constitution/constitution.md` Article III)
+- P3: root `DESIGN.md` + `.qfai/contracts/design/DESIGN.md.lock.yaml` — the locked brand identity, which the loop refuses to run against a mismatched hash
+- P4: the rest of `## Required Contracts` (`.qfai/contracts/ui/*.yaml`, `.qfai/specs/spec-*/{01_Spec.md, 03_Acceptance-Criteria.md}`) and this skill's `## Required References`
+- P5: evidence from earlier cycles under `.qfai/evidence/prototyping/`
+
 ## Goal
 
-One final prototype satisfying the spec under a locked brand identity, with all four UX axes `exceptional`, no layout anti-patterns, and no DESIGN.md violations.
+One final prototype satisfying the spec under a locked brand identity, with no blocking review finding, no layout anti-pattern, and no DESIGN.md violation.
 
 ## Required References
 
@@ -48,7 +58,7 @@ One final prototype satisfying the spec under a locked brand identity, with all 
 - `references/generator-prompt.md` — generator system prompt + Tailwind
   CDN + DESIGN.md token injection rules
 - `references/reviewer-prompt.md` — reviewer schema, 4 UX axes,
-  layout anti-patterns (`lap-001..006` static regex + `lap-007..008` semantic),
+  layout anti-patterns (static regex and reviewer-judged entries),
   `designMdViolations`, pivot rules
 - `references/handoff.md` — post-loop `design-system.yaml` (DESIGN.md
   token mirror) and `prototype-handoff.yaml`
@@ -120,7 +130,7 @@ the help text wins and this section is stale.
   requests (`.css`, `.png`, `fetch()`) still 404 when genuinely
   missing, and the path-traversal 403 guard runs first.
 - `--check-convergence` — read-only peek of `prototyping.json`.
-  Exits `0` when converged (`stopReason === "axes-exceptional"` with
+  Exits `0` when converged (`stopReason === "converged"` with
   `acceptedIterationIndex` set), exits `2` otherwise. No writes,
   no Playwright launches. Use at cycle 9 before recovery.
 - `--target-url <url>` — base URL the capture / review steps drive.
@@ -177,11 +187,11 @@ the help text wins and this section is stale.
 
 ### Step 2-C — Run the Loop
 
-| Step  | Actor                                                     | Action                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 | Output                                   |
-| ----- | --------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------- |
-| C0    | product-experience-architect                              | `npx qfai prototyping iterate --cycle 0 --target-url <url>`. CLI computes `sha256(DESIGN.md)`; lock match enforced. Generator reads contracts + `references/generator-prompt.md` + DESIGN.md tokens and writes `.qfai/prototypes/iter-00/index.html`. Capture + review → the reviewer writes BOTH `iter-00/<spec-id>/<screen>.review.json` (one per (spec, screen) pair) and the per-cycle summary `iter-00/review.json` aggregated from them, exactly as in row C1..9 — cycle 0 can itself converge, and certify rejects the run (exit 64) when a declared pair has no payload. REPLACE the seed `iterations[0]` per "Transcription" below; commit `prototyping: iter-00`.                                                                                                                                            | iter-00, prototyping.json#designMdSha256 |
-| C1..9 | (a) devops, (b) reviewer, (c) orchestrator, (d) generator | (a) playwright writes `iter-NN/<screen>.{png,html}`; (b) reviewer writes BOTH `iter-NN/<spec-id>/<screen>.review.json` (one per (spec, screen) pair; closed schema in `references/review-payload-schema.md`; required by certify) and the per-cycle summary `iter-NN/review.json` aggregated from them, per `references/reviewer-prompt.md` (4 UX axes ordinal, 200..500 word critique, `layoutAntiPatternsDetected[]`, `designMdViolations[]`, `pivotDirective`); (c) transcribe them into `prototyping.json#iterations[]` per "Transcription" below, update `progress.md`, commit `prototyping: iter-NN`; (d) `npx qfai prototyping iterate --cycle <n+1>` decides exit. After C9 do NOT call `--cycle 10` — the CLI rejects out-of-range cycles. See the "Cycle 9 budget exhaustion" subsection below for recovery. | iter-NN, exit ∈ {0, 64, 65, 66, 2}       |
-| H     | orchestrator                                              | Mirror latest to `.qfai/prototypes/final/index.html`. Per `references/handoff.md`: write `design-system.yaml` (deterministic DESIGN.md token mirror, no HTML extraction) + `prototype-handoff.yaml`. Run `npx qfai validate --profile prototyping --fail-on error` (produces `validate.json` with `counts.error === 0`), then `/qfai-verify` (produces `verify.json` with `status === "PASS"`), then `npx qfai prototyping certify` — certify requires both gate files to be present and passing before it will seal the certificate.                                                                                                                                                                                                                                                                                  | DONE                                     |
+| Step  | Actor                                                     | Action                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          | Output                                   |
+| ----- | --------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------- |
+| C0    | product-experience-architect                              | `npx qfai prototyping iterate --cycle 0 --target-url <url>`. CLI computes `sha256(DESIGN.md)`; lock match enforced. Generator reads contracts + `references/generator-prompt.md` + DESIGN.md tokens and writes `.qfai/prototypes/iter-00/index.html`. Capture + review → the reviewer writes BOTH `iter-00/<spec-id>/<screen>.review.json` (one per (spec, screen) pair) and the per-cycle summary `iter-00/review.json` aggregated from them, exactly as in row C1..9 — cycle 0 can itself converge, and certify rejects the run (exit 64) when a declared pair has no payload. REPLACE the seed `iterations[0]` per "Transcription" below; commit `prototyping: iter-00`.                                                                                                                                                     | iter-00, prototyping.json#designMdSha256 |
+| C1..9 | (a) devops, (b) reviewer, (c) orchestrator, (d) generator | (a) playwright writes `iter-NN/<screen>.{png,html}`; (b) reviewer writes BOTH `iter-NN/<spec-id>/<screen>.review.json` (one per (spec, screen) pair; closed schema in `references/review-payload-schema.md`; required by certify) and the per-cycle summary `iter-NN/review.json` aggregated from them, per `references/reviewer-prompt.md` (4 UX axes ordinal, a critique of at most 500 words, `layoutAntiPatternsDetected[]`, `designMdViolations[]`, `pivotDirective`); (c) transcribe them into `prototyping.json#iterations[]` per "Transcription" below, update `progress.md`, commit `prototyping: iter-NN`; (d) `npx qfai prototyping iterate --cycle <n+1>` decides exit. After C9 do NOT call `--cycle 10` — the CLI rejects out-of-range cycles. See the "Cycle 9 budget exhaustion" subsection below for recovery. | iter-NN, exit ∈ {0, 64, 65, 66, 2}       |
+| H     | orchestrator                                              | Mirror latest to `.qfai/prototypes/final/index.html`. Per `references/handoff.md`: write `design-system.yaml` (deterministic DESIGN.md token mirror, no HTML extraction) + `prototype-handoff.yaml`. Run `npx qfai validate --profile prototyping --fail-on error` (produces `validate.json` with `counts.error === 0`), then `/qfai-verify` (produces `verify.json` with `status === "PASS"`), then `npx qfai prototyping certify` — certify requires both gate files to be present and passing before it will seal the certificate.                                                                                                                                                                                                                                                                                           | DONE                                     |
 
 ### Transcription (C0, and C1..9 step c)
 
@@ -204,9 +214,9 @@ Two specifics that are easy to get wrong:
   exemption now requires the record to still BE the untouched seed — so a
   stale stamp is reported rather than obeyed, but it is still wrong.
 
-**Exit codes**: `0` continue (read `pivotDirective`); `64` convergence (4
-axes `exceptional` AND `layoutAntiPatternsDetected` empty AND
-`designMdViolations` empty); `65` 10 cycles reached; `66` license-verify
+**Exit codes**: `0` continue (read `pivotDirective`); `64` convergence
+(`designMdViolations`, `layoutAntiPatternsDetected` and `blockingFindings`
+all empty); `65` 10 cycles reached; `66` license-verify
 failure (`imageSources[]` resolved to a non-allowlisted source, unknown
 license tier, non-HTTPS URL, host mismatch vs the frozen
 `sourceHosts` (host pinning is never patched — see below), or
@@ -321,7 +331,7 @@ an unconverged iter-09.
 
 ### Continuing or resetting a converged loop
 
-Only `stopReason: "axes-exceptional"` + `acceptedIterationIndex` seals a loop; `iterate --cycle N`
+Only `stopReason: "converged"` + `acceptedIterationIndex` seals a loop; `iterate --cycle N`
 then refuses with exit `2` past the accepted index, writing nothing. `license-verify-fail` /
 `input-error` do NOT seal — fix the cause and re-run the same cycle.
 `max-iterations` does not seal either, but iter-09 still stops every `--cycle N >= 1` at exit `65`.

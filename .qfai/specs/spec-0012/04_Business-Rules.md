@@ -84,13 +84,13 @@
 - Status: superseded by BR-0012-0031 (per spec × screen `<screen>.review.json` with 4 ordinal axes + six `*Feel` prose fields, ≤ 200 words each; no global `critique` length rule). See `09_delta.md` CHG-002 OP-PURGE-079.
 - AC-Refs: AC-0012-0021, AC-0012-0022, AC-0012-0023
 - Each `iter-NN/review.json` MUST contain `scores: {informationArchitecture, navigationFlow, usability, functionality}` with ordinal values in `{weak, acceptable, strong, exceptional}`.
-- `critique` is a single 200..500 word string. `pivotDirective` is one of `"continue" | "refine" | "pivot"`.
+- `critique` is a single string, capped and not floored — see BR-0012-0045. `pivotDirective` is one of `"continue" | "refine" | "pivot"`.
 - Schema violations raise `QFAI-PROT-020` / `QFAI-PROT-022` / `QFAI-PROT-023` per AC.
 
 ## BR-0012-0020: Layout-Anti-Pattern Catalog and IA Cap
 
 - AC-Refs: AC-0012-0024, AC-0012-0025
-- `layoutAntiPatternsDetected[]` entries MUST come from `lap-001..008` whitelist.
+- `layoutAntiPatternsDetected[]` entries MUST be identifiers declared in `packages/qfai/assets/validators/layoutAntiPatterns.json`. The capture pass writes into the same array, so the declared set covers what the reviewer judges and what the tool computes alike.
 - Detection caps `informationArchitecture` at `acceptable`. Higher score raises `QFAI-PROT-021`.
 
 ## BR-0012-0021: pivotDirective Rules
@@ -118,9 +118,9 @@
 
 `/qfai-prototyping` stops when one of:
 
-- All 4 UX axes (informationArchitecture / navigationFlow / usability / functionality) of the latest iter are `exceptional` AND `layoutAntiPatternsDetected.length === 0` AND `designMdViolations.length === 0` (`stopReason: "axes-exceptional"`, exit 64)
-- Latest iter `index === 14` (`stopReason: "max-iterations"`, exit 65)
-- DESIGN.md sha256 mismatch on cycle ≥ 1 (`stopReason: "design-md-hash-mismatch"`, exit 2; forces re-run from cycle 0)
+- The latest iter has `blockingFindings.length === 0` AND `layoutAntiPatternsDetected.length === 0` AND `designMdViolations.length === 0` (`stopReason: "converged"`, exit 64). The four UX axes are reported and do not gate.
+- Latest iter `index === 9` (`stopReason: "max-iterations"`, exit 65)
+- DESIGN.md sha256 mismatch on cycle ≥ 1 (`stopReason: "input-error"`, exit 2; forces re-run from cycle 0)
 
 No other path triggers stop. LLM subjective DONE is forbidden.
 
@@ -167,12 +167,12 @@ No other path triggers stop. LLM subjective DONE is forbidden.
 
 - AC-Refs: AC-0012-0041
 - Each `<screen>.review.json` MUST contain the 4 ordinal UX axes (informationArchitecture / navigationFlow / usability / functionality, each in `{weak, acceptable, strong, exceptional}`) AND six `*Feel` short-prose fields (`operability`, `transitionFeel`, `crossScreenContinuity`, `userStoryFeel`, `acceptanceCriteriaFeel`, `menuReachabilityFeel`), each ≤ 200 words.
-- `layoutAntiPatternsDetected[]` (lap-001..008) and `designMdViolations[]` remain present and govern convergence; quantitative AC-pass / transition-pass thresholds are NOT recorded.
+- `layoutAntiPatternsDetected[]` and `designMdViolations[]` remain present and govern convergence; quantitative AC-pass / transition-pass thresholds are NOT recorded.
 
 ## BR-0012-0032: Convergence is AND across spec × screen
 
 - AC-Refs: AC-0012-0042
-- Global convergence is the AND, across every `(spec, screen)` pair in the cycle-0 frozen spec set, of: `all 4 axes === exceptional AND layoutAntiPatternsDetected[] empty AND designMdViolations[] empty`.
+- Global convergence is the AND, across every `(spec, screen)` pair in the cycle-0 frozen spec set, of: `blockingFindings[] empty AND layoutAntiPatternsDetected[] empty AND designMdViolations[] empty`.
 - Quantitative AC-pass% / transition-pass% thresholds are explicitly NOT consulted (user direction 2026-05-18: design and operability are qualitative-only).
 - On hard-fail at cycle 9, the aggregator record MUST name every lagging spec ID.
 
@@ -259,12 +259,13 @@ No other path triggers stop. LLM subjective DONE is forbidden.
 - `SHADOW_DECL_STRIP_RE` MUST match the broader `--*-shadow*:` pattern (any custom property whose name contains `shadow`) when the value contains `rgba()` / `rgb()` literals.
 - The strip MUST execute BEFORE `scanColors` evaluates the input.
 
-## BR-0012-0045: CJK proseCritique (Intl.Segmenter primary + OR-fallback)
+## BR-0012-0045: proseCritique cap, unit selected by the text
 
 - AC-Refs: AC-0012-0057
-- `countWords` MUST use `Intl.Segmenter('ja', { granularity: 'word' })` for primary word counting on CJK-detected text AND MUST apply the OR-condition `200..500 words OR 600..2500 characters` band for QFAI-PROT-002.
-- Error text on out-of-band input MUST name (a) measured count form (words vs characters), (b) band used, (c) actual count.
-- No regression on English fixtures (200–500 words band) is required.
+- QFAI-PROT-002 MUST select the unit from the text: CJK present is measured in CJK characters, anything else in whitespace-separated words. Only the selected unit's cap applies.
+- The rule is a cap. Neither unit carries a lower bound, so a critique of any length up to its cap passes.
+- Selecting the unit rather than accepting whichever fits is what keeps the cap a cap: an English critique carries no CJK characters, so a rule passing on either unit would pass every English text however long.
+- Error text over the cap MUST name (a) the count form measured (words or characters), (b) the cap, (c) the actual count.
 
 ## BR-0012-0046: `browserTool` config compatibility window
 
@@ -295,7 +296,7 @@ No other path triggers stop. LLM subjective DONE is forbidden.
 
 - AC-Refs: AC-0012-0061
 - Every `iterations[i]` written by `iterate` MUST be `qfai validate --profile prototyping --fail-on error` conformant out of the box: non-null `commitSha` (sentinel `"uncommitted"` accepted), non-empty `proseCritique`, `scores`, `layoutAntiPatternsDetected`, `designMdViolations`, `pivotDirective`, `reviewerId`, and `evidenceRefs[]` (one entry per `screens[].id`).
-- On convergence, `acceptedIterationIndex` AND `stopReason ∈ {"axes-exceptional", "max-iterations", "license-verify-fail", "input-error"}` MUST be written at the top level.
+- On convergence, `acceptedIterationIndex` AND `stopReason ∈ {"converged", "max-iterations", "license-verify-fail", "input-error"}` MUST be written at the top level.
 
 ## BR-0012-0050: Self-completable certify via `verify.json#scope` (OQ-0107 Option B)
 

@@ -53,7 +53,7 @@ export const AUTO_DECIDE_ALLOWED_TOKENS: readonly string[] = [
 /**
  * The hard-required entries every skill may carry.
  *
- * `brand intent` reaches root `DESIGN.md` front-matter through qfai-discussion;
+ * `brand intent` reaches root `DESIGN.md` front-matter through qfai-sdd Phase 0;
  * `primarySpecId` selects the spec a skill operates on. Both have a consumer in
  * the shipped tree.
  *

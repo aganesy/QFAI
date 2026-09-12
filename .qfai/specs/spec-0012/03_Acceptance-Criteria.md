@@ -87,7 +87,7 @@
 
 - Given any `iter-NN/review.json`,
 - When validated,
-- Then every entry in `layoutAntiPatternsDetected[]` is one of `lap-001-orphan-page`, `lap-002-deadend-flow`, `lap-003-hidden-state`, `lap-004-broken-back`, `lap-005-mystery-meat-nav`, `lap-006-no-empty-state`, `lap-007-no-error-state`, `lap-008-no-back-affordance`. Unknown tokens raise `QFAI-PROT-025`.
+- Then every entry in `layoutAntiPatternsDetected[]` is an identifier declared in `packages/qfai/assets/validators/layoutAntiPatterns.json`, which is what `loadKnownLapIds` reads. A token no entry declares raises `QFAI-PROT-002`. The registry is the list: writing it out here is a second copy that goes stale the next time an entry is added or retired.
 
 ## AC-0012-0026: pivotDirective Rule — pivot
 
@@ -132,7 +132,7 @@
 
 - Given `qfai prototyping iterate --cycle <n>` runs,
 - When the cycle completes,
-- Then exit code is one of `0` (continue, read pivotDirective), `64` (axes-exceptional convergence), `65` (max-iterations reached), `2` (input error or DESIGN.md hash mismatch). No other exit codes are emitted.
+- Then exit code is one of `0` (continue, read pivotDirective), `64` (convergence), `65` (max-iterations reached), `2` (input error or DESIGN.md hash mismatch). No other exit codes are emitted.
 
 ## AC-0012-0033: CLI certify exit codes
 
@@ -331,14 +331,14 @@
 - When the input filter into `scanColors` runs,
 - Then the broader `--*-shadow*:` pattern MUST strip both declarations before color scanning and `designMdViolations[]` MUST NOT contain entries naming those rgba values.
 
-## AC-0012-0057: CJK-aware proseCritique (Intl.Segmenter + OR-fallback)
+## AC-0012-0057: proseCritique cap, unit selected by the text
 
 - US-Refs: US-0012-0123
 - REQ-Refs: REQ-0012-0059
-- Given a Japanese-only `proseCritique` of 800–1500 characters AND an English critique of 200–500 words,
-- When `countWords` (or its replacement) evaluates the prose against QFAI-PROT-002 using `Intl.Segmenter('ja', { granularity: 'word' })` AND the OR-condition `200..500 words OR 600..2500 characters`,
-- Then both fixtures MUST pass with no regression.
-- And on out-of-band input the error text MUST name (a) the count form measured (words vs characters), (b) the band used, (c) the actual count.
+- Given a Japanese-only `proseCritique` of 800–1500 characters, an English critique of 200–500 words, and a short critique in either language,
+- When QFAI-PROT-002 evaluates the prose, selecting CJK characters as the unit where the text carries CJK and whitespace-separated words otherwise,
+- Then all three MUST pass: the cap binds only above it, and neither unit has a lower bound.
+- And over the cap the error text MUST name (a) the count form measured (words or characters), (b) the cap, (c) the actual count.
 
 ## AC-0012-0058: `browserTool` accepts `"playwright"` and `"playwright-cli"`
 
@@ -376,7 +376,7 @@
 - Given a converged `iterate` invocation,
 - When `iterate` writes `prototyping.json`,
 - Then `iterations[i]` MUST carry non-null `commitSha` (sentinel `"uncommitted"` permitted), non-empty `proseCritique`, `scores`, `layoutAntiPatternsDetected`, `designMdViolations`, `pivotDirective`, `reviewerId`, AND `evidenceRefs[]` with one entry per `screens[].id`.
-- And on convergence the top-level MUST carry `acceptedIterationIndex` AND `stopReason ∈ {"axes-exceptional", "max-iterations", "license-verify-fail", "input-error"}`.
+- And on convergence the top-level MUST carry `acceptedIterationIndex` AND `stopReason ∈ {"converged", "max-iterations", "license-verify-fail", "input-error"}`.
 - And `qfai validate --profile prototyping --fail-on error` MUST PASS without orchestrator post-processing.
 
 ## AC-0012-0062: Self-completable certify via verify.json#scope (OQ-0107 Option B)
@@ -422,7 +422,7 @@
 - REQ-Refs: REQ-0012-0068
 - Given a non-converged cycle,
 - When `iterate` emits its cycle-end summary,
-- Then stdout MUST contain a one-screen `[BLOCKED]` line naming the top-3 categories (`designMdViolations` / `layoutAntiPatternsDetected` / `axes-below-exceptional`) with concrete counts AND first-offender details (e.g. `color=#fff at iter-NN/scr_001.html:97`, `lap-002`, `aesthetics: passing`).
+- Then stdout MUST contain a one-screen `[BLOCKED]` line naming the top-3 categories (`designMdViolations` / `layoutAntiPatternsDetected` / `blockingFindings`) with concrete counts AND first-offender details (e.g. `color=#fff at iter-NN/scr_001.html:97`, `lap-008-no-back-affordance`, the first line the reviewer wrote).
 - And category names MUST be stable identifiers — additive only across versions.
 
 ## AC-0012-0067: `primarySpecId` error text + (SHOULD) input normalisation
@@ -513,7 +513,7 @@
 - When iterate resolves the effective mode,
 - Then `--mode` MUST override the config value; absence of both MUST default to `convergence` (backwards-compatible).
 - And `prototyping.json#mode` MUST record the per-iteration mode.
-- And under `mode: exploration`, `QFAI-CRIT-008` (axes-exceptional) AND the design-compliance error MUST downgrade error → warning while structural / schema / path / license (exit 66) gates remain hard error (medium relaxation per DR-0263).
+- And under `mode: exploration`, `QFAI-CRIT-008` (convergence) AND the design-compliance error MUST downgrade error → warning while structural / schema / path / license (exit 66) gates remain hard error (medium relaxation per DR-0263).
 
 ## AC-0012-0077: Certify rejects exploration-mode iterations (DR-0263)
 

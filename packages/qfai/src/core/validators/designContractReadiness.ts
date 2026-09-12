@@ -60,9 +60,7 @@ function toPosixRelative(root: string, targetPath: string): string {
 }
 
 type YamlReadResult =
-  | { kind: "missing" }
-  | { kind: "invalid" }
-  | { kind: "ok"; value: Record<string, unknown> };
+  { kind: "missing" } | { kind: "invalid" } | { kind: "ok"; value: Record<string, unknown> };
 
 export async function validateSddDesignContractReadiness(
   root: string,
@@ -77,13 +75,12 @@ export async function validateSddDesignContractReadiness(
 /**
  * Whether the root DESIGN.md parses — and nothing else.
  *
- * Split out because the stage that AUTHORS the file could not see whether it
- * parses. `qfai-discussion` mandates a parsable root DESIGN.md and prescribes
- * `--profile discussion`, whose validators read discussion packs, mermaid,
- * visuals, research summaries and review artifacts — none of them DESIGN.md.
- * `QFAI-DCON-033` reached a run only through the sdd or prototyping readiness
- * gates, so a malformed file surfaced a review round later, under a different
- * skill, with the earlier gate having passed.
+ * Split out so a malformed file is reported where it is read, not only where
+ * it is frozen. `--profile discussion` runs validators over discussion packs,
+ * mermaid, visuals, research summaries and review artifacts — none of them
+ * DESIGN.md — and `QFAI-DCON-033` reached a run only through the sdd or
+ * prototyping readiness gates, so a malformed file surfaced a review round
+ * later, under a different skill, with the earlier gate having passed.
  *
  * The parse half only. The readiness validator also compares DESIGN.md against
  * its lock, requires UI contracts and rejects premature ones — all of which
@@ -92,8 +89,8 @@ export async function validateSddDesignContractReadiness(
  * hash" are different failures with different owners, which is why this is a
  * separate entry point rather than a flag on the existing one.
  *
- * Silent when the file is absent: `QFAI-DCON-030` owns missing-file, and a
- * discussion run happens before the file necessarily exists.
+ * Silent when the file is absent: `QFAI-DCON-030` owns missing-file, and
+ * `/qfai-sdd` Phase 0 is where the file gets written.
  */
 export async function validateRootDesignMdParse(root: string): Promise<Issue[]> {
   let text: string;
@@ -161,10 +158,10 @@ async function validateDesignContractReadinessForStage(
   const uiBearingSpecs = await scanUiBearingSpecs(root, config);
   const uiBearing = hasUiContracts || (uiBearingSpecs.ok && uiBearingSpecs.specIds.length > 0);
   // `cli` is discussion UI-bearing but is NOT a visual-prototyping surface:
-  // `/qfai-discussion` authors no root DESIGN.md for a cli-only pack and
-  // `/qfai-prototyping` rejects `cli`, so the `visual.*` token tree has no
-  // reader at all. Demanding the brand SSOT here would re-block a pack the
-  // discussion skill deliberately exempted.
+  // a cli-only pack gets no root DESIGN.md — `/qfai-sdd` Phase 0 skips the
+  // freeze for it — and `/qfai-prototyping` rejects `cli`, so the `visual.*`
+  // token tree has no reader at all. Demanding the brand SSOT here would
+  // re-block a pack the pipeline deliberately exempted.
   //
   // `uiBearing` above is repo-wide, so the carve-out must be too: it is
   // withdrawn unless EVERY classification this repo's UI-bearing specs are
@@ -427,11 +424,11 @@ async function readSpecProvenancePackDirs(
  * `web` / `mobile` / `desktop` / `mixed` entry in `secondary_surfaces`.
  *
  * `cli` is discussion UI-bearing, so it reaches every gate in this file, but
- * it is not a visual-prototyping surface: `/qfai-discussion` deliberately
+ * it is not a visual-prototyping surface: `/qfai-sdd` Phase 0 deliberately
  * authors no root DESIGN.md for such a pack and `/qfai-prototyping` rejects
  * `cli`, leaving the `visual.*` token tree with no reader. Without this the
- * DESIGN.md requirement the discussion skill dropped would simply reappear as
- * a hard `qfai validate --profile sdd` error.
+ * DESIGN.md requirement Phase 0 dropped would simply reappear as a hard
+ * `qfai validate --profile sdd` error.
  *
  * Each classification is read from a pack's `01_Context.md` via the strict
  * validated reader, so a malformed or contradictory block (which
@@ -462,7 +459,7 @@ async function isCliOnlySurfaceProject(
 }
 
 async function isCliOnlyPack(packDir: string): Promise<boolean> {
-  let classification: UiBearingClassification | null = null;
+  let classification: UiBearingClassification | null;
   try {
     classification = await readValidatedClassification(packDir);
   } catch {
@@ -497,7 +494,7 @@ async function isCliOnlyPack(packDir: string): Promise<boolean> {
  * `.qfai/assistant/skills/qfai-prototyping/templates/DESIGN.md.sample` as a
  * starting point, or
  * seeded by a release back when `qfai init` wrote one. Init writes none
- * now — `/qfai-discussion` emits the draft, and only for a
+ * now — `/qfai-sdd` Phase 0 authors it, and only for a
  * visual-prototyping surface — so this gate no longer reports a file the
  * tool itself had just written.
  *
@@ -539,7 +536,7 @@ async function validateRootDesignMdSample(root: string, uiBearing: boolean): Pro
       "designContractReadiness.rootDesignMdSample",
       undefined,
       "canonical",
-      "Replace root DESIGN.md with this product's brand SSOT (run /qfai-discussion, which emits the draft, or author it from `.qfai/assistant/skills/qfai-prototyping/templates/DESIGN.md.sample`) and delete the sample marker comment if present. Do this BEFORE /qfai-sdd Phase 0 freezes its sha256.",
+      "Replace root DESIGN.md with this product's brand SSOT (run /qfai-sdd, whose Phase 0 authors it from the design direction the discussion pack recorded, or author it from `.qfai/assistant/skills/qfai-prototyping/templates/DESIGN.md.sample`) and delete the sample marker comment if present. Phase 0 refuses to freeze a sample.",
     ),
   ];
 }
@@ -576,7 +573,7 @@ async function validateRootDesignMdAndLock(
         "designContractReadiness.rootDesignMd",
         undefined,
         "canonical",
-        "Create root DESIGN.md from the project root with the canonical front-matter (see qfai-discussion / qfai-sdd skills).",
+        "Create root DESIGN.md at the project root with the canonical front-matter, or run /qfai-sdd, whose Phase 0 authors it (see the qfai-sdd skill).",
       ),
     );
   }
@@ -802,9 +799,11 @@ async function validateDesignSystem(
   // until they regenerate their design-system.yaml from the new mirror.
   const checklist = parsed.value.checklist;
   for (const key of REQUIRED_DESIGN_SYSTEM_CHECKLIST_KEYS) {
-    if (
-      !(checklist && typeof checklist === "object" && key in (checklist as Record<string, unknown>))
-    ) {
+    if (!(
+      checklist &&
+      typeof checklist === "object" &&
+      key in (checklist as Record<string, unknown>)
+    )) {
       issues.push(
         issue(
           "QFAI-DCON-005",

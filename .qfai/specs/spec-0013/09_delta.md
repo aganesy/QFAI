@@ -1,9 +1,5 @@
 # 09 Delta (Migration Record)
 
-<!-- markdownlint-disable MD024 -->
-<!-- Each round records its own `## Triage`, and the triage rules read a section
-     only under that exact heading, so the repeated heading is the shape. -->
-
 ## Origin
 
 - Consolidates: old spec-0011 (Spec Diff Protocol), spec-0038 (Auto-Discovery)
@@ -54,7 +50,7 @@
 
 ## v1.8.1 (2026-04-22) — Preflight Side Artifact Neutrality
 
-- updated: REQ-0014~0015 / US-0013-0008 / AC-0013-0008~0010 を current implementation に再同期
+- updated: REQ-0014~~0015 / US-0013-0008 / AC-0013-0008~~0010 を current implementation に再同期
 - removed: prototyping.yaml 必須 preflight blocker 前提
 - rationale: `packages/qfai/src/core/discussionPack.ts` が side artifact requiredness を廃止し、`packages/qfai/src/core/preflight/sddPreflight.ts` は markdown readiness を主 blocker として扱うため
 
@@ -73,7 +69,7 @@
 - Approved By: yusuke_senaga
 - Notes: subjects originated from former spec-0017 (Prototyping v2.0 / UX-loop redesign decomposition). Validator-side enforcement of the lock and mirror invariants is owned by spec-0004; this spec only declares Phase 0 emission semantics.
 
-## Triage
+## Triage (CHG-001)
 
 | Source                                                                         | Subject                                                                                                                                                       | Existing Spec | Operation | Sub-op | Approved By | Rationale                                                                |
 | ------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------- | --------- | ------ | ----------- | ------------------------------------------------------------------------ |
@@ -94,7 +90,7 @@
 - Posture: additive append; preserves existing AC/BR/EX/TC numbering. NFR-0110 (testability of scanner + countWords as pure functions) naturally pairs with spec-0012 for the function-purity side; spec-0013's piece is the UI contract template `primary_tasks:` slot + the new validate lane gating `/qfai-prototyping`.
 - Approved By: yusuke_senaga
 
-## Triage
+## Triage (CHG-005)
 
 Rows owned by this spec.
 

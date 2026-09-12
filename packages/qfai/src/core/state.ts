@@ -592,9 +592,7 @@ export async function writeStateFile(root: string, state: Record<string, unknown
  * selected, which is how a stale/broken pointer silently drops a gate.
  */
 export type DiscussionCurrentIdRead =
-  | { kind: "set"; currentId: string }
-  | { kind: "unset" }
-  | { kind: "corrupt"; detail: string };
+  { kind: "set"; currentId: string } | { kind: "unset" } | { kind: "corrupt"; detail: string };
 
 /**
  * Read `discussion.currentId` from `.qfai/state.json`, discriminating
@@ -669,8 +667,7 @@ export async function readDiscussionCurrentId(root: string): Promise<string | nu
  * wrong shape.
  */
 export type DiscussionPointerRead =
-  | { ok: true; currentId: string | null }
-  | { ok: false; reason: string };
+  { ok: true; currentId: string | null } | { ok: false; reason: string };
 
 export async function readDiscussionPointer(root: string): Promise<DiscussionPointerRead> {
   // Ported to the `loadState` discriminated result main replaced
@@ -985,7 +982,9 @@ async function acquireStateLock(lockPath: string): Promise<StateLock> {
       handle = await open(lockPath, "wx");
     } catch (error) {
       if (!(await exclusiveCreateWasContended(lockPath, error))) {
-        throw new Error(`qfai: cannot create state lock ${lockPath}: ${describeError(error)}`);
+        throw new Error(`qfai: cannot create state lock ${lockPath}: ${describeError(error)}`, {
+          cause: error,
+        });
       }
       contendedBy = errorCode(error) === "EEXIST" ? null : error;
     }
@@ -1087,7 +1086,9 @@ async function stampLockOwner(
     await handle.writeFile(`${JSON.stringify(owner)}\n`, "utf-8");
   } catch (error) {
     await releaseStateLock(lockPath, lock);
-    throw new Error(`qfai: cannot stamp state lock ${lockPath}: ${describeError(error)}`);
+    throw new Error(`qfai: cannot stamp state lock ${lockPath}: ${describeError(error)}`, {
+      cause: error,
+    });
   }
   return lock;
 }

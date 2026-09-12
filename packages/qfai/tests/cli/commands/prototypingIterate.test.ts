@@ -127,12 +127,7 @@ async function seedPrototypingJson(
   root: string,
   iterations: Array<{
     index: number;
-    scores: {
-      informationArchitecture: string;
-      navigationFlow: string;
-      usability: string;
-      functionality: string;
-    };
+    blockingFindings: string[];
     layoutAntiPatternsDetected?: string[];
     designMdViolations?: Array<{ kind: string; found: string }>;
   }>,
@@ -162,7 +157,7 @@ async function seedPrototypingJson(
     iterations: iterations.map((it) => ({
       index: it.index,
       commitSha: "a".repeat(40),
-      scores: it.scores,
+      blockingFindings: it.blockingFindings,
       proseCritique: "x".repeat(1500),
       layoutAntiPatternsDetected: it.layoutAntiPatternsDetected ?? [],
       designMdViolations: it.designMdViolations ?? [],
@@ -234,18 +229,13 @@ describe("runPrototypingIterate cycle 0", () => {
 
 // QFAI:SPEC-0012:TC-0012-0324
 describe("runPrototypingIterate convergence (exit 64)", () => {
-  it("returns 64 when latest iter has all 4 axes exceptional and no anti-patterns", async () => {
+  it("returns 64 when the latest iter has nothing open and no anti-patterns", async () => {
     const root = await newTempDir();
     await seedMinimalProject(root);
     await seedPrototypingJson(root, [
       {
         index: 0,
-        scores: {
-          informationArchitecture: "exceptional",
-          navigationFlow: "exceptional",
-          usability: "exceptional",
-          functionality: "exceptional",
-        },
+        blockingFindings: [],
         layoutAntiPatternsDetected: [],
         designMdViolations: [],
       },
@@ -264,17 +254,12 @@ describe("runPrototypingIterate convergence (exit 64)", () => {
     // present.
     const root = await newTempDir();
     await seedMinimalProject(root);
-    const allExceptional = {
-      informationArchitecture: "exceptional",
-      navigationFlow: "exceptional",
-      usability: "exceptional",
-      functionality: "exceptional",
-    };
-    // 10 iterations (index 0..9) all reporting axes-exceptional with
+
+    // 10 iterations (index 0..9) all reporting converged with
     // empty dmv. Last one at index 9 is the budget-exhausted candidate.
     const iters = Array.from({ length: 10 }, (_, i) => ({
       index: i,
-      scores: allExceptional,
+      blockingFindings: [],
       layoutAntiPatternsDetected: [],
       designMdViolations: [],
     }));
@@ -287,7 +272,7 @@ describe("runPrototypingIterate convergence (exit 64)", () => {
       '<div class="bg-[#abcdef]">drift</div>',
       "utf-8",
     );
-    // Even though shouldStop says axes-exceptional, the recompute finds
+    // Even though shouldStop says converged, the recompute finds
     // drift; with index 9 we cannot continue, so we return 65 (max-iter).
     // (cycle 10 would fail the cycle-input gate; 9 is the highest
     // valid input and shouldStop short-circuits before the cycle-gap
@@ -296,26 +281,21 @@ describe("runPrototypingIterate convergence (exit 64)", () => {
     expect(exit).toBe(65);
   });
 
-  it("does NOT exit 64 when accepted iter HTML still has DESIGN.md drift, even with all-exceptional scores + dmv:[]", async () => {
+  it("does NOT exit 64 when accepted iter HTML still has DESIGN.md drift, even with nothing open + dmv:[]", async () => {
     // The shipped reviewer prompt instructs reviewers to leave
     // designMdViolations empty unless a runtime gate injects findings,
     // and the runtime scanner historically lived in certify only. Pre-
     // fix, a prototype with DESIGN.md drift could converge here ('all 4
     // axes exceptional + dmv:[]'), exit 64, and only fail later at
     // certification. Post-fix, iterate re-runs findDesignMdViolations
-    // against the accepted iter HTML before honoring 'axes-exceptional'
+    // against the accepted iter HTML before honoring 'converged'
     // and falls through to the next-cycle plan when drift is found.
     const root = await newTempDir();
     await seedMinimalProject(root);
     await seedPrototypingJson(root, [
       {
         index: 0,
-        scores: {
-          informationArchitecture: "exceptional",
-          navigationFlow: "exceptional",
-          usability: "exceptional",
-          functionality: "exceptional",
-        },
+        blockingFindings: [],
         layoutAntiPatternsDetected: [],
         designMdViolations: [],
       },
@@ -334,7 +314,7 @@ describe("runPrototypingIterate convergence (exit 64)", () => {
     expect(exit).toBe(0);
   });
 
-  it("does NOT exit 64 when a layout anti-pattern is present even with all-exceptional scores", async () => {
+  it("does NOT exit 64 when a layout anti-pattern is present even with nothing else open", async () => {
     const root = await newTempDir();
     await seedMinimalProject(root);
     // Note: invariant-violating fixture intentionally bypasses
@@ -342,13 +322,8 @@ describe("runPrototypingIterate convergence (exit 64)", () => {
     await seedPrototypingJson(root, [
       {
         index: 0,
-        scores: {
-          informationArchitecture: "exceptional",
-          navigationFlow: "exceptional",
-          usability: "exceptional",
-          functionality: "exceptional",
-        },
-        layoutAntiPatternsDetected: ["lap-001-saas-dashboard"],
+        blockingFindings: [],
+        layoutAntiPatternsDetected: ["lap-008-no-back-affordance"],
         designMdViolations: [],
       },
     ]);
@@ -365,12 +340,7 @@ describe("runPrototypingIterate max-iterations (exit 65)", () => {
     await seedMinimalProject(root);
     const iterations = Array.from({ length: 10 }, (_, i) => ({
       index: i,
-      scores: {
-        informationArchitecture: "acceptable",
-        navigationFlow: "acceptable",
-        usability: "acceptable",
-        functionality: "acceptable",
-      },
+      blockingFindings: ["home: the empty state is not represented"],
     }));
     await seedPrototypingJson(root, iterations);
 
@@ -388,32 +358,27 @@ describe("runPrototypingIterate max-iterations (exit 65)", () => {
     // test below in the "continue (exit 0)" describe block. This test
     // explicitly pins BOTH halves under the TC-0012-0358 annotation so a
     // future regression in either direction is captured by spec lineage.
-    const acceptable = {
-      informationArchitecture: "acceptable",
-      navigationFlow: "acceptable",
-      usability: "acceptable",
-      functionality: "acceptable",
-    };
+
     // Half 1: latest iter index === 9 (10 entries, indices 0..9) → exit 65.
     {
       const root = await newTempDir();
       await seedMinimalProject(root);
       const iterations = Array.from({ length: 10 }, (_, i) => ({
         index: i,
-        scores: acceptable,
+        blockingFindings: ["home: the empty state is not represented"],
       }));
       await seedPrototypingJson(root, iterations);
       const exit = await runPrototypingIterate({ root, cycle: 9 });
       expect(exit).toBe(65);
     }
     // Half 2: latest iter index === 8 (9 entries, indices 0..8), no
-    // convergence (acceptable scores), cycle 9 → exit 0 (continue).
+    // convergence (a finding is open), cycle 9 → exit 0 (continue).
     {
       const root = await newTempDir();
       await seedMinimalProject(root);
       const iterations = Array.from({ length: 9 }, (_, i) => ({
         index: i,
-        scores: acceptable,
+        blockingFindings: ["home: the empty state is not represented"],
       }));
       await seedPrototypingJson(root, iterations);
       const exit = await runPrototypingIterate({ root, cycle: 9 });
@@ -435,15 +400,10 @@ describe("runPrototypingIterate max-iterations (exit 65)", () => {
     // manifest as `candidates/<n>/...` siblings to `iter-NN/`.)
     const root = await newTempDir();
     await seedMinimalProject(root);
-    const acceptable = {
-      informationArchitecture: "acceptable",
-      navigationFlow: "acceptable",
-      usability: "acceptable",
-      functionality: "acceptable",
-    };
+
     const iterations = Array.from({ length: 10 }, (_, i) => ({
       index: i,
-      scores: acceptable,
+      blockingFindings: ["home: the empty state is not represented"],
     }));
     await seedPrototypingJson(root, iterations);
     const exit = await runPrototypingIterate({ root, cycle: 9 });
@@ -486,19 +446,14 @@ describe("runPrototypingIterate max-iterations (exit 65)", () => {
   it("TC-0012-0416 (TDD-0436): --cycle 9 on iterations.length === 10 non-converged → exit 65 directly (no cycle-mismatch path)", async () => {
     const root = await newTempDir();
     await seedMinimalProject(root);
-    // Non-converged 10-iter lineage: every iter "acceptable" (not all four
-    // axes "exceptional"), indices 0..9. shouldStop returns
+    // Non-converged 10-iter lineage: every iter has a finding open,
+    // indices 0..9. shouldStop returns
     // "max-iterations" because last.index === 9 (>= MAX_ITERATION_INDEX),
-    // not because axes-exceptional fired.
-    const acceptable = {
-      informationArchitecture: "acceptable",
-      navigationFlow: "acceptable",
-      usability: "acceptable",
-      functionality: "acceptable",
-    };
+    // not because converged fired.
+
     const iterations = Array.from({ length: 10 }, (_, i) => ({
       index: i,
-      scores: acceptable,
+      blockingFindings: ["home: the empty state is not represented"],
     }));
     await seedPrototypingJson(root, iterations);
 
@@ -590,18 +545,13 @@ describe("runPrototypingIterate input validation", () => {
 });
 
 describe("runPrototypingIterate continue (exit 0)", () => {
-  it("returns 0 at cycle 1 when prior iter is acceptable (no convergence, not at max)", async () => {
+  it("returns 0 at cycle 1 when the prior iter has a finding open (no convergence, not at max)", async () => {
     const root = await newTempDir();
     await seedMinimalProject(root);
     await seedPrototypingJson(root, [
       {
         index: 0,
-        scores: {
-          informationArchitecture: "acceptable",
-          navigationFlow: "acceptable",
-          usability: "acceptable",
-          functionality: "acceptable",
-        },
+        blockingFindings: ["home: the empty state is not represented"],
       },
     ]);
 
@@ -659,12 +609,7 @@ describe("runPrototypingIterate continue (exit 0)", () => {
     // capture/review is recorded in iterations[]).
     const seededIterations = Array.from({ length: 9 }, (_, i) => ({
       index: i,
-      scores: {
-        informationArchitecture: "acceptable",
-        navigationFlow: "acceptable",
-        usability: "acceptable",
-        functionality: "acceptable",
-      },
+      blockingFindings: ["home: the empty state is not represented"],
     }));
     await seedPrototypingJson(root, seededIterations);
 
@@ -801,12 +746,7 @@ describe("runPrototypingIterate cycle 0 DESIGN.md ingestion (TC-3.5.x)", () => {
     await seedPrototypingJson(root, [
       {
         index: 0,
-        scores: {
-          informationArchitecture: "acceptable",
-          navigationFlow: "acceptable",
-          usability: "acceptable",
-          functionality: "acceptable",
-        },
+        blockingFindings: ["home: the empty state is not represented"],
       },
     ]);
     expect(await runPrototypingIterate({ root, cycle: 1 })).toBe(0);
@@ -826,12 +766,7 @@ describe("runPrototypingIterate cycle N hash gate (TC-3.5.x)", () => {
     await seedPrototypingJson(root, [
       {
         index: 0,
-        scores: {
-          informationArchitecture: "acceptable",
-          navigationFlow: "acceptable",
-          usability: "acceptable",
-          functionality: "acceptable",
-        },
+        blockingFindings: ["home: the empty state is not represented"],
       },
     ]);
     expect(await runPrototypingIterate({ root, cycle: 1 })).toBe(0);
@@ -845,12 +780,7 @@ describe("runPrototypingIterate cycle N hash gate (TC-3.5.x)", () => {
       [
         {
           index: 0,
-          scores: {
-            informationArchitecture: "acceptable",
-            navigationFlow: "acceptable",
-            usability: "acceptable",
-            functionality: "acceptable",
-          },
+          blockingFindings: ["home: the empty state is not represented"],
         },
       ],
       { designMd: { path: "DESIGN.md", sha256: "0".repeat(64) } },
@@ -866,12 +796,7 @@ describe("runPrototypingIterate cycle N hash gate (TC-3.5.x)", () => {
       [
         {
           index: 0,
-          scores: {
-            informationArchitecture: "acceptable",
-            navigationFlow: "acceptable",
-            usability: "acceptable",
-            functionality: "acceptable",
-          },
+          blockingFindings: ["home: the empty state is not represented"],
         },
       ],
       { designMd: null },
@@ -885,12 +810,7 @@ describe("runPrototypingIterate cycle N hash gate (TC-3.5.x)", () => {
     await seedPrototypingJson(root, [
       {
         index: 0,
-        scores: {
-          informationArchitecture: "acceptable",
-          navigationFlow: "acceptable",
-          usability: "acceptable",
-          functionality: "acceptable",
-        },
+        blockingFindings: ["home: the empty state is not represented"],
       },
     ]);
     // Rewrite DESIGN.md with CRLF — same logical content, different bytes.
@@ -915,33 +835,18 @@ describe("runPrototypingIterate cycle N hash gate (TC-3.5.x)", () => {
     await seedPrototypingJson(root, [
       {
         index: 0,
-        scores: {
-          informationArchitecture: "acceptable",
-          navigationFlow: "acceptable",
-          usability: "acceptable",
-          functionality: "acceptable",
-        },
+        blockingFindings: ["home: the empty state is not represented"],
       },
     ]);
     expect(await runPrototypingIterate({ root, cycle: 1 })).toBe(0);
     await seedPrototypingJson(root, [
       {
         index: 0,
-        scores: {
-          informationArchitecture: "acceptable",
-          navigationFlow: "acceptable",
-          usability: "acceptable",
-          functionality: "acceptable",
-        },
+        blockingFindings: ["home: the empty state is not represented"],
       },
       {
         index: 1,
-        scores: {
-          informationArchitecture: "strong",
-          navigationFlow: "strong",
-          usability: "strong",
-          functionality: "strong",
-        },
+        blockingFindings: ["home: the empty state is not represented"],
       },
     ]);
     expect(await runPrototypingIterate({ root, cycle: 2 })).toBe(0);
@@ -1082,12 +987,7 @@ describe("runPrototypingIterate cycle N hash gate (TC-3.5.x)", () => {
     await seedPrototypingJson(root, [
       {
         index: 0,
-        scores: {
-          informationArchitecture: "acceptable",
-          navigationFlow: "acceptable",
-          usability: "acceptable",
-          functionality: "acceptable",
-        },
+        blockingFindings: ["home: the empty state is not represented"],
       },
     ]);
     // iterations.length === 1, expected next cycle === 1, but call cycle 3.
@@ -1112,8 +1012,8 @@ describe("runPrototypingIterate cycle 0 hard reset", () => {
     await seedMinimalProject(root);
     await seedRawPrototypingJson(root, {
       iterations: [
-        { index: 0, scores: { informationArchitecture: "exceptional" } },
-        { index: 1, scores: { informationArchitecture: "strong" } },
+        { index: 0, blockingFindings: [] },
+        { index: 1, blockingFindings: ["stale"] },
       ],
       runId: "stale-prior-run",
       designMd: { path: "DESIGN.md", sha256: hashDesignMd(CANONICAL_DESIGN_MD) },
@@ -1129,7 +1029,7 @@ describe("runPrototypingIterate cycle 0 hard reset", () => {
     const body = await readProtoJson(root);
     expect(body.iterations).toHaveLength(1);
     expect(body.iterations[0].index).toBe(0);
-    expect(body.iterations[0].scores.informationArchitecture).toBe("weak");
+    expect(body.iterations[0].blockingFindings).toEqual(["Awaiting the first review."]);
   });
 
   it("re-seeds acceptedIterationIndex / stopReason and deletes reviewerGate / fullHarness / executionPlan on cycle 0", async () => {
@@ -1139,7 +1039,7 @@ describe("runPrototypingIterate cycle 0 hard reset", () => {
       iterations: [{ index: 0 }],
       reviewerGate: { result: "PASS", signoff: { reviewerId: "stale" } },
       acceptedIterationIndex: 0,
-      stopReason: "axes-exceptional",
+      stopReason: "converged",
       fullHarness: {
         runId: "legacy-prior-run",
         status: "complete",
@@ -1486,12 +1386,7 @@ describe("runPrototypingIterate cycle >= 1 lock drift stderr (TC-0012-0373)", ()
       [
         {
           index: 0,
-          scores: {
-            informationArchitecture: "acceptable",
-            navigationFlow: "acceptable",
-            usability: "acceptable",
-            functionality: "acceptable",
-          },
+          blockingFindings: ["home: the empty state is not represented"],
         },
       ],
       // Cycle-0-recorded sha256 set to a value that cannot match the
@@ -1631,12 +1526,7 @@ describe("runPrototypingIterate autonomous run (TC-0012-0375)", () => {
       await seedPrototypingJson(root1, [
         {
           index: 0,
-          scores: {
-            informationArchitecture: "acceptable",
-            navigationFlow: "acceptable",
-            usability: "acceptable",
-            functionality: "acceptable",
-          },
+          blockingFindings: ["home: the empty state is not represented"],
         },
       ]);
       const exit1 = await runPrototypingIterate({ root: root1, cycle: 1 });
@@ -1645,15 +1535,10 @@ describe("runPrototypingIterate autonomous run (TC-0012-0375)", () => {
       // Cycle 9 with 10 prior iters — max-iterations terminator (65).
       const root9 = await newTempDir();
       await seedMinimalProject(root9);
-      const acceptable = {
-        informationArchitecture: "acceptable",
-        navigationFlow: "acceptable",
-        usability: "acceptable",
-        functionality: "acceptable",
-      };
+
       const iters = Array.from({ length: 10 }, (_, i) => ({
         index: i,
-        scores: acceptable,
+        blockingFindings: ["home: the empty state is not represented"],
       }));
       await seedPrototypingJson(root9, iters);
       const exit9 = await runPrototypingIterate({ root: root9, cycle: 9 });
@@ -1750,12 +1635,7 @@ describe("runPrototypingIterate license verify hard-stop (TC-0012-0371)", () => 
     await seedPrototypingJson(root, [
       {
         index: 0,
-        scores: {
-          informationArchitecture: "acceptable",
-          navigationFlow: "acceptable",
-          usability: "acceptable",
-          functionality: "acceptable",
-        },
+        blockingFindings: ["home: the empty state is not represented"],
       },
     ]);
     // Inject a non-allowlisted image source ("pinterest") into the
@@ -1810,12 +1690,7 @@ describe("runPrototypingIterate license verify hard-stop (TC-0012-0371)", () => 
     await seedPrototypingJson(root, [
       {
         index: 0,
-        scores: {
-          informationArchitecture: "acceptable",
-          navigationFlow: "acceptable",
-          usability: "acceptable",
-          functionality: "acceptable",
-        },
+        blockingFindings: ["home: the empty state is not represented"],
       },
     ]);
     const protoJsonPath = path.join(root, ".qfai/evidence/prototyping/prototyping.json");
@@ -1865,12 +1740,7 @@ describe("runPrototypingIterate license verify hard-stop (TC-0012-0371)", () => 
     await seedPrototypingJson(root, [
       {
         index: 0,
-        scores: {
-          informationArchitecture: "acceptable",
-          navigationFlow: "acceptable",
-          usability: "acceptable",
-          functionality: "acceptable",
-        },
+        blockingFindings: ["home: the empty state is not represented"],
       },
     ]);
     const protoJsonPath = path.join(root, ".qfai/evidence/prototyping/prototyping.json");
@@ -1948,12 +1818,7 @@ describe("runPrototypingIterate cycle >= 1 spec-set drift (TC-0012-0385)", () =>
     await seedPrototypingJson(root, [
       {
         index: 0,
-        scores: {
-          informationArchitecture: "acceptable",
-          navigationFlow: "acceptable",
-          usability: "acceptable",
-          functionality: "acceptable",
-        },
+        blockingFindings: ["home: the empty state is not represented"],
       },
     ]);
     const protoJsonPath = path.join(root, ".qfai/evidence/prototyping/prototyping.json");
@@ -2704,12 +2569,7 @@ describe("runPrototypingIterate cycle >= 1 spec-set drift — new larger-id seco
     await seedPrototypingJson(root, [
       {
         index: 0,
-        scores: {
-          informationArchitecture: "acceptable",
-          navigationFlow: "acceptable",
-          usability: "acceptable",
-          functionality: "acceptable",
-        },
+        blockingFindings: ["home: the empty state is not represented"],
       },
     ]);
     const protoJsonPath = path.join(root, ".qfai/evidence/prototyping/prototyping.json");
@@ -2779,12 +2639,7 @@ describe("runPrototypingIterate cycle >= 1 spec-set drift — multi-UI-bearing b
     await seedPrototypingJson(root, [
       {
         index: 0,
-        scores: {
-          informationArchitecture: "acceptable",
-          navigationFlow: "acceptable",
-          usability: "acceptable",
-          functionality: "acceptable",
-        },
+        blockingFindings: ["home: the empty state is not represented"],
       },
     ]);
     const protoJsonPath = path.join(root, ".qfai/evidence/prototyping/prototyping.json");
@@ -3005,12 +2860,7 @@ describe("runPrototypingIterate cycle >= 1 — malformed imageSources hard-stop 
     await seedPrototypingJson(root, [
       {
         index: 0,
-        scores: {
-          informationArchitecture: "acceptable",
-          navigationFlow: "acceptable",
-          usability: "acceptable",
-          functionality: "acceptable",
-        },
+        blockingFindings: ["home: the empty state is not represented"],
       },
     ]);
     const protoJsonPath = path.join(root, ".qfai/evidence/prototyping/prototyping.json");
@@ -3061,12 +2911,7 @@ describe("runPrototypingIterate cycle >= 1 — malformed imageSources hard-stop 
     await seedPrototypingJson(root, [
       {
         index: 0,
-        scores: {
-          informationArchitecture: "acceptable",
-          navigationFlow: "acceptable",
-          usability: "acceptable",
-          functionality: "acceptable",
-        },
+        blockingFindings: ["home: the empty state is not represented"],
       },
     ]);
     const protoJsonPath = path.join(root, ".qfai/evidence/prototyping/prototyping.json");
@@ -3235,7 +3080,7 @@ describe("runPrototypingIterate cycle >= 1 — drift gates run before shouldStop
     // ["0001", "0002"]; live `resolveSurfaceUnion` returns ["0001"]
     // only. The recorded iter is fully converged (axes exceptional +
     // no lap + no dmv) so `shouldStop` would return
-    // "axes-exceptional" if the drift gate ran AFTER it (the pre-29th
+    // "converged" if the drift gate ran AFTER it (the pre-29th
     // ordering). Post-29th the drift gate runs first → exit 2.
     await seedMinimalProject(root);
     // spec-0001 stays UI-bearing (from seedMinimalProject). spec-0002
@@ -3271,12 +3116,7 @@ describe("runPrototypingIterate cycle >= 1 — drift gates run before shouldStop
           {
             index: 0,
             commitSha: "a".repeat(40),
-            scores: {
-              informationArchitecture: "exceptional",
-              navigationFlow: "exceptional",
-              usability: "exceptional",
-              functionality: "exceptional",
-            },
+            blockingFindings: [],
             proseCritique: "x".repeat(1500),
             layoutAntiPatternsDetected: [],
             designMdViolations: [],
@@ -3315,7 +3155,7 @@ describe("runPrototypingIterate cycle >= 1 — drift gates run before shouldStop
     // first `it` block above pins (2). Without this second `it` a
     // future refactor that re-orders only (1) back behind `shouldStop`
     // would silently regress: a converged loop with a missing
-    // `frozenSurfaceUnion` would then return exit 64 (axes-exceptional)
+    // `frozenSurfaceUnion` would then return exit 64 (converged)
     // instead of the documented exit 2 lock-drift. Fixture mirrors the
     // first test but OMITS `frozenSurfaceUnion` from prototyping.json.
     const root = await newTempDir();
@@ -3343,12 +3183,7 @@ describe("runPrototypingIterate cycle >= 1 — drift gates run before shouldStop
           {
             index: 0,
             commitSha: "a".repeat(40),
-            scores: {
-              informationArchitecture: "exceptional",
-              navigationFlow: "exceptional",
-              usability: "exceptional",
-              functionality: "exceptional",
-            },
+            blockingFindings: [],
             proseCritique: "x".repeat(1500),
             layoutAntiPatternsDetected: [],
             designMdViolations: [],
@@ -3421,7 +3256,7 @@ describe("runPrototypingIterate sealed-loop guard", () => {
 
   it("refuses a cycle past the accepted index on a converged loop", async () => {
     const root = await newTempDir();
-    await seedSealedLoop(root, "axes-exceptional");
+    await seedSealedLoop(root, "converged");
 
     const logger = await import("../../../src/cli/lib/logger.js");
     const errorSpy = vi.spyOn(logger, "error").mockImplementation(() => {});
@@ -3475,7 +3310,7 @@ describe("runPrototypingIterate sealed-loop guard", () => {
       designMd: { path: "DESIGN.md", sha256: hashDesignMd(CANONICAL_DESIGN_MD) },
       iterations: [{ index: 0 }],
       acceptedIterationIndex: -1,
-      stopReason: "axes-exceptional",
+      stopReason: "converged",
     });
 
     const messages = (await refusalMessages(root, 0)).join("\n");
@@ -3486,14 +3321,14 @@ describe("runPrototypingIterate sealed-loop guard", () => {
 
   it("exempts cycle 0 on a normally sealed loop too", async () => {
     const root = await newTempDir();
-    await seedSealedLoop(root, "axes-exceptional");
+    await seedSealedLoop(root, "converged");
 
     expect((await refusalMessages(root, 0)).join("\n")).not.toContain("refusing --cycle");
   });
 
   it("names --force in the reset hint and no internal symbol", async () => {
     const root = await newTempDir();
-    await seedSealedLoop(root, "axes-exceptional");
+    await seedSealedLoop(root, "converged");
 
     const messages = (await refusalMessages(root, 2)).join("\n");
     expect(messages).toContain("--cycle 0 --target-url <url> --force");

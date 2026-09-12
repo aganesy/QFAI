@@ -12,6 +12,12 @@ node_modules
 !.qfai/report/preflight_summary.md
 .qfai/review/**
 .qfai/evidence/**
+# An archived pack is a frozen record, so reformatting one is churn on a
+# document nobody is editing — and `check-pack-locations` reads the changed
+# paths, so that churn reports the archive directory as a misplaced pack. The
+# markdownlint globs already skip both archives for the same reason.
+.qfai/discussion_archive/**
+.qfai/review_archive/**
 pnpm-lock.yaml
 tmp
 *.min.js

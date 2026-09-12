@@ -36,12 +36,9 @@ type ReviewerPayload = {
   cycle: number; // integer, 0..9
   sessionStatus: "ok" | "retryExhausted" | "launchFailed";
   retryCount: number; // non-negative integer; retries actually consumed
-  ordinalAxes: {
-    informationArchitecture: "weak" | "acceptable" | "strong" | "exceptional";
-    navigationFlow: "weak" | "acceptable" | "strong" | "exceptional";
-    usability: "weak" | "acceptable" | "strong" | "exceptional";
-    functionality: "weak" | "acceptable" | "strong" | "exceptional";
-  };
+  // One line each: what is wrong on this screen. Empty means nothing
+  // stands between it and shipping.
+  blockingFindings: string[];
   impressions: {
     // each <= 200 words
     operability: string;
@@ -51,10 +48,10 @@ type ReviewerPayload = {
     acceptanceCriteriaFeel: string;
     menuReachabilityFeel: string;
   };
-  layoutAntiPatternsDetected: string[]; // lap-001..lap-008 ids
+  layoutAntiPatternsDetected: string[]; // ids from the layout anti-pattern registry
   designMdViolations: {
     // closed too: `kind` + `found` only, no extra key per element
-    kind: "color" | "font" | "radius" | "shadow";
+    kind: "color" | "font" | "radius" | "shadow" | "contrast";
     found: string;
   }[];
   wallTimeSec: number; // non-negative finite; Reviewer-measured
@@ -65,8 +62,9 @@ type ReviewerPayload = {
 };
 ```
 
-No numeric scores exist on this payload: only ordinal verdicts plus
-bounded prose.
+The payload carries findings and bounded prose. It carries no rating:
+a rating cannot be acted on, and a gate built on one can be satisfied
+by overstating rather than by fixing.
 
 ## Field rules
 
@@ -76,7 +74,7 @@ bounded prose.
 | `cycle`                      | integer, `0..9`; both bounds are enforced                                                                                                                                                                                                                                                                                                                                                  |
 | `sessionStatus`              | exactly one of `ok` / `retryExhausted` / `launchFailed`                                                                                                                                                                                                                                                                                                                                    |
 | `retryCount`                 | non-negative integer                                                                                                                                                                                                                                                                                                                                                                       |
-| `ordinalAxes`                | all 4 axes required, each an ordinal verdict; no extra axis                                                                                                                                                                                                                                                                                                                                |
+| `blockingFindings`           | array of strings; empty array required for convergence                                                                                                                                                                                                                                                                                                                                     |
 | `impressions`                | all 6 `*Feel` fields required, each a string of at most 200 words                                                                                                                                                                                                                                                                                                                          |
 | `layoutAntiPatternsDetected` | array of strings; empty array required for convergence                                                                                                                                                                                                                                                                                                                                     |
 | `designMdViolations`         | array of `{kind, found}` (element closed: no other key); filled by the static gate; empty for convergence                                                                                                                                                                                                                                                                                  |
@@ -93,7 +91,7 @@ These keys belong to the flat per-cycle summary the orchestrator folds
 into `prototyping.json#iterations[]`, **not** to this payload. Writing
 any of them here fails the file:
 
-`iterIndex`, `reviewerId`, `scores`, `proseCritique`, `pivotDirective`,
+`iterIndex`, `reviewerId`, `proseCritique`, `pivotDirective`,
 `evidenceRefs`, and the retired flat `timeBudgetSoftWarning` string
 (use `softWarnings.timeBudget: boolean`).
 
@@ -127,7 +125,7 @@ Who records which status:
   **no file**. Do not invent one — an absent payload is the signal.
   A payload that does carry `retryExhausted` / `launchFailed` reviewed
   nothing, so `npx qfai prototyping certify` rejects it (exit `64`) no
-  matter what its axes claim.
+  matter what else it reports.
 
 That is also what separates the two exit `64`s: a converged run has a
 parsable payload for every (spec, screen) pair, while a Reviewer
@@ -145,10 +143,9 @@ not evidence.
    iteration directory it is stored under. A valid payload copied in
    from another screen, spec, or cycle reviews something else and is
    rejected — write each payload for the pair it is filed under.
-4. It is converged on its own terms: all 4 `ordinalAxes` are
-   `exceptional` and `layoutAntiPatternsDetected` /
-   `designMdViolations` are both empty. Convergence is an AND over
-   every pair, so a `weak` axis or a single unresolved violation
+4. It is converged on its own terms: `blockingFindings`,
+   `layoutAntiPatternsDetected` and `designMdViolations` are all
+   empty. Convergence is an AND over every pair, so one open finding
    rejects the run even when `prototyping.json#reviewerGate.result` is
    already `PASS` — the payloads are the evidence behind that summary,
    and certify refuses to seal a certificate over the contradiction.
@@ -165,6 +162,6 @@ MISMATCH`) and names each payload and reason; re-run the cycle that
 produced it, then `npx qfai prototyping certify` again.
 
 `impressions.*` prose is not deterministic and MUST NOT be asserted for
-exact equality. The stable surfaces are `ordinalAxes.*`,
+exact equality. The stable surfaces are `blockingFindings`,
 `layoutAntiPatternsDetected`, `designMdViolations`, and the existence
 of `<screen>.review.json` itself.

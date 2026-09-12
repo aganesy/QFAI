@@ -121,7 +121,8 @@ per-spec iter-dir migration in `prototypingIterate.ts`) lands.
 
 Convergence (evaluated at cycle ≥1 after Reviewer payloads land):
 the AND across every spec × screen pair of
-`(all 4 axes == exceptional) AND layoutAntiPatternsDetected.empty AND designMdViolations.empty`.
+`blockingFindings.empty AND layoutAntiPatternsDetected.empty AND designMdViolations.empty`.
+The four UX axes are reported and do not gate.
 Quantitative AC-pass% and transition-pass% thresholds are NOT used.
 
 Exit codes:
@@ -287,7 +288,7 @@ schema:
     navigationFlow: enum [weak, acceptable, strong, exceptional]
     usability: enum [weak, acceptable, strong, exceptional]
     functionality: enum [weak, acceptable, strong, exceptional]
-  layoutAntiPatternsDetected: string[] # lap-001..lap-008 ids; empty list required for convergence
+  layoutAntiPatternsDetected: string[] # ids the lap-* registry declares; empty list required for convergence
   designMdViolations: object[] # output of findDesignMdViolations(); empty required for convergence
   impressions: # short-prose fields, each ≤ 200 words; NOT asserted for exact equality
     operability: string
@@ -415,8 +416,16 @@ navigation timeout, screenshot write failure, etc.) iterate exits `2`
 with the operator-actionable reason on stderr. The implemented
 advisory band is `lap-009` (md5 duplicate, REQ-0124) and `lap-010`
 (missing route, REQ-0124); both are advisory-failing per DR-0001-0006
-and counted in `layoutAntiPatternsDetected[]`. Higher `lap-011` /
-`lap-012` codes are reserved but not currently emitted.
+and counted in `layoutAntiPatternsDetected[]`. A further code is added by
+declaring it in the registry, which is what the validator reads; no
+identifier is reserved ahead of an entry that detects something.
+
+These two are computed by the capture pass rather than judged by the
+reviewer, and they are declared in the same `lap-*` registry as the
+codes the reviewer judges. That array has one vocabulary: a code in it
+that no registry entry declares is `QFAI-PROT-002`, whichever writer
+put it there. A new advisory code is therefore registered at the same
+time it is emitted.
 
 ### `--auto-serve`
 
@@ -495,7 +504,7 @@ iterations:
       navigationFlow: enum [weak, acceptable, strong, exceptional]
       usability: enum [weak, acceptable, strong, exceptional]
       functionality: enum [weak, acceptable, strong, exceptional]
-    layoutAntiPatternsDetected: string[] # lap-001..lap-010 (implemented band); empty required for convergence
+    layoutAntiPatternsDetected: string[] # ids the lap-* registry declares; empty required for convergence
     designMdViolations: object[] # findDesignMdViolations() output; empty required for convergence
     pivotDirective: string # reviewer's next-cycle directive; empty allowed only at converged-cycle
     reviewerId:
@@ -529,7 +538,7 @@ On convergence (exit 64), `iterate` MUST set on the top-level
 ```yaml
 acceptedIterationIndex: integer # 0..9; index into iterations[]
 stopReason: enum
-  - axes-exceptional # all (spec,screen) pairs reached exceptional + empty laps + empty designMdViolations
+  - converged # every (spec,screen) pair has all three finding arrays empty
   - max-iterations # exit 65 path (budget exhausted without convergence)
   - license-verify-fail # exit 66 path
   - input-error # exit 2 path

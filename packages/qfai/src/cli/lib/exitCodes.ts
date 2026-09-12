@@ -54,7 +54,8 @@ export const EXIT_CODES = {
    * 証拠が示した、という 1 つの拒否クラス。同じ番号がコマンドによって別の
    * 事象を指すため、名前は事象ではなくクラスを指している:
    *
-   * - iterate: 収束 (全 4 軸 exceptional)。ループとしては成功側の終端。
+   * - iterate: convergence — no DESIGN.md violation, no layout anti-pattern
+   *   and no blocking finding. The loop's terminal on the success side.
    * - certify: review.json のカバレッジ不足。multi-spec frozen set を legacy
    *   flat layout の accepted iteration で証明しようとした layout 非互換
    *   (per-spec layout への移行、または frozen set の単一 spec 化が必要) も
@@ -129,7 +130,8 @@ const EXIT_CODE_ROWS: readonly ExitCodeRow[] = [
       `${EXIT_CODES.ok} = continue (next cycle), or a no-op exit with no UI-bearing spec,`,
       `${EXIT_CODES.inputError} = an input or lock-drift error, or a runtime error`,
       `      (--auto-serve could not start the server; --capture was refused by the runner or failed on I/O),`,
-      `${EXIT_CODES.prototypingStop} = STOP: converged (all four axes exceptional),`,
+      `${EXIT_CODES.prototypingStop} = STOP: converged (no DESIGN.md violation, no layout`,
+      `      anti-pattern, no blocking finding),`,
       `${EXIT_CODES.prototypingBudgetExhausted} = STOP: budget exhausted (max iterations),`,
       `${EXIT_CODES.prototypingLicenseFailure} = STOP: license-verify failed`,
     ],

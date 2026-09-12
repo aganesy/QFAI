@@ -85,15 +85,20 @@ npx qfai validate --profile sdd --fail-on error --format github
 
 ## Work Orders Summary
 
-> Fixed 6-column schema from
+> The shared schema from
 > `.qfai/assistant/constitution/shared-skill-delegation-baseline.md#work-orders-summary`.
 > Do not add, remove or rename columns.
-> `Status` accepts exactly `PASS` or `REVISE` — no other value (no `PENDING`,
-> no `N/A`, no `FAIL`). A work order that has not been reviewed yet is `REVISE`.
+> `Agent instance` is the run-stable id of the sub-agent that performed the
+> step. It is what makes an author-reviewer collision detectable from this
+> table alone: the same instance in an authoring step and in a review step over
+> one artifact is a reviewer-independence violation.
+> `Status` accepts exactly `PASS`, `REVISE` or `PENDING` — no other value (no
+> `N/A`, no `FAIL`). `PENDING` is a gate that could not be run; it never counts
+> as `PASS`, and a row left at `PENDING` blocks DONE.
 
-| Step | Role (sub-agent) | Task title | Input (refs) | Output (refs) | Status (PASS/REVISE) |
-| ---- | ---------------- | ---------- | ------------ | ------------- | -------------------- |
-| 1    | <role>           | <task>     | <refs>       | <refs>        | PASS                 |
+| Step | Role (sub-agent) | Agent instance | Task title | Input (refs) | Output (refs) | Status (PASS/REVISE/PENDING) |
+| ---- | ---------------- | -------------- | ---------- | ------------ | ------------- | ---------------------------- |
+| 1    | <role>           | <instance id>  | <task>     | <refs>       | <refs>        | PASS                         |
 
 ## Gaps / Open risks
 
@@ -109,3 +114,5 @@ npx qfai validate --profile sdd --fail-on error --format github
 > vocabulary in `.qfai/assistant/constitution/shared-skill-delegation-baseline.md#verdict-vocabulary`. A
 > `REVISE` here maps to `status: "FAIL"` when a review pack's `summary.json` is
 > written; they are the same outcome. Do not invent a third verdict.
+> A `PENDING` row above keeps this at `REVISE`: the gate that row names has not
+> run, so the stage is not done and stays resumable.

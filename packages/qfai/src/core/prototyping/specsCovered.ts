@@ -100,9 +100,7 @@ export function readFrozenSpecsCoveredMultiSpec(record: unknown): string[] | nul
  *   - `ok` — the field is present AND valid; caller uses `value`.
  */
 export type FrozenSpecsCoveredClassification =
-  | { kind: "absent" }
-  | { kind: "malformed"; reason: string }
-  | { kind: "ok"; value: string[] };
+  { kind: "absent" } | { kind: "malformed"; reason: string } | { kind: "ok"; value: string[] };
 
 /**
  * Classifying counterpart to {@link readFrozenSpecsCoveredMultiSpec}.

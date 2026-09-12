@@ -1,6 +1,6 @@
 # 99 Delta
 
-<!-- UX-INTENT: If UI-bearing, record design direction changes against root DESIGN.md and uiux/40_screen_contracts.md -->
+<!-- UX-INTENT: If UI-bearing, record design direction changes against 04_Sources.md and uiux/40_screen_contracts.md -->
 
 ## Change History
 

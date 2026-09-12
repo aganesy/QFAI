@@ -127,13 +127,13 @@ export const WIDTH_BUDGET_BACKLOG: ReadonlyMap<string, number> = new Map([
   ["assistant/skills/qfai-atdd/SKILL.md", 2001],
   ["assistant/skills/qfai-atdd/references/red-provenance.md", 460],
   ["assistant/skills/qfai-configure/SKILL.md", 2267],
-  ["assistant/skills/qfai-discussion/SKILL.md", 802],
-  ["assistant/skills/qfai-discussion/references/design-md-brand-catalog.md", 533],
-  ["assistant/skills/qfai-discussion/templates/01_Context.md", 412],
+  ["assistant/skills/qfai-discussion/SKILL.md", 490],
+  ["assistant/skills/qfai-discussion/templates/01_Context.md", 405],
   ["assistant/skills/qfai-implement/SKILL.md", 9104],
   ["assistant/skills/qfai-implement/references/cross-spec-ownership.md", 616],
   ["assistant/skills/qfai-prototyping/SKILL.md", 541],
   ["assistant/skills/qfai-sdd/SKILL.md", 2460],
+  ["assistant/skills/qfai-sdd/references/design-md-brand-catalog.md", 533],
   ["assistant/skills/qfai-sdd/references/sdd-phase-checklists.md", 3763],
   ["assistant/skills/qfai-sdd/references/spec-traceability-rules.md", 790],
   ["assistant/skills/qfai-sdd/templates/report/preflight_summary.md", 425],
@@ -161,12 +161,12 @@ export const WIDTH_BACKLOG_PATHS: readonly string[] = [
   "assistant/skills/qfai-atdd/references/red-provenance.md",
   "assistant/skills/qfai-configure/SKILL.md",
   "assistant/skills/qfai-discussion/SKILL.md",
-  "assistant/skills/qfai-discussion/references/design-md-brand-catalog.md",
   "assistant/skills/qfai-discussion/templates/01_Context.md",
   "assistant/skills/qfai-implement/SKILL.md",
   "assistant/skills/qfai-implement/references/cross-spec-ownership.md",
   "assistant/skills/qfai-prototyping/SKILL.md",
   "assistant/skills/qfai-sdd/SKILL.md",
+  "assistant/skills/qfai-sdd/references/design-md-brand-catalog.md",
   "assistant/skills/qfai-sdd/references/sdd-phase-checklists.md",
   "assistant/skills/qfai-sdd/references/spec-traceability-rules.md",
   "assistant/skills/qfai-sdd/templates/report/preflight_summary.md",
@@ -541,10 +541,7 @@ export type WideLineAssistantAsset = { path: string; widest: number; allowed: nu
 export type ExemptAssistantAsset = { path: string; reason: string };
 
 export type AssistantAssetBudgetStatus =
-  | "ok"
-  | "over_budget"
-  | "incomplete"
-  | "skipped_missing_assistant";
+  "ok" | "over_budget" | "incomplete" | "skipped_missing_assistant";
 
 export type AssistantAssetBudgetReport = {
   status: AssistantAssetBudgetStatus;

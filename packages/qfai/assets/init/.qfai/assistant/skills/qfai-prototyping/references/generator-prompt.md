@@ -57,12 +57,12 @@ non-waivable**: any finding blocks convergence, and there is no
 Reviewer override. Ordinary cycles carry no scanner output —
 `designMdViolations` stays `[]` in every Reviewer report — because the
 scan runs at the two checkpoints below, not once per cycle. A
-**convergence** stop takes more than the four scores: it needs all
-four axes `exceptional` **and both finding arrays empty** —
-`layoutAntiPatternsDetected` and `designMdViolations` alike — so one
-surviving `lap-*` keeps the loop running on four exceptional scores,
-and clearing it is the next cycle's work. On that stop the accepted
-iteration's HTML is re-scanned before the stop is honoured, so a
+**convergence** stop needs **all three finding arrays empty** —
+`designMdViolations`, `layoutAntiPatternsDetected` and
+`blockingFindings` alike — so one surviving `lap-*` keeps the loop
+running however well the screen reviewed, and clearing it is the next
+cycle's work. On that stop the accepted iteration's HTML is
+re-scanned before the stop is honoured, so a
 hand-written `[]` in the Reviewer report is discarded and the loop
 keeps iterating (the re-scan drives that decision only; it is not
 written back into the review). The re-scan reaches the captured HTML
@@ -187,6 +187,46 @@ Authored forms caught:
   strips them before scanning. A literal `box-shadow:` value or an
   `rgba(...)` slot next to one of them is still caught.
 
+### 5. contrast floor
+
+Text must meet `DESIGN.md.accessibility.contrast_ratio_min` against the
+background it sits on, or WCAG AA where the pack declares no floor.
+
+The gate reads a pair from any declaration block that states both a text
+colour and a background — a rule body inside `<style>`, or one inline
+`style="..."` attribute — resolving `:root` tokens first. So a block
+setting `color:` without a `background-color:` is judged against
+nothing, which is not permission: the colour it inherits still has to
+carry the ratio, and the reviewer walks it.
+
+- Pair every foreground with the background it is actually drawn on,
+  in the same block, so the ratio is checkable.
+- Pick both from `DESIGN.md.visual.colors`. A pair of tokens that fails
+  the declared floor is a defect in the palette, not a licence to write
+  a literal.
+- A pair the gate cannot read is not judged: a named colour, `hsl()`,
+  the space-separated `rgb(r g b)` form, a value carrying alpha, or a
+  shorthand with more than a colour in it. Prefer `#rrggbb` and
+  `rgb(r, g, b)` so the check binds.
+
+### Markup shown as sample text
+
+The gate reads class attributes with a regular expression rather than a
+real HTML parser, so it cannot tell a class the page **uses** from one
+the page **shows**. A screen that displays markup as sample text —
+`<code>&lt;div class="bg-[#abcdef]"&gt;</code>` in a tutorial or a
+documentation panel — has that class scanned as if it were live, and the
+literal inside it is reported as drift.
+
+Escape the sample, or keep it out of the rendered HTML. A finding on a
+sample cannot be waived, and rewriting the sample to satisfy the gate
+would leave the screen showing markup nobody writes.
+
+The trade is deliberate: the gate's contract is that every token the
+rendered DOM uses comes from `DESIGN.md`, and a scanner that parsed
+properly could still be wrong about which nodes are rendered. What it
+costs is this one false positive, never a missed violation.
+
 ### Safelisted CSS-wide keywords
 
 The following values are **not** treated as drift by any of the four
@@ -224,8 +264,17 @@ The generator MUST express every styled surface as one of:
 
 ### Other envelope constraints
 
-- No component library beyond Tailwind + Lucide. No external CSS, no
-  design-system imports.
+- No runtime dependency beyond the Tailwind and Lucide tags the
+  envelope declares: no package install, no `<link rel="stylesheet">`,
+  no further script tag. A single file loaded from a CDN has no package
+  manager to run an install with, and CSS behind a `<link>` is never
+  fetched by the gate, so a literal there is drift nobody sees.
+- Markup is not a dependency. Transposing a block from a component
+  catalogue and re-binding its palette classes to `DESIGN.md` tokens is
+  the expected way to build a screen. The gate reads the values a class
+  carries, not where the markup came from, so a transposed block passes
+  once `bg-blue-500` becomes `bg-primary` and `rounded-xl` becomes
+  `rounded-md`. Take the structure; re-bind the palette.
 - One self-contained HTML file; embedded CSS / JS minimal.
 - All declared spec screens reachable; loading / empty / error /
   success states representable.

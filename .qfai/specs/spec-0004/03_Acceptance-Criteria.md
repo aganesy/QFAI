@@ -45,12 +45,12 @@
 
 ## AC-0004-0011
 
-- prototypingEvidenceV3 validator checks each `.qfai/evidence/prototyping/iter-NN/review.json` against schema v3: 4 UX axes (`informationArchitecture`, `navigationFlow`, `usability`, `functionality`) each scored on the ordinal scale `{weak, acceptable, strong, exceptional}`, prose critique 200..500 words, `pivotDirective` ∈ `{continue, refine, pivot}`.
+- prototypingEvidenceV3 validator checks each `.qfai/evidence/prototyping/iter-NN/review.json` against schema v3: 4 UX axes (`informationArchitecture`, `navigationFlow`, `usability`, `functionality`) each scored on the ordinal scale `{weak, acceptable, strong, exceptional}`, prose critique within its cap — measured in CJK characters where the text carries CJK and in whitespace-separated words otherwise, with no lower bound in either unit — and `pivotDirective` ∈ `{continue, refine, pivot}`.
 - Missing axes / out-of-range ordinal / out-of-range word count / unknown pivotDirective each emits `QFAI-PROT-002` at error severity.
 
 ## AC-0004-0012
 
-- `layoutAntiPatternsDetected` is an array of strings drawn from the whitelist in `packages/qfai/assets/validators/layoutAntiPatterns.json`, which is the SSOT the validator resolves against (`loadKnownLapIds`): `{lap-001-saas-dashboard, lap-002-card-grid-sidebar, lap-003-saas-table-tabs, lap-004-bento-grid, lap-005-centered-hero, lap-006-overcrowded-sidebar, lap-007-state-not-represented, lap-008-no-back-affordance}`. Six are scoped `layout` and two (`lap-007`, `lap-008`) `semantic`; each entry carries the regex that detects it, so adding or renaming one is a change to that file and this list follows it.
+- `layoutAntiPatternsDetected` is an array of strings drawn from the whitelist in `packages/qfai/assets/validators/layoutAntiPatterns.json`, which is the SSOT the validator resolves against (`loadKnownLapIds`): `{lap-007-state-not-represented, lap-008-no-back-affordance}`. Both are scoped `semantic`; each entry carries the regex that detects it and the authority that makes it a defect, so adding or renaming one is a change to that file and this list follows it.
 - Any token absent from that registry rejects the review.json with `QFAI-PROT-002` at error severity.
 - An earlier revision of this criterion listed eight different IDs — `lap-001-orphan-page`, `lap-002-deadend-flow`, `lap-003-hidden-state`, `lap-004-missing-wayfinding`, `lap-005-input-trap`, `lap-006-modal-dead-zone`, `lap-007-untargetable-affordance` — naming navigation and interaction defects rather than layout archetypes. Seven of the eight had no counterpart in the registry, so every one of them was rejected by the shipped gate while every ID the gate accepts violated this criterion. The registry is canonical: it is what the validator reads, and each entry carries a working detector. Whether the navigation-defect family is separately worth detecting is a product question, recorded in `08_Open-questions.md` rather than settled here.
 

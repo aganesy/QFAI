@@ -148,7 +148,7 @@ function parseLegacyBody(text: string): Record<string, unknown> | null {
   // Stage 2: YAML via the `yaml` package. Nested structures
   // (mappings under a key) are preserved verbatim by the parser.
   let yamlParsed: unknown;
-  let yamlOk = false;
+  let yamlOk: boolean;
   try {
     yamlParsed = parseYaml(text);
     yamlOk = true;

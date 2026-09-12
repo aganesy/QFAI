@@ -1,17 +1,5 @@
 export type IdPrefix =
-  | "CAP"
-  | "SPEC"
-  | "US"
-  | "BR"
-  | "SC"
-  | "AC"
-  | "EX"
-  | "TC"
-  | "CASE"
-  | "UI"
-  | "API"
-  | "DB"
-  | "THEMA";
+  "CAP" | "SPEC" | "US" | "BR" | "SC" | "AC" | "EX" | "TC" | "CASE" | "UI" | "API" | "DB" | "THEMA";
 /**
  * Prefixes with a declared format but no membership in {@link ID_PREFIXES}.
  *

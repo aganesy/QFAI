@@ -3,59 +3,48 @@
  *
  * The reviewer (product-surface-reviewer) writes one of these per iteration
  * to `iter-NN/review.json`. The schema enforces:
- *   - 4 ordinal axes (weak / acceptable / strong / exceptional):
- *     informationArchitecture, navigationFlow, usability, functionality
- *   - 200..500 word prose critique
- *   - Layout-anti-pattern detection cap: if
- *     `layoutAntiPatternsDetected.length > 0`, `informationArchitecture`
- *     is bounded above by `acceptable` (cannot be `strong` or
- *     `exceptional`).
+ *   - `blockingFindings`: what must be fixed before this iteration
+ *     ships, one non-empty line each. Empty is the converged state.
+ *   - a prose critique, non-empty and under its cap, for what is worth
+ *     saying and does not block.
  *   - DESIGN.md compliance: `designMdViolations[]` must be a valid
- *     array of `{kind, found}` records. The cap rule does NOT apply to
- *     dmv — dmv enforces a separate certify gate at convergence time.
+ *     array of `{kind, found}` records.
  *   - Explicit `pivotDirective: continue | refine | pivot`
  *
- * The cap rule and word-count rule are enforced at construction time so
- * downstream consumers can rely on the type. The on-disk evidence
- * validator re-checks the same invariants.
+ * The review carries no rating. A rating is unfalsifiable, so a gate
+ * built on one is satisfied by overstating rather than by fixing; a
+ * finding names something and can be closed or argued with.
+ *
+ * The critique length is checked at construction time so downstream
+ * consumers can rely on the type. The on-disk evidence validator
+ * re-checks the same invariants, through the same functions.
  */
 
 import type { DesignMdViolation } from "./designMdViolations.js";
-import {
-  isOrdinalScore,
-  isPivotDirective,
-  MAX_ITERATION_INDEX,
-  type OrdinalScore,
-  type PivotDirective,
-} from "./iteration.js";
-
-export const PROSE_CRITIQUE_MIN_WORDS = 200;
-export const PROSE_CRITIQUE_MAX_WORDS = 500;
+import { isPivotDirective, MAX_ITERATION_INDEX, type PivotDirective } from "./iteration.js";
 
 /**
- * QFAI-PROT-002 CJK character band. Japanese-only proseCritique
- * (no whitespace) is accepted when its CJK character count falls in
- * `600..2500`.
+ * QFAI-PROT-002 upper bounds on `proseCritique`, one per unit of measure.
  *
- * The band is enforced via {@link validateProseCritiqueBand} as the
- * OR-fallback half of the bilingual rule: a critique passes when EITHER
- * its English word count is in `200..500` words OR its CJK character
- * count is in `600..2500` characters.
+ * There is no lower bound. A critique that reports one finding and nothing
+ * else is complete, and a floor turns that review into padding — which the
+ * next cycle then reads as work to do.
+ *
+ * The cap remains because a reviewer writing far past the point still costs
+ * the loop something, and it is free to state.
  */
-export const PROSE_CRITIQUE_MIN_CJK_CHARS = 600;
+export const PROSE_CRITIQUE_MAX_WORDS = 500;
 export const PROSE_CRITIQUE_MAX_CJK_CHARS = 2500;
 
 // CJK Unified Ideographs (U+4E00..U+9FFF), Hiragana (U+3040..U+309F),
-// Katakana (U+30A0..U+30FF). Used to discriminate the CJK-only path
-// from whitespace-tokenised English in `validateProseCritiqueBand`.
+// Katakana (U+30A0..U+30FF). Selects the character-counted path over the
+// whitespace-tokenised one in `validateProseCritiqueBand`.
 //
-// Coverage note: this regex covers Hiragana / Katakana / CJK Unified
-// Ideographs (BMP only). CJK Unified Ideographs Extension A
-// (U+3400..U+4DBF) and Extension B+ (surrogate-pair ideographs like
-// 𠮷 at U+20BB7) are intentionally out of scope for prototyping
-// critique heuristics — the bands target everyday Japanese prose,
-// which sits inside the BMP. Revisit if Japanese proseCritique
-// false-positives appear with rare-kanji-heavy text.
+// Coverage note: BMP only. Extension A (U+3400..U+4DBF) and Extension B+
+// (surrogate-pair ideographs like 𠮷 at U+20BB7) are not matched, which
+// targets everyday Japanese prose. Since the rule is a cap and not a
+// floor, an uncounted ideograph can only make the cap bind later than it
+// should, never reject a critique that should pass.
 const CJK_CHAR_RE = /[぀-ヿ一-鿿]/u;
 
 function countCjkCharacters(text: string): number {
@@ -80,53 +69,52 @@ export type ProseCritiqueValidationResult =
     };
 
 /**
- * Validate a proseCritique against the bilingual QFAI-PROT-002 band:
- *   - English path: 200..500 whitespace-separated words.
- *   - CJK path: 600..2500 CJK characters.
+ * Check a proseCritique against the QFAI-PROT-002 cap.
  *
- * Returns `ok: true` when EITHER band is satisfied. When neither is
- * satisfied, returns `ok: false` with an error message that names:
- *   - the count form measured (`characters` when the text contains CJK,
- *     otherwise `words`),
- *   - the band used (`600..2500` or `200..500`),
- *   - the actual measured count.
+ * The unit is **selected** by the text, not tried in turn: a critique
+ * carrying CJK is measured in characters, because those scripts do not
+ * separate words with spaces; anything else is measured in whitespace-
+ * separated words. Only the selected unit's cap applies.
  *
- * Uses `Intl.Segmenter('ja', { granularity: 'word' })` when available
- * to obtain a more accurate Japanese word count for diagnostic
- * purposes; the CJK character count is the authoritative band check.
+ * Selecting rather than accepting whichever unit happens to fit is what
+ * keeps the cap a cap. A rule that passed on either unit would pass every
+ * English text however long, since an English critique holds no CJK
+ * characters and so is under the character cap by construction.
+ *
+ * Returns `ok: false` only for a critique over its cap, with an error that
+ * names the unit measured, the cap, and the count. Both counts are returned
+ * either way, because a caller reporting the finding wants the one the cap
+ * was not written in as well.
+ *
+ * **What the cap does not reach.** A script that writes without spaces and
+ * is not CJK — Thai is the clearest case — counts as very few words, so the
+ * word cap never binds on it. That is a cap which does not apply, not a
+ * critique rejected for the wrong reason: nothing fails that should pass.
+ * Binding the cap for those scripts needs per-script segmentation and is a
+ * separate question from the one this function answers.
  */
 export function validateProseCritiqueBand(text: string): ProseCritiqueValidationResult {
   const wordCount = countWords(text);
   const cjkCount = countCjkCharacters(text);
-  const looksCjk = cjkCount > 0;
+  const counts = { measuredWords: wordCount, measuredCharacters: cjkCount };
 
-  const wordInBand = wordCount >= PROSE_CRITIQUE_MIN_WORDS && wordCount <= PROSE_CRITIQUE_MAX_WORDS;
-  const cjkInBand =
-    cjkCount >= PROSE_CRITIQUE_MIN_CJK_CHARS && cjkCount <= PROSE_CRITIQUE_MAX_CJK_CHARS;
-
-  if (wordInBand || cjkInBand) {
-    return { ok: true, measuredWords: wordCount, measuredCharacters: cjkCount };
+  if (cjkCount > 0) {
+    return cjkCount <= PROSE_CRITIQUE_MAX_CJK_CHARS
+      ? { ok: true, ...counts }
+      : {
+          ok: false,
+          ...counts,
+          error: `proseCritique ${cjkCount} characters over the ${PROSE_CRITIQUE_MAX_CJK_CHARS}-character cap`,
+        };
   }
 
-  if (looksCjk) {
-    return {
-      ok: false,
-      measuredWords: wordCount,
-      measuredCharacters: cjkCount,
-      error:
-        `proseCritique ${cjkCount} characters outside band ` +
-        `${PROSE_CRITIQUE_MIN_CJK_CHARS}..${PROSE_CRITIQUE_MAX_CJK_CHARS}`,
-    };
-  }
-
-  return {
-    ok: false,
-    measuredWords: wordCount,
-    measuredCharacters: cjkCount,
-    error:
-      `proseCritique ${wordCount} words outside band ` +
-      `${PROSE_CRITIQUE_MIN_WORDS}..${PROSE_CRITIQUE_MAX_WORDS}`,
-  };
+  return wordCount <= PROSE_CRITIQUE_MAX_WORDS
+    ? { ok: true, ...counts }
+    : {
+        ok: false,
+        ...counts,
+        error: `proseCritique ${wordCount} words over the ${PROSE_CRITIQUE_MAX_WORDS}-word cap`,
+      };
 }
 
 /**
@@ -137,15 +125,6 @@ export function validateProseCritiqueBand(text: string): ProseCritiqueValidation
  * 1 word and exactly 200 words are both accepted.
  */
 export const FEEL_FIELD_MAX_WORDS = 200;
-
-export const ORDINAL_AXES = [
-  "informationArchitecture",
-  "navigationFlow",
-  "usability",
-  "functionality",
-] as const;
-
-export type OrdinalAxis = (typeof ORDINAL_AXES)[number];
 
 /**
  * Qualitative prose-feel fields surfaced by the reviewer on each
@@ -163,12 +142,23 @@ export const FEEL_FIELDS = [
 
 export type FeelField = (typeof FEEL_FIELDS)[number];
 
-const VIOLATION_KINDS: ReadonlySet<string> = new Set(["color", "font", "radius", "shadow"]);
+const VIOLATION_KINDS: ReadonlySet<string> = new Set([
+  "color",
+  "font",
+  "radius",
+  "shadow",
+  "contrast",
+]);
 
 export type EvaluatorReview = {
   readonly iterIndex: number;
   readonly reviewerId: string;
-  readonly scores: Record<OrdinalAxis, OrdinalScore>;
+  /**
+   * What must be fixed before this iteration ships, one line each. Empty
+   * is the converged state: an iteration with nothing wrong is finished,
+   * not merely unremarkable.
+   */
+  readonly blockingFindings: readonly string[];
   readonly proseCritique: string;
   readonly layoutAntiPatternsDetected: readonly string[];
   readonly designMdViolations: readonly DesignMdViolation[];
@@ -191,23 +181,18 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
-function validateScores(input: BuildEvaluatorReviewInput): void {
-  // The static type promises a Record<OrdinalAxis, OrdinalScore>, but
-  // this validator also runs against on-disk evidence reloaded as JSON
-  // (where the type is gone). Read through `unknown` to keep the
-  // runtime checks honest without a bare `as` cast.
-  const scores: unknown = input.scores;
-  if (!isRecord(scores)) {
-    throw new Error("buildEvaluatorReview: scores must be an object");
+function validateBlockingFindings(input: BuildEvaluatorReviewInput): void {
+  // The static type promises a string array, but this validator also runs
+  // against on-disk evidence reloaded as JSON, where the type is gone.
+  const findings: unknown = input.blockingFindings;
+  if (!Array.isArray(findings)) {
+    throw new Error("buildEvaluatorReview: blockingFindings must be a string array");
   }
-  for (const axis of ORDINAL_AXES) {
-    if (!(axis in scores)) {
-      throw new Error(`buildEvaluatorReview: scores.${axis} is required`);
-    }
-    const score = scores[axis];
-    if (!isOrdinalScore(score)) {
+  for (let i = 0; i < findings.length; i += 1) {
+    const entry: unknown = findings[i];
+    if (typeof entry !== "string" || entry.trim().length === 0) {
       throw new Error(
-        `buildEvaluatorReview: scores.${axis} must be one of weak|acceptable|strong|exceptional (got ${String(score)})`,
+        `buildEvaluatorReview: blockingFindings[${i}] must be a non-empty string (got ${String(entry)})`,
       );
     }
   }
@@ -227,7 +212,7 @@ function validateDesignMdViolations(input: BuildEvaluatorReviewInput): void {
     }
     if (typeof entry.kind !== "string" || !VIOLATION_KINDS.has(entry.kind)) {
       throw new Error(
-        `buildEvaluatorReview: designMdViolations[${i}].kind must be one of color|font|radius|shadow (got ${String(entry.kind)})`,
+        `buildEvaluatorReview: designMdViolations[${i}].kind must be one of color|font|radius|shadow|contrast (got ${String(entry.kind)})`,
       );
     }
     if (typeof entry.found !== "string") {
@@ -236,18 +221,9 @@ function validateDesignMdViolations(input: BuildEvaluatorReviewInput): void {
   }
 }
 
-function validateAntiPatternCap(input: BuildEvaluatorReviewInput): void {
+function validateLayoutAntiPatterns(input: BuildEvaluatorReviewInput): void {
   if (!Array.isArray(input.layoutAntiPatternsDetected)) {
     throw new Error("buildEvaluatorReview: layoutAntiPatternsDetected must be a string array");
-  }
-  if (input.layoutAntiPatternsDetected.length === 0) return;
-  const ia = input.scores.informationArchitecture;
-  if (ia === "strong" || ia === "exceptional") {
-    throw new Error(
-      "buildEvaluatorReview: informationArchitecture must be capped at acceptable when " +
-        `layoutAntiPatternsDetected[] is non-empty (current: ${ia}, ` +
-        `lap: [${input.layoutAntiPatternsDetected.join(", ")}])`,
-    );
   }
 }
 
@@ -259,7 +235,7 @@ export function buildEvaluatorReview(input: BuildEvaluatorReviewInput): Evaluato
     throw new Error("buildEvaluatorReview: reviewerId must be a non-empty string");
   }
 
-  validateScores(input);
+  validateBlockingFindings(input);
 
   if (!isPivotDirective(input.pivotDirective)) {
     throw new Error(
@@ -267,15 +243,18 @@ export function buildEvaluatorReview(input: BuildEvaluatorReviewInput): Evaluato
     );
   }
 
-  const wordCount = countWords(input.proseCritique);
-  if (wordCount < PROSE_CRITIQUE_MIN_WORDS || wordCount > PROSE_CRITIQUE_MAX_WORDS) {
-    throw new Error(
-      `buildEvaluatorReview: proseCritique must be ${PROSE_CRITIQUE_MIN_WORDS}..${PROSE_CRITIQUE_MAX_WORDS} words (got ${wordCount})`,
-    );
+  // Through the same function the on-disk validator calls, rather than a
+  // second copy of the rule here. The copy that stood here counted words
+  // only, so a Japanese critique the validator accepted threw at
+  // construction — one rule, two answers, depending on which door you came
+  // through.
+  const band = validateProseCritiqueBand(input.proseCritique);
+  if (!band.ok) {
+    throw new Error(`buildEvaluatorReview: ${band.error}`);
   }
 
   validateDesignMdViolations(input);
-  validateAntiPatternCap(input);
+  validateLayoutAntiPatterns(input);
 
   if (
     typeof input.evidenceRefs.screenshot !== "string" ||
@@ -290,7 +269,7 @@ export function buildEvaluatorReview(input: BuildEvaluatorReviewInput): Evaluato
   return {
     iterIndex: input.iterIndex,
     reviewerId: input.reviewerId,
-    scores: { ...input.scores },
+    blockingFindings: [...input.blockingFindings],
     proseCritique: input.proseCritique,
     layoutAntiPatternsDetected: [...input.layoutAntiPatternsDetected],
     designMdViolations: input.designMdViolations.map((v) => ({ kind: v.kind, found: v.found })),
@@ -319,7 +298,8 @@ export function buildEvaluatorReview(input: BuildEvaluatorReviewInput): Evaluato
  *     triple and the Reviewer Playwright session outcome (the
  *     `sessionStatus` enum mirrors {@link ReviewerSessionStatus} in
  *     `reviewerDispatch.ts`).
- *   - `ordinalAxes` nests the 4 canonical ordinal verdicts.
+ *   - `blockingFindings` lists what must be fixed before this screen
+ *     ships, one line each; empty is the converged state.
  *   - `impressions` nests the 6 bounded qualitative prose fields
  *     (each ≤ {@link FEEL_FIELD_MAX_WORDS} words).
  *   - `layoutAntiPatternsDetected` / `designMdViolations` carry the
@@ -348,8 +328,6 @@ export const REVIEWER_SESSION_STATUSES = ["ok", "retryExhausted", "launchFailed"
 
 export type ReviewerSessionStatus = (typeof REVIEWER_SESSION_STATUSES)[number];
 
-export type ReviewerOrdinalAxes = Record<OrdinalAxis, OrdinalScore>;
-
 export type ReviewerImpressions = Record<FeelField, string>;
 
 export type ReviewerSoftWarnings = {
@@ -362,7 +340,7 @@ export type ReviewerPayload = {
   readonly cycle: number;
   readonly sessionStatus: ReviewerSessionStatus;
   readonly retryCount: number;
-  readonly ordinalAxes: ReviewerOrdinalAxes;
+  readonly blockingFindings: readonly string[];
   readonly impressions: ReviewerImpressions;
   readonly layoutAntiPatternsDetected: readonly string[];
   readonly designMdViolations: readonly DesignMdViolation[];
@@ -380,7 +358,7 @@ const REVIEWER_PAYLOAD_KNOWN_KEYS: ReadonlySet<string> = new Set<string>([
   "cycle",
   "sessionStatus",
   "retryCount",
-  "ordinalAxes",
+  "blockingFindings",
   "impressions",
   "layoutAntiPatternsDetected",
   "designMdViolations",
@@ -455,43 +433,23 @@ function isCompleteFeelRecord(
   return FEEL_FIELDS.every((field) => typeof value[field] === "string");
 }
 
-function collectOrdinalAxes(
-  source: Record<string, unknown>,
-  errors: string[],
-): ReviewerOrdinalAxes | null {
-  const accepted: Partial<Record<OrdinalAxis, OrdinalScore>> = {};
+function collectBlockingFindings(source: unknown, errors: string[]): string[] | null {
+  if (!Array.isArray(source)) {
+    errors.push("blockingFindings must be an array of strings");
+    return null;
+  }
+  const accepted: string[] = [];
   let complete = true;
-  for (const axis of ORDINAL_AXES) {
-    if (!(axis in source)) {
-      errors.push(`missing field: ordinalAxes.${axis}`);
+  for (let i = 0; i < source.length; i += 1) {
+    const value: unknown = source[i];
+    if (typeof value !== "string" || value.trim().length === 0) {
+      errors.push(`blockingFindings[${i}] must be a non-empty string (got ${String(value)})`);
       complete = false;
       continue;
     }
-    const value = source[axis];
-    if (!isOrdinalScore(value)) {
-      errors.push(
-        `ordinalAxes.${axis} must be one of weak|acceptable|strong|exceptional (got ${String(value)})`,
-      );
-      complete = false;
-      continue;
-    }
-    accepted[axis] = value;
+    accepted.push(value);
   }
-  for (const key of Object.keys(source)) {
-    if (!(ORDINAL_AXES as readonly string[]).includes(key)) {
-      errors.push(`unknown field: ordinalAxes.${key}`);
-      complete = false;
-    }
-  }
-  if (!complete) return null;
-  if (!isCompleteAxisRecord(accepted)) return null;
-  return accepted;
-}
-
-function isCompleteAxisRecord(
-  value: Partial<Record<OrdinalAxis, OrdinalScore>>,
-): value is Record<OrdinalAxis, OrdinalScore> {
-  return ORDINAL_AXES.every((axis) => isOrdinalScore(value[axis]));
+  return complete ? accepted : null;
 }
 
 function pushLapErrors(
@@ -553,7 +511,7 @@ function pushDmvErrors(
     const kindValue = entry.kind;
     if (typeof kindValue !== "string" || !isDesignMdViolationKind(kindValue)) {
       errors.push(
-        `designMdViolations[${i}].kind must be one of color|font|radius|shadow (got ${String(kindValue)})`,
+        `designMdViolations[${i}].kind must be one of color|font|radius|shadow|contrast (got ${String(kindValue)})`,
       );
       continue;
     }
@@ -584,8 +542,7 @@ function pushDmvErrors(
  *   - `sessionStatus` required, one of `ok | retryExhausted | launchFailed`
  *     (mirrors {@link ReviewerSessionStatus} in `reviewerDispatch.ts`)
  *   - `retryCount` required as a non-negative integer
- *   - `ordinalAxes` required as a nested record with all 4 axes
- *     (must satisfy {@link isOrdinalScore})
+ *   - `blockingFindings` required as an array of non-empty strings
  *   - `impressions` required as a nested record with all 6 `*Feel`
  *     fields (each string, ≤ {@link FEEL_FIELD_MAX_WORDS} words)
  *   - `layoutAntiPatternsDetected` required as string[]
@@ -672,13 +629,11 @@ export function parseEvaluatorReview(input: unknown): ParseReviewerPayloadResult
     retryCount = input.retryCount;
   }
 
-  let axes: ReviewerOrdinalAxes | null = null;
-  if (!("ordinalAxes" in input)) {
-    errors.push("missing field: ordinalAxes");
-  } else if (!isRecord(input.ordinalAxes)) {
-    errors.push("ordinalAxes must be an object");
+  let blockingFindings: string[] | null = null;
+  if (!("blockingFindings" in input)) {
+    errors.push("missing field: blockingFindings");
   } else {
-    axes = collectOrdinalAxes(input.ordinalAxes, errors);
+    blockingFindings = collectBlockingFindings(input.blockingFindings, errors);
   }
 
   let impressions: ReviewerImpressions | null = null;
@@ -754,7 +709,7 @@ export function parseEvaluatorReview(input: unknown): ParseReviewerPayloadResult
     cycle === null ||
     sessionStatus === null ||
     retryCount === null ||
-    axes === null ||
+    blockingFindings === null ||
     impressions === null ||
     lap === null ||
     dmv === null ||
@@ -770,12 +725,7 @@ export function parseEvaluatorReview(input: unknown): ParseReviewerPayloadResult
     cycle,
     sessionStatus,
     retryCount,
-    ordinalAxes: {
-      informationArchitecture: axes.informationArchitecture,
-      navigationFlow: axes.navigationFlow,
-      usability: axes.usability,
-      functionality: axes.functionality,
-    },
+    blockingFindings: [...blockingFindings],
     impressions: {
       operability: impressions.operability,
       transitionFeel: impressions.transitionFeel,

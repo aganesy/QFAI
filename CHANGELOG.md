@@ -4,7 +4,1088 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ## [Unreleased]
 
+### Removed
+
+- **`.qfai/report/validate.log` is no longer tracked** (#1582). Every local
+  `qfai validate` rewrites it, so `git add -A` carried it into whatever commit
+  was open — 113 of them, the six most recent about spec prose, CI checkout
+  behaviour and CLI performance.
+
+  The directory already declared it ignored; the file had been force-added past
+  that, and a tracked path bypasses ignore rules, so the disagreement was
+  invisible to `git check-ignore`.
+
+  It is live local state rather than a leftover: `doctor --clean-run-logs`
+  reads its `run_log:` and `run_id:` pointers to keep a referenced run
+  directory from being pruned. That is the argument for untracking rather than
+  deleting — one machine's record of which runs it kept means nothing in
+  another clone. An absent file is already handled as "nothing pinned".
+
+  A pull removes the local copy; the next validate run writes a fresh one.
+
 ### Fixed
+
+- **The FIFO refusal test runs its assertion against a fixture that exists**
+  (#1580). It decided whether the platform could host a FIFO by reading
+  `mkfifo`'s exit status. Git Bash ships `mkfifo`, so on Windows it exits `0`
+  and creates the FIFO inside the MSYS layer, where the running process — using
+  Win32 — cannot see it at all. The row therefore did not skip: `init` found no
+  collision, wrote the template, and the assertion compared a real file against
+  `isFIFO()`.
+
+  It now checks the fixture instead of the tool, so it asserts where a FIFO was
+  planted and skips where none was. The local package suite goes green, which
+  it had not been on this platform.
+
+### Removed
+
+- **The archetype tie-breaker, which nothing called** (#1583).
+  `core/skill/archetypeTieBreaker.ts` resolved two archetypes sharing an
+  aggregate taste-interview score. Its only importer was its own test, it was
+  not on the export surface, and the input it needed — a score from a taste
+  interview — is not produced anywhere since rating was removed.
+
+  The alphabetical tie-break it implemented is stated in the brand catalog's
+  Selection Guide, which is what an agent reads, and a guard already pins that
+  sentence.
+
+### Fixed
+
+- **A ledger `Selector` must now name a test its own `Test file` contains**
+  (#1586). `TDDLIST_SELECTOR_UNRESOLVED` accepted a selector whose last
+  identifier-shaped word appeared anywhere in the file. The last word of
+  `renders the header` is `header`, which is in almost any test file, so a row
+  could claim a completed test the file did not hold and report nothing.
+
+  Resolution is now containment of the selector's own text, which is what
+  `TDDLIST_STALE_STATUS` already required. Across this repository's own ledgers
+  the rule goes from 50 findings to 209 over 12 files, every one a `warning`:
+  the error count is unchanged, so `--fail-on error` and the backlog ratchet are
+  unaffected.
+
+  A selector no runner could match is the shape the strict check is for. Run
+  each of `spec-0002`'s previously accepted selectors through `vitest -t`
+  against its own test file and four of the six select zero tests.
+
+  Strictness makes one reading in `selector-granularity.md` reachable for the
+  first time: a bare cell holding commas was a comma-separated list before the
+  array form existed, and read as a single name such a row can never resolve
+  again. Those cells now get one bounded second reading, adopted only when the
+  file contains every part. A name that legitimately holds a comma is matched
+  whole first, and the array form — a one-element array included — is taken
+  verbatim and never re-split.
+
+- **The remediation for an unreplaced `DESIGN.md` names a step that exists.**
+  `QFAI-DCON-034` told an operator to run `/qfai-discussion`, "which emits the
+  draft". That stage stopped emitting it when authoring moved to `/qfai-sdd`
+  Phase 0, so the instruction could not be followed. It now names the stage
+  that writes the file, and says Phase 0 refuses to freeze a sample.
+
+  `QFAI-DCON-030`'s remediation and three source comments carried the same
+  stale attribution.
+
+  A sweep holds it: no source file may name `/qfai-discussion` on a line that
+  also names `DESIGN.md` or brand intent. Naming the discussion pack as where
+  the direction was recorded still passes — recording is not authoring.
+
+- **The sanctioned ledger backfill can now satisfy the gate that reads it**
+  (#1574). `execution-ledger.md` sanctions backfilling a `done` row whose
+  original run is gone: record the loss in the evidence file and point the cell
+  at that entry. `QFAI-TDDLIST-008` then judged that entry against an
+  unconditional set of 22 fields, three of which are seals recomputed from
+  artifacts on disk.
+
+  A gone run produced no review pack, so there was no seal to record and none
+  that could honestly be written. The sanctioned shape and the gate could not
+  both be satisfied, and the backfill was unreachable.
+
+  An entry now declares the loss with two fields — `Run output retained: no`,
+  read as an exact value, and `Backfill note` saying what was run. That drops
+  the reviewer-pack and seal fields from the required set and nothing else:
+  identity, the RED failure mode, the round block, and the verify and checkpoint
+  commands with their results are all reproducible by re-running the test.
+
+  The exemption is reported rather than applied quietly. `done` is read as
+  reviewed, so a row exempt from the verdicts emits
+  `QFAI-TDDLIST-019` at `warning` and is visible in the same output
+  an operator already reads. A project that will carry no row whose review it cannot verify treats
+  warnings as failures and gets the unconditional set back.
+
+- **The review payload schema stops citing a field it has never had**
+  (#1560). It said a payload that reviewed nothing is rejected "no matter what
+  its axes claim". The payload carries eleven required fields and none of them
+  is a score, so the sentence named something that does not exist.
+
+  A guard pins every statement of the stop condition to the three finding
+  arrays: each named document is checked for all three, and no prototyping
+  document may write a value off the axis ordinal in code-span form. The axes
+  themselves stay nameable — the reviewer still scores four of them and the
+  transcription row still records them.
+
+- **The specs decide convergence the way the loop does** (#1565). The prototype
+  loop stops when the latest iteration has `blockingFindings`,
+  `layoutAntiPatternsDetected` and `designMdViolations` all empty, and records
+  `stopReason: "converged"`. `spec-0012` and two CLI contracts stated it as all
+  four UX axes at `exceptional` and named `stopReason: "axes-exceptional"` —
+  a value no run has ever written.
+
+  That one bites a consumer: `--check-convergence` was specified to exit 0 on
+  it, so anyone building from the contract built for a state the tool cannot
+  produce. The blocked-cause summary was specified with `axes-below-exceptional`
+  as its third category, where the command prints `blockingFindings`.
+
+  The four axes are still scored by the reviewer and still reported. They
+  stopped deciding the stop, and the rows that made them gate are gone while
+  the rows describing them as reported remain.
+
+  A guard reads `STOP_REASONS` out of the source and fails on any spec or CLI
+  contract naming a value that enum does not carry. It found two more than a
+  read-through had: the DESIGN.md hash-mismatch path was given a fifth
+  `stopReason` nothing declares, and the max-iterations terminator was still
+  stated at the retired 15-cycle budget's `index === 14`.
+
+### Changed
+
+- **The user picks the brand direction, at the one stage that asks** (#1473).
+  `/qfai-discussion` now puts candidate themes to the user and records the
+  choice in `01_Context.md#Design Direction`: the adopted theme, what departs
+  from it, and what stays ordinary. `/qfai-sdd` Phase 0 authors `DESIGN.md`
+  from that record, and a UI-bearing pack without one stops rather than
+  picking a brand.
+
+  An assistant used to choose one of eight archetypes from its own reading of
+  the product, and the user first met the result as twelve hex values in a
+  file. Nothing downstream asked, so the decision with the largest effect on
+  how the product looks was the one nobody was consulted about.
+
+  The candidates are named themes rather than adjectives, because the user is
+  choosing rather than specifying, and they lean conventional: novelty in the
+  shape of a screen costs the user what they already know and buys nothing a
+  brand can hold. The brand lives on the accent — the primary hue and the
+  typeface pairing.
+
+  Planner-first is unchanged for what it was about. The screen explorations
+  are still carried unranked; the prototype loop is what ranks them. A
+  cli-only pack is asked for no direction, since nothing downstream reads a
+  theme for a surface that renders no tokens. An unattended run records the
+  most conventional candidate as an assumption and opens it as a question
+  rather than blocking.
+
+### Fixed
+
+- **The layout anti-pattern vocabulary is one list again** (#1517). The specs
+  named it twice and the registry shipped a third set. One identifier out of
+  eight was the same in all three, and `spec-0012` required the capture pass to
+  emit two tokens its own whitelist rejected. It also named `QFAI-PROT-025` for
+  an unregistered token; nothing emits that code, and the validator has always
+  reported `QFAI-PROT-002`.
+
+  Every spec row now names
+  `packages/qfai/assets/validators/layoutAntiPatterns.json` instead of copying
+  its contents, so adding or retiring an entry no longer needs eleven rows
+  edited. The CLI contract stops reserving two identifiers against a detection
+  nobody has written.
+
+  A sweep holds it: no spec or CLI contract may cite an identifier the registry
+  does not declare, unless the same line says that is what it is. It found
+  thirteen references that a read-through had missed.
+
+  The seven navigation and state defects the old lists named — an orphan page,
+  a dead-end flow, a hidden state, a broken back link, unlabelled navigation, a
+  missing empty state, a missing error state — are detected by nothing. That is
+  now an open question on the pack with options and a recommendation, rather
+  than a shipped promise.
+
+### Added
+
+- **`DESIGN.md` says where its numbers came from** (#1474). `brand.theme`
+  names the published theme the token values were taken from, in a form a
+  reader can install, and `/qfai-sdd` Phase 0 takes the twelve colours, three
+  families, four radii and three shadows from that theme rather than composing
+  them.
+
+  Everything downstream is exact about those values: the lock hashes them,
+  `certify` re-scans them, and every literal in every capture is checked
+  against them. Until now there was nothing under the exactness — the chain
+  from archetype to tokens ran through a sentence of prose about a colour
+  tendency, so the numbers were an assistant's invention.
+
+  The two vocabularies do not line up, so the authoring reference carries the
+  crosswalk by role, along with a rule for each gap: a role the theme does not
+  publish is derived from the theme's own palette and checked against the
+  contrast floor, and a role the theme publishes that this schema has no name
+  for is not added. The schema stays closed, and the installed theme supplies
+  the rest at implementation time.
+
+  `brand.archetype` keeps a job. It seeds `accessibility.motion`, which no
+  theme publishes, and it seeds the tokens for a file that names no theme. It
+  no longer overrules a theme that is named.
+
+  The field is optional: a project that authored its own `DESIGN.md` before it
+  existed is not wrong, it just does not say. The handoff mirror copies the
+  name, so an implementer installs the theme instead of reproducing
+  thirty-two values by hand.
+
+- **Each captured screen arrives counted** (#1493). `iterate --capture` now
+  writes `iter-NN/<screen>.signals.json` beside the capture and prints the
+  same numbers.
+
+  | Field                        | What it counts                                        |
+  | ---------------------------- | ----------------------------------------------------- |
+  | `interactiveControls`        | elements the user can operate, disabled ones excluded |
+  | `words`                      | every rendered word                                   |
+  | `explanatoryWords`           | words that name nothing                               |
+  | `controlsPerTask`            | controls over the contract's declared `primary_tasks` |
+  | `explanatoryWordsPerControl` | explanatory words over controls                       |
+  | `maxDepth`                   | deepest nesting                                       |
+  | `distinctElementTypes`       | how many kinds of element the screen uses             |
+
+  Two of the review criteria ask whether a screen is restrained, and the
+  reviewer had to count by eye to answer. An introduction above the form, a
+  line under every field and a dump of every available parameter each move one
+  of the two ratios, and both are contract-relative — a screen declaring one
+  task and carrying forty controls is wrong where the same forty elsewhere are
+  not — so no global threshold has to be invented.
+
+  A count is not a score. Nothing weights, aggregates or thresholds them: the
+  reviewer cites a number in a finding, and the finding is what gates. A
+  denominator the contract does not supply reads `null`, which means unknown
+  rather than zero. The counts are written rather than only printed because
+  the review happens in a later step, and they are computed rather than
+  recorded by the reviewer because a hand-written number is the one nobody can
+  reproduce.
+
+### Fixed
+
+- **Exit 64 is explained by what the loop reads** (#1560). `isConverged` stops
+  the prototype loop when `designMdViolations`, `layoutAntiPatternsDetected`
+  and `blockingFindings` are all empty. Six places still described the same
+  exit as all four UX axes at `exceptional` — the goal, the stop-condition
+  table, the loop reference, the generator prompt and the `--help` text.
+
+  The four axes are still scored and still reported. They stopped deciding the
+  stop, so an agent told to keep iterating until they read `exceptional` would
+  work past a run that had already converged, and an operator reading the help
+  would look for a cause nothing checked.
+
+  A sweep holds it: no paragraph in the prototyping skill may state the stop
+  and a score from the axis ordinal together.
+
+### Changed
+
+- **Root `DESIGN.md` is authored where it is frozen** (#1472). `/qfai-sdd`
+  Phase 0 now writes the file if it is missing, from the design direction the
+  discussion pack recorded; `/qfai-discussion` interviews for that direction
+  and records it, and writes nothing outside its own pack.
+
+  Phase 0 used to stop and send the user back to `/qfai-discussion` for a file
+  it then froze, so the brand was decided one skill before the gate that
+  checks it. The interview questions stay in
+  `qfai-discussion/references/design-dna-intake.md`; the mapping from answer
+  to field moves to the new `qfai-sdd/references/design-md-authoring.md`,
+  beside the archetype catalog.
+
+  Discussion's completion and review gates now check the two reference
+  registries in `04_Sources.md` — the input Phase 0 reads — instead of a file
+  that does not exist yet. A cli-only pack is unaffected: it records no brand
+  direction and gets no `DESIGN.md`.
+
+- **The test runner stops asking for more forks than the machine has** (#1528).
+  `DECLARED_START` is ten, and on a four-core runner that asked for ten forks
+  where four fit. A fifth fork does not run — it waits for a core — and the
+  waiting is charged to the fork, so the suite reported as though it were
+  ten-way parallel while running four-way.
+
+  Whole package suite, four cores, back to back:
+
+  | forks | wall    | collect (summed) | tests (summed) |
+  | ----- | ------- | ---------------- | -------------- |
+  | 10    | 307.4 s | 347.8 s          | 1999.2 s       |
+  | 4     | 253.0 s | 109.6 s          | 703.6 s        |
+
+  Summed test time falls to a third while the same 11 338 cases run with the
+  same outcomes. On the wall clock ten is 21.5% slower, outside the ten percent
+  the adoption rule allows — where the fourteen-core comparison that adopted ten
+  put it at 3.48%, inside it.
+
+  The declaration is unchanged and still ten. What the runner is handed is
+  `Math.min(DECLARED_START, availableParallelism())`, so a machine with ten
+  cores or more is unaffected. `QFAI_TEST_MAX_WORKERS` stays uncapped: a
+  comparison that could not oversubscribe could not measure what
+  oversubscribing costs. `DR-0017-0010` records the decision.
+
+- **The prototyping envelope bans runtime dependencies, not markup** (#1479).
+  `generator-prompt.md` opened its envelope constraints with "No component
+  library beyond Tailwind + Lucide", which also refused transposing a block
+  from a component catalogue — an operation that installs nothing.
+
+  The real constraint is the line beside it: one self-contained file loaded
+  from a CDN, which has no package manager to run an install with. The clause
+  now says that, and names the one authoring path the gate genuinely cannot
+  see — CSS behind a `<link>`, whose href is never fetched, so a literal
+  inside it is drift nobody reports.
+
+  It also states the permission plainly: transposing a catalogue block and
+  re-binding its palette classes to `DESIGN.md` tokens is the expected way to
+  build a screen. `designMdViolations.ts` judges the values a document states
+  and has no way to read where the markup came from, so a transposed block
+  passes once `bg-blue-500` becomes `bg-primary`. Both halves of the
+  scanner / prompt pair now say so, and
+  `designMdViolationsTransposition.test.ts` runs a catalogue block through the
+  gate in both bindings.
+
+### Fixed
+
+- **Prototype captures are checked for accessibility** (#1485). The
+  accessibility phase — image alternatives, document language, skip link,
+  heading hierarchy — was reachable only from `validate`, and the loop writes
+  exactly the artifact it wants: one capture per screen per cycle. Nothing
+  read them with it, so every screen went unchecked.
+
+  It now runs over the accepted iteration's captures beside the token re-scan,
+  and reports what it finds, naming the screen. Reported, never blocking:
+  replacing "any layout shape stops the loop" with "any accessibility finding
+  stops the loop" would repeat the mistake with better sources. The reviewer
+  reads them and decides what belongs in `blockingFindings`.
+
+- **The shipped-document version guard read every triple of numbers as a
+  version** (#1551). `WCAG 3.3.2` failed the same check as `qfai 1.11.1`, so an
+  init-template document could not cite an accessibility criterion by its
+  number — the one form of it a reader can look up.
+
+  A version is now a number something names as one: a leading `v`, or a tool
+  or package name in front of it. A bare triple is left alone, which is what a
+  published standard's clause number is. The guard still rejects a real pin,
+  and a second case asserts both columns so the narrowing cannot be widened
+  back by accident.
+
+  The prototype review criterion on labels now names `WCAG 3.3.2` where it
+  previously pointed at a rule file that carries the number, so the reader of
+  the criterion has the citation in front of them.
+
+- **Two codes shared the `lap-` prefix with a registry that did not declare
+  them** (#1499). `layoutAntiPatternsDetected[]` has one vocabulary and two
+  writers: the reviewer writes the codes it judges, and `iterate --capture`
+  computes `lap-009` (two declared screens whose captures are byte-identical)
+  and `lap-010` (a declared route the capture could not reach).
+
+  Only the first writer's codes were registered. The specification, the CLI
+  contract and the command's own warning all say the other two are counted in
+  that array, so a reviewer recording one — as the warning tells it to —
+  produced `QFAI-PROT-002` for a code the tool itself printed.
+
+  Both are now declared in `layoutAntiPatterns.json`, each naming the screen
+  contract as its authority, which is the same authority
+  `lap-007-state-not-represented` names. A row reads the emitted codes out of
+  the capture pass and fails when one is unregistered, so a third code cannot
+  be added on one side alone.
+
+- **The handoff says what to install, not to rebuild** (#1480). It handed an
+  implementer a screenshot and a paragraph and said "reimplement with
+  project-native patterns", which is an instruction to rebuild by hand at the
+  exact point a component could be installed.
+
+  `prototype-handoff.yaml` now carries `procurement`: what realises each
+  screen region, and for an authored region, what was looked for and did not
+  serve. The reviewer checks the implementation against it instead of judging
+  a resemblance.
+
+  It also settles what the prototype never showed. Responsive behaviour, dark
+  mode, focus states and the detail of an empty state come from the adopted
+  design system's default, which answers them consistently with each other.
+  `implementationNotes` keeps what is genuinely prose.
+
+- **Every layout anti-pattern names what makes it a defect** (#1484). An
+  entry now carries a `source`, and the loader drops one that does not: a
+  published heuristic, an accessibility criterion, or the contract the screen
+  is built to — never this project deciding it dislikes something. A rule with
+  no authority behind it cannot be argued with, only obeyed, which is how the
+  registry came to hold five conventional layouts.
+
+  `lap-006-overcrowded-sidebar` is retired with them. It reported a sidebar
+  carrying ten or more links, and no published source states a navigation
+  count as a defect; the threshold was this repository's own.
+
+  Definitions are pinned rather than researched per run. `certify` re-scans
+  the captures, so a check whose answer depends on what a search returned that
+  morning cannot agree with itself.
+
+- **A concurrency guard that passed because the filesystem undid what it
+  staged** (#1477). `provenanceHostileTree` has a row asserting that a holder
+  reclaimed mid-section leaves its successor's lock alone. It failed about once
+  in thirty-five runs on a loaded machine, and passed the rest — for the wrong
+  reason.
+
+  The fixture removed the lock and published a different directory at the same
+  name. Every identity check in the primitive reads `dev`/`ino`, and a
+  directory inode freed one syscall earlier is handed straight back to the next
+  `mkdir`: measured at 25 reuses in 25 runs. At the filesystem level the
+  successor was the same object, so the release took its _this is mine_ branch
+  and the row exercised the opposite of what it is named for.
+
+  On the rare run where the inode was not reused, the code behaved correctly —
+  it reported the dispossession, retried, and reclaimed a planted lock nobody
+  was renewing — and the assertions, written for the other branch, failed.
+
+  The fixture now stages the successor before removing the lock, so the freed
+  inode cannot be handed to it, and asserts the two differ. It renews the
+  successor's marker for the duration, because a lock with no holder behind it
+  is reclaimable by design. The row's outcome is now the honest one: the
+  dispossessed holder reports the loss instead of writing, and the successor's
+  lock is untouched.
+
+### Fixed
+
+- **A declared contrast floor is now the one a prototype is measured against**
+  (#1481). `accessibility.contrast_ratio_min` is a required key in `DESIGN.md`,
+  and nothing read it as a threshold. It was parsed, checked for finiteness and
+  hashed into the lock, and that was all.
+
+  The one check that computed contrast, `QFAI-MOCK-008`, compared against a
+  hard-coded AA constant and read HTML blocks inside documents rather than
+  iteration captures. So a project declaring a stricter ratio than AA was
+  measured against AA, and a project declaring AA had no capture measured at
+  all — while every other required token in `DESIGN.md` was enforced against the
+  captures.
+
+  `findDesignMdViolations` gains a sixth clause, on the same captures as the
+  other five, with a new violation kind `contrast`. A pair is read from a
+  declaration block that states both a text colour and a background, in a rule
+  body or an inline attribute, with `:root` tokens resolved. Where a pack
+  declares no floor, WCAG AA stands in.
+
+  A pair is judged only when both sides resolve to a colour the ratio
+  computation accepts, so a named colour, `hsl()`, a value carrying alpha or a
+  shorthand with more than a colour in it is skipped rather than guessed at.
+
+- **Two spec packs mandated a prose-critique floor the code does not have**
+  (#1503). QFAI-PROT-002 applies a cap and selects the unit from the text: a
+  critique carrying CJK is measured in CJK characters, anything else in
+  whitespace-separated words, and neither unit has a lower bound.
+
+  `spec-0012` and `spec-0004` stated the band
+  `200..500 words OR 600..2500 characters` as a requirement, in a requirement,
+  a user story, an acceptance criterion, two business rules, an example and two
+  test cases. That is wrong twice over. The lower bound was removed, and the OR
+  was never how the unit is chosen — an English critique carries no CJK
+  characters, so a rule passing on either unit would pass every English text
+  however long.
+
+  `DR-0277` records the cap and the selected unit, and supersedes
+  `DR-0001-0003`, whose rejected alternative was argued against on the strength
+  of the floor. The boundary rows now match the cases that run: only the upper
+  edge of each unit rejects.
+
+- **Thirty-two files told an agent which language to answer in** (#1500).
+  Every document under `.instruction/` opened with a block fixing output to one
+  language, which the constitution's Absolute Rule — answer in the user's
+  working language — already decides.
+
+  This is the same block, in the directory it was copied out of. It reached
+  `constitution/agent-selection.md` that way, overrode the Absolute Rule for
+  every operator working in another language, and was removed there. The guard
+  written with that removal swept only what ships, so the originals stayed, and
+  a comment naming the removal cannot stop a re-port from a directory nobody
+  sweeps.
+
+  The blocks are gone and `outputLanguageSingleSource.test.ts` now sweeps
+  `.instruction/` with the same matcher that guards the shipped tree.
+
+### Added
+
+- **Review criteria that walk every declared task** (#1489). The prototype loop
+  used to rate four axes. Rating went because a number painted on a judgement
+  is not evidence, and what replaces it has to be answerable: eight yes/no
+  criteria, each `no` becoming one line in `blockingFindings`. No axis, no
+  rating, no aggregate — a count is evidence a finding cites, and the finding
+  is what gates.
+
+  | #   | Answer yes or no                                | Source            |
+  | --- | ----------------------------------------------- | ----------------- |
+  | 1-4 | The procurement ladder, read as questions       | procurement rules |
+  | 5   | No catalogued anti-pattern is present           | the `lap-*` set   |
+  | 6   | Conformant, procured, restrained and consistent | below             |
+  | 7   | Every declared `primary_task` walks             | below             |
+  | 8   | No text on the screen explains the interface    | interface rules   |
+
+  Two of the eight carry method rather than opinion.
+
+  **Criterion 7** is the streamlined cognitive walkthrough: step through each
+  declared task and ask, at every step, whether the user will know what to do
+  and whether the response tells them they did the right thing. It tests
+  learnability — whether someone who arrives untold can get through. The task
+  list it needs was already declared on every screen, counted and shape-checked
+  and never walked.
+
+  **Criterion 8** separates a label from an explanation, and the distinction
+  matters because getting it backwards breaks accessibility. Labels stay: WCAG
+  requires one for every form input, and a placeholder standing in for one is a
+  documented failure. What goes is the sentence under the label, the tooltip on
+  a button whose text already says what it does, and the paragraph introducing
+  the page. The finding names the control to fix, not the sentence to delete —
+  copy that explains a control is evidence the control is wrong.
+
+  Criterion 6 stands in for "is it stylish", which is not answerable as asked.
+  Four checkable things replace it, and a screen with all four looks
+  deliberate.
+
+  The four subjects stay as the areas to ask the questions of. They carry what
+  the eight do not: whether the artifact satisfies the spec at all, and whether
+  a user can move between screens.
+
+  Each role that applies the criteria carries one line saying so, so they reach
+  the stage that acts on them rather than living only in the loop.
+
+- **A discussion pack can record the catalogues it adopted from** (#1482).
+  The reference registry knew one kind: a competitor, consulted to differ
+  from. A component catalogue is consulted for the opposite reason and had
+  nowhere to be recorded.
+
+  `04_Sources.md` gains a Component Catalogue Registry beside the competitive
+  one. Both take the same three fields — what was adopted, what was rejected,
+  how it was translated — and are counted apart, so a catalogue entry cannot
+  satisfy the competitive minimum or the reverse.
+
+  The catalogue count is off unless a project sets `uiux.catalogue_refs_min`.
+  A gate that fires on every pack written before the registry existed is one
+  people switch off rather than satisfy. An entry that IS registered is held
+  to all three fields either way.
+
+- **A ladder for where a screen's components come from** (#1478).
+  `.qfai/assistant/catalog/ui-procurement.md` states the order: does the
+  region need to exist, does the installed design system have it, does a
+  catalogue have it, can it be composed from what is present — and only then
+  author it and record why. The theme is adopted from a published one rather
+  than chosen colour by colour.
+
+  It also settles the part a static capture cannot show. Responsive
+  behaviour, dark mode, focus states and the detail of an empty state come
+  from the adopted system's defaults, which agree with each other in a way
+  per-screen invention does not.
+
+  Delivered by placing the file: every skill and every agent card already
+  reads `catalog/**` as a set. The three roles that build or review a
+  surface carry the obligation explicitly, beside the one they already carry
+  for code.
+
+- **A project can say which user-interface stack it adopted** (#1476).
+  `catalog/tech.md` gains a Frontend section naming the CSS framework, the
+  catalogue components are taken from, and the published theme the tokens
+  resolve from. `qfai.config.yaml` gains `uiux.registries`, the machine
+  half: component registries as name to URL template, in the shape a
+  `components.json` already carries, so a project that has one restates it
+  rather than translating it. A template without the `{name}` placeholder
+  resolves no component and is rejected.
+
+  Neither is required, and a project with no user interface leaves both out.
+  Nothing read either before, so an instruction to use the project's design
+  system named nothing and a screen got hand-drawn because that was the only
+  option left.
+
+- **A ruling on what `.instruction/` may say** (#1500). Nothing said what
+  belonged in the directory `AGENTS.md` routes an agent into, so a rule could
+  live there in a second copy and drift from its master unread.
+
+  `.instruction/README.md` states it: the directory holds operating guidance,
+  it is repository-only, it states no rule that a rule master, the
+  constitution, the root entry points or the review policy owns, and on any
+  disagreement the owner wins. A new file earns its place by saying something
+  none of them says.
+
+  The `02_project/` layer summarises facts a live file states — layout, stack,
+  commands — so the ruling says to read the live source before acting on one.
+
+- **A rule for what may appear on an interface** (#1495).
+  `.agents/rules/interface-clarity.md` is the counterpart of
+  `documentation-clarity.md` one surface over: that rule settles what an agent
+  writes about the work, this one settles what it puts in front of a user.
+  Nothing said the second, and an agent left to build a screen produced the
+  failure the first rule exists to stop, in a different medium — a paragraph
+  introducing the page, a hint under every field, a tooltip on a button whose
+  label already says what it does, and every parameter the thing underneath
+  happens to expose.
+
+  Six clauses, one per clause of the prose rule: do not surface the mechanism,
+  do not explain the interface, cut, use the conventional pattern, show the
+  structure, walk every task the surface declares.
+
+  The clause that decides the hard cases is quoted from the GOV.UK Design
+  System: help text that explains the interface means the service is too
+  complicated. Text explaining how to work a control is a defect report against
+  that control.
+
+  Cutting stops at the label. WCAG 3.3.2 requires a label for every form input
+  and a placeholder standing in for one is a documented failure, so the rule
+  deletes the explanation and protects the label — written the other way round
+  it would trade one defect for an accessibility failure.
+
+  Not the web alone: a command-line tool has an interface, so
+  `catalog/cli-ux-guidelines.md` reads as one of its consumers, beside the
+  experience, frontend and surface-review agent cards. The master ships to
+  adopters with the other cross-AI rules.
+
+- **A shape for a review finding about excess** (#1463). `REVIEW.md` listed
+  simplification opportunities among the categories a reviewer must always flag
+  and said nothing about what such a finding looks like, so what came back was
+  hedged and unactionable. A sentence asking whether all of this is really
+  needed says neither what to cut nor what would stand in its place.
+
+  A finding is one line — where it is, what to cut, what replaces it — tagged
+  with the reason:
+
+  | Tag      | Means                                                                               | What replaces it      |
+  | -------- | ----------------------------------------------------------------------------------- | --------------------- |
+  | `delete` | Dead code, unused flexibility, a speculative feature                                | Nothing               |
+  | `stdlib` | A hand-rolled thing the standard library ships                                      | Name the function     |
+  | `native` | Code or a dependency doing what the platform already does                           | Name the feature      |
+  | `yagni`  | An abstraction with one implementation, config nobody sets, a layer with one caller | Inline it             |
+  | `shrink` | The same logic, fewer lines                                                         | Show the shorter form |
+
+  The five reviewer agent cards carry the tags too. `REVIEW.md` is this
+  repository's own and is not shipped, so a card pointing at it would name a
+  file no project has.
+
+  Correctness, security and performance findings keep the shape they had. This
+  is only about excess.
+
+- **A lane that collects every deliberate simplification** (#1466).
+  `.agents/rules/minimal-implementation.md` asks an author who takes a shortcut
+  on purpose to write it down where it is taken, with the ceiling it stops at
+  and the condition that lifts it. Nothing collected those markers, and a marker
+  nobody collects is worth less than no marker, because it reads as tracked.
+
+  `scripts/check-simplification-ledger.mjs` runs in `ci:lint`. It prints every
+  marker grouped by file, with both halves, and exits non-zero on one that names
+  no lifting condition — because a ceiling with no way out cannot be told from
+  an oversight, and the deferral then becomes permanent with nobody deciding it
+  should.
+
+  It does not fail on the count. That would make the guard an argument against
+  marking a shortcut at all: the author who writes the marker would redden the
+  build and the author who takes the same shortcut silently would not.
+
+  Comment lines in source files only. Markdown is out, so the rule's own worked
+  example is not collected as a finding.
+
+- **A rule for how much code implements a behaviour** (#1458).
+  `.agents/rules/minimal-implementation.md` states one ladder — does this need
+  to exist, does the standard library do it, does the platform, does an
+  installed dependency, can it be one line, and only then the least code that
+  works — and says what the ladder never removes: validation at a trust
+  boundary, error handling that prevents data loss, security, accessibility,
+  and anything the spec asks for. Tests are in that second list: the ladder
+  shapes how a test is built, never how many obligations are verified.
+
+  A shortcut taken on purpose is marked where it is taken, with its ceiling and
+  the condition that lifts it. Both halves are required, because a ceiling with
+  no lifting condition cannot be told from an oversight.
+
+  `qfai init` ships the rule and cites it from the entry points it writes, so
+  an adopter's repository carries it the way it carries the writing standard.
+
+  What existed before was one line in this repository's `AGENTS.md`, written in
+  a vocabulary nothing defined, and a checklist nothing loaded on its own. Both
+  are replaced by a reference to the master.
+
+### Removed
+
+- **The design-system presence validator** (#1516). It reported `UIX-VAL-DS01`
+  when a UI-bearing pack had no design-system sidecar, and `UIX-VAL-DS02` when
+  that file's sections were empty. Two things made it dead weight rather than a
+  gate.
+
+  | Fact                                                         | Effect                        |
+  | ------------------------------------------------------------ | ----------------------------- |
+  | The three-layer validator reports the same file as forbidden | No pack could satisfy both    |
+  | Nothing dispatched it                                        | The contradiction never fired |
+
+  The integration suite for that pack already states which side is current: the
+  file is a forbidden legacy sidecar. So one validator required what another
+  refused, and the only reason nobody hit it is that the module was absent from
+  the validator index, from the canonical dispatcher, and from every re-export
+  — listed instead in two allowlists of things known not to run.
+
+  Its three codes are gone with it, and the retired-code register keeps their
+  numbers reserved so a future rule cannot take one back.
+
+  The pack that owned the requirement retires the three test cases and their
+  ledger rows in the same change. `AC-0014-0004` stays: two of its test cases
+  cover the prototyping design-system validator, which is a different module
+  and still runs.
+
+### Fixed
+
+- **One document decides output language** (#1530). The constitution states an
+  Absolute Rule — write every output in the language the user is working in —
+  and says it overrides all other stylistic preferences. `AGENTS.md`, the first
+  document every agent in this repository reads, opened with its own rule
+  fixing that language to one, and told the reader to prefer it.
+
+  So the document that overrode the Absolute Rule for every operator who works
+  in another language was the one they were sent to first. It now points at the
+  rule and says it pins nothing.
+
+  The sweep written when the same block was removed from a shipped file covers
+  the trees that ship. `AGENTS.md`, `CLAUDE.md` and
+  `.github/copilot-instructions.md` are none of them, so nothing looked at the
+  root entry points. They are swept now.
+
+  Extending it exposed two defects in the matcher, both of which the root entry
+  points hit on the first run.
+
+  | Defect                                                                       | Effect                                                  |
+  | ---------------------------------------------------------------------------- | ------------------------------------------------------- |
+  | The topic-marker form was missed                                             | The plainest way to write the rule read as prose        |
+  | A statement of the repository's own written language was read as a directive | Two correct lines were reported, in two different files |
+
+  Every Japanese shape expected the language named before a particle or beside
+  a colon. The topic-marker form names the output first and the language last,
+  which is both the ordinary way to write it and what the entry point used. A
+  shape for it is added.
+
+  The second is a collision between two rules that own different things.
+  `repository-language.md` decides what this repository stores and says in so
+  many words that it does not decide what an assistant replies in — but
+  `written` is an output verb, and the matcher could not tell a repository from
+  an output. A carve-out now names the repository as the thing written. It is
+  narrow: a sentence about what an agent writes is untouched.
+
+- **The project layer describes the repository it is in** (#1531). The files
+  under `.instruction/02_project/` summarise this repository for an agent
+  `AGENTS.md` routes there, and nothing compared a summary against the thing it
+  described. The Node floor moved twice and three directories were removed with
+  none of them failing.
+
+  What an agent read was a repository that no longer exists.
+
+  | Stated                                                     | Actual                                        |
+  | ---------------------------------------------------------- | --------------------------------------------- |
+  | `engines` is `>=18.0.0`                                    | `>=20.19.0`                                   |
+  | `docs/` at the repository root                             | No such directory                             |
+  | `.qfai/require/` is the requirements root                  | No such directory                             |
+  | `.qfai/assistant/prompts/`, `.../instructions/`            | No such directories                           |
+  | A spec pack is `spec.md` / `delta.md` / `scenario.feature` | `01_Spec.md` through `10_Plan.md`             |
+  | ID types are `SPEC` / `SC` / `UI` / `API` / `DB`           | `US` / `AC` / `BR` / `EX` / `TC`, and `CON-*` |
+
+  The pack shape was the one that cost. An agent following it created three
+  files with names no validator reads, while `naming.md` one directory over said
+  otherwise — so the layer contradicted the tree and itself.
+
+  Each fact is now handled according to what kind of fact it is. A value a
+  machine-readable file already states, and that moves on its own schedule,
+  names that file instead of restating it: the Node range and the pnpm version
+  are read from `package.json`. A shape an agent acts on is stated here and
+  correct, because an instruction you have to look up is not an instruction.
+
+  `naming.md` was missing `10_Plan.md` and `11_Slice-Policy.md` from the two
+  required sets, and two paths were written from the package root in prose that
+  named no package. Both are fixed.
+
+  The class no longer goes stale silently: a repository-relative path this layer
+  names must exist, and a Node floor it states must be the declared one. The
+  check goes quiet if the layer is ever removed rather than standing in the way
+  of removing it.
+
+- **A reference is consulted to differ from, or to adopt from, and the two
+  are no longer the same instruction** (#1475). The intake asked an author to
+  treat templates as seeds rather than winners, to name what must feel unlike
+  generic products, and to list default visual patterns that must not survive
+  into prototyping. Every reference was framed as something to move away from.
+
+  That is right for a competitor and wrong for a component catalogue. A
+  product that looks like its competitor has no brand; a settings screen that
+  does not look like a settings screen has no users. The intake now separates
+  the two, and `audience.do_not_look_like` holds identities to avoid rather
+  than conventions — the shipped sample seeded it with a layout, which is the
+  one thing that field is not for.
+
+- **The SDD instructions agree with the validator and with each other** (#1519).
+  Three places in the `/qfai-sdd` assets stated something the tooling does not
+  do, or something a sibling document contradicts. None of them stopped a run.
+  Each made an agent pick a reading and then defend it in review, which is the
+  most expensive way for a document to be wrong.
+
+  | Where                                       | Stated                                     | Actual                                                       |
+  | ------------------------------------------- | ------------------------------------------ | ------------------------------------------------------------ |
+  | Both delta templates, the Phase 4 checklist | Only the first `## Triage` heading is read | Every `## Triage` section is validated                       |
+  | The spec evidence template                  | A fixed 6-column Work Orders table         | The shared schema has 7 columns and admits `PENDING`         |
+  | `SKILL.md` role lists                       | "UI-bearing", with no definition           | The target spec's surface decides, not the files a run edits |
+
+  The Triage claim was the costly one. An agent that followed it merged
+  headings in an append-only ledger — rewriting past entries and conflicting
+  with parallel branches — and a reviewer who read the template flagged a
+  correct file. The rule is now the one the validator holds: a re-run appends a
+  run sub-section under the existing heading, or opens a second H2 that names
+  its round in parentheses. Any other trailer is read by no Triage validator and
+  is reported as such.
+
+  The dropped Work Orders column was `Agent instance`, which is what makes an
+  author-reviewer collision detectable from the evidence alone. The narrowed
+  status vocabulary left an unrun gate no honest value: the baseline says as
+  much in its own text, so the template was arguing with its cited source.
+
+  UI-bearing is now stated once, as a property of the target spec rather than of
+  the files a run edited, and both role sites point at it. This skill authors
+  the contracts that define the screens, so a run against a spec with a surface
+  owes the UI roles whether or not it touched a screen. The routing manifest
+  carries the same condition beside the key it governs.
+
+  The fourth contradiction the report named — the `slice-and-scope` rerun policy
+  — is already reconciled, and a test holds it.
+
+- **The update bot stops offering releases the declared Node floor cannot run**
+  (#1522). Dependency updates merge on a green `ci-pass` and nothing else, which
+  works because that check runs this repository against the new dependency. It
+  cannot judge one narrowing: a release that raises its own `engines.node` above
+  the floor declared here. Every lane runs on the newest Node the range allows,
+  and the one lane pinned to the floor runs the package test suite rather than the
+  lint set, so such a release goes green and lands — and the narrowing surfaces
+  later as a local failure for whoever is on the oldest supported Node.
+
+  `markdownlint-cli2@0.23.2` is the measured case: it declares `>=22` against a
+  floor of `>=20.19.0`, and its update reached a passing check.
+
+  The bot now filters by the declared constraints, against the floor the published
+  package promises. This is not a pin and nothing stops receiving fixes —
+  `markdownlint-cli2@0.22.1` declares `>=20` and is still offered. The floor is
+  read from the package manifest rather than written twice, and a test holds the
+  two together.
+
+- **The floor lane stops failing runs in which nothing failed** (#1523). That lane
+  runs the whole suite in one process pool, and each fork reports progress to the
+  single main process over a call with a fixed budget. When the main process could
+  not answer in time the fork threw, the throw was counted as an unhandled error,
+  and a run with every test green exited 1.
+
+  The budget is not reachable: the runner's fork options carry no timeout, its
+  options builder sets none, and the default lives inside the message library. So
+  the lever is the contention instead. The lane now takes its fork count from the
+  runner rather than inheriting the declared ceiling, which on a four-core machine
+  was 2.5 times oversubscribed.
+
+  That is also faster. Whole suite on four cores, ten forks against four: 299 s
+  against 269 s of wall clock, with the summed collect and test figures falling
+  from 343 s to 113 s and from 1972 s to 743 s. Those sums are taken across forks,
+  so their collapse is the oversubscription — at ten forks most of each fork's
+  measured time was spent waiting for a core.
+
+  The declared starting value is unchanged. This is the override the knob set
+  already defines, used by the one lane that needed it.
+
+- **The prototyping loop converges on open findings, not on a rating** (#1488).
+  The stop test required all four review axes at `exceptional` — a value the
+  scale itself defines as best-in-class and tells the reviewer to use
+  sparingly — aggregated as the worst verdict across every screen, and
+  `certify` re-derived the same condition. A review that rated honestly never
+  satisfied it, so the gate measured the reviewer's willingness to call four
+  axes best-in-class rather than measuring the prototype.
+
+  The four ordinal axes are gone. The reviewer writes `blockingFindings`, one
+  line per thing that must be fixed, and convergence is that array empty
+  alongside `layoutAntiPatternsDetected` and `designMdViolations`. Anything
+  worth saying that does not block goes in the prose critique, where it
+  informs the next cycle without stopping this one.
+
+  Nothing else in this project scored: the shared reviewer contract is a
+  verdict plus graded findings, and `/qfai-implement` already ran a binary
+  checklist. Prototyping now uses the same shape.
+
+  `pivotDirective` compares how many findings are open across cycles, because
+  a count is reproducible where a verdict is not. `stopReason` records
+  `converged`. The cycle-0 seed carries one finding, so an iteration nobody
+  has reviewed cannot satisfy the stop test by never having been looked at.
+
+- **The design-drift scanner cites nothing a reader cannot resolve** (#1496).
+  Nine comment lines in the scanner named a code review tool's internal comment
+  identifier. They pointed at something no reader outside this repository can
+  open, which is what the writing rule forbids. The engineering reason each
+  comment carried is kept; only the identifier is gone.
+
+  Nothing in the tree cites one now: the clarity guard reports no local
+  identifier over the whole tree, where it reported eight.
+
+  The scanner and the generator prompt are a pair that must change together, so
+  the prompt gains what the scanner comments had learned and it had not: a
+  screen that shows markup as sample text has that markup scanned as if it were
+  live, because the gate reads class attributes with a regular expression rather
+  than a parser. The note says what to do about it, and why the trade is a false
+  positive rather than a missed violation.
+
+- **A user story is declared by its entry, not by a sentence naming it**
+  (#1512). The declared set was the entries plus every loose `US-NNNN` in
+  `02_User-stories.md`, so any prose that named an id declared it.
+
+  A retired id is where that costs. A deleted story keeps its number reserved,
+  and a pack writes the reservation down so nobody reuses it — which made the
+  story live again, and `QFAI-ATDD-111` then demanded an E2E reference for
+  something with no entry, no acceptance criteria and no behaviour. Every way
+  out was worse than the note: an annotation with nothing behind it, the note
+  hidden in an HTML comment where the people it warns cannot read it, or the id
+  spelled so the scan missed it.
+
+  An id is declared by a heading (`##` down to `######`) or a catalog list item,
+  which are the two shapes the deferral marker already opens a block at. A
+  mention anywhere else is prose about a story rather than a declaration of one.
+
+  This is the rule the test-case side already applies, and for the same reason:
+  an id read from somewhere other than its declaration carries an obligation
+  nobody wrote.
+
+- **A conventional screen can finish the prototyping loop** (#1471).
+  Five registry entries reported a dashboard with a sidebar and a KPI row, a
+  card grid beside an aside, tabs over a table, a bento grid and a centred
+  hero. A detection is not a score penalty: convergence requires the detection
+  array to be empty and `certify` re-derives the same condition, so a product
+  built the way products are built could not finish the loop at all. It spent
+  every cycle and failed.
+
+  The three entries that name a defect stay — an overcrowded sidebar, a state
+  nothing represents, and no way back. An entry now has to describe a defect
+  rather than a shape, because a layout being common is not evidence of
+  anything.
+
+  The identifiers the specifications name have never matched the ones that
+  shipped, and still do not (#1517).
+
+- **The clarity guard reads test titles, messages, and wrapped lines** (#1497).
+  `scripts/check-doc-clarity.mjs` reported a clean tree while two shapes of the
+  thing it looks for sat in plain sight.
+
+  | Shape                                             | Why it was invisible                                             |
+  | ------------------------------------------------- | ---------------------------------------------------------------- |
+  | A citation in a test title or an operator message | Only comment lines were read in a source file                    |
+  | A citation a line wrap split in two               | Each line was matched on its own, and neither half is a citation |
+
+  Both are surfaces a reader meets. A test title ships in the run output and a
+  message ships in the terminal, more often than the comment above either.
+
+  The string scope is the **call**, not the quote character. A fragment in an
+  assignment or a fixture is data the program uses, and rewriting it would change
+  behaviour, so the window is the call line and the string literals wrapped under
+  it — and a call that also opens a callback ends the window where it starts,
+  because the body of a test is not prose.
+
+  A wrapped citation is reported at the line it starts on, and a shape that
+  already fired on one of the two halves is not counted twice.
+
+  One citation turned up in the tree the moment the wrap gap closed, in a comment
+  nobody had to change since. It is removed here.
+
+- **The forbidden-legacy manifest names every retired sidecar** (#1498). A
+  discussion pack rejects eight families of sidecar file. The manifest an author
+  is sent to listed four of them, so the other four could be created in good
+  faith and refused by validation afterwards.
+
+  The four that were missing are named now, each with what replaced it:
+
+  | File                            | Why it is retired                                                 |
+  | ------------------------------- | ----------------------------------------------------------------- |
+  | `10_implementation_strategy.md` | Discussion carries directions unranked, so it selects no strategy |
+  | `11_design_taste_interview.md`  | Brand signals live in root `DESIGN.md`                            |
+  | `12_design_system.md`           | Replaced by root `DESIGN.md` and the design contracts             |
+  | the `20`–`24` family            | The evaluator axes are fixed by the CLI, not authored in a pack   |
+
+  A test reads the manifest against the validator, so a family added to one and
+  not the other fails rather than waiting for an author to meet it.
+
+- **A screen with one primary task no longer reads as weakening its own focus**
+  (#1490). `QFAI-AUD-020` recommended a band of 3 to 7 primary tasks per screen
+  and reported anything under it, saying the count "weakens screen focus" and
+  telling the author to bring it into the band — that is, to add tasks.
+
+  Seven tasks on one screen weakens focus. One task on one screen is focus, so
+  the lower bound argued against the thing the rule exists to protect. It is
+  gone; the ceiling of 7 stands, and the finding now says which way it was
+  crossed and where the surplus should go.
+
+  `QFAI-AUD-001` still reports a `primary_tasks` list with nothing in it, so a
+  screen that declares no task at all is caught as before. One and two, the
+  range the band invented a problem for, are the range a focused screen
+  occupies.
+
+  Severity was `warning` throughout, so nothing blocked. It still pushed every
+  screen toward the middle of a range, and a finding generally gets resolved.
+
+- **A screen that does one thing can be declared** (#1491). The screen contract
+  counted an empty list as a missing field, so every screen owed at least one
+  secondary task. A screen with a single primary task could not be written down,
+  and the author's only way through was to invent one.
+
+  An explicit empty list is an answer; a missing key is not. The two parsed
+  identically before, and the validator now records which nested keys a screen
+  declared, separately from what they hold.
+
+  `secondary_tasks`, `transitions` and `observable_outcomes` are answered by
+  being declared. `primary_tasks` and `required_states` still have to hold
+  something: a screen with no primary task is not a screen, and an
+  unrepresented empty or error state is a real defect.
+
+  The `requirements-analyst` card described the shipped UI contract sample as
+  exposing an empty `primary_tasks` slot to fill. The sample ships filled
+  entries, and the card says so.
+
+- **A prototyping review may report one finding and stop** (#1492).
+  `proseCritique` carried a lower bound — 200 English words, or 600
+  Japanese/Chinese characters — per screen, per cycle. A reviewer who had one
+  clear thing to say had to write another hundred and eighty words around it,
+  and on the next cycle that padding reads as work to do.
+
+  There is no minimum now. The cap stays, because a reviewer writing far past
+  the point still costs the loop something.
+
+  Removing the floor also removes a way a review could fail on its script.
+  The character count recognises Hiragana, Katakana and Han; everything else
+  fell to the word count, so a critique in Korean, Cyrillic or Thai was
+  measured in words those scripts do not separate with spaces. A count that
+  is too low is no longer a reason to reject anything.
+
+  The cap that remains selects its unit rather than accepting whichever unit
+  fits: a critique carrying CJK is measured in characters, anything else in
+  words. Accepting either would have left every English critique under the
+  character cap by construction, and so under no cap at all.
+
+  Two things follow. `buildEvaluatorReview` now calls the same function the
+  on-disk validator does, instead of carrying its own English-only copy that
+  threw on a Japanese critique the validator accepted. And the cycle-0 seed
+  critique is one sentence rather than that sentence ten times over, which is
+  what the floor had asked of a placeholder with nothing to say.
+
+- **The layout anti-pattern registry has one copy** (#1486).
+  `layoutAntiPatterns.json` existed twice — once beside the loader under
+  `src/core/validators/`, once under `assets/validators/`, which
+  `package.json#files` ships. The loader tries each entry point's depth in turn
+  and stops at the first file that exists, so the nearer copy won wherever both
+  were reachable. Editing one meant this repository and an adopting project
+  enforcing different rules.
+
+  A byte-equality test held the two together, which reports a divergence rather
+  than preventing one: it fires only once someone has already edited a copy,
+  and it cannot say which of the two is the one that ships.
+
+  The copy under `src/` is gone. The shipped copy is the only one, and the
+  loader already carried the candidate that reaches it from `src/` — so the
+  candidate list now holds one entry per entry point and nothing else.
+  `layoutAntiPatternsCandidates` is exported for the test that pins those three
+  depths, alongside one that fails on any second copy, whether or not its bytes
+  match.
+
+- **A second hook group now reaches a project that already has the first**
+  (#1464). `qfai init` merges its Claude Code hooks into a project that already
+  has a `.claude/settings.json`. The merge decided whether to do anything from
+  one status message found anywhere in the file, so once a project carried any
+  group it was treated as done. A project that installed an earlier set
+  therefore received nothing later — and that is the population an upgrade is
+  for.
+
+  The decision is per group now. A group the file does not carry is merged in;
+  one it carries is left alone, and the run names only the events it actually
+  added to.
+
+  A group is recognised by the status messages its entries carry, not by its
+  whole content. The reminder body is prose a project may reasonably have
+  adjusted, and matching on the whole group would re-append it and leave two of
+  the same hook running. A template group carrying no status message is refused
+  rather than merged, because nothing would recognise it on the next run.
 
 - **The stable type gate runs the stable compiler** (#1449). Two packages here
   ship a `tsc` — `typescript`, and `typescript-future`, an alias for the next
@@ -74,7 +1155,93 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   under this defect a pack could go from tens of errors to zero on headings
   alone.
 
+- **Three skills read the shared directories as a set** (#1460).
+  `Inputs Priority` is the section that makes a skill open
+  `.qfai/assistant/constitution/` and `.qfai/assistant/catalog/` as directories
+  rather than as a list of file names. `qfai-sdd`, `qfai-atdd`, `qfai-verify`
+  and `qfai-configure` carried it; `qfai-discussion`, `qfai-implement` and
+  `qfai-prototyping` did not, and named individual documents instead.
+
+  So every invariant added to either directory reached specification,
+  acceptance tests, verification and configuration, and missed the three stages
+  that produce the most: the one that settles direction with the user, the one
+  that writes production code, and the one that builds the screens. Nothing
+  reported the gap, because a closed list is a valid section.
+
+  The three now carry the section in the same form as the other four. The
+  individual paths they already named stay — they point at specific sections
+  and remain useful. `tests/assets/skillInputsPriority.test.ts` reads the skills
+  off the directory and holds each one, so a skill added later is asked the same
+  question, and it reads the section rather than the file: every skill mentions
+  some document under `constitution/` somewhere, and a whole-file search would
+  pass on exactly the state this replaces.
+
 ### Changed
+
+- **The constitution reaches the rule about how much code to write** (#1459).
+  Article VII settles which behaviours a change carries and Article IX asks a
+  preflight to look for work already done. Neither said anything about the
+  amount of code that answers a requirement once it is accepted, so the ladder
+  in `.agents/rules/minimal-implementation.md` was reachable from the rule
+  register and from nowhere an agent passes through on its way to writing code.
+
+  Each article now points at it, and the ladder itself stays in one file:
+
+  | Article | What it gains                                                                       |
+  | ------- | ----------------------------------------------------------------------------------- |
+  | VII     | The first rung — whether a thing needs to exist — while the scope is still open     |
+  | IX      | The reuse rungs: the standard library, the platform, and the installed dependencies |
+
+  Article IX's preflight looked for duplicate implementations inside the
+  repository only. A helper the standard library already ships was outside
+  anything it asked about.
+
+- **The lint toolchain leaves the end-of-life eslint 9 line** (#1450). Every
+  release in that line is marked deprecated by the registry, and 9.39.5 is the
+  last one there will be, so no update inside the declared `^9.8.0` range could
+  clear it. The range is `^10.10.0` now, alongside `@eslint/js` at `^10.0.1`
+  and `typescript-eslint` at `^8.70.0` — the first of its line to accept
+  eslint 10 as a peer.
+
+  The new major adds two rules to `eslint:recommended`, and both reported
+  defects rather than style:
+
+  | Rule                    | Sites | What it names                                                   |
+  | ----------------------- | ----- | --------------------------------------------------------------- |
+  | `no-useless-assignment` | 34    | an initializer that every path overwrites before reading it     |
+  | `preserve-caught-error` | 22    | a `throw` inside a `catch` that dropped the error it reports on |
+
+  Every site is fixed rather than suppressed. A dead initializer becomes a type
+  annotation, so the compiler proves the variable is assigned on each path
+  instead of a placeholder standing in for a path that assigns nothing. A
+  rethrow carries `{ cause }`, so the original error survives in the one that
+  replaces it and a stack trace still reaches the failure.
+
+  `typescript-eslint` also names six type assertions its earlier release could
+  not see as unnecessary. Five are removed. The sixth becomes a return type on
+  the callback that builds the value, which is what the assertion stood in for.
+
+  eslint 10 runs on `^20.19.0 || ^22.13.0 || >=24`, narrower than the
+  `>=20.19.0` this repository declares. It is a development dependency, so the
+  floor the published package promises is unchanged. The cost is that a
+  contributor on Node 21, or on 22.0 through 22.12, cannot run the lint lane.
+
+- **Every Triage section in a delta ledger names the round it records**
+  (#1467). Seven ledgers disabled `MD024/no-duplicate-heading` per file, because
+  a ledger recording several rounds needed several identical `## Triage`
+  headings and the rule rejects those. The heading may name its round now, so
+  each section is `## Triage (CHG-005)` or the like and nothing collides. One
+  section per file stays bare: the file's own table, which belongs to no round.
+
+  The same applies to a round's other parts in `_policies/10_delta.md`. Sixteen
+  headings — `Impact-Cascade Verification`, `ID Stability`,
+  `Distributed-Surface Impact` and the rest — repeated once per round, and each
+  now carries its round the way the spec ledgers' operations and notes sections
+  already do.
+
+  No file disables `MD024` any more, and the three dogfooding lanes are
+  unmoved, which is what says every renamed heading is still one the triage
+  rules read.
 
 - **`W-STALE-REFERENCE` carries the severity it means, instead of reading the
   calendar** (#1433). The rule reported `warning` before `2026-12-01` and
@@ -144,6 +1311,91 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   are promoted beside the table rather than left inside its section. Both files
   reach zero and leave the pins, which the five ledgers above have already
   taken to 98 and 1060: `sdd` 98 errors to 96, `full` 1060 to 1058.
+
+- **A canonical Triage heading may name the round it records** (#1447).
+  `QFAI-TRIAGE-008` required the heading to be exactly `## Triage`, and its
+  remedy told authors to write one such heading per round. A delta ledger is
+  append-only and records several rounds, so following that produced a file of
+  identical H2s — which `markdownlint`'s `MD024` rejects in its default
+  configuration, and which leaves every section anchor pointing at the first.
+
+  The heading may now carry a parenthesised qualifier: `## Triage (2026-05-24)`
+  is canonical and its rows are read exactly as an unqualified section's are.
+  Parentheses are the only accepted form, so `## Triage Table`,
+  `## Triage-Table` and `## Triage — 2026-05-24` still report, which is what the
+  rule exists to catch.
+
+  Nothing that conformed before stops conforming: the bare `## Triage` is
+  unchanged, and both delta templates ship it. The two delta schemas accept the
+  qualifier as well, so the shape lane and the triage rules read the same
+  heading.
+
+- **The UI definition consumption protocol is in English** (#1501). The document
+  ships in `catalog/`, so it is read by adopters with no connection to this
+  repository's history, and four of its sentences were Japanese. They say what
+  they said.
+
+  The file is struck from the approved-Japanese list in the asset guard rather
+  than left there. A translated entry that stays on the list is a slot the next
+  untranslated document can take.
+
+- **A written or edited file restates the implementation rule** (#1465).
+  `.claude/settings.json` carried three hook entries, all restating
+  documentation clarity and all matching Markdown. An agent that wrote Markdown
+  was reminded how to write it; an agent that wrote source was reminded of
+  nothing. A rule read once at the start of a long session is the one that
+  drifts.
+
+  A fourth entry restates `.agents/rules/minimal-implementation.md` after every
+  `Write` and `Edit`: the reuse questions, the marker a deliberate shortcut
+  carries, and the list the ladder never trims — validation at a trust boundary,
+  error handling, security, accessibility, and anything the spec asks for.
+
+  It carries no path condition. The condition is a permission-rule scope matched
+  against the path, so naming source by extension means enumerating a language
+  set, and a language left out is a hook that is silently absent exactly where
+  the rule is needed. The cost is one extra line on a Markdown edit.
+
+  The entry ships in the `qfai init` template as well, and it reaches a project
+  that already carries the clarity hooks, because the merge decides per group.
+
+- **Two review documents stop restating how much code to write** (#1461). The
+  Copilot review instructions and the universal development checklist each held
+  their own KISS, YAGNI and DRY section. Neither was the source, both were
+  written separately, and they already said different things about the same
+  question.
+
+  Both now point at `.agents/rules/minimal-implementation.md` and state no
+  ladder of their own. What was not in the ladder stays where it was: cognitive
+  load, which is a finding whatever the amount of code, and the Rule of Three,
+  which is a floor on sharing rather than a rung.
+
+  SOLID, separation of concerns, fail-fast and the rest are untouched. They are
+  a different subject from how much code answers a requirement.
+
+- **Every agent card carries a minimal-implementation obligation** (#1462).
+  Seven of the nineteen cards said something about simplicity, each in its own
+  words. Twelve said nothing — among them every test-stage role and every
+  planning role, which is why the ladder reached neither stage.
+
+  All nineteen now point at `.agents/rules/minimal-implementation.md`, and what
+  the line asks of the role depends on the stage:
+
+  | Stage                   | What the role owes                                                              |
+  | ----------------------- | ------------------------------------------------------------------------------- |
+  | Requirements and design | The first rung, whether the thing needs to exist, while the scope is still open |
+  | Implementation          | The reuse rungs, and the marker on a deliberate shortcut                        |
+  | Tests                   | How a test is built — never how many obligations are covered                    |
+  | Review                  | A finding that names what to cut and what replaces it                           |
+  | Documentation           | Scripts and workflows the role changes; prose keeps its own standard            |
+
+  The test-stage wording is the one that had to be written down. A rule that
+  says "write less", reaching the role that decides coverage, is a way to lose
+  tests.
+
+  The seven cards that carried prose keep everything that was not the ladder —
+  SOLID, separation of concerns, fail-fast and the rest are a different subject,
+  and only the restated rungs are struck.
 
 ## [1.11.1] - 2026-09-10
 
@@ -3064,22 +4316,22 @@ path` を追加した。drift ルールは対称だが縮小は非対称であ�
   - コメントのみ追跡: 文字列内の `//` がコメントを開く
   - 文字列と template を追跡: **正規表現内の backtick** が phantom template を開く
     計測値（統合前 → 統合後）:
-    | ガード | 症状 | 変化 |
-    | --- | --- | --- |
-    | `unit/validators-are-wired` | (file, validator) 対の誤判定 | 5 → 0 (#1061 で既に修正) |
-    | `validators/ruleCodeUniqueness` | コメント散文がコードとして漏れる | 8/264 → **0/264** |
-    | `helpers/prototypingGateSurface` | 同上 | 8/264 → **0/264** |
-    | `core/prototyping/reviewerDispatch` | **コメントでないテキストの過剰削除** | 11,381 文字・識別子 91 個 → **0 文字・0 個** |
-    `reviewerDispatch` の故障方向が特に危険だった。走査対象は
-    `prototypingIterate.ts` 1 ファイルのみで、アサーションが
-    `not.toMatch(/captureScreenshots/)` という **否定**なので、過剰削除は
-    アサーションを通りやすくする。消えた識別子の 1 つは
-    `resolvedCaptureScreens` — まさに禁止対象の隣だった。つまりこのガードは
-    一度も赤くならずに黙って空回りしうる状態だった。
-    統合により消費側から 217 行を削除し、44 行を追加した。
-    `tests/unit/sourceReduction.test.ts` が共有側の契約を 12 ケースで固定する —
-    各世代を壊した入力そのものを行にしてあるので、5 世代目の手書き実装は
-    散文を読むのではなく、失敗するテストに突き当たる。
+    | ガード                                                                      | 症状                                 | 変化                                         |
+    | --------------------------------------------------------------------------- | ------------------------------------ | -------------------------------------------- |
+    | `unit/validators-are-wired`                                                 | (file, validator) 対の誤判定         | 5 → 0 (#1061 で既に修正)                     |
+    | `validators/ruleCodeUniqueness`                                             | コメント散文がコードとして漏れる     | 8/264 → **0/264**                            |
+    | `helpers/prototypingGateSurface`                                            | 同上                                 | 8/264 → **0/264**                            |
+    | `core/prototyping/reviewerDispatch`                                         | **コメントでないテキストの過剰削除** | 11,381 文字・識別子 91 個 → **0 文字・0 個** |
+    | `reviewerDispatch` の故障方向が特に危険だった。走査対象は                   |
+    | `prototypingIterate.ts` 1 ファイルのみで、アサーションが                    |
+    | `not.toMatch(/captureScreenshots/)` という **否定**なので、過剰削除は       |
+    | アサーションを通りやすくする。消えた識別子の 1 つは                         |
+    | `resolvedCaptureScreens` — まさに禁止対象の隣だった。つまりこのガードは     |
+    | 一度も赤くならずに黙って空回りしうる状態だった。                            |
+    | 統合により消費側から 217 行を削除し、44 行を追加した。                      |
+    | `tests/unit/sourceReduction.test.ts` が共有側の契約を 12 ケースで固定する — |
+    | 各世代を壊した入力そのものを行にしてあるので、5 世代目の手書き実装は        |
+    | 散文を読むのではなく、失敗するテストに突き当たる。                          |
 - **同じ欠陥を持つ `TDD-0012` / `TDD-0013` / `REQ-0020` も付け替えた**
   (`CR-20260904-0001` の scope 拡張、別途承認)。3 件とも
   `tests/core/prototypingEvidence.negative.test.ts` を引いており、
@@ -3176,17 +4428,14 @@ path` を追加した。drift ルールは対称だが縮小は非対称であ�
   (`src/shared/shippedWorkflowNames.ts#SHIPPED_WORKFLOW_NAMES` = `qfai-validate.yml` /
   `qfai-tests.yml`、`cli/commands/init.ts` が利用者の `.github/workflows/` へコピー、出荷ファイル
   自身が `# Generated by \`qfai init\``で始まる)。しかも**同じ段落の直前の文**が
-「QFAI generates integration wrappers under …`.github/**`…」と述べており自己矛盾していた。`scripts/check-readme-alignment.mjs` の oracle は 2 つの README の行単位一致だけだったので、
-  **同じ内容で両方とも間違っていれば "aligned"** になる。ガードは仕様どおり動いていたが、
-  "aligned" が "correct" と読まれていた。
-  2 本目の oracle は他方の README ではなく **binary 内の write set** と突き合わせる:
-  `SHIPPED_WORKFLOW_NAMES` の各名が CI セクションに現れることを要求し、
-  `RETIRED_WORKFLOW_NAMES` の名が現れないことを要求し、`does not generate GitHub Actions
-workflows` という文自体も明示的に拒否する (正しいファイル名を両方書いた上でこの文が残ると、
-  名前一覧の検査だけでは通ってしまう自己矛盾 README になるため)。
-  parse できない宣言形は **黙って skip せず報告する** — 実際これが初稿の穴を捕まえた:
-  `new Set<string>([...])` だけを想定していたため、空宣言の `RETIRED_WORKFLOW_NAMES`
-  (`new Set<string>()`) を unparseable として報告した。両形を受けるよう直した。
+「QFAI generates integration wrappers under …`.github/**`…」と述べており自己矛盾していた。`scripts/check-readme-alignment.mjs`の oracle は 2 つの README の行単位一致だけだったので、
+**同じ内容で両方とも間違っていれば "aligned"** になる。ガードは仕様どおり動いていたが、
+"aligned" が "correct" と読まれていた。
+2 本目の oracle は他方の README ではなく **binary 内の write set** と突き合わせる:`SHIPPED_WORKFLOW_NAMES`の各名が CI セクションに現れることを要求し、`RETIRED_WORKFLOW_NAMES` の名が現れないことを要求し、`does not generate GitHub Actions
+  workflows`という文自体も明示的に拒否する (正しいファイル名を両方書いた上でこの文が残ると、
+名前一覧の検査だけでは通ってしまう自己矛盾 README になるため)。
+parse できない宣言形は **黙って skip せず報告する** — 実際これが初稿の穴を捕まえた:`new Set<string>([...])`だけを想定していたため、空宣言の`RETIRED_WORKFLOW_NAMES`
+(`new Set<string>()`) を unparseable として報告した。両形を受けるよう直した。
   適用範囲は「CI セクションを持つ README」に限る。CI セクションの無い README は workflow に
   ついて何も主張していないので判定対象外 — oracle 1 の fixture がこれに当たる。ただし
   **既定パスを検査しているときにセクションが無ければ error\*\* にする: 主張が消えたことで
@@ -5645,7 +6894,7 @@ advanced` asked for RED/GREEN commands, output and the falsifiability result
   form `QFAI-TEST-001` matches. Both directories are scanned, and the
   remediation says to write the real test rather than move the skeleton.
 - **An L1/L2 annotation in `tests/integration/**`is not a violation.** The
-Reviewer Gate and`project_memory`said`QFAI-ATDD-123`rejects it, but`resolveTcHomeKind`returns`null` for those levels and the scan continues
+  Reviewer Gate and`project_memory`said`QFAI-ATDD-123`rejects it, but`resolveTcHomeKind`returns`null` for those levels and the scan continues
   before the forbidden-placement check — the validator neither counts it nor
   flags it. A reviewer working from that text would have had an existing,
   passing annotation deleted.

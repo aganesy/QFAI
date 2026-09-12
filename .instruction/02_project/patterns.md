@@ -5,10 +5,6 @@ dependencies: [02_project/architecture.md]
 version: 1.0.0
 ---
 
-> **言語指示（厳守）**
->
-> - 報告・出力: 日本語（Plan も含む）
-
 # 実装パターン（QFAI Toolkit）
 
 QFAI Toolkit の実装は CLI とコア検証エンジンを分離し、最小の責務で追加できるように設計する。
@@ -35,7 +31,7 @@ QFAI Toolkit の実装は CLI とコア検証エンジンを分離し、最小�
 ## テンプレート（`packages/qfai/assets/init`）
 
 - `init` テンプレートは assets が SSOT
-- テンプレート変更時は `tests/cli/init.test.ts` を更新する
+- テンプレート変更時は `packages/qfai/tests/cli/init.test.ts` を更新する
 
 ## テスト
 

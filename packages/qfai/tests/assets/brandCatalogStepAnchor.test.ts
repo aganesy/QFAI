@@ -7,16 +7,12 @@ import { describe, expect, it } from "vitest";
 describe("brand catalog step anchor", () => {
   const repoRoot = path.resolve(process.cwd(), "..", "..");
   const assetsRoot = path.resolve(repoRoot, "packages", "qfai", "assets");
-  const discussionSkillDir = path.join(
-    assetsRoot,
-    "init",
-    ".qfai",
-    "assistant",
-    "skills",
-    "qfai-discussion",
-  );
-  const catalogPath = path.join(discussionSkillDir, "references", "design-md-brand-catalog.md");
-  const skillMdPath = path.join(discussionSkillDir, "SKILL.md");
+  const skillsRoot = path.join(assetsRoot, "init", ".qfai", "assistant", "skills");
+  const discussionSkillDir = path.join(skillsRoot, "qfai-discussion");
+  const sddReferences = path.join(skillsRoot, "qfai-sdd", "references");
+  const catalogPath = path.join(sddReferences, "design-md-brand-catalog.md");
+  const authoringPath = path.join(sddReferences, "design-md-authoring.md");
+  const sddSkillMdPath = path.join(skillsRoot, "qfai-sdd", "SKILL.md");
 
   it("no discussion-skill asset routes work to the retired `Step 11.3` address", async () => {
     // `/qfai-discussion`'s Required Process is a flat 11-item list with
@@ -48,16 +44,8 @@ describe("brand catalog step anchor", () => {
     // Over-correction pin. Re-widening the scan to `assetsRoot` would pull
     // in sibling skills whose step numbers are their own local namespace.
     // `qfai-verify/SKILL.md` is the live proof: it defines `## Step 0.5`,
-    // which is valid there and says nothing about discussion's step 9.
-    const verifySkillMd = path.join(
-      assetsRoot,
-      "init",
-      ".qfai",
-      "assistant",
-      "skills",
-      "qfai-verify",
-      "SKILL.md",
-    );
+    // which is valid there and says nothing about discussion's steps.
+    const verifySkillMd = path.join(skillsRoot, "qfai-verify", "SKILL.md");
     expect(await readFile(verifySkillMd, "utf-8")).toMatch(/^##\s+Step 0\.5\b/m);
 
     // `fast-glob` returns POSIX-separated paths even with `absolute: true`, and even on
@@ -86,110 +74,133 @@ describe("brand catalog step anchor", () => {
     }
   });
 
-  it("the catalog routes archetype selection to Required Process step 9", async () => {
+  it("the catalog routes archetype selection to the phase that writes the field", async () => {
     const catalog = await readFile(catalogPath, "utf-8");
-    // Opening line and Selection Guide must both name the step that
+    // Opening line and Selection Guide must both name the phase that
     // actually writes `brand.archetype`.
-    expect(catalog).toMatch(/Required Process\s+step 9[^\n]*Phase A/);
-    expect(catalog).toMatch(/Use this catalog during Required Process step 9[^\n]*Phase A/);
-    expect(catalog).toMatch(/Phase B of step 9/);
+    expect(catalog).toMatch(/Phase 0 DESIGN\.md Freeze picks one/);
+    expect(catalog).toMatch(/Use this catalog during Phase 0 DESIGN\.md Freeze[^\n]*qfai-sdd/);
     // The output mapping the catalog defers to must exist by anchor.
-    expect(catalog).toContain("design-dna-intake.md#output-mapping-new-ssot-path");
+    expect(catalog).toContain("design-md-authoring.md#output-mapping");
   });
 
-  it("SKILL.md step 9 defines the Phase A → Phase B split the catalog cites", async () => {
-    const skillMd = await readFile(skillMdPath, "utf-8");
-    const step9 = skillMd
+  it("only one skill authors root DESIGN.md, and it is the one holding the catalog", async () => {
+    // The catalog, the mapping and the instruction to write the file have to
+    // travel together. A discussion step that still emits the draft would put
+    // two skills on the same artifact, and the second writer would overwrite a
+    // brand the first had already frozen.
+    const sddSkill = await readFile(sddSkillMdPath, "utf-8");
+    const freezeStart = sddSkill.indexOf("## Phase 0 DESIGN.md Freeze");
+    expect(freezeStart, "qfai-sdd has no Phase 0 DESIGN.md Freeze section").toBeGreaterThan(-1);
+    const freezeEnd = sddSkill.indexOf("\n## ", freezeStart + 1);
+    const freeze = sddSkill.slice(freezeStart, freezeEnd === -1 ? undefined : freezeEnd);
+    expect(freeze).toMatch(/author it here per `references\/design-md-authoring\.md`/);
+
+    // A Required Process step is written as an imperative, so the test reads
+    // the step's own opening verb rather than anywhere `DESIGN.md` appears —
+    // step 9 legitimately names the file when it hands it to the next skill.
+    const discussionSkill = await readFile(path.join(discussionSkillDir, "SKILL.md"), "utf-8");
+    const authoringSteps = discussionSkill
       .split("\n")
-      .find((line) => line.startsWith("9. ") && line.includes("DESIGN.md"));
-    expect(step9).toBeDefined();
-    const line = step9 ?? "";
-    const phaseAIdx = line.indexOf("Phase A");
-    const phaseBIdx = line.indexOf("Phase B");
-    expect(phaseAIdx).toBeGreaterThan(-1);
-    expect(phaseBIdx).toBeGreaterThan(phaseAIdx);
-    expect(line).toContain("design-md-brand-catalog.md");
+      .filter((line) =>
+        /^\d+\.\s+(?:\*\*)?(Emit|Author|Generate|Write|Draft|Produce)\b[^\n]*DESIGN\.md/i.test(
+          line,
+        ),
+      );
+    expect(authoringSteps, "discussion must not carry a DESIGN.md authoring step").toEqual([]);
+
+    // And it must not block on the file either: a completion condition on an
+    // artifact the skill no longer writes can never be satisfied from inside
+    // the run that has to satisfy it.
+    expect(discussionSkill).not.toMatch(/root `DESIGN\.md` draft exists/);
   });
 
-  it("Phase B routes the archetype `interaction` default to `accessibility.motion`", async () => {
+  // The same claim one layer down. Moving the step in the skills left the
+  // source saying the old thing, and one of those sentences is not a comment:
+  // `QFAI-DCON-034`'s remediation told an operator to run `/qfai-discussion`
+  // to get a draft it no longer emits, which is an instruction that cannot be
+  // followed.
+  it("no source file attributes root DESIGN.md authoring to the discussion stage", async () => {
+    const files = await fg("**/*.ts", {
+      cwd: path.join(repoRoot, "packages", "qfai", "src"),
+      absolute: true,
+    });
+    expect(files.length, "the sweep must have found source to be about").toBeGreaterThan(0);
+
+    const offenders: string[] = [];
+    for (const file of files) {
+      const lines = (await readFile(file, "utf-8")).split("\n");
+      for (let i = 0; i < lines.length; i += 1) {
+        const line = lines[i] ?? "";
+        // The SKILL name, not the stage. A remediation may say the direction
+        // came from "the discussion pack" — that is where it was recorded, and
+        // recording is not authoring — so the pattern is the invocable name.
+        // No exemption beyond that: these strings run to a couple of hundred
+        // characters, and a phrase-level carve-out would exempt the whole line.
+        if (!/qfai-discussion/.test(line)) continue;
+        if (!/DESIGN\.md|brand intent/i.test(line)) continue;
+        offenders.push(`${path.relative(repoRoot, file).replace(/\\/g, "/")}:${i + 1}`);
+      }
+    }
+
+    expect(offenders, "source naming the discussion stage as DESIGN.md's author").toEqual([]);
+  });
+
+  it("the archetype `interaction` default is routed to `accessibility.motion`", async () => {
     // `visual` rejects unknown keys (`readVisual` in
     // `src/core/design/designMd.ts` allows only
     // colors | typography | radius | shadow | spacing), so an agent told
     // to fold every `aesthetic_properties` entry into `visual.*` would
     // emit `visual.motion` / `visual.interaction` and fail DESIGN.md
-    // parsing. Each Phase B instruction must name the split explicitly.
-    const skillMd = await readFile(skillMdPath, "utf-8");
-    const step9 =
-      skillMd.split("\n").find((line) => line.startsWith("9. ") && line.includes("DESIGN.md")) ??
-      "";
-    expect(step9).toContain("visual.*");
-    expect(step9).toContain("accessibility.motion");
-
+    // parsing. Both files an author reads must name the split.
     const catalog = await readFile(catalogPath, "utf-8");
-    const catalogStep5 =
-      catalog.split("\n").find((line) => line.includes("Phase B of step 9")) ?? "";
-    expect(catalogStep5).toContain("visual.*");
-    expect(catalogStep5).toContain("accessibility.motion");
+    const catalogRouting = catalog
+      .split("\n")
+      .find((line) => line.includes("split by destination"));
+    expect(catalogRouting).toBeDefined();
+    expect(catalogRouting ?? "").toContain("visual.*");
+    expect(catalogRouting ?? "").toContain("accessibility.motion");
 
-    // The intake reference is the mapping SSOT the catalog defers to, so
-    // the same split has to be written there too.
-    const intake = await readFile(
-      path.join(discussionSkillDir, "references", "design-dna-intake.md"),
-      "utf-8",
-    );
-    expect(intake).toContain("accessibility.motion");
+    const authoring = await readFile(authoringPath, "utf-8");
+    expect(authoring).toContain("accessibility.motion");
+    expect(authoring).toMatch(/`visual\.motion`[\s\S]{0,80}fails DESIGN\.md validation/);
   });
 
-  it("step 9 keeps archetype selection inside the planner-first boundary", async () => {
+  it("the authoring reference keeps the field required and says where its answer comes from", async () => {
     // `brand.archetype` is a hard-required DESIGN.md field
     // (`validateDesignMd` in `src/core/design/designMd.ts` raises
-    // `missing-required` on `brand.archetype`), and the root DESIGN.md
-    // draft is a mandatory UI-bearing discussion output. So step 9 must
-    // keep telling the agent to fill it — but it must also say what the
-    // fill is NOT, or the instruction reads as the superseded
-    // archetype-driven design-system generation that discussion no longer
-    // does. `discussion-completion-matrix.md` carries both halves at once:
-    // the full `visual.*` tree is required, AND directions stay unranked.
-    const skillMd = await readFile(skillMdPath, "utf-8");
-    const step9 =
-      skillMd.split("\n").find((line) => line.startsWith("9. ") && line.includes("DESIGN.md")) ??
-      "";
-    expect(step9).toMatch(/required `brand\.archetype`/);
-    expect(step9).toMatch(/draft brand SSOT only/);
-    expect(step9).toMatch(/exploration directions stay unranked/);
-    expect(step9).toMatch(/design system is not finalized here/);
-    // The word discussion never earns: an autonomous winner pick.
-    expect(step9).not.toMatch(/autonomous/i);
-
-    // The catalog is read standalone during Phase A, so the same boundary
-    // has to be legible there and must not resurrect the retired framing.
-    const catalog = await readFile(catalogPath, "utf-8");
-    expect(catalog).toMatch(/required `brand\.archetype`/);
-    expect(catalog).toMatch(/does not rank the\s+exploration directions/);
-    expect(catalog).toMatch(/does not finalize the design system/);
-    expect(catalog).not.toMatch(/autonomous/i);
+    // `missing-required` on it), so the reference that replaces the old
+    // discussion step must still tell the author to fill it — and must name
+    // the recorded direction it is filled from, or the author invents one.
+    const authoring = await readFile(authoringPath, "utf-8");
+    // The answer comes from the theme the user chose, not from the assistant
+    // scoring the product's prose. Scoring survives as the fallback for a pack
+    // that recorded no theme, and the reference says whose answer that is.
+    expect(authoring).toMatch(/Brand archetype → `brand\.archetype`/);
+    expect(authoring).toContain("design-md-brand-catalog.md");
+    expect(authoring).toContain("04_Sources.md");
   });
 
-  it("the completion matrix still requires the DESIGN.md front-matter step 9 fills", async () => {
-    // Over-correction pin. Deleting archetype selection from step 9 would
-    // strand this obligation: the matrix blocks completion until root
-    // DESIGN.md parses with `brand` present, and `brand.archetype` is
-    // required inside it. The unranked-directions rule below it is a
-    // separate axis, not a licence to drop the field.
+  it("discussion still records what Phase 0 authors from", async () => {
+    // Over-correction pin. Moving the artifact must not take its inputs with
+    // it: Phase 0 has nothing to write from unless discussion still captures
+    // the direction, and the unranked-directions rule is a separate axis that
+    // the move does not touch.
     const matrix = await readFile(
       path.join(discussionSkillDir, "references", "discussion-completion-matrix.md"),
       "utf-8",
     );
-    expect(matrix).toMatch(/Root `DESIGN\.md` exists[\s\S]*?`brand`/);
+    expect(matrix).toMatch(/reference registries in `04_Sources\.md` are complete/);
     expect(matrix).toMatch(/Exploration directions are carried unranked/);
   });
 
-  it("keeps the tie-break decidable from the inputs Phase A actually has", async () => {
+  it("keeps the tie-break decidable from the inputs the selection actually has", async () => {
     // "highest visual-theme weight wins" named a number the catalog does not
-    // publish for any archetype, and nothing in step 9 or the intake produces
-    // one — `src/core/skill/archetypeTieBreaker.ts` takes it from a caller that
-    // does not exist. Two agents on the same discussion could therefore pick
-    // different archetypes and different draft tokens.
+    // publish for any archetype, and nothing in the authoring reference or the
+    // intake produces one. Two agents on the same pack could therefore pick
+    // different archetypes and different tokens. The helper that consumed that
+    // number is gone; the tie-break the Selection Guide states is what an agent
+    // reads, and this row is what holds it.
     const catalog = await readFile(catalogPath, "utf-8");
     expect(catalog).not.toMatch(/visual-theme weight wins/);
     expect(catalog).toMatch(/contradict fewer entries of `audience\.do_not_look_like`/);
@@ -197,13 +208,5 @@ describe("brand catalog step anchor", () => {
     // Over-correction pin: the scoring step still reads the three intake
     // fields, so the tie-break is a tail rule and not a replacement for fit.
     expect(catalog).toMatch(/`brand\.voice`, `audience\.emotion`, `audience\.do_not_look_like`/);
-  });
-
-  it("the intake reference still carries the anchor the catalog links to", async () => {
-    const intake = await readFile(
-      path.join(discussionSkillDir, "references", "design-dna-intake.md"),
-      "utf-8",
-    );
-    expect(intake).toContain("## Output Mapping (new SSOT path)");
   });
 });

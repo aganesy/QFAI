@@ -5,10 +5,6 @@ dependencies: none
 version: 1.0.0
 ---
 
-> **言語指示（厳守）**
->
-> - 報告・出力: 日本語（Plan も含む）
-
 # プロジェクト構成（QFAI Toolkit）
 
 QFAI Toolkit は CLI と検証エンジンを単一パッケージとして配布するモノレポです。
@@ -17,8 +13,10 @@ QFAI Toolkit は CLI と検証エンジンを単一パッケージとして配�
 
 - `packages/qfai/`: CLI とコア（npm 配布対象）
 - `packages/qfai/assets/init/`: `qfai init` のテンプレート（`.qfai/` と `qfai.config.yaml` など）
-- `docs/`: ルール/スキーマ/ロードマップ/運用ガイド
-- `scripts/`: パック検証などの補助スクリプト
+- `packages/qfai/docs/`: design notes and the finding-code reference. Not shipped.
+- `.agents/rules/`: the rule masters every assistant follows.
+- `scripts/`: the lint and guard scripts the quality gate runs.
+- `tests/`: repository-level tests. The package's own live under `packages/qfai/tests/`.
 - `tmp/`: 作業用ディレクトリ（成果物対象外）
 
 ## packages/qfai の構成
@@ -42,6 +40,6 @@ packages/qfai/
 
 ## 実行フロー
 
-- `qfai init` は `assets/init` をコピーしてテンプレートを生成する
+- `qfai init` は `packages/qfai/assets/init/` をコピーしてテンプレートを生成する
 - `qfai validate` は `core/validators` を集約して `.qfai/report/validate.json` を出力する
 - `qfai report` は `validate.json` を読み込み、Markdown/JSON を生成する

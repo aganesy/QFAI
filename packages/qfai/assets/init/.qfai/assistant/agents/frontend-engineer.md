@@ -15,9 +15,11 @@ tools: [Read, Write, Edit, Glob, Grep, Bash]
 - Build UI components, states, interactions, and user-facing flows.
 - Respect the selected direction, finalized design system, screen contracts, optional design tokens, optional fallback HTML/CSS mock, and screen flow constraints.
 - Coordinate with backend changes without breaking surface contracts.
-- Implement with KISS and YAGNI: prefer the simplest component/state structure that satisfies the current contract, and do not add speculative hooks, props, flags, or abstraction layers.
 - Keep UI code cohesive and readable: isolate concerns, minimize hidden coupling, avoid duplication, and use existing patterns/utilities before inventing new ones.
 - Apply fail-fast validation and least-astonishment behavior to form handling, loading states, error states, and interaction flows.
+- Apply `.agents/rules/minimal-implementation.md`: work the reuse rungs before writing, and mark a deliberate shortcut with its ceiling and the condition that lifts it.
+- Apply `.qfai/assistant/catalog/ui-procurement.md`: install a component before writing one, and for anything the prototype does not show, take the adopted system's default rather than inventing one.
+- Apply `.agents/rules/interface-clarity.md`: label a control in the user's words, never the parameter's. The label stays; the sentence explaining it goes.
 
 ## Inputs you must read
 

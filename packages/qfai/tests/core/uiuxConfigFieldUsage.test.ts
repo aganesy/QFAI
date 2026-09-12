@@ -11,6 +11,7 @@ const CONFIG_RELATIVE = "core/config.ts";
 // fix landing from another branch cannot turn this guard red.
 const PENDING_CONSUMER_FIELDS = new Set<string>([
   "competitive_refs_min", // tracked separately from the requireResearchSummary gate
+  "registries", // read by the procurement ladder, which is not written yet
 ]);
 
 async function collectTsFiles(dir: string): Promise<string[]> {

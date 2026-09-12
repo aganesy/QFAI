@@ -553,9 +553,6 @@ export const GATE_GROUP_FAMILIES = {
     "UIX-VAL-3LAYER-*",
     "UIX-VAL-CLASSIFICATION-*",
     "UIX-VAL-DIRECTION-*",
-    // Covers `UIX-VAL-DS-READ-ERROR`, `UIX-VAL-DS01` and `UIX-VAL-DS02`: the
-    // two numbered ones carry no separator, so a `-*` form would miss them.
-    "UIX-VAL-DS*",
     "UIX-VAL-OQ-*",
     "UIX-VAL-SCREEN-*",
     "UIX-VAL-SIDECAR-*",
@@ -1635,7 +1632,7 @@ export const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
   "QFAI-TRIAGE-007":
     "SPLIT / MERGE / SUPERSEDE / DELETE are spec-scoped; item decomposition is UPDATE:MODIFY + UPDATE:APPEND and item removal is UPDATE:REMOVE.",
   "QFAI-TRIAGE-008":
-    "Every Triage section is introduced by the canonical `## Triage` H2, so the triage rules read the rows under it.",
+    "Every Triage section is introduced by the canonical `## Triage` H2, optionally naming its round in parentheses, so the triage rules read the rows under it.",
   "QFAI-TRIAGE-009":
     "`Existing Spec` names its target in one grammar: `spec-NNNN` (multiple joined by `+`), `_policies` for a policy-only row, or `-` on a CREATE row. Every named spec must exist on disk; ranges are not a form.",
   "QFAI-SPLIT-106":
@@ -1919,6 +1916,8 @@ export const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
     "Every row of a split test case names the one boundary it owns in `Boundary`, so a reseed pairs rows with boundaries by a cell nothing downstream rewrites rather than by the test name.",
   "QFAI-TDDLIST-018":
     "No two rows of one test case claim the same boundary: the rows of a split are identified by the (`TC-Refs`, `Boundary`) pair, and a repeated slug leaves one boundary covered by nothing.",
+  "QFAI-TDDLIST-019":
+    "A `done` row whose evidence entry declares its original run's output unretained is exempt from the reviewer-pack and seal fields, and says so here: `done` is read as reviewed, so a row whose review cannot be verified from artifacts stays visible rather than passing as one that carries them.",
   // The assistant-tree provenance family. Every governed file under
   // `constitution/` and `catalog/` is either byte-identical to the installed
   // release or an explicitly recorded local overlay; the four classifications

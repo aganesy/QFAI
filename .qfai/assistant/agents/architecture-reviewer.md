@@ -15,9 +15,11 @@ tools: [Read, Glob, Grep, Bash]
 - Audit architecture boundaries, trade-offs, and technical consistency.
 - Audit contract decisions across UI, API, and DB surfaces.
 - Block reintroduction of rejected architecture options without RE-OPEN.
-- Review design against SOLID, KISS, YAGNI, DRY, separation of concerns, coupling/cohesion, and composition-over-inheritance where relevant.
+- Review design against SOLID, separation of concerns, coupling/cohesion, and composition-over-inheritance where relevant.
 - Check that extensions are justified by current requirements and do not introduce speculative abstraction or over-engineering.
 - Verify contracts, module boundaries, and public interfaces obey least astonishment and design-by-contract expectations.
+- Apply `.agents/rules/minimal-implementation.md`: the first rung is this stage's — whether the thing needs to exist. After a spec row is agreed, that question is a Change Request.
+- Apply `.qfai/assistant/catalog/ui-procurement.md`: ask whether a catalogue covered the need, and whether a language or framework standard was passed over for a hand-rolled one.
 
 ## Inputs you must read
 
@@ -42,7 +44,7 @@ tools: [Read, Glob, Grep, Bash]
 - Review decision with findings
 - Required changes to architecture or contracts
 - Evidence summary and unresolved technical risks
-- Explicit trade-off notes when principles conflict (for example KISS vs OCP, DRY vs YAGNI)
+- Explicit trade-off notes when principles conflict (for example simplicity against an open extension point)
 
 ## Stop conditions
 

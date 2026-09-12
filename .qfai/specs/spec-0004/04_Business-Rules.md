@@ -57,13 +57,13 @@
 ## BR-0004-0011: prototypingEvidenceV3 Schema Validation
 
 - AC-Refs: AC-0004-0011
-- prototypingEvidenceV3 validator enforces schema v3 on each `iter-NN/review.json`: required keys `scores` (4 UX axes ordinal), `proseCritique` (200..500 words), `pivotDirective` (∈ continue|refine|pivot), `layoutAntiPatternsDetected`, `designMdViolations`.
+- prototypingEvidenceV3 validator enforces schema v3 on each `iter-NN/review.json`: required keys `scores` (4 UX axes ordinal), `proseCritique` (within its cap; the unit is selected by the text and neither unit has a lower bound), `pivotDirective` (∈ continue|refine|pivot), `layoutAntiPatternsDetected`, `designMdViolations`.
 - Schema violation emits `QFAI-PROT-002` at error severity. v1.x fields (`mode`, `fullHarness`, `scoringTrace`, `allReviewerAxesPerfect100`) being present is an additional schema warning.
 
 ## BR-0004-0012: layoutAntiPatternsDetected Whitelist
 
 - AC-Refs: AC-0004-0012
-- Any string in `layoutAntiPatternsDetected` not in `{lap-001-orphan-page..lap-008-no-back-affordance}` rejects the review.json.
+- Any string in `layoutAntiPatternsDetected` that `packages/qfai/assets/validators/layoutAntiPatterns.json` does not declare rejects the review.json.
 - Detection of any `lap-*` token caps `informationArchitecture` at `acceptable` (cross-validated against AC-0012-0024 in spec-0012).
 
 ## BR-0004-0013: designMdViolations Shape and findDesignMdViolations Purity

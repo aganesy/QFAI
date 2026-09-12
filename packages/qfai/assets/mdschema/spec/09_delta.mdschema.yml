@@ -22,7 +22,7 @@ structure:
     allow_additional: true
     children:
       - heading:
-          pattern: "^## (Change Summary|Triage)$"
+          pattern: "^## (Change Summary|Triage( \\([^()]+\\))?)$"
           regex: true
         description: >-
           The change record. `Change Summary` states what changed and when;

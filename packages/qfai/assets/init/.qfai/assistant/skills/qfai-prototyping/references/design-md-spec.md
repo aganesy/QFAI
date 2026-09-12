@@ -1,8 +1,8 @@
 # DESIGN.md Specification
 
 `DESIGN.md` lives at the **consuming-project root** and is the single
-source of truth for brand identity. It is generated as a draft by
-`/qfai-discussion` and frozen by `/qfai-sdd` Phase 0 into
+source of truth for brand identity. `/qfai-sdd` Phase 0 authors it when
+the project has none, then freezes it into
 `.qfai/contracts/design/DESIGN.md.lock.yaml` (sha256 record).
 
 `/qfai-prototyping` reads it as read-only context. The compliance gate
@@ -31,6 +31,7 @@ brand:
   name: string # display name
   archetype: enum # see below
   voice: string[] # 1..N short trait words
+  theme: string # optional; the published theme the token values came from
 audience:
   emotion: string[] # what users should feel
   do_not_look_like: string[] # negative references
@@ -74,10 +75,25 @@ accessibility:
 ## `brand.archetype` allowed values
 
 The 8-archetype catalog is the SSOT in
-`.qfai/assistant/skills/qfai-discussion/references/design-md-brand-catalog.md`:
+`.qfai/assistant/skills/qfai-sdd/references/design-md-brand-catalog.md`:
 `minimal | bold | corporate | playful | organic | tech | elegant |
 casual`. Read that reference for archetype semantics, do not duplicate
 here.
+
+## `brand.theme`
+
+Names the published theme the values below it came from, in a form a
+reader can install: the design system and the theme within it.
+
+It is optional because a project that authored its own `DESIGN.md`
+before this field existed is not wrong — it just does not say. A file
+`/qfai-sdd` Phase 0 writes names its theme, and Phase 0 takes the token
+values from that theme rather than composing them.
+
+Everything downstream treats these numbers as exact. The lock hashes
+them, `certify` re-scans them, and every literal in every capture is
+checked against them. Without this field there was nothing underneath
+the exactness.
 
 ## `accessibility` allowed keys
 
