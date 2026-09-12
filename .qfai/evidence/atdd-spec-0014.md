@@ -2,9 +2,9 @@
 
 ## Objective
 
-Carry the proof for three of the five `Integration` rows of this spec's ledger
-whose `Evidence` cells predate the pointer grammar. `TDD-0009` and `TDD-0036`
-are not backfilled; the reasons are under Gaps.
+Carry the proof for two of the five `Integration` rows of this spec's ledger
+whose `Evidence` cells predate the pointer grammar. `TDD-0009`, `TDD-0018` and
+`TDD-0036` are not backfilled; the reasons are under Gaps.
 
 ## Inputs reviewed (files/paths)
 
@@ -22,8 +22,10 @@ command and no output, so the reviewer verdicts and pack seals a completed entry
 normally carries cannot be recorded and are not invented.
 
 No row can produce an observed RED — every implementation shipped long before
-this record — so all three take the falsifiability path, and the mutation
-recorded per row is what that path asks for.
+this record — so both take the falsifiability path, and the mutation recorded
+per row is what that path asks for. A mutation earns the row only if it
+falsifies the row's own obligation; one that reddens a neighbouring predicate
+proves that predicate instead.
 
 Every run is narrowed to the row's own `Selector`. A whole-file run can stay red
 through a case belonging to another row, and then it says nothing about whether
@@ -36,8 +38,8 @@ obligation, chosen by what it asserts.
 ## Work performed (what changed, where)
 
 - `.qfai/specs/spec-0014/tdd/test-list.md` — the `Selector` of `TDD-0035`
-  rewritten to the title it names, and the `Evidence` cells of `TDD-0018`,
-  `TDD-0019` and `TDD-0035` rewritten as pointers into this file. `TDD-0033` and
+  rewritten to the title it names, and the `Evidence` cells of `TDD-0019` and
+  `TDD-0035` rewritten as pointers into this file. `TDD-0033` and
   `TDD-0034` are `unit`, so they belong to
   `.qfai/evidence/implement-spec-0014.md`, which records neither and says why.
   No `Status` moved.
@@ -55,8 +57,6 @@ below are over the selected cases, not over the file.
 
 | Run                       | Selected | Result              |
 | ------------------------- | -------- | ------------------- |
-| `TDD-0018` GREEN          | 2 of 5   | 2 passed            |
-| `TDD-0018` falsifiability | 2 of 5   | 1 failed, 1 passed  |
 | `TDD-0019` GREEN          | 1 of 5   | 1 passed            |
 | `TDD-0019` falsifiability | 1 of 5   | 1 failed            |
 | `TDD-0035` GREEN          | 2 of 2   | 2 passed            |
@@ -81,56 +81,8 @@ evidence its cell points at.
 
 | TDD-ID     | Obligation     | Layer       | RED provenance | Status |
 | ---------- | -------------- | ----------- | -------------- | ------ |
-| `TDD-0018` | `TC-0014-0018` | integration | falsifiability | done   |
 | `TDD-0019` | `TC-0014-0019` | integration | falsifiability | done   |
 | `TDD-0035` | `TC-0014-0035` | integration | falsifiability | done   |
-
-### TDD-0018
-
-- TDD-ID: TDD-0018
-- Layer: integration
-- Test file: packages/qfai/tests/integration/verifySemanticsSpec0014.test.ts
-- Selector: TC-0014-0018
-- TC-ref: TC-0014-0018
-- Run output retained: no
-- Backfill note: the row's cell recorded a verdict with no command and no output, so nothing of the original run survives. The test was re-run for the GREEN below, and the mutation below was applied and reverted to establish that the test discriminates. No reviewer verdict is recorded because none can be reconstructed.
-
-- RED failure mode: falsifiability
-
-#### Round 1
-
-- Round 1: Revision: 649d8111147436408c90cbbe1b9f9b07e34da8cb
-- Round 1: Satisfied-by: packages/qfai/src/core/validators/uix/threeLayer.ts, validateForbiddenLegacyFiles — the filter that reports a canonical sidecar matching any forbidden legacy pattern.
-- Round 1: Falsifiability command: npx vitest run tests/integration/verifySemanticsSpec0014.test.ts -t 'TC-0014-0018'
-- Round 1: Falsifiability result: Test Files 1 failed (1); Tests 1 failed, 1 passed (2 of the file's 5 selected), on `expected undefined to be defined` — the absent `UIX-VAL-3LAYER-FORBIDDEN-FILE` finding.
-- Round 1: Falsifiability revision: working-tree+e8f19276e2c174fae97eaa94a78ab60dbdfb4b94ab010c33bddb558629445383
-- Round 1: GREEN command: npx vitest run tests/integration/verifySemanticsSpec0014.test.ts -t 'TC-0014-0018'
-- Round 1: GREEN result: Test Files 1 passed (1); Tests 2 passed (2 of the file's 5 selected)
-- Round 1: RED test hash: f59276acc52e9397953da7c5d7edccfbdeb45e1ca9822da516c17b75de8c2ce2
-- Round 1: RED test manifest: packages/qfai/tests/integration/verifySemanticsSpec0014.test.ts
-
-The mutation, in `packages/qfai/src/core/validators/uix/threeLayer.ts` line 166:
-
-```diff
--    .filter((entry) => FORBIDDEN_LEGACY_PATTERNS.some((pattern) => pattern.test(entry)))
-+    .filter((entry) => FORBIDDEN_LEGACY_PATTERNS.every((pattern) => pattern.test(entry)))
-```
-
-No single filename matches every forbidden pattern, so the filter returns
-nothing.
-
-The selector holds two cases. The one that dies is the one that runs the
-validators and reads the finding back; the other asserts that `validate.ts`
-imports and invokes them, which the mutation leaves true. Run over the whole
-file the mutation also kills a `TDD-0009` case reading the same filter, which is
-why the command names the selector.
-
-- Refactor verify command: npx vitest run tests/integration/verifySemanticsSpec0014.test.ts tests/cli/commands/prototypingIterate.test.ts tests/integration/cli/commands/prototypingCertify.saasPackage.test.ts tests/integration/cli/commands/prototypingCertify.upgradeScope.test.ts
-- Refactor verify result: Test Files 4 passed (4); Tests 126 passed (126)
-- Refactor verify revision: 649d8111147436408c90cbbe1b9f9b07e34da8cb
-- Checkpoint verification command: npx vitest run --project integration --project cli
-- Checkpoint verification result: PASS — exit 0; Test Files 187 passed (191); Tests 2258 passed (2277)
-- Checkpoint verification revision: 649d8111147436408c90cbbe1b9f9b07e34da8cb
 
 Four files and nineteen cases in those projects declare themselves inactive and
 did not run, each through `describe.skip` carrying the marker
@@ -280,6 +232,24 @@ a review pack's `PASS` / `FAIL` / `NA` roster and never a `REVISE` verdict. No
 case in the package reads either clause. So the row needs a test over the
 shipped skill, not a decision about the obligation.
 
+`TDD-0018` is not backfilled. Its obligation, `TC-0014-0018`, is that the
+full-scan verify path depends on the canonical validators, and its selector
+holds two cases that sit at opposite ends of that claim.
+
+One drives `runCanonicalUixValidators` directly over a seeded pack and reads the
+forbidden-file finding back. A mutation of the three-layer filter reddens it —
+but calling the validators directly is not verify calling them, so what that
+mutation falsifies is the validator's own predicate, not the dependency.
+
+The other case carries the dependency, and carries it as
+`expect(validateSrc).toContain("runCanonicalUixValidators")` over the text of
+`validate.ts`. The import statement alone satisfies it, so deleting every call
+leaves it green, and no mutation of behaviour can redden it.
+
+So the half that is falsifiable is not the obligation, and the half that is the
+obligation is not falsifiable. The row needs a case that drives a verify run and
+observes the canonical findings in its output.
+
 `TDD-0036` is not backfilled either, for a different reason. Its obligation,
 `TC-0014-0036`, holds two boundaries: `--upgrade-scope full` is refused while a
 gate is still missing, and accepted once every gate passes. Two cases in
@@ -296,6 +266,6 @@ it stands and needs a Change Request that decomposes it.
 
 ## Final status
 
-PASS for the three rows recorded here. This is a per-row verdict, not a stage
-verdict: the pack is not clean, and `TDD-0009` and `TDD-0036` are listed rather
-than claimed.
+PASS for the two rows recorded here. This is a per-row verdict, not a stage
+verdict: the pack is not clean, and `TDD-0009`, `TDD-0018` and `TDD-0036` are
+listed rather than claimed.
