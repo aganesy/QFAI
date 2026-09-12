@@ -55,8 +55,14 @@ describe("the design direction is the user's decision", () => {
       // One ask path, the shared one. A second would escape the protocol that
       // decides when a question is allowed at all.
       expect(intake).toContain("shared-skill-operating-baseline.md#user-questions");
-      // An approval is exempt from the budget, so the cap is not a reason to skip it.
-      expect(intake).toContain("is an approval, which is exempt");
+      // The cap is not a reason to skip the ask, and the reason is the
+      // exemption rather than the stage the ask happens in. Two classes of
+      // question reach it, so both are named here: dropping either leaves the
+      // document explaining the cap away for a case it no longer covers.
+      expect(intake).toContain(
+        "is an approval, and a question inside a grilling session is a grilling question",
+      );
+      expect(intake).toContain("Both are exempt.");
     });
 
     it(`${tree}: an unattended run records an assumption instead of blocking`, async () => {
