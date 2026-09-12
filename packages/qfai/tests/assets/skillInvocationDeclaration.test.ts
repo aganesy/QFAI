@@ -16,7 +16,7 @@
  * declares it today, so the next user-invoked skill is asked the same question.
  */
 
-import { readdir, readFile } from "node:fs/promises";
+import { access, readdir, readFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -31,9 +31,24 @@ const SKILLS_DIR = "assistant/skills";
 
 const OPT_OUT_FIELD = "disable-model-invocation";
 
+/**
+ * Every skill in the tree, found the way the installer finds one: a directory
+ * holding a `SKILL.md`. A name prefix would look like the same list and is not
+ * — one shipped skill is named for what it does rather than for the package,
+ * and a prefix filter drops it without the run saying anything.
+ */
 async function skillNames(tree: string): Promise<string[]> {
-  const entries = await readdir(path.join(repoRoot, tree, SKILLS_DIR));
-  return entries.filter((name) => name.startsWith("qfai-")).sort();
+  const base = path.join(repoRoot, tree, SKILLS_DIR);
+  const found: string[] = [];
+  for (const entry of await readdir(base)) {
+    try {
+      await access(path.join(base, entry, "SKILL.md"));
+    } catch {
+      continue;
+    }
+    found.push(entry);
+  }
+  return found.sort();
 }
 
 function readSkill(tree: string, skill: string): Promise<string> {
@@ -58,7 +73,14 @@ describe.each(QFAI_TREES)("%s: the opt-out is stated once, in two places", (tree
     // two ways to get one — a moved directory, a filter that matches nothing —
     // look identical to a green run.
     const names = await skillNames(tree);
-    expect(names.length, `${tree}/${SKILLS_DIR} holds no qfai-* skill`).toBeGreaterThan(0);
+    expect(names.length, `${tree}/${SKILLS_DIR} holds no skill`).toBeGreaterThan(0);
+    // The whole directory, not the part of it named for the package. A suite
+    // that silently stopped at the prefix would read as green on the skill it
+    // had stopped covering.
+    const everyDirectory = await readdir(path.join(repoRoot, tree, SKILLS_DIR));
+    expect(names, "an entry under the skills directory the suite does not read").toEqual(
+      everyDirectory.sort(),
+    );
   });
 
   it("writes the opt-out as a declaration or not at all", async () => {
