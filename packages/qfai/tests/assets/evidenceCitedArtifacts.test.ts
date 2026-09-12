@@ -52,6 +52,9 @@ const CITED_GENERATED_ROOT = /\.qfai\/(?:review|review_archive|report|discussion
 /** The characters a citation carries outside a group. */
 const CITATION_CHARACTER = /[A-Za-z0-9._/*?+-]/;
 
+/** What closes each kind of group a citation can open. */
+const GROUP_CLOSERS: Readonly<Record<string, string>> = { "(": ")", "{": "}", "[": "]" };
+
 /**
  * Every citation a line carries, taken whole.
  *
@@ -59,8 +62,7 @@ const CITATION_CHARACTER = /[A-Za-z0-9._/*?+-]/;
  * a valid pattern, and a class that stops at the first `)` cuts the token to
  * something the tree does not have — which is measured as the root, discarded,
  * and the artifacts it really named go unchecked. So the root is found by
- * pattern and the rest is scanned, counting `(` against `)` and `{` against
- * `}`.
+ * pattern and the rest is scanned, counting each opener against its closer.
  */
 function citationsIn(line: string): string[] {
   const found: string[] = [];
@@ -69,21 +71,33 @@ function citationsIn(line: string): string[] {
     if (from === undefined) continue;
     let index = from + start[0].length;
     const closers: string[] = [];
-    let balanced = true;
+    let usable = true;
     while (index < line.length) {
       const character = line[index] ?? "";
-      if (character === "(" || character === "{") {
-        closers.push(character === "(" ? ")" : "}");
-      } else if (character === ")" || character === "}") {
+      const closer = GROUP_CLOSERS[character];
+      if (closer !== undefined) {
+        closers.push(closer);
+      } else if (character === ")" || character === "}" || character === "]") {
+        // A closer with no opener inside the token belongs to the text around
+        // it — a Markdown link's `)`, a parenthesis the sentence opened before
+        // the path. It ends the citation rather than spoiling it. A mismatch
+        // against a group this token opened is a different thing: the token is
+        // not a path, and recording the text before the group would record a
+        // prefix nothing has.
+        if (closers.length === 0) break;
         if (closers.at(-1) !== character) {
-          balanced = false;
+          usable = false;
           break;
         }
         closers.pop();
       } else if (CITATION_CHARACTER.test(character)) {
         // An ordinary path character, inside a group or out.
-      } else if (closers.length > 0 && (character === "|" || character === ",")) {
-        // The separators a group's alternatives use.
+      } else if (
+        closers.length > 0 &&
+        (character === "|" || character === "," || character === "!" || character === "^")
+      ) {
+        // The separators a group's alternatives use, and the two spellings of a
+        // negated bracket class.
       } else if ((character === "@" || character === "!") && line[index + 1] === "(") {
         // An extglob introducer, which is one only where a group follows it.
       } else {
@@ -91,9 +105,7 @@ function citationsIn(line: string): string[] {
       }
       index += 1;
     }
-    // An unbalanced group is not one, and the text before it opened is a prefix
-    // nothing has — recording it would be the very entry this scan avoids.
-    if (!balanced || closers.length > 0) continue;
+    if (!usable || closers.length > 0) continue;
     const cited = line.slice(from, index);
     if (cited.length > start[0].length) found.push(cited);
   }
@@ -477,15 +489,51 @@ function namesSomethingInside(cited: string): boolean {
 function expandBraces(cited: string): string[] {
   const open = cited.indexOf("{");
   if (open === -1) return [cited];
-  const close = cited.indexOf("}", open);
+  const close = matchingBrace(cited, open);
   if (close === -1) return [cited];
   const before = cited.slice(0, open);
   const after = cited.slice(close + 1);
-  return cited
-    .slice(open + 1, close)
-    .split(",")
-    .map((part) => part.trim())
-    .flatMap((part) => expandBraces(`${before}${part}${after}`));
+  return topLevelAlternatives(cited.slice(open + 1, close)).flatMap((part) =>
+    expandBraces(`${before}${part}${after}`),
+  );
+}
+
+/** The index of the `}` matching the `{` at `open`, or `-1` when it has none. */
+function matchingBrace(cited: string, open: number): number {
+  let depth = 0;
+  for (let index = open; index < cited.length; index += 1) {
+    if (cited[index] === "{") depth += 1;
+    if (cited[index] === "}") {
+      depth -= 1;
+      if (depth === 0) return index;
+    }
+  }
+  return -1;
+}
+
+/**
+ * A brace body's alternatives, split at the commas that belong to it.
+ *
+ * A list can hold a list — `{a,{b,c}}` — and splitting on every comma makes
+ * names carrying a stray brace, which resolve nowhere. Only the commas outside
+ * a nested pair separate this list's members.
+ */
+function topLevelAlternatives(body: string): string[] {
+  const parts: string[] = [];
+  let depth = 0;
+  let current = "";
+  for (const character of body) {
+    if (character === "{") depth += 1;
+    if (character === "}") depth -= 1;
+    if (character === "," && depth === 0) {
+      parts.push(current.trim());
+      current = "";
+      continue;
+    }
+    current += character;
+  }
+  parts.push(current.trim());
+  return parts;
 }
 
 /**
@@ -679,6 +727,21 @@ describe("what the scan counts as a citation", () => {
     expect(matches("- `.qfai/review/@(review-a|review-b/summary.json`")).toEqual([]);
   });
 
+  it("ends a citation at punctuation the surrounding text opened", () => {
+    // A Markdown link destination. The `)` was opened before the path, so it
+    // closes the link rather than spoiling the citation.
+    expect(matches("see [the report](.qfai/report/missing.json)")).toEqual([
+      ".qfai/report/missing.json",
+    ]);
+    // A group this token opened is different: a mismatch there means the token
+    // is not a path, and the text before the group is a prefix nothing has.
+    expect(matches("- `.qfai/review/@(review-a|review-b/summary.json`")).toEqual([]);
+  });
+
+  it("takes a bracket class whole", () => {
+    expect(matches("- `.qfai/report/[0-9]*.json`")).toEqual([".qfai/report/[0-9]*.json"]);
+  });
+
   it("takes a one-character wildcard", () => {
     // The dialect supports `?`, and a grammar that stops before it leaves the
     // pack directory to be checked in place of the file set the citation named.
@@ -764,6 +827,11 @@ describe("a glob is a claim about a set", () => {
     expect(globToRegExp(".qfai/report/?(draft-)run.json").test(".qfai/report/run.json")).toBe(true);
     expect(globToRegExp(".qfai/report/!(draft).json").test(".qfai/report/draft.json")).toBe(false);
     expect(globToRegExp(".qfai/report/!(draft).json").test(".qfai/report/final.json")).toBe(true);
+    // The dialect reads the negation by prefix rather than by the pattern
+    // around it, so a name merely starting with the excluded text is refused
+    // where fast-glob admits it. Filed separately; pinned here so the fix has
+    // a case to flip rather than a silent behaviour change.
+    expect(globToRegExp(".qfai/report/!(draft).json").test(".qfai/report/draftx.json")).toBe(false);
   });
 
   it("resolves every extended form through the matcher", () => {
@@ -798,6 +866,21 @@ describe("a glob is a claim about a set", () => {
     // first ended the line's scan.
     const line = "checked `.qfai/report/validate.log` and `.qfai/report/run-20260822024224027`";
     expect(matchesLine(line)).toHaveLength(2);
+  });
+
+  it("expands a nested brace list without stray braces", () => {
+    expect(expandBraces(".qfai/report/{a,{b,c}}.json")).toEqual([
+      ".qfai/report/a.json",
+      ".qfai/report/b.json",
+      ".qfai/report/c.json",
+    ]);
+  });
+
+  it("reads a bracket class as the set it names", () => {
+    const pattern = globToRegExp(".qfai/report/[0-9]*.json");
+    expect(pattern.test(".qfai/report/1x.json")).toBe(true);
+    expect(pattern.test(".qfai/report/x1.json")).toBe(false);
+    expect(globToRegExp(".qfai/report/[!0-9]*.json").test(".qfai/report/x1.json")).toBe(true);
   });
 
   it("resolves a one-member brace list", () => {

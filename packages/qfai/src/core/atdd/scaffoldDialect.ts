@@ -432,6 +432,20 @@ export function compileGlob(pattern: string): string {
         continue;
       }
     }
+    if (char === "[") {
+      // A bracket class, which fast-glob supports and an escape-everything
+      // matcher reads as four literal characters. `[!a-z]` is the glob spelling
+      // of a negated class; a regular expression spells it `[^a-z]`.
+      const close = pattern.indexOf("]", index + (pattern[index + 1] === "]" ? 2 : 1));
+      if (close !== -1) {
+        const body = pattern.slice(index + 1, close);
+        const negated = body.startsWith("!") || body.startsWith("^");
+        const members = body.slice(negated ? 1 : 0).replace(/\\/g, "\\\\");
+        source += `[${negated ? "^" : ""}${members}]`;
+        index = close;
+        continue;
+      }
+    }
     source += escapeRegExp(char);
   }
   return source;
