@@ -378,4 +378,300 @@ describe("cross-AI rules surface (.agents/rules/ master)", () => {
       expect(text).toContain(".agents/rules/interface-clarity.md");
     });
   });
+
+  // The form a question arrives in is the same wherever an agent works, so the
+  // master ships and both copies are held to the same clauses.
+  describe("user-questions rule", () => {
+    const MASTERS = [
+      ".agents/rules/user-questions.md",
+      "packages/qfai/assets/init/root/.agents/rules/user-questions.md",
+    ];
+
+    it.each(MASTERS)("%s states every clause", async (rel) => {
+      const text = await readFile(path.join(ROOT, rel), "utf-8");
+      // One token per clause that no other clause in the file carries.
+      for (const clause of [
+        /No exceptions/i,
+        /short\s+label/,
+        /Recommend/,
+        /numbered\s+plain-text\s+choices/,
+        /question\s+budget/i,
+      ]) {
+        expect(text).toMatch(clause);
+      }
+    });
+
+    // An exception is where an agent goes when it would rather not ask, and the
+    // question it skips is the one it was least sure of. Stated as a reason
+    // rather than a prohibition, because a prohibition invites a search for the
+    // case it does not cover.
+    it.each(MASTERS)("%s admits no light question", async (rel) => {
+      const text = await readFile(path.join(ROOT, rel), "utf-8");
+      expect(text).toMatch(/no\s+class\s+of\s+question\s+light\s+enough\s+to\s+skip\s+it/);
+      expect(text).toMatch(/would\s+rather\s+not\s+ask/);
+    });
+
+    // Availability is judged per question, not per host. A tool present but
+    // withheld in this mode is the fallback's case; a tool that cannot carry the
+    // answer's shape — a multiple-answer question put to exclusive options — is
+    // not callable for that question, and forcing it loses the constraint.
+    it.each(MASTERS)("%s judges the tool per question", async (rel) => {
+      const text = await readFile(path.join(ROOT, rel), "utf-8");
+      expect(text).toMatch(/at\s+the\s+moment\s+the\s+question\s+is\s+asked/);
+      expect(text).toMatch(/Callable\s+for\s+this\s+question,\s+not\s+in\s+general/);
+      expect(text).toMatch(/one\s+yes-or-no\s+per\s+option/);
+    });
+
+    // A recommendation invented to satisfy a host that requires one is the
+    // failure the clause exists to prevent, so the conflict resolves the other
+    // way: the cheapest option to reverse goes first, and the description says
+    // the choice is close.
+    it.each(MASTERS)("%s never invents a recommendation", async (rel) => {
+      const text = await readFile(path.join(ROOT, rel), "utf-8");
+      expect(text).toMatch(/Where\s+no\s+option\s+is\s+better,\s+say\s+that\s+too/);
+      expect(text).toMatch(/cheapest\s+to\s+reverse/);
+    });
+
+    // Reading the limit off the tool is what keeps the rule followable on a host
+    // that takes fewer questions than any number written here would assume.
+    it.each(MASTERS)("%s reads the host's limit rather than naming one", async (rel) => {
+      const text = await readFile(path.join(ROOT, rel), "utf-8");
+      expect(text).toMatch(/Read\s+the\s+limit\s+off\s+the\s+tool/);
+      expect(text).toMatch(/Do\s+not\s+hard-code\s+a\s+number/);
+      // The three properties a split has to respect, or it becomes a way to ask
+      // past a cap, to override a stop, or to act on half a set.
+      expect(text).toMatch(/set\s+is\s+fixed\s+before\s+the\s+first\s+call/i);
+      expect(text).toMatch(/Read\s+each\s+batch's\s+answers\s+for\s+a\s+stop/);
+      expect(text).toMatch(/No\s+answer\s+is\s+acted\s+on\s+until\s+the\s+set\s+is\s+exhausted/);
+    });
+
+    // The selection constraint is the part a numbered list loses, and losing it
+    // changes the question: "pick one" and "pick all that apply" are different.
+    it.each(MASTERS)("%s keeps the selection constraint in the fallback", async (rel) => {
+      const text = await readFile(path.join(ROOT, rel), "utf-8");
+      expect(text).toMatch(/how\s+many\s+options\s+may\s+be\s+chosen/);
+      expect(text).toMatch(/Say\s+why\s+the\s+tool\s+was\s+not\s+callable/);
+    });
+
+    // The form and the count are independent. Without this the rule reads as a
+    // licence to ask more, and a well-shaped question that should not be asked
+    // is still one that should not be asked.
+    it.each(MASTERS)("%s says what it is not", async (rel) => {
+      const text = await readFile(path.join(ROOT, rel), "utf-8");
+      expect(text).toMatch(/Not\s+a\s+question\s+budget/);
+      expect(text).toMatch(/Not\s+a\s+reason\s+to\s+ask\s+more/);
+      expect(text).toMatch(/what\s+the\s+environment\s+can\s+settle/);
+    });
+
+    it.each([
+      "AGENTS.md",
+      "CLAUDE.md",
+      ".github/copilot-instructions.md",
+      "packages/qfai/assets/init/root/AGENTS.md",
+      "packages/qfai/assets/init/root/CLAUDE.md",
+      "packages/qfai/src/cli/commands/init.ts",
+    ])("%s cites the rule master", async (rel) => {
+      const text = await readFile(path.join(ROOT, rel), "utf-8");
+      expect(text).toContain("user-questions.md");
+    });
+
+    // The two rules divide one subject: which questions to ask, and what each
+    // one looks like. A grilling round is delivered under this rule's § 4, so
+    // the pointer is what stops the mechanics being written twice.
+    it.each([
+      ".agents/rules/grilling.md",
+      "packages/qfai/assets/init/root/.agents/rules/grilling.md",
+    ])("%s points at the question form", async (rel) => {
+      const text = await readFile(path.join(ROOT, rel), "utf-8");
+      expect(text).toContain("user-questions.md");
+    });
+  });
+
+  // A decision tree is a thing an adopter's project has as much as this one
+  // does, so the master is shipped and both copies are held to the same
+  // clauses.
+  describe("grilling rule", () => {
+    const MASTERS = [
+      ".agents/rules/grilling.md",
+      "packages/qfai/assets/init/root/.agents/rules/grilling.md",
+    ];
+
+    it.each(MASTERS)("%s states every clause", async (rel) => {
+      const text = await readFile(path.join(ROOT, rel), "utf-8");
+      // One token per clause that no other clause in the file carries, so a
+      // clause cannot be dropped and still leave the master looking complete.
+      for (const clause of [
+        /[Dd]esign tree/,
+        /[Ff]rontier/,
+        /[Rr]ound/,
+        /recommended answer/i,
+        /sub-agent/i,
+        /throwaway version/i,
+      ]) {
+        expect(text).toMatch(clause);
+      }
+    });
+
+    // The two halves of the end condition are one obligation. An empty frontier
+    // alone is the state an agent reaches by running out of questions, which is
+    // the failure this rule exists to name — so a master that stopped at the
+    // frontier would license the behaviour it forbids.
+    it.each(MASTERS)("%s requires both halves of the end condition", async (rel) => {
+      const text = await readFile(path.join(ROOT, rel), "utf-8");
+      expect(text).toMatch(/frontier\s+is\s+empty/i);
+      expect(text).toMatch(/confirms\s+the\s+understanding\s+is\s+shared/i);
+    });
+
+    // A cap is the one mechanism that would make the rule self-defeating: it
+    // ends a session on a number rather than on the work being done, which is
+    // what the rule replaces. Asserted because a later editor reaching for a cap
+    // would otherwise find nothing in the way.
+    it.each(MASTERS)("%s sets no question cap", async (rel) => {
+      const text = await readFile(path.join(ROOT, rel), "utf-8");
+      expect(text).toMatch(/no\s+question\s+cap/i);
+    });
+
+    // Facts and decisions are separated so an agent cannot spend the user's
+    // attention on something it could look up, nor settle on their behalf
+    // something only they can settle.
+    it.each(MASTERS)("%s separates facts from decisions", async (rel) => {
+      const text = await readFile(path.join(ROOT, rel), "utf-8");
+      expect(text).toMatch(
+        /[Nn]ever\s+ask\s+the\s+user\s+for\s+something\s+you\s+could\s+look\s+up/,
+      );
+      expect(text).toMatch(/answers its own\s+decisions/);
+    });
+
+    // Without a fallback the rule has no compliant path on a host that offers
+    // no structured question tool: it orders a round asked through one, and an
+    // agent that cannot reach it can only skip the session.
+    it.each(MASTERS)("%s gives a fallback for a host without the tool", async (rel) => {
+      const text = await readFile(path.join(ROOT, rel), "utf-8");
+      expect(text).toMatch(/no\s+such\s+tool/i);
+      expect(text).toMatch(/numbered\s+choices/i);
+    });
+
+    // The prototype answers a question talking cannot; it does not hand the
+    // agent the answer. A master that stopped at "build it" would let an agent
+    // settle a question of taste on the user's behalf, one clause after saying
+    // decisions are theirs.
+    it.each(MASTERS)("%s returns the prototype to the user", async (rel) => {
+      const text = await readFile(path.join(ROOT, rel), "utf-8");
+      expect(text).toMatch(/put\s+it\s+in\s+front\s+of\s+the\s+user/i);
+      expect(text).toMatch(/does\s+not\s+transfer\s+the\s+decision/i);
+    });
+
+    // A no-question run is the one place the rule and a no-question mode could
+    // deadlock. It resolves toward the open question, which is what stops the
+    // work completing over a decision nobody took.
+    //
+    // The labelled value is allowed beside it, and has to be: a discussion pack
+    // under `--auto` takes the conventional design direction, labels it
+    // `chosen_by: assumption` and opens the register entry, and the pack cannot
+    // complete while that entry is open. Forbidding the value outright would
+    // leave that run with no artifact it is permitted to write. What the rule
+    // refuses is the assumption standing alone.
+    // Without a boundary the trigger reads as "ask whenever a design decision
+    // comes up", and every such question then carries the budget exemption with
+    // it. The class has to be decidable when the question is asked, which means
+    // it turns on whether a session was declared.
+    it.each(MASTERS)("%s makes a session a mode, not a posture", async (rel) => {
+      const text = await readFile(path.join(ROOT, rel), "utf-8");
+      expect(text).toMatch(/entered\s+deliberately/);
+      expect(text).toMatch(/an\s+ambiguity\s+found\s+while\s+implementing/);
+      expect(text).toMatch(/ordinary\s+clarification,\s+capped\s+as\s+one/);
+    });
+
+    // A date nobody published, a number only the user knows: no lookup reaches
+    // it. Off the frontier, the decision below it waits on a node no round asks,
+    // so the frontier never empties and the session cannot end.
+    it.each(MASTERS)("%s puts a user-held fact on the frontier", async (rel) => {
+      const text = await readFile(path.join(ROOT, rel), "utf-8");
+      expect(text).toMatch(/[Ff]act\s+only\s+the\s+user\s+holds/);
+      expect(text).toMatch(/nothing\s+else\s+can\s+put\s+it\s+there/);
+      expect(text).toMatch(/never\s+offered\s+as\s+a\s+choice/);
+    });
+
+    // Recommending a value the agent does not hold is a guess, and attaching it
+    // to the question invites the user to accept it.
+    it.each(MASTERS)("%s recommends nothing on a question for a fact", async (rel) => {
+      const text = await readFile(path.join(ROOT, rel), "utf-8");
+      expect(text).toMatch(/asking\s+for\s+a\s+fact\s+carries\s+no\s+recommended\s+answer/i);
+    });
+
+    // The frontier empties while a lookup is in flight, so an end condition
+    // reading the frontier alone closes the session before the lookup can raise
+    // the questions it was dispatched to answer.
+    it.each(MASTERS)("%s holds the end condition open for a running lookup", async (rel) => {
+      const text = await readFile(path.join(ROOT, rel), "utf-8");
+      expect(text).toMatch(/no\s+lookup\s+is\s+still\s+running/);
+      expect(text).toMatch(/about\s+the\s+whole\s+tree/);
+    });
+
+    // Article VI gives all three answers a meaning. Without them here an agent
+    // inside a session has to choose which document to follow, and the rule as
+    // written says a session ends on its own terms and no others.
+    it.each(MASTERS)("%s gives the user a way to end a session", async (rel) => {
+      const text = await readFile(path.join(ROOT, rel), "utf-8");
+      expect(text).toMatch(/ends\s+it\s+immediately,\s+frontier\s+empty\s+or\s+not/);
+      expect(text).toMatch(/ends\s+the\s+asking,\s+not\s+the\s+work/);
+      // The two kinds `proceed` never covers, or a waiver would swallow a
+      // mandatory approval and an undefaultable input along with the rest.
+      expect(text).toMatch(/never\s+assumed\s+when\s+the\s+questions\s+close/);
+    });
+
+    // A split that recomputed the frontier, or acted on a batch before the round
+    // finished, would be two rounds wearing one name — and a closing answer in
+    // an early batch would be read only after the agent had carried on past it.
+    it.each(MASTERS)("%s keeps a batched round one round", async (rel) => {
+      const text = await readFile(path.join(ROOT, rel), "utf-8");
+      expect(text).toMatch(/frontier\s+is\s+not\s+recomputed\s+between\s+them/);
+      expect(text).toMatch(/read\s+for\s+a\s+closing\s+answer\s+before\s+the\s+next\s+is\s+put/);
+      expect(text).toMatch(/it\s+never\s+makes\s+two\s+rounds/);
+    });
+
+    // Precision and settledness are different things, and only the second ends
+    // the need for a session. A choice between two fully specified options is
+    // precise and still open, so an exit keyed on how well the subject can be
+    // stated lets an agent skip the interview and then decide for the user.
+    it.each(MASTERS)("%s keys the exit on the decision, not on precision", async (rel) => {
+      const text = await readFile(path.join(ROOT, rel), "utf-8");
+      expect(text).toMatch(/the\s+decision\s+being\s+settled,\s+not\s+the\s+subject/);
+    });
+
+    // Agreement is not evidence the session was unnecessary: the user's
+    // preferences may simply match, and the decisions were still theirs to
+    // authorise. Read as a success criterion, it teaches an agent to skip the
+    // next interview on the strength of the last one going smoothly.
+    it.each(MASTERS)("%s does not read agreement as a wasted session", async (rel) => {
+      const text = await readFile(path.join(ROOT, rel), "utf-8");
+      expect(text).toMatch(/Agreeing\s+with\s+every\s+recommendation\s+is\s+a\s+fine/);
+      expect(text).not.toMatch(/session\s+that\s+was\s+not\s+needed/);
+    });
+
+    it.each(MASTERS)("%s resolves a no-question run to open questions", async (rel) => {
+      const text = await readFile(path.join(ROOT, rel), "utf-8");
+      expect(text).toMatch(/[Uu]nder\s+a\s+no-question\s+mode/);
+      expect(text).toMatch(/opens\s+every\s+decision\s+left\s+over\s*\n?\s*as\s+a\s+question/);
+      expect(text).toMatch(
+        /write\s+the\s+defaulted\s+value\s*\n?\s*and\s+label\s+it\s+an\s+assumption/,
+      );
+      expect(text).toMatch(/the\s*\n?\s*assumption\s+on\s+its\s+own/);
+    });
+
+    it.each([
+      "AGENTS.md",
+      "CLAUDE.md",
+      ".github/copilot-instructions.md",
+      "packages/qfai/assets/init/root/AGENTS.md",
+      "packages/qfai/assets/init/root/CLAUDE.md",
+      // The list `qfai init` appends to a project that already has an entry
+      // point. A project with its own `AGENTS.md` keeps it, so this is the only
+      // rule list that population ever sees.
+      "packages/qfai/src/cli/commands/init.ts",
+    ])("%s cites the rule master", async (rel) => {
+      const text = await readFile(path.join(ROOT, rel), "utf-8");
+      expect(text).toContain("grilling.md");
+    });
+  });
 });
