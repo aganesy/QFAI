@@ -122,9 +122,10 @@ and did not run.
 - Run output retained: no
 - Backfill note: the row's cell recorded a verdict with no command and no output, so nothing of the original run survives. The test was re-run for the GREEN below, and the mutation below was applied and reverted to establish that the test discriminates. No reviewer verdict is recorded because none can be reconstructed.
 
+- RED failure mode: falsifiability
+
 #### Round 1
 
-- Round 1: RED failure mode: falsifiability
 - Round 1: Revision: 649d8111147436408c90cbbe1b9f9b07e34da8cb
 - Round 1: Satisfied-by: packages/qfai/src/core/validators/designAudit.ts, checkContractHierarchyFromScreens — the empty-list test that opens the `QFAI-AUD-001` branch.
 - Round 1: Falsifiability command: npx vitest run tests/integration/sddPrimaryTasksLane.test.ts
@@ -156,9 +157,10 @@ one this row's sibling owns.
 - Run output retained: no
 - Backfill note: the row's cell recorded a verdict with no command and no output, so nothing of the original run survives. The test was re-run for the GREEN below, and the mutation below was applied and reverted to establish that the test discriminates. No reviewer verdict is recorded because none can be reconstructed.
 
+- RED failure mode: falsifiability
+
 #### Round 1
 
-- Round 1: RED failure mode: falsifiability
 - Round 1: Revision: 649d8111147436408c90cbbe1b9f9b07e34da8cb
 - Round 1: Satisfied-by: packages/qfai/src/core/discussionPack.ts, resolveActiveDiscussionPack — the filter that matches the pointer against the packs on disk.
 - Round 1: Falsifiability command: npx vitest run tests/core/activeDiscussionPack.test.ts
@@ -185,9 +187,10 @@ one this row's sibling owns.
 - Run output retained: no
 - Backfill note: the row's cell recorded a verdict with no command and no output, so nothing of the original run survives. The test was re-run for the GREEN below, and the mutation below was applied and reverted to establish that the test discriminates. No reviewer verdict is recorded because none can be reconstructed.
 
+- RED failure mode: falsifiability
+
 #### Round 1
 
-- Round 1: RED failure mode: falsifiability
 - Round 1: Revision: 649d8111147436408c90cbbe1b9f9b07e34da8cb
 - Round 1: Satisfied-by: packages/qfai/src/core/contracts/screenContracts.ts, REQUIRED_PRIMARY_TASK_KEYS — the closed set a structured item is measured against.
 - Round 1: Falsifiability command: npx vitest run tests/integration/primaryTasksStructured.test.ts
@@ -221,9 +224,10 @@ does not displace it and the assertion holds.
 - Run output retained: no
 - Backfill note: the row's cell recorded a verdict with no command and no output, so nothing of the original run survives. The test was re-run for the GREEN below, and the mutation below was applied and reverted to establish that the test discriminates. No reviewer verdict is recorded because none can be reconstructed.
 
+- RED failure mode: falsifiability
+
 #### Round 1
 
-- Round 1: RED failure mode: falsifiability
 - Round 1: Revision: 649d8111147436408c90cbbe1b9f9b07e34da8cb
 - Round 1: Satisfied-by: packages/qfai/src/core/validators/designAudit.ts, shapeFindingFor — the rule code a shape violation is reported under.
 - Round 1: Falsifiability command: npx vitest run tests/integration/primaryTasksStructured.test.ts
