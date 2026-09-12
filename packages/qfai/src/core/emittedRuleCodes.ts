@@ -421,6 +421,7 @@ export const EMITTED_RULE_CODES: readonly string[] = [
   "QFAI-UIE-002",
   "QFAI-UIE-003",
   "QFAI-VALIDATE-017",
+  "QFAI-GRILL-001",
   "QFAI-VIS-001",
   "QFAI-VIS-002",
   "QFAI-WAIVER-001",
