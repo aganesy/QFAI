@@ -26,6 +26,7 @@ import { resolvePath } from "../config.js";
 import { parseSkillFrontmatter, skillFrontmatterMapping } from "../agentFrontmatter.js";
 import { collectFiles } from "../fs.js";
 import { hasErrnoCode, isEnoent } from "../fs/errno.js";
+import { readBoundedRegularFile } from "../../shared/boundedRead.js";
 import { parseHeadings } from "../parse/markdown.js";
 import { ASSISTANT_DIR } from "../paths/assistantPaths.js";
 import { escapeRegExp } from "../regex.js";
@@ -330,25 +331,28 @@ export async function validateAssistantAssets(root: string, config: QfaiConfig):
     // Outside the crawl — a directory on the shared ignore list — so nothing has
     // reported this file, and a read that fails here is the only chance to say
     // the skill cannot be loaded.
-    let content: string;
-    try {
-      content = await readFile(entryPoint, "utf-8");
-    } catch (cause) {
+    //
+    // Through the bounded reader rather than a bare read: the path is whatever
+    // the adopter's tree holds, and a FIFO does not fail on open — it blocks
+    // until somebody writes to it, which would hang the run instead of
+    // reporting the skill.
+    const bytes = await readBoundedRegularFile(entryPoint, SKILL_DOCUMENT_MAX_BYTES);
+    if (bytes === undefined) {
       issues.push(
         issue(
           "QFAI-SKILLS-014",
-          `A skill's entry point could not be read (${describeReadError(cause)}), so the host cannot load it either.`,
+          `A skill's entry point is not an ordinary file this run can read within ${String(SKILL_DOCUMENT_MAX_BYTES)} bytes, so the host cannot load it either.`,
           "error",
           entryPoint,
           "skills.documentReadable",
           undefined,
           "canonical",
-          "Clear the I/O fault the message names — grant read permission, repair a broken symlink, fetch a file that was never materialised — or delete the document if it does not belong under `skills`.",
+          "Make the entry point an ordinary readable file — grant read permission, repair a broken symlink, replace a directory or a device with the document — or delete it if it does not belong under `skills`.",
         ),
       );
       continue;
     }
-    issues.push(...collectSkillRegistrationIssues(entryPoint, content));
+    issues.push(...collectSkillRegistrationIssues(entryPoint, bytes.toString("utf-8")));
   }
 
   issues.push(...collectReferenceGraphIssues(root, skillsDir, documents));
@@ -1170,6 +1174,14 @@ function isUnfilledValue(raw: string): boolean {
  * directory is called, so a skill in one of them is registered, or fails to be,
  * with the crawl saying nothing about it either way.
  */
+/**
+ * The ceiling on a skill entry point this pass reads.
+ *
+ * A `SKILL.md` is prose and front matter; a file past this is not one, and
+ * buffering it to find that out is what the ceiling exists to avoid.
+ */
+const SKILL_DOCUMENT_MAX_BYTES = 1024 * 1024;
+
 async function collectSkillEntryPoints(skillsDir: string): Promise<string[]> {
   const entries = await readdir(skillsDir, { withFileTypes: true }).catch(() => []);
   const found: string[] = [];
