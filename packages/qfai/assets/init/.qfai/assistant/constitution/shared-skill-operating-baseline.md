@@ -218,10 +218,13 @@ There is one base, and it is the project root.
   session is entered deliberately: an invocation declares one and nothing else
   starts one, so a question asked outside a declared session is an ordinary
   clarification and spends a unit, whatever its subject. Under an explicit `--auto` the session asks nothing and opens each
-  decision it could not settle as a question in the register the stage reads.
-  Where a document requires the field to hold something, write the defaulted
-  value and label it an assumption beside that open question; what is forbidden
-  is the assumption with no open question against it (Article X, rule 6).
+  node it could not settle as a question in the register the stage reads. Each
+  node, not each decision: a fact only the user holds cannot be settled from
+  evidence either, and a fact declared undefaultable stops the run rather than
+  taking a value nobody has. Where a document requires the field to hold
+  something, write the defaulted value and label it an assumption beside that
+  open question; what is forbidden is the assumption with no open question
+  against it (Article X, rule 6).
 
 ## Canonical qfai Launcher (Mandatory)
 

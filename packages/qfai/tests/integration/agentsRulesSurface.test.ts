@@ -494,6 +494,16 @@ describe("cross-AI rules surface (.agents/rules/ master)", () => {
       expect(text).toMatch(/no\s+option\s+that\s+is\s+cheaper\s+to\s+reverse/);
     });
 
+    // A fact with listable candidates reaches the fallback because the host
+    // demanded a recommendation and § 3 forbids one here. Requiring the list to
+    // carry a recommendation anyway would leave that question with no
+    // compliant shape at all.
+    it.each(MASTERS)("%s does not require a recommendation it forbids", async (rel) => {
+      const text = await readFile(path.join(ROOT, rel), "utf-8");
+      expect(text).toMatch(/recommendation\s+\*\*where\s+one\s+is\s+permitted\*\*/);
+      expect(text).toMatch(/inventing\s+one\s+to\s+fill\s+the\s*\n?\s*slot/i);
+    });
+
     // The form and the count are independent. Without this the rule reads as a
     // licence to ask more, and a well-shaped question that should not be asked
     // is still one that should not be asked.
@@ -810,9 +820,13 @@ describe("a no-question run opens every node, on every surface that says so", ()
     "packages/qfai/assets/init/.qfai/assistant/constitution/communication.md",
     ".qfai/assistant/skills/qfai-grilling/SKILL.md",
     "packages/qfai/assets/init/.qfai/assistant/skills/qfai-grilling/SKILL.md",
+    ".qfai/assistant/constitution/shared-skill-operating-baseline.md",
+    "packages/qfai/assets/init/.qfai/assistant/constitution/shared-skill-operating-baseline.md",
   ])("%s opens nodes rather than decisions", async (rel) => {
     const text = await readFile(path.join(ROOT, rel), "utf-8");
-    expect(text).toMatch(/(?:every|each)\s+\*{0,2}node\*{0,2}\s+left\s+over/);
+    expect(text).toMatch(
+      /(?:every|each)\s+\*{0,2}node\*{0,2}\s+(?:left\s+over|it\s+could\s+not\s+settle)/,
+    );
     expect(text).not.toMatch(/(?:every|each)\s+decision\s+left\s+over/);
     expect(text).toMatch(/undefaultable/);
   });

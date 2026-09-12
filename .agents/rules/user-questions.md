@@ -161,7 +161,14 @@ Fall back to plain text **in the shape the answer has**.
 
 Where there are choices, that is a numbered list keeping every part the tool
 would have carried: the label, the description of what each choice means, the
-recommendation, and **how many options may be chosen**.
+recommendation **where one is permitted**, and **how many options may be
+chosen**.
+
+The qualifier is not a loophole; it is the one case § 3 creates. A question
+asking for a fact carries no recommendation at all, and a fact with listable
+candidates arrives here precisely because the host demanded one. Carrying the
+list without a recommendation is the compliant answer; inventing one to fill the
+slot is the failure the whole clause exists to prevent.
 
 Where the answer is open — no listable set of candidates — it is a plain request
 for the value, naming what depends on it. Inventing two options so an open

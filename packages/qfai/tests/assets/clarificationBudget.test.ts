@@ -200,7 +200,10 @@ describe("the clarification budget binds a stage", () => {
       // has to permit what Article X permits. Forbidding the labelled value
       // outright here left a `--auto` discussion run choosing between omitting a
       // required field and breaking the protocol.
-      expectPhrase(content, "opens each\n  decision it could not settle as a question");
+      expectPhrase(content, "opens each\n  node it could not settle as a question");
+      // Each node, not each decision: a fact only the user holds cannot be
+      // settled from evidence either.
+      expectPhrase(content, "Each\n  node, not each decision");
       expectPhrase(content, "the assumption with no open question against it");
     });
 
