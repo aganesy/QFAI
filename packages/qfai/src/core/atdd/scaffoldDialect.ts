@@ -374,7 +374,7 @@ function splitGlobAlternatives(inner: string): string[] {
  * `!(a|b)` uses picomatch's own expansion — a negative lookahead followed by a
  * lazy segment wildcard — so this matcher agrees with fast-glob there too.
  */
-function compileGlob(pattern: string): string {
+export function compileGlob(pattern: string): string {
   let source = "";
   for (let index = 0; index < pattern.length; index += 1) {
     const char = pattern[index] ?? "";

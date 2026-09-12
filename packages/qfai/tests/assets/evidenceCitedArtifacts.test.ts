@@ -6,6 +6,8 @@ import { fileURLToPath } from "node:url";
 
 import { describe, expect, it } from "vitest";
 
+import { compileGlob } from "../../src/core/atdd/scaffoldDialect.js";
+
 // Anchored to this file rather than to `process.cwd()`, for the reason the
 // clarification-budget suite gives: a runner launched from the repo root would
 // otherwise resolve `../..` above the repo.
@@ -45,7 +47,7 @@ const GENERATED_ROOTS = [
  * tracked.
  */
 const CITED_GENERATED_PATH =
-  /\.qfai\/(?:review|review_archive|report|discussion|output)\/(?:[A-Za-z0-9._/*?+-]|[?*+@!]\([A-Za-z0-9._/*?+|-]+\)|\{[A-Za-z0-9._/*?+,-]+\})+/g;
+  /\.qfai\/(?:review|review_archive|report|discussion|output)\/(?:[?*+@!]\([A-Za-z0-9._/*?+|-]+\)|\{[A-Za-z0-9._/*?+,-]*\}|[A-Za-z0-9._/*?+-])+/g;
 
 /**
  * A line that says a path is not provenance.
@@ -327,8 +329,11 @@ async function measureCitations(): Promise<[string, string][]> {
       if (covered === "all") return;
       for (const match of line.match(CITED_GENERATED_PATH) ?? []) {
         const cited = match.replace(/[.,;:]+$/, "").replace(/\/+$/, "");
-        if (covered?.has(cited) === true) return;
-        if (seen.has(cited) || !namesSomethingInside(cited)) return;
+        // `continue`, not `return`: one line can carry several citations, and
+        // leaving the line on the first one that is seen, root-only or
+        // disclaimed loses every citation after it.
+        if (covered?.has(cited) === true) continue;
+        if (seen.has(cited) || !namesSomethingInside(cited)) continue;
         seen.add(cited);
         measured.push([file, cited]);
       }
@@ -406,129 +411,15 @@ function namesSomethingInside(cited: string): boolean {
   return inside !== "" && inside !== "*" && inside !== "**";
 }
 
-const escapeForRegExp = (literal: string): string => literal.replace(/[.+?^${}()|[\]\\]/g, "\\$&");
-
-/**
- * A glob as a regular expression over a whole path.
- *
- * Only the two forms an evidence record uses: `**` for any number of segments,
- * `*` for part of one. A record naming a set still claims the set exists, so a
- * glob is resolved like a single path rather than skipped — the tree carried
- * three matching nothing at all, and skipping them let that provenance through
- * as green.
- */
-function globToRegExp(cited: string): RegExp {
-  // Segment by segment, because a globstar crosses separators only where it is
-  // the whole segment — which is the rule the scaffold dialect in this package
-  // implements, and two dialects for one notation is two answers for one tree.
-  // A non-final `**` takes its own separator with it, so `report/**/*.json`
-  // names every JSON under the tree including one sitting directly in it: a
-  // translation that leaves the separator behind demands a directory nobody
-  // wrote.
-  const segments = cited.split("/");
-  let source = "";
-  for (const [index, segment] of segments.entries()) {
-    const last = index === segments.length - 1;
-    if (segment === "**") {
-      source += last ? ".*" : "(?:[^/]+/)*";
-      continue;
-    }
-    source += segmentToRegExp(segment);
-    if (!last) source += "/";
-  }
-  return new RegExp(`^${source}$`);
-}
-
-/**
- * One path segment as a regular expression over one path segment.
- *
- * `*` and `?` are the two wildcards, and neither crosses a separator. An
- * embedded globstar is not a globstar: the dialect degrades `a**b` to a single
- * `*`, and reading it as cross-segment lets `discussion-**.md` — which names
- * files in the tree itself — match a file inside a pack instead.
- */
-function segmentToRegExp(segment: string): string {
-  let source = "";
-  let index = 0;
-  while (index < segment.length) {
-    const character = segment[index] ?? "";
-    // `@(a|b)`, `?(a)`, `*(a)`, `+(a)`, `!(a)` — the extended forms the dialect
-    // supports. Read as ordinary characters they are literals, and the citation
-    // then names a path nothing has while the artifacts it really names go
-    // unchecked.
-    const extended = "?*+@!".includes(character) && segment[index + 1] === "(";
-    if (extended) {
-      const close = matchingParenthesis(segment, index + 1);
-      if (close !== -1) {
-        const inner = segment
-          .slice(index + 2, close)
-          .split("|")
-          .map((part) => segmentToRegExp(part))
-          .join("|");
-        source += extendedGroup(character, inner);
-        index = close + 1;
-        continue;
-      }
-    }
-    if (character === "*") {
-      // An embedded globstar is not one: the dialect degrades `a**b` to a single
-      // `*`, which stays inside the segment.
-      while (segment[index + 1] === "*") index += 1;
-      source += "[^/]*";
-      index += 1;
-      continue;
-    }
-    if (character === "?") {
-      source += "[^/]";
-      index += 1;
-      continue;
-    }
-    source += escapeForRegExp(character);
-    index += 1;
-  }
-  return source;
-}
-
-/** The index of the `)` closing the `(` at `open`, or `-1` when it has none. */
-function matchingParenthesis(segment: string, open: number): number {
-  let depth = 0;
-  for (let index = open; index < segment.length; index += 1) {
-    if (segment[index] === "(") depth += 1;
-    if (segment[index] === ")") {
-      depth -= 1;
-      if (depth === 0) return index;
-    }
-  }
-  return -1;
-}
-
-/**
- * One extended group, by the character that introduced it.
- *
- * `!(p)` is the awkward one: the negation covers what the group would have
- * matched, not the rest of the segment, so it is a lookahead followed by a lazy
- * run — `!(draft).json` then rejects `draft.json` and accepts `final.json`.
- * A name that merely starts with the excluded text and goes on, `draftx.json`,
- * is admitted where the dialect would refuse it. That is the direction a guard
- * can afford to be wrong in: a citation reported unresolved sends someone to
- * look, and one reported resolved sends nobody.
- */
-function extendedGroup(introducer: string, inner: string): string {
-  if (introducer === "?") return `(?:${inner})?`;
-  if (introducer === "*") return `(?:${inner})*`;
-  if (introducer === "+") return `(?:${inner})+`;
-  if (introducer === "!") return `(?!(?:${inner})\\b)[^/]*?`;
-  return `(?:${inner})`;
-}
-
 /**
  * A citation as the one or more paths it names.
  *
  * `README.md` spells a review pack's contents as a brace list, and a record
- * using that spelling claims every name in it. Read as one path the whole token
- * resolves nowhere; read as the directory before the brace — which is what
- * stripping the trailing separator leaves — a tracked pack holding anything at
- * all passes it, while every artifact the list names may be absent.
+ * using that spelling claims every name in it — which is why the list is
+ * expanded here rather than left to the compiler, whose braces are an
+ * alternation: one member matching is enough for a matcher, and not enough for
+ * a claim. An empty member is a member: `{,draft-}validate.json` names the base
+ * report as well as the draft.
  */
 function expandBraces(cited: string): string[] {
   const open = cited.indexOf("{");
@@ -541,8 +432,31 @@ function expandBraces(cited: string): string[] {
     .slice(open + 1, close)
     .split(",")
     .map((part) => part.trim())
-    .filter((part) => part !== "")
     .flatMap((part) => expandBraces(`${before}${part}${after}`));
+}
+
+/**
+ * A glob as a regular expression over a whole path.
+ *
+ * Delegated to the dialect this package already implements, rather than written
+ * again here. Two implementations of one notation are two answers for one tree,
+ * and every round of review on this file found another construct the second one
+ * did not know: a one-character wildcard, a brace list, an extended group, a
+ * quantified extended group, an empty alternative. The shared compiler knows
+ * them because it was written against the same matcher the project's own globs
+ * are read by.
+ *
+ * A record naming a set still claims the set exists, so a glob is resolved like
+ * a single path rather than skipped — the tree carried three matching nothing at
+ * all, and skipping them let that provenance through as green.
+ */
+function globToRegExp(cited: string): RegExp {
+  return new RegExp(`^${compileGlob(cited)}$`);
+}
+
+/** Whether a citation names a set rather than one path. */
+function namesASet(cited: string): boolean {
+  return /[*?]/.test(cited) || /[?*+@!]\(/.test(cited) || cited.includes("{");
 }
 
 /**
@@ -563,7 +477,7 @@ function resolves(cited: string): boolean {
   }
   const root = GENERATED_ROOTS.find((candidate) => cited.startsWith(candidate));
   if (root === undefined || !staysInsideRoot(cited, root)) return false;
-  if (/[*?]/.test(cited)) {
+  if (namesASet(cited)) {
     // Directories as well as files: `.qfai/discussion/discussion-*` names a set
     // of packs, and an anchored pattern matches no file below one of them — so
     // reading files alone reports a citation unresolved while the tree holds
@@ -719,6 +633,8 @@ describe("what the scan counts as a citation", () => {
 });
 
 describe("a glob is a claim about a set", () => {
+  const matchesLine = (line: string): string[] => line.match(CITED_GENERATED_PATH) ?? [];
+
   it("resolves when at least one tracked path matches", () => {
     // `.qfai/specs/**` is not a generated root, so a glob under one of those is
     // the case: the tree carries packs, and a glob naming them resolves.
@@ -766,6 +682,40 @@ describe("a glob is a claim about a set", () => {
     expect(globToRegExp(".qfai/report/?(draft-)run.json").test(".qfai/report/run.json")).toBe(true);
     expect(globToRegExp(".qfai/report/!(draft).json").test(".qfai/report/draft.json")).toBe(false);
     expect(globToRegExp(".qfai/report/!(draft).json").test(".qfai/report/final.json")).toBe(true);
+  });
+
+  it("resolves every extended form through the matcher", () => {
+    // A group of literal alternatives carries no `*` or `?`, so a branch keyed
+    // on those two fell through to the exact-path lookup and reported a tracked
+    // artifact missing.
+    const pack = ".qfai/discussion/discussion-20260328212829687";
+    expect(resolves(`${pack}/@(01_Context|99_missing).md`)).toBe(true);
+    expect(resolves(`${pack}/@(98_missing|99_missing).md`)).toBe(false);
+    expect(resolves(`${pack}/!(01_Context).md`)).toBe(true);
+  });
+
+  it("keeps a quantified group whole in the grammar", () => {
+    // Cut at the introducer, `*(a|b).json` becomes `*` — which names the tree
+    // rather than anything inside it, so the citation is discarded entirely.
+    expect(matchesLine("- `.qfai/report/*(a|b).json`")).toEqual([".qfai/report/*(a|b).json"]);
+    expect(matchesLine("- `.qfai/report/+(a|b).json`")).toEqual([".qfai/report/+(a|b).json"]);
+    expect(matchesLine("- `.qfai/report/?(a|b).json`")).toEqual([".qfai/report/?(a|b).json"]);
+  });
+
+  it("claims an empty brace alternative too", () => {
+    // `{,draft-}x` names the base as well as the draft, so a tree holding only
+    // the draft does not satisfy it.
+    expect(expandBraces(".qfai/report/{,draft-}validate.json")).toEqual([
+      ".qfai/report/validate.json",
+      ".qfai/report/draft-validate.json",
+    ]);
+  });
+
+  it("measures every citation on one line", () => {
+    // A line carrying a disclaimed path and a real one lost the second when the
+    // first ended the line's scan.
+    const line = "checked `.qfai/report/validate.log` and `.qfai/report/run-20260822024224027`";
+    expect(matchesLine(line)).toHaveLength(2);
   });
 
   it("resolves a one-member brace list", () => {
