@@ -297,6 +297,7 @@
     "tests/validators/reOpenDecisionRecord.test.ts",
     "tests/validators/inertGateFirstContact.test.ts",
     "tests/validators/skillRolesRouting.test.ts",
+    "tests/validators/specPack/openQuestionsAdjudication.test.ts",
     "tests/validators/uiMarkerPresence.test.ts",
     "tests/validators/uiPrototypeMode.test.ts",
     "tests/validators/uix/competitiveRefs.test.ts",
