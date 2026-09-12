@@ -4,6 +4,19 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ## [Unreleased]
 
+### Changed
+
+- **Every question to the user arrives as a structured choice** (#1611). Article X
+  said the tool must be used where available and never said whether any question
+  was outside that, so a light one could read as outside it — and the light one
+  is where an agent goes when it would rather not ask. None is exempt now.
+
+  Availability is judged for the question in front of the agent, not from what
+  the host supports in general: a tool a mode withholds, and one that cannot
+  carry the answer's shape, both take the fallback. The fallback keeps that
+  shape — numbered choices where there are choices, a plain request for the value
+  where the answer is a name, a number or a sentence.
+
 ### Removed
 
 - **`.qfai/report/validate.log` is no longer tracked** (#1582). Every local
