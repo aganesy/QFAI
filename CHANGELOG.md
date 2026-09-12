@@ -4,6 +4,20 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ## [Unreleased]
 
+### Fixed
+
+- **The active-pointer rule names a state no directory can be in** (#1693). A
+  shared decision and both packs that follow it say a recovery error is raised
+  when the pointer resolves to a duplicate pack. The helper and the
+  `discussion list --active` command both take their candidates from one
+  directory listing and match on an exact name, so no two can match, and that
+  has been true since the branch was written: it has never been reachable.
+
+  `CR-20260913-0004`, a defect-class request, narrows the rule to the absent and
+  missing conditions — at the shared decision first, then in both packs — and
+  lists both unreachable branches for removal. It blocks the one ledger row
+  whose obligation names the duplicate state.
+
 ## [1.12.0] - 2026-09-12
 
 ### Added
@@ -1986,18 +2000,6 @@ unadjudicated`, read off a Work Orders Summary row the session writes rather
   stale every verdict in the spec when any cell moved. A record re-attestation
   closes it, because the revision has not moved — and it is not a rubber stamp,
   since what it re-signs is a judgement over a subject that has grown.
-
-- **The active-pointer rule names a state no directory can be in** (#1693). A
-  shared decision and both packs that follow it say a recovery error is raised
-  when the pointer resolves to a duplicate pack. The helper and the
-  `discussion list --active` command both take their candidates from one
-  directory listing and match on an exact name, so no two can match, and that
-  has been true since the branch was written: it has never been reachable.
-
-  `CR-20260913-0004`, a defect-class request, narrows the rule to the absent and
-  missing conditions — at the shared decision first, then in both packs — and
-  lists both unreachable branches for removal. It blocks the one ledger row
-  whose obligation names the duplicate state.
 
 ## [1.11.1] - 2026-09-10
 
