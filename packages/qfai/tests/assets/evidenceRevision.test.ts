@@ -581,10 +581,23 @@ describe("the working-tree address has one notation", () => {
     it(`${tree}: step 3 fixes the notation of every part`, async () => {
       const text = flat(await read(tree, REFERENCE));
       expect(text).toContain("How each part is written is fixed");
-      expect(text).toContain("64 lowercase hexadecimal characters");
-      expect(text).toContain("never its 32 raw bytes, and never the bytes it is a digest of");
-      expect(text).toContain("full 40-character revision");
-      expect(text).toContain("between records and none after the last");
+      expect(text).toContain("Its 64 lowercase hexadecimal characters");
+      expect(text).toContain("Never its 32 raw bytes, and never the bytes it is a digest of");
+      // The whole of what git printed, not a fixed width: a repository created
+      // with the SHA-256 object format prints 64 characters, and a rule naming
+      // 40 would have its producer truncate a real revision.
+      expect(text).toContain("The whole of what `git rev-parse HEAD` printed");
+      expect(text).toContain("a SHA-256 repository gives 64 characters where a SHA-1 one gives 40");
+      // The three spellings of one mode, and the two of one path.
+      expect(text).toContain("Three octal digits, no prefix and no padding");
+      expect(text).toContain("The repository-relative bytes `-z` returned, unquoted and unescaped");
+      expect(text).toContain("between records, and none after the last");
+      // The address is compared as a string, so the final digest has a case too.
+      expect(text).toContain("record its 64 lowercase hexadecimal characters");
+      // `-z` is part of the collect command, or the path bytes are the display
+      // spelling and `core.quotePath` moves the address for one tree.
+      expect(text).toContain("git ls-files --others --exclude-standard -z");
+      expect(text).toContain("`-z` is part of the command, not a preference");
     });
   }
 

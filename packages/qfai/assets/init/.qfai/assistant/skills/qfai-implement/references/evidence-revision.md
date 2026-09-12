@@ -37,8 +37,11 @@ check. Gate item 10 rejects any other shape wherever a revision is recorded:
   1. **Collect.** `git rev-parse HEAD`; the tracked diff from
      `git diff HEAD --no-color --no-ext-diff --binary --` followed by the
      exclusions below; and every untracked file
-     `git ls-files --others --exclude-standard` reports, after the same
-     exclusions.
+     `git ls-files --others --exclude-standard -z` reports, after the same
+     exclusions. **`-z` is part of the command, not a preference.** Without it
+     git writes a path holding non-ASCII or a control character in a quoted
+     display spelling, and `core.quotePath` changes that spelling for the same
+     tree — so two producers hash different bytes for one file.
   2. **Exclude.** `.qfai/specs/*/tdd/test-list.md`, `.qfai/evidence/**` and
      `.qfai/review/**`, from **both** the diff and the untracked list — they are
      the record of the observation, not the thing observed. The review pack is
@@ -67,14 +70,22 @@ check. Gate item 10 rejects any other shape wherever a revision is recorded:
      collide — renaming a file, or swapping the contents of two, leaves the hash
      unchanged.
      **How each part is written is fixed, for the reason the `symlink` clause
-     gives.** Every SHA-256 inside a record is its 64 lowercase hexadecimal
-     characters — never its 32 raw bytes, and never the bytes it is a digest of.
-     The `HEAD` record carries the full 40-character revision, not an
-     abbreviation. A single `\n` goes between records and none after the last.
-     Each of those has two defensible readings, so leaving one open lets two
-     honest implementations address the same tree differently, which is the one
+     gives.** Each of these has two defensible readings, and leaving one open
+     lets two honest implementations address the same tree differently — the one
      thing the address exists to prevent.
-  4. **Hash.** SHA-256 of that string; record the hex digest.
+
+     | Part                      | Written as                                                                                                                                                                                |
+     | ------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+     | A SHA-256 inside a record | Its 64 lowercase hexadecimal characters. Never its 32 raw bytes, and never the bytes it is a digest of                                                                                    |
+     | The `HEAD` record's rev   | The whole of what `git rev-parse HEAD` printed, not an abbreviation. Its length is the repository's object format, so a SHA-256 repository gives 64 characters where a SHA-1 one gives 40 |
+     | `mode`                    | Three octal digits, no prefix and no padding: `644`, `755`. Not `0644`, not `0o644`, not git's six-digit tree mode                                                                        |
+     | A path                    | The repository-relative bytes `-z` returned, unquoted and unescaped                                                                                                                       |
+     | The join                  | A single `\n` between records, and none after the last                                                                                                                                    |
+
+  4. **Hash.** SHA-256 of that string; record its 64 lowercase hexadecimal
+     characters. Lowercase here too: the recorded address is compared as a
+     string, so one producer's uppercase suffix and another's lowercase are two
+     addresses for one tree.
 
   An empty diff and an empty untracked list still contribute their records, so
   "clean but uncommitted" has a value rather than a special case.
