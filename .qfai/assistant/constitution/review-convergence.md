@@ -119,3 +119,42 @@ which owns the delegation rules these sit beside.
   That prohibition does not depend on lateness or on who proposes the deferral:
   the escalation exit in the round budget withholds _Accept as Open Question_
   for this same class, so a user choice cannot supersede it either.
+
+### Agent-to-agent grilling (MUST)
+
+A grilling session between agents has no user answering its questions, so the
+end condition the session rule states — an empty frontier and the user's
+confirmation — cannot be reached from inside it. Two agents can also agree on a
+wrong premise with nobody watching. These rules give such a session an end.
+
+**Two rounds**, the same budget a reviewer has. **Every decision still open
+after the second round escalates**, whether or not that round settled others:
+partial progress is the ordinary outcome, and a condition reading "the round
+settled nothing" would be false almost always, leaving the rest of the frontier
+to a third round nobody authorised.
+
+Each escalated decision goes to the user with both positions and a
+recommendation. Escalating is not failure: the work stays where it is and the
+user accepts, decides, or drops the item, exactly as at the reviewer gate.
+
+**Three subjects escalate at once**, without spending a round. The test in each
+is authoritative evidence: `.qfai/specs/**`, `.qfai/contracts/**`, and recorded
+decisions. A discussion pack is not among them — it is non-normative discovery
+material (`.qfai/assistant/constitution/drift-protocol.md`), so a decision
+resting on one alone is a proposal awaiting promotion rather than a settled
+answer.
+
+| Subject                                                            | Escalates when                                                                                                        |
+| ------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------- |
+| Product or business intent                                         | No authoritative artifact answers it. Where one does, that is the answer and there is nothing left to settle          |
+| A decision contradicting a spec, a contract or a recorded decision | Always. Changing settled input is a Change Request, not a design round                                                |
+| A decision resting on nothing authoritative                        | Always, discussion-pack support included. Two agents reasoning past the evidence converge on the more fluent argument |
+
+Each names a decision agents cannot settle from what the repository
+authoritatively holds. Rounds spent on one produce agreement, which is not the
+same as an answer and is harder to tell apart afterwards.
+
+Under a no-question mode the escalation has nobody to reach. The decision is
+opened as a question in the register the stage reads, so the stage cannot
+complete over it (`.qfai/assistant/constitution/constitution.md` Article X,
+rule 6).
