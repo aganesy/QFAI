@@ -9,6 +9,15 @@ import type { QfaiConfig } from "../../src/core/config.js";
 import { evaluateAtddCodeTraceability } from "../../src/core/atddTraceability.js";
 import { validateAtddCodeTraceability } from "../../src/core/validators/atddCodeTraceability.js";
 
+/**
+ * A glob `fast-glob` rejects, spelled so this file stays text.
+ *
+ * The value needs a NUL byte, and a raw one in tracked source is its own
+ * defect: `sourceEncodingHygiene.test.ts` scans every tracked text file for byte
+ * zero, and text tooling reads such a file as binary.
+ */
+const INVALID_GLOB = `a${String.fromCharCode(0)}b`;
+
 describe("validateAtddCodeTraceability", () => {
   it("passes when US/TC/CON-API are fully referenced in required test layers", async () => {
     await withProject(async (root) => {
@@ -1119,7 +1128,7 @@ describe("acceptance tests outside paths.testsDir", () => {
       // one — never reaches them.
       const result = await evaluateAtddCodeTraceability(
         root,
-        withProjectGlobs(["packages/*/tests/**/*.test.ts", "a b"]),
+        withProjectGlobs(["packages/*/tests/**/*.test.ts", INVALID_GLOB]),
       );
 
       expect(result.scan.matchedFileCount).toBe(0);

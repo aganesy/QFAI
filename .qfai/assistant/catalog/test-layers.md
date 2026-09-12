@@ -234,9 +234,14 @@ ancestor makes every test under it an API test —
 `packages/api/tests/unit/pay.test.ts` included, which owes ATDD nothing.
 
 **A suite under a root of its own name** — `packages/app/spec/acceptance/e2e/**`
-— has no segment to anchor on. There the **deepest** layer directory answers,
-so the suite is read rather than reported missing, and the directory closest to
-the test still wins over any ancestor that shares a layer's name.
+— has no segment to anchor on. There the file's **own directory** answers and
+nothing above it does, so the suite is read rather than reported missing and a
+package called `api` cannot lend its name to the unit tests beneath it.
+
+A project that nests below its layer directory gets the anchored rule back by
+naming its root `tests`, `test` or `__tests__`, or by pointing
+`paths.testsDir` at it. Missing such a file is the safe direction; claiming one
+is not.
 
 Three things that does not change.
 

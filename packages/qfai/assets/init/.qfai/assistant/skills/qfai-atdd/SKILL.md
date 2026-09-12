@@ -171,8 +171,8 @@ Follow `.qfai/assistant/constitution/shared-skill-operating-baseline.md#delta-re
     file collected that way is answered by the layer directory inside its own
     test root — the segment after the deepest `tests` / `test` / `__tests__` or
     the configured `paths.testsDir` basename, because a package may legitimately
-    be called `api`; a suite under a root of its own name falls back to the
-    deepest layer directory — so in a repository with one suite per
+    be called `api`; a suite under a root of its own name is answered by
+    the file's own directory and nothing above it — so in a repository with one suite per
     package, `packages/<name>/tests/integration/**` answers an `L3` obligation
     just as `<testsDir>/integration/**` does. Write new tests where that package's
     suite already lives; do not move a package's tests to satisfy the gate

@@ -2550,16 +2550,17 @@ function resolveTestKindFromPath(
   }
   // No test root to anchor on: a package may keep its suite under `spec/`,
   // `acceptance/` or a name of its own, and refusing every such path would
-  // report a whole package's coverage missing. The deepest layer directory
-  // answers instead — the one closest to the test, so an ancestor that shares
-  // a layer's name still loses to the directory the test is in.
-  for (const directory of [...directories].reverse()) {
-    const kind = ATDD_LAYER_SEGMENTS.get(directory);
-    if (kind !== undefined) {
-      return kind;
-    }
-  }
-  return null;
+  // report a whole package's coverage missing.
+  //
+  // Only the file's own directory answers here. Walking outwards instead
+  // reaches the package name, so `packages/api/spec/unit/pay.test.ts` — a unit
+  // suite, which owes ATDD nothing — was read as an API acceptance test and
+  // its annotations could discharge `L4` obligations. A project that nests
+  // below its layer directory keeps the anchored rule by naming its root
+  // `tests`, `test` or `__tests__`, or by setting `paths.testsDir`; missing
+  // such a file is the safe direction, and claiming one is not.
+  const parent = directories[directories.length - 1];
+  return parent === undefined ? null : (ATDD_LAYER_SEGMENTS.get(parent) ?? null);
 }
 
 /**
