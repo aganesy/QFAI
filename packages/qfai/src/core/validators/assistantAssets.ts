@@ -356,7 +356,27 @@ export async function validateAssistantAssets(root: string, config: QfaiConfig):
       );
       continue;
     }
-    issues.push(...collectSkillRegistrationIssues(entryPoint, bytes.toString("utf-8")));
+    // Decoded strictly. `toString("utf-8")` turns an invalid byte into a
+    // replacement character and hands back metadata that reads as usable, while
+    // the host reports the file unreadable and omits the skill — so a run
+    // passed an entry point nothing could load.
+    const text = decodeUtf8(bytes);
+    if (text === undefined) {
+      issues.push(
+        issue(
+          "QFAI-SKILLS-014",
+          "A skill's entry point holds bytes that are not valid UTF-8, so the host reports it unreadable and does not load the skill.",
+          "error",
+          entryPoint,
+          "skills.documentReadable",
+          undefined,
+          "canonical",
+          "Save the entry point as UTF-8. A byte that is not part of a valid sequence is usually text pasted from another encoding, or a binary file left at the path.",
+        ),
+      );
+      continue;
+    }
+    issues.push(...collectSkillRegistrationIssues(entryPoint, text));
   }
 
   issues.push(...collectReferenceGraphIssues(root, skillsDir, documents));
@@ -1193,10 +1213,29 @@ function isUnfilledValue(raw: string): boolean {
  */
 const SKILL_DOCUMENT_MAX_BYTES = 8 * 1024 * 1024;
 
+/**
+ * A document's text, or `undefined` where the bytes are not valid UTF-8.
+ *
+ * Through a fatal decoder, because the lenient one substitutes a replacement
+ * character and produces a document that parses: the front matter then reads as
+ * usable metadata for a file the host refuses to open.
+ */
+function decodeUtf8(bytes: Buffer): string | undefined {
+  try {
+    return new TextDecoder("utf-8", { fatal: true }).decode(bytes);
+  } catch {
+    return undefined;
+  }
+}
+
 async function collectSkillEntryPoints(skillsDir: string): Promise<string[]> {
   const entries = await readdir(skillsDir, { withFileTypes: true }).catch(() => []);
   const found: string[] = [];
   for (const entry of entries) {
+    // A dot-prefixed directory is one the host does not list, so a draft parked
+    // as `.draft/` is a skill nothing registers and nothing here should report.
+    // Reported, it would fail a run over a skill the host never loads.
+    if (entry.name.startsWith(".")) continue;
     // A symlinked skill directory is a shape this CLI itself writes, and
     // `isDirectory()` is false for the link. What matters is what it resolves
     // to — and a link that resolves to nothing, or to something this process
@@ -1239,7 +1278,25 @@ async function collectSkillFiles(dirs: string[]): Promise<string[]> {
   return files
     .flat()
     .filter((filePath) => path.basename(filePath) === "SKILL.md")
+    .filter((filePath) => !underHiddenSkillDirectory(dirs, filePath))
     .sort((a, b) => a.localeCompare(b));
+}
+
+/**
+ * Whether a document sits under a skill directory the host does not list.
+ *
+ * The host lists no dot-prefixed directory, so a draft parked as `.draft/` is a
+ * skill nothing registers. Checked here as well as at the entry-point loop,
+ * because the checks that read a skill's document — the drift marker, the
+ * Reviewer Gate section — would otherwise fail a run over a skill the host
+ * never loads.
+ */
+function underHiddenSkillDirectory(roots: readonly string[], filePath: string): boolean {
+  return roots.some((root) => {
+    const relative = path.relative(root, filePath);
+    if (relative === "" || relative.startsWith("..") || path.isAbsolute(relative)) return false;
+    return relative.split(/[\\/]/).some((segment) => segment.startsWith("."));
+  });
 }
 
 function extractReviewerGateSection(content: string): string | null {
@@ -1274,6 +1331,13 @@ function collectSkillNameIssue(
   const value = typeof name === "string" ? name.trim() : "";
   const wrong = skillNameProblem(value, directory);
   if (wrong === null) return [];
+  // A directory whose own name is not a legal one leaves no value that clears
+  // both halves: its spelling fails the form, and every legal spelling differs
+  // from it. Telling the operator to copy it in would be an action nobody can
+  // follow, so the rename comes first.
+  const action = SKILL_NAME_FORM.test(directory)
+    ? `Set \`name:\` to \`${directory}\` — the skill's own directory, which is what a host lists it under.`
+    : `Rename the skill's directory, \`${printable(directory)}\`, to lowercase letters, digits and single hyphens, then set \`name:\` to the new name. A host lists the skill under the directory, so no value in this field can stand in for one it will not accept.`;
   return [
     issue(
       "QFAI-SKILLS-015",
@@ -1283,9 +1347,27 @@ function collectSkillNameIssue(
       "skills.name",
       undefined,
       "change",
-      `Set \`name:\` to \`${directory}\` — the skill's own directory, which is what a host lists it under.`,
+      action,
     ),
   ];
+}
+
+/**
+ * A value out of a `SKILL.md`, safe to print.
+ *
+ * The document is a file the run did not write, and the text formatter writes a
+ * message straight to the terminal. A name carrying a newline or an escape
+ * sequence forges lines in that output, so every character below ` `, the
+ * delete character and the C1 block are written as their escapes instead.
+ */
+function printable(value: string): string {
+  let out = "";
+  for (const character of value) {
+    const code = character.codePointAt(0) ?? 0;
+    const unprintable = code < 0x20 || (code >= 0x7f && code <= 0x9f);
+    out += unprintable ? `\\u${code.toString(16).padStart(4, "0")}` : character;
+  }
+  return out;
 }
 
 /**
@@ -1298,6 +1380,16 @@ function collectSkillNameIssue(
 const SKILL_NAME_FORM = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 const SKILL_NAME_MAX_LENGTH = 64;
 
+/**
+ * How long a `description:` a host accepts.
+ *
+ * The field is registration metadata rather than the document: a host reads it
+ * to decide whether to load the skill and whether to offer it, and refuses one
+ * past this length outright. What a reader needs beyond a sentence or two is in
+ * the document, which is loaded after the skill is registered.
+ */
+const SKILL_DESCRIPTION_MAX_LENGTH = 1024;
+
 /** Why a `name:` is unusable, or `null` where it is not. */
 function skillNameProblem(value: string, directory: string): string | null {
   if (value === "") return "the field is missing, empty, or not text";
@@ -1305,11 +1397,13 @@ function skillNameProblem(value: string, directory: string): string | null {
     return `it is ${value.length} characters, past the ${SKILL_NAME_MAX_LENGTH} a host accepts`;
   }
   if (!SKILL_NAME_FORM.test(value)) {
-    return `\`${value}\` is not lowercase letters, digits and single hyphens`;
+    return `\`${printable(value)}\` is not lowercase letters, digits and single hyphens`;
   }
   // The directory is what a host lists the skill under, so a name that differs
   // from it names one the user will not find under either spelling.
-  if (value !== directory) return `\`${value}\` is not the skill's directory, \`${directory}\``;
+  if (value !== directory) {
+    return `\`${printable(value)}\` is not the skill's directory, \`${printable(directory)}\``;
+  }
   return null;
 }
 
@@ -1359,7 +1453,21 @@ function collectSkillRegistrationIssues(skillFile: string, content: string): Iss
   const missingName = collectSkillNameIssue(skillFile, frontMatter);
   const description = frontMatter?.["description"];
   if (typeof description === "string" && description.trim() !== "") {
-    return missingName;
+    return description.length > SKILL_DESCRIPTION_MAX_LENGTH
+      ? [
+          ...missingName,
+          issue(
+            "QFAI-SKILLS-015",
+            `SKILL.md has a \`description:\` of ${description.length} characters, past the ${SKILL_DESCRIPTION_MAX_LENGTH} a host accepts. It is refused there, so the skill is not registered and the user cannot invoke it by name.`,
+            "error",
+            skillFile,
+            "skills.description",
+            undefined,
+            "change",
+            `Cut \`description:\` to ${SKILL_DESCRIPTION_MAX_LENGTH} characters — one or two sentences saying what the skill does and when to reach for it. What a reader needs beyond that belongs in the document below the front matter, which the host loads once the skill is registered.`,
+          ),
+        ]
+      : missingName;
   }
   const optsOut = frontMatter?.["disable-model-invocation"] === true;
   // A key that is there and unusable is repaired by replacing its value. Told

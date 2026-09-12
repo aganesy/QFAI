@@ -372,3 +372,89 @@ describe("a skill carries what a host needs to register it", () => {
     expect(finding?.suggested_action).toContain("guard the skill itself");
   });
 });
+
+describe("what the gate and the host disagreed about", () => {
+  const findings = async (
+    root: string,
+  ): Promise<Awaited<ReturnType<typeof validateAssistantAssets>>> =>
+    (await validateAssistantAssets(root, defaultConfig)).filter((finding) =>
+      finding.code.startsWith("QFAI-SKILLS-01"),
+    );
+
+  it("reports a description the host refuses for its length", async () => {
+    // The field is registration metadata, not the document. Past the cap the
+    // host refuses it and the skill is not loaded, which is the same outcome as
+    // having no description at all.
+    const root = await projectWithSkill([`description: "${"a".repeat(1025)}"`]);
+    const [finding] = await registrationFindings(root);
+    expect(finding?.message).toContain("1025 characters");
+    expect(finding?.suggested_action).toContain("Cut `description:`");
+    // And the length a host does accept is accepted here.
+    const ok = await projectWithSkill([`description: "${"a".repeat(1024)}"`]);
+    expect(await registrationFindings(ok)).toEqual([]);
+  });
+
+  it("tells the operator to rename a directory no name can match", async () => {
+    // The directory's own spelling fails the form, and every legal spelling
+    // differs from it — so an action naming the directory cannot be followed.
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-skill-registration-"));
+    tempDirs.push(root);
+    const skillDir = path.join(root, ".qfai", "assistant", "skills", "My Skill");
+    await mkdir(skillDir, { recursive: true });
+    await writeFile(
+      path.join(skillDir, "SKILL.md"),
+      ["---", "name: my-skill", 'description: "Does the thing."', "---", "", "# x", ""].join("\n"),
+      "utf-8",
+    );
+
+    const [finding] = await registrationFindings(root);
+    expect(finding?.suggested_action).toContain("Rename the skill's directory");
+    expect(finding?.suggested_action).not.toContain("Set `name:` to `My Skill`");
+  });
+
+  it("passes over a directory the host does not list", async () => {
+    // A draft parked as a dot-prefixed directory is a skill nothing registers,
+    // so reporting it fails a run over something the host never loads.
+    const root = await projectWithSkill(['description: "Does the thing."']);
+    const skills = path.join(root, ".qfai", "assistant", "skills");
+    await mkdir(path.join(skills, ".draft"), { recursive: true });
+    await writeFile(path.join(skills, ".draft", "SKILL.md"), "# draft\n", "utf-8");
+
+    expect(await findings(root)).toEqual([]);
+  });
+
+  it("reports an entry point that is not valid UTF-8", async () => {
+    // The lenient decoder substitutes a replacement character and hands back
+    // metadata that parses, while the host reports the file unreadable.
+    const root = await projectWithSkill(['description: "Does the thing."']);
+    const skills = path.join(root, ".qfai", "assistant", "skills");
+    const dist = path.join(skills, "dist");
+    await mkdir(dist, { recursive: true });
+    await writeFile(
+      path.join(dist, "SKILL.md"),
+      Buffer.concat([
+        Buffer.from('---\nname: dist\ndescription: "Does the '),
+        Buffer.from([0xff]),
+        Buffer.from('thing."\n---\n\n# dist\n'),
+      ]),
+    );
+
+    const codes = (await findings(root)).map((finding) => finding.code);
+    expect(codes).toContain("QFAI-SKILLS-014");
+    expect(codes).not.toContain("QFAI-SKILLS-015");
+  });
+
+  it("escapes a control character in the name it reports", async () => {
+    // The document is a file the run did not write, and the text formatter
+    // writes a message straight to the terminal — so a name carrying a newline
+    // or an escape sequence could forge lines in the run's own output.
+    const root = await projectWithSkillDocument(
+      ["---", 'name: "qfai-\u001b[31mexample"', 'description: "Does the thing."', "---", ""].join(
+        "\n",
+      ),
+    );
+    const [finding] = await registrationFindings(root);
+    expect(finding?.message).toContain("\\u001b");
+    expect(finding?.message).not.toContain("\u001b");
+  });
+});
