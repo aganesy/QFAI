@@ -1,4 +1,5 @@
 import { execFileSync } from "node:child_process";
+import { createHash } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -82,6 +83,17 @@ const NOT_A_CITATION = "<!-- qfai:not-a-citation -->";
  * remove one that was really there — and either edit is visible.
  */
 const INITIAL_CENSUS_SIZE = 93;
+
+/**
+ * The census keys themselves, as one digest.
+ *
+ * A length alone is not the no-growth rule: replacing a repaired entry with a
+ * new one keeps it at 93, and every other check then passes while a fresh
+ * citation inherits the retired slot. The digest moves for any substitution, and
+ * does not move when an entry is repaired — repair adds to `CLEARED` and leaves
+ * the census alone.
+ */
+const INITIAL_CENSUS_DIGEST = "f0754587d775d81ffddaf020f6f49d44629489c25a07337e1e83a9b20eef7763";
 
 /**
  * Every citation the first census found unresolved. **Append nothing here.**
@@ -325,9 +337,18 @@ const escapeForRegExp = (literal: string): string => literal.replace(/[.+?^${}()
  * as green.
  */
 function globToRegExp(cited: string): RegExp {
+  // `**/` is translated as a whole, and as optional: `report/**/*.json` names
+  // every JSON under the tree including one sitting directly in it, and a
+  // translation that leaves the separator behind demands a directory nobody
+  // wrote.
   const source = cited
-    .split(/(\*\*|\*)/)
-    .map((part) => (part === "**" ? ".*" : part === "*" ? "[^/]*" : escapeForRegExp(part)))
+    .split(/(\*\*\/|\*\*|\*)/)
+    .map((part) => {
+      if (part === "**/") return "(?:[^/]+/)*";
+      if (part === "**") return ".*";
+      if (part === "*") return "[^/]*";
+      return escapeForRegExp(part);
+    })
     .join("");
   return new RegExp(`^${source}$`);
 }
@@ -397,6 +418,11 @@ describe("a committed record cites what the repository has", () => {
       "the census is not the size it was measured at. A record added today does not belong in it: " +
         "repair moves a key to CLEARED and leaves the census as it stands",
     ).toBe(INITIAL_CENSUS_SIZE);
+    expect(
+      createHash("sha256").update(INITIAL_CENSUS.map(key).sort().join("|")).digest("hex"),
+      "the census holds a key it was not measured with. Swapping one entry for another keeps the " +
+        "length and hands a new citation a retired slot, which is what this digest refuses",
+    ).toBe(INITIAL_CENSUS_DIGEST);
   });
 
   it("clears only what is really repaired", async () => {
@@ -495,5 +521,18 @@ describe("a glob is a claim about a set", () => {
     // A literal after the wildcard-only segment is still a claim about a set.
     expect(namesSomethingInside(".qfai/review/**/*.json")).toBe(true);
     expect(namesSomethingInside(".qfai/review/**/summary.json")).toBe(true);
+  });
+});
+
+describe("a globstar can match no segment at all", () => {
+  it("resolves a file sitting directly in the tree the glob names", () => {
+    // `report/**/*.json` names every JSON under the tree, including one in the
+    // tree itself. A translation that keeps the separator demands a directory
+    // nobody wrote, and reports a tracked file as missing.
+    const pattern = globToRegExp(".qfai/report/**/*.json");
+    expect(pattern.test(".qfai/report/validate.spec-0017.json")).toBe(true);
+    expect(pattern.test(".qfai/report/run-1/validate.json")).toBe(true);
+    expect(pattern.test(".qfai/report/a/b/validate.json")).toBe(true);
+    expect(pattern.test(".qfai/report/validate.log")).toBe(false);
   });
 });
