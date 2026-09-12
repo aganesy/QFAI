@@ -318,10 +318,32 @@ export async function validateAssistantAssets(root: string, config: QfaiConfig):
   // nothing, and a skill in a directory the crawl ignores is registered all the
   // same.
   for (const entryPoint of await collectSkillEntryPoints(skillsDir)) {
-    const content =
-      documents.get(entryPoint) ?? (await readFile(entryPoint, "utf-8").catch(() => null));
-    // Unreadable, and reported as its own finding where the crawl reached it.
-    if (content === null) continue;
+    const crawled = documents.get(entryPoint);
+    if (crawled !== undefined) {
+      issues.push(...collectSkillRegistrationIssues(entryPoint, crawled));
+      continue;
+    }
+    // Outside the crawl — a directory on the shared ignore list — so nothing has
+    // reported this file, and a read that fails here is the only chance to say
+    // the skill cannot be loaded.
+    let content: string;
+    try {
+      content = await readFile(entryPoint, "utf-8");
+    } catch (cause) {
+      issues.push(
+        issue(
+          "QFAI-SKILLS-014",
+          `skills 配下の文書を読み込めませんでした（${describeReadError(cause)}）。参照到達性を判定できないため、権限と I/O を確認してください。`,
+          "error",
+          entryPoint,
+          "skills.documentReadable",
+          undefined,
+          "canonical",
+          "メッセージが示す I/O エラーを解消してください（読み取り権限の付与、切れた symlink の張り直し、materialise されていないファイルの取得など）。skills 配下から外すべき文書であれば削除してください。",
+        ),
+      );
+      continue;
+    }
     issues.push(...collectSkillRegistrationIssues(entryPoint, content));
   }
 

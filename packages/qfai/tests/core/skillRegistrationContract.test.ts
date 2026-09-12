@@ -14,7 +14,7 @@
  * that should not be offered to the model says so with
  * `disable-model-invocation: true` beside it.
  */
-import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
+import { chmod, mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
@@ -199,5 +199,25 @@ describe("a skill carries what a host needs to register it", () => {
     );
 
     expect(await registrationFindings(root)).toEqual([]);
+  });
+
+  it("reports a direct skill in an ignored directory that cannot be read", async () => {
+    // The crawl never reached the file, so this pass is the only place that can
+    // say the skill will not load. Permission is the portable way to produce an
+    // unreadable regular file, and neither Windows nor root honours it.
+    if (process.platform === "win32" || process.getuid?.() === 0) return;
+    const root = await projectWithSkill(['description: "Does the thing."']);
+    const ignored = path.join(root, ".qfai", "assistant", "skills", "tmp");
+    await mkdir(ignored, { recursive: true });
+    const file = path.join(ignored, "SKILL.md");
+    await writeFile(file, ["---", "name: tmp", "---", ""].join("\n"), "utf-8");
+    await chmod(file, 0o000);
+
+    const findings = (await validateAssistantAssets(root, defaultConfig)).filter(
+      (finding) => finding.file === file,
+    );
+
+    await chmod(file, 0o600);
+    expect(findings.map((finding) => finding.code)).toContain("QFAI-SKILLS-014");
   });
 });
