@@ -39,6 +39,17 @@ const OPT_OUT_FIELD = "disable-model-invocation";
 const CANONICAL_OPT_OUT = `${OPT_OUT_FIELD}: true`;
 
 /**
+ * The claim an explanation has to make: the agent does not start this skill,
+ * and the user is who does.
+ *
+ * Naming the field is not that claim. A paragraph can carry the field and the
+ * word "user" while saying nothing about who may invoke what, and the reason
+ * the line is there is the whole of what the next contributor needs.
+ */
+const INVOCATION_CLAIM =
+  /\bonly\b[^.]*\buser\b|\buser-invoked\b|\bnever\b[^.]*\b(?:agent|model)\b|\b(?:agent|model)\b[^.]*\bnever\b/i;
+
+/**
  * Any front-matter line whose key is the opt-out, however it is spelled.
  *
  * Quoted keys are valid YAML and the host reads them, so a line-oriented match
@@ -74,6 +85,19 @@ function declaresOptOut(raw: string): boolean {
   return skillFrontmatterMapping(raw)?.[OPT_OUT_FIELD] === true;
 }
 
+/**
+ * Whether the front matter carries the key at all, whatever it is set to.
+ *
+ * Read separately from the value, because only this one decides whether a skill
+ * has anything to check. A flow-style `false` declares nothing and is still the
+ * file saying something about the opt-out, which is what the canonical-spelling
+ * rule below exists for.
+ */
+function mentionsOptOutKey(raw: string): boolean {
+  const mapping = skillFrontmatterMapping(raw);
+  return mapping !== undefined && Object.hasOwn(mapping, OPT_OUT_FIELD);
+}
+
 function skillNames(tree: string): Promise<string[]> {
   return collectCanonicalSkillIds(path.join(repoRoot, tree, ASSISTANT_DIR));
 }
@@ -88,10 +112,37 @@ function frontMatter(raw: string): string {
   return match?.[1] ?? "";
 }
 
-/** Everything after that block, as paragraphs with their soft wraps collapsed. */
+/**
+ * The prose after that block, as paragraphs with their soft wraps collapsed,
+ * and with fenced blocks dropped.
+ *
+ * A sample is not an explanation. A configuration example naming the field
+ * reads to a search exactly like a sentence about why the line is there, and
+ * only one of the two tells the next contributor anything.
+ */
 function paragraphs(raw: string): string[] {
   const match = /^---\r?\n[\s\S]*?\r?\n---\r?\n([\s\S]*)$/.exec(raw);
-  return (match?.[1] ?? raw).split(/\r?\n\s*\r?\n/).map((block) => block.replace(/\s*\n\s*/g, " "));
+  return withoutFences(match?.[1] ?? raw)
+    .split(/\n\s*\n/)
+    .map((block) => block.replace(/\s*\n\s*/g, " "));
+}
+
+/** The text with every fenced code block removed, fence lines included. */
+function withoutFences(text: string): string {
+  const kept: string[] = [];
+  let open: string | null = null;
+  for (const line of text.split(/\r?\n/)) {
+    const fence = /^ {0,3}(`{3,}|~{3,})/.exec(line);
+    if (open === null) {
+      if (fence) open = fence[1];
+      else kept.push(line);
+      continue;
+    }
+    // A fence closes on the same character, at least as long as the one that
+    // opened it, which is what lets a longer fence quote a shorter one.
+    if (fence && fence[1][0] === open[0] && fence[1].length >= open.length) open = null;
+  }
+  return kept.join("\n");
 }
 
 describe.each(QFAI_TREES)("%s: the opt-out is stated once, in two places", (tree) => {
@@ -114,7 +165,7 @@ describe.each(QFAI_TREES)("%s: the opt-out is stated once, in two places", (tree
     for (const skill of await skillNames(tree)) {
       const raw = await readSkill(tree, skill);
       const lines = optOutLines(frontMatter(raw));
-      if (lines.length === 0 && !declaresOptOut(raw)) continue;
+      if (lines.length === 0 && !mentionsOptOutKey(raw)) continue;
       if (lines.length !== 1 || lines[0] !== CANONICAL_OPT_OUT) wrong.push(skill);
     }
     expect(wrong, `${OPT_OUT_FIELD} is written once, as \`${CANONICAL_OPT_OUT}\``).toEqual([]);
@@ -130,15 +181,16 @@ describe.each(QFAI_TREES)("%s: the opt-out is stated once, in two places", (tree
     // parsed value the host receives, not the field's name somewhere in the
     // block: a commented-out declaration leaves the body's account standing
     // over a skill the agent is once again free to fire. The body half is a
-    // paragraph that names the field and says who invokes the skill, since
-    // naming it anywhere would be met by a code sample or a passing reference,
-    // and neither tells the next contributor why the line is there.
+    // paragraph of prose that names the field and says the agent does not
+    // start the skill. Naming it anywhere would be met by a code sample or a
+    // passing reference, and neither tells the next contributor why the line is
+    // there.
     const unpaired: string[] = [];
     for (const skill of await skillNames(tree)) {
       const raw = await readSkill(tree, skill);
       const declared = declaresOptOut(raw);
       const explained = paragraphs(raw).some(
-        (block) => block.includes(OPT_OUT_FIELD) && /\buser\b/i.test(block),
+        (block) => block.includes(OPT_OUT_FIELD) && INVOCATION_CLAIM.test(block),
       );
       if (declared !== explained) unpaired.push(skill);
     }
