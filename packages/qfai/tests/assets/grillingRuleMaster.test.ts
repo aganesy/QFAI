@@ -21,6 +21,7 @@ import {
   ASSISTANT_ASSET_MAX_LINE_CHARS,
   ASSISTANT_ASSET_MAX_LINES,
   countLines,
+  widestMeasurableLine,
 } from "../../src/core/doctor/assetLineBudget.js";
 
 // tests/assets/<this file> -> tests -> packages/qfai -> packages -> repo root
@@ -151,13 +152,19 @@ describe("the shipped rule masters stay inside the assistant asset ceilings", ()
   it("no rule master carries a line over the width ceiling", async () => {
     // A line past the width ceiling is one no diff shows usefully, so a change
     // inside it lands unreviewed.
+    //
+    // Measured by the shared helper rather than a local `line.length`. The
+    // policy excludes the forms that cannot be wrapped — a table row, a fenced
+    // example — and counts code points rather than UTF-16 units, so a local
+    // count disagrees with both `qfai doctor` and the guard over
+    // `.qfai/assistant/**` on exactly the files it is most likely to flag.
     const dir = path.join(repoRoot, SHIPPED_RULES);
     const names = (await readdir(dir)).filter((name) => name.endsWith(".md"));
 
     const wide: string[] = [];
     for (const name of names) {
       const content = await readFile(path.join(dir, name), "utf-8");
-      const widest = Math.max(...content.split(/\r?\n/).map((line) => line.length));
+      const widest = widestMeasurableLine(content);
       if (widest > ASSISTANT_ASSET_MAX_LINE_CHARS) wide.push(`${name} (${String(widest)})`);
     }
     expect(wide, `over ${ASSISTANT_ASSET_MAX_LINE_CHARS} characters on one line`).toEqual([]);
