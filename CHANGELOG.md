@@ -6,7 +6,7 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
-- **A skill the gate accepts is one the host accepts** (#1707). Five cases
+- **A skill the gate accepts is one the host accepts** (#1707). Four cases
   parted company with the host `QFAI-SKILLS-015` is modelled on: a description
   past 1024 characters, a skill directory whose own name is not a legal one, a
   dot-prefixed directory the host does not list, and an entry point holding a
@@ -18,9 +18,10 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   value in `name:` clears both the form and the directory match, so the rename
   comes first.
 
-  A value read out of a `SKILL.md` reaches an operator-facing message with its
-  control characters escaped. The document is a file the run did not write, and
-  the text formatter prints a message straight to the terminal.
+  A fifth case was not a host disagreement. A value read out of a `SKILL.md` now
+  reaches an operator-facing message with its control characters escaped. The
+  document is a file the run did not write, and the text formatter prints a
+  message straight to the terminal.
 
 ## [1.12.0] - 2026-09-12
 

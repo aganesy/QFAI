@@ -9,15 +9,15 @@ export type CollectFilesOptions = {
   extensions?: string[];
   ignoreDirs?: string[];
   /**
-   * Directories to walk past, decided from the name rather than listed.
+   * Directories to walk past, decided from each one's path rather than listed.
    *
-   * A caller that skips a whole class of directory — every dot-prefixed one,
-   * say — cannot enumerate the class in `ignoreDirs`, and filtering the result
-   * afterwards is too late: the walk has already read inside, so a directory
-   * this process may not traverse fails the collection rather than being passed
-   * over.
+   * A caller that skips a whole class of directory — every dot-prefixed one
+   * directly under the root, say — cannot enumerate the class in `ignoreDirs`,
+   * and filtering the result afterwards is too late: the walk has already read
+   * inside, so a directory this process may not traverse fails the collection
+   * rather than being passed over.
    */
-  skipDirectory?: (name: string) => boolean;
+  skipDirectory?: (directory: string) => boolean;
 };
 
 export type CollectFilesByGlobOptions = {
@@ -85,7 +85,7 @@ async function walk(
   base: string,
   current: string,
   ignoreDirs: Set<string>,
-  skipDirectory: ((name: string) => boolean) | undefined,
+  skipDirectory: ((directory: string) => boolean) | undefined,
   extensions: string[],
   out: string[],
 ): Promise<void> {
@@ -95,7 +95,7 @@ async function walk(
     const fullPath = path.join(current, item.name);
 
     if (item.isDirectory()) {
-      if (ignoreDirs.has(item.name) || skipDirectory?.(item.name) === true) {
+      if (ignoreDirs.has(item.name) || skipDirectory?.(fullPath) === true) {
         continue;
       }
       await walk(base, fullPath, ignoreDirs, skipDirectory, extensions, out);

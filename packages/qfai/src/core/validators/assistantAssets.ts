@@ -1222,7 +1222,7 @@ const SKILL_DOCUMENT_MAX_BYTES = 8 * 1024 * 1024;
  */
 function decodeUtf8(bytes: Buffer): string | undefined {
   try {
-    return new TextDecoder("utf-8", { fatal: true }).decode(bytes);
+    return new TextDecoder("utf-8", { fatal: true, ignoreBOM: true }).decode(bytes);
   } catch {
     return undefined;
   }
@@ -1232,7 +1232,7 @@ async function collectSkillEntryPoints(skillsDir: string): Promise<string[]> {
   const entries = await readdir(skillsDir, { withFileTypes: true }).catch(() => []);
   const found: string[] = [];
   for (const entry of entries) {
-    if (isHiddenSkillDirectory(entry.name)) continue;
+    if (isHiddenSkillDirectory(skillsDir, path.join(skillsDir, entry.name))) continue;
     // A symlinked skill directory is a shape this CLI itself writes, and
     // `isDirectory()` is false for the link. What matters is what it resolves
     // to — and a link that resolves to nothing, or to something this process
@@ -1272,7 +1272,9 @@ async function collectSkillEntryPoints(skillsDir: string): Promise<string[]> {
 
 async function collectSkillFiles(dirs: string[]): Promise<string[]> {
   const files = await Promise.all(
-    dirs.map((dir) => collectFiles(dir, { skipDirectory: isHiddenSkillDirectory })),
+    dirs.map((dir) =>
+      collectFiles(dir, { skipDirectory: (directory) => isHiddenSkillDirectory(dir, directory) }),
+    ),
   );
   return files
     .flat()
@@ -1281,15 +1283,19 @@ async function collectSkillFiles(dirs: string[]): Promise<string[]> {
 }
 
 /**
- * Whether a skill directory is one the host does not list.
+ * Whether a directory is a skill directory the host does not list: a
+ * dot-prefixed one directly under the skills root.
  *
- * The host lists no dot-prefixed directory, so a draft parked as `.draft/` is a
- * skill nothing registers. The walk is what applies it, so the tree is never
- * read: dropping its files afterwards leaves a directory this process may not
- * traverse failing the whole run, over a skill the host never loads.
+ * A draft parked as `.draft/` is a skill nothing registers. The walk is what
+ * applies it, so the tree is never read: dropping its files afterwards leaves a
+ * directory this process may not traverse failing the whole run, over a skill
+ * the host never loads. A dot-prefixed directory inside a skill is not one — a
+ * registered skill can name a document under it — so it is read like any
+ * other.
  */
-function isHiddenSkillDirectory(name: string): boolean {
-  return name.startsWith(".");
+function isHiddenSkillDirectory(skillsDir: string, directory: string): boolean {
+  const relative = path.relative(skillsDir, directory);
+  return relative.startsWith(".") && relative !== ".." && !relative.includes(path.sep);
 }
 
 function extractReviewerGateSection(content: string): string | null {
@@ -1451,12 +1457,15 @@ function collectSkillRegistrationIssues(skillFile: string, content: string): Iss
   const missingName = collectSkillNameIssue(skillFile, frontMatter);
   const description = frontMatter?.["description"];
   if (typeof description === "string" && description.trim() !== "") {
-    return description.length > SKILL_DESCRIPTION_MAX_LENGTH
+    // Measured as a host reads it, trimmed. Padding around the text is not part
+    // of the value, and counted, a description within the limit was refused.
+    const length = description.trim().length;
+    return length > SKILL_DESCRIPTION_MAX_LENGTH
       ? [
           ...missingName,
           issue(
             "QFAI-SKILLS-015",
-            `SKILL.md has a \`description:\` of ${description.length} characters, past the ${SKILL_DESCRIPTION_MAX_LENGTH} a host accepts. It is refused there, so the skill is not registered and the user cannot invoke it by name.`,
+            `SKILL.md has a \`description:\` of ${length} characters, past the ${SKILL_DESCRIPTION_MAX_LENGTH} a host accepts. It is refused there, so the skill is not registered and the user cannot invoke it by name.`,
             "error",
             skillFile,
             "skills.description",
@@ -1590,7 +1599,7 @@ async function readSkillDocuments(skillsDir: string): Promise<SkillDocuments> {
   // its citations vouched for live documents.
   const files = await collectFiles(skillsDir, {
     extensions: [".md", ".yaml", ".yml"],
-    skipDirectory: isHiddenSkillDirectory,
+    skipDirectory: (directory) => isHiddenSkillDirectory(skillsDir, directory),
   });
   const documents = new Map<string, string>();
   const unreadable: Issue[] = [];
@@ -1606,10 +1615,9 @@ async function readSkillDocuments(skillsDir: string): Promise<SkillDocuments> {
         // an entry point to register the skill at all, and a reference only
         // once a step names one — so the same byte stops the skill in the first
         // case and a step partway through the work in the second.
-        const message =
-          path.basename(file) === "SKILL.md"
-            ? "A skill's entry point holds bytes that are not valid UTF-8, so the host reports it unreadable and registers no skill from it."
-            : "A document under `skills` holds bytes that are not valid UTF-8. The host registers the skill from its entry point and reads this file only where a step names it, so the failure arrives partway through the work.";
+        const message = isSkillEntryPoint(skillsDir, file)
+          ? "A skill's entry point holds bytes that are not valid UTF-8, so the host reports it unreadable and registers no skill from it."
+          : "A document under `skills` holds bytes that are not valid UTF-8. The host registers the skill from its entry point and reads this file only where a step names it, so the failure arrives partway through the work.";
         unreadable.push(
           issue(
             "QFAI-SKILLS-014",

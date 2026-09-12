@@ -571,4 +571,72 @@ describe("what the gate and the host disagreed about", () => {
     expect(finding?.message).toContain("only where a step names it");
     expect(finding?.message).not.toContain("registers no skill");
   });
+
+  it("reads a hidden directory inside a registered skill", async () => {
+    // Pruned at every depth, a document under a nested dot-prefixed directory
+    // was never decoded, though the skill can name it and the host then opens it.
+    const root = await projectWithSkill(['description: "Does the thing."']);
+    const internal = path.join(
+      root,
+      ".qfai",
+      "assistant",
+      "skills",
+      "qfai-example",
+      "references",
+      ".internal",
+    );
+    await mkdir(internal, { recursive: true });
+    const file = path.join(internal, "guide.md");
+    await writeFile(file, Buffer.concat([Buffer.from("# guide\n"), Buffer.from([0xff])]));
+
+    const codes = (await validateAssistantAssets(root, defaultConfig))
+      .filter((item) => item.file === file)
+      .map((item) => item.code);
+    expect(codes).toContain("QFAI-SKILLS-014");
+  });
+
+  it("calls a nested SKILL.md a reference, not an entry point", async () => {
+    // A template named SKILL.md inside a skill registers nothing, so an invalid
+    // byte in it stops the step that names it rather than the skill.
+    const root = await projectWithSkill(['description: "Does the thing."']);
+    const templates = path.join(root, ".qfai", "assistant", "skills", "qfai-example", "templates");
+    await mkdir(templates, { recursive: true });
+    const file = path.join(templates, "SKILL.md");
+    await writeFile(file, Buffer.concat([Buffer.from("# template\n"), Buffer.from([0xff])]));
+
+    const [finding] = (await validateAssistantAssets(root, defaultConfig)).filter(
+      (item) => item.code === "QFAI-SKILLS-014" && item.file === file,
+    );
+    expect(finding?.message).toContain("only where a step names it");
+  });
+
+  it("measures a description as a host reads it, trimmed", async () => {
+    // Counted with its padding, a description within the limit was refused.
+    const padded = await projectWithSkill([`description: " ${"a".repeat(1024)} "`]);
+    expect(await registrationFindings(padded)).toEqual([]);
+    const over = await projectWithSkill([`description: " ${"a".repeat(1025)}"`]);
+    const [finding] = await registrationFindings(over);
+    expect(finding?.message).toContain("1025 characters");
+  });
+
+  it("does not read front matter behind a byte order mark", async () => {
+    // A strict decoder drops the mark by default, so the document parsed while
+    // a host that keeps it finds no opening delimiter and registers nothing.
+    const body = [
+      "---",
+      "name: qfai-example",
+      'description: "Does the thing."',
+      "---",
+      "",
+      "# x",
+      "",
+    ].join("\n");
+    const root = await projectWithSkillDocument(body);
+    const file = path.join(root, ".qfai", "assistant", "skills", "qfai-example", "SKILL.md");
+    await writeFile(file, Buffer.concat([Buffer.from([0xef, 0xbb, 0xbf]), Buffer.from(body)]));
+
+    expect((await registrationFindings(root)).length).toBeGreaterThan(0);
+    await writeFile(file, body, "utf-8");
+    expect(await registrationFindings(root)).toEqual([]);
+  });
 });
