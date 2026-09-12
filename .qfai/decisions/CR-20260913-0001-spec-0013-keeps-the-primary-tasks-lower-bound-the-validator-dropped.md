@@ -1,0 +1,155 @@
+# Change Request
+
+- ID: `CR-20260913-0001`
+- Title: `spec-0013 keeps the primary_tasks lower bound the validator dropped`
+- Raised by: `qfai-implement`
+- Raised at: `2026-09-13T00:00:00Z`
+- Class: `intent`
+- Status: `open`
+- Approved by: `-`
+- Approved at: `-`
+- Approved option: `-`
+- Applied at: `-`
+- Superseded by: `-`
+
+## Context
+
+`QFAI-AUD-020` is a ceiling today. `packages/qfai/src/core/validators/designAudit.ts`
+raises it when a screen's `primary_tasks` count is **over** the recommended
+maximum and at no other count, and
+`packages/qfai/tests/integration/primaryTasksBand.test.ts` pins that with a case
+named `count == 1 emits nothing`.
+
+`spec-0013` still specifies a band. `06_Test-Cases.md`'s `TC-0013-0033` reads
+"Verify a screen declaring fewer than 3 or more than 7 `primary_tasks` triggers
+the `QFAI-AUD-020` warning naming the band; 3 and 7 (inclusive bounds) do not."
+
+So the spec says one task warns and the test says it does not, and
+`.qfai/specs/spec-0013/tdd/test-list.md` joins them: `TDD-0028` carries
+`TC-0013-0033`, names that test file, and stands at `done`.
+
+The lower bound was removed as product work. Nothing recorded it upstream: the
+implementation, the tests, the shipped skill documents, the templates and the
+changelog moved, and the spec pack and the two decision records did not.
+
+**Two decisions state the band as a decision.** `_policies/08_Decisions.md`
+`DR-0267` chose 3..7 and gives "Below 3 risks under-specified screens" as half
+its rationale; `spec-0013/07_Decisions.md` `DR-0013-0003` cites it and repeats
+the band. The removal overturned them, and the reasoning it was carried out on
+is the opposite of theirs: seven tasks weaken a screen's focus, one **is** the
+focus, so a floor warns against the thing it was meant to protect.
+
+That is the part a rerun cannot settle by following the product. A decision
+record is what it says it is at the date it carries; whether a reversed decision
+is rewritten in place or left standing with a later record beside it is the
+question this Change Request puts.
+
+## Proposed change
+
+Bring `spec-0013` into agreement with the validator on the lower bound, and
+record what happened to the two decisions that chose the band. The statements
+that carry the floor are:
+
+| File                        | What carries it                                         |
+| --------------------------- | ------------------------------------------------------- |
+| `01_Spec.md`                | `REQ-0164` and the Consumer View's band sentence        |
+| `02_User-stories.md`        | `US-0013-0014`, heading and body                        |
+| `03_Acceptance-Criteria.md` | `AC-0013-0024`, which names `below 3`                   |
+| `04_Business-Rules.md`      | `BR-0013-0019`, "Below 3 risks under-specified screens" |
+| `05_Examples.md`            | `EX-0013-0019`                                          |
+| `06_Test-Cases.md`          | `TC-0013-0032` and `TC-0013-0033`                       |
+| `07_Decisions.md`           | `DR-0013-0003`                                          |
+| `08_Open-questions.md`      | the `OQ-0158` resolution record                         |
+| `10_Plan.md`                | the item describing the band                            |
+
+`_policies/08_Decisions.md` `DR-0267` is the tenth, and it belongs to every
+spec rather than to this one.
+
+## Options (at least 3) and recommendation
+
+| #   | Option                                                                                                                                                                                                                              | Cost                                                                                                                                     | Risk                                                                                                                                                                                         | Recommended |
+| --- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------- |
+| 1   | Narrow the spec to the product, and **supersede** the two decisions with a new one: the band's floor is withdrawn, `QFAI-AUD-020` is a ceiling, and the records that chose 3..7 keep their dates and gain a `Superseded by` pointer | Nine `spec-0013` statements edited plus one `_policies` record; one new `DR-*` in `_policies`; reset `spec-0013/TDD-0027` and `TDD-0028` | Records today's behaviour as intended. A decision nobody reviewed at the time becomes the recorded one — but it is already the shipped one, and the record says by whom and when             | ✅          |
+| 2   | Narrow the spec to the product, and **rewrite** `DR-0267` and `DR-0013-0003` in place to say `ceiling 7`                                                                                                                            | The same nine statements; no new record                                                                                                  | The repository then has no record that a floor was ever chosen, or that it was removed. The rejected options `DR-0267` lists ("1..3 minimal band") lose the thing they were rejected against |             |
+| 3   | Restore the floor in the product: `QFAI-AUD-020` warns below the minimum again, and the spec stands                                                                                                                                 | A validator change, its tests, the shipped template comments and the guide; no spec edit                                                 | Reverses a deliberate removal on a rationale nobody has contradicted — one task is a screen's focus, and a floor warns against it. A CR of its own would be the place to argue that          |             |
+
+Option 1 is recommended because the two records are the artifact this Change
+Request is actually about. A decision record's value is that it says what was
+chosen and why at a date; rewriting one leaves the repository unable to say that
+a floor was ever chosen, which is the state that let this drift sit unnoticed.
+Superseding keeps both halves — the choice and its reversal — and the rejected
+options `DR-0267` enumerates stay meaningful, because what they were rejected
+against is still written down.
+
+## Blocked downstream items
+
+| Item                 | Kind         | Why it depends on the artifact                                            |
+| -------------------- | ------------ | ------------------------------------------------------------------------- |
+| `spec-0013/TDD-0027` | `ledger-row` | `TC-0013-0032` names the band the shipped documents are required to state |
+| `spec-0013/TDD-0028` | `ledger-row` | `TC-0013-0033` states the floor the validator does not raise              |
+
+- Not blocked by this CR: the other ten `done` rows of `spec-0013`'s ledger.
+  Their obligations are independent of the band, so the evidence backfill that
+  covers them continues. **Those two are the exception**: writing evidence for
+  a row whose obligation the product states the opposite of records the
+  contradiction rather than discharging it.
+- Overlapping open CRs: `none`
+
+## Impact scope
+
+- Specs: `spec-0013` — `.qfai/specs/spec-0013/01_Spec.md`,
+  `.qfai/specs/spec-0013/02_User-stories.md`,
+  `.qfai/specs/spec-0013/03_Acceptance-Criteria.md`,
+  `.qfai/specs/spec-0013/04_Business-Rules.md`,
+  `.qfai/specs/spec-0013/05_Examples.md`,
+  `.qfai/specs/spec-0013/06_Test-Cases.md`,
+  `.qfai/specs/spec-0013/07_Decisions.md`,
+  `.qfai/specs/spec-0013/08_Open-questions.md`,
+  `.qfai/specs/spec-0013/09_delta.md`,
+  `.qfai/specs/spec-0013/tdd/test-list.md`,
+  `.qfai/specs/_policies/08_Decisions.md`
+- Plans: `.qfai/specs/spec-0013/10_Plan.md` — the item describing the band, and
+  nothing else in that file
+- Tests: `spec-0013/TDD-0027`, `spec-0013/TDD-0028`
+- Contracts: `none`
+- Schema: `none`
+- Upstream paths edited under this CR: the `Specs` and `Plans` paths above.
+  **Under option 3 this list is empty**: that option changes the product and
+  leaves every upstream statement standing, so approving it authorises no
+  upstream edit at all. The section is reduced to the approved outcome before
+  `Status: approved` is written, because `QFAI-DRIFT-001` reads a path here and
+  not the condition beside it.
+
+## Decision needed from user
+
+Which of the three: narrow the spec and supersede the two band decisions;
+narrow the spec and rewrite them in place; or restore the floor in the product
+and leave the spec as it stands.
+
+## Approved actions (owner skill rerun plan)
+
+1. `/qfai-sdd` rerun scope, under options 1 and 2: the nine `spec-0013`
+   statements listed under `## Proposed change`, plus `10_Plan.md`'s band item.
+   Mode `re-derive` — the statements change what they say, and `confirm-only`
+   writes nothing but this Change Request's reference.
+2. The decision records, under options 1 and 2 and differing by option.
+   - **Option 1**: a new `DR-*` in `_policies/08_Decisions.md` recording the
+     withdrawal, its date and its rationale; `DR-0267` and
+     `spec-0013/07_Decisions.md` `DR-0013-0003` keep their text and gain a
+     `Superseded by` pointer to it.
+   - **Option 2**: `DR-0267` and `DR-0013-0003` rewritten to state a ceiling,
+     with their `Rejected` lists re-derived against the new statement.
+3. Downstream ledger sweep, under options 1 and 2. Reset to `todo`, recording
+   this CR's ID in their `DR-ID` column: `spec-0013/TDD-0027`,
+   `spec-0013/TDD-0028`. Neither is retired: both obligations survive with a
+   changed statement, so the rows are re-derived rather than deleted.
+   Under option 3 no row moves — the product changes to meet them.
+4. Under option 3 only: `packages/qfai/src/core/validators/designAudit.ts` and
+   `packages/qfai/tests/integration/primaryTasksBand.test.ts`, with the shipped
+   `templates/contracts/ui-spec.yaml` comments and
+   `references/ui-contract-guide.md` that state the band. That option is
+   implementation work and its scope is product paths rather than upstream ones.
+
+## Resolution
+
+<!-- Filled in when Status leaves `open`. -->
