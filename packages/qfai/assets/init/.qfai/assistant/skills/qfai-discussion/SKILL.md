@@ -70,7 +70,11 @@ A **cli-only** pack (`primary_surface: cli`, no visual secondary surface) stays 
 
 ## Required Process
 
-1. Run the core interview for concept, scope, stakeholders, and constraints.
+1. Run the core interview for concept, scope, stakeholders, and constraints as a grilling
+   session through the `qfai-grilling` skill, covering every topic in
+   `references/discussion-coverage-checklist.md`. The method is `.agents/rules/grilling.md` and
+   this step does not restate it. "Run the interview" named no method, and an interview with no
+   method is the agent deciding and reporting.
 2. Run `.qfai/assistant/constitution/research-first-protocol.md` before any other artifact is authored, record its `research_summary` output in the `## Research Summary` section of `04_Sources.md`, then register source traceability there. Its `best_practices` / `anti_patterns` are inputs to every step below, not a late fill-in.
 3. Run Inception Deck and include at least one Mermaid diagram.
 4. Run Story Workshop, capture user stories and user flows; HTML+CSS mock is optional fallback only.
@@ -98,6 +102,10 @@ The full completion logic, including the UI-bearing blocking conditions, is in
 `references/discussion-completion-matrix.md`. It must stay consistent with the canonical
 sidecar family declared above and with `templates/uiux/00_index.md#Forbidden Legacy Files`.
 
+Artifact authoring does not start until the session's frontier is empty and the user has
+confirmed. A pack drafted mid-session records a design that was still being decided, and the
+draft is what the rest of the run then defends.
+
 Before declaring completion, you MUST:
 
 - verify all 15 mandatory output files exist and are populated;
@@ -114,6 +122,9 @@ Before declaring completion, you MUST:
 
 Reviewer checks must confirm:
 
+- the grilling session that preceded authoring ended on an empty frontier with the user's
+  confirmation, and every decision it settled is recorded where
+  `references/oq-and-deferred-rules.md` says;
 - the cycle's review pack was written per `references/review-cycle-playbook.md`, i.e. the three
   required artifacts exist under a `.qfai/review/review-YYYYMMDDhhmmssSSS/` directory;
 - the 15-file discussion pack is complete; `Disposition: open` count is zero in `11_OQ-Register.md`;
@@ -159,8 +170,13 @@ The skill collapses avoidable per-session prompts to 0-1 by classifying every de
   - output formatting
   - ID / sequence numbering
   - append-vs-create on subject overlap
-  - equivalent-option pick
+  - equivalent-option pick — demonstrably equivalent, which a design choice is not: moving one
+    here is how a design nobody agreed to gets recorded as decided
 - ask-user:
+  - every decision the interview puts on the frontier, over every topic in
+    `references/discussion-coverage-checklist.md`. Running the interview is what this skill
+    performs, so these are its own operations
+  - the confirmation that closes the session
   - CREATE / DELETE / SPLIT / MERGE / SUPERSEDE / UPDATE:REMOVE triage operations (each with a prompt template that names the target and rationale)
   - destructive operations (rm / overwrite / force-push)
   - version-pin changes (`package.json#version`, branch pin)

@@ -6,6 +6,26 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
+- **`/qfai-discussion` runs its interview as a grilling session** (#1597). Step
+  one of its process read "Run the core interview" and named no method, so an
+  agent that asked nothing had followed it. It now runs the session through the
+  `qfai-grilling` skill, over every topic in the coverage checklist.
+
+  The policy moves with it. A design choice is not an equivalent-option pick,
+  and a skill that treats it as one records a design nobody agreed to as
+  decided, so the decisions the interview raises are `ask-user` and the
+  `auto-decide` entry says what equivalent means.
+
+  Authoring waits for the session to end. A pack drafted mid-session records a
+  design that was still being decided, and the draft is what the rest of the run
+  then defends. The completion matrix makes that blocking, because a pack
+  authored mid-session is indistinguishable from one authored after — same
+  fifteen files, same coverage, same register — and the missing thing is that
+  anyone agreed. Under a no-question mode the open count blocks instead, since
+  nobody is there to confirm.
+
+### Changed
+
 - **A reviewer that recommended a decision the agents adopted cannot clear it**
   (#1600). A grilling session puts a recommended answer beside each question,
   and who settled the decision now decides what follows. Where the user chose
