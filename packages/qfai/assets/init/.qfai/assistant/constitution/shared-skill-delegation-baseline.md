@@ -157,6 +157,7 @@ A finding outside the reviewing stage's remit is recorded and deferred, never bl
 | `/qfai-verify`     | Gate execution, evidence completeness, report / artifact fidelity                                   | Authoring quality of the artifacts it verifies                                          |
 | `/web-research`    | Source authority and freshness, citation accuracy, claim support                                    | Spec content, implementation structure                                                  |
 | `/qfai-grilling`   | Decisions asked rather than assumed, facts naming where they were read, the session's end condition | The merit of what the user decided, and the artifacts the invoking stage writes from it |
+| `/qfai-grill`      | The same, reported to the user rather than to a stage                                               | The merit of what the user decided; there is no artifact to review                      |
 
 **Fallback for any stage not listed.** A stage that references this baseline without a
 row above has, as its remit, the artifacts that stage itself produces; everything

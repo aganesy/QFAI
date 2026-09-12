@@ -88,6 +88,7 @@ export const HARD_REQUIRED_SKILL_ENTRIES: Readonly<Record<string, readonly strin
   // design conversation is about: picking one would be the skill answering the
   // first question it exists to ask.
   "qfai-grilling": ["grilling subject"],
+  "qfai-grill": ["grilling subject"],
 };
 
 /**
