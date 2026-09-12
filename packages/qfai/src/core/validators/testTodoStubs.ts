@@ -1247,6 +1247,15 @@ export type TestTodoStubOptions = {
    * the gate scanned nothing at all on a freshly initialised repository.
    */
   globs?: readonly string[];
+  /**
+   * Narrows the collected set to the files this caller owns.
+   *
+   * Globs alone could not express it once the ATDD scan started reading the
+   * project's own test globs: those match a package's unit suite as well as its
+   * acceptance one, and a unit test's stub must not block a gate that owns none
+   * of it. The predicate takes a repository-relative, posix-slashed path.
+   */
+  fileFilter?: (relativePath: string) => boolean;
 };
 
 /**
@@ -1360,6 +1369,9 @@ export async function validateTestTodoStubs(
   const unscannedExtensions = new Set<string>();
   for (const absFile of files) {
     const relFile = path.relative(root, absFile).replace(/\\/g, "/");
+    if (options.fileFilter && !options.fileFilter(relFile)) {
+      continue;
+    }
     // No dialect means qfai knows no stub construct for this extension. Reading
     // the file and reporting nothing would be the original defect: a clean
     // result that means "not checked", presented as "no stubs".

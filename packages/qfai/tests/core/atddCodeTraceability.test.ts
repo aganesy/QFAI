@@ -969,22 +969,24 @@ describe("acceptance tests outside paths.testsDir", () => {
     });
   });
 
-  it("the outermost layer directory owns a file that sits under two", async () => {
+  it("the deepest layer directory owns a file that sits under two", async () => {
     await withProject(async (root) => {
-      await seedSpec(root, "0001", ["US-0001"], ["TC-0001"]);
-      // `e2e/api/` is within the E2E root under the testsDir containment check,
-      // so the path rule has to give the same answer or one layout would be read
-      // two ways depending on which package it is in.
-      await seedPackageTest(root, "checkout", "e2e/api", "journey.test.ts", [
-        "/* QFAI:SPEC-0001:US-0001 */",
+      await seedSpec(root, "0001", [], ["TC-0001"]);
+      await seedApiContract(root, "CON-API-0001");
+      // The directory holding the test names its layer. Reading outwards would
+      // answer `e2e` here and would answer `api` for every test in a package
+      // called `api`, which is the shape this rule exists to get right.
+      await seedPackageTest(root, "checkout", "e2e/api", "contract.test.ts", [
+        "/* QFAI:CON-API-0001 */",
       ]);
+      await seedTest(root, "integration", "a.test.ts", "/* QFAI:SPEC-0001:TC-0001 */");
 
       const result = await evaluateAtddCodeTraceability(
         root,
         withProjectGlobs(["packages/*/tests/**/*.test.ts"]),
       );
 
-      expect(result.missing.us).toEqual([]);
+      expect(result.missing.conApi).toEqual([]);
     });
   });
 
@@ -1025,6 +1027,52 @@ describe("acceptance tests outside paths.testsDir", () => {
       // path, so no lane may read it — least of all one that would then report
       // the obligation as covered.
       expect(result.missing.tc).toEqual(["SPEC-0001:TC-0001"]);
+    });
+  });
+
+  it("a package named for a layer does not decide its tests' layer", async () => {
+    await withProject(async (root) => {
+      await seedSpec(root, "0001", ["US-0001"], ["TC-0001"]);
+      // A package may legitimately be called `api`. Reading the path outwards
+      // classified everything under it as an API test, so an L3 annotation was
+      // reported uncovered and forbidden at once. The directory holding the
+      // test is the one that names its layer.
+      await seedPackageTest(root, "api", "integration", "pay.test.ts", [
+        "/* QFAI:SPEC-0001:TC-0001 */",
+      ]);
+      await seedTest(root, "e2e", "a.test.ts", "/* QFAI:SPEC-0001:US-0001 */");
+
+      const result = await evaluateAtddCodeTraceability(
+        root,
+        withProjectGlobs(["packages/*/tests/**/*.test.ts"]),
+      );
+
+      expect(result.missing.tc).toEqual([]);
+      expect(result.forbidden.tcInApi).toEqual([]);
+    });
+  });
+
+  it("an excluded scaffold is not reported as a file to move", async () => {
+    await withProject(async (root) => {
+      await seedSpec(root, "0001", ["US-0001"], ["TC-0001"]);
+      await seedTest(root, "e2e", "a.test.ts", "/* QFAI:SPEC-0001:US-0001 */");
+      await seedTest(root, "integration", "a.test.ts", "/* QFAI:SPEC-0001:TC-0001 */");
+      const scaffoldDir = path.join(root, "tests", "atdd");
+      await mkdir(scaffoldDir, { recursive: true });
+      await writeFile(
+        path.join(scaffoldDir, "old.test.ts"),
+        "/* QFAI:SPEC-0001:TC-0001 */\ndescribe('x', () => { it('y', () => {}); });\n",
+        "utf-8",
+      );
+
+      const result = await evaluateAtddCodeTraceability(
+        root,
+        withProjectGlobs(["packages/*/tests/**/*.test.ts"], ["tests/atdd/**"]),
+      );
+
+      // The project withdrew the path. Asking an operator to move a file they
+      // took out of scope is advice about a file no lane reads.
+      expect(result.skippedTestFiles).toEqual([]);
     });
   });
 

@@ -107,7 +107,7 @@ import {
   validateImportLiteEvidencePresence,
   STUB_SOURCE_FILE_PATTERN,
 } from "./validators/index.js";
-import { atddAcceptanceTestGlobs } from "./atddTraceability.js";
+import { atddAcceptanceTestGlobs, isAtddAcceptanceLayerPath } from "./atddTraceability.js";
 import type { HtmlMockTiming } from "./validators/index.js";
 import { readSafe } from "./validators/utils.js";
 
@@ -915,13 +915,19 @@ async function runAtddValidators(
     // skill instructs the operator to run. Unscoped like the contract rules:
     // the finding names a test file, which no spec owns.
     //
-    // Selection is the stage's own three directories, not
-    // `validation.traceability.testFileGlobs`: that list is repo-wide, so a
-    // `tests/**/*.test.ts` project would have had a `tests/unit/**` stub block
-    // a gate that owns none of it, and the shipped `qfai.config.yaml` leaves
-    // it empty, which made the validator return before reading anything.
+    // Selection is the stage's own, and the stage reads two glob sets: the
+    // three layer directories under `paths.testsDir`, and the project's own
+    // `validation.traceability.testFileGlobs`, which is where a monorepo's other
+    // packages keep their acceptance suites. The second set also matches unit
+    // and component files, and a unit test's stub must not block a gate that
+    // owns none of it — so the layer filter, not the globs, is what keeps them
+    // out. Passing the configured globs alone was the original defect twice
+    // over: it let a `tests/unit/**` stub block this gate, and the shipped
+    // `qfai.config.yaml` leaves the list empty, so the validator returned
+    // before reading anything.
     ...(await validateTestTodoStubs(root, config, {
       globs: atddAcceptanceTestGlobs(root, config, STUB_SOURCE_FILE_PATTERN),
+      fileFilter: isAtddAcceptanceLayerPath,
     })),
   ];
 }

@@ -16,8 +16,10 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
   The scan now also collects from the project's own
   `validation.traceability.testFileGlobs`, minus its `testFileExcludeGlobs`, and
-  a file collected that way is answered by the outermost `e2e` / `api` /
-  `integration` directory in its path. The globs are used as written: a base is
+  a file collected that way is answered by the **deepest** `e2e` / `api` /
+  `integration` directory in its path — the one holding the test. A file's
+  ancestors are project structure, and a package may legitimately be called
+  `api`. The globs are used as written: a base is
   never derived by slicing one, because a glob whose directory part carries a
   wildcard slices to a base with the wildcard still in it, and a layer glob
   synthesized under that base addresses a directory the project never

@@ -223,9 +223,14 @@ whose suites live one per package can name at most one of them there, and the
 acceptance tests of every other package sit outside the scan. The scan therefore
 also reads the project's own `validation.traceability.testFileGlobs`, minus its
 `testFileExcludeGlobs`, and a file collected that way is answered by the
-**outermost** `e2e` / `api` / `integration` directory in its path.
-`packages/checkout/tests/integration/pay.test.ts` answers an `L3` obligation
-exactly as `<testsDir>/integration/pay.test.ts` does.
+**deepest** `e2e` / `api` / `integration` directory in its path — the one that
+holds the test. `packages/checkout/tests/integration/pay.test.ts` answers an
+`L3` obligation exactly as `<testsDir>/integration/pay.test.ts` does.
+
+Deepest rather than outermost, because a file's ancestors are project structure
+and a package may legitimately be called `api`: reading outwards,
+`packages/api/tests/integration/pay.test.ts` is an API test, and its `L3`
+annotation is then reported both uncovered and forbidden.
 
 Three things that does not change.
 

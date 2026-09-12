@@ -657,7 +657,14 @@ export async function evaluateAtddCodeTraceability(
   // scan is glob-scoped to the three roots and never sees them. `tcLevels` is
   // passed because "contributes nothing" is not the same as "should be moved":
   // an L1/L2 annotation is owed to no ATDD directory at all.
-  skippedTestFiles.push(...(await collectUncountedTestFiles(root, testsRoot, tcLevels)));
+  skippedTestFiles.push(
+    ...(await collectUncountedTestFiles(
+      root,
+      testsRoot,
+      tcLevels,
+      config.validation.traceability.testFileExcludeGlobs,
+    )),
+  );
 
   // Active = declared minus deferred, mirroring the contract collectors:
   // `x-qfai-status: planned` suspends the E2E obligation for that one story, it
@@ -811,16 +818,30 @@ async function collectUncountedTestFiles(
   root: string,
   testsRoot: string,
   tcLevels: Map<string, Map<string, string>>,
+  excludeGlobs: readonly string[] = [],
 ): Promise<string[]> {
+  // Repository-relative, like every other glob here. An absolute pattern
+  // produces absolute entries, and a project's own `testFileExcludeGlobs` are
+  // written relative to the repository root, so an absolute scan could not be
+  // filtered by them at all.
+  const relativeTestsRoot = path.relative(root, testsRoot);
+  const base =
+    relativeTestsRoot.length === 0 ||
+    (!relativeTestsRoot.startsWith("..") && !path.isAbsolute(relativeTestsRoot))
+      ? toPosixPath(relativeTestsRoot.length === 0 ? "." : relativeTestsRoot)
+      : toPosixPath(testsRoot);
   const patterns = UNCOUNTED_TEST_DIRS.map(
     (dir) =>
-      `${toPosixPath(path.join(testsRoot, dir)).replace(/\/+$/, "")}/**/*.{ts,tsx,js,jsx,mjs,cjs,mts,cts,feature,md,markdown}`,
+      `${base.replace(/\/+$/, "")}/${dir}/**/*.{ts,tsx,js,jsx,mjs,cjs,mts,cts,feature,md,markdown}`,
   );
   let files: string[];
   try {
     const collected = await collectFilesByGlobs(root, {
+      // The project's own exclusions apply here as well. A path it withdrew is
+      // withdrawn from every lane, and reporting an excluded scaffold as a file
+      // to move would ask the operator to act on something they took out.
       globs: patterns,
-      ignore: DEFAULT_TEST_FILE_EXCLUDE_GLOBS,
+      ignore: [...DEFAULT_TEST_FILE_EXCLUDE_GLOBS, ...excludeGlobs],
       limit: DEFAULT_GLOB_FILE_LIMIT,
     });
     files = collected.files;
@@ -2409,7 +2430,12 @@ export function atddAcceptanceTestGlobs(
   config: QfaiConfig,
   filePattern: string,
 ): string[] {
-  return buildAtddTestGlobs(root, resolvePath(root, config, "testsDir"), filePattern);
+  return buildAtddScanGlobs(
+    root,
+    resolvePath(root, config, "testsDir"),
+    filePattern,
+    config.validation.traceability.testFileGlobs,
+  );
 }
 
 async function collectTestFiles(
@@ -2459,10 +2485,12 @@ function resolveTestKind(
 /**
  * The layer a file outside `paths.testsDir` declares by where it sits.
  *
- * The outermost layer directory wins, which is the answer the containment
- * checks above give for the same shape: a file under `e2e/api/` is within the
- * E2E root, so it is an E2E test whichever rule reads it. Taking the innermost
- * would make one path answer two ways depending on which package it is in.
+ * The **deepest** layer directory wins. A file's ancestors are project
+ * structure — package names, `src`, `tests` — and a package may legitimately be
+ * called `api`: under `packages/*\u002ftests/**`, reading outwards classifies
+ * `packages/api/tests/integration/pay.test.ts` as an API test, which then
+ * reports its `L3` annotation as both uncovered and forbidden. The directory
+ * that holds the test is the one that names its layer.
  *
  * `null` for a path outside the repository root, which has no segments this can
  * read.
@@ -2473,13 +2501,25 @@ function resolveTestKindFromPath(root: string, filePath: string): AtddTestKind |
     return null;
   }
   const directories = toPosixPath(relative).split("/").slice(0, -1);
-  for (const directory of directories) {
+  for (const directory of [...directories].reverse()) {
     const kind = ATDD_LAYER_SEGMENTS.get(directory);
     if (kind !== undefined) {
       return kind;
     }
   }
   return null;
+}
+
+/**
+ * Whether a repository-relative path sits in an acceptance layer.
+ *
+ * The same question `resolveTestKindFromPath` answers, for a caller that has a
+ * path and no scan: the stub gate, which reads the acceptance suites and must
+ * not read a unit or component one.
+ */
+export function isAtddAcceptanceLayerPath(relativePath: string): boolean {
+  const directories = toPosixPath(relativePath).split("/").slice(0, -1);
+  return directories.some((directory) => ATDD_LAYER_SEGMENTS.has(directory));
 }
 
 function isWithinPath(base: string, target: string): boolean {

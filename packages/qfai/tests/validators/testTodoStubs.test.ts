@@ -11,6 +11,10 @@ import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 
 import { defaultConfig, type QfaiConfig } from "../../src/core/config.js";
+import {
+  atddAcceptanceTestGlobs,
+  isAtddAcceptanceLayerPath,
+} from "../../src/core/atddTraceability.js";
 import { validateTestTodoStubs } from "../../src/core/validators/testTodoStubs.js";
 
 // Source-level split of the `*.todo(` token so this validator's own test
@@ -377,5 +381,69 @@ describe("a stub token that is not executing code", () => {
     const issues = await validateTestTodoStubs(root, configWith());
     expect(issues).toHaveLength(1);
     expect(issues[0]?.loc?.line).toBe(2);
+  });
+});
+
+describe("the ATDD gate's file selection", () => {
+  // The ATDD scan reads the project's own test globs as well as the three layer
+  // directories under `paths.testsDir`, so a package's acceptance suite now
+  // satisfies the coverage rules. The stub gate has to read the same files, or
+  // a package test that never runs discharges an obligation and passes.
+  const atddConfig = (globs: string[]): QfaiConfig => ({
+    ...defaultConfig,
+    validation: {
+      ...defaultConfig.validation,
+      traceability: {
+        ...defaultConfig.validation.traceability,
+        testFileGlobs: globs,
+      },
+    },
+  });
+
+  it("the ATDD gate reads a package's acceptance suite", async () => {
+    const root = await newTempDir();
+    await writeTestFile(
+      root,
+      "packages/checkout/tests/integration/pay.test.ts",
+      `it${TODO}("pays");\n`,
+    );
+
+    const issues = await validateTestTodoStubs(
+      root,
+      atddConfig(["packages/*/tests/**/*.test.ts"]),
+      {
+        globs: atddAcceptanceTestGlobs(
+          root,
+          atddConfig(["packages/*/tests/**/*.test.ts"]),
+          "**/*.ts",
+        ),
+        fileFilter: isAtddAcceptanceLayerPath,
+      },
+    );
+
+    expect(issues.map((issue) => issue.code)).toContain("QFAI-TEST-001");
+  });
+
+  it("and leaves a package's unit suite to the gate that owns it", async () => {
+    const root = await newTempDir();
+    await writeTestFile(root, "packages/checkout/tests/unit/pure.test.ts", `it${TODO}("adds");\n`);
+
+    const issues = await validateTestTodoStubs(
+      root,
+      atddConfig(["packages/*/tests/**/*.test.ts"]),
+      {
+        globs: atddAcceptanceTestGlobs(
+          root,
+          atddConfig(["packages/*/tests/**/*.test.ts"]),
+          "**/*.ts",
+        ),
+        fileFilter: isAtddAcceptanceLayerPath,
+      },
+    );
+
+    // A unit test's stub is real and is somebody's problem. Blocking the ATDD
+    // gate on it is the all-integration collapse in another form: the stage
+    // owns three directories, and a stub outside them is not its finding.
+    expect(issues.filter((issue) => issue.code === "QFAI-TEST-001")).toEqual([]);
   });
 });

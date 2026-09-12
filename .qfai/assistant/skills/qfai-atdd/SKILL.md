@@ -168,8 +168,9 @@ Follow `.qfai/assistant/constitution/shared-skill-operating-baseline.md#delta-re
   - **`tests/` above is `<testsDir>`, and it is not the only place those three
     directories may sit.** The scan also reads the project's own
     `validation.traceability.testFileGlobs` (minus `testFileExcludeGlobs`), and a
-    file collected that way is answered by the outermost `e2e` / `api` /
-    `integration` directory in its path — so in a repository with one suite per
+    file collected that way is answered by the deepest `e2e` / `api` /
+    `integration` directory in its path — the one holding the test, because a
+    package may legitimately be called `api` — so in a repository with one suite per
     package, `packages/<name>/tests/integration/**` answers an `L3` obligation
     just as `<testsDir>/integration/**` does. Write new tests where that package's
     suite already lives; do not move a package's tests to satisfy the gate
