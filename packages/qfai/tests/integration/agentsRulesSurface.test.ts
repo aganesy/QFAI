@@ -456,9 +456,10 @@ describe("cross-AI rules surface (.agents/rules/ master)", () => {
     });
 
     // The fallback carries the answer's shape, not a list unconditionally. A
-    // question whose answer is a name or a number has no choices to enumerate,
-    // and requiring a list there has an agent invent two options to fit it —
-    // which is the guess the recommendation clause refuses, in another costume.
+    // question whose answer has no finite set of candidates has none to
+    // enumerate, and requiring a list there has an agent invent two options to
+    // fit it — which is the guess the recommendation clause refuses, in another
+    // costume.
     it.each(MASTERS)("%s does not force an open answer into a list", async (rel) => {
       const text = await readFile(path.join(ROOT, rel), "utf-8");
       expect(text).toMatch(/in\s+the\s+shape\s+the\s+answer\s+has/);
@@ -638,7 +639,17 @@ describe("cross-AI rules surface (.agents/rules/ master)", () => {
       const text = await readFile(path.join(ROOT, rel), "utf-8");
       expect(text).toMatch(/[Ff]act\s+only\s+the\s+user\s+holds/);
       expect(text).toMatch(/nothing\s+else\s+can\s+put\s+it\s+there/);
-      expect(text).toMatch(/never\s+offered\s+as\s+a\s+choice/);
+      expect(text).toMatch(/never\s+with\s+a\s+recommended\s+answer/);
+    });
+
+    // What a fact never carries is a recommended answer. Whether it arrives as
+    // options is decided by the candidate set, so a master saying both keeps an
+    // agent from reading "not a choice" as licence to ask for one of four
+    // supported regions as free text.
+    it.each(MASTERS)("%s separates the recommendation from the answer's shape", async (rel) => {
+      const text = await readFile(path.join(ROOT, rel), "utf-8");
+      expect(text).toMatch(/Whether\s+it\s+arrives\s+as\s+options\s+is\s+a\s+separate\s+question/);
+      expect(text).toMatch(/a\s+known\s+few\s+possible\s+values/);
     });
 
     // Recommending a value the agent does not hold is a guess, and attaching it
