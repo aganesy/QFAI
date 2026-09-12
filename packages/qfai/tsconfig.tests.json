@@ -245,6 +245,7 @@
     "tests/integration/spec0017TuningChangeScope.test.ts",
     "tests/integration/validators/hygieneLaneIngestion.test.ts",
     "tests/scripts/conflictMarkers.test.ts",
+    "tests/scripts/pinnedFileConflictMarkers.test.ts",
     "tests/scripts/trackedScratch.test.ts",
     "tests/scripts/boundedRead.test.ts",
     "tests/scripts/checkDocClarity.test.ts",
