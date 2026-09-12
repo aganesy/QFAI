@@ -366,14 +366,22 @@ describe("the register it reads, and the notation it reads it in", () => {
     expect(codes(doc(table))).toEqual(["QFAI-SPACK-102"]);
   });
 
-  it("reads every status field an entry's own line carries", () => {
-    // An entry may quote a value in the sentence that states its own. Reading
-    // one of the two leaves the register declaring a status it does not hold,
-    // and the blocking one is the one that goes missing.
-    const text = doc([
+  it("declares nothing where an entry's own line states the field twice", () => {
+    // An entry may quote a value in the sentence that states its own, and the
+    // field is the first occurrence in one spelling of that and the last in the
+    // other. Either choice guesses: one blocks a stage nobody is waiting on,
+    // and the other passes the decision this gate exists for.
+    for (const line of [
       "- OQ-0007 — change the text from Status: deferred to the new value. Status: unadjudicated.",
-    ]);
-    expect(codes(text)).toEqual(["QFAI-SPACK-102"]);
+      "- OQ-0007 — change the text from Status: unadjudicated to the new value. Status: deferred.",
+    ]) {
+      const issues = collectOpenQuestionsGateIssues(ENTRY, doc([line]), false);
+      expect(
+        issues.map((issue) => issue.code),
+        line,
+      ).toEqual(["E_OQ_STATUS_UNPARSEABLE"]);
+      expect(issues[0]?.message, line).toContain("OQ-0007=(two on one line)");
+    }
   });
 
   it("reads the id column the header names, wherever it sits", () => {

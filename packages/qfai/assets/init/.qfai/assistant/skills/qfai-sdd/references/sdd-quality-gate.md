@@ -108,7 +108,9 @@ Phase 0 is a mandatory output of this skill, so its own artifacts belong on this
   every later one indistinguishable from a checkpoint that never happened.
 - A row reads `run` only with zero escalations. One escalation makes it `escalated`, and an
   `escalated` row needs a `PENDING` work order for it — an escalation nobody answered is a design
-  decision nobody took, and `08_Open-questions.md` does not block a spec stage.
+  decision nobody took. Record it in `08_Open-questions.md` as well, with
+  `status: unadjudicated`: the work order keeps the stage resumable, and the status is what
+  validation reads.
 - Each phase's settled count equals the number of `grilling(<phase>/...)` rows in
   `## Work Orders Summary` — the phase is the title's first field, because the shared schema has no
   column for it. Without that key a row cannot be assigned to a phase, so an omitted row passes by

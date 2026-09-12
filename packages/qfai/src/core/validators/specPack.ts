@@ -1927,6 +1927,9 @@ async function fileExists(target: string): Promise<boolean> {
  */
 const REGISTER_MAX_BYTES = 4 * 1024 * 1024;
 
+/** The spec-pack layout's register, read through the bounded reader and not the bulk load. */
+const LEGACY_REGISTER_FILE = "15_Open-questions.md";
+
 /** The `code` an fs rejection carries, where it carries one. */
 function errorCode(error: unknown): string | undefined {
   if (typeof error !== "object" || error === null) return undefined;
@@ -2067,7 +2070,7 @@ function collectUnreadableStatuses(register: string, text: string): Issue[] {
       "specPack.openQuestionsStatus",
       Array.from(new Set(invalid.map((item) => item.id))),
       "canonical",
-      "Spell the status as one of `open`, `resolved`, `deferred` or `unadjudicated` — a value outside those four is read as no status at all.",
+      "Spell the status as one of `open`, `resolved`, `deferred` or `unadjudicated`, once per entry — a value outside those four is read as no status at all, and an entry whose own line states the field twice declares neither.",
     ),
   ];
 }
@@ -3006,6 +3009,9 @@ const OPEN_QUESTIONS_HEADING = "Open Questions";
 /** What a status is attributed to where no entry has been opened yet. */
 const UNLABELLED_OQ = "(unlabeled-oq)";
 
+/** What an entry declares when its own line carries the field more than once. */
+const AMBIGUOUS_STATUS = "(two on one line)";
+
 /** One status a register declares, as written. */
 type DeclaredStatus = { id: string; raw: string };
 
@@ -3119,16 +3125,20 @@ function readRegister(text: string): RegisterReading {
     // declares nothing, which is what keeps a register that explains its own
     // notation from answering for the question it named last.
     //
-    // Every occurrence on an entry's own line, not the first: an entry may
+    // One occurrence on an entry's own line, or none of them. An entry may
     // quote a value in the sentence that states its own — `from Status:
-    // deferred to ...` — and reading one of the two leaves the register
-    // declaring a status it does not hold. Both are read, so the blocking one
-    // cannot be hidden behind the other.
+    // deferred to ...` — and neither the first nor the last is the field in
+    // both spellings of that, so a line carrying two declares nothing and says
+    // so. Reading either would be a guess, and a guess here either blocks a
+    // stage nobody is waiting on or passes the decision this gate exists for.
     if (opened !== null) {
-      for (const match of line.matchAll(STATUS_FIELD)) {
-        if (match[1] !== undefined) {
-          declared.push({ id: currentId || UNLABELLED_OQ, raw: statusValue(match[1]) });
-        }
+      const values = [...line.matchAll(STATUS_FIELD)].flatMap((match) =>
+        match[1] === undefined ? [] : [statusValue(match[1])],
+      );
+      if (values.length === 1) {
+        declared.push({ id: currentId || UNLABELLED_OQ, raw: values[0] ?? "" });
+      } else if (values.length > 1) {
+        declared.push({ id: currentId || UNLABELLED_OQ, raw: AMBIGUOUS_STATUS });
       }
       continue;
     }
@@ -3631,6 +3641,14 @@ function validateUpperToLowerReferenceRules(
   return issues;
 }
 
+/**
+ * The required files' text, minus the register.
+ *
+ * The register is read through the bounded reader instead, where a ceiling and
+ * a kind check apply. Loading it here as well would read an oversized one into
+ * memory before that ceiling is reached, which is the failure the ceiling
+ * exists to prevent.
+ */
 async function loadExistingRequiredTexts(
   entry: SpecEntry,
   missingFiles: RequiredSpecPackFile[],
@@ -3638,7 +3656,7 @@ async function loadExistingRequiredTexts(
   const missing = new Set(missingFiles);
   const texts: Partial<Record<RequiredSpecPackFile, string>> = {};
   for (const fileName of Object.keys(entry.requiredFiles) as RequiredSpecPackFile[]) {
-    if (missing.has(fileName)) {
+    if (missing.has(fileName) || fileName === LEGACY_REGISTER_FILE) {
       continue;
     }
     const fullPath = entry.requiredFiles[fileName];
