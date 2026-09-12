@@ -4,6 +4,17 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ## [Unreleased]
 
+### Fixed
+
+- **A UI contract entry no screen is read from is reported** (#1734). Every
+  consumer of UI contracts reads screens the same way: it keeps the first entry
+  for each `id` and skips an entry with no `id` or no `route`. That reading stays.
+  What such an entry stated was checked by nothing, and nothing said so. An
+  empty `primary_tasks` on it passed the audit lane and the prototyping
+  preflight, and a different route was prototyped as the entry it repeated.
+  `QFAI-CONTRACT-042` now names each such entry with its file and position,
+  and for a repeated `id` it also names the entry read in its place.
+
 ## [1.12.0] - 2026-09-12
 
 ### Added

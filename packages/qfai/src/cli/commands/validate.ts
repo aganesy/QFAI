@@ -680,6 +680,9 @@ export const GATE_GROUP_FAMILIES = {
     // joining on its own. It comes from the same `validateContractConsistency`
     // as `-040`, so it has the same two profiles.
     "QFAI-CONTRACT-041",
+    // `validateUiScreenEntries`, composed by `validateContracts` with the other
+    // UI contract checks, and reachable from the same two profiles.
+    "QFAI-CONTRACT-042",
     "QFAI-DB-*",
   ],
   // `validateContractReferences` — `runSddValidators` only. Five codes, not
@@ -1849,6 +1852,8 @@ export const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
     "Every state/status value an API contract mandates must have a representable counterpart in the domain declared by the DB contract(s) bounding the same normalized field name (CHECK ... IN, CREATE TYPE ... AS ENUM, or inline ENUM), unless a DB contract declares it `Derived (not stored)`. Pairing is by normalized field name, not by an explicit pair declaration, so the finding is an error only when every such contract bounds the field with an ENUM.",
   "QFAI-CONTRACT-041":
     "Every `-- Derived (not stored): <column> = <values> from <inputs>` declaration in a DB contract parses, and every value it names is one the paired API contract requires and the DB domain cannot store. A declaration that does not parse was not read, and one that covers a stored or unrequested value is a claim about the schema that is not true of it.",
+  "QFAI-CONTRACT-042":
+    "Every entry under `screens` in a UI contract is a mapping with an `id` and a `route`, and no two entries share an `id`, so each entry is a screen every consumer reads.",
   // Same rule as `QFAI-BPAP-001` below: `paths.contractsDir` is configurable, so
   // the expected state names the contracts root by role. Pinning the default
   // path sent a project that moved its contracts to repair a directory it does

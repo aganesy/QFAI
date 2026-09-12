@@ -36,6 +36,11 @@ Discussion UI/UX files are **non-normative** discovery / reference artifacts —
   is asked for nothing. A marker counts as rendered wherever its text appears,
   not only where the attribute is written out — a framework that builds the
   attribute from a variable still writes the marker somewhere.
+- **Every entry under `screens` is a screen, once.** Each entry is a mapping
+  with an `id` and a `route`, and no two entries share an `id`. The tooling
+  reads the first entry for an `id` and skips an entry missing either key, so
+  anything else such an entry states is checked by nothing. `QFAI-CONTRACT-042`
+  names each one.
 - `api/`, `db/`, and `ui/` contracts must declare `QFAI-CONTRACT-ID` at the top.
 - Use prefixes `CON-API-*`, `CON-DB-*`, and `CON-UI-*`.
 - `design/` files do not require `QFAI-CONTRACT-ID`, but they are execution-time SSOT for UI-bearing work. Having no ID, they are addressed by repo-relative path when an owner rerun targets them: `/qfai-sdd --contract .qfai/contracts/design/<file>`. The same path form addresses an `api/` / `db/` / `ui/` contract whose ID is the thing under repair.
