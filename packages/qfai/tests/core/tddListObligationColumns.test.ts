@@ -277,6 +277,35 @@ describe("an obligation is only legal on the Layer that owns it", () => {
     );
   });
 
+  it("reports the rows of an appended table that lacks a column the first one has", async () => {
+    // A `## CHG-…` table appended below the seed can be written without a column
+    // the first table carries. Its rows are unprotected all the same, and the
+    // finding names them by table as well as by id — without claiming the whole
+    // file lacks a column that is right there in the first table.
+    await withLedger(
+      [
+        `${BASE_HEADERS} US-Refs |`,
+        `${BASE_SEP} ------- |`,
+        "| TDD-0001 | -       | E2E   | tests/e2e/a.ts  | journey  | todo   | -     | -        | US-0001 |",
+        "",
+        "## CHG-001",
+        "",
+        BASE_HEADERS,
+        BASE_SEP,
+        "| TDD-0002 | -       | E2E   | tests/e2e/b.ts  | journey  | todo   | -     | -        |",
+      ],
+      (issues) => {
+        const usRefs = absentColumnFindings(issues).filter((finding) =>
+          finding.message.includes("US-Refs"),
+        );
+        expect(usRefs).toHaveLength(1);
+        expect(usRefs[0]?.message).toContain("TDD-0002 (ledger table 2, row 1)");
+        expect(usRefs[0]?.message).not.toContain("TDD-0001");
+        expect(usRefs[0]?.message).toContain("sit in a ledger table with no US-Refs column");
+      },
+    );
+  });
+
   it("says nothing about an absent column no row's Layer owns", async () => {
     // A ledger of unit rows has no use for either column, so its absence is not
     // a gap in anything.

@@ -5896,8 +5896,9 @@ function validateObligationColumn(
   spec: ObligationColumnSpec,
 ): Issue[] {
   const issues: Issue[] = [];
-  // Rows whose `Layer` owns this column, on a ledger whose table has no such
-  // column at all. Collected rather than reported per row: the gap is the
+  // Rows whose `Layer` owns this column, in a ledger table that has no such
+  // column. Per table, not per file: an appended table can lack a column the
+  // first one carries, and its rows are just as unprotected. Collected rather than reported per row: the gap is the
   // ledger's shape, and one finding naming every affected row says that.
   const unprotected: string[] = [];
   for (const ref of rows) {
@@ -5964,7 +5965,7 @@ function validateObligationColumn(
     issues.push(
       issue(
         OBLIGATION_COLUMN_ABSENT_CODE,
-        `tdd/test-list.md for spec-${spec.specNumber} has no ${spec.column} column, so ${String(unprotected.length)} Layer=${spec.layer.toUpperCase()} row(s) record no obligation it can check: ${unprotected.join(", ")}`,
+        `${String(unprotected.length)} Layer=${spec.layer.toUpperCase()} row(s) in tdd/test-list.md for spec-${spec.specNumber} sit in a ledger table with no ${spec.column} column, so they record no obligation it can check: ${unprotected.join(", ")}`,
         "warning",
         spec.relPath,
         `${spec.rule}ColumnAbsent`,
