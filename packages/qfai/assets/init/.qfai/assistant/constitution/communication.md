@@ -50,7 +50,8 @@ When an agent needs to ask the user a question, the following rules apply (see a
    invocation**: a tool the mode withholds, and one that cannot carry the answer's
    shape, are both unavailable for that question and take rule 3.
    `.agents/rules/user-questions.md` owns the form and states the whole of it.
-2. **MUST prefer structured choices** (radio/multi-select) over free-text input when supported.
+2. **MUST prefer structured choices** (radio/multi-select) over free-text input where the question
+   has choices and the tool supports them.
    Where the answer is genuinely open — a name, a number, a sentence — the tool's
    free-text path carries it; that is an answer shape, not an exception.
 3. **Fallback**: If AskUserQuestion is unavailable for this question, the agent MUST present the same

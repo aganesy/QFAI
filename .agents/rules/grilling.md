@@ -84,13 +84,20 @@ One round is one frontier: asked in full, answered in full.
 Count rounds, not questions. Forty questions across four rounds is an ordinary
 session; the same forty asked one at a time is a worse one.
 
-Ask through the host's structured question tool. Where the host has no such
-tool, or it is unavailable in the current mode, ask the same round as a normal
-message **in the shape each answer has** — numbered choices where the question
-offers choices, a plain request for the value where it asks for a fact — keep
-the choice semantics where there are choices, and say why the tool was
-unavailable. `user-questions.md` § 5 owns the rest of that fallback. A session
-is never skipped for want of a tool.
+Ask through the host's structured question tool. Three things send a round to
+plain text instead: the host has no such tool, the current mode withholds it, or
+it cannot carry the answer shape of some question in the round — a question
+permitting several answers put to a tool whose options are exclusive is the
+common case, and forcing it through loses the constraint.
+
+**The whole round falls back, not the question that triggered it.** Splitting a
+round across two carriers costs the thing a round exists for: the user seeing
+what is being decided together. So the round is asked as a normal message **in
+the shape each answer has** — numbered choices where the question offers
+choices, a plain request for the value where it asks for a fact — keeping the
+choice semantics where there are choices, and saying which question the tool
+could not carry and why. `user-questions.md` § 5 owns the rest of that fallback.
+A session is never skipped for want of a tool.
 
 **Where the tool takes fewer questions than the round holds**, deliver the round
 in host-sized batches. The frontier is not recomputed between them, no answer is
