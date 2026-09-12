@@ -1322,11 +1322,15 @@ export const ALLOWED_INIT_CONTENT: ReadonlyMap<string, string> = new Map([
     // `.agents/rules/minimal-implementation.md`. Derived by running `qfai init` into a temp root
     // and hashing what it wrote; dropping that bullet reproduces `2a264d5e…`.
     //
-    // The current digest adds the bullet naming `.agents/rules/interface-clarity.md`, the rule the
-    // same run seeds beside the other masters. Derived the same way, and checked the same way:
-    // dropping that one bullet reproduces `3978847f…` byte for byte.
+    // The digest before this one added the bullet naming `.agents/rules/interface-clarity.md`, the
+    // rule the same run seeds beside the other masters. Derived the same way, and checked the same
+    // way: dropping that one bullet reproduces `3978847f…` byte for byte.
+    //
+    // The current digest adds the bullet naming `.agents/rules/grilling.md`, on the same footing.
+    // Derived and checked the same way: dropping that one bullet reproduces `f3cfb742…` byte for
+    // byte.
     ".github/copilot-instructions.md",
-    "f3cfb74268079edceea5d97c27b5dfdf4c2b63b72bfa62f16cac756c5590f9a1",
+    "801d31abb7828b95d768b8b1a7b4fce51a6fc43f87ffcc2ac832b5eab3847e3f",
   ],
   // `qfai init` copies this file verbatim, so it is pinned like every other
   // adopter-facing file here — and for one reason none of the others has: it
@@ -1426,8 +1430,12 @@ export const ALLOWED_INIT_CONTENT: ReadonlyMap<string, string> = new Map([
   // Re-pinned for a third, naming `.agents/rules/interface-clarity.md`, seeded
   // by the same run. Derived and checked the same way: dropping that one bullet
   // reproduces `22af72dd…` and `3f9ad00f…` byte for byte.
-  ["AGENTS.md", "60340a757d161e7d39cf988c5b222a12964c77759dc486b8162b66e5dad9aa47"],
-  ["CLAUDE.md", "f83493c5ca396a49822bbbf08aa72c451ce5ea24326ec7ebe4fda2c7b5298de5"],
+  //
+  // Re-pinned for a fourth, naming `.agents/rules/grilling.md`, seeded by the
+  // same run. Derived and checked the same way: dropping that one bullet
+  // reproduces `60340a75…` and `f83493c5…` byte for byte.
+  ["AGENTS.md", "d954d6a018ccc298e5a29aa6ac43d9361ffd72d4676ccb01025d27eb158ce630"],
+  ["CLAUDE.md", "9bf117acd6fea91e0d43f6532a8afd3c4fd7fdb44a3fa6ed9f83ccf069633308"],
   // Inside `.claude/`, and pinned anyway — see the paragraph above the path set.
   // These are the hooks that restate a rule at the moment it applies: the writing
   // rule when a pull request, issue or review is posted through the GitHub tools
@@ -1586,6 +1594,7 @@ export const INERT_DECORATIONS: ReadonlyArray<string> = [
 export const ALLOWED_INIT_SOURCE_ASSETS: ReadonlySet<string> = new Set([
   "root/.agents/rules/distributed-surface.md",
   "root/.agents/rules/documentation-clarity.md",
+  "root/.agents/rules/grilling.md",
   "root/.agents/rules/interface-clarity.md",
   "root/.agents/rules/minimal-implementation.md",
   "root/.agents/rules/root-additions-policy.md",
