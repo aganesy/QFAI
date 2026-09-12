@@ -40,7 +40,7 @@ else.** Ten have no test at all: `US-0013-0001`, `-0002`, `-0004`, `-0005`, `-00
 assertions over the shipped `qfai-sdd/SKILL.md` that carry none of the obligation they are annotated
 to. Two are self-referential coverage placeholders whose annotated `describe` tests the diff
 detector. Those seventeen rows carry 153 of the matrix's 286 `❌` cells between them. Six further
-wording rows carry another 44.
+wording rows carry another 45.
 
 The remaining twenty-six rows are scored on their merits and range widely. `US-0013-0014`,
 `TC-0013-0035`, `TC-0013-0033` and `TC-0013-0026` are the strongest work in the pack: a closed-schema
@@ -1472,7 +1472,9 @@ them is repaired here; this artifact scores coverage and does not edit tests, le
    and left the ledger behind. A `done` over a selector that cannot be run records a completion nobody
    can re-execute.
 7. **Five business rules point at an acceptance criterion about a different subject.** `AC-Refs` on
-   `BR-0013-0002` … `BR-0013-0007` appear to have been written when the AC numbering was different:
+   `BR-0013-0002`, `-0004`, `-0005`, `-0006` and `-0007` appear to have been written when the AC
+   numbering was different. `BR-0013-0003` is **not** among them and the range notation that included
+   it was wrong: it points at `AC-0013-0003`, which states its own usable-source subject.
 
    | Rule           | Its subject               | `AC-Refs` points at                | The AC that states its subject |
    | -------------- | ------------------------- | ---------------------------------- | ------------------------------ |
@@ -1527,10 +1529,17 @@ to this file and restates the counted totals beside it. Those totals are:
 60 business rule scored cells. `Status` is a row verdict, not a mark, and is excluded from all four
 counts.
 
-Seven obligations in this pack cannot be moved by testing alone. `US-0013-0009` and `TC-0013-0024`
-name artifacts and fields the product does not carry and have never had a test. `TC-0013-0022` is
-half of that case: the Phase 0 write it names has no callable function, and the halt-on-missing-file
-it also names has one, which is tested.
+Six obligations in this pack cannot be moved by testing alone. `US-0013-0009` names artifacts and
+fields the product does not carry and has never had a test. `TC-0013-0022` is half of that case: the
+Phase 0 write it names has no callable function, and the halt-on-missing-file it also names has one,
+which is tested.
+
+`TC-0013-0024` is **not** among them, and counting it there was wrong. Nothing in the pack
+contradicts it: `US-0013-0010`, `AC-0013-0017`, `BR-0013-0014` and `EX-0013-0014` all name the same
+five-entry active set, and all five entries are in `_policies/05_Contracts.md` today — `DCON-005`,
+`DCON-008`, `DCON-030`, `DCON-031` and `DCON-032`. What is missing is a test, and the contract-index
+validator that would let one assert the closed half of the rule. That is implementation work, and
+routing it to a Change Request would ask the user to settle a question nobody disagrees about.
 
 `TC-0013-0025` belongs here for a different reason, and it is the one the census had missing: no
 test can satisfy it **and** `TC-0013-0026` at once. It requires every `screens[]` entry of the
@@ -1546,7 +1555,7 @@ brand contracts removed — so the assertion is writable today against artifacts
 Its cells are `❌` for missing coverage, which a test can fix, and not for an obligation no test
 could reach.
 `TC-0013-0032`, `TC-0013-0033` and `TC-0013-0027` declare behaviour the product deliberately changed,
-and their tests already fix the current behaviour correctly. All seven need the spec reconciled with
+and their tests already fix the current behaviour correctly. All six need the spec reconciled with
 the code through a Change Request before any test can raise their scores. `US-0013-0003` is an eighth
 of the same kind and is counted apart from the seven, because what it needs reconciled is its own
 acceptance criterion rather than the product: until that is settled neither it nor the criterion can

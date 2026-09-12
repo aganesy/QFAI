@@ -136,6 +136,16 @@ and did not run.
 - Round 1: Satisfied-by: packages/qfai/src/core/validators/designAudit.ts, checkContractHierarchyFromScreens — the empty-list test that opens the `QFAI-AUD-001` branch.
 - Round 1: Falsifiability command: npx vitest run tests/integration/sddPrimaryTasksLane.test.ts
 - Round 1: Falsifiability result: Test Files 1 failed (1); Tests 3 failed, 1 passed (4). This row's own case fails on the absent finding.
+
+The edit, in `checkContractHierarchyFromScreens` — the empty-list branch that
+opens `QFAI-AUD-001`:
+
+```diff
+   for (const screen of screens) {
+-    if (screen.primaryTasks.length === 0) {
++    if (false) {
+       // sourceRef is `<rel-path>#<screenId>` — split so the message names
+```
 - Round 1: Falsifiability revision: working-tree+2931d34aa471bfb18f339e1a1d66f4bf091412090a43cf61665b2282ee4700fb
 - Round 1: GREEN command: npx vitest run tests/integration/sddPrimaryTasksLane.test.ts
 - Round 1: GREEN result: Test Files 1 passed (1); Tests 4 passed (4)
@@ -171,6 +181,14 @@ one this row's sibling owns.
 - Round 1: Satisfied-by: packages/qfai/src/core/discussionPack.ts, resolveActiveDiscussionPack — the filter that matches the pointer against the packs on disk.
 - Round 1: Falsifiability command: npx vitest run tests/core/activeDiscussionPack.test.ts
 - Round 1: Falsifiability result: Test Files 1 failed (1); Tests 1 failed, 3 passed (4). The dangling-pointer case fails; the error stops being raised.
+
+The edit, in `resolveActiveDiscussionPack` — the filter that matches the
+pointer against the packs on disk:
+
+```diff
+-  const matches = candidates.filter((pack) => pack.name === currentId);
++  const matches = candidates;
+```
 - Round 1: Falsifiability revision: working-tree+01dcf4fa9d5f24f9cbd5321207d20ffb4fc433eb459fc66c27021b2f38734669
 - Round 1: GREEN command: npx vitest run tests/core/activeDiscussionPack.test.ts
 - Round 1: GREEN result: Test Files 1 passed (1); Tests 4 passed (4)
@@ -201,6 +219,14 @@ one this row's sibling owns.
 - Round 1: Satisfied-by: packages/qfai/src/core/contracts/screenContracts.ts, REQUIRED_PRIMARY_TASK_KEYS — the closed set a structured item is measured against.
 - Round 1: Falsifiability command: npx vitest run tests/integration/primaryTasksStructured.test.ts
 - Round 1: Falsifiability result: Test Files 1 failed (1); Tests 4 failed, 2 passed (6). This row's acceptance case fails on the complete item it is meant to admit.
+
+The edit, in `screenContracts.ts` — the closed set a structured item is
+measured against:
+
+```diff
+-const REQUIRED_PRIMARY_TASK_KEYS = ["id", "label", "acceptance"] as const;
++const REQUIRED_PRIMARY_TASK_KEYS = ["id", "label"] as const;
+```
 - Round 1: Falsifiability revision: working-tree+e9c87b9362c368ec472519a028f2a933c792d5228d3460dbcd53ccd142d86c82
 - Round 1: GREEN command: npx vitest run tests/integration/primaryTasksStructured.test.ts
 - Round 1: GREEN result: Test Files 1 passed (1); Tests 6 passed (6)
@@ -263,6 +289,19 @@ obligation admits.
 - Round 1: Satisfied-by: packages/qfai/src/core/validators/designAudit.ts, shapeFindingFor — the rule code a shape violation is reported under.
 - Round 1: Falsifiability command: npx vitest run tests/integration/primaryTasksStructured.test.ts
 - Round 1: Falsifiability result: Test Files 1 failed (1); Tests 4 failed, 2 passed (6). Every rejection case fails; the finding is no longer reported under the code they read.
+
+The edit, in `shapeFindingFor` — the rule code a shape violation is reported
+under:
+
+```diff
+   return {
+-    ruleId: "QFAI-AUD-021",
++    ruleId: "QFAI-AUD-001",
+     dimension: "visualHierarchy",
+     severityTier: 1,
+-    message: `[QFAI-AUD-021] ${filePath}: screen '${screenId}' primary_task ${shape.taskRef} ${detail}`,
++    message: `[QFAI-AUD-001] ${filePath}: screen '${screenId}' primary_task ${shape.taskRef} ${detail}`,
+```
 - Round 1: Falsifiability revision: working-tree+31eb23a6df91e77744655424faf54d2f2bcd603df00be8a19eee4a04997d638b
 - Round 1: GREEN command: npx vitest run tests/integration/primaryTasksStructured.test.ts
 - Round 1: GREEN result: Test Files 1 passed (1); Tests 6 passed (6)
@@ -324,11 +363,11 @@ None.
   is reached by no case this pack owns. The gate is `PENDING` for that reason:
   the verdict stands for the revision it names, and no reviewer has read the
   current artifact.
-- Residual risk: the five falsifiability mutations cannot be re-executed. Each
-  names a content address that folds the tree state into it, and the tree has
-  moved. Each claimed kill count was re-derived from the source line its
-  mutation names instead, and all five are consistent, including which case
-  survives in each. Separately, whether a cell deserves `⚠️` over `✅` is a
+- Residual risk: the five falsifiability mutations were re-applied at this tree
+  and every kill count reproduced, but their recorded `Falsifiability revision`
+  values cannot be. Each folds the tree state into a content address and the
+  tree has moved, so what a reader reconstructs from the recorded edit is the
+  same mutation over a different base. Separately, whether a cell deserves `⚠️` over `✅` is a
   judgement the arithmetic cannot settle: the totals and both censuses were
   verified mechanically, the individual scores by sampling.
 
