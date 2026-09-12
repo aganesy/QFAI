@@ -99,7 +99,7 @@ restating what the test case asks for.
 
 | Row        | Reached by the recorded case                                                             | Not reached                                                                                                            |
 | ---------- | ---------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
-| `TDD-0020` | The lane fails at `error`, and the message names the file, the screen and the rule token | That `/qfai-prototyping` preflight then refuses. One case asserts it, in the end-to-end file `TDD-0022` names            |
+| `TDD-0020` | The lane fails at `error`, and the message names the file, the screen and the rule token | That `/qfai-prototyping` preflight then refuses. No case drives a preflight; the nearest is in the end-to-end file `TDD-0022` names, asserting a non-zero `runValidate` exit carrying the rule token |
 | `TDD-0023` | The helper returns the pack `state.json#discussion.currentId` names                      | That it does so without scanning modification times. A case under the sibling test case asserts it, by reading the source |
 | `TDD-0024` | A missing pointer and an absent pack each raise a recovery error                         | A pointer resolving to a duplicate pack. No case supplies one                                                            |
 
@@ -229,9 +229,10 @@ one this row's sibling owns.
 - Round 1: RED test hash: d798fda11f10e7516c51e3b1aaee98a7c9ab6fd5c86b1e78303e2234803d2c6e
 - Round 1: RED test manifest: packages/qfai/tests/integration/primaryTasksStructured.test.ts
 
-Adding a fourth required key rejects every item, so the rejection cases fail too
-— they name the key they expect to be reported missing, and the mutation adds a
-second one to every finding.
+Adding a fourth required key rejects every item, so three of the four rejection
+cases fail too — they name the key they expect to be reported missing, and the
+mutation adds a second one to every finding. The fourth survives: its item omits
+every key, so the first finding still reports `id` and the assertion holds.
 
 - Refactor verify command: npx vitest run tests/integration/sddUiTemplate.test.ts tests/integration/sddPrimaryTasksLane.test.ts tests/e2e/spec0013UiContractPrimaryTasksE2E.test.ts tests/core/activeDiscussionPack.test.ts tests/core/surfaceTypePopulate.test.ts tests/integration/primaryTasksStructured.test.ts
 - Refactor verify result: Test Files 6 passed (6); Tests 25 passed (25)
@@ -282,11 +283,27 @@ every total.
 | Role                | Task                                                     | Status (PASS/REVISE/PENDING) |
 | ------------------- | -------------------------------------------------------- | ---------------------------- |
 | test-design-analyst | Score the forty-nine obligations and write the matrix    | PASS                         |
-| completion-reviewer | Audit every claim this file makes against the repository | PENDING                      |
+| completion-reviewer | Audit every claim this file makes against the repository | PASS                         |
 
 ## Cross-spec obligations
 
 None.
+
+## Reviewer response
+
+- Role: completion-reviewer
+- Status: PASS
+- Reviewed revision: a485d63e135f661d3b4f26b273fc5f54ff5386d6
+- Subject: every claim this file makes, checked against the files it names
+- Result: the five recorded rows reproduce their commands and counts; the
+  evidence-entry contract holds, with `QFAI-TDDLIST-008` and `-009` silent and
+  `-007` / `-011` naming exactly the seven unbackfilled rows; all seven gap
+  reasons check out against the files they name; the matrix totals agree with
+  the matrix.
+- Residual risk: the five falsifiability rounds cannot be re-executed. Each
+  names a content address that folds `HEAD` into it, and `HEAD` has moved. Each
+  claimed kill count was re-derived from the source instead, and all five are
+  consistent.
 
 ## Execution logs
 
