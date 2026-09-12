@@ -1965,6 +1965,26 @@ unadjudicated`, read off a Work Orders Summary row the session writes rather
   some document under `constitution/` somewhere, and a whole-file search would
   pass on exactly the state this replaces.
 
+- **The audit hash says which matrix its coverage-depth slice comes from**
+  (#1624). Step 3 adds a record for the part of the matrix that belongs to the
+  row's obligation and said nothing about when that part is read. Two reviewer
+  roles derived opposite values from one record — one taking the matrix as it
+  stood at the verdict, one as it stood at the verdict's `Reviewed revision` —
+  and both readings followed from the text. The values differ by a whole
+  record, so every hash in a spec split on a reading whenever a change added an
+  obligation to the matrix.
+
+  The slice is taken as the matrix stands when the verdict is taken. The other
+  reading has nothing to read: `Reviewed revision` excludes the evidence tree,
+  so it addresses no state of the matrix, while the completion gate recomputes
+  from the working tree — the reviewer hashes what the gate will hash.
+
+  A matrix that later names the row's obligation stales that row's verdicts,
+  which is the slice's price rather than a defect: hashing the file whole would
+  stale every verdict in the spec when any cell moved. A record re-attestation
+  closes it, because the revision has not moved — and it is not a rubber stamp,
+  since what it re-signs is a judgement over a subject that has grown.
+
 - **The `primary_tasks` band drift is recorded where the Drift Protocol looks
   for it** (#1621). `QFAI-AUD-020` lost its lower bound as product work, and
   `spec-0013` still specifies the band: its test case says one task warns and
