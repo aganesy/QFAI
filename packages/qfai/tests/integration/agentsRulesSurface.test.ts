@@ -11,12 +11,11 @@ const ROOT = path.resolve(__dirname, "../../../..");
 /**
  * Every rule master, read off the directory.
  *
- * The two cases below used to iterate a list written beside them, which made
- * each of them ask about the rules someone remembered to add rather than the
- * rules that exist: a master registered in neither `README.md` nor
- * `.claude/rules/` had no entry, so nothing asked about it and both passed.
- * Read from disk, a master that skips either step is named by the case that
- * finds it missing.
+ * The subject is the rules that exist, not the rules a list names. Reading the
+ * directory is what makes that true: a master that skips either registration —
+ * `README.md` or `.claude/rules/` — is still named by the case that finds it
+ * missing, because it reached the case from disk rather than from an entry
+ * someone had to add.
  *
  * Synchronous because `it.each` needs the names while the file is collected.
  */
