@@ -185,9 +185,11 @@ is one input among several and the decision is not the griller's to re-derive.
 know what an earlier one recommended, so the record supplies it: a session that
 settled a decision agent-to-agent records, in the stage's Work Orders Summary,
 the decision and the `Agent instance` that recommended it. `Recommended and
-unadjudicated` is read off that record, not off recollection, and a review whose
-stage has no such record has nothing to check the field against — which is
-itself a `REVISE`.
+unadjudicated` is read off that record, not off recollection. A stage that ran no
+agent-to-agent grilling session records no such row, and an otherwise complete
+Work Orders Summary without one is the evidence for `none`. What is a `REVISE`
+is a summary that records such a session and then omits the row for a decision
+it settled, or one too incomplete to tell those two apart.
 
 The field asks about the artifact **as it now stands**. A recommendation the
 artifact no longer carries, and one the user has since settled, are both outside
@@ -198,10 +200,13 @@ would disqualify a reviewer over something nobody is being asked to judge.
 **Review rounds are one series, whatever instance serves them.** The budget is
 two rounds per reviewer per artifact, and a host may answer round 2 with a fresh
 sub-agent under a new `Agent instance`. The work order and the response both
-carry a `Review series` value — the reviewed artifact plus the role — and the budget is counted per
-series. Counting per instance would restart it every round, so the budget could
-never be exhausted and the escalation exit that opens when it is would never
-open.
+carry a `Review series` value — the reviewed artifact, the role, and a replacement ordinal that
+starts at 1 and rises each time the review is handed to a non-participating reviewer — and the
+budget is counted per series. A reset instance serving round 2 keeps the series it was issued; a
+replacement reviewer is issued the next ordinal and starts at round 1, because it is continuing
+nobody's review. Counting per instance would restart the budget every round, so it could never be
+exhausted and the escalation exit that opens when it is would never open; counting a replacement
+against its predecessor's series would exhaust it a round early.
 
 - Reviewers must verify Drift Protocol enforcement.
 - Reviewers must verify test-layer policy enforcement when relevant.
@@ -363,9 +368,14 @@ post-escalation verification review of a user-named fix.
   normal failure this field addresses. If the tree changed mid-review, say so and name the revision
   the ruling is pinned to.
 - `Reviewer role`, `Reviewed artifact`, `Review series`, `Authored/edited under review` and `Recommended and unadjudicated` are REQUIRED. A response omitting any of them is not a valid review verdict and MUST NOT satisfy a completion gate — re-request it rather than reading a bare `Result:` line out of it, which is how a doer's self-assessment gets counted as a reviewer's ruling.
-- Anything other than `none` is a declared independence conflict: the verdict cannot be `PASS`,
-  and the review must be handed to a non-participating reviewer (see
+- A non-`none` `Authored/edited under review` is a declared independence conflict: the verdict
+  cannot be `PASS`, and the review is handed to a non-participating reviewer (see
   `Definition: independent reviewer`).
+- A non-`none` `Recommended and unadjudicated` is not a routing problem, and a handoff does not
+  answer it. The verdict is `REVISE` naming the decision, and the decision is reopened and put to
+  the user — or recorded open where no question can be asked. A replacement reviewer would attest
+  `none` truthfully and clear nothing, because what is unsettled is the decision the artifact
+  carries, not who is reading it.
 - `Result: REVISE` is legal only when at least one finding is `Severity: blocking`. A response
   whose findings are all advisory returns `Result: PASS` with the proposals attached.
 

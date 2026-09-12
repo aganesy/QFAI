@@ -109,7 +109,50 @@ describe("a griller's recommendations and reviewer independence", () => {
       const content = await read(tree);
       expectPhrase(content, "**Review rounds are one series, whatever instance serves them.**");
       expectPhrase(content, "`Review series`");
-      expectPhrase(content, "the budget could\nnever be exhausted");
+      expectPhrase(content, "it could never be exhausted");
+    });
+
+    it(`${tree}: separates a reset instance from a replacement reviewer`, async () => {
+      // Both arrive as a new `Agent instance` on the same artifact and role, so
+      // a key of artifact + role alone cannot tell them apart and a replacement
+      // inherits a round its predecessor spent.
+      const content = await read(tree);
+      expectPhrase(content, "a replacement ordinal that starts at 1");
+      expectPhrase(
+        content,
+        "a replacement reviewer is issued the next ordinal and starts at round 1",
+      );
+      expectPhrase(
+        content,
+        "counting a replacement against its predecessor's series would exhaust it a round early",
+      );
+    });
+
+    it(`${tree}: reopens an unadjudicated recommendation instead of rerouting it`, async () => {
+      // The handoff remedy answers an authorship conflict. Applied to a
+      // recommendation nobody adjudicated, the replacement attests `none`
+      // truthfully and the artifact still carries what no user settled.
+      const content = await read(tree);
+      expectPhrase(
+        content,
+        "A non-`none` `Recommended and unadjudicated` is not a routing problem, and a handoff does not answer it",
+      );
+      expectPhrase(
+        content,
+        "A replacement reviewer would attest `none` truthfully and clear nothing",
+      );
+    });
+
+    it(`${tree}: lets a stage that ran no grilling session answer none`, async () => {
+      // Most stages run no agent-to-agent grilling session and record no row.
+      // Required unconditionally, the ordinary `none` response becomes a
+      // `REVISE` over provenance that never existed.
+      const content = await read(tree);
+      expectPhrase(
+        content,
+        "an otherwise complete Work Orders Summary without one is the evidence for `none`",
+      );
+      expectPhrase(content, "or one too incomplete to tell those two apart");
     });
 
     it(`${tree}: makes the attestation a required field`, async () => {
