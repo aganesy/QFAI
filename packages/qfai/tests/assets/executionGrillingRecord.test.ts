@@ -152,6 +152,14 @@ describe.each(TREES)("%s — the execution stages record their sessions", (tree)
     // Two stages share an evidence file, so one table would have each gate
     // rejecting the other stage's rows.
     expectPhrase(body, "**One block per stage as well as per run**");
+    // An artifact cannot prove its own freshness: the value that settles it
+    // arrives in the reviewer work order.
+    expectPhrase(
+      body,
+      "**The run's start goes to the reviewer in its work order, not only into the",
+    );
+    expectPhrase(body, "a rerun that wrote no block leaves an earlier one internally consistent");
+    expectPhrase(body, "the one value that settles it has to arrive from outside the artifact");
     expectPhrase(body, "The gate reads this stage's own block and leaves every other block alone");
     expectPhrase(body, "The gate reads this stage's own block and leaves every other block alone");
     expectPhrase(
@@ -188,19 +196,26 @@ describe.each(TREES)("%s — the execution stages record their sessions", (tree)
     expectPhrase(body, "a recurring obstacle reopens a session under the same description");
   });
 
-  it("sends an implement run's record to the file its row owns", async () => {
+  it("sends an implement run's record to every file its rows own", async () => {
     // An `E2E` / `API` / `Integration` row's evidence is `atdd-<spec-id>.md`, so
     // a record always written here leaves that row's reviewer without one.
     const body = await grilling("qfai-implement");
-    expectPhrase(body, "The record goes in **the evidence file this run's row owns**");
+    expectPhrase(body, "The record goes in **every evidence file this invocation's rows own**");
     expectPhrase(body, "by the rule gate item 10 uses");
-    expectPhrase(body, "writing to both leaves two records going stale independently");
+    // One pass may hold a Unit row and an E2E row, read by two reviewers
+    // opening two files.
+    expectPhrase(
+      body,
+      "**Every one, because one invocation may process rows with different owners.**",
+    );
+    expectPhrase(body, "identical heading, identical rows, written in the same edit");
   });
 
   it.each(STAGES)("%s tells its gate to read every row", async (skill) => {
     // Nothing else reads it. An unread record is a heading.
     const body = await read(`assistant/skills/${skill}/SKILL.md`);
     expectPhrase(body, "`Preflight`, a row for every session detection opened");
+    expectPhrase(body, "block whose time equals the one this run's work order states");
     expectPhrase(
       body,
       "every row`s `Ended at` is at or after the run-started time".replace("row`s", "row's"),

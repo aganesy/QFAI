@@ -112,7 +112,8 @@ Use the shared schema.
   says `session opened` — one for the preflight session, all of them inside this
   run's own block. Every `Ended` is one of the four endings the rule master
   names, every row's `Ended at` is at or after the run-started time on
-  its own `### /qfai-verify — run started` block, and each row's `Open` count matches the register lines naming
+  a `### /qfai-verify — run started` block whose time equals the one this
+  run's work order states, and each row's `Open` count matches the register lines naming
   that row's `Session`. **A row whose ending lets the work go on also carries a
   `Work resumed` later than its own `Ended at`** — that ordering is the whole
   reason both times are recorded, and a blank or earlier one is a session
@@ -235,6 +236,15 @@ restated here.
   over an unchanged tree produces the same `Revision`, because that address is a
   tree address and excludes `.qfai/evidence/**`. Only a value that moves every
   invocation separates the two.
+
+  **The run's start goes to the reviewer in its work order, not only into the
+  file.** A block carries its own heading, so a gate reading the heading alone
+  checks the record against itself: a rerun that wrote no block leaves an
+  earlier one internally consistent, and its reviewer has nothing to contradict
+  it with. The orchestrator states this invocation's start in every reviewer
+  work order it opens, and the gate requires the block heading to carry that
+  exact value. An artifact cannot prove its own freshness, and the one value
+  that settles it has to arrive from outside the artifact.
 
   **One block per stage as well as per run**, because two stages share an
   evidence file: an `E2E` / `API` / `Integration` row's proof lives in

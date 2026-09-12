@@ -92,13 +92,22 @@ restated here.
   upstream changes, so there is nothing to approve.
 - **Record both sessions where the gate reads them.** The method writes no
   artifact of its own, so a run that grilled and a run that skipped it leave the
-  same tree. The record goes in **the evidence file this run's row owns**, by
-  the rule gate item 10 uses: `.qfai/evidence/implement-<spec-id>.md`, and
-  `.qfai/evidence/atdd-<spec-id>.md` for an `E2E` / `API` / `Integration` row
-  whose `Pre-split-evidence` marker does not send it back here. One file, the
-  one that row's reviewers read — writing to both leaves two records going stale
-  independently, and writing only here leaves the artifact the reviewer opens
-  without the section its gate requires. That file carries a
+  same tree. The record goes in **every evidence file this invocation's rows
+  own**, by the rule gate item 10 uses: `.qfai/evidence/implement-<spec-id>.md`,
+  and `.qfai/evidence/atdd-<spec-id>.md` for an `E2E` / `API` / `Integration`
+  row whose `Pre-split-evidence` marker does not send it back here.
+
+  **Every one, because one invocation may process rows with different owners.**
+  A `Unit` row and an `E2E` row in the same pass are read by two reviewers
+  opening two files, and a record in one of them leaves the other reviewer
+  without the section its gate requires. The blocks are the same block —
+  identical heading, identical rows, written in the same edit when the session
+  ends — so they cannot go stale independently the way a record updated in one
+  place would. Each gate reads the block in the file it audits and leaves the
+  rest alone. A run whose rows all own one file writes one block, which is the
+  ordinary case.
+
+  Each of those files carries a
   `## Grilling Session` section holding one row per session:
 
   ```text
@@ -130,6 +139,15 @@ restated here.
   over an unchanged tree produces the same `Revision`, because that address is a
   tree address and excludes `.qfai/evidence/**`. Only a value that moves every
   invocation separates the two.
+
+  **The run's start goes to the reviewer in its work order, not only into the
+  file.** A block carries its own heading, so a gate reading the heading alone
+  checks the record against itself: a rerun that wrote no block leaves an
+  earlier one internally consistent, and its reviewer has nothing to contradict
+  it with. The orchestrator states this invocation's start in every reviewer
+  work order it opens, and the gate requires the block heading to carry that
+  exact value. An artifact cannot prove its own freshness, and the one value
+  that settles it has to arrive from outside the artifact.
 
   **One block per stage as well as per run**, because two stages share an
   evidence file: an `E2E` / `API` / `Integration` row's proof lives in
@@ -418,7 +436,8 @@ Use the shared schema (per-row `Status (PASS/REVISE/PENDING)` column, reviewer r
   says `session opened` — one for the preflight session, all of them inside this
   run's own block. Every `Ended` is one of the four endings the rule master
   names, every row's `Ended at` is at or after the run-started time on
-  its own `### /qfai-implement — run started` block, and each row's `Open` count matches the register lines naming
+  a `### /qfai-implement — run started` block whose time equals the one this
+  run's work order states, and each row's `Open` count matches the register lines naming
   that row's `Session`. **A row whose ending lets the work go on also carries a
   `Work resumed` later than its own `Ended at`** — that ordering is the whole
   reason both times are recorded, and a blank or earlier one is a session
@@ -574,11 +593,12 @@ Required sections:
 - Items processed (TDD-ID, TC-Refs, final status)
 - `## Grilling Session` — one `### /qfai-implement — run started <time>` block
   per invocation, one row per session inside it, and the open questions listed
-  under the table. The block heading is what says the rows are this
-  invocation's; `Revision` says which tree each session ended against
-  (`## Grilling (MANDATORY)`). A run whose row owns `atdd-<spec-id>.md` writes
-  its block into that file's section instead, beside the blocks `/qfai-atdd`
-  wrote, by the same rule gate item 10 uses
+  under the table. The block heading carries the start this run's work order
+  states, which is what says the rows are this invocation's; `Revision` says
+  which tree each session ended against (`## Grilling (MANDATORY)`). A run
+  whose rows own `atdd-<spec-id>.md` writes the same block into that file's
+  section too, beside the blocks `/qfai-atdd` wrote, by the same rule gate
+  item 10 uses
 - **Per item, one `### TDD-NNNN` section** carrying the contract below — the single home for that item's RED/GREEN commands and output, in whichever of the two files the row's `Layer` names. The ledger's `Evidence` cell anchors here and holds only the one-word outcomes, because a GFM cell cannot hold a newline or a bare `|` (`references/execution-ledger.md#evidence-cell-contract`)
 - Test results summary
 - Exception items (if any) with DR-IDs
