@@ -2741,6 +2741,14 @@ const LEGACY_EVIDENCE_IGNORE_NEGATIONS: readonly string[] = [
   // out to its full width, which is the only width the check accepts: any
   // other suffix is rejected there rather than demoted, so a wider negation
   // would commit a file nothing reads.
+  // The prototyping session record, for the same reason again. It is a user
+  // decision rather than regenerable stage evidence, so the root block tracks
+  // it — and the nested `*` overrides that root negation on any project
+  // carrying the legacy file, which is every project initialized before the
+  // root block grew its own evidence negations. The directory needs its own
+  // line: git never descends into an ignored one, so the leaf alone is inert.
+  "!prototyping/",
+  "!prototyping/grilling.md",
   "!import-lite.md",
   `!import-lite-${CANONICAL_TIMESTAMP_GLOB}.md`,
 ];
