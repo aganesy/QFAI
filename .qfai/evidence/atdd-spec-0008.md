@@ -100,13 +100,16 @@ the evidence their cells point at.
 The mutation removed the `TODO:` prefix from **both** marker lines in the JS/TS
 body.
 
-**What the oracle does not cover.** Removing the prefix from one of the two
-lines leaves the test green, and that was run rather than assumed. The
-assertion reads each emitted body for one occurrence of the marker, and both
-lines write it into every body, so either alone satisfies it. The oracle covers
-the marker's presence and not its placement. That is the boundary a stronger
-test would have to move, and it is recorded here rather than left for the next
-reader to find.
+**A second mutation, and why it survives.** Removing the prefix from one of the
+two lines leaves the test green. That was run rather than assumed, and it is not
+an oracle gap: `TC-0008-0013` asks that each emitted file **contain**
+`// TODO: implement assertion for <TC-ID>`, so a body still holding it at one
+site satisfies the obligation. The surviving mutant changes no contracted
+behaviour, which is what makes it uninformative here.
+
+The boundary that follows is on the obligation, not the test: nothing in the
+spec pins where in the body the marker sits. A test asserting placement would
+assert more than the spec requires.
 
 - Refactor verify command: npx vitest run tests/integration/atddScaffoldSkeleton.test.ts tests/integration/atddScaffoldEscalation.test.ts
 - Refactor verify result: Test Files 2 passed (2); Tests 21 passed (21)
@@ -180,8 +183,9 @@ Recorded per row above, and summarized in the table under
 
 ## Gaps / Open risks
 
-- `TDD-0013`'s oracle covers the marker's presence and not its placement. The
-  boundary is stated in that row's section.
+- `TC-0008-0013` pins the marker's presence in an emitted body and not its
+  position, so a mutation to one of the two sites that write it survives. The
+  measurement is in that row's section.
 - Twelve of the spec's other rows are parked at `exception`, and two of those
   cite `DR-0008-0100`, which no decision record declares. Out of scope here:
   this run advanced no row's status.
