@@ -1328,7 +1328,7 @@ export const ALLOWED_INIT_CONTENT: ReadonlyMap<string, string> = new Map([
     // byte. That check is what keeps a re-pin a review of one line rather than a re-blessing of
     // the whole file.
     ".github/copilot-instructions.md",
-    "bf048bd541b3218519f34f4b54b6e190daf541904598a98ae9a7f34cbc4b6476",
+    "a246e728b78099a29460764aaa7e09f3b11cdb420f0ffe061a1812e9fa8c38c2",
   ],
   // `qfai init` copies this file verbatim, so it is pinned like every other
   // adopter-facing file here — and for one reason none of the others has: it
@@ -1410,9 +1410,13 @@ export const ALLOWED_INIT_CONTENT: ReadonlyMap<string, string> = new Map([
   //
   //     .qfai/review_archive/*
   //
+  // Re-pinned again for the spec stage's evidence, which `QFAI-GRILL-001` reads:
+  //
+  //     !.qfai/evidence/sdd-*.md
+  //
   // Derived the way its predecessors were — `qfai init` into a temp root, then
   // reading what it wrote.
-  [".gitignore", "bba1090962529e016912dc9a0a80a23e500805c384ea4d6328c6d4c91536a70e"],
+  [".gitignore", "15e02de9c5677debca0985333c91261f9731c52efcbdb8a352458fdae930d32f"],
   // One bullet each, inside the managed cross-AI rules block: the
   // `documentation-clarity.md` master that the same run seeds beside them.
   // Removing that line from both files reproduces the previous digests
@@ -1433,9 +1437,10 @@ export const ALLOWED_INIT_CONTENT: ReadonlyMap<string, string> = new Map([
   // run leaves the section exactly as edited; it now adds a bullet for a rule
   // being shipped into the project for the first time, and says that a bullet
   // the project deleted stays deleted. Restoring the old sentence in both files
-  // reproduces the previous digests byte for byte.
-  ["AGENTS.md", "400c5af150a32317083b2fb97c08e6213bf3dcddeb758565e76f423b3cd8c32b"],
-  ["CLAUDE.md", "39da2c9cec9b46ddf2f43c924e4f4348073ab9b421554ed9fa58015043694d45"],
+  // reproduces `fff9e210…` and `7203ba75…` byte for byte, which is what makes
+  // this a review of one sentence per file.
+  ["AGENTS.md", "d3d39ba436dfbb657845fd0f339e18a174cba0ad38ca8137c116415ca8efa64a"],
+  ["CLAUDE.md", "5b6487bad9c1b9f46901650be64f04cb3aaf000d9d3c51327ec7c62653f64001"],
   // Inside `.claude/`, and pinned anyway — see the paragraph above the path set.
   // These are the hooks that restate a rule at the moment it applies: the writing
   // rule when a pull request, issue or review is posted through the GitHub tools

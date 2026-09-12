@@ -115,10 +115,16 @@ describe("reviewer response provenance", () => {
     }
 
     for (const content of await readShipped("skills/web-research/SKILL.md")) {
+      // The gate enumerates every field the baseline makes REQUIRED. One the
+      // baseline demands and this list omits is a response that satisfies the
+      // skill and not the contract — which is how a reset round reaches a gate
+      // unbound to the budget it is continuing.
       expect(content).toContain(
-        "REQUIRED `Reviewer role:`, `Reviewed artifact:`, `Authored/edited under review:` and",
+        "REQUIRED `Reviewer role:`, `Reviewed artifact:`, `Review series:`,",
       );
-      expect(content).toContain("`Recommended and unadjudicated:`");
+      expect(content).toContain(
+        "`Authored/edited under review:` and `Recommended and unadjudicated:`",
+      );
     }
   });
 });
