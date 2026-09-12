@@ -51,11 +51,21 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   only the questions downstream of that lookup wait. A decision about what is
   wanted is the user's, and the agent waits for it.
 
-  Asking stops when the frontier is empty **and** the user confirms the
-  understanding is shared. There is no question cap, and an agent that answered
-  its own decisions has broken the rule rather than read it liberally. A question
-  about how something should look or feel is answered by building something to
-  react to, not by another round.
+  Asking stops when no node is open **and** the user confirms the understanding
+  is shared. There is no question cap, and an agent that answered its own
+  decisions has broken the rule rather than read it liberally. A question about
+  how something should look or feel is answered by building something to react
+  to, not by another round.
+
+  Three cases the method has to survive are stated rather than left to the
+  reader. A host whose question tool takes fewer questions than the round holds
+  receives the round in batches, with the frontier held fixed between them, so
+  batching never becomes a second round. A fact the environment does not hold —
+  an unpublished date, a constraint in a contract — is asked of the user as a
+  value rather than offered as a choice, because a fact recorded as a preference
+  becomes revisable. And a lookup still running when the user closes the
+  questions is finished, with whatever decision it raises recorded like the rest,
+  so nothing surfaces into a gap where it can be neither asked nor assumed.
 
   Repository-only for now, as `document-schema.md` and `repository-language.md`
   are. The shipped copy and the entry-point listings are one unit and land
