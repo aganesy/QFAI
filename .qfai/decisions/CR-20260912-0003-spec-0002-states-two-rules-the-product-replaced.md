@@ -102,7 +102,13 @@ spec catching up, not the product going back.
 - Tests: `spec-0002/TDD-0008`, `spec-0002/TDD-0009`, `spec-0002/TDD-0010`, `spec-0002/TDD-0012`
 - Contracts: `none`
 - Schema: `none`
-- Upstream paths edited under this CR: `.qfai/specs/spec-0002/01_Spec.md`, `.qfai/specs/spec-0002/03_Acceptance-Criteria.md`, `.qfai/specs/spec-0002/06_Test-Cases.md`, `.qfai/specs/spec-0002/07_Decisions.md`, `.qfai/specs/spec-0002/10_Plan.md`, `.qfai/specs/spec-0002/tdd/test-list.md`
+- Upstream paths edited under this CR:
+  `.qfai/specs/spec-0002/01_Spec.md`,
+  `.qfai/specs/spec-0002/03_Acceptance-Criteria.md`,
+  `.qfai/specs/spec-0002/06_Test-Cases.md`,
+  `.qfai/specs/spec-0002/07_Decisions.md`,
+  `.qfai/specs/spec-0002/10_Plan.md`,
+  `.qfai/specs/spec-0002/tdd/test-list.md`
 
 ## Decision needed from user
 
