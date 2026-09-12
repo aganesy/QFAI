@@ -66,6 +66,14 @@ check. Gate item 10 rejects any other shape wherever a revision is recorded:
      `\n`. Path, boundary and order are all in it on purpose: contents alone
      collide — renaming a file, or swapping the contents of two, leaves the hash
      unchanged.
+     **How each part is written is fixed, for the reason the `symlink` clause
+     gives.** Every SHA-256 inside a record is its 64 lowercase hexadecimal
+     characters — never its 32 raw bytes, and never the bytes it is a digest of.
+     The `HEAD` record carries the full 40-character revision, not an
+     abbreviation. A single `\n` goes between records and none after the last.
+     Each of those has two defensible readings, so leaving one open lets two
+     honest implementations address the same tree differently, which is the one
+     thing the address exists to prevent.
   4. **Hash.** SHA-256 of that string; record the hex digest.
 
   An empty diff and an empty untracked list still contribute their records, so

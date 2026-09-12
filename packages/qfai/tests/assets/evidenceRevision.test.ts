@@ -22,6 +22,7 @@
  * distinctive clauses, deliberately not on whole paragraphs: the rule is the
  * subject, and a reword of the surrounding prose must not redden this file.
  */
+import { createHash } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -525,4 +526,80 @@ describe("evidence and verdicts carry a revision", () => {
       expect(occurrences).toBeGreaterThanOrEqual(3);
     });
   }
+});
+
+/**
+ * The address is one value, or it is not an address.
+ *
+ * Step 3 builds a string of records and step 4 hashes it. A SHA-256 is 32 bytes
+ * and those bytes have two written forms, so a step that names a digest without
+ * naming its notation has two honest readings. The same holds for the trailing
+ * newline and for how long a revision is written. Five readings of one clean
+ * tree gave five addresses, and the whole point of the address is that they
+ * cannot.
+ *
+ * This is the second implementation the rule needs: it builds the string the
+ * document describes and checks that the reading the document now fixes is the
+ * one that reproduces a recorded address, and that the four it rules out do not.
+ */
+describe("the working-tree address has one notation", () => {
+  const REVISION = "649d8111147436408c90cbbe1b9f9b07e34da8cb";
+  /** Recorded for a clean checkout of that revision. */
+  const RECORDED = "working-tree+ec692d38e2347eafdf17ade16c61b11a4391417f0733d3f4de42c352e659e8b5";
+
+  const sha256 = (input: Buffer): Buffer => createHash("sha256").update(input).digest();
+  const sha256Hex = (input: Buffer): string => sha256(input).toString("hex");
+
+  /**
+   * Steps 3 and 4 over a clean checkout: the diff is empty, the untracked list
+   * is empty, so the string is the `HEAD` record and the `DIFF` record.
+   */
+  function address(options: {
+    readonly digestAsHex: boolean;
+    readonly trailingNewline: boolean;
+    readonly revision: string;
+  }): string {
+    const emptyDiff = Buffer.alloc(0);
+    const diffDigest = options.digestAsHex
+      ? Buffer.from(sha256Hex(emptyDiff), "utf-8")
+      : sha256(emptyDiff);
+    const serialized = Buffer.concat([
+      Buffer.from(`HEAD\u0000${options.revision}\nDIFF\u0000`, "utf-8"),
+      diffDigest,
+      Buffer.from(options.trailingNewline ? "\n" : "", "utf-8"),
+    ]);
+    return `working-tree+${sha256Hex(serialized)}`;
+  }
+
+  const HEX_FULL_NO_TRAILING = {
+    digestAsHex: true,
+    trailingNewline: false,
+    revision: REVISION,
+  } as const;
+
+  for (const tree of QFAI_TREES) {
+    it(`${tree}: step 3 fixes the notation of every part`, async () => {
+      const text = flat(await read(tree, REFERENCE));
+      expect(text).toContain("How each part is written is fixed");
+      expect(text).toContain("64 lowercase hexadecimal characters");
+      expect(text).toContain("never its 32 raw bytes, and never the bytes it is a digest of");
+      expect(text).toContain("full 40-character revision");
+      expect(text).toContain("between records and none after the last");
+    });
+  }
+
+  it("reproduces a recorded address under the reading the document fixes", () => {
+    expect(address(HEX_FULL_NO_TRAILING)).toBe(RECORDED);
+  });
+
+  it("gives a different address under each reading the document rules out", () => {
+    // Named individually rather than counted: a reading that quietly started
+    // agreeing would be the drift this suite exists to catch, and a count of
+    // distinct values would not say which one moved.
+    expect(address({ ...HEX_FULL_NO_TRAILING, digestAsHex: false })).not.toBe(RECORDED);
+    expect(address({ ...HEX_FULL_NO_TRAILING, trailingNewline: true })).not.toBe(RECORDED);
+    expect(address({ ...HEX_FULL_NO_TRAILING, revision: REVISION.slice(0, 12) })).not.toBe(
+      RECORDED,
+    );
+  });
 });
