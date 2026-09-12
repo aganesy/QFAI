@@ -2,51 +2,72 @@
 
 ## Scope
 
-This matrix scores the nine test cases `06_Test-Cases.md` declares — `TC-0014-0009`, `-0018`,
-`-0019`, `-0028`, `-0029`, `-0033`, `-0034`, `-0035` and `-0036` — against the tests that actually
-discharge them in `packages/qfai/tests/**`. The obligation set is read from `06_Test-Cases.md` in
-full, not from the rows of `.qfai/specs/spec-0014/tdd/test-list.md`. Four of the nine rows are
-`Level: unit` (`-0028`, `-0029`, `-0033`, `-0034`) and five are `Level: integration`; the split
-matters and is stated under "Annotation coverage" below. The business rule table carries all seven
-`BR-0014-*` headings of `04_Business-Rules.md` — `-0001` … `-0006` and `-0025`. None carries a
-status retiring it, so all seven are active and all seven own a row.
+This matrix scores fourteen obligations: the five user stories of `02_User-stories.md` —
+`US-0014-0013`, `-0014`, `-0018`, `-0019` and `-0020` — and the nine test cases of
+`06_Test-Cases.md` — `TC-0014-0009`, `-0018`, `-0019`, `-0028`, `-0029`, `-0033`, `-0034`, `-0035`
+and `-0036`. Both obligation sets are read from their own file in full, not from the rows of
+`.qfai/specs/spec-0014/tdd/test-list.md`. A `US-*` seeds no ledger row at all, and a `TC-*` whose
+row had been dropped would be invisible to a reading that starts from the ledger.
 
-**Three of the nine obligations have no test at all, and in each case the reason is that the
-behaviour the row names is absent from the product rather than that the testing is thin.**
+All five user stories are active. A story deferred out of the slice carries an
+`- x-qfai-status: planned` meta line inside its own `US-*` block; no block in `02_User-stories.md`
+carries one, and the string occurs nowhere under `.qfai/specs/spec-0014/`.
+
+Four of the nine test-case rows are `Level: unit` (`-0028`, `-0029`, `-0033`, `-0034`) and five are
+`Level: integration`; the split matters and is stated under "Annotation coverage" below. The
+business rule table carries all seven `BR-0014-*` headings of `04_Business-Rules.md` — `-0001` …
+`-0006` and `-0025`. None carries a status retiring it, so all seven are active and all seven own a
+row.
+
+**Four obligations are undischarged, and in none of them is thin testing the whole reason.**
+`TC-0014-0009` names behaviour that exists only as a shipped skill contract, which no test reads.
+`TC-0014-0028` and `TC-0014-0029` name a slice that is absent from the product. `TC-0014-0033` names
+a layout rule the product contradicts. Only the first can be repaired by writing a test.
 
 - `TC-0014-0009` declares `AC-0014-0002` and `EX-0014-0002`: feed `/qfai-verify` a `REVISE` review
-  artifact, and verify blocks completion. There is no verify command in
-  `packages/qfai/src/cli/commands/`, and no code anywhere blocks on a `REVISE` verdict in a verify
-  path. The two `describe` blocks named `TC-0014-0009` in `verifySemanticsSpec0014.test.ts` pass,
-  and they test stale sidecar migration errors — a different subject, adopted by `09_delta.md`
-  under a chain whose `AC`, `BR` and `EX` were never written into the pack. See Findings 1.
+  artifact, and verify blocks completion. The behaviour exists. `/qfai-verify` is a shipped skill,
+  and its SKILL.md requires the reviewer to return only `PASS` or `REVISE` and forbids DONE or
+  handoff until every routed blocking reviewer returns `PASS`. No test reads those clauses, and no
+  case anywhere feeds a `REVISE` artifact to anything. The two `describe` blocks named
+  `TC-0014-0009` in `verifySemanticsSpec0014.test.ts` pass, and they test stale sidecar migration
+  errors — a different subject with a different emission. See Findings 1.
 - `TC-0014-0028` and `TC-0014-0029` declare `AC-0014-0004` and `EX-0014-0025`: a prototyping
   design-system compliance slice reading `designSystemCompliance` out of a legacy scoring artifact.
   Neither `PROT-DS01` nor `designSystemCompliance` occurs anywhere in `packages/qfai/src/**` or
   `packages/qfai/tests/**`. `01_Spec.md` REQ-0028 states the obligation conditionally — "`PROT-DS01`
   remains a validator for design-system compliance artifacts **when that slice exists**" — and the
   slice does not exist.
+- `TC-0014-0033` declares `AC-0014-0005`, whose deciding clause is that the legacy `screenshots/` /
+  `html/` directory layout "is no longer accepted as the active SSOT". The product requires that
+  layout: `uiEvidenceArtifacts.ts` builds `screenshotRoot` as `<prototyping root>/screenshots` and
+  checks it before it scans for an `iter-NN` file, `validate.ts` documents that path as the required
+  location of screenshot evidence, and `prototypingIterate.ts` mirrors every accepted iteration into
+  `screenshots/` and `html/` so the first lookup finds something. Two passing cases in
+  `uiEvidenceArtifacts.test.ts` require a project carrying only the legacy layout to produce zero
+  issues. See Findings 4.
 
-Those three rows carry 27 of the matrix's 47 `❌` depth cells between them.
+`TC-0014-0009`, `TC-0014-0028` and `TC-0014-0029` carry 27 of the matrix's 65 `❌` depth cells
+between them.
 
-The remaining six rows are scored on their merits and range widely. `TC-0014-0036` and
-`TC-0014-0033` are the strongest work in the pack: 16 passing cases driving the scope-upgrade
-re-gating end to end, and a three-way partition of the prototyping evidence layout with a
-discriminating control. `TC-0014-0018`, `-0019` and `-0035` are narrower, and `-0034` is a single
-well-oracled case with no boundary or error direction.
+The rest of the pack ranges widely. `TC-0014-0036` and `US-0014-0020` are the strongest work here:
+sixteen passing cases drive the scope-upgrade re-gating end to end with five distinct refusal
+causes, and two more seal the scope-limited certificate. `US-0014-0014` is enforced by a strong
+suite that the pack binds to it by nothing.
+`TC-0014-0018`, `TC-0014-0019`, `US-0014-0013` and `TC-0014-0035` are narrow, `TC-0014-0034` is a
+single well-oracled case with no boundary or error direction, and `US-0014-0018` has one incidental
+gate and no case on the claim that distinguishes it.
 
-Committed, because it is a governance record. Section "Every `❌` cell, named" enumerates all 58 of
-them so that "one justification per `❌`" is checkable rather than asserted, and section "Every `⚠️`
-cell, named" does the same for all 33 partial scores, which the PASS criterion also requires a
-rationale for.
+Committed, because it is a governance record. Section "Every `❌` cell, named" enumerates all 78 of
+them — 69 scored, 9 in the non-scored `Status` columns — so that "one justification per `❌`" is
+checkable rather than asserted, and section "Every `⚠️` cell, named" does the same for all 62
+partial scores, 50 of which are scored cells the PASS criterion also requires a rationale for.
 
 ## What was measured, and how
 
 Every score below rests on a test run, not on a reading of a ledger. The ledger is a usable starting
 point for this pack — all seven `done` rows name a file that exists on disk — but three of its rows
-point somewhere the obligation is not discharged, and three of the files that do carry coverage
-appear in no row at all. The files below were located by reading the tests and the source, then
-executed:
+point somewhere the obligation is not discharged, and five of the files that carry coverage appear
+in no row at all. The files below were located by reading the tests and the source, then executed:
 
 | File                                                                      | Result        |
 | ------------------------------------------------------------------------- | ------------- |
@@ -57,30 +78,40 @@ executed:
 | `tests/cli/prototypingCertify.test.ts`                                    | 40 passed     |
 | `tests/validators/uiEvidenceArtifacts.test.ts`                            | 7 passed      |
 | `tests/core/prototyping/iterationPaths.test.ts`                           | 8 passed      |
+| `tests/core/renderEvidence.test.ts`                                       | 28 passed     |
+| `tests/integration/reviewArtifactsProfileWiring.test.ts`                  | 4 passed      |
 | `tests/integration/specAutoDiscovery.test.ts`                             | 38 passed     |
 | `tests/integration/spec0014SaasPackageCertify.test.ts`                    | 2 **skipped** |
 | `tests/e2e/spec0014SaasPackageCertifyE2E.test.ts`                         | 2 **skipped** |
 
-Three of those files carry no ledger row and are scored anyway, because the obligation is read from
-`06_Test-Cases.md`: `uiEvidenceArtifacts.test.ts` and `iterationPaths.test.ts` hold the reader-side
-coverage for `TC-0014-0033`, and `prototypingCertify.test.ts` holds the `reviewerGate` refusal that
-`BR-0014-0002` is scored against.
+Five of those files carry no ledger row and are scored anyway, because the obligation is read from
+`06_Test-Cases.md` and `02_User-stories.md`: `uiEvidenceArtifacts.test.ts` and `iterationPaths.test.ts`
+hold the reader-side coverage for `TC-0014-0033`, `prototypingCertify.test.ts` holds the
+`reviewerGate` refusal that `BR-0014-0002` is scored against, `renderEvidence.test.ts` is the suite
+that enforces `US-0014-0014`'s subject, and `reviewArtifactsProfileWiring.test.ts` is the only file
+that drives a verify-profile validate run.
 
-Four negative results are load-bearing and were checked directly rather than inferred:
+Five negative results are load-bearing and were checked directly rather than inferred:
 
 1. **`packages/qfai/tests/validators/prototypingDesignSystem.test.ts` does not exist.** Both
    exception rows, `TDD-0028` and `TDD-0029`, name it as their `Test file`.
 2. **`PROT-DS01` and `designSystemCompliance` occur nowhere in `packages/qfai/src/**` or
    `packages/qfai/tests/**`.** The identifiers appear only in spec prose, and `spec-0012`'s own
    `09_delta.md` records the `designSystemCompliance` slice as purged.
-3. **`src/**` blocks on a `REVISE` verdict in exactly one place, and it is not a verify path.**
-   The token appears in three source files. `gitignore.ts` and `tddList.ts` are the TDD ledger's own
-   reviewer-verdict handling. `renderCritique.ts` requires an evidence file to carry a
-   `verdict: (PASS|REVISE)` field, and a `REVISE` satisfies that presence check exactly as a `PASS`
-   does. The one gate that refuses is `prototypingCertify.ts`, which exits non-zero unless
-   `prototyping.json#reviewerGate.result === "PASS"` — a different command reading a different
-   artifact from the one `AC-0014-0002` names.
-4. **`saas-package`, `SaaS` and `--upgrade-scope` do not occur in `/qfai-prototyping` SKILL.md.**
+3. **No CLI surface blocks on a `REVISE` verdict in a verify path; the gate `AC-0014-0002` names is
+   a skill contract.** The token appears in three source files.
+   `gitignore.ts` and `tddList.ts` are the TDD ledger's own reviewer-verdict handling.
+   `renderCritique.ts` requires an evidence file to carry a `verdict: (PASS|REVISE)` field, and a
+   `REVISE` satisfies that presence check exactly as a `PASS` does. The one command that refuses is
+   `prototypingCertify.ts`, which exits non-zero unless `prototyping.json#reviewerGate.result ===
+   "PASS"` — a different command reading a different artifact from the one `AC-0014-0002` names. The
+   gate the criterion is about is stated in the shipped `/qfai-verify` skill instead; see Findings 1.
+4. **No test in `packages/qfai/tests/**` reads the `/qfai-verify` reviewer-gate clauses.** The
+   shipped copy under `packages/qfai/assets/init/` and the installed copy under `.qfai/assistant/`
+   carry them at the same two lines. The tests that do assert a reviewer gate over a skill file —
+   `skillRoster.test.ts`, `implementationReviewerBlocking.test.ts`,
+   `finalChecklistGateParity.test.ts` — assert `qfai-implement`'s.
+5. **`saas-package`, `SaaS` and `--upgrade-scope` do not occur in `/qfai-prototyping` SKILL.md.**
    `BR-0014-0025`'s fourth clause requires the delivery mode to be documented there.
 
 ### Annotation coverage
@@ -92,7 +123,9 @@ records `scan.matchedFileCount: 2`, and both matches are annotation carriers —
 at all. Every integration obligation in this pack is therefore reported `coveredByCarrierOnly`:
 `TC-0014-0009`, `-0018`, `-0019`, `-0035`, `-0036`, and all five `US-0014-*`. This is a repo-wide
 condition that no work inside this pack can clear, and it is stated once here rather than repeated
-per row. It caps every integration row's `Status` at `⚠️`, exactly as it did for spec-0002.
+per row. It caps the `Status` of every row it names — the five integration test-case rows and all
+five user-story rows — at `⚠️`, exactly as it did for spec-0002. Two of those rows sit below the cap
+on their own merits, and the reasons are given per row.
 
 It does **not** cap the four unit rows. `catalog/test-layers.md` places the ATDD annotation
 obligation on L3 only, and the summary agrees: `TC-0014-0028`, `-0029`, `-0033` and `-0034` sit
@@ -112,33 +145,41 @@ skipped cases in all:
 
 **No obligation depends on a skipped case.** Both files were authored red, ahead of the
 implementation, and both were superseded by live suites that were never removed: `TC-0014-0035` is
-discharged by two passing cases in `prototypingCertify.saasPackage.test.ts` and `TC-0014-0036` by
-sixteen in `prototypingCertify.upgradeScope.test.ts`. The four skipped cases contribute to no cell
-in this matrix, and they are duplicates rather than gaps — but they are also the only files in the
-package that carry the `TC-0014-0035` / `TC-0014-0036` annotation in a `describe` a reader would
-take for the covering suite. See Findings 5.
+discharged by two passing cases in `prototypingCertify.saasPackage.test.ts`, `TC-0014-0036` by
+sixteen in `prototypingCertify.upgradeScope.test.ts`, and `US-0014-0020` by both. The four skipped
+cases contribute to no cell in this matrix, and they are duplicates rather than gaps — but they are
+also the only files in the package that carry the `TC-0014-0035`, `TC-0014-0036` or `US-0014-0020`
+annotation in a `describe` a reader would take for the covering suite. See Findings 5.
 
 ## The matrix
 
 | US/TC ID     | Equivalence partitions | Normal path | Error path | Edge cases | Boundary values | Special values | State transitions | Combinatorial | Oracle strength | Status |
 | ------------ | ---------------------- | ----------- | ---------- | ---------- | --------------- | -------------- | ----------------- | ------------- | --------------- | ------ |
+| US-0014-0013 | ⚠️                     | ✅          | ⚠️         | ❌         | ❌              | ❌             | ❌                | ❌            | ⚠️              | ⚠️     |
+| US-0014-0014 | ⚠️                     | ⚠️          | ⚠️         | ⚠️         | ⚠️              | ⚠️             | ❌                | ⚠️            | ⚠️              | ⚠️     |
+| US-0014-0018 | ⚠️                     | ❌          | ⚠️         | ❌         | ❌              | ❌             | ❌                | ❌            | ⚠️              | ❌     |
+| US-0014-0019 | ❌                     | ✅          | ⚠️         | ❌         | ❌              | ❌             | ❌                | ❌            | ⚠️              | ⚠️     |
+| US-0014-0020 | ✅                     | ✅          | ✅         | ✅         | ⚠️              | ⚠️             | ✅                | ✅            | ⚠️              | ⚠️     |
 | TC-0014-0009 | ❌                     | ❌          | ❌         | ❌         | ❌              | ❌             | ❌                | ❌            | ❌              | ❌     |
 | TC-0014-0018 | ⚠️                     | ✅          | ⚠️         | ❌         | ❌              | ❌             | ❌                | ❌            | ⚠️              | ⚠️     |
 | TC-0014-0019 | ❌                     | ✅          | ⚠️         | ❌         | ❌              | ❌             | ❌                | ❌            | ⚠️              | ⚠️     |
 | TC-0014-0028 | ❌                     | ❌          | ❌         | ❌         | ❌              | ❌             | ❌                | ❌            | ❌              | ❌     |
 | TC-0014-0029 | ❌                     | ❌          | ❌         | ❌         | ❌              | ❌             | ❌                | ❌            | ❌              | ❌     |
-| TC-0014-0033 | ✅                     | ✅          | ✅         | ✅         | ✅              | ⚠️             | ⚠️                | ⚠️            | ✅              | ⚠️     |
+| TC-0014-0033 | ⚠️                     | ⚠️          | ⚠️         | ⚠️         | ⚠️              | ⚠️             | ⚠️                | ⚠️            | ⚠️              | ❌     |
 | TC-0014-0034 | ⚠️                     | ✅          | ❌         | ⚠️         | ❌              | ❌             | ✅                | ⚠️            | ✅              | ⚠️     |
 | TC-0014-0035 | ⚠️                     | ✅          | ❌         | ❌         | ❌              | ❌             | ❌                | ❌            | ⚠️              | ⚠️     |
 | TC-0014-0036 | ✅                     | ✅          | ✅         | ✅         | ⚠️              | ⚠️             | ✅                | ✅            | ✅              | ⚠️     |
 
-Totals across the nine depth columns, 81 cells (9 rows × 9): **✅ 19 / ⚠️ 15 / ❌ 47**.
+14 rows × the 9 depth columns = **126 scored cells: ✅ 21 / ⚠️ 40 / ❌ 65**.
 
-Totals by `Status`, 9 cells: **✅ 0 / ⚠️ 6 / ❌ 3**.
+`Status` is the row verdict, not a mark, so it is outside the scored population. For reference, its
+14 cells read **✅ 0 / ⚠️ 9 / ❌ 5**.
 
-No row reaches `Status = ✅`. The five integration rows are capped by the carrier-only condition
-described above. The four unit rows are not capped by it; `TC-0014-0033` and `TC-0014-0034` are held
-at `⚠️` on their own merits, and `TC-0014-0028` and `TC-0014-0029` have no test.
+No row reaches `Status = ✅`. The five integration test-case rows and all five user-story rows are
+capped by the carrier-only condition described above. The four unit rows are not capped by it;
+`TC-0014-0034` is held at `⚠️` on its own merits, `TC-0014-0033` is `❌` because the clause that
+decides its criterion is contradicted by the product, and `TC-0014-0028` and `TC-0014-0029` have no
+test.
 
 ### Business rule coverage
 
@@ -156,20 +197,134 @@ the test cases cite, not from the rule's number.
 | BR-0014-0006 | ✅            | ⚠️            | ⚠️                   | TC-0014-0034                 | ⚠️     |
 | BR-0014-0025 | ⚠️            | ✅            | ✅                   | TC-0014-0035, TC-0014-0036   | ⚠️     |
 
-Totals across the three scored columns, 21 cells: **✅ 5 / ⚠️ 9 / n/a 3 / ❌ 4**.
-
-Totals by `Status`, 7 cells: **✅ 0 / ⚠️ 3 / ❌ 4**.
+7 rows × the 3 scored columns — `Positive case`, `Negative case`, `Conditional branches` — =
+**21 scored cells: ✅ 5 / ⚠️ 9 / ❌ 4, with `n/a` 3**. `Covering TC` holds identifiers and `Status`
+holds the row verdict, so neither is scored; the 7 `Status` cells read **✅ 0 / ⚠️ 3 / ❌ 4**.
 
 `n/a` is used three times, for `BR-0014-0001`, `-0002` and `-0003`, each of which states its rule
 unconditionally — "always full-scan", "is part of the completion gate", "remains the source" — so
 there is no branch to cover. It is not used anywhere an obligation exists and is unmet.
 
+### Both tables together
+
+The scored population is 147 cells: 126 matrix depth cells plus 21 business rule cells.
+
+| Mark | Matrix depth | Business rule | Scored total |
+| ---- | ------------ | ------------- | ------------ |
+| ✅   | 21           | 5             | 26           |
+| ⚠️   | 40           | 9             | 49           |
+| ❌   | 65           | 4             | 69           |
+| n/a  | 0            | 3             | 3            |
+| Sum  | 126          | 21            | 147          |
+
 ## Every ❌ cell, named
 
-The matrix carries 47 `❌` depth cells plus 3 in `Status`; the business rule table carries 4 in its
-scored columns plus 4 in its `Status` column — 58 in all. Each is named below with its own reason.
-A row's `Status` is `❌` when the obligation is not discharged at the depth the case describes; that
-verdict is stated once per row and is not repeated per cell.
+The matrix carries 65 `❌` depth cells plus 5 in `Status`; the business rule table carries 4 in its
+scored columns plus 4 in its `Status` column — 78 in all, of which 69 are scored. Each is named
+below with its own reason. A row's `Status` is `❌` when the obligation is not discharged at the
+depth the row describes; that verdict is stated once per row and is not repeated per cell.
+
+### US-0014-0013 — verify to use the canonical validator path
+
+The story's chain in the pack is `AC-0014-0003` → `TC-0014-0018`, `TC-0014-0019`, and its whole
+coverage is those rows' three passing cases in `verifySemanticsSpec0014.test.ts`. Nothing else in
+the suite addresses it. This row has **five `❌` depth cells** and no `❌` in `Status`.
+
+- **Edge cases** — the one case that builds a fixture seeds exactly one discussion pack, and the two
+  source reads cover three `src/` files between them. A repo root with no discussion directory, with
+  an empty one, and with two packs where the older must be ignored are untested, and a legacy
+  namespace re-entering through a re-export in `src/index.ts`, through a retained `dist/` artifact,
+  or through a path listed in `package.json#files` is invisible to a read of three named files.
+- **Boundary values** — the story's one ordered domain is the pack timestamp that decides "latest",
+  and no case exercises it at any edge. Its other half has no ordered domain at all: a namespace is
+  present or it is not, with no edge between.
+- **Special values** — no empty, absent or unreadable `01_Context.md` is supplied, and no empty or
+  truncated source file is constructed. Every fixture writes a well-formed context file with an
+  explicit surface.
+- **State transitions** — reaching a validator from an entrypoint is a single step, and no
+  removal-to-return progression of a compatibility namespace is observed.
+- **Combinatorial** — the story's two halves are never crossed. The source-text read, the
+  reach-through run and the package-surface read share no fixture, and no input violates two
+  predicates at once.
+
+### US-0014-0014 — truthful evidence and placeholder rejection to remain enforced
+
+The pack declares no `AC-*`, `BR-*`, `EX-*` or `TC-*` for this story; see Findings 6. The suite that
+enforces its subject is `packages/qfai/tests/core/renderEvidence.test.ts`, 28 passing cases over
+`core/uiux/renderEvidence.ts`: a bundle claiming `captured` must carry real file paths rather than a
+data URI, inline HTML or an oversized single-line blob, and a top-level status must agree with the
+per-screen statuses. Because the pack binds those cases to no criterion of this story, no cell in
+the row reaches `✅` — a reader has no artifact saying which enforcement the story means. This row
+has **one `❌` depth cell** and no `❌` in `Status`.
+
+- **State transitions** — `runRenderCapture` produces all three terminal statuses under three
+  conditions, and each is required to carry its evidence or its reason: a real capture yields
+  `captured` with files on disk, an unavailable adapter yields `skipped` with a reason, and a
+  throwing adapter yields `failed` with a reason. No progression between statuses is observed —
+  nothing re-runs a capture over a bundle that already records `skipped` and requires the stored
+  state to move — and no invalid transition is attempted and rejected.
+
+### US-0014-0018 — verify to depend on contract-first validate gates
+
+The pack declares no `AC-*`, `BR-*`, `EX-*` or `TC-*` for this story either; see Findings 6.
+`09_delta.md` records the decision as `AD-0014-0007`, with `AD-0014-0008` retaining
+`runCanonicalUixValidators` for direct discussion-pack validation only. The story's coverage is
+`reviewArtifactsProfileWiring.test.ts`, whose four passing cases drive `validateProject` under
+`profile: "verify"` over a project root and require one contract-first gate to report there and not
+under the partial `tdd` profile. This row has **six `❌` depth cells** and `Status = ❌`.
+
+- **Normal path** — the story's own direction is a verify run whose completion decision comes from
+  specs and contracts. Every case in the covering file seeds a review pack whose `summary.json` is
+  not JSON, so the only direction exercised is a failing one. No case requires a well-formed project
+  to pass the verify profile clean.
+- **Edge cases** — a project with contracts and no discussion pack, and a project with a discussion
+  pack and no contracts, are the two states that separate the two architectures. Neither is
+  constructed.
+- **Boundary values** — the story has no numeric, date, length or ordered domain, and no gate count
+  or profile size is measured at any edge.
+- **Special values** — no empty, absent or malformed `.qfai/contracts/` tree is supplied to a
+  verify-profile run.
+- **State transitions** — nothing observes downstream completion, so the pass-to-non-pass
+  progression the story's "so that" clause is about has no case.
+- **Combinatorial** — the profile is never crossed with the artifact source. No run pairs a
+  contracts-bearing root with a discussion pack present and states which one drives the result.
+- **Status** — one contract-first gate is reached through the verify profile, and the half that
+  distinguishes the story has no case: nothing establishes that verify does not depend on a
+  discussion-pack runner, and the one case in the pack that drives `runCanonicalUixValidators`
+  drives it over a seeded discussion pack, which is the direct-pack path `AD-0014-0008` retains.
+  Downstream completion is observed nowhere.
+
+### US-0014-0019 — legacy compatibility namespaces to remain removed
+
+The story's chain in the pack is `AC-0014-0003` → `TC-0014-0019`, one passing case reading
+`src/core/validators/index.ts` and `src/core/types.ts`. The story adds a consequence clause — verify
+guidance matching the actual package surface — that no case reads. This row has **six `❌` depth
+cells** and no `❌` in `Status`.
+
+- **Equivalence partitions** — the tree is read as it stands and no input is constructed, so the
+  compliant and violating partitions of the package surface are not represented as inputs. The case
+  observes one state of one artifact rather than classifying two.
+- **Edge cases** — the case's own text names the package surface, and the assertions read two `src/`
+  files. A legacy namespace re-entering through a re-export in `src/index.ts`, through a retained
+  `dist/` artifact, or through a path listed in `package.json#files` is invisible to it, and no case
+  reads verify's own guidance text at all.
+- **Boundary values** — the obligation has no numeric, date, length or ordered domain; a namespace
+  is present or it is not, with no edge between, and the `IssueCategory` member count is pinned by
+  enumeration rather than counted.
+- **Special values** — no empty, truncated or absent source file is constructed. An absent file
+  would throw out of `readFile` rather than pass, which is a guard, not a supplied special value.
+- **State transitions** — reading a source surface has no state machine, and no removal-to-return
+  progression is observed.
+- **Combinatorial** — the two files and the four predicates are asserted independently and never
+  crossed; no input violates two at once, and the guidance half is never crossed with the surface
+  half.
+
+### US-0014-0020 — saas-package certify scope seal and upgrade path
+
+The story's chain in the pack is `AC-0014-0022` → `TC-0014-0035`, `TC-0014-0036`, and its coverage
+is 18 passing cases across `prototypingCertify.saasPackage.test.ts` and
+`prototypingCertify.upgradeScope.test.ts`. This row has **no `❌` cell** in any column. Its three
+`⚠️` depth cells and its `⚠️` `Status` are stated below.
 
 ### TC-0014-0009 — REVISE review artifact blocks completion
 
@@ -180,31 +335,38 @@ about this obligation: they assert that a legacy strategy-style filename and leg
 content are rejected with exploration-first migration guidance, which is a different subject with a
 different emission. Resolution is not discharge.
 
-Nothing feeds a `REVISE` review artifact to anything in a verify path, and no verify path exists to
-feed. Every cell is `❌`, and each is named so the count is checkable:
+The gate the obligation names exists, in `/qfai-verify`'s SKILL.md, and no test reads it. Nothing
+feeds a `REVISE` review artifact to anything. Every cell is `❌`, and each is named so the count is
+checkable:
 
-- **Equivalence partitions** — no review artifact is classified as `PASS` or `REVISE` by anything in
-  the verify path, so neither partition of the input is represented.
+- **Equivalence partitions** — the `PASS` and `REVISE` partitions of a reviewer verdict are
+  represented by no case. `validateReviewArtifacts` does run under the verify profile and does read
+  reviewer status, but in a review pack's `PASS|FAIL|NA` roster vocabulary, so no case feeds a
+  `REVISE` to it either.
 - **Normal path** — the case's own direction is a block produced from a `REVISE` artifact. Nothing
-  produces one. The two passing cases annotated to this row address the migration-error subject the
-  delta redefined it to, and that subject has no `AC`, `BR` or `EX` in the pack for the direction to
-  be scored against.
-- **Error path** — the block *is* the error direction, and it is never exercised.
+  produces one, and no case reads the skill clause that states the block. The two passing cases
+  annotated to this row address the migration-error subject instead.
+- **Error path** — the block _is_ the error direction, and it is never exercised.
 - **Edge cases** — a review artifact with no verdict field, one carrying both verdicts, and one
   whose verdict is a third value are all untested.
 - **Boundary values** — the verdict domain has exactly two members and no ordered or numeric
-  dimension; no count of blocking reviews is exercised, because no review is read.
+  dimension; no count of blocking reviewers is exercised, because no reviewer roster is read against
+  this obligation.
 - **Special values** — no empty, absent or malformed review artifact is supplied.
 - **State transitions** — a `REVISE`-to-`PASS` progression across review rounds is the clearest
   state obligation this row has, and no case observes any transition.
 - **Combinatorial** — the reviewer verdict is never crossed with validate's result, with scan scope,
   or with anything else.
-- **Oracle strength** — there is no production code whose mutation could redden this row. The
-  nearest gate, `prototypingCertify.ts`'s `reviewerGate.result !== "PASS"` refusal, belongs to a
-  different command and a different artifact, and is covered by a case scored under `BR-0014-0002`
-  rather than here.
-- **Status** — the obligation names a block that nothing in the product produces. This row should be
-  reconciled with the delta or rewritten rather than covered; see Findings 1.
+- **Oracle strength** — the obligation does have a surface a mutation could redden. Deleting "Do not
+  declare DONE or handoff until all routed blocking reviewers return `PASS`" from
+  `packages/qfai/assets/init/.qfai/assistant/skills/qfai-verify/SKILL.md`, the copy `qfai init`
+  writes into a consuming project, changes the gate for every adopter. No case reads that file, so
+  there is nothing for the mutation to redden. The nearest executable gate,
+  `prototypingCertify.ts`'s `reviewerGate.result !== "PASS"` refusal, belongs to a different command
+  and a different artifact, and is scored under `BR-0014-0002` rather than here.
+- **Status** — the obligation is undischarged by testing. The behaviour it names is carried by the
+  shipped skill's reviewer gate, no test in `packages/qfai/tests/**` reads those clauses, and no
+  case anywhere feeds a `REVISE` artifact. See Findings 1.
 
 ### TC-0014-0018 — full-scan verify depends on canonical validate groups
 
@@ -317,10 +479,24 @@ the file the assertion is written in.
 
 ### TC-0014-0033 — iter-NN evidence path layout
 
-`Status = done` under `DR-0014-0001`. Discharged by three files: the writer side in
+`Status = done` under `DR-0014-0001`. Three files carry work on it: the writer side in
 `prototypingIterate.test.ts`, the reader side in `uiEvidenceArtifacts.test.ts`, and the path helpers
-in `iterationPaths.test.ts`. This row has **no `❌` cell** in any column. Its three `⚠️` cells are
-stated below, and its `Status` is `⚠️` for the reason given there.
+in `iterationPaths.test.ts`. This row has **no `❌` depth cell**; every depth cell is `⚠️`, and the
+reason each stops short of `✅` is the same one that puts its `Status` at `❌`.
+
+- **Status** — the obligation has two halves and only one of them is coverable. `AC-0014-0005`
+  states that the active layout is `.qfai/evidence/prototyping/iter-NN/{<screen>.png, <screen>.html,
+  review.json}` **and** that the legacy `screenshots/` / `html/` layout "is no longer accepted as
+  the active SSOT"; the row's `Expected` compresses both into iter-NN "only". The first half is
+  covered. The second is contradicted by the product: `validateUiEvidenceArtifacts` builds
+  `screenshotRoot` as `<prototyping root>/screenshots` and `htmlRoot` as `<prototyping root>/html`,
+  tests those paths before it scans for an `iter-NN` file, reports the legacy path as the issue's
+  location, and names it first in the operator guidance; `validate.ts` documents
+  `.qfai/evidence/prototyping/screenshots/<screen-id>.png` as the required location; and
+  `mirrorAcceptedIterToAggregateDirs` in `prototypingIterate.ts` copies every accepted iteration
+  into both directories, so the first lookup finds something. Two passing cases in
+  `uiEvidenceArtifacts.test.ts` require a project carrying only the legacy layout to produce zero
+  issues, so a test that discharged the second half would have to redden them. See Findings 4.
 
 ### TC-0014-0034 — full-harness block drop on cycle 0
 
@@ -374,8 +550,8 @@ leaves both markers undefined. This row has **six `❌` depth cells** and no `�
 ### TC-0014-0036 — upgrade-scope gating
 
 `Status = done` under `DR-0014-0004`. Discharged by 16 passing cases in
-`prototypingCertify.upgradeScope.test.ts`. This row has **no `❌` cell** in any column. Its two `⚠️`
-cells are stated below.
+`prototypingCertify.upgradeScope.test.ts`. This row has **no `❌` cell** in any column. Its three
+`⚠️` depth cells and its `⚠️` `Status` are stated below.
 
 ### The four ❌ cells of the business rule table
 
@@ -404,7 +580,8 @@ cells are stated below.
 - **BR-0014-0002 × Status** — the rule's own covering case, `TC-0014-0009`, has no test. What does
   exercise a reviewer verdict is a gate in a different command over a different artifact, which is
   why both scored cells are `⚠️` rather than `❌` and why the row's verdict is still `❌`: the rule as
-  its `AC` scopes it, verify inspecting review artifacts, is unenforced.
+  its `AC` scopes it, verify inspecting review artifacts, is enforced only by skill prose that no
+  test reads.
 - **BR-0014-0003 × Status** — the positive direction rests partly on a substring read of
   `validate.ts` and the negative direction has no case. The rule is documented and half-measured.
 - **BR-0014-0004 × Status** — both covering cases, `TC-0014-0028` and `TC-0014-0029`, have no test
@@ -413,12 +590,99 @@ cells are stated below.
 
 ## Every ⚠️ cell, named
 
-15 depth cells and 6 `Status` cells in the matrix, and 9 scored cells and 3 `Status` cells in the
-business rule table, are `⚠️` — 33 in all. The PASS criterion requires a documented rationale for
-each, so each is named here.
+40 depth cells and 9 `Status` cells in the matrix, and 9 scored cells and 3 `Status` cells in the
+business rule table, are `⚠️` — 61 in all, of which 49 are scored. The PASS criterion requires a
+documented rationale for each, so each is named here.
 
 ### Matrix depth cells
 
+- **US-0014-0013 × Equivalence partitions** — one partition of the discussion-pack input is
+  represented with a real input and a required emission: a UI-bearing pack carrying the forbidden
+  legacy sidecar `12_design_system.md`. The complementary clean pack is never fed, and the
+  package-surface half of the story constructs no input at all, so the story's discriminating power
+  is established in one direction on one of its two halves.
+- **US-0014-0013 × Error path** — a real error-severity issue is produced from the canonical
+  entrypoint, and the negative predicates over the real tree would redden if `validators/legacy` or
+  `runLegacyUixCompatibilityValidators` were re-introduced. What the story's consequence clause
+  needs — verify itself remaining non-pass when validate returns an error — is observed by nothing,
+  because no verify run is driven anywhere in the pack.
+- **US-0014-0013 × Oracle strength** — two of the three cases carry real oracles: removing the
+  forbidden-file rule reddens the reach-through case, and re-adding `"compatibility"` to the
+  category union reddens the surface case. The third is `expect(validateSrc).toContain("runCanonicalUixValidators")`,
+  which the import statement alone satisfies, and the `IssueCategory` regex has no end anchor, so a
+  third union member passes both of its assertions.
+- **US-0014-0014 × Equivalence partitions** — the valid partition is fed as a real file and required
+  to produce zero issues, and each invalid partition has its own representative: `skipped` without
+  `skippedReason`, `captured` without `imagePath`/`htmlPath`, `failed` without `error`, three inline
+  payload shapes, and three top-level/per-screen status contradictions. Held at `⚠️` because no
+  criterion in the pack says these are this story's partitions.
+- **US-0014-0014 × Normal path** — `it("reads and validates canonical render bundle")` writes a real
+  bundle to disk, reads it back through `readRenderEvidenceBundle`, and requires
+  `validateRenderEvidenceBundle` to return `[]`. Held at `⚠️` for the same binding reason.
+- **US-0014-0014 × Error path** — the rejection cases pin specific codes — `QFAI-PROT-251` for an
+  inline payload, `QFAI-PROT-252` for a captured screen with no paths, `QFAI-PROT-253` for a status
+  contradiction — rather than "some issue was raised". Held at `⚠️` for the same binding reason.
+- **US-0014-0014 × Edge cases** — four edges are covered: a `captured` top level with no captured
+  screen, a `skipped` top level with a captured screen, a `failed` top level with a captured screen,
+  and a null bundle summarized as zeros rather than throwing. A capture run with no adapter is
+  additionally required to return `skipped` rather than `captured` with placeholder paths, which is
+  the story's own failure mode. Held at `⚠️` for the same binding reason.
+- **US-0014-0014 × Boundary values** — the one numeric limit is exercised on both sides:
+  `looksLikeOversizedInlinePayload` must be `true` at 501 characters and `false` at 500, and `false`
+  for a 501-character string containing a newline. Held at `⚠️` for the same binding reason.
+- **US-0014-0014 × Special values** — data URIs in two media types, a bare `;base64,` fragment,
+  `<!doctype html>`, `<body>`, a null bundle and absent fields are all supplied. Not supplied: a
+  zero-byte bundle file, a bundle whose top level is an array, and a path containing control
+  characters.
+- **US-0014-0014 × Combinatorial** — the top-level status is crossed with the per-screen status in
+  three combinations, each required to report a contradiction, and `looksLikeInlineRenderPayload` is
+  crossed over all four payload shapes plus a valid path. Not crossed: two defects at once — an
+  inline payload inside a bundle that already contradicts its own status — so nothing establishes
+  that both are reported rather than the first one short-circuiting.
+- **US-0014-0014 × Oracle strength** — the assertions pin issue codes and exact booleans rather than
+  truthiness, and the boundary pair would redden on an off-by-one in the limit. Held at `⚠️` because
+  the largest claim the row makes — that this suite is what "enforced" means for this story — rests
+  on no criterion, and because the only elaboration the story ever carried, five canonical evidence
+  states, does not match this module's three.
+- **US-0014-0018 × Equivalence partitions** — the profile input is partitioned with opposite
+  expectations over one fixture: the full-scan `verify` profile must report `QFAI-REVIEW-*` and the
+  partial `tdd` profile must report none. The partition the story is about — a contract-first input
+  against a discussion-pack input — is not represented.
+- **US-0014-0018 × Error path** — a real error direction is exercised: a review pack whose
+  `summary.json` is not JSON produces `QFAI-REVIEW-*` under the verify profile. It is the covering
+  validator's error direction rather than the story's, which would be a verify run refusing to take
+  its completion decision from a discussion-pack runner.
+- **US-0014-0018 × Oracle strength** — the wiring cases are real oracles: removing
+  `validateReviewArtifacts` from the verify profile reddens the first, adding it to the `tdd` profile
+  reddens the third, and the fourth pins the shipped layout doc against the profiles that actually
+  report. None of them can fail on the story's own claim, because no case observes where verify's
+  completion decision comes from.
+- **US-0014-0019 × Error path** — the obligation is negative in shape and the assertions are
+  negative over the real tree, which is the right shape for "remain removed": re-introducing
+  `validators/legacy` or `runLegacyUixCompatibilityValidators` into either file reddens the case.
+  It is `⚠️` rather than `✅` because no fixture plants a re-introduction and requires the same
+  predicate to fire, so a predicate that had stopped matching anything would pass silently.
+- **US-0014-0019 × Oracle strength** — one assertion is a real oracle:
+  `toMatch(/type\s+IssueCategory\s*=\s*"canonical"\s*\|\s*"change"/)` against a `types.ts` whose
+  union is exactly those two members. Two weaknesses keep it off `✅`. The regex has no end anchor,
+  so a third member added to the union still matches the prefix; only the literal `"compatibility"`
+  is separately excluded. And the scan covers two `src/` files while the story's subject is the
+  package surface, which `package.json#files` defines and nothing here reads.
+- **US-0014-0020 × Boundary values** — the ordered domain is mtime, and `TC-0014-0036`'s cases
+  exercise it on both sides of two distinct freshness gates. The exact boundary — equal mtimes — is
+  never supplied, and `TC-0014-0035`'s only count, the length of `notes`, is asserted with
+  `toBeGreaterThan(0)` against a fixture that could not have emptied it.
+- **US-0014-0020 × Special values** — one special value is supplied and is required to refuse rather
+  than default to success: a parseable but empty `{}` canonical signal. Not supplied: an unparseable
+  non-JSON signal, a zero-byte file, a non-numeric `counts.error`, a `null` body, and an empty or
+  absent skipped-gate list.
+- **US-0014-0020 × Oracle strength** — the story's covered directions have strong oracles:
+  `cert.scope` is pinned to the exact literal, the notes assertion iterates the shipped
+  `SAAS_PACKAGE_SKIPPED_GATES` rather than a stale literal list, and raising the refusal threshold in
+  `prototypingCertify.ts` kills every refusal case, and replacing `stripScopeMarkers(cert)` with
+  `cert` in the upgrade branch kills every acceptance case. One weakness keeps it off `✅`, the
+  story's "never overstates completion" clause: `expect(cert.scope).not.toBe("full")` cannot fail
+  while `expect(cert.scope).toBe("saas-package")` passes in the same case.
 - **TC-0014-0018 × Equivalence partitions** — one partition of the discussion-pack input is
   represented with a real input and a required emission: a UI-bearing pack carrying the forbidden
   legacy sidecar `12_design_system.md`. The complementary partition — a pack with a clean canonical
@@ -445,6 +709,31 @@ each, so each is named here.
   is separately excluded, and any other new member passes both assertions. And the scan covers two
   `src/` files while the case's own text names the package surface, which `package.json#files`
   defines and nothing here reads.
+- **TC-0014-0033 × Equivalence partitions** — three partitions of the evidence layout are fed with
+  stated expectations: no evidence at all, required to produce `QFAI-UIE-001` and `QFAI-UIE-002` at
+  error severity; an `iter-03` layout, required to produce zero issues; and a legacy
+  `screenshots/`+`html/` layout, also required to produce zero issues. The partitioning is complete
+  as input, and the third partition's expectation is the one the criterion denies.
+- **TC-0014-0033 × Normal path** — the iter-NN half has a real normal case:
+  `iter-03/orders-dashboard.png` and `.html`, matching `EX-0014-0026`'s shape, required to produce
+  zero issues. The clause that makes the criterion true has no normal case — no run requires a
+  project whose only evidence is the legacy layout to be treated as lacking an active SSOT.
+- **TC-0014-0033 × Error path** — the validator's error direction is real and specific: declared
+  screens with no evidence produce `QFAI-UIE-001` and `QFAI-UIE-002` at error severity, an unsafe
+  screen id produces `QFAI-UIE-003` with the offending contract reference in `file`, and a custom
+  `contractsDir` is required to be named in the suggested action rather than the default path. The
+  error the criterion implies — a required-path lookup raised against the legacy directories — is
+  produced by nothing, because those directories are the validator's own first choice.
+- **TC-0014-0033 × Edge cases** — three edges are covered on the covered half: an absent
+  `contracts/ui` skips the check rather than failing, an absent prototyping evidence root produces
+  zero issues rather than an error, and `parseIterationReviewPath` returns `null` on five malformed
+  inputs rather than throwing. The edge that decides the criterion — both layouts present at once,
+  which is the state `mirrorAcceptedIterToAggregateDirs` creates on every accepted iteration — has
+  no case and no stated winner.
+- **TC-0014-0033 × Boundary values** — the iteration-index domain is exercised at its edges by
+  `iterationPaths.test.ts`: `0`, `9`, `14`, `99` and `123` compose and round-trip correctly, while
+  `iter-1` and `iter-bad` are excluded from the stale-directory match and `iter-2` in a review path
+  parses to `null`. The criterion's other half has no edge to exercise because no case approaches it.
 - **TC-0014-0033 × Special values** — two special inputs are supplied and both are required to
   produce zero issues rather than an error: an absent `contracts/ui` directory, and an absent
   prototyping evidence root. `parseIterationReviewPath` is also required to return `null` on
@@ -457,14 +746,21 @@ each, so each is named here.
   post-delete `readdir` is required to equal the exact residual set, and the cycle-0 reset is
   required to preserve non-iter siblings. No invalid transition is attempted, and no partial state
   is constructed — a delete interrupted midway, leaving some iter directories and not others, has
-  no case.
+  no case. The transition the criterion would need, a project moving off the legacy layout onto
+  iter-NN, is neither constructed nor required.
 - **TC-0014-0033 × Combinatorial** — one combination is constructed deliberately and one fixture is
   genuinely dense: the custom-`contractsDir` case crosses a non-default config with the legacy
   layout, and the `findIterationReviewFiles` fixture crosses two specs, two screens, three file
   extensions and two iteration indices with an exact expected set. What is never crossed is the one
-  pair the rule creates: a project carrying the legacy `screenshots/`+`html/` layout **and** an
+  pair the criterion creates: a project carrying the legacy `screenshots/`+`html/` layout **and** an
   iter-NN layout at once, with a stated winner. The custom `contractsDir` is also never crossed with
   the iter-NN layout, only with the legacy one, and no case declares more than one screen.
+- **TC-0014-0033 × Oracle strength** — the covered half has a named mutation: removing the
+  `ITERATION_DIR_PATTERN` branch of `hasEvidenceFile` reddens the `iter-03` case, and
+  `deleteStaleIterDirs` is pinned by an exact residual `readdir` set rather than a count. The
+  oracles that bear on the criterion's other half point the wrong way — removing the canonical
+  `screenshotRoot` branch, which is what making the criterion true would require, reddens two
+  passing cases in the same file.
 - **TC-0014-0034 × Equivalence partitions** — two partitions of the prior `prototyping.json` are
   represented with opposite expectations: one carrying the three per-loop blocks that must be
   deleted, and one carrying operator-defined keys (`mode`, `surface`) that must survive the same
@@ -507,6 +803,28 @@ each, so each is named here.
 
 ### Matrix Status cells
 
+- **US-0014-0013 × Status** — the canonical entrypoint is reached from a repo root with a real
+  emission, and the removed namespaces are asserted over the real tree. Three things cap it. No
+  verify run is driven anywhere, so the story's own subject is reached only through `validate.ts`
+  read as text. The five `❌` depth cells named above are unaddressed. And the obligation is
+  reported carrier-only, with every discharging file under `packages/qfai/tests/`, outside the
+  scanned root.
+- **US-0014-0014 × Status** — the story's subject is enforced by a suite whose oracles are specific
+  and whose categories are nearly complete, which is more than most rows in this pack can say. It is
+  capped at `⚠️` because the pack binds that suite to the story by nothing — no `AC`, `BR`, `EX` or
+  `TC` — because no state progression is observed, and because the obligation is reported
+  carrier-only.
+- **US-0014-0019 × Status** — the direction the story names is asserted over the real artifacts and
+  would redden on the re-introduction it exists to prevent. It is capped at `⚠️` because the story's
+  subject is the package surface while the assertions read two `src/` files, because its consequence
+  clause about verify guidance is read by nothing, and because the obligation is reported
+  carrier-only.
+- **US-0014-0020 × Status** — the story carries the widest coverage of any row here: 18 passing
+  cases across two files, five distinct refusal causes, an SSOT-derived gate list, mtime freshness
+  gates in both directions, and stderr assertions that pin the recovery message away from an
+  infinite loop. It is capped at `⚠️` because the obligation is reported carrier-only, because the
+  only file carrying its annotation is entirely `describe.skip`, and because the "never overstates
+  completion" clause is carried by a tautological assertion.
 - **TC-0014-0018 × Status** — one half of the obligation is genuinely discharged: the canonical
   entrypoint is reached from a repo root and produces a real emission. Three things cap it.
   `AC-0014-0001`'s full-scan posture is not exercised at all. `EX-0014-0001`'s consequence, verify
@@ -516,14 +834,6 @@ each, so each is named here.
   would redden on the re-introduction it exists to prevent, which is more than most rows in this
   pack can say. It is capped at `⚠️` because the case's own subject is the package surface and the
   assertions read two `src/` files, and because the obligation is reported carrier-only.
-- **TC-0014-0033 × Status** — both directions are covered with mutation-sensitive oracles across
-  three files, and this row owes no ATDD annotation, so the carrier-only condition does not apply to
-  it. Two things cap it. `AC-0014-0005` names the layout as
-  `iter-NN/{<screen>.png, <screen>.html, review.json}`, and no case requires a per-iter `review.json`
-  to be present for the layout to be accepted — `validateUiEvidenceArtifacts` checks only the two
-  media extensions. And the row's `Expected` says the active layout is iter-NN "only", while
-  `prototypingIterate.ts` still writes the legacy aggregate mirror under
-  `.qfai/evidence/prototyping/screenshots/` and `html/` on every accepted iteration. See Findings 4.
 - **TC-0014-0034 × Status** — the behaviour the `AC` states is exercised end to end on the live
   artifact with a strong oracle, and no annotation is owed. It is capped at `⚠️` because the cycle
   boundary is unguarded — nothing requires cycle ≥ 1 to leave the block alone — and because the
@@ -532,12 +842,12 @@ each, so each is named here.
 - **TC-0014-0035 × Status** — the positive direction is discharged with a real run against a real
   fixture and an SSOT-derived oracle. It is capped by the six `❌` depth cells named above — no error
   direction, no edge, no boundary, no combination — and by the carrier-only condition.
-- **TC-0014-0036 × Status** — this is the strongest row in the pack: seven depth columns at `✅`,
-  sixteen cases, five distinct refusal causes, each refusal additionally required to leave the
-  certificate scope-limited, and stderr assertions that pin the recovery message away from an
-  infinite loop. It is capped at `⚠️` for one reason only, and it is not about this row's work: the
-  obligation is reported `coveredByCarrierOnly`, because the configured scan root is the repo-root
-  `tests/` and the discharging file sits at `packages/qfai/tests/integration/cli/commands/`.
+- **TC-0014-0036 × Status** — this is the strongest test-case row in the pack: sixteen cases, five
+  distinct refusal causes, each refusal additionally required to leave the certificate
+  scope-limited, and stderr assertions that pin the recovery message away from an infinite loop. It
+  is capped at `⚠️` by the carrier-only condition — the configured scan root is the repo-root
+  `tests/` and the discharging file sits at `packages/qfai/tests/integration/cli/commands/` — and by
+  the successful-upgrade direction having no recorded mutation.
 
 ### Business rule table
 
@@ -555,7 +865,7 @@ each, so each is named here.
   `validatorConvergenceIntegration.test.ts` runs `validateThreeLayerModel` twice over the same
   fixture and requires `second).toEqual(first)`, and the canonical entrypoint is separately reached
   from a repo root with a real emission. It is `⚠️` because the rule's other half — that validate
-  *remains the source* of these findings, rather than a parallel runner — rests on a substring read
+  _remains the source_ of these findings, rather than a parallel runner — rests on a substring read
   of `validate.ts`, and because the case carrying the determinism assertion is annotated
   `TC-0014-0004`, an id absent from the active test-case table.
 - **BR-0014-0004 × Positive case** — the rule permits legacy slices to keep referring to
@@ -597,9 +907,9 @@ each, so each is named here.
 - **BR-0014-0005 × Status** — positive, negative and one branch of the condition are all genuinely
   present, exercised against real fixtures, and the accepting cases fail if the `iter-NN` branch of
   `hasEvidenceFile` is removed. It is capped at `⚠️` because the rule names the iter-NN layout as
-  *the* active SSOT while the product writes the legacy aggregate mirror on every accepted
-  iteration, so the artifact state the rule describes is not the artifact state the product
-  produces.
+  _the_ active evidence layout while the product writes the legacy aggregate mirror on every
+  accepted iteration and looks there first, so the artifact state the rule describes is not the
+  artifact state the product produces.
 - **BR-0014-0006 × Status** — the `MUST` is exercised on the live artifact with an oracle that a
   one-line source mutation reddens. It is capped at `⚠️` because the condition that scopes the
   deletion to cycle 0 is unverified, and because the rule's stated purpose — that stale runtime
@@ -612,21 +922,22 @@ each, so each is named here.
 
 ## Findings
 
-Five things were found while producing this matrix that the reviewing stage should act on. None of
+Six things were found while producing this matrix that the reviewing stage should act on. None of
 them is repaired here; this artifact scores coverage and does not edit tests, ledgers or specs.
 
-1. **`TC-0014-0009`'s declared obligation and its adopted redefinition disagree, and neither is
-   testable as written.** Under the v1.7.15 semantics-audit correction, `09_delta.md` adopts a
-   redefinition of `TC-0014-0009` to stale sidecar migration errors, together with
-   `US-0014-0012`, `AC-0014-0014`, `BR-0014-0015` and `EX-0014-0015`, and records the chain
-   `US-0014-0012 → AC-0014-0014 → BR-0014-0015 → EX-0014-0015 → TC-0014-0009`.
-   **None of those four upstream ids exists in the pack**: `02_User-stories.md` has
-   no `US-0014-0012`, `03_Acceptance-Criteria.md` no `AC-0014-0014`, `04_Business-Rules.md` no
-   `BR-0014-0015`, `05_Examples.md` no `EX-0014-0015`. Meanwhile `06_Test-Cases.md` still records
-   `TC-0014-0009` against `AC-0014-0002` and `EX-0014-0002`, the original `REVISE` gate. The test
-   that carries the annotation implements the redefinition; the active table declares the original;
-   the redefinition's upstream chain is absent. The row needs the table and the delta reconciled
-   before any test can discharge it.
+1. **`TC-0014-0009`'s obligation is implemented in a shipped skill and observed by no test.**
+   `AC-0014-0002` reads "Verify inspects reviewer artifacts and blocks on `REVISE`". `/qfai-verify`
+   is a skill, not a CLI command, so the gate lives in
+   `packages/qfai/assets/init/.qfai/assistant/skills/qfai-verify/SKILL.md`: under "Stage Minimum
+   Roles (MUST)", "Gate: Reviewer is delegated independently and returns only `PASS` or `REVISE`";
+   under "Reviewer Gate (MUST)", "Do not declare DONE or handoff until all routed blocking reviewers
+   return `PASS`". The inspection half has an executable counterpart as well —
+   `validateReviewArtifacts` is wired into the full-scan verify profile, which
+   `reviewArtifactsProfileWiring.test.ts` pins — though it reads a review pack's `PASS|FAIL|NA`
+   roster rather than a `REVISE` verdict. What is missing is a test. No file in
+   `packages/qfai/tests/**` reads either clause, and the two `describe` blocks carrying the
+   `TC-0014-0009` annotation assert stale sidecar migration guidance, a different subject, so the
+   annotation resolves without discharging anything. The gap is coverage over behaviour that exists.
 2. **Two exception rows cite a decision record that addresses a different subject, and name a file
    that does not exist.** `TDD-0028` and `TDD-0029` are parked citing `DR-0014-0002`, whose text
    reads "removed compatibility surfaces remain removed" — that is `TC-0014-0019`'s subject.
@@ -641,14 +952,19 @@ them is repaired here; this artifact scores coverage and does not edit tests, le
    `packages/qfai/assets/init/` contains `saas-package`, `SaaS` or `--upgrade-scope` anywhere. The
    behaviour is implemented and well tested; an operator reading the skill has no way to learn the
    mode exists.
-4. **The legacy evidence layout is still written by the product, which contradicts
-   `TC-0014-0033`'s "only".** `mirrorAcceptedIterToAggregateDirs` in `prototypingIterate.ts` copies
-   the accepted iteration's files into `.qfai/evidence/prototyping/screenshots/` and
-   `.qfai/evidence/prototyping/html/`, and `validate.ts`'s operator-facing text still names
-   `screenshots/<screen-id>.png` as the expected location. `BR-0014-0005` survives this — it says
-   only that the legacy paths must not be *required*, and `hasEvidenceFile` accepts either layout —
-   but the test case's `Expected` says the active layout is iter-NN "only", and the product writes
-   both. One of the two needs a Change Request.
+4. **The legacy evidence layout is the product's first choice, which contradicts `AC-0014-0005`.**
+   The criterion states that the legacy `screenshots/` / `html/` layout "is no longer accepted as
+   the active SSOT", and `TC-0014-0033`'s `Expected` compresses it to iter-NN "only".
+   `validateUiEvidenceArtifacts` builds `screenshotRoot` as `<prototyping root>/screenshots` and
+   `htmlRoot` as `<prototyping root>/html`, tests those paths before it scans for an `iter-NN` file,
+   reports the legacy path as the issue's location, and names it first in the suggested action.
+   `validate.ts` documents `.qfai/evidence/prototyping/screenshots/<screen-id>.png` as the required
+   location of screenshot evidence. `mirrorAcceptedIterToAggregateDirs` in `prototypingIterate.ts`
+   copies every accepted iteration into both directories, so the first lookup finds something. Two
+   passing cases in `uiEvidenceArtifacts.test.ts` require a project carrying only the legacy layout
+   to produce zero issues. `BR-0014-0005` survives this — it says only that the legacy paths must
+   not be _required_, and `hasEvidenceFile` accepts either layout — but `AC-0014-0005` and
+   `TC-0014-0033` say otherwise, and one of the two needs a Change Request.
 5. **Two test files carrying spec-0014 annotations are entirely `describe.skip` and have been
    superseded.** `tests/integration/spec0014SaasPackageCertify.test.ts` (`TC-0014-0035`,
    `TC-0014-0036`) and `tests/e2e/spec0014SaasPackageCertifyE2E.test.ts` (`US-0014-0020`) were
@@ -658,16 +974,32 @@ them is repaired here; this artifact scores coverage and does not edit tests, le
    stronger in every dimension. The four skipped cases discharge nothing, they are two of the 16
    `QFAI-TEST-003` findings in the recorded validate run, and their `describe` blocks are what a
    reader scanning for the covering suite finds first. They should be unskipped or retired.
+6. **Two active stories have no chain, and one test case has two that disagree.** `US-0014-0014` and
+   `US-0014-0018` are active stories with no `AC-*`, `BR-*`, `EX-*` or `TC-*` anywhere in the pack,
+   so nothing states what "truthful evidence and placeholder rejection to remain enforced" or
+   "contract-first validate gates rather than implicit discussion-pack runners" require. No case can
+   be traced to either, and their rows above are scored against the behaviour their own wording
+   names, which is weaker than the matrix is meant to be. `TC-0014-0009` has the opposite problem:
+   `06_Test-Cases.md` records it against `AC-0014-0002` and `EX-0014-0002`, and `09_delta.md`
+   records a second chain for it, `US-0014-0012 → AC-0014-0014 → BR-0014-0015 → EX-0014-0015 →
+   TC-0014-0009`, whose four upstream ids the pack does not carry. The test currently annotated to
+   the row implements the second chain's subject, which is why its annotation resolves against work
+   that discharges nothing of the first.
 
 ## Follow-up this matrix does not discharge
 
 `QFAI-ATDD-133` requires the stage evidence to carry a `## Coverage Depth Matrix` section that links
 to this file and restates the counted totals beside it. Those totals are:
 
-**✅ 24 / ⚠️ 33 / ❌ 58**, with `n/a 3`, across all 118 scored cells — 81 matrix depth cells, 9
-matrix `Status` cells, 21 business rule scored cells and 7 business rule `Status` cells.
+**✅ 26 / ⚠️ 49 / ❌ 69**, with `n/a` 3, across all 147 scored cells — 126 matrix depth cells (14
+rows × 9 columns) and 21 business rule cells (7 rows × 3 columns). The `Status` columns of both
+tables hold row verdicts rather than marks and are outside that population; for reference the
+matrix's 14 read `⚠️ 9 / ❌ 5` and the business rule table's 7 read `⚠️ 3 / ❌ 4`.
 
-Three obligations in this pack cannot be moved by testing alone. `TC-0014-0009` needs its table row
-and its adopted redefinition reconciled; `TC-0014-0028` and `TC-0014-0029` name a validator slice
-that does not exist, and `01_Spec.md` REQ-0028 already makes their obligation conditional on its
-existence. Until those are settled, the honest verdict for all three is the one recorded above.
+Four obligations are stuck, and each needs a different kind of work. `TC-0014-0009` needs a test
+over the shipped skill's reviewer gate: the behaviour is there and only the coverage is missing.
+`TC-0014-0028` and `TC-0014-0029` name a validator slice that does not exist, and `01_Spec.md`
+REQ-0028 already makes their obligation conditional on its existence. `TC-0014-0033` states a layout
+rule the product contradicts, and a Change Request has to settle which side is current before any
+case can discharge it. Until each is addressed, the honest verdict for all four is the one recorded
+above.

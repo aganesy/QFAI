@@ -43,7 +43,7 @@ its `Selector` names both cases in the list form the column admits.
 ## Commands executed + key outputs
 
 Every command ran from `packages/qfai`. The clean-tree runs were taken at
-revision `be74e075f00e815c888e3808e75bfde5e3cb952f`. Each mutation was reverted
+revision `649d8111147436408c90cbbe1b9f9b07e34da8cb`. Each mutation was reverted
 from a copy of the pre-mutation bytes, and the tree re-addressed afterwards to
 confirm it had returned to the clean value.
 
@@ -55,10 +55,11 @@ confirm it had returned to the clean value.
 | `TDD-0019` falsifiability | 1 failed, 4 passed    |
 | `TDD-0035` GREEN          | 2 passed              |
 | `TDD-0035` falsifiability | 1 failed, 1 passed    |
-| `TDD-0036` GREEN          | 16 passed             |
-| `TDD-0036` falsifiability | 6 failed, 10 passed   |
+| `TDD-0036` GREEN            | 16 passed             |
+| `TDD-0036` falsifiability A | 6 failed, 10 passed   |
+| `TDD-0036` falsifiability B | 7 failed, 9 passed    |
 | Refactor verify           | 126 passed            |
-| Checkpoint                | 2263 passed           |
+| Checkpoint                | 2258 passed, exit 0   |
 
 ## Test volume estimate
 
@@ -95,30 +96,45 @@ evidence its cell points at.
 
 #### Round 1
 
-- Round 1: Revision: be74e075f00e815c888e3808e75bfde5e3cb952f
+- Round 1: Revision: 649d8111147436408c90cbbe1b9f9b07e34da8cb
 - Round 1: Satisfied-by: packages/qfai/src/core/validators/uix/threeLayer.ts, validateForbiddenLegacyFiles — the filter that reports a canonical sidecar matching any forbidden legacy pattern.
 - Round 1: Falsifiability command: npx vitest run tests/integration/verifySemanticsSpec0014.test.ts
 - Round 1: Falsifiability result: Test Files 1 failed (1); Tests 2 failed, 3 passed (5). This row's own case fails on the absent `UIX-VAL-3LAYER-FORBIDDEN-FILE` finding.
-- Round 1: Falsifiability revision: working-tree+7c7f15c70f3fbe5ca54b0ff0f674ec64255986b18305780eec3b104bcb9c4fe0
+- Round 1: Falsifiability revision: working-tree+e8f19276e2c174fae97eaa94a78ab60dbdfb4b94ab010c33bddb558629445383
 - Round 1: GREEN command: npx vitest run tests/integration/verifySemanticsSpec0014.test.ts
 - Round 1: GREEN result: Test Files 1 passed (1); Tests 5 passed (5)
 - Round 1: RED test hash: f59276acc52e9397953da7c5d7edccfbdeb45e1ca9822da516c17b75de8c2ce2
 - Round 1: RED test manifest: packages/qfai/tests/integration/verifySemanticsSpec0014.test.ts
 
-The mutation changed the forbidden-pattern filter from "matches any pattern" to
-"matches every pattern", which no single filename can. The second failing case
+The mutation, in `packages/qfai/src/core/validators/uix/threeLayer.ts` line 166:
+
+```diff
+-    .filter((entry) => FORBIDDEN_LEGACY_PATTERNS.some((pattern) => pattern.test(entry)))
++    .filter((entry) => FORBIDDEN_LEGACY_PATTERNS.every((pattern) => pattern.test(entry)))
+```
+
+No single filename matches every forbidden pattern, so the filter returns
+nothing. Both failures read `expected undefined to be defined`. The second
 belongs to `TDD-0009`, which reads the same filter — recorded here because it
 says what this mutation reaches, not only what it proves.
 
 - Refactor verify command: npx vitest run tests/integration/verifySemanticsSpec0014.test.ts tests/cli/commands/prototypingIterate.test.ts tests/integration/cli/commands/prototypingCertify.saasPackage.test.ts tests/integration/cli/commands/prototypingCertify.upgradeScope.test.ts
 - Refactor verify result: Test Files 4 passed (4); Tests 126 passed (126)
-- Refactor verify revision: be74e075f00e815c888e3808e75bfde5e3cb952f
+- Refactor verify revision: 649d8111147436408c90cbbe1b9f9b07e34da8cb
 - Checkpoint verification command: npx vitest run --project integration --project cli
-- Checkpoint verification result: PASS — exit 0; Test Files 188 passed (192); Tests 2263 passed (2282)
-- Checkpoint verification revision: be74e075f00e815c888e3808e75bfde5e3cb952f
+- Checkpoint verification result: PASS — exit 0; Test Files 187 passed (191); Tests 2258 passed (2277)
+- Checkpoint verification revision: 649d8111147436408c90cbbe1b9f9b07e34da8cb
 
 Four files and nineteen cases in those projects declare themselves inactive and
-did not run.
+did not run, each through `describe.skip` carrying the marker
+`(test-first, pending /qfai-implement)`.
+
+The checkpoint needs `pnpm -C packages/qfai build` first.
+`tests/integration/cliStartupCost.test.ts` reads `packages/qfai/dist/**` and is
+written to fail rather than pass vacuously when no build exists.
+
+Validate gate: `npx qfai validate --profile atdd --fail-on error --spec 0014`
+at the same revision — `counts: info=3 warning=0 error=0`, exit 0.
 
 ### TDD-0019
 
@@ -133,25 +149,34 @@ did not run.
 
 #### Round 1
 
-- Round 1: Revision: be74e075f00e815c888e3808e75bfde5e3cb952f
+- Round 1: Revision: 649d8111147436408c90cbbe1b9f9b07e34da8cb
 - Round 1: Satisfied-by: packages/qfai/src/core/types.ts, IssueCategory — the union the removed compatibility category is absent from.
 - Round 1: Falsifiability command: npx vitest run tests/integration/verifySemanticsSpec0014.test.ts
 - Round 1: Falsifiability result: Test Files 1 failed (1); Tests 1 failed, 4 passed (5). Only this row's own case fails.
-- Round 1: Falsifiability revision: working-tree+9b841d7fdfa486b843ecbfb2666b81dca6d471eceec659902c9f36b108472ac2
+- Round 1: Falsifiability revision: working-tree+d46540131695fb9d36bba2c09b20878d6ad69136a24ccd1f9672326b7e78e173
 - Round 1: GREEN command: npx vitest run tests/integration/verifySemanticsSpec0014.test.ts
 - Round 1: GREEN result: Test Files 1 passed (1); Tests 5 passed (5)
 - Round 1: RED test hash: f59276acc52e9397953da7c5d7edccfbdeb45e1ca9822da516c17b75de8c2ce2
 - Round 1: RED test manifest: packages/qfai/tests/integration/verifySemanticsSpec0014.test.ts
 
-The mutation re-added `"compatibility"` to the category union. That is the
-removed surface reappearing, which is the obligation stated as a change.
+The mutation, in `packages/qfai/src/core/types.ts` line 5:
+
+```diff
+-export type IssueCategory = "canonical" | "change";
++export type IssueCategory = "canonical" | "change" | "compatibility";
+```
+
+That is the removed surface reappearing, which is the obligation stated as a
+change. The case reads the source text rather than the type, which is why a
+type-only edit is observable at run time: `expected 'import type { ScCoverage,
+TestFileSca…' not to contain '"compatibility"'`.
 
 - Refactor verify command: npx vitest run tests/integration/verifySemanticsSpec0014.test.ts tests/cli/commands/prototypingIterate.test.ts tests/integration/cli/commands/prototypingCertify.saasPackage.test.ts tests/integration/cli/commands/prototypingCertify.upgradeScope.test.ts
 - Refactor verify result: Test Files 4 passed (4); Tests 126 passed (126)
-- Refactor verify revision: be74e075f00e815c888e3808e75bfde5e3cb952f
+- Refactor verify revision: 649d8111147436408c90cbbe1b9f9b07e34da8cb
 - Checkpoint verification command: npx vitest run --project integration --project cli
-- Checkpoint verification result: PASS — exit 0; Test Files 188 passed (192); Tests 2263 passed (2282)
-- Checkpoint verification revision: be74e075f00e815c888e3808e75bfde5e3cb952f
+- Checkpoint verification result: PASS — exit 0; Test Files 187 passed (191); Tests 2258 passed (2277)
+- Checkpoint verification revision: 649d8111147436408c90cbbe1b9f9b07e34da8cb
 
 ### TDD-0035
 
@@ -166,27 +191,34 @@ removed surface reappearing, which is the obligation stated as a change.
 
 #### Round 1
 
-- Round 1: Revision: be74e075f00e815c888e3808e75bfde5e3cb952f
+- Round 1: Revision: 649d8111147436408c90cbbe1b9f9b07e34da8cb
 - Round 1: Satisfied-by: packages/qfai/src/cli/commands/prototypingCertify.ts — the certificate body's conditional `scope` field.
 - Round 1: Falsifiability command: npx vitest run tests/integration/cli/commands/prototypingCertify.saasPackage.test.ts
 - Round 1: Falsifiability result: Test Files 1 failed (1); Tests 1 failed, 1 passed (2). This row's own case fails on the absent `scope` field.
-- Round 1: Falsifiability revision: working-tree+f272662388b8a461b20ab548d3a9bb78717e341c3af6a9dcf0b94ca51ccbe7d6
+- Round 1: Falsifiability revision: working-tree+fedb7acf0fa804aaaf25cab36939479ca8521973762ca046b060d2a4ef5da720
 - Round 1: GREEN command: npx vitest run tests/integration/cli/commands/prototypingCertify.saasPackage.test.ts
 - Round 1: GREEN result: Test Files 1 passed (1); Tests 2 passed (2)
 - Round 1: RED test hash: f30c3f411f42ae69e34e5a4c5b2ac752e656e258b40d2f42a3879c5f0a98448a
 - Round 1: RED test manifest: packages/qfai/tests/integration/cli/commands/prototypingCertify.saasPackage.test.ts
 
-The mutation dropped the `scope` field from the sealed certificate. The file's
-other case, which asserts a default invocation carries no `scope`, stays green —
-the mutation removes the field in both directions, and only one direction is a
+The mutation, in `packages/qfai/src/cli/commands/prototypingCertify.ts` line
+1200, deletes the line:
+
+```diff
+-    ...(isSaasPackageScope ? { scope: "saas-package" as const } : {}),
+```
+
+The case fails on `expected undefined to be 'saas-package'`. The file's other
+case, which asserts a default invocation carries no `scope`, stays green — the
+mutation removes the field in both directions, and only one direction is a
 defect.
 
 - Refactor verify command: npx vitest run tests/integration/verifySemanticsSpec0014.test.ts tests/cli/commands/prototypingIterate.test.ts tests/integration/cli/commands/prototypingCertify.saasPackage.test.ts tests/integration/cli/commands/prototypingCertify.upgradeScope.test.ts
 - Refactor verify result: Test Files 4 passed (4); Tests 126 passed (126)
-- Refactor verify revision: be74e075f00e815c888e3808e75bfde5e3cb952f
+- Refactor verify revision: 649d8111147436408c90cbbe1b9f9b07e34da8cb
 - Checkpoint verification command: npx vitest run --project integration --project cli
-- Checkpoint verification result: PASS — exit 0; Test Files 188 passed (192); Tests 2263 passed (2282)
-- Checkpoint verification revision: be74e075f00e815c888e3808e75bfde5e3cb952f
+- Checkpoint verification result: PASS — exit 0; Test Files 187 passed (191); Tests 2258 passed (2277)
+- Checkpoint verification revision: 649d8111147436408c90cbbe1b9f9b07e34da8cb
 
 ### TDD-0036
 
@@ -201,40 +233,75 @@ defect.
 
 #### Round 1
 
-- Round 1: Revision: be74e075f00e815c888e3808e75bfde5e3cb952f
+- Round 1: Revision: 649d8111147436408c90cbbe1b9f9b07e34da8cb
 - Round 1: Satisfied-by: packages/qfai/src/cli/commands/prototypingCertify.ts — the refusal branch taken when the gates signal still names a missing gate.
 - Round 1: Falsifiability command: npx vitest run tests/integration/cli/commands/prototypingCertify.upgradeScope.test.ts
 - Round 1: Falsifiability result: Test Files 1 failed (1); Tests 6 failed, 10 passed (16). Every refusal case fails, including this row's own.
-- Round 1: Falsifiability revision: working-tree+2f640f1876df7dd0b3fb7a5dc1c454ff725dbecacfdf3d758b5372c2177acedf
+- Round 1: Falsifiability revision: working-tree+c0b2657afd0bcc8a48b3375d05c60c47ce75d92eb09c057d11b9ce5ac74e41a1
 - Round 1: GREEN command: npx vitest run tests/integration/cli/commands/prototypingCertify.upgradeScope.test.ts
 - Round 1: GREEN result: Test Files 1 passed (1); Tests 16 passed (16)
 - Round 1: RED test hash: cba71be37bffe18df1121e93e5e70680e26306fbbd36f86789c70e1bc93773fd
 - Round 1: RED test manifest: packages/qfai/tests/integration/cli/commands/prototypingCertify.upgradeScope.test.ts
 
-The mutation raised the refusal threshold beyond any reachable count, so the
-command upgrades whatever the signal says. Six cases die: every one that
-expects a refusal. The acceptance case stays green, which is correct — the
-mutation only removes refusals.
+The obligation has two directions, so it carries two mutations. Each kills one
+direction and leaves the other green, which is what makes the pair evidence
+rather than one observation stated twice.
+
+**Mutation A — the refusal direction.** In
+`packages/qfai/src/cli/commands/prototypingCertify.ts` line 1603:
+
+```diff
+-  if (stillMissing.length > 0) {
++  if (stillMissing.length > 9999) {
+```
+
+The threshold is beyond any reachable count, so the command upgrades whatever
+the signal says. Six cases die, every one that expects a refusal, all on
+`expected +0 not to be +0`. The acceptance case stays green.
+
+**Mutation B — the acceptance direction.** In the same file, line 1656:
+
+```diff
+-  const upgraded = stripScopeMarkers(cert);
++  const upgraded = cert;
+```
+
+- Round 1: Second falsifiability command: npx vitest run tests/integration/cli/commands/prototypingCertify.upgradeScope.test.ts
+- Round 1: Second falsifiability result: Test Files 1 failed (1); Tests 7 failed, 9 passed (16). Every acceptance-direction case fails, this row's own among them, all on `expected 'saas-package' to be undefined`.
+- Round 1: Second falsifiability revision: working-tree+d6d8998685c20b869dc0de4edacbe53a4beb5a2a97f04979c6d4a25d59f38b58
+
+The upgrade branch never writes `scope: "full"` — it removes the field, through
+`stripScopeMarkers()`, which rebuilds the certificate and omits `scope` and
+`notes`. Returning the certificate unchanged therefore leaves it scope-limited
+while reporting success. All eight refusal cases stay green, so the two
+mutations partition the file: no case dies under both.
+
+One acceptance-path case survives mutation B: `prefers the canonical path when
+BOTH canonical and legacy signals exist`. It drives a successful upgrade but
+asserts only the exit code and which signal path won, never reading the sealed
+certificate back, so it would not notice an upgrade that silently left the
+certificate scope-limited.
 
 - Refactor verify command: npx vitest run tests/integration/verifySemanticsSpec0014.test.ts tests/cli/commands/prototypingIterate.test.ts tests/integration/cli/commands/prototypingCertify.saasPackage.test.ts tests/integration/cli/commands/prototypingCertify.upgradeScope.test.ts
 - Refactor verify result: Test Files 4 passed (4); Tests 126 passed (126)
-- Refactor verify revision: be74e075f00e815c888e3808e75bfde5e3cb952f
+- Refactor verify revision: 649d8111147436408c90cbbe1b9f9b07e34da8cb
 - Checkpoint verification command: npx vitest run --project integration --project cli
-- Checkpoint verification result: PASS — exit 0; Test Files 188 passed (192); Tests 2263 passed (2282)
-- Checkpoint verification revision: be74e075f00e815c888e3808e75bfde5e3cb952f
+- Checkpoint verification result: PASS — exit 0; Test Files 187 passed (191); Tests 2258 passed (2277)
+- Checkpoint verification revision: 649d8111147436408c90cbbe1b9f9b07e34da8cb
 
 ## Coverage Depth Matrix
 
 See `.qfai/evidence/coverage-depth-spec-0014.md`.
-Totals: ✅ 24 / ⚠️ 33 / ❌ 58, with 3 not applicable, across 118 scored cells —
-81 matrix depth cells, 9 matrix status cells, 21 business rule cells and 7
-business rule status cells.
+Totals: ✅ 26 / ⚠️ 49 / ❌ 69, with 3 not applicable, across 147 scored cells —
+126 matrix depth cells (14 rows × 9 columns) and 21 business rule cells
+(7 rows × 3 columns). `Status` is a row verdict, not a mark, and is outside
+every total.
 
 ## Work Orders Summary
 
-| Role                | Task                                            | Status (PASS/REVISE/PENDING) |
-| ------------------- | ----------------------------------------------- | ---------------------------- |
-| test-design-analyst | Score the nine obligations and write the matrix | PASS                         |
+| Role                | Task                                                 | Status (PASS/REVISE/PENDING) |
+| ------------------- | ---------------------------------------------------- | ---------------------------- |
+| test-design-analyst | Score the fourteen obligations and write the matrix  | PASS                         |
 
 ## Cross-spec obligations
 
@@ -258,13 +325,20 @@ The row's `Selector` is the bare test-case id, and the test's `describe` name
 begins with the same string, so the selector resolves. Resolution is not
 evidence of discharge, and no lane reports the difference.
 
-Nothing found so far discharges the obligation. There is no verify command under
-`packages/qfai/src/cli/commands/`, and `src/**` mentions `REVISE` in three
-files — the ledger's own reviewer-verdict handling among them, which is a
-different layer from a verify run inspecting review artifacts. What the row
-should name is a decision about the obligation, not an evidence run.
+The behaviour exists; the coverage does not. `/qfai-verify` is a shipped skill
+rather than a CLI command, and
+`packages/qfai/assets/init/.qfai/assistant/skills/qfai-verify/SKILL.md` carries
+the gate in two clauses: under `Stage Minimum Roles (MUST)`, "Reviewer is
+delegated independently and returns only `PASS` or `REVISE`"; under
+`Reviewer Gate (MUST)`, "Do not declare DONE or handoff until all routed
+blocking reviewers return `PASS`".
+
+`validateReviewArtifacts` is wired into the full-scan verify profile, but reads
+a review pack's `PASS` / `FAIL` / `NA` roster and never a `REVISE` verdict. No
+case in the package reads either clause. So the row needs a test over the
+shipped skill, not a decision about the obligation.
 
 ## Final status
 
-PASS for the four rows recorded here. The pack is not clean; `TDD-0009` is
-listed rather than claimed.
+PASS for the four rows recorded here. This is a per-row verdict, not a stage
+verdict: the pack is not clean, and `TDD-0009` is listed rather than claimed.
