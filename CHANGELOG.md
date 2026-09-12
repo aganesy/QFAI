@@ -6,6 +6,29 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Added
 
+- **The execution stages grill at two points** (#1601). `/qfai-implement`,
+  `/qfai-atdd` and `/qfai-verify` run one round at the preflight, over what the
+  confidence check left uncertain, and one on detection — a contradiction in the
+  spec, an unconsidered case or a technical obstacle surfacing mid-run stops the
+  work rather than being decided alone. These stages read a spec closely enough
+  for its gaps to show, and the agent that finds one is the least able to judge
+  alone what the spec ought to have said.
+
+  Article IX already required a confidence check and said to ask targeted
+  questions when confidence was low, naming no method. It names one now.
+
+  One round, not a session. A spec and a test ledger are settled input here, and
+  re-interviewing them every run would stop the micro-cycle and invite the drift
+  these stages exist to avoid.
+
+  Neither round changes settled input, and neither is a second way to. The Drift
+  Protocol still governs: stop the dependent work, raise the Change Request, wait
+  for approval. What the round produces is what goes into it — the options and
+  the recommendation its `Approved option` is chosen from. Grilling decides what
+  the change should be; the protocol decides whether it happens.
+
+### Added
+
 - **A lint lane refuses a tracked file under the scratch directory.** `tmp/` is
   the sole staging area for scratch output and nothing there is committed, but
   an ignore rule does not stop tracking a file already in the index: a scratch

@@ -139,6 +139,25 @@ Follow `.qfai/assistant/constitution/shared-skill-operating-baseline.md#stage-0-
 
 Follow `.qfai/assistant/constitution/shared-skill-operating-baseline.md#delta-rejected-guard-mandatory`.
 
+## Grilling (MANDATORY)
+
+Article IX of `.qfai/assistant/constitution/constitution.md` owns both rounds
+this stage runs, and `.agents/rules/grilling.md` owns the method. Neither is
+restated here.
+
+- **At the preflight.** One round over what this invocation is about to do,
+  where the confidence check left something uncertain. One round, not a session:
+  the spec and the ledger are settled input, and re-interviewing them each run
+  would stop the cycle and invite the drift this stage avoids.
+- **On detection.** A contradiction in the spec, an unconsidered case or a
+  technical obstacle surfacing mid-run stops the work and opens a round rather
+  than being decided alone.
+- **Neither round changes settled input.**
+  `.qfai/assistant/constitution/drift-protocol.md` still governs:
+  stop the dependent work, raise the Change Request, wait for approval. The
+  round produces what goes into it — the options and the recommendation its
+  `Approved option` is chosen from.
+
 ## CRITICAL CONSTRAINTS (Read First)
 
 - Do NOT declare completion without running the defined gates.

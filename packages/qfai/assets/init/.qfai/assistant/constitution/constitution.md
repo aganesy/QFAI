@@ -331,6 +331,26 @@ Before modifying code/tests, perform a **quick preflight**:
 
 If confidence is low, ask targeted questions or run additional repo inspection.
 
+**"Targeted questions" means a grilling round** (`.agents/rules/grilling.md`),
+over what this invocation is about to do. One round, not a session: a spec and a
+test ledger are settled input here, and interviewing them from scratch each time
+would stop the micro-cycle and invite the drift these stages exist to avoid. The
+round covers what the preflight could not settle — the items above it left
+uncertain, and nothing else.
+
+**A round also runs on detection.** Where a contradiction in the spec, an
+unconsidered case, or a technical obstacle surfaces mid-run, stop and grill
+rather than deciding alone. These stages read a spec closely enough for its gaps
+to show, and the agent that finds one is the agent least able to judge, on its
+own, what the spec ought to have said.
+
+That round does not change settled input, and is not a second way to.
+`.qfai/assistant/constitution/drift-protocol.md` still governs: stop the
+dependent work, raise the Change Request, and wait for approval. What the round
+produces is what goes **into** that Change Request — the options and the
+recommendation its `Approved option` is chosen from. Grilling decides what the
+change should be; the protocol decides whether it happens.
+
 ---
 
 ## Article X — AskUserQuestion MUST
