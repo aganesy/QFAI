@@ -1200,6 +1200,41 @@ describe("acceptance tests outside paths.testsDir", () => {
     });
   });
 
+  it("recognizes a package manifest from any ecosystem it reads tests in", async () => {
+    await withProject(async (root) => {
+      await seedSpec(root, "0001", ["US-0001"], ["TC-0001"]);
+      await seedTest(root, "integration", "a.test.ts", "/* QFAI:SPEC-0001:TC-0001 */");
+      // A Python workspace package called `tests`. Reading only Node's manifest
+      // would make `api/` its acceptance layer, which is the same defect the
+      // discriminator exists to stop.
+      const dir = path.join(root, "packages", "tests", "api");
+      await mkdir(dir, { recursive: true });
+      await writeFile(
+        path.join(root, "packages", "tests", "pyproject.toml"),
+        ["[project]", 'name = "tests"', ""].join("\n"),
+        "utf-8",
+      );
+      await writeFile(
+        path.join(dir, "client.spec.ts"),
+        [
+          "/* QFAI:SPEC-0001:US-0001 */",
+          "describe('client', () => {",
+          "  it('runs', () => {});",
+          "});",
+          "",
+        ].join("\n"),
+        "utf-8",
+      );
+
+      const result = await evaluateAtddCodeTraceability(
+        root,
+        withProjectGlobs(["packages/*/**/*.spec.ts"]),
+      );
+
+      expect(result.missing.us).toEqual(["SPEC-0001:US-0001"]);
+    });
+  });
+
   it("and a suite directory inside that package still is one", async () => {
     await withProject(async (root) => {
       await seedSpec(root, "0001", ["US-0001"], ["TC-0001"]);

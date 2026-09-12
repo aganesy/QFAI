@@ -1,4 +1,4 @@
-import { statSync } from "node:fs";
+import { readdirSync } from "node:fs";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 
@@ -2593,11 +2593,42 @@ function testsDirName(root: string, config: QfaiConfig): string {
 }
 
 /**
+ * Package-manifest basenames, one per ecosystem this toolkit reads tests in.
+ *
+ * The stub validator carries a dialect for each of these languages, so a
+ * workspace in any of them can have a package called `tests` — and the
+ * discriminator has to be its own manifest, not Node's.
+ */
+const PACKAGE_MANIFEST_NAMES = new Set([
+  "package.json",
+  "deno.json",
+  "deno.jsonc",
+  "pyproject.toml",
+  "setup.py",
+  "setup.cfg",
+  "go.mod",
+  "Cargo.toml",
+  "pom.xml",
+  "build.gradle",
+  "build.gradle.kts",
+  "build.sbt",
+  "Gemfile",
+  "composer.json",
+  "Package.swift",
+  "pubspec.yaml",
+]);
+
+/** Manifest extensions whose basename a project chooses. */
+const PACKAGE_MANIFEST_EXTENSIONS = new Set([".gemspec", ".csproj", ".vbproj", ".fsproj"]);
+
+/**
  * Whether a directory carries a package manifest, memoised per scan.
  *
- * One `statSync` per candidate directory, and a scan asks about the same few
- * over and over. Synchronous because the layer question is asked from a
- * predicate the file stream calls per file, which cannot await.
+ * One `readdirSync` per candidate directory — the same cost class as a stat,
+ * and it answers the named manifests and the ones whose basename the project
+ * chooses in one read. A scan asks about the same few directories over and
+ * over, so the answer is cached. Synchronous because the layer question is
+ * asked from a predicate the file stream calls per file, which cannot await.
  */
 export function packageRootProbe(): (absoluteDir: string) => boolean {
   const seen = new Map<string, boolean>();
@@ -2608,10 +2639,14 @@ export function packageRootProbe(): (absoluteDir: string) => boolean {
     }
     let answer: boolean;
     try {
-      answer = statSync(path.join(absoluteDir, "package.json")).isFile();
+      answer = readdirSync(absoluteDir).some(
+        (entry) =>
+          PACKAGE_MANIFEST_NAMES.has(entry) ||
+          PACKAGE_MANIFEST_EXTENSIONS.has(path.extname(entry).toLowerCase()),
+      );
     } catch {
-      // Absent, unreadable, or a path that is not a directory at all. None of
-      // those is a package root, and none is this function's to report.
+      // Unreadable, or a path that is not a directory at all. Neither is a
+      // package root, and neither is this function's to report.
       answer = false;
     }
     seen.set(absoluteDir, answer);

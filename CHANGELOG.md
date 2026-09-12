@@ -34,10 +34,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   `QFAI-ATDD-105` keeps its subject: a file under `paths.testsDir` that no layer
   owns.
 
-  The stub gate collects only the extensions its own pattern names. A project
-  glob is used as written and may be extension-broad, so a fixture beside the
-  suite — `tests/integration/data.json` — reached a scan that had nothing to say
-  about it and was reported as an unscanned language.
+  The stub gate collects the extensions its own pattern names, plus any a
+  project glob names outright. A glob used as written may be extension-broad, so
+  a fixture beside the suite — `tests/integration/data.json` — reached a scan
+  that had nothing to say about it and was reported as an unscanned language;
+  and a glob naming `.zig` selects a language with no dialect on purpose, which
+  is what that report is for.
 
   A file in no acceptance layer is dropped while the stream runs, before it is
   counted against the collection limit. A project glob may match a whole
@@ -56,8 +58,10 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
   A collected file answers a layer only from inside a test root — a directory
   named `tests`, `test` or `__tests__`, or the one `paths.testsDir` points at,
-  and in either case one that carries no `package.json`, since a workspace
-  package named `tests` is a package rather than a suite root.
+  and in either case one that carries no package manifest, since a workspace
+  package named `tests` is a package rather than a suite root. The manifest is
+  read for every ecosystem this toolkit has a stub dialect for, not Node's
+  alone: a Python or Go workspace can name a package that way too.
   The glob `qfai init` derives reaches colocated sources, so reading the file's
   own parent instead would have made every `src/api/client.spec.ts` an API
   acceptance test: its annotation could then discharge an obligation, and an

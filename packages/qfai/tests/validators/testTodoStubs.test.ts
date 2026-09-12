@@ -483,6 +483,22 @@ describe("the ATDD gate's file selection", () => {
     expect(issues.filter((issue) => issue.code === "QFAI-TEST-002")).toEqual([]);
   });
 
+  it("keeps an extension the project's globs name outright", async () => {
+    const root = await newTempDir();
+    const config = atddConfig(["packages/*/tests/**/*.zig"]);
+    // A language this validator has no dialect for, named by the project. Drop
+    // it and `QFAI-TEST-002` never fires, so a suite nothing can scan reads as
+    // a clean one.
+    await writeTestFile(root, "packages/checkout/tests/integration/pay.zig", 'test "pays" {}\n');
+
+    const issues = await validateTestTodoStubs(root, config, {
+      globs: atddAcceptanceTestGlobs(root, config, STUB_SOURCE_FILE_PATTERN),
+      fileFilter: atddAcceptanceLayerFilter(root, config),
+    });
+
+    expect(issues.map((issue) => issue.code)).toContain("QFAI-TEST-002");
+  });
+
   it("stands aside for a marked skeleton the placeholder validator scans", async () => {
     const root = await newTempDir();
     const config = atddConfig(["packages/*/tests/**/*.test.ts"]);

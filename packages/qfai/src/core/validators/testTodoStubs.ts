@@ -1278,6 +1278,34 @@ export type TestTodoStubOptions = {
 };
 
 /**
+ * Extensions a glob names outright, as `.ext` in lower case.
+ *
+ * A pattern ending in a literal extension names it, and one ending in a brace
+ * set names each member; a pattern ending in a wildcard names none, which is
+ * the extension-broad case the caller filters.
+ */
+function globExtensions(globs: readonly string[]): string[] {
+  const found: string[] = [];
+  for (const glob of globs) {
+    const braces = /\.\{([^}]+)\}$/.exec(glob);
+    if (braces) {
+      for (const part of (braces[1] ?? "").split(",")) {
+        const extension = part.trim().toLowerCase();
+        if (extension.length > 0 && /^[a-z0-9_+-]+$/.test(extension)) {
+          found.push(`.${extension}`);
+        }
+      }
+      continue;
+    }
+    const literal = /\.([a-zA-Z0-9_+-]+)$/.exec(glob);
+    if (literal) {
+      found.push(`.${(literal[1] ?? "").toLowerCase()}`);
+    }
+  }
+  return found;
+}
+
+/**
  * The empty-glob form of `QFAI-TEST-002`: the gate is enabled, but file
  * selection is empty so nothing at all was scanned.
  *
@@ -1384,7 +1412,18 @@ export async function validateTestTodoStubs(
   // rather than in the glob, because slicing a project glob is the defect that
   // list exists to avoid.
   const sourceExtensions =
-    options.globs === undefined ? null : new Set(STUB_SOURCE_EXTENSIONS.map((ext) => `.${ext}`));
+    options.globs === undefined
+      ? null
+      : new Set([
+          ...STUB_SOURCE_EXTENSIONS.map((ext) => `.${ext}`),
+          // An extension the project's own globs name is scanned whatever this
+          // validator knows about it: dropped, it never reaches
+          // `unscannedExtensions`, and a suite in a language with no dialect
+          // reads as a clean scan rather than an unscannable one. What the
+          // intersection is for is the file an extension-**broad** glob sweeps
+          // in, which names nothing.
+          ...globExtensions(globs),
+        ]);
   const wanted = (absolutePath: string): boolean => {
     if (sourceExtensions && !sourceExtensions.has(path.extname(absolutePath).toLowerCase())) {
       return false;
