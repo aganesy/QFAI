@@ -317,7 +317,7 @@ with its own approval; `2B` cannot be approved until it has landed.
   `packages/qfai/tests/assets/discussionGrilling.test.ts`, which requires the
   design direction to be asked inside the discussion session and asserts the
   phrases this option removes, so leaving it out ends the option in a red suite
-  or in an edit the drift guard does not authorise.
+  or in an edit this approval does not name.
 
   **Under `2B` — restoring the requiredness of `prototyping.yaml`:**
   `packages/qfai/src/core/preflight/sddPreflight.ts` with
@@ -399,8 +399,8 @@ with its own approval; `2B` cannot be approved until it has landed.
   spec's rows attesting to behaviour the product no longer has.
 
 **This section is reduced to the approved outcome before `Status: approved` is
-written.** `QFAI-DRIFT-001` reads every path that appears here as
-authorisation, and it neither evaluates the "under `2a`" qualifiers nor compares
+written.** `QFAI-DRIFT-001` reads every spec, policy and contract path that
+appears here as authorisation, and it neither evaluates the "under `2a`" qualifiers nor compares
 them with `Approved option` — so a document left whole would have option 1
 authorising every edit `2a` and `2B` list. The conditions above are what the
 user chooses from; once they have chosen, the paths belonging to the outcomes
@@ -426,8 +426,8 @@ offered stays in `## Options` and in `## Decision needed from user`.
   root mirror, for the direction-selection step and the authoring it performs;
   **`packages/qfai/tests/assets/brandCatalogStepAnchor.test.ts`**, which
   requires the brand catalog to route authoring to `/qfai-sdd` and names its
-  Phase 0 as the sole author — "the tests that pin both" named no path, and the
-  drift guard authorises paths, so that phrase authorised nothing;
+  Phase 0 as the sole author — "the tests that pin both" named no path, so an
+  approval could not say which suites it covered;
   `packages/qfai/src/cli/commands/prototypingIterate.ts`
   with its tests, whose hash-mismatch recovery tells the user to "re-run
   `/qfai-sdd` Phase 0 to refreeze" — a stage that under this sub-option no longer
