@@ -368,3 +368,57 @@ describe("a section with no rule bullet left still gains the new citation", () =
     expect(occurrences(merged, QFAI_AGENT_RULES_END)).toBe(1);
   });
 });
+
+describe("the third agent's instruction file gains the citation too", () => {
+  it("cites a newly shipped master in an existing copilot-instructions.md", async () => {
+    await withProject(async (root) => {
+      const master = ".agents/rules/grilling.md";
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+
+      // The project as an earlier release left it: the file exists, so the
+      // wrapper sync skips it, and the bullet for a later rule is missing.
+      const copilot = path.join(root, ".github", "copilot-instructions.md");
+      const trimmed = (await readFile(copilot, "utf-8"))
+        .split("\n")
+        .filter((line) => !(line.startsWith("- ") && line.includes(master)))
+        .join("\n");
+      await writeFile(copilot, trimmed, "utf-8");
+      await rm(path.join(root, ...master.split("/")), { force: true });
+
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+
+      const after = await readFile(copilot, "utf-8");
+      expect(after, "the newly shipped master is not cited").toContain(master);
+      // Only that line was added.
+      const added = after.split("\n").filter((line) => !trimmed.split("\n").includes(line));
+      expect(added).toHaveLength(1);
+    });
+  });
+});
+
+describe("a section written with CRLF keeps its line endings", () => {
+  it("renders the inserted bullet with the newline the file uses", () => {
+    const template = [
+      QFAI_AGENT_RULES_BEGIN,
+      "",
+      "- `.agents/rules/grilling.md` — interview the decision tree.",
+      "",
+      QFAI_AGENT_RULES_END,
+    ].join("\n");
+    const existing = [
+      QFAI_AGENT_RULES_BEGIN,
+      "",
+      "- `.agents/rules/temporary-files.md` — scratch goes under `tmp/`.",
+      "",
+      QFAI_AGENT_RULES_END,
+      "",
+    ].join("\r\n");
+
+    const merged = addRuleCitations(existing, template, [".agents/rules/grilling.md"]);
+
+    expect(merged).toContain(".agents/rules/grilling.md");
+    // Mixed endings are what a formatter rewrites the whole file over, turning a
+    // one-line change into a diff nobody asked for.
+    expect(merged.split("\n").filter((line) => !line.endsWith("\r"))).toHaveLength(1);
+  });
+});

@@ -89,6 +89,12 @@ export function needsManagedRulesSection(existing: string, section: string): boo
  * reasons a citation can be absent — never shipped, or deliberately removed —
  * without recording anything: the second kind has its file on disk already, so
  * the copy skips it and it is not in this list.
+ *
+ * The separation holds while the master is on disk. A project that deleted the
+ * bullet **and** the file gets both back, because the same run writes the file
+ * again — the opt-out was never durable for the file either, and a rule present
+ * in the tree and cited nowhere is the state this exists to end. Recording which
+ * masters a run wrote is what would tell the two apart; no run records it yet.
  */
 export function newlyWrittenRuleMasters(
   copiedPaths: readonly string[],
@@ -101,6 +107,51 @@ export function newlyWrittenRuleMasters(
     for (const master of citedRuleMasters(relative)) cited.add(master);
   }
   return [...cited].sort();
+}
+
+/**
+ * `existing` with a bullet added for every master it does not already cite,
+ * inserted after the last rule bullet in the file.
+ *
+ * For a file the run generates whole rather than delimits: Copilot's instruction
+ * file is written once and skipped afterwards, so without this a newly shipped
+ * rule reached Codex and Claude and not the third agent this repository says
+ * loads it.
+ */
+export function addRuleCitationsToList(
+  existing: string,
+  section: string,
+  masters: readonly string[],
+): string {
+  const newline = existing.includes("\r\n") ? "\r\n" : "\n";
+  const bullets = pendingBullets(existing, section, masters);
+  if (bullets.length === 0) return existing;
+
+  const lines = existing.split(newline);
+  let insertAfter = -1;
+  for (let index = 0; index < lines.length; index += 1) {
+    const line = lines[index];
+    if (line !== undefined && line.startsWith("- ") && citedRuleMasters(line).length > 0) {
+      insertAfter = index;
+    }
+  }
+  // No rule bullet at all: the project rewrote the list, and there is no place
+  // to put one that a reader would read as part of it.
+  if (insertAfter === -1) return existing;
+
+  lines.splice(insertAfter + 1, 0, ...bullets);
+  return lines.join(newline);
+}
+
+/** The template's bullets for the masters `existing` does not already cite. */
+function pendingBullets(existing: string, section: string, masters: readonly string[]): string[] {
+  const bullets: string[] = [];
+  for (const master of masters) {
+    if (existing.includes(master)) continue;
+    const bullet = bulletFor(section, master);
+    if (bullet !== null) bullets.push(bullet);
+  }
+  return bullets;
 }
 
 /** The template's own bullet for `master`, or `null` when it has none. */
@@ -134,16 +185,15 @@ export function addRuleCitations(
   const endAt = existing.indexOf(QFAI_AGENT_RULES_END, start + QFAI_AGENT_RULES_BEGIN.length);
   if (endAt === -1) return existing;
 
-  const bullets: string[] = [];
-  for (const master of masters) {
-    if (existing.includes(master)) continue;
-    const bullet = bulletFor(section, master);
-    if (bullet !== null) bullets.push(bullet);
-  }
+  const bullets = pendingBullets(existing, section, masters);
   if (bullets.length === 0) return existing;
 
+  // A Windows checkout keeps CRLF, and a template bullet is LF. Splicing one
+  // into the other leaves a file with mixed endings, which a formatter then
+  // rewrites whole — a one-line change turning into a diff over the file.
+  const newline = existing.includes("\r\n") ? "\r\n" : "\n";
   const managed = existing.slice(start, endAt);
-  const lines = managed.split("\n");
+  const lines = managed.split(newline);
   // After the last rule bullet, not the last line: the section closes with
   // prose, and a bullet after it would read as part of that paragraph.
   let insertAfter = -1;
@@ -160,9 +210,9 @@ export function addRuleCitations(
     // section as their own block, separated from whatever precedes them.
     const trailing = lines.at(-1) === "" ? 1 : 0;
     lines.splice(lines.length - trailing, 0, "", ...bullets, "");
-    return `${existing.slice(0, start)}${lines.join("\n")}${existing.slice(endAt)}`;
+    return `${existing.slice(0, start)}${lines.join(newline)}${existing.slice(endAt)}`;
   }
 
   lines.splice(insertAfter + 1, 0, ...bullets);
-  return `${existing.slice(0, start)}${lines.join("\n")}${existing.slice(endAt)}`;
+  return `${existing.slice(0, start)}${lines.join(newline)}${existing.slice(endAt)}`;
 }

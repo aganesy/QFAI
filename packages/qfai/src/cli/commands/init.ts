@@ -67,6 +67,7 @@ import { CANONICAL_TIMESTAMP_GLOB } from "../../core/packLocator.js";
 import {
   AGENT_ENTRY_POINT_FILES,
   addRuleCitations,
+  addRuleCitationsToList,
   extractManagedRulesSection,
   needsManagedRulesSection,
   newlyWrittenRuleMasters,
@@ -2833,6 +2834,11 @@ async function ensureAgentEntryPointRules(
   const copied: string[] = [];
   const skipped: string[] = [];
 
+  await citeNewMastersInCopilotInstructions(rootAssets, destRoot, dryRun, newlyWritten, {
+    copied,
+    skipped,
+  });
+
   for (const name of AGENT_ENTRY_POINT_FILES) {
     const target = path.join(destRoot, name);
     const existing = await readTextFileIfPresent(target);
@@ -2903,6 +2909,53 @@ async function ensureAgentEntryPointRules(
 }
 
 /**
+ * Cites a newly shipped master in an existing `.github/copilot-instructions.md`.
+ *
+ * That file is generated whole and then skipped, so without this a rule the run
+ * shipped reached Codex and Claude Code and not the third agent this repository
+ * says loads it. It carries no managed markers — the whole file is qfai's — so
+ * the bullet goes after the last rule bullet in it, and the same refusals apply
+ * as to the two entry points.
+ */
+async function citeNewMastersInCopilotInstructions(
+  rootAssets: string,
+  destRoot: string,
+  dryRun: boolean,
+  newlyWritten: readonly string[],
+  report: { copied: string[]; skipped: string[] },
+): Promise<void> {
+  const target = path.join(destRoot, ".github", "copilot-instructions.md");
+  const existing = await readTextFileIfPresent(target);
+  // Absent: `syncIntegrationWrappers` writes it whole later in this run, from
+  // the same source, so it will carry every master already.
+  if (existing === null) return;
+
+  const template = await readTextFileIfPresent(path.join(rootAssets, "AGENTS.md"));
+  const section = template === null ? null : extractManagedRulesSection(template);
+  if (section === null) return;
+
+  const merged = addRuleCitationsToList(existing, section, newlyWritten);
+  if (merged === existing) {
+    report.skipped.push(target);
+    return;
+  }
+  const refusal = await refuseUnsafeEntryPointRewrite(target, existing);
+  if (refusal !== null) {
+    error(`  WARNING: ${target} was left unchanged. ${refusal}`);
+    report.skipped.push(target);
+    return;
+  }
+  if (dryRun) {
+    info(`  would update: ${target} (cite the newly shipped rule masters)`);
+    report.copied.push(target);
+    return;
+  }
+  await writeFile(target, merged, "utf-8");
+  info(`  updated: ${target} (cited the newly shipped rule masters; nothing else changed)`);
+  report.copied.push(target);
+}
+
+/**
  * Why this file must not be rewritten, or `null` when rewriting it is safe.
  *
  * The create-only copy treats a symlink as occupied and never follows it. This
@@ -2923,6 +2976,12 @@ async function refuseUnsafeEntryPointRewrite(
   const link = await lstat(target).catch(() => null);
   if (link?.isSymbolicLink() === true) {
     return `It is a symbolic link, and writing through it would change the file it points at — which may be shared, or outside this project. Add the rule citations to the link's target by hand.`;
+  }
+  // A hard link reports as an ordinary file, and a write truncates the inode
+  // every name shares — so a file linked into another repository changes there
+  // too, with nothing in this run naming it.
+  if (link !== null && link.nlink > 1) {
+    return `It is a hard link with ${String(link.nlink)} names, and writing to it would change every one of them. Add the rule citations by hand, or give this project its own copy.`;
   }
 
   const bytes = await readFile(target).catch(() => null);
