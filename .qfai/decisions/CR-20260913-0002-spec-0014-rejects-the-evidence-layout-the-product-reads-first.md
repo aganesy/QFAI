@@ -3,7 +3,7 @@
 - ID: `CR-20260913-0002`
 - Title: `spec-0014 rejects the prototyping evidence layout the product reads first`
 - Raised by: `qfai-implement`
-- Raised at: `2026-09-13T00:00:00Z`
+- Raised at: `2026-09-12T20:29:34Z`
 - Class: `intent`
 - Status: `open`
 - Approved by: `-`
