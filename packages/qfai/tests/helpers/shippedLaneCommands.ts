@@ -1445,10 +1445,15 @@ export const ALLOWED_INIT_CONTENT: ReadonlyMap<string, string> = new Map([
   // `tests/assets/documentationClarityHooks.test.ts` executes and parses. The
   // bytes are what an adopter's agent runs, so the bytes are the pin.
   //
-  // Re-pinned for the implementation-rule group. Derived by running `qfai init`
-  // into a temp root and hashing what it wrote; dropping that one group
-  // reproduces `b13d4081…` byte for byte.
-  [".claude/settings.json", "6be452d2cf1e63bb742d699e2e934531e770f87c98d2c79f23bf185b2cbc9786"],
+  // Re-pinned for the three grilling groups. Derived by running `qfai init` into
+  // a temp root and hashing what it wrote. Each group is one `node -e` entry
+  // naming `.agents/rules/grilling.md` and printing `additionalContext`, with no
+  // shell, no file read and no network — the shape every reminder here takes.
+  // None carries an `if`: a path scope naming the default artifact directories
+  // is silently absent in a project that moved them. The `UserPromptSubmit`
+  // group is one more entry of the same shape, on every turn rather than
+  // every write.
+  [".claude/settings.json", "a5f0f0e088022672b869c566a2a4d05cecc7aa7904b9fbde699140e88f5f4827"],
   // Re-derived for the MERGED file, which carries both sides' edits: the three
   // retired `validation.traceability` knobs are gone (`brMustHaveSc`,
   // `scNoTestSeverity`, `orphanContractsPolicy`), the `forbidTestTodoStubs`

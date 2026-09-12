@@ -35,6 +35,29 @@ export const DOCUMENTATION_CLARITY_HOOK_MARKER = "QFAI documentation-clarity rem
  */
 export const MINIMAL_IMPLEMENTATION_HOOK_MARKER = "QFAI minimal-implementation reminder";
 
+/**
+ * Identities of the three groups that restate the grilling rule, one for each
+ * moment a decision stops being cheap to revisit.
+ *
+ * They share an event and differ only in matcher, which is the case the
+ * paragraph above is about: the merge reads a group's identity off its markers,
+ * so one marker across all three would make them one group, and a project that
+ * had added any one of them by hand would never receive the other two.
+ */
+export const GRILLING_DESIGN_ARTIFACT_HOOK_MARKER = "QFAI grilling reminder: design artifact";
+export const GRILLING_DELEGATION_HOOK_MARKER = "QFAI grilling reminder: delegation";
+export const GRILLING_PLAN_HOOK_MARKER = "QFAI grilling reminder: plan";
+
+/**
+ * Identity of the group that restates the question-form rule on every turn.
+ *
+ * `UserPromptSubmit` rather than a one-shot event: the rule has to be in view at
+ * the moment a question forms, and that moment is unpredictable. A session-start
+ * reminder is gone by the time the context is compacted, which is exactly when a
+ * long session starts skipping it.
+ */
+export const STRUCTURED_QUESTION_HOOK_MARKER = "QFAI structured-question reminder";
+
 /** Where both the template and the project keep the file, relative to the root. */
 export const CLAUDE_SETTINGS_RELATIVE_PATH = ".claude/settings.json";
 
