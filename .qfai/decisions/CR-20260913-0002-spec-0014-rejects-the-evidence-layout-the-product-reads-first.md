@@ -129,8 +129,9 @@ than discovering it.
   `.qfai/specs/spec-0014/tdd/test-list.md`
 
   **Under option 1 the product paths are in scope as well**, and they are listed
-  here because `QFAI-DRIFT-001` reads this section and not the condition beside
-  an entry: `packages/qfai/src/core/validators/uiEvidenceArtifacts.ts`,
+  here so an approval of that option says what it covers. `QFAI-DRIFT-001` reads
+  this section for the spec paths among them and not the condition beside an
+  entry: `packages/qfai/src/core/validators/uiEvidenceArtifacts.ts`,
   `packages/qfai/src/cli/commands/validate.ts`,
   `packages/qfai/src/core/validators/skill/prototypingSkill.ts`,
   `packages/qfai/src/cli/commands/prototypingIterate.ts`,
