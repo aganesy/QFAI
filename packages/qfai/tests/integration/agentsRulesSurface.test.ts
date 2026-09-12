@@ -697,9 +697,10 @@ describe("cross-AI rules surface (.agents/rules/ master)", () => {
       const text = await readFile(path.join(ROOT, rel), "utf-8");
       expect(text).toMatch(/value\s+with\s+no\s+candidates\s+goes\s+through\s+the\s+tool/);
       expect(text).toMatch(/user-questions\.md`\s+§\s+2/);
-      // The fallback stays what it is: the case where the host has no such
-      // path, not a second way of asking wherever it is easier.
-      expect(text).toMatch(/§\s+5\s+keeps\s+for\s+a\s+host\s+that\s+has\s+none/);
+      // The fallback keeps its own three reasons, all of them about the tool.
+      // Written as the host-has-none case alone it would contradict the round
+      // section above, where a mode withholding the tool falls back too.
+      expect(text).toMatch(/never\s+because\s+the\s+answer\s+is\s+a\s+value/);
     });
 
     // The frontier empties while a lookup is in flight, so an end condition
