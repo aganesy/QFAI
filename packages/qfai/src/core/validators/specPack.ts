@@ -94,7 +94,7 @@ const DELTA_REQUIRED_H2_HEADINGS = [
 
 type OpenQuestionStatus = {
   id: string;
-  status: "open" | "resolved" | "deferred";
+  status: "open" | "resolved" | "deferred" | "unadjudicated";
 };
 
 type InvalidOpenQuestionStatus = {
@@ -1895,7 +1895,7 @@ async function fileExists(target: string): Promise<boolean> {
   }
 }
 
-function validateOpenQuestionsGate(
+export function validateOpenQuestionsGate(
   entry: SpecEntry,
   text: string,
   releaseCandidate: boolean,
@@ -1915,6 +1915,33 @@ function validateOpenQuestionsGate(
   );
   const severity = releaseCandidate ? "error" : "warning";
   const issues: Issue[] = [];
+
+  // A decision the user was asked for and never took. Unlike `open`, this one
+  // does not soften outside a release candidate: the pack is claiming a design
+  // nobody chose, and a stage that completes over it has recorded the agent's
+  // preference as the project's decision.
+  const unadjudicatedIds = Array.from(
+    new Set(
+      statuses
+        .filter((item) => item.status === "unadjudicated")
+        .map((item) => item.id)
+        .filter((id) => id.length > 0),
+    ),
+  );
+  if (unadjudicatedIds.length > 0) {
+    issues.push(
+      issue(
+        "QFAI-SPACK-102",
+        `A decision was put to the user and nobody settled it: ${unadjudicatedIds.join(", ")}`,
+        "error",
+        entry.openQuestionsPath,
+        "specPack.openQuestionsUnadjudicated",
+        unadjudicatedIds,
+        "canonical",
+        "Put the decision to the user and record the answer, or — where it is the agent's to make and the user has closed the questions — record it as an assumption and set `status: deferred` with the next decision point.",
+      ),
+    );
+  }
 
   if (openIds.length > 0) {
     const message = releaseCandidate
@@ -1958,7 +1985,7 @@ function validateOpenQuestionsGate(
         "specPack.openQuestionsStatus",
         refs,
         "canonical",
-        "15_Open-questions.md の各 OQ-* に `status: open|resolved|deferred` を正しい綴りで記載してください。",
+        "15_Open-questions.md の各 OQ-* に `status: open|resolved|deferred|unadjudicated` を正しい綴りで記載してください。",
       ),
     );
   }
@@ -1995,7 +2022,12 @@ function parseInvalidOpenQuestionStatuses(text: string): InvalidOpenQuestionStat
     }
 
     const normalized = rawStatus.toLowerCase();
-    if (normalized === "open" || normalized === "resolved" || normalized === "deferred") {
+    if (
+      normalized === "open" ||
+      normalized === "resolved" ||
+      normalized === "deferred" ||
+      normalized === "unadjudicated"
+    ) {
       continue;
     }
 
@@ -2801,7 +2833,8 @@ function parseOpenQuestionStatuses(text: string): OpenQuestionStatus[] {
       currentId = idMatch[1];
     }
 
-    const statusMatch = /(?:^|\s)(?:-\s*)?status\s*:\s*(open|resolved|deferred)\s*$/i.exec(line);
+    const statusMatch =
+      /(?:^|\s)(?:-\s*)?status\s*:\s*(open|resolved|deferred|unadjudicated)\s*$/i.exec(line);
     if (!statusMatch?.[1]) {
       continue;
     }

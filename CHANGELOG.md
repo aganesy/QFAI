@@ -6,6 +6,19 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Added
 
+- **A spec stage cannot complete over a decision nobody took** (#1678). An open
+  question and an unanswered decision were the same word. A question parked on
+  purpose is what `08_Open-questions.md` is for, and a stage completes over it;
+  a decision a grilling session put to the user, and nobody answered, is the
+  pack claiming a design nobody chose.
+
+  `status: unadjudicated` is the second one, and it fails validation at every
+  profile rather than warning outside a release candidate. No existing pack
+  carries the value, so nothing has to be migrated to it. What to do instead is
+  in the finding: ask again and record the answer, or — where the user closed
+  the questions and the decision is the agent's to make — record it as an
+  assumption and park it as `deferred` with the point that takes it up.
+
 - **The question-form rule is put in front of the agent on every turn** (#1610).
   A `UserPromptSubmit` hook emits it as context, naming the rule master and the
   one line an agent reaches past when it would rather not ask.

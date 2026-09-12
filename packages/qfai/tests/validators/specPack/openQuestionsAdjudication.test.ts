@@ -1,0 +1,83 @@
+/**
+ * A spec stage that completes over a decision nobody took.
+ *
+ * `08_Open-questions.md` holds two different things under one word. A question
+ * parked on purpose is what the file is for, and a stage completes over it. A
+ * decision a grilling session put to the user, which nobody answered, is the
+ * pack claiming a design nobody chose — and completing there records the
+ * agent's preference as the project's, with nothing later reopening it.
+ *
+ * `unadjudicated` is the second one. It is a status rather than a new file or a
+ * new section, because the gate already reads statuses and no existing pack
+ * carries the value, so nothing has to be migrated to it.
+ */
+import { describe, expect, it } from "vitest";
+
+import { validateOpenQuestionsGate } from "../../../src/core/validators/specPack.js";
+import type { SpecEntry } from "../../../src/core/specLayout.js";
+
+const ENTRY = { openQuestionsPath: "spec-0042/08_Open-questions.md" } as unknown as SpecEntry;
+
+const doc = (rows: readonly string[]): string =>
+  ["# 08 Open Questions", "", "## Open Questions", "", ...rows, ""].join("\n");
+
+const codes = (text: string, releaseCandidate = false): string[] =>
+  validateOpenQuestionsGate(ENTRY, text, releaseCandidate).map((issue) => issue.code);
+
+describe("a decision the user was asked for and never took blocks the stage", () => {
+  it("reports it, and names the question", () => {
+    const issues = validateOpenQuestionsGate(
+      ENTRY,
+      doc(["- OQ-0007 — which retention window applies", "  - status: unadjudicated"]),
+      false,
+    );
+    expect(issues.map((issue) => issue.code)).toEqual(["QFAI-SPACK-102"]);
+    expect(issues[0]?.refs).toEqual(["OQ-0007"]);
+  });
+
+  it("is an error at the merge gate, not only in a release candidate", () => {
+    // `open` softens to a warning outside a release candidate, because a
+    // question still being worked is not a claim. This one is a claim.
+    const rows = ["- OQ-0007 — which retention window applies", "  - status: unadjudicated"];
+    for (const releaseCandidate of [false, true]) {
+      const issues = validateOpenQuestionsGate(ENTRY, doc(rows), releaseCandidate);
+      expect(issues[0]?.severity, String(releaseCandidate)).toBe("error");
+    }
+  });
+
+  it("says what to do instead", async () => {
+    const issues = validateOpenQuestionsGate(
+      ENTRY,
+      doc(["- OQ-0007 — which retention window applies", "  - status: unadjudicated"]),
+      false,
+    );
+    expect(issues[0]?.suggested_action).toContain("status: deferred");
+  });
+});
+
+describe("what the new status does not change", () => {
+  it("leaves a question parked on purpose alone", () => {
+    // The whole point of the file. A stage completes over this.
+    expect(
+      codes(doc(["- OQ-0007 — which retention window applies", "  - status: deferred"])),
+    ).toEqual([]);
+  });
+
+  it("keeps `open` a warning at the merge gate", () => {
+    const rows = ["- OQ-0007 — which retention window applies", "  - status: open"];
+    const issues = validateOpenQuestionsGate(ENTRY, doc(rows), false);
+    expect(issues.map((issue) => issue.code)).toEqual(["E_OQ_OPEN_RELEASE_BLOCK"]);
+    expect(issues[0]?.severity).toBe("warning");
+  });
+
+  it("reads the new value as a valid status rather than an unparseable one", () => {
+    // Both would fire on the same row otherwise, and the second would tell the
+    // author to write one of three values that does not include this one.
+    expect(
+      codes(doc(["- OQ-0007 — which retention window applies", "  - status: unadjudicated"])),
+    ).not.toContain("E_OQ_STATUS_UNPARSEABLE");
+    expect(codes(doc(["- OQ-0008 — which region is live", "  - status: pending"]))).toContain(
+      "E_OQ_STATUS_UNPARSEABLE",
+    );
+  });
+});

@@ -1600,7 +1600,9 @@ export const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
   E_TC_ORPHAN: "Every TC is linked in Ledger and traceable up to objective intent.",
   E_UPWARD_REF_FORBIDDEN: "Upper-to-lower direct references are forbidden outside Ledger.",
   E_OQ_OPEN_RELEASE_BLOCK: "release_candidate requires zero open items in 15_Open-questions.md.",
-  E_OQ_STATUS_UNPARSEABLE: "Each OQ entry has a valid status (open|resolved|deferred).",
+  E_OQ_STATUS_UNPARSEABLE:
+    "Each OQ entry has a valid status (open|resolved|deferred|unadjudicated).",
+  "QFAI-SPACK-102": "No open question is a decision the user was asked for and never took.",
   E_DELTA_MISSING_REQUIRED:
     "18_delta.md includes all required sections and Rejected has DO NOT/Temptation.",
   "QFAI-DECISION-001":
