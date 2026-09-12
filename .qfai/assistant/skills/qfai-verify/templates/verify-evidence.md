@@ -29,11 +29,13 @@ Required sections (all of them, in this order):
 
 ## Grilling Session
 
-<!-- One row per session, written when each ends. See the skill's
+<!-- One `### /qfai-verify — run started <time>` block per invocation, one row
+     per session inside it, written when each session ends. See the skill's
      `## Grilling (MANDATORY)` section; the open questions go under the
      table. -->
 
-Run started: 2026-01-01T09:02:00Z
+### /qfai-verify — run started 2026-01-01T09:02:00Z
+
 Preflight: session opened
 
 | Session | Ended | Ended at | Revision | Work resumed | Subject | Frontier | Lookups | Decisions | Open | Escalated |

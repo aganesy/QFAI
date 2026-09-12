@@ -22,9 +22,15 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   The section opens with `Run started`, and every row ends at or after it. That
   is what bounds the invocation: an evidence file is updated in place, and a
   rerun over an unchanged tree produces the same `Revision`, because that
-  address excludes `.qfai/evidence/**`. A second line, `Preflight`, says whether
+  address excludes `.qfai/evidence/**`. A line under the heading, `Preflight`, says whether
   the confidence check opened a session at all, so a run that needed none is
   distinguishable from one that skipped it.
+
+  One block per stage as well as per run, because two stages share an evidence
+  file: an `E2E` / `API` / `Integration` row's proof lives in the ATDD evidence,
+  which `/qfai-atdd` wrote its own sessions into and `/qfai-implement` later
+  writes to. One table for both would have each stage's gate rejecting the
+  other's rows.
 
   A row carries both times — when the session ended, and when the stage next
   wrote — and this run's `Revision` beside them. A row holding only the ending

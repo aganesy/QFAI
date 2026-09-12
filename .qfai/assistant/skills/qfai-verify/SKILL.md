@@ -109,9 +109,10 @@ Use the shared schema.
 - Follow `.qfai/assistant/constitution/shared-skill-delegation-baseline.md#reviewer-gate-baseline`.
 - The stage evidence's `## Grilling Session` section carries `Run started`,
   `Preflight`, a row for every session detection opened, and — when `Preflight`
-  says `session opened` — one for the preflight session. Every `Ended` is one of
-  the four endings the rule master names, every row's `Ended at` is at or after
-  `Run started`, and each row's `Open` count matches the register lines naming
+  says `session opened` — one for the preflight session, all of them inside this
+  run's own block. Every `Ended` is one of the four endings the rule master
+  names, every row's `Ended at` is at or after the run-started time on
+  its own `### /qfai-verify — run started` block, and each row's `Open` count matches the register lines naming
   that row's `Session`. **A row whose ending lets the work go on also carries a
   `Work resumed` later than its own `Ended at`** — that ordering is the whole
   reason both times are recorded, and a blank or earlier one is a session
@@ -206,7 +207,8 @@ restated here.
   opens any:
 
   ```text
-  Run started: 2026-01-01T09:02:00Z
+  ### /qfai-verify — run started 2026-01-01T09:02:00Z
+
   Preflight: session opened
 
   | Session | Ended | Ended at | Revision | Work resumed | Subject | Frontier | Lookups | Decisions | Open | Escalated |
@@ -226,13 +228,21 @@ restated here.
   order, which is the part a later reader has no other way to recover. It still
   cannot prove a session happened: the agent writes its own record.
 
-  **`Run started` is what bounds the invocation.** An evidence file is updated in
-  place, so a row left by an earlier run has a valid ending, an `Ended at`
-  before its own `Work resumed`, and a consistent count; and a rerun over an
-  unchanged tree produces the same `Revision`, because that address is a tree
-  address and excludes `.qfai/evidence/**`. Only a value that moves every
-  invocation separates the two, so the run writes one before it opens a session
-  and every row of this run ends at or after it.
+  **The `### <command> — run started <time>` heading is what bounds the
+  invocation, and it is one block per stage-invocation.** An evidence file is
+  updated in place, so a row left by an earlier run has a valid ending, an
+  `Ended at` before its own `Work resumed`, and a consistent count; and a rerun
+  over an unchanged tree produces the same `Revision`, because that address is a
+  tree address and excludes `.qfai/evidence/**`. Only a value that moves every
+  invocation separates the two.
+
+  **One block per stage as well as per run**, because two stages share an
+  evidence file: an `E2E` / `API` / `Integration` row's proof lives in
+  `atdd-<spec-id>.md`, which `/qfai-atdd` wrote its own sessions into and
+  `/qfai-implement` later writes to. One table for both would have each stage's
+  gate rejecting the other's rows for a start time they never claimed. The gate
+  reads this stage's own block and leaves every other block alone, so both
+  histories stay in the file and stay valid.
 
   `Revision` stays beside it, written in the notation
   `.qfai/assistant/skills/qfai-implement/references/evidence-revision.md`

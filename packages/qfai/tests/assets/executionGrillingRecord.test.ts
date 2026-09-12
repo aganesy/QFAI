@@ -129,7 +129,7 @@ describe.each(TREES)("%s — the execution stages record their sessions", (tree)
     );
     // The confidence check may open no preflight session at all, and an absent
     // row reads the same as a skipped one without a line saying which.
-    expectPhrase(body, "Run started: 2026-01-01T09:02:00Z");
+    expectPhrase(body, "run started 2026-01-01T09:02:00Z");
     expectPhrase(body, "Preflight: session opened");
     expectPhrase(body, "**`Preflight` says whether the confidence check opened a session.**");
     expectPhrase(body, "The shape `/qfai-discussion` already writes");
@@ -148,7 +148,12 @@ describe.each(TREES)("%s — the execution stages record their sessions", (tree)
     );
     // The times order a session against the work and bound no invocation: an
     // evidence file is updated in place, so last week's row reads as valid.
-    expectPhrase(body, "**`Run started` is what bounds the invocation.**");
+    expectPhrase(body, "is what bounds the invocation, and it is one block per stage-invocation");
+    // Two stages share an evidence file, so one table would have each gate
+    // rejecting the other stage's rows.
+    expectPhrase(body, "**One block per stage as well as per run**");
+    expectPhrase(body, "The gate reads this stage's own block and leaves every other block alone");
+    expectPhrase(body, "The gate reads this stage's own block and leaves every other block alone");
     expectPhrase(
       body,
       "a rerun over an unchanged tree produces the same `Revision`, because that address is a tree address and excludes `.qfai/evidence/**`",
@@ -195,13 +200,10 @@ describe.each(TREES)("%s — the execution stages record their sessions", (tree)
   it.each(STAGES)("%s tells its gate to read every row", async (skill) => {
     // Nothing else reads it. An unread record is a heading.
     const body = await read(`assistant/skills/${skill}/SKILL.md`);
+    expectPhrase(body, "`Preflight`, a row for every session detection opened");
     expectPhrase(
       body,
-      "carries `Run started`, `Preflight`, a row for every session detection opened",
-    );
-    expectPhrase(
-      body,
-      "every row`s `Ended at` is at or after `Run started`".replace("row`s", "row's"),
+      "every row`s `Ended at` is at or after the run-started time".replace("row`s", "row's"),
     );
     expectPhrase(
       body,

@@ -117,9 +117,10 @@ Use the shared schema.
 - Follow `.qfai/assistant/constitution/shared-skill-delegation-baseline.md#reviewer-gate-baseline`.
 - The stage evidence's `## Grilling Session` section carries `Run started`,
   `Preflight`, a row for every session detection opened, and — when `Preflight`
-  says `session opened` — one for the preflight session. Every `Ended` is one of
-  the four endings the rule master names, every row's `Ended at` is at or after
-  `Run started`, and each row's `Open` count matches the register lines naming
+  says `session opened` — one for the preflight session, all of them inside this
+  run's own block. Every `Ended` is one of the four endings the rule master
+  names, every row's `Ended at` is at or after the run-started time on
+  its own `### /qfai-atdd — run started` block, and each row's `Open` count matches the register lines naming
   that row's `Session`. **A row whose ending lets the work go on also carries a
   `Work resumed` later than its own `Ended at`** — that ordering is the whole
   reason both times are recorded, and a blank or earlier one is a session
@@ -216,13 +217,14 @@ restated here.
   opens any:
 
   ```text
-  Run started: 2026-01-01T09:02:00Z
+  ### /qfai-atdd — run started 2026-01-01T09:02:00Z
+
   Preflight: session opened
 
   | Session | Ended | Ended at | Revision | Work resumed | Subject | Frontier | Lookups | Decisions | Open | Escalated |
   | ------- | ----- | -------- | -------- | ------------ | ------- | -------- | ------- | --------- | ---- | --------- |
-  | S1 | S1 | confirmed | 2026-01-01T09:14:00Z | a1b2c3d | 2026-01-01T09:15:20Z | preflight | empty | none in flight | 4 | 0 | 0 |
-  | S2 | S2 | user-closed | 2026-01-01T11:02:00Z | a1b2c3d | 2026-01-01T11:04:10Z | an acceptance criterion the spec does not cover | empty | none in flight | 2 | 1 | 0 |
+  | S1 | confirmed | 2026-01-01T09:14:00Z | a1b2c3d | 2026-01-01T09:15:20Z | preflight | empty | none in flight | 4 | 0 | 0 |
+  | S2 | user-closed | 2026-01-01T11:02:00Z | a1b2c3d | 2026-01-01T11:04:10Z | an acceptance criterion the spec does not cover | empty | none in flight | 2 | 1 | 0 |
   ```
 
   The shape `/qfai-discussion` already writes, with `Subject` in place of that
@@ -236,13 +238,21 @@ restated here.
   order, which is the part a later reader has no other way to recover. It still
   cannot prove a session happened: the agent writes its own record.
 
-  **`Run started` is what bounds the invocation.** An evidence file is updated in
-  place, so a row left by an earlier run has a valid ending, an `Ended at`
-  before its own `Work resumed`, and a consistent count; and a rerun over an
-  unchanged tree produces the same `Revision`, because that address is a tree
-  address and excludes `.qfai/evidence/**`. Only a value that moves every
-  invocation separates the two, so the run writes one before it opens a session
-  and every row of this run ends at or after it.
+  **The `### <command> — run started <time>` heading is what bounds the
+  invocation, and it is one block per stage-invocation.** An evidence file is
+  updated in place, so a row left by an earlier run has a valid ending, an
+  `Ended at` before its own `Work resumed`, and a consistent count; and a rerun
+  over an unchanged tree produces the same `Revision`, because that address is a
+  tree address and excludes `.qfai/evidence/**`. Only a value that moves every
+  invocation separates the two.
+
+  **One block per stage as well as per run**, because two stages share an
+  evidence file: an `E2E` / `API` / `Integration` row's proof lives in
+  `atdd-<spec-id>.md`, which `/qfai-atdd` wrote its own sessions into and
+  `/qfai-implement` later writes to. One table for both would have each stage's
+  gate rejecting the other's rows for a start time they never claimed. The gate
+  reads this stage's own block and leaves every other block alone, so both
+  histories stay in the file and stay valid.
 
   `Revision` stays beside it, written in the notation
   `.qfai/assistant/skills/qfai-implement/references/evidence-revision.md`
@@ -462,12 +472,14 @@ the heading cannot:
   the section. A rework round is a `#### Round N` block nested **inside that
   row's section**, not a section of its own: the list is closed, and nesting
   attributes it to a row (`references/review-fix-rounds.md`).
-- **Grilling Session** — one row per session, with the open questions listed
-  under the table. Each is written when that session ends, and carries this run's
-  `Revision` beside the time the stage next wrote: the times order the session
-  against the work, and the revision says the row is this invocation's rather
-  than one an earlier run left in the same file. The Reviewer Gate reads it
-  (`## Grilling (MANDATORY)`).
+- **Grilling Session** — one `### /qfai-atdd — run started <time>` block per
+  invocation, one row per session inside it, and the open questions listed under
+  the table. Each row is written when that session ends. **The block heading is
+  what says the rows are this invocation's**; `Revision` says which tree the
+  session ended against and nothing more, because that address excludes
+  `.qfai/evidence/**` and so repeats across two runs over an unchanged source
+  tree. The two times order the session against the work. The Reviewer Gate
+  reads this stage's own block (`## Grilling (MANDATORY)`).
 - **Coverage Depth Matrix** — a link to
   `.qfai/evidence/coverage-depth-<spec-id>.md` and the `✅`/`⚠️`/`❌` totals.
   The matrix and its per-`❌` justifications live in that committed file;
@@ -488,11 +500,13 @@ Template:
 
 ## Grilling Session
 
-<!-- One row per session, written when each ends. See this skill's
+<!-- One `### /qfai-atdd — run started <time>` block per invocation, one row
+     per session inside it, written when each session ends. See this skill's
      `## Grilling (MANDATORY)` section; the open questions go under the
      table. -->
 
-Run started: 2026-01-01T09:02:00Z
+### /qfai-atdd — run started 2026-01-01T09:02:00Z
+
 Preflight: session opened
 
 | Session | Ended | Ended at | Revision | Work resumed | Subject | Frontier | Lookups | Decisions | Open | Escalated |
