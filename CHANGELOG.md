@@ -4,6 +4,16 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ## [Unreleased]
 
+### Changed
+
+- **A grilling session's outcome has a named home** (#1604). A settled
+  discussion decision goes to `99_delta.md`; one the session could not settle
+  goes to the open-question register. Answering a question later moves its
+  register row as well as writing the log, because readiness reads the register
+  and an answer recorded only in the log left the pack blocked on a settled
+  question. A settled spec decision needs its `DL-*` entry in the delta as well
+  as `07_Decisions.md`, because `npx qfai report` reads the Decision Log alone.
+
 ### Removed
 
 - **`.qfai/report/validate.log` is no longer tracked** (#1582). Every local
