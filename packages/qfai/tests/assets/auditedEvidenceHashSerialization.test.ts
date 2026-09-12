@@ -42,45 +42,51 @@ describe.each(TREES)("%s — the audit hash's extraction is one text", (tree) =>
     await expectPhrase("two readers taking the same fields can still compute different digests");
   });
 
-  it("settles the marker, the prefix and the separator in one clause", async () => {
-    // All three are spelling, and a rule that rewrites any of them is a rule
-    // two readers implement differently.
-    await expectPhrase("the entry's own lines, **selected and never rewritten**");
-    await expectPhrase("the leading `- ` list marker stays, the `Round N: ` prefix stays");
-    await expectPhrase("keep whatever separator the entry wrote them with");
+  it("takes a region rather than a selection of lines", async () => {
+    // A selection would also have to state an order, a separator and a
+    // spelling per field, each a further way for two readers to disagree.
+    await expectPhrase(
+      "The extraction is a **region of the entry**, not a selection of lines out of it",
+    );
+    await expectPhrase("every line inside it is kept **verbatim**");
+    await expectPhrase("The field lists below are what decide **where the region ends**");
+  });
+
+  it("ends the region at the first field the subject could not have read", async () => {
+    await expectPhrase("for a completion subject, the first field a reviewer writes");
+    await expectPhrase("for the GREEN subject, the first field written after the GREEN");
+  });
+
+  it("drops a reviewer's own verdict line from what that reviewer hashes", async () => {
+    await expectPhrase("a reviewer's own `reviewer verdict` line is dropped wherever it falls");
+    await expectPhrase("the one line that cannot be in its own subject");
+  });
+
+  it("synthesizes the heading rather than copying it", async () => {
+    // A heading carrying extra text would otherwise move the digest when the
+    // text is tidied.
+    await expectPhrase("the heading is **synthesized** as `### <TDD-ID>` rather than copied");
   });
 
   it("carries a field's fenced value with the field", async () => {
-    // The recorded output is the observation. Taking the field line alone
-    // leaves the output free to change after the verdict.
+    // The recorded output is the observation, so it is inside the region.
     await expectPhrase("opening fence through closing fence");
-    await expectPhrase(
-      "a subject that took the field line alone let the output be rewritten after the verdict with the digest unmoved",
-    );
-  });
-
-  it("takes the entry's order rather than the contract's", async () => {
-    // A selection that also reorders is a rewrite, and the two readings gave
-    // one entry two digests.
-    await expectPhrase("**in the order the entry writes them**, not the order this contract lists");
-    await expectPhrase("a selection cannot also reorder without rewriting");
-  });
-
-  it("opens the text with the row's heading line", async () => {
-    await expectPhrase("opened by the row's `### <TDD-ID>` heading line");
-    await expectPhrase("an entry moved under another id is a different subject");
   });
 
   it("says the gate computes it this way today", async () => {
     // A contract no tool implements is the state this paragraph was written
     // for: the recorded values were reproducible only by their own run.
-    await expectPhrase("gate item 10 computes the completion subject this way today");
+    await expectPhrase("computes the completion subject exactly this way");
+    await expectPhrase("`phaseAuthoredEvidence` in `packages/qfai/src/core/validators/tddList.ts`");
     await expectPhrase("reproducible only inside the run that wrote it");
   });
 
-  it("separates the three values that share these words", async () => {
-    await expectPhrase('**Two fields share the words "audited evidence hash" and are not the same');
-    await expectPhrase("computed by these same four steps");
-    await expectPhrase("Neither is the working-tree revision");
+  it("enumerates all three reviewer-owned fields before the revision", async () => {
+    // Omitting the parity one is how a compliant UI row loses the hash its
+    // gate requires.
+    await expectPhrase("**Three ledger fields carry an audited evidence hash");
+    await expectPhrase("`Prototype parity audited evidence hash`");
+    await expectPhrase("omitting the third is how a compliant UI row loses the parity hash");
+    await expectPhrase("The working-tree revision is a fourth value with a fourth name");
   });
 });

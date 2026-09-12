@@ -27,28 +27,38 @@ procedure, in four steps:
 
    **What the extraction produces, exactly.** Naming the fields settles which
    lines are taken and leaves open what they become, and two readers taking the
-   same fields can still compute different digests. The text is:
+   same fields can still compute different digests. The extraction is a
+   **region of the entry**, not a selection of lines out of it:
 
-   - the entry's own lines, **selected and never rewritten** — the leading
-     `- ` list marker stays, the `Round N: ` prefix stays, the name and value
-     keep whatever separator the entry wrote them with;
-   - a fenced block that is a field's value carried with that field, opening
-     fence through closing fence: the recorded command output **is** the
-     observation, and a subject that took the field line alone let the output
-     be rewritten after the verdict with the digest unmoved;
-   - **in the order the entry writes them**, not the order this contract lists
-     them. The contract names _which_ fields a subject holds; a selection
-     cannot also reorder without rewriting, and the two readings gave one
-     entry two digests;
-   - opened by the row's `### <TDD-ID>` heading line, so an entry moved under
-     another id is a different subject rather than the same one.
+   - it runs from the row's heading to the line before the **first field the
+     subject could not have read** — for a completion subject, the first field
+     a reviewer writes; for the GREEN subject, the first field written after
+     the GREEN; for the RED subject, the first field written after the RED;
+   - every line inside it is kept **verbatim** — the leading `- ` list marker,
+     the `Round N: ` prefix, the `#### Round N` headings, the blank lines and
+     any prose between the fields, and the fenced block that is a field's
+     value, opening fence through closing fence;
+   - a reviewer's own `reviewer verdict` line is dropped wherever it falls
+     inside the region, with the fenced value that follows an empty one:
+     hashing a reviewer's own answer into what that reviewer hashes is the one
+     line that cannot be in its own subject;
+   - the heading is **synthesized** as `### <TDD-ID>` rather than copied, so an
+     entry whose heading carries extra text hashes the same before and after
+     that text is tidied.
 
-   Joined with newlines, that text is the artifact step 2 normalizes and step 3
-   records under the evidence file's path. `npx qfai validate`'s gate item 10
-   computes the completion subject this way today, and stating it here is what
-   lets a second party recompute a recorded digest at all: before this
-   paragraph, the same six choices were each open, and a recorded value was
-   reproducible only inside the run that wrote it.
+   A region rather than a selection, because that is what the gate computes: a
+   selection would also have to state an order, a separator and a spelling for
+   every field, and each of those is a sixth way for two honest readers to
+   disagree. The field lists below are what decide **where the region ends**,
+   which is the one thing a boundary needs from them.
+
+   Joined as they stand, those lines are the artifact step 2 normalizes and
+   step 3 records under the evidence file's path. `npx qfai validate`'s gate
+   item 10 computes the completion subject exactly this way
+   (`phaseAuthoredEvidence` in `packages/qfai/src/core/validators/tddList.ts`),
+   and stating it here is what lets a second party recompute a recorded digest
+   at all: before this paragraph, six choices were each open and a recorded
+   value was reproducible only inside the run that wrote it.
 
    The fields, per subject:
 
@@ -203,13 +213,15 @@ procedure, in four steps:
    in the matrix contributes nothing.
 4. **Hash.** SHA-256 of that record list; record the hex digest.
 
-**Two fields share the words "audited evidence hash" and are not the same
-value.** This one is a reviewer's, over the subject its role reads. A ledger
-row's `Spec audited evidence hash` and `Code quality audited evidence hash` are
-the verdicts of two named reviewer roles over their own subjects, computed by
-these same four steps — the words differ only by the role they belong to.
-Neither is the working-tree revision, which
-`../../skills/qfai-implement/references/evidence-revision.md` defines and which
+**Three ledger fields carry an audited evidence hash, and none of them is the
+working-tree revision.** A row records `Spec audited evidence hash`,
+`Code quality audited evidence hash` and — on a UI-affecting row —
+`Prototype parity audited evidence hash`, one per named reviewer role, each
+computed by these same four steps over that role's own subject. The words
+differ only by the role they belong to, and omitting the third is how a
+compliant UI row loses the parity hash its gate requires. The working-tree
+revision is a fourth value with a fourth name:
+`../../skills/qfai-implement/references/evidence-revision.md` defines it, and it
 addresses a tree rather than a subject.
 
 **A T1 coherent group is one pass and several rows**

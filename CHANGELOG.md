@@ -14,15 +14,18 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   undetermined. A recorded value was reproducible only inside the run that wrote
   it, which is not a check.
 
-  The extraction now selects the entry's own lines and never rewrites them, in
-  the order the entry writes them, with a field's fenced value carried through
-  its closing fence and the row's heading line opening the text. That is what
-  `qfai validate` gate item 10 computes today, so a second party recomputing a
-  recorded digest gets the recorded digest.
+  The extraction is a region of the entry rather than a selection out of it: it
+  runs from the row's heading to the first field the subject could not have
+  read, keeps every line inside verbatim including a field's fenced value, drops
+  a reviewer's own verdict line, and synthesizes the heading. That is what
+  `npx qfai validate` gate item 10 computes today, so a second party recomputing
+  a recorded digest gets the recorded digest. A selection would have had to fix
+  an order, a separator and a spelling as well, each a further way to disagree.
 
-  Three values share these words and are not one: two ledger fields carrying two
-  reviewer roles' verdicts by these same four steps, and the working-tree
-  revision, which addresses a tree rather than a subject.
+  Four values share these words and are not one: three ledger fields carrying
+  three reviewer roles' verdicts by these same four steps — the third is the
+  parity hash a UI-affecting row owes — and the working-tree revision, which
+  addresses a tree rather than a subject.
 
 ### Added
 
