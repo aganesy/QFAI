@@ -404,6 +404,7 @@ export async function runInit(options: InitOptions): Promise<void> {
     rootAssets,
     destRoot,
     options.dryRun,
+    options.force,
     newlyWrittenRuleMasters(rootResult.copied, destRoot),
   );
   const qfaiResult = await copyTemplateTree(qfaiAssets, destQfai, {
@@ -2834,6 +2835,7 @@ async function ensureAgentEntryPointRules(
   rootAssets: string,
   destRoot: string,
   dryRun: boolean,
+  force: boolean,
   newlyWritten: readonly string[],
 ): Promise<{ copied: string[]; skipped: string[] }> {
   const copied: string[] = [];
@@ -2841,10 +2843,15 @@ async function ensureAgentEntryPointRules(
 
   if (!dryRun) await reclaimEntryPointStaging(destRoot);
 
-  await citeNewMastersInCopilotInstructions(rootAssets, destRoot, dryRun, newlyWritten, {
-    copied,
-    skipped,
-  });
+  // Under `--force` the wrapper sync writes the Copilot file whole, from the
+  // same source, later in this run. Adding a line here first is work thrown
+  // away, and its refusals would name a file this run goes on to replace.
+  if (!force) {
+    await citeNewMastersInCopilotInstructions(rootAssets, destRoot, dryRun, newlyWritten, {
+      copied,
+      skipped,
+    });
+  }
 
   for (const name of AGENT_ENTRY_POINT_FILES) {
     const target = path.join(destRoot, name);
@@ -3057,15 +3064,27 @@ async function citeNewMastersInCopilotInstructions(
   const section = template === null ? null : extractManagedRulesSection(template);
   if (section === null) return;
 
-  const merged = addRuleCitationsToList(existing, section, newlyWritten);
+  const shown = new Set(citedRuleMastersOutsideCode(existing));
+  const uncited = newlyWritten.filter((master) => !shown.has(master));
+  const merged = addRuleCitationsToList(existing, section, uncited);
   if (merged === existing) {
+    if (uncited.length > 0) {
+      // A project that wrote its own Copilot instructions: no generated heading
+      // and no rule bullet, so there is no list to add a line to. The wrapper
+      // sync skips an existing file, so nothing else will carry these — saying
+      // so is the difference between a rule the project can connect and one it
+      // never hears about.
+      error(
+        `  WARNING: ${formatReportPath(target)} was left unchanged. It carries no rule list this run can ` +
+          `add a line to, so add ${quoteList(uncited)} to it by hand.`,
+      );
+    }
     report.skipped.push(target);
     return;
   }
   const refusal = await refuseUnsafeEntryPointRewrite(target, existing, destRoot);
   if (refusal !== null) {
-    const shown = new Set(citedRuleMastersOutsideCode(existing));
-    const pending = newlyWritten.filter((master) => !shown.has(master));
+    const pending = uncited;
     error(
       `  WARNING: ${formatReportPath(target)} was left unchanged. ${refusal}${pendingNote(pending)}`,
     );

@@ -786,3 +786,53 @@ describe("a marker pair inside an example is an example", () => {
     expect(citedRuleMastersOutsideCode(existing)).toEqual([]);
   });
 });
+
+describe("the Copilot file this run cannot extend", () => {
+  it("names the masters when the project wrote its own instructions", async () => {
+    await withProject(async (root) => {
+      const master = ".agents/rules/grilling.md";
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+
+      // A project's own Copilot instructions: no generated heading, no rule
+      // bullet. The wrapper sync skips an existing file, so nothing else will
+      // carry the citation either.
+      const copilot = path.join(root, ".github", "copilot-instructions.md");
+      const own = ["# House instructions", "", "Run the tests before pushing.", ""].join("\n");
+      await writeFile(copilot, own, "utf-8");
+      await rm(path.join(root, ...master.split("/")), { force: true });
+
+      const stderr = await initCapturingStderr(root);
+
+      expect(await readFile(copilot, "utf-8")).toBe(own);
+      expect(stderr).toContain("carries no rule list this run can add a line to");
+      expect(stderr).toContain(master);
+    });
+  });
+
+  it("leaves the file to the wrapper regeneration under --force", async () => {
+    await withProject(async (root) => {
+      const master = ".agents/rules/grilling.md";
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+
+      const copilot = path.join(root, ".github", "copilot-instructions.md");
+      await writeFile(copilot, "# House instructions\n", "utf-8");
+      await rm(path.join(root, ...master.split("/")), { force: true });
+
+      const chunks: string[] = [];
+      const spy = vi.spyOn(process.stderr, "write").mockImplementation((chunk: unknown) => {
+        chunks.push(String(chunk));
+        return true;
+      });
+      try {
+        await runInit({ dir: root, force: true, dryRun: false, yes: true });
+      } finally {
+        spy.mockRestore();
+      }
+
+      // The wrapper sync writes it whole from the same source, so a diagnostic
+      // here would name a file this run goes on to replace.
+      expect(chunks.join("")).not.toContain("carries no rule list");
+      expect(await readFile(copilot, "utf-8")).toContain(master);
+    });
+  });
+});

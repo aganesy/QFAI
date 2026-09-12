@@ -206,7 +206,14 @@ about to rename.
 **What it reads.** The Copilot file belongs to the adopter, so it is opened
 once, refused unless it is an ordinary file, and read to a ceiling. A larger one
 is reported and left alone rather than buffered and decoded whole for the sake of
-one line.
+one line. A file carrying no rule list to add a line to — a project that wrote
+its own instructions — is reported too, naming the masters: the wrapper sync
+skips an existing file, so nothing else will carry them.
+
+**Under `--force` the Copilot file belongs to the wrapper sync**, which writes it
+whole from the same source later in the run. Nothing is added to it here, and no
+refusal is reported for it, because a refusal would name a file this run goes on
+to replace.
 
 **What a fenced block is.** An example. A rule path inside one is not a
 citation: the file is not hand-wired by it, no bullet is written into it, and the
