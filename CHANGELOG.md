@@ -12,6 +12,21 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   report sat on the default branch with `git status` clean. The report is
   untracked and deleted, and the lane catches the next one.
 
+### Fixed
+
+- **The autopilot tailoring contract now covers every shipped skill** (#1642).
+  It was held against a hardcoded list of seven, so the two grilling skills were
+  outside it and nothing reported that they carried no tailoring rule at all.
+  The list is read off the tree, the way the Reviewer-Gate validator picks its
+  own subjects, and both skills carry the rule.
+
+  The rule also now sanctions what the validator already allowed: `hard-required`
+  takes the undefaultable inputs a skill itself consumes, declared per skill and
+  checked against that declaration. The bucket is what a run cannot proceed
+  without, and no prototype can enumerate that for a skill it does not know — so
+  the sentence forbade `qfai-configure`'s `testFileGlobs` proposal and the
+  grilling subject a session cannot start without.
+
 - **A grilling loop runs before a spec phase freezes its first draft** (#1598).
   The phase's drafting agent is interviewed by a griller; the orchestrator holds
   the loop, routes it, and does not answer its questions. It runs before Phase 0,
