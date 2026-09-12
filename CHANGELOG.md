@@ -20,7 +20,18 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   A finished prototype makes a decision answerable and does not take it. The
   question is asked again against it — an agent that builds one, judges it and
   carries on has decided on the user's behalf, with more evidence than before
-  and still not the user's answer. The scope floor is unchanged.
+  and still not the user's answer, so the loop now blocks on that answer before
+  handoff: convergence is the reviewer's verdict on four fixed axes, not the
+  user's on the question. Under a no-question mode the run stops there rather
+  than certifying a design nobody picked.
+
+  The session's answers go to `.qfai/evidence/prototyping/grilling.md`, and the
+  generator and the reviewer both read it. The generator runs from contracts and
+  a fixed prompt and the reviewer from four fixed axes, neither of which says
+  anything about this prototype's purpose — so an answer with no destination is
+  one the loop contradicts on the next cycle.
+
+  The scope floor is unchanged.
 
 ### Added
 

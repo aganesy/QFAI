@@ -28,25 +28,90 @@ function expectPhrase(content: string, phrase: string): void {
   expect(unwrap(content)).toContain(unwrap(phrase));
 }
 
+/** The boundary table's rows as trimmed cells, heading row first, separator dropped. */
+function boundaryTable(skill: string): string[][] {
+  const section = /## What is grilled, and what is prototyped([\s\S]*?)^## /m.exec(skill);
+  expect(section, "the boundary section is gone").not.toBeNull();
+  return (section?.[1] ?? "")
+    .split("\n")
+    .map((line) => line.replace("\r", ""))
+    .filter((line) => line.trim().startsWith("|"))
+    .map((line) =>
+      line
+        .trim()
+        .replace(/^\||\|$/g, "")
+        .split("|")
+        .map((cell) => cell.trim()),
+    )
+    .filter((cells) => !cells.every((cell) => /^-+$/.test(cell)));
+}
+
 describe.each(TREES)("%s — prototyping and grilling", (tree) => {
   const read = (rel: string): Promise<string> => readFile(path.join(repoRoot, tree, rel), "utf-8");
 
-  it("names both columns, not just the one it owns", async () => {
+  it("puts each question on its own side of the table", async () => {
     // A skill that named only what it prototypes leaves the other half to
     // whoever reads it, and the reading that costs least effort is "prototype
     // everything" — which is the loop answering by building.
+    //
+    // The cells are read per row rather than searched for in the file: an edit
+    // that moved a question across the table, or swapped the headings, would
+    // leave every phrase present and the boundary reversed.
     const skill = await read(SKILL);
     expectPhrase(skill, "## What is grilled, and what is prototyped");
-    for (const grilled of [
+
+    const rows = boundaryTable(skill);
+    expect(rows[0], "the heading row is gone or reworded").toEqual([
+      "Settled by talking, before the loop",
+      "Settled by the loop",
+    ]);
+    const grilled = rows.slice(1).map((row) => row[0]);
+    const prototyped = rows.slice(1).map((row) => row[1]);
+
+    for (const question of [
       "What the prototype is for",
       "What would count as better",
       "What is out of bounds",
     ]) {
-      expectPhrase(skill, grilled);
+      expect(grilled, `${question} left the talking column`).toContain(question);
+      expect(prototyped, `${question} reached the loop column`).not.toContain(question);
     }
-    for (const prototyped of ["How it should feel", "Which layout carries the task"]) {
-      expectPhrase(skill, prototyped);
+    for (const question of ["How it should feel", "Which layout carries the task"]) {
+      expect(prototyped, `${question} left the loop column`).toContain(question);
+      expect(grilled, `${question} reached the talking column`).not.toContain(question);
     }
+  });
+
+  it("blocks handoff on the user's answer", async () => {
+    // Convergence is the reviewer's verdict on four fixed axes. It is not the
+    // user's answer to the question the loop was built to make answerable, and
+    // a process that goes from converged to certified never asks for one.
+    const skill = await read(SKILL);
+    expectPhrase(
+      skill,
+      "**Put the question the loop was built to answer back to the user, against the converged prototype**",
+    );
+    expectPhrase(skill, "Blocking: `H` does not start until they answer");
+    expectPhrase(skill, "convergence is the reviewer's verdict on four axes, not the user's");
+    // And the no-question route stops rather than certifying an unpicked design.
+    expectPhrase(skill, "the run stops there rather than certifying a design nobody picked");
+  });
+
+  it("carries the session's answers into the loop", async () => {
+    // The generator runs from contracts and a fixed prompt, the reviewer from
+    // four fixed axes. Neither says anything about this prototype's purpose, so
+    // answers with no destination are answers the loop cannot read — and it
+    // will contradict them on the next cycle.
+    const skill = await read(SKILL);
+    expectPhrase(skill, "`.qfai/evidence/prototyping/grilling.md`");
+    expectPhrase(skill, "under `## Session` for the decisions");
+    expectPhrase(skill, "`## Escalated` for anything the user has yet to settle");
+    // Both consumers, named where each lists its inputs.
+    const evaluator = /## Evaluator Inputs \(Mandatory\)([\s\S]*?)^## /m.exec(skill)?.[1] ?? "";
+    expect(unwrap(evaluator)).toContain(".qfai/evidence/prototyping/grilling.md");
+    expect(unwrap(skill)).toContain(
+      "Generator reads contracts + `.qfai/evidence/prototyping/grilling.md`",
+    );
   });
 
   it("says what each mistake costs", async () => {
