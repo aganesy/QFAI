@@ -146,7 +146,9 @@ session is a delegation like any other, so:
   `.qfai/assistant/constitution/shared-skill-delegation-baseline.md#definition-independent-reviewer-normative`,
   and an agent that answered a lookup in this session is disqualified from
   answering it again as a check on itself.
-- The Drift Protocol applies to the run, as it does to any run.
+- The Drift Protocol applies to the run, as it does to any run. Where a
+  session touches tests, `test-layers.md` is what their placement is read
+  against, and a ratio there is a signal rather than a gate.
 - A lookup that could not be run at all is reported as unread, with the decisions
   downstream of it held open. That is this skill's `PENDING`, and it never reads
   as settled.
