@@ -19,8 +19,12 @@
 - `Recommendation` must explicitly state the recommended option, where one is
   permitted.
 - **A question asking for a fact is the exception to both.** Nothing is being
-  decided, so there are no alternatives and nothing to recommend: write `fact`
-  in `Options` and `—` in `Recommendation`, and say in `Rationale` what the
-  value is for. Inventing two options and a preferred one to fill the columns
-  records a decision nobody made.
+  decided, so there is nothing to recommend: `Recommendation` is `—`, and
+  `Rationale` says what the value is for. Inventing a preferred answer to fill
+  the column records a decision nobody made.
+- **`Options` still carries the candidates when the fact has any.** Which of the
+  four regions the platform supports is a fact with a finite set, and dropping
+  the set loses the constraint the answer has to satisfy — the register would
+  ask for a value it has already made unanswerable. Write `fact` there only
+  where the value is open, as a name or a number nobody has narrowed.
 - All 11 columns are mandatory for every row.

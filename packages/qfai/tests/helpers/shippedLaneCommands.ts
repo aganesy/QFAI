@@ -1328,7 +1328,7 @@ export const ALLOWED_INIT_CONTENT: ReadonlyMap<string, string> = new Map([
     // byte. That check is what keeps a re-pin a review of one line rather than a re-blessing of
     // the whole file.
     ".github/copilot-instructions.md",
-    "4701ee7376fb7b480738da497131d2bd44f9512ee4b2273b55fbb12fa94680c7",
+    "a246e728b78099a29460764aaa7e09f3b11cdb420f0ffe061a1812e9fa8c38c2",
   ],
   // `qfai init` copies this file verbatim, so it is pinned like every other
   // adopter-facing file here — and for one reason none of the others has: it
@@ -1429,8 +1429,8 @@ export const ALLOWED_INIT_CONTENT: ReadonlyMap<string, string> = new Map([
   // `qfai init` into a temp root and hash what it wrote, then drop the added bullet and confirm
   // both previous digests come back byte for byte. That check is what keeps a re-pin a review of
   // one line per file.
-  ["AGENTS.md", "a9565b59fd328479bd6517b5a0f1d6dab77a26d8dbcb9935ba011be2e371344d"],
-  ["CLAUDE.md", "319d6916088d26d2a87e2f946f024f10760241cf3a314f7a6298cf78f4d2cea8"],
+  ["AGENTS.md", "fff9e2105f4a99c915825653117b1607306c7f6c861002d630043d2ab5722570"],
+  ["CLAUDE.md", "7203ba754c0aec9979c72252ab9813c914ef544475707c903a7949be5d61fe04"],
   // Inside `.claude/`, and pinned anyway — see the paragraph above the path set.
   // These are the hooks that restate a rule at the moment it applies: the writing
   // rule when a pull request, issue or review is posted through the GitHub tools
