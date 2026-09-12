@@ -304,6 +304,18 @@ describe("the clarification budget is countable", () => {
       expectNoPhrase(content, "Non-discussion commands MUST minimize questions.");
     });
 
+    it(`${tree}: the article's scope and the baseline's applied scope are one set`, async () => {
+      // Three statements of the same scope, and the one that drifted was the
+      // article's opening: the baseline has always applied the budget to every
+      // `/qfai-*` stage, so an opening that excluded discussion made the two
+      // documents disagree about a stage rather than about a word.
+      const constitution = await read(tree, CONSTITUTION);
+      const baseline = await read(tree, OPERATING);
+      expectPhrase(baseline, "a `/qfai-*` stage");
+      expectNoPhrase(baseline, "non-discussion");
+      expectNoPhrase(constitution, "Non-discussion");
+    });
+
     it(`${tree}: qfai-sdd exempts its unbounded per-row approvals`, async () => {
       const content = await read(tree, SDD);
       expectPhrase(content, "exempt from\nthe Article VI clarification budget");
