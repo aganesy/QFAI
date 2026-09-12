@@ -13,11 +13,20 @@ carries a status retiring it, so all twenty are active and all twenty own a row.
 the nine depth columns of the matrix and the `Positive case` / `Negative case` /
 `Conditional branches` columns of the business rule table.
 
-**What credits a cell.** A cell is credited only to a case that runs and that the pack binds to the
-obligation. Binding is by annotation: a case carrying `QFAI:SPEC-0013:TC-0013-NNNN` is bound to that
-obligation, and a case annotated for another spec is not, whatever it exercises. A test existing
-somewhere in the repository is therefore not coverage here. The rule has one visible consequence in
-this pack, set out under "The `auditProfile.ts` entrypoint" below.
+**What credits a cell.** A cell is credited only to a case that runs and that this pack owns. A test
+existing somewhere in the repository is not coverage here. Ownership is read in two steps:
+
+1. **An annotation binds.** A case carrying `QFAI:SPEC-0013:TC-0013-NNNN` is bound to that
+   obligation. A case carrying an annotation for another spec is bound to that spec, not to this
+   one, whatever it exercises — and where a plan assigns the surface to that spec, the split is
+   deliberate rather than a gap here. That is the case under "The `auditProfile.ts` entrypoint".
+2. **An unannotated case is owned when nothing else produces the outcome.** A case with no
+   annotation at all is not claimed by another spec, so where it is the only place an obligation's
+   outcome is produced, it is scored and named as such. One file is in this position, and the
+   inventory below says which and for which two obligations.
+
+The two steps do not overlap: the first turns on an annotation pointing elsewhere, the second on
+there being no annotation to point anywhere. Neither admits a case that another spec owns.
 
 **Twenty-four of the forty-nine obligations are discharged by nothing, or by a test about something
 else.** Eleven have no test at all: `US-0013-0001`, `-0002`, `-0004`, `-0005`, `-0006`, `-0007`,
@@ -69,8 +78,10 @@ spec-0013 coverage were located by reading the tests and the source, then execut
 |                                                               | **192**    |
 
 Two sets are counted here and they are not the same set. Thirteen files carry a `QFAI:SPEC-0013`
-annotation; `sddPreflight.test.ts` carries none and is scored anyway, because the obligation is read
-from the pack rather than from an annotation. Every annotated file is in the table.
+annotation, and every one of them is in the table. `sddPreflight.test.ts` carries none, and is
+scored under step 2 of "What credits a cell": it is claimed by no other spec, and it is the only
+place in the repository where the outcome of `US-0013-0003` or `US-0013-0008` is produced. Its
+scores are the whole of what those two stories have, which the rows for them state.
 
 Four of the fourteen carry no ledger row, and are likewise scored from the pack:
 

@@ -68,8 +68,13 @@ PowerShell script, and this container has no `pwsh`, so eighteen of their
 nineteen cases fail on `spawn pwsh ENOENT` whatever the tree holds. They run in
 continuous integration, which does have it.
 
-Validate gate: `npx qfai validate --profile atdd --fail-on error --spec 0013`
-at the same revision — `counts: info=2 warning=0 error=0`, exit 0.
+Validate gate, over the tree as this change leaves it rather than at the
+revision above — the matrix this profile requires is part of the change, so the
+gate cannot pass without it: `npx qfai validate --profile atdd --fail-on error
+--spec 0013` — `error=0`, exit 0. Two findings are about the tree, both `info`:
+the partial-profile notice, and the carrier-only coverage note. A third,
+`QFAI-TOOL-001`, reports which binary ran and moves with how the command is
+invoked rather than with the tree.
 
 ## Test volume estimate
 
