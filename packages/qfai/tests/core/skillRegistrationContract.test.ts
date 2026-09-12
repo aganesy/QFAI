@@ -61,6 +61,16 @@ async function projectWithSkill(frontMatter: readonly string[]): Promise<string>
   return root;
 }
 
+/** A project whose skills tree holds one skill with the given document body. */
+async function projectWithSkillDocument(body: string): Promise<string> {
+  const root = await mkdtemp(path.join(os.tmpdir(), "qfai-skill-registration-"));
+  tempDirs.push(root);
+  const skillDir = path.join(root, ".qfai", "assistant", "skills", "qfai-example");
+  await mkdir(skillDir, { recursive: true });
+  await writeFile(path.join(skillDir, "SKILL.md"), body, "utf-8");
+  return root;
+}
+
 const registrationFindings = async (
   root: string,
 ): Promise<Awaited<ReturnType<typeof validateAssistantAssets>>> =>
@@ -100,5 +110,30 @@ describe("a skill carries what a host needs to register it", () => {
     expect(finding?.severity).toBe("error");
     expect(finding?.message).toContain("stops the model from firing the skill");
     expect(finding?.message).toContain("the user cannot invoke it by name either");
+  });
+
+  it("reports a description the host has no text for", async () => {
+    // The key is present and carries nothing a host can register the skill by.
+    // Matching the key alone passes a file in exactly the state this finding
+    // exists to name.
+    for (const line of ["description:", 'description: ""', "description: 42"]) {
+      const root = await projectWithSkill([line]);
+      const [finding] = await registrationFindings(root);
+      expect(finding?.severity, line).toBe("error");
+    }
+  });
+
+  it("reports a skill whose front matter a host cannot read", async () => {
+    // No front matter at all, and front matter that does not parse. Both leave
+    // the host with nowhere to read the field from, so both are the finding.
+    const documents = [
+      "# qfai-example\n\nIt does the thing.\n",
+      "---\nname: qfai-example\ndescription: [\n---\n\n# qfai-example\n",
+    ];
+    for (const document of documents) {
+      const root = await projectWithSkillDocument(document);
+      const [finding] = await registrationFindings(root);
+      expect(finding?.severity, document.slice(0, 16)).toBe("error");
+    }
   });
 });
