@@ -14,8 +14,9 @@
  * implemented, while a `.skip` keeps its body and the fix is to drop the
  * modifier.
  *
- * A file still carrying {@link SCAFFOLD_PLACEHOLDER_MARKER} is exempt from
- * `QFAI-TEST-003`. `qfai atdd scaffold` writes its skeletons as `it.skip`, and
+ * A file `D-SCAFFOLD-PLACEHOLDER` will report — an unfilled skeleton, carrying
+ * the scaffold sentinel beside a per-test-case TODO line, in a directory that
+ * validator scans — is exempt from `QFAI-TEST-003`. `qfai atdd scaffold` writes its skeletons as `it.skip`, and
  * `D-SCAFFOLD-PLACEHOLDER` already owns an unfilled scaffold — with a
  * deliberate ladder that stays a warning for `atdd.scaffoldEscalateCycles`
  * validate runs before it becomes an error. Reporting the same block here as
@@ -39,7 +40,6 @@ import { readFile } from "node:fs/promises";
 import path from "node:path";
 
 import type { QfaiConfig } from "../config.js";
-import { SCAFFOLD_PLACEHOLDER_MARKER } from "../atdd/scaffold.js";
 import { collectFilesByGlobs, DEFAULT_GLOB_FILE_LIMIT } from "../fs.js";
 import { DEFAULT_TEST_FILE_EXCLUDE_GLOBS, normalizeGlobs } from "../traceability.js";
 import type { Issue, IssueSeverity } from "../types.js";
