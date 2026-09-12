@@ -104,6 +104,29 @@ describe("the register it reads, and the notation it reads it in", () => {
     expect(issues[0]?.refs).toEqual(["OQ-0007"]);
   });
 
+  it("reads the Status column, not whichever cell holds one of the words", () => {
+    // A question can be about an open question. Searching every cell answered
+    // for the row from the Question column and let the blocker go unfired.
+    const table = [
+      "| OQ-ID   | Question | Owner | Due        | Status        | Notes |",
+      "| ------- | -------- | ----- | ---------- | ------------- | ----- |",
+      "| OQ-0007 | open     | alice | 2026-10-01 | unadjudicated | -     |",
+      "",
+    ].join("\n");
+    expect(codes(table)).toEqual(["QFAI-SPACK-102"]);
+  });
+
+  it("reports a status that is none of the four", () => {
+    const table = [
+      "| OQ-ID   | Status       |",
+      "| ------- | ------------ |",
+      "| OQ-0007 | unadjudicted |",
+      "",
+    ].join("\n");
+    expect(codes(table)).toContain("E_OQ_STATUS_UNPARSEABLE");
+    expect(codes(table)).not.toContain("QFAI-SPACK-102");
+  });
+
   it("does not read a separator row as a status", () => {
     const table = ["| OQ-ID   | Status |", "| ------- | ------ |", "| OQ-0007 | open   |", ""].join(
       "\n",

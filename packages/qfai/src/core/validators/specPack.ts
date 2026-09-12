@@ -141,6 +141,15 @@ export async function validateSpecPacks(root: string, config: QfaiConfig): Promi
     entries.map((entry) => [`spec-${entry.specNumber}`, entry.status]),
   );
 
+  // Once for the tree: the shared policy register belongs to every layered
+  // spec, and reading it per entry reports one policy decision once per spec.
+  const sharedRegister = entries.find((entry) => entry.layout === "layered")?.sharedDir;
+  if (sharedRegister !== undefined) {
+    issues.push(
+      ...(await collectRegisterIssues(path.join(sharedRegister, "09_Open-questions.md"))),
+    );
+  }
+
   for (const entry of entries) {
     if (entry.layout === "layered") {
       issues.push(...(await validateLayeredSpecEntry(entry, layerPolicy.tags)));
@@ -1554,18 +1563,11 @@ async function validateLayeredSpecEntry(
     );
   }
 
-  // A decision nobody settled blocks the stage wherever its register lives:
-  // the spec's own, and the shared policy one. Both are read here because the
-  // layered layouts carry no other open-question gate, and this is the layout
-  // `qfai init` generates.
-  for (const register of [
-    entry.openQuestionsPath,
-    path.join(entry.sharedDir, "09_Open-questions.md"),
-  ]) {
-    const text = await readFile(register, "utf-8").catch(() => null);
-    if (text === null) continue;
-    issues.push(...collectUnadjudicatedDecisions(register, text));
-  }
+  // A decision nobody settled blocks the stage, and the layered layouts carry
+  // no other open-question gate — which is the layout `qfai init` generates.
+  // The shared policy register is read once for the whole tree, not here: one
+  // policy decision is one finding however many specs the project has.
+  issues.push(...(await collectRegisterIssues(entry.openQuestionsPath)));
 
   const missingSharedFiles = await collectMissingLayeredSharedRequiredFiles(entry);
   if (missingSharedFiles.length > 0) {
@@ -1918,6 +1920,42 @@ async function fileExists(target: string): Promise<boolean> {
  * a design nobody chose, and a stage that completes over it has recorded the
  * agent's preference as the project's decision.
  */
+/**
+ * The status findings one open-question register carries.
+ *
+ * Both halves, because a typo is how the blocking value is missed: a row
+ * reading `unadjudicted` is not the status that blocks and is not one of the
+ * four either, so a register checked for the first alone passes a decision
+ * nobody took.
+ */
+async function collectRegisterIssues(register: string): Promise<Issue[]> {
+  const text = await readFile(register, "utf-8").catch(() => null);
+  if (text === null) return [];
+  return [
+    ...collectUnadjudicatedDecisions(register, text),
+    ...collectUnreadableStatuses(register, text),
+  ];
+}
+
+/** A register row whose status is not one of the four. */
+function collectUnreadableStatuses(register: string, text: string): Issue[] {
+  const invalid = parseInvalidOpenQuestionStatuses(text);
+  if (invalid.length === 0) return [];
+  const samples = invalid.map((item) => `${item.id}=${item.value}`).slice(0, 8);
+  return [
+    issue(
+      "E_OQ_STATUS_UNPARSEABLE",
+      `Statuses this register declares are not among open / resolved / deferred / unadjudicated: ${samples.join(", ")}`,
+      "error",
+      register,
+      "specPack.openQuestionsStatus",
+      Array.from(new Set(invalid.map((item) => item.id))),
+      "canonical",
+      "Spell the status as one of `open`, `resolved`, `deferred` or `unadjudicated` — a value outside those four is read as no status at all.",
+    ),
+  ];
+}
+
 export function collectUnadjudicatedDecisions(registerPath: string, text: string): Issue[] {
   const ids = Array.from(
     new Set(
@@ -2023,7 +2061,6 @@ export function validateOpenQuestionsGate(
  * unparseable the moment the table notation was read at all. Every real id
  * carries digits.
  */
-const OPEN_QUESTION_COLUMN_LABEL = /^OQ-ID$/i;
 
 function extractOpenQuestionIds(text: string): string[] {
   const ids = new Set<string>();
@@ -2034,42 +2071,6 @@ function extractOpenQuestionIds(text: string): string[] {
     }
   }
   return Array.from(ids);
-}
-
-function parseInvalidOpenQuestionStatuses(text: string): InvalidOpenQuestionStatus[] {
-  const lines = text.replace(/\r\n/g, "\n").split("\n");
-  const statuses: InvalidOpenQuestionStatus[] = [];
-  let currentId = "";
-
-  for (const line of lines) {
-    const idMatch = /\b(OQ-[A-Za-z0-9_-]+)\b/i.exec(line);
-    if (idMatch?.[1] && !OPEN_QUESTION_COLUMN_LABEL.test(idMatch[1])) {
-      currentId = idMatch[1];
-    }
-
-    const statusMatch = /(?:^|\s)(?:-\s*)?status\s*:\s*([^\s#]+)\s*$/i.exec(line);
-    const rawStatus = statusMatch?.[1];
-    if (!rawStatus) {
-      continue;
-    }
-
-    const normalized = rawStatus.toLowerCase();
-    if (
-      normalized === "open" ||
-      normalized === "resolved" ||
-      normalized === "deferred" ||
-      normalized === "unadjudicated"
-    ) {
-      continue;
-    }
-
-    statuses.push({
-      id: currentId || "(unlabeled-oq)",
-      value: rawStatus,
-    });
-  }
-
-  return statuses;
 }
 
 function validateDeltaGate(entry: SpecEntry, text: string): Issue[] {
@@ -2854,48 +2855,84 @@ function splitReOpenedByRefs(raw: string): string[] {
   return refs;
 }
 
-function parseOpenQuestionStatuses(text: string): OpenQuestionStatus[] {
-  const lines = text.replace(/\r\n/g, "\n").split("\n");
-  const statuses: OpenQuestionStatus[] = [];
-  let currentId = "";
+/** The statuses a register may declare, in either notation. */
+const OPEN_QUESTION_STATUSES = new Set(["open", "resolved", "deferred", "unadjudicated"]);
 
-  for (const line of lines) {
+/**
+ * The column label, which is not a question.
+ *
+ * The register's table heads its first column `OQ-ID`, and read as an id it is
+ * a question with no status — so the shipped template reported itself as
+ * unparseable the moment the table notation was read at all. Every real id
+ * carries digits.
+ */
+const OPEN_QUESTION_COLUMN_LABEL = /^OQ-ID$/i;
+
+/** One status a register declares, as written. */
+type DeclaredStatus = { id: string; raw: string };
+
+/**
+ * Every status a register declares, valid or not.
+ *
+ * Two notations are in use and both are read: a `Status` cell in the table the
+ * template writes, and a `status:` line under a subsection. Read as a search
+ * across every cell, a row whose question text happens to be one of the four
+ * values answered for the row — so the column is resolved from the header and
+ * only that cell is read.
+ */
+function readDeclaredStatuses(text: string): DeclaredStatus[] {
+  const lines = text.replace(/\r\n/g, "\n").split("\n");
+  const declared: DeclaredStatus[] = [];
+  let currentId = "";
+  let statusColumn: number | null = null;
+
+  for (const [index, line] of lines.entries()) {
     const idMatch = /\b(OQ-[A-Za-z0-9_-]+)\b/i.exec(line);
     if (idMatch?.[1] && !OPEN_QUESTION_COLUMN_LABEL.test(idMatch[1])) {
       currentId = idMatch[1];
     }
 
-    // The template writes a row per question, so the status is a cell rather
-    // than a line of its own. Reading only the standalone form left every
-    // template row unparsed, which is the shape the shipped packs are in.
+    // The separator row is part of the table it underlines, so it does not end
+    // one: resetting on it threw away the column the header had just resolved.
+    if (isSeparatorRow(line)) continue;
     const cells = tableCells(line);
-    const cellStatus = cells.find((cell) => OPEN_QUESTION_STATUSES.has(cell.toLowerCase()));
-    if (cells.length > 0 && cellStatus !== undefined) {
-      statuses.push({
-        id: currentId || "(unlabeled-oq)",
-        status: cellStatus.toLowerCase() as OpenQuestionStatus["status"],
-      });
+    if (cells.length === 0) {
+      // Out of the table, so the next one resolves its own column.
+      statusColumn = null;
+    } else if (isSeparatorRow(lines[index + 1])) {
+      const header = cells.findIndex((cell) => cell.toLowerCase() === "status");
+      statusColumn = header === -1 ? null : header;
+    } else if (statusColumn !== null) {
+      const cell = cells[statusColumn];
+      if (cell !== undefined && cell !== "" && cell !== "-") {
+        declared.push({ id: currentId || "(unlabeled-oq)", raw: cell });
+      }
       continue;
     }
 
-    const statusMatch =
-      /(?:^|\s)(?:-\s*)?status\s*:\s*(open|resolved|deferred|unadjudicated)\s*$/i.exec(line);
-    if (!statusMatch?.[1]) {
-      continue;
+    const statusMatch = /(?:^|\s)(?:-\s*)?status\s*:\s*([^\s#]+)\s*$/i.exec(line);
+    if (statusMatch?.[1]) {
+      declared.push({ id: currentId || "(unlabeled-oq)", raw: statusMatch[1] });
     }
-
-    const status = statusMatch[1].toLowerCase() as OpenQuestionStatus["status"];
-    statuses.push({
-      id: currentId || "(unlabeled-oq)",
-      status,
-    });
   }
 
-  return statuses;
+  return declared;
 }
 
-/** The statuses a register may declare, in either notation. */
-const OPEN_QUESTION_STATUSES = new Set(["open", "resolved", "deferred", "unadjudicated"]);
+function parseOpenQuestionStatuses(text: string): OpenQuestionStatus[] {
+  return readDeclaredStatuses(text)
+    .filter((item) => OPEN_QUESTION_STATUSES.has(item.raw.toLowerCase()))
+    .map((item) => ({
+      id: item.id,
+      status: item.raw.toLowerCase() as OpenQuestionStatus["status"],
+    }));
+}
+
+function parseInvalidOpenQuestionStatuses(text: string): InvalidOpenQuestionStatus[] {
+  return readDeclaredStatuses(text)
+    .filter((item) => !OPEN_QUESTION_STATUSES.has(item.raw.toLowerCase()))
+    .map((item) => ({ id: item.id, value: item.raw }));
+}
 
 /**
  * The cells of a Markdown table row, or none when the line is not one.
@@ -2912,6 +2949,16 @@ function tableCells(line: string): string[] {
     .map((cell) => cell.trim());
   if (cells.every((cell) => /^:?-{3,}:?$/.test(cell))) return [];
   return cells;
+}
+
+/** Whether `line` is the dashes under a table's header row. */
+function isSeparatorRow(line: string | undefined): boolean {
+  const trimmed = (line ?? "").trim();
+  if (!trimmed.startsWith("|") || !trimmed.endsWith("|")) return false;
+  return trimmed
+    .slice(1, -1)
+    .split("|")
+    .every((cell) => /^:?-{3,}:?$/.test(cell.trim()));
 }
 
 function isReleaseCandidate(initiativeText: string): boolean {
