@@ -32,75 +32,65 @@ keeps writing it.
 Two cases in `packages/qfai/tests/validators/uiEvidenceArtifacts.test.ts`
 require a project carrying only the legacy layout to report no issue.
 
-**Only one layer of the pack disagrees with that.** The requirement, the rule
-and the example beneath the criterion are all satisfied by the product as it
-stands:
+**Two statements take a position, and both are the ones the product
+contradicts.** The rest of the pack holds under either reading:
 
-| Layer                 | What it states                                                                | Product |
-| --------------------- | ----------------------------------------------------------------------------- | ------- |
-| `01_Spec.md` Scope.In | the legacy layout "is no longer **the** active SSOT"                          | agrees  |
-| `AC-0014-0005`        | the legacy layout "is no longer **accepted as** the active SSOT"              | differs |
-| `BR-0014-0005`        | legacy paths "MUST not be **required**"                                       | agrees  |
-| `EX-0014-0026`        | an `iter-03` capture is accepted and no legacy required-path lookup is raised | agrees  |
-| `TC-0014-0033`        | the active layout uses `iter-NN` "**only**"                                   | differs |
+| Layer                 | What it states                                                                | Takes a position on the aggregate directories |
+| --------------------- | ----------------------------------------------------------------------------- | --------------------------------------------- |
+| `01_Spec.md` Scope.In | the legacy layout "is no longer **the** active SSOT"                          | no — true of a derived copy as well           |
+| `AC-0014-0005`        | the legacy layout "is no longer **accepted as** the active SSOT"              | **yes — it rejects them as a source**         |
+| `BR-0014-0005`        | legacy paths "MUST not be **required**"                                       | no — rejecting them does not require them     |
+| `EX-0014-0026`        | an `iter-03` capture is accepted and no legacy required-path lookup is raised | no — true whether the directories are read    |
+| `TC-0014-0033`        | the active layout uses `iter-NN` "**only**"                                   | **yes — it restates the criterion**           |
 
-"No longer the active SSOT" and "no longer accepted" are different rules. The
-first holds of a derived mirror; the second forbids one. The criterion took the
-second where its own requirement, rule and example took the first, and the test
-case followed the criterion.
+**Two authoritative artifacts outside this pack take the opposite position.**
+The mirror is the only writer of the aggregate directories, and both define
+what it writes as the handoff source:
 
-**Another pack requires the mirror outright.** `spec-0012` settled how accepted
-evidence reaches the aggregate directories as an open question, `OQ-0110`, and
-chose its Option A. The whole chain below that choice is active, and it is a
-`MUST`:
+| Artifact                                          | Statement                                                                                                                                      |
+| ------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
+| `.qfai/contracts/cli/qfai-prototyping-iterate.md` | on convergence, iterate "mirrors the accepted-iter content into the **aggregate-dir SSOT**", and the screenshot copy is "Required for handoff" |
+| `spec-0012` `REQ-0012-0066`                       | on convergence, `iterate` **MUST** mirror accepted-iter content into `screenshots/<screen-id>.png` and `html/<screen-id>.html`                 |
+| `spec-0012` `AC-0012-0064` → `TC-0012-0448`       | the chain below that requirement, resolving `OQ-0110` as its Option A; `TC-0012-0448`'s row `TDD-0484` is `done`                               |
 
-| Layer                | Statement                                                                                                  |
-| -------------------- | ---------------------------------------------------------------------------------------------------------- |
-| `REQ-0012-0066`      | on convergence, `iterate` MUST mirror accepted-iter content into `.qfai/evidence/prototyping/screenshots/` |
-| `AC-0012-0064`       | aggregate-dir mirror with underscore casing (`OQ-0110` Option A)                                           |
-| `BR-0012-0052`       | the same, as a business rule                                                                               |
-| `EX-0012-0173`       | the aggregate-dir mirror uses underscore casing                                                            |
-| `TC-0012-0448`       | a converged iteration mirrors to `screenshots/<id>.png` and `html/<id>.html`                               |
-| `spec-0012/TDD-0484` | `done`, on `prototypingIterate.aggregateMirror.test.ts`                                                    |
-
-So the aggregate directories are not a leftover the product forgot to remove.
-They are an output one pack decided on and specified at every layer, and the
-criterion in this pack rejects what that pack requires.
+So the criterion does not contradict a leftover the product forgot to remove.
+It contradicts a handoff output one pack chose and a command contract names as
+the SSOT, and the lookup that reads those directories first is reading what
+those artifacts say is there.
 
 ## Proposed change
 
-Settle which of the two rules the pack states, and make every layer state that
-one.
+Settle whether the aggregate directories are an evidence source a required-path
+check may read, and make the pack and the contract state the same answer.
 
 ## Options (at least 3) and recommendation
 
-| #   | Option                                                                                                                                                                                        | Cost                                                                                                                                                                                                                                                                                          | Risk                                                                                                                                                                                                                                                                      | Recommended |
-| --- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------- |
-| 1   | The criterion is right. Move the required-path lookup to `iter-NN/`, stop mirroring, and keep the aggregate directories as an output nothing reads                                            | A product change across five files, the shipped skill text and three further suites, plus a migration for every project whose evidence sits in `screenshots/` today — **and a `spec-0012` re-derivation**, since stopping the mirror withdraws a `MUST` that pack resolved `OQ-0110` to adopt | An adopter upgrading finds evidence that satisfied the gate yesterday rejected today, with the files still on disk. Three layers of this pack and a whole chain of `spec-0012` would have to be re-derived **away** from what they say, to follow one criterion's wording |             |
-| 2   | The code is right. Narrow `AC-0014-0005` to the rule its own requirement, business rule and example already state, and say which layout a required-path check reads                           | One criterion, one test case, and the delta row that records it                                                                                                                                                                                                                               | The repository stops asserting that the aggregate directories are rejected. Evidence satisfying the gate through `screenshots/` does not say which iteration produced it, and nothing at the gate notices                                                                 | ✅          |
-| 3   | Withdraw the layout criterion. Retire `AC-0014-0005` and `TC-0014-0033`, leaving `BR-0014-0005`'s "legacy paths MUST not be required" as the pack's only statement about where evidence lives | The criterion, the test case, the ledger row and the reservations entry                                                                                                                                                                                                                       | The pack then states what must **not** be required and nothing about what the active layout is, so the next change to the lookup order contradicts no written rule and is not drift                                                                                       |             |
+| #   | Option                                                                                                                                                                                                                                                          | Cost                                                                                                                                                                                                                                                                                 | Risk                                                                                                                                                                                      | Recommended |
+| --- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------- |
+| 1   | The criterion is right. The required-path check reads `iter-NN/` only. **The mirror keeps writing** the aggregate directories, as `spec-0012` requires, for handoff; verify stops treating them as an evidence source                                           | A product change to the lookup, its documented path, the skill-text check and the shipped skill; and the iterate contract's "aggregate-dir SSOT" re-scoped to a handoff copy, since a contract calling it the SSOT contradicts a gate that does not read it. No spec statement moves | A project whose screenshots exist only in the aggregate directories — placed there by hand rather than produced by `iterate` — fails the gate after upgrade, with the files still on disk |             |
+| 2   | The code is right. Narrow `AC-0014-0005` and `TC-0014-0033` to what the contract and `spec-0012` already say: the aggregate directories are the handoff copy, a required-path check may read them, and evidence read through them does not record its iteration | Two statements, and the delta row that records them. No product change and no contract change                                                                                                                                                                                        | The pack stops asserting that the aggregate directories are rejected. Evidence satisfying the gate through them does not say which iteration produced it, and nothing at the gate notices | ✅          |
+| 3   | Withdraw the layout obligation. Retire `AC-0014-0005` and `TC-0014-0033` — and `BR-0014-0005` and `EX-0014-0026` with them, because `AC-0014-0005` is that rule's only parent and a rule cannot stand without one                                               | Four statements, the ledger row and its reservation                                                                                                                                                                                                                                  | The pack then says nothing about where prototyping evidence lives, so the next change to the lookup contradicts no written rule and is not drift                                          |             |
 
-Option 2 is recommended because the criterion is the outlier rather than the
-product. The requirement above it, the business rule beneath it and the example
-beneath that all state the softer rule, and the product satisfies all three; the
-criterion alone states the stronger one, and the test case restated the
-criterion. Narrowing one layer to three is a smaller claim than re-deriving
-three layers to one, and option 1 would have to move the requirement, the rule
-and the example **away** from statements nothing has shown to be wrong.
+**Stopping the mirror is not offered.** Nothing in the criterion requires it:
+the criterion is about what verify accepts as a source, not about what
+`iterate` writes. Stopping it would withdraw `spec-0012`'s `MUST` chain and the
+contract's handoff output to settle a question neither of them is party to.
 
-**The strongest evidence is in another pack.** `spec-0012` resolved `OQ-0110` by
-choosing the mirror, and specifies it as a `MUST` from requirement to test case.
-Option 2 agrees with that decision; option 1 would overturn it to follow a
-criterion that never cited it. A choice recorded as the answer to an open
-question outranks a criterion's wording that predates the question being put.
+Option 2 is recommended because the criterion is the lone statement against two
+authoritative artifacts. The iterate contract names the aggregate directories
+the SSOT and requires them for handoff, and `spec-0012` resolved an open
+question by choosing to write them, specifying it as a `MUST` down to a `done`
+row. Option 2 brings this pack into line with both by editing two statements;
+option 1 would edit the product and re-scope the contract's wording to follow
+one criterion that never cited either.
 
 What option 2 costs is worth naming rather than discounting. The aggregate
 directories hold one file per screen, so a screen captured in two iterations
-keeps only the last accepted one, and evidence accepted through that path cannot
-say which iteration produced it. That is the substance the criterion was
-reaching for. Option 2 keeps the gate accepting it; the narrowed criterion
-should say so in as many words, so the next reader meets the limitation rather
-than discovering it.
+keeps only the last accepted one, and evidence accepted through that path
+cannot say which iteration produced it. That is the substance the criterion was
+reaching for, and option 1 is the answer that keeps it. The narrowed criterion
+should state the limitation in as many words, so the next reader meets it
+rather than discovering it.
 
 ## Blocked downstream items
 
@@ -110,9 +100,11 @@ than discovering it.
 | `spec-0014/TC-0014-0033` | `spec`       | The test case restates the criterion, so it moves with whatever the criterion becomes                                                  |
 
 - Not blocked by this CR: every other `spec-0014` row. `TDD-0034` is held by a
-  separate obstacle recorded with it — its selector names one case asserting five
-  outcomes — and `TDD-0028` and `TDD-0029` sit at `exception` and owe no
-  completed evidence. None of the three turns on which layout is active.
+  separate obstacle recorded with it — its selector names one case asserting
+  five outcomes — and `TDD-0028` and `TDD-0029` sit at `exception` and owe no
+  completed evidence. None of the three turns on which layout is a source.
+- Not blocked either: `spec-0012/TDD-0484` and `TDD-0493`. No option stops the
+  mirror, so the obligations those rows carry hold under every outcome.
 - Overlapping open CRs: `none`
 
 ## Impact scope
@@ -120,101 +112,76 @@ than discovering it.
 - Specs: `spec-0014`
 - Plans: `none`
 - Tests: `spec-0014/TDD-0033` — `packages/qfai/tests/validators/uiEvidenceArtifacts.test.ts`
-- Contracts: `none`
+- Contracts: `none` under options 2 and 3; under option 1 the iterate command's
+  contract, `.qfai/contracts/cli/qfai-prototyping-iterate.md`
 - Schema: `none`
-- Upstream paths edited under this CR:
-  `.qfai/specs/spec-0014/03_Acceptance-Criteria.md`,
-  `.qfai/specs/spec-0014/06_Test-Cases.md`,
-  `.qfai/specs/spec-0014/09_delta.md`,
-  `.qfai/specs/spec-0014/tdd/test-list.md`
+- Upstream paths edited under this CR, by outcome:
 
-  **Under option 1 the product paths are in scope as well**, and they are listed
-  here so an approval of that option says what it covers. `QFAI-DRIFT-001` reads
-  this section for the spec paths among them and not the condition beside an
-  entry: `packages/qfai/src/core/validators/uiEvidenceArtifacts.ts`,
+  | Path                                              | Kept under      |
+  | ------------------------------------------------- | --------------- |
+  | `.qfai/specs/spec-0014/03_Acceptance-Criteria.md` | options 2 and 3 |
+  | `.qfai/specs/spec-0014/04_Business-Rules.md`      | option 3        |
+  | `.qfai/specs/spec-0014/05_Examples.md`            | option 3        |
+  | `.qfai/specs/spec-0014/06_Test-Cases.md`          | options 2 and 3 |
+  | `.qfai/specs/spec-0014/09_delta.md`               | options 2 and 3 |
+  | `.qfai/specs/spec-0014/tdd/test-list.md`          | every option    |
+  | `.qfai/contracts/cli/qfai-prototyping-iterate.md` | option 1        |
+
+  **This section is reduced to the approved outcome before `Status: approved` is
+  written**: `QFAI-DRIFT-001` reads the spec and contract paths here and not
+  the outcome beside them.
+
+  **Product paths, under option 1 only**, listed so an approval of that option
+  says what it covers: `packages/qfai/src/core/validators/uiEvidenceArtifacts.ts`,
   `packages/qfai/src/cli/commands/validate.ts`,
   `packages/qfai/src/core/validators/skill/prototypingSkill.ts`,
-  `packages/qfai/src/cli/commands/prototypingIterate.ts`,
   `packages/qfai/assets/init/.qfai/assistant/skills/qfai-prototyping/**` and its
-  root mirror, with
-  `packages/qfai/tests/validators/uiEvidenceArtifacts.test.ts`,
-  `packages/qfai/tests/cli/commands/prototypingIterate.test.ts`,
-  `packages/qfai/tests/integration/cli/commands/prototypingIterate.aggregateMirror.test.ts`,
-  which requires the mirror; `packages/qfai/tests/integration/cli/commands/prototypingIterate.autoServe.sigint.test.ts`,
-  which drives the mirror's failure path as the vehicle for its SIGINT case; and
-  `packages/qfai/tests/e2e/spec0012PrototypingRemediationE2E.test.ts`, which
-  seeds a screenshot at the aggregate path. And the `spec-0012` chain the mirror
-  is specified in: `.qfai/specs/spec-0012/01_Spec.md`,
-  `.qfai/specs/spec-0012/02_User-stories.md`,
-  `.qfai/specs/spec-0012/03_Acceptance-Criteria.md`,
-  `.qfai/specs/spec-0012/04_Business-Rules.md`,
-  `.qfai/specs/spec-0012/05_Examples.md`,
-  `.qfai/specs/spec-0012/06_Test-Cases.md`,
-  `.qfai/specs/spec-0012/08_Open-questions.md`,
-  `.qfai/specs/spec-0012/09_delta.md` and
-  `.qfai/specs/spec-0012/tdd/test-list.md`. **This list is reduced to the
-  approved outcome before `Status: approved` is written**, so an approval of
-  option 2 or 3 authorises no product edit and no `spec-0012` edit.
+  root mirror, and `packages/qfai/tests/validators/uiEvidenceArtifacts.test.ts`.
+  `packages/qfai/src/cli/commands/prototypingIterate.ts` is **not** among them:
+  no option changes what the mirror writes.
 
-  `01_Spec.md` is **not** here. Its Scope.In line already states the rule
-  options 1 and 2 both settle on, so no approved action edits it, and naming the
-  path would authorise an edit nothing asked for.
+  `01_Spec.md` is **not** here under any option. Its Scope.In line holds under
+  every reading, so no approved action edits it.
 
 ## Decision needed from user
 
-Which rule does the pack state about prototyping evidence: that the aggregate
-`screenshots/` / `html/` directories are rejected as a source (option 1), that
-they are a derived mirror a required-path check may read (option 2), or that the
-pack says nothing about the active layout beyond not requiring the legacy one
+Is a prototyping evidence file that exists only in the aggregate `screenshots/`
+/ `html/` directories acceptable to a required-path check — so the pack narrows
+its criterion to match the iterate contract and `spec-0012` (option 2) — or not,
+so verify reads `iter-NN/` only while the mirror keeps writing for handoff
+(option 1)? Or should the pack withdraw its layout obligation altogether
 (option 3)?
 
 ## Approved actions (owner skill rerun plan)
 
-1. `/qfai-sdd spec-0014` rerun scope, mode `re-derive`:
+1. Owner rerun, by outcome:
 
-   | Option | What is re-derived                                                                                                                                                                                                                    |
-   | ------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-   | 1      | `AC-0014-0005` and `TC-0014-0033` keep their wording. `BR-0014-0005` and `EX-0014-0026` are re-derived **to the stronger rule**, because the product change makes a legacy-only project fail and both currently say it passes         |
-   | 2      | `AC-0014-0005` is re-derived to say the aggregate directories are a derived mirror a required-path check reads, and that evidence accepted through them does not record its iteration. `TC-0014-0033` is re-derived to that criterion |
-   | 3      | `AC-0014-0005` and `TC-0014-0033` are withdrawn. `EX-0014-0026` is re-derived against `BR-0014-0005` alone, since the example currently cites the criterion's subject                                                                 |
+   | Option | Rerun                                                                                                                                                                                                                                      |
+   | ------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+   | 1      | `/qfai-sdd` over `.qfai/contracts/cli/qfai-prototyping-iterate.md` alone, re-scoping "aggregate-dir SSOT" to the handoff copy it is. No spec statement moves, so no pack is re-derived; the product change follows under `/qfai-implement` |
+   | 2      | `/qfai-sdd spec-0014`, mode `re-derive`: `AC-0014-0005` says the aggregate directories are the handoff copy a required-path check may read and that evidence read through them does not record its iteration; `TC-0014-0033` follows it    |
+   | 3      | `/qfai-sdd spec-0014`, mode `re-derive`: `AC-0014-0005`, `BR-0014-0005`, `EX-0014-0026` and `TC-0014-0033` are withdrawn together, so no rule is left citing a withdrawn criterion                                                         |
 
-   Every option carries the pack's `09_delta.md` row for what it did.
+   Options 2 and 3 carry the pack's `09_delta.md` row for what they did.
 
-   **Under option 1 only, `/qfai-sdd spec-0012` re-derives the mirror chain** —
-   `REQ-0012-0066`, `US-0012-0130`, `AC-0012-0064`, `BR-0012-0052`,
-   `EX-0012-0173`, `TC-0012-0448` and the `OQ-0110` resolution — to withdraw the
-   mirror, with that pack's own `09_delta.md` row. Stopping the mirror in the
-   product while `spec-0012` still requires it would leave two packs prescribing
-   opposite behaviour.
-
-2. Downstream ledger sweep.
-   - Reset to `todo`, recording this CR's ID in `DR-ID`: `spec-0014/TDD-0033`,
-     under options 1 and 2. Its obligation changes under both — the criterion it
-     carries is re-derived — and its recorded observation is of neither rule.
-     The row is re-pointed in the same rerun: its `Selector`,
-     `iter-NN path layout`, occurs in no runnable case name today, so a reset
-     alone returns it to `todo` still selecting nothing.
-   - Under option 1 only, in `spec-0012`: `spec-0012/TDD-0484` is reset to
-     `todo` with this CR's ID in `DR-ID`, because the mirror its obligation
-     requires is withdrawn. `spec-0012/TDD-0471` and `spec-0012/TDD-0460`
-     through `TDD-0463` keep their obligations — SIGINT cleanup, and the
-     remediation journeys whose fixture happens to seed an aggregate screenshot —
-     and take the in-place shared-artifact re-verification over their edited
-     suites.
-   - Retire, under option 3 only: `spec-0014/TDD-0033` —
+2. Downstream ledger sweep for `spec-0014/TDD-0033`.
+   - **Option 1: re-verified in place, not reset.** No statement moves, so its
+     obligation does not either; what changes is the product beneath it. Its
+     `Selector`, `iter-NN path layout`, occurs in no runnable case name, so the
+     unresolved-selector carve-out writes the corrected case name first.
+   - **Option 2: reset to `todo`** with this CR's ID in `DR-ID`, because the
+     criterion it carries is re-derived, and re-pointed in the same rerun for
+     the same unresolved selector.
+   - **Option 3: retired**, with its `Evidence` cell verbatim —
      `current iterate path-layout suite pass`. Its test disposition is "none to
-     dispose of": the selector resolves to no case, so the retirement leaves no
-     surviving assertion to delete or re-point, and the stale selector goes with
-     the row.
+     dispose of": the selector resolves to no case, so no surviving assertion is
+     left behind and the stale selector goes with the row. The id is reserved in
+     that ledger's `## TDD-ID reservations` before the row is deleted.
 
-3. Reserve `spec-0014/TDD-0033` in that ledger's `## TDD-ID reservations` before
-   the row is deleted, under option 3. It is not that pack's maximum, but a
-   reservation is what keeps the number from being handed out again.
-
-4. Write the test the outcome needs, under `/qfai-implement`, once the rerun
-   lands. No option discharges `TC-0014-0033` without one: today no case
-   discriminates which layout a required-path check reads, so the criterion is
-   true or false by reading the source rather than by running anything.
+3. Under options 1 and 2, write the test the outcome needs, under
+   `/qfai-implement`. Today no case discriminates whether a required-path check
+   reads the aggregate directories, so the criterion is true or false by reading
+   the source rather than by running anything.
 
 ## Resolution
 

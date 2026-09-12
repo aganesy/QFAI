@@ -7,21 +7,17 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 ### Fixed
 
 - **The prototyping evidence layout is recorded where the Drift Protocol looks
-  for it** (#1626). One acceptance criterion says the aggregate `screenshots/`
-  and `html/` directories are no longer accepted as the active source, and the
-  required-path check reads them first, the command documents them, and the
-  iterate command keeps writing them.
+  for it** (#1626). One acceptance criterion and the test case restating it say
+  the aggregate `screenshots/` and `html/` directories are not accepted as an
+  evidence source. The required-path check reads them first — and the iterate
+  command contract calls them the SSOT for handoff, while another spec pack
+  requires the mirror that writes them.
 
-  Only that one layer disagrees. The requirement above it says the legacy
-  layout is no longer _the_ active source, the business rule says legacy paths
-  must not be _required_, and the example has an iteration capture accepted with
-  no legacy lookup raised — all three hold of the product as it stands.
-
-  `CR-20260913-0002` records both sides layer by layer, blocks the one ledger
-  row whose obligation turns on the disputed clause, and puts the choice: the
-  criterion is right and the lookup moves, the code is right and the criterion
-  narrows to what its own rule and example already state, or the pack says
-  nothing about the active layout beyond not requiring the legacy one.
+  `CR-20260913-0002` records both sides, blocks the one ledger row whose
+  obligation turns on the disputed clause, and puts the choice: narrow the
+  criterion to match the contract and that pack, keep the mirror but stop
+  reading it, or withdraw the layout obligation together with the rule that
+  depends on it. No option stops the mirror.
 
 ## [1.12.0] - 2026-09-12
 
