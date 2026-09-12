@@ -69,35 +69,41 @@ When unsure, read inputs in this order:
 
 ## Grilling
 
-Article IX's preflight round runs here, and this section says what its subject
-is in this stage and what reopens it.
+Article IX's preflight round runs here. This section carries what is local to
+this stage — the round's subject, what reopens it, and where the record goes.
+The method is `.qfai/assistant/skills/qfai-grilling/SKILL.md`, read before the
+round and followed as written; `.agents/rules/grilling.md` is the rule it
+implements. Neither is restated here, and a stage-local copy of either would
+give an execution run one instruction and the primitive another.
 
-- **Read the method before the round.** `.qfai/assistant/skills/qfai-grilling/SKILL.md`
-  is the one implementation, and `.agents/rules/grilling.md` is the rule it
-  implements. Neither is restated here. A stage that names the method without
-  loading it gets the reference and improvises the interview, which is the
-  methodless interview this wiring replaces.
-- **Declare the session over this invocation.** Its tree holds the decisions
-  this run is about to take — the seam's shape, the production approach behind the row's
-  assertion, and what the refactor step will and will not touch. It does not hold the spec, the
-  acceptance criteria or the ledger rows: those are settled input, and a run
-  that re-interviews them every pass stops the cycle and reopens what somebody
-  already decided. A tree that small usually empties in one round.
-- **Facts are read, not asked.** The repository settles most of what the
-  preflight is unsure about. A question the tree can answer from the files is
-  the agent's to answer.
+- **Subject: this invocation.** The tree holds the decisions this run is about to
+  take — the seam's shape, the production approach behind the row's
+  assertion, and what the refactor step will and will not touch. It does not hold the spec, the acceptance criteria or the
+  ledger rows: those are settled input, and re-interviewing them each pass
+  reopens what somebody already decided. A tree that small usually empties in one
+  round.
 - **Reopen on a contradiction, and hand the answer to the Drift Protocol.**
-  A row whose obligation contradicts another, an
-  assertion the spec cannot settle, or a production change the specified
-  approach cannot carry. Stop and open a round over **what the change should ask
-  for** — never over whether to make it. The change itself goes through
-  `.qfai/assistant/constitution/drift-protocol.md`: STOP, Change Request, the
-  user's approval, the owner rerun. Deciding alone and editing settled input is
-  the drift that protocol exists to stop, and a round is not a way around it.
-- **Under `--auto`, the session runs without asking.** Every decision left over
-  is recorded as an open question where this stage's gate will see it, and a
-  defaulted value is labelled an assumption beside it. An assumption on its own
-  is a decision nobody took wearing the face of one somebody did.
+  A row whose obligation contradicts another, an assertion
+  the spec cannot settle, or a production change the specified approach cannot
+  carry. Open a round over **what the change should ask for**, never over
+  whether to make it. `.qfai/assistant/constitution/drift-protocol.md` carries
+  the change — STOP, Change Request, the user's approval, the owner rerun — and a
+  round is not a second route to editing settled input.
+- **Record the session where the gate reads it.** The method writes no artifact
+  of its own, so a run that grilled and a run that skipped it leave the same
+  tree. `.qfai/evidence/implement-<spec-id>.md` carries a `## Grilling Session` section, written when the
+  session ends and before the first production or test file this run writes:
+
+  ```text
+  | Ended | Ended at | Decisions | Open | Escalated |
+  | ----- | -------- | --------- | ---- | --------- |
+  | confirmed | 2026-01-01T09:14:00Z | 4 | 0 | 0 |
+  ```
+
+  `Ended` takes one of the endings the method defines. `Open` counts the
+  decisions left open, and each is recorded where `references/round-evidence.md` puts it. The Reviewer Gate
+  reads this section: a stage whose evidence carries none of it is a stage whose
+  round nobody can distinguish from a skipped one, and that is a `REVISE`.
 
 ## CRITICAL CONSTRAINTS (Read First)
 
@@ -338,6 +344,10 @@ Use the shared schema (per-row `Status (PASS/REVISE/PENDING)` column, reviewer r
 ### Reviewer Gate (MUST)
 
 - Delegate final completion gate to an independent Reviewer.
+- The stage evidence's `## Grilling Session` section is present, its `Ended` is
+  one of the endings the method defines, and its `Open` count matches the open
+  questions recorded. A run that skipped the round leaves the same tree as one
+  that ran it, so this section is the only thing that tells them apart.
 - Reviewer response must include `Reviewer role:`, `Reviewed artifact:` and `Result: PASS | REVISE` (matching .qfai/assistant/constitution/shared-skill-delegation-baseline.md#reviewer-response-template). A bare `Result:` line is not a verdict — without the role and the artifact it is textually identical to a doer's self-assessment, so a response missing either line is re-requested, never read for its `Result:`.
 - Reviewer checks Drift Protocol compliance and alignment with `.qfai/assistant/catalog/test-layers.md`.
 - Test volume floors/ratios are not gates; they are signals.

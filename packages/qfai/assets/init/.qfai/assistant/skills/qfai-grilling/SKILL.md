@@ -32,12 +32,26 @@ user agrees the understanding is shared.
 
 ## Preconditions
 
-| Condition                           | Effect                                                          |
-| ----------------------------------- | --------------------------------------------------------------- |
-| A design that is not yet fixed      | Proceed                                                         |
-| The work is already specified       | Do not invoke; the spec is the authority                        |
-| A no-question mode is active        | Run without asking; open every decision left over as a question |
-| An ambiguity met while implementing | Not a session; an ordinary clarification under its own budget   |
+| Condition                                                     | Effect                                                          |
+| ------------------------------------------------------------- | --------------------------------------------------------------- |
+| A design that is not yet fixed                                | Proceed                                                         |
+| A decision this invocation must take that no artifact settles | Proceed, over that decision and nothing wider                   |
+| Settled input the work reveals to be wrong                    | Proceed, over what the Change Request should ask for            |
+| The decision is one the spec already settles                  | Do not invoke; the spec is the authority                        |
+| A no-question mode is active                                  | Run without asking; open every decision left over as a question |
+| A single-reading ambiguity met while implementing             | Not a session; an ordinary clarification under its own budget   |
+
+**Rows two and three are why an execution stage may invoke this.** A spec settles
+what to build and leaves a run its own decisions — a seam's shape, what an oracle
+observes, which gates a verify run answers for. Those are unfixed designs the
+fourth row does not cover, and left to the moment the code needs an answer they
+are decided silently, which is the failure this method exists to catch. Row three
+is the same point at the other end: the interview settles what a Change Request
+should ask for, and the Drift Protocol carries the change, so a session there is
+not a second route to editing settled input.
+
+Row six is what stays out. One ambiguity with one reading is a question, not a
+tree, and answering it is an ordinary clarification.
 
 **A no-question mode silences the questions, not the session.** An invocation
 told not to ask — `--auto`, or whatever the host spells it as — settles what the

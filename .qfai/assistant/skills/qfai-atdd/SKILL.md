@@ -66,36 +66,42 @@ Do not read discussion-pack UI/UX sidecars. UI-bearing acceptance tests consume 
 
 ## Grilling
 
-Article IX's preflight round runs here, and this section says what its subject
-is in this stage and what reopens it.
+Article IX's preflight round runs here. This section carries what is local to
+this stage — the round's subject, what reopens it, and where the record goes.
+The method is `.qfai/assistant/skills/qfai-grilling/SKILL.md`, read before the
+round and followed as written; `.agents/rules/grilling.md` is the rule it
+implements. Neither is restated here, and a stage-local copy of either would
+give an execution run one instruction and the primitive another.
 
-- **Read the method before the round.** `.qfai/assistant/skills/qfai-grilling/SKILL.md`
-  is the one implementation, and `.agents/rules/grilling.md` is the rule it
-  implements. Neither is restated here. A stage that names the method without
-  loading it gets the reference and improvises the interview, which is the
-  methodless interview this wiring replaces.
-- **Declare the session over this invocation.** Its tree holds the decisions
-  this run is about to take — which layer an obligation is answered from where its
-  `Level` leaves room, what a case's oracle must observe, and what a fixture
-  has to construct for it. It does not hold the spec, the
-  acceptance criteria or the ledger rows: those are settled input, and a run
-  that re-interviews them every pass stops the cycle and reopens what somebody
-  already decided. A tree that small usually empties in one round.
-- **Facts are read, not asked.** The repository settles most of what the
-  preflight is unsure about. A question the tree can answer from the files is
-  the agent's to answer.
+- **Subject: this invocation.** The tree holds the decisions this run is about to
+  take — which layer an obligation is answered from where its
+  `Level` leaves room, what a case's oracle must observe, and what a fixture has
+  to construct for it. It does not hold the spec, the acceptance criteria or the
+  ledger rows: those are settled input, and re-interviewing them each pass
+  reopens what somebody already decided. A tree that small usually empties in one
+  round.
 - **Reopen on a contradiction, and hand the answer to the Drift Protocol.**
-  An obligation two layers could answer, a `Level`
-  that routes to a home the obligation cannot be observed from, or an
-  acceptance criterion no test can reach as written. Stop and open a round over **what the change should ask
-  for** — never over whether to make it. The change itself goes through
-  `.qfai/assistant/constitution/drift-protocol.md`: STOP, Change Request, the
-  user's approval, the owner rerun. Deciding alone and editing settled input is
-  the drift that protocol exists to stop, and a round is not a way around it.
-- **Under `--auto`, the session runs without asking.** Every decision left over
-  is recorded as an open question where this stage's gate will see it, and a
-  defaulted value is labelled an assumption beside it. An assumption on its own
-  is a decision nobody took wearing the face of one somebody did.
+  An obligation two layers could answer, a `Level` that
+  routes to a home the obligation cannot be observed from, or an acceptance
+  criterion no test can reach as written. Open a round over **what the change should ask for**, never over
+  whether to make it. `.qfai/assistant/constitution/drift-protocol.md` carries
+  the change — STOP, Change Request, the user's approval, the owner rerun — and a
+  round is not a second route to editing settled input.
+- **Record the session where the gate reads it.** The method writes no artifact
+  of its own, so a run that grilled and a run that skipped it leave the same
+  tree. `.qfai/evidence/atdd-<spec-id>.md` carries a `## Grilling Session` section, written when the
+  session ends and before the first acceptance test this run writes:
+
+  ```text
+  | Ended | Ended at | Decisions | Open | Escalated |
+  | ----- | -------- | --------- | ---- | --------- |
+  | confirmed | 2026-01-01T09:14:00Z | 4 | 0 | 0 |
+  ```
+
+  `Ended` takes one of the endings the method defines. `Open` counts the
+  decisions left open, and each is recorded in this stage's own open-question register. The Reviewer Gate
+  reads this section: a stage whose evidence carries none of it is a stage whose
+  round nobody can distinguish from a skipped one, and that is a `REVISE`.
 
 ## Read Set Contract (Mandatory)
 
@@ -148,6 +154,10 @@ Use the shared schema.
 ### Reviewer Gate (MUST)
 
 - Follow `.qfai/assistant/constitution/shared-skill-delegation-baseline.md#reviewer-gate-baseline`.
+- The stage evidence's `## Grilling Session` section is present, its `Ended` is
+  one of the endings the method defines, and its `Open` count matches the open
+  questions recorded. A run that skipped the round leaves the same tree as one
+  that ran it, so this section is the only thing that tells them apart.
 - Final completion gate MUST be delegated to an independent `completion-reviewer`.
 - ATDD-specific reviewer checks:
   - coverage obligations met: E2E covers `US`, API covers `CON-API`, Integration covers every declared `CON-DB` (`QFAI-ATDD-115`) — a contract **this spec owns** but outside the current slice deferred with `-- x-qfai-status: planned` on a line of its own, never silently uncovered — and every `TC` **whose `Level` routes to an ATDD home** — `L3`/`L4`/`L5`, no `Level`, an unreadable spelling, or `system` / `acceptance` — is covered from the directory that `Level` routes to. A **sibling spec's** uncovered `CON-DB` is not that case, and the reviewer must not ask for that edit: `QFAI-ATDD-115` is filed against `.qfai/contracts/**` and survives `--spec`, so it reaches this gate without becoming this run's work — record it as a cross-spec obligation and leave the contract file alone (CRITICAL CONSTRAINTS), because marking it `planned` defers the owning spec's DB test and hides a real gap. `L1`/`Unit` and `L2`/`Component` owe nothing here (CRITICAL CONSTRAINTS): the ledger covers them. An existing L1/L2 annotation in `tests/integration/**` is not a violation — the validator declines to count it and declines to flag it — so do not require one to be added, and do not require an existing one to be removed;

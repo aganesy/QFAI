@@ -51,8 +51,8 @@ for (const tree of TREES) {
         expect(section, `${stage} has no \`## Grilling\` section`).not.toBe("");
 
         // Naming a skill does not make its procedure available on a host that
-        // loads bodies lazily: the agent gets the reference and improvises the
-        // interview, which is the methodless interview this wiring replaces.
+        // loads bodies lazily. The reference alone leaves the agent to improvise
+        // an interview the method already defines.
         expectPhrase(section, "assistant/skills/qfai-grilling/SKILL.md");
         expectPhrase(section, ".agents/rules/grilling.md");
       });
@@ -71,7 +71,7 @@ for (const tree of TREES) {
         // Re-interviewing the spec every run stops the micro-cycle and reopens
         // decisions somebody already took. The bound is what keeps the round
         // affordable enough to run every time.
-        expectPhrase(section, "Declare the session over this invocation");
+        expectPhrase(section, "Subject: this invocation");
         expectPhrase(section, "those are settled input");
       });
 
@@ -85,12 +85,30 @@ for (const tree of TREES) {
         expectPhrase(section, "assistant/constitution/drift-protocol.md");
       });
 
-      it(`${stage}: says what a no-question run owes instead`, async () => {
+      it(`${stage}: records the session where the gate reads it`, async () => {
         const section = grillingSection(await read(tree, rel));
-        // An assumption with no open question beside it is a decision nobody
-        // took wearing the face of one somebody did.
-        expectPhrase(section, "recorded as an open question");
-        expectPhrase(section, "labelled an assumption");
+        // The method writes no artifact, so a run that grilled and one that did
+        // not leave the same tree. The record is the only thing between them.
+        expectPhrase(section, "## Grilling Session");
+        expectPhrase(section, "before the first");
+        expectPhrase(section, "The Reviewer Gate reads this section");
+      });
+
+      it(`${stage}: the gate is told to read it`, async () => {
+        const skill = await read(tree, rel);
+        const from = skill.indexOf("### Reviewer Gate (MUST)");
+        const rest = skill.slice(from);
+        const to = rest.indexOf("\n## ");
+        const gate = to < 0 ? rest : rest.slice(0, to);
+        expectPhrase(gate, "`## Grilling Session` section is present");
+      });
+
+      it(`${stage}: carries no copy of the shared mechanics`, async () => {
+        const section = grillingSection(await read(tree, rel));
+        // A stage-local copy gives an execution run one instruction and the
+        // primitive another the moment either changes.
+        expectPhrase(section, "Neither is restated here");
+        expect(unwrap(section)).not.toContain("Facts are read, not asked");
       });
     }
 
