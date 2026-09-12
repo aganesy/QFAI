@@ -23,7 +23,10 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   and still not the user's answer, so the loop now blocks on that answer before
   handoff: convergence is the reviewer's verdict on four fixed axes, not the
   user's on the question. Under a no-question mode the run stops there rather
-  than certifying a design nobody picked.
+  than certifying a design nobody picked. An answer that rejects the prototype,
+  or picks a direction it does not implement, goes back through a cycle carrying
+  that answer as the pivot: recording a choice does not change the HTML, and
+  certifying the unchanged iteration would ship the design the user turned down.
 
   The session's answers go to `.qfai/evidence/prototyping/grilling.md`, and the
   generator and the reviewer both read it. The generator runs from contracts and

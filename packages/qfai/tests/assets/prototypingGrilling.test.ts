@@ -97,6 +97,24 @@ describe.each(TREES)("%s — prototyping and grilling", (tree) => {
     expectPhrase(skill, "the run stops there rather than certifying a design nobody picked");
   });
 
+  it("sends a rejected choice back through a cycle", async () => {
+    // Recording the answer does not change the HTML. Treating any answer as
+    // sufficient would copy the unchanged iteration to `final` and certify the
+    // design the user just turned down.
+    const skill = await read(SKILL);
+    expectPhrase(skill, "**Accepted** — the prototype is what they picked — goes to `H`");
+    expectPhrase(
+      skill,
+      "goes back to `C1..9` as the next cycle, carrying their answer as the pivot",
+    );
+    expectPhrase(
+      skill,
+      "certifying the unchanged iteration would ship the design they turned down",
+    );
+    // The loop's own bound still applies, so the branch cannot run forever.
+    expectPhrase(skill, "Cycle 9 bounds this like any other cycle.");
+  });
+
   it("carries the session's answers into the loop", async () => {
     // The generator runs from contracts and a fixed prompt, the reviewer from
     // four fixed axes. Neither says anything about this prototype's purpose, so
