@@ -463,6 +463,65 @@ describe("cross-AI rules surface (.agents/rules/ master)", () => {
     // complete while that entry is open. Forbidding the value outright would
     // leave that run with no artifact it is permitted to write. What the rule
     // refuses is the assumption standing alone.
+    // Without a boundary the trigger reads as "ask whenever a design decision
+    // comes up", and every such question then carries the budget exemption with
+    // it. The class has to be decidable when the question is asked, which means
+    // it turns on whether a session was declared.
+    it.each(MASTERS)("%s makes a session a mode, not a posture", async (rel) => {
+      const text = await readFile(path.join(ROOT, rel), "utf-8");
+      expect(text).toMatch(/entered\s+deliberately/);
+      expect(text).toMatch(/an\s+ambiguity\s+found\s+while\s+implementing/);
+      expect(text).toMatch(/ordinary\s+clarification,\s+capped\s+as\s+one/);
+    });
+
+    // A date nobody published, a number only the user knows: no lookup reaches
+    // it. Off the frontier, the decision below it waits on a node no round asks,
+    // so the frontier never empties and the session cannot end.
+    it.each(MASTERS)("%s puts a user-held fact on the frontier", async (rel) => {
+      const text = await readFile(path.join(ROOT, rel), "utf-8");
+      expect(text).toMatch(/[Ff]act\s+only\s+the\s+user\s+holds/);
+      expect(text).toMatch(/nothing\s+else\s+can\s+put\s+it\s+there/);
+      expect(text).toMatch(/never\s+offered\s+as\s+a\s+choice/);
+    });
+
+    // Recommending a value the agent does not hold is a guess, and attaching it
+    // to the question invites the user to accept it.
+    it.each(MASTERS)("%s recommends nothing on a question for a fact", async (rel) => {
+      const text = await readFile(path.join(ROOT, rel), "utf-8");
+      expect(text).toMatch(/asking\s+for\s+a\s+fact\s+carries\s+no\s+recommended\s+answer/i);
+    });
+
+    // The frontier empties while a lookup is in flight, so an end condition
+    // reading the frontier alone closes the session before the lookup can raise
+    // the questions it was dispatched to answer.
+    it.each(MASTERS)("%s holds the end condition open for a running lookup", async (rel) => {
+      const text = await readFile(path.join(ROOT, rel), "utf-8");
+      expect(text).toMatch(/no\s+lookup\s+is\s+still\s+running/);
+      expect(text).toMatch(/about\s+the\s+whole\s+tree/);
+    });
+
+    // Article VI gives all three answers a meaning. Without them here an agent
+    // inside a session has to choose which document to follow, and the rule as
+    // written says a session ends on its own terms and no others.
+    it.each(MASTERS)("%s gives the user a way to end a session", async (rel) => {
+      const text = await readFile(path.join(ROOT, rel), "utf-8");
+      expect(text).toMatch(/ends\s+it\s+immediately,\s+frontier\s+empty\s+or\s+not/);
+      expect(text).toMatch(/ends\s+the\s+asking,\s+not\s+the\s+work/);
+      // The two kinds `proceed` never covers, or a waiver would swallow a
+      // mandatory approval and an undefaultable input along with the rest.
+      expect(text).toMatch(/never\s+assumed\s+when\s+the\s+questions\s+close/);
+    });
+
+    // A split that recomputed the frontier, or acted on a batch before the round
+    // finished, would be two rounds wearing one name — and a closing answer in
+    // an early batch would be read only after the agent had carried on past it.
+    it.each(MASTERS)("%s keeps a batched round one round", async (rel) => {
+      const text = await readFile(path.join(ROOT, rel), "utf-8");
+      expect(text).toMatch(/frontier\s+is\s+not\s+recomputed\s+between\s+them/);
+      expect(text).toMatch(/read\s+for\s+a\s+closing\s+answer\s+before\s+the\s+next\s+is\s+put/);
+      expect(text).toMatch(/it\s+never\s+makes\s+two\s+rounds/);
+    });
+
     // Precision and settledness are different things, and only the second ends
     // the need for a session. A choice between two fully specified options is
     // precise and still open, so an exit keyed on how well the subject can be
