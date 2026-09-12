@@ -222,6 +222,21 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
+- **A later `qfai init` cites a rule master it is shipping for the first time**
+  (#1643). Create-only left an existing `AGENTS.md`, `CLAUDE.md` or
+  `.github/copilot-instructions.md` alone, so a rule the same run wrote into
+  `.agents/rules/` was cited by nothing. A nominal re-init may now add a bullet
+  to those three files — one line per master the run's own copy report says it
+  wrote, lifted from the shipped template, and nothing else in the file changes.
+
+  The write refuses what it cannot make safely and says which file and why: a
+  symbolic link at the target or at any directory below the project root, a hard
+  link with more than one name, bytes that are not valid UTF-8, and a file that
+  changed while the run was working. A file that opens the managed section and
+  never closes it is reported rather than skipped in silence. A file with no
+  markers that cites rules anyway keeps the list it has, and gains only the
+  masters it does not name.
+
 - **`/qfai-discussion` runs its interview as a grilling session** (#1597). Step
   one of its process read "Run the core interview" and named no method, so an
   agent that asked nothing had followed it. It now runs the session through the
