@@ -20,7 +20,7 @@
  * governance contract fails here rather than in `qfai validate`.
  */
 
-import { readFile } from "node:fs/promises";
+import { readdir, readFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -32,21 +32,29 @@ import { parseAutopilotPolicy } from "../../src/core/validators/autopilotPolicy.
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "..", "..");
 
 /** Source tree first, then the generated root mirror `sync:ssot` writes. */
-const TREES = ["packages/qfai/assets/init/.qfai", ".qfai"];
+const SOURCE_TREE = "packages/qfai/assets/init/.qfai";
+const TREES = [SOURCE_TREE, ".qfai"];
 
-const QFAI_SKILLS = [
-  "qfai-atdd",
-  "qfai-configure",
-  "qfai-discussion",
-  "qfai-implement",
-  "qfai-prototyping",
-  "qfai-sdd",
-  "qfai-verify",
-];
+/**
+ * Every shipped `qfai-*` skill, read off the tree rather than listed here.
+ *
+ * A list would have to be edited by whoever adds a skill, and a skill left off
+ * it is exactly the one whose policy nobody has checked. The Reviewer-Gate
+ * validator picks its subjects the same way.
+ */
+const QFAI_SKILLS = (
+  await readdir(path.join(repoRoot, SOURCE_TREE, "assistant", "skills"), { withFileTypes: true })
+)
+  .filter((entry) => entry.isDirectory() && entry.name.startsWith("qfai-"))
+  .map((entry) => entry.name)
+  .sort();
 
 function skillPath(tree: string, skillId: string): string {
   return path.join(repoRoot, tree, "assistant", "skills", skillId, "SKILL.md");
 }
+
+/** Collapse markdown soft wraps so assertions pin wording, not the wrap column. */
+const unwrap = (markdown: string): string => markdown.split(/\s+/).join(" ");
 
 /** The `## Default Autopilot Policy` block, heading excluded. */
 function policyBlock(content: string): string {
@@ -80,7 +88,10 @@ function bucketEntries(block: string, bucket: string): string[] {
 
 describe.each(TREES)("%s — Default Autopilot Policy tailoring contract", (tree) => {
   it.each(QFAI_SKILLS)("%s permits narrowing in all three buckets", async (skillId) => {
-    const block = policyBlock(await readFile(skillPath(tree, skillId), "utf-8"));
+    // Soft wraps fall wherever the prose reaches the column, so the block is
+    // read as one line: an assertion that also pins the wrap position fails on
+    // an edit that changed nothing it is about.
+    const block = unwrap(policyBlock(await readFile(skillPath(tree, skillId), "utf-8")));
 
     // The narrowing permission must not be scoped to auto-decide alone.
     expect(block).not.toContain("MAY narrow the auto-decide bucket");
@@ -90,6 +101,11 @@ describe.each(TREES)("%s — Default Autopilot Policy tailoring contract", (tree
     // widening — without that distinction `/qfai-implement` had no legal way
     // to name the waiver and the Change-Request escalation it does gate on.
     expect(block).toMatch(/MUST NOT introduce an entry outside the prototype's categories/);
+    // `hard-required` is the exception, because the bucket is what a run cannot
+    // proceed without and no prototype can enumerate that for a skill it does
+    // not know. The validator checks those against a per-skill declaration, so
+    // the sentence has to sanction what the validator already allows.
+    expect(block).toMatch(/undefaultable inputs this skill itself consumes/);
     expect(block).toMatch(/MAY instantiate a category entry/);
     expect(block).toMatch(/approval-required governance operations/);
   });

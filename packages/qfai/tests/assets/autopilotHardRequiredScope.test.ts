@@ -136,3 +136,82 @@ describe("governing decision", () => {
     }
   });
 });
+
+/**
+ * What the buckets classify, and the one category a session earns.
+ *
+ * They classify the **operations a skill performs**, not every question an
+ * invocation can utter: a frontier decision inside a grilling session settles
+ * something before anything is performed, and the grilling rule owns which of
+ * those are asked. Two things are outside that carve-out and stay classified by
+ * their subject wherever they are asked — a mandatory approval, and a
+ * `hard-required` input the invocation consumes.
+ *
+ * The `ask-user` list is closed at five categories. The fifth is a decision a
+ * declared grilling session puts to the user, and it is open only to a skill
+ * whose own operation is the interview, which is what makes the two grilling
+ * skills' own entries legal rather than a widening.
+ */
+describe("the autopilot buckets classify operations, not interview questions", () => {
+  const SCOPE = "the **operations the skill performs**";
+
+  for (const tree of QFAI_TREES) {
+    it(`${tree}: the operating baseline scopes the buckets`, async () => {
+      const text = flat(
+        await readFile(
+          path.join(repoRoot, tree, "assistant/constitution/shared-skill-operating-baseline.md"),
+          "utf-8",
+        ),
+      );
+      expect(text).toContain("say who settles a decision **the skill performs**");
+      expect(text).toContain("A **frontier decision** put inside a grilling session is not one");
+      expect(text).toContain("`.agents/rules/grilling.md` owns which of those are asked");
+      // A mandatory approval and a hard-required input are classified by their
+      // subject wherever they are asked. Carved out with the rest, an --auto run
+      // would guess a value it is required to stop for.
+      expect(text).toContain("Two things stay classified by their subject wherever they are asked");
+      expect(text).toContain("still stops a run that cannot get it, rather than being guessed");
+      // The interview skills are the exception the narrowing needs, or their own
+      // frontier questions fall outside every bucket.
+      expect(text).toContain("Where the interview is what the skill performs, the asking stays in");
+      // Named, not cited: a decision id is an internal identifier and the
+      // baseline is a shipped file.
+      expect(text).toContain(
+        "a category for a decision a declared grilling session puts to the user",
+      );
+      expect(text).not.toContain("DR-0269");
+    });
+  }
+
+  it("the business rule carries the scope the baseline states", async () => {
+    // The rule, not the acceptance criterion: the criterion states what the
+    // gate checks — the section is present and populated — and that is
+    // unchanged. What the buckets are about is the rule's.
+    const text = flat(
+      await readFile(path.join(repoRoot, ".qfai/specs/spec-0015/04_Business-Rules.md"), "utf-8"),
+    );
+    expect(text).toContain(SCOPE);
+    expect(text).toContain(
+      "A **frontier decision** put inside a grilling session is not one of those",
+    );
+    expect(text).toContain("owns which of those are asked and in what order");
+    // The closed list gains the entry the interview skills already ship, or a
+    // conforming review has to reject the policy this scope says to keep.
+    expect(text).toContain("a decision a declared grilling session puts to the user");
+    expect(text).toContain("available only to a skill whose own operation is the interview");
+  });
+
+  it("the primary consumer view and the glossary carry the same categories", async () => {
+    // A consumer reads the primary spec, not the business rule, and the glossary
+    // is where the term is defined. Left at four, either one rejects the entries
+    // the rule legalises.
+    for (const relative of [
+      ".qfai/specs/spec-0015/01_Spec.md",
+      ".qfai/specs/_policies/06_Glossary.md",
+    ]) {
+      const text = flat(await readFile(path.join(repoRoot, relative), "utf-8"));
+      expect(text, relative).toMatch(/interview/);
+      expect(text, relative).toMatch(/grilling.session/);
+    }
+  });
+});
