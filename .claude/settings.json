@@ -25,38 +25,7 @@
             "args": [
               "-e",
               "console.log(JSON.stringify({hookSpecificOutput:{hookEventName:'PreToolUse',additionalContext:\"QFAI grilling (.agents/rules/grilling.md). Before this: is a decision about to be fixed that the repository cannot settle — a design, an approach, a scope boundary, a trade-off? If so, that rule governs how it is put, and an agent that answers it alone has stopped following it. Read the rule rather than working from this line: the method has parts a reminder cannot carry without contradicting them.\"}}))"
-            ],
-            "if": "Write(**/.qfai/specs/**)"
-          },
-          {
-            "type": "command",
-            "statusMessage": "QFAI grilling reminder: design artifact",
-            "command": "node",
-            "args": [
-              "-e",
-              "console.log(JSON.stringify({hookSpecificOutput:{hookEventName:'PreToolUse',additionalContext:\"QFAI grilling (.agents/rules/grilling.md). Before this: is a decision about to be fixed that the repository cannot settle — a design, an approach, a scope boundary, a trade-off? If so, that rule governs how it is put, and an agent that answers it alone has stopped following it. Read the rule rather than working from this line: the method has parts a reminder cannot carry without contradicting them.\"}}))"
-            ],
-            "if": "Edit(**/.qfai/specs/**)"
-          },
-          {
-            "type": "command",
-            "statusMessage": "QFAI grilling reminder: design artifact",
-            "command": "node",
-            "args": [
-              "-e",
-              "console.log(JSON.stringify({hookSpecificOutput:{hookEventName:'PreToolUse',additionalContext:\"QFAI grilling (.agents/rules/grilling.md). Before this: is a decision about to be fixed that the repository cannot settle — a design, an approach, a scope boundary, a trade-off? If so, that rule governs how it is put, and an agent that answers it alone has stopped following it. Read the rule rather than working from this line: the method has parts a reminder cannot carry without contradicting them.\"}}))"
-            ],
-            "if": "Write(**/.qfai/discussion/**)"
-          },
-          {
-            "type": "command",
-            "statusMessage": "QFAI grilling reminder: design artifact",
-            "command": "node",
-            "args": [
-              "-e",
-              "console.log(JSON.stringify({hookSpecificOutput:{hookEventName:'PreToolUse',additionalContext:\"QFAI grilling (.agents/rules/grilling.md). Before this: is a decision about to be fixed that the repository cannot settle — a design, an approach, a scope boundary, a trade-off? If so, that rule governs how it is put, and an agent that answers it alone has stopped following it. Read the rule rather than working from this line: the method has parts a reminder cannot carry without contradicting them.\"}}))"
-            ],
-            "if": "Edit(**/.qfai/discussion/**)"
+            ]
           }
         ]
       },

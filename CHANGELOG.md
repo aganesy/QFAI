@@ -60,6 +60,11 @@ series` — the reviewed artifact plus the role — carries the round budget
   deciding whether a question should have been asked needs intent and a false
   positive would stop work outright.
 
+  None of the three carries a path condition. A project moves its artifacts with
+  `paths.specsDir` and `paths.discussionDir`, so a scope naming the defaults is
+  silently absent in exactly the project that relocated, and deriving one at
+  `qfai init` holds only until the config next changes.
+
   The reminder names the trigger and the file, and stops there. The method's
   parts qualify each other, so a summary that drops one states the opposite of
   what the rule says — a fact only the user holds takes no recommendation, a

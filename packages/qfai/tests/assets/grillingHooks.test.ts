@@ -49,12 +49,20 @@ const MARKERS: ReadonlyArray<readonly [string, string]> = [
 
 describe("the grilling reminder fires where a decision gets made quietly", () => {
   it.each(SETTINGS)("%s reminds before a design artifact is written", async (rel) => {
-    // The moment a decision stops being reversible cheaply. Scoped by path, so
-    // the reminder does not follow every file the run touches.
+    // The moment a decision stops being reversible cheaply.
+    //
+    // No `if`, deliberately, and for the reason the implementation-rule hook in
+    // this same file gives: the condition is a path scope, and a project moves
+    // its artifacts with `paths.specsDir` / `paths.discussionDir`. A scope
+    // naming the defaults is silently absent in exactly the project that
+    // relocated -- and deriving it at `qfai init` fixes it only until the
+    // config changes, which init does not see. The cost of the broader match is
+    // one line on a write that was not a design decision, against a reminder
+    // that disappears without trace on one that was.
     const settings = await readSettings(rel);
-    const conditions = preToolUse(settings, "Write|Edit").hooks.map((h) => h.if);
-    expect(conditions).toContain("Write(**/.qfai/specs/**)");
-    expect(conditions).toContain("Edit(**/.qfai/discussion/**)");
+    const group = preToolUse(settings, "Write|Edit");
+    expect(group.hooks).toHaveLength(1);
+    expect(group.hooks[0]?.if, "a path scope goes stale when a project relocates").toBeUndefined();
   });
 
   it.each(SETTINGS)("%s reminds before work is delegated", async (rel) => {
