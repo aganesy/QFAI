@@ -894,7 +894,7 @@ function buildCarrierOnlyIssues(
       "atddCodeTraceability.coverage.carrierOnly",
       refs,
       "change",
-      `これらの ID を参照しているファイルは、\`.md\` の散文か、テスト宣言（\`it\` / \`test\` / \`describe\`、Gherkin の \`Scenario:\`、\`def test_\` 等）を含まないファイルだけです。${dirs.integration} / ${dirs.api} / ${dirs.e2e} の実際のテストへ注釈を移すか、その状態を意図的な placeholder として記録してください。判定するのは「テストが宣言されているか」までで、skip されているかまでは見ません。`,
+      `これらの ID を参照しているファイルは、\`.md\` の散文か、テスト宣言（\`it\` / \`test\` / \`describe\`、Gherkin の \`Scenario:\`、\`def test_\` 等）を含まないファイルだけです。${dirs.integration} / ${dirs.api} / ${dirs.e2e} の実際のテストへ注釈を移すか、その状態を意図的な placeholder として記録してください。判定するのは「テストが宣言されているか」までで、skip されているかまでは見ません。 ${ATDD_PACKAGE_SUITE_HINT}`,
       { relatedFiles: attribution.relatedFiles },
     ),
   ];

@@ -533,6 +533,25 @@ describe("the ATDD gate's file selection", () => {
     expect(issues.map((issue) => issue.code)).toContain("QFAI-TEST-002");
   });
 
+  it("keeps an extension an extglob group names", async () => {
+    const root = await newTempDir();
+    const config = atddConfig(["packages/*/tests/**/*.@(sol|zig)"]);
+    // The group selects its members as a brace set does. Read as neither, the
+    // file it collected was filtered out before its language could be reported.
+    await writeTestFile(
+      root,
+      "packages/checkout/tests/integration/pay.sol",
+      "contract PayTest { function testPays() public {} }\n",
+    );
+
+    const issues = await validateTestTodoStubs(root, config, {
+      globs: atddAcceptanceTestGlobs(root, config, STUB_SOURCE_FILE_PATTERN),
+      fileFilter: atddAcceptanceLayerFilter(root, config),
+    });
+
+    expect(issues.map((issue) => issue.code)).toContain("QFAI-TEST-002");
+  });
+
   it("keeps the spelling a project glob gave its extension", async () => {
     const root = await newTempDir();
     const config = atddConfig(["packages/**/*.TS"]);

@@ -228,10 +228,18 @@ directory **inside its own test root**: the segment after the deepest `tests`,
 basename. `packages/checkout/tests/integration/pay.test.ts` answers an `L3`
 obligation exactly as `<testsDir>/integration/pay.test.ts` does.
 
-A directory carrying a `package.json` is a package rather than a test root,
+A directory carrying a package manifest is a package rather than a test root,
 whatever it is called: without that, a workspace package named `tests` would
 make `packages/tests/api/**` an API layer, which is the same defect one
-directory further out.
+directory further out. A suite also keeps some of those files for its runner's
+settings, so those count only when they name a package:
+
+| Manifest                                                                                                                                                                                                     | Makes its directory a package               |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------- |
+| `setup.py`, `go.mod`, `Cargo.toml`, `pom.xml`, `build.gradle`, `build.gradle.kts`, `build.sbt`, `Gemfile`, `composer.json`, `Package.swift`, `pubspec.yaml`, `*.gemspec`, `*.csproj`, `*.vbproj`, `*.fsproj` | Always                                      |
+| `package.json`, `deno.json`, `deno.jsonc`                                                                                                                                                                    | When it declares a `name`                   |
+| `pyproject.toml`                                                                                                                                                                                             | With a `[project]` or `[tool.poetry]` table |
+| `setup.cfg`                                                                                                                                                                                                  | With a `[metadata]` section                 |
 
 **The configured root answers by containment and needs no segment of its own.**
 With `paths.testsDir` at the repository root, `e2e/journey.test.ts` carries no

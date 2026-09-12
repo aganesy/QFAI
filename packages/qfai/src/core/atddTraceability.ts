@@ -1,4 +1,4 @@
-import { readdirSync } from "node:fs";
+import { readdirSync, readFileSync } from "node:fs";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 
@@ -2632,19 +2632,15 @@ function testsDirName(root: string, config: QfaiConfig): string {
 }
 
 /**
- * Package-manifest basenames, one per ecosystem this toolkit reads tests in.
+ * Package-manifest basenames that name a package whatever they hold, across the
+ * ecosystems this toolkit reads tests in.
  *
  * The stub validator carries a dialect for each of these languages, so a
  * workspace in any of them can have a package called `tests` — and the
  * discriminator has to be its own manifest, not Node's.
  */
 const PACKAGE_MANIFEST_NAMES = new Set([
-  "package.json",
-  "deno.json",
-  "deno.jsonc",
-  "pyproject.toml",
   "setup.py",
-  "setup.cfg",
   "go.mod",
   "Cargo.toml",
   "pom.xml",
@@ -2660,12 +2656,62 @@ const PACKAGE_MANIFEST_NAMES = new Set([
 /** Manifest extensions whose basename a project chooses. */
 const PACKAGE_MANIFEST_EXTENSIONS = new Set([".gemspec", ".csproj", ".vbproj", ".fsproj"]);
 
+/** Whether a JSON manifest's top level declares a string `name`. */
+function declaresName(content: string): boolean {
+  try {
+    const parsed: unknown = JSON.parse(content);
+    return (
+      typeof parsed === "object" &&
+      parsed !== null &&
+      "name" in parsed &&
+      typeof parsed.name === "string"
+    );
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Manifests a test root also keeps for its runner's settings, with what makes
+ * one a package's.
+ *
+ * A suite holds `setup.cfg` or a tool-only `pyproject.toml` for pytest, or a
+ * `package.json` holding only `"type"` to set its module format. Read by name
+ * alone, each made the suite's own directory a package and dropped every
+ * acceptance file below it. `deno.jsonc` admits comments, so its `name` is
+ * matched rather than parsed.
+ */
+const CONFIGURABLE_MANIFESTS = new Map<string, (content: string) => boolean>([
+  ["package.json", declaresName],
+  ["deno.json", declaresName],
+  ["deno.jsonc", (content) => /^\s*"name"\s*:\s*"/m.test(content)],
+  ["pyproject.toml", (content) => /^\s*\[(?:project|tool\.poetry)\]\s*$/m.test(content)],
+  ["setup.cfg", (content) => /^\s*\[metadata\]\s*$/m.test(content)],
+]);
+
+function isPackageManifest(absoluteDir: string, entry: string): boolean {
+  const namesPackage = CONFIGURABLE_MANIFESTS.get(entry);
+  if (namesPackage) {
+    try {
+      return namesPackage(readFileSync(path.join(absoluteDir, entry), "utf-8"));
+    } catch {
+      // A manifest that cannot be read says nothing about a package.
+      return false;
+    }
+  }
+  return (
+    PACKAGE_MANIFEST_NAMES.has(entry) ||
+    PACKAGE_MANIFEST_EXTENSIONS.has(path.extname(entry).toLowerCase())
+  );
+}
+
 /**
  * Whether a directory carries a package manifest, memoised per scan.
  *
  * One `readdirSync` per candidate directory — the same cost class as a stat,
  * and it answers the named manifests and the ones whose basename the project
- * chooses in one read. A scan asks about the same few directories over and
+ * chooses in one read; a manifest a suite may keep for configuration is read
+ * as well. A scan asks about the same few directories over and
  * over, so the answer is cached. Synchronous because the layer question is
  * asked from a predicate the file stream calls per file, which cannot await.
  */
@@ -2678,11 +2724,7 @@ export function packageRootProbe(): (absoluteDir: string) => boolean {
     }
     let answer: boolean;
     try {
-      answer = readdirSync(absoluteDir).some(
-        (entry) =>
-          PACKAGE_MANIFEST_NAMES.has(entry) ||
-          PACKAGE_MANIFEST_EXTENSIONS.has(path.extname(entry).toLowerCase()),
-      );
+      answer = readdirSync(absoluteDir).some((entry) => isPackageManifest(absoluteDir, entry));
     } catch {
       // Unreadable, or a path that is not a directory at all. Neither is a
       // package root, and neither is this function's to report.

@@ -114,6 +114,25 @@ describe("an annotation carrier is not an executable test", () => {
     );
   });
 
+  it("sends a package with a suite of its own to that suite", async () => {
+    // Moving the annotation into the configured directories alone builds the
+    // parallel central suite the ATDD instructions forbid.
+    await withProject(
+      {
+        us: ["US-0001"],
+        files: {
+          "tests/e2e/qfai-traceability.md": "# QFAI E2E Traceability\n\n- QFAI:SPEC-0001:US-0001\n",
+        },
+      },
+      async (root) => {
+        const issues = await validateAtddCodeTraceability(root, defaultConfig);
+        const fix = issues.find((entry) => entry.code === "QFAI-ATDD-119")?.suggested_action;
+
+        expect(fix).toContain("A package with a suite of its own");
+      },
+    );
+  });
+
   it("says nothing when an executable test carries the same annotation", async () => {
     await withProject(
       {

@@ -1306,6 +1306,40 @@ describe("acceptance tests outside paths.testsDir", () => {
     });
   });
 
+  it.each([
+    ["setup.cfg", ["[tool:pytest]", "addopts = -q", ""].join("\n")],
+    ["pyproject.toml", ["[tool.pytest.ini_options]", 'addopts = "-q"', ""].join("\n")],
+    ["package.json", JSON.stringify({ type: "module" })],
+  ])("a suite keeping %s for its runner is still a test root", async (manifest, content) => {
+    await withProject(async (root) => {
+      await seedSpec(root, "0001", ["US-0001"], ["TC-0001"]);
+      await seedTest(root, "e2e", "a.test.ts", "/* QFAI:SPEC-0001:US-0001 */");
+      // The file configures the suite and names no package. Read by name, it
+      // made `tests/` itself a package and dropped the acceptance file below it.
+      const dir = path.join(root, "packages", "app", "tests", "integration");
+      await mkdir(dir, { recursive: true });
+      await writeFile(path.join(root, "packages", "app", "tests", manifest), content, "utf-8");
+      await writeFile(
+        path.join(dir, "pay.test.ts"),
+        [
+          "/* QFAI:SPEC-0001:TC-0001 */",
+          "describe('pay', () => {",
+          "  it('runs', () => {});",
+          "});",
+          "",
+        ].join("\n"),
+        "utf-8",
+      );
+
+      const result = await evaluateAtddCodeTraceability(
+        root,
+        withProjectGlobs(["packages/*/tests/**/*.test.ts"]),
+      );
+
+      expect(result.missing.tc).toEqual([]);
+    });
+  });
+
   it("keeps the layer when a suite nests a second conventional root", async () => {
     await withProject(async (root) => {
       await seedSpec(root, "0001", ["US-0001"], ["TC-0001"]);

@@ -1308,23 +1308,35 @@ export type TestTodoStubOptions = {
  * Extensions a glob names outright, as `.ext` in lower case.
  *
  * A pattern ending in a literal extension names it, and one ending in a brace
- * set names each member; a pattern ending in a wildcard names none, which is
- * the extension-broad case the caller filters.
+ * set or an extglob group names each member; a pattern ending in a wildcard
+ * names none, which is the extension-broad case the caller filters.
  */
 function globExtensions(globs: readonly string[]): string[] {
   const found: string[] = [];
+  const pushAlternatives = (alternatives: string[]): void => {
+    for (const part of alternatives) {
+      // The alternative's own last dotted segment: `{test.zig,spec.zig}`
+      // names `.zig` twice, and rejecting an alternative for carrying a dot
+      // dropped the extension a project had selected outright.
+      const extension = part.trim().split(".").at(-1) ?? "";
+      if (/^[A-Za-z0-9_+-]+$/.test(extension)) {
+        found.push(`.${extension}`);
+      }
+    }
+  };
   for (const glob of globs) {
     const braces = /\.\{([^}]+)\}$/.exec(glob);
     if (braces) {
-      for (const part of (braces[1] ?? "").split(",")) {
-        // The alternative's own last dotted segment: `{test.zig,spec.zig}`
-        // names `.zig` twice, and rejecting an alternative for carrying a dot
-        // dropped the extension a project had selected outright.
-        const extension = part.trim().split(".").at(-1) ?? "";
-        if (/^[A-Za-z0-9_+-]+$/.test(extension)) {
-          found.push(`.${extension}`);
-        }
-      }
+      pushAlternatives((braces[1] ?? "").split(","));
+      continue;
+    }
+    // `*.@(sol|zig)` selects its members as a brace set does. Read as neither,
+    // it named nothing, and the files it collected were filtered out before
+    // their language could be reported as unscanned. `!(…)` selects every
+    // extension except its members, so it names none and stays broad.
+    const group = /\.[@?+*]\(([^)]+)\)$/.exec(glob);
+    if (group) {
+      pushAlternatives((group[1] ?? "").split("|"));
       continue;
     }
     const literal = /\.([a-zA-Z0-9_+-]+)$/.exec(glob);
