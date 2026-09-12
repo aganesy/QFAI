@@ -398,6 +398,39 @@ describe("the register it reads, and the notation it reads it in", () => {
     expect(issues[0]?.message).toContain("OQ-0007=(two on one line)");
   });
 
+  it("reads a table headed with the other word for the field", () => {
+    // The field is read as `Disposition` in the other two notations, so a
+    // table headed that way declared no status and every valid row in it was
+    // reported for the omission.
+    const table = [
+      "| OQ-ID   | Disposition   |",
+      "| ------- | ------------- |",
+      "| OQ-0007 | unadjudicated |",
+      "| OQ-0008 | deferred      |",
+      "",
+    ].join("\n");
+    const issues = collectOpenQuestionsGateIssues(ENTRY, doc([table]), false);
+    expect(issues.map((issue) => issue.code)).toEqual(["QFAI-SPACK-102"]);
+    expect(issues[0]?.refs).toEqual(["OQ-0007"]);
+  });
+
+  it("reports a question the register opens two entries for", () => {
+    // A status on either entry answered for both, so the one declaring none
+    // was invisible — and which of two conflicting values is the register's is
+    // not decidable from the document.
+    const text = doc([
+      "### OQ-0007: which retention window applies",
+      "",
+      "- Status: deferred",
+      "",
+      "### OQ-0007: which retention window applies",
+      "",
+      "- Owner: ops",
+    ]);
+    const issues = collectOpenQuestionsGateIssues(ENTRY, text, false);
+    expect(issues.map((issue) => issue.code)).toEqual(["E_OQ_STATUS_UNPARSEABLE"]);
+    expect(issues[0]?.message).toContain("OQ-0007=(two entries)");
+  });
   it("reads the id column the header names, wherever it sits", () => {
     // The schema requires an `OQ-ID` column and does not say it comes first.
     // Read from the first cell, a conforming reordered table has no row id at

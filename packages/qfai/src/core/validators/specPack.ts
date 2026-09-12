@@ -2012,19 +2012,6 @@ async function readRegisterFile(
 }
 
 /**
- * The ids a register declares an entry for, rather than merely mentions.
- *
- * A register names other questions in prose all the time — a note saying which
- * decision resolved this one, a carry-forward pointing upstream. Those are
- * references, not entries, and requiring a status for each would report a
- * register for explaining itself. An entry is a row keyed by the id, or a
- * heading that opens a subsection for it.
- */
-function extractOpenQuestionEntryIds(text: string): string[] {
-  return readRegister(text).entries;
-}
-
-/**
  * The question a line opens an entry for, outside a table.
  *
  * A subsection heading, or a list item that starts with the id — the two ways
@@ -2046,6 +2033,18 @@ function keyedCellId(cell: string): string | null {
   return id;
 }
 
+/**
+ * The questions the register opens more than one entry for.
+ *
+ * One entry per question. With two, a status on either answers for both, so the
+ * entry declaring none is invisible — and which of two conflicting values is
+ * the register's is not decidable from the document.
+ */
+function repeatedEntries(entries: readonly string[]): InvalidOpenQuestionStatus[] {
+  const repeated = entries.filter((id, at) => entries.indexOf(id) !== at);
+  return [...new Set(repeated)].map((id) => ({ id, value: REPEATED_ENTRY }));
+}
+
 /** A register entry whose status is not one of the four, or is not there. */
 function collectUnreadableStatuses(register: string, text: string): Issue[] {
   const declared = new Set(parseOpenQuestionStatuses(text).map((item) => item.id));
@@ -2053,10 +2052,15 @@ function collectUnreadableStatuses(register: string, text: string): Issue[] {
   // that simply omits it declares nothing at all — so the ids are compared with
   // the statuses rather than only the statuses being read. A row form that
   // leaves the cell empty is already counted as an unreadable value below.
-  const undeclared = extractOpenQuestionEntryIds(text)
+  const entries = readRegister(text).entries;
+  const undeclared = [...new Set(entries)]
     .filter((id) => !declared.has(id))
     .map((id) => ({ id, value: "" }));
-  const invalid = [...parseInvalidOpenQuestionStatuses(text), ...undeclared];
+  const invalid = [
+    ...parseInvalidOpenQuestionStatuses(text),
+    ...undeclared,
+    ...repeatedEntries(entries),
+  ];
   if (invalid.length === 0) return [];
   const samples = Array.from(
     new Set(invalid.map((item) => `${item.id}=${item.value === "" ? "(none)" : item.value}`)),
@@ -2115,7 +2119,10 @@ export function collectOpenQuestionsGateIssues(
   releaseCandidate: boolean,
 ): Issue[] {
   const statuses = parseOpenQuestionStatuses(text);
-  const invalidStatuses = parseInvalidOpenQuestionStatuses(text);
+  const invalidStatuses = [
+    ...parseInvalidOpenQuestionStatuses(text),
+    ...repeatedEntries(readRegister(text).entries),
+  ];
   const statusIds = new Set(statuses.map((item) => item.id));
   const openQuestionIds = extractOpenQuestionIds(text);
   const idsWithoutValidStatus = openQuestionIds.filter((id) => !statusIds.has(id));
@@ -2194,7 +2201,7 @@ export function collectOpenQuestionsGateIssues(
  * nothing is compared against.
  */
 function extractOpenQuestionIds(text: string): string[] {
-  return readRegister(text).entries;
+  return [...new Set(readRegister(text).entries)];
 }
 
 function validateDeltaGate(entry: SpecEntry, text: string): Issue[] {
@@ -3009,6 +3016,12 @@ const OPEN_QUESTIONS_HEADING = "Open Questions";
 /** What a status is attributed to where no entry has been opened yet. */
 const UNLABELLED_OQ = "(unlabeled-oq)";
 
+/** The header a register's status column carries, in either word. */
+const STATUS_HEADER = /^(?:status|disposition)$/i;
+
+/** What a question declares when the register opens two entries for it. */
+const REPEATED_ENTRY = "(two entries)";
+
 /** What an entry declares when its own line carries the field more than once. */
 const AMBIGUOUS_STATUS = "(two on one line)";
 
@@ -3039,7 +3052,13 @@ function openQuestionsLines(text: string): string[] {
   return sections.flatMap((section) => section.split("\n"));
 }
 
-/** What one register declares: the entries it opens, and the statuses on them. */
+/**
+ * What one register declares: the entries it opens, and the statuses on them.
+ *
+ * `entries` holds every occurrence, not a set of ids: a question the register
+ * opens twice is a question whose status on either entry answers for both, and
+ * a set cannot say that happened.
+ */
 type RegisterReading = { entries: string[]; declared: DeclaredStatus[] };
 
 /**
@@ -3057,7 +3076,7 @@ type RegisterReading = { entries: string[]; declared: DeclaredStatus[] };
  */
 function readRegister(text: string): RegisterReading {
   const lines = openQuestionsLines(text);
-  const entries = new Set<string>();
+  const entries: string[] = [];
   const declared: DeclaredStatus[] = [];
   let currentId = "";
   let inTable = false;
@@ -3081,7 +3100,10 @@ function readRegister(text: string): RegisterReading {
       // them, and an untouched template reports itself.
       const cells = rowCells(line);
       const key = cells.findIndex((cell) => OPEN_QUESTION_COLUMN_LABEL.test(cell));
-      const status = cells.findIndex((cell) => cell.toLowerCase() === "status");
+      // Either word: the field is read as `Disposition` in the other two
+      // notations, so a table headed that way declared no status at all and
+      // every valid row in it was reported for the omission.
+      const status = cells.findIndex((cell) => STATUS_HEADER.test(cell));
       idColumn = key === -1 ? null : key;
       statusColumn = key === -1 || status === -1 ? null : status;
       inTable = true;
@@ -3095,7 +3117,7 @@ function readRegister(text: string): RegisterReading {
         : keyedCellId(cells[idColumn] ?? "")
       : openedEntryId(line);
     if (opened !== null) {
-      entries.add(opened);
+      entries.push(opened);
       currentId = opened;
     }
 
@@ -3144,7 +3166,7 @@ function readRegister(text: string): RegisterReading {
     }
   }
 
-  return { entries: [...entries], declared };
+  return { entries, declared };
 }
 
 /**
