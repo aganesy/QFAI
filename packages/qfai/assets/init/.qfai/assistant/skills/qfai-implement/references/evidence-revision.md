@@ -43,12 +43,18 @@ check. Gate item 10 rejects any other shape wherever a revision is recorded:
          const check = JSON.parse(s).checks.find((c) => c.id === "paths.specsDir");
          process.stdout.write(check?.details?.path ?? ".qfai/specs");
        })')
-     exclude=(":(exclude,glob)${specs}/*/tdd/test-list.md"
-              ':(exclude,glob).qfai/evidence/**'
+     exclude=(':(exclude,glob).qfai/evidence/**'
               ':(exclude,glob).qfai/review/**')
+     case "$specs" in
+       /*|../*) ;;  # outside the worktree: nothing it holds is in the address
+       *) exclude+=(":(exclude,glob)${specs}/*/tdd/test-list.md") ;;
+     esac
+     common=(-C "$root" -c core.quotePath=false -c core.ignoreCase=false)
      git --no-replace-objects -C "$root" rev-parse HEAD
-     git -C "$root" -c core.quotePath=false ls-files --deduplicate -z -- . "${exclude[@]}"
-     git -C "$root" -c core.quotePath=false ls-files --others \
+     git "${common[@]}" ls-files --deduplicate -z -- . "${exclude[@]}"
+     git "${common[@]}" ls-files --others \
+       --exclude-per-directory=.gitignore -z -- . "${exclude[@]}"
+     git "${common[@]}" ls-files --others --directory \
        --exclude-per-directory=.gitignore -z -- . "${exclude[@]}"
      ```
 
@@ -62,6 +68,13 @@ check. Gate item 10 rejects any other shape wherever a revision is recorded:
      `.qfai/evidence` and `.qfai/review` are not configurable, and are written
      as they are.
 
+     **A ledger outside the worktree is not excluded, because it was never in.**
+     The setting takes an absolute path, and a resolved directory that starts
+     with a separator or climbs out of the tree names files no pathspec here can
+     address: `ls-files` refuses the pathspec outright, and the address cannot
+     be taken at all. Nothing outside the worktree reaches the two lists, so
+     leaving the exclusion off changes nothing about what is hashed.
+
      **Git names the files. It does not read them.** A diff is a rendering
      rather than a state, and what renders it is checkout-local: `core.autocrlf`,
      `core.fileMode`, `core.eol`, `diff.algorithm`, `diff.indentHeuristic` and a
@@ -72,13 +85,16 @@ check. Gate item 10 rejects any other shape wherever a revision is recorded:
      address for the same files. The bytes come off the filesystem, where there
      is nothing to configure.
 
-     Three things still come from git, and each is pinned above.
+     What still comes from git is pinned above, one setting per thing the
+     checkout would otherwise decide.
 
      | Pinned                               | Without it                                                                                                                                                          |
      | ------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
      | `-c core.quotePath=false` and `-z`   | A path holding non-ASCII or a control character comes back in a quoted display spelling, and the config changes that spelling for the same tree                     |
+     | `-c core.ignoreCase=false`           | An untracked name differing only in case from a tracked one is taken for the tracked file and reported by neither list, so edits to it never move the address       |
      | `--no-replace-objects`               | A local replacement ref makes `rev-parse HEAD` print one object while every later read of `HEAD` sees another, so the recorded rev names a tree nobody observed     |
      | `--exclude-per-directory=.gitignore` | `--exclude-standard` also reads `.git/info/exclude` and `core.excludesFile`, which live outside the tree — one producer's untracked file is another's invisible one |
+     | `--directory` on the third pass      | An untracked directory with nothing git lists under it — empty, or holding only ignored files — is named by neither of the first two lists                          |
 
      **An unborn HEAD has no address.** Before the first commit `rev-parse HEAD`
      exits with `fatal: ambiguous argument 'HEAD'`, and an observation with no
@@ -109,24 +125,39 @@ check. Gate item 10 rejects any other shape wherever a revision is recorded:
      it was. An entry ending in the path separator is that case. Register it as
      a submodule, remove it, or record the observation against its own tree.
 
-     **A directory is a record too, and neither command lists one.** Git tracks
-     files, and `ls-files --others` names a directory only for the embedded
-     repository the clause above stops on. So the directories are derived:
-     every path component of every path in the two lists, each once. A
-     directory's mode is in the address for the reason a file's is — removing
-     the execute bit from `src/` changes what the tests can read while every
-     file under it keeps its bytes, and a PASS taken before it would still read
-     as fresh.
+     **A directory is a record too, and the first two lists name none.** Git
+     tracks files, and `ls-files --others` names a directory only for the
+     embedded repository the clause above stops on. So the directories come from
+     two places: every path component of every path in the first two lists, and
+     every entry of the third pass that no listed path lies under. A directory's
+     mode is in the address for the reason a file's is — removing the execute
+     bit from `src/` changes what the tests can read while every file under it
+     keeps its bytes, and a PASS taken before it would still read as fresh.
+
+     The third pass is what reaches a directory with nothing git lists under it:
+     an empty one, or one holding only ignored files. Derivation from the first
+     two cannot, because there is no path to derive it from, and such a
+     directory is created, removed and re-moded like any other.
 
      **The repository root is not one of them.** It has two spellings, `.` and
      the empty path, and it is the thing being addressed rather than something
-     in it. Every other component is recorded by what it is on disk, read
+     in it. Every other directory is recorded by what it is on disk, read
      without following a link: a component that is a symlink is a `symlink`
-     record carrying its own payload, and one the filesystem does not have —
-     the parent of a tracked path that is `absent` — is `absent` itself.
+     record carrying its own payload, one the filesystem does not have — the
+     parent of a tracked path that is `absent` — is `absent` itself, and a
+     third-pass entry is written without the trailing separator git prints.
+
+     **A path the process cannot read stops the address.** An uncommitted mode
+     change can take the search bit off a directory while the index still lists
+     what is under it: the paths come back, and the `lstat` each record needs
+     fails with `EACCES`. There is no record to write there and no honest
+     default — an `inaccessible` record would be one value for a directory at
+     `0600` and for one at `0000`, and the mode change is exactly what this
+     address exists to catch. Restore access to the path and take the address
+     again.
 
   2. **Exclude.** `<specsDir>/*/tdd/test-list.md`, `.qfai/evidence/**` and
-     `.qfai/review/**`, in the pathspecs above, so **both** lists carry them —
+     `.qfai/review/**`, in the pathspecs above, so **every** list carries them —
      they are the record of the observation, not the thing observed. The review
      pack is on that list for the same reason the others are: a project may
      legitimately track `.qfai/review/**`, and then every reviewer answer
@@ -135,11 +166,13 @@ check. Gate item 10 rejects any other shape wherever a revision is recorded:
      reached `done`. What protects the pack is a pack seal, not the audit hash —
      see `#review-pack-seal`.
 
-  3. **Serialize.** `HEAD` + NUL + the rev; then one record per path from both
-     lists, `path + NUL + kind + NUL + mode + NUL + the SHA-256 of its bytes`,
-     sorted by path in byte order. A path appears once: the two lists do not
-     overlap, and `--deduplicate` collapses the several index stages an
-     unresolved merge conflict would otherwise emit for one path.
+  3. **Serialize.** `HEAD` + NUL + the rev; then one record per path — the two
+     file lists, and the directories step 1 names — as
+     `path + NUL + kind + NUL + mode + NUL + the SHA-256 of its bytes`, sorted
+     by path in byte order. A path appears once: the two file lists do not
+     overlap, `--deduplicate` collapses the several index stages an unresolved
+     merge conflict would otherwise emit for one path, and a directory reached
+     from two children is one record.
 
      `kind` is `file` / `symlink` / `dir` / `absent`, and `mode` is the octal
      permission bits. **`absent` is a tracked path with nothing on disk** — a

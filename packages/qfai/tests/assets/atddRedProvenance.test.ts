@@ -1591,7 +1591,7 @@ describe.each(TREES)("%s (each gate reads what the step before it produced)", (t
       await read(tree, "assistant/skills/qfai-implement/references/evidence-revision.md"),
     );
     // The manifest is now spelled out as a four-step procedure.
-    expect(revision).toContain("one record per path from both");
+    expect(revision).toContain("one record per path");
     expect(revision).toContain("sorted by path in byte order");
   });
 
@@ -2417,7 +2417,7 @@ describe.each(TREES)("%s (the two sides of each contract agree)", (tree) => {
       await read(tree, "assistant/skills/qfai-implement/references/evidence-revision.md"),
     );
     expect(revision).toContain(
-      "`.qfai/review/**`, in the pathspecs above, so **both** lists carry",
+      "`.qfai/review/**`, in the pathspecs above, so **every** list carries",
     );
     expect(revision).toContain("What protects the pack is a **pack seal**");
   });

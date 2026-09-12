@@ -533,16 +533,18 @@ describe("evidence and verdicts carry a revision", () => {
 /**
  * The address is one value, or it is not an address.
  *
- * Step 3 builds a string of records and step 4 hashes it. A SHA-256 is 32 bytes
- * and those bytes have two written forms, so a step that names a digest without
- * naming its notation has two honest readings. The same holds for the trailing
- * newline and for how long a revision is written. Five readings of one clean
- * tree gave five addresses, and the whole point of the address is that they
- * cannot.
+ * Step 3 builds a string of records and step 4 hashes it, and every part of
+ * that string has a notation the document fixes: a digest is written as 64
+ * lowercase characters and never as its 32 raw bytes, records are joined with
+ * one newline and none follows the last, and a revision is the whole object id
+ * git printed. Each is a choice two honest implementations could make
+ * differently, which would give one clean tree two addresses.
  *
- * This is the second implementation the rule needs: it builds the string the
- * document describes and checks that the reading the document now fixes is the
- * one that reproduces a recorded address, and that the four it rules out do not.
+ * A second implementation is what holds a notation that a prose rule cannot.
+ * The block below builds the string the document describes, from records
+ * covering every kind it names, and asserts two things of it: the fixed reading
+ * reproduces a recorded address, and each reading the document rules out gives
+ * a different one.
  */
 describe("the working-tree address has one notation", () => {
   const REVISION = "649d8111147436408c90cbbe1b9f9b07e34da8cb";
@@ -673,12 +675,25 @@ describe("the working-tree address has one notation", () => {
       expect(text).toContain("qfai doctor --format json");
       expect(text).toContain("paths.specsDir");
       expect(text).toContain('-- . "${exclude[@]}"');
-      // Neither command lists an ordinary directory, so a mode change on one —
-      // the execute bit off `src/` — left every file's bytes and the address
-      // where they were.
-      expect(text).toContain("A directory is a record too, and neither command lists one");
-      expect(text).toContain("every path component of every path in the two lists, each once");
+      // The setting takes an absolute path, and a pathspec outside the worktree
+      // is refused outright, so no address could be taken at all.
+      expect(text).toContain("A ledger outside the worktree is not excluded");
+      // An untracked name differing only in case from a tracked one is taken
+      // for the tracked file, so edits to it never move the address.
+      expect(text).toContain("core.ignoreCase=false");
+      // The listing commands name no ordinary directory, so a mode change on
+      // one — the execute bit off `src/` — left every file's bytes and the
+      // address where they were.
+      expect(text).toContain("A directory is a record too, and the first two lists name none");
+      expect(text).toContain("every path component of every path in the first two lists");
+      // A directory with nothing git lists under it has no path to derive it
+      // from, and is created, removed and re-moded like any other.
+      expect(text).toContain("ls-files --others --directory");
+      expect(text).toContain("every entry of the third pass that no listed path lies under");
       expect(text).toContain("The repository root is not one of them");
+      // A search bit taken off a directory leaves the index listing what is
+      // under it and every record's own read failing.
+      expect(text).toContain("A path the process cannot read stops the address");
       // Collection is many reads, and a tree edited between them addresses a
       // state that never existed.
       expect(text).toContain("The tree has to hold still while you read it");
