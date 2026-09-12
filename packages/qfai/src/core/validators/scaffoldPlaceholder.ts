@@ -132,12 +132,18 @@ export function scaffoldPlaceholderScanDirs(testsDir: string): string[] {
 /**
  * Whether this validator's scan reaches a repository-relative path.
  *
- * Both halves of that scan, because either alone is wrong. The directories are
+ * Every part of that scan, because any one alone is wrong. The directories are
  * the four above; the basenames are the writer's own dialect patterns, which is
  * what the scan globs with. A marked file in one of those directories whose
  * name the writer would never emit — `pay.ts` beside `pay.test.ts` — is not
  * collected there, so a caller standing aside for it leaves it reported by
  * nobody.
+ *
+ * The same holds for a path with a dot-prefixed segment below a scan
+ * directory. The scan globs with `dot: false`, so
+ * `tests/integration/.generated/pay.test.ts` is collected by nothing here even
+ * though its directory and basename both match — while a project glob that
+ * names the dot directory explicitly still reads it elsewhere.
  */
 export function scaffoldPlaceholderScannedFilter(
   root: string,
@@ -154,7 +160,13 @@ export function scaffoldPlaceholderScannedFilter(
     const absolute = path.resolve(root, relativePath);
     return scanned.some((dir) => {
       const inside = path.relative(dir, absolute);
-      return inside.length > 0 && !inside.startsWith("..") && !path.isAbsolute(inside);
+      if (inside.length === 0 || inside.startsWith("..") || path.isAbsolute(inside)) {
+        return false;
+      }
+      // Only the part the scan's wildcards match: a dot inside the configured
+      // directory's own path is a literal segment of the pattern, and `dot`
+      // does not apply to it.
+      return !inside.split(path.sep).some((segment) => segment.startsWith("."));
     });
   };
 }

@@ -598,6 +598,24 @@ describe("the ATDD gate's file selection", () => {
     expect(issues.map((issue) => issue.code)).toContain("QFAI-TEST-003");
   });
 
+  it("reports a marked skeleton under a dot directory the placeholder scan skips", async () => {
+    const root = await newTempDir();
+    const config = atddConfig(["tests/integration/.generated/**/*.test.ts"]);
+    // The directory is a scanned one and the basename is the writer's own, so
+    // both halves of the earlier check hold. But the placeholder scan globs
+    // with `dot: false` and never enters `.generated`, while the project glob
+    // names it and this gate reads it — so standing aside left the skeleton
+    // reported by neither.
+    await writeTestFile(root, "tests/integration/.generated/pay.test.ts", scaffolded());
+
+    const issues = await validateTestTodoStubs(root, config, {
+      globs: ["tests/integration/.generated/**/*.test.ts"],
+      placeholderScanned: scaffoldPlaceholderScannedFilter(root, config),
+    });
+
+    expect(issues.map((issue) => issue.code)).toContain("QFAI-TEST-003");
+  });
+
   it("reports a marked file the placeholder validator's globs do not collect", async () => {
     const root = await newTempDir();
     const config = atddConfig(["packages/*/tests/**/*.test.ts"]);

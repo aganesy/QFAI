@@ -2436,14 +2436,18 @@ function buildAtddScanGlobs(
 }
 
 /**
- * The acceptance-test globs this stage owns, for a scanner that brings its own
+ * The acceptance-test globs this stage reads, for a scanner that brings its own
  * file pattern.
  *
- * `/qfai-atdd` owns `tests/{e2e,api,integration}/**` and nothing else, so a
- * validator wired into `--profile atdd` must select files the same way the
- * ATDD scan does — following `paths.testsDir` — rather than reusing
- * `validation.traceability.testFileGlobs`, which describes the whole
- * repository's tests.
+ * Two sources, the same two the ATDD scan uses: the layer directories under
+ * `paths.testsDir`, built from the pattern, and the project's own
+ * `validation.traceability.testFileGlobs`, which is where a monorepo's other
+ * packages keep their acceptance suites.
+ *
+ * **The result is not acceptance-only.** The project globs describe the whole
+ * repository's tests, unit and component suites included, so a caller must
+ * apply `atddAcceptanceLayerFilter` to what these globs collect. The globs
+ * decide what can be read; the filter decides what this stage owns.
  */
 export function atddAcceptanceTestGlobs(
   root: string,

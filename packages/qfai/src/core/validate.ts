@@ -930,10 +930,9 @@ async function runAtddValidators(
     // packages keep their acceptance suites. The second set also matches unit
     // and component files, and a unit test's stub must not block a gate that
     // owns none of it — so the layer filter, not the globs, is what keeps them
-    // out. Passing the configured globs alone was the original defect twice
-    // over: it let a `tests/unit/**` stub block this gate, and the shipped
-    // `qfai.config.yaml` leaves the list empty, so the validator returned
-    // before reading anything.
+    // out. Neither set suffices alone: the configured globs reach unit suites,
+    // and the shipped `qfai.config.yaml` leaves them empty, where the layer
+    // directories are the only acceptance tests there are.
     //
     // The marker exemption is handed the same stage's scan boundary. A marked
     // skeleton under `paths.testsDir` is `D-SCAFFOLD-PLACEHOLDER`'s to report;

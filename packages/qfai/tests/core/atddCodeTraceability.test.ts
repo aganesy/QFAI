@@ -90,6 +90,22 @@ describe("validateAtddCodeTraceability", () => {
     });
   });
 
+  it("separates the missing identifiers from the package-suite hint", async () => {
+    await withProject(async (root) => {
+      await seedSpec(root, "0001", ["US-0001"], ["TC-0001"]);
+      await seedApiContract(root, "CON-API-0001");
+      await seedTest(root, "e2e", "a.test.ts", "/* QFAI:SPEC-0001:US-0001 */");
+      await seedTest(root, "api", "a.test.ts", "/* QFAI:CON-API-0001 */");
+
+      const issues = await validateAtddCodeTraceability(root, defaultConfig);
+      const fix = issues.find((entry) => entry.code === "QFAI-ATDD-112")?.suggested_action ?? "";
+      // Appended straight after the last identifier the two ran together as
+      // `TC-0001A package with…`, which reads as one token.
+      expect(fix).not.toMatch(/TC-\d{4}(?:-\d{4})?A package/);
+      expect(fix).toMatch(/TC-\d{4}(?:-\d{4})?\. A package with a suite of its own/);
+    });
+  });
+
   it("emits QFAI-ATDD-113 when CON-API references are missing in tests/api", async () => {
     await withProject(async (root) => {
       await seedSpec(root, "0001", ["US-0001"], ["TC-0001"]);
