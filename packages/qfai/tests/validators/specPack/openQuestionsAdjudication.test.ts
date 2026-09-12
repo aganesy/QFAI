@@ -384,6 +384,20 @@ describe("the register it reads, and the notation it reads it in", () => {
     }
   });
 
+  it("declares nothing where a metadata line states the field twice", () => {
+    // The same reading, on the other line the field is read from. Taking the
+    // first left `Status: deferred; Status: unadjudicated` declaring `deferred`,
+    // and the blocking value reached nothing.
+    const text = doc([
+      "### OQ-0007: which retention window applies",
+      "",
+      "- Status: deferred; Status: unadjudicated",
+    ]);
+    const issues = collectOpenQuestionsGateIssues(ENTRY, text, false);
+    expect(issues.map((issue) => issue.code)).toEqual(["E_OQ_STATUS_UNPARSEABLE"]);
+    expect(issues[0]?.message).toContain("OQ-0007=(two on one line)");
+  });
+
   it("reads the id column the header names, wherever it sits", () => {
     // The schema requires an `OQ-ID` column and does not say it comes first.
     // Read from the first cell, a conforming reordered table has no row id at

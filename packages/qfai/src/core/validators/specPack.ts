@@ -3125,26 +3125,22 @@ function readRegister(text: string): RegisterReading {
     // declares nothing, which is what keeps a register that explains its own
     // notation from answering for the question it named last.
     //
-    // One occurrence on an entry's own line, or none of them. An entry may
-    // quote a value in the sentence that states its own — `from Status:
-    // deferred to ...` — and neither the first nor the last is the field in
-    // both spellings of that, so a line carrying two declares nothing and says
-    // so. Reading either would be a guess, and a guess here either blocks a
-    // stage nobody is waiting on or passes the decision this gate exists for.
-    if (opened !== null) {
-      const values = [...line.matchAll(STATUS_FIELD)].flatMap((match) =>
-        match[1] === undefined ? [] : [statusValue(match[1])],
-      );
-      if (values.length === 1) {
-        declared.push({ id: currentId || UNLABELLED_OQ, raw: values[0] ?? "" });
-      } else if (values.length > 1) {
-        declared.push({ id: currentId || UNLABELLED_OQ, raw: AMBIGUOUS_STATUS });
-      }
-      continue;
-    }
-    const statusMatch = STATUS_FIELD_LINE.exec(line);
-    if (statusMatch?.[1] !== undefined) {
-      declared.push({ id: currentId || UNLABELLED_OQ, raw: statusValue(statusMatch[1]) });
+    // One occurrence, or none of them, on either line the field is read from.
+    // An entry may quote a value in the sentence that states its own — `from
+    // Status: deferred to ...` — and a metadata line may hold two outright:
+    // `Status: deferred; Status: unadjudicated`. Neither the first nor the last
+    // is the field in every spelling of that, so a line carrying two declares
+    // nothing and says so. Reading either would be a guess, and a guess here
+    // blocks a stage nobody is waiting on or passes the decision this gate
+    // exists for.
+    if (opened === null && !STATUS_FIELD_LINE.test(line)) continue;
+    const values = [...line.matchAll(STATUS_FIELD)].flatMap((match) =>
+      match[1] === undefined ? [] : [statusValue(match[1])],
+    );
+    if (values.length === 1) {
+      declared.push({ id: currentId || UNLABELLED_OQ, raw: values[0] ?? "" });
+    } else if (values.length > 1) {
+      declared.push({ id: currentId || UNLABELLED_OQ, raw: AMBIGUOUS_STATUS });
     }
   }
 
