@@ -1603,6 +1603,8 @@ export const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
   E_OQ_STATUS_UNPARSEABLE:
     "Each OQ entry has a valid status (open|resolved|deferred|unadjudicated).",
   "QFAI-SPACK-102": "No open question is a decision the user was asked for and never took.",
+  "QFAI-SPACK-103":
+    "Every open-question register that is present is a regular file this run can read.",
   E_DELTA_MISSING_REQUIRED:
     "18_delta.md includes all required sections and Rejected has DO NOT/Temptation.",
   "QFAI-DECISION-001":

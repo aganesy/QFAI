@@ -27,6 +27,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   declaring no status at all is reported too — a question whose state nobody
   wrote down is the one the new value would otherwise have named.
 
+  The shared policy register is read before the run decides the tree holds no
+  spec pack, so a pack being established policy-first has its decisions checked
+  rather than skipped. A register that is present and cannot be read —
+  a directory, a device, a pipe at the name, or a size past 4 MiB — reports
+  `QFAI-SPACK-103` instead of passing as a pack with no questions in it.
+
 - **The question-form rule is put in front of the agent on every turn** (#1610).
   A `UserPromptSubmit` hook emits it as context, naming the rule master and the
   one line an agent reaches past when it would rather not ask.

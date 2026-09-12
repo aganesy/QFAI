@@ -43,7 +43,7 @@
 
 ## Open questions
 
-- OQ-XXXX: <question> — Disposition: open | resolved | deferred
+- OQ-XXXX: <question> — Disposition: open | resolved | deferred | unadjudicated
 - <or> none
 
 ## Decisions made

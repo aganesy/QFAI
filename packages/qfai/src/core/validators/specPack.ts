@@ -1,6 +1,7 @@
-import { readFile } from "node:fs/promises";
+import { lstat, readFile, realpath } from "node:fs/promises";
 import path from "node:path";
 
+import { readBoundedRegularFile } from "../../shared/boundedRead.js";
 import type { QfaiConfig } from "../config.js";
 import { resolvePath } from "../config.js";
 import { buildContractIndex } from "../contractIndex.js";
@@ -119,8 +120,17 @@ type SpecDefinitions = {
 export async function validateSpecPacks(root: string, config: QfaiConfig): Promise<Issue[]> {
   const specsRoot = resolvePath(root, config, "specsDir");
   const entries = await collectSpecEntries(specsRoot);
+  // Once for the tree: the shared policy register belongs to every layered
+  // spec, and reading it per entry reports one policy decision once per spec.
+  // Before the no-pack return below, because a tree holding the register with
+  // no spec beside it yet is a pack being established policy-first, and
+  // returning there would leave every decision in it unread.
+  const sharedRegisterIssues = await collectRegisterIssues(
+    path.join(specsRoot, "_policies", "09_Open-questions.md"),
+  );
   if (entries.length === 0) {
     return [
+      ...sharedRegisterIssues,
       issue(
         "QFAI-SPACK-000",
         `Spec Pack が見つかりません。配置場所: ${config.paths.specsDir} / 期待: spec-0001/01_Spec.md ... 18_delta.md または Layered spec (01_Spec.md ... *_delta.md)`,
@@ -142,14 +152,7 @@ export async function validateSpecPacks(root: string, config: QfaiConfig): Promi
     entries.map((entry) => [`spec-${entry.specNumber}`, entry.status]),
   );
 
-  // Once for the tree: the shared policy register belongs to every layered
-  // spec, and reading it per entry reports one policy decision once per spec.
-  const sharedRegister = entries.find((entry) => entry.layout === "layered")?.sharedDir;
-  if (sharedRegister !== undefined) {
-    issues.push(
-      ...(await collectRegisterIssues(path.join(sharedRegister, "09_Open-questions.md"))),
-    );
-  }
+  issues.push(...sharedRegisterIssues);
 
   for (const entry of entries) {
     if (entry.layout === "layered") {
@@ -1912,15 +1915,37 @@ async function fileExists(target: string): Promise<boolean> {
 }
 
 /**
- * A decision the user was asked for and nobody settled, in one register.
+ * The ceiling a register is read under.
  *
- * Separate from the rest of the open-question gate because it applies wherever
- * a register lives — per spec, and under `_policies` — while the `open` count
- * is a release-candidate rule the layered layouts have never carried. Unlike
- * `open`, it does not soften outside a release candidate: the pack is claiming
- * a design nobody chose, and a stage that completes over it has recorded the
- * agent's preference as the project's decision.
+ * Well past any register anyone writes, and small enough that a device or a
+ * runaway file at the name cannot be pulled into memory.
  */
+const REGISTER_MAX_BYTES = 4 * 1024 * 1024;
+
+/** The `code` an fs rejection carries, where it carries one. */
+function errorCode(error: unknown): string | undefined {
+  if (typeof error !== "object" || error === null) return undefined;
+  const code: unknown = Reflect.get(error, "code");
+  return typeof code === "string" ? code : undefined;
+}
+
+/**
+ * Whether nothing is at `target`, as against something that cannot be read.
+ *
+ * Two errors say the name resolves to nothing: the last segment is absent, or
+ * a segment before it is not a directory. Every other one says something is
+ * there.
+ */
+async function isAbsent(target: string): Promise<boolean> {
+  try {
+    await lstat(target);
+    return false;
+  } catch (error) {
+    const code = errorCode(error);
+    return code === "ENOENT" || code === "ENOTDIR";
+  }
+}
+
 /**
  * The status findings one open-question register carries.
  *
@@ -1930,11 +1955,35 @@ async function fileExists(target: string): Promise<boolean> {
  * nobody took.
  */
 async function collectRegisterIssues(register: string): Promise<Issue[]> {
-  const text = await readFile(register, "utf-8").catch(() => null);
-  if (text === null) return [];
+  // Through the bounded reader, on the path a link resolves to: a FIFO at this
+  // name blocks the command in `open` itself, and a register is a file the
+  // adopter writes, so the gate cannot assume what is at it.
+  const target = await realpath(register).catch(() => register);
+  const bytes = await readBoundedRegularFile(target, REGISTER_MAX_BYTES);
+  if (bytes !== undefined) {
+    const text = bytes.toString("utf-8");
+    return [
+      ...collectUnadjudicatedDecisions(register, text),
+      ...collectUnreadableStatuses(register, text),
+    ];
+  }
+  // Absent is the ordinary answer — a tree with no shared register, a spec
+  // whose questions file is not written yet — and reports nothing. Anything
+  // else is a register that is there and was not read, and reading that as
+  // absence is how a decision nobody took passes a gate that never opened the
+  // file.
+  if (await isAbsent(register)) return [];
   return [
-    ...collectUnadjudicatedDecisions(register, text),
-    ...collectUnreadableStatuses(register, text),
+    issue(
+      "QFAI-SPACK-103",
+      "This open-question register is present and could not be read, so the decisions in it were not checked.",
+      "error",
+      register,
+      "specPack.openQuestionsUnreadable",
+      [],
+      "canonical",
+      "Make the path a regular file this run can read, under 4 MiB — not a directory, a device, a pipe or a link that resolves to one.",
+    ),
   ];
 }
 
@@ -1991,6 +2040,16 @@ function collectUnreadableStatuses(register: string, text: string): Issue[] {
   ];
 }
 
+/**
+ * A decision the user was asked for and nobody settled, in one register.
+ *
+ * Separate from the rest of the open-question gate because it applies wherever
+ * a register lives — per spec, and under `_policies` — while the `open` count
+ * is a release-candidate rule the layered layouts have never carried. Unlike
+ * `open`, it does not soften outside a release candidate: the pack is claiming
+ * a design nobody chose, and a stage that completes over it has recorded the
+ * agent's preference as the project's decision.
+ */
 export function collectUnadjudicatedDecisions(registerPath: string, text: string): Issue[] {
   const ids = Array.from(
     new Set(
