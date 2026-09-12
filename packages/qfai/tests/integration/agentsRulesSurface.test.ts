@@ -484,6 +484,13 @@ describe("cross-AI rules surface (.agents/rules/ master)", () => {
     ])("%s cites the rule master", async (rel) => {
       const text = await readFile(path.join(ROOT, rel), "utf-8");
       expect(text).toContain("user-questions.md");
+      // Naming the master is not summarising it. These surfaces are where a
+      // rule is discovered, and one that still promises numbered choices for
+      // every answer sends an agent to invent options for an open value before
+      // it ever opens the master.
+      expect(text).toMatch(/in\s+the\s+shape\s+its\s+answer\s+has/);
+      expect(text).toMatch(/a\s+plain\s+request/);
+      expect(text).not.toMatch(/numbered\s+plain-text\s+choices\s+keep\s+the\s+same\s+parts/);
     });
 
     // The two rules divide one subject: which questions to ask, and what each
@@ -495,6 +502,14 @@ describe("cross-AI rules surface (.agents/rules/ master)", () => {
     ])("%s points at the question form", async (rel) => {
       const text = await readFile(path.join(ROOT, rel), "utf-8");
       expect(text).toContain("user-questions.md");
+      // A round can hold a question asking for a fact, and this same rule says
+      // such a question carries no options and no recommended answer. A
+      // fallback demanding numbered choices for the whole round contradicts
+      // that, in the one document that states both.
+      expect(text).toMatch(/in\s+the\s+shape\s+each\s+answer\s+has/);
+      expect(text).toMatch(
+        /a\s+plain\s+request\s+for\s+the\s+value\s+where\s+it\s+asks\s+for\s+a\s+fact/,
+      );
     });
   });
 

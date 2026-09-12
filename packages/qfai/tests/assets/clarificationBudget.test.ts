@@ -252,6 +252,11 @@ describe("the clarification budget is countable", () => {
       expectPhrase(content, "**One question item is one question**");
       expectPhrase(content, "bundles N question items spends N, not 1");
       expectPhrase(content, "one numbered choice set is one question");
+      // Both shapes the fallback takes. Counting only the list would leave
+      // every open-value request outside the budget, which is the whole of
+      // Article X's other path.
+      expectPhrase(content, "one plain request for an open value is one question");
+      expectPhrase(content, "A question the tool could not carry is still a question");
     });
 
     it(`${tree}: Article VI says what exhaustion does`, async () => {
@@ -557,6 +562,16 @@ describe("the question form binds every question", () => {
       expectPhrase(content, "**this question in this\n   invocation**");
       expectPhrase(content, "`.agents/rules/user-questions.md` owns the form");
       expectPhrase(content, "that is an answer shape, not an exception");
+      // Rule 3 itself, not only the clauses around it. Pinning those while
+      // leaving the numbered rule loose would let the fallback revert to
+      // numbered-only, or shed the selection constraint, with this suite still
+      // green — which is the drift it exists to catch.
+      expectPhrase(content, "in the shape its answer has");
+      expectPhrase(content, "a plain request for the value where the answer is open");
+      expectPhrase(
+        content,
+        "preserve structured choice semantics (enumerated options, selection constraints)",
+      );
     });
 
     it(`${tree}: availability is judged per question, not per host`, async () => {
