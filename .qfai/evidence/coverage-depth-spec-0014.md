@@ -168,10 +168,12 @@ counts: info=6 warning=533 error=1021
 a run through it reports on a tree this branch has not changed — which is the same reason
 `atdd-spec-0014.md` gives for its own gate.
 
-`QFAI-TEST-003` accounts for **32** of those errors, one per skipped declaration, across eight
-files. That is the count this document uses throughout. Two of the 32 sit in files carrying a
-spec-0014 annotation, and each is a `describe.skip` covering two `it` cases — four skipped cases in
-all:
+`QFAI-TEST-003` accounts for **16** of those errors, one per skipped declaration, across eight
+files. That is the count this document uses throughout, and it agrees with the eight per-file entries
+`scripts/dogfood-backlog.json` pins for this rule. A previous revision said 32 by counting the
+validator output twice — each finding prints a human-readable line and a machine `error_code:` line,
+and a grep for the rule name matches both. Two of the 16 sit in files carrying a spec-0014
+annotation, and each is a `describe.skip` covering two `it` cases — four skipped cases in all:
 
 | File                                                   | Annotations                   | Cases |
 | ------------------------------------------------------ | ----------------------------- | ----- |
@@ -1163,7 +1165,7 @@ them is repaired here; this artifact scores coverage and does not edit tests, le
    authored red ahead of the implementation, and their bodies shell out to a built CLI that now
    implements everything they assert. The live suites that replaced them
    (`prototypingCertify.saasPackage.test.ts` and `prototypingCertify.upgradeScope.test.ts`) are
-   stronger in every dimension. The four skipped cases discharge nothing, they are two of the 32
+   stronger in every dimension. The four skipped cases discharge nothing, they are two of the 16
    `QFAI-TEST-003` findings in the recorded validate run, and their `describe` blocks are what a
    reader scanning for the covering suite finds first. They should be rewritten or retired — and
    not simply retired, because they are not weaker in every dimension. They hold the only cases that
