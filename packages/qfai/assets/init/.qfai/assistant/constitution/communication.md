@@ -58,6 +58,11 @@ When an agent needs to ask the user a question, the following rules apply (see a
    where rule 4 does not apply — mandatory approvals and the `hard-required` inputs that invocation actually
    consumes MUST still be asked. A user's `proceed` / `done` answer enters that same mode and is likewise
    not `--auto`; rule 4 is activated by the `--auto` flag alone.
+6. **A grilling session under `--auto` opens what it could not settle**: rule 4 silences its questions like any
+   others, and each decision left over MUST be opened as a question in the register the stage reads, so the stage
+   cannot complete over it. Where a document requires the field to hold something, write the defaulted value and
+   label it an assumption beside that open question. Rule 4's assumptions are the defaultable ones; an assumption
+   with no open question against it is not one of them.
 
 All SKILL.md files MUST include a
 `## User Questions (AskUserQuestion Protocol)` section with MUST-level wording.

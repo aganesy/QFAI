@@ -23,6 +23,7 @@ directory.
 | `repository-language.md`    | This repository is written in English. Operator-facing strings are held by `packages/qfai/tests/unit/cliMessageLanguage.test.ts` and the changelog by `packages/qfai/tests/unit/changelogLanguage.test.ts`, each against an allowlist that may only shrink. |
 | `minimal-implementation.md` | The order to try solutions in, once a behaviour is agreed, and how a deliberate shortcut is marked.                                                                                                                                                         |
 | `interface-clarity.md`      | What may appear on a screen or in terminal output, and what a sentence there says about the control under it.                                                                                                                                               |
+| `grilling.md`               | Interview the decision tree in rounds before a design is fixed. A session ends when the frontier is empty and the user confirms, never at a question count.                                                                                                 |
 
 ## Adding a rule
 

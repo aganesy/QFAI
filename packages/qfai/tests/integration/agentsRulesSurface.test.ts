@@ -378,4 +378,133 @@ describe("cross-AI rules surface (.agents/rules/ master)", () => {
       expect(text).toContain(".agents/rules/interface-clarity.md");
     });
   });
+
+  // A decision tree is a thing an adopter's project has as much as this one
+  // does, so the master is shipped and both copies are held to the same
+  // clauses.
+  describe("grilling rule", () => {
+    const MASTERS = [
+      ".agents/rules/grilling.md",
+      "packages/qfai/assets/init/root/.agents/rules/grilling.md",
+    ];
+
+    it.each(MASTERS)("%s states every clause", async (rel) => {
+      const text = await readFile(path.join(ROOT, rel), "utf-8");
+      // One token per clause that no other clause in the file carries, so a
+      // clause cannot be dropped and still leave the master looking complete.
+      for (const clause of [
+        /[Dd]esign tree/,
+        /[Ff]rontier/,
+        /[Rr]ound/,
+        /recommended answer/i,
+        /sub-agent/i,
+        /throwaway version/i,
+      ]) {
+        expect(text).toMatch(clause);
+      }
+    });
+
+    // The two halves of the end condition are one obligation. An empty frontier
+    // alone is the state an agent reaches by running out of questions, which is
+    // the failure this rule exists to name — so a master that stopped at the
+    // frontier would license the behaviour it forbids.
+    it.each(MASTERS)("%s requires both halves of the end condition", async (rel) => {
+      const text = await readFile(path.join(ROOT, rel), "utf-8");
+      expect(text).toMatch(/frontier\s+is\s+empty/i);
+      expect(text).toMatch(/confirms\s+the\s+understanding\s+is\s+shared/i);
+    });
+
+    // A cap is the one mechanism that would make the rule self-defeating: it
+    // ends a session on a number rather than on the work being done, which is
+    // what the rule replaces. Asserted because a later editor reaching for a cap
+    // would otherwise find nothing in the way.
+    it.each(MASTERS)("%s sets no question cap", async (rel) => {
+      const text = await readFile(path.join(ROOT, rel), "utf-8");
+      expect(text).toMatch(/no\s+question\s+cap/i);
+    });
+
+    // Facts and decisions are separated so an agent cannot spend the user's
+    // attention on something it could look up, nor settle on their behalf
+    // something only they can settle.
+    it.each(MASTERS)("%s separates facts from decisions", async (rel) => {
+      const text = await readFile(path.join(ROOT, rel), "utf-8");
+      expect(text).toMatch(
+        /[Nn]ever\s+ask\s+the\s+user\s+for\s+something\s+you\s+could\s+look\s+up/,
+      );
+      expect(text).toMatch(/answers its own\s+decisions/);
+    });
+
+    // Without a fallback the rule has no compliant path on a host that offers
+    // no structured question tool: it orders a round asked through one, and an
+    // agent that cannot reach it can only skip the session.
+    it.each(MASTERS)("%s gives a fallback for a host without the tool", async (rel) => {
+      const text = await readFile(path.join(ROOT, rel), "utf-8");
+      expect(text).toMatch(/no\s+such\s+tool/i);
+      expect(text).toMatch(/numbered\s+choices/i);
+    });
+
+    // The prototype answers a question talking cannot; it does not hand the
+    // agent the answer. A master that stopped at "build it" would let an agent
+    // settle a question of taste on the user's behalf, one clause after saying
+    // decisions are theirs.
+    it.each(MASTERS)("%s returns the prototype to the user", async (rel) => {
+      const text = await readFile(path.join(ROOT, rel), "utf-8");
+      expect(text).toMatch(/put\s+it\s+in\s+front\s+of\s+the\s+user/i);
+      expect(text).toMatch(/does\s+not\s+transfer\s+the\s+decision/i);
+    });
+
+    // A no-question run is the one place the rule and a no-question mode could
+    // deadlock. It resolves toward the open question, which is what stops the
+    // work completing over a decision nobody took.
+    //
+    // The labelled value is allowed beside it, and has to be: a discussion pack
+    // under `--auto` takes the conventional design direction, labels it
+    // `chosen_by: assumption` and opens the register entry, and the pack cannot
+    // complete while that entry is open. Forbidding the value outright would
+    // leave that run with no artifact it is permitted to write. What the rule
+    // refuses is the assumption standing alone.
+    // Precision and settledness are different things, and only the second ends
+    // the need for a session. A choice between two fully specified options is
+    // precise and still open, so an exit keyed on how well the subject can be
+    // stated lets an agent skip the interview and then decide for the user.
+    it.each(MASTERS)("%s keys the exit on the decision, not on precision", async (rel) => {
+      const text = await readFile(path.join(ROOT, rel), "utf-8");
+      expect(text).toMatch(/the\s+decision\s+being\s+settled,\s+not\s+the\s+subject/);
+    });
+
+    // Agreement is not evidence the session was unnecessary: the user's
+    // preferences may simply match, and the decisions were still theirs to
+    // authorise. Read as a success criterion, it teaches an agent to skip the
+    // next interview on the strength of the last one going smoothly.
+    it.each(MASTERS)("%s does not read agreement as a wasted session", async (rel) => {
+      const text = await readFile(path.join(ROOT, rel), "utf-8");
+      expect(text).toMatch(/Agreeing\s+with\s+every\s+recommendation\s+is\s+a\s+fine/);
+      expect(text).not.toMatch(/session\s+that\s+was\s+not\s+needed/);
+    });
+
+    it.each(MASTERS)("%s resolves a no-question run to open questions", async (rel) => {
+      const text = await readFile(path.join(ROOT, rel), "utf-8");
+      expect(text).toMatch(/[Uu]nder\s+a\s+no-question\s+mode/);
+      expect(text).toMatch(/opens\s+every\s+decision\s+left\s+over\s*\n?\s*as\s+a\s+question/);
+      expect(text).toMatch(
+        /write\s+the\s+defaulted\s+value\s*\n?\s*and\s+label\s+it\s+an\s+assumption/,
+      );
+      expect(text).toMatch(/the\s*\n?\s*assumption\s+on\s+its\s+own/);
+    });
+
+    it.each([
+      "AGENTS.md",
+      "CLAUDE.md",
+      ".github/copilot-instructions.md",
+      "packages/qfai/assets/init/root/AGENTS.md",
+      "packages/qfai/assets/init/root/CLAUDE.md",
+      // The list `qfai init` appends to a project that already has an entry
+      // point. A project with its own `AGENTS.md` keeps it, so this is the only
+      // rule list that population ever sees.
+      "packages/qfai/src/cli/commands/init.ts",
+    ])("%s cites the rule master", async (rel) => {
+      const text = await readFile(path.join(ROOT, rel), "utf-8");
+      expect(text).toContain("grilling.md");
+    });
+  });
 });
