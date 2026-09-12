@@ -4,6 +4,22 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ## [Unreleased]
 
+### Fixed
+
+- **A refused citation is retried once the entry point can be rewritten**
+  (#1687). `qfai init` cites a rule master only in the run that copied it, because
+  that run alone knows no entry point can have cited it yet. When the rewrite was
+  refused, because the file was not UTF-8, was a link, changed during the run, or
+  was a Copilot file past the read ceiling, the citation was lost for good. The
+  master was on disk, so the next copy skipped it and no later run offered the
+  citation again.
+
+  A refused run now records, per entry point, the masters it could not cite, in
+  `.agents/rules/.qfai-citations.pending.json`, and the warning says they are
+  kept. A later run cites the recorded masters that are still on disk once the
+  file can be rewritten, then clears the record. A bullet the project deleted on
+  purpose was never recorded, so it is still not restored.
+
 ## [1.12.0] - 2026-09-12
 
 ### Added

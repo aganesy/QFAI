@@ -226,10 +226,20 @@ whole from the same source later in the run. Nothing is added to it here, and no
 refusal is reported for it, because a refusal would name a file this run goes on
 to replace.
 
-**What a refusal does not do.** Queue the citation for later. A master this run
-copied is one no later run offers again, because the file is on disk and the
-next copy skips it. The refusal names the masters that stayed uncited, and
-repairing the file does not bring them with it.
+**What a refusal keeps.** The masters it could not cite. A master this run copied
+is one no later copy offers again, because the file is on disk and the next copy
+skips it. So a refused rewrite records those masters for its entry point in
+`.agents/rules/.qfai-citations.pending.json`, and the refusal says they are
+kept. A later run cites every recorded master still on disk once the file can
+be rewritten, and clears that entry point from the record when they land.
+
+| Refused because                                                                                                                       | Recorded under                    |
+| ------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------- |
+| The entry point is a symbolic or hard link, cannot be read back, holds bytes that are not UTF-8, or changed while the run was writing | that entry point                  |
+| `.github/copilot-instructions.md` is not an ordinary file, or is past the read ceiling                                                | `.github/copilot-instructions.md` |
+
+Only a recorded master is retried. A bullet the project deleted, with its master
+still on disk, was never recorded and stays deleted. A dry run records nothing.
 
 **What the signal cannot tell.** A project that deleted both the bullet and the
 master gets both back: the same run writes the file again, so the citation
