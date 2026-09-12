@@ -361,6 +361,13 @@ describe.each(TREES)("%s — prototyping and grilling", (tree) => {
     expectPhrase(skill, "naming what it destroys in both trees");
     expectPhrase(skill, "`.qfai/prototypes/iter-00/index.html` is overwritten");
     expectPhrase(skill, "with no backup taken");
+
+    // And a refusal has an outcome of its own. Without one the table maps a
+    // rejection to the reset and stops there, so a declined reset leaves the
+    // orchestrator with no next step but the operation the user just refused.
+    expectPhrase(skill, "**A declined reset ends the run and deletes nothing.**");
+    expectPhrase(skill, "leave both trees as they stand, and stop");
+    expectPhrase(skill, "or end with nothing deleted where the reset is declined");
   });
 
   it("tells the delegated roles an escalated row is not a constraint", async () => {

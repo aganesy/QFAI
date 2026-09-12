@@ -215,22 +215,32 @@ function computeChangedSetFromGit(base) {
 }
 
 /**
- * The text under `PROMPT_SCOPE_HEADING`, or `null` when the heading is
- * absent. A section runs to the next heading of the same level; a deeper
- * one belongs to it.
+ * The text under every `PROMPT_SCOPE_HEADING`, or `null` when there is none.
+ * A section runs to the next heading of the same level; a deeper one belongs
+ * to it.
+ *
+ * Every one, not the first. A second section under the same heading is valid
+ * Markdown and a reader takes both as the contract, so stopping at the first
+ * would let a branch append contradictory rules beside the original and report
+ * no change at all. Two sections are also a different text from one, which is
+ * what makes appending one count as the change it is.
  */
-function scopedSection(text) {
+function scopedSections(text) {
   const lines = text.split("\n");
-  const start = lines.findIndex((line) => line.trim() === PROMPT_SCOPE_HEADING);
-  if (start < 0) return null;
-  let end = lines.length;
-  for (let i = start + 1; i < lines.length; i += 1) {
-    if (/^## (?!#)/.test(lines[i])) {
-      end = i;
-      break;
+  const found = [];
+  for (let start = 0; start < lines.length; start += 1) {
+    if (lines[start].trim() !== PROMPT_SCOPE_HEADING) continue;
+    let end = lines.length;
+    for (let i = start + 1; i < lines.length; i += 1) {
+      if (/^## (?!#)/.test(lines[i])) {
+        end = i;
+        break;
+      }
     }
+    found.push(lines.slice(start, end).join("\n"));
+    start = end - 1;
   }
-  return lines.slice(start, end).join("\n");
+  return found.length === 0 ? null : found.join("\n");
 }
 
 /** A file's content at a ref, or `null` when the ref does not carry it. */
@@ -263,8 +273,8 @@ function promptContractChanged(base) {
   const before = blobAt(mergeBase, PROMPT_REL);
   const after = blobAt("HEAD", PROMPT_REL);
   if (before === null || after === null) return true;
-  const beforeSection = scopedSection(before);
-  const afterSection = scopedSection(after);
+  const beforeSection = scopedSections(before);
+  const afterSection = scopedSections(after);
   if (beforeSection === null || afterSection === null) return true;
   return beforeSection !== afterSection;
 }

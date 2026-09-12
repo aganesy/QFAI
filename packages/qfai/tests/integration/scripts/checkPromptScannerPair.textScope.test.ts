@@ -199,6 +199,26 @@ describe("the prompt half is scoped to the section that states the contract", ()
     expect(await commitAndRun(PROMPT_REL, edited)).toMatch(/R-PROMPT-SCANNER-DRIFT/);
   });
 
+  it("fires on a second section appended under the same heading", async () => {
+    // Valid Markdown, and a reader takes both as the contract. Read from the
+    // first heading alone, appending one is the way to put a contradictory rule
+    // beside the original and report no change at all.
+    const edited = `${PROMPT_WITH_SECTIONS}\n${SCOPE_HEADING}\n\n- Color literals are fine here.\n`;
+
+    expect(await commitAndRun(PROMPT_REL, edited)).toMatch(/R-PROMPT-SCANNER-DRIFT/);
+  });
+
+  it("fires on an edit inside a later section when an earlier one is untouched", async () => {
+    const twoSections = `${PROMPT_WITH_SECTIONS}\n${SCOPE_HEADING}\n\n- No shadow literal.\n`;
+    await seed(PROMPT_REL, twoSections);
+    await git("add", "-A");
+    await git("commit", "-qm", "give the prompt a second compliance section");
+
+    const edited = twoSections.replace("- No shadow literal.", "- Shadow literals are fine.");
+
+    expect(await commitAndRun(PROMPT_REL, edited)).toMatch(/R-PROMPT-SCANNER-DRIFT/);
+  });
+
   it("still pairs an edit inside the section with a scanner edit", async () => {
     await seed(
       PROMPT_REL,
