@@ -11,16 +11,41 @@
 import { mkdir, mkdtemp, readFile, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 
 import { describe, expect, it } from "vitest";
 
 import { runInit } from "../../src/cli/commands/init.js";
-import { DOCUMENTATION_CLARITY_HOOK_MARKER } from "../../src/core/claudeCodeHooks.js";
+import {
+  DOCUMENTATION_CLARITY_HOOK_MARKER,
+  GRILLING_DELEGATION_HOOK_MARKER,
+  GRILLING_DESIGN_ARTIFACT_HOOK_MARKER,
+  GRILLING_PLAN_HOOK_MARKER,
+} from "../../src/core/claudeCodeHooks.js";
 import { captureStderr } from "../helpers/stderr.js";
 import { captureStdout } from "../helpers/stdout.js";
 import { removeTempTree } from "../helpers/tempTree.js";
 
 const SETTINGS = path.join(".claude", "settings.json");
+
+// tests/cli/<this file> -> tests -> packages/qfai
+const assetsRoot = path.resolve(
+  path.dirname(fileURLToPath(import.meta.url)),
+  "..",
+  "..",
+  "assets",
+  "init",
+);
+
+/** The `hooks.PreToolUse` array of a parsed settings object. */
+function readPreToolUse(settings: unknown): unknown[] {
+  const hooks: unknown =
+    typeof settings === "object" && settings !== null ? Reflect.get(settings, "hooks") : undefined;
+  const groups: unknown =
+    typeof hooks === "object" && hooks !== null ? Reflect.get(hooks, "PreToolUse") : undefined;
+  if (!Array.isArray(groups)) throw new Error("settings carry no PreToolUse groups");
+  return [...groups];
+}
 
 /** One `qfai init` run with its console output swallowed; returns what it wrote to stderr. */
 async function initInto(root: string): Promise<string> {
@@ -55,7 +80,7 @@ async function withTempRoot(body: (root: string) => Promise<void>): Promise<void
   }
 }
 
-describe("qfai init and the documentation-clarity hooks", () => {
+describe("qfai init and the reminder hooks", () => {
   it("seeds the whole settings file into a project that has none", async () => {
     await withTempRoot(async (root) => {
       await initInto(root);
@@ -88,6 +113,39 @@ describe("qfai init and the documentation-clarity hooks", () => {
     });
   });
 
+  it("adds a group to a project that carries only the earlier ones", async () => {
+    // The upgrade path, and the reason the merge decides per group. A project
+    // that installed before a reminder existed carries a settings file the
+    // create-only copy will not touch, so a rerun is the only way the group
+    // reaches it.
+    await withTempRoot(async (root) => {
+      const shipped: unknown = JSON.parse(
+        await readFile(path.join(assetsRoot, ".claude", "settings.json"), "utf-8"),
+      );
+      const preToolUse = readPreToolUse(shipped);
+      const earlier = preToolUse.filter((group) =>
+        JSON.stringify(group).includes(DOCUMENTATION_CLARITY_HOOK_MARKER),
+      );
+      expect(earlier.length).toBeGreaterThan(0);
+      await seedSettings(root, { hooks: { PreToolUse: earlier } });
+
+      await initInto(root);
+
+      const settings = await readSettings(root);
+      const merged = readPreToolUse(settings);
+      expect(merged.length).toBe(preToolUse.length);
+      for (const marker of [
+        GRILLING_DESIGN_ARTIFACT_HOOK_MARKER,
+        GRILLING_DELEGATION_HOOK_MARKER,
+        GRILLING_PLAN_HOOK_MARKER,
+      ]) {
+        expect(JSON.stringify(merged), `${marker} did not reach the project`).toContain(marker);
+      }
+      // The group it already had is not duplicated by the one it gained.
+      expect(JSON.stringify(merged).split(DOCUMENTATION_CLARITY_HOOK_MARKER)).toHaveLength(2);
+    });
+  });
+
   it("adds the entries exactly once across repeated runs", async () => {
     await withTempRoot(async (root) => {
       await seedSettings(root, { hooks: {} });
@@ -111,7 +169,7 @@ describe("qfai init and the documentation-clarity hooks", () => {
       const stderr = await initInto(root);
 
       expect(await readFile(path.join(root, SETTINGS), "utf-8")).toBe(damaged);
-      expect(stderr).toContain("documentation-clarity");
+      expect(stderr).toContain("reminder hooks");
     });
   });
 
@@ -129,7 +187,7 @@ describe("qfai init and the documentation-clarity hooks", () => {
 
       const stderr = await initInto(root);
 
-      expect(stderr).toContain("documentation-clarity");
+      expect(stderr).toContain("reminder hooks");
       expect(stderr).toContain(".claude/settings.json");
       // init got past it: the files it writes beside the hooks are all there.
       await expect(readFile(path.join(root, "AGENTS.md"), "utf-8")).resolves.toContain(
