@@ -6096,7 +6096,14 @@ async function replaceWithRegularFile(dest: string, content: string): Promise<vo
 // Canonical skill / agent collection
 // ---------------------------------------------------------------------------
 
-async function collectCanonicalSkillIds(assistantAssetsDir: string): Promise<string[]> {
+/**
+ * The skills an install carries: a directory under `skills/` holding a
+ * `SKILL.md`. Exported because a name prefix looks like the same list and is
+ * not — a suite that reads the tree its own way answers a slightly different
+ * question than the installer does, and the gap shows up as a shipped skill
+ * nothing checks.
+ */
+export async function collectCanonicalSkillIds(assistantAssetsDir: string): Promise<string[]> {
   const skillsDir = path.join(assistantAssetsDir, "skills");
   if (!(await exists(skillsDir))) {
     return [];
