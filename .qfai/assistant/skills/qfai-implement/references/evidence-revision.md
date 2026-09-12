@@ -47,15 +47,17 @@ check. Gate item 10 rejects any other shape wherever a revision is recorded:
               ':(exclude,glob).qfai/review/**')
      case "$specs" in
        /*|../*) ;;  # outside the worktree: nothing it holds is in the address
-       *) exclude+=(":(exclude,glob)${specs}/*/tdd/test-list.md") ;;
+       # Every glob character in the configured name escaped, so a directory
+       # really called `[specs]` is matched rather than read as a class.
+       *) exclude+=(":(exclude,glob)$(printf '%s' "$specs" |
+            sed 's/[][*?\\]/\\&/g')/*/tdd/test-list.md") ;;
      esac
      common=(-C "$root" -c core.quotePath=false -c core.ignoreCase=false)
+     others=(ls-files --others --exclude-per-directory=.gitignore -z)
      git --no-replace-objects -C "$root" rev-parse HEAD
      git "${common[@]}" ls-files --deduplicate -z -- . "${exclude[@]}"
-     git "${common[@]}" ls-files --others \
-       --exclude-per-directory=.gitignore -z -- . "${exclude[@]}"
-     git "${common[@]}" ls-files --others --directory \
-       --exclude-per-directory=.gitignore -z -- . "${exclude[@]}"
+     git "${common[@]}" "${others[@]}" -- . "${exclude[@]}"
+     git "${common[@]}" "${others[@]}" --directory -- . "${exclude[@]}"
      ```
 
      **The ledger's directory is read, not assumed.** `paths.specsDir` is a
@@ -139,13 +141,40 @@ check. Gate item 10 rejects any other shape wherever a revision is recorded:
      two cannot, because there is no path to derive it from, and such a
      directory is created, removed and re-moded like any other.
 
+     **That pass collapses, so it is run again one level in.** `--directory`
+     reports the topmost untracked directory and nothing beneath it, so an empty
+     directory inside an untracked one is named by no list at all. For every
+     entry it returns that a listed path lies under, run it again scoped to that
+     entry's own children — `-- '<entry>*'` — and repeat until it returns no
+     directory that is not already a record. Each level is git's own listing, so
+     a subdirectory the project ignores stays ignored rather than being walked
+     into by a reader that does not know the rules.
+
      **The repository root is not one of them.** It has two spellings, `.` and
      the empty path, and it is the thing being addressed rather than something
      in it. Every other directory is recorded by what it is on disk, read
-     without following a link: a component that is a symlink is a `symlink`
-     record carrying its own payload, one the filesystem does not have — the
-     parent of a tracked path that is `absent` — is `absent` itself, and a
-     third-pass entry is written without the trailing separator git prints.
+     without following a link: a directory is a `dir`, one the filesystem does
+     not have — the parent of a tracked path that is `absent` — is `absent`
+     itself, and a third-pass entry is written without the trailing separator
+     git prints. A component that is a link is neither, and the clause below
+     stops there.
+
+     **A symlink used as a directory component stops the address.** Replace
+     `src` with a link and the lists still name `src/a`, because the index does;
+     what they cannot name is everything else the link reaches, which is on the
+     far side of it and may be excluded from the address outright. Serializing
+     then reads one file through the component and omits its siblings, so
+     editing one of them moves nothing. A link as the last segment is a record
+     and stays one — it is read as itself, not followed. Restore the directory,
+     or record the observation against the tree the link points into.
+
+     **A regular file with more than one link stops the address.** Two paths
+     that are one file behave differently from two paths that are copies —
+     writing through one changes what a test reads through the other — and every
+     field in both records is identical either way. There is no spelling here
+     that tells them apart, so the address says it cannot describe the tree
+     rather than giving two behaviours one name. Break the link, or record the
+     observation on a tree without one.
 
      **A path the process cannot read stops the address.** An uncommitted mode
      change can take the search bit off a directory while the index still lists

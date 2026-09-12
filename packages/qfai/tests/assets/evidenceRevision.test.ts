@@ -671,7 +671,7 @@ describe("the working-tree address has one notation", () => {
       // from the resolved value. Writing the default excludes nothing in a
       // project that moved its specs, and the phase's own bookkeeping then
       // moves the address between the observations item 10 requires to agree.
-      expect(text).toContain(":(exclude,glob)${specs}/*/tdd/test-list.md");
+      expect(text).toContain("/*/tdd/test-list.md");
       expect(text).toContain("qfai doctor --format json");
       expect(text).toContain("paths.specsDir");
       expect(text).toContain('-- . "${exclude[@]}"');
@@ -688,9 +688,19 @@ describe("the working-tree address has one notation", () => {
       expect(text).toContain("every path component of every path in the first two lists");
       // A directory with nothing git lists under it has no path to derive it
       // from, and is created, removed and re-moded like any other.
-      expect(text).toContain("ls-files --others --directory");
+      expect(text).toContain("others=(ls-files --others --exclude-per-directory=.gitignore -z)");
+      expect(text).toContain('${others[@]}" --directory');
       expect(text).toContain("every entry of the third pass that no listed path lies under");
+      // That pass reports the topmost untracked directory only, so an empty one
+      // inside another was named by no list at all.
+      expect(text).toContain("That pass collapses, so it is run again one level in");
       expect(text).toContain("The repository root is not one of them");
+      // The configured name reaches a glob pathspec, where a directory really
+      // called `[specs]` is otherwise read as a class and excluded nothing.
+      expect(text).toContain("really called `[specs]` is matched rather than read as a class");
+      // Two states the records cannot tell apart while the tests can.
+      expect(text).toContain("A symlink used as a directory component stops the address");
+      expect(text).toContain("A regular file with more than one link stops the address");
       // A search bit taken off a directory leaves the index listing what is
       // under it and every record's own read failing.
       expect(text).toContain("A path the process cannot read stops the address");
