@@ -795,28 +795,26 @@ function segmentAdmits(part: string, segment: string): boolean {
 /**
  * One segment's alternatives, where it is written as a list of them.
  *
- * A brace list names a set, and so does a segment that is one extended group:
- * `@(…)` and `?(…)` match one member, so each member is a pattern in its own
- * right. `+(…)` and `*(…)` match a run of members, and a name's leading dot is
- * spelled by the first, so each member comes back followed by the group again.
- * Every other form — a plain wildcard, a group beside other text — is one
+ * A brace list names a set, and so does a segment holding an extended group:
+ * `@(…)` and `?(…)` match one member, so each member, with the text around the
+ * group, is a pattern in its own right. `+(…)` and `*(…)` match a run of
+ * members, and a leading dot the group spells is spelled by the first, so each
+ * member comes back followed by the group again. A plain wildcard is one
  * pattern, and comes back as itself.
  */
 function topLevelAlternativesOf(part: string): string[] {
-  const quantifier = part[0];
-  if (
-    quantifier === undefined ||
-    !"@?+*".includes(quantifier) ||
-    part[1] !== "(" ||
-    groupClose(part, 1) !== part.length - 1
-  ) {
-    return expandBraces(part);
-  }
-  const body = part.slice(2, -1);
-  const members = splitAlternatives(body).flatMap((alternative) => expandBraces(alternative));
-  return quantifier === "+" || quantifier === "*"
-    ? members.map((member) => `${member}*(${body})`)
-    : members;
+  const open = outsideClasses(part).find(
+    (index) => "@?+*".includes(part[index] ?? "") && part[index + 1] === "(",
+  );
+  const close = open === undefined ? -1 : groupClose(part, open + 1);
+  if (open === undefined || close === -1) return expandBraces(part);
+  const before = part.slice(0, open);
+  const body = part.slice(open + 2, close);
+  const after = part.slice(close + 1);
+  const repeat = part[open] === "+" || part[open] === "*" ? `*(${body})` : "";
+  return splitAlternatives(body).flatMap((member) =>
+    expandBraces(`${before}${member}${repeat}${after}`),
+  );
 }
 
 /** The index of the `)` closing the group opened at `open`, or `-1`. */
@@ -832,7 +830,10 @@ function groupClose(part: string, open: number): number {
   return -1;
 }
 
-/** One group body's alternatives, at the top level of that body. */
+/**
+ * One extended group body's alternatives, at the top level of that body. Only
+ * `|` separates them: a comma there is part of a name.
+ */
 function splitAlternatives(body: string): string[] {
   const parts: string[] = [];
   let depth = 0;
@@ -851,7 +852,7 @@ function splitAlternatives(body: string): string[] {
     }
     if (character === "(" || character === "{") depth += 1;
     else if (character === ")" || character === "}") depth -= 1;
-    else if ((character === "|" || character === ",") && depth === 0) {
+    else if (character === "|" && depth === 0) {
       parts.push(current);
       current = "";
       continue;
@@ -1248,6 +1249,34 @@ describe("a glob is a claim about a set", () => {
     }
   });
 
+  it("keeps a negated class's leading hyphen a member", () => {
+    // Written beside the members, the separator made a range with the hyphen:
+    // `[!-a-z]` compiled to a class whose `/-a` also excluded every capital, so
+    // a name the project's own scan accepts was refused.
+    expect(compiled("[!-a-z]*.test.ts").test("TC-0000-0000.test.ts")).toBe(true);
+    expect(compiled("[!-a-z]*.test.ts").test("-x.test.ts")).toBe(false);
+    expect(compiled("[!-a-z]*.test.ts").test("b.test.ts")).toBe(false);
+    expect(compiled("tests[!-a]x").test("tests/x")).toBe(false);
+  });
+
+  it("reads a comma in an extended group as part of a name", () => {
+    // Only `|` separates an extended group; the matcher reads
+    // `@(preflight_summary.md,missing.md)` as one name holding a comma, and split
+    // there it resolved against the tracked summary it does not name.
+    const cited = ".qfai/report/@(preflight_summary.md,missing.md)";
+    expect(globToRegExp(cited).test(".qfai/report/preflight_summary.md")).toBe(false);
+    expect(globToRegExp(cited).test(".qfai/report/preflight_summary.md,missing.md")).toBe(true);
+    // A brace list is still a list.
+    expect(globToRegExp(".qfai/report/{a,b}.md").test(".qfai/report/b.md")).toBe(true);
+  });
+
+  it("reads the alternative that spells a dot-leading name inside a longer segment", () => {
+    // With text after the group, the whole segment was asked at once, and the
+    // wildcard sibling matching the name without its dot hid the spelled one.
+    const control = ".qfai/report/.gitignore";
+    expect(hidesADotName(".qfai/report/@(.git|g*)ignore", control)).toBe(false);
+    expect(hidesADotName(".qfai/report/@(a|g*)ignore", control)).toBe(true);
+  });
   it("counts each citation of a path, not the path once per record", () => {
     // Counted once per file, a section added beside an old one could cite the
     // same absent pack and pass on the backlog entry the old section holds.

@@ -342,11 +342,11 @@ function findGroupClose(pattern: string, open: number, opener: string, closer: s
 }
 
 /**
- * Split a group's interior on its top-level separators. `,` (braces) and `|`
- * (extglob) are both accepted in both group kinds: no real glob relies on the
- * other one being a literal, and conflating them keeps one splitter.
+ * Split a group's interior on its top-level separator: `,` in a brace list and
+ * `|` in an extended group. Each is a literal in the other kind, so
+ * `@(a.md,b.md)` names one file with a comma in its name.
  */
-function splitGlobAlternatives(inner: string): string[] {
+function splitGlobAlternatives(inner: string, separator: "|" | ","): string[] {
   const parts: string[] = [];
   let depth = 0;
   let current = "";
@@ -367,7 +367,7 @@ function splitGlobAlternatives(inner: string): string[] {
       depth += 1;
     } else if (char === ")" || char === "}") {
       depth -= 1;
-    } else if ((char === "," || char === "|") && depth === 0) {
+    } else if (char === separator && depth === 0) {
       parts.push(current);
       current = "";
       continue;
@@ -403,7 +403,7 @@ export function compileGlob(pattern: string): string {
     if (pattern[index + 1] === "(" && "@?*+!".includes(char)) {
       const close = findGroupClose(pattern, index + 1, "(", ")");
       if (close !== -1) {
-        const alternatives = splitGlobAlternatives(pattern.slice(index + 2, close))
+        const alternatives = splitGlobAlternatives(pattern.slice(index + 2, close), "|")
           .map((alternative) => compileGlob(alternative.trim()))
           .join("|");
         source +=
@@ -446,7 +446,7 @@ export function compileGlob(pattern: string): string {
     if (char === "{") {
       const close = findGroupClose(pattern, index, "{", "}");
       if (close !== -1) {
-        const alternatives = splitGlobAlternatives(pattern.slice(index + 1, close))
+        const alternatives = splitGlobAlternatives(pattern.slice(index + 1, close), ",")
           .map((alternative) => compileGlob(alternative.trim()))
           .join("|");
         source += `(?:${alternatives})`;
@@ -465,11 +465,12 @@ export function compileGlob(pattern: string): string {
         // A class never reaches across a separator, whatever it spells. A
         // range holding `/` — `[.-9]` does — otherwise matched the separator
         // itself, and a destination the project's own scan cannot reach was
-        // accepted as one it could. Negated, the separator joins what is
-        // excluded; positive, a lookahead holds it out of a set that spells it.
+        // accepted as one it could. A lookahead holds it out in both forms:
+        // written into a negated class beside the members, it made a range with
+        // a leading hyphen, and `[!-a-z]` excluded every capital letter.
         const members = compileClassBody(body.slice(negated ? 1 : 0));
         const compiled =
-          members === null ? NEVER_MATCHES : negated ? `[^/${members}]` : `(?!/)[${members}]`;
+          members === null ? NEVER_MATCHES : `(?!/)[${negated ? "^" : ""}${members}]`;
         // A class the author wrote wrongly — a descending range, say — matches
         // nothing, which is what the project's own scan does with it. Left to
         // build a regular expression it threw instead, out of a command whose
