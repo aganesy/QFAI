@@ -298,17 +298,21 @@ None.
 
 - Role: completion-reviewer
 - Status: PASS
-- Reviewed revision: 17b974ae598385cb80b8ef1c55268e2624f6a72f
+- Reviewed revision: 88dee008d8c04a1722a40e58bbcb5d332896fb4a
 - Subject: every claim this file makes, checked against the files it names
 - Result: the four recorded rows reproduce their GREEN commands, their
   refactor-verify run and the checkpoint exactly as recorded, and every
   `Selector` resolves to a real case; the evidence-entry contract holds, with
   `QFAI-TDDLIST-008` and `-009` silent and `-007` / `-011` naming exactly the
   eight unbackfilled rows and no backfilled one; all eight gap reasons check
-  out against the files they name; the matrix totals — ✅ 76 / ⚠️ 105 /
-  ❌ 312 with `n/a` 8 across 501 cells — agree with the tables, and every
-  `❌` and `⚠️` cell carries exactly one justification, with no coordinate
-  missing and none listed that does not carry the mark.
+  out against the files they name; the validate gate reproduces at `error=0`,
+  and fails on a missing matrix at the revision the mutations were taken at,
+  which is why it is recorded over this tree; the matrix totals — ✅ 76 /
+  ⚠️ 105 / ❌ 312 with `n/a` 8 across 501 cells — agree with the tables, and
+  every `❌` and `⚠️` cell carries exactly one justification, with no
+  coordinate missing and none listed that does not carry the mark; and the
+  four rows naming `auditProfile.ts` keep every mark when read against the
+  eight sibling-pack cases that drive that entrypoint.
 - Residual risk: the five falsifiability mutations cannot be re-executed. Each
   names a content address that folds the tree state into it, and the tree has
   moved. Each claimed kill count was re-derived from the source line its
