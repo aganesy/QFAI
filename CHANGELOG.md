@@ -29,8 +29,24 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   then defends. The completion matrix makes that blocking, because a pack
   authored mid-session is indistinguishable from one authored after — same
   fifteen files, same coverage, same register — and the missing thing is that
-  anyone agreed. Under a no-question mode the open count blocks instead, since
-  nobody is there to confirm.
+  anyone agreed.
+
+  The session has three endings and authoring waits for any of them: its own
+  condition (no node open — the frontier empty and no lookup still running — and
+  the user confirming), the user's word, or, under a no-question mode, every
+  remaining decision registered as an open question. That last one is an ending
+  rather than an exemption: `--auto` reaches no confirmation, and a guard waiting
+  for one would stop the run before it could write the open questions that block
+  its completion.
+
+  The stage evidence carries a `## Grilling Session` row, which is what the
+  Reviewer Gate reads the condition off. A skipped session and a completed one
+  present the same pack, so without the row a reviewer would have to block every
+  run or accept a claim it cannot check.
+
+  The research protocol runs before the interview rather than after it. A
+  decision settled before the research bearing on it is settled against evidence
+  nobody had.
 
 ### Changed
 

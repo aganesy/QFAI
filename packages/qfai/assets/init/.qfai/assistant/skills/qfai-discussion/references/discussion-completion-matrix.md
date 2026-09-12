@@ -13,18 +13,23 @@ Blocking for every pack, UI-bearing or not:
    `sources` / `best_practices` / `anti_patterns` / `reflection` are non-empty, every `source_id`
    resolves to a `sources[].id`, and at least one `reflection[]` entry records an apply decision.
    `npx qfai validate --profile discussion --fail-on error` reports `QFAI-RESEARCH-*` until it is.
-2. The grilling session that preceded authoring ended the way `.agents/rules/grilling.md` says a
-   session ends: the frontier empty, and the user confirming the understanding is shared. Not at a
-   count, and not on the questions running out.
+2. The stage evidence's `## Grilling Session` row shows the session ended before authoring began,
+   the way `.agents/rules/grilling.md` says a session ends: no node open — the frontier empty
+   **and** no fact lookup still running — and the user confirming the understanding is shared. Not
+   at a count, and not on the questions running out.
+
+   Both halves of the first condition, because when every remaining decision waits on a lookup the
+   frontier is empty while the tree still holds open nodes, and authoring there begins before the
+   lookup can raise the questions it was dispatched to answer.
 
    This is blocking rather than advisory because the failure it catches leaves no other trace. A
    pack authored mid-session looks exactly like one authored after: fifteen files, every topic
    covered, every open question registered. What is missing is that someone agreed to what is in
    them, and nothing downstream can tell.
 
-   Under a no-question mode the confirmation has nobody to give it, so the session's remaining
-   decisions are registered as open questions instead. Item 7 below is then what blocks: an open
-   count above zero closes nothing.
+   Under a no-question mode the confirmation has nobody to give it, so the row reads `no-question`
+   and the session's remaining decisions are registered as open questions instead. Item 7 below is
+   then what blocks: an open count above zero closes nothing.
 
 ## UI-bearing Packs
 

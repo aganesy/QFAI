@@ -1,11 +1,11 @@
 /**
  * `/qfai-discussion` runs its interview as a grilling session.
  *
- * This is the skill the whole grilling effort was reported against: it settled
- * design without asking, and the reason was in one line of its own process —
- * "Run the core interview", naming no method. An interview with no method is
- * the agent deciding and reporting, and every assertion here pins a part of
- * what replaced it.
+ * The pack a run produces looks the same whether or not anyone was asked:
+ * fifteen files, every topic covered, every open question registered. Nothing
+ * downstream can recover the difference, so the obligations that make it are
+ * pinned here — the method the interview follows, the bucket its decisions fall
+ * in, the point authoring may begin, and the record a reviewer reads.
  */
 
 import { readFile } from "node:fs/promises";
@@ -24,9 +24,6 @@ const MATRIX = "assistant/skills/qfai-discussion/references/discussion-completio
 
 /** Collapse markdown soft wraps so assertions pin wording, not the wrap column. */
 const unwrap = (markdown: string): string => markdown.replace(/\s*\n\s*/g, " ");
-
-const read = (tree: string, rel: string): Promise<string> =>
-  readFile(path.join(repoRoot, tree, rel), "utf-8");
 
 function expectPhrase(content: string, phrase: string): void {
   expect(unwrap(content)).toContain(unwrap(phrase));
@@ -52,24 +49,22 @@ function bucket(skill: string, name: string): string {
 }
 
 describe.each(TREES)("%s — the discussion interview", (tree) => {
-  it("names a method instead of naming an interview", async () => {
-    // The defect this replaces, in full: step 1 read "Run the core interview
-    // for concept, scope, stakeholders, and constraints" and stopped. Nothing
-    // said how, so an agent that asked nothing had followed it.
-    const skill = await read(tree, SKILL);
+  const read = (rel: string): Promise<string> => readFile(path.join(repoRoot, tree, rel), "utf-8");
+
+  it("names the method the interview follows", async () => {
+    // Without one, an agent that asked nothing has followed the step. The
+    // topics are the checklist's, so there is one list to keep current.
+    const skill = await read(SKILL);
     expectPhrase(skill, "as a grilling\n   session through the `qfai-grilling` skill");
     expectPhrase(skill, ".agents/rules/grilling.md");
-    // The topics are the checklist's, not a second list that can drift from it.
     expectPhrase(skill, "references/discussion-coverage-checklist.md");
   });
 
   it("cites the method rather than restating it", async () => {
-    // Two copies of a method drift, and the drift shows up as two instructions
-    // an agent has to choose between.
-    const skill = await read(tree, SKILL);
+    // Two copies of a method drift, and the drift reaches an agent as two
+    // instructions to choose between.
+    const skill = await read(SKILL);
     expectPhrase(skill, "this step does not restate it");
-    // The mechanics the rule owns. A copy here is a copy that drifts, and the
-    // drift surfaces as two instructions an agent has to choose between.
     for (const mechanic of [
       /the whole frontier at once/i,
       /each question numbered/i,
@@ -82,65 +77,76 @@ describe.each(TREES)("%s — the discussion interview", (tree) => {
     }
   });
 
+  it("researches before it interviews", async () => {
+    // A decision settled before the research bearing on it is settled against
+    // evidence nobody had, and the method reads a fact rather than asking
+    // about it — so the protocol's output is an input to the session's tree.
+    const skill = await read(SKILL);
+    const research = unwrap(skill).indexOf("research-first-protocol.md");
+    const session = unwrap(skill).indexOf("session through the `qfai-grilling` skill");
+    expect(research).toBeGreaterThan(-1);
+    expect(session).toBeGreaterThan(-1);
+    expect(research, "research runs after the interview").toBeLessThan(session);
+    expectPhrase(skill, "Step 1's findings are inputs to the session's tree");
+  });
+
   it("puts the interview's decisions in ask-user, not auto-decide", async () => {
-    // The policy had `equivalent-option pick` under auto-decide and no design
-    // decision under ask-user. A design choice is not an equivalent-option
-    // pick, and a skill that treats it as one records a design nobody agreed to
-    // as decided.
-    const skill = await read(tree, SKILL);
+    // A design choice is not a pick among demonstrably equivalent alternatives,
+    // and a skill that files it as one records a design nobody agreed to as
+    // decided. Running the interview is what this skill performs, so its
+    // questions are its own operations.
+    const skill = await read(SKILL);
     const askUser = bucket(skill, "ask-user");
     const autoDecide = bucket(skill, "auto-decide");
 
     expect(askUser).toMatch(/frontier/i);
     expect(askUser).toMatch(/confirmation that closes the session/i);
-    // Running the interview is what this skill performs, which is why its
-    // questions are its own operations rather than an entry added to the
-    // prototype's closed list.
     expect(askUser).toMatch(/what this skill\s*performs/i);
-    // And the escape hatch is closed from the other side.
     expect(autoDecide).toMatch(/demonstrably equivalent, which a design choice is not/i);
   });
 
-  it("holds authoring until the session has ended", async () => {
-    // The whole value is in deciding before drafting. A pack drafted
-    // mid-session records a design still being decided, and from then on the
-    // run defends the draft rather than the decision.
-    const skill = await read(tree, SKILL);
-    expectPhrase(skill, "Artifact authoring does not start until the session's frontier is empty");
-    expectPhrase(skill, "the user has\nconfirmed");
-    expectPhrase(skill, "the draft is what the rest of the run then defends");
+  it("holds authoring until the session has ended, by any of its routes", async () => {
+    // A pack drafted mid-session records a design still being decided, and from
+    // then on the run defends the draft rather than the decision. Under a
+    // no-question mode no confirmation can arrive, so a guard waiting for one
+    // would stop the run before it could write the open questions that block
+    // its completion.
+    const skill = await read(SKILL);
+    expectPhrase(skill, "Artifact authoring does not start until the session has ended");
+    expectPhrase(skill, "the frontier empty **and** no fact lookup still running");
+    expectPhrase(skill, "with every remaining decision\nregistered as an open question");
+    expectPhrase(skill, "The no-question route is an ending, not an exemption.");
   });
 
-  it("makes the end condition blocking, and says why it has to be", async () => {
-    // A pack authored mid-session is indistinguishable from one authored after:
-    // same fifteen files, same coverage, same register. The missing thing is
-    // that anyone agreed, and no later gate can recover it.
-    const matrix = await read(tree, MATRIX);
-    expectPhrase(matrix, "the frontier empty, and the user confirming the understanding is shared");
-    expectPhrase(matrix, "Not at a\n   count");
-    expectPhrase(matrix, "the failure it catches leaves no other trace");
-    expectPhrase(matrix, "nothing downstream can tell");
+  it("requires both halves of the end condition", async () => {
+    // When every remaining decision waits on a lookup, the frontier is empty
+    // while the tree still holds open nodes, and authoring there begins before
+    // the lookup can raise the questions it was dispatched to answer.
+    const matrix = await read(MATRIX);
+    expectPhrase(
+      matrix,
+      "no node open — the frontier empty\n   **and** no fact lookup still running",
+    );
+    expectPhrase(matrix, "Both halves of the first condition");
+    expectPhrase(matrix, "Not\n   at a count");
   });
 
-  it("routes a no-question run to the register instead", async () => {
-    // Under `--auto` nobody can give the confirmation, so a blocking condition
-    // that only reads it would stop every such run outright. The open count is
-    // what blocks there, which is the same guarantee by another route.
-    const matrix = await read(tree, MATRIX);
-    expectPhrase(matrix, "the confirmation has nobody to give it");
-    expectPhrase(matrix, "registered as open questions instead");
-    expectPhrase(matrix, "an open\n   count above zero closes nothing");
-  });
-
-  it("has the reviewer check the session, not only the pack", async () => {
-    // Every other gate reads the fifteen files. A session that never ran leaves
-    // them complete, so a reviewer reading only the pack confirms nothing about
-    // whether its contents were decided.
-    const skill = await read(tree, SKILL);
+  it("leaves a record the reviewer can check the claim against", async () => {
+    // A skipped session and a completed one present the same pack, so a
+    // reviewer with only the pack must either block every run or accept a
+    // claim it cannot verify.
+    const skill = await read(SKILL);
+    expectPhrase(skill, "## Grilling Session");
+    expectPhrase(skill, "`Ended` is `confirmed`, `user-closed` or `no-question`.");
+    expectPhrase(skill, "accept a claim it cannot check");
+    // And the gate reads the row rather than the event.
     expectPhrase(
       skill,
-      "the grilling session that preceded authoring ended on an empty frontier with the user's\n  confirmation",
+      "the stage evidence's `## Grilling Session` row shows the session ended before authoring began",
     );
-    expectPhrase(skill, "references/oq-and-deferred-rules.md");
+
+    const matrix = await read(MATRIX);
+    expectPhrase(matrix, "The stage evidence's `## Grilling Session` row");
+    expectPhrase(matrix, "the row reads `no-question`");
   });
 });

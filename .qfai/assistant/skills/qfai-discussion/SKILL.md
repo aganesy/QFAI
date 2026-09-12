@@ -70,12 +70,15 @@ A **cli-only** pack (`primary_surface: cli`, no visual secondary surface) stays 
 
 ## Required Process
 
-1. Run the core interview for concept, scope, stakeholders, and constraints as a grilling
+1. Run `.qfai/assistant/constitution/research-first-protocol.md` before any other artifact is authored, record its `research_summary` output in the `## Research Summary` section of `04_Sources.md`, then register source traceability there. Its `best_practices` / `anti_patterns` are inputs to every step below, not a late fill-in.
+2. Run the core interview for concept, scope, stakeholders, and constraints as a grilling
    session through the `qfai-grilling` skill, covering every topic in
    `references/discussion-coverage-checklist.md`. The method is `.agents/rules/grilling.md` and
    this step does not restate it. "Run the interview" named no method, and an interview with no
    method is the agent deciding and reporting.
-2. Run `.qfai/assistant/constitution/research-first-protocol.md` before any other artifact is authored, record its `research_summary` output in the `## Research Summary` section of `04_Sources.md`, then register source traceability there. Its `best_practices` / `anti_patterns` are inputs to every step below, not a late fill-in.
+   Step 1's findings are inputs to the session's tree, not a later fill-in: a decision settled
+   before the research that bears on it is settled against evidence nobody had, and the method
+   reads a fact rather than asking about it.
 3. Run Inception Deck and include at least one Mermaid diagram.
 4. Run Story Workshop, capture user stories and user flows; HTML+CSS mock is optional fallback only.
 5. Capture scope, REQ, NFR, glossary, constraints, and policies.
@@ -102,9 +105,15 @@ The full completion logic, including the UI-bearing blocking conditions, is in
 `references/discussion-completion-matrix.md`. It must stay consistent with the canonical
 sidecar family declared above and with `templates/uiux/00_index.md#Forbidden Legacy Files`.
 
-Artifact authoring does not start until the session's frontier is empty and the user has
-confirmed. A pack drafted mid-session records a design that was still being decided, and the
-draft is what the rest of the run then defends.
+Artifact authoring does not start until the session has ended — on its own condition (no node
+open, which means the frontier empty **and** no fact lookup still running, and the user
+confirming), on the user's word, or, under a no-question mode, with every remaining decision
+registered as an open question. A pack drafted mid-session records a design that was still being
+decided, and the draft is what the rest of the run then defends.
+
+The no-question route is an ending, not an exemption. `--auto` can reach no confirmation, so a
+guard that waited for one would stop the run before it could write the open questions that are
+what blocks its completion.
 
 Before declaring completion, you MUST:
 
@@ -122,9 +131,8 @@ Before declaring completion, you MUST:
 
 Reviewer checks must confirm:
 
-- the grilling session that preceded authoring ended on an empty frontier with the user's
-  confirmation, and every decision it settled is recorded where
-  `references/oq-and-deferred-rules.md` says;
+- the stage evidence's `## Grilling Session` row shows the session ended before authoring began,
+  and every decision it settled is recorded where `references/oq-and-deferred-rules.md` says;
 - the cycle's review pack was written per `references/review-cycle-playbook.md`, i.e. the three
   required artifacts exist under a `.qfai/review/review-YYYYMMDDhhmmssSSS/` directory;
 - the 15-file discussion pack is complete; `Disposition: open` count is zero in `11_OQ-Register.md`;
@@ -154,6 +162,19 @@ Follow `.qfai/assistant/constitution/shared-skill-delegation-baseline.md`.
 ## Work Orders Summary
 
 Use the shared schema (per-row `Status (PASS/REVISE/PENDING)` column, reviewer response `Reviewer role:` + `Reviewed artifact:` + `Result: PASS | REVISE`). A response missing the role or artifact line is not a verdict; re-request it.
+
+The stage evidence also carries `## Grilling Session`, which is what the Reviewer Gate reads its
+session condition off:
+
+```text
+| Ended | Frontier | Lookups | Decisions | Escalated |
+| ----- | -------- | ------- | --------- | --------- |
+| confirmed | empty | none in flight | 12 | 0 |
+```
+
+`Ended` is `confirmed`, `user-closed` or `no-question`. Without the record a skipped session and a
+completed one present the same pack — fifteen files, every topic covered, every open question
+registered — so the reviewer would have to block every run or accept a claim it cannot check.
 
 ## Completion Message & Next Actions (MUST)
 
