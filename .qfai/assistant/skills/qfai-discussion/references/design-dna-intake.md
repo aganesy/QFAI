@@ -52,7 +52,8 @@ the scope: a question whose subject is a decision the skill declares mandatory i
 an approval, and a question inside a grilling session whose subject is a decision
 the design has left open is a grilling question. Both are exempt. A question
 inside a session whose subject is something else is an ordinary clarification and
-is capped like any other.
+is capped like any other — except the confirmation that closes the session, which
+the article puts in the grilling class with the session's questions.
 
 **Offer candidates, not adjectives.** "Which of these three" is a choice a
 user can make from a page; "how would you describe the brand" asks them to

@@ -273,13 +273,18 @@ describe("the clarification budget is countable", () => {
     // each of the three documents that states an exhaustion rule states it.
     it(`${tree}: a grilling session is outside the budget and survives exhaustion`, async () => {
       const constitution = await read(tree, CONSTITUTION);
-      expectPhrase(constitution, "A **grilling question**");
-      expectPhrase(constitution, "does **not** spend budget");
+      expectPhrase(
+        constitution,
+        "A **grilling question** — a question asked inside a grilling session, where the\n  subject is a decision the design has left open — does **not** spend budget.",
+      );
       expectPhrase(constitution, "**Grilling questions are exempt.**");
       expectPhrase(constitution, "A grilling session has no question cap");
       // Both halves of the end condition, so a session cannot be closed on the
-      // agent's own measure alone.
-      expectPhrase(constitution, "the user's confirmation that the\n  understanding is shared");
+      // agent's own measure alone — and the first half is the whole tree, since
+      // an empty frontier with a lookup still running is not a settled tree.
+      expectPhrase(constitution, "the user's confirmation that the understanding is shared");
+      expectPhrase(constitution, "no\n  node open");
+      expectPhrase(constitution, "no fact lookup\n  still running");
       // Exhaustion names it beside the two classes that already survived.
       expectPhrase(
         constitution,
@@ -295,10 +300,10 @@ describe("the clarification budget is countable", () => {
       expectPhrase(communication, "exhausting that budget\n   does not end one");
     });
 
-    // Article VI's opening sentence and its counting unit name the same set. The
-    // opening said "Non-discussion commands" while the unit named every `/qfai-*`
-    // stage, `/qfai-discussion` among them, so the article both did and did not
-    // bind that stage depending on which sentence a reader stopped at.
+    // Article VI's opening sentence and its counting unit name one set. Two
+    // sentences naming different sets leave whether the article binds a given
+    // stage to depend on which of them a reader stopped at, and the stage most
+    // exposed to that is the one whose whole job is asking.
     it(`${tree}: Article VI's scope sentence matches the unit it counts`, async () => {
       const content = await read(tree, CONSTITUTION);
       expectPhrase(content, "Every invocation MUST minimize clarifying questions.");
@@ -360,6 +365,30 @@ describe("the clarification budget is countable", () => {
         "The confirmation that\n  closes a session is in this class with its questions",
       );
       expectPhrase(content, "That closing confirmation is exempt with the\n  questions");
+    });
+
+    it(`${tree}: a session is entered deliberately, so the class is decidable`, async () => {
+      // Whether a question spends budget turns on whether it is inside a
+      // session. With no statement of how one starts, the same design question
+      // is a capped clarification or an uncapped grilling question depending on
+      // who is asked, and the cap cannot be enforced at all.
+      const content = await read(tree, CONSTITUTION);
+      expectPhrase(content, "**A session is entered deliberately.**");
+      expectPhrase(content, "An invocation declares one and nothing\n  else starts one");
+      expectPhrase(content, "meeting an unfixed design does not");
+      expectPhrase(content, "Outside a declared session every question\n  is a clarification");
+    });
+
+    it(`${tree}: the intake's catch-all does not capture the closing confirmation`, async () => {
+      // The catch-all sends every in-session question whose subject is not an
+      // open design decision back to the cap. The confirmation that closes the
+      // session is exactly such a question, and the article exempts it by name —
+      // so the catch-all makes the end condition unaskable again.
+      const content = await read(tree, DESIGN_DNA_INTAKE);
+      expectPhrase(
+        content,
+        "except the confirmation that closes the session, which\nthe article puts in the grilling class",
+      );
     });
 
     it(`${tree}: the discussion intake does not claim the cap skips its stage`, async () => {

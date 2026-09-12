@@ -161,6 +161,11 @@ Default policy:
   the specs, or the repository — spends budget.
 - A **grilling question** — a question asked inside a grilling session, where the
   subject is a decision the design has left open — does **not** spend budget.
+  **A session is entered deliberately.** An invocation declares one and nothing
+  else starts one: meeting an unfixed design does not, and neither does an
+  ambiguity found while implementing. Outside a declared session every question
+  is a clarification and spends budget, so which class a question belongs to is
+  decidable when it is asked rather than argued about afterwards.
   Grilling interrogates a design in rounds, asking each time only the decisions
   whose prerequisites are already settled, and it ends when none are left rather
   than at a count. A cap would end a session by arithmetic with decisions still
@@ -197,8 +202,8 @@ Default policy:
 - **Grilling questions are exempt.** A grilling session has no question cap, and
   exhausting the budget does not end one. Its questions are decisions the user
   owns, asked a round at a time, and the session ends on its own condition: no
-  open decision whose prerequisites are settled, and the user's confirmation that
-  the understanding is shared. That closing confirmation is exempt with the
+  node open — no decision whose prerequisites are settled, and no fact lookup
+  still running — and the user's confirmation that the understanding is shared. That closing confirmation is exempt with the
   questions, or a spent budget would make the second half of the condition
   unaskable and the session unendable. A session cut short by the budget would
   hand back a design with decisions assumed rather than asked.

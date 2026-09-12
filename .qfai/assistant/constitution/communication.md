@@ -59,8 +59,8 @@ When an agent needs to ask the user a question, the following rules apply (see a
    invocation actually consumes MUST still be asked. A user's `proceed` / `done` answer enters that same mode
    and is likewise not `--auto`; rule 4 is activated by the `--auto` flag alone.
 6. **A grilling session has no cap**: its questions spend no clarification budget, and exhausting that budget
-   does not end one. It ends when no open decision has its prerequisites settled and the user confirms the
-   understanding is shared.
+   does not end one. It ends when no node is open — no decision whose prerequisites are settled, and no fact
+   lookup still running — and the user confirms the understanding is shared.
 
 All SKILL.md files MUST include a
 `## User Questions (AskUserQuestion Protocol)` section with MUST-level wording.
