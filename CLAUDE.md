@@ -25,8 +25,10 @@ Quality-First AI (QFAI) — specification-driven development の検証フレー�
   (master: `.agents/rules/user-questions.md`) sets out: the host's structured
   question tool, a description per option saying what choosing it means, and the
   recommended answer where the evidence names one. No class of question is light
-  enough to skip it. The rule bounds the form only — how many questions are worth
-  asking is the clarification budget's subject.
+  enough to skip it. The rule bounds the form only. How many _clarifying_
+  questions are worth asking is the clarification budget's subject; a grilling
+  question, a mandatory approval and a needed `hard-required` input are outside
+  it and are asked however many there are.
 - All temporary/scratch files go in `tmp/` — working-tree files only; a test's `mkdtemp` sandbox under `os.tmpdir()` is out of scope (see `.claude/rules/temporary-files.md`, master: `.agents/rules/temporary-files.md`).
 - Do not create new directories or files at the repository root without explicit user approval; editing existing root files is allowed (see `.claude/rules/root-additions-policy.md`, master: `.agents/rules/root-additions-policy.md`).
 - Traceability chain (REQ -> Spec -> Code -> Test) must be maintained; TDD-IDs and TC-Refs must not collide or reference unregistered entries.

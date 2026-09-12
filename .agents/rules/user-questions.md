@@ -7,16 +7,24 @@ worth asking. It decides only what a question looks like when it is put.
 
 ## Scope
 
-| Target                                 | Applies                                  |
-| -------------------------------------- | ---------------------------------------- |
-| Any question put to the user           | Always                                   |
-| A host with a structured-question tool | The tool, every time                     |
-| A host without one                     | The fallback below, with the same shape  |
-| How many questions to ask              | Outside this rule — see the budget below |
+| Target                                      | Applies                                     |
+| ------------------------------------------- | ------------------------------------------- |
+| Any question put to the user                | Always                                      |
+| The tool is callable in this invocation     | The tool, every time                        |
+| The tool is not callable in this invocation | The fallback below, carrying the same parts |
+| How many questions to ask                   | Outside this rule — see § 6                 |
+
+**Callable, not present.** A host may carry a structured-question capability
+that this invocation cannot use — a mode that withholds it, a permission that
+was not granted. That is the fallback's case, not a violation. Judge
+availability at the moment the question is asked, never from what the host
+supports in general.
 
 ## 1. No exceptions
 
-Every question to the user goes through the host's structured question tool.
+Every question to the user goes through the host's structured question tool
+where it is callable, and through § 5's fallback where it is not. No question
+reaches the user as an unstructured ask.
 
 There is no class of question light enough to skip it. A yes-or-no, a
 confirmation, a "just checking" — each is a question, and each goes through the
@@ -50,25 +58,50 @@ at a worse answer, because the agent had the evidence and they do not.
 Where no option is better, say that too. A recommendation invented to look
 decisive is worse than none.
 
-## 4. More than four questions
+Some hosts require a recommended option and give no way to present an unranked
+choice. There, put first the option that is cheapest to reverse, and say in its
+description that the choice is close and why. The host's shape is satisfied and
+the user is not told a preference the evidence does not support. Never resolve
+the conflict the other way: an invented recommendation is the failure this
+clause exists to prevent, and the host's formatting requirement does not
+outrank it.
 
-Split them across consecutive calls, until the set is exhausted.
+## 4. More questions than the host takes at once
 
-The split is presentation only. It does not reorder the questions, and it does
-not defer any of them to a later exchange — every question in the set is asked
-before the agent acts on any answer.
+Read the limit off the tool, and split the set into consecutive calls of at most
+that many. Do not hard-code a number: the capacity differs per host, and a rule
+that names one is unfollowable on a host that takes fewer.
 
-The set is whatever the agent was already entitled to ask, and this rule does not
-add to it. Where a budget bounded the set, it bounded it before the split;
-splitting is a way to present a set the host cannot show at once, never a way to
-ask past a cap.
+**The batches are sequential, not simultaneous.** A structured-question call
+blocks until it is answered, so the second batch is issued after the first is
+answered. Three things follow, and they are the whole of what a split has to
+respect.
 
-## 5. A host without the tool
+1. **The set is fixed before the first call.** It does not grow as answers
+   arrive, and this rule adds nothing to it. Where a budget bounded the set, it
+   bounded it before the split, so splitting is never a way to ask past a cap.
+2. **Read each batch's answers for a stop before issuing the next.** A `stop`
+   ends the asking there, and the questions not yet put are reported as
+   unasked. Issuing the next batch after that is the agent overriding the user.
+   A `proceed` or `done` likewise ends the asking, and the rest of the set is
+   recorded as assumed, labelled as such.
+3. **No answer is acted on until the set is exhausted or a stop ends it.**
+   Ordering is preserved and nothing is deferred to a later exchange. What the
+   split cannot do is show a set larger than the host's capacity in one view, so
+   where another rule asks for a whole set to be visible at once, a host-limited
+   split satisfies it to the host's capacity and no further.
 
-Fall back to numbered plain-text choices, keeping everything above: the label,
-the description of what each choice means, and the recommendation.
+## 5. When the tool is not callable
 
-Say why the tool was unavailable. Otherwise the fallback reads as a choice the
+Fall back to numbered plain-text choices, keeping every part the tool would have
+carried: the label, the description of what each choice means, the
+recommendation, and **how many options may be chosen**.
+
+The selection constraint is the part most easily lost and the one that changes
+the answer. "Pick one" and "pick all that apply" are different questions, and a
+numbered list alone does not say which was asked.
+
+Say why the tool was not callable. Otherwise the fallback reads as a choice the
 agent made about how to ask, and the next reader cannot tell a limitation from a
 preference.
 

@@ -18,13 +18,23 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   saying why; where none is, it requires saying that instead of inventing a
   recommendation.
 
-  More than four questions split across consecutive calls. The split is
-  presentation: it does not reorder them, does not defer any to a later
-  exchange, and does not enlarge the set — where a budget bounded the set it
-  bounded it before the split, so splitting is never a way to ask past a cap. A
-  host without the tool falls back to numbered plain-text choices carrying the
-  same three parts, and says why the tool was unavailable, so a limitation does
-  not read as a preference.
+  A set larger than the host takes at once is split into consecutive calls of at
+  most that many, with the limit read off the tool rather than fixed in the
+  rule. The calls block, so they are sequential: the set is fixed before the
+  first one, each batch's answers are read for a `stop` before the next is
+  issued, and no answer is acted on until the set is exhausted or a stop ends
+  it. A split therefore never enlarges the set and never asks past a cap.
+
+  Where the tool is not callable — a mode that withholds it, a permission not
+  granted — the fallback is numbered plain-text choices carrying every part the
+  tool would have: the label, the description, the recommendation, and how many
+  options may be chosen. It also says why the tool was not callable, so a
+  limitation does not read as a preference.
+
+  Where a host requires a recommended option and offers no unranked choice, the
+  option that is cheapest to reverse goes first and its description says the
+  choice is close. The host's shape is satisfied without telling the user a
+  preference the evidence does not support.
 
   The rule bounds the form and says nothing about the count. Those are separate
   subjects, and a question that should not be asked is not improved by being

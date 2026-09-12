@@ -28,6 +28,14 @@ async function readMaybeSymlink(linkPath: string): Promise<string> {
   return readFile(linkPath, "utf-8");
 }
 
+/**
+ * Collapse wrapping so a pin reads the sentence rather than its wrap column.
+ *
+ * A requirement is the same requirement whichever column the formatter broke it
+ * at, and a pin that encodes the break fails on a reflow that changed nothing.
+ */
+const flatten = (text: string): string => text.replace(/\s*\n\s*/g, " ");
+
 async function isSymlinkTo(linkPath: string, masterPath: string): Promise<boolean> {
   const stat = await lstat(linkPath);
   if (!stat.isSymbolicLink()) return false;
@@ -302,8 +310,13 @@ describe("cross-AI rules surface (.agents/rules/ master)", () => {
   // The form a question arrives in. Each clause closes one way of asking badly:
   // skipping the tool for a question that felt light, a label whose consequence
   // the user has to infer, withholding the recommendation the agent already has,
-  // splitting a set and acting on half of it, and a fallback that reads as a
-  // preference rather than a limitation.
+  // splitting a set and acting on half of it, and a fallback that drops a part
+  // the tool would have carried.
+  //
+  // Every pin below is on a normative sentence rather than on the paragraph that
+  // explains it. The explanations repeat the vocabulary, so a token drawn from
+  // one of them survives deleting the requirement it explains — which is a case
+  // that passes over a rule that no longer says anything.
   //
   // Both root entry points cite it. A master no entry point names is loaded by
   // nothing — Codex reads `AGENTS.md`, Claude Code reads `CLAUDE.md`, and
@@ -312,21 +325,26 @@ describe("cross-AI rules surface (.agents/rules/ master)", () => {
   // copy and citation are one change, asserted where they land.
   describe("user-questions rule", () => {
     const MASTER = ".agents/rules/user-questions.md";
+    const master = (): Promise<string> => readFile(path.join(ROOT, MASTER), "utf-8");
 
-    it("states every clause of the form", async () => {
-      const text = await readFile(path.join(ROOT, MASTER), "utf-8");
-      // One token per clause that no other clause in the file carries.
-      for (const clause of [
-        /No exceptions/i,
-        /would rather not ask/,
-        /infer the/,
-        /free-text path/,
-        /agree in one word/,
-        /does not reorder the questions/,
-        /numbered plain-text choices/,
-        /say why the tool was unavailable/i,
+    it("states the requirement of every clause, not the prose beside it", async () => {
+      const text = flatten(await master());
+      for (const requirement of [
+        // 1: both paths, and nothing outside them.
+        /Every question to the user goes through the host's structured question tool where it is callable, and through § 5's fallback where it is not/,
+        /No question reaches the user as an unstructured ask/,
+        // 2: the description is required, not encouraged.
+        /Each option carries two things: a short label, and a description saying what choosing it means/,
+        // 3: both halves — say so when one option is better, and say so when none is.
+        /Where one option is the better answer on the evidence, say so, and say why/,
+        /Where no option is better, say that too/,
+        // 4: the limit comes off the tool.
+        /Read the limit off the tool/,
+        // 5: the fallback carries every part, the selection constraint included.
+        /Fall back to numbered plain-text choices, keeping every part the tool would have carried/,
+        /Say why the tool was not callable/,
       ]) {
-        expect(text).toMatch(clause);
+        expect(text).toMatch(requirement);
       }
     });
 
@@ -334,33 +352,119 @@ describe("cross-AI rules surface (.agents/rules/ master)", () => {
       // The heading alone does not hold this. "Prefer the tool where the question
       // warrants it" keeps the heading and puts the exception back, and the
       // question an agent judges unwarranted is the one it was least sure of.
-      const text = await readFile(path.join(ROOT, MASTER), "utf-8");
-      expect(text).toMatch(/goes through the host's structured question tool/);
+      const text = flatten(await master());
       expect(text).toMatch(/no class of question light enough to skip it/);
+      expect(text).toMatch(/No question reaches the user as an unstructured ask/);
+    });
+
+    it("judges the tool's availability per invocation, not per host", async () => {
+      // A host may carry the capability and give this invocation no way to call
+      // it — a mode that withholds it, a permission not granted. Read as a
+      // property of the host, that state is neither the tool's row nor the
+      // fallback's, and a question asked there has no compliant path at all.
+      const text = flatten(await master());
+      expect(text).toMatch(/The tool is not callable in this invocation/);
+      expect(text).toMatch(
+        /A host may carry a structured-question capability that this invocation cannot use/,
+      );
+      expect(text).toMatch(/Judge availability at the moment the question is asked/);
     });
 
     it("keeps the form separate from the count", async () => {
       // Read as a budget the rule would cap questions, which is a different
       // subject with a different owner. Conflating them is how "ask less" gets
       // justified by a rule that only ever said "ask clearly".
-      const text = await readFile(path.join(ROOT, MASTER), "utf-8");
-      expect(text).toMatch(/bounds the count/);
-      expect(text).toMatch(/not improved\s+by being well shaped/);
+      const text = flatten(await master());
+      expect(text).toMatch(/one bounds the count, this bounds the form/);
+      expect(text).toMatch(/not improved by being well shaped/);
+    });
+
+    it("takes the split threshold off the host rather than naming a number", async () => {
+      // A rule that names four is unfollowable on a host that takes three: a set
+      // of exactly four is then neither split nor valid as one call.
+      const text = flatten(await master());
+      expect(text).toMatch(/Do not hard-code a number/);
+      expect(text).toMatch(/the capacity differs per host/);
+      expect(text, "a fixed threshold is the defect this clause fixes").not.toMatch(
+        /More than four questions/,
+      );
+    });
+
+    it("treats the batches of a split as sequential, and reads each for a stop", async () => {
+      // A structured-question call blocks until it is answered, so batch two is
+      // issued after batch one is answered. Without that, "every question is
+      // asked before the agent acts on any answer" directs the agent to issue
+      // the next batch after the user has already said stop.
+      const text = flatten(await master());
+      expect(text).toMatch(/The batches are sequential, not simultaneous/);
+      expect(text).toMatch(/Read each batch's answers for a stop before issuing the next/);
+      expect(text).toMatch(/Issuing the next batch after that is the agent overriding the user/);
+      // And the honest limit on what a split can deliver.
+      expect(text).toMatch(
+        /a host-limited split satisfies it to the host's capacity and no further/,
+      );
     });
 
     it("does not let the split ask past a cap", async () => {
-      // "Split them across consecutive calls, until the set is exhausted" reads,
-      // on its own, as licence to keep calling until every question is asked —
-      // so an agent holding six questions under a budget of five could satisfy
-      // the split by exceeding the budget. The set is fixed before the split.
-      const text = await readFile(path.join(ROOT, MASTER), "utf-8");
-      expect(text).toMatch(/already entitled to ask, and this rule does not\s+add to it/);
-      expect(text).toMatch(/never a way to\s*ask past a cap/);
+      // "Split until the set is exhausted" reads, on its own, as licence to keep
+      // calling until every question is asked — so an agent holding six
+      // questions under a budget of five could satisfy the split by exceeding
+      // the budget. The set is fixed before the first call.
+      const text = flatten(await master());
+      expect(text).toMatch(/The set is fixed before the first call/);
+      expect(text).toMatch(/splitting is never a way to ask past a cap/);
+    });
+
+    it("never resolves a host's ranked shape with an invented preference", async () => {
+      // Some hosts require a recommended option and offer no unranked choice.
+      // Satisfying that by inventing a preference is the one thing the recommend
+      // clause forbids, so the rule has to say which side gives way.
+      const text = flatten(await master());
+      expect(text).toMatch(/put first the option that is cheapest to reverse/);
+      expect(text).toMatch(/say in its description that the choice is close/);
+      expect(text).toMatch(
+        /an invented recommendation is the failure this clause exists to prevent, and the host's formatting requirement does not outrank it/,
+      );
+    });
+
+    it("keeps the selection constraint in the fallback", async () => {
+      // A numbered list carries labels, descriptions and a recommendation and
+      // still does not say whether one option may be chosen or several. That
+      // changes the answer rather than its presentation.
+      const text = flatten(await master());
+      expect(text).toMatch(/how many options may be chosen/);
+      expect(text).toMatch(/"Pick one" and "pick all that apply" are different questions/);
     });
 
     it.each(["AGENTS.md", "CLAUDE.md"])("%s cites the rule master", async (rel) => {
       const text = await readFile(path.join(ROOT, rel), "utf-8");
       expect(text).toContain("user-questions.md");
+    });
+
+    it("CLAUDE.md scopes the budget to clarifications", async () => {
+      // "How many questions are worth asking is the budget's subject" counts
+      // every question against the cap, and three classes are outside it — so an
+      // agent stops at five with a grilling decision or a mandatory approval
+      // still unasked.
+      const text = flatten(await readFile(path.join(ROOT, "CLAUDE.md"), "utf-8"));
+      // Either emphasis marker: which one the file carries is the formatter's
+      // choice, and the requirement is that the count is qualified at all.
+      expect(text).toMatch(/How many [_*]clarifying[_*] questions are worth asking/);
+      expect(text).toMatch(
+        /a grilling question, a mandatory approval and a needed `hard-required` input are outside it/,
+      );
+    });
+
+    it("the sibling rule's round names the one host limit that splits it", async () => {
+      // `grilling.md` asks for the whole round at once. A host that takes fewer
+      // questions than the round holds cannot deliver that, so the two rules
+      // disagree unless the round names the exception and where its mechanics
+      // live.
+      const text = flatten(await readFile(path.join(ROOT, ".agents/rules/grilling.md"), "utf-8"));
+      expect(text).toMatch(
+        /A host that takes fewer questions than the round holds is the one exception/,
+      );
+      expect(text).toMatch(/without becoming two rounds/);
     });
 
     it("the sibling rule points at it, now that it resolves", async () => {

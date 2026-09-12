@@ -65,7 +65,9 @@ One round is one frontier: asked in full, answered in full.
 - Two questions never share a round when one depends on the other. The
   dependent one belongs to a later round.
 - Every question in the round is put at once, so the user sees the whole of
-  what is being decided together.
+  what is being decided together. A host that takes fewer questions than the
+  round holds is the one exception: `user-questions.md` § 4 says how such a
+  round is split across calls without becoming two rounds.
 - The next round is recomputed from the answers. It is never written ahead of
   them.
 
