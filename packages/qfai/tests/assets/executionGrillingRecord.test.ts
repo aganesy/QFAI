@@ -52,6 +52,10 @@ describe.each(RULE_MASTERS)("%s/grilling.md — the endings are a closed set", (
       expectPhrase(text, `| \`${ending}\``);
     }
     expectPhrase(text, "**`stopped` is the one that does not let the work continue.**");
+    // The working-when checklist cannot require a confirmation three of the
+    // four endings are reached without.
+    expectPhrase(text, "The session reached one of the four endings on purpose.");
+    expectPhrase(text, "a run that could not have asked is not failing this list by not asking");
   });
 
   it("keeps `no-question` an ending rather than an exemption", async () => {
@@ -123,6 +127,11 @@ describe.each(TREES)("%s — the execution stages record their sessions", (tree)
       body,
       "| Ended | Ended at | Revision | Work resumed | Subject | Frontier | Lookups | Decisions | Open | Escalated |",
     );
+    // The confidence check may open no preflight session at all, and an absent
+    // row reads the same as a skipped one without a line saying which.
+    expectPhrase(body, "Run started: 2026-01-01T09:02:00Z");
+    expectPhrase(body, "Preflight: session opened");
+    expectPhrase(body, "**`Preflight` says whether the confidence check opened a session.**");
     expectPhrase(body, "The shape `/qfai-discussion` already writes");
     expectPhrase(body, "this stage holds more than one session, so a row says which");
   });
@@ -139,8 +148,12 @@ describe.each(TREES)("%s — the execution stages record their sessions", (tree)
     );
     // The times order a session against the work and bound no invocation: an
     // evidence file is updated in place, so last week's row reads as valid.
-    expectPhrase(body, "**`Revision` is what says the row belongs to this run**");
-    expectPhrase(body, "nothing in them bounds the invocation");
+    expectPhrase(body, "**`Run started` is what bounds the invocation.**");
+    expectPhrase(
+      body,
+      "a rerun over an unchanged tree produces the same `Revision`, because that address is a tree address and excludes `.qfai/evidence/**`",
+    );
+    expectPhrase(body, "`Revision` stays beside it");
   });
 
   it.each(STAGES)("%s names the four endings and what they authorize", async (skill) => {
@@ -161,6 +174,11 @@ describe.each(TREES)("%s — the execution stages record their sessions", (tree)
       "the labelled assumption written in its place where a document required a value",
     );
     expectPhrase(body, "a reader finds the count and the questions it counts in one place");
+    // A register of decisions alone lets one unanswered user-held fact through.
+    expectPhrase(body, "**Nodes, not decisions.**");
+    expectPhrase(body, "`Open` counts the lines.");
+    // Two rows at `Open = 1` and an unkeyed register: one question satisfies both.
+    expectPhrase(body, "**And each line names its session**");
   });
 
   it("sends an implement run's record to the file its row owns", async () => {
@@ -177,21 +195,28 @@ describe.each(TREES)("%s — the execution stages record their sessions", (tree)
     const body = await read(`assistant/skills/${skill}/SKILL.md`);
     expectPhrase(
       body,
-      "a row for the preflight session and one for every session detection opened",
+      "carries `Run started`, `Preflight`, a row for every session detection opened",
     );
     expectPhrase(
       body,
-      "every `Revision` is this run's and every `Work resumed` is later than its own `Ended at`",
+      "every row`s `Ended at` is at or after `Run started`".replace("row`s", "row's"),
     );
-    expectPhrase(body, "each row's `Open` count matches the questions listed under the table");
+    expectPhrase(
+      body,
+      "each row's `Open` count matches the register lines naming that row's `Subject`",
+    );
   });
 
   it.each(STAGES)("%s gives each ending a verdict at that gate", async (skill) => {
     // `user-closed` with open decisions passes and `no-question` with the same
     // count does not, so a gate reading the count alone gets both wrong.
     const body = await read(`assistant/skills/${skill}/SKILL.md`);
-    expectPhrase(body, "**A `no-question` row with a non-zero `Open` is a `REVISE`.**");
-    expectPhrase(body, "A `user-closed` row with open decisions **passes**");
-    expectPhrase(body, "A `stopped` row is a `REVISE` whatever it counts");
+    expectPhrase(body, "**Each ending carries its own condition, and the name alone is not one.**");
+    // One predicate per ending: an enum check passes a row that claims an
+    // ending whose own condition it does not meet.
+    expectPhrase(body, "`Frontier` empty, `Lookups` none in flight, `Open` 0.");
+    expectPhrase(body, "Every open node assumable.");
+    expectPhrase(body, "`Open` 0. Article X, rule 6");
+    expectPhrase(body, "`Work resumed` empty. The user ended the session");
   });
 });

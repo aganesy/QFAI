@@ -275,7 +275,11 @@ uncertainty.
 - Facts were looked up rather than asked for.
 - Work running in the background did not stall the round — only the questions
   downstream of it waited.
-- The session ended by asking for confirmation, not by starting work.
+- The session reached one of the four endings on purpose. `confirmed` is the
+  one that asks for confirmation rather than starting work; the other three are
+  reached when the user closes the asking, when a no-question mode forbids it,
+  and when the user stops — and a run that could not have asked is not failing
+  this list by not asking.
 
 ## Related
 

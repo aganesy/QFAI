@@ -115,20 +115,28 @@ Use the shared schema.
 ### Reviewer Gate (MUST)
 
 - Follow `.qfai/assistant/constitution/shared-skill-delegation-baseline.md#reviewer-gate-baseline`.
-- The stage evidence's `## Grilling Session` section carries a row for the
-  preflight session and one for every session detection opened; every `Ended` is
-  one of the four endings the rule master names; every `Revision` is this run's
-  and every `Work resumed` is later than its own `Ended at`; and each row's `Open` count
-  matches the questions listed under the table. A run that skipped a session
-  leaves the same tree as one that ran it, and an evidence file is updated in
-  place, so the rows are what tell a fresh session from an absent one and from
-  last week's.
-- **A `no-question` row with a non-zero `Open` is a `REVISE`.** Article X, rule 6
-  says the stage cannot complete over a decision nobody took, and nobody was
-  asked. A `user-closed` row with open decisions **passes**: the user saw them
-  and closed the asking, and the method records each as a labelled assumption.
-  A `stopped` row is a `REVISE` whatever it counts — the user ended the session,
-  so the stage reports every open decision rather than proceeding.
+- The stage evidence's `## Grilling Session` section carries `Run started`,
+  `Preflight`, a row for every session detection opened, and — when `Preflight`
+  says `session opened` — one for the preflight session. Every `Ended` is one of
+  the four endings the rule master names, every row's `Ended at` is at or after
+  `Run started`, and each row's `Open` count matches the register lines naming
+  that row's `Subject`. A run that skipped a session leaves the same tree as one
+  that ran it, and an evidence file is updated in place, so these are what tell
+  a fresh session from an absent one and from last week's.
+- **Each ending carries its own condition, and the name alone is not one.** A
+  malformed row labelled `confirmed` passes an enum check and fails the rule it
+  claims to have met.
+
+  | `Ended`       | What the row must also show                                                                                                                                                                                                            |
+  | ------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+  | `confirmed`   | `Frontier` empty, `Lookups` none in flight, `Open` 0. That is the rule master's completing condition, and the label is a claim to have met it                                                                                          |
+  | `user-closed` | Every open node assumable. A decision some document requires the user to make and record, and an input declared undefaultable, are **not** — the rule master says the closure does not reach them, so a row carrying one is a `REVISE` |
+  | `no-question` | `Open` 0. Article X, rule 6: the stage cannot complete over a decision nobody took, and nobody was asked                                                                                                                               |
+  | `stopped`     | `Work resumed` empty. The user ended the session, so the stage reports every open node rather than resuming — a `stopped` row with work after it is a `REVISE` whatever it counts                                                      |
+
+  A `user-closed` row with open nodes otherwise **passes**: the user saw them and
+  closed the asking, and the method records each as a labelled assumption.
+
 - Final completion gate MUST be delegated to an independent `completion-reviewer`.
 - ATDD-specific reviewer checks:
   - coverage obligations met: E2E covers `US`, API covers `CON-API`, Integration covers every declared `CON-DB` (`QFAI-ATDD-115`) — a contract **this spec owns** but outside the current slice deferred with `-- x-qfai-status: planned` on a line of its own, never silently uncovered — and every `TC` **whose `Level` routes to an ATDD home** — `L3`/`L4`/`L5`, no `Level`, an unreadable spelling, or `system` / `acceptance` — is covered from the directory that `Level` routes to. A **sibling spec's** uncovered `CON-DB` is not that case, and the reviewer must not ask for that edit: `QFAI-ATDD-115` is filed against `.qfai/contracts/**` and survives `--spec`, so it reaches this gate without becoming this run's work — record it as a cross-spec obligation and leave the contract file alone (CRITICAL CONSTRAINTS), because marking it `planned` defers the owning spec's DB test and hides a real gap. `L1`/`Unit` and `L2`/`Component` owe nothing here (CRITICAL CONSTRAINTS): the ledger covers them. An existing L1/L2 annotation in `tests/integration/**` is not a violation — the validator declines to count it and declines to flag it — so do not require one to be added, and do not require an existing one to be removed;
@@ -190,9 +198,13 @@ restated here.
 - **Record both sessions where the gate reads them.** The method writes no
   artifact of its own, so a run that grilled and a run that skipped it leave the
   same tree. `.qfai/evidence/atdd-<spec-id>.md` carries a `## Grilling Session`
-  section holding one row per session:
+  section holding one row per session, under two lines the run writes before it
+  opens any:
 
   ```text
+  Run started: 2026-01-01T09:02:00Z
+  Preflight: session opened
+
   | Ended | Ended at | Revision | Work resumed | Subject | Frontier | Lookups | Decisions | Open | Escalated |
   | ----- | -------- | -------- | ------------ | ------- | -------- | ------- | --------- | ---- | --------- |
   | confirmed | 2026-01-01T09:14:00Z | a1b2c3d | 2026-01-01T09:15:20Z | preflight | empty | none in flight | 4 | 0 | 0 |
@@ -210,24 +222,45 @@ restated here.
   order, which is the part a later reader has no other way to recover. It still
   cannot prove a session happened: the agent writes its own record.
 
-  **`Revision` is what says the row belongs to this run**, written in the
-  notation `.qfai/assistant/skills/qfai-implement/references/evidence-revision.md`
-  defines — a git rev, or `working-tree+<hash>` for an uncommitted tree. The
-  two times order a session against the work, and nothing in them bounds the
-  invocation: an evidence file is updated in place, so a row left by last
-  week's run has a valid ending, an `Ended at` before its own `Work resumed`,
-  and a consistent count. Without an address the gate can compare, a stage that
-  skipped the session is indistinguishable from one that held it.
+  **`Run started` is what bounds the invocation.** An evidence file is updated in
+  place, so a row left by an earlier run has a valid ending, an `Ended at`
+  before its own `Work resumed`, and a consistent count; and a rerun over an
+  unchanged tree produces the same `Revision`, because that address is a tree
+  address and excludes `.qfai/evidence/**`. Only a value that moves every
+  invocation separates the two, so the run writes one before it opens a session
+  and every row of this run ends at or after it.
+
+  `Revision` stays beside it, written in the notation
+  `.qfai/assistant/skills/qfai-implement/references/evidence-revision.md`
+  defines — a git rev, or `working-tree+<hash>` for an uncommitted tree. It says
+  which tree the session ended against, which is what a later reader needs to
+  reconstruct what was being decided.
+
+  **`Preflight` says whether the confidence check opened a session.** Article IX
+  asks its targeted questions _if confidence is low_, so a run that found none
+  owes no preflight row — and an absent row and a skipped session look alike
+  without a line saying which. It takes `session opened` or `confidence high`,
+  and the second is a disposition the reviewer reads rather than an omission it
+  cannot see.
 
   `Ended` is `confirmed`, `user-closed`, `no-question` or `stopped` — the four
   endings `.agents/rules/grilling.md` names — and only the first three let the
   work go on.
 
 - **The open questions go under that table, in the same section.** One line per
-  decision left open, carrying the decision and the labelled assumption written
+  **node** left open — a decision, or a fact only the user holds — naming the
+  session's `Subject` it belongs to and carrying the labelled assumption written
   in its place where a document required a value. That is the register this
   stage's gate reads, and it is here so a reader finds the count and the
   questions it counts in one place.
+
+  **Nodes, not decisions.** `.agents/rules/grilling.md` puts a user-held fact on
+  the frontier because nothing else can settle it, and a register of decisions
+  alone lets a run with one unanswered fact write `Open = 0` and complete.
+  `Open` counts the lines.
+
+  **And each line names its session**, because two rows may each carry
+  `Open = 1` and an unkeyed register satisfies both with one question.
 
 ## CRITICAL CONSTRAINTS (Read First)
 
@@ -441,6 +474,9 @@ Template:
 <!-- One row per session, written when each ends. See this skill's
      `## Grilling (MANDATORY)` section; the open questions go under the
      table. -->
+
+Run started: 2026-01-01T09:02:00Z
+Preflight: session opened
 
 | Ended | Ended at | Revision | Work resumed | Subject | Frontier | Lookups | Decisions | Open | Escalated |
 | ----- | -------- | -------- | ------------ | ------- | -------- | ------- | --------- | ---- | --------- |

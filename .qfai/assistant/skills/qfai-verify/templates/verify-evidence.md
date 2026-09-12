@@ -33,6 +33,9 @@ Required sections (all of them, in this order):
      `## Grilling (MANDATORY)` section; the open questions go under the
      table. -->
 
+Run started: 2026-01-01T09:02:00Z
+Preflight: session opened
+
 | Ended | Ended at | Revision | Work resumed | Subject | Frontier | Lookups | Decisions | Open | Escalated |
 | ----- | -------- | -------- | ------------ | ------- | -------- | ------- | --------- | ---- | --------- |
 

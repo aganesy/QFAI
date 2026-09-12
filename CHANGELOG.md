@@ -19,6 +19,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   session. The open questions go under the same table, so the count and the
   questions it counts are in one place.
 
+  The section opens with `Run started`, and every row ends at or after it. That
+  is what bounds the invocation: an evidence file is updated in place, and a
+  rerun over an unchanged tree produces the same `Revision`, because that
+  address excludes `.qfai/evidence/**`. A second line, `Preflight`, says whether
+  the confidence check opened a session at all, so a run that needed none is
+  distinguishable from one that skipped it.
+
   A row carries both times — when the session ended, and when the stage next
   wrote — and this run's `Revision` beside them. A row holding only the ending
   reads the same whether the session ran before the work or after it, because it
