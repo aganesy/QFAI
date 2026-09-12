@@ -254,8 +254,8 @@ The scored population is 147 cells: 126 matrix depth cells plus 21 business rule
 
 ## Every ❌ cell, named
 
-The matrix carries 65 `❌` depth cells plus 5 in `Status`; the business rule table carries 4 in its
-scored columns plus 4 in its `Status` column — 78 in all, of which 69 are scored. Each is named
+The matrix carries 65 `❌` depth cells plus 5 in `Status`; the business rule table carries 5 in its
+scored columns plus 4 in its `Status` column — 79 in all, of which 70 are scored. Each is named
 below with its own reason. A row's `Status` is `❌` when the obligation is not discharged at the
 depth the row describes; that verdict is stated once per row and is not repeated per cell.
 
@@ -644,8 +644,8 @@ leaves both markers undefined. This row has **six `❌` depth cells** and no `�
 
 ## Every ⚠️ cell, named
 
-50 depth cells and 9 `Status` cells in the matrix, and 9 scored cells and 3 `Status` cells in the
-business rule table, are `⚠️` — 71 in all, of which 59 are scored. The PASS criterion requires a
+52 depth cells and 9 `Status` cells in the matrix, and 8 scored cells and 3 `Status` cells in the
+business rule table, are `⚠️` — 72 in all, of which 60 are scored. The PASS criterion requires a
 documented rationale for each, so each is named here.
 
 ### Matrix depth cells
