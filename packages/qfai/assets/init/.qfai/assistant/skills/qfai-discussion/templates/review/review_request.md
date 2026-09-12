@@ -41,10 +41,14 @@
 > Copy the `## Grilling Session` row from this stage's evidence. The reviewer
 > rules on whether the session ended before authoring began, and a row it has to
 > go looking for is one it can pass without reading.
+>
+> Both times, because they are what that ruling compares. A row carrying the
+> final state alone reads the same whether the session ran first, ran after, or
+> never ran, so a reviewer handed that row can only take the claim.
 
-| Ended | Frontier | Lookups | Decisions | Escalated |
-| ----- | -------- | ------- | --------- | --------- |
-|       |          |         |           |           |
+| Ended | Ended at | Authoring began | Frontier | Lookups | Decisions | Escalated |
+| ----- | -------- | --------------- | -------- | ------- | --------- | --------- |
+|       |          |                 |          |         |           |           |
 
 ## Required Reviewers
 
