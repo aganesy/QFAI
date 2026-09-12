@@ -29,6 +29,82 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   completion gate recomputes today and which one it does not, so nobody takes
   the third for a checked field.
 
+- **A design is grilled before it is fixed, and every stage does it** (#1591,
+  #1594, #1595). A grilling session interviews an unfixed design as a tree of
+  open decisions. The frontier is the decisions answerable now, put as one round
+  rather than one question at a time; a fact the environment holds is read
+  rather than asked; a fact only the user holds is asked as a value; and the
+  session ends on an empty frontier and the user's confirmation, never at a
+  question count.
+
+  `.agents/rules/grilling.md` is the method, and every stage that grills cites
+  it instead of restating it — the rule's parts qualify each other, so a partial
+  copy states the opposite of what the rule says. `qfai-grilling` is the single
+  implementation an agent runs, so an interview is the method rather than
+  whatever the agent remembers of it. `/qfai-grill` is the entry point a user
+  types to grill anything at all — a design, a product direction, a piece of
+  writing — needing no repository and writing no files.
+
+  `/qfai-discussion`, `/qfai-sdd`, `/qfai-prototyping`, `/qfai-implement`,
+  `/qfai-atdd` and `/qfai-verify` each open a session where a design used to be
+  settled by whoever happened to be writing at the time. What each of them
+  grills, and when, is in its own entry below.
+
+- **The clarification budget has a third exemption class** (#1592). Article VI
+  caps clarifications at five per invocation. That is right for a stage asking
+  its way through an ambiguity and wrong for a session whose whole method is
+  asking: cut off at five the frontier is still open, and the questions left are
+  the ones the agent then answers for itself — which is the failure grilling
+  exists to prevent. A session's questions are exempt, beside the approval and
+  `hard-required` classes that already were.
+
+  The exemption is a session's, not a subject's. A question about an open design
+  decision outside a declared session is an ordinary clarification and spends
+  budget, so the class cannot be claimed after the fact for whatever was asked.
+
+- **Every question to the user arrives in the shape its answer has** (#1609,
+  #1613). `.agents/rules/user-questions.md` sends a question through the host's
+  structured question tool, with an option per candidate answer, a description
+  saying what choosing it means, and a recommendation. Where the answer is
+  genuinely open the tool's free-text path carries it. Where the tool is not
+  callable the same parts go into a plain message, and the rule says what that
+  message has to hold, so the fallback loses the carrier and not the structure.
+
+  Both rules reach an adopting project the way the others do. `qfai init` writes
+  them under `.agents/rules/` and lists them in the cross-AI rules block of
+  `AGENTS.md`, `CLAUDE.md` and `.github/copilot-instructions.md`, and the
+  reminder hooks ship with the settings file — so a project gets the same
+  prompts at the same moments this repository does.
+
+- **`/qfai-prototyping` grills what talking can settle and builds what it
+  cannot** (#1602). The loop exists for the questions no rephrasing turns into
+  answerable ones — how something should feel, which of two layouts carries the
+  task — and it settled the rest by itself. A session before cycle 0 now takes
+  what the prototype is for, what would count as better and what is out of
+  bounds, over whatever the specs, the UI contracts and `DESIGN.md` leave open.
+  Running the loop on those wastes cycles building an answer a sentence would
+  have given; grilling the others spends a session on rephrasing.
+
+  The answers go to `.qfai/evidence/prototyping/grilling.md`, which the generator
+  and the reviewer both read — a decision the loop cannot see is one it
+  contradicts on the next cycle. One invocation runs a lineage per spec and
+  screen, so every row names its scope and each role reads its own plus the
+  global ones. A row the session settled is a constraint; one it escalated is
+  a question nobody has answered, which a prototype makes answerable rather
+  than treats as a bar.
+
+  The record is a user decision rather than regenerable stage evidence, so it is
+  tracked: the managed ignore block re-includes that one path and leaves the
+  captures, the mutation log and the progress file ignored.
+
+  Convergence reopens the session rather than ending it. Four axes scored by a
+  reviewer are not the user's answer to the question the loop was run for, so the
+  prototype goes back to them together with everything it made answerable.
+  Accepting goes to handoff; rejecting takes the cycle-0 reset, which is
+  destructive and so is asked for first — naming what goes in the evidence tree
+  and in the authoring tree, and ending the run with nothing deleted if they
+  decline.
+
 ### Added
 
 - **`qfai validate` reports a spec stage whose grilling session left no trace**
