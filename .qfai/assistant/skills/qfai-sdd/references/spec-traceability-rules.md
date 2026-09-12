@@ -618,3 +618,20 @@ Template: `templates/specs/spec/16_Traceability-ledger.md`.
 - Use Mermaid fences only for diagrams.
 - Required decision/open-question/delta files must exist even when empty; write `0 items` or equivalent.
 - Contracts SSOT remains `.qfai/contracts/**`; reports are derived outputs.
+
+## Where a grilling session's outcome goes
+
+A session run inside a spec stage records into the spec pack, not into a file of
+its own.
+
+| Outcome                               | Home                                                                                |
+| ------------------------------------- | ----------------------------------------------------------------------------------- |
+| A decision the session settled        | `07_Decisions.md`                                                                   |
+| A decision the session did not settle | `08_Open-questions.md`                                                              |
+| A decision at the policy layer        | `_policies/08_Decisions.md`, with its open half in `_policies/09_Open-questions.md` |
+
+The record states what was chosen and why. How the session reached it is in the
+history, and repeating it here costs a reader the one thing the record is for.
+
+A session that dispatched a lookup also records the work order, under the shared
+schema in `.qfai/assistant/constitution/shared-skill-delegation-baseline.md`.
