@@ -233,8 +233,10 @@ before the span's last entry is left.
   answers whether it is right; this loop runs before the write and answers whether its decisions
   were taken. Both run.
 - Holding the loop is not authoring: the orchestrator routes it and does not answer its questions.
-- Every escalation reaches the user through `AskUserQuestion`. Under a no-question mode it is opened
-  as a question instead, never recorded as an assumption alone.
+- Every escalation reaches the user through `AskUserQuestion` where it is callable for that
+  question, and through the fallback in `.agents/rules/user-questions.md` where it is not — numbered
+  choices carrying the same parts. Under a no-question mode it is opened as a question instead,
+  never recorded as an assumption alone.
 - The phase records a run-or-skip line and a work-order row per settled decision, naming who
   adjudicated it. An omitted session and a legitimate empty frontier are the same absence otherwise.
 

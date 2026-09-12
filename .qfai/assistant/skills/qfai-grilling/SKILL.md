@@ -252,6 +252,14 @@ decisions belonging to different drafting roles.
 - **Two authors answering one question differently is itself a decision**, and
   it joins the frontier rather than being averaged or decided by the griller. If
   the budget ends with it open, it escalates like any other.
+- **A fact only the user holds goes to the user, not to an author.** No author
+  can answer an unpublished constraint or an intention nobody wrote down, and
+  the convergence rules escalate decisions rather than facts — so without this
+  the fact sits on the frontier until the budget ends, taking every decision
+  waiting on it with it. It escalates immediately, as a request for the value
+  rather than a choice. Under a no-question mode it reaches nobody and is an
+  undefaultable input, which stops the work rather than being invented
+  (`.qfai/assistant/constitution/constitution.md` Article X, rule 4).
 
 ### Orchestrator Protocol (MUST)
 

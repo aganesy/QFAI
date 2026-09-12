@@ -185,6 +185,26 @@ describe.each(TREES)("%s — the pre-draft grilling loop", (tree) => {
       "where it is\n   callable for that question and through the same rule's fallback",
     );
     expectPhrase(loop, "it is the reason the fallback exists");
+    // And the skill's own summary, which an operator reads instead of the
+    // reference: a corrected reference beside an uncorrected summary leaves the
+    // contradiction where it is most likely to be read.
+    const skill = await read(SKILL);
+    expectPhrase(skill, "where it is callable for that question, and through the fallback in");
+  });
+
+  it("sends a fact only the user holds to the user", async () => {
+    // No author can answer an unpublished constraint, and the convergence rules
+    // escalate decisions rather than facts — so without this the fact sits on
+    // the frontier until the budget ends, taking every decision waiting on it.
+    const primitive = await read(PRIMITIVE);
+    expectPhrase(primitive, "**A fact only the user holds goes to the user, not to an author.**");
+    expectPhrase(
+      primitive,
+      "It escalates immediately, as a request for the value rather than a choice",
+    );
+    // Under a no-question mode it is an undefaultable input, which stops rather
+    // than being invented.
+    expectPhrase(primitive, "stops the work rather than being invented");
   });
 
   it("cites the method rather than restating it", async () => {

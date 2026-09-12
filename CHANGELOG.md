@@ -75,6 +75,11 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   Where the structured question tool is not callable, the escalation takes the
   rule's fallback rather than being skipped.
 
+  A fact only the user holds goes to the user rather than to an author. No
+  author can answer an unpublished constraint, and the convergence rules
+  escalate decisions rather than facts, so without this it sat on the frontier
+  until the budget ended and took every decision waiting on it along.
+
   The gate asks only about the phases the loop covers. Phase 2b and Phase 4
   produce no design decision, so a row for them would either reject valid
   evidence or claim a session that was never owed. The canonical evidence
