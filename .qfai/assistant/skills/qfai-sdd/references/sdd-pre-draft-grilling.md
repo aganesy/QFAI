@@ -152,11 +152,13 @@ question rather than assumed, the phase's row reads `escalated`, and **the
 phase does not write**: the stage's grilling work order stays `PENDING`, which
 blocks DONE and leaves the stage resumable.
 
-That is the gate, because `08_Open-questions.md` is not one — a spec pack
-carries open questions as a matter of course, so nothing there stops a run.
-Writing the phase anyway would encode a design decision nobody took, which is
-the outcome the whole loop exists to prevent, reached by the one path where
-nobody can be asked.
+Two gates, and both are needed. The work order is what keeps the stage
+resumable, and the register row — `status: unadjudicated` in
+`08_Open-questions.md` — is what validation reads: the file carries open
+questions as a matter of course, so it is that status and not the file that
+stops a run. Writing the phase anyway would encode a design decision nobody
+took, which is the outcome the whole loop exists to prevent, reached by the one
+path where nobody can be asked.
 
 ## What the phase records
 
