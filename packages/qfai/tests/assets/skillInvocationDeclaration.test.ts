@@ -46,6 +46,18 @@ const CANONICAL_OPT_OUT = `${OPT_OUT_FIELD}: true`;
  */
 const OPT_OUT_KEY_LINE = new RegExp(`^\\s*['"]?${OPT_OUT_FIELD}['"]?\\s*:.*$`, "gm");
 
+/**
+ * The opt-out lines a front-matter block declares, however the key is spelled.
+ *
+ * Read as lines rather than as a substring of the block, because the block also
+ * holds text the host does not act on — a commented-out declaration reads
+ * exactly like a live one to a substring search, and that is the state where
+ * the agent may fire a skill whose body still says it may not.
+ */
+function optOutLines(frontMatterText: string): string[] {
+  return frontMatterText.match(OPT_OUT_KEY_LINE) ?? [];
+}
+
 function skillNames(tree: string): Promise<string[]> {
   return collectCanonicalSkillIds(path.join(repoRoot, tree, ASSISTANT_DIR));
 }
@@ -82,7 +94,7 @@ describe.each(QFAI_TREES)("%s: the opt-out is stated once, in two places", (tree
     // while the first one is what a reader finds.
     const wrong: string[] = [];
     for (const skill of await skillNames(tree)) {
-      const lines = frontMatter(await readSkill(tree, skill)).match(OPT_OUT_KEY_LINE) ?? [];
+      const lines = optOutLines(frontMatter(await readSkill(tree, skill)));
       if (lines.length === 0) continue;
       if (lines.length > 1 || lines[0] !== CANONICAL_OPT_OUT) wrong.push(skill);
     }
@@ -95,13 +107,17 @@ describe.each(QFAI_TREES)("%s: the opt-out is stated once, in two places", (tree
     // account with no declaration behind it describes a skill the agent is in
     // fact free to fire, and reads as though it does not.
     //
-    // The body half is a paragraph that names the field and says who invokes
-    // the skill. Naming it anywhere would be met by a code sample or a passing
-    // reference, and neither tells the next contributor why the line is there.
+    // Both halves read the thing the reader reads. The front-matter half is
+    // the key line the host acts on, not the field's name somewhere in the
+    // block: a commented-out declaration leaves the body's account standing
+    // over a skill the agent is once again free to fire. The body half is a
+    // paragraph that names the field and says who invokes the skill, since
+    // naming it anywhere would be met by a code sample or a passing reference,
+    // and neither tells the next contributor why the line is there.
     const unpaired: string[] = [];
     for (const skill of await skillNames(tree)) {
       const raw = await readSkill(tree, skill);
-      const declared = frontMatter(raw).includes(CANONICAL_OPT_OUT);
+      const declared = optOutLines(frontMatter(raw)).includes(CANONICAL_OPT_OUT);
       const explained = paragraphs(raw).some(
         (block) => block.includes(OPT_OUT_FIELD) && /\buser\b/i.test(block),
       );
