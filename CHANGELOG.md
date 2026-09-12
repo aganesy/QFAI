@@ -4,6 +4,61 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ## [Unreleased]
 
+### Added
+
+- **Every grilling session leaves a record, and the stage's gate reads it**
+  (#1601). A run that held the session and a run that skipped it produced the
+  same spec, the same ledger and the same code, so a reviewer could only block
+  every run or accept a claim it could not check.
+
+  `/qfai-implement`, `/qfai-atdd` and `/qfai-verify` now write a
+  `## Grilling Session` section into their stage evidence, one row per session:
+  the preflight one and any that detection opened. It is the shape
+  `/qfai-discussion` already writes, with a `Subject` column in place of that
+  stage's single `Authoring began`, because these stages hold more than one
+  session. The open questions go under the same table, so the count and the
+  questions it counts are in one place.
+
+  The section opens with `Run started`, and every row ends at or after it. That
+  is what bounds the invocation: an evidence file is updated in place, and a
+  rerun over an unchanged tree produces the same `Revision`, because that
+  address excludes `.qfai/evidence/**`. A line under the heading, `Preflight`, says whether
+  the confidence check opened a session at all, so a run that needed none is
+  distinguishable from one that skipped it.
+
+  One block per stage as well as per run, because two stages share an evidence
+  file: an `E2E` / `API` / `Integration` row's proof lives in the ATDD evidence,
+  which `/qfai-atdd` wrote its own sessions into and `/qfai-implement` later
+  writes to. One table for both would have each stage's gate rejecting the
+  other's rows.
+
+  A row carries both times — when the session ended, and when the stage next
+  wrote — and this run's `Revision` beside them. A row holding only the ending
+  reads the same whether the session ran before the work or after it, because it
+  is written at the end either way; and the times alone bound no invocation,
+  since an evidence file is updated in place and last week's row satisfies them
+  too. It still cannot prove a session happened; the agent writes its own record.
+
+  `.agents/rules/grilling.md` names the four endings a row may hold, so a gate
+  and a record share one vocabulary.
+
+  | Ending        | The work may proceed                                     |
+  | ------------- | -------------------------------------------------------- |
+  | `confirmed`   | Yes                                                      |
+  | `user-closed` | Yes                                                      |
+  | `no-question` | Yes, and whatever gates the work reports those questions |
+  | `stopped`     | No. Report every open decision as open                   |
+
+  Each stage's Reviewer Gate reads the rows and gives each ending a verdict: a
+  `no-question` row with an open decision is a REVISE, because nobody was asked;
+  the same count under `user-closed` passes, because the user saw them and
+  closed the asking.
+
+  A session between agents reaches none of the four on its own. Its budget ends
+  the rounds between agents, and the decisions still open go to the user, who
+  ends it — which the primitive said the other way round, so an agent could
+  terminate a session before the user saw what it escalated.
+
 ## [1.12.0] - 2026-09-12
 
 ### Added
@@ -570,59 +625,6 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   What existed before was one line in this repository's `AGENTS.md`, written in
   a vocabulary nothing defined, and a checklist nothing loaded on its own. Both
   are replaced by a reference to the master.
-
-- **Every grilling session leaves a record, and the stage's gate reads it**
-  (#1601). A run that held the session and a run that skipped it produced the
-  same spec, the same ledger and the same code, so a reviewer could only block
-  every run or accept a claim it could not check.
-
-  `/qfai-implement`, `/qfai-atdd` and `/qfai-verify` now write a
-  `## Grilling Session` section into their stage evidence, one row per session:
-  the preflight one and any that detection opened. It is the shape
-  `/qfai-discussion` already writes, with a `Subject` column in place of that
-  stage's single `Authoring began`, because these stages hold more than one
-  session. The open questions go under the same table, so the count and the
-  questions it counts are in one place.
-
-  The section opens with `Run started`, and every row ends at or after it. That
-  is what bounds the invocation: an evidence file is updated in place, and a
-  rerun over an unchanged tree produces the same `Revision`, because that
-  address excludes `.qfai/evidence/**`. A line under the heading, `Preflight`, says whether
-  the confidence check opened a session at all, so a run that needed none is
-  distinguishable from one that skipped it.
-
-  One block per stage as well as per run, because two stages share an evidence
-  file: an `E2E` / `API` / `Integration` row's proof lives in the ATDD evidence,
-  which `/qfai-atdd` wrote its own sessions into and `/qfai-implement` later
-  writes to. One table for both would have each stage's gate rejecting the
-  other's rows.
-
-  A row carries both times — when the session ended, and when the stage next
-  wrote — and this run's `Revision` beside them. A row holding only the ending
-  reads the same whether the session ran before the work or after it, because it
-  is written at the end either way; and the times alone bound no invocation,
-  since an evidence file is updated in place and last week's row satisfies them
-  too. It still cannot prove a session happened; the agent writes its own record.
-
-  `.agents/rules/grilling.md` names the four endings a row may hold, so a gate
-  and a record share one vocabulary.
-
-  | Ending        | The work may proceed                                     |
-  | ------------- | -------------------------------------------------------- |
-  | `confirmed`   | Yes                                                      |
-  | `user-closed` | Yes                                                      |
-  | `no-question` | Yes, and whatever gates the work reports those questions |
-  | `stopped`     | No. Report every open decision as open                   |
-
-  Each stage's Reviewer Gate reads the rows and gives each ending a verdict: a
-  `no-question` row with an open decision is a REVISE, because nobody was asked;
-  the same count under `user-closed` passes, because the user saw them and
-  closed the asking.
-
-  A session between agents reaches none of the four on its own. Its budget ends
-  the rounds between agents, and the decisions still open go to the user, who
-  ends it — which the primitive said the other way round, so an agent could
-  terminate a session before the user saw what it escalated.
 
 ### Changed
 
