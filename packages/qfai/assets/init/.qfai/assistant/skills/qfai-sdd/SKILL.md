@@ -212,6 +212,34 @@ is normative and lives in `references/sdd-routing-phase-crosswalk.md`. Honour th
 a routing phase's mandatory agents run inside its span, and its blocking agents MUST return `PASS`
 before the span's last entry is left.
 
+### Pre-draft Grilling (MUST)
+
+- Before Phase 0, Phase 1, Phase 2, Phase 2c and Phase 3 write anything, run one grilling session
+  for that phase, held by this skill. The trigger is this invocation's first write or design
+  mutation in the phase, not whether the artifact already exists — most runs are `UPDATE:*` against
+  artifacts that do.
+- Method: `.agents/rules/grilling.md` through the `qfai-grilling` skill. Ending a session with no
+  user in it: `.qfai/assistant/constitution/review-convergence.md#agent-to-agent-grilling-must`.
+  Placement, roles, what the orchestrator does with the result, and what the phase records:
+  `references/sdd-pre-draft-grilling.md`.
+- **One session per phase, over every routed drafting role's decisions.** Grilling one author leaves
+  the others free to settle their own before their own writes.
+- **Every decision the session settled that authoritative evidence did not answer goes to the user
+  before any author writes** — not only the ones the round budget left open. An agent-to-agent
+  decision nobody adjudicated makes the artifact one no reviewer can clear
+  (`.qfai/assistant/constitution/shared-skill-delegation-baseline.md`), so escalating only the
+  residue hands the authors a settled set whose agreed half fails review.
+- This is not the Reviewer Gate below and does not replace it. The gate reads a written artifact and
+  answers whether it is right; this loop runs before the write and answers whether its decisions
+  were taken. Both run.
+- Holding the loop is not authoring: the orchestrator routes it and does not answer its questions.
+- Every escalation reaches the user through `AskUserQuestion` where it is callable for that
+  question, and through the fallback in `.agents/rules/user-questions.md` where it is not — numbered
+  choices carrying the same parts. Under a no-question mode it is opened as a question instead,
+  never recorded as an assumption alone.
+- The phase records a run-or-skip line and a work-order row per settled decision, naming who
+  adjudicated it. An omitted session and a legitimate empty frontier are the same absence otherwise.
+
 ### Reviewer Gate (MUST)
 
 - Default: `completion-reviewer`.
@@ -659,7 +687,13 @@ The skill collapses avoidable per-session prompts to 0-1 by classifying every de
   - brand intent
   - `primarySpecId` (when absent from inputs)
 
-A skill MAY narrow any of the three buckets (drop an entry the skill cannot reach), and MAY instantiate a category entry — `approval-required governance operations` — with the operations its own run cannot authorize for itself. It MUST NOT introduce an entry outside the prototype's categories. Widening triggers a Reviewer-Gate finding.
+A skill MAY narrow any of the three buckets (drop an entry the skill cannot reach), and
+MAY instantiate a category entry — `approval-required governance operations` — with the
+operations its own run cannot authorize for itself. `hard-required` also takes the
+undefaultable inputs this skill itself consumes, declared per skill and checked against
+that declaration; the bucket is what a run cannot proceed without, and no prototype can
+enumerate that for a skill it does not know. Otherwise a skill MUST NOT introduce an
+entry outside the prototype's categories. Widening triggers a Reviewer-Gate finding.
 
 project_memory:
 

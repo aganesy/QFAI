@@ -48,6 +48,16 @@ export const GRILLING_DESIGN_ARTIFACT_HOOK_MARKER = "QFAI grilling reminder: des
 export const GRILLING_DELEGATION_HOOK_MARKER = "QFAI grilling reminder: delegation";
 export const GRILLING_PLAN_HOOK_MARKER = "QFAI grilling reminder: plan";
 
+/**
+ * Identity of the group that restates the question-form rule on every turn.
+ *
+ * `UserPromptSubmit` rather than a one-shot event: the rule has to be in view at
+ * the moment a question forms, and that moment is unpredictable. A session-start
+ * reminder is gone by the time the context is compacted, which is exactly when a
+ * long session starts skipping it.
+ */
+export const STRUCTURED_QUESTION_HOOK_MARKER = "QFAI structured-question reminder";
+
 /** Where both the template and the project keep the file, relative to the root. */
 export const CLAUDE_SETTINGS_RELATIVE_PATH = ".claude/settings.json";
 

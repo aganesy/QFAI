@@ -136,7 +136,9 @@ records the same thing from the reviewer's side: there is no artifact to review.
 What the user is shown at the end:
 
 - every decision they answered, and what they answered;
-- every decision left open, labelled as an assumption or as unasked;
+- every node left open, labelled as an assumption or as unasked — decisions and
+  facts only the user holds alike, because a fact no lookup reached is exactly
+  the node that disappears when the report names decisions only;
 - every fact taken as settled, with where it was read.
 
 The exemption covers the verdict and nothing else. A lookup dispatched during the
@@ -167,6 +169,15 @@ the primitive's, because the decisions are.
 - hard-required:
   - grilling subject (the design to interrogate; the argument supplies it, and
     an empty argument is asked for rather than guessed)
+
+The asking is what this skill performs, so its `ask-user` entries are its own operations
+rather than an entry added to the prototype. A skill MAY narrow any of the three buckets (drop an entry the skill cannot reach), and
+MAY instantiate a category entry — `approval-required governance operations` — with the
+operations its own run cannot authorize for itself. `hard-required` also takes the
+undefaultable inputs this skill itself consumes, declared per skill and checked against
+that declaration; the bucket is what a run cannot proceed without, and no prototype can
+enumerate that for a skill it does not know. Otherwise a skill MUST NOT introduce an
+entry outside the prototype's categories. Widening triggers a Reviewer-Gate finding.
 
 ## Related
 

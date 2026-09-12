@@ -28,6 +28,7 @@ import {
   GRILLING_DESIGN_ARTIFACT_HOOK_MARKER,
   GRILLING_PLAN_HOOK_MARKER,
   MINIMAL_IMPLEMENTATION_HOOK_MARKER,
+  STRUCTURED_QUESTION_HOOK_MARKER,
 } from "../../src/core/claudeCodeHooks.js";
 
 /**
@@ -44,6 +45,7 @@ const RESTATES: ReadonlyMap<string, string> = new Map([
   [GRILLING_DESIGN_ARTIFACT_HOOK_MARKER, "grilling.md"],
   [GRILLING_DELEGATION_HOOK_MARKER, "grilling.md"],
   [GRILLING_PLAN_HOOK_MARKER, "grilling.md"],
+  [STRUCTURED_QUESTION_HOOK_MARKER, "user-questions.md"],
 ]);
 
 const run = promisify(execFile);
@@ -125,7 +127,7 @@ describe.each(SETTINGS_PATHS)("%s", (rel) => {
   });
 
   it("wires the reminder to a GitHub post and to a Markdown edit", () => {
-    expect([...hooks.keys()].sort()).toEqual(["PostToolUse", "PreToolUse"]);
+    expect([...hooks.keys()].sort()).toEqual(["PostToolUse", "PreToolUse", "UserPromptSubmit"]);
 
     // Selected by matcher rather than by position: other reminders share the
     // event, and asserting this one is the only entry made every later hook a

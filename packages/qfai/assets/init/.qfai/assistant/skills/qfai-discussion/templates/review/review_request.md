@@ -36,6 +36,16 @@
 - Validate hard gate evidence exists (`.qfai/report/validate.log`).
 - Coverage hard gates are clear.
 
+## Grilling Session
+
+> Copy the `## Grilling Session` row from this stage's evidence. The reviewer
+> rules on whether the session ended before authoring began, and a row it has to
+> go looking for is one it can pass without reading.
+
+| Ended | Frontier | Lookups | Decisions | Escalated |
+| ----- | -------- | ------- | --------- | --------- |
+|       |          |         |           |           |
+
 ## Required Reviewers
 
 - Resolve reviewers from `.qfai/assistant/manifest/agent-routing.yml` and `.qfai/assistant/manifest/review-profiles.yml`.

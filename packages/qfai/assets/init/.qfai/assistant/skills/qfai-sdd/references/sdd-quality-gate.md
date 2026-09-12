@@ -85,3 +85,28 @@ Phase 0 is a mandatory output of this skill, so its own artifacts belong on this
 - Evidence file exists.
 - Work Orders Summary exists.
 - Reviewer result exists.
+- `## Pre-draft Grilling` carries a row for every **grilling-covered** phase this run entered —
+  Phase 0, 1, 2, 2c and 3, and only those. Phase 2b and Phase 4 produce no design decision and run
+  no session, so requiring a row for them would either reject valid evidence or force a row claiming
+  a session that was never owed. Each row reads `run`, `skipped` or `escalated`; a `skipped` row
+  names the authoritative artifact that answered the phase's decisions. A missing row is the
+  finding: an omitted session and an empty frontier are the same absence, and only the written skip
+  tells them apart (`references/sdd-pre-draft-grilling.md`).
+- Every row carries the times its state has — `Ended at` where a session ran, `Wrote at` where the
+  phase mutated something — and where both are present the first is earlier. A `confirm-only` rerun
+  enters Phase 2c read-only and writes nothing, so it carries neither and is still a truthful row; a
+  rule demanding both would make that supported mode uncompletable. A row holding only the
+  outcome reads the same whether the session ran before the phase, after it, or not at all;
+  requiring both of every state would instead make two legitimate states unrecordable.
+- Phase 2c carries one row per expansion, `2c.1` upward, in the order they ran. Its scope is
+  recomputed after every contract write, so a single row records the first checkpoint and leaves
+  every later one indistinguishable from a checkpoint that never happened.
+- A row reads `run` only with zero escalations. One escalation makes it `escalated`, and an
+  `escalated` row needs a `PENDING` work order for it — an escalation nobody answered is a design
+  decision nobody took, and `08_Open-questions.md` does not block a spec stage.
+- Each phase's settled count equals the number of `grilling(<phase>/...)` rows in
+  `## Work Orders Summary` — the phase is the title's first field, because the shared schema has no
+  column for it. Without that key a row cannot be assigned to a phase, so an omitted row passes by
+  being counted against another, and a reviewer looking for what it recommended finds nothing.
+- Every `grilling(...)` row names who adjudicated the decision, `user` or `agents`. A reviewer reads
+  its `Recommended and unadjudicated` answer off these rows and holds no memory of the session.
