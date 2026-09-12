@@ -39,6 +39,11 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   reports either field missing or unusable, at error severity, for every direct
   skill the loader would open.
 
+  A `name:` is usable when it is lowercase letters, digits and single hyphens,
+  at most 64 characters, and the skill's own directory — the three things a
+  host requires to list the skill and key it by. A value outside them registers
+  nothing, or registers a skill under a name the user will not find.
+
   **Breaking for a project whose skills are missing those fields**: a
   `validate --fail-on error` run that passed before this release fails after it.
   Repair is one line per skill. A skill that should not be offered to the model

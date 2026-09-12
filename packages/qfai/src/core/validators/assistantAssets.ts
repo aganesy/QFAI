@@ -1269,20 +1269,48 @@ function collectSkillNameIssue(
   skillFile: string,
   frontMatter: Record<string, unknown> | undefined,
 ): Issue[] {
+  const directory = path.basename(path.dirname(skillFile));
   const name = frontMatter?.["name"];
-  if (typeof name === "string" && name.trim() !== "") return [];
+  const value = typeof name === "string" ? name.trim() : "";
+  const wrong = skillNameProblem(value, directory);
+  if (wrong === null) return [];
   return [
     issue(
       "QFAI-SKILLS-015",
-      "SKILL.md carries no usable `name:`. A host reads that field to key the skill, so without it the skill is not registered and the user cannot invoke it by name.",
+      `SKILL.md carries no usable \`name:\`: ${wrong}. A host reads that field to key the skill, so the skill is not registered and the user cannot invoke it by name.`,
       "error",
       skillFile,
       "skills.name",
       undefined,
       "change",
-      "Give `name:` the name a user invokes the skill by — the skill directory's own name is the convention this repository follows.",
+      `Set \`name:\` to \`${directory}\` — the skill's own directory, which is what a host lists it under.`,
     ),
   ];
+}
+
+/**
+ * The characters a host accepts in a skill's name, and how many.
+ *
+ * Lowercase letters, digits and single hyphens between them, to 64 characters.
+ * A capital or a space is rejected by the loader outright, so a value carrying
+ * one names a skill nobody can invoke.
+ */
+const SKILL_NAME_FORM = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
+const SKILL_NAME_MAX_LENGTH = 64;
+
+/** Why a `name:` is unusable, or `null` where it is not. */
+function skillNameProblem(value: string, directory: string): string | null {
+  if (value === "") return "the field is missing, empty, or not text";
+  if (value.length > SKILL_NAME_MAX_LENGTH) {
+    return `it is ${value.length} characters, past the ${SKILL_NAME_MAX_LENGTH} a host accepts`;
+  }
+  if (!SKILL_NAME_FORM.test(value)) {
+    return `\`${value}\` is not lowercase letters, digits and single hyphens`;
+  }
+  // The directory is what a host lists the skill under, so a name that differs
+  // from it names one the user will not find under either spelling.
+  if (value !== directory) return `\`${value}\` is not the skill's directory, \`${directory}\``;
+  return null;
 }
 
 /**
@@ -1311,13 +1339,16 @@ function collectSkillRegistrationIssues(skillFile: string, content: string): Iss
     return [
       issue(
         "QFAI-SKILLS-015",
-        `SKILL.md has front matter a host cannot read: ${unreadable}. That block is where the host reads \`description:\` to register the skill.`,
+        `SKILL.md has front matter a host cannot read: ${unreadable}. That block is where the host reads \`name:\` and \`description:\` to register the skill.`,
         "error",
         skillFile,
         "skills.description",
         undefined,
         "change",
-        "Repair the front matter first, then make sure `description:` carries a sentence saying what the skill does.",
+        // Both fields, because the block is unreadable and neither has been
+        // looked at: told to repair one, the operator writes valid front matter
+        // that fails this same finding again on the other.
+        `Repair the front matter first, then make sure \`name:\` is \`${path.basename(path.dirname(skillFile))}\` and \`description:\` carries a sentence saying what the skill does.`,
       ),
     ];
   }

@@ -166,6 +166,11 @@ describe("a skill carries what a host needs to register it", () => {
     const [finding] = await registrationFindings(root);
     expect(finding?.message).toContain("front matter a host cannot read");
     expect(finding?.suggested_action).toContain("Repair the front matter first");
+    // Both fields: the block never parsed, so neither has been looked at, and
+    // an action naming one leaves valid front matter that fails again on the
+    // other.
+    expect(finding?.suggested_action).toContain("`name:`");
+    expect(finding?.suggested_action).toContain("`description:`");
   });
 
   it("reads a skill whose directory name the document crawl ignores", async () => {
@@ -295,7 +300,7 @@ describe("a skill carries what a host needs to register it", () => {
     await mkdir(path.join(skills, "qfai-folder", "SKILL.md"), { recursive: true });
 
     const findings = (await validateAssistantAssets(root, defaultConfig)).filter((finding) =>
-      finding.file.includes("qfai-folder"),
+      (finding.file ?? "").includes("qfai-folder"),
     );
 
     expect(findings.map((finding) => finding.code)).toContain("QFAI-SKILLS-014");
@@ -308,7 +313,33 @@ describe("a skill carries what a host needs to register it", () => {
     );
     const [finding] = await registrationFindings(root);
     expect(finding?.message).toContain("no usable `name:`");
-    expect(finding?.suggested_action).toContain("the name a user invokes");
+    // The directory, because that is what a host lists the skill under.
+    expect(finding?.suggested_action).toContain("`qfai-example`");
+  });
+
+  it("reports a name the host's own contract refuses", async () => {
+    // Present and non-empty is not the contract: a capital or a space is
+    // rejected by the loader, a value past the cap is truncated or dropped, and
+    // one that is not the directory names a skill the user will not find.
+    for (const [name, why] of [
+      ["My Skill", "not lowercase letters, digits and single hyphens"],
+      ["qfai_example", "not lowercase letters, digits and single hyphens"],
+      ["-qfai-example", "not lowercase letters, digits and single hyphens"],
+      ["qfai-other", "not the skill's directory"],
+      [`qfai-${"e".repeat(62)}`, "past the 64 a host accepts"],
+    ] as const) {
+      const root = await projectWithSkillDocument(
+        ["---", `name: ${name}`, 'description: "Does the thing."', "---", "", "# x", ""].join("\n"),
+      );
+      const [finding] = await registrationFindings(root);
+      expect(finding?.code, name).toBe("QFAI-SKILLS-015");
+      expect(finding?.message, name).toContain(why);
+    }
+  });
+
+  it("accepts the name a host registers", async () => {
+    const root = await projectWithSkill(['description: "Does the thing."']);
+    expect(await registrationFindings(root)).toEqual([]);
   });
 
   it("follows a readable symlink to the entry point", async () => {
