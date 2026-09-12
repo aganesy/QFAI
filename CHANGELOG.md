@@ -12,8 +12,9 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   the test pinning it says nothing is emitted, with a `done` ledger row joining
   the two.
 
-  `CR-20260913-0001` records both sides, blocks the two rows whose obligations
-  the product contradicts and says which ten it leaves alone, and puts the part
+  `CR-20260913-0001` records both sides, blocks the three rows whose
+  obligations the product contradicts — two of one pack and one of another that
+  shares the decision — and says which it leaves alone, and puts the part
   a rerun cannot settle by following the product: two decision records chose the
   band, the removal overturned them on the opposite rationale, and whether a
   reversed decision is rewritten or superseded is the user's to choose.

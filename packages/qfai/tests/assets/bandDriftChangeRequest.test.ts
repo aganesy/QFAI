@@ -2,17 +2,19 @@
  * The band drift is recorded where the Drift Protocol looks for it.
  *
  * `QFAI-AUD-020` lost its lower bound as product work: the validator, its
- * tests, the shipped documents and the changelog moved, and the spec pack and
- * the two decision records that chose the band did not. A spec stating the
- * opposite of the product is not a bug in either of them — it is settled input
- * the work revealed to be wrong, and the protocol's answer to that is a Change
- * Request.
+ * tests, the shipped documents and the changelog moved, and the spec packs and
+ * the decision records that chose the band did not. A spec stating the opposite
+ * of the product is not a bug in either of them — it is settled input the work
+ * revealed to be wrong, and the protocol's answer to that is a Change Request.
  *
- * This file pins the Change Request's shape rather than its prose: that it
- * exists, that it is `intent` class and `open`, that its blocked set names the
- * two ledger rows whose obligations the product contradicts and says which rows
- * it leaves alone, and that its options put the decision-record question — the
- * one a rerun cannot settle by following the product — to the user.
+ * **These assertions hold across the record's lifecycle.** A Change Request is
+ * approved, rejected or superseded in place, and the protocol's own step 3
+ * rewrites `Status`, `Approved option` and the impact scope when that happens —
+ * so pinning today's `open` / `-` would redden this file on the very resolution
+ * it exists to make possible. What is pinned instead is the shape a record of
+ * this drift must have whatever its status: the contradiction it states, the
+ * rows it blocks, the question it puts, and the fields the Decisions layout
+ * gives an owner to answer it with.
  */
 import { readFile } from "node:fs/promises";
 import path from "node:path";
@@ -38,13 +40,14 @@ describe("the primary_tasks band drift has a Change Request", () => {
     expect(unwrap(await changeRequest())).toContain(unwrap(phrase));
   };
 
-  it("is open, intent-class, and names no approved option yet", async () => {
-    // The protocol reads these fields; a record that pre-answers its own
-    // question is not a request.
+  it("carries the header fields the protocol reads, at a legal value", async () => {
+    // The values move as the record is resolved; that they exist and are legal
+    // is what a reader and `QFAI-DRIFT-001` both depend on.
+    const text = await changeRequest();
     await expectPhrase("- ID: `CR-20260913-0001`");
     await expectPhrase("- Class: `intent`");
-    await expectPhrase("- Status: `open`");
-    await expectPhrase("- Approved option: `-`");
+    expect(text).toMatch(/^- Status: `(open|approved|rejected|superseded)`$/m);
+    expect(text).toMatch(/^- Approved option: `(-|[123][ab]?)`$/m);
   });
 
   it("states both sides of the contradiction by artifact", async () => {
@@ -53,7 +56,7 @@ describe("the primary_tasks band drift has a Change Request", () => {
     await expectPhrase("fewer than 3 or more than 7");
   });
 
-  it("blocks the two rows whose obligation the product contradicts", async () => {
+  it("blocks the rows whose obligation the product contradicts", async () => {
     await expectPhrase("| `spec-0013/TDD-0027` | `ledger-row` |");
     await expectPhrase("| `spec-0013/TDD-0028` | `ledger-row` |");
     // The two packs share the decision, so settling it for one leaves the
@@ -81,13 +84,23 @@ describe("the primary_tasks band drift has a Change Request", () => {
     // Following the product settles the spec statements. It does not settle
     // what becomes of a decision the product overturned.
     await expectPhrase("whether a reversed decision is rewritten in place or left standing");
-    await expectPhrase("**supersede** the two decisions");
-    await expectPhrase("**rewrite** `DR-0267` and `DR-0013-0003` in place");
+    await expectPhrase("**supersede** the three decisions");
+    await expectPhrase("**rewrite** the three decisions in place");
     await expectPhrase("Restore the floor in the product");
   });
 
+  it("supersedes through the fields the Decisions layout defines", async () => {
+    // `Superseded by` is not one of them, and the protocol forbids inventing
+    // a layout, so an owner could not have carried out that instruction.
+    await expectPhrase(
+      "take `Status: superseded` with the new record named in their `Related` list",
+    );
+    await expectPhrase("there is no `Superseded by` field to write");
+  });
+
   it("keeps the authorization list conditioned on the outcome", async () => {
-    // `QFAI-DRIFT-001` reads a path here and not the condition beside it.
+    // `QFAI-DRIFT-001` reads a path here and not the condition beside it, so
+    // the section is narrowed before the status leaves `open`.
     await expectPhrase("**Under option 3 this list is empty**");
     await expectPhrase("reduced to the approved outcome before `Status: approved` is written");
   });

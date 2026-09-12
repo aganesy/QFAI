@@ -67,8 +67,12 @@ spec rather than to this one.
 
 **`spec-0004` states the same band, and one of its completed rows is on the
 same test.** `01_Spec.md` line 108 and its Consumer View bind `REQ-0164` to
-"the `3..7` recommended count band (DR-0267)", `04_Business-Rules.md` and
-`06_Test-Cases.md` repeat it, and `spec-0004/TDD-0050` stands `done` on
+"the `3..7` recommended count band (DR-0267)", and the band is repeated through
+the whole pack — `03_Acceptance-Criteria.md`, `04_Business-Rules.md`,
+`05_Examples.md`, `06_Test-Cases.md`, the `OQ-0158` resolution in
+`08_Open-questions.md`, `10_Plan.md`, and `07_Decisions.md`'s `DR-0004-0014`,
+which adopts `DR-0267` verbatim and is a **third** decision to settle. And
+`spec-0004/TDD-0050` stands `done` on
 `packages/qfai/tests/unit/core/validators/auditProfileBandReject.test.ts`,
 which asserts a ceiling and that one task emits nothing.
 
@@ -79,19 +83,20 @@ document exists to remove.
 
 ## Options (at least 3) and recommendation
 
-| #   | Option                                                                                                                                                                                                                              | Cost                                                                                                                                     | Risk                                                                                                                                                                                         | Recommended |
-| --- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------- |
-| 1   | Narrow the spec to the product, and **supersede** the two decisions with a new one: the band's floor is withdrawn, `QFAI-AUD-020` is a ceiling, and the records that chose 3..7 keep their dates and gain a `Superseded by` pointer | Nine `spec-0013` statements edited plus one `_policies` record; one new `DR-*` in `_policies`; reset `spec-0013/TDD-0027` and `TDD-0028` | Records today's behaviour as intended. A decision nobody reviewed at the time becomes the recorded one — but it is already the shipped one, and the record says by whom and when             | ✅          |
-| 2   | Narrow the spec to the product, and **rewrite** `DR-0267` and `DR-0013-0003` in place to say `ceiling 7`                                                                                                                            | The same nine statements; no new record                                                                                                  | The repository then has no record that a floor was ever chosen, or that it was removed. The rejected options `DR-0267` lists ("1..3 minimal band") lose the thing they were rejected against |             |
-| 3   | Restore the floor in the product: `QFAI-AUD-020` warns below the minimum again, and the spec stands                                                                                                                                 | A validator change, its tests, the shipped template comments and the guide; no spec edit                                                 | Reverses a deliberate removal on a rationale nobody has contradicted — one task is a screen's focus, and a floor warns against it. A CR of its own would be the place to argue that          |             |
+| #   | Option                                                                                                                                                                                                                                                                       | Cost                                                                                                                                     | Risk                                                                                                                                                                                                                                                                                                                                                                                                              | Recommended |
+| --- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------- |
+| 1   | Narrow the spec to the product, and **supersede** the three decisions with a new one: the band's floor is withdrawn, `QFAI-AUD-020` is a ceiling, and the records that chose 3..7 keep their `Decision` text, take `Status: superseded` and name the new record in `Related` | Nine `spec-0013` statements edited plus one `_policies` record; one new `DR-*` in `_policies`; reset `spec-0013/TDD-0027` and `TDD-0028` | Records today's behaviour as intended. A decision nobody reviewed at the time becomes the recorded one — but it is already the shipped one, and the record says by whom and when                                                                                                                                                                                                                                  | ✅          |
+| 2   | Narrow the spec to the product, and **rewrite** the three decisions in place to say `ceiling 7`                                                                                                                                                                              | The same statements; no new record                                                                                                       | The **authoritative** lineage goes: the Decision Records stop saying a floor was chosen, and the rejected options `DR-0267` lists ("1..3 minimal band") lose the thing they were rejected against. The history survives outside them — this Change Request, the changelog entry for the removal, and the delta rows that recorded the adoption — so a reader who knows to look elsewhere can still reconstruct it |             |
+| 3   | Restore the floor in the product: `QFAI-AUD-020` warns below the minimum again, and the spec stands                                                                                                                                                                          | A validator change, its tests, the shipped template comments and the guide; no spec edit                                                 | Reverses a deliberate removal on a rationale nobody has contradicted — one task is a screen's focus, and a floor warns against it. A CR of its own would be the place to argue that                                                                                                                                                                                                                               |             |
 
-Option 1 is recommended because the two records are the artifact this Change
+Option 1 is recommended because the three records are the artifact this Change
 Request is actually about. A decision record's value is that it says what was
-chosen and why at a date; rewriting one leaves the repository unable to say that
-a floor was ever chosen, which is the state that let this drift sit unnoticed.
-Superseding keeps both halves — the choice and its reversal — and the rejected
-options `DR-0267` enumerates stay meaningful, because what they were rejected
-against is still written down.
+chosen and why at a date, and it is where a reader looks first; rewriting one
+moves that history out of the authoritative place and into this document, the
+changelog and the delta rows, where only a reader who already knows to look will
+find it. Superseding keeps both halves in the records themselves — the choice
+and its reversal — and the options `DR-0267` enumerates stay meaningful,
+because what they were rejected against is still written where they are.
 
 ## Blocked downstream items
 
@@ -122,9 +127,14 @@ against is still written down.
   `.qfai/specs/spec-0013/09_delta.md`,
   `.qfai/specs/spec-0013/tdd/test-list.md`,
   `.qfai/specs/spec-0004/01_Spec.md`,
+  `.qfai/specs/spec-0004/03_Acceptance-Criteria.md`,
   `.qfai/specs/spec-0004/04_Business-Rules.md`,
+  `.qfai/specs/spec-0004/05_Examples.md`,
   `.qfai/specs/spec-0004/06_Test-Cases.md`,
+  `.qfai/specs/spec-0004/07_Decisions.md`,
+  `.qfai/specs/spec-0004/08_Open-questions.md`,
   `.qfai/specs/spec-0004/09_delta.md`,
+  `.qfai/specs/spec-0004/10_Plan.md`,
   `.qfai/specs/spec-0004/tdd/test-list.md`,
   `.qfai/specs/_policies/08_Decisions.md`,
   `.qfai/specs/_policies/10_delta.md`
@@ -152,11 +162,11 @@ and leave the spec as it stands.
    artifact classes and `.qfai/assistant/constitution/drift-protocol.md` gives
    each its own:
 
-   | Invocation            | Scope                                                                               | Mode        | CR reference lands in                         |
-   | --------------------- | ----------------------------------------------------------------------------------- | ----------- | --------------------------------------------- |
-   | `/qfai-sdd spec-0013` | The nine statements under `## Proposed change`, plus `10_Plan.md`'s band item       | `re-derive` | `spec-0013/09_delta.md` and `07_Decisions.md` |
-   | `/qfai-sdd spec-0004` | `REQ-0164` and its Consumer View sentence, the matching business rule and test case | `re-derive` | `spec-0004/09_delta.md`                       |
-   | `/qfai-sdd`           | `_policies/08_Decisions.md` — `DR-0267`, superseded or rewritten by the option      | `re-derive` | `_policies/10_delta.md` and `08_Decisions.md` |
+   | Invocation            | Scope                                                                                                                                                                                                                                                     | Mode        | CR reference lands in                         |
+   | --------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------- | --------------------------------------------- |
+   | `/qfai-sdd spec-0013` | The nine statements under `## Proposed change`, plus `10_Plan.md`'s band item                                                                                                                                                                             | `re-derive` | `spec-0013/09_delta.md` and `07_Decisions.md` |
+   | `/qfai-sdd spec-0004` | Every statement that carries the band: `REQ-0164` and its Consumer View sentence, `AC-0004-0037`, `BR-0004-0031`, the example, `TC-0004-0070`, the `OQ-0158` resolution, the plan item, and `DR-0004-0014` — a third decision adopting `DR-0267` verbatim | `re-derive` | `spec-0004/09_delta.md` and `07_Decisions.md` |
+   | `/qfai-sdd`           | `_policies/08_Decisions.md` — `DR-0267`, superseded or rewritten by the option                                                                                                                                                                            | `re-derive` | `_policies/10_delta.md` and `08_Decisions.md` |
 
    `re-derive` in all three: the statements change what they say, and
    `confirm-only` writes nothing but this Change Request's reference. A bare
@@ -166,9 +176,13 @@ and leave the spec as it stands.
 
 2. The decision records, under options 1 and 2 and differing by option.
    - **Option 1**: a new `DR-*` in `_policies/08_Decisions.md` recording the
-     withdrawal, its date and its rationale; `DR-0267` and
-     `spec-0013/07_Decisions.md` `DR-0013-0003` keep their text and gain a
-     `Superseded by` pointer to it.
+     withdrawal, its date and its rationale. `DR-0267`,
+     `spec-0013/07_Decisions.md` `DR-0013-0003` and `spec-0004`'s
+     `DR-0004-0014` keep their `Decision` text and take `Status: superseded`
+     with the new record named in their `Related` list. **Those are the fields
+     the layout defines** — `Status`, `Context`, `Decision`, `Consequences`,
+     `Related` — and the Drift Protocol forbids inventing another, so there is
+     no `Superseded by` field to write.
    - **Option 2**: `DR-0267` and `DR-0013-0003` rewritten to state a ceiling,
      with their `Rejected` lists re-derived against the new statement.
 3. Downstream ledger sweep, under options 1 and 2. Reset to `todo`, recording
@@ -179,8 +193,12 @@ and leave the spec as it stands.
    Under option 3 no row moves — the product changes to meet them.
 4. Under option 3 only: `packages/qfai/src/core/validators/designAudit.ts`,
    `packages/qfai/src/core/validators/auditProfile.ts` and their tests —
-   `packages/qfai/tests/integration/primaryTasksBand.test.ts` and
-   `packages/qfai/tests/unit/core/validators/auditProfileBandReject.test.ts` —
+   `packages/qfai/tests/integration/primaryTasksBand.test.ts`,
+   `packages/qfai/tests/unit/core/validators/auditProfileBandReject.test.ts`,
+   `packages/qfai/tests/integration/spec0013ActivePointerSurfaceType.test.ts` and
+   `packages/qfai/tests/e2e/spec0013ActivePointerSurfaceTypeE2E.test.ts` — the
+   last two require a two-task screen to emit nothing, which a restored floor
+   contradicts, so leaving them out ends the option in a red suite —
    with the shipped template and guide that state the band:
    `packages/qfai/assets/init/.qfai/assistant/skills/qfai-sdd/templates/contracts/ui-contract.sample.yaml`,
    whose comments currently read "at most 7" and "There is no lower bound", and
