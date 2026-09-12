@@ -25,6 +25,10 @@ const GENERATED_ROOTS = [
   ".qfai/review_archive/",
   ".qfai/report/",
   ".qfai/discussion/",
+  // The legacy output tree, ignored like the rest. Production still reads
+  // `.qfai/output/verify.json` as a fallback, so a record citing one of its
+  // files is the same unsupported provenance as any other.
+  ".qfai/output/",
 ] as const;
 
 /**
@@ -34,10 +38,24 @@ const GENERATED_ROOTS = [
  * stops at the first wildcard, so a glob naming a set of packs is measured as
  * the prefix before it — a path nothing has, recorded as an entry a later exact
  * citation could inherit. Matching the whole token is what lets the filter below
- * recognise a glob at all.
+ * recognise a glob at all. The plus is in it for the same reason: a report
+ * scoped to several specs is named `validate.spec-0003+0004.json`, and a class
+ * stopping at the plus measures a prefix nothing has while the real file is
+ * tracked.
  */
 const CITED_GENERATED_PATH =
-  /\.qfai\/(?:review|review_archive|report|discussion)\/[A-Za-z0-9._/*-]+/g;
+  /\.qfai\/(?:review|review_archive|report|discussion|output)\/[A-Za-z0-9._/*+-]+/g;
+
+/**
+ * A line that says a path is not provenance.
+ *
+ * A record explaining why an artifact is absent, or saying it is deliberately
+ * not cited, writes the path like any other. Without a way to say so it would
+ * either fail this guard or need a backlog entry claiming a citation it just
+ * disclaimed. The marker is per line, so it covers what a reader can see it
+ * covering.
+ */
+const NOT_A_CITATION = "<!-- qfai:not-a-citation -->";
 
 /**
  * Citations that do not resolve in the committed tree, as measured.
@@ -224,12 +242,15 @@ async function measureCitations(): Promise<[string, string][]> {
     const text = await readFile(path.join(repoRoot, file), "utf-8");
     // Per file, so the same path cited twice in one record is one obligation.
     const seen = new Set<string>();
-    for (const match of text.match(CITED_GENERATED_PATH) ?? []) {
-      const cited = match.replace(/[.,;:]+$/, "").replace(/\/+$/, "");
-      // A glob names a set, not an artifact, so there is nothing to resolve.
-      if (cited.includes("*") || seen.has(cited)) continue;
-      seen.add(cited);
-      measured.push([file, cited]);
+    for (const line of text.split("\n")) {
+      if (line.includes(NOT_A_CITATION)) continue;
+      for (const match of line.match(CITED_GENERATED_PATH) ?? []) {
+        const cited = match.replace(/[.,;:]+$/, "").replace(/\/+$/, "");
+        // A glob names a set, not an artifact, so there is nothing to resolve.
+        if (cited.includes("*") || seen.has(cited)) continue;
+        seen.add(cited);
+        measured.push([file, cited]);
+      }
     }
   }
   return measured;
@@ -290,5 +311,31 @@ describe("a committed record cites what the repository has", () => {
     // artifact under `.qfai/report/` that no record ever cited.
     expect(resolves(".qfai/report/../../package.json")).toBe(false);
     expect(staysInsideRoot(".qfai/report/validate.json", ".qfai/report/")).toBe(true);
+  });
+});
+
+describe("what the scan counts as a citation", () => {
+  const matches = (line: string): string[] =>
+    line.includes(NOT_A_CITATION) ? [] : (line.match(CITED_GENERATED_PATH) ?? []);
+
+  it("takes a scoped report's whole filename", () => {
+    // A class stopping at the plus measures a prefix nothing has, and reports
+    // the real file as missing while git tracks it.
+    expect(matches("- `.qfai/report/validate.spec-0003+0004.json` — scoped run")).toEqual([
+      ".qfai/report/validate.spec-0003+0004.json",
+    ]);
+  });
+
+  it("reads the legacy output tree", () => {
+    expect(matches("Fallback: `.qfai/output/verify.json`")).toEqual([".qfai/output/verify.json"]);
+  });
+
+  it("counts nothing on a line that says the path is not provenance", () => {
+    // A record explaining why an artifact is absent writes the path like any
+    // other, and would otherwise need a backlog entry for a citation it just
+    // disclaimed.
+    expect(matches(`\`.qfai/report/validate.log\` is not cited here. ${NOT_A_CITATION}`)).toEqual(
+      [],
+    );
   });
 });
