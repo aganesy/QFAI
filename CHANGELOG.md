@@ -1083,6 +1083,26 @@ unadjudicated`, read off a Work Orders Summary row the session writes rather
 
 ### Fixed
 
+- **The completion gate recomputes the product-surface review's hash** (#1713).
+  A UI-affecting row carries three reviewer hashes, and the gate recomputed only
+  the spec and code-quality ones. A row could reach `done` with a parity verdict
+  and no hash, and a screenshot replaced after the verdict changed nothing the
+  gate read, because `Reviewed revision` excludes `.qfai/evidence/`.
+
+  A `PASS (clause N)` verdict now requires its four labelled fields and a
+  `Surface artifacts` manifest that names at least one capture under
+  `.qfai/evidence/`. The hash is recomputed over the entry, the Coverage Depth
+  Matrix slice, and each capture. Captures are hashed raw, except `.md` and
+  `.html` files, which are normalized. The parity review pack is checked as the
+  product-surface-reviewer's.
+
+  The gate also reads the verdict forms the contract defines. It used to compare
+  the value with `PASS` exactly, so it rejected `PASS (clause N)` and
+  `n/a (not UI-affecting)`. An `n/a` row now needs only the revision the clauses
+  were evaluated at. Captures are ignored stage evidence, so where one is absent
+  from the checkout, as on a fresh clone, the gate skips the recomputation. It
+  does the same for a review pack.
+
 - **The autopilot tailoring contract now covers every shipped skill** (#1642).
   It was held against a hardcoded list of seven, so the two grilling skills were
   outside it and nothing reported that they carried no tailoring rule at all.
