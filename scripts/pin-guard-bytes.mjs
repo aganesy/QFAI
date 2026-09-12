@@ -80,18 +80,43 @@ function digestOf(root, rel) {
     .digest("hex");
 }
 
+/** Seven of one marker character, then a space or the end of the line. */
+const MARKER_RE = /^(?:<{7}|={7}|>{7}|\|{7})(?: |$)/m;
+
+/**
+ * The pinned paths that still carry a merge conflict.
+ *
+ * Resealing computes a digest over whatever bytes are there, so a conflict block
+ * would be pinned rather than reported — and this file is rewritten from the
+ * tree rather than edited, so a conflict in the list itself would be discarded
+ * with nothing left to read. Both are refused here, where the operator is
+ * already looking, because the byte guard that sent them here reports an
+ * unresolved merge as a digest mismatch and names resealing as the repair.
+ */
+function pathsWithConflictMarkers(root, rels) {
+  return rels.filter((rel) => MARKER_RE.test(readFileSync(path.join(root, rel), "utf-8")));
+}
+
 async function main(root) {
   // The list first, over the roots as they now stand: the workflow pins its digest, so the file
   // has to be final before the workflow can be written. Nothing here is circular — `ci.yml` is
   // not itself pinned by bytes, so writing it changes none of the digests just computed.
-  const entries = [];
+  const rels = [];
   for (const pinnedRoot of PINNED_ROOTS) {
-    for (const rel of filesUnder(root, pinnedRoot)) {
-      entries.push([digestOf(root, rel), rel]);
-    }
+    rels.push(...filesUnder(root, pinnedRoot));
   }
 
   const listPath = path.join(root, LIST_REL);
+  const conflicted = pathsWithConflictMarkers(root, [...rels, LIST_REL]);
+  if (conflicted.length > 0) {
+    stdout.write(
+      `pin-guard-bytes: nothing was pinned. These files carry merge conflict markers: ${conflicted.join(", ")}\n` +
+        "Resolve the merge first. A digest is computed over whatever bytes are there, so sealing now would record the conflict block as the reviewed bytes — and this list is rewritten from the tree rather than edited, so a conflict inside it would be discarded with nothing left to report it.\n",
+    );
+    return 1;
+  }
+
+  const entries = rels.map((rel) => [digestOf(root, rel), rel]);
   const existing = readFileSync(listPath, "utf-8");
   const header = existing
     .split(/\r?\n/)

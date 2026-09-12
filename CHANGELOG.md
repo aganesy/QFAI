@@ -1985,6 +1985,23 @@ unadjudicated`, read off a Work Orders Summary row the session writes rather
   closes it, because the revision has not moved — and it is not a rubber stamp,
   since what it re-signs is a judgement over a subject that has grown.
 
+- **An unresolved merge in a pinned file is named as one** (#1722). A conflict
+  block changes a pinned file's bytes like any other edit, so the byte guard
+  that opens the lint job failed it as a digest mismatch and named resealing as
+  the repair. The scan that would have named the real cause runs later in the
+  same job, and a job stops at its first failure, so the cause arrived a CI
+  round late, after the operator had followed the wrong advice once.
+
+  The guard now scans the pinned paths for marker lines before comparing
+  digests, and says that resealing is not the repair. The re-pin program
+  refuses the same tree rather than sealing a conflict block as the reviewed
+  bytes.
+
+  One path had no later reader at all: the pinned-bytes list is rewritten from
+  the tree rather than edited, so a conflict inside it was discarded by the
+  reseal and the only trace was a routine-looking re-pin commit. Both checks
+  read that file too, although the list does not name itself.
+
 ## [1.11.1] - 2026-09-10
 
 ### Removed
