@@ -12,6 +12,11 @@
  * indentation change, and indentation carries meaning in the Markdown half of
  * this pair.
  *
+ * The prompt half is scoped smaller still: one of its sections states the
+ * compliance contract and the rest of the file does not, so an edit elsewhere
+ * in it owes the scanner nothing. The last group holds that boundary from both
+ * sides.
+ *
  * The lane's other tests hand it a path list through `--changed`, which is the
  * shape a fixture can build without a repository. That leaves the git half —
  * the half CI actually runs — with nothing holding it, so these cases go
@@ -123,6 +128,169 @@ describe("a rewrite that moves text", () => {
 describe("a change that carries both halves", () => {
   it("passes, because the pair moved together", async () => {
     await seed(PROMPT_REL, `${PROMPT_SEED}- No font family outside the design document.\n`);
+
+    expect(
+      await commitAndRun(SCANNER_REL, `${SCANNER_SEED}export const THIRD = "radius";\n`),
+    ).not.toMatch(/R-PROMPT-SCANNER-DRIFT/);
+  });
+});
+
+/** The shape the real prompt has: one section states the contract, others do not. */
+const SCOPE_HEADING = "## Hard constraints (enforced by the compliance gate)";
+const PROMPT_WITH_SECTIONS = [
+  "# Generator prompt",
+  "",
+  "## Read order",
+  "",
+  "1. The frozen design document.",
+  "",
+  SCOPE_HEADING,
+  "",
+  "- No color literal outside the design document.",
+  "",
+  "## Output layout",
+  "",
+  "- One file per screen.",
+  "",
+].join("\n");
+
+describe("the prompt half is scoped to the section that states the contract", () => {
+  beforeEach(async () => {
+    await seed(PROMPT_REL, PROMPT_WITH_SECTIONS);
+    await git("add", "-A");
+    await git("commit", "-qm", "give the prompt its real section structure");
+  });
+
+  it("passes on an edit outside that section", async () => {
+    // The case the whole-path pairing got wrong: an edit to the read order
+    // demanded a scanner edit, and the only way to supply one is to touch the
+    // scanner without a reason to.
+    const edited = PROMPT_WITH_SECTIONS.replace(
+      "1. The frozen design document.",
+      "1. The frozen design document.\n2. The session record.",
+    );
+
+    expect(await commitAndRun(PROMPT_REL, edited)).not.toMatch(/R-PROMPT-SCANNER-DRIFT/);
+  });
+
+  it("fires on an edit inside that section", async () => {
+    const edited = PROMPT_WITH_SECTIONS.replace(
+      "- No color literal outside the design document.",
+      "- No color literal outside the design document.\n- No font family either.",
+    );
+
+    expect(await commitAndRun(PROMPT_REL, edited)).toMatch(/R-PROMPT-SCANNER-DRIFT/);
+  });
+
+  it("passes when the section only moved down the file", async () => {
+    // Compared as text rather than by line number, so content inserted above
+    // the section does not read as a change to it.
+    const edited = PROMPT_WITH_SECTIONS.replace(
+      "## Read order",
+      "## Preface\n\nSomething new.\n\n## Read order",
+    );
+
+    expect(await commitAndRun(PROMPT_REL, edited)).not.toMatch(/R-PROMPT-SCANNER-DRIFT/);
+  });
+
+  it("fires when the heading is gone, since the contract is then out of sight", async () => {
+    const edited = PROMPT_WITH_SECTIONS.replace(SCOPE_HEADING, "## Constraints");
+
+    expect(await commitAndRun(PROMPT_REL, edited)).toMatch(/R-PROMPT-SCANNER-DRIFT/);
+  });
+
+  it("fires on a second section appended under the same heading", async () => {
+    // Valid Markdown, and a reader takes both as the contract. Read from the
+    // first heading alone, appending one is the way to put a contradictory rule
+    // beside the original and report no change at all.
+    const edited = `${PROMPT_WITH_SECTIONS}\n${SCOPE_HEADING}\n\n- Color literals are fine here.\n`;
+
+    expect(await commitAndRun(PROMPT_REL, edited)).toMatch(/R-PROMPT-SCANNER-DRIFT/);
+  });
+
+  it("reads a quoted heading as an example, not as where the section ends", async () => {
+    // A prompt is a document about writing, so it quotes what it forbids. Taken
+    // as live, the quoted heading opens a section of its own that swallows
+    // everything to the next real heading — so an edit under `## Example`, which
+    // owes the scanner nothing, is read as an edit to the contract.
+    const fence = "```";
+    const quoting = [
+      "# Generator prompt",
+      "",
+      SCOPE_HEADING,
+      "",
+      "- No color literal outside the design document.",
+      "",
+      "## Example",
+      "",
+      `${fence}markdown`,
+      SCOPE_HEADING,
+      "",
+      "- No color literal outside the design document.",
+      fence,
+      "",
+      "- One file per screen.",
+      "",
+    ].join("\n");
+    await seed(PROMPT_REL, quoting);
+    await git("add", "-A");
+    await git("commit", "-qm", "quote the heading in an example");
+
+    const edited = quoting.replace("- One file per screen.", "- One file per screen or view.");
+
+    expect(await commitAndRun(PROMPT_REL, edited)).not.toMatch(/R-PROMPT-SCANNER-DRIFT/);
+  });
+
+  it("fires on every edit to a prompt whose only such heading is quoted", async () => {
+    // The reproduction from the other side: with no live section the contract
+    // is somewhere this guard cannot see, which is the case to be loudest
+    // about. Read as live, the example stands in for the section that is gone
+    // and an unpaired edit passes with nothing to flag it.
+    const fence = "```";
+    const exampleOnly = [
+      "# Generator prompt",
+      "",
+      "## Constraints",
+      "",
+      "- Color literals are fine.",
+      "",
+      "## The wording this replaced",
+      "",
+      `${fence}markdown`,
+      SCOPE_HEADING,
+      "",
+      "- No color literal outside the design document.",
+      fence,
+      "",
+    ].join("\n");
+    await seed(PROMPT_REL, exampleOnly);
+    await git("add", "-A");
+    await git("commit", "-qm", "leave the heading only inside an example");
+
+    const edited = exampleOnly.replace("- Color literals are fine.", "- Anything goes.");
+
+    expect(await commitAndRun(PROMPT_REL, edited)).toMatch(/R-PROMPT-SCANNER-DRIFT/);
+  });
+
+  it("fires on an edit inside a later section when an earlier one is untouched", async () => {
+    const twoSections = `${PROMPT_WITH_SECTIONS}\n${SCOPE_HEADING}\n\n- No shadow literal.\n`;
+    await seed(PROMPT_REL, twoSections);
+    await git("add", "-A");
+    await git("commit", "-qm", "give the prompt a second compliance section");
+
+    const edited = twoSections.replace("- No shadow literal.", "- Shadow literals are fine.");
+
+    expect(await commitAndRun(PROMPT_REL, edited)).toMatch(/R-PROMPT-SCANNER-DRIFT/);
+  });
+
+  it("still pairs an edit inside the section with a scanner edit", async () => {
+    await seed(
+      PROMPT_REL,
+      PROMPT_WITH_SECTIONS.replace(
+        "- No color literal outside the design document.",
+        "- No color literal outside the design document.\n- No font family either.",
+      ),
+    );
 
     expect(
       await commitAndRun(SCANNER_REL, `${SCANNER_SEED}export const THIRD = "radius";\n`),

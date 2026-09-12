@@ -5,6 +5,7 @@ import type { Dirent, Stats } from "node:fs";
 import {
   access,
   chmod,
+  chown,
   copyFile,
   lstat,
   mkdir,
@@ -66,8 +67,15 @@ import {
 import { CANONICAL_TIMESTAMP_GLOB } from "../../core/packLocator.js";
 import {
   AGENT_ENTRY_POINT_FILES,
+  QFAI_AGENT_RULES_END,
+  addRuleCitations,
+  addRuleCitationsToList,
+  citedRuleMasters,
+  citedRuleMastersOutsideCode,
+  hasUnclosedRulesSection,
   extractManagedRulesSection,
   needsManagedRulesSection,
+  newlyWrittenRuleMasters,
 } from "../../core/agentEntryPoints.js";
 import {
   CLAUDE_SETTINGS_RELATIVE_PATH,
@@ -382,6 +390,23 @@ export async function runInit(options: InitOptions): Promise<void> {
   if (!options.dryRun && rootResult.copied.includes(configPath)) {
     await aimTestFileGlobsAtRepository(destRoot, configPath);
   }
+  // Runs immediately AFTER the create-only root copy, and before anything else
+  // that can throw. The files it repairs are exactly the ones that copy skipped
+  // because the project already had them, and the signal it reads — which
+  // masters this run wrote — is available only in the run that wrote them. A
+  // step between the two that failed would leave the master on disk and its
+  // citation unwritten, with the next run seeing a master it did not write.
+  //
+  // SIMPLIFIED: the window is one operation wide rather than closed.
+  // Lift when: init records per-master provenance, which the rule-master upgrade
+  // path needs for its own reasons.
+  const entryPointRulesResult = await ensureAgentEntryPointRules(
+    rootAssets,
+    destRoot,
+    options.dryRun,
+    options.force,
+    newlyWrittenRuleMasters(rootResult.copied, destRoot),
+  );
   const qfaiResult = await copyTemplateTree(qfaiAssets, destQfai, {
     force: false,
     dryRun: options.dryRun,
@@ -426,13 +451,6 @@ export async function runInit(options: InitOptions): Promise<void> {
   });
   const gitignoreResult = await ensureRootGitignoreEntries(destRoot, options.dryRun);
   const legacyEvidenceIgnoreResult = await ensureLegacyEvidenceIgnoreNegations(
-    destRoot,
-    options.dryRun,
-  );
-  // Runs AFTER the create-only root copy: the files it repairs are exactly the
-  // ones that copy skipped because the project already had them.
-  const entryPointRulesResult = await ensureAgentEntryPointRules(
-    rootAssets,
     destRoot,
     options.dryRun,
   );
@@ -2663,6 +2681,45 @@ function demotedProjectNegations(before: string, after: string): string[] {
  * negations it is missing (appended last, because git applies the last matching
  * pattern). A project with no managed block still gets the full canonical one.
  */
+/**
+ * The ignores that already hide the prototyping directory, any one of which
+ * makes the re-inclusion below a widening rather than a fix.
+ *
+ * The evidence tree is the usual shape. A block naming the prototyping
+ * directory itself is the narrower one a project writes when it tracks the rest
+ * of its audit trail and not the captures, and reading only the tree line
+ * treated that project as having no ignore to preserve — so the re-inclusion
+ * cancelled its rule and `git add .` picked up the mutation log, `progress.md`
+ * and every `iter-NN` capture.
+ */
+const PROTOTYPING_COVERING_IGNORES: readonly string[] = [
+  ".qfai/evidence/*",
+  ".qfai/evidence/",
+  ".qfai/evidence/prototyping/",
+];
+
+/**
+ * An ignore line as the list above spells it.
+ *
+ * A leading slash anchors a pattern to the directory its `.gitignore` sits in,
+ * which for the managed block is the project root — the same set the unanchored
+ * spelling matches, written the way a contributor who knows the syntax writes
+ * it. Compared literally, that spelling reads as a project with no rule to
+ * preserve, and the re-inclusion below then cancels the rule it has.
+ *
+ * SIMPLIFIED: equality against a list, after dropping the anchor.
+ * Lift when: a project is found whose ignore covers that directory by some
+ * other pattern, at which point the answer is gitignore matching rather than a
+ * longer list. A wrong answer here adds an ignore line a later run can remove,
+ * so the cost of the narrow read is bounded.
+ */
+function asIgnoreLine(line: string): string {
+  return line.startsWith("/") ? line.slice(1) : line;
+}
+
+/** The line that keeps the re-included prototyping directory's contents ignored. */
+const PROTOTYPING_CONTENTS_IGNORE = ".qfai/evidence/prototyping/*";
+
 function rebuildManagedBlock(existingBlock: string): string {
   if (existingBlock.length === 0) {
     return QFAI_GITIGNORE_BLOCK;
@@ -2699,7 +2756,31 @@ function rebuildManagedBlock(existingBlock: string): string {
     .filter(([retired, successor]) => present.has(retired) && !present.has(successor))
     .map(([, successor]) => successor);
 
-  return [QFAI_GITIGNORE_MARKER, ...kept, ...renamed, ...QFAI_GITIGNORE_GOVERNANCE_NEGATIONS]
+  // One ignore is migrated, against the rule above, and only where the block
+  // already hides that directory. The negations below re-include
+  // `.qfai/evidence/prototyping/`, and re-including a directory exposes every
+  // descendant with no later rule of its own — the mutation log, the `iter-NN`
+  // captures, `progress.md`. So a block that ignored them must also carry the
+  // line that re-ignores that directory's contents, or the upgrade tracks files
+  // the project never chose to track.
+  //
+  // Conditional on an existing ignore, because a project that deleted every one
+  // of them to keep its audit trail tracked would otherwise have it re-hidden —
+  // the regression the rule above exists to stop.
+  const ignores = lines.map((line) => asIgnoreLine(line));
+  const reIgnore =
+    ignores.some((line) => PROTOTYPING_COVERING_IGNORES.includes(line)) &&
+    !ignores.includes(PROTOTYPING_CONTENTS_IGNORE)
+      ? [PROTOTYPING_CONTENTS_IGNORE]
+      : [];
+
+  return [
+    QFAI_GITIGNORE_MARKER,
+    ...kept,
+    ...renamed,
+    ...reIgnore,
+    ...QFAI_GITIGNORE_GOVERNANCE_NEGATIONS,
+  ]
     .filter((line, index, all) => line.length > 0 || all[index - 1]?.length !== 0)
     .join("\n");
 }
@@ -2734,6 +2815,11 @@ const LEGACY_EVIDENCE_IGNORE_NEGATIONS: readonly string[] = [
   // fresh clone and CI that the root negation was added for saw neither file.
   "!implement-*.md",
   "!atdd-*.md",
+  // A spec's own evidence, which carries the grilling trace a validator rule
+  // reads. That makes it an input to a check rather than a log of one, and a
+  // rule whose input is hidden reports the same clean result for a run that
+  // skipped every session as for one that grilled every phase.
+  "!sdd-*.md",
   // The import-lite record, for the same reason: on a spec set that arrived
   // without a discussion pack it is the only input source in the repository,
   // and the nested `*` hides it from the fresh clone that CI validates. Both
@@ -2741,6 +2827,14 @@ const LEGACY_EVIDENCE_IGNORE_NEGATIONS: readonly string[] = [
   // out to its full width, which is the only width the check accepts: any
   // other suffix is rejected there rather than demoted, so a wider negation
   // would commit a file nothing reads.
+  // The prototyping session record, for the same reason again. It is a user
+  // decision rather than regenerable stage evidence, so the root block tracks
+  // it — and the nested `*` overrides that root negation on any project
+  // carrying the legacy file, which is every project initialized before the
+  // root block grew its own evidence negations. The directory needs its own
+  // line: git never descends into an ignored one, so the leaf alone is inert.
+  "!prototyping/",
+  "!prototyping/grilling.md",
   "!import-lite.md",
   `!import-lite-${CANONICAL_TIMESTAMP_GLOB}.md`,
 ];
@@ -2817,9 +2911,23 @@ async function ensureAgentEntryPointRules(
   rootAssets: string,
   destRoot: string,
   dryRun: boolean,
+  force: boolean,
+  newlyWritten: readonly string[],
 ): Promise<{ copied: string[]; skipped: string[] }> {
   const copied: string[] = [];
   const skipped: string[] = [];
+
+  if (!dryRun) await reclaimEntryPointStaging(destRoot);
+
+  // Under `--force` the wrapper sync writes the Copilot file whole, from the
+  // same source, later in this run. Adding a line here first is work thrown
+  // away, and its refusals would name a file this run goes on to replace.
+  if (!force) {
+    await citeNewMastersInCopilotInstructions(rootAssets, destRoot, dryRun, newlyWritten, {
+      copied,
+      skipped,
+    });
+  }
 
   for (const name of AGENT_ENTRY_POINT_FILES) {
     const target = path.join(destRoot, name);
@@ -2838,7 +2946,7 @@ async function ensureAgentEntryPointRules(
       // would be worse than saying so: the project keeps a file that cites no
       // rule, and now knows it.
       error(
-        `  WARNING: ${name} already exists and was left unchanged. The shipped template has no ` +
+        `  WARNING: ${formatReportPath(name)} already exists and was left unchanged. The shipped template has no ` +
           `managed section, so add a reference to \`.agents/rules/\` by hand (while it is unreferenced, ` +
           `the shared rules never reach the AI's context).`,
       );
@@ -2846,13 +2954,116 @@ async function ensureAgentEntryPointRules(
       continue;
     }
 
+    if (hasUnclosedRulesSection(existing)) {
+      // Begin marker, no end marker. The file reads as connected, so nothing
+      // appends the section, and there is no region to insert a citation into
+      // either. Saying so is what lets the project restore the marker; skipping
+      // in silence leaves the rule uncited and gives the next run no reason to
+      // look at the file again.
+      error(
+        `  WARNING: ${formatReportPath(target)} was left unchanged. It opens the managed rules section ` +
+          `and never closes it, so there is no region to add a citation to. Restore the closing marker ` +
+          `${QFAI_AGENT_RULES_END} at the end of that section.`,
+      );
+      skipped.push(target);
+      continue;
+    }
+
     if (!needsManagedRulesSection(existing, section)) {
+      // The section is already there. A master this run wrote is one the file
+      // cannot have cited, so its bullet is added; everything else is left as
+      // the project has it, including a bullet the project deleted.
+      const merged = addRuleCitations(existing, section, newlyWritten);
+      if (merged === existing) {
+        skipped.push(target);
+        continue;
+      }
+      const refusal = await refuseUnsafeEntryPointRewrite(target, existing, destRoot);
+      if (refusal !== null) {
+        const shown = new Set(citedRuleMastersOutsideCode(existing));
+        const pending = newlyWritten.filter((master) => !shown.has(master));
+        error(
+          `  WARNING: ${formatReportPath(target)} was left unchanged. ${refusal}${pendingNote(pending)}`,
+        );
+        skipped.push(target);
+        continue;
+      }
+      if (dryRun) {
+        info(`  would update: ${formatReportPath(target)} (cite the newly shipped rule masters)`);
+        copied.push(target);
+        continue;
+      }
+      const wrote = await replaceEntryPointFile(target, merged, destRoot, existing);
+      if (wrote !== null) {
+        error(`  WARNING: ${formatReportPath(target)} was left unchanged. ${wrote}`);
+        skipped.push(target);
+        continue;
+      }
+      info(
+        `  updated: ${formatReportPath(target)} (cited the newly shipped rule masters; nothing else changed)`,
+      );
+      copied.push(target);
+      continue;
+    }
+
+    // No markers, and rule masters cited anyway: the project wired them in by
+    // hand. Appending the section there would restate every citation the file
+    // already has, so the masters it does not name go into the list it keeps
+    // instead. With no markers nothing records a bullet as removed, so every
+    // uncited master is one the file never named.
+    if (citedRuleMastersOutsideCode(existing).length > 0) {
+      const cited = new Set(citedRuleMastersOutsideCode(existing));
+      const uncited = citedRuleMasters(section).filter((master) => !cited.has(master));
+      const merged = addRuleCitationsToList(existing, section, uncited);
+      if (merged === existing) {
+        // The file cites rules somewhere this run cannot extend — in prose, a
+        // numbered list, an indented bullet. Appending the whole section would
+        // restate what it already says, which is what this branch exists to
+        // avoid, so the run names the lines instead of writing them.
+        error(
+          `  WARNING: ${formatReportPath(target)} was left unchanged. It cites rule masters, but not as a ` +
+            `bullet list this run can add a line to, so add ${quoteList(uncited)} to it by hand.`,
+        );
+        skipped.push(target);
+        continue;
+      }
+      const refusal = await refuseUnsafeEntryPointRewrite(target, existing, destRoot);
+      if (refusal !== null) {
+        // No pending note here: this branch reads the uncited masters off the
+        // shipped template rather than off the copy report, so the next run
+        // finds them again and tries once more.
+        error(`  WARNING: ${formatReportPath(target)} was left unchanged. ${refusal}`);
+        skipped.push(target);
+        continue;
+      }
+      if (dryRun) {
+        info(`  would update: ${formatReportPath(target)} (cite the uncited rule masters)`);
+      } else {
+        const wrote = await replaceEntryPointFile(target, merged, destRoot, existing);
+        if (wrote !== null) {
+          error(`  WARNING: ${formatReportPath(target)} was left unchanged. ${wrote}`);
+          skipped.push(target);
+          continue;
+        }
+        info(
+          `  updated: ${formatReportPath(target)} (cited the uncited rule masters; nothing else changed)`,
+        );
+      }
+      copied.push(target);
+      continue;
+    }
+
+    // The append lands on the same file the edit above would have, so it takes
+    // the same refusals: a link here writes through to whatever it points at.
+    const appendRefusal = await refuseUnsafeEntryPointRewrite(target, existing, destRoot);
+    if (appendRefusal !== null) {
+      error(`  WARNING: ${formatReportPath(target)} was left unchanged. ${appendRefusal}`);
       skipped.push(target);
       continue;
     }
 
     if (dryRun) {
-      info(`  would update: ${target} (append .agents/rules section)`);
+      info(`  would update: ${formatReportPath(target)} (append .agents/rules section)`);
       copied.push(target);
       continue;
     }
@@ -2861,12 +3072,360 @@ async function ensureAgentEntryPointRules(
     // whatever the file happened to end with.
     const body = existing.replace(/\s*$/, "");
     const separator = body.length === 0 ? "" : "\n\n";
-    await writeFile(target, `${body}${separator}${section}\n`, "utf-8");
-    info(`  updated: ${target} (appended .agents/rules section; existing content kept)`);
+    const wrote = await replaceEntryPointFile(
+      target,
+      `${body}${separator}${section}\n`,
+      destRoot,
+      existing,
+    );
+    if (wrote !== null) {
+      error(`  WARNING: ${formatReportPath(target)} was left unchanged. ${wrote}`);
+      skipped.push(target);
+      continue;
+    }
+    info(
+      `  updated: ${formatReportPath(target)} (appended .agents/rules section; existing content kept)`,
+    );
     copied.push(target);
   }
 
   return { copied, skipped };
+}
+
+/**
+ * The ceiling on the Copilot instruction file this run reads.
+ *
+ * Generated whole by this CLI, the file is a few kilobytes; a project that has
+ * grown it past this is one whose bullet is better added by hand than buffered
+ * and decoded in full for one line.
+ */
+const COPILOT_INSTRUCTIONS_MAX_BYTES = 512 * 1024;
+
+/**
+ * Cites a newly shipped master in an existing `.github/copilot-instructions.md`.
+ *
+ * That file is generated whole and then skipped, so without this a rule the run
+ * shipped reached Codex and Claude Code and not the third agent this repository
+ * says loads it. It carries no managed markers — the whole file is qfai's — so
+ * the bullet goes after the last rule bullet in it, and the same refusals apply
+ * as to the two entry points.
+ */
+async function citeNewMastersInCopilotInstructions(
+  rootAssets: string,
+  destRoot: string,
+  dryRun: boolean,
+  newlyWritten: readonly string[],
+  report: { copied: string[]; skipped: string[] },
+): Promise<void> {
+  // Nothing to cite: no read, no stat, no risk of blocking on a path that is
+  // not an ordinary file.
+  if (newlyWritten.length === 0) return;
+
+  const target = path.join(destRoot, ".github", "copilot-instructions.md");
+  // Absent — and only absent. `syncIntegrationWrappers` writes the file whole
+  // later in this run, from the same source, so it will carry every master
+  // already. Any other failure means a file is there and something is wrong
+  // with reaching it, which the bounded read below reports rather than passing
+  // over in silence.
+  const present = await lstat(target).then(
+    () => true,
+    (cause: unknown) => !isEnoent(cause),
+  );
+  if (!present) return;
+
+  // One open, one descriptor, a ceiling on the read. The file belongs to the
+  // adopter: a FIFO blocks until a writer closes it, a device never ends, and an
+  // ordinary file of any size would be buffered and decoded whole for the sake
+  // of adding one line. The wrapper sync this path took over from only asked
+  // whether the entry was occupied.
+  const bytes = await readBoundedRegularFile(target, COPILOT_INSTRUCTIONS_MAX_BYTES);
+  if (bytes === undefined) {
+    error(
+      `  WARNING: ${formatReportPath(target)} was left unchanged. It is not an ordinary file this run can ` +
+        `read, or it is larger than ${String(COPILOT_INSTRUCTIONS_MAX_BYTES)} bytes. Add the rule citations by hand.`,
+    );
+    report.skipped.push(target);
+    return;
+  }
+  const existing = bytes.toString("utf-8");
+
+  const template = await readTextFileIfPresent(path.join(rootAssets, "AGENTS.md"));
+  const section = template === null ? null : extractManagedRulesSection(template);
+  if (section === null) return;
+
+  const shown = new Set(citedRuleMastersOutsideCode(existing));
+  const uncited = newlyWritten.filter((master) => !shown.has(master));
+  const merged = addRuleCitationsToList(existing, section, uncited);
+  if (merged === existing) {
+    if (uncited.length > 0) {
+      // A project that wrote its own Copilot instructions: no generated heading
+      // and no rule bullet, so there is no list to add a line to. The wrapper
+      // sync skips an existing file, so nothing else will carry these — saying
+      // so is the difference between a rule the project can connect and one it
+      // never hears about.
+      error(
+        `  WARNING: ${formatReportPath(target)} was left unchanged. It carries no rule list this run can ` +
+          `add a line to, so add ${quoteList(uncited)} to it by hand.`,
+      );
+    }
+    report.skipped.push(target);
+    return;
+  }
+  const refusal = await refuseUnsafeEntryPointRewrite(target, existing, destRoot);
+  if (refusal !== null) {
+    const pending = uncited;
+    error(
+      `  WARNING: ${formatReportPath(target)} was left unchanged. ${refusal}${pendingNote(pending)}`,
+    );
+    report.skipped.push(target);
+    return;
+  }
+  if (dryRun) {
+    info(`  would update: ${formatReportPath(target)} (cite the newly shipped rule masters)`);
+    report.copied.push(target);
+    return;
+  }
+  const wrote = await replaceEntryPointFile(target, merged, destRoot, existing);
+  if (wrote !== null) {
+    error(`  WARNING: ${formatReportPath(target)} was left unchanged. ${wrote}`);
+    report.skipped.push(target);
+    return;
+  }
+  info(
+    `  updated: ${formatReportPath(target)} (cited the newly shipped rule masters; nothing else changed)`,
+  );
+  report.copied.push(target);
+}
+
+/**
+ * The first component of `target` at or below `destRoot` that is a symbolic
+ * link, or `null` when every one of them is an ordinary directory or file.
+ */
+async function firstLinkedComponent(target: string, destRoot: string): Promise<string | null> {
+  const relative = path.relative(destRoot, target);
+  let walked = destRoot;
+  for (const segment of relative.split(path.sep)) {
+    walked = path.join(walked, segment);
+    const entry = await lstat(walked).catch(() => null);
+    if (entry?.isSymbolicLink() === true) return walked;
+  }
+  return null;
+}
+
+/** A list of paths as the messages write them. */
+function quoteList(paths: readonly string[]): string {
+  return paths.map((entry) => "`" + entry + "`").join(", ");
+}
+
+/**
+ * What a refused rewrite leaves undone, appended to the refusal.
+ *
+ * A master this run copied is one no later run will offer again: the file is on
+ * disk, so the next copy skips it and the list of newly written masters comes
+ * back empty. Repairing the file therefore does not bring the citation with it,
+ * and a refusal that does not say so reads as one.
+ */
+function pendingNote(masters: readonly string[]): string {
+  if (masters.length === 0) return "";
+  return ` A later run does not retry this: add ${quoteList(masters)} to the file yourself.`;
+}
+/**
+ * The name shape `replaceEntryPointFile` stages under.
+ *
+ * The prefix, the identifiers `randomUUID` writes — version 4, variant `8` to
+ * `b` — and the suffix. A looser pattern matches names the writer could never
+ * have produced, and this loop deletes what it matches.
+ */
+const ENTRY_POINT_STAGING =
+  /^\.qfai-entry-[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\.tmp$/;
+
+/** How long a staging file must have sat still before a run reclaims it. */
+const ENTRY_POINT_STAGING_STALE_MS = 60 * 60 * 1000;
+
+/**
+ * Removes staging files an interrupted run left beside an entry point.
+ *
+ * The writer below stages next to its target so the rename is atomic, and
+ * clears the staging file when the write itself fails. A process killed between
+ * the write and the rename never reaches that, and what it leaves behind is a
+ * full copy of the project's instructions sitting untracked in the repository
+ * root.
+ *
+ * Two things bound what it removes. The name has to be one the writer could
+ * have produced, and the file has to have sat still long enough that no run is
+ * using it: a second init started a moment ago stages under the same shape, and
+ * deleting its file makes its rename fail and loses the citation it was
+ * writing. A file that will not delete is not worth stopping an init over.
+ */
+async function reclaimEntryPointStaging(destRoot: string): Promise<void> {
+  for (const dir of [destRoot, path.join(destRoot, ".github")]) {
+    // The rewrite refuses a linked path component and so does this. A linked
+    // `.github` would have the loop reading and deleting inside whatever it
+    // points at, which is a directory this project does not own.
+    if ((await firstLinkedComponent(dir, destRoot)) !== null) continue;
+    const entries = await readdir(dir).catch(() => []);
+    for (const entry of entries) {
+      if (!ENTRY_POINT_STAGING.test(entry)) continue;
+      const staging = path.join(dir, entry);
+      const written = await lstat(staging).catch(() => null);
+      if (written === null || !written.isFile()) continue;
+      if (Date.now() - written.mtimeMs < ENTRY_POINT_STAGING_STALE_MS) continue;
+      await rm(staging, { force: true }).catch(() => {
+        // Left for the next run to try again; it is not this run's to report.
+      });
+    }
+  }
+}
+
+/**
+ * Replaces an entry point's content without ever leaving it truncated.
+ *
+ * The merged text is staged beside the target and renamed over it, so an
+ * `ENOSPC`, an `EIO` or a kill mid-write leaves the adopter's file exactly as
+ * it was. Writing in place would truncate first, and what is lost is the
+ * project's own instructions outside the managed section.
+ *
+ * The staging file carries the whole of those instructions, so it is created
+ * owner-only rather than at whatever the process default is, and the target's
+ * own mode is restored before the rename — a file the project had kept to
+ * itself stays that way, and one the project had made group-writable does not
+ * come back read-only. Ownership goes with it where the platform has it: an
+ * init run under `sudo` would otherwise hand the adopter's file to root.
+ *
+ * SIMPLIFIED: mode and ownership only. A POSIX ACL, an extended attribute or a
+ * security label on the original is not carried to the staging inode, so a
+ * rename drops it — and Node exposes no portable way either to read one or to
+ * detect that a file has any.
+ * Lift when: a dependency this project already carries can read and apply them,
+ * or an adopter reports access lost through this path.
+ */
+async function replaceEntryPointFile(
+  target: string,
+  content: string,
+  destRoot: string,
+  previous: string,
+): Promise<string | null> {
+  const staging = path.join(path.dirname(target), `.qfai-entry-${randomUUID()}.tmp`);
+  const original = await stat(target).catch(() => null);
+  try {
+    await writeFile(staging, content, { encoding: "utf-8", mode: 0o600 });
+    if (original !== null) {
+      await chmod(staging, original.mode & 0o7777);
+      const refusal = await keepOwner(staging, original);
+      if (refusal !== null) {
+        await rm(staging, { force: true }).catch(() => {
+          // The refusal is the one worth reporting.
+        });
+        return refusal;
+      }
+    }
+    // The walk that cleared this path happened before the write. A parent
+    // replaced since then would have the rename land wherever it now points, so
+    // the walk is repeated here. It is a check, not a lock: what it buys is a
+    // window measured in the two lines between it and the rename, which is what
+    // a single-process CLI can honestly offer.
+    const linked = await firstLinkedComponent(target, destRoot);
+    if (linked !== null) {
+      await rm(staging, { force: true }).catch(() => {
+        // The refusal is the one worth reporting.
+      });
+      return `${formatReportPath(linked)} became a symbolic link while this run was working, so the write would have landed outside this project.`;
+    }
+    // The earlier read was before the staging write and the metadata calls. A
+    // save in that window would be replaced by a merge of the contents before
+    // it, so the file is compared again here — the last thing before the
+    // rename.
+    const current = await readFile(target, "utf-8").catch(() => null);
+    if (current !== previous) {
+      await rm(staging, { force: true }).catch(() => {
+        // The refusal is the one worth reporting.
+      });
+      return `It changed while this run was working. Run this again once the file has settled.`;
+    }
+    await rename(staging, target);
+    return null;
+  } catch (error: unknown) {
+    await rm(staging, { force: true }).catch(() => {
+      // Best effort: the write fault is the one worth reporting.
+    });
+    throw error;
+  }
+}
+
+/**
+ * Gives the staged file the original's owner, or says why it could not.
+ *
+ * A rename makes the staged inode the file, so where ownership is not restored
+ * the adopter's own file comes back owned by whoever ran init. At mode `0644`
+ * its former owner can then read it and not edit it — a worse outcome than the
+ * citation going unwritten, so this refuses rather than proceeding.
+ *
+ * Nothing is attempted where the process already owns the file, which is the
+ * ordinary case, or on a platform with no ownership to restore.
+ */
+async function keepOwner(staging: string, original: Stats): Promise<string | null> {
+  if (typeof process.getuid !== "function" || typeof process.getgid !== "function") return null;
+  if (original.uid === process.getuid() && original.gid === process.getgid()) return null;
+  try {
+    await chown(staging, original.uid, original.gid);
+    return null;
+  } catch (cause: unknown) {
+    // The code alone. Node puts the full path in the message, and a checkout
+    // whose path carries a newline or an escape sequence would then forge
+    // report lines through a warning — the separately printed target goes
+    // through `formatReportPath` for exactly that reason.
+    const code = hasErrnoCode(cause) ? cause.code : "unknown";
+    return `Its owner could not be kept (${code}). Renaming over it would leave the file owned by this run, and its owner unable to edit it.`;
+  }
+}
+
+/**
+ * Why this file must not be rewritten, or `null` when rewriting it is safe.
+ *
+ * The create-only copy treats a symlink as occupied and never follows it. This
+ * path revisits a file the project owns, so it needs the same protection and two
+ * more: a file whose bytes are not UTF-8 would be written back as its lossy
+ * decoding, and a file saved between the read and the write would lose that
+ * save.
+ *
+ * The last is a check, not a lock: an editor can still save in the window
+ * between this read and the write below. It narrows a silent overwrite to a race
+ * measured in milliseconds, which is what a single-process CLI can honestly
+ * offer.
+ */
+async function refuseUnsafeEntryPointRewrite(
+  target: string,
+  readEarlier: string,
+  destRoot: string,
+): Promise<string | null> {
+  // Every path component, not only the final entry: a linked `.github` with an
+  // ordinary file inside it reports that file as regular, and the write then
+  // lands in whatever the parent points at.
+  const linked = await firstLinkedComponent(target, destRoot);
+  if (linked !== null) {
+    return `${formatReportPath(linked)} is a symbolic link, so writing here would change a file outside this project — which may be shared with another repository. Add the rule citations to the link's target by hand.`;
+  }
+  const link = await lstat(target).catch(() => null);
+  // A hard link reports as an ordinary file, and a write truncates the inode
+  // every name shares — so a file linked into another repository changes there
+  // too, with nothing in this run naming it.
+  if (link !== null && link.nlink > 1) {
+    return `It is a hard link with ${String(link.nlink)} names, and writing to it would change every one of them. Add the rule citations by hand, or give this project its own copy.`;
+  }
+
+  const bytes = await readFile(target).catch(() => null);
+  if (bytes === null) {
+    return `It could not be read back.`;
+  }
+  // A lossy decode is not detectable from the string, so the bytes are compared
+  // with the re-encoded decoding: they differ exactly when a byte was replaced.
+  if (!bytes.equals(Buffer.from(bytes.toString("utf-8"), "utf-8"))) {
+    return `Its bytes are not valid UTF-8, and rewriting it would replace the invalid ones. Convert it to UTF-8 and run this again.`;
+  }
+  if (bytes.toString("utf-8") !== readEarlier) {
+    return `It changed while this run was working. Run this again once the file has settled.`;
+  }
+  return null;
 }
 
 /**
@@ -2907,7 +3466,7 @@ async function ensureClaudeCodeHooks(
         ? "the shipped hook template is missing from this install"
         : `the shipped hook template could not be read (${template.reason})`;
     error(
-      `  WARNING: ${shown} was left unchanged: ${why}, so the documentation-clarity reminder is ` +
+      `  WARNING: ${shown} was left unchanged: ${why}, so the reminder hooks are ` +
         `not wired up.`,
     );
     return { copied: [], skipped: [target] };
@@ -2917,7 +3476,7 @@ async function ensureClaudeCodeHooks(
   if (existing.kind === "unreadable") {
     error(
       `  WARNING: ${shown} was left unchanged (${existing.reason}). Copy the \`hooks\` entries from ` +
-        `the shipped template by hand to enable the documentation-clarity reminder.`,
+        `the shipped template by hand to enable the reminder hooks.`,
     );
     return { copied: [], skipped: [target] };
   }
@@ -2938,20 +3497,18 @@ async function ensureClaudeCodeHooks(
   if (merged.outcome === "unreadable") {
     error(
       `  WARNING: ${shown} was left unchanged (${merged.reason}). Copy the \`hooks\` entries from ` +
-        `the shipped template by hand to enable the documentation-clarity reminder.`,
+        `the shipped template by hand to enable the reminder hooks.`,
     );
     return { copied: [], skipped: [target] };
   }
 
   const events = merged.events.join(", ");
   if (dryRun) {
-    info(`  would update: ${shown} (add documentation-clarity hooks: ${events})`);
+    info(`  would update: ${shown} (add reminder hooks: ${events})`);
     return { copied: [target], skipped: [] };
   }
   await writeFile(target, serializeClaudeSettings(merged.settings), "utf-8");
-  info(
-    `  updated: ${shown} (added documentation-clarity hooks: ${events}; existing settings kept)`,
-  );
+  info(`  updated: ${shown} (added reminder hooks: ${events}; existing settings kept)`);
   return { copied: [target], skipped: [] };
 }
 
@@ -6890,7 +7447,7 @@ function buildCopilotInstructions(): string {
     "- `.agents/rules/minimal-implementation.md` — the order to try solutions in once a behaviour is agreed; mark a deliberate shortcut with its ceiling and the condition that lifts it.",
     "- `.agents/rules/interface-clarity.md` — what may appear on a screen or in terminal output; text explaining how to work a control is a defect report against that control.",
     "- `.agents/rules/grilling.md` — interview the decision tree in rounds before a design is fixed; a session ends on an empty frontier and the user's confirmation, never at a question count.",
-    "- `.agents/rules/user-questions.md` — every question to the user arrives as a structured choice; where the tool cannot carry one, numbered plain-text choices keep the same parts.",
+    "- `.agents/rules/user-questions.md` — every question arrives in the shape its answer has: a choice where the candidates can be listed, a plain request where they cannot; the fallback keeps the same parts.",
     "",
   ].join("\n");
 }

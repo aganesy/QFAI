@@ -15,10 +15,16 @@ worth asking. It decides only what a question looks like when it is put.
 | How many questions to ask                   | Outside this rule — see § 6                 |
 
 **Callable, not present.** A host may carry a structured-question capability
-that this invocation cannot use — a mode that withholds it, a permission that
-was not granted. That is the fallback's case, not a violation. Judge
-availability at the moment the question is asked, never from what the host
+that this invocation cannot use — a mode that offers no structured tool, a
+permission that was not granted. That is the fallback's case, not a violation.
+Judge availability at the moment the question is asked, never from what the host
 supports in general.
+
+**A mode that asks nothing is a different case.** Where the invocation is
+forbidden to ask at all — `--auto` is the one QFAI ships — there is no question
+whose availability this rule could judge. It is silenced, and the run proceeds
+on a recorded assumption or stops. Reading it as an unavailability would send it
+to the fallback and ask in plain text what the mode forbids asking.
 
 **Callable for this question, not in general.** A tool that cannot carry the
 answer's shape is not callable for that question either. The common case is a
@@ -34,7 +40,26 @@ stated constraint exists to avoid.
 
 Every question to the user goes through the host's structured question tool
 where it is callable, and through § 5's fallback where it is not. No question
-reaches the user as an unstructured ask.
+reaches the user as a bare paragraph: whichever path carries it, it arrives with
+its parts.
+
+| The question   | Its parts                                                               |
+| -------------- | ----------------------------------------------------------------------- |
+| Offers choices | What is being asked, what each choice means, and how many may be chosen |
+| Is open        | What is being asked, and what depends on the answer                     |
+
+That is not the same as "always a list of choices", and it is not the same as
+"a scalar answer is open" either. **What decides is whether a listable set of
+candidates exists**, not what type the value has: one deployment count out of
+the four the platform supports is a choice, and a release name nobody has picked
+is open. § 2 sends the open one down the tool's free-text path and § 5 carries
+the same distinction.
+
+**Finite is not the same as listable.** A port between 1 and 65535 has a bounded
+set of valid values and is still an open answer, because 65535 options is not a
+choice — it is the question made unreadable. The set has to be one the question
+can put in front of someone. Where it is not, ask for the value and say what
+makes one valid.
 
 There is no class of question light enough to skip it. A yes-or-no, a
 confirmation, a "just checking" — each is a question, and each goes through the
@@ -43,6 +68,20 @@ same path.
 The reason is what an exception is used for. An agent looking for one is an agent
 that would rather not ask, and the question it skips is the one it was least sure
 of. Exactly the question the user most needed to see.
+
+### A set presented as one
+
+Some questions are put as a unit — a grilling round is the case this repository
+has — and the unit is the point: the user sees what is being decided together,
+and answers it as one thing.
+
+**Availability is then judged for the unit.** A tool that cannot carry one
+member cannot carry the unit, so the whole of it takes § 5's fallback. Judged
+per member instead, the unit arrives split across two carriers, and what the
+unit was for is gone.
+
+Each question inside it still arrives in the shape its own answer has. The unit
+decides the carrier; it never flattens two shapes into one.
 
 ## 2. Choices, not free text
 
@@ -53,9 +92,11 @@ The description is the work. A label alone asks the user to infer the
 consequence, and inferring it is the reasoning the agent already did and did not
 write down.
 
-Where the answer is genuinely open — a name, a number, a sentence — the tool's
-own free-text path covers it. That is a different answer shape, not an exception
-to this rule.
+Where the answer is genuinely open — no listable set of candidates to choose from —
+the tool's own free-text path covers it. That is a different answer shape, not an
+exception to this rule. A name, a number or a sentence is usually of that kind and
+is not of that kind by type: where the value has to be one of a known few, the set
+is what the user needs to see, and free text loses it.
 
 ## 3. Recommend
 
@@ -75,6 +116,13 @@ the user is not told a preference the evidence does not support. Never resolve
 the conflict the other way: an invented recommendation is the failure this
 clause exists to prevent, and the host's formatting requirement does not
 outrank it.
+
+**That workaround is for decisions.** A question asking for a fact has no option
+that is cheaper to reverse, because nothing is being reversed: the value is
+whatever it is, and none of the candidates may be recommended. A host requiring
+a recommendation therefore cannot carry that question, in the sense the Scope
+section gives: not callable for this question. It takes § 5's fallback, with the
+candidates kept as numbered choices.
 
 ## 4. More questions than the host takes at once
 
@@ -109,9 +157,23 @@ respect.
 
 ## 5. When the tool is not callable
 
-Fall back to numbered plain-text choices, keeping every part the tool would have
-carried: the label, the description of what each choice means, the
-recommendation, and **how many options may be chosen**.
+Fall back to plain text **in the shape the answer has**.
+
+Where there are choices, that is a numbered list keeping every part the tool
+would have carried: the label, the description of what each choice means, the
+recommendation **where one is permitted**, and **how many options may be
+chosen**.
+
+The qualifier is not a loophole; it is the one case § 3 creates. A question
+asking for a fact carries no recommendation at all, and a fact with listable
+candidates arrives here precisely because the host demanded one. Carrying the
+list without a recommendation is the compliant answer; inventing one to fill the
+slot is the failure the whole clause exists to prevent.
+
+Where the answer is open — no listable set of candidates — it is a plain request
+for the value, naming what depends on it. Inventing two options so an open
+answer fits a numbered list is the guess § 3 refuses, wearing the fallback's
+shape.
 
 The selection constraint is the part most easily lost and the one that changes
 the answer. "Pick one" and "pick all that apply" are different questions, and a
@@ -130,6 +192,24 @@ preference.
   by being well shaped.
 - Not a licence to ask for what the environment can settle. A fact the agent can
   read is the agent's to read.
+
+## The reminder
+
+`.claude/settings.json` puts this rule in front of the agent on every turn,
+through a `UserPromptSubmit` hook.
+
+Every turn rather than once, because the moment a question forms is
+unpredictable and a session-start reminder is gone by the time the context is
+compacted — which is when a long session starts reaching for an exception.
+
+It reminds and never blocks. Deciding whether a question should have been asked
+as a structured choice needs intent, and a false positive on a hook that fires
+every turn stops the session outright. It runs `node` directly and prints fixed
+text, with no shell, no file reads and no network, so it cannot fail the session
+it is attached to.
+
+What it carries is where this rule lives and the line an agent reaches past when
+it would rather not ask. The rest is here.
 
 ## Related
 

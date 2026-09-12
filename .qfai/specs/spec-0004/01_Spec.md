@@ -34,6 +34,7 @@
   - `auditProfile.ts` `primary_tasks` shape acceptance (REQ-0164): string-only AND structured `{id,label,acceptance}` (DR-0268); `QFAI-AUD-020` warning names the `3..7` count band (DR-0267)
   - workflow-hygiene CI lane (CHG-007): a repository script wired into `pnpm ci:lint`, emitting `R-WORKFLOW-HYGIENE-DRIFT` / `R-SHIPPED-WORKFLOW-SHAPE-DRIFT`. Recorded here because this spec owns the `pnpm ci:lint` lane inventory; the lane's own rule set is owned by spec-0017 (`CAP-0017`) and its shipped-file targets by spec-0003. No validator and no finding code is added to `qfai validate` itself — same posture as the pack-location lane below.
   - pack-location CI lane (REQ-0167): `packages/qfai/scripts/check-pack-locations.mjs` wired into `pnpm ci:lint`, emits `R-PACK-LOCATION-DRIFT` (DR-0274 scope)
+  - tracked-scratch CI lane: `scripts/check-tracked-scratch.mjs` wired into `pnpm ci:lint`, failing when git tracks any path under the scratch directory. Recorded here because this spec owns the `pnpm ci:lint` lane inventory; the script is a root toolchain file and belongs to spec-0017. No validator and no finding code is added to `qfai validate` itself — same posture as the two lanes above
 - Out:
   - report rendering details
   - prototyping runtime execution

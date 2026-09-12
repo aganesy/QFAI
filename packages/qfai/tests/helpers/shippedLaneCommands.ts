@@ -1328,7 +1328,7 @@ export const ALLOWED_INIT_CONTENT: ReadonlyMap<string, string> = new Map([
     // byte. That check is what keeps a re-pin a review of one line rather than a re-blessing of
     // the whole file.
     ".github/copilot-instructions.md",
-    "bf048bd541b3218519f34f4b54b6e190daf541904598a98ae9a7f34cbc4b6476",
+    "a246e728b78099a29460764aaa7e09f3b11cdb420f0ffe061a1812e9fa8c38c2",
   ],
   // `qfai init` copies this file verbatim, so it is pinned like every other
   // adopter-facing file here — and for one reason none of the others has: it
@@ -1410,9 +1410,21 @@ export const ALLOWED_INIT_CONTENT: ReadonlyMap<string, string> = new Map([
   //
   //     .qfai/review_archive/*
   //
+  // Re-pinned again for the spec stage's evidence, which `QFAI-GRILL-001` reads:
+  //
+  //     !.qfai/evidence/sdd-*.md
+  //
+  // Re-pinned again for the prototyping session record, which is a user decision
+  // rather than regenerable stage evidence — three lines, in the order git reads
+  // them, because the last matching pattern is what decides:
+  //
+  //     .qfai/evidence/prototyping/*
+  //     !.qfai/evidence/prototyping/
+  //     !.qfai/evidence/prototyping/grilling.md
+  //
   // Derived the way its predecessors were — `qfai init` into a temp root, then
   // reading what it wrote.
-  [".gitignore", "bba1090962529e016912dc9a0a80a23e500805c384ea4d6328c6d4c91536a70e"],
+  [".gitignore", "cd2c521c777ae0cee4c0ff38f44d70d53d5ea82af5b9eccb60bd8ae54df5118e"],
   // One bullet each, inside the managed cross-AI rules block: the
   // `documentation-clarity.md` master that the same run seeds beside them.
   // Removing that line from both files reproduces the previous digests
@@ -1429,8 +1441,14 @@ export const ALLOWED_INIT_CONTENT: ReadonlyMap<string, string> = new Map([
   // `qfai init` into a temp root and hash what it wrote, then drop the added bullet and confirm
   // both previous digests come back byte for byte. That check is what keeps a re-pin a review of
   // one line per file.
-  ["AGENTS.md", "c197b064a585305094b6342abe34dddfd7e199a16961aeb29a80c0b89b589f66"],
-  ["CLAUDE.md", "399dfc78f737fd771579c475fc0d231dfe24f288817074752b19f39401231a1e"],
+  // Re-pinned for the sentence that describes what a later run does. It said the
+  // run leaves the section exactly as edited; it now adds a bullet for a rule
+  // being shipped into the project for the first time, and says that a bullet
+  // the project deleted stays deleted. Restoring the old sentence in both files
+  // reproduces `fff9e210…` and `7203ba75…` byte for byte, which is what makes
+  // this a review of one sentence per file.
+  ["AGENTS.md", "d3d39ba436dfbb657845fd0f339e18a174cba0ad38ca8137c116415ca8efa64a"],
+  ["CLAUDE.md", "5b6487bad9c1b9f46901650be64f04cb3aaf000d9d3c51327ec7c62653f64001"],
   // Inside `.claude/`, and pinned anyway — see the paragraph above the path set.
   // These are the hooks that restate a rule at the moment it applies: the writing
   // rule when a pull request, issue or review is posted through the GitHub tools
@@ -1440,10 +1458,15 @@ export const ALLOWED_INIT_CONTENT: ReadonlyMap<string, string> = new Map([
   // `tests/assets/documentationClarityHooks.test.ts` executes and parses. The
   // bytes are what an adopter's agent runs, so the bytes are the pin.
   //
-  // Re-pinned for the implementation-rule group. Derived by running `qfai init`
-  // into a temp root and hashing what it wrote; dropping that one group
-  // reproduces `b13d4081…` byte for byte.
-  [".claude/settings.json", "6be452d2cf1e63bb742d699e2e934531e770f87c98d2c79f23bf185b2cbc9786"],
+  // Re-pinned for the three grilling groups. Derived by running `qfai init` into
+  // a temp root and hashing what it wrote. Each group is one `node -e` entry
+  // naming `.agents/rules/grilling.md` and printing `additionalContext`, with no
+  // shell, no file read and no network — the shape every reminder here takes.
+  // None carries an `if`: a path scope naming the default artifact directories
+  // is silently absent in a project that moved them. The `UserPromptSubmit`
+  // group is one more entry of the same shape, on every turn rather than
+  // every write.
+  [".claude/settings.json", "a5f0f0e088022672b869c566a2a4d05cecc7aa7904b9fbde699140e88f5f4827"],
   // Re-derived for the MERGED file, which carries both sides' edits: the three
   // retired `validation.traceability` knobs are gone (`brMustHaveSc`,
   // `scNoTestSeverity`, `orphanContractsPolicy`), the `forbidTestTodoStubs`
