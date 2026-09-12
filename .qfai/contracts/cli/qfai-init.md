@@ -193,9 +193,19 @@ write when it cannot — a renamed file owned by whoever ran init is one its own
 may no longer edit.
 
 The walk that refuses a linked path component runs again immediately before the
-rename. A parent replaced in between would have the write land wherever it now
-points; this is a check rather than a lock, and what it buys is a window of two
-statements.
+rename, and so does the comparison with the bytes that were read: a parent
+replaced in between would have the write land wherever it now points, and a save
+in between would be replaced by a merge of the contents before it. Both are
+checks rather than locks, and what they buy is a window of one statement.
+
+**What a fenced block is.** An example, wherever it sits — a block quote's `>`
+prefix does not hide it. Neither a rule path nor a managed marker inside one is
+read as live: the file is not hand-wired by it, the example is not mistaken for
+the section, and nothing is written into it.
+
+**What a bullet is.** The whole list item, continuation lines included. A
+citation is added after the last of them, so the project's own explanation stays
+under the bullet it explains.
 
 A staging file an earlier run was killed before renaming is removed at the start
 of the next one. Two things bound that: the name has to be one the writer could
@@ -214,10 +224,6 @@ skips an existing file, so nothing else will carry them.
 whole from the same source later in the run. Nothing is added to it here, and no
 refusal is reported for it, because a refusal would name a file this run goes on
 to replace.
-
-**What a fenced block is.** An example. A rule path inside one is not a
-citation: the file is not hand-wired by it, no bullet is written into it, and the
-managed section still has to reach that file.
 
 **What a refusal does not do.** Queue the citation for later. A master this run
 copied is one no later run offers again, because the file is on disk and the

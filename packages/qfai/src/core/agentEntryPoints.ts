@@ -146,33 +146,34 @@ export function addRuleCitationsToList(
   section: string,
   masters: readonly string[],
 ): string {
-  const newline = existing.includes("\r\n") ? "\r\n" : "\n";
   const bullets = pendingBullets(existing, section, masters);
   if (bullets.length === 0) return existing;
 
-  const lines = existing.split(newline);
+  // Split on the separator alone, so a file whose endings are mixed keeps every
+  // one of them: a CR left on the line is part of that line, and joining on the
+  // same separator restores the document exactly.
+  const lines = existing.split("\n");
   const open = outsideFences(lines);
   let insertAfter = -1;
   for (let index = 0; index < lines.length; index += 1) {
-    const line = lines[index];
-    if (open[index] !== true) continue;
-    if (line !== undefined && line.startsWith("- ") && citedRuleMasters(line).length > 0) {
-      insertAfter = index;
-    }
+    if (isRuleBullet(lines, open, index)) insertAfter = index;
   }
   if (insertAfter === -1) {
     // Every bullet deleted. The heading is the one place left that a reader
     // reads as the rule list, so the bullets go under it as their own block.
     const heading = lines.findIndex(
-      (line, index) => open[index] === true && line.startsWith(CROSS_AI_RULES_HEADING),
+      (line, index) => open[index] === true && plainLine(line).startsWith(CROSS_AI_RULES_HEADING),
     );
     if (heading === -1) return existing;
-    lines.splice(heading + 1, 0, "", ...bullets);
-    return lines.join(newline);
+    const end = terminatorOf(lines[heading]);
+    lines.splice(heading + 1, 0, end, ...bullets.map((bullet) => `${bullet}${end}`));
+    return lines.join("\n");
   }
 
-  lines.splice(insertAfter + 1, 0, ...bullets);
-  return lines.join(newline);
+  const at = endOfListItem(lines, open, insertAfter);
+  const end = terminatorOf(lines[insertAfter]);
+  lines.splice(at, 0, ...bullets.map((bullet) => `${bullet}${end}`));
+  return lines.join("\n");
 }
 
 /**
@@ -197,6 +198,23 @@ export function citedRuleMastersOutsideCode(text: string): readonly string[] {
 }
 
 /**
+ * A line with its Markdown container prefix and line terminator removed.
+ *
+ * A fence inside a block quote opens with `> ~~~`, and a scan anchored at the
+ * start of the line never sees it — so an example inside one reads as live
+ * content. A trailing CR is stripped for the same reason: what follows is a
+ * test of the line's own text, not of how it happened to end.
+ */
+function plainLine(line: string | undefined): string {
+  return (line ?? "").replace(/\r$/, "").replace(/^[ \t]{0,3}(?:> ?)+/, "");
+}
+
+/** The terminator `line` carried, so an inserted line keeps its neighbour's. */
+function terminatorOf(line: string | undefined): string {
+  return (line ?? "").endsWith("\r") ? "\r" : "";
+}
+
+/**
  * Which lines of a document are outside every fenced block.
  *
  * A rule path inside a fence is an example of a citation, not one. Spliced into
@@ -206,7 +224,8 @@ export function citedRuleMastersOutsideCode(text: string): readonly string[] {
  */
 function outsideFences(lines: readonly string[]): boolean[] {
   let open: { character: string; length: number } | null = null;
-  return lines.map((line) => {
+  return lines.map((raw) => {
+    const line = plainLine(raw);
     const fence = /^ {0,3}(`{3,}|~{3,})(.*)$/.exec(line);
     if (fence === null) return open === null;
     const run = fence[1] ?? "";
@@ -230,6 +249,34 @@ function outsideFences(lines: readonly string[]): boolean[] {
 }
 
 /**
+ * One past the last line of the list item that starts at `index`.
+ *
+ * A bullet is not one line: its continuation is indented under it. Inserting
+ * between the two moves the project's own explanation under the new bullet,
+ * where it describes a rule it was never about.
+ */
+function endOfListItem(lines: readonly string[], open: readonly boolean[], index: number): number {
+  let end = index + 1;
+  while (end < lines.length) {
+    const line = plainLine(lines[end]);
+    // A blank line inside a list item is followed by more of it; two in a row,
+    // or an unindented line, end it.
+    const continued =
+      /^\s+\S/.test(line) || (line.trim() === "" && /^\s+\S/.test(plainLine(lines[end + 1])));
+    if (!continued || open[end] !== true) break;
+    end += 1;
+  }
+  return end;
+}
+
+/** Whether the line at `index` is a rule bullet a citation can be added after. */
+function isRuleBullet(lines: readonly string[], open: readonly boolean[], index: number): boolean {
+  if (open[index] !== true) return false;
+  const line = plainLine(lines[index]);
+  return line.startsWith("- ") && citedRuleMasters(line).length > 0;
+}
+
+/**
  * Where the managed section's markers sit, ignoring any inside a fenced block.
  *
  * A document showing what the section looks like carries a marker pair in an
@@ -240,15 +287,13 @@ function outsideFences(lines: readonly string[]): boolean[] {
 function managedSection(existing: string): {
   lines: string[];
   open: boolean[];
-  newline: string;
   begin: number;
   end: number;
 } {
-  // A Windows checkout keeps CRLF, and a template bullet is LF. Splicing one
-  // into the other leaves a file with mixed endings, which a formatter then
-  // rewrites whole — a one-line change turning into a diff over the file.
-  const newline = existing.includes("\r\n") ? "\r\n" : "\n";
-  const lines = existing.split(newline);
+  // Split on the separator alone. Choosing one terminator for the document put
+  // an LF-delimited section into a single element of a CRLF split, so the begin
+  // and end markers shared one line and the section read as never closed.
+  const lines = existing.split("\n");
   const open = outsideFences(lines);
   const begin = lines.findIndex(
     (line, index) => open[index] === true && line.includes(QFAI_AGENT_RULES_BEGIN),
@@ -260,7 +305,7 @@ function managedSection(existing: string): {
           (line, index) =>
             index > begin && open[index] === true && line.includes(QFAI_AGENT_RULES_END),
         );
-  return { lines, open, newline, begin, end };
+  return { lines, open, begin, end };
 }
 /** The template's bullets for the masters `existing` does not already cite. */
 function pendingBullets(existing: string, section: string, masters: readonly string[]): string[] {
@@ -300,7 +345,7 @@ export function addRuleCitations(
   section: string,
   masters: readonly string[],
 ): string {
-  const { lines, open, newline, begin, end } = managedSection(existing);
+  const { lines, open, begin, end } = managedSection(existing);
   if (begin === -1 || end === -1) return existing;
 
   const bullets = pendingBullets(existing, section, masters);
@@ -310,22 +355,27 @@ export function addRuleCitations(
   // prose, and a bullet after it would read as part of that paragraph.
   let insertAfter = -1;
   for (let index = begin + 1; index < end; index += 1) {
-    const line = lines[index];
-    if (open[index] !== true) continue;
-    if (line !== undefined && line.startsWith("- ") && citedRuleMasters(line).length > 0) {
-      insertAfter = index;
-    }
+    if (isRuleBullet(lines, open, index)) insertAfter = index;
   }
   if (insertAfter === -1) {
     // A section with no rule bullet left — every one deleted, or the citations
     // rewritten as something else. Discarding the bullets here would leave a
     // rule the run shipped uncited for good, so they go at the end of the
     // section as their own block, separated from whatever precedes them.
-    const trailing = lines[end - 1] === "" ? 1 : 0;
-    lines.splice(end - trailing, 0, "", ...bullets, "");
-    return lines.join(newline);
+    const terminator = terminatorOf(lines[end]);
+    const blank = plainLine(lines[end - 1]).trim() === "" ? 1 : 0;
+    lines.splice(
+      end - blank,
+      0,
+      terminator,
+      ...bullets.map((bullet) => `${bullet}${terminator}`),
+      terminator,
+    );
+    return lines.join("\n");
   }
 
-  lines.splice(insertAfter + 1, 0, ...bullets);
-  return lines.join(newline);
+  const at = Math.min(endOfListItem(lines, open, insertAfter), end);
+  const terminator = terminatorOf(lines[insertAfter]);
+  lines.splice(at, 0, ...bullets.map((bullet) => `${bullet}${terminator}`));
+  return lines.join("\n");
 }

@@ -2917,7 +2917,7 @@ async function ensureAgentEntryPointRules(
         copied.push(target);
         continue;
       }
-      const wrote = await replaceEntryPointFile(target, merged, destRoot);
+      const wrote = await replaceEntryPointFile(target, merged, destRoot, existing);
       if (wrote !== null) {
         error(`  WARNING: ${formatReportPath(target)} was left unchanged. ${wrote}`);
         skipped.push(target);
@@ -2962,7 +2962,7 @@ async function ensureAgentEntryPointRules(
       if (dryRun) {
         info(`  would update: ${formatReportPath(target)} (cite the uncited rule masters)`);
       } else {
-        const wrote = await replaceEntryPointFile(target, merged, destRoot);
+        const wrote = await replaceEntryPointFile(target, merged, destRoot, existing);
         if (wrote !== null) {
           error(`  WARNING: ${formatReportPath(target)} was left unchanged. ${wrote}`);
           skipped.push(target);
@@ -2995,7 +2995,12 @@ async function ensureAgentEntryPointRules(
     // whatever the file happened to end with.
     const body = existing.replace(/\s*$/, "");
     const separator = body.length === 0 ? "" : "\n\n";
-    const wrote = await replaceEntryPointFile(target, `${body}${separator}${section}\n`, destRoot);
+    const wrote = await replaceEntryPointFile(
+      target,
+      `${body}${separator}${section}\n`,
+      destRoot,
+      existing,
+    );
     if (wrote !== null) {
       error(`  WARNING: ${formatReportPath(target)} was left unchanged. ${wrote}`);
       skipped.push(target);
@@ -3096,7 +3101,7 @@ async function citeNewMastersInCopilotInstructions(
     report.copied.push(target);
     return;
   }
-  const wrote = await replaceEntryPointFile(target, merged, destRoot);
+  const wrote = await replaceEntryPointFile(target, merged, destRoot, existing);
   if (wrote !== null) {
     error(`  WARNING: ${formatReportPath(target)} was left unchanged. ${wrote}`);
     report.skipped.push(target);
@@ -3207,6 +3212,7 @@ async function replaceEntryPointFile(
   target: string,
   content: string,
   destRoot: string,
+  previous: string,
 ): Promise<string | null> {
   const staging = path.join(path.dirname(target), `.qfai-entry-${randomUUID()}.tmp`);
   const original = await stat(target).catch(() => null);
@@ -3233,6 +3239,17 @@ async function replaceEntryPointFile(
         // The refusal is the one worth reporting.
       });
       return `${formatReportPath(linked)} became a symbolic link while this run was working, so the write would have landed outside this project.`;
+    }
+    // The earlier read was before the staging write and the metadata calls. A
+    // save in that window would be replaced by a merge of the contents before
+    // it, so the file is compared again here — the last thing before the
+    // rename.
+    const current = await readFile(target, "utf-8").catch(() => null);
+    if (current !== previous) {
+      await rm(staging, { force: true }).catch(() => {
+        // The refusal is the one worth reporting.
+      });
+      return `It changed while this run was working. Run this again once the file has settled.`;
     }
     await rename(staging, target);
     return null;

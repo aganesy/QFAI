@@ -836,3 +836,77 @@ describe("the Copilot file this run cannot extend", () => {
     });
   });
 });
+
+describe("what the citation scan reads a line as", () => {
+  const template = [
+    QFAI_AGENT_RULES_BEGIN,
+    "",
+    "- `.agents/rules/grilling.md` — interview the decision tree.",
+    "",
+    QFAI_AGENT_RULES_END,
+  ].join("\n");
+
+  it("reads a fence inside a block quote as a fence", () => {
+    // Anchored at the start of the line, the scan never sees `> ~~~`, and the
+    // example inside reads as live content.
+    const existing = [
+      "# Our house rules",
+      "",
+      "> Ours looks like this:",
+      ">",
+      "> ~~~markdown",
+      "> " + QFAI_AGENT_RULES_BEGIN,
+      "> - `.agents/rules/temporary-files.md` — scratch goes under `tmp/`.",
+      "> " + QFAI_AGENT_RULES_END,
+      "> ~~~",
+      "",
+    ].join("\n");
+
+    expect(citedRuleMastersOutsideCode(existing)).toEqual([]);
+    expect(needsManagedRulesSection(existing, template)).toBe(true);
+    expect(addRuleCitations(existing, template, [".agents/rules/grilling.md"])).toBe(existing);
+  });
+
+  it("keeps a wrapped bullet with its own continuation", () => {
+    // The continuation explains the bullet above it. Inserting between the two
+    // leaves it describing a rule it was never about.
+    const existing = [
+      QFAI_AGENT_RULES_BEGIN,
+      "",
+      "- `.agents/rules/temporary-files.md` — scratch goes under `tmp/`,",
+      "  and the task that made it cleans it up.",
+      "",
+      QFAI_AGENT_RULES_END,
+      "",
+    ].join("\n");
+
+    const merged = addRuleCitations(existing, template, [".agents/rules/grilling.md"]);
+    const lines = merged.split("\n");
+    const continuation = lines.findIndex((line) => line.includes("cleans it up"));
+    const added = lines.findIndex((line) => line.includes("grilling.md"));
+    expect(continuation).toBeGreaterThan(0);
+    expect(added).toBeGreaterThan(continuation);
+  });
+
+  it("keeps a closed section closed when the file's endings are mixed", () => {
+    // One CRLF anywhere made the whole document split on CRLF, so an LF section
+    // landed in a single element and its two markers shared a line.
+    const existing = [
+      "# Our house rules\r",
+      "\r",
+      QFAI_AGENT_RULES_BEGIN,
+      "",
+      "- `.agents/rules/temporary-files.md` — scratch goes under `tmp/`.",
+      "",
+      QFAI_AGENT_RULES_END,
+      "",
+    ].join("\n");
+
+    expect(hasUnclosedRulesSection(existing)).toBe(false);
+    const merged = addRuleCitations(existing, template, [".agents/rules/grilling.md"]);
+    expect(merged).toContain(".agents/rules/grilling.md");
+    // The project's own CRLF lines are still CRLF, and the section is still LF.
+    expect(merged.startsWith("# Our house rules\r\n")).toBe(true);
+    expect(merged).toContain("- `.agents/rules/grilling.md` — interview the decision tree.\n");
+  });
+});
