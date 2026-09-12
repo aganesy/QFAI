@@ -171,7 +171,12 @@ describe("the autopilot buckets classify operations, not interview questions", (
       // The interview skills are the exception the narrowing needs, or their own
       // frontier questions fall outside every bucket.
       expect(text).toContain("Where the interview is what the skill performs, the asking stays in");
-      expect(text).toContain("the category DR-0269 Amendment 4 opens for it");
+      // Named, not cited: a decision id is an internal identifier and the
+      // baseline is a shipped file.
+      expect(text).toContain(
+        "a category for a decision a declared grilling session puts to the user",
+      );
+      expect(text).not.toContain("DR-0269");
     });
   }
 

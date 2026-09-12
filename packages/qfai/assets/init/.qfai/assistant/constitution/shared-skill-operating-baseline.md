@@ -154,7 +154,9 @@ There is one base, and it is the project root.
   session does not reclassify either — a `hard-required` input asked inside one
   still stops a run that cannot get it, rather than being guessed.
   Where the interview is what the skill performs, the asking stays in
-  `ask-user`, which is the category DR-0269 Amendment 4 opens for it.
+  `ask-user`: the bucket carries a category for a decision a declared grilling
+  session puts to the user, open to a skill whose own operation is the interview
+  and to no other.
   The buckets:
   - `auto-decide` — the skill settles it without asking.
   - `ask-user` — the skill asks before acting.
