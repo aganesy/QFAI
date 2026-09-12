@@ -157,7 +157,6 @@ describe("TC-0004-0019: Old 4-axis format is error", () => {
 // ---------------------------------------------------------------------------
 
 // QFAI:SPEC-0004:TC-0004-0020
-// QFAI:SPEC-0014:TC-0014-0005
 describe("TC-0004-0020: Non-UI pack UIX skip", () => {
   it("non-UI pack produces zero UIX-VAL issues from threeLayer", async () => {
     const root = await newTempDir();
@@ -172,7 +171,6 @@ describe("TC-0004-0020: Non-UI pack UIX skip", () => {
 // TC-0014-0004: UIX-VAL determinism
 // ---------------------------------------------------------------------------
 
-// QFAI:SPEC-0014:TC-0014-0004
 describe("TC-0014-0004: UIX-VAL determinism", () => {
   it("same input produces identical output on repeated runs", async () => {
     const root = await newTempDir();

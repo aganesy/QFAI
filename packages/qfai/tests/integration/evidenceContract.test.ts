@@ -61,7 +61,7 @@ describe("valid evidence accepted (free-text+labels format)", () => {
   });
 });
 
-// QFAI:SPEC-0011:TC-0011-0013
+// QFAI:SPEC-0011:TC-0011-0007
 describe("status-only and empty evidence rejected", () => {
   it("explicitly rejects status-only evidence", async () => {
     const c = await loadContent();
@@ -74,7 +74,7 @@ describe("status-only and empty evidence rejected", () => {
   });
 });
 
-// QFAI:SPEC-0011:TC-0011-0014
+// QFAI:SPEC-0011:TC-0011-0007
 describe("thin evidence replaced with full evidence", () => {
   it("requires both command and result", async () => {
     const c = await loadContent();
@@ -87,7 +87,6 @@ describe("thin evidence replaced with full evidence", () => {
   });
 });
 
-// QFAI:SPEC-0011:TC-0011-0015
 describe("evidence with truncated result accepted", () => {
   it("accepts truncated results as best-effort", async () => {
     const c = await loadContent();
