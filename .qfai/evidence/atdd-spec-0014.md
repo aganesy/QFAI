@@ -270,10 +270,10 @@ first mutation passes it and fails the literal check below it instead.
 - Refactor verify revision: db8cd210a3b71ffd82591dda52ed250af76d812d
 - Checkpoint item test command: pnpm -C packages/qfai build && pnpm -C packages/qfai exec vitest run tests/integration/verifySemanticsSpec0014.test.ts --reporter=verbose
 - Checkpoint item test result: Test Files 1 passed (1); Tests 6 passed (6). The verbose output names the row's `Selector` entry among the tests it ran — `TC-0014-0019: removed compatibility surface > package surface exposes no legacy namespace or compatibility category` — which is what the per-item step asks of a file-scoped run.
-- Checkpoint item test revision: 434caaabeca8513a1a830943d4dcbeade10b9507
+- Checkpoint item test revision: c2b60820df8fab209abe4f8c77a7b05de1f2b8fe
 - Checkpoint verification command: pnpm -C packages/qfai build && pnpm -C packages/qfai test:core && pnpm -C packages/qfai test:validators && pnpm -C packages/qfai test:integration && pnpm -C packages/qfai test:e2e && pnpm -C packages/qfai test:cli && pnpm -C packages/qfai test:unit && pnpm -C packages/qfai test:scripts
-- Checkpoint verification result: FAIL — six of seven slices green, nothing filtered out; the seven together cover every project `vitest.workspace.ts` declares. `core` 3179 passed / 32 skipped, `validators` 959 / 2, `integration` 1490 / 23, `e2e` 3892 / 21, `cli` 893 / 7, `unit` 745 / 8. `scripts` reports 1 failed / 696 passed
-- Checkpoint verification revision: 3a1eeb3fa4127c7703bfdaac1550f294becb0119
+- Checkpoint verification result: FAIL — six of seven slices green, nothing filtered out; the seven together cover every project `vitest.workspace.ts` declares. `core` 3179 passed / 32 skipped, `validators` 994 / 2, `integration` 1490 / 23, `e2e` 3915 / 20, `cli` 901 / 7, `unit` 750 / 8. `scripts` reports 1 failed / 696 passed
+- Checkpoint verification revision: c2b60820df8fab209abe4f8c77a7b05de1f2b8fe
 - Checkpoint verification note: the run above was taken here, on the tree under
   review, and its revision is this branch's head rather than a merge tree. The
   one failure is environmental and is recorded as its own issue: the release

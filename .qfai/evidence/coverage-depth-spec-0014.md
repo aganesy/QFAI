@@ -91,16 +91,29 @@ Every score below rests on a test run, not on a reading of a ledger. The ledger 
 point for this pack — all seven `done` rows name a file that exists on disk — but three of its rows
 point somewhere the obligation is not discharged, and six of the files that carry coverage appear
 in no row at all. The files below were located by reading the tests and the source, then executed
-together, by one command at one revision:
+together, by one command at one revision, from the repository root:
 
 ```text
 pnpm -C packages/qfai build
-npx vitest run --reporter=verbose <the thirteen files below>
+pnpm -C packages/qfai exec vitest run --reporter=verbose \
+  tests/integration/verifySemanticsSpec0014.test.ts \
+  tests/integration/cli/commands/prototypingCertify.saasPackage.test.ts \
+  tests/integration/cli/commands/prototypingCertify.upgradeScope.test.ts \
+  tests/cli/commands/prototypingIterate.test.ts \
+  tests/cli/prototypingCertify.test.ts \
+  tests/validators/uiEvidenceArtifacts.test.ts \
+  tests/core/prototyping/iterationPaths.test.ts \
+  tests/core/renderEvidence.test.ts \
+  tests/integration/reviewArtifactsProfileWiring.test.ts \
+  tests/integration/validatorConvergenceIntegration.test.ts \
+  tests/integration/specAutoDiscovery.test.ts \
+  tests/integration/spec0014SaasPackageCertify.test.ts \
+  tests/e2e/spec0014SaasPackageCertifyE2E.test.ts
 ```
 
 The build comes first because two of the thirteen read `packages/qfai/dist/**`. The run reports
 `Test Files 11 passed | 2 skipped (13)` and `Tests 259 passed | 4 skipped (263)`, exit 0, at
-revision `3a1eeb3fa4127c7703bfdaac1550f294becb0119`. The per-file counts below are that run's, read
+revision `c2b60820df8fab209abe4f8c77a7b05de1f2b8fe`. The per-file counts below are that run's, read
 from its verbose output, and they sum to its totals:
 
 | File                                                                      | Result        |
