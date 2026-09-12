@@ -92,15 +92,31 @@ describe("the primary_tasks band drift has a Change Request", () => {
   it("supersedes through the fields the Decisions layout defines", async () => {
     // `Superseded by` is not one of them, and the protocol forbids inventing
     // a layout, so an owner could not have carried out that instruction.
-    await expectPhrase(
-      "take `Status: superseded` with the new record named in their `Related` list",
-    );
     await expectPhrase("there is no `Superseded by` field to write");
   });
 
-  it("keeps the authorization list conditioned on the outcome", async () => {
+  it("links a superseded record through a value `Related` may hold", async () => {
+    // Neither Decisions template admits a `DR-*` in `Related`, and both admit
+    // a `CR-*`. Naming the new decision there would write a value the layout
+    // forbids; naming this record, which names the new decision, does not.
+    await expectPhrase("`Related` cannot hold");
+    await expectPhrase("names\n`CR-20260913-0001` in `Related`");
+  });
+
+  it("supersedes only the band choice of the composite record", async () => {
+    // `Status` belongs to the whole record, and the composite adopts two
+    // decisions this record does not reach. Setting it would withdraw them.
+    await expectPhrase("`DR-0004-0014` is not superseded as a record.");
+    await expectPhrase("The other two\nadoptions are not touched.");
+  });
+
+  it("keeps the authorization list conditioned on the outcome while it is open", async () => {
     // `QFAI-DRIFT-001` reads a path here and not the condition beside it, so
-    // the section is narrowed before the status leaves `open`.
+    // the section is narrowed before the status leaves `open` — which removes
+    // the conditional prose this asserts. Pinning it past `open` would redden
+    // this file on the very resolution the record exists to make possible.
+    const text = await changeRequest();
+    if (!/^- Status: `open`$/m.test(text)) return;
     await expectPhrase("**Under option 3 this list is empty**");
     await expectPhrase("reduced to the approved outcome before `Status: approved` is written");
   });

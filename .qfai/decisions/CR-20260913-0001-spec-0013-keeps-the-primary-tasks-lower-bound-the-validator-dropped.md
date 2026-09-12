@@ -83,11 +83,11 @@ document exists to remove.
 
 ## Options (at least 3) and recommendation
 
-| #   | Option                                                                                                                                                                                                                                                                       | Cost                                                                                                                                     | Risk                                                                                                                                                                                                                                                                                                                                                                                                              | Recommended |
-| --- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------- |
-| 1   | Narrow the spec to the product, and **supersede** the three decisions with a new one: the band's floor is withdrawn, `QFAI-AUD-020` is a ceiling, and the records that chose 3..7 keep their `Decision` text, take `Status: superseded` and name the new record in `Related` | Nine `spec-0013` statements edited plus one `_policies` record; one new `DR-*` in `_policies`; reset `spec-0013/TDD-0027` and `TDD-0028` | Records today's behaviour as intended. A decision nobody reviewed at the time becomes the recorded one — but it is already the shipped one, and the record says by whom and when                                                                                                                                                                                                                                  | ✅          |
-| 2   | Narrow the spec to the product, and **rewrite** the three decisions in place to say `ceiling 7`                                                                                                                                                                              | The same statements; no new record                                                                                                       | The **authoritative** lineage goes: the Decision Records stop saying a floor was chosen, and the rejected options `DR-0267` lists ("1..3 minimal band") lose the thing they were rejected against. The history survives outside them — this Change Request, the changelog entry for the removal, and the delta rows that recorded the adoption — so a reader who knows to look elsewhere can still reconstruct it |             |
-| 3   | Restore the floor in the product: `QFAI-AUD-020` warns below the minimum again, and the spec stands                                                                                                                                                                          | A validator change, its tests, the shipped template comments and the guide; no spec edit                                                 | Reverses a deliberate removal on a rationale nobody has contradicted — one task is a screen's focus, and a floor warns against it. A CR of its own would be the place to argue that                                                                                                                                                                                                                               |             |
+| #   | Option                                                                                                                                                                                                                                                              | Cost                                                                                                                                                                                                                  | Risk                                                                                                                                                                                                                                                                                                                                                                                                              | Recommended |
+| --- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------- |
+| 1   | Narrow the spec to the product, and **supersede** the three decisions with a new one: the band's floor is withdrawn, `QFAI-AUD-020` is a ceiling, and the records that chose 3..7 keep their `Decision` text and are marked superseded as the actions below set out | Nine `spec-0013` statements and every `spec-0004` statement carrying the band re-derived, plus one `_policies` record; one new `DR-*` in `_policies`; reset `spec-0013/TDD-0027`, `TDD-0028` and `spec-0004/TDD-0050` | Records today's behaviour as intended. A decision nobody reviewed at the time becomes the recorded one — but it is already the shipped one, and the record says by whom and when                                                                                                                                                                                                                                  | ✅          |
+| 2   | Narrow the spec to the product, and **rewrite** the three decisions in place to say `ceiling 7`                                                                                                                                                                     | The same statements in both packs and the same three resets; no new record                                                                                                                                            | The **authoritative** lineage goes: the Decision Records stop saying a floor was chosen, and the rejected options `DR-0267` lists ("1..3 minimal band") lose the thing they were rejected against. The history survives outside them — this Change Request, the changelog entry for the removal, and the delta rows that recorded the adoption — so a reader who knows to look elsewhere can still reconstruct it |             |
+| 3   | Restore the floor in the product: `QFAI-AUD-020` warns below the minimum again, and the spec stands                                                                                                                                                                 | A validator change, its tests, the shipped template comments and the guide; no spec edit                                                                                                                              | Reverses a deliberate removal on a rationale nobody has contradicted — one task is a screen's focus, and a floor warns against it. A CR of its own would be the place to argue that                                                                                                                                                                                                                               |             |
 
 Option 1 is recommended because the three records are the artifact this Change
 Request is actually about. A decision record's value is that it says what was
@@ -153,9 +153,11 @@ because what they were rejected against is still written where they are.
 
 ## Decision needed from user
 
-Which of the three: narrow the spec and supersede the two band decisions;
-narrow the spec and rewrite them in place; or restore the floor in the product
-and leave the spec as it stands.
+Which of the three: narrow the spec and supersede the **three** decisions that
+chose the band — `_policies` `DR-0267`, `spec-0013` `DR-0013-0003`, and the band
+entry of `spec-0004`'s composite `DR-0004-0014`; narrow the spec and rewrite all
+three in place; or restore the floor in the product and leave the spec as it
+stands.
 
 ## Approved actions (owner skill rerun plan)
 
@@ -177,20 +179,37 @@ and leave the spec as it stands.
 
 2. The decision records, under options 1 and 2 and differing by option.
    - **Option 1**: a new `DR-*` in `_policies/08_Decisions.md` recording the
-     withdrawal, its date and its rationale. `DR-0267`,
-     `spec-0013/07_Decisions.md` `DR-0013-0003` and `spec-0004`'s
-     `DR-0004-0014` keep their `Decision` text and take `Status: superseded`
-     with the new record named in their `Related` list. **Those are the fields
-     the layout defines** — `Status`, `Context`, `Decision`, `Consequences`,
-     `Related` — and the Drift Protocol forbids inventing another, so there is
-     no `Superseded by` field to write.
+     withdrawal, its date and its rationale, naming this Change Request in its
+     `Related` list. **Those are the fields the layout defines** — `Status`,
+     `Context`, `Decision`, `Consequences`, `Related` — and the Drift Protocol
+     forbids inventing another, so there is no `Superseded by` field to write.
+
+     **The link runs through this Change Request, because `Related` cannot hold
+     a decision.** The spec template admits `AC-*`, `BR-*`, `TC-*`, `TDD-*` and
+     `CR-*` there, and the policy template specs, capabilities, contracts and
+     `CR-*`; neither admits a `DR-*`. So a superseded record names
+     `CR-20260913-0001` in `Related`, and this record names the new decision.
+     The lineage reads in two steps, each through a value the layout permits.
+
+     `DR-0267` and `spec-0013/07_Decisions.md` `DR-0013-0003` keep their
+     `Decision` text and take `Status: superseded` with this CR in `Related`.
+
+     **`DR-0004-0014` is not superseded as a record.** It is a composite: it
+     adopts `DR-0267` alongside `DR-0268`'s structured task shape and
+     `DR-0274`'s pack-location rule, neither of which this Change Request
+     reaches. `Status` is a field of the whole record, so setting it would mark
+     two standing decisions as withdrawn. The record keeps its `Status`; its
+     band entry is edited to say that adoption is superseded and to name this CR,
+     and this CR is added to the record's `Related` list. The other two
+     adoptions are not touched.
+
    - **Option 2**: **all three** rewritten to state a ceiling — `DR-0267`,
      `DR-0013-0003` and `DR-0004-0014`. The third is a composite record that
      adopts `DR-0267` verbatim alongside `DR-0268` and `DR-0274`, which this
      Change Request does not reach: only its band entry is rewritten, and the
-     other two choices stay as they are. Leaving it out, as an earlier draft of
-     this step did, left one of the three still adopting `3..7` after the option
-     had been applied.
+     other two choices stay as they are. All three are named because the option
+     settles the band for every record that adopted it; a record left out would
+     still adopt `3..7` once the option was applied.
 
      **The re-derived trade-offs go in `Consequences`.** The layout defines
      `Status`, `Context`, `Decision`, `Consequences` and `Related`, and the
