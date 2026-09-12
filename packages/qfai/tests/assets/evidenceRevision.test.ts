@@ -704,9 +704,12 @@ describe("the working-tree address has one notation", () => {
       // `GIT_DIR` and `GIT_WORK_TREE` choose the repository, so a root resolved
       // before they are cleared belongs to another one.
       expect(text).toContain('root=$(env "${unset[@]}" git rev-parse --show-toplevel)');
-      // A drive-qualified directory is outside the worktree, and a pathspec
-      // naming it is refused.
-      expect(text).toContain("/*|..|../*|[A-Za-z]:/*) ;;");
+      // One spelling is both: `C:/specs` is another drive on Windows and an
+      // ordinary directory on POSIX, so git answers whether it is inside.
+      expect(text).toContain('git -C "$root" ls-files -z -- ":(literal)$specs"');
+      // `--local-env-vars` does not list the variables that set pathspec magic,
+      // so under `GIT_LITERAL_PATHSPECS=1` the exclusions were names to match.
+      expect(text).toContain("unset=(-u GIT_LITERAL_PATHSPECS -u GIT_GLOB_PATHSPECS");
       // The tracked list names a submodule as it names a file; only its mode
       // says what it is.
       expect(text).toContain('ls-files --stage -z -- . "${exclude[@]}"');

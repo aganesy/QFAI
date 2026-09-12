@@ -37,17 +37,18 @@ check. Gate item 10 rejects any other shape wherever a revision is recorded:
   1. **Collect**, from the repository root, the paths and nothing else:
 
      ```bash
-     # Every repository-local variable cleared, not a chosen few, and before
-     # anything reads the repository: `GIT_DIR` and `GIT_WORK_TREE` choose the
-     # repository itself, so a root resolved under them is a sibling's. Pathspec
-     # magic is read from the environment as well as from the argument, and
-     # `GIT_INDEX_FILE` names the index the listings read. Under
-     # `GIT_LITERAL_PATHSPECS=1` the exclusions are names to match rather than
-     # patterns; under an alternate index a deleted path is listed by neither
+     # Cleared before anything reads the repository. `GIT_DIR` and
+     # `GIT_WORK_TREE` choose the repository itself, so a root resolved under
+     # them is a sibling's, and `GIT_INDEX_FILE` names the index the listings
+     # read: under an alternate index a deleted path is listed by neither
      # command, so its `absent` record goes missing. `git rev-parse
-     # --local-env-vars` is the list itself, so nothing here has to stay in
-     # step with a version of git.
-     unset=()
+     # --local-env-vars` lists every variable of that kind, and no others. The
+     # four that set pathspec magic are not on it, and are read from the
+     # environment as well as from the argument: under `GIT_LITERAL_PATHSPECS=1`
+     # the exclusions are names to match rather than patterns. They are cleared
+     # by name.
+     unset=(-u GIT_LITERAL_PATHSPECS -u GIT_GLOB_PATHSPECS
+            -u GIT_NOGLOB_PATHSPECS -u GIT_ICASE_PATHSPECS)
      for name in $(git rev-parse --local-env-vars); do unset+=(-u "$name"); done
      root=$(env "${unset[@]}" git rev-parse --show-toplevel)
      specs=$(npx qfai doctor --format json | node -e 'let s="";
@@ -57,16 +58,17 @@ check. Gate item 10 rejects any other shape wherever a revision is recorded:
        })')
      exclude=(':(exclude,glob).qfai/evidence/**'
               ':(exclude,glob).qfai/review/**')
-     case "$specs" in
-       # Outside the worktree: nothing it holds is in the address, and a
-       # pathspec pointing there is refused outright. `..` exactly is that
-       # case as much as `../x` is, and so is a path on another drive.
-       /*|..|../*|[A-Za-z]:/*) ;;
+     # Git is asked whether the directory is inside the worktree, rather than
+     # its spelling read: `..` and an absolute path are outside, `D:/specs` is
+     # outside on Windows and an ordinary directory name on POSIX, and git
+     # refuses a pathspec naming a place outside. Nothing outside is in the
+     # address, so there is nothing to exclude there.
+     if env "${unset[@]}" git -C "$root" ls-files -z -- ":(literal)$specs" >/dev/null 2>&1; then
        # Every glob character in the configured name escaped, so a directory
        # really called `[specs]` is matched rather than read as a class.
-       *) exclude+=(":(exclude,glob)$(printf '%s' "$specs" |
-            sed 's/[][*?\\]/\\&/g')/*/tdd/test-list.md") ;;
-     esac
+       exclude+=(":(exclude,glob)$(printf '%s' "$specs" |
+         sed 's/[][*?\\]/\\&/g')/*/tdd/test-list.md")
+     fi
      common=(env "${unset[@]}"
              git -C "$root" -c core.quotePath=false -c core.ignoreCase=false)
      others=(ls-files --others --exclude-per-directory=.gitignore -z)
@@ -90,11 +92,13 @@ check. Gate item 10 rejects any other shape wherever a revision is recorded:
      as they are.
 
      **A ledger outside the worktree is not excluded, because it was never in.**
-     The setting takes an absolute path, and a resolved directory that starts
-     with a separator or climbs out of the tree names files no pathspec here can
-     address: `ls-files` refuses the pathspec outright, and the address cannot
-     be taken at all. Nothing outside the worktree reaches the two lists, so
-     leaving the exclusion off changes nothing about what is hashed.
+     The setting takes an absolute path, and a directory outside the tree names
+     files no pathspec here can address: `ls-files` refuses a pathspec naming
+     one outright, and the address could not be taken at all. Whether a
+     directory is outside is git's answer rather than the spelling's, because
+     one spelling is both: `C:/specs` names another drive on Windows and an
+     ordinary directory on POSIX. Nothing outside the worktree reaches the two
+     lists, so leaving the exclusion off changes nothing about what is hashed.
 
      **Git names the files. It does not read them.** A diff is a rendering
      rather than a state, and what renders it is checkout-local: `core.autocrlf`,
