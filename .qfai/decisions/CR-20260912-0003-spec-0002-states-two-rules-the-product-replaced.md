@@ -249,11 +249,19 @@ with its own approval; `2B` cannot be approved until it has landed.
   `.qfai/specs/spec-0012/07_Decisions.md`,
   `.qfai/specs/spec-0012/09_delta.md`,
   `.qfai/specs/spec-0012/10_Plan.md`,
-  `.qfai/specs/spec-0012/tdd/test-list.md`,
-  `.qfai/specs/_policies/05_Contracts.md`,
-  `.qfai/specs/_policies/06_Glossary.md`,
-  `.qfai/specs/_policies/08_Decisions.md`,
-  `.qfai/specs/_policies/10_delta.md`.
+  `.qfai/specs/spec-0012/tdd/test-list.md`.
+
+  **The policy layer, per outcome.** These paths are not nested under any one
+  sub-option, because different outcomes reach different policy files, and the
+  reduction to the approved outcome keeps each path only where its condition
+  holds:
+
+  | Path                                    | Kept under                                                                  |
+  | --------------------------------------- | --------------------------------------------------------------------------- |
+  | `.qfai/specs/_policies/05_Contracts.md` | every statement-A outcome, for the producer prose; and `2a`, for `DCON-031` |
+  | `.qfai/specs/_policies/06_Glossary.md`  | `1A` and `3A`                                                               |
+  | `.qfai/specs/_policies/08_Decisions.md` | `2B`, for `DR-0240`                                                         |
+  | `.qfai/specs/_policies/10_delta.md`     | any outcome that keeps one of the three above                               |
 
   **`spec-0012/03_Acceptance-Criteria.md` is here because `AC-0012-0035` tells
   the user what to do about a mismatch**, and what it tells them is to "re-run
@@ -424,6 +432,12 @@ offered stays in `## Options` and in `## Decision needed from user`.
 - Product paths under `2a`:
   `packages/qfai/assets/init/.qfai/assistant/skills/qfai-prototyping/**` and its
   root mirror, for the direction-selection step and the authoring it performs;
+  **`packages/qfai/assets/init/.qfai/assistant/skills/qfai-implement/SKILL.md`**
+  and its root mirror, whose UI-affecting read order says `/qfai-sdd` Phase 0
+  authors root `DESIGN.md` and performs the freeze — downstream implementation
+  guidance that would otherwise keep the old producer and send recovery to a
+  stage that can no longer create the inputs — with the asset coverage that pins
+  that wording;
   **`packages/qfai/tests/assets/brandCatalogStepAnchor.test.ts`**, which
   requires the brand catalog to route authoring to `/qfai-sdd` and names its
   Phase 0 as the sole author — "the tests that pin both" named no path, so an

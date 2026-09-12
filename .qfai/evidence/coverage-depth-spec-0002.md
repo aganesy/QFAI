@@ -38,9 +38,9 @@ pack's own notes record that it was retired together with the exploration-sideca
 rows carry seventeen of the twenty-eight `❌` depth cells the five test-case rows hold, and the
 reason is not thin testing — it is an obligation with no subject left to test.
 
-Committed, because it is a governance record. Section "Every `❌` cell, named" enumerates all 92 of
+Committed, because it is a governance record. Section "Every `❌` cell, named" enumerates all 91 of
 them so that "one justification per `❌`" is checkable rather than asserted, and section "Every `⚠️`
-cell, named" does the same for all 16 partial scores, which the PASS criterion also requires a
+cell, named" does the same for all 17 partial scores, which the PASS criterion also requires a
 rationale for.
 
 ## What was measured, and how
@@ -108,10 +108,10 @@ this matrix.
 | TC-0002-0008 | ❌                     | ✅          | ❌         | ❌         | ❌              | ❌             | ❌                | ❌            | ❌              | ❌     |
 | TC-0002-0009 | ❌                     | ❌          | ❌         | ❌         | ❌              | ❌             | ❌                | ❌            | ❌              | ❌     |
 | TC-0002-0010 | ⚠️                     | ✅          | ✅         | ❌         | ❌              | ❌             | ❌                | ⚠️            | ✅              | ⚠️     |
-| TC-0002-0011 | ⚠️                     | ⚠️          | ❌         | ⚠️         | ❌              | ❌             | ❌                | ❌            | ⚠️              | ❌     |
+| TC-0002-0011 | ⚠️                     | ⚠️          | ❌         | ⚠️         | ❌              | ❌             | ❌                | ⚠️            | ⚠️              | ❌     |
 
 Totals across the nine depth columns of 12 rows — 7 stories and 5 test cases, 108 cells:
-**✅ 6 / ⚠️ 11 / ❌ 91**.
+**✅ 6 / ⚠️ 12 / ❌ 90**.
 
 Only the mark cells are scored. `US/TC ID` holds an identifier and `Status` holds the row verdict,
 so neither is in that total. Over the same 12 rows the verdicts read **✅ 0 / ⚠️ 2 / ❌ 10**.
@@ -143,10 +143,10 @@ has no branch to cover. It is not used anywhere an obligation exists and is unme
 
 ## Every ❌ cell, named
 
-The matrix carries 91 `❌` depth cells and the business rule table carries 1 in its scored columns —
-92 in all. Each is named below with its own reason.
+The matrix carries 90 `❌` depth cells and the business rule table carries 1 in its scored columns —
+91 in all. Each is named below with its own reason.
 A row's `Status` is `❌` when the obligation is not discharged at the depth the case describes; that
-verdict is the row's own, is stated once per row, and is not one of the 92.
+verdict is the row's own, is stated once per row, and is not one of the 91.
 
 ### The seven stories — `US-0002-0001`, `-0002`, `-0003`, `-0005`, `-0008`, `-0009` and `-0010`
 
@@ -298,7 +298,7 @@ One nearby case is mis-titled. `assets.test.ts`'s "discussion README and SKILL.m
 prototyping.yaml optionality" reads `SKILL.md` and nothing else, so its title asserts a comparison
 it does not make. That is a defect in the title, not a gap in this row's coverage.
 
-This row has **five `❌` depth cells** plus `Status`.
+This row has **four `❌` depth cells** plus `Status`.
 
 - **Error path** — the tests carry absence assertions over the real artifacts: the retired blocking
   sentence must not appear in the playbook, and legacy-permissive wording must not appear in the
@@ -310,9 +310,6 @@ This row has **five `❌` depth cells** plus `Status`.
   read as they stand.
 - **State transitions** — reading wording has no state machine, and no multi-step process is
   exercised.
-- **Combinatorial** — the case names an agreement between two artifacts and no test evaluates the
-  pair. The two-tree loop repeats each predicate in a second location rather than combining two
-  conditions, and the six predicates are never crossed with one another.
 - **Status** — both artifacts the case names exist and both are read, so what caps the row is not a
   missing surface. It is that the case's expected result is that requiredness "matches active rule",
   and the rule has no runtime to match: `src/**` never reads `prototyping.yaml`, and
@@ -338,7 +335,7 @@ One scored cell, and the two row verdicts that sit outside the count but still o
 
 ## Every ⚠️ cell, named
 
-11 depth cells in the matrix and 5 scored cells in the business rule table are `⚠️` — 16 in all. The
+12 depth cells in the matrix and 5 scored cells in the business rule table are `⚠️` — 17 in all. The
 PASS criterion requires a documented rationale for each, so each is named here. Four rows also carry
 a `⚠️` verdict. Those are outside the count and are named here too, because a verdict weaker than
 the cells beneath it needs a reason of its own.
@@ -396,6 +393,12 @@ the cells beneath it needs a reason of its own.
   matrix is sliced to the `## UI-bearing Packs` section and the slice's end is chosen at the next
   `## ` heading rather than at `## Non-UI Packs`, with `expect(uiBearing.length).toBeGreaterThan(0)`
   to stop an empty slice passing vacuously. No other edge is identified or tested.
+- **TC-0002-0011 × Combinatorial** — the case names an agreement between the README and the skill,
+  and one test evaluates it across documents: `ensures qfai-discussion skill and artifact rules use
+  canonical pack wording` reads the README, the skill and the artifact rules together and requires
+  the same canonical sentence in all three. That is the pair the case names, held in one assertion
+  set. Capped at `⚠️` because agreement is established only on that one sentence, and the other
+  predicates are never crossed with one another.
 - **TC-0002-0011 × Oracle strength** — one assertion is a real oracle over a real artifact: the
   cited schema path is opened from the project root and required to carry the `prototyping.yaml`
   schema heading, so a renamed heading or a dangling citation reddens it. The rest are substring
@@ -532,7 +535,7 @@ it says so and names what carries it now.
 `QFAI-ATDD-133` requires the stage evidence to carry a `## Coverage Depth Matrix` section that links
 this file and restates the counted totals beside it. Those totals are:
 
-**✅ 11 / ⚠️ 16 / ❌ 92**, with `n/a 1`, across 120 scored cells — 108 matrix depth cells (12 rows ×
+**✅ 11 / ⚠️ 17 / ❌ 91**, with `n/a 1`, across 120 scored cells — 108 matrix depth cells (12 rows ×
 9 columns) and 12 business rule cells (4 rows × 3 columns). The 16 row verdicts are outside them.
 
 Four of the pack's six ledger rows carry no evidence, and none of them can until the row is true.

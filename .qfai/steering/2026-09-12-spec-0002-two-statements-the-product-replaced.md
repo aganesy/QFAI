@@ -67,12 +67,22 @@ Statement B, the requiredness rule, owns `TDD-0012`. So for `1A/3bB`: option 1
 on A resets `TDD-0008` and `TDD-0009` and retires `TDD-0010`, and option 3 on B
 retires `TDD-0012` and deletes the legacy-format case its disposition names.
 
-Option 2 resets nothing. No obligation moves under it, and the approved reset is
-for a row an approved upstream change invalidated. Its rerun mode is `re-derive`
-nonetheless — `confirm-only` writes nothing but the CR reference, and the rerun
-has to rewrite `TDD-0012`'s identity. Its rows
-take the in-place shared-artifact re-verification plus falsifiability evidence
-for each corrected assertion. Option 2 on **B** reaches `TDD-0001` as well:
+**Option 2 is read per statement too, because the two halves differ.**
+
+- **On A**, no obligation moves: the option restores the behaviour the direction
+  rule already requires. `TDD-0008` and `TDD-0009` are not reset; they take the
+  in-place shared-artifact re-verification plus falsifiability evidence for each
+  corrected assertion.
+- **On B**, the requiredness statements are re-derived around the visual-surface
+  predicate, because the restored preflight lets a cli-only pack through while
+  those statements make requiredness follow from the UI-bearing flag.
+  `TDD-0012`'s obligation therefore moves: it is **reset to `todo`** with the
+  change request in `DR-ID`, and re-pointed in the same rerun. Following the
+  in-place path instead would leave its `done` evidence attached to an
+  obligation the approval replaced.
+
+The rerun mode is `re-derive` under both — `confirm-only` writes nothing but
+the change request's reference. Option 2 on **B** reaches `TDD-0001` as well:
 restoring the preflight check for `prototyping.yaml` edits
 `sddPreflight.test.ts`, the file that row's observation covers. Option 2 on A
 does not touch that file.
