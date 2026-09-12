@@ -85,15 +85,22 @@ evidence its cell points at.
 
 Four files and nineteen cases in those projects declare themselves inactive and
 did not run, each through `describe.skip` carrying the marker
-`(test-first, pending /qfai-implement)`.
+`(test-first, pending /qfai-implement)`. That accounts for the whole of the
+checkpoint's skip count on a POSIX runner, which is where it was taken. A Windows
+runner skips about eleven more, through the `it.skipIf(process.platform ===
+"win32")` cases in the `cli` and `integration` projects, so the count is read
+against the platform rather than as a constant.
 
 The checkpoint needs `pnpm -C packages/qfai build` first.
 `tests/integration/cliStartupCost.test.ts` reads `packages/qfai/dist/**` and is
 written to fail rather than pass vacuously when no build exists.
 
 Validate gate, over the ledger as this change leaves it:
-`npx qfai validate --profile atdd --fail-on error --spec 0014` —
-`counts: info=4 warning=0 error=0`, exit 0.
+`node packages/qfai/dist/cli/index.mjs validate --profile atdd --fail-on error --spec 0014` —
+`counts: info=3 warning=0 error=0`, exit 0. The three are `QFAI-ATDD-117`,
+`QFAI-ATDD-119` and `QFAI-PROFILE-001`. The command names the built entry point
+rather than `npx qfai`, which resolves to the registry rather than to this
+branch and so cannot re-check anything this branch changed.
 
 ### TDD-0019
 
@@ -171,9 +178,10 @@ every total.
 
 ## Work Orders Summary
 
-| Role                | Task                                                 | Status (PASS/REVISE/PENDING) |
-| ------------------- | ---------------------------------------------------- | ---------------------------- |
-| test-design-analyst | Score the fourteen obligations and write the matrix  | PASS                         |
+| Role                | Task                                                     | Status (PASS/REVISE/PENDING) |
+| ------------------- | -------------------------------------------------------- | ---------------------------- |
+| test-design-analyst | Score the fourteen obligations and write the matrix      | PASS                         |
+| completion-reviewer | Audit every claim this file and the matrix make          | PENDING                      |
 
 ## Cross-spec obligations
 
@@ -221,8 +229,11 @@ mutation falsifies is the validator's own predicate, not the dependency.
 
 The other case carries the dependency, and carries it as
 `expect(validateSrc).toContain("runCanonicalUixValidators")` over the text of
-`validate.ts`. The import statement alone satisfies it, so deleting every call
-leaves it green, and no mutation of behaviour can redden it.
+`validate.ts`. The import statement alone satisfies it, so a behavioural mutation
+that removes every call survives it. Removing the import as well does redden the
+case, and its `not.toMatch` half over the two legacy aggregator names is a real
+oracle — but neither observes verify running the canonical validators, which is
+what the row claims.
 
 So the half that is falsifiable is not the obligation, and the half that is the
 obligation is not falsifiable. The row needs a case that drives a verify run and

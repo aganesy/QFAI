@@ -246,8 +246,8 @@ The scored population is 147 cells: 126 matrix depth cells plus 21 business rule
 
 | Mark | Matrix depth | Business rule | Scored total |
 | ---- | ------------ | ------------- | ------------ |
-| ✅   | 9            | 5             | 14           |
-| ⚠️   | 52           | 8             | 60           |
+| ✅   | 8            | 5             | 13           |
+| ⚠️   | 53           | 8             | 61           |
 | ❌   | 65           | 5             | 70           |
 | n/a  | 0            | 3             | 3            |
 | Sum  | 126          | 21            | 147          |
