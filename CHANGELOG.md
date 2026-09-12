@@ -4,6 +4,37 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ## [Unreleased]
 
+### Fixed
+
+- **The audited evidence hash says what its extraction produces, not only which
+  fields it reads** (#1616). Naming the fields settled which lines are taken and
+  left open what they become, so two readers taking the same fields computed
+  different digests: the list marker, the `Round N: ` prefix, a field's fenced
+  value, the heading line, the field order and the separator were each
+  undetermined. A recorded value was reproducible only inside the run that wrote
+  it, which is not a check.
+
+  The extraction is a region of the entry rather than a selection out of it: it
+  runs from the row's heading to the first field the subject could not have
+  read, keeps every line inside verbatim including a field's fenced value, drops
+  a reviewer's own verdict line, and synthesizes the heading. That is what
+  `npx qfai validate` gate item 10 computes today, so a second party recomputing
+  a recorded digest gets the recorded digest. A selection would have had to fix
+  an order, a separator and a spelling as well, each a further way to disagree.
+
+  Four values share these words and are not one: three ledger fields carrying
+  three reviewer roles' verdicts by these same four steps — the third is the
+  parity hash a UI-affecting row owes — and the working-tree revision, which
+  addresses a tree rather than a subject. The reference says which two the
+  completion gate recomputes today and which one it does not, so nobody takes
+  the third for a checked field — as do the implement skill's gate item and the
+  record contract, which promised a recomputation no code performs.
+
+  A round with several review attempts qualifies its verdict field, and the
+  extraction now drops that form too: the contract said every verdict line goes
+  and the code matched only the unqualified one, so a multi-attempt round gave
+  the reviewer and the gate two digests.
+
 ## [1.12.0] - 2026-09-12
 
 ### Added
@@ -1986,35 +2017,6 @@ unadjudicated`, read off a Work Orders Summary row the session writes rather
   stale every verdict in the spec when any cell moved. A record re-attestation
   closes it, because the revision has not moved — and it is not a rubber stamp,
   since what it re-signs is a judgement over a subject that has grown.
-
-- **The audited evidence hash says what its extraction produces, not only which
-  fields it reads** (#1616). Naming the fields settled which lines are taken and
-  left open what they become, so two readers taking the same fields computed
-  different digests: the list marker, the `Round N: ` prefix, a field's fenced
-  value, the heading line, the field order and the separator were each
-  undetermined. A recorded value was reproducible only inside the run that wrote
-  it, which is not a check.
-
-  The extraction is a region of the entry rather than a selection out of it: it
-  runs from the row's heading to the first field the subject could not have
-  read, keeps every line inside verbatim including a field's fenced value, drops
-  a reviewer's own verdict line, and synthesizes the heading. That is what
-  `npx qfai validate` gate item 10 computes today, so a second party recomputing
-  a recorded digest gets the recorded digest. A selection would have had to fix
-  an order, a separator and a spelling as well, each a further way to disagree.
-
-  Four values share these words and are not one: three ledger fields carrying
-  three reviewer roles' verdicts by these same four steps — the third is the
-  parity hash a UI-affecting row owes — and the working-tree revision, which
-  addresses a tree rather than a subject. The reference says which two the
-  completion gate recomputes today and which one it does not, so nobody takes
-  the third for a checked field — as do the implement skill's gate item and the
-  record contract, which promised a recomputation no code performs.
-
-  A round with several review attempts qualifies its verdict field, and the
-  extraction now drops that form too: the contract said every verdict line goes
-  and the code matched only the unqualified one, so a multi-attempt round gave
-  the reviewer and the gate two digests.
 
 ## [1.11.1] - 2026-09-10
 
