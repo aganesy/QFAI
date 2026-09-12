@@ -109,6 +109,12 @@ import {
   pinDirectory,
   resolvesInsideRoot,
 } from "../../core/manifest/manifestWriteGuard.js";
+import type { RuleMasterPlan } from "../../core/ruleMasterUpdates.js";
+import {
+  planRuleMasterUpdates,
+  readRuleLock,
+  writeRuleLock,
+} from "../../core/ruleMasterUpdates.js";
 import { resolveToolVersion } from "../../core/version.js";
 import {
   RETIRED_WORKFLOW_NAMES,
@@ -407,6 +413,9 @@ export async function runInit(options: InitOptions): Promise<void> {
     options.force,
     newlyWrittenRuleMasters(rootResult.copied, destRoot),
   );
+  // After the citation repair, which reads this run's own copy report: a master
+  // replaced here was already on disk, so it is not one that pass is looking for.
+  const ruleMasterResult = await updateUneditedRuleMasters(rootAssets, destRoot, options.dryRun);
   const qfaiResult = await copyTemplateTree(qfaiAssets, destQfai, {
     force: false,
     dryRun: options.dryRun,
@@ -573,6 +582,7 @@ export async function runInit(options: InitOptions): Promise<void> {
       ...gitignoreResult.copied,
       ...legacyEvidenceIgnoreResult.copied,
       ...entryPointRulesResult.copied,
+      ...ruleMasterResult.copied,
       ...claudeHooksResult.copied,
       ...assistantTreeResult.copied,
       ...projectSteeringResult.copied,
@@ -587,6 +597,7 @@ export async function runInit(options: InitOptions): Promise<void> {
       ...gitignoreResult.skipped,
       ...legacyEvidenceIgnoreResult.skipped,
       ...entryPointRulesResult.skipped,
+      ...ruleMasterResult.skipped,
       ...claudeHooksResult.skipped,
       ...assistantTreeResult.skipped,
       ...projectSteeringResult.skipped,
@@ -2907,6 +2918,94 @@ async function ensureLegacyEvidenceIgnoreNegations(
  * read back or rewritten, and a run that finds the start marker (or the masters
  * already cited by hand) writes nothing at all.
  */
+/** The masters' directory, relative to a project root and to the shipped tree alike. */
+const AGENTS_RULES_DIR_REL = path.join(".agents", "rules");
+
+/**
+ * Brings each shipped rule master the project has not edited up to this
+ * release's text.
+ *
+ * The root copy above is create-only, so a master whose wording changed in a
+ * release never reaches a project that ran `init` before it. That is the right
+ * default for a file the project owns and the wrong one for a rule, which is
+ * QFAI's: the projects it fails to reach are exactly the ones running an agent
+ * against the superseded text.
+ *
+ * What decides is the record of what `init` last wrote, not a guess from the
+ * file. Bytes matching that record are untouched and may be replaced; anything
+ * else is the adopter's and is reported instead of overwritten, because nothing
+ * in the file tells an edit from an older release.
+ *
+ * The write is `replaceGovernedAsset`, for the reasons that helper exists: a
+ * master left as a symlink is replaced rather than followed, a failure leaves
+ * the previous rule in place, and the hash is re-read immediately before the
+ * rename so a file that moved while this was deciding is reported rather than
+ * discarded.
+ */
+async function updateUneditedRuleMasters(
+  rootAssets: string,
+  destRoot: string,
+  dryRun: boolean,
+): Promise<{ copied: string[]; skipped: string[] }> {
+  const shippedRulesDir = path.join(rootAssets, AGENTS_RULES_DIR_REL);
+  const projectRulesDir = path.join(destRoot, AGENTS_RULES_DIR_REL);
+  const copied: string[] = [];
+  const skipped: string[] = [];
+
+  let plans: readonly RuleMasterPlan[];
+  try {
+    plans = await planRuleMasterUpdates(shippedRulesDir, projectRulesDir);
+  } catch (error: unknown) {
+    // A tree this run cannot read is one it must not rewrite. Say so and leave
+    // every master where it is: the copy above already put the missing ones
+    // there, and nothing here is required for the run to be correct.
+    info(`  NOTE: rule masters were not checked for updates (${describeError(error)})`);
+    return { copied, skipped };
+  }
+
+  const recorded: Record<string, string> = {};
+  for (const plan of plans) {
+    const target = path.join(projectRulesDir, plan.name);
+    if (plan.verdict === "keep") {
+      skipped.push(target);
+      info(
+        `  kept: ${formatReportPath(target)} (edited here, or written before this record existed)`,
+      );
+      // Its hash is not recorded. Recording it would make the next release read
+      // the adopter's text as this run's write and replace it.
+      continue;
+    }
+    if (plan.verdict !== "update") {
+      recorded[plan.name] = plan.shippedHash;
+      continue;
+    }
+    if (dryRun) {
+      copied.push(target);
+      info(`  would update: ${formatReportPath(target)} (rule master, unedited here)`);
+      continue;
+    }
+    const outcome = await replaceGovernedAsset(
+      path.join(shippedRulesDir, plan.name),
+      target,
+      plan.currentHash ?? undefined,
+    );
+    if (outcome === "target-changed") {
+      skipped.push(target);
+      info(`  kept: ${formatReportPath(target)} (changed while this run was deciding)`);
+      continue;
+    }
+    copied.push(target);
+    recorded[plan.name] = plan.shippedHash;
+  }
+
+  if (!dryRun && plans.length > 0) {
+    // Written whatever happened above, because a record missing a master is the
+    // state that keeps it unreplaceable for ever.
+    await writeRuleLock(projectRulesDir, { ...(await readRuleLock(projectRulesDir)), ...recorded });
+  }
+  return { copied, skipped };
+}
+
 async function ensureAgentEntryPointRules(
   rootAssets: string,
   destRoot: string,
