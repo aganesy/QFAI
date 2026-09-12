@@ -143,7 +143,21 @@ There is one base, and it is the project root.
 - Preserve structured choice semantics when falling back.
 - State why AskUserQuestion was unavailable.
 - The three buckets of a skill's `## Default Autopilot Policy` say who settles a
-  decision:
+  decision **the skill performs**. A **frontier decision** put inside a grilling
+  session is not one: it settles a design, an approach, a scope boundary or a
+  trade-off before anything is performed, and `.agents/rules/grilling.md` owns
+  which of those are asked and in what order. Read as a classification of every
+  question an invocation can utter, the closed `ask-user` list would contradict
+  that rule.
+  **Two things stay classified by their subject wherever they are asked**: a
+  mandatory approval, and a `hard-required` input the invocation consumes. A
+  session does not reclassify either — a `hard-required` input asked inside one
+  still stops a run that cannot get it, rather than being guessed.
+  Where the interview is what the skill performs, the asking stays in
+  `ask-user`: the bucket carries a category for a decision a declared grilling
+  session puts to the user, open to a skill whose own operation is the interview
+  and to no other.
+  The buckets:
   - `auto-decide` — the skill settles it without asking.
   - `ask-user` — the skill asks before acting.
   - `hard-required` — no default is possible, so a run may not proceed on a
