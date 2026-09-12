@@ -380,6 +380,7 @@ type AtddTraceabilitySummary = {
   };
   scan: {
     matchedFileCount: number;
+    countedFileCount: number;
     truncated: boolean;
     limit: number;
     globs: string[];
@@ -1092,6 +1093,7 @@ async function writeAtddTraceabilityReport(
     },
     scan: {
       matchedFileCount: result.scan.matchedFileCount,
+      countedFileCount: result.scan.countedFileCount,
       truncated: result.scan.truncated,
       limit: result.scan.limit,
       globs: result.scan.globs,
@@ -1186,6 +1188,7 @@ function buildSummaryMarkdown(summary: AtddTraceabilitySummary): string {
   lines.push("## Scan");
   lines.push("");
   lines.push(`- matchedFileCount: ${summary.scan.matchedFileCount}`);
+  lines.push(`- countedFileCount: ${summary.scan.countedFileCount}`);
   lines.push(`- truncated: ${summary.scan.truncated ? "true" : "false"}`);
   lines.push(`- limit: ${summary.scan.limit}`);
   lines.push("- globs:");

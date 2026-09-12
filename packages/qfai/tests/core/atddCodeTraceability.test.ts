@@ -22,7 +22,15 @@ describe("validateAtddCodeTraceability", () => {
       expect(issues.filter((entry) => entry.severity === "error")).toEqual([]);
 
       const reportPath = path.join(root, ".qfai", "report", "atdd-traceability", "summary.json");
-      await expect(readFile(reportPath, "utf-8")).resolves.toContain('"missing"');
+      const summary = await readFile(reportPath, "utf-8");
+      expect(summary).toContain('"missing"');
+      // Both scan totals reach the report. They are the same number here and
+      // are not in a repository whose test globs also match a unit suite, so a
+      // reader needs the one the coverage rules were computed from.
+      expect(JSON.parse(summary).scan).toMatchObject({
+        matchedFileCount: 3,
+        countedFileCount: 3,
+      });
     });
   });
 
