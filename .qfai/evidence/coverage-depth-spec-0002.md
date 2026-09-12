@@ -285,13 +285,20 @@ Partly addressed by `tests/assets/sddStage0PrototypingOptional.test.ts`, which r
 across both shipped trees (`packages/qfai/assets/init/.qfai` and `.qfai`), and by the
 `prototyping.yaml` cases in `tests/assets/assets.test.ts`.
 
-**The case names a README and there is no README.** The four artifacts those tests read are the
-discussion `SKILL.md`, the SDD execution playbook, `discussion-artifact-rules.md` and
-`discussion-completion-matrix.md`. No `README` file exists anywhere under
-`.qfai/assistant/skills/qfai-discussion/` or under the shipped `assets/init` copy of it. A case in
-`assets.test.ts` titled "discussion README and SKILL.md agree on prototyping.yaml optionality" reads
-`SKILL.md` and nothing else, so its title asserts a comparison it does not make. This row has
-**five `❌` depth cells** plus `Status`.
+**Both surfaces the case names are read.** The five artifacts those tests open are
+`packages/qfai/README.md`, the discussion `SKILL.md`, the SDD execution playbook,
+`discussion-artifact-rules.md` and `discussion-completion-matrix.md`. Two cases in `assets.test.ts`
+read the README: `ensures qfai-discussion skill and artifact rules use canonical pack wording`
+requires one requiredness sentence in the README, the skill and the artifact rules alike, and
+`keeps package README aligned with discussion completion contract` requires the same sentence in
+the README on its own. The file that does not exist is a `README` under
+`.qfai/assistant/skills/qfai-discussion/`, which is not the README the rule is about.
+
+One nearby case is mis-titled. `assets.test.ts`'s "discussion README and SKILL.md agree on
+prototyping.yaml optionality" reads `SKILL.md` and nothing else, so its title asserts a comparison
+it does not make. That is a defect in the title, not a gap in this row's coverage.
+
+This row has **five `❌` depth cells** plus `Status`.
 
 - **Error path** — the tests carry absence assertions over the real artifacts: the retired blocking
   sentence must not appear in the playbook, and legacy-permissive wording must not appear in the
@@ -321,8 +328,10 @@ One scored cell, and the two row verdicts that sit outside the count but still o
   first is addressed only in guidance prose; the second names an emission with no emitter. The rule
   is documented and unenforced.
 - **BR-0002-0010 × Status** — the rule's own Notes name "README / SKILL canonical wording" as the
-  surface it governs. There is no README in either shipped tree, and `src/**` never reads
-  `prototyping.yaml`, so neither the artifact set nor the runtime the rule assumes exists.
+  surface it governs. Both halves of that surface exist and are asserted, so the gap is on the other
+  side of the rule: `src/**` never reads `prototyping.yaml`, and
+  `isPrototypingRequiredForDiscussionPack` returns a constant `false` whatever it is given. Nothing
+  at runtime acts on the requiredness the wording states.
 
 ## Every ⚠️ cell, named
 
@@ -370,12 +379,16 @@ the cells beneath it needs a reason of its own.
   with the forbidden-legacy-file check that shares the same guard.
 - **TC-0002-0011 × Equivalence partitions** — the requiredness rule's two classification partitions
   both have a representative: `ui-bearing discussion packs may include prototyping.yaml` and
-  `non-ui discussion packs typically omit it`. The artifact partition the case names has only one
-  of its two members, because the README does not exist.
-- **TC-0002-0011 × Normal path** — the SKILL half is covered well: exact-sentence assertions on the
-  conditional-emission rule and the optional-artifact rule, repeated across both shipped trees. The
-  README half has no case, and no artifact for a case to read. Scored `⚠️` rather than `✅` because
-  the case names two surfaces and one of them is absent.
+  `non-ui discussion packs typically omit it`. Both members of the artifact partition are
+  represented too, the README as well as the skill. The invalid partition is not: a document whose
+  wording states the opposite requiredness is never supplied, so every representative scored here
+  belongs to the conforming class.
+- **TC-0002-0011 × Normal path** — both named surfaces carry exact-sentence assertions: the
+  conditional-emission rule and the optional-artifact rule in the skill, repeated across both
+  shipped trees, and the optional-artifact sentence in `packages/qfai/README.md`, required by two
+  cases. Scored `⚠️` rather than `✅` because the case's expected result is that requiredness
+  "matches active rule", and nothing compares the two: the sentences are checked for presence, never
+  against `isPrototypingRequiredForDiscussionPack`, which returns a constant.
 - **TC-0002-0011 × Edge cases** — one edge is guarded, and guarded thoughtfully: the completion
   matrix is sliced to the `## UI-bearing Packs` section and the slice's end is chosen at the next
   `## ` heading rather than at `## Non-UI Packs`, with `expect(uiBearing.length).toBeGreaterThan(0)`
@@ -409,9 +422,11 @@ the cells beneath it needs a reason of its own.
   assertions: the screen explorations are governed and must be carried unranked, and the brand
   direction is the stated exception. Neither branch is exercised against a pack; both are addressed
   at the level of the sentence that describes them.
-- **BR-0002-0010 × Positive case** — the requiredness wording is asserted present in four artifacts
-  across both shipped trees, which is thorough for what it measures. It is `⚠️` because the rule's
-  own Notes name README and SKILL, and the README half has no artifact.
+- **BR-0002-0010 × Positive case** — the requiredness wording is asserted present in every artifact
+  the rule names: the skill in both shipped trees, the artifact rules, and `packages/qfai/README.md`
+  under two cases. It is `⚠️` because presence is all that is measured. No pack is classified and
+  found to be treated the way the wording says, so the positive direction is established for the
+  sentence and not for the rule.
 - **BR-0002-0010 × Negative case** — the negative direction is genuinely present in shape: the
   retired blocking sentences must not appear in the Stage 0 playbook, and legacy-permissive wording
   must not appear in the skill. Both are absence assertions over the real tree rather than a planted
@@ -443,12 +458,13 @@ it says so and names what carries it now.
    direction not be required as a completion condition — it does not ask for an emission. The case
    is stricter than the criterion it refs and stricter than the product. It needs a Change Request,
    not a test.
-2. **`TC-0002-0011` names an artifact that does not exist.** The case and `BR-0002-0010` both name
-   "README / SKILL canonical wording". There is no README under `qfai-discussion/` in either the
-   working tree or the shipped `assets/init` copy. A case in `assets.test.ts` titled "discussion
-   README and SKILL.md agree on prototyping.yaml optionality" reads only `SKILL.md`, so the title
-   claims an agreement check that is not performed. Either the artifact set in the case is stale, or
-   the README is missing.
+2. **A test title claims a comparison the test does not perform.** `assets.test.ts`'s "discussion
+   README and SKILL.md agree on prototyping.yaml optionality" reads `SKILL.md` and nothing else, so
+   nothing in it compares two documents. The comparison the title describes is performed elsewhere,
+   by `ensures qfai-discussion skill and artifact rules use canonical pack wording`, which requires
+   one sentence in `packages/qfai/README.md`, the skill and the artifact rules alike. A reader
+   scanning titles would take the first case for the agreement proof and would be reading a
+   single-file presence check. Rename it for what it does.
 3. **`it("non-UI skip")` passes under a mutation of the behaviour its title names.** Removing the
    `isUiBearingSpec` guard from `validateThreeLayerModel` leaves all ten cases in
    `tests/validators/uix/threeLayer.test.ts` green, because the fixture has no sidecar files for the
