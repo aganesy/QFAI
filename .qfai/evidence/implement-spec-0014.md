@@ -51,11 +51,17 @@ not.
 
 `TDD-0033` therefore needs the selector repair whether or not the layout
 conflict its Gaps entry records is settled: resolving the conflict leaves a row
-that still names no case. The title that carries its
-obligation is
-`re-seeds acceptedIterationIndex / stopReason and deletes reviewerGate /
-fullHarness / executionPlan on cycle 0`, recorded here for the owner rather than
-written into the cell.
+that still names no case.
+
+No replacement title is recorded, because no running case carries this row's
+obligation. The cases that concern the iteration layout are in
+`iterationPaths.test.ts` — path composition, the review-file glob, and the
+stale-directory match — and each establishes that the `iter-NN` layout works,
+never the "only" clause the criterion turns on and the product contradicts. A
+title naming the cycle-0 reset would select a case, and that case is
+`TDD-0034`'s subject rather than this row's: the row would read as repaired
+while pointing at coverage of something else. The repair goes to the owner
+together with the conflict.
 
 ## Items processed
 
@@ -76,12 +82,24 @@ available here.
 `references/red-not-observable.md` accepts a sibling `TDD-NNNN` whose
 implementation already satisfies the obligation, the production path and symbol,
 the row's own id and round when it resumes from `blocked`, or an artifact plus
-the property it already had. The production path and symbol is accepted **only**
-on an `E2E` / `API` / `Integration` row handed over by `/qfai-atdd`; on a `Unit`
-or `Component` row it is refused, because production code no ledger row owns is
-the case the procedure sends to `exception`. This row is `unit`, it resumes from
-nothing, and no sibling row in the pack establishes the cycle-0 reset:
-`TDD-0033`'s obligation is the iteration directory layout.
+the property it already had. All four are refused here.
+
+The production path and symbol is accepted **only** on an `E2E` / `API` /
+`Integration` row handed over by `/qfai-atdd`; on a `Unit` or `Component` row
+it is refused, because production code no ledger row owns is the case the
+procedure sends to `exception`. This row is `unit`. It resumes from nothing, so
+the own-round form has no round to name. And no sibling row in the pack
+establishes the cycle-0 reset: `TDD-0033`'s obligation is the iteration
+directory layout.
+
+The artifact-plus-property form is the one that looks available, and it is the
+one worth spelling out. It covers pre-existing production state that no row and
+no work order created — a property **the system already had before this spec
+existed**. The purge this row asserts is not that. The pack's first document was
+committed on 2026-03-17; the line that drops the legacy block was written on
+2026-05-06, the same day this row was added to the ledger. The property arrived
+with the row rather than before the spec, so the form that would carry it is the
+sibling-row one, and that is the form the pack has no row for.
 
 A second obstacle stands behind that one. The case the `Selector` names asserts
 five outcomes — three deletions and two re-seeds — and a single case fails once,

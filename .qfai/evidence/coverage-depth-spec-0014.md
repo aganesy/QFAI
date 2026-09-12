@@ -33,9 +33,14 @@ four incidental ones in `reviewArtifactsProfileWiring.test.ts` that exercise the
 distinguishing the completion flow the story declares. `TC-0014-0028` and `TC-0014-0029` name a
 slice that is absent from the product. `TC-0014-0033` names a layout rule the product contradicts.
 
-The first two are repairable by writing a test — `US-0014-0018` needs a case that drives the
-completion flow and observes the gate refusing it, which nothing does today. The other three need
-the product or the spec to move first.
+The first two need a test, and a test on its own repairs neither. The configuration this matrix
+audited points `paths.testsDir` at the repository-root `tests/`, while every runnable suite lives
+under `packages/qfai/tests/**`, so the ATDD gate reads none of them: `TC-0014-0009` and all five
+stories stay `coveredByCarrierOnly` and status-capped however many cases are written. Repair takes
+the scan-root change as well — the configured root has to reach the suites — and, for the stories,
+the `US-*` → `AC-*` links the live pack does not record. With those in place, `US-0014-0018` needs
+a case that drives the completion flow and observes the gate refusing it, which nothing does today.
+The other three need the product or the spec to move first.
 
 - `TC-0014-0009` declares `AC-0014-0002` and `EX-0014-0002`: feed `/qfai-verify` a `REVISE` review
   artifact, and verify blocks completion. The behaviour exists. `/qfai-verify` is a shipped skill,
@@ -170,9 +175,9 @@ a run through it reports on a tree this branch has not changed — which is the 
 
 `QFAI-TEST-003` accounts for **16** of those errors, one per skipped declaration, across eight
 files. That is the count this document uses throughout, and it agrees with the eight per-file entries
-`scripts/dogfood-backlog.json` pins for this rule. A previous revision said 32 by counting the
-validator output twice — each finding prints a human-readable line and a machine `error_code:` line,
-and a grep for the rule name matches both. Two of the 16 sit in files carrying a spec-0014
+`scripts/dogfood-backlog.json` pins for this rule. Count declarations, not output lines: the
+validator prints every finding twice, once as a human-readable line and once as a machine
+`error_code:` line, so a grep for the rule name returns twice the number of findings. Two of the 16 sit in files carrying a spec-0014
 annotation, and each is a `describe.skip` covering two `it` cases — four skipped cases in all:
 
 | File                                                   | Annotations                   | Cases |
@@ -202,12 +207,14 @@ halves rule out different things.
 
 The live pack records no `US-*` → `AC-*` link for any of the five stories — the only `US-*` chains
 written down anywhere are the stale ones in `09_delta.md`, which give those identifiers a different
-subject (Findings 6). Every story row is therefore bound to its cases by subject: by the criterion
-the story's wording matches, or by the cascade that introduced the story and the test cases
-together. The cap `US-0014-0014` already carried applies to all five. A case the pack does not bind
-to the story can hold a cell at `⚠️`; no cell reaches `✅`.
+subject (Findings 6). So the pack binds no running case to any of the five stories, and every case
+named below is **attributed** rather than bound: reached by the criterion the story's wording
+matches, or by the cascade that introduced the story and the test cases together. Attribution and
+binding are not the same relation, and only a binding lifts a cap — an attributed case can hold a
+cell at `⚠️`, and no cell reaches `✅`. The cap `US-0014-0014` already carried applies to all
+five.
 
-| Story        | Cases credited                                                                 | Carrying the story's annotation |
+| Story        | Cases attributed                                                               | Carrying the story's annotation |
 | ------------ | ------------------------------------------------------------------------------ | ------------------------------- |
 | US-0014-0013 | 3 in `verifySemanticsSpec0014.test.ts`                                         | none                            |
 | US-0014-0014 | 28 in `renderEvidence.test.ts`                                                 | none                            |
@@ -239,9 +246,10 @@ to the story can hold a cell at `⚠️`; no cell reaches `✅`.
 `Status` is the row verdict, not a mark, so it is outside the scored population. For reference, its
 14 cells read **✅ 0 / ⚠️ 9 / ❌ 5**.
 
-No user-story row carries a `✅` in any column, because no case that runs is bound to any of the
-five stories; the crediting rule is stated above and the evidence behind each capped cell is named
-in "Every `⚠️` cell, named".
+No user-story row carries a `✅` in any column, because the pack binds no running case to any of
+the five stories — the cases named above are attributed by subject, which holds a cell at `⚠️` and
+never lifts it. The crediting rule is stated above and the evidence behind each capped cell is
+named in "Every `⚠️` cell, named".
 
 No row reaches `Status = ✅`. The five integration test-case rows and all five user-story rows are
 capped by the carrier-only condition described above. The four unit rows are not capped by it;
@@ -1146,6 +1154,11 @@ them is repaired here; this artifact scores coverage and does not edit tests, le
    `packages/qfai/assets/init/` contains `saas-package`, `SaaS` or `--upgrade-scope` anywhere. The
    behaviour is implemented and well tested; an operator reading the skill has no way to learn the
    mode exists.
+
+   The skill is not the whole of what is stale. `.qfai/contracts/cli/qfai-prototyping.md` owns this
+   command's documented surface, and it still advertises `certify [--check]` with neither flag. A
+   repair that touches only the skill leaves the contract describing a command shape the
+   implementation no longer has, so both belong in the remediation set.
 4. **The legacy evidence layout is the product's first choice, which contradicts `AC-0014-0005`.**
    The criterion states that the legacy `screenshots/` / `html/` layout "is no longer accepted as
    the active SSOT", and `TC-0014-0033`'s `Expected` compresses it to iter-NN "only".
@@ -1165,7 +1178,9 @@ them is repaired here; this artifact scores coverage and does not edit tests, le
    authored red ahead of the implementation, and their bodies shell out to a built CLI that now
    implements everything they assert. The live suites that replaced them
    (`prototypingCertify.saasPackage.test.ts` and `prototypingCertify.upgradeScope.test.ts`) are
-   stronger in every dimension. The four skipped cases discharge nothing, they are two of the 16
+   stronger on every dimension but one: both call `runPrototypingCertify` directly, so neither
+   reaches the parsing and dispatch the skipped bodies enter through. The four skipped cases
+   discharge nothing, they are two of the 16
    `QFAI-TEST-003` findings in the recorded validate run, and their `describe` blocks are what a
    reader scanning for the covering suite finds first. They should be rewritten or retired — and
    not simply retired, because they are not weaker in every dimension. They hold the only cases that

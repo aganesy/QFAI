@@ -452,7 +452,15 @@ claim this whole record exists to remove.
 twice: `TC-0014-0035` reads "run `qfai prototyping certify --scope saas-package`
 against a SaaS-tenant project", and its type column calls it the CLI shape.
 
-Both cases under the row's selector enter by calling `runPrototypingCertify`
+The row also carries the zero-match defect the two `unit` rows carry. Its
+`Selector` occurs in no runnable case name: the file it points at holds the test
+case id only in an annotation comment, and the suite covering the obligation is
+named `certify --scope saas-package seals a scope-limited certificate`. A `-t`
+run on the recorded selector therefore selects nothing, so what follows describes
+the cases the row is **about** rather than cases its selector reaches. That
+repair goes to the ledger owner with the rest.
+
+Both cases the row is about enter by calling `runPrototypingCertify`
 with the scope as an argument. The seal itself is discriminated — one mutation
 kills the `scope` field, a second drops a gate from the notes, and each leaves
 the other intact — but the parsing and dispatch that turn the flag into that
@@ -519,8 +527,14 @@ exist, so the fields record the absence. It is part of what the escalation puts
 to the user: a later decision cannot verify that the reviewed evidence or the
 reviewer's response stayed unchanged, because nothing sealed them.
 
-ESCALATED. The row's evidence is complete and the reviewer gate has not passed
-it: `completion-reviewer` returned `REVISE` in both rounds, and the one
+ESCALATED. The row's evidence is incomplete on its own terms, and the reviewer
+gate has not passed it either. A falsifiability row owes two proofs this record
+does not hold: `red-provenance.md` requires a `qa-gatekeeper` PASS, which this
+run did not dispatch, and `checkpoint-verification.md` requires a
+`Checkpoint verification seal` beside the command, result and revision, which is
+absent for the same reason the pack seal is. Linking the row against this
+artifact would fail the completion contract on both counts. The gate stands apart
+from that: `completion-reviewer` returned `REVISE` in both rounds, and the one
 permitted verification round escalated rather than clearing them.
 `review-convergence.md` makes the user's decision the only exit from an
 escalation, and no such decision is recorded, so this stage is not `PASS`
