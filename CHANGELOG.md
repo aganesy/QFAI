@@ -6,6 +6,24 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Added
 
+- **The question-form rule is put in front of the agent on every turn** (#1610).
+  A `UserPromptSubmit` hook emits it as context, naming the rule master and the
+  one line an agent reaches past when it would rather not ask.
+
+  Every turn rather than once at session start, because the moment a question
+  forms is unpredictable and a session-start reminder is gone by the time the
+  context is compacted — which is when a long session starts reaching for an
+  exception.
+
+  It reminds and never blocks: judging whether a question should have been a
+  structured choice needs intent, and a false positive on a hook that fires every
+  turn stops the session outright. Like the reminders already there, it runs
+  `node` directly and prints fixed text, with no shell, no file reads and no
+  network.
+
+  The rule master says it has a reminder, so a hook that stops firing does not
+  read as a rule nobody wrote one for.
+
 - **The execution stages grill at two points** (#1601). `/qfai-implement`,
   `/qfai-atdd` and `/qfai-verify` run one round at the preflight, over what the
   confidence check left uncertain, and one on detection — a contradiction in the
