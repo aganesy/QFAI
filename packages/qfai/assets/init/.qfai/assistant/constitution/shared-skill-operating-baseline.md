@@ -183,10 +183,11 @@ There is one base, and it is the project root.
 - **Grilling questions are exempt too, and unbounded.** A question asked inside
   the interview `.agents/rules/grilling.md` defines spends no budget, and a
   session runs to its own end condition — an empty frontier and the user's
-  confirmation — rather than to a count. An exhausted budget does not close one,
-  because its questions never opened it. The exemption covers the session, not
-  the stage around it: an ordinary clarification asked beside one still spends a
-  unit. Under an explicit `--auto` the session asks nothing and opens each
+  confirmation, which is itself in the exempt class — rather than to a count. An
+  exhausted budget does not close one, because its questions never opened it. A
+  session is entered deliberately: an invocation declares one and nothing else
+  starts one, so a question asked outside a declared session is an ordinary
+  clarification and spends a unit, whatever its subject. Under an explicit `--auto` the session asks nothing and opens each
   decision it could not settle as a question in the register the stage reads.
   Where a document requires the field to hold something, write the defaulted
   value and label it an assumption beside that open question; what is forbidden

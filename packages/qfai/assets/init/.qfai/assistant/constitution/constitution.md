@@ -186,14 +186,28 @@ Default policy:
 
 - **Grilling questions are exempt.** A question asked inside a grilling
   session — the interview `.agents/rules/grilling.md` defines, which walks a
-  design tree in rounds until the frontier is empty — is not a clarification
-  against this budget. Such questions are unbounded and MUST still be asked
-  after the budget is exhausted. A session ends on an empty frontier and the
-  user's confirmation, so a cap would end it on a number instead: some plans
-  need three questions and some need fifty, and a ceiling either truncates the
-  first kind or looks arbitrary on the second. The exemption covers the session,
-  not the stage it runs in — an ordinary clarification asked beside one spends
-  budget as usual.
+  design tree in rounds until nothing is left silently assumed — is not a
+  clarification against this budget. Such questions are unbounded and MUST still
+  be asked after the budget is exhausted. A session ends on an empty frontier
+  and the user's confirmation, so a cap would end it on a number instead: some
+  plans need three questions and some need fifty, and a ceiling either truncates
+  the first kind or looks arbitrary on the second.
+
+  **A session is entered deliberately.** An invocation declares one and nothing
+  else starts one: meeting an unfixed design does not, and neither does an
+  ambiguity found while implementing. Outside a declared session no question is
+  a grilling question — one about an open design decision is an ordinary
+  clarification and spends budget. That is what decides the class when the
+  question is asked, rather than leaving it arguable afterwards, and it is what
+  keeps the exemption from emptying the budget. It separates grilling from
+  clarification and nothing else: the approval and `hard-required` exemptions
+  below turn on what a question is about, not on whether a session was declared,
+  so they hold in every invocation.
+
+  **The confirmation that closes a session is in this class with its
+  questions.** It is the session's own end condition, so counting it would leave
+  a session that can be neither continued nor closed.
+
 - **Approval questions are exempt.** A question whose subject is a user decision
   the skill declares mandatory — a per-row triage approval in `/qfai-sdd`, a
   destructive-operation confirmation, an escalation under

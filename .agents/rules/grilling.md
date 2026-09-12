@@ -2,56 +2,114 @@
 
 An interview that settles a plan before anyone acts on it.
 
-Reach for it whenever a decision is about to be made that the repository cannot
-settle by itself: a design, an approach, a scope boundary, a trade-off between
-things that both matter. A session turns those into decisions someone made on
-purpose, instead of defaults nobody chose.
+This rule does not decide what to build and does not replace a specification.
+What it decides is the order questions are asked in, who answers each one, and
+when asking stops.
 
-Vagueness is not a reason to postpone a session. It is what the session is for.
-What ends the need for one is the decision being settled, not the subject being
-easy to state: a choice between two fully specified options is precise and still
-open, and precision is no help whatever in making it.
+## Scope
 
-## Three pieces
+A **grilling session** is a mode entered deliberately. An invocation declares
+one; nothing else starts one. Meeting an unfixed design does not, and neither
+does an ambiguity found while implementing.
 
-| Piece       | What it is                                                                                     |
-| ----------- | ---------------------------------------------------------------------------------------------- |
-| Design tree | The subject modelled as decisions, with decisions hanging off them                             |
-| Frontier    | Every decision whose prerequisites are settled — the only questions that can honestly be asked |
-| Round       | One frontier, asked in full and answered in full                                               |
+| Target                            | Applies                                                            |
+| --------------------------------- | ------------------------------------------------------------------ |
+| A session, once entered           | Every round, until it ends                                         |
+| A decision the user owns          | Asked, never assumed                                               |
+| A fact the environment can settle | Never asked; looked up                                             |
+| A fact only the user holds        | Asked as a value, never offered as a choice                        |
+| A question outside a session      | Not a grilling question — an ordinary clarification, capped as one |
+| Work already specified            | Outside this rule; the spec is the authority                       |
 
-Two questions never share a round if one depends on the other. A question that
-hinges on an answer still open belongs to a later round.
+The fifth row is what keeps the rest from being a way around a question budget.
+It also makes the class decidable when the question is asked rather than
+arguable afterwards.
 
-Each round's answers reshape the tree: settled decisions push the frontier
-outward and unblock the questions that waited on them. Recompute the frontier
-and ask the next round. A later round is computed from the answers, never
-written in advance.
+Reach for a session whenever a decision is about to be made that the repository
+cannot settle by itself: a design, an approach, a scope boundary, a trade-off
+between things that both matter. A session turns those into decisions someone
+made on purpose, instead of defaults nobody chose.
+
+Vagueness is not a reason to postpone one. It is what the session is for. What
+ends the need is the decision being settled, not the subject being easy to
+state: a choice between two fully specified options is precise and still open,
+and precision is no help whatever in making it.
+
+## The design tree
+
+The subject sits at the root, and below it hang nodes, each on whatever it
+depends on.
+
+| Node                       | Settled by                        | State while open |
+| -------------------------- | --------------------------------- | ---------------- |
+| Decision                   | The user, when asked              | Open             |
+| Fact the environment holds | The agent, by reading or a lookup | Open, in flight  |
+| Fact only the user holds   | The user, when asked              | Open             |
+
+**A fact the environment does not hold is still a fact.** An unpublished date, a
+constraint that lives in a contract, a number only the user knows: no lookup
+reaches it. Ask for it as the value it is, not as a choice — nothing is being
+decided, so there are no options to offer. Recorded as a preference it becomes
+revisable, and a fact is not.
+
+The tree is not written once. Each answer changes what the remaining nodes are,
+so it is the current state of what is settled and what is not, never a plan made
+at the start.
+
+## The frontier
+
+The frontier is every node that can be settled now: every decision whose
+prerequisites are all settled, and every user-held fact whose own prerequisites
+are settled.
+
+A user-held fact belongs there because nothing else can put it there. Left off,
+the decision below it waits on a node no round ever asks, the frontier never
+empties, and the session cannot end.
+
+Those are the only questions that can honestly be asked yet. A question whose
+answer depends on an unanswered one cannot be answered, only guessed at — and a
+guess recorded as an answer is worse than an open question, because nothing
+later re-opens it.
+
+## A round
+
+One round is one frontier: asked in full, answered in full.
+
+- Two questions never share a round when one depends on the other. The dependent
+  one belongs to a later round.
+- Every question in the round is put at once, so the user sees the whole of what
+  is being decided together.
+- The next round is recomputed from the answers, never written ahead of them.
 
 Count rounds, not questions. Forty questions across four rounds is an ordinary
 session; the same forty asked one at a time is a worse one.
 
-## Asking a round
+Ask through the host's structured question tool. Where the host has no such
+tool, or it is unavailable in the current mode, ask the same round as a normal
+message with numbered choices, keep the choice semantics, and say why the tool
+was unavailable. A session is never skipped for want of a tool.
 
-Every question in a round has the same shape:
+**Where the tool takes fewer questions than the round holds**, deliver the round
+in host-sized batches. The frontier is not recomputed between them, no answer is
+acted on until the round is exhausted, and each batch is read for a closing
+answer before the next is put. Batching is how one round reaches a host that
+cannot show it whole; it never makes two rounds.
 
-- a number and a short title, so the round can be answered by number;
-- the question itself, with the options where there are options;
-- **the recommended answer**, and why it is the one to pick.
+## The shape of a question
 
-The recommendation is not a formality. Without it the user has to reconstruct
-the reasoning before they can disagree with it, and most rounds are long enough
-that they will stop reading instead.
+Each question is numbered, carries a short title, and states the recommended
+answer on a line of its own. That shape is what makes a round answerable by
+number: a user who agrees with every recommendation says so once, and a user who
+disagrees with the third names the third.
 
-Ask through the host's structured question tool. When a round carries more
-questions than one call accepts, split it across consecutive calls until the
-round is exhausted. The split is presentation: it neither reorders the questions
-nor defers any of them to a later round.
+Without a recommendation the user has to reconstruct the reasoning before they
+can disagree with it, and most rounds are long enough that they will stop
+reading instead.
 
-Where the host has no such tool, or it is unavailable in the current mode, ask
-the same round as a normal message with numbered choices, keep the choice
-semantics, and say why the tool was unavailable. A session is never skipped for
-want of a tool.
+**A question asking for a fact carries no recommended answer.** There is nothing
+to recommend: the agent does not hold the value, a guessed one is the corruption
+the tree warns about, and offering it invites the user to accept it. Name the
+fact, say what depends on it, and leave the answer to them.
 
 ## Facts are yours, decisions are theirs
 
@@ -66,11 +124,15 @@ decisions has not read this rule liberally — it has stopped following it.
 
 ## When a session ends
 
-Both of these, together:
+A session **completes** on both of these:
 
-1. The frontier is empty. Every branch has been visited and nothing is left
-   silently assumed.
+1. No node is open. The frontier is empty **and** no lookup is still running.
 2. The user confirms the understanding is shared.
+
+Condition 1 is about the whole tree. When every remaining decision waits on a
+lookup, the frontier is empty while the tree still holds open nodes, and
+completing there would close the session before the lookup could raise the
+questions it was dispatched to answer.
 
 Running out of questions is not the same as being finished. Do not act on what
 was agreed until the confirmation in step 2.
@@ -79,6 +141,27 @@ There is no question cap, and adding one would not help: some plans need three
 questions and some need fifty, so a fixed ceiling either truncates the hard case
 or looks arbitrary on the easy one. When a session runs long the cause is
 usually a subject too large to hold at once. Break it up and grill the pieces.
+
+### When the user ends it
+
+Completing is how a session ends on its own. It is not the only way one ends.
+
+A user's **stop** ends it immediately, frontier empty or not: ask nothing
+further, do no further work, and report every open decision as open. Nothing
+above outranks that, and an agent that kept asking because condition 1 was unmet
+has read this rule as licence to ignore the user.
+
+A user who closes the questions instead — **proceed**, **done**, or an answer to
+that effect — ends the asking, not the work. Each decision still open is
+recorded as an assumption and labelled as one. A lookup still running is
+finished, and a decision it then raises is recorded the same way: the closure
+covers the tree as it finally stands, not only the nodes open at the moment it
+arrived.
+
+Two kinds of node are never assumed when the questions close: a decision some
+document requires the user to make and record, and an input declared
+undefaultable. Both are still asked, and a run missing the second stops rather
+than inventing it.
 
 ## Under a no-question mode
 

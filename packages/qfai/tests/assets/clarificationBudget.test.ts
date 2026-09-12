@@ -103,7 +103,20 @@ describe("the clarification budget binds a stage", () => {
       // Scoped to the session. Without this the exemption reads as "a stage that
       // grills may ask anything", which empties the budget wherever a session
       // has run.
-      expectPhrase(content, "The exemption covers the session,\n  not the stage it runs in");
+      // The class has to be decidable when the question is asked. Without an
+      // entry condition an agent that meets an unfixed design, or an ambiguity
+      // while implementing, can call the question a grilling question, and the
+      // budget stops binding anything.
+      expectPhrase(content, "**A session is entered deliberately.**");
+      expectPhrase(content, "an\n  ambiguity found while implementing");
+      expectPhrase(content, "Outside a declared session no question is\n  a grilling question");
+      // Grilling alone. The other two exemptions turn on what a question is
+      // about, so tying them to a declared session would withdraw a mandatory
+      // approval from every invocation that did not declare one.
+      expectPhrase(content, "It separates grilling from\n  clarification and nothing else");
+      // The closing question is the session's end condition. Counted, a session
+      // reaching its end on a spent budget could be neither continued nor closed.
+      expectPhrase(content, "**The confirmation that closes a session is in this class");
     });
 
     it(`${tree}: a spent budget does not end a grilling session`, async () => {
@@ -174,7 +187,15 @@ describe("the clarification budget binds a stage", () => {
       const content = await read(tree, OPERATING);
       expectPhrase(content, "**Grilling questions are exempt too, and unbounded.**");
       expectPhrase(content, "An exhausted budget does not close one");
-      expectPhrase(content, "The exemption covers the session, not\n  the stage around it");
+      // The baseline carries the entry condition too, or a skill reading it
+      // rather than the article has no way to tell a grilling question from an
+      // ordinary one — and every design question would then be exempt.
+      expectPhrase(content, "A\n  session is entered deliberately");
+      expectPhrase(
+        content,
+        "a question asked outside a declared session is an ordinary\n  clarification",
+      );
+      expectPhrase(content, "which is itself in the exempt class");
       // The baseline is the nearer document for an agent inside a skill, so it
       // has to permit what Article X permits. Forbidding the labelled value
       // outright here left a `--auto` discussion run choosing between omitting a
