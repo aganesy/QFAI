@@ -5,18 +5,28 @@
 This matrix scores the eight user stories `02_User-stories.md` declares — `US-0008-0001` through
 `US-0008-0008` — and the eighteen test cases `06_Test-Cases.md` declares — `TC-0008-0001` through
 `TC-0008-0018` — against the tests that actually discharge them in `packages/qfai/tests/**`. The
-obligation set is read from those two files in full, not from the rows of
-`.qfai/specs/spec-0008/tdd/test-list.md`, so a case whose ledger row was never updated is still
-scored here, and a story, which seeds no ledger row at all, is scored too. No story carries a
-`- x-qfai-status: planned` meta line, so all eight are active and all eight own a row. The business
-rule table below it carries all twelve `BR-0008-*` of `04_Business-Rules.md`; none of the twelve
-headings carries a `Status:` retiring it, so all twelve are active and all twelve own a row.
+obligation set is read from those two files in full, and not from the rows of
+`.qfai/specs/spec-0008/tdd/test-list.md`, because **the ledger is missing rows the seeding contract
+requires**. All eighteen of its rows sit at the Integration layer, it has no `US-Refs` column, and
+it holds no `Layer = E2E` row for any of the eight stories — eight rows short (see Findings).
+Reading the obligation set from it would drop every story, and drop any test case whose row was
+never added. No story carries a `- x-qfai-status: planned` meta line, so all eight are active and
+all eight own a row. The business rule table below it carries all twelve `BR-0008-*` of
+`04_Business-Rules.md`; none of the twelve headings carries a `Status:` retiring it, so all twelve
+are active and all twelve own a row.
 
 **A `US-*` row is scored against the files that declare the story**, which is what an annotation
 does. The behaviour under a story is often exercised somewhere else in the tree, and that coverage
 is scored on the `TC-*` row whose annotation carries it. Reading it a second time into the story
 would report an obligation owed to the E2E layer as discharged by a layer that holds no test for it,
 so the two readings are kept apart and each story's entry names what stands beside it.
+
+**The ATDD scan opens narrower directories than this matrix scores.** With `paths.testsDir: tests`,
+the scan globs are `tests/e2e/**`, `tests/api/**` and `tests/integration/**` at the repository root,
+so no file under `packages/qfai/tests/**` is in them. `US-0008-0008` is the one story scoring above
+zero, and the suite that earns its marks sits outside that root, so `QFAI-ATDD-111` counts the story
+as covered by an annotation carrier alone. The marks stand: a test that exercises the obligation is
+coverage whether or not a scan glob opens it, and that is the measure the sibling matrices use too.
 
 **Most cells are `❌` for a reason worth stating precisely, because it is not the obvious one.**
 Sixteen of the eighteen test cases do have a passing annotated test — only `TC-0008-0009` and
@@ -197,6 +207,13 @@ Declared by `tests/e2e/spec0008CredentialReuseGuidanceE2E.test.ts`, two passing 
 Two depth cells are `✅`, and the oracle behind them was measured: renaming the seventh rule's
 heading in the shipped artifact fails the first case, and restoring it returns 2 passed. Six depth
 cells are `❌`; the row's one `⚠️` is stated under "Every `⚠️` cell, named".
+
+The ATDD scan does not open that suite. It sits at
+`packages/qfai/tests/e2e/spec0008CredentialReuseGuidanceE2E.test.ts`, and the scan globs, built from
+`paths.testsDir: tests`, are `tests/e2e/**`, `tests/api/**` and `tests/integration/**` at the
+repository root — different directories. `QFAI-ATDD-111` therefore counts this story as covered by
+an annotation carrier alone. The marks above are unaffected: they score what discharges the
+obligation, and these two cases do.
 
 - **Error path** — both cases read the tree `qfai init` produces. Neither constructs a delivery with
   the artifact dropped, the link removed or the file truncated and requires a failure. The two
@@ -661,7 +678,7 @@ The PASS criterion requires a documented rationale for each, so each is named he
 
 ## Findings
 
-Seven things were found while producing this matrix that the reviewing stage should act on. None of
+Eight things were found while producing this matrix that the reviewing stage should act on. None of
 them is repaired here; this artifact scores coverage and does not edit tests, ledgers or specs.
 
 1. **The ledger is stale for `TDD-0015` … `TDD-0018`.** All four rows read `Status = todo`,
@@ -705,6 +722,14 @@ them is repaired here; this artifact scores coverage and does not edit tests, le
    `tests/integration/spec0008AtddScaffold.test.ts` carries. Unskipping that E2E file is the cheapest
    of the seven gaps to close, because the behaviour beneath it already has twenty-one passing
    integration cases.
+8. **The ledger is eight rows short of what seeds it.** `qfai-sdd`'s Phase 2b seeds
+   `tdd/test-list.md` in four groups, and one of them is "one `Layer = E2E` row per **active**
+   `US-*` from `02_User-stories.md` (obligation in `US-Refs`, `TC-Refs` = `-`)"
+   (`.qfai/assistant/skills/qfai-sdd/SKILL.md`). The same phase migrates an eight-column ledger by
+   adding the `US-Refs` and `CON-API-Refs` columns the E2E and API groups write into. This ledger
+   has eighteen rows, all at the Integration layer, and eight columns with no `US-Refs` among them,
+   so none of the eight active stories has a row. The column has to arrive with them: a
+   `Layer = E2E` row put into the table as it stands would have nowhere to record its obligation.
 
 ## Follow-up this matrix does not discharge
 

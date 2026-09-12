@@ -6,11 +6,12 @@ This matrix scores the seven active user stories `02_User-stories.md` declares �
 `-0002`, `-0003`, `-0005`, `-0008`, `-0009` and `-0010` — and the five active test cases
 `06_Test-Cases.md` declares — `TC-0002-0001`, `-0008`, `-0009`, `-0010` and `-0011`, all at
 `Level: L3` — against the tests that actually discharge them in `packages/qfai/tests/**`. The
-obligation set is read from those two files in full, not from the rows of
-`.qfai/specs/spec-0002/tdd/test-list.md`. `TC-0002-0002` … `-0007` were removed from the active
-table when the `discussionDesignHardening` validator and the exploration-sidecar family were
-retired, so they are not scored; `US-0002-0004`, `-0006` and `-0007` were retired with them and have
-no `US-*` block left to score. None of the seven remaining stories carries a
+obligation set is read from those two files in full, and not from the rows of
+`.qfai/specs/spec-0002/tdd/test-list.md`, because the ledger is missing rows the seeding contract
+requires — seven of them, one per story (see Findings). `TC-0002-0002` … `-0007` were removed from
+the active table when the `discussionDesignHardening` validator and the exploration-sidecar family
+were retired, so they are not scored; `US-0002-0004`, `-0006` and `-0007` were retired with them
+and have no `US-*` block left to score. None of the seven remaining stories carries a
 `- x-qfai-status: planned` meta line, so all seven are active and all seven own a row. The business
 rule table below carries all four active `BR-0002-*` of `04_Business-Rules.md`; `BR-0002-0002` …
 `-0007` were removed in the same retirement, and none of the four remaining rows carries a status
@@ -22,11 +23,13 @@ here is declared by prose alone. Where the behaviour under a story is exercised,
 scored on the `TC-*` row whose obligation it discharges; reading it a second time into the story
 would report an obligation owed to the E2E layer as met by a layer that holds no test for it.
 
-**The ledger is not a coverage source for this pack, and the matrix does not read it.** Three of its
-six `done` rows name a `Selector` that appears in no file in the repository, and a fourth names one
-that resolves to a test about a different behaviour. A `Status` column that says `done` over a
-selector nothing can run is a claim, not a measurement. Every test-case score below comes from a test
-that was located in the tree and executed.
+**The ledger is not a coverage source for this pack, and the matrix does not read it.** It has six
+rows — four `integration` and two `validators` — and eight columns with no `US-Refs` among them, so
+not one of the seven active stories appears in it. Of the rows it does have, three `done` rows name
+a `Selector` that appears in no file in the repository, and a fourth names one that resolves to a
+test about a different behaviour. A `Status` column that says `done` over a selector nothing can run
+is a claim, not a measurement. Every test-case score below comes from a test that was located in the
+tree and executed.
 
 **Two obligations name a behaviour that no longer has an implementation.** `TC-0002-0008` and
 `TC-0002-0009` describe a planner-first pass and a planner-first violation. The validator that
@@ -429,7 +432,7 @@ the cells beneath it needs a reason of its own.
 
 ## Findings
 
-Six things were found while producing this matrix that the reviewing stage should act on. None is
+Seven things were found while producing this matrix that the reviewing stage should act on. None is
 repaired here; this artifact scores coverage and does not edit tests, ledgers or specs.
 
 1. **`TC-0002-0009` specifies a finding that nothing emits.** The case requires a planner-first
@@ -472,6 +475,14 @@ repaired here; this artifact scores coverage and does not edit tests, ledgers or
    `tests/validators/uix/screenContract.test.ts` declares `TC-0002-0020` through `TC-0002-0024`.
    None of those seven appears in `06_Test-Cases.md`, whose active table holds five rows. The
    annotations point at obligations that were removed or never registered.
+7. **The ledger is seven rows short of what seeds it.** `qfai-sdd`'s Phase 2b seeds
+   `tdd/test-list.md` in four groups, and one of them is "one `Layer = E2E` row per **active**
+   `US-*` from `02_User-stories.md` (obligation in `US-Refs`, `TC-Refs` = `-`)"
+   (`.qfai/assistant/skills/qfai-sdd/SKILL.md`). The same phase migrates an eight-column ledger by
+   adding the `US-Refs` and `CON-API-Refs` columns the E2E and API groups write into. This ledger
+   has neither the column nor a single `Layer = E2E` row, so none of the seven active stories has
+   one. The column has to arrive with the rows: a `Layer = E2E` row put into the table as it stands
+   would have nowhere to record its obligation.
 
 ## Follow-up this matrix does not discharge
 
