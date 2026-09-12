@@ -4,6 +4,80 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ## [Unreleased]
 
+### Fixed
+
+- **The ATDD traceability scan reads every package's acceptance tests, not only
+  the one under `paths.testsDir`** (#1588). That setting holds a single path, so
+  a repository whose suites live one per package could name at most one of them.
+  The three globs the scan built from it matched whatever was under the
+  configured root, and in this repository that was two prose annotation carriers
+  and no test at all. Every obligation was then satisfied by a list of IDs, and
+  `QFAI-ATDD-111` and `-112` could not report a coverage gap.
+
+  The scan now also collects from the project's own
+  `validation.traceability.testFileGlobs`, minus its `testFileExcludeGlobs`, and
+  a file collected that way is answered by the segment **inside its test
+  root** — `<package>/tests/<layer>/**`. Read from any ancestor instead, every
+  test of a package called `api` lands in the API layer, including its unit
+  suite. The globs are used as written: a base is
+  never derived by slicing one, because a glob whose directory part carries a
+  wildcard slices to a base with the wildcard still in it, and a layer glob
+  synthesized under that base addresses a directory the project never
+  configured.
+
+  Measured on this repository: obligations covered by an annotation carrier
+  alone fall from 781 to 384 — 93 user stories and 304 test cases move to a test
+  that exists and runs — with no new finding at any severity.
+
+  A collected file in none of the three directories answers nothing and is not
+  reported as misplaced. A unit suite owes ATDD nothing wherever it sits, so
+  `QFAI-ATDD-105` keeps its subject: a file under `paths.testsDir` that no layer
+  owns.
+
+  The stub gate collects the extensions its own pattern names, plus any a
+  project glob names outright — and those reach the layer globs it generates
+  under `paths.testsDir` as well, so an extension named only by a package glob
+  is collected from the configured root too. A glob used as written may be extension-broad, so
+  a fixture beside the suite — `tests/integration/data.json` — reached a scan
+  that had nothing to say about it and was reported as an unscanned language;
+  and a glob naming `.zig` selects a language with no dialect on purpose, which
+  is what that report is for.
+
+  A file in no acceptance layer is dropped while the stream runs, before it is
+  counted against the collection limit. A project glob may match a whole
+  monorepo, and files no acceptance rule reads would otherwise spend the limit
+  on the first packages and never reach the later ones — reported only as an
+  `info`, which `--fail-on error` passes. `scan.matchedFileCount` therefore
+  counts acceptance files rather than glob matches.
+
+  A malformed `validation.traceability.testFileGlobs` entry no longer rejects
+  the whole validator batch. It degrades to an empty scan, so the finding the
+  user can act on still reaches them alongside every other result.
+
+  The missing-coverage remediations name the package's own suite as well as
+  `paths.testsDir`, so an author following the canonical fix does not build a
+  parallel central suite the shipped skill tells them not to build.
+
+  A collected file answers a layer only from inside a test root — a directory
+  named `tests`, `test` or `__tests__`, or the one `paths.testsDir` points at,
+  and in either case one that carries no package manifest, since a workspace
+  package named `tests` is a package rather than a suite root. The manifest is
+  read for every ecosystem this toolkit has a stub dialect for, not Node's
+  alone: a Python or Go workspace can name a package that way too.
+  The glob `qfai init` derives reaches colocated sources, so reading the file's
+  own parent instead would have made every `src/api/client.spec.ts` an API
+  acceptance test: its annotation could then discharge an obligation, and an
+  unfilled stub in it could block a gate that owns no unit test. A suite kept
+  outside those roots is reported as uncovered until its root is named, which
+  is the safe direction of the two.
+
+  The scaffold marker still hands an unfilled skeleton to
+  `D-SCAFFOLD-PLACEHOLDER`, but only where that validator looks — both halves of
+  its scan, the four directories under `paths.testsDir` and the writer's own
+  basename patterns. A marked skeleton outside either was exempt from this gate
+  and uncollected by that one, leaving the ATDD gate green over a suite that
+  does not run.
+
 ## [1.12.0] - 2026-09-12
 
 ### Added
@@ -1986,78 +2060,6 @@ unadjudicated`, read off a Work Orders Summary row the session writes rather
   stale every verdict in the spec when any cell moved. A record re-attestation
   closes it, because the revision has not moved — and it is not a rubber stamp,
   since what it re-signs is a judgement over a subject that has grown.
-
-- **The ATDD traceability scan reads every package's acceptance tests, not only
-  the one under `paths.testsDir`** (#1588). That setting holds a single path, so
-  a repository whose suites live one per package could name at most one of them.
-  The three globs the scan built from it matched whatever was under the
-  configured root, and in this repository that was two prose annotation carriers
-  and no test at all. Every obligation was then satisfied by a list of IDs, and
-  `QFAI-ATDD-111` and `-112` could not report a coverage gap.
-
-  The scan now also collects from the project's own
-  `validation.traceability.testFileGlobs`, minus its `testFileExcludeGlobs`, and
-  a file collected that way is answered by the segment **inside its test
-  root** — `<package>/tests/<layer>/**`. Read from any ancestor instead, every
-  test of a package called `api` lands in the API layer, including its unit
-  suite. The globs are used as written: a base is
-  never derived by slicing one, because a glob whose directory part carries a
-  wildcard slices to a base with the wildcard still in it, and a layer glob
-  synthesized under that base addresses a directory the project never
-  configured.
-
-  Measured on this repository: obligations covered by an annotation carrier
-  alone fall from 781 to 384 — 93 user stories and 304 test cases move to a test
-  that exists and runs — with no new finding at any severity.
-
-  A collected file in none of the three directories answers nothing and is not
-  reported as misplaced. A unit suite owes ATDD nothing wherever it sits, so
-  `QFAI-ATDD-105` keeps its subject: a file under `paths.testsDir` that no layer
-  owns.
-
-  The stub gate collects the extensions its own pattern names, plus any a
-  project glob names outright — and those reach the layer globs it generates
-  under `paths.testsDir` as well, so an extension named only by a package glob
-  is collected from the configured root too. A glob used as written may be extension-broad, so
-  a fixture beside the suite — `tests/integration/data.json` — reached a scan
-  that had nothing to say about it and was reported as an unscanned language;
-  and a glob naming `.zig` selects a language with no dialect on purpose, which
-  is what that report is for.
-
-  A file in no acceptance layer is dropped while the stream runs, before it is
-  counted against the collection limit. A project glob may match a whole
-  monorepo, and files no acceptance rule reads would otherwise spend the limit
-  on the first packages and never reach the later ones — reported only as an
-  `info`, which `--fail-on error` passes. `scan.matchedFileCount` therefore
-  counts acceptance files rather than glob matches.
-
-  A malformed `validation.traceability.testFileGlobs` entry no longer rejects
-  the whole validator batch. It degrades to an empty scan, so the finding the
-  user can act on still reaches them alongside every other result.
-
-  The missing-coverage remediations name the package's own suite as well as
-  `paths.testsDir`, so an author following the canonical fix does not build a
-  parallel central suite the shipped skill tells them not to build.
-
-  A collected file answers a layer only from inside a test root — a directory
-  named `tests`, `test` or `__tests__`, or the one `paths.testsDir` points at,
-  and in either case one that carries no package manifest, since a workspace
-  package named `tests` is a package rather than a suite root. The manifest is
-  read for every ecosystem this toolkit has a stub dialect for, not Node's
-  alone: a Python or Go workspace can name a package that way too.
-  The glob `qfai init` derives reaches colocated sources, so reading the file's
-  own parent instead would have made every `src/api/client.spec.ts` an API
-  acceptance test: its annotation could then discharge an obligation, and an
-  unfilled stub in it could block a gate that owns no unit test. A suite kept
-  outside those roots is reported as uncovered until its root is named, which
-  is the safe direction of the two.
-
-  The scaffold marker still hands an unfilled skeleton to
-  `D-SCAFFOLD-PLACEHOLDER`, but only where that validator looks — both halves of
-  its scan, the four directories under `paths.testsDir` and the writer's own
-  basename patterns. A marked skeleton outside either was exempt from this gate
-  and uncollected by that one, leaving the ATDD gate green over a suite that
-  does not run.
 
 ## [1.11.1] - 2026-09-10
 
