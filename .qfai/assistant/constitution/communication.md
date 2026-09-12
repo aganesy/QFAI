@@ -46,7 +46,13 @@ Full rule: `.agents/rules/documentation-clarity.md`.
 When an agent needs to ask the user a question, the following rules apply (see also Constitution Article X):
 
 1. **MUST use AskUserQuestion** when the tool is available in the current environment.
+   **No question is exempt**, and availability is judged for **this question in this
+   invocation**: a tool the mode withholds, and one that cannot carry the answer's
+   shape, are both unavailable for that question and take rule 3.
+   `.agents/rules/user-questions.md` owns the form and states the whole of it.
 2. **MUST prefer structured choices** (radio/multi-select) over free-text input when supported.
+   Where the answer is genuinely open — a name, a number, a sentence — the tool's
+   free-text path carries it; that is an answer shape, not an exception.
 3. **Fallback**: If AskUserQuestion is technically unavailable (e.g., non-VS Code environment),
    the agent MUST present the same question as a normal message with explicit numbered choices.
    The agent SHOULD preserve structured choice semantics (enumerated options, selection constraints).

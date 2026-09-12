@@ -533,10 +533,24 @@ describe("the question form binds every question", () => {
       // are the mandatory ones.
       const content = await read(tree, CONSTITUTION);
       expectPhrase(content, "**This is the form, not the count.**");
-      expectPhrase(
-        content,
-        "the questions that\nsurvive exhaustion still arrive as structured choices",
-      );
+      // The form its answer shape calls for, not a choice unconditionally. A
+      // `hard-required` input that survives exhaustion can need an open value —
+      // `qfai-configure`'s replacement glob — and demanding options there would
+      // have an agent invent two to narrow an answer nobody wanted narrowed.
+      expectPhrase(content, "the form its answer shape calls for");
+      expectPhrase(content, "the tool's free-text path where the\nanswer is a name");
+    });
+
+    it(`${tree}: communication.md states the same protocol, not an older one`, async () => {
+      // It presents itself as a normative copy, so an agent reading it instead
+      // of the article got "the tool whenever it is present" and lost the
+      // per-question judgement — and with it the selection constraint on a
+      // question the tool cannot carry.
+      const content = await read(tree, COMMUNICATION);
+      expectPhrase(content, "**No question is exempt**");
+      expectPhrase(content, "**this question in this\n   invocation**");
+      expectPhrase(content, "`.agents/rules/user-questions.md` owns the form");
+      expectPhrase(content, "that is an answer shape, not an exception");
     });
 
     it(`${tree}: availability is judged per question, not per host`, async () => {

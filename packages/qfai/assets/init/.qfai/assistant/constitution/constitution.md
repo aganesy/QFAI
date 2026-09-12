@@ -346,8 +346,12 @@ takes and states the whole of it; this article is where the obligation binds.
 
 **This is the form, not the count.** Article VI bounds how many clarifying
 questions an invocation asks; this article bounds what each of them looks like.
-Exhausting that budget changes the count and nothing here — the questions that
-survive exhaustion still arrive as structured choices.
+Exhausting that budget changes the count and nothing here: a question that
+survives exhaustion still arrives in the form its answer shape calls for — a
+structured choice where there are choices, the tool's free-text path where the
+answer is a name, a number or a sentence. `qfai-configure`'s replacement glob is
+the second kind, and inventing options to narrow it would be the failure the
+rule master names.
 
 Rules:
 
