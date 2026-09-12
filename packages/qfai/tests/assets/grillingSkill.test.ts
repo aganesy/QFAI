@@ -230,7 +230,12 @@ describe("the primitive carries the master's clauses", () => {
 
     it(`${tree}: a question for a fact carries no recommended answer`, async () => {
       const text = flat(await readSkill(tree, SKILL));
-      expect(text).toMatch(/no options and no recommended answer/);
+      expect(text).toContain("with **no recommended answer**");
+      // Options are a separate question from the recommendation, and the
+      // candidate set answers it: asked as free text, "which of four supported
+      // regions" loses the four.
+      expect(text).toMatch(/the candidate set answers it/);
+      expect(text).toMatch(/asked as a choice among them/);
     });
 
     it(`${tree}: a frontier larger than the tool is batched, not split into rounds`, async () => {

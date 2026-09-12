@@ -62,10 +62,15 @@ off whatever it depends on.
 
 **A fact the environment does not hold is still a fact.** An unpublished date, a
 constraint that lives in a contract, a number only the user knows: no lookup
-reaches it, and it is not a decision either. Ask for it as the value it is, with
-no options and no recommended answer — nothing is being decided, so there is
-nothing to recommend, and a recommended value the agent does not hold is a guess
-the user is invited to accept.
+reaches it, and it is not a decision either. Ask for it as the value it is, and
+with **no recommended answer** — nothing is being decided, so there is nothing
+to recommend, and a recommended value the agent does not hold is a guess the
+user is invited to accept.
+
+Whether it arrives as options is a separate question, and the candidate set
+answers it: a fact with a known few possible values is asked as a choice among
+them, and one with no such set as a plain request. Asking which of four
+supported regions is active as free text loses the four.
 
 All three are prerequisites, so a decision waiting on a fact is on the tree as
 exactly that. The tree is not written once: each answer changes what the

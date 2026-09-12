@@ -521,6 +521,19 @@ describe("cross-AI rules surface (.agents/rules/ master)", () => {
       expect(text).toMatch(/numbered\s+choices\s+where\s+a\s+finite\s+set\s+of\s+candidates/);
       expect(text).toMatch(/not\s+whether\s+the\s+question\s+asks\s+for\s+a\s+fact/);
     });
+
+    // A round is put as a unit, so whether the tool can carry it is judged for
+    // the unit. Judged per question, the grilling master's whole-round fallback
+    // and this rule's per-question one prescribe two carriers for one round,
+    // and no path satisfies both.
+    it.each(MASTERS)("%s judges a set presented as one as one", async (rel) => {
+      const text = await readFile(path.join(ROOT, rel), "utf-8");
+      expect(text).toMatch(/A\s+set\s+presented\s+as\s+one/);
+      expect(text).toMatch(/Availability\s+is\s+then\s+judged\s+for\s+the\s+unit/);
+      expect(text).toMatch(/split\s+across\s+two\s+carriers/);
+      // The unit decides the carrier only, never the shape of each answer.
+      expect(text).toMatch(/never\s+flattens\s+two\s+shapes\s+into\s+one/);
+    });
   });
 
   // A decision tree is a thing an adopter's project has as much as this one

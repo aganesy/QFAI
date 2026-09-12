@@ -63,6 +63,20 @@ The reason is what an exception is used for. An agent looking for one is an agen
 that would rather not ask, and the question it skips is the one it was least sure
 of. Exactly the question the user most needed to see.
 
+### A set presented as one
+
+Some questions are put as a unit — a grilling round is the case this repository
+has — and the unit is the point: the user sees what is being decided together,
+and answers it as one thing.
+
+**Availability is then judged for the unit.** A tool that cannot carry one
+member cannot carry the unit, so the whole of it takes § 5's fallback. Judged
+per member instead, the unit arrives split across two carriers, and what the
+unit was for is gone.
+
+Each question inside it still arrives in the shape its own answer has. The unit
+decides the carrier; it never flattens two shapes into one.
+
 ## 2. Choices, not free text
 
 Each option carries two things: a short label, and a description saying what
