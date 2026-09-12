@@ -453,6 +453,12 @@ export async function evaluateAtddCodeTraceability(
     root,
     testsRoot,
     deriveAtddFilePattern(config.validation.traceability.testFileGlobs),
+    config.validation.traceability.testFileGlobs,
+  );
+  const extraLayerMatchers = additionalLayerMatchers(
+    root,
+    testsRoot,
+    config.validation.traceability.testFileGlobs,
   );
   const scanResult = await collectTestFiles(root, scanGlobs);
 
@@ -484,11 +490,12 @@ export async function evaluateAtddCodeTraceability(
   const flowStories = storiesByFlow(await scanBusinessFlows(root, config));
 
   for (const file of scanResult.files) {
-    const kind = resolveTestKind(file, {
-      e2eRoot,
-      apiRoot,
-      integrationRoot,
-    });
+    const kind =
+      resolveTestKind(file, {
+        e2eRoot,
+        apiRoot,
+        integrationRoot,
+      }) ?? resolveTestKindByBase(toPosixPath(path.relative(root, file)), extraLayerMatchers);
     if (!kind) {
       // Recorded, not dropped. A correctly annotated test outside the three
       // scanned roots contributes nothing to coverage and used to vanish with
@@ -2320,7 +2327,8 @@ export function deriveAtddFilePattern(testFileGlobs: readonly string[]): string 
   return `**/*.{${sorted.join(",")}}`;
 }
 
-function buildAtddTestGlobs(root: string, testsRoot: string, filePattern: string): string[] {
+/** `paths.testsDir` as a repo-relative posix base, or an absolute one when it lies outside. */
+function testsDirBase(root: string, testsRoot: string): string {
   const relativeTestsRoot = path.relative(root, testsRoot);
   const isInsideRoot =
     relativeTestsRoot.length === 0 ||
@@ -2328,30 +2336,141 @@ function buildAtddTestGlobs(root: string, testsRoot: string, filePattern: string
   const base = isInsideRoot
     ? toPosixPath(relativeTestsRoot.length === 0 ? "." : relativeTestsRoot)
     : toPosixPath(testsRoot);
-  const normalizedBase = base.replace(/\/+$/, "");
-  return [
-    `${normalizedBase}/e2e/${filePattern}`,
-    `${normalizedBase}/api/${filePattern}`,
-    `${normalizedBase}/integration/${filePattern}`,
-  ];
+  return base.replace(/\/+$/, "");
+}
+
+/**
+ * The directory a configured test glob describes, up to its first `**`.
+ *
+ * `paths.testsDir` is one value, so on a workspace holding more than one package it can name at
+ * most one package's tests and the rest are outside the scan. `testFileGlobs` already names them
+ * all — this lifts the directory half out, the way `deriveAtddFilePattern` lifts the extensions.
+ *
+ * | Glob                             | Base                  |
+ * | -------------------------------- | --------------------- |
+ * | `tests/**\/*.test.ts`            | `tests`               |
+ * | `packages/*\/tests/**\/*.test.ts` | `packages/*\/tests`   |
+ * | `tests/unit/*.test.ts`           | `tests/unit`          |
+ *
+ * A single `*` is kept: it is a segment wildcard the matcher expands, and dropping it would
+ * collapse every package's tests to one arbitrary path. `**` and the filename pattern are dropped
+ * because the layer directory goes there instead. `null` when nothing is left.
+ */
+function globDirectoryBase(glob: string): string | null {
+  const segments = toPosixPath(glob).split("/");
+  const doubleStar = segments.indexOf("**");
+  const kept = doubleStar >= 0 ? segments.slice(0, doubleStar) : segments.slice(0, -1);
+  const base = kept.filter((segment) => segment.length > 0).join("/");
+  return base.length > 0 ? base : null;
+}
+
+/**
+ * Every directory the layer subdirectories are looked for under, `paths.testsDir` first.
+ *
+ * Ordered and deduplicated. `testsDir` stays first and stays present even when no glob names it,
+ * so a project that configured it and nothing else is scanned exactly as before.
+ */
+function atddScanBases(
+  root: string,
+  testsRoot: string,
+  testFileGlobs: readonly string[],
+): string[] {
+  const bases = [testsDirBase(root, testsRoot)];
+  for (const glob of testFileGlobs) {
+    const base = globDirectoryBase(glob);
+    if (base !== null && !bases.includes(base)) {
+      bases.push(base);
+    }
+  }
+  return bases;
+}
+
+/**
+ * The three layer directories, in the order a file is tested against them.
+ *
+ * One list, read by both the glob builder and the kind resolver. Held together because a file the
+ * globs collect and the resolver then declines contributes nothing and is reported as uncounted —
+ * which is the shape a widened glob set produced while the resolver still knew one base.
+ */
+const ATDD_LAYER_DIRS: readonly AtddTestKind[] = ["e2e", "api", "integration"];
+
+function buildAtddTestGlobs(
+  root: string,
+  testsRoot: string,
+  filePattern: string,
+  testFileGlobs: readonly string[],
+): string[] {
+  return atddScanBases(root, testsRoot, testFileGlobs).flatMap((base) =>
+    ATDD_LAYER_DIRS.map((layer) => `${base}/${layer}/${filePattern}`),
+  );
+}
+
+/** One layer directory of one scan base, as a matcher over repo-relative posix paths. */
+type AtddLayerMatcher = { readonly kind: AtddTestKind; readonly under: RegExp };
+
+/**
+ * `<base>/<layer>` as a regular expression, with `*` reading as exactly one path segment.
+ *
+ * A base lifted from a glob can carry a `*` (`packages/*\/tests`), so containment against a literal
+ * directory cannot decide these. Every other character is escaped, so a base is matched as the
+ * path it is rather than as a pattern of its own.
+ */
+function layerMatcher(base: string, kind: AtddTestKind): AtddLayerMatcher {
+  const escaped = base
+    .split("/")
+    .map((segment) => (segment === "*" ? "[^/]+" : segment.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")))
+    .join("/");
+  return { kind, under: new RegExp(`^${escaped}/${kind}(?:/|$)`) };
+}
+
+/**
+ * Layer matchers for every base except the `paths.testsDir` one.
+ *
+ * That first base keeps its own containment check, which reads absolute paths and so still works
+ * when `testsDir` points outside the repository. These matchers read repo-relative paths, which a
+ * base holding a `*` has to, and answer for the bases `testFileGlobs` contributed.
+ */
+function additionalLayerMatchers(
+  root: string,
+  testsRoot: string,
+  testFileGlobs: readonly string[],
+): AtddLayerMatcher[] {
+  return atddScanBases(root, testsRoot, testFileGlobs)
+    .slice(1)
+    .flatMap((base) => ATDD_LAYER_DIRS.map((kind) => layerMatcher(base, kind)));
+}
+
+function resolveTestKindByBase(
+  relPath: string,
+  matchers: readonly AtddLayerMatcher[],
+): AtddTestKind | null {
+  for (const matcher of matchers) {
+    if (matcher.under.test(relPath)) {
+      return matcher.kind;
+    }
+  }
+  return null;
 }
 
 /**
  * The acceptance-test globs this stage owns, for a scanner that brings its own
  * file pattern.
  *
- * `/qfai-atdd` owns `tests/{e2e,api,integration}/**` and nothing else, so a
- * validator wired into `--profile atdd` must select files the same way the
- * ATDD scan does — following `paths.testsDir` — rather than reusing
- * `validation.traceability.testFileGlobs`, which describes the whole
- * repository's tests.
+ * `/qfai-atdd` owns `{e2e,api,integration}/**` under the project's test directories and nothing
+ * else, so a validator wired into `--profile atdd` must select files the same way the ATDD scan
+ * does. Both go through `buildAtddTestGlobs`, so they cannot disagree about where the tests are.
  */
 export function atddAcceptanceTestGlobs(
   root: string,
   config: QfaiConfig,
   filePattern: string,
 ): string[] {
-  return buildAtddTestGlobs(root, resolvePath(root, config, "testsDir"), filePattern);
+  return buildAtddTestGlobs(
+    root,
+    resolvePath(root, config, "testsDir"),
+    filePattern,
+    config.validation.traceability.testFileGlobs,
+  );
 }
 
 async function collectTestFiles(root: string, globs: string[]): Promise<CollectFilesByGlobsResult> {

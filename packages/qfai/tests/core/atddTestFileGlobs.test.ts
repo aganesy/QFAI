@@ -89,3 +89,123 @@ describe("the ATDD scan honours testFileGlobs", () => {
     }
   });
 });
+
+/**
+ * `paths.testsDir` is one value, so on a workspace it names at most one package's tests.
+ *
+ * `testFileGlobs` already names them all, and the scan lifts the directory half out of those globs
+ * the way `deriveAtddFilePattern` lifts the extensions. Without it a workspace whose suite lives
+ * under `packages/<name>/tests/` had every annotation in it read by nothing: the obligations were
+ * reported covered by whatever prose carrier enumerated them, and no gate could see the difference.
+ */
+describe("the ATDD scan reads every test directory testFileGlobs names", () => {
+  /** A tree whose only annotated test is under `packages/<pkg>/tests/e2e/`. */
+  async function seedWorkspace(pkgPath: string): Promise<string> {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-atdd-bases-"));
+    const specDir = path.join(root, ".qfai", "specs", "spec-0001");
+    await mkdir(specDir, { recursive: true });
+    await writeFile(path.join(specDir, "01_Spec.md"), "# 01 Spec\n", "utf-8");
+    await writeFile(
+      path.join(specDir, "02_User-stories.md"),
+      ["# 02 User stories", "", "## US-0001: title", "- Parent: CAP-0001", ""].join("\n"),
+      "utf-8",
+    );
+    const testDir = path.join(root, ...pkgPath.split("/"), "tests", "e2e");
+    await mkdir(testDir, { recursive: true });
+    await writeFile(
+      path.join(testDir, "journey.test.ts"),
+      "// QFAI:SPEC-0001:US-0001\nit('walks the journey', () => {});\n",
+      "utf-8",
+    );
+    return root;
+  }
+
+  function withGlobs(globs: string[]) {
+    return {
+      ...defaultConfig,
+      validation: {
+        ...defaultConfig.validation,
+        traceability: { ...defaultConfig.validation.traceability, testFileGlobs: globs },
+      },
+    };
+  }
+
+  const uncovered = (issues: Awaited<ReturnType<typeof validateAtddCodeTraceability>>): boolean =>
+    issues.some((entry) => entry.code === "QFAI-ATDD-111");
+
+  it("counts a story annotated under a package's own tests directory", async () => {
+    const root = await seedWorkspace("packages/pkg-a");
+    try {
+      const issues = await validateAtddCodeTraceability(
+        root,
+        withGlobs(["packages/*/tests/**/*.test.ts"]),
+      );
+      expect(uncovered(issues), "the story is annotated in a file the scan now reads").toBe(false);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("reports the same tree when no configured glob names that directory", async () => {
+    // The other direction of the same case. Coverage comes from the glob, not from reading
+    // everywhere: `paths.testsDir` is `tests` and this tree has no `tests/e2e/` at the root.
+    const root = await seedWorkspace("packages/pkg-a");
+    try {
+      const issues = await validateAtddCodeTraceability(root, withGlobs(["tests/**/*.test.ts"]));
+      expect(uncovered(issues), "nothing configured names packages/pkg-a/tests").toBe(true);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("expands the wildcard across every sibling package, not one of them", async () => {
+    // The case a single value cannot answer. Two packages each hold one story's only annotation,
+    // so a base that resolved `*` to one directory would leave the other story uncovered.
+    const root = await seedWorkspace("packages/pkg-a");
+    try {
+      await mkdir(path.join(root, "packages", "pkg-b", "tests", "e2e"), { recursive: true });
+      await writeFile(
+        path.join(root, "packages", "pkg-b", "tests", "e2e", "second.test.ts"),
+        "// QFAI:SPEC-0001:US-0002\nit('covers the second story', () => {});\n",
+        "utf-8",
+      );
+      await writeFile(
+        path.join(root, ".qfai", "specs", "spec-0001", "02_User-stories.md"),
+        [
+          "# 02 User stories",
+          "",
+          "## US-0001: title",
+          "- Parent: CAP-0001",
+          "",
+          "## US-0002: second",
+          "- Parent: CAP-0001",
+          "",
+        ].join("\n"),
+        "utf-8",
+      );
+
+      const issues = await validateAtddCodeTraceability(
+        root,
+        withGlobs(["packages/*/tests/**/*.test.ts"]),
+      );
+      expect(uncovered(issues), "both packages' annotations must be read").toBe(false);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("still reads paths.testsDir when no glob names it", async () => {
+    // The configured base is additive. A project that set `testsDir` and left the globs pointing
+    // elsewhere is scanned exactly as it was before.
+    const root = await seedWorkspace(".");
+    try {
+      const issues = await validateAtddCodeTraceability(
+        root,
+        withGlobs(["packages/*/tests/**/*.test.ts"]),
+      );
+      expect(uncovered(issues), "tests/e2e is still the first base").toBe(false);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+});

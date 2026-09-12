@@ -25,6 +25,39 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **The ATDD traceability scan reads every test directory the project names**
+  (#1588). It looked for `{e2e,api,integration}/` under `paths.testsDir` and
+  nowhere else. That is one value, so on a workspace it can name at most one
+  package's tests — in this repository it named a directory holding two prose
+  annotation carriers and no test at all, and the 185-file suite under
+  `packages/qfai/tests/` was outside the scan.
+
+  Every obligation was therefore reported covered by whatever carrier
+  enumerated it, `QFAI-ATDD-111` and `QFAI-ATDD-112` could not report a gap,
+  and adding one identifier to a carrier satisfied the coverage gates without
+  a test.
+
+  The scan now also reads the directory half out of
+  `validation.traceability.testFileGlobs`, the way the file pattern was already
+  lifted out of them. `paths.testsDir` stays the first base, so a project that
+  configured it and nothing else is scanned as before. A single `*` in a glob
+  is one path segment, matching how the glob itself expands.
+
+  Measured on this repository:
+
+  |                                      | Before | After |
+  | ------------------------------------ | ------ | ----- |
+  | Files scanned                        | 2      | 185   |
+  | Stories covered only by a carrier    | 219    | 126   |
+  | Test cases covered only by a carrier | 562    | 287   |
+  | Errors, `full` profile               | 1047   | 1059  |
+
+  The twelve new errors are annotations naming obligations that do not exist —
+  one story and eleven test-case sets, five of the files pointing at a spec the
+  repository does not hold. They were always wrong and were never read. Each is
+  pinned in the dogfooding backlog rather than corrected here: re-pointing an
+  annotation changes what a test claims to cover.
+
 - **The FIFO refusal test runs its assertion against a fixture that exists**
   (#1580). It decided whether the platform could host a FIFO by reading
   `mkfifo`'s exit status. Git Bash ships `mkfifo`, so on Windows it exits `0`
