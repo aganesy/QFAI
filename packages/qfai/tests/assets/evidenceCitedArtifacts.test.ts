@@ -45,7 +45,7 @@ const GENERATED_ROOTS = [
  * tracked.
  */
 const CITED_GENERATED_PATH =
-  /\.qfai\/(?:review|review_archive|report|discussion|output)\/(?:[A-Za-z0-9._/*?+-]|\{[A-Za-z0-9._/*?+,-]+\})+/g;
+  /\.qfai\/(?:review|review_archive|report|discussion|output)\/(?:[A-Za-z0-9._/*?+-]|[?*+@!]\([A-Za-z0-9._/*?+|-]+\)|\{[A-Za-z0-9._/*?+,-]+\})+/g;
 
 /**
  * A line that says a path is not provenance.
@@ -55,8 +55,14 @@ const CITED_GENERATED_PATH =
  * either fail this guard or need a backlog entry claiming a citation it just
  * disclaimed. The marker is per line, so it covers what a reader can see it
  * covering.
+ *
+ * On the line before a fenced block it covers the paths it names inside that
+ * block, and only those. A transcript is where both halves of that matter: the
+ * marker cannot go inside the fence, where it renders as though the command had
+ * printed it, and it cannot cover the whole block either, because a transcript
+ * carries real citations beside the disclaimed mention.
  */
-const NOT_A_CITATION = "<!-- qfai:not-a-citation -->";
+const NOT_A_CITATION = /<!--\s*qfai:not-a-citation[^>]*-->/;
 
 /**
  * Citations that do not resolve in the committed tree, as measured.
@@ -248,14 +254,27 @@ function trackedPaths(): { files: ReadonlySet<string>; directories: ReadonlySet<
   // checkout holds artifacts its own QFAI runs generated. Walking the disk would
   // fail on an uncommitted evidence file and pass on a citation that resolves
   // only here — the opposite of the guard's purpose, in both directions.
-  const listed = execFileSync("git", ["ls-files", "-z"], {
+  //
+  // `-s` for the mode, because being listed is not the same as being readable in
+  // a clone. A force-added symlink is a path git tracks and a file nobody can
+  // open when its target is missing or outside the repository, and a gitlink is
+  // a commit id rather than content. Only a regular blob carries the artifact a
+  // citation claims.
+  const listed = execFileSync("git", ["ls-files", "-s", "-z"], {
     cwd: repoRoot,
     encoding: "buffer",
     maxBuffer: 64 * 1024 * 1024,
   })
     .toString("utf-8")
     .split("\0")
-    .filter((entry) => entry !== "");
+    .filter((entry) => entry !== "")
+    .flatMap((entry) => {
+      // `<mode> <object> <stage>\t<path>`
+      const tab = entry.indexOf("\t");
+      const mode = entry.slice(0, 6);
+      if (tab === -1 || (mode !== "100644" && mode !== "100755")) return [];
+      return [entry.slice(tab + 1)];
+    });
 
   const directories = new Set<string>();
   for (const file of listed) {
@@ -302,17 +321,68 @@ async function measureCitations(): Promise<[string, string][]> {
     const text = await readFile(path.join(repoRoot, file), "utf-8");
     // Per file, so the same path cited twice in one record is one obligation.
     const seen = new Set<string>();
-    for (const line of text.split("\n")) {
-      if (line.includes(NOT_A_CITATION)) continue;
+    const disclaimed = disclaimedByLine(text);
+    text.split("\n").forEach((line, index) => {
+      const covered = disclaimed[index];
+      if (covered === "all") return;
       for (const match of line.match(CITED_GENERATED_PATH) ?? []) {
         const cited = match.replace(/[.,;:]+$/, "").replace(/\/+$/, "");
-        if (seen.has(cited) || !namesSomethingInside(cited)) continue;
+        if (covered?.has(cited) === true) return;
+        if (seen.has(cited) || !namesSomethingInside(cited)) return;
         seen.add(cited);
         measured.push([file, cited]);
       }
-    }
+    });
   }
   return measured;
+}
+
+/**
+ * What each line of a record has been said not to be provenance for.
+ *
+ * `"all"` is the marker on the line itself, which is how prose disclaims a path
+ * it is explaining rather than citing. A set is the marker on the line before a
+ * fenced block, naming the paths it covers inside that block: a marker inside
+ * the fence renders as though the command printed it, which alters the record of
+ * what was observed in order to control a scanner — and a block form that
+ * covered everything would hide the real citations a transcript also carries.
+ */
+function disclaimedByLine(text: string): Array<"all" | Set<string> | undefined> {
+  const lines = text.split("\n");
+  const disclaimed: Array<"all" | Set<string> | undefined> = lines.map((line) =>
+    NOT_A_CITATION.test(line) ? "all" : undefined,
+  );
+  let open: { character: string; length: number } | null = null;
+  let covers: Set<string> | null = null;
+  lines.forEach((line, index) => {
+    const fence = /^ {0,3}(`{3,}|~{3,})(.*)$/.exec(line);
+    if (fence === null) {
+      if (open !== null && covers !== null) disclaimed[index] = covers;
+      return;
+    }
+    const run = fence[1] ?? "";
+    const rest = fence[2] ?? "";
+    if (open === null) {
+      if (run.startsWith("`") && rest.includes("`")) return;
+      open = { character: run[0] ?? "`", length: run.length };
+      covers = disclaimedPaths(lines[index - 1] ?? "");
+      return;
+    }
+    if (run[0] === open.character && run.length >= open.length && rest.trim() === "") {
+      open = null;
+      covers = null;
+    } else if (covers !== null) {
+      disclaimed[index] = covers;
+    }
+  });
+  return disclaimed;
+}
+
+/** The paths a marker names, or `null` when the line carries no marker naming any. */
+function disclaimedPaths(line: string): Set<string> | null {
+  const marker = /<!--\s*qfai:not-a-citation([^>]*?)-->/.exec(line);
+  const named = marker?.[1]?.match(CITED_GENERATED_PATH) ?? [];
+  return named.length === 0 ? null : new Set(named);
 }
 
 /**
@@ -378,15 +448,77 @@ function globToRegExp(cited: string): RegExp {
  * files in the tree itself — match a file inside a pack instead.
  */
 function segmentToRegExp(segment: string): string {
-  return segment
-    .replace(/\*\*+/g, "*")
-    .split(/([*?])/)
-    .map((part) => {
-      if (part === "*") return "[^/]*";
-      if (part === "?") return "[^/]";
-      return escapeForRegExp(part);
-    })
-    .join("");
+  let source = "";
+  let index = 0;
+  while (index < segment.length) {
+    const character = segment[index] ?? "";
+    // `@(a|b)`, `?(a)`, `*(a)`, `+(a)`, `!(a)` — the extended forms the dialect
+    // supports. Read as ordinary characters they are literals, and the citation
+    // then names a path nothing has while the artifacts it really names go
+    // unchecked.
+    const extended = "?*+@!".includes(character) && segment[index + 1] === "(";
+    if (extended) {
+      const close = matchingParenthesis(segment, index + 1);
+      if (close !== -1) {
+        const inner = segment
+          .slice(index + 2, close)
+          .split("|")
+          .map((part) => segmentToRegExp(part))
+          .join("|");
+        source += extendedGroup(character, inner);
+        index = close + 1;
+        continue;
+      }
+    }
+    if (character === "*") {
+      // An embedded globstar is not one: the dialect degrades `a**b` to a single
+      // `*`, which stays inside the segment.
+      while (segment[index + 1] === "*") index += 1;
+      source += "[^/]*";
+      index += 1;
+      continue;
+    }
+    if (character === "?") {
+      source += "[^/]";
+      index += 1;
+      continue;
+    }
+    source += escapeForRegExp(character);
+    index += 1;
+  }
+  return source;
+}
+
+/** The index of the `)` closing the `(` at `open`, or `-1` when it has none. */
+function matchingParenthesis(segment: string, open: number): number {
+  let depth = 0;
+  for (let index = open; index < segment.length; index += 1) {
+    if (segment[index] === "(") depth += 1;
+    if (segment[index] === ")") {
+      depth -= 1;
+      if (depth === 0) return index;
+    }
+  }
+  return -1;
+}
+
+/**
+ * One extended group, by the character that introduced it.
+ *
+ * `!(p)` is the awkward one: the negation covers what the group would have
+ * matched, not the rest of the segment, so it is a lookahead followed by a lazy
+ * run — `!(draft).json` then rejects `draft.json` and accepts `final.json`.
+ * A name that merely starts with the excluded text and goes on, `draftx.json`,
+ * is admitted where the dialect would refuse it. That is the direction a guard
+ * can afford to be wrong in: a citation reported unresolved sends someone to
+ * look, and one reported resolved sends nobody.
+ */
+function extendedGroup(introducer: string, inner: string): string {
+  if (introducer === "?") return `(?:${inner})?`;
+  if (introducer === "*") return `(?:${inner})*`;
+  if (introducer === "+") return `(?:${inner})+`;
+  if (introducer === "!") return `(?!(?:${inner})\\b)[^/]*?`;
+  return `(?:${inner})`;
 }
 
 /**
@@ -531,7 +663,7 @@ describe("a committed record cites what the repository has", () => {
 
 describe("what the scan counts as a citation", () => {
   const matches = (line: string): string[] =>
-    line.includes(NOT_A_CITATION) ? [] : (line.match(CITED_GENERATED_PATH) ?? []);
+    NOT_A_CITATION.test(line) ? [] : (line.match(CITED_GENERATED_PATH) ?? []);
 
   it("takes a scoped report's whole filename", () => {
     // A class stopping at the plus measures a prefix nothing has, and reports
@@ -555,6 +687,19 @@ describe("what the scan counts as a citation", () => {
     ]);
   });
 
+  it("takes an extended glob group whole", () => {
+    // The dialect supports `@(a|b)` and its siblings. Cut at the `@`, what is
+    // left is the pack directory, and a tracked pack passes a citation naming
+    // two packs that may both be missing.
+    expect(matches("- `.qfai/review/@(review-a|review-b)/summary.json`")).toEqual([
+      ".qfai/review/@(review-a|review-b)/summary.json",
+    ]);
+    // An ordinary parenthesis after a path still ends the token.
+    expect(matches("- `.qfai/report/validate.json` (the scoped run)")).toEqual([
+      ".qfai/report/validate.json",
+    ]);
+  });
+
   it("takes a one-character wildcard", () => {
     // The dialect supports `?`, and a grammar that stops before it leaves the
     // pack directory to be checked in place of the file set the citation named.
@@ -567,9 +712,9 @@ describe("what the scan counts as a citation", () => {
     // A record explaining why an artifact is absent writes the path like any
     // other, and would otherwise need a backlog entry for a citation it just
     // disclaimed.
-    expect(matches(`\`.qfai/report/validate.log\` is not cited here. ${NOT_A_CITATION}`)).toEqual(
-      [],
-    );
+    expect(
+      matches("`.qfai/report/validate.log` is not cited here. <!-- qfai:not-a-citation -->"),
+    ).toEqual([]);
   });
 });
 
@@ -611,6 +756,16 @@ describe("a glob is a claim about a set", () => {
     // missing, which is the opposite failure to the one the guard exists for.
     const pack = ".qfai/discussion/discussion-20260328212829687";
     expect(resolves(`${pack}/0?_Context.md`)).toBe(resolves(`${pack}/0*_Context.md`));
+  });
+
+  it("reads an extended glob group as the set it names", () => {
+    const one = globToRegExp(".qfai/review/@(review-a|review-b)/summary.json");
+    expect(one.test(".qfai/review/review-a/summary.json")).toBe(true);
+    expect(one.test(".qfai/review/review-c/summary.json")).toBe(false);
+    expect(globToRegExp(".qfai/report/+(a|b).json").test(".qfai/report/abab.json")).toBe(true);
+    expect(globToRegExp(".qfai/report/?(draft-)run.json").test(".qfai/report/run.json")).toBe(true);
+    expect(globToRegExp(".qfai/report/!(draft).json").test(".qfai/report/draft.json")).toBe(false);
+    expect(globToRegExp(".qfai/report/!(draft).json").test(".qfai/report/final.json")).toBe(true);
   });
 
   it("resolves a one-member brace list", () => {
