@@ -4,6 +4,25 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ## [Unreleased]
 
+### Removed
+
+- **`.qfai/report/validate.log` is no longer tracked** (#1582). Every local
+  `qfai validate` rewrites it, so `git add -A` carried it into whatever commit
+  was open — 113 of them, the six most recent about spec prose, CI checkout
+  behaviour and CLI performance.
+
+  The directory already declared it ignored; the file had been force-added past
+  that, and a tracked path bypasses ignore rules, so the disagreement was
+  invisible to `git check-ignore`.
+
+  It is live local state rather than a leftover: `doctor --clean-run-logs`
+  reads its `run_log:` and `run_id:` pointers to keep a referenced run
+  directory from being pruned. That is the argument for untracking rather than
+  deleting — one machine's record of which runs it kept means nothing in
+  another clone. An absent file is already handled as "nothing pinned".
+
+  A pull removes the local copy; the next validate run writes a fresh one.
+
 ### Fixed
 
 - **The FIFO refusal test runs its assertion against a fixture that exists**
