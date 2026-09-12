@@ -3087,6 +3087,69 @@ describe("qfai init", () => {
     }
   });
 
+  // The re-inclusion of `.qfai/evidence/prototyping/` exposes every descendant
+  // with no later rule of its own, so a block that hid that directory has to
+  // gain the line that re-ignores its contents. What counts as having hidden it
+  // is the whole question: a project may write the evidence tree, or the
+  // directory itself when it tracks the rest of its audit trail.
+  it.each([".qfai/evidence/*", ".qfai/evidence/prototyping/"])(
+    "keeps the prototype captures ignored for a block carrying `%s`",
+    async (existingIgnore) => {
+      const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-"));
+      try {
+        const block = [
+          QFAI_GITIGNORE_MARKER,
+          ".qfai/report/*",
+          existingIgnore,
+          ".qfai/discussion/*",
+          ".qfai/review/*",
+          ".qfai/state.json",
+          "",
+        ].join("\n");
+        await writeFile(path.join(root, ".gitignore"), block, "utf-8");
+
+        await runInit({ dir: root, force: false, dryRun: false, yes: true });
+
+        // Asserted by position, because git applies the last matching pattern:
+        // the contents ignore has to land above the re-inclusion of the
+        // directory and of the one record inside it.
+        const lines = (await readFile(path.join(root, ".gitignore"), "utf-8")).split("\n");
+        const contents = lines.indexOf(".qfai/evidence/prototyping/*");
+        expect(contents, "the contents ignore is missing").toBeGreaterThan(-1);
+        expect(contents).toBeLessThan(lines.indexOf("!.qfai/evidence/prototyping/"));
+        expect(contents).toBeLessThan(lines.indexOf("!.qfai/evidence/prototyping/grilling.md"));
+        expect(lines.filter((line) => line === ".qfai/evidence/prototyping/*")).toHaveLength(1);
+      } finally {
+        await removeTempTree(root);
+      }
+    },
+  );
+
+  it("adds no contents ignore where the project hid none of that tree", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-"));
+    try {
+      // The audit-trail case again, from the other side: a project that removed
+      // every ignore over the evidence tree is tracking what is in it, and a
+      // re-ignore added here would hide the captures it chose to keep.
+      const block = [
+        QFAI_GITIGNORE_MARKER,
+        ".qfai/report/*",
+        ".qfai/discussion/*",
+        ".qfai/review/*",
+        ".qfai/state.json",
+        "",
+      ].join("\n");
+      await writeFile(path.join(root, ".gitignore"), block, "utf-8");
+
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+
+      const content = await readFile(path.join(root, ".gitignore"), "utf-8");
+      expect(content).not.toContain(".qfai/evidence/prototyping/*");
+    } finally {
+      await removeTempTree(root);
+    }
+  });
+
   // TC-1.4.1 — fresh init writes no DESIGN.md at root
   it("writes no DESIGN.md at root (TC-1.4.1)", async () => {
     // `/qfai-discussion` emits the brand SSOT, and only for a

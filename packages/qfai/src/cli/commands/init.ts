@@ -2663,8 +2663,22 @@ function demotedProjectNegations(before: string, after: string): string[] {
  * negations it is missing (appended last, because git applies the last matching
  * pattern). A project with no managed block still gets the full canonical one.
  */
-/** The evidence-tree ignore whose presence the migration below is conditional on. */
-const EVIDENCE_TREE_IGNORE = ".qfai/evidence/*";
+/**
+ * The ignores that already hide the prototyping directory, any one of which
+ * makes the re-inclusion below a widening rather than a fix.
+ *
+ * The evidence tree is the usual shape. A block naming the prototyping
+ * directory itself is the narrower one a project writes when it tracks the rest
+ * of its audit trail and not the captures, and reading only the tree line
+ * treated that project as having no ignore to preserve — so the re-inclusion
+ * cancelled its rule and `git add .` picked up the mutation log, `progress.md`
+ * and every `iter-NN` capture.
+ */
+const PROTOTYPING_COVERING_IGNORES: readonly string[] = [
+  ".qfai/evidence/*",
+  ".qfai/evidence/",
+  ".qfai/evidence/prototyping/",
+];
 
 /** The line that keeps the re-included prototyping directory's contents ignored. */
 const PROTOTYPING_CONTENTS_IGNORE = ".qfai/evidence/prototyping/*";
@@ -2705,19 +2719,20 @@ function rebuildManagedBlock(existingBlock: string): string {
     .filter(([retired, successor]) => present.has(retired) && !present.has(successor))
     .map(([, successor]) => successor);
 
-  // One ignore is migrated, against the rule above, and only where its parent is
-  // present. The negations below re-include `.qfai/evidence/prototyping/`, and
-  // re-including a directory exposes every descendant with no later rule of its
-  // own — the mutation log, the `iter-NN` captures, `progress.md`. So a block
-  // that ignores the evidence tree must also carry the line that re-ignores
-  // that directory's contents, or the upgrade tracks files the project never
-  // chose to track.
+  // One ignore is migrated, against the rule above, and only where the block
+  // already hides that directory. The negations below re-include
+  // `.qfai/evidence/prototyping/`, and re-including a directory exposes every
+  // descendant with no later rule of its own — the mutation log, the `iter-NN`
+  // captures, `progress.md`. So a block that ignored them must also carry the
+  // line that re-ignores that directory's contents, or the upgrade tracks files
+  // the project never chose to track.
   //
-  // Conditional on the parent, because a project that deleted
-  // `.qfai/evidence/*` to keep its audit trail tracked would otherwise have it
-  // re-hidden — the regression the rule above exists to stop.
+  // Conditional on an existing ignore, because a project that deleted every one
+  // of them to keep its audit trail tracked would otherwise have it re-hidden —
+  // the regression the rule above exists to stop.
   const reIgnore =
-    present.has(EVIDENCE_TREE_IGNORE) && !present.has(PROTOTYPING_CONTENTS_IGNORE)
+    PROTOTYPING_COVERING_IGNORES.some((line) => present.has(line)) &&
+    !present.has(PROTOTYPING_CONTENTS_IGNORE)
       ? [PROTOTYPING_CONTENTS_IGNORE]
       : [];
 

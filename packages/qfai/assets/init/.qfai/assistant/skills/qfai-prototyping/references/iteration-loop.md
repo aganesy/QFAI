@@ -113,9 +113,12 @@ Two paths remain open on a sealed loop:
   refused by the sealed-loop guard; it also deletes stale `iter-NN`
   directories. `--force` is required, not optional: a converged loop
   always has an `iter-00`, and the cycle-0 destructive-rerun gate
-  refuses to overwrite it without the flag. With it, `iter-00` is moved
-  to `iter-00.backup-<ISO>` before the reset, so the prior loop is
-  recoverable.
+  refuses to overwrite it without the flag. With it, the **evidence**
+  `iter-00` is moved to `iter-00.backup-<ISO>` before the reset, so the
+  prior loop's records are recoverable. The authoring tree is not part of
+  that: `.qfai/prototypes/iter-00/index.html` is overwritten by the new
+  cycle-0 generation with no backup, so copy that directory aside first
+  where the prior prototype still matters.
 
 Re-running the accepted cycle itself (`--cycle <acceptedIterationIndex>`)
 is not refused by the sealed-loop guard — that would be a redo of recorded

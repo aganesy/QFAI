@@ -27,6 +27,9 @@ acted on; a finding names something and can be fixed or argued with.
   Read the rows whose `Scope` is this lineage — `<spec-id>/<screen>` or
   `<spec-id>` — plus the `global` ones, and no others: one invocation runs a
   lineage per spec and screen, and another screen's answer is not this one's bar.
+  Grade against `## Session` only. An `## Escalated` row is a question nobody
+  has answered, so scoring a prototype against one marks it down for failing a
+  bar that was never set.
 
 ## Outputs — two files, two schemas
 

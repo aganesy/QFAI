@@ -18,6 +18,11 @@ identity.
    `<spec-id>` — plus the `global` ones, and no others.** One invocation runs a
    lineage per spec and screen, so an unfiltered read lets another screen's
    answer constrain this one.
+   **`## Session` rows are constraints; `## Escalated` rows are not.** An
+   escalated row is a question nobody has answered yet. Build something that
+   makes it answerable and leave it open — treating it as a settled constraint
+   decides on the user's behalf the one kind of question this loop exists to
+   return to them.
 5. Cycles 1..9: `iter-(NN-1)/review.json` (critique, scores,
    `layoutAntiPatternsDetected`, `designMdViolations`,
    `pivotDirective`), `iter-(NN-2)/review.json` when present, and

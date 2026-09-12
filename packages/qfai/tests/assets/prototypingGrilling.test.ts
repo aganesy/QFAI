@@ -321,6 +321,61 @@ describe.each(TREES)("%s — prototyping and grilling", (tree) => {
     }
   });
 
+  it("reads the primitive's body before either session", async () => {
+    // A host that loads skill bodies lazily hands the agent the skill's name
+    // and not its procedure, and an agent with the name alone improvises an
+    // interview that reads exactly like the method.
+    const skill = await read(SKILL);
+    expectPhrase(skill, "Read\n`.qfai/assistant/skills/qfai-grilling/SKILL.md` before starting");
+    expectPhrase(skill, "It is the single implementation");
+    // In the read order too, since that is where an agent looks for what to
+    // open before it starts.
+    const inputs = /## Inputs Priority[\s\S]*?\n## /.exec(skill);
+    expect(inputs, "the read order is gone").not.toBeNull();
+    expect(unwrap(inputs?.[0] ?? "")).toContain(
+      "`.qfai/assistant/skills/qfai-grilling/SKILL.md` before either session",
+    );
+  });
+
+  it("stops before the loop on a left-column decision nobody answered", async () => {
+    // Under a no-question mode the session records those open and nobody
+    // answers them. Starting the loop there spends the whole cycle budget
+    // building against nothing, and the reviewer prompt says in its own words
+    // what it does without the record.
+    const skill = await read(SKILL);
+    expectPhrase(
+      skill,
+      "**A left-column decision still under `## Escalated` stops the run before C0.**",
+    );
+    expectPhrase(skill, "Report the open rows and stop");
+    // Scoped to the left column, or the gate blocks on the questions the loop
+    // exists to make answerable — which are open by design until then.
+    expectPhrase(skill, "The right column is not this gate's subject");
+  });
+
+  it("names both trees in the reset it asks for", async () => {
+    // The evidence `iter-00` is renamed and kept; the authoring one is
+    // overwritten with no backup. A confirmation naming the first understates
+    // the loss, and a destructive operation is approved on what it says.
+    const skill = await read(SKILL);
+    expectPhrase(skill, "naming what it destroys in both trees");
+    expectPhrase(skill, "`.qfai/prototypes/iter-00/index.html` is overwritten");
+    expectPhrase(skill, "with no backup taken");
+  });
+
+  it("tells the delegated roles an escalated row is not a constraint", async () => {
+    // Both prompts read every row matching their lineage. Read as settled, an
+    // open row decides on the user's behalf the one kind of question the loop
+    // exists to return to them.
+    const generator = await read(GENERATOR_PROMPT);
+    expectPhrase(generator, "`## Session` rows are constraints; `## Escalated` rows are not.");
+    expectPhrase(generator, "Build something that\n   makes it answerable and leave it open");
+
+    const reviewer = await read(REVIEWER_PROMPT);
+    expectPhrase(reviewer, "Grade against `## Session` only.");
+    expectPhrase(reviewer, "a bar that was never set");
+  });
+
   it("agrees with the rule master it points at", async () => {
     // The rule states the same boundary from its side. If one moved without
     // the other, an agent would be told to grill and not to grill the same
