@@ -26,10 +26,16 @@ business rule table carries all seven `BR-0014-*` headings of `04_Business-Rules
 `-0006` and `-0025`. None carries a status retiring it, so all seven are active and all seven own a
 row.
 
-**Four obligations are undischarged, and in none of them is thin testing the whole reason.**
+**Five obligations are undischarged, and in only two of them is a missing test the whole reason.**
 `TC-0014-0009` names behaviour that exists only as a shipped skill contract, which no test reads.
-`TC-0014-0028` and `TC-0014-0029` name a slice that is absent from the product. `TC-0014-0033` names
-a layout rule the product contradicts. Only the first can be repaired by writing a test.
+`US-0014-0018` names verify depending on the contract-first validate gates, and its only cases are
+four incidental ones in `reviewArtifactsProfileWiring.test.ts` that exercise the profile without
+distinguishing the completion flow the story declares. `TC-0014-0028` and `TC-0014-0029` name a
+slice that is absent from the product. `TC-0014-0033` names a layout rule the product contradicts.
+
+The first two are repairable by writing a test — `US-0014-0018` needs a case that drives the
+completion flow and observes the gate refusing it, which nothing does today. The other three need
+the product or the spec to move first.
 
 - `TC-0014-0009` declares `AC-0014-0002` and `EX-0014-0002`: feed `/qfai-verify` a `REVISE` review
   artifact, and verify blocks completion. The behaviour exists. `/qfai-verify` is a shipped skill,
@@ -154,12 +160,18 @@ no cell is marked down for a missing annotation they do not owe.
 and the run that reports it is:
 
 ```text
-$ npx qfai validate --profile tdd --fail-on error
+$ node packages/qfai/dist/cli/index.mjs validate --profile tdd --fail-on error
 counts: info=6 warning=533 error=1021
 ```
 
-`QFAI-TEST-003` accounts for 32 of those errors. Two sit in files that carry a spec-0014
-annotation, and each is a `describe.skip` covering two `it` cases — four skipped cases in all:
+**The built entrypoint, not `npx qfai`.** That command resolves the installed or cached package, so
+a run through it reports on a tree this branch has not changed — which is the same reason
+`atdd-spec-0014.md` gives for its own gate.
+
+`QFAI-TEST-003` accounts for **32** of those errors, one per skipped declaration, across eight
+files. That is the count this document uses throughout. Two of the 32 sit in files carrying a
+spec-0014 annotation, and each is a `describe.skip` covering two `it` cases — four skipped cases in
+all:
 
 | File                                                   | Annotations                   | Cases |
 | ------------------------------------------------------ | ----------------------------- | ----- |
@@ -1151,14 +1163,27 @@ them is repaired here; this artifact scores coverage and does not edit tests, le
    authored red ahead of the implementation, and their bodies shell out to a built CLI that now
    implements everything they assert. The live suites that replaced them
    (`prototypingCertify.saasPackage.test.ts` and `prototypingCertify.upgradeScope.test.ts`) are
-   stronger in every dimension. The four skipped cases discharge nothing, they are two of the 16
+   stronger in every dimension. The four skipped cases discharge nothing, they are two of the 32
    `QFAI-TEST-003` findings in the recorded validate run, and their `describe` blocks are what a
-   reader scanning for the covering suite finds first. They should be unskipped or retired — and
+   reader scanning for the covering suite finds first. They should be rewritten or retired — and
    not simply retired, because they are not weaker in every dimension. They hold the only cases that
    invoke the built CLI with `--scope` and `--upgrade-scope`; the live suites that look stronger
    call `runPrototypingCertify` directly and reach no parser or dispatch. Retiring them without
    porting those invocations would close the acknowledged parser gap by deleting the only thing
-   that could ever open it. For
+   that could ever open it.
+
+   **Rewritten, not unskipped.** Dropping the modifier leaves three defects in the bodies, and each
+   would fail or pass for the wrong reason:
+
+   | Defect                                                                                   | What it costs                                                                 |
+   | ------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------- |
+   | Both invoke the CLI against `process.cwd()`                                                | The project under test is this repository, not the SaaS-tenant project the titles describe |
+   | The seal case asserts `saas-package` and `notes` in stdout                                 | The successful command logs neither field, so the assertion fails against correct behaviour |
+   | The upgrade case's title promises a successful upgrade after the gates pass; the body stops at the rejection | Half the declared obligation has no code at all                    |
+
+   So the repair is a fixture that constructs the project, an oracle that reads the sealed
+   certificate rather than stdout, and a second half for the upgrade case. That is the work this
+   finding asks for; "unskip them" would report a green suite over three of those still open. For
    `US-0014-0020` the skip also sets the row's ceiling: the story's only annotation sits in the
    skipped file, so no running case is bound to the story and no cell in its row can reach `✅`
    until that file runs or the annotation moves to a suite that does.
@@ -1203,10 +1228,11 @@ rows × 9 columns) and 21 business rule cells (7 rows × 3 columns). The `Status
 tables hold row verdicts rather than marks and are outside that population; for reference the
 matrix's 14 read `⚠️ 9 / ❌ 5` and the business rule table's 7 read `⚠️ 3 / ❌ 4`.
 
-Four obligations are stuck, and each needs a different kind of work. `TC-0014-0009` needs a test
-over the shipped skill's reviewer gate: the behaviour is there and only the coverage is missing.
-`TC-0014-0028` and `TC-0014-0029` name a validator slice that does not exist, and `01_Spec.md`
-REQ-0028 already makes their obligation conditional on its existence. `TC-0014-0033` states a layout
-rule the product contradicts, and a Change Request has to settle which side is current before any
-case can discharge it. Until each is addressed, the honest verdict for all four is the one recorded
-above.
+Five obligations are stuck, and they need three kinds of work. `TC-0014-0009` needs a test over the
+shipped skill's reviewer gate, and `US-0014-0018` a case that drives the completion flow and
+observes the contract-first gate refusing it: for both the behaviour is there and only the coverage
+is missing. `TC-0014-0028` and `TC-0014-0029` name a validator slice that does not exist, and
+`01_Spec.md` REQ-0028 already makes their obligation conditional on its existence. `TC-0014-0033`
+states a layout rule the product contradicts, and a Change Request has to settle which side is
+current before any case can discharge it. Until each is addressed, the honest verdict for all five is
+the one recorded above.

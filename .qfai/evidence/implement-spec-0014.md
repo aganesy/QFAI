@@ -35,8 +35,23 @@ Both ran from `packages/qfai` at revision
 | `npx vitest run tests/cli/commands/prototypingIterate.test.ts`                             | all       | 103 passed  |
 | `npx vitest run tests/cli/commands/prototypingIterate.test.ts -t "cycle 0 deletes fullHarness"` | 0 of 103  | 103 skipped |
 
-The second is the finding: the `Selector` as the ledger carries it matches no
-case, so the row names nothing that can be run. The title that carries its
+The second is the finding, and **it is both `unit` rows rather than one**. Neither
+`Selector` the ledger carries matches a case:
+
+| Row        | `Selector`                    | `-t` selects |
+| ---------- | ----------------------------- | ------------ |
+| `TDD-0033` | `iter-NN path layout`         | 0 of 103     |
+| `TDD-0034` | `cycle 0 deletes fullHarness` | 0 of 103     |
+
+`iter-NN path layout` appears in the test-case specification and in the ledger,
+and in no `describe` or `it` name anywhere in the repository. A `-t` run that
+matches nothing exits successfully and establishes nothing
+(`references/checkpoint-verification.md`), so the row reads as runnable and is
+not.
+
+`TDD-0033` therefore needs the selector repair whether or not the layout
+conflict its Gaps entry records is settled: resolving the conflict leaves a row
+that still names no case. The title that carries its
 obligation is
 `re-seeds acceptedIterationIndex / stopReason and deletes reviewerGate /
 fullHarness / executionPlan on cycle 0`, recorded here for the owner rather than
