@@ -9,7 +9,7 @@
  * string holding a NUL byte — the stage scanned extensions the project does not
  * use, found no annotation, and reported every obligation as uncovered.
  *
- * `QFAI-TRACE-124` says the same thing about the same setting under the `sdd`
+ * `QFAI-TRACE-124` says the same thing about the same setting under the `tdd`
  * and `full` profiles. It is not in this profile's gate list, so the gate the
  * skill tells the operator to run said nothing at all.
  */
@@ -77,6 +77,15 @@ describe("the stage says when it could not read the globs it was given", () => {
     expect(finding?.severity).toBe("error");
     expect(finding?.message).toContain("scanned only for the extensions the others name (ts)");
     expect(finding?.message).not.toContain("tests/**/*.ts");
+  });
+
+  it("reads a negative entry as an exclusion, not a glob with no extension", async () => {
+    // A leading `!` selects nothing, so the extension comes from the entry
+    // beside it, and reporting it blocked a list the scan reads correctly.
+    const root = await projectWithAcceptanceTest();
+    expect(await codes(root, ["tests/**/*.ts", "!tests/e2e/legacy/**"])).not.toContain(
+      "QFAI-ATDD-134",
+    );
   });
 
   it("says nothing about globs it can read", async () => {

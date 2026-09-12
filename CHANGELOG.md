@@ -15,7 +15,7 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   that configured globs and got no extension out of them, the stage scanned
   extensions the project does not use, found no annotation, and reported every
   obligation as uncovered — a configuration defect wearing the face of missing
-  tests. `QFAI-TRACE-124` says the same thing under the `sdd` and `full`
+  tests. `QFAI-TRACE-124` says the same thing under the `tdd` and `full`
   profiles, and is not in this profile’s gate list, so the gate the skill tells
   the operator to run said nothing at all.
 

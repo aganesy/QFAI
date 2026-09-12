@@ -398,7 +398,7 @@ type AtddTraceabilitySummary = {
  * does not use, finds no annotation, and reports every obligation as uncovered
  * — a configuration defect wearing the face of missing tests.
  *
- * `QFAI-TRACE-124` reports the same configuration under the `sdd` and
+ * `QFAI-TRACE-124` reports the same configuration under the `tdd` and
  * `full` profiles. This is the stage's own code because the consequence is
  * the stage's: the gate the operator was told to run is the one that has to
  * say why it found nothing.
@@ -410,7 +410,11 @@ function collectUnreadableTestGlobs(root: string, config: QfaiConfig): Issue[] {
   // Each glob answers for itself. Asked of the list, one readable entry beside
   // an unreadable one narrowed the scan to the readable entry's extensions, and
   // the files the other was written to select were never scanned.
-  const unreadable = globs.filter((glob) => deriveTestFileExtensions([glob]).size === 0);
+  // A leading `!` excludes rather than selects, so it names no extension and
+  // needs none: `!tests/e2e/legacy/**` beside `tests/**/*.ts` is a readable list.
+  const unreadable = globs.filter(
+    (glob) => !glob.trimStart().startsWith("!") && deriveTestFileExtensions([glob]).size === 0,
+  );
   if (unreadable.length === 0) return [];
   const read = [...deriveTestFileExtensions(globs)];
   const message =
