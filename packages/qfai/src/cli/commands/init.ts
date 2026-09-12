@@ -2926,7 +2926,21 @@ async function citeNewMastersInCopilotInstructions(
   newlyWritten: readonly string[],
   report: { copied: string[]; skipped: string[] },
 ): Promise<void> {
+  // Nothing to cite: no read, no stat, no risk of blocking on a path that is
+  // not an ordinary file.
+  if (newlyWritten.length === 0) return;
+
   const target = path.join(destRoot, ".github", "copilot-instructions.md");
+  // A FIFO does not throw on open — it blocks until a writer closes it — so the
+  // kind is checked before the read rather than caught after it. The wrapper
+  // sync this path took over from only asked whether the entry was occupied.
+  const entry = await lstat(target).catch(() => null);
+  if (entry !== null && !entry.isFile()) {
+    error(`  WARNING: ${formatReportPath(target)} was left unchanged. It is not an ordinary file.`);
+    report.skipped.push(target);
+    return;
+  }
+
   let existing: string | null;
   try {
     existing = await readTextFileIfPresent(target);

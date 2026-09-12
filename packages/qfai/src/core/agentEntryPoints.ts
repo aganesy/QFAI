@@ -109,6 +109,9 @@ export function newlyWrittenRuleMasters(
   return [...cited].sort();
 }
 
+/** The heading the generated instruction file puts its rule list under. */
+export const CROSS_AI_RULES_HEADING = "## Cross-AI rules (master)";
+
 /**
  * `existing` with a bullet added for every master it does not already cite,
  * inserted after the last rule bullet in the file.
@@ -117,6 +120,10 @@ export function newlyWrittenRuleMasters(
  * file is written once and skipped afterwards, so without this a newly shipped
  * rule reached Codex and Claude and not the third agent this repository says
  * loads it.
+ *
+ * With no rule bullet left, the heading is the insertion point. Returning
+ * unchanged there would leave the rule uncited for good, because the wrapper
+ * sync skips an existing file and nothing else writes one.
  */
 export function addRuleCitationsToList(
   existing: string,
@@ -135,9 +142,14 @@ export function addRuleCitationsToList(
       insertAfter = index;
     }
   }
-  // No rule bullet at all: the project rewrote the list, and there is no place
-  // to put one that a reader would read as part of it.
-  if (insertAfter === -1) return existing;
+  if (insertAfter === -1) {
+    // Every bullet deleted. The heading is the one place left that a reader
+    // reads as the rule list, so the bullets go under it as their own block.
+    const heading = lines.findIndex((line) => line.startsWith(CROSS_AI_RULES_HEADING));
+    if (heading === -1) return existing;
+    lines.splice(heading + 1, 0, "", ...bullets);
+    return lines.join(newline);
+  }
 
   lines.splice(insertAfter + 1, 0, ...bullets);
   return lines.join(newline);

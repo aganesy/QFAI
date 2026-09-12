@@ -25,7 +25,9 @@ import { describe, expect, it } from "vitest";
 import { runInit } from "../../src/cli/commands/init.js";
 import {
   AGENT_ENTRY_POINT_FILES,
+  CROSS_AI_RULES_HEADING,
   addRuleCitations,
+  addRuleCitationsToList,
   QFAI_AGENT_RULES_BEGIN,
   QFAI_AGENT_RULES_END,
   citedRuleMasters,
@@ -454,5 +456,34 @@ describe("the update refuses a write it cannot make safely", () => {
       expect(await readFile(path.join(outside, "copilot-instructions.md"), "utf-8")).toBe(trimmed);
       await rm(outside, { recursive: true, force: true });
     });
+  });
+});
+
+describe("an emptied Copilot rule list still gains the citation", () => {
+  it("puts the bullets under the heading when no bullet is left", () => {
+    const template = [
+      QFAI_AGENT_RULES_BEGIN,
+      "",
+      "- `.agents/rules/grilling.md` — interview the decision tree.",
+      "",
+      QFAI_AGENT_RULES_END,
+    ].join("\n");
+    const existing = [
+      "# QFAI repository instructions (Copilot)",
+      "",
+      CROSS_AI_RULES_HEADING,
+      "",
+      "We keep our own summary here instead.",
+      "",
+    ].join("\n");
+
+    const merged = addRuleCitationsToList(existing, template, [".agents/rules/grilling.md"]);
+
+    expect(merged).toContain("- `.agents/rules/grilling.md` — interview the decision tree.");
+    expect(merged).toContain("We keep our own summary here instead.");
+    // Under the heading, which is the one place a reader reads as the list.
+    expect(merged.indexOf(CROSS_AI_RULES_HEADING)).toBeLessThan(
+      merged.indexOf(".agents/rules/grilling.md"),
+    );
   });
 });
