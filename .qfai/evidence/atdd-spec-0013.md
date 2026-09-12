@@ -298,7 +298,9 @@ None.
 
 - Role: completion-reviewer
 - Status: PASS
-- Reviewed revision: 88dee008d8c04a1722a40e58bbcb5d332896fb4a
+- Reviewed revision: c751cb050caa9e78a1ff5e622fc5abd738d126c2
+- Review series: .qfai/evidence/coverage-depth-spec-0013.md + completion-reviewer
+- Rounds: 1 `REVISE`, 2 `REVISE`, 2b `PASS`
 - Subject: every claim this file makes, checked against the files it names
 - Result: the four recorded rows reproduce their GREEN commands, their
   refactor-verify run and the checkpoint exactly as recorded, and every
@@ -313,6 +315,18 @@ None.
   coordinate missing and none listed that does not carry the mark; and the
   four rows naming `auditProfile.ts` keep every mark when read against the
   eight sibling-pack cases that drive that entrypoint.
+- Rounds 1 and 2 audited the widening of the crediting rule and the two files
+  it added, and both returned `REVISE`. Round 1 falsified the claim that no
+  counted case supplies a required file below the minimum-content threshold —
+  the import-lite suite seeds a five-character `06_REQ.md` — so the cell keeps
+  its mark for a different reason: that case asks only whether the pack is
+  blocked, which the fourteen absent files already produce. Round 2 falsified
+  the repair: it capped oracle strength on a case its own new rule excludes,
+  and replaced one wrong census with another. Round 2b verified the second
+  repair and returned `PASS`, having re-read every down-marked cell on the two
+  rows and confirmed no total, census or cell moved. One advisory it left open
+  — a sentence saying `the counted suites` where only two of the three declare
+  a required-file list — was applied afterwards and moves nothing.
 - Residual risk: the five falsifiability mutations cannot be re-executed. Each
   names a content address that folds the tree state into it, and the tree has
   moved. Each claimed kill count was re-derived from the source line its

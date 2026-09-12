@@ -108,7 +108,7 @@ incomplete and on which generation continues, an empty pack directory, a require
 a directory, a zero-byte required file, an unreadable `discussion-*` pack — the discussion root
 being unreadable is supplied, the pack directory is not — and a sixteenth required file. The rest
 turn on reasons an entry path cannot reach, chiefly these: the pairs left uncrossed under
-`Combinatorial`, the required-file lists the counted suites declare for themselves instead of
+`Combinatorial`, the required-file lists the two preflight suites declare for themselves instead of
 importing the source constant, the absent incomplete-to-ready progression under `State
 transitions`, and the oracle caps named below.
 
@@ -946,7 +946,7 @@ grouped by column with a per-coordinate reason.
 - `US-0013-0003`, `US-0013-0008` — the required-file count is exercised at its two adjacent values:
   a complete pack is `ready`, and a pack with one required markdown file removed reports the
   missing-file blocker. That is the boundary that matters. Two gaps keep both off `✅`: a sixteenth
-  file is never supplied, and both counted suites declare their own literal list of required names
+  file is never supplied, and both preflight suites declare their own literal list of required names
   rather than importing the source constant, so a requirement **removed** from the source stays invisible.
 - `US-0013-0011`, `TC-0013-0027` — the 0-versus-1 `primary_tasks` boundary is exercised in both
   directions. Nothing sits at the ceiling, the e2e asserts `not.toBe(0)` rather than a specific exit
