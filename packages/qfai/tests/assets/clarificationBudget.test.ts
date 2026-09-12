@@ -382,7 +382,13 @@ describe("the clarification budget is countable", () => {
       expectPhrase(content, "**A session is entered deliberately.**");
       expectPhrase(content, "An invocation declares one and nothing\n  else starts one");
       expectPhrase(content, "meeting an unfixed design does not");
-      expectPhrase(content, "Outside a declared session every question\n  is a clarification");
+      expectPhrase(content, "Outside a declared session no question is a\n  grilling question");
+      // The entry condition decides grilling against clarification and nothing
+      // else. Read as a catch-all it sends an approval and a consumed
+      // `hard-required` input to the cap in every invocation that declared no
+      // session, which is most of them.
+      expectPhrase(content, "This decides grilling\n  against clarification and nothing else");
+      expectPhrase(content, "so they hold in every invocation");
     });
 
     it(`${tree}: the intake's catch-all does not capture the closing confirmation`, async () => {

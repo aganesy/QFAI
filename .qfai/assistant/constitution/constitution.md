@@ -163,9 +163,13 @@ Default policy:
   subject is a decision the design has left open — does **not** spend budget.
   **A session is entered deliberately.** An invocation declares one and nothing
   else starts one: meeting an unfixed design does not, and neither does an
-  ambiguity found while implementing. Outside a declared session every question
-  is a clarification and spends budget, so which class a question belongs to is
-  decidable when it is asked rather than argued about afterwards.
+  ambiguity found while implementing. Outside a declared session no question is a
+  grilling question: one about an open design decision is an ordinary
+  clarification and spends budget, which is what makes the class decidable when a
+  question is asked rather than argued about afterwards. This decides grilling
+  against clarification and nothing else — the approval and `hard-required`
+  exemptions below turn on what a question is about, not on whether a session was
+  declared, so they hold in every invocation.
   Grilling interrogates a design in rounds, asking each time only the decisions
   whose prerequisites are already settled, and it ends when none are left rather
   than at a count. A cap would end a session by arithmetic with decisions still
