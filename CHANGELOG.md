@@ -116,6 +116,17 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   checkpoint while leaving every later one indistinguishable from one that never
   happened.
 
+  The session covers every routed drafting role, `solution-architect` included,
+  and the user's answer is put back into the tree: a decision whose prerequisite
+  was open could not enter either agent round, so the rounds repeat until no node
+  is open. The constitution counts as authoritative evidence beside the specs and
+  contracts, since both this skill and the primitive rank it above them.
+
+  A throwaway built to answer a question the frozen inputs cannot is not the
+  phase writing. The freeze names the files it covers — the policy layer, the
+  spec packs and the contracts — so a UI-bearing phase can build the thing its
+  own method asks for.
+
   A decision row names its phase, as the title's first field, because the shared
   work-order schema has no column for it. Without that key a row cannot be
   assigned to a phase, so an omitted row passes by being counted against another.

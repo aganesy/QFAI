@@ -49,6 +49,14 @@ Once the phase has written, a decision argued against what it wrote is a change
 to something recorded rather than a choice among options, and the cheaper
 conversation is already over.
 
+**A throwaway built to answer a question is not the phase writing.** The method
+stops the interview where talking cannot settle a question, builds something to
+react to, and asks again against it. That artifact is not an SDD artifact, is
+not kept, and is outside the freeze — which is on `_policies/**`, `spec-*/**`
+and `.qfai/contracts/**`, the files a later reader takes the design from. A
+freeze over every write would leave a UI-bearing phase unable to build what its
+own method requires, and so unable to settle the decision or proceed.
+
 **Phase 2c gets a checkpoint per expansion, not one per phase.** Its scope is
 recomputed after every contract write and the reconciliation repeats until no
 write adds work, so a frontier collected before the first write cannot hold the
@@ -67,8 +75,8 @@ which is the same evidence a run that skipped them produces.
 | Orchestrator | This skill                                                                   |
 
 **One session per phase, over one frontier.** Phase 2 routes
-`requirements-analyst`, `test-design-analyst` and, on a UI-bearing target,
-`product-experience-architect`; grilling one of them leaves the others free to
+`requirements-analyst`, `solution-architect`, `test-design-analyst` and, on a
+UI-bearing target, `product-experience-architect`; grilling one of them leaves the others free to
 settle requirement, test-design or UX decisions after the session and before
 their own writes. The orchestrator collects each routed author's open decisions
 into a single tree before the first round, which is also what the method asks
@@ -104,7 +112,11 @@ answer its questions.
    not — numbered choices carrying the same parts
    (`.agents/rules/user-questions.md`). A host without the tool is not a reason
    to skip the escalation; it is the reason the fallback exists.
-4. Hand the authors the settled set before any of them writes. **Each settled
+4. Recompute the tree against each answer, and put what it newly exposes.
+   A decision whose prerequisite was open could not enter either agent round,
+   and including it in the first escalation would ask it before the answer it
+   depends on exists. Repeat until no node is open.
+5. Hand the authors the settled set before any of them writes. **Each settled
    decision is persisted by the drafting agent that owns its artifact**, where
    `references/spec-traceability-rules.md` says — `07_Decisions.md` and
    `09_delta.md` are primary artifacts, and the orchestrator may not draft one.
@@ -120,9 +132,15 @@ Escalating only the residue would therefore hand the authors a settled set whose
 agreed half is the half that fails review.
 
 Authoritative evidence is the exception because it is not a decision at all:
-where `.qfai/specs/**`, `.qfai/contracts/**` or a recorded decision answers the
-question, that is the answer, and putting it to the user asks them to re-decide
-what they already decided.
+where `.qfai/assistant/constitution/**`, `.qfai/specs/**`, `.qfai/contracts/**`
+or a recorded decision answers the question, that is the answer, and putting it
+to the user asks them to re-decide what they already decided.
+
+The constitution is on that list because both this skill and the primitive rank
+it above the specs. Left off, a question a constitutional invariant already
+fixes is presented as the user's to make — and answering it differently produces
+a draft that cannot be valid, while a no-question run blocks waiting for an
+answer the repository already holds.
 
 A decision the user settles is an input to the write, not a note beside it. A
 draft that contradicts one is the Drift Protocol's subject, not this loop's.
@@ -147,22 +165,22 @@ its state has: a row holding only the outcome reads the same whether the session
 ran before the phase, after it, or not at all, because it is written at the end
 either way.
 
-| State       | `Ended at`                                              | `Wrote at`                                  |
-| ----------- | ------------------------------------------------------- | ------------------------------------------- |
-| `run`       | When the session ended, written before the phase writes | When the phase wrote. Later than `Ended at` |
-| `skipped`   | `-` — no session ran                                    | When the phase wrote                        |
-| `escalated` | When the session ended                                  | `-` — an escalated phase does not write     |
+| State       | `Ended at`                                              | `Wrote at`                                             |
+| ----------- | ------------------------------------------------------- | ------------------------------------------------------ |
+| `run`       | When the session ended, written before the phase writes | When the phase wrote. Later than `Ended at`            |
+| `skipped`   | `-` — no session ran                                    | When the phase wrote, or `-` where it made no mutation |
+| `escalated` | When the session ended                                  | `-` — an escalated phase does not write                |
 
 Where both are present the first is earlier, and that is the whole check. A
 single mandatory pair would make two legitimate states unrecordable, and a state
 nobody can record honestly is one an agent records dishonestly:
 
 ```text
-| Phase | Session   | Frontier                  | Evidence             |
-| ----- | --------- | ------------------------- | -------------------- |
-| 0     | run       | 4 settled, 0 escalated    | #work-orders-summary |
-| 1     | skipped   | empty: answered by <ref>  | -                    |
-| 2     | escalated | 3 settled, 1 escalated    | #work-orders-summary |
+| Phase | Session   | Ended at  | Wrote at  | Frontier                 | Evidence             |
+| ----- | --------- | --------- | --------- | ------------------------ | -------------------- |
+| 0     | run       | <ISO8601> | <ISO8601> | 4 settled, 0 escalated   | #work-orders-summary |
+| 1     | skipped   | -         | <ISO8601> | empty: answered by <ref> | -                    |
+| 2     | escalated | <ISO8601> | -         | 3 settled, 1 escalated   | #work-orders-summary |
 ```
 
 `run` means the phase settled its frontier and escalated nothing. One

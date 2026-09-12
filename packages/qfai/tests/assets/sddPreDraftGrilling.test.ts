@@ -302,6 +302,60 @@ describe.each(TREES)("%s — the pre-draft grilling loop", (tree) => {
     expectPhrase(loop, "a state nobody can record honestly is one an agent records dishonestly");
   });
 
+  it("grills every routed drafting role Phase 2 has", async () => {
+    // `solution-architect` drafts the structural, contract and architecture
+    // sections and is mandatory in the routing phase Phase 2 sits in. Left out,
+    // it settles structural decisions after the frontier and before its write.
+    const loop = await read(LOOP);
+    expectPhrase(loop, "`requirements-analyst`, `solution-architect`, `test-design-analyst`");
+  });
+
+  it("counts the constitution as authoritative evidence", async () => {
+    // Both this skill and the primitive rank it above the specs. Left off the
+    // list, a question an invariant already fixes is put to the user — and
+    // answering differently produces a draft that cannot be valid.
+    const loop = await read(LOOP);
+    expectPhrase(loop, "`.qfai/assistant/constitution/**`, `.qfai/specs/**`");
+    expectPhrase(loop, "a draft that cannot be valid");
+    expectPhrase(loop, "blocks waiting for an answer the repository already holds");
+  });
+
+  it("recomputes the tree against each answer", async () => {
+    // A decision whose prerequisite was open could not enter either agent
+    // round, and putting it in the first escalation would ask it before the
+    // answer it depends on exists.
+    const loop = await read(LOOP);
+    expectPhrase(loop, "Recompute the tree against each answer, and put what it newly exposes");
+    expectPhrase(loop, "Repeat until no node is open");
+  });
+
+  it("lets a phase build the throwaway its method requires", async () => {
+    // Where talking cannot settle a question, the method builds something to
+    // react to. A freeze over every write would leave a UI-bearing phase unable
+    // to build it, and so unable to settle the decision or proceed.
+    const loop = await read(LOOP);
+    expectPhrase(loop, "**A throwaway built to answer a question is not the phase writing.**");
+    // The freeze names the files it covers, so the exception is bounded.
+    expectPhrase(loop, "`_policies/**`, `spec-*/**`");
+    expectPhrase(loop, "the files a later reader takes the design from");
+  });
+
+  it("shows one row shape, matching the gate", async () => {
+    // The procedure's own example is what an operator copies. Short of the
+    // canonical columns, copying it produces evidence the same procedure's gate
+    // rejects.
+    const loop = await read(LOOP);
+    expectPhrase(loop, "| Phase | Session   | Ended at  | Wrote at  |");
+  });
+
+  it("lets a read-only phase record no write", async () => {
+    // A `confirm-only` rerun enters Phase 2c read-only and writes nothing, so
+    // demanding a write time would make a supported mode uncompletable.
+    const gate = await read(GATE);
+    expectPhrase(gate, "`Wrote at` where the phase mutated something");
+    expectPhrase(gate, "a rule demanding both would make that supported mode uncompletable");
+  });
+
   it("cites the method rather than restating it", async () => {
     // Three files own parts of this: the rule owns the method, the convergence
     // rules own how a session with no user in it ends, and the delegation

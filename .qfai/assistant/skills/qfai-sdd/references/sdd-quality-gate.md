@@ -92,8 +92,10 @@ Phase 0 is a mandatory output of this skill, so its own artifacts belong on this
   names the authoritative artifact that answered the phase's decisions. A missing row is the
   finding: an omitted session and an empty frontier are the same absence, and only the written skip
   tells them apart (`references/sdd-pre-draft-grilling.md`).
-- Every row carries the times its state has — `Ended at` on `run` and `escalated`, `Wrote at` on
-  `run` and `skipped` — and where both are present the first is earlier. A row holding only the
+- Every row carries the times its state has — `Ended at` where a session ran, `Wrote at` where the
+  phase mutated something — and where both are present the first is earlier. A `confirm-only` rerun
+  enters Phase 2c read-only and writes nothing, so it carries neither and is still a truthful row; a
+  rule demanding both would make that supported mode uncompletable. A row holding only the
   outcome reads the same whether the session ran before the phase, after it, or not at all;
   requiring both of every state would instead make two legitimate states unrecordable.
 - Phase 2c carries one row per expansion, `2c.1` upward, in the order they ran. Its scope is
