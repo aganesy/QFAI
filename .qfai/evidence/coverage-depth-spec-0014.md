@@ -26,32 +26,37 @@ business rule table carries all seven `BR-0014-*` headings of `04_Business-Rules
 `-0006` and `-0025`. None carries a status retiring it, so all seven are active and all seven own a
 row.
 
-**Five obligations are undischarged, and in only two of them is a missing test the whole reason.**
-`TC-0014-0009` names behaviour that exists only as a shipped skill contract, which no test reads.
+**Four obligations are undischarged, and in only one of them is a missing test the whole reason.**
 `US-0014-0018` names verify depending on the contract-first validate gates, and its only cases are
 four incidental ones in `reviewArtifactsProfileWiring.test.ts` that exercise the profile without
 distinguishing the completion flow the story declares. `TC-0014-0028` and `TC-0014-0029` name a
 slice that is absent from the product. `TC-0014-0033` names a layout rule the product contradicts.
 
-The first two need a test, and a test on its own repairs neither. The configuration this matrix
+The first needs a test, and a test on its own does not repair it. The configuration this matrix
 audited points `paths.testsDir` at the repository-root `tests/`, while every runnable suite lives
-under `packages/qfai/tests/**`, so the ATDD gate reads none of them: `TC-0014-0009` and all five
-stories stay `coveredByCarrierOnly` and status-capped however many cases are written. Repair takes
-the scan-root change as well — the configured root has to reach the suites — and, for the stories,
-the `US-*` → `AC-*` links the live pack does not record. With those in place, `US-0014-0018` needs
-a case that drives the completion flow and observes the gate refusing it, which nothing does today.
-The other three need the product or the spec to move first.
+under `packages/qfai/tests/**`, so the ATDD gate reads none of them: all five stories stay
+`coveredByCarrierOnly` and status-capped however many cases are written. Repair takes the scan-root
+change as well — the configured root has to reach the suites — and the `US-*` → `AC-*` links the
+live pack does not record. With those in place, `US-0014-0018` needs a case that drives the
+completion flow and observes the gate refusing it, which nothing does today. The other three need
+the product or the spec to move first.
+
+**`TC-0014-0009` is discharged in part.** One case feeds a `REVISE` verdict to verify's binding
+gate and requires the error that fails it. The gate for the reviewers that `/qfai-verify` routes is read
+by no test.
 
 - `TC-0014-0009` declares `AC-0014-0002` and `EX-0014-0002`: feed `/qfai-verify` a `REVISE` review
-  artifact, and verify blocks completion. The behaviour exists. `/qfai-verify` is a shipped skill,
-  and its SKILL.md requires the reviewer to return only `PASS` or `REVISE` and forbids DONE or
-  handoff until every routed blocking reviewer returns `PASS`. No test reads those clauses, and
-  nothing feeds a `REVISE` artifact **to verify**. One case does feed one to something:
+  artifact, and verify blocks completion. One case does that for one kind of review artifact:
+  `prototypingExplorationRelaxationScope.test.ts`'s `keeps the declared error severity under verify
+  and full` writes a render critique whose mobile verdict is `REVISE`, runs validate under the
+  `verify` profile, and requires `QFAI-CRIT-008` at `error` — the severity verify's binding gate,
+  `validate --profile verify --fail-on error`, refuses on. What no test reads is the gate for the
+  reviewers that verify routes: `/qfai-verify`'s SKILL.md requires the reviewer to return only `PASS` or
+  `REVISE` and forbids DONE or handoff until every routed blocking reviewer returns `PASS`.
   `tests/cli/prototypingCertify.test.ts`'s `exits 2 when reviewerGate is not PASS` seeds
-  `reviewerGate: { result: "REVISE" }` and drives the certify gate, and this matrix credits it as a
-  real negative case where it belongs — on `BR-0014-0002`. It does not discharge this obligation
-  because the gate it exercises is a different command over a different artifact. The two `describe`
-  blocks named `TC-0014-0009` in `verifySemanticsSpec0014.test.ts` pass, and they test stale sidecar
+  `reviewerGate: { result: "REVISE" }` and drives the certify gate, a different command over a
+  different artifact, so this matrix credits it on `BR-0014-0002` instead. The two `describe` blocks
+  named `TC-0014-0009` in `verifySemanticsSpec0014.test.ts` pass, and they test stale sidecar
   migration errors — a different subject with a different emission. See Findings 1.
 - `TC-0014-0028` and `TC-0014-0029` declare `AC-0014-0004` and `EX-0014-0025`: a prototyping
   design-system compliance slice reading `designSystemCompliance` out of a legacy scoring artifact.
@@ -68,8 +73,8 @@ The other three need the product or the spec to move first.
   `uiEvidenceArtifacts.test.ts` require a project carrying only the legacy layout to produce zero
   issues. See Findings 4.
 
-`TC-0014-0009`, `TC-0014-0028` and `TC-0014-0029` carry 27 of the matrix's 64 `❌` depth cells
-between them.
+`TC-0014-0028` and `TC-0014-0029` carry 18 of the matrix's 58 `❌` depth cells between them, and
+`TC-0014-0009` three more.
 
 The rest of the pack ranges widely. `TC-0014-0036` is the strongest work here: sixteen passing cases
 drive the scope-upgrade re-gating end to end with five distinct refusal causes, and two more seal
@@ -80,16 +85,16 @@ enforced by a strong suite that no live chain binds to it.
 single well-oracled case with no boundary or error direction, and `US-0014-0018` has one incidental
 gate and no case on the claim that distinguishes it.
 
-Section "Every `❌` cell, named" enumerates all 79 of them — 70 scored, 9 in the non-scored `Status`
+Section "Every `❌` cell, named" enumerates all 71 of them — 64 scored, 7 in the non-scored `Status`
 columns — so that "one justification per `❌`" is checkable rather than asserted, and section
-"Every `⚠️` cell, named" does the same for all 72 partial scores, 60 of which are scored cells the
+"Every `⚠️` cell, named" does the same for all 80 partial scores, 66 of which are scored cells the
 PASS criterion also requires a rationale for.
 
 ## What was measured, and how
 
 Every score below rests on a test run, not on a reading of a ledger. The ledger is a usable starting
 point for this pack — all seven `done` rows name a file that exists on disk — but three of its rows
-point somewhere the obligation is not discharged, and six of the files that carry coverage appear
+point somewhere the obligation is not discharged, and seven of the files that carry coverage appear
 in no row at all. The files below were located by reading the tests and the source, then executed
 together, by one command at one revision, from the repository root:
 
@@ -107,13 +112,14 @@ pnpm -C packages/qfai exec vitest run --reporter=verbose \
   tests/integration/reviewArtifactsProfileWiring.test.ts \
   tests/integration/validatorConvergenceIntegration.test.ts \
   tests/integration/specAutoDiscovery.test.ts \
+  tests/integration/prototypingExplorationRelaxationScope.test.ts \
   tests/integration/spec0014SaasPackageCertify.test.ts \
   tests/e2e/spec0014SaasPackageCertifyE2E.test.ts
 ```
 
-The build comes first because two of the thirteen read `packages/qfai/dist/**`. The run reports
-`Test Files 11 passed | 2 skipped (13)` and `Tests 259 passed | 4 skipped (263)`, exit 0, at
-revision `c2b60820df8fab209abe4f8c77a7b05de1f2b8fe`. The per-file counts below are that run's, read
+The build comes first because two of the fourteen read `packages/qfai/dist/**`. The run reports
+`Test Files 12 passed | 2 skipped (14)` and `Tests 263 passed | 4 skipped (267)`, exit 0, at
+revision `d8aaf60c0bbe270b0e3f443dfca9cc28614bda10`. The per-file counts below are that run's, read
 from its verbose output, and they sum to its totals:
 
 | File                                                                      | Result        |
@@ -129,17 +135,20 @@ from its verbose output, and they sum to its totals:
 | `tests/integration/reviewArtifactsProfileWiring.test.ts`                  | 4 passed      |
 | `tests/integration/validatorConvergenceIntegration.test.ts`               | 7 passed      |
 | `tests/integration/specAutoDiscovery.test.ts`                             | 38 passed     |
+| `tests/integration/prototypingExplorationRelaxationScope.test.ts`         | 4 passed      |
 | `tests/integration/spec0014SaasPackageCertify.test.ts`                    | 2 **skipped** |
 | `tests/e2e/spec0014SaasPackageCertifyE2E.test.ts`                         | 2 **skipped** |
 
-Six of those files carry no ledger row and are scored anyway, because the obligation is read from
+Seven of those files carry no ledger row and are scored anyway, because the obligation is read from
 `06_Test-Cases.md` and `02_User-stories.md`: `uiEvidenceArtifacts.test.ts` and `iterationPaths.test.ts`
 hold the reader-side coverage for `TC-0014-0033`, `prototypingCertify.test.ts` holds the
 `reviewerGate` refusal that `BR-0014-0002` is scored against, `renderEvidence.test.ts` is the suite
-that enforces `US-0014-0014`'s subject, `reviewArtifactsProfileWiring.test.ts` is the only file
-that drives a verify-profile validate run, and `validatorConvergenceIntegration.test.ts` holds the
-repeat-run determinism case that `BR-0014-0003`'s positive direction is scored against. That case
-is collected and passes: the file runs 7 of 7 with nothing skipped.
+that enforces `US-0014-0014`'s subject, `reviewArtifactsProfileWiring.test.ts` holds the
+verify-profile wiring `US-0014-0018` is scored against, `prototypingExplorationRelaxationScope.test.ts`
+holds the verify-profile `REVISE` case that `TC-0014-0009` and `BR-0014-0002` are scored against,
+and `validatorConvergenceIntegration.test.ts` holds the repeat-run determinism case that
+`BR-0014-0003`'s positive direction is scored against. That case is collected and passes: the file
+runs 7 of 7 with nothing skipped.
 
 Five negative results are load-bearing and were checked directly rather than inferred:
 
@@ -148,14 +157,16 @@ Five negative results are load-bearing and were checked directly rather than inf
 2. **`PROT-DS01` and `designSystemCompliance` occur nowhere in `packages/qfai/src/**` or
    `packages/qfai/tests/**`.** The identifiers appear only in spec prose, and `spec-0012`'s own
    `09_delta.md` records the `designSystemCompliance` slice as purged.
-3. **No CLI surface blocks on a `REVISE` verdict in a verify path; the gate `AC-0014-0002` names is
-   a skill contract.** The token appears in three source files.
-   `gitignore.ts` and `tddList.ts` are the TDD ledger's own reviewer-verdict handling.
-   `renderCritique.ts` requires an evidence file to carry a `verdict: (PASS|REVISE)` field, and a
-   `REVISE` satisfies that presence check exactly as a `PASS` does. The one command that refuses is
-   `prototypingCertify.ts`, which exits non-zero unless `prototyping.json#reviewerGate.result ===
-   "PASS"` — a different command reading a different artifact from the one `AC-0014-0002` names. The
-   gate the criterion is about is stated in the shipped `/qfai-verify` skill instead; see Findings 1.
+3. **No CLI surface reads the verdict of a reviewer that verify routes; the one `REVISE` a verify run
+   refuses is a render critique's.** The token appears in three source files. `gitignore.ts` and
+   `tddList.ts` are the TDD ledger's own reviewer-verdict handling. `renderCritique.ts` requires an
+   evidence file to carry a `verdict: (PASS|REVISE)` field, and then raises `QFAI-CRIT-008` at
+   `error` unless a desktop section and a mobile section each say `verdict: PASS`. The `verify`
+   profile runs it, so a `REVISE` critique fails `validate --profile verify --fail-on error`. The
+   one command that refuses outside validate is `prototypingCertify.ts`, which exits non-zero unless
+   `prototyping.json#reviewerGate.result === "PASS"` — a different command reading a different
+   artifact. The gate for the reviewers that verify routes is stated in the shipped `/qfai-verify` skill;
+   see Findings 1.
 4. **No test in `packages/qfai/tests/**` reads the `/qfai-verify` reviewer-gate clauses.** The
    shipped copy under `packages/qfai/assets/init/` and the installed copy under `.qfai/assistant/`
    carry them at the same two lines. The tests that do assert a reviewer gate over a skill file —
@@ -174,8 +185,8 @@ at all. Every integration obligation in this pack is therefore reported `covered
 `TC-0014-0009`, `-0018`, `-0019`, `-0035`, `-0036`, and all five `US-0014-*`. This is a repo-wide
 condition that no work inside this pack can clear, and it is stated once here rather than repeated
 per row. It caps the `Status` of every row it names — the five integration test-case rows and all
-five user-story rows — at `⚠️`, exactly as it did for spec-0002. Two of those rows sit below the cap
-on their own merits, and the reasons are given per row.
+five user-story rows — at `⚠️`, exactly as it did for spec-0002. One of those rows, `US-0014-0018`,
+sits below the cap on its own merits, and the reason is given with it.
 
 It does **not** cap the four unit rows. `catalog/test-layers.md` places the ATDD annotation
 obligation on L3 only, and the summary agrees: `TC-0014-0028`, `-0029`, `-0033` and `-0034` sit
@@ -190,8 +201,14 @@ and the run that reports it is:
 
 ```text
 $ node packages/qfai/dist/cli/index.mjs validate --profile tdd --fail-on error
-counts: info=6 warning=533 error=1021
+counts: info=6 warning=529 error=1013
 ```
+
+The run followed `pnpm -C packages/qfai build` at revision
+`d8aaf60c0bbe270b0e3f443dfca9cc28614bda10` and exits 1. Its 1013 errors are the backlog
+`scripts/dogfood-backlog.json` pins for the `tdd` profile, file for file:
+`node scripts/check-dogfood-backlog.mjs --profile tdd` reports `tdd reports 1013 error(s) across 19
+file(s), all within the pinned backlog`.
 
 **The built entrypoint, not `npx qfai`.** That command resolves the installed or cached package, so
 a run through it reports on a tree this branch has not changed — which is the same reason
@@ -199,7 +216,7 @@ a run through it reports on a tree this branch has not changed — which is the 
 
 `QFAI-TEST-003` accounts for **16** of those errors, one per skipped declaration, across eight
 files. That is the count this document uses throughout, and it agrees with the eight per-file entries
-`scripts/dogfood-backlog.json` pins for this rule. Count declarations, not output lines: the
+`scripts/dogfood-backlog.json` pins for those eight files. Count declarations, not output lines: the
 validator prints every finding twice, once as a human-readable line and once as a machine
 `error_code:` line, so a grep for the rule name returns twice the number of findings. Two of the 16 sit in files carrying a spec-0014
 annotation, and each is a `describe.skip` covering two `it` cases — four skipped cases in all:
@@ -255,7 +272,7 @@ five.
 | US-0014-0018 | ⚠️                     | ❌          | ⚠️         | ❌         | ❌              | ❌             | ❌                | ❌            | ⚠️              | ❌     |
 | US-0014-0019 | ❌                     | ⚠️          | ⚠️         | ❌         | ❌              | ❌             | ❌                | ❌            | ⚠️              | ⚠️     |
 | US-0014-0020 | ⚠️                     | ⚠️          | ⚠️         | ⚠️         | ⚠️              | ⚠️             | ⚠️                | ⚠️            | ⚠️              | ⚠️     |
-| TC-0014-0009 | ❌                     | ❌          | ❌         | ❌         | ❌              | ❌             | ❌                | ❌            | ❌              | ❌     |
+| TC-0014-0009 | ⚠️                     | ⚠️          | ⚠️         | ⚠️         | ❌              | ❌             | ❌                | ⚠️            | ⚠️              | ⚠️     |
 | TC-0014-0018 | ⚠️                     | ✅          | ⚠️         | ❌         | ❌              | ❌             | ❌                | ⚠️            | ⚠️              | ⚠️     |
 | TC-0014-0019 | ❌                     | ⚠️          | ⚠️         | ❌         | ❌              | ❌             | ❌                | ❌            | ⚠️              | ⚠️     |
 | TC-0014-0028 | ❌                     | ❌          | ❌         | ❌         | ❌              | ❌             | ❌                | ❌            | ❌              | ❌     |
@@ -265,10 +282,10 @@ five.
 | TC-0014-0035 | ⚠️                     | ⚠️          | ❌         | ❌         | ❌              | ❌             | ❌                | ❌            | ⚠️              | ⚠️     |
 | TC-0014-0036 | ✅                     | ⚠️          | ✅         | ✅         | ⚠️              | ⚠️             | ✅                | ✅            | ⚠️              | ⚠️     |
 
-14 rows × the 9 depth columns = **126 scored cells: ✅ 9 / ⚠️ 53 / ❌ 64**.
+14 rows × the 9 depth columns = **126 scored cells: ✅ 9 / ⚠️ 59 / ❌ 58**.
 
 `Status` is the row verdict, not a mark, so it is outside the scored population. For reference, its
-14 cells read **✅ 0 / ⚠️ 9 / ❌ 5**.
+14 cells read **✅ 0 / ⚠️ 10 / ❌ 4**.
 
 No user-story row carries a `✅` in any column, because the pack binds no running case to any of
 the five stories — the cases named above are attributed by subject, which holds a cell at `⚠️` and
@@ -290,7 +307,7 @@ the test cases cite, not from the rule's number.
 | BR ID        | Positive case | Negative case | Conditional branches | Covering TC                  | Status |
 | ------------ | ------------- | ------------- | -------------------- | ---------------------------- | ------ |
 | BR-0014-0001 | ❌            | ❌            | n/a                  | TC-0014-0018, TC-0014-0019   | ❌     |
-| BR-0014-0002 | ⚠️            | ⚠️            | n/a                  | TC-0014-0009                 | ❌     |
+| BR-0014-0002 | ⚠️            | ⚠️            | n/a                  | TC-0014-0009                 | ⚠️     |
 | BR-0014-0003 | ⚠️            | ❌            | n/a                  | TC-0014-0018, TC-0014-0019   | ❌     |
 | BR-0014-0004 | ❌            | ❌            | ❌                   | TC-0014-0028, TC-0014-0029   | ❌     |
 | BR-0014-0005 | ✅            | ✅            | ⚠️                   | TC-0014-0033                 | ⚠️     |
@@ -299,7 +316,7 @@ the test cases cite, not from the rule's number.
 
 7 rows × the 3 scored columns — `Positive case`, `Negative case`, `Conditional branches` — =
 **21 scored cells: ✅ 5 / ⚠️ 7 / ❌ 6, with `n/a` 3**. `Covering TC` holds identifiers and `Status`
-holds the row verdict, so neither is scored; the 7 `Status` cells read **✅ 0 / ⚠️ 3 / ❌ 4**.
+holds the row verdict, so neither is scored; the 7 `Status` cells read **✅ 0 / ⚠️ 4 / ❌ 3**.
 
 `n/a` is used three times, for `BR-0014-0001`, `-0002` and `-0003`, each of which states its rule
 unconditionally — "always full-scan", "is part of the completion gate", "remains the source" — so
@@ -312,8 +329,8 @@ The scored population is 147 cells: 126 matrix depth cells plus 21 business rule
 | Mark | Matrix depth | Business rule | Scored total |
 | ---- | ------------ | ------------- | ------------ |
 | ✅   | 9            | 5             | 14           |
-| ⚠️   | 53           | 7             | 60           |
-| ❌   | 64           | 6             | 70           |
+| ⚠️   | 59           | 7             | 66           |
+| ❌   | 58           | 6             | 64           |
 | n/a  | 0            | 3             | 3            |
 | Sum  | 126          | 21            | 147          |
 
@@ -335,8 +352,8 @@ the gap stands open against the rows.
 
 ## Every ❌ cell, named
 
-The matrix carries 64 `❌` depth cells plus 5 in `Status`; the business rule table carries 6 in its
-scored columns plus 4 in its `Status` column — 79 in all, of which 70 are scored. Each is named
+The matrix carries 58 `❌` depth cells plus 4 in `Status`; the business rule table carries 6 in its
+scored columns plus 3 in its `Status` column — 71 in all, of which 64 are scored. Each is named
 below with its own reason. A row's `Status` is `❌` when the obligation is not discharged at the
 depth the row describes; that verdict is stated once per row and is not repeated per cell.
 
@@ -462,40 +479,22 @@ about this obligation: they assert that a legacy strategy-style filename and leg
 content are rejected with exploration-first migration guidance, which is a different subject with a
 different emission. Resolution is not discharge.
 
-The gate the obligation names exists, in `/qfai-verify`'s SKILL.md, and no test reads it. Nothing
-feeds a `REVISE` review artifact **to verify** — `tests/cli/prototypingCertify.test.ts` feeds one to
-the certify gate, which is a different command over a different artifact, and this matrix credits
-that case on `BR-0014-0002` where it belongs (see "What was measured, and how"). Every cell is `❌`, and each is named so the count is
-checkable:
+The cases that do bear on the obligation are in a file the row does not name.
+`prototypingExplorationRelaxationScope.test.ts`'s `keeps the declared error severity under verify
+and full` and `reports error in every profile under convergence` each feed a render critique whose
+desktop verdict is `PASS` and whose mobile verdict is `REVISE`, and each requires `QFAI-CRIT-008` at
+`error` from a `verify`-profile run. Six depth cells and the row's `Status` rest on them and are
+named under "Every `⚠️` cell, named". Three cells are `❌`:
 
-- **Equivalence partitions** — the `PASS` and `REVISE` partitions of a reviewer verdict are
-  represented by no case. `validateReviewArtifacts` does run under the verify profile and does read
-  reviewer status, but in a review pack's `PASS|FAIL|NA` roster vocabulary, so no case feeds a
-  `REVISE` to it either.
-- **Normal path** — the case's own direction is a block produced from a `REVISE` artifact. Nothing
-  produces one, and no case reads the skill clause that states the block. The two passing cases
-  annotated to this row address the migration-error subject instead.
-- **Error path** — the block _is_ the error direction, and it is never exercised.
-- **Edge cases** — a review artifact with no verdict field, one carrying both verdicts, and one
-  whose verdict is a third value are all untested.
-- **Boundary values** — the verdict domain has exactly two members and no ordered or numeric
-  dimension; no count of blocking reviewers is exercised, because no reviewer roster is read against
-  this obligation.
-- **Special values** — no empty, absent or malformed review artifact is supplied.
+- **Boundary values** — the verdict domain has two members and no ordered or numeric dimension. The
+  critique's viewport count is fixed at two by the validator, and no count of blocking reviewers is
+  exercised, because no reviewer roster is read against this obligation.
+- **Special values** — no empty, absent or malformed review artifact is supplied. The critique both
+  cases feed is well formed in every field.
 - **State transitions** — a `REVISE`-to-`PASS` progression across review rounds is the clearest
-  state obligation this row has, and no case observes any transition.
-- **Combinatorial** — the reviewer verdict is never crossed with validate's result, with scan scope,
-  or with anything else.
-- **Oracle strength** — the obligation does have a surface a mutation could redden. Deleting "Do not
-  declare DONE or handoff until all routed blocking reviewers return `PASS`" from
-  `packages/qfai/assets/init/.qfai/assistant/skills/qfai-verify/SKILL.md`, the copy `qfai init`
-  writes into a consuming project, changes the gate for every adopter. No case reads that file, so
-  there is nothing for the mutation to redden. The nearest executable gate,
-  `prototypingCertify.ts`'s `reviewerGate.result !== "PASS"` refusal, belongs to a different command
-  and a different artifact, and is scored under `BR-0014-0002` rather than here.
-- **Status** — the obligation is undischarged by testing. The behaviour it names is carried by the
-  shipped skill's reviewer gate, no test in `packages/qfai/tests/**` reads those clauses, and no
-  case anywhere feeds a `REVISE` artifact. See Findings 1.
+  state obligation this row has, and no case observes it. The two loop modes the cases feed,
+  `exploration` and `convergence`, are separate fixtures rather than a progression, and the verdict
+  is the same in both.
 
 ### TC-0014-0018 — full-scan verify depends on canonical validate groups
 
@@ -725,15 +724,10 @@ leaves both markers undefined. This row has **six `❌` depth cells** and no `�
   contract, is never built either. The three cases that touch the vocabulary delete it, reject it,
   or leave it in a field nothing reads, and none of those exercises either side of the condition.
 
-### The four ❌ cells of the business rule Status column
+### The three ❌ cells of the business rule Status column
 
 - **BR-0014-0001 × Status** — both scored cells are `❌`. The rule is stated in the spec and rejected
   alternatives are recorded, and nothing in the suite can tell a full scan from a partial one.
-- **BR-0014-0002 × Status** — the rule's own covering case, `TC-0014-0009`, has no test. What does
-  exercise a reviewer verdict is a gate in a different command over a different artifact, which is
-  why both scored cells are `⚠️` rather than `❌` and why the row's verdict is still `❌`: the rule as
-  its `AC` scopes it, verify inspecting review artifacts, is enforced only by skill prose that no
-  test reads.
 - **BR-0014-0003 × Status** — the positive direction rests partly on a substring read of
   `validate.ts` and the negative direction has no case. The rule is documented and half-measured.
 - **BR-0014-0004 × Status** — both covering cases, `TC-0014-0028` and `TC-0014-0029`, have no test
@@ -742,8 +736,8 @@ leaves both markers undefined. This row has **six `❌` depth cells** and no `�
 
 ## Every ⚠️ cell, named
 
-53 depth cells and 9 `Status` cells in the matrix, and 7 scored cells and 3 `Status` cells in the
-business rule table, are `⚠️` — 72 in all, of which 60 are scored. The PASS criterion requires a
+59 depth cells and 10 `Status` cells in the matrix, and 7 scored cells and 4 `Status` cells in the
+business rule table, are `⚠️` — 80 in all, of which 66 are scored. The PASS criterion requires a
 documented rationale for each, so each is named here.
 
 ### Matrix depth cells
@@ -881,6 +875,30 @@ documented rationale for each, so each is named here.
   `expect(cert.scope).not.toBe("full")`, which cannot fail while
   `expect(cert.scope).toBe("saas-package")` passes in the same case; and every oracle named here
   belongs to a case the pack binds to a test case rather than to this story.
+- **TC-0014-0009 × Equivalence partitions** — the `REVISE` partition of a critique verdict is fed
+  and required to raise an error under the `verify` profile. The `PASS` partition appears only
+  beside it, in the same artifact's desktop section: no artifact whose every verdict is `PASS` is
+  fed to a `verify` run and required to raise nothing, so the partition that must not block is
+  unrepresented.
+- **TC-0014-0009 × Normal path** — the row's own direction, a block produced from a `REVISE`
+  artifact, is produced: a `verify`-profile run over the critique raises `QFAI-CRIT-008` at `error`.
+  Held at `⚠️` because the block is read as a finding's severity from `validateProject` rather than
+  as the refusal of `validate --profile verify --fail-on error`, because the artifact is a render
+  critique rather than the verdict of a reviewer that verify routes, and by the carrier-only condition.
+- **TC-0014-0009 × Error path** — the block is the error direction, and the same cases exercise it
+  under the same three limits.
+- **TC-0014-0009 × Edge cases** — one of the three edges is fed: an artifact carrying both verdicts,
+  `PASS` on desktop and `REVISE` on mobile, is required to block. An artifact with no verdict field
+  and one whose verdict is a third value are not.
+- **TC-0014-0009 × Combinatorial** — the `REVISE` critique is crossed with four profiles and two loop
+  modes, each pair with a required severity: `warning` under `prototyping` and `saas-package` in
+  `exploration`, and `error` in the other six. Only one verdict value is crossed, so nothing shows a
+  `PASS` critique left unblocked under any profile.
+- **TC-0014-0009 × Oracle strength** — the oracle pins the code and the severity, so making
+  `QFAI-CRIT-008` a warning, or dropping the render critique from the `verify` profile, reddens it.
+  It does not read the verdict's value: the validator raises the same finding for any viewport
+  section that lacks `verdict: PASS`, so a missing or misspelled verdict in place of `REVISE` leaves
+  both cases green, and deleting the reviewer gate from `/qfai-verify`'s SKILL.md reddens nothing.
 - **TC-0014-0018 × Combinatorial** — `EX-0014-0001` crosses two conditions, a UI-bearing repo and
   a validate error, and requires a third state, verify remaining non-pass. The verify-path case
   constructs the pair: a repo root carrying the forbidden sidecar, run through the verify profile.
@@ -1059,6 +1077,11 @@ documented rationale for each, so each is named here.
   entirely `describe.skip`, which is also why no depth cell in the row reaches `✅`, because the
   obligation is reported carrier-only, and because the "never overstates completion" clause is
   carried by a tautological assertion.
+- **TC-0014-0009 × Status** — the block the obligation names is established for one kind of review
+  artifact: a `REVISE` render critique fails verify's binding gate, and two cases require it. Three
+  things cap it. The gate for the reviewers that verify routes — only `PASS` or `REVISE`, and no DONE
+  until every routed blocking reviewer returns `PASS` — is read by no test. The cases sit in a file
+  the row does not name and carry no annotation. And the obligation is reported carrier-only.
 - **TC-0014-0018 × Status** — one half of the obligation is genuinely discharged: the canonical
   entrypoint is reached from a repo root and produces a real emission. Three things cap it.
   `AC-0014-0001`'s full-scan posture is not exercised at all. `EX-0014-0001`'s consequence, verify
@@ -1091,12 +1114,16 @@ documented rationale for each, so each is named here.
   the seal only on `PASS`: `prototypingCertify.ts` requires `prototyping.json#reviewerGate.result`
   to be `PASS`, and that precondition is satisfied and exercised by every passing case in the two
   certify suites. It is `⚠️` because `AC-0014-0002` scopes the rule to verify inspecting reviewer
-  artifacts, and the gate that exists is a different command reading a different artifact.
-- **BR-0014-0002 × Negative case** — the negative direction is genuinely present:
+  artifacts, the gate these cases exercise is a different command reading a different artifact, and
+  no `verify` run is fed an artifact whose every verdict is `PASS`.
+- **BR-0014-0002 × Negative case** — the negative direction is genuinely present in two places.
   `it("exits 2 when reviewerGate is not PASS")` in `prototypingCertify.test.ts` seeds
-  `reviewerGate: { result: "REVISE" }` and requires exit 2. It is `⚠️` for the same scoping reason,
-  and because the case asserts only the exit code — nothing requires the refusal to name the verdict
-  or the artifact, so an operator-facing message that regressed to silence would still pass.
+  `reviewerGate: { result: "REVISE" }` and requires exit 2, and
+  `prototypingExplorationRelaxationScope.test.ts` feeds a `REVISE` render critique to a
+  `verify`-profile run and requires `QFAI-CRIT-008` at `error`. It is `⚠️` because neither reads the
+  verdict of a reviewer that verify routes, and because neither asserts what an operator sees: the
+  certify case reads only the exit code and the verify case only a severity, so a refusal that
+  regressed to silence would still pass both.
 - **BR-0014-0003 × Positive case** — determinism is directly exercised:
   `validatorConvergenceIntegration.test.ts` runs `validateThreeLayerModel` twice over the same
   fixture and requires `second).toEqual(first)`, and the canonical entrypoint is separately reached
@@ -1129,6 +1156,11 @@ documented rationale for each, so each is named here.
 
 ### Business rule Status cells
 
+- **BR-0014-0002 × Status** — a verdict is part of a completion gate in two executable places, and a
+  case refuses a `REVISE` in each: the certify command over `reviewerGate`, and verify's binding
+  validate run over a render critique. It is capped at `⚠️` because the rule as `AC-0014-0002`
+  scopes it, verify inspecting the artifacts of the reviewers it routes, is enforced only by skill
+  prose that no test reads, and because no `verify` run is shown letting a `PASS` through.
 - **BR-0014-0005 × Status** — positive, negative and one branch of the condition are all genuinely
   present, exercised against real fixtures, and the accepting cases fail if the `iter-NN` branch of
   `hasEvidenceFile` is removed. It is capped at `⚠️` because the rule names the iter-NN layout as
@@ -1151,7 +1183,7 @@ documented rationale for each, so each is named here.
 Six things were found while producing this matrix that the reviewing stage should act on. None of
 them is repaired here; this artifact scores coverage and does not edit tests, ledgers or specs.
 
-1. **`TC-0014-0009`'s obligation is implemented in a shipped skill and observed by no test.**
+1. **`TC-0014-0009`'s reviewer gate is implemented in a shipped skill and observed by no test.**
    `AC-0014-0002` reads "Verify inspects reviewer artifacts and blocks on `REVISE`". `/qfai-verify`
    is a skill, not a CLI command, so the gate lives in
    `packages/qfai/assets/init/.qfai/assistant/skills/qfai-verify/SKILL.md`: under "Stage Minimum
@@ -1160,7 +1192,10 @@ them is repaired here; this artifact scores coverage and does not edit tests, le
    return `PASS`". The inspection half has an executable counterpart as well —
    `validateReviewArtifacts` is wired into the full-scan verify profile, which
    `reviewArtifactsProfileWiring.test.ts` pins — though it reads a review pack's `PASS|FAIL|NA`
-   roster rather than a `REVISE` verdict. What is missing is a test. No file in
+   roster rather than a `REVISE` verdict. The blocking half has one for render critiques: the
+   `verify` profile raises `QFAI-CRIT-008` at `error` for a critique whose viewport verdict is not
+   `PASS`, and `prototypingExplorationRelaxationScope.test.ts` requires it, which is what the row's
+   `⚠️` cells rest on. What is missing is a test of the gate itself. No file in
    `packages/qfai/tests/**` reads either clause, and the two `describe` blocks carrying the
    `TC-0014-0009` annotation assert stale sidecar migration guidance, a different subject, so the
    annotation resolves without discharging anything. The gap is coverage over behaviour that exists.
@@ -1264,16 +1299,19 @@ them is repaired here; this artifact scores coverage and does not edit tests, le
 `QFAI-ATDD-133` requires the stage evidence to carry a `## Coverage Depth Matrix` section that links
 to this file and restates the counted totals beside it. Those totals are:
 
-**✅ 14 / ⚠️ 60 / ❌ 70**, with `n/a` 3, across all 147 scored cells — 126 matrix depth cells (14
+**✅ 14 / ⚠️ 66 / ❌ 64**, with `n/a` 3, across all 147 scored cells — 126 matrix depth cells (14
 rows × 9 columns) and 21 business rule cells (7 rows × 3 columns). The `Status` columns of both
 tables hold row verdicts rather than marks and are outside that population; for reference the
-matrix's 14 read `⚠️ 9 / ❌ 5` and the business rule table's 7 read `⚠️ 3 / ❌ 4`.
+matrix's 14 read `⚠️ 10 / ❌ 4` and the business rule table's 7 read `⚠️ 4 / ❌ 3`.
 
-Five obligations are stuck, and they need three kinds of work. `TC-0014-0009` needs a test over the
-shipped skill's reviewer gate, and `US-0014-0018` a case that drives the completion flow and
-observes the contract-first gate refusing it: for both the behaviour is there and only the coverage
-is missing. `TC-0014-0028` and `TC-0014-0029` name a validator slice that does not exist, and
-`01_Spec.md` REQ-0028 already makes their obligation conditional on its existence. `TC-0014-0033`
-states a layout rule the product contradicts, and a Change Request has to settle which side is
-current before any case can discharge it. Until each is addressed, the honest verdict for all five is
-the one recorded above.
+Four obligations are stuck, and they need three kinds of work. `US-0014-0018` needs a case that
+drives the completion flow and observes the contract-first gate refusing it: the behaviour is there
+and only the coverage is missing. `TC-0014-0028` and `TC-0014-0029` name a validator slice that
+does not exist, and `01_Spec.md` REQ-0028 already makes their obligation conditional on its
+existence. `TC-0014-0033` states a layout rule the product contradicts, and a Change Request has to
+settle which side is current before any case can discharge it. Until each is addressed, the honest
+verdict for all four is the one recorded above.
+
+`TC-0014-0009` is discharged in part and needs a test over the shipped skill's reviewer gate: a
+`REVISE` render critique already fails verify's binding gate under a case, and nothing reads the
+gate for the reviewers that verify routes.

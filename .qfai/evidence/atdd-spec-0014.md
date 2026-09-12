@@ -130,27 +130,20 @@ written is under Final status.
 
 Eight files declare themselves inactive and did not run, each through
 `describe.skip` carrying the marker `(test-first, pending /qfai-implement)`.
-They hold thirty-five cases, which is the platform-independent part of every
-skip count below.
+They hold thirty-five cases, which is the platform-independent part of the skip
+count below.
 
 The rest is conditional — `it.skipIf` and `describe.skipIf` on the platform, on
 `geteuid`, and on optional tooling — so it is read against the runner rather
-than as a constant, and the two runs recorded here disagree because they ran on
-different ones.
+than as a constant.
 
-| Run                                                      | Skips | Conditional |
-| -------------------------------------------------------- | ----- | ----------- |
-| The checkpoint, seven `ubuntu-latest` jobs               | 82    | 47          |
-| One unfiltered `npx vitest run` here, on Windows         | 92    | 57          |
+| Run                                                 | Runner                | Skips | Conditional |
+| --------------------------------------------------- | --------------------- | ----: | ----------: |
+| The checkpoint below, over its six passing projects | this machine, Windows |    92 |          57 |
 
-The ten between them are platform gates the POSIX runner takes and this one does
-not: `cli` and `integration` hold eleven `process.platform === "win32"`
-declarations between them — ten `it.skipIf` and one `describe.skipIf` over a
-single case — and the difference is read off the two totals rather than matched
-to them one by one, because a case may sit behind more than one gate.
-
-Attributing the checkpoint's count to Windows was the error: `ci.yml` runs that
-matrix on `ubuntu-latest`, so 82 is the POSIX figure and 92 is this machine's.
+Five projects hold `process.platform === "win32"` gates, which skip here and
+run on a POSIX runner. This record carries no POSIX run, so it states no POSIX
+total.
 
 The checkpoint needs `pnpm -C packages/qfai build` first.
 `tests/integration/cliStartupCost.test.ts` reads `packages/qfai/dist/**` and is
@@ -304,7 +297,7 @@ first mutation passes it and fails the literal check below it instead.
 ## Coverage Depth Matrix
 
 See `.qfai/evidence/coverage-depth-spec-0014.md`.
-Totals: ✅ 14 / ⚠️ 60 / ❌ 70, with 3 not applicable, across 147 scored cells —
+Totals: ✅ 14 / ⚠️ 66 / ❌ 64, with 3 not applicable, across 147 scored cells —
 126 matrix depth cells (14 rows × 9 columns) and 21 business rule cells
 (7 rows × 3 columns). `Status` is a row verdict, not a mark, and is outside
 every total.
@@ -412,6 +405,12 @@ blocking reviewers return `PASS`".
 a review pack's `PASS` / `FAIL` / `NA` roster and never a `REVISE` verdict. No
 case in the package reads either clause. So the row needs a test over the
 shipped skill, not a decision about the obligation.
+
+One case does feed verify a `REVISE`, from a render critique rather than a
+reviewer that verify routes: `prototypingExplorationRelaxationScope.test.ts` requires
+`QFAI-CRIT-008` at `error` from a `verify`-profile run over one. The matrix
+credits it in part. It sits in a file the row does not name, so it backs no
+backfill of the row either.
 
 `TDD-0018` is not backfilled, and the reason is not its coverage. Its
 obligation, `TC-0014-0018`, is that the full-scan verify path depends on the
