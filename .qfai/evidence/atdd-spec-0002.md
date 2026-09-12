@@ -48,12 +48,12 @@ revision `955d78ccf4323d25c9eba36c1586da746c48203a`. The mutation was reverted
 from a copy of the pre-mutation bytes, and the tree re-addressed afterwards to
 confirm it had returned to the clean value.
 
-| Run                       | Command                                                                        | Result                |
-| ------------------------- | ------------------------------------------------------------------------------ | --------------------- |
-| `TDD-0001` GREEN          | `npx vitest run tests/core/sddPreflight.test.ts`                                | 26 passed             |
-| `TDD-0001` falsifiability | `npx vitest run tests/core/sddPreflight.test.ts`                                | 14 failed, 12 passed  |
-| Refactor verify           | `npx vitest run tests/core/sddPreflight.test.ts tests/validators/uix/threeLayer.test.ts` | 36 passed    |
-| Checkpoint                | `npx vitest run --project core --project validators`                            | 4121 passed           |
+| Run                       | Command                                                                                                                                     | Result               |
+| ------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- | -------------------- |
+| `TDD-0001` GREEN          | `npx vitest run tests/core/sddPreflight.test.ts`                                                                                            | 26 passed            |
+| `TDD-0001` falsifiability | `npx vitest run tests/core/sddPreflight.test.ts`                                                                                            | 14 failed, 12 passed |
+| Refactor verify           | `npx vitest run tests/core/sddPreflight.test.ts tests/validators/uix/threeLayer.test.ts`                                                    | 36 passed            |
+| Checkpoint                | `npx vitest run --project core --project validators --exclude 'tests/core/prFixMonitor.test.ts' --exclude 'tests/core/prMergePlan.test.ts'` | 4121 passed          |
 
 ## Test volume estimate
 
@@ -104,29 +104,31 @@ every case that seeds a pack and expects it to be readable reads that list.
 - Refactor verify command: npx vitest run tests/core/sddPreflight.test.ts tests/validators/uix/threeLayer.test.ts
 - Refactor verify result: Test Files 2 passed (2); Tests 36 passed (36)
 - Refactor verify revision: 955d78ccf4323d25c9eba36c1586da746c48203a
-- Checkpoint verification command: npx vitest run --project core --project validators
+- Checkpoint verification command: npx vitest run --project core --project validators --exclude 'tests/core/prFixMonitor.test.ts' --exclude 'tests/core/prMergePlan.test.ts'
 - Checkpoint verification result: PASS — exit 0; Test Files 222 passed (222); Tests 4121 passed (4126)
 - Checkpoint verification revision: 955d78ccf4323d25c9eba36c1586da746c48203a
 
-Two files of the `core` project were held out of the checkpoint:
-`tests/core/prFixMonitor.test.ts` and `tests/core/prMergePlan.test.ts`. Both
-drive a PowerShell script, and this container has no `pwsh`, so all eighteen of
-their cases fail on `spawn pwsh ENOENT` whatever the tree holds. They run in
-continuous integration, which does have it. Five further cases in the projects
-above declare themselves inactive and did not run.
+The two excluded files, `tests/core/prFixMonitor.test.ts` and
+`tests/core/prMergePlan.test.ts`, both drive a PowerShell script. This container
+has no `pwsh`, so eighteen of their nineteen cases fail on `spawn pwsh ENOENT`
+whatever the tree holds, and the command carries the exclusion so that a reader
+running it gets the result above rather than those eighteen failures. They run in
+continuous integration, which does have `pwsh`. Five further cases in the
+projects above declare themselves inactive and did not run.
 
 ## Coverage Depth Matrix
 
 See `.qfai/evidence/coverage-depth-spec-0002.md`.
-Totals: ✅ 11 / ⚠️ 20 / ❌ 34, with 1 not applicable, across 66 scored cells —
-45 matrix depth cells, 5 matrix status cells, 12 business rule cells and 4
-business rule status cells. No obligation reaches a green status.
+Totals: ✅ 11 / ⚠️ 16 / ❌ 92, with 1 not applicable, across 120 scored cells —
+108 matrix depth cells (12 rows × 9 columns) and 12 business rule cells
+(4 rows × 3 columns). `Status` is a row verdict, not a mark, and is outside
+every total.
 
 ## Work Orders Summary
 
-| Role                | Task                                             | Status (PASS/REVISE/PENDING) |
-| ------------------- | ------------------------------------------------ | ---------------------------- |
-| test-design-analyst | Score the five obligations and write the matrix  | PASS                         |
+| Role                | Task                                              | Status (PASS/REVISE/PENDING) |
+| ------------------- | ------------------------------------------------- | ---------------------------- |
+| test-design-analyst | Score the twelve obligations and write the matrix | PASS                         |
 
 ## Cross-spec obligations
 

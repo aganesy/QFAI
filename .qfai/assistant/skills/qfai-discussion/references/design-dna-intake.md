@@ -46,10 +46,12 @@ an unasked question becomes an invented brand.
 
 Route the ask through
 `.qfai/assistant/constitution/shared-skill-operating-baseline.md#user-questions-askuserquestion-protocol`.
-Do not open a second path for it. The question budget is not the obstacle:
-non-discussion commands are what the cap constrains, and a question whose
-subject is a decision the skill declares mandatory is an approval, which is
-exempt.
+Do not open a second path for it. The question budget is not the obstacle, and
+the reason is the question rather than the command it sits in: a question whose
+subject is a decision the skill declares mandatory is an approval, and one asked
+inside a grilling session is a grilling question. Both are exempt. The cap binds
+every command alike, so an ordinary clarification asked here spends a unit like
+any other.
 
 **Offer candidates, not adjectives.** "Which of these three" is a choice a
 user can make from a page; "how would you describe the brand" asks them to

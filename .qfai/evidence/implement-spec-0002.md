@@ -70,16 +70,17 @@ returned early.
 - Refactor verify command: npx vitest run tests/core/sddPreflight.test.ts tests/validators/uix/threeLayer.test.ts
 - Refactor verify result: Test Files 2 passed (2); Tests 36 passed (36)
 - Refactor verify revision: 955d78ccf4323d25c9eba36c1586da746c48203a
-- Checkpoint verification command: npx vitest run --project core --project validators
+- Checkpoint verification command: npx vitest run --project core --project validators --exclude 'tests/core/prFixMonitor.test.ts' --exclude 'tests/core/prMergePlan.test.ts'
 - Checkpoint verification result: PASS — exit 0; Test Files 222 passed (222); Tests 4121 passed (4126)
 - Checkpoint verification revision: 955d78ccf4323d25c9eba36c1586da746c48203a
 
-Two files of the `core` project were held out of the checkpoint:
-`tests/core/prFixMonitor.test.ts` and `tests/core/prMergePlan.test.ts`. Both
-drive a PowerShell script, and this container has no `pwsh`, so all eighteen of
-their cases fail on `spawn pwsh ENOENT` whatever the tree holds. They run in
-continuous integration, which does have it. Five further cases in the projects
-above declare themselves inactive and did not run.
+The two excluded files, `tests/core/prFixMonitor.test.ts` and
+`tests/core/prMergePlan.test.ts`, both drive a PowerShell script. This container
+has no `pwsh`, so eighteen of their nineteen cases fail on `spawn pwsh ENOENT`
+whatever the tree holds, and the command carries the exclusion so that a reader
+running it gets the result above rather than those eighteen failures. They run in
+continuous integration, which does have `pwsh`. Five further cases in the
+projects above declare themselves inactive and did not run.
 
 ## Test results summary
 

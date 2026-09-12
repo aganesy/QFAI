@@ -1322,11 +1322,13 @@ export const ALLOWED_INIT_CONTENT: ReadonlyMap<string, string> = new Map([
     // `.agents/rules/minimal-implementation.md`. Derived by running `qfai init` into a temp root
     // and hashing what it wrote; dropping that bullet reproduces `2a264d5e…`.
     //
-    // The current digest adds the bullet naming `.agents/rules/interface-clarity.md`, the rule the
-    // same run seeds beside the other masters. Derived the same way, and checked the same way:
-    // dropping that one bullet reproduces `3978847f…` byte for byte.
+    // Every later bullet on that list moves this digest the same way. To re-pin one: run
+    // `qfai init` into a temp root and hash what it wrote — never copy a value out of a failure
+    // message — then drop the added bullet and confirm the previous digest comes back byte for
+    // byte. That check is what keeps a re-pin a review of one line rather than a re-blessing of
+    // the whole file.
     ".github/copilot-instructions.md",
-    "f3cfb74268079edceea5d97c27b5dfdf4c2b63b72bfa62f16cac756c5590f9a1",
+    "bf048bd541b3218519f34f4b54b6e190daf541904598a98ae9a7f34cbc4b6476",
   ],
   // `qfai init` copies this file verbatim, so it is pinned like every other
   // adopter-facing file here — and for one reason none of the others has: it
@@ -1423,11 +1425,12 @@ export const ALLOWED_INIT_CONTENT: ReadonlyMap<string, string> = new Map([
   // way the note above asks: dropping that one bullet reproduces `a832e27c…`
   // and `20040ab0…` byte for byte.
   //
-  // Re-pinned for a third, naming `.agents/rules/interface-clarity.md`, seeded
-  // by the same run. Derived and checked the same way: dropping that one bullet
-  // reproduces `22af72dd…` and `3f9ad00f…` byte for byte.
-  ["AGENTS.md", "60340a757d161e7d39cf988c5b222a12964c77759dc486b8162b66e5dad9aa47"],
-  ["CLAUDE.md", "f83493c5ca396a49822bbbf08aa72c451ce5ea24326ec7ebe4fda2c7b5298de5"],
+  // Every later master seeded beside them moves both digests the same way. To re-pin: run
+  // `qfai init` into a temp root and hash what it wrote, then drop the added bullet and confirm
+  // both previous digests come back byte for byte. That check is what keeps a re-pin a review of
+  // one line per file.
+  ["AGENTS.md", "c197b064a585305094b6342abe34dddfd7e199a16961aeb29a80c0b89b589f66"],
+  ["CLAUDE.md", "399dfc78f737fd771579c475fc0d231dfe24f288817074752b19f39401231a1e"],
   // Inside `.claude/`, and pinned anyway — see the paragraph above the path set.
   // These are the hooks that restate a rule at the moment it applies: the writing
   // rule when a pull request, issue or review is posted through the GitHub tools
@@ -1586,10 +1589,12 @@ export const INERT_DECORATIONS: ReadonlyArray<string> = [
 export const ALLOWED_INIT_SOURCE_ASSETS: ReadonlySet<string> = new Set([
   "root/.agents/rules/distributed-surface.md",
   "root/.agents/rules/documentation-clarity.md",
+  "root/.agents/rules/grilling.md",
   "root/.agents/rules/interface-clarity.md",
   "root/.agents/rules/minimal-implementation.md",
   "root/.agents/rules/root-additions-policy.md",
   "root/.agents/rules/temporary-files.md",
+  "root/.agents/rules/user-questions.md",
   "root/.agents/rules/version-discipline.md",
   "root/.gitattributes",
   "root/.github/workflows/qfai-docs.yml",
