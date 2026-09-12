@@ -7,6 +7,8 @@
 !skeleton.md
 !decisions/
 !decisions/**
+!prototyping/
+!prototyping/grilling.md
 !implement-*.md
 !atdd-*.md
 !sdd-*.md
