@@ -34,10 +34,14 @@ a layout rule the product contradicts. Only the first can be repaired by writing
 - `TC-0014-0009` declares `AC-0014-0002` and `EX-0014-0002`: feed `/qfai-verify` a `REVISE` review
   artifact, and verify blocks completion. The behaviour exists. `/qfai-verify` is a shipped skill,
   and its SKILL.md requires the reviewer to return only `PASS` or `REVISE` and forbids DONE or
-  handoff until every routed blocking reviewer returns `PASS`. No test reads those clauses, and no
-  case anywhere feeds a `REVISE` artifact to anything. The two `describe` blocks named
-  `TC-0014-0009` in `verifySemanticsSpec0014.test.ts` pass, and they test stale sidecar migration
-  errors — a different subject with a different emission. See Findings 1.
+  handoff until every routed blocking reviewer returns `PASS`. No test reads those clauses, and
+  nothing feeds a `REVISE` artifact **to verify**. One case does feed one to something:
+  `tests/cli/prototypingCertify.test.ts`'s `exits 2 when reviewerGate is not PASS` seeds
+  `reviewerGate: { result: "REVISE" }` and drives the certify gate, and this matrix credits it as a
+  real negative case where it belongs — on `BR-0014-0002`. It does not discharge this obligation
+  because the gate it exercises is a different command over a different artifact. The two `describe`
+  blocks named `TC-0014-0009` in `verifySemanticsSpec0014.test.ts` pass, and they test stale sidecar
+  migration errors — a different subject with a different emission. See Findings 1.
 - `TC-0014-0028` and `TC-0014-0029` declare `AC-0014-0004` and `EX-0014-0025`: a prototyping
   design-system compliance slice reading `designSystemCompliance` out of a legacy scoring artifact.
   Neither `PROT-DS01` nor `designSystemCompliance` occurs anywhere in `packages/qfai/src/**` or
@@ -231,7 +235,7 @@ the test cases cite, not from the rule's number.
 
 | BR ID        | Positive case | Negative case | Conditional branches | Covering TC                  | Status |
 | ------------ | ------------- | ------------- | -------------------- | ---------------------------- | ------ |
-| BR-0014-0001 | ❌            | ❌            | n/a                  | TC-0014-0018                 | ❌     |
+| BR-0014-0001 | ❌            | ❌            | n/a                  | TC-0014-0018, TC-0014-0019   | ❌     |
 | BR-0014-0002 | ⚠️            | ⚠️            | n/a                  | TC-0014-0009                 | ❌     |
 | BR-0014-0003 | ⚠️            | ❌            | n/a                  | TC-0014-0018, TC-0014-0019   | ❌     |
 | BR-0014-0004 | ❌            | ❌            | ❌                   | TC-0014-0028, TC-0014-0029   | ❌     |

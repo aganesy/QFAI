@@ -286,6 +286,19 @@ measured against, so they were taken separately and before it.
 
 ## Reviewer response
 
+**This response is short of the contract, and the missing fields are named
+rather than written.** `shared-skill-delegation-baseline.md#reviewer-response-template`
+requires a reviewed revision, an audited evidence hash, an independence
+declaration, traced findings, required fixes and the evidence checked, one block
+per round. This record carries a summary across the rounds and none of the
+first three. They cannot be supplied now: the rounds were taken against trees
+this branch has moved past, an audited hash recomputed today would address a
+different subject than the one reviewed, and an independence declaration is the
+reviewer's to make and not the author's. Writing any of them would be the
+invented provenance the template exists to prevent. The stage is `ESCALATED`
+partly for this: what a user is being asked to decide includes a review record
+that does not meet its own contract.
+
 - Role: completion-reviewer
 - Status: REVISE, budget spent
 - Review series: .qfai/evidence/atdd-spec-0014.md + completion-reviewer
@@ -419,6 +432,17 @@ one identifier, which is the shape that rule forbids. The row therefore stays as
 it stands and needs a Change Request that decomposes it.
 
 ## Final status
+
+- Review pack: none retained
+- Review pack seal: none
+
+**Both are absent rather than empty.** `pack-seal.md` requires a sealed
+`.qfai/review/review-<timestamp>/` pack beside a stage verdict, and this run
+retained none — the rounds were taken and their responses summarised without a
+pack being archived. A seal computed now would address a directory that does not
+exist, so the fields record the absence. It is part of what the escalation puts
+to the user: a later decision cannot verify that the reviewed evidence or the
+reviewer's response stayed unchanged, because nothing sealed them.
 
 ESCALATED. The row's evidence is complete and the reviewer gate has not passed
 it: `completion-reviewer` returned `REVISE` in both rounds, and the one
