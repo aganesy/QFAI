@@ -106,5 +106,8 @@ rows parked will not find them parked.
 ## References to consult first
 
 - `.qfai/decisions/CR-20260912-0003-spec-0002-states-two-rules-the-product-replaced.md`
-- `.qfai/evidence/coverage-depth-spec-0002.md`, findings 1 through 5
+- `.qfai/evidence/coverage-depth-spec-0002.md`, findings 1 through 7 — finding 6
+  carries the annotation-repair routes `TDD-0011`'s re-verification depends on,
+  and finding 7 the seven ledger rows the seeding contract requires and this
+  pack does not have
 - `.qfai/assistant/skills/qfai-implement/references/execution-ledger.md`, the status lifecycle

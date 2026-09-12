@@ -132,13 +132,22 @@ to do with. A row whose obligation is unchanged waits on nobody.
   `packages/qfai/assets/init/.qfai/assistant/skills/qfai-sdd/**` and its mirror,
   whose Phase 0 reads the recorded direction;
   `packages/qfai/src/core/preflight/sddPreflight.ts`, which must block on a
-  missing `prototyping.yaml`; a new validator source for the single-winner
+  missing `prototyping.yaml`, **and `packages/qfai/src/core/discussionPack.ts`,
+  which is what would give it something to report**:
+  `isPrototypingRequiredForDiscussionPack` returns a constant `false` and the
+  artifact never enters `missingSideArtifacts`, so the preflight branch receives
+  nothing however it is written and requiredness has to be derived from the
+  validated UI-bearing classification instead; a new validator source for the single-winner
   violation **and every path that makes it run** —
   `packages/qfai/src/core/validators/uix/canonical.ts`, whose
   `CANONICAL_UIX_VALIDATORS` list is the only way `qfai validate` reaches a UIX
   validator, the export that puts the new module on that surface, the emitted
   finding-code registry, and the regression tests that pin both; and the three
-  shipped documents carrying the optional-artifact sentence. The tests that pin the behaviour being removed move with it:
+  shipped documents carrying the optional-artifact sentence, of which
+  `packages/qfai/README.md` is one and is outside both skill-directory
+  wildcards — two cases in `assets.test.ts` require that sentence there, so a
+  rerun following the enumerated paths alone would leave the public README
+  asserting optionality and those cases failing. The tests that pin the behaviour being removed move with it:
   `packages/qfai/tests/assets/designDirectionInterview.test.ts`,
   `packages/qfai/tests/assets/sddStage0PrototypingOptional.test.ts`,
   `packages/qfai/tests/assets/assets.test.ts` and
@@ -148,7 +157,12 @@ to do with. A row whose obligation is unchanged waits on nobody.
   is named by `spec-0010/TDD-0006` and `TDD-0007`, and
   `packages/qfai/tests/e2e/discussionHardeningE2E.test.ts` by
   `spec-0010/TDD-0008` — three `done` rows whose recorded observations this
-  option's edits invalidate. The cross-spec ownership procedure
+  option's edits invalidate. **Five more are reached through the asset rather
+  than the test.** `packages/qfai/tests/assets/uiuxSidecar.test.ts` reads the
+  shipped `qfai-discussion/SKILL.md` this option rewrites, and
+  `spec-0010/TDD-0001` … `TDD-0005` are `done` rows naming that file. The
+  procedure matches a reverse-dependent path, not only a file edited directly,
+  so the sweep covers all eight. The cross-spec ownership procedure
   (`.qfai/assistant/skills/qfai-implement/references/cross-spec-ownership.md`)
   runs before either file is written, and those three rows owe fresh
   verification in the same change. Without it option 2 finishes with another
@@ -164,8 +178,14 @@ to do with. A row whose obligation is unchanged waits on nobody.
   `.qfai/specs/spec-0002/06_Test-Cases.md`,
   `.qfai/specs/spec-0002/07_Decisions.md`,
   `.qfai/specs/spec-0002/09_delta.md`,
-  `.qfai/specs/spec-0002/10_Plan.md`,
   `.qfai/specs/spec-0002/tdd/test-list.md`
+
+  `10_Plan.md` is **not** here. `QFAI-DRIFT-001` reads this list as the
+  authorisation, so naming the file would waive any change to it — including the
+  `TC-0002-0026` repair the approved actions exclude by name and send to a
+  Change Request of its own. No approved action edits the plan, so the path has
+  nothing to authorise and its presence would grant exactly what the exclusion
+  denies.
 
   A layered pack states one rule at every layer, so the story, the business rule
   and the example that carry these two rules move with the requirement and the
@@ -185,6 +205,11 @@ disposition `b` for statement B, the requiredness rule. A single token means the
 same option for both. The combinations are not listed as separate options,
 because the two statements are independent and a table of every pairing would
 ask the user to read every row to make two choices.
+
+**Option 2 carries a letter on statement A.** `2a` and `2b` name the stage that
+authors `DESIGN.md` once the direction interview is withdrawn, and that
+withdrawal is statement A's. `2B` takes no letter: restoring the requiredness
+rule removes no producer.
 
 **Option 3 carries its letter when it settles statement B.** `3a` and `3b` are
 the two dispositions of the legacy-format test, and one of them deletes an
@@ -209,11 +234,24 @@ and refusing `3A/1B` for want of one would make a valid split unrecordable.
    its own.
 
 2. Downstream ledger sweep. The two statements are settled independently, so the
-   plan is read per statement and not per bundle. Statement A is the direction
-   rule — `REQ-0012`, `AC-0002-0008`, `DR-0002-0001`, `DR-0002-0003`, and
-   `TC-0002-0008` / `TC-0002-0009` under them, which `TDD-0008`, `TDD-0009` and
-   `TDD-0010` rest on. Statement B is the requiredness rule — `REQ-0005`,
-   `AC-0002-0010`, and `TC-0002-0011` under them, which `TDD-0012` rests on.
+   plan is read per statement and not per bundle, so every dependent identifier
+   is assigned to one of them here rather than left in the combined option
+   bodies — a split cannot be applied from a list that names only part of a
+   layer.
+
+   | Layer                       | Statement A — the direction rule   | Statement B — the requiredness rule |
+   | --------------------------- | ---------------------------------- | ----------------------------------- |
+   | `01_Spec.md`                | `REQ-0012`                         | `REQ-0005` (requiredness half)      |
+   | `02_User-stories.md`        | —                                  | `US-0002-0005`                      |
+   | `03_Acceptance-Criteria.md` | `AC-0002-0008`                     | `AC-0002-0010`                      |
+   | `04_Business-Rules.md`      | `BR-0002-0008`                     | `BR-0002-0010`                      |
+   | `05_Examples.md`            | `EX-0002-0008`, `EX-0002-0009`     | `EX-0002-0011`                      |
+   | `06_Test-Cases.md`          | `TC-0002-0008`, `TC-0002-0009`     | `TC-0002-0011`                      |
+   | `07_Decisions.md`           | `DR-0002-0001`, `DR-0002-0003`     | —                                   |
+   | `tdd/test-list.md`          | `TDD-0008`, `TDD-0009`, `TDD-0010` | `TDD-0012`                          |
+
+   `US-0002-0005` is statement B's because its acceptance criterion is
+   `AC-0002-0010`; the direction rule has no story of its own.
    Nothing in statement A's list touches statement B's rows or the reverse, so
    `1A/2B` is option 1 applied to A's rows and option 2 applied to B's, with no
    overlap to resolve. `TDD-0011` is re-verified under every combination —
@@ -236,7 +274,13 @@ and refusing `3A/1B` for want of one would make a valid split unrecordable.
    - Reset to `todo`, recording this CR's ID in `DR-ID`:
      `spec-0002/TDD-0008`, `spec-0002/TDD-0009`, `spec-0002/TDD-0012`
    - Re-scope `spec-0002/TDD-0012` in the same `/qfai-sdd` rerun, before the
-     reset is any use. Its `Test file` exists and its `Selector`,
+     reset is any use. **Under option 2 the rerun is `confirm-only` and would
+     write the CR reference alone, so that mode is lifted for this one row**:
+     the rerun re-derives the row's identity, or retires it and seeds a new one
+     for the narrowed rule. Without the lift `2B` produces no evidence for
+     `TC-0002-0011` at all — the row keeps a selector that resolves, so
+     `/qfai-implement` may not rewrite it, and the only thing it can re-run is
+     an assertion about the legacy-format finding. Its `Test file` exists and its `Selector`,
      `legacy 4-axis format is error`, resolves in it, so the ledger whitelist
      permits changing neither: a reset alone returns the row to `todo` still
      pointing at a case about `UIX-VAL-3LAYER-LEGACY-FORMAT`, and the only thing
@@ -261,11 +305,17 @@ and refusing `3A/1B` for want of one would make a valid split unrecordable.
    `qfai-prototyping/references/design-md-spec.md` has Phase 0 author that file
    and prototyping read it as read-only context, so a new UI project under this
    option reaches prototyping with no brand contract and no stage that can
-   produce one. Option 2 therefore owes a producer as well as a removal: either
-   a downstream direction-selection and `DESIGN.md` authoring path with its
-   tests, or one of the three retained as that producer. Withdrawing the
-   interview without answering this makes the option unimplementable rather
-   than expensive. Beside that: a validator that emits the single-winner violation
+   produce one. Which stage replaces it is a decision rather than a detail, so
+   option 2 is offered as two, the same way option 3 is:
+
+   | Option | Who authors `DESIGN.md`                                                                                                                                                                              |
+   | ------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+   | `2a`   | `/qfai-prototyping` gains a direction-selection step and authors the file, with its tests. Discussion still chooses nothing, and the contract that has prototyping read it read-only changes with it |
+   | `2b`   | `/qfai-sdd` Phase 0 authors it from the spec, with no interview anywhere. The requirement is met with no user-facing choice, and whatever a brand needs that a spec does not carry is lost           |
+
+   `2A` with no letter authorises neither, and withdrawing every producer
+   without naming a replacement leaves a new UI project unable to enter
+   prototyping at all. Beside that: a validator that emits the single-winner violation
    `TC-0002-0009` names, a preflight that blocks a UI-bearing pack missing
    `prototyping.yaml`, and the three shipped documents rewritten to say the
    artifact is required. This is the option with the largest blast radius, and
@@ -282,9 +332,17 @@ and refusing `3A/1B` for want of one would make a valid split unrecordable.
      each corrected assertion — break the production predicate the new assertion
      names, run the row's `Selector`, confirm an admissible failure, revert and
      re-run for the restored GREEN — recorded on the row's own line at the
-     mutated tree's `Falsifiability revision`. Routing them to a reset would
+     mutated tree's `Falsifiability revision`.
+
+     **`TDD-0008` and `TDD-0009` need their selectors replaced before any of
+     that.** Both name a test title that occurs nowhere in the file they point
+     at, so every command above selects no test: no mutation failure, no
+     restored GREEN, nothing to record. Use the unresolved-selector carve-out to
+     write the corrected assertion names into both rows first, then begin the
+     re-verification. Routing them to a reset would
      demand an authorization this record cannot legitimately give, and would
      leave each row holding a gate it can never clear.
+
    - **`spec-0002/TDD-0001`, under statement B alone, takes the same path.** It
      is in neither statement's obligation list — its `TC-Refs` is `TC-0002-0001`
      — and is here because the restored preflight check edits
