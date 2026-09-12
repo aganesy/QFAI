@@ -21,6 +21,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   questions and the decision is the agent's to make — record it as an assumption
   and park it as `deferred` with the point that takes it up.
 
+  The gate reads a register in the notations registers are written in: a
+  `Status` column, a `status:` line under a subsection, and `Disposition`, which
+  is the word the discussion pack's register uses for the same field. An entry
+  declaring no status at all is reported too — a question whose state nobody
+  wrote down is the one the new value would otherwise have named.
+
 - **The question-form rule is put in front of the agent on every turn** (#1610).
   A `UserPromptSubmit` hook emits it as context, naming the rule master and the
   one line an agent reaches past when it would rather not ask.

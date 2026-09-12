@@ -47,6 +47,7 @@ import {
   parseIdsFromText,
   parseTestCaseIds,
   resolveTestCaseTable,
+  splitMarkdownRow,
 } from "../specPackParsers.js";
 import {
   isValidDeprecatedAt,
@@ -1937,13 +1938,45 @@ async function collectRegisterIssues(register: string): Promise<Issue[]> {
   ];
 }
 
-/** A register row whose status is not one of the four. */
+/**
+ * The ids a register declares an entry for, rather than merely mentions.
+ *
+ * A register names other questions in prose all the time — a note saying which
+ * decision resolved this one, a carry-forward pointing upstream. Those are
+ * references, not entries, and requiring a status for each would report a
+ * register for explaining itself. An entry is a row keyed by the id, or a
+ * heading that opens a subsection for it.
+ */
+function extractOpenQuestionEntryIds(text: string): string[] {
+  const ids = new Set<string>();
+  for (const line of maskNonSpecRegions(text.replace(/\r\n/g, "\n")).split("\n")) {
+    const heading = /^#{1,6}\s+(OQ-[A-Za-z0-9_-]+)\b/i.exec(line.trim())?.[1];
+    if (heading !== undefined && !OPEN_QUESTION_COLUMN_LABEL.test(heading)) {
+      ids.add(heading);
+      continue;
+    }
+    const cells = tableCells(line);
+    const keyed = /^(OQ-[A-Za-z0-9_-]+)$/i.exec(cells[0]?.trim() ?? "")?.[1];
+    if (keyed !== undefined && !OPEN_QUESTION_COLUMN_LABEL.test(keyed)) ids.add(keyed);
+  }
+  return [...ids];
+}
+
+/** A register entry whose status is not one of the four, or is not there. */
 function collectUnreadableStatuses(register: string, text: string): Issue[] {
-  const invalid = parseInvalidOpenQuestionStatuses(text);
+  const declared = new Set(parseOpenQuestionStatuses(text).map((item) => item.id));
+  // A subsection entry declares its status on a line of its own, and an entry
+  // that simply omits it declares nothing at all — so the ids are compared with
+  // the statuses rather than only the statuses being read. A row form that
+  // leaves the cell empty is already counted as an unreadable value below.
+  const undeclared = extractOpenQuestionEntryIds(text)
+    .filter((id) => !declared.has(id))
+    .map((id) => ({ id, value: "" }));
+  const invalid = [...parseInvalidOpenQuestionStatuses(text), ...undeclared];
   if (invalid.length === 0) return [];
-  const samples = invalid
-    .map((item) => `${item.id}=${item.value === "" ? "(none)" : item.value}`)
-    .slice(0, 8);
+  const samples = Array.from(
+    new Set(invalid.map((item) => `${item.id}=${item.value === "" ? "(none)" : item.value}`)),
+  ).slice(0, 8);
   return [
     issue(
       "E_OQ_STATUS_UNPARSEABLE",
@@ -2070,7 +2103,9 @@ export function collectOpenQuestionsGateIssues(
 
 function extractOpenQuestionIds(text: string): string[] {
   const ids = new Set<string>();
-  for (const match of text.matchAll(/\b(OQ-[A-Za-z0-9_-]+)\b/gi)) {
+  // Masked, like the status scan: a register documenting its own notation
+  // writes an example row, and an id read out of it is a question nobody asked.
+  for (const match of maskNonSpecRegions(text).matchAll(/\b(OQ-[A-Za-z0-9_-]+)\b/gi)) {
     const id = match[1];
     if (id && !OPEN_QUESTION_COLUMN_LABEL.test(id)) {
       ids.add(id);
@@ -2887,7 +2922,10 @@ type DeclaredStatus = { id: string; raw: string };
  * only that cell is read.
  */
 function readDeclaredStatuses(text: string): DeclaredStatus[] {
-  const lines = text.replace(/\r\n/g, "\n").split("\n");
+  // Masked first: a register that documents its own notation writes an example
+  // table in a fenced block, and read as live data it fails the document for
+  // showing what a row looks like.
+  const lines = maskNonSpecRegions(text.replace(/\r\n/g, "\n")).split("\n");
   const declared: DeclaredStatus[] = [];
   let currentId = "";
   let statusColumn: number | null = null;
@@ -2931,7 +2969,12 @@ function readDeclaredStatuses(text: string): DeclaredStatus[] {
       continue;
     }
 
-    const statusMatch = /(?:^|\s)(?:-\s*)?status\s*:\s*([^\s#]+)\s*$/i.exec(line);
+    // `Disposition` is this field under the word the discussion pack uses for
+    // it, and registers here are written both ways. Anchored to the start of
+    // the line so a sentence quoting a status does not declare one, and the
+    // value is the first token so a parenthetical beside it — `deferred (trigger
+    // = ...)` — reads as the note it is rather than hiding the status.
+    const statusMatch = /^\s*(?:[-*]\s*)?(?:status|disposition)\s*:\s*([^\s#]+)/i.exec(line);
     if (statusMatch?.[1]) {
       declared.push({ id: currentId || "(unlabeled-oq)", raw: statusMatch[1] });
     }
@@ -2962,10 +3005,11 @@ function parseInvalidOpenQuestionStatuses(text: string): InvalidOpenQuestionStat
  * pipe, so both come back empty rather than as a row of dashes.
  */
 function tableCells(line: string): string[] {
-  const trimmed = line.trim();
-  if (!trimmed.startsWith("|")) return [];
-  const body = trimmed.endsWith("|") ? trimmed.slice(1, -1) : trimmed.slice(1);
-  const cells = body.split("|").map((cell) => cell.trim());
+  if (!line.trim().startsWith("|")) return [];
+  // Through the shared splitter, which keeps an escaped pipe inside a cell: a
+  // question reading `choose A \| B` otherwise shifts every column after it,
+  // and the status is then read from the cell beside the one that holds it.
+  const cells = splitMarkdownRow(line).map((cell) => cell.trim());
   if (cells.every((cell) => /^:?-{3,}:?$/.test(cell))) return [];
   return cells;
 }
@@ -2974,8 +3018,7 @@ function tableCells(line: string): string[] {
 function isSeparatorRow(line: string | undefined): boolean {
   const trimmed = (line ?? "").trim();
   if (!trimmed.startsWith("|")) return false;
-  const body = trimmed.endsWith("|") ? trimmed.slice(1, -1) : trimmed.slice(1);
-  return body.split("|").every((cell) => /^:?-{3,}:?$/.test(cell.trim()));
+  return splitMarkdownRow(trimmed).every((cell) => /^:?-{3,}:?$/.test(cell.trim()));
 }
 
 function isReleaseCandidate(initiativeText: string): boolean {

@@ -58,7 +58,7 @@ describe("a decision the user was asked for and never took blocks the stage", ()
     }
   });
 
-  it("says what to do instead", async () => {
+  it("says what to do instead", () => {
     const issues = collectOpenQuestionsGateIssues(
       ENTRY,
       doc(["- OQ-0007 — which retention window applies", "  - status: unadjudicated"]),
@@ -205,5 +205,105 @@ describe("the register it reads, and the notation it reads it in", () => {
     // The placeholder row declares nothing and is not a question.
     expect(issues.map((issue) => issue.code)).toEqual(["E_OQ_STATUS_UNPARSEABLE"]);
     expect(issues[0]?.message).toContain("OQ-0007=(none)");
+  });
+
+  it("keeps an escaped pipe inside the cell that holds it", () => {
+    // `choose A \| B` is one cell in valid GFM. Split on every pipe, every
+    // column after it shifts and the status is read from its neighbour.
+    const table = [
+      "| OQ-ID   | Question          | Status        |",
+      "| ------- | ----------------- | ------------- |",
+      "| OQ-0007 | choose A \\| B     | unadjudicated |",
+      "",
+    ].join("\n");
+    expect(codes(table)).toEqual(["QFAI-SPACK-102"]);
+  });
+
+  it("does not read an example table as the register", () => {
+    // A register that documents its own notation writes one in a fenced block.
+    const text = [
+      "# 08 Open Questions",
+      "",
+      "A row looks like this:",
+      "",
+      "```markdown",
+      "| OQ-ID   | Status        |",
+      "| ------- | ------------- |",
+      "| OQ-0007 | unadjudicated |",
+      "```",
+      "",
+    ].join("\n");
+    expect(codes(text)).toEqual([]);
+  });
+
+  it("reports a subsection entry that declares no status", () => {
+    // The other notation: one subsection per question. An entry that omits the
+    // line declares nothing, and reading only the declared statuses found none
+    // to object to.
+    const text = [
+      "# 08 Open Questions",
+      "",
+      "## Open Questions",
+      "",
+      "### OQ-0007 — which retention window applies",
+      "",
+      "- owner: ops",
+      "",
+    ].join("\n");
+    expect(codes(text)).toContain("E_OQ_STATUS_UNPARSEABLE");
+  });
+
+  it("reads `Disposition` as the same field", () => {
+    // The discussion pack's register calls this field `Disposition` over the
+    // same values, and subsection entries are written both ways. A reader that
+    // knows one word reports an entry that states its answer plainly.
+    const entry = (status: string): string =>
+      [
+        "# 08 Open Questions",
+        "",
+        "## Open Questions",
+        "",
+        "### OQ-0007: which retention window applies",
+        "",
+        `- Disposition: ${status}`,
+        "- Owner: ops",
+        "",
+      ].join("\n");
+    expect(codes(entry("deferred"))).toEqual([]);
+    expect(codes(entry("open"))).toEqual(["E_OQ_OPEN_RELEASE_BLOCK"]);
+    expect(codes(entry("unadjudicated"))).toEqual(["QFAI-SPACK-102"]);
+  });
+
+  it("reads the value beside a parenthetical as the status", () => {
+    // `deferred (trigger = ...)` names the point that takes the question up.
+    // The note is not a second status.
+    const text = [
+      "# 08 Open Questions",
+      "",
+      "## Open Questions",
+      "",
+      "### OQ-0007: which retention window applies",
+      "",
+      "- Disposition: deferred (trigger = the first request to keep a record longer)",
+      "",
+    ].join("\n");
+    expect(codes(text)).toEqual([]);
+  });
+
+  it("does not read a sentence about a status as one", () => {
+    // Prose naming the value is how a register explains itself, and read as a
+    // declaration it answers for whichever question was named last.
+    const text = [
+      "# 08 Open Questions",
+      "",
+      "## Open Questions",
+      "",
+      "### OQ-0007: which retention window applies",
+      "",
+      "- Status: deferred",
+      "- Notes: the row this replaces carried status: unadjudicated",
+      "",
+    ].join("\n");
+    expect(codes(text)).toEqual([]);
   });
 });
