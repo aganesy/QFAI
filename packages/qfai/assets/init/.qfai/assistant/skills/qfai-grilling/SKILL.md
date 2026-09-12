@@ -63,6 +63,14 @@ value and label it an assumption beside that open question
 forbidden is the assumption with no open question against it. Declaring a
 session is still not a way to ask.
 
+**That is an ending, and it is the one such a run takes.** The general end
+condition needs the user's confirmation, and an invocation told not to ask
+cannot obtain one — so a run with no ending available could never finish a
+session it is required to hold. The session ends `no-question` when the evidence
+is exhausted and every remaining decision is open in the register, and the
+agent never confirms on the user's behalf: the ending records that nobody was
+asked, and the open decisions are what stop the stage completing.
+
 ## The design tree
 
 The subject sits at the root. Below it hang two kinds of node, and a node hangs

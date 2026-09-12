@@ -100,8 +100,11 @@ give an execution run one instruction and the primitive another.
   | confirmed | 2026-01-01T09:14:00Z | 4 | 0 | 0 |
   ```
 
-  `Ended` takes one of the endings the method defines. `Open` counts the
-  decisions left open, and each is recorded where `references/round-evidence.md` puts it. The Reviewer Gate
+  `Ended` takes one of the endings the method defines: `confirmed` where the
+  user confirmed, `user-closed` where they ended the asking, and `no-question`
+  where the invocation was told not to ask — which is the ending every `--auto`
+  run takes, because no confirmation can arrive and the agent never gives one on
+  the user's behalf. `Open` counts the decisions left open, and each is recorded where `references/round-evidence.md` puts it. The Reviewer Gate
   reads this section: a stage whose evidence carries none of it is a stage whose
   round nobody can distinguish from a skipped one, and that is a `REVISE`.
 
@@ -348,6 +351,11 @@ Use the shared schema (per-row `Status (PASS/REVISE/PENDING)` column, reviewer r
   one of the endings the method defines, and its `Open` count matches the open
   questions recorded. A run that skipped the round leaves the same tree as one
   that ran it, so this section is the only thing that tells them apart.
+- **A non-zero `Open` is a `REVISE`, whatever it matches.** Article X, rule 6
+  says the stage cannot complete over a decision nobody took, so a count that
+  agrees with the register still describes a stage that is not done. The
+  questions go to the user and the stage is re-run against their answers; a
+  matching count is what makes the record honest, not what makes it passable.
 - Reviewer response must include `Reviewer role:`, `Reviewed artifact:` and `Result: PASS | REVISE` (matching .qfai/assistant/constitution/shared-skill-delegation-baseline.md#reviewer-response-template). A bare `Result:` line is not a verdict — without the role and the artifact it is textually identical to a doer's self-assessment, so a response missing either line is re-requested, never read for its `Result:`.
 - Reviewer checks Drift Protocol compliance and alignment with `.qfai/assistant/catalog/test-layers.md`.
 - Test volume floors/ratios are not gates; they are signals.

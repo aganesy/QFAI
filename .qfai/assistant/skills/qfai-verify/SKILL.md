@@ -66,8 +66,11 @@ implements. Neither is restated here, and a stage-local copy of either would
 give an execution run one instruction and the primitive another.
 
 - **Subject: this invocation.** The tree holds the decisions this run is about to
-  take — which gates this run is answerable for, and what evidence
-  a finding needs before it is reported as one. It does not hold the spec, the acceptance criteria or the
+  take — what evidence a finding needs before it is reported as one, and how a
+  gate the environment cannot execute is recorded. **Which gates apply is not
+  among them**: the declared scope and the mandatory completion list fix that,
+  and whether this environment can run one is a fact to inspect. Putting either
+  in the tree would ask the user to drop a check the contract requires. It does not hold the spec, the acceptance criteria or the
   ledger rows: those are settled input, and re-interviewing them each pass
   reopens what somebody already decided. A tree that small usually empties in one
   round.
@@ -88,8 +91,11 @@ give an execution run one instruction and the primitive another.
   | confirmed | 2026-01-01T09:14:00Z | 4 | 0 | 0 |
   ```
 
-  `Ended` takes one of the endings the method defines. `Open` counts the
-  decisions left open, and each is recorded in this stage's own open-question register. The Reviewer Gate
+  `Ended` takes one of the endings the method defines: `confirmed` where the
+  user confirmed, `user-closed` where they ended the asking, and `no-question`
+  where the invocation was told not to ask — which is the ending every `--auto`
+  run takes, because no confirmation can arrive and the agent never gives one on
+  the user's behalf. `Open` counts the decisions left open, and each is recorded in this stage's own open-question register. The Reviewer Gate
   reads this section: a stage whose evidence carries none of it is a stage whose
   round nobody can distinguish from a skipped one, and that is a `REVISE`.
 
@@ -148,6 +154,11 @@ Use the shared schema.
   one of the endings the method defines, and its `Open` count matches the open
   questions recorded. A run that skipped the round leaves the same tree as one
   that ran it, so this section is the only thing that tells them apart.
+- **A non-zero `Open` is a `REVISE`, whatever it matches.** Article X, rule 6
+  says the stage cannot complete over a decision nobody took, so a count that
+  agrees with the register still describes a stage that is not done. The
+  questions go to the user and the stage is re-run against their answers; a
+  matching count is what makes the record honest, not what makes it passable.
 - Reviewer checks:
   - required roles were delegated;
   - validate evidence exists: `npx qfai validate --profile verify --fail-on error` completed with `error=0` — for a `scope: "prototyping"` run this is `npx qfai validate --profile prototyping --fail-on error` instead, per the prototyping carve-out in "Verify Scope Rule". Requiring the `verify` profile here would reinstate the circular gate: it fails `QFAI-ATDD-111/112/113`, so no reviewer could return PASS before `/qfai-atdd` has run;

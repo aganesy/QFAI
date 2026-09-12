@@ -92,6 +92,9 @@ for (const tree of TREES) {
         expectPhrase(section, "## Grilling Session");
         expectPhrase(section, "before the first");
         expectPhrase(section, "The Reviewer Gate reads this section");
+        // An invocation told not to ask can obtain no confirmation, so without
+        // this ending the session it is required to hold could never finish.
+        expectPhrase(section, "which is the ending every `--auto`");
       });
 
       it(`${stage}: the gate is told to read it`, async () => {
@@ -101,6 +104,9 @@ for (const tree of TREES) {
         const to = rest.indexOf("\n## ");
         const gate = to < 0 ? rest : rest.slice(0, to);
         expectPhrase(gate, "`## Grilling Session` section is present");
+        // A count that agrees with the register still describes a stage that is
+        // not done: Article X says it cannot complete over a decision nobody took.
+        expectPhrase(gate, "A non-zero `Open` is a `REVISE`, whatever it matches");
       });
 
       it(`${stage}: carries no copy of the shared mechanics`, async () => {

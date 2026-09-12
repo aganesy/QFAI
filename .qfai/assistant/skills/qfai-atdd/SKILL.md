@@ -98,8 +98,11 @@ give an execution run one instruction and the primitive another.
   | confirmed | 2026-01-01T09:14:00Z | 4 | 0 | 0 |
   ```
 
-  `Ended` takes one of the endings the method defines. `Open` counts the
-  decisions left open, and each is recorded in this stage's own open-question register. The Reviewer Gate
+  `Ended` takes one of the endings the method defines: `confirmed` where the
+  user confirmed, `user-closed` where they ended the asking, and `no-question`
+  where the invocation was told not to ask — which is the ending every `--auto`
+  run takes, because no confirmation can arrive and the agent never gives one on
+  the user's behalf. `Open` counts the decisions left open, and each is recorded in this stage's own open-question register. The Reviewer Gate
   reads this section: a stage whose evidence carries none of it is a stage whose
   round nobody can distinguish from a skipped one, and that is a `REVISE`.
 
@@ -158,6 +161,11 @@ Use the shared schema.
   one of the endings the method defines, and its `Open` count matches the open
   questions recorded. A run that skipped the round leaves the same tree as one
   that ran it, so this section is the only thing that tells them apart.
+- **A non-zero `Open` is a `REVISE`, whatever it matches.** Article X, rule 6
+  says the stage cannot complete over a decision nobody took, so a count that
+  agrees with the register still describes a stage that is not done. The
+  questions go to the user and the stage is re-run against their answers; a
+  matching count is what makes the record honest, not what makes it passable.
 - Final completion gate MUST be delegated to an independent `completion-reviewer`.
 - ATDD-specific reviewer checks:
   - coverage obligations met: E2E covers `US`, API covers `CON-API`, Integration covers every declared `CON-DB` (`QFAI-ATDD-115`) — a contract **this spec owns** but outside the current slice deferred with `-- x-qfai-status: planned` on a line of its own, never silently uncovered — and every `TC` **whose `Level` routes to an ATDD home** — `L3`/`L4`/`L5`, no `Level`, an unreadable spelling, or `system` / `acceptance` — is covered from the directory that `Level` routes to. A **sibling spec's** uncovered `CON-DB` is not that case, and the reviewer must not ask for that edit: `QFAI-ATDD-115` is filed against `.qfai/contracts/**` and survives `--spec`, so it reaches this gate without becoming this run's work — record it as a cross-spec obligation and leave the contract file alone (CRITICAL CONSTRAINTS), because marking it `planned` defers the owning spec's DB test and hides a real gap. `L1`/`Unit` and `L2`/`Component` owe nothing here (CRITICAL CONSTRAINTS): the ledger covers them. An existing L1/L2 annotation in `tests/integration/**` is not a violation — the validator declines to count it and declines to flag it — so do not require one to be added, and do not require an existing one to be removed;
@@ -366,7 +374,7 @@ Notes:
 
 Create and update: `.qfai/evidence/atdd-<spec-id>.md`
 
-Required sections: the template below is the list. Four of them carry a contract
+Required sections: the template below is the list. Five of them carry a contract
 the heading cannot:
 
 - **Ledger rows advanced** — an index table plus one `### TDD-NNNN` section per
@@ -375,6 +383,11 @@ the heading cannot:
   the section. A rework round is a `#### Round N` block nested **inside that
   row's section**, not a section of its own: the list is closed, and nesting
   attributes it to a row (`references/review-fix-rounds.md`).
+- **Grilling Session** — one row recording how the preflight round ended, its
+  decision counts, and how many are still open. Written when the session ends and
+  before this run writes an acceptance test, because a row holding only the final
+  state reads the same whether the session ran first, ran after, or never ran.
+  The Reviewer Gate reads it (`## Grilling`).
 - **Coverage Depth Matrix** — a link to
   `.qfai/evidence/coverage-depth-<spec-id>.md` and the `✅`/`⚠️`/`❌` totals.
   The matrix and its per-`❌` justifications live in that committed file;
@@ -392,6 +405,14 @@ Template:
 ## Inputs reviewed (files/paths)
 
 ## Decisions made (with rationale)
+
+## Grilling Session
+
+<!-- One row, written when the session ends and before the first acceptance test
+     this run writes. See this skill's `## Grilling` section. -->
+
+| Ended | Ended at | Decisions | Open | Escalated |
+| ----- | -------- | --------- | ---- | --------- |
 
 ## Work performed (what changed, where)
 
