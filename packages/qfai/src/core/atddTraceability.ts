@@ -2555,13 +2555,7 @@ function resolveTestKindFromPath(
   }
   const directories = toPosixPath(relative).split("/").slice(0, -1);
   let testRoot = -1;
-  // Set when a deeper root declared a layer this stage does not own: the file
-  // answers nothing, and a root shallower still cannot re-claim it.
-  let terminated = false;
   directories.forEach((directory, index) => {
-    if (terminated) {
-      return;
-    }
     if (!TEST_ROOT_SEGMENTS.has(directory) && directory !== testsDirName) {
       return;
     }
@@ -2583,12 +2577,15 @@ function resolveTestKindFromPath(
     }
     if (!ATDD_LAYER_SEGMENTS.has(below)) {
       // The deeper root declares a layer this stage does not own —
-      // `.../fixtures/tests/unit/pay.test.ts` is a unit suite — so the file
-      // answers nothing. Returning here instead left the outer `integration`
+      // `.../fixtures/tests/unit/pay.test.ts` is a unit suite — so the outer
+      // candidate goes. Returning here instead left the outer `integration`
       // standing over it, where its annotation discharged an `L3` obligation
       // and its stub blocked a gate that owns no unit test.
+      //
+      // The scan continues: a still deeper root may be the real one, as in
+      // `examples/test/projects/app/tests/integration/**`, where the first
+      // pair is a fixture path and the second is the suite.
       testRoot = -1;
-      terminated = true;
       return;
     }
     testRoot = index;

@@ -1304,19 +1304,10 @@ describe("acceptance tests outside paths.testsDir", () => {
     await withProject(async (root) => {
       await seedSpec(root, "0001", ["US-0001"], ["TC-0001"]);
       await seedTest(root, "integration", "a.test.ts", "/* QFAI:SPEC-0001:TC-0001 */");
-      // A unit suite nested under a fixture tree. Leaving the outer
-      // `integration` root standing would let its annotation discharge an `L3`
-      // obligation and its stubs block a gate that owns no unit test.
-      const dir = path.join(
-        root,
-        "packages",
-        "app",
-        "tests",
-        "integration",
-        "fixtures",
-        "tests",
-        "unit",
-      );
+      // A unit suite nested under a fixture tree. Leaving the outer `e2e` root
+      // standing would let its annotation discharge the story and its stubs
+      // block a gate that owns no unit test.
+      const dir = path.join(root, "packages", "app", "tests", "e2e", "fixtures", "tests", "unit");
       await mkdir(dir, { recursive: true });
       await writeFile(
         path.join(dir, "pay.test.ts"),
@@ -1338,6 +1329,46 @@ describe("acceptance tests outside paths.testsDir", () => {
       expect(result.missing.us).toEqual(["SPEC-0001:US-0001"]);
       // A unit suite owes ATDD nothing wherever it sits.
       expect(result.skippedTestFiles).toEqual([]);
+    });
+  });
+
+  it("finds a deeper root past one an earlier fixture path invalidated", async () => {
+    await withProject(async (root) => {
+      await seedSpec(root, "0001", ["US-0001"], ["TC-0001"]);
+      await seedTest(root, "integration", "a.test.ts", "/* QFAI:SPEC-0001:TC-0001 */");
+      // `examples/test/projects/` is a fixture path whose `test` is followed by
+      // no layer; the suite is the `tests/e2e` below it. Stopping at
+      // the first invalidation dropped the acceptance test entirely.
+      const dir = path.join(
+        root,
+        "packages",
+        "app",
+        "examples",
+        "test",
+        "projects",
+        "demo",
+        "tests",
+        "e2e",
+      );
+      await mkdir(dir, { recursive: true });
+      await writeFile(
+        path.join(dir, "pay.test.ts"),
+        [
+          "/* QFAI:SPEC-0001:US-0001 */",
+          "describe('pay', () => {",
+          "  it('runs', () => {});",
+          "});",
+          "",
+        ].join("\n"),
+        "utf-8",
+      );
+
+      const result = await evaluateAtddCodeTraceability(
+        root,
+        withProjectGlobs(["packages/*/examples/**/*.test.ts"]),
+      );
+
+      expect(result.missing.us).toEqual([]);
     });
   });
 
