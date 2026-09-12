@@ -119,12 +119,24 @@ Every major artifact in the stage should include this table schema:
   It exists so an author→reviewer collision is detectable after the fact from the evidence alone;
   the same instance appearing in an authoring step and in a review step over the same artifact is
   a reviewer-independence violation.
-- **A grilling session that settled a decision agent-to-agent adds a row for it**, with
-  `Task title` = `grilling: <the decision>` and `Agent instance` = the agent whose
-  recommendation was adopted. That row is what a later reviewer reads its
-  `Recommended and unadjudicated` answer off: a reset instance holds no memory of the
-  session, so without the row the field cannot be answered honestly and the review has
-  nothing to check against.
+- **A grilling session adds a row for every decision it settled**, with
+  `Task title` = `grilling(<where>/<adjudication>): <the decision>` and `Agent instance` = the
+  agent that **made the recommendation**, whether or not it was taken. That row is what a
+  later reviewer reads its `Recommended and unadjudicated` answer off: a reset instance
+  holds no memory of the session, so without the row the field cannot be answered
+  honestly and the review has nothing to check against. The field asks what this reviewer
+  recommended, so the recommender is what the row has to name — "the agent whose
+  recommendation was adopted" is undefined for the ordinary case where the user chose
+  something else.
+- **`<where>` is the stage's own name for where the session ran** — a phase for a spec
+  stage, `-` for a stage that has one session — and **`<adjudication>` is `user` or
+  `agents`**. Both are in the title because the schema has no column for either, and a
+  row that cannot be assigned to a place is one an omission elsewhere can be counted
+  against. The two outcomes point opposite ways — a user-settled decision leaves
+  the griller free to review the artifact, an agent-settled one makes the artifact wrong
+  until somebody decides — so a row recording only that a session happened tells the
+  reviewer nothing it can act on. One format, always parenthesized, so a gate selecting
+  `grilling(` finds every row.
 - `PENDING` records a gate that could not be run — the only honest status for the exhausted-budget
   branch below, which mandates it. It is never a substitute for `PASS`: DONE stays blocked while
   any row is `PENDING`, and the stage stays resumable. A skill that allows only `PASS`/`REVISE`
@@ -185,9 +197,64 @@ is one input among several and the decision is not the griller's to re-derive.
 know what an earlier one recommended, so the record supplies it: a session that
 settled a decision agent-to-agent records, in the stage's Work Orders Summary,
 the decision and the `Agent instance` that recommended it. `Recommended and
-unadjudicated` is read off that record, not off recollection, and a review whose
-stage has no such record has nothing to check the field against — which is
-itself a `REVISE`.
+unadjudicated` is read off that record, not off recollection.
+
+**The record answers either way, and silence answers nothing.** The question the
+field asks is whether any decision was settled agent-to-agent, so the record
+answers that and not whether a session ran. A stage that settled none writes one
+row reading `grilling(-/none): none` — whether it ran no session at all, or ran one that
+escalated every decision and settled nothing. A stage that settled some writes a
+row per decision. A summary carrying neither is incomplete, and that is the
+`REVISE` — not an inference in either direction. Absence of rows cannot be read
+as evidence for `none`, because a table that omitted a required row looks exactly
+like a table that had none to write, and the reviewer would attest `none` over
+the very decision the record exists to expose.
+
+**The field asks about the artifact, not about the reviewer.** It reports any
+decision the artifact still carries that an agent recommended and agents adopted
+with nobody adjudicating — whichever agent recommended it. Scoped to the
+reviewer's own recommendations it would answer `none` truthfully whenever a
+different agent made them, which is the common case and the one the record was
+built to catch: what is wrong is that the artifact carries a decision nobody
+took, and that is true however the review was routed. The reviewer's own
+recommendations are covered because they are a subset, and the dual-role table
+above is what decides whether that reviewer may rule at all.
+
+The `grilling(-/none): none` row records a fact rather than a step, so it names no agent:
+`Agent instance` is `n/a`, `Role`, `Input (refs)` and `Output (refs)` are `-`,
+and `Status` is `PASS`. Writing a role or an instance there would invent
+provenance for work nobody did, which is the failure the `Agent instance` column
+exists to make detectable.
+
+**A row gains a disposition when its decision stops being open.** The field reads
+the artifact as it now stands, and the row is the only record of what was
+settled, so the two part company the moment a decision is adjudicated or
+withdrawn. Whoever closes it amends the row in place, and usually no grilling session is
+running when that happens: the reviewer that reopened the decision, the user
+answering it directly, or the agent that removed it as the requested fix. The
+obligation follows the act, not the session —
+`Task title` becomes `grilling(<where>/user): <the decision> (settled by the user)` or
+`grilling(<where>/withdrawn): <the decision> (withdrawn from the artifact)` — the
+parenthesized fields survive the rewrite, because a gate that selects on them
+skips any row that drops them, and these are the rows a dispute produced — so the next reviewer reads the disposition
+rather than inferring it. Without that, a live row and a closed one look
+identical, and a reviewer deriving `none` from the artifact has to contradict the
+record to do it, or keep a stale non-`none` value that blocks a `PASS` nothing is
+wrong with. Amending is not deleting: the decision, the agent instance and the
+fact that it was once open all stay.
+
+**A disposition carries its evidence.** The suffix is an assertion, and the next
+reviewer is told to trust it, so the amended row points at what closed the
+decision as well as saying that something did. `Output (refs)` gains the record
+carrying the user's answer for `(settled by the user)`, and the revision that
+removed the recommendation for `(withdrawn from the artifact)`. Either is a
+reference a reader can open and check.
+
+A disposition with nothing behind it cannot be told from a fabricated one, so it
+is read as no disposition: the row is still open, and the reviewer returns
+`REVISE` and names it. Trusting an unverifiable suffix would launder the
+unadjudicated decision the row exists to expose — the table's second row again,
+arriving one step later and wearing a closure.
 
 The field asks about the artifact **as it now stands**. A recommendation the
 artifact no longer carries, and one the user has since settled, are both outside
@@ -198,10 +265,46 @@ would disqualify a reviewer over something nobody is being asked to judge.
 **Review rounds are one series, whatever instance serves them.** The budget is
 two rounds per reviewer per artifact, and a host may answer round 2 with a fresh
 sub-agent under a new `Agent instance`. The work order and the response both
-carry a `Review series` value — the reviewed artifact plus the role — and the budget is counted per
-series. Counting per instance would restart it every round, so the budget could
-never be exhausted and the escalation exit that opens when it is would never
-open.
+carry a `Review series` value — the reviewed artifact, the role, and a replacement ordinal that
+starts at 1 and rises each time the review is handed to a non-participating reviewer — and the
+budget is counted per series. A reset instance serving round 2 keeps the series it was issued; a
+replacement reviewer is issued the next ordinal and starts at round 1, because it is continuing
+nobody's review.
+
+**The two are told apart by a record, not by the instance.** Both arrive as a fresh `Agent instance`
+on the same artifact, role and evidence, so nothing observable at dispatch separates them. What
+separates them is why the handoff happened: a replacement is issued **only** where the previous
+response in the series declared a conflict — a non-`none` `Authored/edited under review` — or where
+the orchestrator records an equivalent disqualification in the Work Orders Summary. Absent that
+record the dispatch is a reset and keeps the series, whatever instance serves it. So an orchestrator
+cannot mint budget by calling a reset a replacement: the ordinal only moves behind a declared
+conflict somebody wrote down. Counting per instance would restart the budget every round, so it could never be
+exhausted and the escalation exit that opens when it is would never open; counting a replacement
+against its predecessor's series would exhaust it a round early.
+
+**The ordinal is bounded, or the budget is not.** A fresh series starts a fresh two rounds, so an
+orchestrator that replaced the reviewer after every round 1 would reset the budget for ever and the
+escalation could never arrive. At most **two series per artifact per role**: ordinal 2 is the last
+one that opens, and a further conflict escalates to the user with the conflict named instead of
+opening a third. This is the cap `.qfai/assistant/constitution/review-convergence.md` puts on the
+post-escalation verification review, applied to the other way a gate can be made unbounded.
+
+**A special round is not a new series of the artifact it follows.** The one permitted verification
+review is scoped to a named fix on the same artifact, so a conflict discovered inside it is handed
+to a non-participating reviewer **within the same series**, which finishes the round it was opened
+for. Opening a new series there would do one of two wrong things: reopen a general two-round budget
+the escalation has already spent, or leave the verification unfinished because its replacement is
+serving a round 1 that has no remit.
+
+The corrective review is the other case and takes the opposite answer, because
+`.qfai/assistant/constitution/review-convergence.md` makes it a **separate artifact** with a remit of
+its own. Its series names that artifact, at ordinal 1, and is terminal: one round, no second, and no
+replacement ordinal after it. Sharing the originating artifact's series would have let a corrective
+review inherit a spent budget and would have made the two artifacts' rounds indistinguishable in the
+record.
+
+The ordinal rises on a handoff that opens a general series on the same artifact, and on nothing
+else.
 
 - Reviewers must verify Drift Protocol enforcement.
 - Reviewers must verify test-layer policy enforcement when relevant.
@@ -275,7 +378,7 @@ failure, not a licence to skip the gate or to self-review.
 ```text
 Task title: <short>
 Role: <sub-agent role>
-Review series: <reviewed artifact> + <reviewer role>   # review work orders only; the budget is counted per series
+Review series: <reviewed artifact> + <reviewer role> + <replacement ordinal>   # review work orders only; the budget is counted per series
 Goal: <what to decide/produce>
 Inputs (refs):
 - <file/section>
@@ -296,12 +399,12 @@ Acceptance bar: <accept when ...> | <rework when ...>   # never `PASS`/`REVISE`:
 Reviewer role: <sub-agent role that produced this response>   # REQUIRED — a `Result:` line with no speaker is a report, not a verdict
 Reviewed artifact: <path/anchor this verdict rules on>        # REQUIRED — bounds the ruling; a PASS here clears nothing else
 Round: 1 | 2 | 2b
-Review series: <reviewed artifact> + <reviewer role>          # the budget is counted per series, not per instance
+Review series: <reviewed artifact> + <reviewer role> + <replacement ordinal>   # the budget is counted per series, not per instance
 Result: PASS | REVISE
 Reviewed revision: <git rev> | working-tree+<content hash>
 Audited evidence hash: <content hash of the evidence read>   # one line per TDD-ID on a T1 group
 Authored/edited under review: none | <artifact refs this reviewer authored or edited in this run>
-Recommended and unadjudicated: none | <decisions in THIS artifact as it now stands that this reviewer recommended and no user has since settled>
+Recommended and unadjudicated: none | <decisions in THIS artifact as it now stands that any agent recommended and adopted with no user adjudication>
 Findings:
 - <issue> | Severity: blocking|advisory | Traces to: <AC-*/BR-*/TC-*/CON-*/rule-name|defect:correctness|defect:security|defect:code-quality|record:<CODE>|none>
 Required fixes:
@@ -363,9 +466,14 @@ post-escalation verification review of a user-named fix.
   normal failure this field addresses. If the tree changed mid-review, say so and name the revision
   the ruling is pinned to.
 - `Reviewer role`, `Reviewed artifact`, `Review series`, `Authored/edited under review` and `Recommended and unadjudicated` are REQUIRED. A response omitting any of them is not a valid review verdict and MUST NOT satisfy a completion gate — re-request it rather than reading a bare `Result:` line out of it, which is how a doer's self-assessment gets counted as a reviewer's ruling.
-- Anything other than `none` is a declared independence conflict: the verdict cannot be `PASS`,
-  and the review must be handed to a non-participating reviewer (see
+- A non-`none` `Authored/edited under review` is a declared independence conflict: the verdict
+  cannot be `PASS`, and the review is handed to a non-participating reviewer (see
   `Definition: independent reviewer`).
+- A non-`none` `Recommended and unadjudicated` is not a routing problem, and a handoff does not
+  answer it. The verdict is `REVISE` naming the decision, and the decision is reopened and put to
+  the user — or recorded open where no question can be asked. A replacement reviewer would attest
+  `none` truthfully and clear nothing, because what is unsettled is the decision the artifact
+  carries, not who is reading it.
 - `Result: REVISE` is legal only when at least one finding is `Severity: blocking`. A response
   whose findings are all advisory returns `Result: PASS` with the proposals attached.
 

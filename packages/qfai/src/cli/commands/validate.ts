@@ -625,6 +625,9 @@ export const GATE_GROUP_FAMILIES = {
     "R-CERTIFY-VERIFY-CIRCULAR",
     "R-PROMPT-SCANNER-DRIFT",
     "R-AUTOPILOT-POLICY-*",
+    // Dispatched from the same group: `validateGrillingTrace` runs beside
+    // `validateAutopilotPolicy` in `runSddValidators`.
+    "QFAI-GRILL-*",
     "R-HANDOFF-INCOMPLETE",
     "R-WORKLOG-DRIFT",
     "R-REJECTED-READOPT",
