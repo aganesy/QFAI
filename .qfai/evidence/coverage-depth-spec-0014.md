@@ -1105,7 +1105,12 @@ them is repaired here; this artifact scores coverage and does not edit tests, le
    (`prototypingCertify.saasPackage.test.ts` and `prototypingCertify.upgradeScope.test.ts`) are
    stronger in every dimension. The four skipped cases discharge nothing, they are two of the 16
    `QFAI-TEST-003` findings in the recorded validate run, and their `describe` blocks are what a
-   reader scanning for the covering suite finds first. They should be unskipped or retired. For
+   reader scanning for the covering suite finds first. They should be unskipped or retired — and
+   not simply retired, because they are not weaker in every dimension. They hold the only cases that
+   invoke the built CLI with `--scope` and `--upgrade-scope`; the live suites that look stronger
+   call `runPrototypingCertify` directly and reach no parser or dispatch. Retiring them without
+   porting those invocations would close the acknowledged parser gap by deleting the only thing
+   that could ever open it. For
    `US-0014-0020` the skip also sets the row's ceiling: the story's only annotation sits in the
    skipped file, so no running case is bound to the story and no cell in its row can reach `✅`
    until that file runs or the annotation moves to a suite that does.
