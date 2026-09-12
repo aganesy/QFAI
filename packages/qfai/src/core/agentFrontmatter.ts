@@ -173,6 +173,33 @@ export function parseSkillFrontmatter(content: string): SkillFrontmatter | undef
 }
 
 /**
+ * A skill document's front matter as a mapping, or `undefined` when there is
+ * none a host could read.
+ *
+ * The delimiter is {@link parseSkillFrontmatter}'s: a complete `---` line at the
+ * top and a complete `---` line closing it. A document opening `--- # note` has
+ * no front matter to the loader, so it has none here either — the alternative is
+ * a check certifying metadata on a file the assistant cannot load.
+ *
+ * One `undefined` for every way of having nothing readable: no block, an empty
+ * block, YAML that does not parse, and YAML that is not a mapping. A caller
+ * asking whether a field is declared gets the same answer in all four, which is
+ * that it is not.
+ */
+export function skillFrontmatterMapping(content: string): Record<string, unknown> | undefined {
+  const raw = content.match(FRONTMATTER_PATTERN)?.[1];
+  if (raw === undefined || raw === "") return undefined;
+  let parsed: unknown;
+  try {
+    parsed = parseYaml(raw);
+  } catch {
+    return undefined;
+  }
+  if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return undefined;
+  return { ...parsed };
+}
+
+/**
  * The `routing-profile:` half of {@link parseSkillFrontmatter}.
  *
  * An absent key is the deliberate "not routed" declaration (`web-research`);

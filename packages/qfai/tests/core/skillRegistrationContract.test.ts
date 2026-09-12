@@ -136,4 +136,39 @@ describe("a skill carries what a host needs to register it", () => {
       expect(finding?.severity, document.slice(0, 16)).toBe("error");
     }
   });
+
+  it("tells the operator to replace a value rather than add a second key", async () => {
+    // Told to add `description:` to front matter that already has one, an
+    // operator writes a second mapping key and the document stops parsing.
+    const root = await projectWithSkill(['description: ""']);
+    const [finding] = await registrationFindings(root);
+    expect(finding?.message).toContain("with nothing a host can use in it");
+    expect(finding?.suggested_action).toContain("Replace the value of `description:`");
+  });
+
+  it("reads the delimiter the loader reads", async () => {
+    // `--- # note` is not a front-matter opener to the skill loader, so a
+    // mapping under it is not front matter here either. Certifying it would
+    // pass registration metadata on a file the assistant cannot load.
+    const root = await projectWithSkillDocument(
+      ["--- # note", "name: qfai-example", 'description: "Does the thing."', "---", ""].join("\n"),
+    );
+    const [finding] = await registrationFindings(root);
+    expect(finding?.severity).toBe("error");
+  });
+
+  it("asks nothing of a template that only looks like a skill", async () => {
+    // The loader opens one SKILL.md per direct subdirectory. A generator
+    // template under `templates/` is never registered by anything.
+    const root = await projectWithSkill(['description: "Does the thing."']);
+    const templates = path.join(root, ".qfai", "assistant", "skills", "qfai-example", "templates");
+    await mkdir(templates, { recursive: true });
+    await writeFile(
+      path.join(templates, "SKILL.md"),
+      ["---", "name: <skill-name>", "---", "", "## <skill-name>", ""].join("\n"),
+      "utf-8",
+    );
+
+    expect(await registrationFindings(root)).toEqual([]);
+  });
 });

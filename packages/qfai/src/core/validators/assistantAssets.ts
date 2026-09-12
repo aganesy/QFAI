@@ -3,8 +3,6 @@ import type { FileHandle } from "node:fs/promises";
 import { access, open, readFile, stat } from "node:fs/promises";
 import path from "node:path";
 
-import { parse as parseYaml } from "yaml";
-
 import {
   ADOPTER_OWNED_ASSETS,
   ADOPTER_OWNED_CATALOG_FILES,
@@ -25,6 +23,7 @@ import type {
 } from "../assistantAssetProvenance.js";
 import type { QfaiConfig } from "../config.js";
 import { resolvePath } from "../config.js";
+import { skillFrontmatterMapping } from "../agentFrontmatter.js";
 import { collectFiles } from "../fs.js";
 import { hasErrnoCode } from "../fs/errno.js";
 import { parseHeadings } from "../parse/markdown.js";
@@ -274,7 +273,12 @@ export async function validateAssistantAssets(root: string, config: QfaiConfig):
       continue;
     }
 
-    issues.push(...collectSkillRegistrationIssues(skillFile, content));
+    // The loader opens one SKILL.md per direct subdirectory. A template or an
+    // example copy below it is never registered, so registration metadata is
+    // not its to carry.
+    if (isSkillEntryPoint(skillsDir, skillFile)) {
+      issues.push(...collectSkillRegistrationIssues(skillFile, content));
+    }
 
     if (!content.includes(DRIFT_PROTOCOL_MARKER)) {
       issues.push(
@@ -1165,60 +1169,40 @@ function extractReviewerGateSection(content: string): string | null {
  * likely to lose the field to a contributor tidying front matter.
  */
 function collectSkillRegistrationIssues(skillFile: string, content: string): Issue[] {
-  const frontMatter = skillFrontMatter(content);
-  if (skillDescription(frontMatter) !== null) {
+  const frontMatter = skillFrontmatterMapping(content);
+  const description = frontMatter?.["description"];
+  if (typeof description === "string" && description.trim() !== "") {
     return [];
   }
-  const optsOut =
-    frontMatter !== null && /^disable-model-invocation:\s*true\s*$/m.test(frontMatter);
+  const optsOut = frontMatter?.["disable-model-invocation"] === true;
+  // A key that is there and unusable is repaired by replacing its value. Told
+  // to add one, the operator writes a second `description:` into the same
+  // mapping, which is a document no host reads at all.
+  const declared = frontMatter !== undefined && "description" in frontMatter;
+  const problem = declared
+    ? "SKILL.md has a `description:` with nothing a host can use in it — it is empty, or it is not text."
+    : "SKILL.md has no `description:`.";
+  const why = optsOut
+    ? " `disable-model-invocation: true` stops the model from firing the skill; the host reads `description:` to register it at all, so without the field the skill is not loaded and the user cannot invoke it by name either."
+    : " A host reads that field to register the skill. To stop the model firing it while keeping it reachable, declare `disable-model-invocation: true` and keep the description.";
+  const repair = declared
+    ? "Replace the value of `description:` with a sentence saying what the skill does"
+    : "Add `description:` to the front matter";
+  const beside = optsOut
+    ? ", and keep `disable-model-invocation: true` beside it."
+    : ", with `disable-model-invocation: true` beside it when the model should not fire the skill.";
   return [
     issue(
       "QFAI-SKILLS-015",
-      optsOut
-        ? "SKILL.md carries no usable `description:`. `disable-model-invocation: true` stops the model from firing the skill; the host reads `description:` to register it at all, so without the field the skill is not loaded and the user cannot invoke it by name either."
-        : "SKILL.md carries no usable `description:`. A host reads that field to register the skill. To stop the model firing it while keeping it reachable, declare `disable-model-invocation: true` and keep the description.",
+      problem + why,
       "error",
       skillFile,
       "skills.description",
       undefined,
       "change",
-      optsOut
-        ? "Put `description:` back in the front matter and keep `disable-model-invocation: true` beside it."
-        : "Add `description:` to the front matter, with `disable-model-invocation: true` beside it when the model should not fire the skill.",
+      repair + beside,
     ),
   ];
-}
-
-/**
- * The description a host would register the skill by, or `null` when there is
- * none it can use.
- *
- * The key alone is not the contract. `description:` with nothing after it, an
- * empty string, and a value that is not a string all leave the host with no text
- * to register or offer, and a document with no front matter at all leaves it
- * with nowhere to look. Front matter that does not parse is the same answer for
- * the same reason: what the host reads is what decides this, not what was meant.
- */
-function skillDescription(frontMatter: string | null): string | null {
-  if (frontMatter === null) return null;
-  let parsed: unknown;
-  try {
-    parsed = parseYaml(frontMatter);
-  } catch {
-    return null;
-  }
-  if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) return null;
-  if (!("description" in parsed)) return null;
-  const description: unknown = parsed.description;
-  if (typeof description !== "string" || description.trim() === "") return null;
-  return description;
-}
-
-/** The front-matter block of a skill document, or `null` when it has none. */
-function skillFrontMatter(content: string): string | null {
-  if (!content.startsWith("---")) return null;
-  const end = content.indexOf("\n---", 3);
-  return end === -1 ? null : content.slice(3, end);
 }
 
 function collectMissingReviewerGateTerms(section: string): string[] {
