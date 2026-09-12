@@ -79,3 +79,82 @@ export function needsManagedRulesSection(existing: string, section: string): boo
   }
   return !masters.every((master) => existing.includes(master));
 }
+
+/**
+ * Masters this run wrote into `.agents/rules/`, from the create-only copy's
+ * report.
+ *
+ * A master the copy wrote did not exist in this project before the run, so no
+ * section in it can ever have cited that master. That is what separates the two
+ * reasons a citation can be absent — never shipped, or deliberately removed —
+ * without recording anything: the second kind has its file on disk already, so
+ * the copy skips it and it is not in this list.
+ */
+export function newlyWrittenRuleMasters(
+  copiedPaths: readonly string[],
+  destRoot: string,
+): readonly string[] {
+  const prefix = `${destRoot.replace(/[\\/]+$/, "")}/`;
+  const cited = new Set<string>();
+  for (const copied of copiedPaths) {
+    const relative = copied.replace(/\\/g, "/").replace(prefix.replace(/\\/g, "/"), "");
+    for (const master of citedRuleMasters(relative)) cited.add(master);
+  }
+  return [...cited].sort();
+}
+
+/** The template's own bullet for `master`, or `null` when it has none. */
+function bulletFor(section: string, master: string): string | null {
+  for (const line of section.split("\n")) {
+    if (line.startsWith("- ") && line.includes(master)) return line;
+  }
+  return null;
+}
+
+/**
+ * `existing` with a bullet added for every master in `masters` the file does not
+ * already cite.
+ *
+ * The bullet is lifted from `section` rather than composed here, for the reason
+ * the whole section is: one wording, in the template, where it is reviewed.
+ * Insertion goes after the last rule bullet inside the managed section, so the
+ * prose that closes the section stays closed and anything the project wrote
+ * around it is untouched.
+ *
+ * Returns `existing` unchanged when there is nothing to add, or when the file
+ * has no complete marker pair to insert inside.
+ */
+export function addRuleCitations(
+  existing: string,
+  section: string,
+  masters: readonly string[],
+): string {
+  const start = existing.indexOf(QFAI_AGENT_RULES_BEGIN);
+  if (start === -1) return existing;
+  const endAt = existing.indexOf(QFAI_AGENT_RULES_END, start + QFAI_AGENT_RULES_BEGIN.length);
+  if (endAt === -1) return existing;
+
+  const bullets: string[] = [];
+  for (const master of masters) {
+    if (existing.includes(master)) continue;
+    const bullet = bulletFor(section, master);
+    if (bullet !== null) bullets.push(bullet);
+  }
+  if (bullets.length === 0) return existing;
+
+  const managed = existing.slice(start, endAt);
+  const lines = managed.split("\n");
+  // The last rule bullet, not the last line: the section closes with prose, and
+  // a bullet after it would read as part of that paragraph.
+  let insertAfter = -1;
+  for (let index = 0; index < lines.length; index += 1) {
+    const line = lines[index];
+    if (line !== undefined && line.startsWith("- ") && citedRuleMasters(line).length > 0) {
+      insertAfter = index;
+    }
+  }
+  if (insertAfter === -1) return existing;
+
+  lines.splice(insertAfter + 1, 0, ...bullets);
+  return `${existing.slice(0, start)}${lines.join("\n")}${existing.slice(endAt)}`;
+}

@@ -177,3 +177,99 @@ describe("shipped entry-point templates carry the section the writer appends", (
     },
   );
 });
+
+/**
+ * A rule shipped after the section was written.
+ *
+ * The section is written once and then left alone, which is what keeps a bullet
+ * the project deleted deleted. New masters still arrive, so a project that reran
+ * `init` got the file on disk and no bullet citing it — the rule shipped and no
+ * entry point named it, which means no agent loaded it.
+ *
+ * What separates the two reasons a bullet can be absent is the copy's own
+ * report: a master it wrote this run did not exist here before, so no section
+ * can have cited it. One the project deleted has its file on disk already, the
+ * copy skips it, and nothing is restored.
+ */
+describe("a later init cites a rule master it is shipping for the first time", () => {
+  /** The project as an earlier release left it: the section, minus one rule. */
+  async function seedWithout(root: string, master: string): Promise<void> {
+    await writeFile(path.join(root, "AGENTS.md"), PROJECT_TEXT, "utf-8");
+    await runInit({ dir: root, force: false, dryRun: false, yes: true });
+
+    const after = await readEntryPoint(root, "AGENTS.md");
+    const withoutBullet = after
+      .split("\n")
+      .filter((line) => !(line.startsWith("- ") && line.includes(master)))
+      .join("\n");
+    await writeFile(path.join(root, "AGENTS.md"), withoutBullet, "utf-8");
+    await rm(path.join(root, ...master.split("/")), { force: true });
+  }
+
+  it("adds the bullet for a master the run wrote, and nothing else", async () => {
+    await withProject(async (root) => {
+      const master = ".agents/rules/grilling.md";
+      await seedWithout(root, master);
+      const before = await readEntryPoint(root, "AGENTS.md");
+      expect(before, "the seed still cites the master").not.toContain(master);
+
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+
+      const after = await readEntryPoint(root, "AGENTS.md");
+      expect(after, "the newly shipped master is not cited").toContain(master);
+      // One section, one heading, and the project's own text where it was.
+      expect(occurrences(after, QFAI_AGENT_RULES_BEGIN)).toBe(1);
+      expect(after.startsWith(PROJECT_TEXT.trimEnd())).toBe(true);
+      // The bullet is the template's, not one composed here.
+      const templateBullet = (extractManagedRulesSection(await readTemplate("AGENTS.md")) ?? "")
+        .split("\n")
+        .find((line) => line.startsWith("- ") && line.includes(master));
+      expect(templateBullet).toBeDefined();
+      expect(after).toContain(templateBullet ?? "");
+      // Nothing else moved: the only added lines are that bullet.
+      const added = after.split("\n").filter((line) => !before.split("\n").includes(line));
+      expect(added).toEqual([templateBullet]);
+    });
+  });
+
+  it("leaves a bullet the project deleted deleted", async () => {
+    await withProject(async (root) => {
+      const master = ".agents/rules/temporary-files.md";
+      await writeFile(path.join(root, "AGENTS.md"), PROJECT_TEXT, "utf-8");
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+
+      // Deleted on purpose: the file stays on disk, so the copy skips it and
+      // the run has no reason to think the rule is new here.
+      const trimmed = (await readEntryPoint(root, "AGENTS.md"))
+        .split("\n")
+        .filter((line) => !(line.startsWith("- ") && line.includes(master)))
+        .join("\n");
+      await writeFile(path.join(root, "AGENTS.md"), trimmed, "utf-8");
+
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+
+      expect(await readEntryPoint(root, "AGENTS.md")).toBe(trimmed);
+    });
+  });
+
+  it("keeps what the project wrote inside the section", async () => {
+    await withProject(async (root) => {
+      const master = ".agents/rules/grilling.md";
+      await seedWithout(root, master);
+      const note = "Our team reads these before every review.";
+      const withNote = (await readEntryPoint(root, "AGENTS.md")).replace(
+        QFAI_AGENT_RULES_END,
+        `${note}\n\n${QFAI_AGENT_RULES_END}`,
+      );
+      await writeFile(path.join(root, "AGENTS.md"), withNote, "utf-8");
+
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+
+      const after = await readEntryPoint(root, "AGENTS.md");
+      expect(after).toContain(note);
+      expect(after).toContain(master);
+      // The bullet goes above the closing prose, not into it.
+      expect(after.indexOf(master)).toBeLessThan(after.indexOf(note));
+    });
+  });
+});

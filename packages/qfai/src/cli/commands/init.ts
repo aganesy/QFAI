@@ -66,8 +66,10 @@ import {
 import { CANONICAL_TIMESTAMP_GLOB } from "../../core/packLocator.js";
 import {
   AGENT_ENTRY_POINT_FILES,
+  addRuleCitations,
   extractManagedRulesSection,
   needsManagedRulesSection,
+  newlyWrittenRuleMasters,
 } from "../../core/agentEntryPoints.js";
 import {
   CLAUDE_SETTINGS_RELATIVE_PATH,
@@ -435,6 +437,10 @@ export async function runInit(options: InitOptions): Promise<void> {
     rootAssets,
     destRoot,
     options.dryRun,
+    // Masters this run wrote. A section cannot have cited one of them before,
+    // so a bullet missing for one is a rule that never shipped here rather than
+    // one the project removed.
+    newlyWrittenRuleMasters(rootResult.copied, destRoot),
   );
   // Its template sits outside `root/`, so no earlier copy has touched the file:
   // this owns both writing it and merging into one the project already had.
@@ -2817,6 +2823,7 @@ async function ensureAgentEntryPointRules(
   rootAssets: string,
   destRoot: string,
   dryRun: boolean,
+  newlyWritten: readonly string[],
 ): Promise<{ copied: string[]; skipped: string[] }> {
   const copied: string[] = [];
   const skipped: string[] = [];
@@ -2847,7 +2854,22 @@ async function ensureAgentEntryPointRules(
     }
 
     if (!needsManagedRulesSection(existing, section)) {
-      skipped.push(target);
+      // The section is already there. A master this run wrote is one the file
+      // cannot have cited, so its bullet is added; everything else is left as
+      // the project has it, including a bullet the project deleted.
+      const merged = addRuleCitations(existing, section, newlyWritten);
+      if (merged === existing) {
+        skipped.push(target);
+        continue;
+      }
+      if (dryRun) {
+        info(`  would update: ${target} (cite the newly shipped rule masters)`);
+        copied.push(target);
+        continue;
+      }
+      await writeFile(target, merged, "utf-8");
+      info(`  updated: ${target} (cited the newly shipped rule masters; nothing else changed)`);
+      copied.push(target);
       continue;
     }
 
