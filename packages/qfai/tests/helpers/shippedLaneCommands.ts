@@ -1445,8 +1445,10 @@ export const ALLOWED_INIT_CONTENT: ReadonlyMap<string, string> = new Map([
   // naming `.agents/rules/grilling.md` and printing `additionalContext`, with no
   // shell, no file read and no network — the shape every reminder here takes.
   // None carries an `if`: a path scope naming the default artifact directories
-  // is silently absent in a project that moved them.
-  [".claude/settings.json", "1a207d5df495c9fc7938ca35efdea50747c3608275b761121498cac74e9ac5a0"],
+  // is silently absent in a project that moved them. The `UserPromptSubmit`
+  // group is one more entry of the same shape, on every turn rather than
+  // every write.
+  [".claude/settings.json", "a5f0f0e088022672b869c566a2a4d05cecc7aa7904b9fbde699140e88f5f4827"],
   // Re-derived for the MERGED file, which carries both sides' edits: the three
   // retired `validation.traceability` knobs are gone (`brMustHaveSc`,
   // `scNoTestSeverity`, `orphanContractsPolicy`), the `forbidTestTodoStubs`
