@@ -149,9 +149,17 @@ no cell is marked down for a missing annotation they do not owe.
 
 ### Skipped tests
 
-`QFAI-TEST-003` reports 16 skipped tests in the recorded validate run. Two of the 16 sit in files
-that carry a spec-0014 annotation, and each is a `describe.skip` covering two `it` cases — four
-skipped cases in all:
+`QFAI-TEST-003` is error-severity and the spec-scoped gate recorded in `atdd-spec-0014.md` exits
+`info=3 warning=0 error=0`, so that run is not where this census comes from. The rule is unscoped,
+and the run that reports it is:
+
+```text
+$ npx qfai validate --profile tdd --fail-on error
+counts: info=6 warning=533 error=1021
+```
+
+`QFAI-TEST-003` accounts for 32 of those errors. Two sit in files that carry a spec-0014
+annotation, and each is a `describe.skip` covering two `it` cases — four skipped cases in all:
 
 | File                                                   | Annotations                   | Cases |
 | ------------------------------------------------------ | ----------------------------- | ----- |
@@ -271,8 +279,9 @@ sibling REQ-0167 (pack-location lint scope) decision and is intentionally NOT
 cited as governing here."
 
 So the provenance the ledger records for both rows is contradicted by the
-decision it names. This is the third decision-provenance gap in the pack and it
-is reported here rather than repaired: a `DR-ID` cell belongs to the row, both
+decision it names. It is one of three decision-provenance gaps this pack carries — the other two
+are the `exception` rows `TDD-0028` / `TDD-0029`, and `TDD-0019` — and it is
+reported here rather than repaired: a `DR-ID` cell belongs to the row, both
 rows are `done`, and correcting one is the ledger owner's edit under the
 transition that allows it. Neither row's scores turn on it — what the cells
 score is the case, not the citation — so the matrix totals are unaffected and
@@ -408,7 +417,9 @@ content are rejected with exploration-first migration guidance, which is a diffe
 different emission. Resolution is not discharge.
 
 The gate the obligation names exists, in `/qfai-verify`'s SKILL.md, and no test reads it. Nothing
-feeds a `REVISE` review artifact to anything. Every cell is `❌`, and each is named so the count is
+feeds a `REVISE` review artifact **to verify** — `tests/cli/prototypingCertify.test.ts` feeds one to
+the certify gate, which is a different command over a different artifact, and this matrix credits
+that case on `BR-0014-0002` where it belongs (see "What was measured, and how"). Every cell is `❌`, and each is named so the count is
 checkable:
 
 - **Equivalence partitions** — the `PASS` and `REVISE` partitions of a reviewer verdict are
@@ -469,7 +480,9 @@ This row has **four `❌` depth cells** and no `❌` in `Status`.
 
 ### TC-0014-0019 — removed compatibility namespace does not reappear
 
-`Status = done` under `DR-0014-0002`, the record whose text is this row's subject. One
+`Status = done`. **The ledger cites `DR-0014-0001`**, a different record from
+`DR-0014-0002`, whose text is this row's subject. That is one of the three decision-provenance gaps
+this pack carries, reported against the row and left to the ledger owner like the other two. One
 passing case, reading `src/core/validators/index.ts` and
 `src/core/types.ts` and requiring that neither contains `validators/legacy`,
 `runLegacyUixCompatibilityValidators` or `"compatibility"`, and that `IssueCategory` is the exact

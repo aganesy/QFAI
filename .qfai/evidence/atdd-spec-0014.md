@@ -39,10 +39,11 @@ Every run is narrowed to the row's own `Selector`. A whole-file run can stay red
 through a case belonging to another row, and then it says nothing about whether
 this row's test discriminates.
 
-`TDD-0035` carried a `Selector` written as a summary of the obligation rather
-than a test's title. It was corrected to the title of the block that carries the
-obligation, so the row names a case that can be run. Its `Evidence` cell is
-unchanged; the reason is under Gaps.
+`TDD-0035` carries a `Selector` written as a summary of the obligation rather
+than a test's title, and **the ledger still carries it**. A correction to the
+title of the block that holds the obligation was drafted and withdrawn: the cell
+belongs to a `done` row, and re-pointing one here is outside the transition that
+allows it. Both cells are unchanged, and what the repair would be is under Gaps.
 
 ## Work performed (what changed, where)
 
@@ -62,8 +63,14 @@ unchanged; the reason is under Gaps.
 Every `vitest` command ran from `packages/qfai`; the validate gate ran from the
 repository root, which is where its `node packages/qfai/dist/cli/index.mjs` path
 resolves. From `packages/qfai` that same string names a `packages/qfai` inside
-`packages/qfai` and does not exist. The clean-tree runs were taken at
-revision `649d8111147436408c90cbbe1b9f9b07e34da8cb`. Each mutation was reverted
+`packages/qfai` and does not exist. The clean-tree runs of the **first** pass were taken at revision
+`649d8111147436408c90cbbe1b9f9b07e34da8cb`, and that is the only address this
+preamble carries. Later runs are addressed where they are recorded and the two
+disagree by construction, because each pass ran against the tree it produced:
+the re-taken GREEN and its mutation name `09f6f3b`, the refactor verification
+and the item checkpoint name `db8cd210`, and the seven-job checkpoint names the
+merge commit `879079199019a43767e893f4366056e493d8a798`. Read a run's own
+revision, never this one, when reproducing it. Each mutation was reverted
 from a copy of the pre-mutation bytes, and the tree re-addressed afterwards to
 confirm it had returned to the clean value.
 
@@ -109,8 +116,10 @@ the Coverage Depth Matrix below.
 
 ## Ledger rows advanced
 
-No row changed status. Every row below was already `done`; this run supplies the
-evidence its cell points at.
+No row changed status. Every row below was already `done`, and **no cell points
+here**: each keeps the prose it had, so this record is an unlinked artifact
+rather than the target of a traceable reference. The reason the pointer was not
+written is under Final status.
 
 | TDD-ID     | Obligation     | Layer       | RED provenance | Status |
 | ---------- | -------------- | ----------- | -------------- | ------ |
@@ -416,42 +425,25 @@ a review pack's `PASS` / `FAIL` / `NA` roster and never a `REVISE` verdict. No
 case in the package reads either clause. So the row needs a test over the
 shipped skill, not a decision about the obligation.
 
-`TDD-0018` is not backfilled. Its obligation, `TC-0014-0018`, is that the
-full-scan verify path depends on the canonical validators, and its selector
-holds two cases that sit at opposite ends of that claim.
+`TDD-0018` is not backfilled, and the reason is not its coverage. Its
+obligation, `TC-0014-0018`, is that the full-scan verify path depends on the
+canonical validators, and its `Selector` — the bare test-case id — selects three
+cases inside `describe("TC-0014-0018: canonical UIX in verify path")`.
 
-One drives `runCanonicalUixValidators` directly over a seeded pack and reads the
-forbidden-file finding back. A mutation of the three-layer filter reddens it —
-but calling the validators directly is not verify calling them, so what that
-mutation falsifies is the validator's own predicate, not the dependency.
+| Case                                                | What a mutation of it shows                                                                    |
+| ---------------------------------------------------- | ----------------------------------------------------------------------------------------------- |
+| Drives `runCanonicalUixValidators` directly          | The validator's own predicate. Calling the validators directly is not verify calling them        |
+| `expect(validateSrc).toContain(…)` over `validate.ts` | The import line. A mutation removing every call survives it; removing the import too reddens it |
+| `a verify run surfaces a canonical group finding`    | The dependency itself: `validateProject` under the `verify` profile, asserting the finding      |
 
-The other case carries the dependency, and carries it as
-`expect(validateSrc).toContain("runCanonicalUixValidators")` over the text of
-`validate.ts`. The import statement alone satisfies it, so a behavioural mutation
-that removes every call survives it. Removing the import as well does redden the
-case, and its `not.toMatch` half over the two legacy aggregator names is a real
-oracle — but neither observes verify running the canonical validators, which is
-what the row claims.
+The third is the one the row claims, and it arrived from main rather than from
+this run. Its own comment names the falsifying change as deleting the two
+`runCanonicalUixValidators` call sites while keeping the import — the mutation
+the second case survives. So the obligation is covered, the selector already
+reaches it, and nothing is owed on either.
 
-So the half that is falsifiable is not the obligation, and the half that is the
-obligation is not falsifiable. The row needs a case that drives a verify run and
-observes the canonical findings in its output.
-
-**That case now exists, and it arrived from main rather than from this run.**
-`verifySemanticsSpec0014.test.ts` holds `a verify run surfaces a canonical group
-finding`, which calls `validateProject` under the `verify` profile and asserts
-the forbidden-sidecar finding in its output; its own comment names the
-falsifying change as deleting the two `runCanonicalUixValidators` call sites
-while keeping the import — the mutation this withdrawal reports as surviving.
-So the gap is closed and `TDD-0018` is backfillable, and the row's existing
-`Selector` already selects the case: the selector is the bare test-case id, the
-case sits inside `describe("TC-0014-0018: canonical UIX in verify path")`, and
-this record states three paragraphs earlier that a bare id resolves against a
-`describe` name. No re-pointing is owed. An earlier reading of this said the
-case was not the one the selector names, and that was wrong.
-
-This run still does not backfill it, for a reason that has nothing to do with
-the selector: a backfill is a RED observation, a GREEN, a refactor verification
+This run still does not backfill the row, for a reason that has nothing to do
+with coverage: a backfill is a RED observation, a GREEN, a refactor verification
 and a checkpoint against **that** row, and this run's subject is `TDD-0019`.
 Recording another row's verdict from a run taken for this one is the shape of
 claim this whole record exists to remove.
@@ -484,6 +476,24 @@ is split there, into two rows carrying the same `TC-Refs`, never in place at
 evidence time. A `Selector` naming both cases would pack both boundaries behind
 one identifier, which is the shape that rule forbids. The row therefore stays as
 it stands and needs a Change Request that decomposes it.
+
+**And as it stands the `Selector` selects nothing.** The runner contract reads
+`-t` as a regular expression over the full test name
+(`references/checkpoint-verification.md`), and `TC-0014-0036` appears in
+`prototypingCertify.upgradeScope.test.ts` only as an annotation comment — no
+`describe` or `it` name contains it:
+
+```text
+$ cd packages/qfai && npx vitest run \
+    tests/integration/cli/commands/prototypingCertify.upgradeScope.test.ts \
+    -t "TC-0014-0036"
+ Test Files  1 skipped (1)
+      Tests  16 skipped (16)
+```
+
+So the row names nothing that can be run, which is a defect the decomposition
+does not address and a repair the ledger owner makes either way. Reported here;
+not repaired here, for the reason the whole record gives.
 
 ## Final status
 
