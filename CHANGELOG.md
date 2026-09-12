@@ -6,6 +6,24 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Added
 
+- **`/qfai-prototyping` states which questions it grills and which it builds**
+  (#1602). The loop exists for questions that need something to react to — how
+  it should feel, which layout carries the task. The questions around it are
+  settled by talking first: what the prototype is for, what would count as
+  better, what is out of bounds.
+
+  Each mistake costs something different, and the skill says which. Running the
+  loop on a question a sentence would have settled spends cycles building an
+  answer nobody needed; talking through one the loop should answer spends a
+  whole session on rephrasing, which is where a session balloons.
+
+  A finished prototype makes a decision answerable and does not take it. The
+  question is asked again against it — an agent that builds one, judges it and
+  carries on has decided on the user's behalf, with more evidence than before
+  and still not the user's answer. The scope floor is unchanged.
+
+### Added
+
 - **A lint lane refuses a tracked file under the scratch directory.** `tmp/` is
   the sole staging area for scratch output and nothing there is committed, but
   an ignore rule does not stop tracking a file already in the index: a scratch

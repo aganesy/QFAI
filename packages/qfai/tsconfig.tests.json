@@ -85,6 +85,7 @@
     "tests/assets/packGateQualifier.test.ts",
     "tests/assets/projectMemoryReadScope.test.ts",
     "tests/assets/prototypeParityRecording.test.ts",
+    "tests/assets/prototypingGrilling.test.ts",
     "tests/assets/prototypingScopeFloorHome.test.ts",
     "tests/assets/reOpenRecordShape.test.ts",
     "tests/assets/repositoryAttributionGuard.test.ts",

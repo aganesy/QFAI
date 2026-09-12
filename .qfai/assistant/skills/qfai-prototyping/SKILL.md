@@ -52,6 +52,37 @@ When unsure, read inputs in this order:
 
 One final prototype satisfying the spec under a locked brand identity, with no blocking review finding, no layout anti-pattern, and no DESIGN.md violation.
 
+## What is grilled, and what is prototyped
+
+This skill exists for the questions talking cannot settle. "How should this
+feel" and "one long form or three pages" need something to react to, and no
+amount of rephrasing turns them into answerable ones — talking through one is
+where a session balloons, because the agent rephrases, the user guesses, and the
+scope grows to fill the uncertainty.
+
+The questions around it can be settled by talking, and are grilled before the
+loop starts, through the `qfai-grilling` skill. The method is
+`.agents/rules/grilling.md`.
+
+| Settled by talking, before the loop | Settled by the loop              |
+| ----------------------------------- | -------------------------------- |
+| What the prototype is for           | How it should feel               |
+| What would count as better          | Which layout carries the task    |
+| What is out of bounds               | Which of two shapes reads faster |
+
+Running the loop on the left column wastes cycles: the loop answers by building,
+and building is the expensive way to learn something a sentence would have
+settled. Grilling the right column is the error the rule master names, and it
+costs a session rather than a cycle.
+
+**The prototype makes a decision answerable; it does not take it.** Put the
+result in front of the user and ask the question again against it. An agent that
+builds one, judges it, and carries on has settled a question of taste on the
+user's behalf — with more evidence than before, and still not the user's answer.
+
+The scope floor is unchanged: which specs the loop covers is decided where it
+was, and no session narrows it.
+
 ## Required References
 
 - `references/iteration-loop.md` — flow, exit codes, evidence paths
@@ -396,6 +427,9 @@ The skill collapses avoidable per-session prompts to 0-1 by classifying every de
   - append-vs-create on subject overlap
   - equivalent-option pick
 - ask-user:
+  - what the prototype is for, what would count as better, and what is out of bounds — the
+    decisions the pre-loop session raises, which this skill puts before it runs
+  - the choice a finished prototype was built to make answerable, asked again against it
   - CREATE / DELETE / SPLIT / MERGE / SUPERSEDE / UPDATE:REMOVE triage operations (each with a prompt template that names the target and rationale)
   - destructive operations (rm / overwrite / force-push)
   - version-pin changes (`package.json#version`, branch pin)
