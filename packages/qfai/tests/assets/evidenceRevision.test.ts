@@ -549,7 +549,7 @@ describe("evidence and verdicts carry a revision", () => {
 describe("the working-tree address has one notation", () => {
   const REVISION = "649d8111147436408c90cbbe1b9f9b07e34da8cb";
   /** Recorded for a clean checkout of that revision. */
-  const RECORDED = "working-tree+00d19b893564738e3182854d88d7a362b88500457d9424ed4d76a3e422726906";
+  const RECORDED = "working-tree+fd5686a9d446725fba950775308babffc54a647a54386ede74db2f7b0e98f793";
 
   const sha256 = (input: Buffer): Buffer => createHash("sha256").update(input).digest();
   const sha256Hex = (input: Buffer): string => sha256(input).toString("hex");
@@ -569,9 +569,11 @@ describe("the working-tree address has one notation", () => {
   };
 
   const RECORDS: readonly PathRecord[] = [
-    // The path components of everything below, which step 1 records too: a
+    // The repository root, and the path components of everything below, which
+    // step 1 records too: a
     // fixture without them is one a conforming collector cannot reproduce, and
     // the pin would then pass an implementation that omits directory modes.
+    { path: Buffer.from("."), kind: "dir", mode: "0755", bytes: Buffer.alloc(0) },
     { path: Buffer.from("src"), kind: "dir", mode: "0755", bytes: Buffer.alloc(0) },
     {
       path: Buffer.from("src/a.ts"),
@@ -706,7 +708,9 @@ describe("the working-tree address has one notation", () => {
       expect(text).toContain("SIMPLIFIED: an ignored file is not in the address");
       // Pathspec magic is read from the environment as well as the argument.
       expect(text).toContain("GIT_LITERAL_PATHSPECS");
-      expect(text).toContain("The repository root is not one of them");
+      // The root has a mode too, and taking the write bit off it stops a run
+      // creating anything at the top level while every child is identical.
+      expect(text).toContain("The repository root is one of them, written");
       // The configured name reaches a glob pathspec, where a directory really
       // called `[specs]` is otherwise read as a class and excluded nothing.
       expect(text).toContain("really called `[specs]` is matched rather than read as a class");
@@ -719,7 +723,11 @@ describe("the working-tree address has one notation", () => {
       // Collection is many reads, and a tree edited between them addresses a
       // state that never existed.
       expect(text).toContain("The tree has to hold still while you read it");
-      expect(text).toContain("take the first value two consecutive runs agree on");
+      // Two equal runs are evidence that the tree was quiet, not a proof: a
+      // writer repeating one change can hand both runs a pair the filesystem
+      // never held. The stop is what makes the address attributable.
+      expect(text).toContain("So the writers stop, and the repeat is a check rather than the rule");
+      expect(text).toContain("GIT_INDEX_FILE");
       // States that leave the address where it was while the filesystem the
       // tests read is a different one.
       expect(text).toContain("An unborn HEAD has no address");

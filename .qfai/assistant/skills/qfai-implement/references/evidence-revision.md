@@ -46,18 +46,26 @@ check. Gate item 10 rejects any other shape wherever a revision is recorded:
      exclude=(':(exclude,glob).qfai/evidence/**'
               ':(exclude,glob).qfai/review/**')
      case "$specs" in
-       /*|../*) ;;  # outside the worktree: nothing it holds is in the address
+       # Outside the worktree: nothing it holds is in the address, and a
+       # pathspec pointing there is refused outright. `..` exactly is that
+       # case as much as `../x` is.
+       /*|..|../*) ;;
        # Every glob character in the configured name escaped, so a directory
        # really called `[specs]` is matched rather than read as a class.
        *) exclude+=(":(exclude,glob)$(printf '%s' "$specs" |
             sed 's/[][*?\\]/\\&/g')/*/tdd/test-list.md") ;;
      esac
-     # Pathspec magic is read from the environment as well as from the
-     # argument, so the four variables that redefine it are cleared: under
-     # `GIT_LITERAL_PATHSPECS=1` the exclusions above are names to match rather
-     # than patterns, and the ledger and the evidence enter the address.
-     common=(env -u GIT_LITERAL_PATHSPECS -u GIT_GLOB_PATHSPECS
-             -u GIT_NOGLOB_PATHSPECS -u GIT_ICASE_PATHSPECS
+     # Every repository-local variable cleared, not a chosen few: pathspec
+     # magic is read from the environment as well as from the argument, and
+     # `GIT_INDEX_FILE` names the index the listings read. Under
+     # `GIT_LITERAL_PATHSPECS=1` the exclusions are names to match rather than
+     # patterns; under an alternate index a deleted path is listed by neither
+     # command, so its `absent` record goes missing. `git rev-parse
+     # --local-env-vars` is the list itself, so nothing here has to stay in
+     # step with a version of git.
+     unset=()
+     for name in $(git rev-parse --local-env-vars); do unset+=(-u "$name"); done
+     common=(env "${unset[@]}"
              git -C "$root" -c core.quotePath=false -c core.ignoreCase=false)
      others=(ls-files --others --exclude-per-directory=.gitignore -z)
      "${common[@]}" --no-replace-objects rev-parse HEAD
@@ -165,9 +173,11 @@ check. Gate item 10 rejects any other shape wherever a revision is recorded:
      Lift when: a project needs an ignored input addressed, which it declares by
      tracking the file.
 
-     **The repository root is not one of them.** It has two spellings, `.` and
-     the empty path, and it is the thing being addressed rather than something
-     in it. Every other directory is recorded by what it is on disk, read
+     **The repository root is one of them, written `.`** — the one spelling,
+     chosen the way every other notation here is. Its mode is in the address
+     for the reason a child directory's is: taking the write bit off it stops a
+     run creating anything at the top level while every recorded child is
+     identical. Every directory is recorded by what it is on disk, read
      without following a link: a directory is a `dir`, one the filesystem does
      not have — the parent of a tracked path that is `absent` — is `absent`
      itself, and a third-pass entry is written without the trailing separator
@@ -273,11 +283,18 @@ check. Gate item 10 rejects any other shape wherever a revision is recorded:
   old bytes while the next carries the new. This is the ordinary case during a
   review, where another worker may be editing the integrated worktree.
 
-  Run steps 1-4 twice and compare. Two equal runs mean nothing moved between
-  them, and that value is the address. Two unequal ones mean something did: run
-  again, and take the first value two consecutive runs agree on. A tree that
-  never gives two equal runs is being written while you address it — stop the
-  writer, or take the address once it has finished.
+  **So the writers stop, and the repeat is a check rather than the rule.**
+  Stop whatever is writing — the parallel worker, the watcher, the dev server —
+  and then take the address. Run steps 1-4 twice and compare: two equal runs
+  are what a quiet tree gives, and two unequal ones say something is still
+  writing, so stop it and start again.
+
+  Two equal runs do not by themselves prove a snapshot, and the document does
+  not claim they do. A writer repeating one multi-file change can hand both
+  runs the same pair of halves while the filesystem never held that pair:
+  each run reads `a` before the change and `b` after it, and between the runs
+  the writer puts both back. Equality is evidence that the tree was quiet, not
+  a proof that it was; the stop is what makes the address attributable.
 
   Every tracked path contributes a record whether or not it differs from `HEAD`,
   so "clean but uncommitted" has a value rather than a special case, and an
