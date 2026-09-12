@@ -4,6 +4,8 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ## [Unreleased]
 
+## [1.12.0] - 2026-09-12
+
 ### Added
 
 - **A design is grilled before it is fixed, and every stage does it** (#1591,
