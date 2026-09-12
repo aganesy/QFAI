@@ -108,7 +108,7 @@ describe("a skill carries what a host needs to register it", () => {
     const root = await projectWithSkill(["disable-model-invocation: true"]);
     const [finding] = await registrationFindings(root);
     expect(finding?.severity).toBe("error");
-    expect(finding?.message).toContain("stops the model from firing the skill");
+    expect(finding?.message).toContain("asks the Claude Code surface not to fire the skill");
     expect(finding?.message).toContain("the user cannot invoke it by name either");
   });
 
@@ -270,5 +270,29 @@ describe("a skill carries what a host needs to register it", () => {
 
     const codes = (await registrationFindings(root)).map((finding) => finding.code);
     expect(codes).toContain("QFAI-SKILLS-015");
+  });
+
+  it("says which host honours the opt-out", async () => {
+    // Codex reads `name` and `description` and knows nothing of the flag, so
+    // advice promising it everywhere would pass validation on a skill that is
+    // still offered to a model.
+    const root = await projectWithSkill(['argument-hint: "<subject>"']);
+    const [finding] = await registrationFindings(root);
+    expect(finding?.message).toContain("Claude Code surface");
+    expect(finding?.message).toContain("Codex surface");
+  });
+
+  it("reports an entry point that is not a file", async () => {
+    // A `SKILL.md` that is a directory: `stat` succeeds and the host still
+    // cannot load it, and the crawl walks through rather than naming it.
+    const root = await projectWithSkill(['description: "Does the thing."']);
+    const skills = path.join(root, ".qfai", "assistant", "skills");
+    await mkdir(path.join(skills, "qfai-folder", "SKILL.md"), { recursive: true });
+
+    const findings = (await validateAssistantAssets(root, defaultConfig)).filter((finding) =>
+      finding.file.includes("qfai-folder"),
+    );
+
+    expect(findings.map((finding) => finding.code)).toContain("QFAI-SKILLS-014");
   });
 });

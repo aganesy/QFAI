@@ -1176,29 +1176,37 @@ async function collectSkillEntryPoints(skillsDir: string): Promise<string[]> {
   for (const entry of entries) {
     // A symlinked skill directory is a shape this CLI itself writes, and
     // `isDirectory()` is false for the link. What matters is what it resolves
-    // to, so the link is followed before it is excluded.
-    const isDirectory = entry.isDirectory()
+    // to — and a link that resolves to nothing, or to something this process
+    // cannot traverse, is a skill path the host cannot load either. Excluding
+    // it here is the silence the guarded read exists to break, so it is kept
+    // and the read reports it.
+    const resolved = entry.isDirectory()
       ? true
-      : entry.isSymbolicLink() &&
-        ((await stat(path.join(skillsDir, entry.name)).catch(() => null))?.isDirectory() ?? false);
-    if (!isDirectory) continue;
+      : entry.isSymbolicLink()
+        ? ((await stat(path.join(skillsDir, entry.name)).catch(() => null))?.isDirectory() ?? null)
+        : false;
+    if (resolved === false) continue;
     const file = path.join(skillsDir, entry.name, "SKILL.md");
-    // Absent is the ordinary answer for a directory that holds no skill. Any
-    // other failure — a directory this process may not traverse, an I/O fault —
-    // is an entry point the host cannot load either, and dropping it here is
-    // the silence the caller's read exists to break.
+    if (resolved === null) {
+      found.push(file);
+      continue;
+    }
+    // Absent is the ordinary answer for a directory that holds no skill.
+    // Anything else — a directory this process may not traverse, an I/O fault,
+    // a `SKILL.md` that is a directory or a device — is an entry point the host
+    // cannot load, and the read below is what says so.
     const probe = await stat(file)
-      .then((stats) => (stats.isFile() ? "file" : "other"))
+      .then((stats) => (stats.isFile() ? "file" : "unusable"))
       .catch(async (cause: unknown) => {
         // A dangling symlink resolves to nothing and reports `ENOENT`, which is
         // the same answer as a directory holding no skill. `lstat` tells them
         // apart: the link is there, the host cannot load it, and the read below
         // is what says so.
-        if (!isEnoent(cause)) return "error";
+        if (!isEnoent(cause)) return "unusable";
         const link = await lstat(file).catch(() => null);
-        return link === null ? "absent" : "error";
+        return link === null ? "absent" : "unusable";
       });
-    if (probe === "file" || probe === "error") found.push(file);
+    if (probe !== "absent") found.push(file);
   }
   return found.sort((a, b) => a.localeCompare(b));
 }
@@ -1237,7 +1245,10 @@ function extractReviewerGateSection(content: string): string | null {
  * what the omission was for.
  *
  * A skill that should not be offered to the model says so with
- * `disable-model-invocation: true`, and keeps its description. The rule is
+ * `disable-model-invocation: true`, and keeps its description. That flag is the
+ * Claude Code surface's, and the Codex surface this CLI also installs honours
+ * nothing like it — so the field is how a skill asks, and not a promise every
+ * host keeps. The rule is
  * general: no skill is named here, and the one that opts out is the one most
  * likely to lose the field to a contributor tidying front matter.
  */
@@ -1274,8 +1285,8 @@ function collectSkillRegistrationIssues(skillFile: string, content: string): Iss
     ? "SKILL.md has a `description:` with nothing a host can use in it — it is empty, or it is not text."
     : "SKILL.md has no `description:`.";
   const why = optsOut
-    ? " `disable-model-invocation: true` stops the model from firing the skill; the host reads `description:` to register it at all, so without the field the skill is not loaded and the user cannot invoke it by name either."
-    : " A host reads that field to register the skill. To stop the model firing it while keeping it reachable, declare `disable-model-invocation: true` and keep the description.";
+    ? " `disable-model-invocation: true` asks the Claude Code surface not to fire the skill; every host reads `description:` to register it at all, so without the field the skill is not loaded and the user cannot invoke it by name either."
+    : " A host reads that field to register the skill. `disable-model-invocation: true` beside it asks the Claude Code surface not to fire the skill on its own — the Codex surface reads `name` and `description` and honours no such field, so a skill that must never run unattended needs a guard of its own rather than that flag.";
   const repair = declared
     ? "Replace the value of `description:` with a sentence saying what the skill does"
     : "Add `description:` to the front matter";
