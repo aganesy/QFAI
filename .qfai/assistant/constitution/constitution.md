@@ -173,9 +173,10 @@ Default policy:
   escalation exit requires a user decision per escalation
   (`.qfai/assistant/constitution/shared-skill-delegation-baseline.md#round-budget-and-convergence-must`). Counting them would
   make this article impossible to satisfy in the stage that asks the most.
-- Classify **each question, not the prompt**. A prompt that carries both spends
-  one unit per clarification it contains; only its approval questions are exempt.
-  Attaching an approval to a clarification does not buy the clarification back.
+- Classify **each question, not the prompt**. A prompt that carries several spends
+  one unit per clarification it contains; its grilling and approval questions are
+  exempt. Attaching an exempt question to a clarification does not buy the
+  clarification back.
 
 ### Counting unit (MUST)
 
@@ -225,8 +226,8 @@ Stop conditions:
 - User says “stop” → abort the invocation; no further work or file changes.
 - User says “proceed / done” → clarification-exhausted mode for the rest of the
   invocation. It waives clarifications only; it is **not** `--auto`, and the
-  mandatory approvals and needed `hard-required` inputs above MUST still be
-  asked.
+  grilling questions, mandatory approvals and needed `hard-required` inputs above
+  MUST still be asked.
 - Question budget is exhausted → clarification-exhausted mode for the rest of the
   invocation.
 
@@ -337,8 +338,8 @@ Rules:
    silences the question, it does not authorize the guess (Article VI).
 5. **Exhausting the Article VI budget is not `--auto`**: it enters
    clarification-exhausted mode, which silences clarifying questions only.
-   Rule 4 does not apply to it — mandatory approvals and the `hard-required`
-   inputs that invocation actually consumes MUST still be asked. A user's
+   Rule 4 does not apply to it — grilling questions, mandatory approvals and the
+   `hard-required` inputs that invocation actually consumes MUST still be asked. A user's
    `proceed` / `done` answer enters that same mode and is likewise not `--auto`;
    this rule is activated by the `--auto` flag alone.
 

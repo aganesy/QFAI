@@ -43,8 +43,8 @@ describe("the clarification budget binds a stage", () => {
       expectPhrase(content, "## Article VI — Clarification budget (avoid endless Q&A)");
       expectPhrase(content, "**at most 5 clarifying questions per invocation**");
       expectPhrase(content, "The unit is one\n  top-level skill or command invocation");
-      // The article binds every non-discussion command, so the unit cannot be a
-      // canonical stage: `/qfai-configure` and `/web-research` are neither.
+      // The article binds every invocation, so the unit cannot be a canonical
+      // stage alone: `/qfai-configure` and `/web-research` are not stages.
       expectPhrase(content, "`/qfai-configure` or `/web-research`");
       expectPhrase(content, "It is not per session and not per\n  conversation.");
       // "5 clarifying questions total" left the scope open to four readings.
@@ -100,6 +100,7 @@ describe("the clarification budget binds a stage", () => {
 });
 
 const COMMUNICATION = "assistant/constitution/communication.md";
+const DESIGN_DNA_INTAKE = "assistant/skills/qfai-discussion/references/design-dna-intake.md";
 const SDD = "assistant/skills/qfai-sdd/SKILL.md";
 const CONFIGURE = "assistant/skills/qfai-configure/SKILL.md";
 
@@ -302,6 +303,40 @@ describe("the clarification budget is countable", () => {
       expectPhrase(content, "Every invocation MUST minimize clarifying questions.");
       expectPhrase(content, "`/qfai-discussion`\nincluded");
       expectNoPhrase(content, "Non-discussion commands MUST minimize questions.");
+    });
+
+    it(`${tree}: every enumeration of the survivors names all three classes`, async () => {
+      // The failure mode this closes is one statement written in five places and
+      // updated in four. An agent reads whichever it reaches: the per-question
+      // classification bullet decides whether a grilling item in a mixed prompt
+      // is counted, and Article X is the compaction-reload target, so an omission
+      // there ends a session after a summarise that Article VI says continues.
+      const content = await read(tree, CONSTITUTION);
+      expectPhrase(content, "its grilling and approval questions are\n  exempt");
+      expectPhrase(
+        content,
+        "grilling questions, mandatory approvals and needed `hard-required` inputs above\n  MUST still be asked",
+      );
+      expectPhrase(
+        content,
+        "grilling questions, mandatory approvals and needed `hard-required` inputs MUST\nstill be asked",
+      );
+      expectPhrase(
+        content,
+        "grilling questions, mandatory approvals and the\n   `hard-required` inputs that invocation actually consumes MUST still be asked",
+      );
+      // No enumeration may name only the two older classes.
+      expectNoPhrase(content, "only its approval questions are exempt");
+    });
+
+    it(`${tree}: the discussion intake does not claim the cap skips its stage`, async () => {
+      // It said the cap constrains non-discussion commands, which was the
+      // article's old opening repeated downstream. With one scope the reason the
+      // budget is not the obstacle is the exemption, not the stage.
+      const content = await read(tree, DESIGN_DNA_INTAKE);
+      expectNoPhrase(content, "non-discussion commands are what the cap constrains");
+      expectPhrase(content, "The cap constrains this stage as it does every\nother");
+      expectPhrase(content, "a question inside a grilling session is a grilling question");
     });
 
     it(`${tree}: the article's scope and the baseline's applied scope are one set`, async () => {
