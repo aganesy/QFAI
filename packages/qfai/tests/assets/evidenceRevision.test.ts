@@ -547,7 +547,7 @@ describe("evidence and verdicts carry a revision", () => {
 describe("the working-tree address has one notation", () => {
   const REVISION = "649d8111147436408c90cbbe1b9f9b07e34da8cb";
   /** Recorded for a clean checkout of that revision. */
-  const RECORDED = "working-tree+43cd72eb62cb2a13eca3cb111f6c1e85252abed35c4a08e6e4e5f1617e703a1a";
+  const RECORDED = "working-tree+c5d867c413a95d1911c347d5202c14436fd1265fda5ef5adca6d895dc36e4194";
 
   const sha256 = (input: Buffer): Buffer => createHash("sha256").update(input).digest();
   const sha256Hex = (input: Buffer): string => sha256(input).toString("hex");
@@ -560,17 +560,28 @@ describe("the working-tree address has one notation", () => {
    * points at, and the directory's the empty string.
    */
   type PathRecord = {
-    readonly path: string;
-    readonly kind: "file" | "symlink" | "dir";
+    readonly path: Buffer;
+    readonly kind: "file" | "symlink" | "dir" | "absent";
     readonly mode: string;
     readonly bytes: Buffer;
   };
 
   const RECORDS: readonly PathRecord[] = [
-    { path: "src/a.ts", kind: "file", mode: "0644", bytes: Buffer.from("export const a = 1;\n") },
-    { path: "src/link", kind: "symlink", mode: "0777", bytes: Buffer.from("a.ts") },
-    { path: "src/run.sh", kind: "file", mode: "0755", bytes: Buffer.from("#!/bin/sh\n") },
-    { path: "tmp/hold", kind: "dir", mode: "0755", bytes: Buffer.alloc(0) },
+    {
+      path: Buffer.from("src/a.ts"),
+      kind: "file",
+      mode: "0644",
+      bytes: Buffer.from("export const a = 1;\n"),
+    },
+    { path: Buffer.from("src/link"), kind: "symlink", mode: "0777", bytes: Buffer.from("a.ts") },
+    {
+      path: Buffer.from("src/run.sh"),
+      kind: "file",
+      mode: "0755",
+      bytes: Buffer.from("#!/bin/sh\n"),
+    },
+    { path: Buffer.from("src/gone.ts"), kind: "absent", mode: "0000", bytes: Buffer.alloc(0) },
+    { path: Buffer.from("tmp/hold"), kind: "dir", mode: "0755", bytes: Buffer.alloc(0) },
   ];
 
   /** Steps 3 and 4 over those records. */
@@ -583,9 +594,14 @@ describe("the working-tree address has one notation", () => {
     const records = options.records ?? RECORDS;
     const parts: Buffer[] = [Buffer.from(`HEAD\u0000${options.revision}`, "utf-8")];
     for (const record of records) {
+      // The path is concatenated as the bytes it is. Interpolating it into a
+      // string decodes and re-encodes it, which turns two distinct invalid-byte
+      // names into one — the collapse the notation table forbids, and one a
+      // fixture built from strings cannot catch an implementation making.
       parts.push(
         Buffer.concat([
-          Buffer.from(`${record.path}\u0000${record.kind}\u0000${record.mode}\u0000`, "utf-8"),
+          record.path,
+          Buffer.from(`\u0000${record.kind}\u0000${record.mode}\u0000`, "utf-8"),
           options.digestAsHex
             ? Buffer.from(sha256Hex(record.bytes), "utf-8")
             : sha256(record.bytes),
@@ -655,7 +671,9 @@ describe("the working-tree address has one notation", () => {
       // tests read is a different one.
       expect(text).toContain("An unborn HEAD has no address");
       expect(text).toContain("A submodule stops the address");
-      expect(text).toContain("A tracked path the filesystem does not have stops the address");
+      expect(text).toContain("A tracked path the filesystem does not have is a record, not a stop");
+      expect(text).toContain("A tracked path that is none of the three kinds stops the address");
+      expect(text).toContain("--deduplicate");
       expect(text).toContain("An untracked embedded repository stops the address");
       // Decoding a path that is not valid UTF-8 turns distinct names into one.
       expect(text).toContain("Bytes, never a decoded string");
@@ -688,7 +706,7 @@ describe("the working-tree address has one notation", () => {
       address({
         ...HEX_FULL_NO_TRAILING,
         records: RECORDS.map((record) =>
-          record.path === "src/a.ts" ? { ...record, mode: "0755" } : record,
+          record.path.equals(Buffer.from("src/a.ts")) ? { ...record, mode: "0755" } : record,
         ),
       }),
     ).not.toBe(RECORDED);
@@ -717,10 +735,38 @@ describe("the working-tree address has one notation", () => {
       address({
         ...HEX_FULL_NO_TRAILING,
         records: RECORDS.map((record) =>
-          record.path === "src/a.ts" ? { ...record, path: "src/b.ts" } : record,
+          record.path.equals(Buffer.from("src/a.ts"))
+            ? { ...record, path: Buffer.from("src/b.ts") }
+            : record,
         ),
       }),
     ).not.toBe(RECORDED);
+    // A tracked path with nothing on disk is a record, not a stop, and it
+    // differs from the record the file would have had.
+    expect(
+      address({
+        ...HEX_FULL_NO_TRAILING,
+        records: RECORDS.map((record) =>
+          record.kind === "absent"
+            ? { ...record, kind: "file" as const, mode: "0644", bytes: Buffer.from("x") }
+            : record,
+        ),
+      }),
+    ).not.toBe(RECORDED);
+    // Two names that differ only in bytes no decoding keeps apart. An
+    // implementation that decodes a path collapses both onto one replacement
+    // character and gives them the same address.
+    const invalid = (byte: number): readonly PathRecord[] => [
+      {
+        path: Buffer.concat([Buffer.from("src/"), Buffer.from([byte]), Buffer.from(".ts")]),
+        kind: "file",
+        mode: "0644",
+        bytes: Buffer.from("x"),
+      },
+    ];
+    expect(address({ ...HEX_FULL_NO_TRAILING, records: invalid(0xfe) })).not.toBe(
+      address({ ...HEX_FULL_NO_TRAILING, records: invalid(0xff) }),
+    );
   });
 });
 

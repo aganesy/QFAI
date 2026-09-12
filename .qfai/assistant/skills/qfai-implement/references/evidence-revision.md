@@ -42,7 +42,7 @@ check. Gate item 10 rejects any other shape wherever a revision is recorded:
               ':(exclude,glob).qfai/evidence/**'
               ':(exclude,glob).qfai/review/**')
      git --no-replace-objects -C "$root" rev-parse HEAD
-     git -C "$root" -c core.quotePath=false ls-files -z -- . "${exclude[@]}"
+     git -C "$root" -c core.quotePath=false ls-files --deduplicate -z -- . "${exclude[@]}"
      git -C "$root" -c core.quotePath=false ls-files --others \
        --exclude-per-directory=.gitignore -z -- . "${exclude[@]}"
      ```
@@ -79,10 +79,16 @@ check. Gate item 10 rejects any other shape wherever a revision is recorded:
      observation against the submodule's own tree instead. Do not record an
      address over a repository holding one.
 
-     **A tracked path the filesystem does not have stops the address.**
-     `skip-worktree` and a sparse checkout both leave a path in the index and
-     not on disk, so its record cannot be read at all. `ls-files -v` marks the
-     first with `S`. Materialize the paths and take the address again.
+     **A tracked path the filesystem does not have is a record, not a stop.** An
+     uncommitted deletion, a rename, a sparse checkout and `skip-worktree` all
+     leave a path in the index and nothing on disk, and all four are states a
+     reviewer reads evidence against. The record is `absent`, below, and the
+     address moves between having the file and not — which is what it is for.
+
+     **A tracked path that is none of the three kinds stops the address.** A
+     regular file replaced by a FIFO, a socket or a device has no record shape
+     here, and reading a FIFO blocks until somebody writes to it. Restore the
+     path and take the address again.
 
      **An untracked embedded repository stops the address.** `ls-files --others`
      reports one entry for it — the directory, with a trailing separator — and
@@ -103,8 +109,15 @@ check. Gate item 10 rejects any other shape wherever a revision is recorded:
   3. **Serialize.** `HEAD` + NUL + the rev; then one record per path from both
      lists, `path + NUL + kind + NUL + mode + NUL + the SHA-256 of its bytes`,
      sorted by path in byte order. A path appears once: the two lists do not
-     overlap. `kind` is `file` / `symlink` / `dir` and `mode` is the octal
-     permission bits.
+     overlap, and `--deduplicate` collapses the several index stages an
+     unresolved merge conflict would otherwise emit for one path.
+
+     `kind` is `file` / `symlink` / `dir` / `absent`, and `mode` is the octal
+     permission bits. **`absent` is a tracked path with nothing on disk** — a
+     deletion not yet committed, a rename, a sparse checkout. Its `mode` is
+     `0000` and its bytes are the empty string, so it has exactly one spelling;
+     what matters is that the record is there and differs from the one the file
+     would have had.
 
      **The bytes are what the filesystem holds**, read with no conversion of any
      kind — never through `git show`, `git cat-file` or a checkout filter, which

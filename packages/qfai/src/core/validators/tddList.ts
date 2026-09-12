@@ -1316,7 +1316,7 @@ const SHA256_VALUE = /^(?:sha256:)?[a-f0-9]{64}$/i;
 // carries.
 const EVIDENCE_REVISION_FORM = new RegExp(`^${REVISION_FORM_SOURCE}$`);
 
-const REVISION_FORM_HINT = "a git rev or working-tree+<sha256>";
+const REVISION_FORM_HINT = "a git rev or working-tree+<64 lowercase hex>";
 
 function sha256(value: string | Buffer): string {
   return createHash("sha256").update(value).digest("hex");

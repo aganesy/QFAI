@@ -675,7 +675,9 @@ async function validateSummarySchema(
       ? [
           issue(
             declaresForm ? "QFAI-REVIEW-007" : "QFAI-REVIEW-009",
-            "`revision` の形式が不正です。git rev (7-64 hex) か `working-tree+<64 hex>`（content hash）を指定してください。`working-tree+<porcelain digest>` は内容が変わっても動かないため受理しません。" +
+            "`revision` is not a form this gate reads. Give a git rev (7-64 hex) or " +
+              "`working-tree+<64 hex>` — a content hash, in lowercase hex. " +
+              "`working-tree+<porcelain digest>` is refused: it does not move when the contents do." +
               (declaresForm
                 ? ""
                 : `（この pack は \`revision_form: "${REVISION_FORM_LEGACY}"\` を宣言しているため warning 扱いです。当時の tree は復元できず、移行先の content hash が存在しません。）`),
