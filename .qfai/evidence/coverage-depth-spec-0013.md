@@ -34,12 +34,12 @@ existing somewhere in the repository is not coverage here. Ownership is read in 
 The two steps do not overlap: the first turns on an annotation pointing elsewhere, the second on
 there being no annotation to point anywhere. Neither admits a case that another spec owns.
 
-**Twenty-four of the forty-nine obligations are discharged by nothing, or by a test about something
-else.** Eleven have no test at all: `US-0013-0001`, `-0002`, `-0004`, `-0005`, `-0006`, `-0007`,
-`-0009`, `-0010`, and `TC-0013-0022`, `-0023`, `-0024`. Five more are discharged by substring
+**Twenty-three of the forty-nine obligations are discharged by nothing, or by a test about something
+else.** Ten have no test at all: `US-0013-0001`, `-0002`, `-0004`, `-0005`, `-0006`, `-0007`,
+`-0009`, `-0010`, and `TC-0013-0023`, `-0024`. Five more are discharged by substring
 assertions over the shipped `qfai-sdd/SKILL.md` that carry none of the obligation they are annotated
 to. Two are self-referential coverage placeholders whose annotated `describe` tests the diff
-detector. Those eighteen rows carry 162 of the matrix's 289 `❌` cells between them. Six further
+detector. Those seventeen rows carry 153 of the matrix's 285 `❌` cells between them. Six further
 wording rows carry another 44.
 
 The remaining twenty-five rows are scored on their merits and range widely. `US-0013-0014`,
@@ -55,15 +55,32 @@ spec-0013 annotation anywhere. `US-0013-0011` and `TC-0013-0025` are narrow, and
 records the disagreement. A fifth, `US-0013-0003`, is covered by tests that fix its direction while
 contradicting its own acceptance criterion. See Findings 1, 2, 3 and 8.
 
-Section "Every `❌` cell, named" accounts for all 312 of them in named groups whose coordinates are
+Section "Every `❌` cell, named" accounts for all 310 of them in named groups whose coordinates are
 fully enumerated, so that "one justification per `❌`" is checkable rather than asserted, and section
-"Every `⚠️` cell, named" does the same for all 103 partial scores, which the PASS criterion also
+"Every `⚠️` cell, named" does the same for all 108 partial scores, which the PASS criterion also
 requires a rationale for.
 
 ## What was measured, and how
 
-Every score below rests on a test run, not on a reading of a ledger. The sixteen files that carry
-spec-0013 coverage were located by reading the tests and the source, then executed. All sixteen pass:
+Every score below rests on a test run, not on a reading of a ledger. The seventeen files that carry
+spec-0013 coverage were located by reading the tests and the source, then executed. All seventeen
+pass, each by its own file-scoped command from `packages/qfai`, at revision
+`e0f367b48e905c3b36fb7b1689706982dbea5162`:
+
+```bash
+npx vitest run <file>
+```
+
+Two of them need their project named, because `vitest.workspace.ts` puts
+`tests/validators/**` and `tests/scripts/**` in projects of their own and a checkpoint command that
+selects `integration`, `e2e`, `cli` and `core` reaches neither:
+
+```bash
+npx vitest run --project validators tests/validators/importLite.test.ts
+```
+
+That command is what the `94 passed` below was read from. Without it the row would be a count with
+no run behind it, which is the defect this whole document is written against.
 
 | File                                                          | Result     |
 | ------------------------------------------------------------- | ---------- |
@@ -83,12 +100,15 @@ spec-0013 coverage were located by reading the tests and the source, then execut
 | `tests/integration/spec0013ActivePointerSurfaceType.test.ts`  | 8 passed   |
 | `tests/cli/commands/sddPreflight.test.ts`                     | 12 passed  |
 | `tests/validators/importLite.test.ts`                         | 94 passed  |
-|                                                               | **298**    |
+| `tests/core/validators/designContractReadiness.test.ts`       | 63 passed  |
+|                                                               | **361**    |
 
 Two sets are counted here and they are not the same set. Thirteen files carry a `QFAI:SPEC-0013`
-annotation, and every one of them is in the table. Three carry none and are scored under step 2 of
-"What credits a cell": `US-0013-0003` and `US-0013-0008` have no annotated case anywhere, and these
-three are where their outcome is produced.
+annotation, and every one of them is in the table. Four carry none and are scored under step 2 of
+"What credits a cell": `US-0013-0003` and `US-0013-0008` have no annotated case anywhere and three
+of these files are where their outcome is produced;
+`tests/core/validators/designContractReadiness.test.ts` is the fourth, and it is where
+`TC-0013-0022`'s second half is produced.
 
 | File                                        | Drives                                      |
 | ------------------------------------------- | ------------------------------------------- |
@@ -134,11 +154,18 @@ and is not itself coverage. Six of the thirty selectors do not resolve — see F
 
 Seven negative results are load-bearing and were checked directly rather than inferred:
 
-1. **`TC-0013-0022`, `-0023` and `-0024` have no test file.** Their ledger rows carry `—` in the
+1. **`TC-0013-0022`, `-0023` and `-0024` are named by no test.** Their ledger rows carry `—` in the
    `Test file` column, and the three ids appear nowhere in `packages/qfai/tests/**`. Their only
    occurrence in a `tests/` tree is as three annotation lines in `tests/integration/qfai-traceability.md`.
    The same holds for `US-0013-0001` … `-0010`: their only occurrence is in
    `tests/e2e/qfai-traceability.md`.
+
+   Being named by no test is not the same as having no coverage, and for `TC-0013-0022` the two part
+   company. Step 2 of "What credits a cell" claims an unannotated case where the obligation has no
+   annotated one anywhere, and
+   `tests/core/validators/designContractReadiness.test.ts` carries no annotation for any spec and
+   produces the outcome the second half of that obligation names. The row is scored on it. `-0023`
+   and `-0024` have no such case, so for them the two questions have the same answer.
 2. **`templates/contracts/ui-spec.yaml` does not exist.** `TC-0013-0032`, `BR-0013-0019`,
    `EX-0013-0019`, `AC-0013-0024`, `US-0013-0014`, `REQ-0164` and `10_Plan.md` all name it as the
    artifact the count guidance must live in. A search of `packages/qfai/assets/**` returns no file of
@@ -299,7 +326,7 @@ $ node packages/qfai/dist/cli/index.mjs validate --profile tdd --spec 0013 --fai
 ```
 
 **No spec-0013 obligation depends on a skipped test.** All sixteen belong to spec-0004, spec-0006,
-spec-0008 and spec-0014. None of the sixteen files that carry spec-0013 coverage contains a `.skip`,
+spec-0008 and spec-0014. None of the seventeen files that carry spec-0013 coverage contains a `.skip`,
 `.only` or `.todo` modifier of any kind, and all 298 of their cases ran. The sixteen findings are
 in this pack's *report* scope because the validator scans the whole test tree; they are not in its
 *coverage* scope, and they contribute to no cell in this matrix.
@@ -310,12 +337,12 @@ in this pack's *report* scope because the validator scans the whole test tree; t
 | ------------ | ---------------------- | ----------- | ---------- | ---------- | --------------- | -------------- | ----------------- | ------------- | --------------- | ------ |
 | US-0013-0001 | ❌                     | ❌          | ❌         | ❌         | ❌              | ❌             | ❌                | ❌            | ❌              | ❌     |
 | US-0013-0002 | ❌                     | ❌          | ❌         | ❌         | ❌              | ❌             | ❌                | ❌            | ❌              | ❌     |
-| US-0013-0003 | ⚠️                     | ✅          | ✅         | ⚠️         | ⚠️              | ⚠️             | ⚠️                | ⚠️            | ⚠️              | ❌     |
+| US-0013-0003 | ⚠️                     | ✅          | ✅         | ⚠️         | ⚠️              | ⚠️             | ❌                | ⚠️            | ⚠️              | ❌     |
 | US-0013-0004 | ❌                     | ❌          | ❌         | ❌         | ❌              | ❌             | ❌                | ❌            | ❌              | ❌     |
 | US-0013-0005 | ❌                     | ❌          | ❌         | ❌         | ❌              | ❌             | ❌                | ❌            | ❌              | ❌     |
 | US-0013-0006 | ❌                     | ❌          | ❌         | ❌         | ❌              | ❌             | ❌                | ❌            | ❌              | ❌     |
 | US-0013-0007 | ❌                     | ❌          | ❌         | ❌         | ❌              | ❌             | ❌                | ❌            | ❌              | ❌     |
-| US-0013-0008 | ✅                     | ✅          | ✅         | ⚠️         | ⚠️              | ✅             | ⚠️                | ⚠️            | ⚠️              | ⚠️     |
+| US-0013-0008 | ✅                     | ✅          | ✅         | ⚠️         | ⚠️              | ✅             | ❌                | ⚠️            | ⚠️              | ⚠️     |
 | US-0013-0009 | ❌                     | ❌          | ❌         | ❌         | ❌              | ❌             | ❌                | ❌            | ❌              | ❌     |
 | US-0013-0010 | ❌                     | ❌          | ❌         | ❌         | ❌              | ❌             | ❌                | ❌            | ❌              | ❌     |
 | US-0013-0011 | ✅                     | ✅          | ✅         | ⚠️         | ⚠️              | ❌             | ❌                | ⚠️            | ⚠️              | ⚠️     |
@@ -343,7 +370,7 @@ in this pack's *report* scope because the validator scans the whole test tree; t
 | TC-0013-0019 | ⚠️                     | ✅          | ❌         | ❌         | ❌              | ❌             | ❌                | ❌            | ⚠️              | ⚠️     |
 | TC-0013-0020 | ⚠️                     | ✅          | ❌         | ❌         | ❌              | ❌             | ❌                | ❌            | ⚠️              | ⚠️     |
 | TC-0013-0021 | ⚠️                     | ✅          | ⚠️         | ❌         | ⚠️              | ❌             | ❌                | ⚠️            | ⚠️              | ⚠️     |
-| TC-0013-0022 | ❌                     | ❌          | ❌         | ❌         | ❌              | ❌             | ❌                | ❌            | ❌              | ❌     |
+| TC-0013-0022 | ⚠️                     | ⚠️          | ✅         | ⚠️         | ❌              | ❌             | ❌                | ⚠️            | ⚠️              | ⚠️     |
 | TC-0013-0023 | ❌                     | ❌          | ❌         | ❌         | ❌              | ❌             | ❌                | ❌            | ❌              | ❌     |
 | TC-0013-0024 | ❌                     | ❌          | ❌         | ❌         | ❌              | ❌             | ❌                | ❌            | ❌              | ❌     |
 | TC-0013-0025 | ⚠️                     | ✅          | ❌         | ⚠️         | ❌              | ❌             | ❌                | ❌            | ⚠️              | ⚠️     |
@@ -358,26 +385,26 @@ in this pack's *report* scope because the validator scans the whole test tree; t
 | TC-0013-0034 | ✅                     | ✅          | ❌         | ❌         | ❌              | ❌             | ❌                | ⚠️            | ⚠️              | ⚠️     |
 | TC-0013-0035 | ✅                     | ✅          | ✅         | ✅         | ⚠️              | ⚠️             | ❌                | ⚠️            | ✅              | ⚠️     |
 
-Totals across the nine scored depth columns, 441 cells (49 rows × 9): **✅ 62 / ⚠️ 90 / ❌ 289**.
+Totals across the nine scored depth columns, 441 cells (49 rows × 9): **✅ 63 / ⚠️ 93 / ❌ 285**.
 
 `Status` is the row verdict and is not a scored cell, so it is excluded from that total and from the
-grand total at the end. Its distribution across the 49 rows, for reading only, is ✅ 0 / ⚠️ 17 /
-❌ 32. No row reaches `Status = ✅`; every row is capped by the carrier-only condition described
+grand total at the end. Its distribution across the 49 rows, for reading only, is ✅ 0 / ⚠️ 18 /
+❌ 31. No row reaches `Status = ✅`; every row is capped by the carrier-only condition described
 above.
 
 Per scored depth column, 49 cells each:
 
 | Column                 | ✅  | ⚠️  | ❌  |
 | ---------------------- | --- | --- | --- |
-| Equivalence partitions | 13  | 13  | 23  |
-| Normal path            | 25  | 5   | 19  |
-| Error path             | 11  | 3   | 35  |
-| Edge cases             | 2   | 13  | 34  |
+| Equivalence partitions | 13  | 14  | 22  |
+| Normal path            | 25  | 6   | 18  |
+| Error path             | 12  | 3   | 34  |
+| Edge cases             | 2   | 14  | 33  |
 | Boundary values        | 1   | 11  | 37  |
 | Special values         | 1   | 8   | 40  |
-| State transitions      | 1   | 2   | 46  |
-| Combinatorial          | 0   | 17  | 32  |
-| Oracle strength        | 8   | 18  | 23  |
+| State transitions      | 1   | 0   | 48  |
+| Combinatorial          | 0   | 18  | 31  |
+| Oracle strength        | 8   | 19  | 22  |
 
 The shape of that table is the pack's central fact: twenty-five rows have a passing normal path, one
 row in the whole pack observes a state transition, one row exercises a boundary in both directions,
@@ -408,7 +435,7 @@ is cited by at least one `TC-0013-*`. The other derivation route, each rule's ow
 | BR-0013-0009 | ✅            | ✅            | n/a                  | TC-0013-0018, TC-0013-0019                      | ⚠️     |
 | BR-0013-0010 | ✅            | ⚠️            | ⚠️                   | TC-0013-0014, -0015, -0016, -0017               | ⚠️     |
 | BR-0013-0011 | ✅            | ❌            | n/a                  | TC-0013-0020                                    | ❌     |
-| BR-0013-0012 | ❌            | ❌            | ❌                   | TC-0013-0022                                    | ❌     |
+| BR-0013-0012 | ⚠️            | ✅            | ⚠️                   | TC-0013-0022                                    | ⚠️     |
 | BR-0013-0013 | ❌            | ❌            | ❌                   | TC-0013-0023                                    | ❌     |
 | BR-0013-0014 | ❌            | ❌            | ❌                   | TC-0013-0024                                    | ❌     |
 | BR-0013-0015 | ✅            | ❌            | ❌                   | TC-0013-0025                                    | ❌     |
@@ -421,7 +448,7 @@ is cited by at least one `TC-0013-*`. The other derivation route, each rule's ow
 Totals across the three scored columns, 60 cells: **✅ 12 / ⚠️ 13 / n/a 7 / ❌ 28**.
 
 `Status` here is likewise a row verdict and is not counted. Its distribution across the 20 rows is
-✅ 0 / ⚠️ 4 / ❌ 16.
+✅ 0 / ⚠️ 5 / ❌ 15.
 
 `n/a` is used seven times in the `Conditional branches` column, for `BR-0013-0001`, `-0004`, `-0006`,
 `-0007`, `-0008`, `-0009` and `-0011`. Each states its rule unconditionally — "MUST follow",
@@ -440,32 +467,39 @@ when the reason is stated. No row reaches `✅`.
 
 ## Every ❌ cell, named
 
-The matrix carries **289** `❌` scored cells and the business rule table carries **28** — **317 in
-all**. They are accounted for below in six groups. Every group names every coordinate it covers and
-states its count, and the six counts sum to 312:
+The matrix carries **285** `❌` scored cells and the business rule table carries **25** — **310 in
+all**. They are accounted for below in seven groups. Every group names every coordinate it covers
+and states its count, and the seven counts sum to 310:
 
 | Group                                                             | Cells   |
 | ----------------------------------------------------------------- | ------- |
-| 1. Eleven obligations with no test at all                         | 99      |
+| 1. Ten obligations with no test at all                            | 90      |
 | 2. Five wording rows whose assertion carries none of the obligation | 45    |
 | 3. Two placeholder rows whose test has another subject            | 18      |
 | 4. Six wording rows that address their direction and nothing else  | 45     |
-| 5. Remaining scored cells of the twenty-five tested rows           | 80     |
-| 6. Business rule scored columns                                   | 28      |
+| 5. Remaining scored cells of the twenty-six tested rows            | 85     |
+| 6. Business rule scored columns                                   | 25      |
 | 7. Two story cells credited to a case bound elsewhere             | 2       |
-| **Total**                                                         | **317** |
+| **Total**                                                         | **310** |
 
-### Group 1 — eleven obligations with no test at all (99 cells)
+### Group 1 — ten obligations with no test at all (90 cells)
 
 Coordinates: `US-0013-0001`, `US-0013-0002`, `US-0013-0004`, `US-0013-0005`, `US-0013-0006`,
-`US-0013-0007`, `US-0013-0009`, `US-0013-0010`, `TC-0013-0022`, `TC-0013-0023` and `TC-0013-0024`,
+`US-0013-0007`, `US-0013-0009`, `US-0013-0010`, `TC-0013-0023` and `TC-0013-0024`,
 each × all nine scored columns (`Equivalence partitions`, `Normal path`, `Error path`, `Edge cases`,
 `Boundary values`, `Special values`, `State transitions`, `Combinatorial`, `Oracle strength`).
-11 × 9 = **99**.
+10 × 9 = **90**.
 
 The eight user stories appear only in `tests/e2e/qfai-traceability.md`, the annotation carrier. The
-three test cases are `todo` in the ledger under `DR-NOTE-3` with `—` in their `Test file` column.
-Nothing in `packages/qfai/tests/**` names any of the eleven.
+two test cases are `todo` in the ledger under `DR-NOTE-3` with `—` in their `Test file` column.
+Nothing in `packages/qfai/tests/**` names any of the ten.
+
+`TC-0013-0022` was here and is not. Its ledger row is still `todo` with `—` in `Test file`, but the
+row is scored against tests rather than against the ledger, and the second half of its obligation —
+absence of root `DESIGN.md` halting Phase 0 with an error-severity finding from the design contract
+validator family — is produced by `tests/core/validators/designContractReadiness.test.ts`, which
+carries no annotation for any spec. Step 2 of "What credits a cell" therefore claims it here, and
+the row is scored under group 5.
 
 The cause is one with several faces:
 
@@ -482,6 +516,10 @@ The cause is one with several faces:
   by any function a test can call. The lock file's reader, `readDesignMdLockSha` in
   `src/core/design/designMdLock.ts`, exists and is exercised by other specs' tests; the writer is
   prose. The obligation also names fields the product does not use — see Findings 5.
+  That is the **writing** half. The other half of `TC-0013-0022` — a missing root `DESIGN.md`
+  halting Phase 0 with an error-severity finding from the design contract validator family — is a
+  callable function and is exercised, which is why that row is scored rather than left at nine
+  `❌` cells. `US-0013-0009` has no such half.
 - `US-0013-0010`, `TC-0013-0023`, `TC-0013-0024` assert properties of `_policies/05_Contracts.md`, a
   document in this repository's own tree. Nothing reads that document in any test. For
   `TC-0013-0023` that is the whole of the gap: the document is present and the six names it must not
@@ -594,7 +632,7 @@ Per column, for both rows:
   traceability validator and to nothing these rows name. No mutation of the obligation's own subject
   reddens either.
 
-### Group 4 — six wording rows that address their direction and nothing else (44 cells)
+### Group 4 — six wording rows that address their direction and nothing else (45 cells)
 
 These six have a `Normal path` or `Error path` cell above `❌` because the asserted string is the
 sentence that carries the obligation, rather than a token naming an artifact. Everything else is
@@ -644,13 +682,14 @@ sentence that carries the obligation, rather than a token naming an artifact. Ev
   passes on any line containing "Plan" before "finalize". `TC-0013-0006`'s `/lower-to-upper/` and
   `TC-0013-0013`'s describe are the same shape.
 
-### Group 5 — remaining scored cells of the twenty-five tested rows (80 cells)
+### Group 5 — remaining scored cells of the twenty-six tested rows (85 cells)
 
-**5a. `State transitions`, 21 cells.** Coordinates: `US-0013-0011`, `US-0013-0012`, `US-0013-0014`,
-`TC-0013-0014`, `-0015`, `-0016`, `-0017`, `-0018`, `-0019`, `-0020`, `-0021`, `-0025`, `-0026`,
+**5a. `State transitions`, 24 cells.** Coordinates: `US-0013-0003`, `US-0013-0008`,
+`US-0013-0011`, `US-0013-0012`, `US-0013-0014`,
+`TC-0013-0014`, `-0015`, `-0016`, `-0017`, `-0018`, `-0019`, `-0020`, `-0021`, `-0022`, `-0025`, `-0026`,
 `-0027`, `-0028`, `-0029`, `-0031`, `-0032`, `-0033`, `-0034`, `-0035`.
 
-One cause, four faces:
+One cause, five faces:
 
 1. **Single-evaluation obligations.** `TC-0013-0014`, `-0015`, `-0016`, `-0017`, `-0020`, `-0028`,
    `-0032`, `-0034` each evaluate one input once. A diff result, a policy predicate, a config read, a
@@ -670,13 +709,26 @@ One cause, four faces:
 4. **Artifact states never sequenced.** `TC-0013-0021` reads one evidence file in one format;
    `TC-0013-0025` reads one template in one state. Neither observes the old-to-new progression its
    own text is written around.
+5. **A neighbouring artifact's transitions, not the obligation's.** `US-0013-0003` and
+   `US-0013-0008` are the two cells this column most recently lost. `sddPreflight.test.ts` does
+   sequence a genuine multi-step process across five cases — a summary written into a run-scoped
+   directory and mirrored to the latest pointer, an earlier run's summary still readable after a
+   later preflight, an older run not overwriting a newer run's pointer, the pointer's own run id
+   read when the newer directory is gone, and the pointer still refreshed when this run is the
+   newest. Every one of those is over the **summary artifact**. The incomplete-to-ready progression
+   each story exists to gate has no case, and no invalid readiness transition is attempted or
+   rejected. This column is scored per obligation, so a neighbouring artifact's sequence cannot
+   raise it. `TC-0013-0022` is here for the plainer reason: its transition is Phase 0 halting, and
+   no case runs a phase.
 
-**5b. `Special values`, 16 cells.** Coordinates: `US-0013-0011`, `US-0013-0012`, `US-0013-0013`,
-`TC-0013-0014`, `-0015`, `-0017`, `-0019`, `-0020`, `-0021`, `-0025`, `-0028`, `-0029`, `-0030`,
+**5b. `Special values`, 17 cells.** Coordinates: `US-0013-0011`, `US-0013-0012`, `US-0013-0013`,
+`TC-0013-0014`, `-0015`, `-0017`, `-0019`, `-0020`, `-0021`, `-0022`, `-0025`, `-0028`, `-0029`, `-0030`,
 `-0031`, `-0032`, `-0034`.
 
-One cause across all sixteen: every fixture writes well-formed input, and no `null`, empty, absent,
-zero-byte or wrong-typed value is fed to any SUT.
+One cause across all seventeen: every fixture writes well-formed input, and no `null`, empty, absent,
+zero-byte or wrong-typed value is fed to any SUT. `TC-0013-0022` is in it for a specific instance of
+the same thing: no lock file carrying an empty `sha256`, an absent `lockedAt` or a `DESIGN.md` of
+zero bytes is supplied to the readiness validator.
 
 - `TC-0013-0014`, `TC-0013-0017`, `TC-0013-0021` — no empty or malformed evidence file; a git throw is
   arranged by the mock rather than supplied as data.
@@ -693,8 +745,11 @@ zero-byte or wrong-typed value is fed to any SUT.
   any fixture in the pack.
 - `TC-0013-0034` — no `null` item, no empty map, no field present but not a string.
 
-**5c. `Boundary values`, 13 cells.** Coordinates: `US-0013-0012`, `TC-0013-0014`, `-0015`, `-0016`,
-`-0018`, `-0019`, `-0020`, `-0025`, `-0028`, `-0029`, `-0031`, `-0032`, `-0034`.
+**5c. `Boundary values`, 14 cells.** Coordinates: `US-0013-0012`, `TC-0013-0014`, `-0015`, `-0016`,
+`-0018`, `-0019`, `-0020`, `-0022`, `-0025`, `-0028`, `-0029`, `-0031`, `-0032`, `-0034`.
+
+`TC-0013-0022` joins them: a sha256 digest has no ordered domain, and the one field that does have a
+format boundary — `lockedAt`, an ISO 8601 timestamp — is asserted by nothing.
 
 - `TC-0013-0014`, `-0015`, `-0016`, `-0020`, `-0028` — the obligations have no numeric, date, length
   or ordered domain under test, and the counts they do carry are never exercised at an edge.
@@ -807,7 +862,7 @@ discriminates the structured form the story names.
 A case bound elsewhere can still show the behaviour works. What it cannot do is answer this
 obligation, and a mark is the second claim.
 
-### Group 6 — the 28 ❌ cells of the business rule scored columns
+### Group 6 — the 25 ❌ cells of the business rule scored columns
 
 **`Conditional branches`, 1 cell** — `BR-0013-0019`.
 
@@ -818,7 +873,7 @@ obligation, and a mark is the second claim.
   band the rule states. This cell read `n/a` until it was noticed that an unconditional rule and a
   rule with an unmet branch are not the same thing.
 
-**`Positive case`, 8 cells** — `BR-0013-0004`, `-0005`, `-0006`, `-0007`, `-0008`, `-0012`, `-0013`, `-0014`.
+**`Positive case`, 7 cells** — `BR-0013-0004`, `-0005`, `-0006`, `-0007`, `-0008`, `-0013`, `-0014`.
 
 - `BR-0013-0008` — the rule's first bullet, the shipped template's `Type` legend, was credited to an
   assertion in a file written for the `Level` column that carries no spec-0013 annotation, and the
@@ -835,10 +890,13 @@ obligation, and a mark is the second claim.
   so not even the wording the rule requires is pinned.
 - `BR-0013-0007` (Batch Mode Stable Mapping) — the covering case asserts `SKILL.md` contains
   `"qfai-sdd"`. No capability order is read, and no `spec-0001..N` assignment is produced.
-- `BR-0013-0012`, `-0013`, `-0014` — covered by `TC-0013-0022`, `-0023`, `-0024`, which have no test.
+- `BR-0013-0013`, `-0014` — covered by `TC-0013-0023` and `-0024`, which no test names and no
+  unannotated case reaches. `BR-0013-0012` was in this list and is not: its covering obligation
+  `TC-0013-0022` is reached by the readiness validator's cases, so the rule's satisfied state is
+  asserted against a real tree and its cell is `⚠️`.
 
-**`Negative case`, 12 cells** — `BR-0013-0001`, `-0002`, `-0004`, `-0005`, `-0006`, `-0007`, `-0008`,
-`-0011`, `-0012`, `-0013`, `-0014`, `-0015`.
+**`Negative case`, 11 cells** — `BR-0013-0001`, `-0002`, `-0004`, `-0005`, `-0006`, `-0007`, `-0008`,
+`-0011`, `-0013`, `-0014`, `-0015`.
 
 - `BR-0013-0001` — the negative is an out-of-order execution required to be refused. No stage is run.
 - `BR-0013-0002` — the negative is an upper-to-lower reference required to be detected.
@@ -860,7 +918,7 @@ obligation, and a mark is the second claim.
 - `BR-0013-0015` — the negative is a template with the slot removed or renamed. No such template is
   constructed, so the per-screen assertion's discriminating power is unestablished.
 
-**`Conditional branches`, 7 cells** — `BR-0013-0005`, `-0012`, `-0013`, `-0014`, `-0015`, `-0016`,
+**`Conditional branches`, 6 cells** — `BR-0013-0005`, `-0013`, `-0014`, `-0015`, `-0016`,
 `-0018`.
 
 - `BR-0013-0005` — the condition is that `none` is allowed only with no contract impact and a written
@@ -881,14 +939,24 @@ obligation, and a mark is the second claim.
 
 ## Every ⚠️ cell, named
 
-90 scored depth cells in the matrix and 13 scored cells in the business rule table are `⚠️` —
-**105 in all**. The PASS criterion requires a documented rationale for each, so each is named here,
+93 scored depth cells in the matrix and 15 scored cells in the business rule table are `⚠️` —
+**108 in all**. The PASS criterion requires a documented rationale for each, so each is named here,
 grouped by column with a per-coordinate reason.
 
-### Matrix depth cells (91)
+### Matrix depth cells (93)
 
-**`Equivalence partitions`, 13 cells** — `US-0013-0003`, `US-0013-0012`, `TC-0013-0003`, `-0014`,
-`-0017`, `-0018`, `-0019`, `-0020`, `-0021`, `-0025`, `-0028`, `-0029`, `-0032`.
+**`Equivalence partitions`, 14 cells** — `US-0013-0003`, `US-0013-0012`, `TC-0013-0003`, `-0014`,
+`-0017`, `-0018`, `-0019`, `-0020`, `-0021`, `-0022`, `-0025`, `-0028`, `-0029`, `-0032`.
+
+- `TC-0013-0022` — present and absent `DESIGN.md`, present and absent lock, and matching
+  and mismatching digest each have a representative with its own verdict. The partition the first
+  half of the obligation names — a Phase 0 run that writes the lock, against one that does not — has
+  none, because nothing runs Phase 0. `tests/core/validators/designContractReadiness.test.ts`
+  removes root `DESIGN.md` and requires `QFAI-DCON-030` with `file` `DESIGN.md` and `severity`
+  `error`; it also requires the missing lock to raise `QFAI-DCON-031` and a mutated `DESIGN.md` to
+  raise `QFAI-DCON-032` against the recorded digest. Nothing runs Phase 0, so the half of the
+  obligation that says Phase 0 **writes** the lock — and the `lockedAt` timestamp it is required to
+  carry — is asserted by no case.
 
 - `US-0013-0003` — four partitions of the pack input have a representative with a distinct outcome:
   ready, pack absent, blocking OQ present, required markdown missing. Counting the import-lite
@@ -928,7 +996,11 @@ grouped by column with a per-coordinate reason.
   `QFAI-AUD-020`. The documentation half reads two shipped files as they stand, so its compliant and
   violating partitions are unrepresented.
 
-**`Normal path`, 5 cells** — `TC-0013-0001`, `-0005`, `-0006`, `-0007`, `-0032`.
+**`Normal path`, 6 cells** — `TC-0013-0001`, `-0005`, `-0006`, `-0007`, `-0022`, `-0032`.
+
+- `TC-0013-0022` — the happy path of the validator half is asserted: the complete file set yields
+  no issue at all. The happy path of the obligation is Phase 0 producing the lock, and no case
+  runs a phase, so what passes is the state after the writing rather than the writing.
 
 - `TC-0013-0001` — `/phase order/i` pins the concept and the five phase names are each required to be
   present, so a document that lost the vocabulary reddens. The property the row names, the order, is
@@ -961,8 +1033,13 @@ grouped by column with a per-coordinate reason.
   the same file under `TDD-0011` and belongs to a different obligation. No case plants an
   evidence-format fault and requires a report.
 
-**`Edge cases`, 13 cells** — `US-0013-0003`, `-0008`, `-0011`, `-0012`, `-0013`, `-0014`,
-`TC-0013-0025`, `-0026`, `-0027`, `-0029`, `-0030`, `-0031`, `-0033`.
+**`Edge cases`, 14 cells** — `US-0013-0003`, `-0008`, `-0011`, `-0012`, `-0013`, `-0014`,
+`TC-0013-0022`, `-0025`, `-0026`, `-0027`, `-0029`, `-0030`, `-0031`, `-0033`.
+
+- `TC-0013-0022` — two edges are guarded, and both are ones a validator gets wrong in practice:
+  the SDD and prototyping stages are required to diverge on the same tree, and three missing files
+  are required to raise three findings rather than short-circuiting at the first. A present but
+  unreadable `DESIGN.md`, which the rule names beside the missing one, is not among them.
 
 - `US-0013-0003`, `US-0013-0008` — real edges are covered in `sddPreflight.test.ts`: a pack directory
   present only under a non-canonical name, reported with the naming detail; a deferred OQ with no
@@ -1049,21 +1126,18 @@ grouped by column with a per-coordinate reason.
   detail to survive alongside the `QFAI-AUD-001` empty signal. Not supplied: `null`, an empty map, a
   field present but empty, and a field present but not a string.
 
-**`State transitions`, 2 cells** — `US-0013-0003`, `US-0013-0008`.
+**`State transitions`, 0 cells.** One row in the pack is above `❌` here and it is `✅`, so this
+column contributes nothing to the partial census. The two cells that used to sit here,
+`US-0013-0003` and `US-0013-0008`, are `❌` and are named in group 5a: the sequence their credit
+rested on is over the run-summary artifact, and this column is scored per obligation.
 
-Both are `⚠️` for the same reason and it is worth stating precisely, because they are two of the four
-cells above `❌` in this column across the whole pack. `sddPreflight.test.ts` does exercise a genuine
-multi-step process with five cases: a summary written into a run-scoped directory and mirrored to the
-latest pointer, an earlier run's summary still readable after a later preflight, an older run not
-overwriting a newer run's pointer, the pointer's own run id read when the newer directory is gone, and
-the pointer still refreshed when this run is the newest. That is real state-transition work. It is
-over the **summary artifact**, not over the pack-readiness verdict the two stories name: the
-incomplete-to-ready progression each story exists to gate has no case, and no invalid transition is
-attempted or rejected.
+**`Combinatorial`, 18 cells** — `US-0013-0003`, `-0008`, `-0011`, `-0012`, `-0013`, `-0014`,
+`TC-0013-0018`, `-0021`, `-0022`, `-0026`, `-0027`, `-0029`, `-0030`, `-0031`, `-0032`, `-0033`,
+`-0034`, `-0035`.
 
-**`Combinatorial`, 17 cells** — `US-0013-0003`, `-0008`, `-0011`, `-0012`, `-0013`, `-0014`,
-`TC-0013-0018`, `-0021`, `-0026`, `-0027`, `-0029`, `-0030`, `-0031`, `-0032`, `-0033`, `-0034`,
-`-0035`.
+- `TC-0013-0022` — two grids are crossed: stage against file set, and three absences at once. The
+  cross the obligation is about, a written lock against a mutated `DESIGN.md` within one Phase 0
+  run, is not, because no case runs one.
 
 - `US-0013-0003`, `US-0013-0008` — two crosses are deliberate: a missing required file crossed with
   the Story Workshop Mermaid check, with the second required **not** to fire so that one defect is not
@@ -1110,9 +1184,15 @@ attempted or rejected.
   and a rejected shape in one list. The mixed list is also never crossed with an over-ceiling count or
   with `uiux.audit.enabled: false`.
 
-**`Oracle strength`, 18 cells** — `US-0013-0003`, `-0008`, `-0011`, `-0013`, `TC-0013-0003`, `-0007`,
-`-0014`, `-0017`, `-0019`, `-0020`, `-0021`, `-0025`, `-0027`, `-0028`, `-0030`, `-0031`, `-0032`,
-`-0034`.
+**`Oracle strength`, 19 cells** — `US-0013-0003`, `-0008`, `-0011`, `-0013`, `TC-0013-0003`, `-0007`,
+`-0014`, `-0017`, `-0019`, `-0020`, `-0021`, `-0022`, `-0025`, `-0027`, `-0028`, `-0030`, `-0031`,
+`-0032`, `-0034`.
+
+- `TC-0013-0022` — the oracle reads the emitted finding's code, file and severity over a real
+  temporary tree, which is strong. What weakens it is the fixture: the lock's digest is written by
+  `hashDesignMd`, the function under test's own hasher, so the passing direction asserts that the
+  hasher agrees with itself. The mismatch case escapes that — it mutates the file after the lock is
+  written — and is the assertion the cell is credited for.
 
 - `US-0013-0003`, `US-0013-0008` — blockers are asserted by content (`OQ-0009`, the missing-file
   blocker text `sddPreflight.ts` builds,
@@ -1197,9 +1277,14 @@ attempted or rejected.
 
 **Depth `⚠️` count check.** 13 + 6 + 3 + 13 + 11 + 8 + 2 + 17 + 18 = **91**.
 
-### Business rule table (14)
+### Business rule table (15)
 
-**`Positive case`, 5 cells** — `BR-0013-0001`, `-0002`, `-0003`, `-0018`, `-0019`.
+**`Positive case`, 6 cells** — `BR-0013-0001`, `-0002`, `-0003`, `-0012`, `-0018`, `-0019`.
+
+- `BR-0013-0012` — the complete file set is required to yield no issue, so the rule's satisfied
+  state is asserted against a real tree. The rule's own positive, Phase 0 hashing `DESIGN.md` and
+  writing the result with a `lockedAt` timestamp, is asserted by nothing: no case runs a phase and
+  no case reads that field.
 
 - `BR-0013-0001` — the shipped `SKILL.md` does state the fixed order, and the covering wording checks
   require the phrase "phase order" and each phase name, so a document that lost the vocabulary
@@ -1234,7 +1319,12 @@ attempted or rejected.
 - `BR-0013-0019` — the over-ceiling direction fires and is pinned. The under-floor direction the rule
   states is exercised with the opposite verdict: counts 1 and 2 are required to stay silent.
 
-**`Conditional branches`, 5 cells** — `BR-0013-0002`, `-0003`, `-0010`, `-0017`, `-0020`.
+**`Conditional branches`, 6 cells** — `BR-0013-0002`, `-0003`, `-0010`, `-0012`, `-0017`, `-0020`.
+
+- `BR-0013-0012` — the stage branch is covered: the same tree is required to yield different
+  findings under the SDD and prototyping stages. The branch inside the rule's own second bullet —
+  `DESIGN.md` missing against `DESIGN.md` present but unreadable — is not, and both are required
+  to halt Phase 0.
 
 - `BR-0013-0002` — the rule distinguishes two reference directions with opposite verdicts. Both are
   named on the one line the assertion matches, and neither is evaluated against an artifact.
@@ -1377,12 +1467,14 @@ rather than by the spec.
 `QFAI-ATDD-133` requires the stage evidence to carry a `## Coverage Depth Matrix` section that links
 to this file and restates the counted totals beside it. Those totals are:
 
-**✅ 74 / ⚠️ 103 / ❌ 317**, with `n/a 7`, across all 501 scored cells — 441 matrix depth cells and
+**✅ 76 / ⚠️ 108 / ❌ 310**, with `n/a 7`, across all 501 scored cells — 441 matrix depth cells and
 60 business rule scored cells. `Status` is a row verdict, not a mark, and is excluded from all four
 counts.
 
-Six obligations in this pack cannot be moved by testing alone. `US-0013-0009`, `TC-0013-0022` and
-`TC-0013-0024` name artifacts and fields the product does not carry and have never had a test.
+Six obligations in this pack cannot be moved by testing alone. `US-0013-0009` and `TC-0013-0024`
+name artifacts and fields the product does not carry and have never had a test. `TC-0013-0022` is
+half of that case: the Phase 0 write it names has no callable function, and the halt-on-missing-file
+it also names has one, which is tested.
 
 `TC-0013-0023` is **not** among them, and listing it there was wrong. It asks that
 `_policies/05_Contracts.md` name none of six legacy design contracts after `/qfai-sdd` completes.
