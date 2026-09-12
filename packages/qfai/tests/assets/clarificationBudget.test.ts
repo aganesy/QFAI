@@ -183,6 +183,20 @@ describe("the clarification budget binds a stage", () => {
       expectPhrase(content, "the assumption with no open question against it");
     });
 
+    it(`${tree}: communication.md carries the same --auto rule`, async () => {
+      // Article III has an agent read every constitution document, and this one
+      // states the protocol in its own words. While it said only "proceed with
+      // explicit assumptions", the nearer of the two let a stage complete over a
+      // decision the other says must stay open.
+      const content = await read(tree, COMMUNICATION);
+      expectPhrase(content, "**A grilling session under `--auto` opens what it could not settle**");
+      expectPhrase(content, "opened as a question in the register the stage reads");
+      expectPhrase(
+        content,
+        "an assumption\n   with no open question against it is not one of them",
+      );
+    });
+
     it(`${tree}: the operating baseline restates the budget where questions are asked`, async () => {
       const content = await read(tree, OPERATING);
       // Article X reaches every skill through this section; without a line here

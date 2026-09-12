@@ -463,6 +463,25 @@ describe("cross-AI rules surface (.agents/rules/ master)", () => {
     // complete while that entry is open. Forbidding the value outright would
     // leave that run with no artifact it is permitted to write. What the rule
     // refuses is the assumption standing alone.
+    // Precision and settledness are different things, and only the second ends
+    // the need for a session. A choice between two fully specified options is
+    // precise and still open, so an exit keyed on how well the subject can be
+    // stated lets an agent skip the interview and then decide for the user.
+    it.each(MASTERS)("%s keys the exit on the decision, not on precision", async (rel) => {
+      const text = await readFile(path.join(ROOT, rel), "utf-8");
+      expect(text).toMatch(/the\s+decision\s+being\s+settled,\s+not\s+the\s+subject/);
+    });
+
+    // Agreement is not evidence the session was unnecessary: the user's
+    // preferences may simply match, and the decisions were still theirs to
+    // authorise. Read as a success criterion, it teaches an agent to skip the
+    // next interview on the strength of the last one going smoothly.
+    it.each(MASTERS)("%s does not read agreement as a wasted session", async (rel) => {
+      const text = await readFile(path.join(ROOT, rel), "utf-8");
+      expect(text).toMatch(/Agreeing\s+with\s+every\s+recommendation\s+is\s+a\s+fine/);
+      expect(text).not.toMatch(/session\s+that\s+was\s+not\s+needed/);
+    });
+
     it.each(MASTERS)("%s resolves a no-question run to open questions", async (rel) => {
       const text = await readFile(path.join(ROOT, rel), "utf-8");
       expect(text).toMatch(/[Uu]nder\s+a\s+no-question\s+mode/);

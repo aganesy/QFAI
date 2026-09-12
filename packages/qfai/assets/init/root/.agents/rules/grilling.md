@@ -8,7 +8,9 @@ things that both matter. A session turns those into decisions someone made on
 purpose, instead of defaults nobody chose.
 
 Vagueness is not a reason to postpone a session. It is what the session is for.
-When the subject can already be specified precisely, there is nothing to grill.
+What ends the need for one is the decision being settled, not the subject being
+easy to state: a choice between two fully specified options is precise and still
+open, and precision is no help whatever in making it.
 
 ## Three pieces
 
@@ -107,8 +109,9 @@ uncertainty.
 
 ## It is working when
 
-- Some recommendations are turned down. A session with no pushback from the user
-  is a session that was not needed.
+- Every decision the session opened is either settled by the user or left open on
+  purpose, and they said which. Agreeing with every recommendation is a fine
+  outcome; a decision that closed without them is not, however sound it was.
 - Later rounds ask what the first round could not have asked.
 - Facts were looked up rather than asked for.
 - Work running in the background did not stall the round — only the questions
