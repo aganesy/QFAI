@@ -1,10 +1,11 @@
 /**
- * The two rounds the execution stages run.
+ * The two sessions the execution stages run.
  *
  * These stages take a spec and a test ledger as settled input, so the risk runs
- * both ways: without a round they decide alone what the spec left open, and
- * with a session they re-open a design every run and stop the micro-cycle. Each
- * assertion pins one side of that bound.
+ * both ways: without a session they decide alone what the spec left open, and
+ * with an unbounded one they re-open a design every run and stop the
+ * micro-cycle. Each assertion pins one side of that bound, or one of the two
+ * places the answer to "what happens next" is not the Drift Protocol's.
  */
 
 import { readFile } from "node:fs/promises";
@@ -37,50 +38,68 @@ describe.each(TREES)("%s — grilling in the execution stages", (tree) => {
     return section?.[1] ?? "";
   };
 
-  it("gives the confidence gate's questions a method", async () => {
-    // Article IX already said to ask targeted questions when confidence is low
-    // and named no method, which is the same gap the discussion interview had.
-    expectPhrase(await article(), '**"Targeted questions" means a grilling round**');
-    expectPhrase(await article(), ".agents/rules/grilling.md");
+  it("declares a session, not a question outside one", async () => {
+    // The rule master admits nothing into a session by accident: one is entered
+    // deliberately, and a question outside one is an ordinary clarification
+    // capped by Article VI. A cap on the question that would have prevented the
+    // wrong build is the failure this gate exists to catch.
+    const text = await article();
+    expectPhrase(text, '**"Targeted questions" means a grilling session**');
+    expectPhrase(text, "a session is entered deliberately, and this is the deliberate entry");
+    expectPhrase(text, "Not an ordinary clarification");
+    expectPhrase(text, ".agents/rules/grilling.md");
   });
 
-  it("bounds the preflight to one round, and says why", async () => {
-    // A session here would re-interview a spec and a ledger that are settled
-    // input, stopping the micro-cycle every run. The bound is what makes the
-    // round safe to make mandatory.
+  it("bounds the subject rather than the length", async () => {
+    // Re-interrogating a settled spec and ledger every run would stop the
+    // micro-cycle. Bounding the rounds instead would cut a session off with its
+    // frontier still open, which is what the method exists to prevent.
     const text = await article();
-    expectPhrase(text, "One round, not a session");
+    expectPhrase(text, "**Its subject is bounded, not its length.**");
+    expectPhrase(text, "what the preflight left uncertain, and nothing else");
     expectPhrase(
       text,
       "would stop the micro-cycle and invite the drift these stages exist to avoid",
     );
-    // And it covers only what the preflight could not settle.
-    expectPhrase(text, "the items above it left uncertain, and nothing else");
+    expectPhrase(text, "runs until its frontier is empty, however few rounds that takes");
   });
 
-  it("runs a round on detection, and says why these stages are where it fires", async () => {
-    // This is the case the whole effort exists for: an implement or atdd run
-    // reads a spec closely enough for its gaps to show, and the agent that
-    // finds one is the least able to judge alone what the spec ought to say.
+  it("opens a session on detection too", async () => {
+    // The case this effort exists for: an implement or atdd run reads a spec
+    // closely enough for its gaps to show, and the agent that finds one is the
+    // least able to judge alone what the spec ought to say.
     const text = await article();
-    expectPhrase(text, "**A round also runs on detection.**");
-    expectPhrase(text, "stop and grill\nrather than deciding alone");
-    expectPhrase(text, "read a spec closely enough for its gaps\nto show");
+    expectPhrase(text, "**A session also opens on detection.**");
+    expectPhrase(text, "stop and grill rather than deciding alone");
+    expectPhrase(text, "read a spec closely enough for its gaps to show");
+    expectPhrase(text, "Its subject is what was detected.");
   });
 
-  it("keeps the round out of the change path", async () => {
-    // Without this the round is a second way to change settled input, which is
-    // exactly what the Drift Protocol exists to prevent. What it produces is an
-    // input to the Change Request, not a substitute for one.
+  it("sends only an upstream change through the Drift Protocol", async () => {
+    // Not every detection is drift. A dependency that is unavailable, or an
+    // approach that failed, is this run's to solve, and routing it through an
+    // approval blocks the run on a decision nobody upstream has to make.
     const text = await article();
-    expectPhrase(text, "That round does not change settled input, and is not a second way to.");
-    expectPhrase(text, "drift-protocol.md` still governs");
-    expectPhrase(text, "stop the\ndependent work, raise the Change Request, and wait for approval");
-    // The seam: the round fills the options the approval chooses between.
-    expectPhrase(text, "the options and the\nrecommendation its `Approved option` is chosen from");
+    expectPhrase(text, "only one branch is the Drift Protocol's");
+    expectPhrase(text, "Settled input must change");
+    expectPhrase(text, "stop the dependent work, raise the Change Request, wait for approval");
     expectPhrase(
       text,
-      "Grilling decides what the\nchange should be; the protocol decides whether it happens",
+      "The run solves it. Nothing upstream changes, so there is nothing to approve",
+    );
+  });
+
+  it("gives each drift class what that class asks for", async () => {
+    // Intent drift takes options and a recommendation. Defect drift has one
+    // correct repair and the protocol records `Approved option: -`, so options
+    // there would be invented alternatives dressed as a choice.
+    const text = await article();
+    expectPhrase(text, "for\nintent drift, the options and the recommendation");
+    expectPhrase(text, "for defect drift, the single correct repair");
+    expectPhrase(text, "`Approved option: -`");
+    expectPhrase(
+      text,
+      "Grilling decides what the change should be; the protocol decides whether it happens",
     );
   });
 
@@ -90,15 +109,14 @@ describe.each(TREES)("%s — grilling in the execution stages", (tree) => {
     // moment.
     const body = await read(`assistant/skills/${skill}/SKILL.md`);
     expectPhrase(body, "## Grilling (MANDATORY)");
-    expectPhrase(
-      body,
-      "Article IX of `.qfai/assistant/constitution/constitution.md` owns both rounds",
-    );
-    expectPhrase(body, "Neither is\nrestated here.");
+    expectPhrase(body, "Article IX of `.qfai/assistant/constitution/constitution.md` owns both");
+    expectPhrase(body, "Neither is restated here.");
     // The three obligations, named where an operator reads the skill.
     expectPhrase(body, "**At the preflight.**");
     expectPhrase(body, "**On detection.**");
-    expectPhrase(body, "**Neither round changes settled input.**");
+    expectPhrase(body, "**Neither session changes settled input.**");
+    // Including the branch that is not the protocol's.
+    expectPhrase(body, "the run solves it");
   });
 
   it.each(STAGES)("%s does not restate the method", async (skill) => {

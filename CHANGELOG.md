@@ -35,15 +35,26 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   Article IX already required a confidence check and said to ask targeted
   questions when confidence was low, naming no method. It names one now.
 
-  One round, not a session. A spec and a test ledger are settled input here, and
-  re-interviewing them every run would stop the micro-cycle and invite the drift
-  these stages exist to avoid.
+  A session, declared the way the rule requires, rather than a question outside
+  one: those are ordinary clarifications capped by Article VI, and a cap on the
+  question that would have prevented the wrong build is the failure this gate
+  exists to catch.
 
-  Neither round changes settled input, and neither is a second way to. The Drift
-  Protocol still governs: stop the dependent work, raise the Change Request, wait
-  for approval. What the round produces is what goes into it — the options and
-  the recommendation its `Approved option` is chosen from. Grilling decides what
-  the change should be; the protocol decides whether it happens.
+  What is bounded is the subject, not the length. The session covers what the
+  preflight left uncertain, or what was detected, and nothing else —
+  re-interrogating a settled spec and ledger every run would stop the micro-cycle
+  and invite the drift these stages exist to avoid.
+
+  Only one outcome is the Drift Protocol's. Where the session concludes that
+  settled input must change, the protocol governs: stop the dependent work, raise
+  the Change Request, wait for approval. Where it concludes the obstacle is this
+  run's to solve — an unavailable dependency, an approach that failed — the run
+  solves it, and there is nothing upstream to approve.
+
+  What a session contributes to a Change Request is what its class asks for:
+  options and a recommendation for intent drift, the single correct repair for
+  defect drift, which the protocol records with `Approved option: -`. Grilling
+  decides what the change should be; the protocol decides whether it happens.
 
 ### Added
 

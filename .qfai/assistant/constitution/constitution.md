@@ -331,25 +331,39 @@ Before modifying code/tests, perform a **quick preflight**:
 
 If confidence is low, ask targeted questions or run additional repo inspection.
 
-**"Targeted questions" means a grilling round** (`.agents/rules/grilling.md`),
-over what this invocation is about to do. One round, not a session: a spec and a
-test ledger are settled input here, and interviewing them from scratch each time
-would stop the micro-cycle and invite the drift these stages exist to avoid. The
-round covers what the preflight could not settle — the items above it left
-uncertain, and nothing else.
+**"Targeted questions" means a grilling session** (`.agents/rules/grilling.md`),
+declared here the way that rule requires — a session is entered deliberately,
+and this is the deliberate entry. Not an ordinary clarification: those are
+capped by Article VI, and a cap on the one question that would have prevented
+the wrong build is the failure this gate exists to catch.
 
-**A round also runs on detection.** Where a contradiction in the spec, an
+**Its subject is bounded, not its length.** The session interrogates what the
+preflight left uncertain, and nothing else. A spec and a test ledger are settled
+input here, and re-interrogating them each run would stop the micro-cycle and
+invite the drift these stages exist to avoid — but that bounds the subject. A
+session runs until its frontier is empty, however few rounds that takes.
+
+**A session also opens on detection.** Where a contradiction in the spec, an
 unconsidered case, or a technical obstacle surfaces mid-run, stop and grill
 rather than deciding alone. These stages read a spec closely enough for its gaps
 to show, and the agent that finds one is the agent least able to judge, on its
-own, what the spec ought to have said.
+own, what the spec ought to have said. Its subject is what was detected.
 
-That round does not change settled input, and is not a second way to.
-`.qfai/assistant/constitution/drift-protocol.md` still governs: stop the
-dependent work, raise the Change Request, and wait for approval. What the round
-produces is what goes **into** that Change Request — the options and the
-recommendation its `Approved option` is chosen from. Grilling decides what the
-change should be; the protocol decides whether it happens.
+**What follows depends on what the session concludes, and only one branch is the
+Drift Protocol's.**
+
+| The session concludes                                                                    | What follows                                                                                                           |
+| ---------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| Settled input must change                                                                | `.qfai/assistant/constitution/drift-protocol.md`: stop the dependent work, raise the Change Request, wait for approval |
+| The obstacle is this run's to solve — an unavailable dependency, an approach that failed | The run solves it. Nothing upstream changes, so there is nothing to approve                                            |
+
+A session does not change settled input and is not a second way to. What it
+contributes to a Change Request is what that protocol asks of the class: for
+intent drift, the options and the recommendation its `Approved option` is chosen
+from; for defect drift, the single correct repair, which that protocol records
+with `Approved option: -` and which options would only dress as a choice.
+Grilling decides what the change should be; the protocol decides whether it
+happens.
 
 ---
 
