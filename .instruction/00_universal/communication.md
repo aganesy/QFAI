@@ -25,13 +25,12 @@ version: 1.1.0
 
 ## 質問の書き方（型）
 
-```
-1. 現状理解: 〜だと理解している
-2. 不明点: どこが分からないかを具体化
-3. 選択肢: 考えられる案を列挙
-4. 推奨案と理由: どれを推すか、なぜか
-5. 追加で欲しい情報: 決定に必要な入力を明示
-```
+The shape of a question is owned by `.agents/rules/user-questions.md`: what parts
+it carries, when it offers choices, and when it recommends one. Follow that file.
+
+A form restated here is a copy that drifts, and the drift is invisible until
+someone follows the copy — which is what this directory says about every rule it
+points at.
 
 ## 進捗報告
 
