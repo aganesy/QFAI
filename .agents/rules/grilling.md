@@ -181,12 +181,12 @@ usually a subject too large to hold at once. Break it up and grill the pieces.
 
 A session ends in exactly one of these, and a record of one names which:
 
-| Ending        | Reached when                                                                                                       | The work may proceed                                     |
-| ------------- | ------------------------------------------------------------------------------------------------------------------ | -------------------------------------------------------- |
-| `confirmed`   | Both conditions above: no node open, and the user confirms                                                         | Yes                                                      |
-| `user-closed` | The user answered `proceed` or `done`; each decision still open is recorded as an assumption and labelled          | Yes                                                      |
-| `no-question` | A no-question mode was active: the evidence settled what it could and every decision left over is an open question | Yes, and whatever gates the work reports those questions |
-| `stopped`     | The user stopped the session                                                                                       | No. Report every open decision as open                   |
+| Ending        | Reached when                                                                                                   | The work may proceed                                     |
+| ------------- | -------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------- |
+| `confirmed`   | Both conditions above: no node open, and the user confirms                                                     | Yes                                                      |
+| `user-closed` | The user answered `proceed` or `done`; each decision still open is recorded as an assumption and labelled      | Yes                                                      |
+| `no-question` | A no-question mode was active: the evidence settled what it could and every node left over is an open question | Yes, and whatever gates the work reports those questions |
+| `stopped`     | The user stopped the session                                                                                   | No. Report every open decision as open                   |
 
 **`no-question` is an ending, not an exemption.** The completing condition needs
 the user's confirmation, and an invocation told not to ask cannot obtain one —
