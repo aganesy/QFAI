@@ -972,8 +972,8 @@ documented rationale for each, so each is named here.
   fixture and requires `second).toEqual(first)`, and the canonical entrypoint is separately reached
   from a repo root with a real emission. It is `⚠️` because the rule's other half — that validate
   _remains the source_ of these findings, rather than a parallel runner — rests on a substring read
-  of `validate.ts`, and because the case carrying the determinism assertion is annotated
-  `TC-0014-0004`, an id absent from the active test-case table.
+  of `validate.ts`, and because the case carrying the determinism assertion carries no spec-0014
+  annotation, so nothing binds it to this pack.
 - **BR-0014-0004 × Positive case** — the rule permits legacy slices to keep referring to
   `full-harness` artifact semantics where the code remains. Exactly one slice that handles the
   vocabulary is exercised, and it is the one that removes it: `delete body.fullHarness` in the
