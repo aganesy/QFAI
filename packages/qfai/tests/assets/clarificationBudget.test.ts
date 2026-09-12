@@ -55,7 +55,13 @@ describe("the clarification budget binds a stage", () => {
       const content = await read(tree, CONSTITUTION);
       expectPhrase(content, "### What spends the budget (MUST)");
       expectPhrase(content, "A **clarification**");
-      expectPhrase(content, "does **not** spend budget");
+      // The whole definition, not the polarity alone: two clauses in this
+      // section end with `does **not** spend budget`, so a loose match on it is
+      // satisfied by whichever one still says so.
+      expectPhrase(
+        content,
+        "An **approval** — a question asked because a document requires a recorded\n  human decision before the work may proceed — does **not** spend budget.",
+      );
       // The unbounded approval sources are named, so the carve-out is checkable
       // rather than a general escape hatch.
       expectPhrase(content, "`Approved By`");
@@ -353,6 +359,14 @@ describe("the clarification budget is countable", () => {
         content,
         "grilling questions, mandatory approvals and the\n   `hard-required` inputs that invocation actually consumes MUST still be asked",
       );
+      // The rule list is a fifth enumeration, and an agent can act on it
+      // directly after exhaustion, so it is read here rather than left to
+      // the no-cap case beside it.
+      const rules = await read(tree, COMMUNICATION);
+      expectPhrase(
+        rules,
+        "where rule 4 does not apply — grilling questions, mandatory approvals and the `hard-required` inputs that\n   invocation actually consumes MUST still be asked",
+      );
       // No enumeration may name only the two older classes.
       expectNoPhrase(content, "only its approval questions are exempt");
     });
@@ -404,9 +418,10 @@ describe("the clarification budget is countable", () => {
     });
 
     it(`${tree}: the discussion intake does not claim the cap skips its stage`, async () => {
-      // It said the cap constrains non-discussion commands, which was the
-      // article's old opening repeated downstream. With one scope the reason the
-      // budget is not the obstacle is the exemption, not the stage.
+      // The intake explains why the cap is not the obstacle, and the reason has
+      // to be the exemption rather than the stage: the article's scope covers
+      // every stage, so a downstream document claiming its own stage is outside
+      // it would be giving the right answer from a premise that is false.
       const content = await read(tree, DESIGN_DNA_INTAKE);
       expectNoPhrase(content, "non-discussion commands are what the cap constrains");
       expectPhrase(content, "The cap constrains this stage as it does every\nother");
@@ -424,10 +439,10 @@ describe("the clarification budget is countable", () => {
     });
 
     it(`${tree}: the article's scope and the baseline's applied scope are one set`, async () => {
-      // Three statements of the same scope, and the one that drifted was the
-      // article's opening: the baseline has always applied the budget to every
-      // `/qfai-*` stage, so an opening that excluded discussion made the two
-      // documents disagree about a stage rather than about a word.
+      // Three documents state this scope, and they state one set. The baseline
+      // applies the budget to every `/qfai-*` stage, so an article whose opening
+      // named a smaller set would put the two in disagreement about a stage
+      // rather than about a word — read together here for that reason.
       const constitution = await read(tree, CONSTITUTION);
       const baseline = await read(tree, OPERATING);
       expectPhrase(baseline, "a `/qfai-*` stage");

@@ -207,8 +207,9 @@ Default policy:
   exhausting the budget does not end one. Its questions are decisions the user
   owns, asked a round at a time, and the session ends on its own condition: no
   node open — no decision whose prerequisites are settled, and no fact lookup
-  still running — and the user's confirmation that the understanding is shared. That closing confirmation is exempt with the
-  questions, or a spent budget would make the second half of the condition
+  still running — and the user's confirmation that the understanding is shared.
+  That closing confirmation is exempt with the questions, or a spent budget
+  would make the second half of the condition
   unaskable and the session unendable. A session cut short by the budget would
   hand back a design with decisions assumed rather than asked.
 - **Approval questions are exempt.** A question whose subject is a user decision

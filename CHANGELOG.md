@@ -14,8 +14,10 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
   Grilling questions now join approvals and needed `hard-required` inputs as a
   class that spends no budget and survives exhaustion. A session ends on its own
-  condition: no open decision whose prerequisites are settled, and the user's
-  confirmation that the understanding is shared.
+  condition: no node open — no decision whose prerequisites are settled, and no
+  fact lookup still running — and the user's confirmation that the understanding
+  is shared. The confirmation is exempt with the questions, or a spent budget
+  would leave the second half of that condition unaskable.
 
   Nothing else about exhaustion moves. It still means clarification-exhausted
   mode rather than `--auto`, under both entry conditions.
