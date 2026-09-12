@@ -55,6 +55,12 @@ the four the platform supports is a choice, and a release name nobody has picked
 is open. § 2 sends the open one down the tool's free-text path and § 5 carries
 the same distinction.
 
+**Finite is not the same as listable.** A port between 1 and 65535 has a bounded
+set of valid values and is still an open answer, because 65535 options is not a
+choice — it is the question made unreadable. The set has to be one the question
+can put in front of someone. Where it is not, ask for the value and say what
+makes one valid.
+
 There is no class of question light enough to skip it. A yes-or-no, a
 confirmation, a "just checking" — each is a question, and each goes through the
 same path.
@@ -110,6 +116,13 @@ the user is not told a preference the evidence does not support. Never resolve
 the conflict the other way: an invented recommendation is the failure this
 clause exists to prevent, and the host's formatting requirement does not
 outrank it.
+
+**That workaround is for decisions.** A question asking for a fact has no option
+that is cheaper to reverse, because nothing is being reversed: the value is
+whatever it is, and none of the candidates may be recommended. A host requiring
+a recommendation therefore cannot carry that question, in the sense the Scope
+section gives: not callable for this question. It takes § 5's fallback, with the
+candidates kept as numbered choices.
 
 ## 4. More questions than the host takes at once
 

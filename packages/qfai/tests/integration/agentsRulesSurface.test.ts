@@ -475,6 +475,25 @@ describe("cross-AI rules surface (.agents/rules/ master)", () => {
       expect(text).toMatch(/no\s+finite\s+set\s+of\s+candidates/);
     });
 
+    // Finite is not the same as listable. A port between 1 and 65535 has a
+    // bounded set of valid values and is still open, because a list of 65535
+    // options is the question made unreadable.
+    it.each(MASTERS)("%s bounds the candidate set by what a question can show", async (rel) => {
+      const text = await readFile(path.join(ROOT, rel), "utf-8");
+      expect(text).toMatch(/Finite\s+is\s+not\s+the\s+same\s+as\s+listable/);
+      expect(text).toMatch(/put\s+in\s+front\s+of\s+someone/);
+    });
+
+    // A host that demands a recommendation cannot carry a question for a fact:
+    // nothing is being decided, so no candidate is cheaper to reverse and none
+    // may be recommended. Without this the two clauses meet and the agent has
+    // no compliant move.
+    it.each(MASTERS)("%s keeps the host workaround to decisions", async (rel) => {
+      const text = await readFile(path.join(ROOT, rel), "utf-8");
+      expect(text).toMatch(/That\s+workaround\s+is\s+for\s+decisions/);
+      expect(text).toMatch(/no\s+option\s+that\s+is\s+cheaper\s+to\s+reverse/);
+    });
+
     // The form and the count are independent. Without this the rule reads as a
     // licence to ask more, and a well-shaped question that should not be asked
     // is still one that should not be asked.
