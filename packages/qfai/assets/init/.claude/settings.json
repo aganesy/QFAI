@@ -24,7 +24,7 @@
             "command": "node",
             "args": [
               "-e",
-              "console.log(JSON.stringify({hookSpecificOutput:{hookEventName:'PreToolUse',additionalContext:\"QFAI grilling (.agents/rules/grilling.md). Before this: is a decision about to be made that the repository cannot settle — a design, an approach, a scope boundary, a trade-off? Then a grilling session is declared and put in rounds: the whole frontier at once, each question numbered with its recommended answer, facts looked up rather than asked. A session ends on an empty frontier and the user's confirmation, never at a count. An agent that answers its own decisions has stopped following the rule.\"}}))"
+              "console.log(JSON.stringify({hookSpecificOutput:{hookEventName:'PreToolUse',additionalContext:\"QFAI grilling (.agents/rules/grilling.md). Before this: is a decision about to be fixed that the repository cannot settle — a design, an approach, a scope boundary, a trade-off? If so, that rule governs how it is put, and an agent that answers it alone has stopped following it. Read the rule rather than working from this line: the method has parts a reminder cannot carry without contradicting them.\"}}))"
             ],
             "if": "Write(**/.qfai/specs/**)"
           },
@@ -34,7 +34,7 @@
             "command": "node",
             "args": [
               "-e",
-              "console.log(JSON.stringify({hookSpecificOutput:{hookEventName:'PreToolUse',additionalContext:\"QFAI grilling (.agents/rules/grilling.md). Before this: is a decision about to be made that the repository cannot settle — a design, an approach, a scope boundary, a trade-off? Then a grilling session is declared and put in rounds: the whole frontier at once, each question numbered with its recommended answer, facts looked up rather than asked. A session ends on an empty frontier and the user's confirmation, never at a count. An agent that answers its own decisions has stopped following the rule.\"}}))"
+              "console.log(JSON.stringify({hookSpecificOutput:{hookEventName:'PreToolUse',additionalContext:\"QFAI grilling (.agents/rules/grilling.md). Before this: is a decision about to be fixed that the repository cannot settle — a design, an approach, a scope boundary, a trade-off? If so, that rule governs how it is put, and an agent that answers it alone has stopped following it. Read the rule rather than working from this line: the method has parts a reminder cannot carry without contradicting them.\"}}))"
             ],
             "if": "Edit(**/.qfai/specs/**)"
           },
@@ -44,7 +44,7 @@
             "command": "node",
             "args": [
               "-e",
-              "console.log(JSON.stringify({hookSpecificOutput:{hookEventName:'PreToolUse',additionalContext:\"QFAI grilling (.agents/rules/grilling.md). Before this: is a decision about to be made that the repository cannot settle — a design, an approach, a scope boundary, a trade-off? Then a grilling session is declared and put in rounds: the whole frontier at once, each question numbered with its recommended answer, facts looked up rather than asked. A session ends on an empty frontier and the user's confirmation, never at a count. An agent that answers its own decisions has stopped following the rule.\"}}))"
+              "console.log(JSON.stringify({hookSpecificOutput:{hookEventName:'PreToolUse',additionalContext:\"QFAI grilling (.agents/rules/grilling.md). Before this: is a decision about to be fixed that the repository cannot settle — a design, an approach, a scope boundary, a trade-off? If so, that rule governs how it is put, and an agent that answers it alone has stopped following it. Read the rule rather than working from this line: the method has parts a reminder cannot carry without contradicting them.\"}}))"
             ],
             "if": "Write(**/.qfai/discussion/**)"
           },
@@ -54,7 +54,7 @@
             "command": "node",
             "args": [
               "-e",
-              "console.log(JSON.stringify({hookSpecificOutput:{hookEventName:'PreToolUse',additionalContext:\"QFAI grilling (.agents/rules/grilling.md). Before this: is a decision about to be made that the repository cannot settle — a design, an approach, a scope boundary, a trade-off? Then a grilling session is declared and put in rounds: the whole frontier at once, each question numbered with its recommended answer, facts looked up rather than asked. A session ends on an empty frontier and the user's confirmation, never at a count. An agent that answers its own decisions has stopped following the rule.\"}}))"
+              "console.log(JSON.stringify({hookSpecificOutput:{hookEventName:'PreToolUse',additionalContext:\"QFAI grilling (.agents/rules/grilling.md). Before this: is a decision about to be fixed that the repository cannot settle — a design, an approach, a scope boundary, a trade-off? If so, that rule governs how it is put, and an agent that answers it alone has stopped following it. Read the rule rather than working from this line: the method has parts a reminder cannot carry without contradicting them.\"}}))"
             ],
             "if": "Edit(**/.qfai/discussion/**)"
           }
@@ -69,7 +69,7 @@
             "command": "node",
             "args": [
               "-e",
-              "console.log(JSON.stringify({hookSpecificOutput:{hookEventName:'PreToolUse',additionalContext:\"QFAI grilling (.agents/rules/grilling.md). Before this: is a decision about to be made that the repository cannot settle — a design, an approach, a scope boundary, a trade-off? Then a grilling session is declared and put in rounds: the whole frontier at once, each question numbered with its recommended answer, facts looked up rather than asked. A session ends on an empty frontier and the user's confirmation, never at a count. An agent that answers its own decisions has stopped following the rule.\"}}))"
+              "console.log(JSON.stringify({hookSpecificOutput:{hookEventName:'PreToolUse',additionalContext:\"QFAI grilling (.agents/rules/grilling.md). Before this: is a decision about to be fixed that the repository cannot settle — a design, an approach, a scope boundary, a trade-off? If so, that rule governs how it is put, and an agent that answers it alone has stopped following it. Read the rule rather than working from this line: the method has parts a reminder cannot carry without contradicting them.\"}}))"
             ]
           }
         ]
@@ -83,7 +83,7 @@
             "command": "node",
             "args": [
               "-e",
-              "console.log(JSON.stringify({hookSpecificOutput:{hookEventName:'PreToolUse',additionalContext:\"QFAI grilling (.agents/rules/grilling.md). Before this: is a decision about to be made that the repository cannot settle — a design, an approach, a scope boundary, a trade-off? Then a grilling session is declared and put in rounds: the whole frontier at once, each question numbered with its recommended answer, facts looked up rather than asked. A session ends on an empty frontier and the user's confirmation, never at a count. An agent that answers its own decisions has stopped following the rule.\"}}))"
+              "console.log(JSON.stringify({hookSpecificOutput:{hookEventName:'PreToolUse',additionalContext:\"QFAI grilling (.agents/rules/grilling.md). Before this: is a decision about to be fixed that the repository cannot settle — a design, an approach, a scope boundary, a trade-off? If so, that rule governs how it is put, and an agent that answers it alone has stopped following it. Read the rule rather than working from this line: the method has parts a reminder cannot carry without contradicting them.\"}}))"
             ]
           }
         ]

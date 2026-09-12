@@ -97,11 +97,27 @@ describe("the grilling reminder fires where a decision gets made quietly", () =>
   });
 
   it.each(SETTINGS)("%s points at the master rather than restating it", async (rel) => {
-    // A hook that carries the rule drifts from it. The one thing it must carry
-    // is where the rule lives.
+    // A hook that carries the rule drifts from it, and a compressed method is
+    // worse than none: the rule's parts qualify each other, so a summary that
+    // drops a qualifier states the opposite of what the rule says. An earlier
+    // draft of this text managed it four times over — user-held facts have no
+    // recommendation, a frontier larger than the host takes goes in consecutive
+    // batches, a running lookup keeps a session open past an empty frontier,
+    // and a session between agents does end at a count.
+    //
+    // So the reminder names the trigger, names the file, and stops.
     const settings = await readSettings(rel);
-    const payload = preToolUse(settings, "Task|Agent").hooks.map((h) => (h.args ?? []).join(" "));
-    expect(payload.join(" ")).toContain(".agents/rules/grilling.md");
+    for (const [matcher] of MARKERS) {
+      const payload = preToolUse(settings, matcher)
+        .hooks.map((h) => (h.args ?? []).join(" "))
+        .join(" ");
+      expect(payload, `${matcher} does not name the master`).toContain(".agents/rules/grilling.md");
+      for (const part of ["frontier", "round", "recommend", "confirmation", "lookup"]) {
+        expect(payload.toLowerCase(), `${matcher} restates the method: ${part}`).not.toContain(
+          part,
+        );
+      }
+    }
   });
 
   it.each(SETTINGS)("%s gives each reminder its own marker", async (rel) => {

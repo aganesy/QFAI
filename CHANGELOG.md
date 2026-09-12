@@ -36,6 +36,13 @@ series` — the reviewed artifact plus the role — carries the round budget
   deciding whether a question should have been asked needs intent and a false
   positive would stop work outright.
 
+  The reminder names the trigger and the file, and stops there. The method's
+  parts qualify each other, so a summary that drops one states the opposite of
+  what the rule says — a fact only the user holds takes no recommendation, a
+  frontier larger than the host takes goes in consecutive batches, a running
+  lookup keeps a session open past an empty frontier, and a session between
+  agents does end at a count.
+
   They follow the pattern the writing-standard reminder set — `node` invoked
   directly, printing fixed text, with no shell, no file reads and no network —
   and ship to adopters with the settings file. A project that already has a
