@@ -83,6 +83,11 @@ export const HARD_REQUIRED_COMMON_ENTRIES: readonly string[] = ["brand intent", 
  */
 export const HARD_REQUIRED_SKILL_ENTRIES: Readonly<Record<string, readonly string[]>> = {
   "qfai-configure": ["testfileglobs", "tooling choice"],
+  // A grilling session interrogates one subject, and that subject is the root
+  // of the decision tree the whole method reads. There is no default for what a
+  // design conversation is about: picking one would be the skill answering the
+  // first question it exists to ask.
+  "qfai-grilling": ["grilling subject"],
 };
 
 /**

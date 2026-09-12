@@ -6,6 +6,27 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Added
 
+- **A model-invoked skill that holds the interview method** (#1594).
+  `.qfai/assistant/skills/qfai-grilling/SKILL.md` is the one implementation: a
+  skill that needs a design interrogated invokes it rather than writing rounds
+  of its own.
+
+  The body states the method rather than citing the cross-AI rule master that
+  also states it, because `qfai init` does not write that master into a
+  project's tree and a citation would resolve to nothing there.
+
+  It is deliberately un-routed. The skill produces no artifact, so the gate that
+  covers a session is the invoking stage's, and a review profile nothing routes
+  to would be a gate nobody runs. Its reviewer remit is added to the delegation
+  baseline: decisions asked rather than assumed, facts naming where they were
+  read, and the session's end condition — the merit of what the user decided is
+  the invoking stage's to review, not the session's.
+
+  `grilling subject` joins the per-skill hard-required inputs. A session
+  interrogates one subject, that subject is the root of the tree the method
+  reads, and there is no default for it: picking one would be the skill
+  answering the first question it exists to ask.
+
 - **A rule master for grilling a design before it is fixed** (#1591).
   `.agents/rules/grilling.md` states the method: the open decisions form a tree,
   the frontier is the ones whose prerequisites are settled, and a round is one
