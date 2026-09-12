@@ -92,9 +92,15 @@ Phase 0 is a mandatory output of this skill, so its own artifacts belong on this
   names the authoritative artifact that answered the phase's decisions. A missing row is the
   finding: an omitted session and an empty frontier are the same absence, and only the written skip
   tells them apart (`references/sdd-pre-draft-grilling.md`).
-- No row reads `escalated` unless the stage also carries a `PENDING` work order for it. An
-  escalation nobody answered is a design decision nobody took, and `08_Open-questions.md` does not
-  block a spec stage.
-- Every `grilling(...)` row in `## Work Orders Summary` names who adjudicated the decision, `user`
-  or `agents`. A reviewer reads its `Recommended and unadjudicated` answer off these rows and holds
-  no memory of the session.
+- Every row carries when its session ended and when the phase first wrote, and the first is earlier.
+  A row holding only the outcome reads the same whether the session ran before the phase, after it,
+  or not at all.
+- A row reads `run` only with zero escalations. One escalation makes it `escalated`, and an
+  `escalated` row needs a `PENDING` work order for it — an escalation nobody answered is a design
+  decision nobody took, and `08_Open-questions.md` does not block a spec stage.
+- Each phase's settled count equals the number of `grilling(...)` rows carrying that phase in
+  `## Work Orders Summary`. Without the key the count is a number nobody can check, and a phase
+  claiming four settled decisions with no rows behind them passes while a reviewer looking for what
+  it recommended finds nothing.
+- Every `grilling(...)` row names who adjudicated the decision, `user` or `agents`. A reviewer reads
+  its `Recommended and unadjudicated` answer off these rows and holds no memory of the session.

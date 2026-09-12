@@ -100,6 +100,23 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   escalate decisions rather than facts, so without this it sat on the frontier
   until the budget ended and took every decision waiting on it along.
 
+  The phase row carries when its session ended and when the phase first wrote,
+  the first recorded before that write — a row holding only the outcome reads the
+  same whether the session ran before the phase, after it, or not at all. `run`
+  means zero escalations, and each phase's settled count equals the number of
+  decision rows carrying that phase, so a count has something behind it.
+
+  A decision is persisted by the drafting agent that owns its artifact, not by
+  the orchestrator: `07_Decisions.md` and `09_delta.md` are primary artifacts,
+  and on a CREATE run the file may not exist, so writing it is authoring.
+
+  Every distinct position reaches the user with whose it is. Phase 2 routes three
+  authors, so merging two answers before the user sees them hands them a choice
+  the full set was never asked to adjudicate.
+
+  Phase 2c gets a checkpoint per expansion rather than one per phase, because its
+  scope is recomputed after every contract write.
+
   The gate asks only about the phases the loop covers. Phase 2b and Phase 4
   produce no design decision, so a row for them would either reject valid
   evidence or claim a session that was never owed. The canonical evidence

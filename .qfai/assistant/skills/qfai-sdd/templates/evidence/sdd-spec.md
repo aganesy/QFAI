@@ -88,17 +88,24 @@ npx qfai validate --profile sdd --fail-on error --format github
 > One row per grilling-covered phase this run entered — Phase 0, 1, 2, 2c and 3,
 > and only those. Phase 2b and Phase 4 produce no design decision and run no
 > session.
-> `Session` is `run`, `skipped` or `escalated`. A `skipped` row names the
-> authoritative artifact that answered the phase's decisions, because an omitted
-> session and an empty frontier are the same absence otherwise.
+> `Session` is `run`, `skipped` or `escalated`. `run` means zero escalations;
+> one escalation makes the row `escalated` whatever else the phase settled.
+> A `skipped` row names the authoritative artifact that answered the phase's
+> decisions, because an omitted session and an empty frontier are the same
+> absence otherwise.
 > An `escalated` row needs a `PENDING` work order below: an escalation nobody
 > answered is a design decision nobody took, and `08_Open-questions.md` does not
 > block a spec stage.
+> `Ended at` is written before the phase's first write. A row holding only the
+> outcome reads the same whether the session ran before the phase, after it, or
+> not at all.
+> The settled count equals the number of `grilling(...)` rows below carrying
+> this phase.
 
-| Phase | Session | Frontier                      | Evidence             |
-| ----- | ------- | ----------------------------- | -------------------- |
-| 0     | run     | <n settled, n escalated>      | #work-orders-summary |
-| 1     | skipped | empty: answered by <artifact> | -                    |
+| Phase | Session | Ended at  | Wrote at  | Frontier                 | Evidence             |
+| ----- | ------- | --------- | --------- | ------------------------ | -------------------- |
+| 0     | run     | <ISO8601> | <ISO8601> | <n> settled, 0 escalated | #work-orders-summary |
+| 1     | skipped | -         | <ISO8601> | empty: answered by <ref> | -                    |
 
 ## Work Orders Summary
 

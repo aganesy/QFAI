@@ -49,6 +49,12 @@ Once the phase has written, a decision argued against what it wrote is a change
 to something recorded rather than a choice among options, and the cheaper
 conversation is already over.
 
+**Phase 2c gets a checkpoint per expansion, not one per phase.** Its scope is
+recomputed after every contract write and the reconciliation repeats until no
+write adds work, so a frontier collected before the first write cannot hold the
+decisions of a spec the third write brought in. Each re-expansion that brings
+decision-bearing work runs its own round before the next mutation.
+
 ## Who plays what
 
 | Role         | Played by                                                                    |
@@ -86,14 +92,22 @@ answer its questions.
 2. Collect their open decisions into one tree, and let the rounds run to the
    budget the convergence rules set.
 3. Put to the user **every decision the session settled that authoritative
-   evidence did not** — not only the ones still open after the budget. Both
-   positions and a recommendation, through `AskUserQuestion` where it is
+   evidence did not** — not only the ones still open after the budget. **Every
+   distinct position, named with whose it is**, and the griller's
+   recommendation. Phase 2 routes three authors, so a decision can carry three
+   answers; merging two of them before the user sees it hands them a choice the
+   full set was never asked to adjudicate. Through `AskUserQuestion` where it is
    callable for that question and through the same rule's fallback where it is
    not — numbered choices carrying the same parts
    (`.agents/rules/user-questions.md`). A host without the tool is not a reason
    to skip the escalation; it is the reason the fallback exists.
-4. Record each outcome where `references/spec-traceability-rules.md` says, and
-   hand the authors the settled set before any of them writes.
+4. Hand the authors the settled set before any of them writes. **Each settled
+   decision is persisted by the drafting agent that owns its artifact**, where
+   `references/spec-traceability-rules.md` says — `07_Decisions.md` and
+   `09_delta.md` are primary artifacts, and the orchestrator may not draft one.
+   On a CREATE run the file may not exist yet, so writing it is authoring and
+   not integration. What the orchestrator records is the orchestration
+   evidence: the phase row and the work orders.
 
 **Step 3 covers agreement, not only deadlock.** A decision the author accepted
 from the griller inside two rounds is no longer open, so the convergence rules
@@ -125,14 +139,29 @@ nobody can be asked.
 
 Two records, both in the stage evidence, and the quality gate reads both.
 
-**A run-or-skip line per phase**, under `## Pre-draft Grilling`:
+**A run-or-skip line per phase**, under `## Pre-draft Grilling`, each carrying
+when its session ended and when the phase first wrote — the first recorded
+before that write. A row holding only the outcome reads the same whether the
+session ran before the phase, after it, or not at all, because it is written at
+the end either way:
 
 ```text
-| Phase | Session | Frontier | Evidence |
-| ----- | ------- | -------- | -------- |
-| 0     | run     | 4 settled, 1 escalated | #work-orders-summary |
-| 1     | skipped | empty: every decision answered by <the artifact> | - |
+| Phase | Session   | Frontier                  | Evidence             |
+| ----- | --------- | ------------------------- | -------------------- |
+| 0     | run       | 4 settled, 0 escalated    | #work-orders-summary |
+| 1     | skipped   | empty: answered by <ref>  | -                    |
+| 2     | escalated | 3 settled, 1 escalated    | #work-orders-summary |
 ```
+
+`run` means the phase settled its frontier and escalated nothing. One
+escalation makes the row `escalated`, whatever else the phase settled — the
+cell says what the phase is waiting on, and a `run` row with an escalation in
+its count reads as finished while a user-owned decision is open.
+
+**The settled count is the number of decision rows for that phase.** Each
+carries its phase, and a count without the rows behind it is a number nobody
+can check — which is also the state a reviewer finds when it goes looking for
+what it recommended.
 
 `skipped` names the authoritative artifact that answered the phase's decisions.
 A phase whose subject is settled has nothing to grill, and that is a legitimate
@@ -149,7 +178,7 @@ taken or not. The adjudication says who settled it:
 | `user`       | The decision is the user's. The griller may review the artifact |
 | `agents`     | Nobody adjudicated. The reviewer returns `REVISE` and names it  |
 
-Recording every session's outcome under one marker made those two
-indistinguishable in the row the reviewer is told to read its
-`Recommended and unadjudicated` answer off — and that field is the whole reason
-the row exists, because a reset instance holds no memory of the session.
+The adjudication is required because the reviewer reads its
+`Recommended and unadjudicated` answer off this row and holds no memory of the
+session. Without it the row says a session happened and not what it settled, so
+the two outcomes — which point opposite ways — are one row to the reviewer.

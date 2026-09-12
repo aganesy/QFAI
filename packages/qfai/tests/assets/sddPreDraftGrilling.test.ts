@@ -169,9 +169,17 @@ describe.each(TREES)("%s — the pre-draft grilling loop", (tree) => {
     expectPhrase(loop, "stays `PENDING`, which\nblocks DONE and leaves the stage resumable");
 
     const gate = await read(GATE);
+    expectPhrase(gate, "an `escalated` row needs a `PENDING` work order for it");
+    // And `run` cannot carry one: a `run` row with an escalation in its count
+    // reads as finished while a user-owned decision is open.
+    expectPhrase(gate, "A row reads `run` only with zero escalations");
+    // The count is checkable, because each decision row carries its phase.
+    expectPhrase(gate, "Each phase's settled count equals the number of `grilling(...)` rows");
+    expectPhrase(gate, "a number nobody can check");
+    // And the order is recorded rather than claimed.
     expectPhrase(
       gate,
-      "No row reads `escalated` unless the stage also carries a `PENDING` work order",
+      "when its session ended and when the phase first wrote, and the first is earlier",
     );
   });
 
@@ -202,9 +210,80 @@ describe.each(TREES)("%s — the pre-draft grilling loop", (tree) => {
       primitive,
       "It escalates immediately, as a request for the value rather than a choice",
     );
-    // Under a no-question mode it is an undefaultable input, which stops rather
-    // than being invented.
-    expectPhrase(primitive, "stops the work rather than being invented");
+    // Under a no-question mode what follows depends on the fact, not its kind:
+    // stopping on every user-held fact would block a run over a defaultable
+    // date, which is the ordinary no-question path rather than a blocker.
+    expectPhrase(primitive, "depends on the fact rather than on its kind");
+    expectPhrase(
+      primitive,
+      "Stopping on every user-held fact would block a run over a defaultable date",
+    );
+  });
+
+  it("keeps an author's answer as a position", async () => {
+    // The orchestrator may not record an answer as the user's, and in an
+    // agent-to-agent round every answer comes from an author — so a rule
+    // reading as user-only leaves the round unable to be recomputed, a
+    // disagreement unable to be kept, and an escalation with no positions.
+    const primitive = await read(PRIMITIVE);
+    expectPhrase(
+      primitive,
+      "MUST NOT record an answer **as the user's** that the user did not give",
+    );
+    expectPhrase(primitive, "recorded as that author's position, with whose it is");
+    expectPhrase(primitive, "A position is not a settled decision");
+  });
+
+  it("forwards every distinct position, not two", async () => {
+    // Phase 2 routes three authors, so a decision can carry three answers.
+    // Merging two before the user sees them hands the user a choice the full
+    // set was never asked to adjudicate.
+    const loop = await read(LOOP);
+    expectPhrase(loop, "**Every distinct position, named with whose it is**");
+    expectPhrase(loop, "hands them a choice the full set was never asked to adjudicate");
+  });
+
+  it("gives Phase 2c a checkpoint per expansion", async () => {
+    // Its scope is recomputed after every contract write and the reconciliation
+    // repeats, so a frontier collected before the first write cannot hold the
+    // decisions of a spec the third write brought in.
+    const loop = await read(LOOP);
+    expectPhrase(loop, "**Phase 2c gets a checkpoint per expansion, not one per phase.**");
+    expectPhrase(loop, "runs its own round before the next mutation");
+  });
+
+  it("leaves the artifact write with the agent that owns it", async () => {
+    // `07_Decisions.md` and `09_delta.md` are primary artifacts and the
+    // orchestrator may not draft one. On a CREATE run the file may not exist,
+    // so writing it is authoring rather than integrating an author's output.
+    const loop = await read(LOOP);
+    expectPhrase(
+      loop,
+      "**Each settled decision is persisted by the drafting agent that owns its artifact**",
+    );
+    expectPhrase(loop, "writing it is authoring and not integration");
+    expectPhrase(loop, "What the orchestrator records is the orchestration evidence");
+  });
+
+  it("makes `run` mean nothing was left escalated", async () => {
+    // A `run` row carrying an escalation in its count reads as finished while a
+    // user-owned decision is open, and the gate's PENDING requirement keys on
+    // the cell rather than the count.
+    const loop = await read(LOOP);
+    expectPhrase(loop, "`run` means the phase settled its frontier and escalated nothing");
+    expectPhrase(loop, "One escalation makes the row `escalated`, whatever else the phase settled");
+    // And the counts are checkable: each decision row carries its phase.
+    expectPhrase(loop, "**The settled count is the number of decision rows for that phase.**");
+    expectPhrase(loop, "a count without the rows behind it is a number nobody can check");
+  });
+
+  it("records when the session ended and when the phase wrote", async () => {
+    // A row holding only the outcome reads the same whether the session ran
+    // before the phase, after it, or not at all — it is written at the end
+    // either way.
+    const loop = await read(LOOP);
+    expectPhrase(loop, "when its session ended and when the phase first wrote");
+    expectPhrase(loop, "the first recorded before that write");
   });
 
   it("cites the method rather than restating it", async () => {

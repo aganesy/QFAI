@@ -257,9 +257,13 @@ decisions belonging to different drafting roles.
   the convergence rules escalate decisions rather than facts — so without this
   the fact sits on the frontier until the budget ends, taking every decision
   waiting on it with it. It escalates immediately, as a request for the value
-  rather than a choice. Under a no-question mode it reaches nobody and is an
-  undefaultable input, which stops the work rather than being invented
-  (`.qfai/assistant/constitution/constitution.md` Article X, rule 4).
+  rather than a choice. Under a no-question mode it reaches nobody, and what
+  follows depends on the fact rather than on its kind: where the consuming
+  document declares the value undefaultable the run stops and names it
+  (`.qfai/assistant/constitution/constitution.md` Article X, rule 4), and where
+  the document has a default that default is recorded as a labelled assumption
+  beside the open question, which is the ordinary no-question path. Stopping on
+  every user-held fact would block a run over a defaultable date.
 
 ### Orchestrator Protocol (MUST)
 
@@ -269,8 +273,13 @@ decisions belonging to different drafting roles.
   user, the orchestrator puts it. Between agents, the griller puts it and the
   orchestrator does not — a session where both do is one where an author is
   asked twice and the two answers have no tie-break.
-- It MUST NOT record an answer the user did not give, and MUST NOT self-approve
-  the session's end condition.
+- It MUST NOT record an answer **as the user's** that the user did not give, and
+  MUST NOT self-approve the session's end condition. An author's answer in an
+  agent-to-agent round is recorded as that author's position, with whose it is:
+  the round cannot be recomputed, a disagreement cannot be kept, and an
+  escalation cannot carry the positions to the user unless the answers are
+  held. A position is not a settled decision, and only the user's answer or
+  authoritative evidence makes one.
 
 ### Capability Probe (MUST)
 
