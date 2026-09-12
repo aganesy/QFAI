@@ -569,6 +569,21 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   a vocabulary nothing defined, and a checklist nothing loaded on its own. Both
   are replaced by a reference to the master.
 
+- **A legacy ledger outside the obligation-column protection is reported**
+  (#1663). A seeded `E2E` or `API` row has `TC-Refs` forbidden to it, so the
+  `US-Refs` and `CON-API-Refs` columns are the only place its obligation can
+  live, and an empty cell there is an error. On a ledger written before those
+  columns existed the check is waived — the shape is sanctioned — and the waiver
+  also meant nothing said that those rows could reach `done` with no auditable
+  target.
+
+  `QFAI-TDDLIST-020` now says it, at `warning`, once per absent column, naming
+  each row by its `TDD-ID`. Not an error, because that would revoke the
+  sanction and force a migration the shipped reference says is not owed; not
+  silence, because a row outside the protection should not read like one inside
+  it. It follows the reasoning the backfilled-evidence warning already gives, and
+  the SDD profile hears it, since the columns are that stage's to write.
+
 ### Changed
 
 - **A later `qfai init` cites a rule master it is shipping for the first time**

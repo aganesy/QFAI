@@ -53,6 +53,11 @@ const layerFindings = (
 ): Awaited<ReturnType<typeof validateTddList>> =>
   issues.filter((entry) => entry.code === "TDDLIST_OBLIGATION_LAYER_MISMATCH");
 
+const absentColumnFindings = (
+  issues: Awaited<ReturnType<typeof validateTddList>>,
+): Awaited<ReturnType<typeof validateTddList>> =>
+  issues.filter((entry) => entry.code === "QFAI-TDDLIST-020");
+
 describe("optional obligation columns on the TDD ledger", () => {
   it("accepts a ledger without the optional columns", async () => {
     await withLedger(
@@ -232,6 +237,75 @@ describe("an obligation is only legal on the Layer that owns it", () => {
       ],
       (issues) => {
         expect(layerFindings(issues)).toEqual([]);
+        expect(
+          issues.filter((entry) => entry.severity === "error").map((e) => e.code),
+        ).not.toContain("QFAI-TDDLIST-020");
+      },
+    );
+  });
+
+  it("warns once per absent column, naming every row that column would protect", async () => {
+    // The waiver above keeps the legacy shape legal. What it also did was hide
+    // that those rows sit outside the protection the columns exist for: TC-Refs
+    // is forbidden on them, so each can reach done with no auditable target,
+    // and nothing said so at validate time.
+    await withLedger(
+      [
+        BASE_HEADERS,
+        BASE_SEP,
+        "| TDD-0001 | -       | E2E   | tests/e2e/a.ts  | journey  | done   | -     | ev       |",
+        "| TDD-0002 | -       | E2E   | tests/e2e/b.ts  | journey  | todo   | -     | -        |",
+        "| TDD-0003 | -       | API   | tests/api/a.ts  | contract | done   | -     | ev       |",
+      ],
+      (issues) => {
+        const findings = absentColumnFindings(issues);
+        // One per column, not one per row: the gap is the ledger's shape.
+        expect(findings).toHaveLength(2);
+        for (const finding of findings) expect(finding.severity).toBe("warning");
+
+        const usRefs = findings.find((finding) => finding.message.includes("US-Refs"));
+        expect(usRefs?.message).toContain("2 Layer=E2E row(s)");
+        expect(usRefs?.message).toContain("TDD-0001");
+        expect(usRefs?.message).toContain("TDD-0002");
+        expect(usRefs?.message).not.toContain("TDD-0003");
+
+        const conApi = findings.find((finding) => finding.message.includes("CON-API-Refs"));
+        expect(conApi?.message).toContain("1 Layer=API row(s)");
+        expect(conApi?.message).toContain("TDD-0003");
+        expect(conApi?.suggested_action).toContain("Add the CON-API-Refs column");
+      },
+    );
+  });
+
+  it("says nothing about an absent column no row's Layer owns", async () => {
+    // A ledger of unit rows has no use for either column, so its absence is not
+    // a gap in anything.
+    await withLedger(
+      [
+        BASE_HEADERS,
+        BASE_SEP,
+        "| TDD-0001 | TC-0001 | Unit  | tests/a.test.ts | case a   | todo   | -     | -        |",
+      ],
+      (issues) => {
+        expect(absentColumnFindings(issues)).toEqual([]);
+      },
+      UNIT_TEST_CASE,
+    );
+  });
+
+  it("says nothing once the column ships", async () => {
+    // The column's own checks take over, so the warning would be a second
+    // finding about a gap that is no longer there.
+    await withLedger(
+      [
+        `${BASE_HEADERS} US-Refs |`,
+        `${BASE_SEP} ------- |`,
+        "| TDD-0001 | -       | E2E   | tests/e2e/a.ts  | journey  | todo   | -     | -        | US-0001 |",
+      ],
+      (issues) => {
+        expect(
+          absentColumnFindings(issues).filter((finding) => finding.message.includes("US-Refs")),
+        ).toEqual([]);
       },
     );
   });
