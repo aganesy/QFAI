@@ -39,7 +39,7 @@ else.** Eleven have no test at all: `US-0013-0001`, `-0002`, `-0004`, `-0005`, `
 `-0009`, `-0010`, and `TC-0013-0022`, `-0023`, `-0024`. Five more are discharged by substring
 assertions over the shipped `qfai-sdd/SKILL.md` that carry none of the obligation they are annotated
 to. Two are self-referential coverage placeholders whose annotated `describe` tests the diff
-detector. Those eighteen rows carry 162 of the matrix's 286 `❌` cells between them. Six further
+detector. Those eighteen rows carry 162 of the matrix's 287 `❌` cells between them. Six further
 wording rows carry another 44.
 
 The remaining twenty-five rows are scored on their merits and range widely. `US-0013-0014`,
@@ -318,7 +318,7 @@ in this pack's *report* scope because the validator scans the whole test tree; t
 | TC-0013-0010 | ❌                     | ❌          | ❌         | ❌         | ❌              | ❌             | ❌                | ❌            | ❌              | ❌     |
 | TC-0013-0011 | ❌                     | ❌          | ❌         | ❌         | ❌              | ❌             | ❌                | ❌            | ❌              | ❌     |
 | TC-0013-0012 | ❌                     | ❌          | ❌         | ❌         | ❌              | ❌             | ❌                | ❌            | ❌              | ❌     |
-| TC-0013-0013 | ❌                     | ⚠️          | ❌         | ❌         | ❌              | ❌             | ❌                | ❌            | ❌              | ❌     |
+| TC-0013-0013 | ❌                     | ❌          | ❌         | ❌         | ❌              | ❌             | ❌                | ❌            | ❌              | ❌     |
 | TC-0013-0014 | ⚠️                     | ✅          | ⚠️         | ❌         | ❌              | ❌             | ❌                | ❌            | ⚠️              | ⚠️     |
 | TC-0013-0015 | ✅                     | ✅          | ❌         | ❌         | ❌              | ❌             | ❌                | ❌            | ✅              | ⚠️     |
 | TC-0013-0016 | ✅                     | ✅          | ❌         | ❌         | ❌              | ⚠️             | ❌                | ❌            | ✅              | ⚠️     |
@@ -342,7 +342,7 @@ in this pack's *report* scope because the validator scans the whole test tree; t
 | TC-0013-0034 | ✅                     | ✅          | ❌         | ❌         | ❌              | ❌             | ❌                | ⚠️            | ⚠️              | ⚠️     |
 | TC-0013-0035 | ✅                     | ✅          | ✅         | ✅         | ⚠️              | ⚠️             | ❌                | ⚠️            | ✅              | ⚠️     |
 
-Totals across the nine scored depth columns, 441 cells (49 rows × 9): **✅ 64 / ⚠️ 91 / ❌ 286**.
+Totals across the nine scored depth columns, 441 cells (49 rows × 9): **✅ 64 / ⚠️ 90 / ❌ 287**.
 
 `Status` is the row verdict and is not a scored cell, so it is excluded from that total and from the
 grand total at the end. Its distribution across the 49 rows, for reading only, is ✅ 0 / ⚠️ 17 /
@@ -388,7 +388,7 @@ is cited by at least one `TC-0013-*`. The other derivation route, each rule's ow
 | BR-0013-0005 | ❌            | ❌            | ❌                   | TC-0013-0012                                    | ❌     |
 | BR-0013-0006 | ❌            | ❌            | n/a                  | TC-0013-0009                                    | ❌     |
 | BR-0013-0007 | ❌            | ❌            | n/a                  | TC-0013-0010                                    | ❌     |
-| BR-0013-0008 | ⚠️            | ❌            | n/a                  | TC-0013-0013                                    | ❌     |
+| BR-0013-0008 | ❌            | ❌            | n/a                  | TC-0013-0013                                    | ❌     |
 | BR-0013-0009 | ✅            | ✅            | n/a                  | TC-0013-0018, TC-0013-0019                      | ⚠️     |
 | BR-0013-0010 | ✅            | ⚠️            | ⚠️                   | TC-0013-0014, -0015, -0016, -0017               | ⚠️     |
 | BR-0013-0011 | ✅            | ❌            | n/a                  | TC-0013-0020                                    | ❌     |
@@ -399,27 +399,32 @@ is cited by at least one `TC-0013-*`. The other derivation route, each rule's ow
 | BR-0013-0016 | ✅            | ✅            | ❌                   | TC-0013-0026, TC-0013-0027                      | ❌     |
 | BR-0013-0017 | ✅            | ✅            | ⚠️                   | TC-0013-0028, TC-0013-0029                      | ⚠️     |
 | BR-0013-0018 | ⚠️            | ✅            | ❌                   | TC-0013-0030, TC-0013-0031                      | ❌     |
-| BR-0013-0019 | ⚠️            | ⚠️            | n/a                  | TC-0013-0032, TC-0013-0033                      | ❌     |
+| BR-0013-0019 | ⚠️            | ⚠️            | ❌                   | TC-0013-0032, TC-0013-0033                      | ❌     |
 | BR-0013-0020 | ✅            | ✅            | ⚠️                   | TC-0013-0034, TC-0013-0035                      | ⚠️     |
 
-Totals across the three scored columns, 60 cells: **✅ 12 / ⚠️ 14 / n/a 8 / ❌ 26**.
+Totals across the three scored columns, 60 cells: **✅ 12 / ⚠️ 13 / n/a 7 / ❌ 28**.
 
 `Status` here is likewise a row verdict and is not counted. Its distribution across the 20 rows is
 ✅ 0 / ⚠️ 4 / ❌ 16.
 
-`n/a` is used eight times in the `Conditional branches` column, for `BR-0013-0001`, `-0004`, `-0006`,
-`-0007`, `-0008`, `-0009`, `-0011` and `-0019`. Each states its rule unconditionally — "MUST follow",
+`n/a` is used seven times in the `Conditional branches` column, for `BR-0013-0001`, `-0004`, `-0006`,
+`-0007`, `-0008`, `-0009` and `-0011`. Each states its rule unconditionally — "MUST follow",
 "MUST happen after", "MUST include", "is SSOT", "MUST include a `Type` column", "MUST agree", "MUST be
-exported … AND MUST be imported", "the recommended band is 3..7" — so there is no branch to cover.
-It is not used anywhere an obligation exists and is unmet. The remaining twelve rules each state at
-least one condition and are scored.
+exported … AND MUST be imported" — so there is no branch to cover. It is not used anywhere an
+obligation exists and is unmet. The remaining thirteen rules each state at least one condition and
+are scored.
+
+`BR-0013-0019` was in that list and is not unconditional. "The recommended band is 3..7" names two
+boundaries and the rule has a direction on each side, which is why the `⚠️` census for this row
+records the over-ceiling direction firing while the under-floor direction is exercised with the
+opposite verdict. An `n/a` there read a rule with an unmet branch as a rule with no branch.
 
 A row's `Status` is `❌` whenever either scored direction is `❌`, and may be `❌` with both at `⚠️`
 when the reason is stated. No row reaches `✅`.
 
 ## Every ❌ cell, named
 
-The matrix carries **286** `❌` scored cells and the business rule table carries **26** — **312 in
+The matrix carries **287** `❌` scored cells and the business rule table carries **28** — **315 in
 all**. They are accounted for below in six groups. Every group names every coordinate it covers and
 states its count, and the six counts sum to 312:
 
@@ -428,10 +433,10 @@ states its count, and the six counts sum to 312:
 | 1. Eleven obligations with no test at all                         | 99      |
 | 2. Five wording rows whose assertion carries none of the obligation | 45    |
 | 3. Two placeholder rows whose test has another subject            | 18      |
-| 4. Six wording rows that address their direction and nothing else  | 44     |
+| 4. Six wording rows that address their direction and nothing else  | 45     |
 | 5. Remaining scored cells of the twenty-five tested rows           | 80     |
-| 6. Business rule scored columns                                   | 26      |
-| **Total**                                                         | **312** |
+| 6. Business rule scored columns                                   | 28      |
+| **Total**                                                         | **315** |
 
 ### Group 1 — eleven obligations with no test at all (99 cells)
 
@@ -583,9 +588,17 @@ sentence that carries the obligation, rather than a token naming an artifact. Ev
 | `TC-0013-0005` | EP, ER, ED, BV, SV, ST, CO, OS            | 8     |
 | `TC-0013-0006` | EP, ER, ED, BV, SV, ST, CO, OS            | 8     |
 | `TC-0013-0007` | EP, ER, ED, BV, SV, ST, CO                | 7     |
-| `TC-0013-0013` | EP, ER, ED, BV, SV, ST, CO, OS            | 8     |
-|                |                                           | **44** |
+| `TC-0013-0013` | EP, NP, ER, ED, BV, SV, ST, CO, OS        | 9     |
+|                |                                           | **45** |
 
+- **`Normal path`** (1 cell: `TC-0013-0013`) — the row's only credit was an assertion in
+  `tests/assets/testCaseLevelColumn.test.ts`, a file written for the `Level` column that carries no
+  spec-0013 annotation. It cannot be credited: step 2 of "What credits a cell" reaches an
+  unannotated case only where the obligation has no annotated one anywhere, and `TC-0013-0013` has
+  one — `specAutoDiscovery.test.ts` carries `QFAI:SPEC-0013:TC-0013-0013`. The file is also absent
+  from the run inventory, so nothing established it passes in this measurement either. With that
+  credit withdrawn the row has no case at all, and its second clause — each AC having at least one
+  non-normal case — was already asserted by nothing.
 - **`Equivalence partitions`** (5 cells: `TC-0013-0001`, `-0005`, `-0006`, `-0007`, `-0013`) — the
   documents are read as they stand, so the compliant and violating partitions each obligation implies
   have no representative on either side.
@@ -761,9 +774,24 @@ zero-byte or wrong-typed value is fed to any SUT.
 `Equivalence partitions`, `Normal path` or `Oracle strength`, so those three columns contribute
 nothing to this group.
 
-### Group 6 — the 26 ❌ cells of the business rule scored columns
+### Group 6 — the 28 ❌ cells of the business rule scored columns
 
-**`Positive case`, 7 cells** — `BR-0013-0004`, `-0005`, `-0006`, `-0007`, `-0012`, `-0013`, `-0014`.
+**`Conditional branches`, 1 cell** — `BR-0013-0019`.
+
+- `BR-0013-0019` — the rule names a band, so it has a direction on each side of it. The over-ceiling
+  direction fires and is pinned; the under-floor direction is exercised with the opposite verdict,
+  because the validator's lower bound was removed and counts of one and two are now required to stay
+  silent. So one branch is covered, the other is covered backwards, and no case distinguishes the
+  band the rule states. This cell read `n/a` until it was noticed that an unconditional rule and a
+  rule with an unmet branch are not the same thing.
+
+**`Positive case`, 8 cells** — `BR-0013-0004`, `-0005`, `-0006`, `-0007`, `-0008`, `-0012`, `-0013`, `-0014`.
+
+- `BR-0013-0008` — the rule's first bullet, the shipped template's `Type` legend, was credited to an
+  assertion in a file written for the `Level` column that carries no spec-0013 annotation, and the
+  obligation it covers has an annotated case elsewhere, so the crediting rule does not reach it. The
+  rule's second bullet — every AC needing both a normal and a non-normal case — has no case at all.
+  With the first credit withdrawn the positive direction is empty rather than partial.
 
 - `BR-0013-0004` (Plan After Slice) and `BR-0013-0005` (Contract Stub Validity) are covered by
   `TC-0013-0011` and `TC-0013-0012`, the two coverage placeholders that have no test of their own
@@ -820,7 +848,7 @@ nothing to this group.
 
 ## Every ⚠️ cell, named
 
-91 scored depth cells in the matrix and 14 scored cells in the business rule table are `⚠️` —
+90 scored depth cells in the matrix and 13 scored cells in the business rule table are `⚠️` —
 **105 in all**. The PASS criterion requires a documented rationale for each, so each is named here,
 grouped by column with a per-coordinate reason.
 
@@ -867,7 +895,7 @@ grouped by column with a per-coordinate reason.
   `QFAI-AUD-020`. The documentation half reads two shipped files as they stand, so its compliant and
   violating partitions are unrepresented.
 
-**`Normal path`, 6 cells** — `TC-0013-0001`, `-0005`, `-0006`, `-0007`, `-0013`, `-0032`.
+**`Normal path`, 5 cells** — `TC-0013-0001`, `-0005`, `-0006`, `-0007`, `-0032`.
 
 - `TC-0013-0001` — `/phase order/i` pins the concept and the five phase names are each required to be
   present, so a document that lost the vocabulary reddens. The property the row names, the order, is
@@ -881,11 +909,6 @@ grouped by column with a per-coordinate reason.
   which is a real wording oracle. It is `⚠️` because the row's direction is that the command
   *produces* `error = 0`, and no run is made; and because the pinned literal carries `--profile sdd`,
   which the row's own text does not.
-- `TC-0013-0013` — the template half of the row is established: `### Type column values` is required
-  to be present in the shipped template. It is `⚠️` because the assertion lives in
-  `tests/assets/testCaseLevelColumn.test.ts`, a file written for the `Level` column and carrying no
-  spec-0013 annotation, and because the row's second clause — each AC having at least one non-normal
-  case — is asserted by nothing.
 - `TC-0013-0032` — all three assertions pass and pin `at most 7` in three places, one of them the live
   warning message. It is `⚠️` because the property the row declares is the **band 3..7**, which
   appears in none of the three artifacts and in no assertion; what is pinned is a ceiling with no
@@ -1143,7 +1166,7 @@ attempted or rejected.
 
 ### Business rule table (14)
 
-**`Positive case`, 6 cells** — `BR-0013-0001`, `-0002`, `-0003`, `-0008`, `-0018`, `-0019`.
+**`Positive case`, 5 cells** — `BR-0013-0001`, `-0002`, `-0003`, `-0018`, `-0019`.
 
 - `BR-0013-0001` — the shipped `SKILL.md` does state the fixed order, and the covering wording checks
   require the phrase "phase order" and each phase name, so a document that lost the vocabulary
@@ -1154,10 +1177,6 @@ attempted or rejected.
   `runSddPreflight` genuinely returns `ready` for a complete pack under `US-0013-0003`. It is `⚠️`
   because the rule's own positive is that SDD **continues** on an incomplete or contradictory pack,
   and no case supplies one and requires the run to proceed.
-- `BR-0013-0008` — the shipped template's `Type` legend is asserted present, which is the rule's first
-  bullet. The assertion belongs to a file written for the `Level` column and carrying no spec-0013
-  annotation, and the rule's second bullet — every AC needing both a normal and a non-normal case —
-  has no positive case at all.
 - `BR-0013-0018` — the helper and the validator are both exercised against real fixtures with real
   assertions. The rule's first clause is that `/qfai-sdd` MUST set the frontmatter, and
   `populateSurfaceTypeIfUiCompanion` has no caller in `src/**` and no instruction in the skill, so the
@@ -1325,7 +1344,7 @@ rather than by the spec.
 `QFAI-ATDD-133` requires the stage evidence to carry a `## Coverage Depth Matrix` section that links
 to this file and restates the counted totals beside it. Those totals are:
 
-**✅ 76 / ⚠️ 105 / ❌ 312**, with `n/a 8`, across all 501 scored cells — 441 matrix depth cells and
+**✅ 76 / ⚠️ 103 / ❌ 315**, with `n/a 7`, across all 501 scored cells — 441 matrix depth cells and
 60 business rule scored cells. `Status` is a row verdict, not a mark, and is excluded from all four
 counts.
 

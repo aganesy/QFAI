@@ -278,7 +278,7 @@ obligation admits.
 ## Coverage Depth Matrix
 
 See `.qfai/evidence/coverage-depth-spec-0013.md`.
-Totals: ✅ 76 / ⚠️ 105 / ❌ 312, with 8 not applicable, across 501 scored cells —
+Totals: ✅ 76 / ⚠️ 103 / ❌ 315, with 7 not applicable, across 501 scored cells —
 441 matrix depth cells (49 rows × 9 columns) and 60 business rule cells
 (20 rows × 3 columns). `Status` is a row verdict, not a mark, and is outside
 every total.
@@ -310,7 +310,7 @@ None.
   out against the files they name; the validate gate reproduces at `error=0`,
   and fails on a missing matrix at the revision the mutations were taken at,
   which is why it is recorded over this tree; the matrix totals — ✅ 76 /
-  ⚠️ 105 / ❌ 312 with `n/a` 8 across 501 cells — agree with the tables, and
+  ⚠️ 103 / ❌ 315 with `n/a` 7 across 501 cells — agree with the tables, and
   every `❌` and `⚠️` cell carries exactly one justification, with no
   coordinate missing and none listed that does not carry the mark; and the
   four rows naming `auditProfile.ts` keep every mark when read against the
@@ -350,7 +350,7 @@ oracle for what its obligation names; the last cannot carry a pointer at all.
 | ---------- | -------------- | ----------------------------------------------------------------- |
 | `TDD-0019` | `TC-0013-0025` | The obligation contradicts a sibling test case                    |
 | `TDD-0021` | `TC-0013-0027` | Half the obligation is stated the other way round by the product  |
-| `TDD-0022` | `US-0013-0011` | The ledger has no `US-Refs` column for an `e2e` row to read       |
+| `TDD-0022` | `US-0013-0011` | Its case drives `runValidate`, not the preflight the row promises |
 | `TDD-0023` | `TC-0013-0028` | Ignoring the pointer entirely leaves the row's own case green     |
 | `TDD-0025` | `TC-0013-0030` | The test drives a helper no production path calls                 |
 | `TDD-0026` | `TC-0013-0031` | The obligation says `warning`; the validator emits `error`        |
@@ -395,12 +395,18 @@ ignored entirely — leaves the row's own case green, because its fixture builds
 one pack and returning the sole directory satisfies it. Only a `TDD-0024` case
 dies. A mutation that cannot redden the row is not an oracle for it.
 
-**`TDD-0022` cannot carry a pointer at all.** It declares `Layer: e2e`, and an
-`e2e` row's obligation is read from a `US-Refs` column. This ledger has only
-`TC-Refs`, so the obligation reads as empty and no evidence entry can match it.
-The row does name a real user story in the column it has. Adding the column
-changes the table every row shares, and it belongs with the `Boundary` column
-the same ledger owes.
+**`TDD-0022`'s case does not drive what the row promises.** The structural
+blocker this entry used to name is gone: the ledger now carries a `US-Refs`
+column and the row reads `US-0013-0011` from it, so the obligation resolves and
+an evidence entry can match it.
+
+What remains is the row's own coverage. `US-0013-0011` is about the UI contract's
+`primary_tasks` slot and the lane that refuses a pack without it, and the case
+the `Selector` names asserts a non-zero `runValidate` exit carrying the rule
+token. `runValidate` is not the `/qfai-prototyping` preflight the story's second
+half names, and nothing in the file drives one. The row can carry a pointer now;
+what it cannot yet carry is a pointer to a case that reaches the whole
+obligation.
 
 **`TDD-0027` and `TDD-0028` name a count band the product dropped.**
 `TC-0013-0032` and `TC-0013-0033` state a `primary_tasks` band of 3..7. The
