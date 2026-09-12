@@ -186,7 +186,7 @@ describe("cross-AI rules surface (.agents/rules/ master)", () => {
         /belongs to a later round/,
         /answerable by number/,
         /dispatch a sub-agent/,
-        /question cap/i,
+        /There is no question cap/,
         /Stop grilling and build something to react to/,
       ]) {
         expect(text).toMatch(clause);
@@ -270,7 +270,12 @@ describe("cross-AI rules surface (.agents/rules/ master)", () => {
       const text = flatten(await readFile(path.join(ROOT, MASTER), "utf-8"));
       expect(text).toMatch(/the round is delivered in host-sized batches/);
       expect(text).toMatch(/the frontier is \*\*not\*\* recomputed between them/);
-      expect(text).toMatch(/each batch's answers are read for a stop before the next is put/);
+      expect(text).toMatch(
+        /each batch's answers are read for any of §6's closing answers — `stop`, `proceed`, `done` — before the next is put/,
+      );
+      expect(text).toMatch(
+        /putting the next batch after one is the agent continuing past the user/,
+      );
       expect(text).toMatch(/It never makes two rounds/);
     });
 
@@ -298,10 +303,10 @@ describe("cross-AI rules surface (.agents/rules/ master)", () => {
     });
 
     it("names the closure path in the scope table, not only the no-question mode", async () => {
-      // The row said a user-owned decision is never assumed except under a
-      // no-question mode, while § 6 turns every open defaultable decision into
-      // a labelled assumption after `proceed`. Two instructions for one normal
-      // path.
+      // Two normal paths turn a user-owned decision into a labelled assumption:
+      // a no-question mode, and the user closing the questions. The scope table
+      // is read before § 6, so a table naming one of them leaves the reader who
+      // stops there concluding that `proceed` changes nothing.
       const text = flatten(await readFile(path.join(ROOT, MASTER), "utf-8"));
       expect(text).toMatch(
         /Asked, never assumed — except under a no-question mode, or after the user closes the questions/,
@@ -331,6 +336,19 @@ describe("cross-AI rules surface (.agents/rules/ master)", () => {
       expect(text).toMatch(/leave the answer to them/);
     });
 
+    it("routes a factual question the tool cannot shape to the plain-text path", async () => {
+      // The question form requires the host's structured tool, and a tool that
+      // takes only ranked choices cannot carry a value. Without a path the fact
+      // is unaskable and its dependent decisions stay blocked — or the agent
+      // invents two choices, which is the guess the fact clause refuses.
+      const text = flatten(await readFile(path.join(ROOT, MASTER), "utf-8"));
+      expect(text).toMatch(
+        /A tool that cannot carry the answer's shape is not available for that question/,
+      );
+      expect(text).toMatch(/Ask it through the host's plain-text path instead/);
+      expect(text).toMatch(/Inventing two choices to fit the tool is the same guess/);
+    });
+
     it("keeps a stop authoritative over the mandatory-question carve-out", async () => {
       // "Never assumed, whatever the user answered — still asked" reads as a
       // licence to keep asking after a `stop`, which the rule elsewhere says
@@ -349,6 +367,18 @@ describe("cross-AI rules surface (.agents/rules/ master)", () => {
     it.each(["AGENTS.md", "CLAUDE.md"])("%s cites the rule master", async (rel) => {
       const text = await readFile(path.join(ROOT, rel), "utf-8");
       expect(text).toContain("grilling.md");
+    });
+
+    it("CLAUDE.md does not tell the agent to read a fact only the user holds", async () => {
+      // "Read the facts rather than asking for them" is true of the facts the
+      // environment holds and false of the one kind it does not. Followed as
+      // written, that node stays open and the decisions under it never reach a
+      // round.
+      const text = flatten(await readFile(path.join(ROOT, "CLAUDE.md"), "utf-8"));
+      expect(text).toMatch(/read the facts the environment holds rather than asking for them/);
+      expect(text).toMatch(
+        /a fact only the user holds is asked for, as a value rather than a choice/,
+      );
     });
 
     it("CLAUDE.md does not start a session by meeting an unfixed design", async () => {

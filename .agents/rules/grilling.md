@@ -84,8 +84,10 @@ One round is one frontier: asked in full, answered in full.
   what is being decided together. Where the host's question tool takes fewer
   questions than the round holds, the round is delivered in host-sized batches:
   the frontier is **not** recomputed between them, each batch's answers are read
-  for a stop before the next is put, and no answer is acted on until the round is
-  exhausted or the user ends it. Batching is how one round reaches a host that
+  for any of §6's closing answers — `stop`, `proceed`, `done` — before the next
+  is put, and no answer is acted on until the round is exhausted or the user ends
+  it. A closure in an early batch ends the asking there, and putting the next
+  batch after one is the agent continuing past the user. Batching is how one round reaches a host that
   cannot show it whole. It never makes two rounds.
 - The next round is recomputed from the answers. It is never written ahead of
   them.
@@ -103,6 +105,12 @@ third.
 to recommend: the agent does not hold the value, a guessed one is the corruption
 §1 warns about, and offering it invites the user to accept it. Name the fact, say
 what depends on it, and leave the answer to them.
+
+A host's question tool may not carry that shape — some take only a ranked set of
+choices. **A tool that cannot carry the answer's shape is not available for that
+question.** Ask it through the host's plain-text path instead, keeping the name
+of the fact and what depends on it, and say why the tool was not used. Inventing
+two choices to fit the tool is the same guess in the tool's shape.
 
 ## 5. Facts and decisions are not asked the same way
 

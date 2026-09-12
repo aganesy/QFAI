@@ -19,7 +19,9 @@ Quality-First AI (QFAI) — specification-driven development の検証フレー�
 - Once a grilling session has been entered deliberately, interrogate the design
   in the rounds `.claude/rules/grilling.md` (master:
   `.agents/rules/grilling.md`) sets out: ask only the decisions whose
-  prerequisites are settled, and read the facts rather than asking for them.
+  prerequisites are settled, and read the facts the environment holds rather than
+  asking for them — a fact only the user holds is asked for, as a value rather
+  than a choice.
   Meeting an unfixed design is not itself entry, and an ambiguity met while
   implementing is an ordinary clarification under its own budget. A session
   completes only when no node is open **and** the user confirms the
