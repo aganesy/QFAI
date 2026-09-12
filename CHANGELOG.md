@@ -35,7 +35,9 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   owns.
 
   The stub gate collects the extensions its own pattern names, plus any a
-  project glob names outright. A glob used as written may be extension-broad, so
+  project glob names outright — and those reach the layer globs it generates
+  under `paths.testsDir` as well, so an extension named only by a package glob
+  is collected from the configured root too. A glob used as written may be extension-broad, so
   a fixture beside the suite — `tests/integration/data.json` — reached a scan
   that had nothing to say about it and was reported as an unscanned language;
   and a glob naming `.zig` selects a language with no dialect on purpose, which

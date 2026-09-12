@@ -2555,7 +2555,13 @@ function resolveTestKindFromPath(
   }
   const directories = toPosixPath(relative).split("/").slice(0, -1);
   let testRoot = -1;
+  // Set when a deeper root declared a layer this stage does not own: the file
+  // answers nothing, and a root shallower still cannot re-claim it.
+  let terminated = false;
   directories.forEach((directory, index) => {
+    if (terminated) {
+      return;
+    }
     if (!TEST_ROOT_SEGMENTS.has(directory) && directory !== testsDirName) {
       return;
     }
@@ -2566,12 +2572,23 @@ function resolveTestKindFromPath(
     if (isPackageRoot(path.join(root, ...directories.slice(0, index + 1)))) {
       return;
     }
-    // Deeper wins only when a layer follows it. A suite may nest a second
-    // conventional name — `<package>/tests/integration/__tests__/pay.test.ts`
-    // is the documented layout with one more directory inside it — and taking
-    // the deepest root unconditionally put the boundary past the layer, where
-    // nothing follows and the file answers nothing.
-    if (testRoot >= 0 && !ATDD_LAYER_SEGMENTS.has(directories[index + 1] ?? "")) {
+    // A deeper root answers or invalidates; it never leaves an outer one
+    // standing over a suite that declares something else.
+    const below = directories[index + 1];
+    if (below === undefined) {
+      // A terminal container: `<pkg>/tests/integration/__tests__/pay.test.ts`
+      // is the documented layout with one more directory inside it, and the
+      // outer root's layer is still the file's.
+      return;
+    }
+    if (!ATDD_LAYER_SEGMENTS.has(below)) {
+      // The deeper root declares a layer this stage does not own —
+      // `.../fixtures/tests/unit/pay.test.ts` is a unit suite — so the file
+      // answers nothing. Returning here instead left the outer `integration`
+      // standing over it, where its annotation discharged an `L3` obligation
+      // and its stub blocked a gate that owns no unit test.
+      testRoot = -1;
+      terminated = true;
       return;
     }
     testRoot = index;

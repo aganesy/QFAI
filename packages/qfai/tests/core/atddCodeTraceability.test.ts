@@ -1300,6 +1300,47 @@ describe("acceptance tests outside paths.testsDir", () => {
     });
   });
 
+  it("answers nothing when a nested root declares a layer this stage does not own", async () => {
+    await withProject(async (root) => {
+      await seedSpec(root, "0001", ["US-0001"], ["TC-0001"]);
+      await seedTest(root, "integration", "a.test.ts", "/* QFAI:SPEC-0001:TC-0001 */");
+      // A unit suite nested under a fixture tree. Leaving the outer
+      // `integration` root standing would let its annotation discharge an `L3`
+      // obligation and its stubs block a gate that owns no unit test.
+      const dir = path.join(
+        root,
+        "packages",
+        "app",
+        "tests",
+        "integration",
+        "fixtures",
+        "tests",
+        "unit",
+      );
+      await mkdir(dir, { recursive: true });
+      await writeFile(
+        path.join(dir, "pay.test.ts"),
+        [
+          "/* QFAI:SPEC-0001:US-0001 */",
+          "describe('pay', () => {",
+          "  it('runs', () => {});",
+          "});",
+          "",
+        ].join("\n"),
+        "utf-8",
+      );
+
+      const result = await evaluateAtddCodeTraceability(
+        root,
+        withProjectGlobs(["packages/*/tests/**/*.test.ts"]),
+      );
+
+      expect(result.missing.us).toEqual(["SPEC-0001:US-0001"]);
+      // A unit suite owes ATDD nothing wherever it sits.
+      expect(result.skippedTestFiles).toEqual([]);
+    });
+  });
+
   it("a malformed project glob does not abort the run", async () => {
     await withProject(async (root) => {
       await seedSpec(root, "0001", ["US-0001"], ["TC-0001"]);

@@ -108,7 +108,7 @@ import {
   runPackageSelfGovernanceValidators,
   validateStaleReferences,
   validateImportLiteEvidencePresence,
-  STUB_SOURCE_FILE_PATTERN,
+  stubSourceFilePattern,
 } from "./validators/index.js";
 import { atddAcceptanceLayerFilter, atddAcceptanceTestGlobs } from "./atddTraceability.js";
 import type { HtmlMockTiming } from "./validators/index.js";
@@ -934,7 +934,18 @@ async function runAtddValidators(
     // one in a package-local suite is outside that validator, so exempting it
     // here would leave it reported by neither.
     ...(await validateTestTodoStubs(root, config, {
-      globs: atddAcceptanceTestGlobs(root, config, STUB_SOURCE_FILE_PATTERN),
+      // The pattern carries the project's own extensions as well. The layer
+      // globs this builds under `paths.testsDir` are generated from it, so an
+      // extension named only by a package glob — `packages/**/*.sol` beside a
+      // `tests/integration/pay.sol` — was collected by neither: the package
+      // glob does not reach that path, and the canonical globs did not carry
+      // the extension. A runnable carrier then cleared coverage with no
+      // `QFAI-TEST-002` beside it.
+      globs: atddAcceptanceTestGlobs(
+        root,
+        config,
+        stubSourceFilePattern(config.validation.traceability.testFileGlobs),
+      ),
       fileFilter: atddAcceptanceLayerFilter(root, config),
       placeholderScanned: scaffoldPlaceholderScannedFilter(root, config),
     })),

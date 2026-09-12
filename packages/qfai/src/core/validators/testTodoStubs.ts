@@ -837,6 +837,26 @@ const STUB_SOURCE_EXTENSIONS: readonly string[] = Array.from(
 export const STUB_SOURCE_FILE_PATTERN = `**/*.{${STUB_SOURCE_EXTENSIONS.join(",")}}`;
 
 /**
+ * The same pattern widened by the extensions a project's own globs name.
+ *
+ * A caller builds its canonical `<testsDir>` globs from this, and an extension
+ * named only by a package glob reaches neither otherwise: that glob does not
+ * match a path under the configured root, and the generated globs did not carry
+ * the extension. The post-collection filter cannot recover a file nothing
+ * collected.
+ */
+export function stubSourceFilePattern(projectGlobs: readonly string[]): string {
+  const extensions = new Set([
+    ...STUB_SOURCE_EXTENSIONS.map((ext) => `.${ext}`),
+    ...globExtensions(projectGlobs),
+  ]);
+  return `**/*.{${[...extensions]
+    .map((ext) => ext.slice(1))
+    .sort()
+    .join(",")}}`;
+}
+
+/**
  * Blanks every comment and string-literal span, keeping offsets and line
  * breaks intact so the caller can still report a line number.
  *
