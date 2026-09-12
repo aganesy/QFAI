@@ -31,7 +31,15 @@ existing somewhere in the repository is not coverage here. Ownership is read in 
    `tests/cli/args.test.ts` and `tests/assets/sddStage0PrototypingOptional.test.ts` are two of them.
    The set is open and the rule decides it, so this is a rule rather than a census.
 
-The two steps do not overlap: the first turns on an annotation pointing elsewhere, the second on
+3. **An obligation is scored only from the layer it is answered from.** `.qfai/assistant/catalog/test-layers.md`
+   fixes that by ID type: a `US-*` is answered from `<testsDir>/e2e/**`, a `CON-API-*` from
+   `<testsDir>/api/**`, a `CON-DB-*` from `<testsDir>/integration/**`, and a `TC-*` from the
+   directory its own declared `Level` names. A case outside that directory exercises the behaviour
+   and does not answer the obligation, so it cannot raise a cell above `❌`. Steps 1 and 2 decide
+   which spec owns a case; this decides whether the case can answer this obligation at all, and it
+   is applied after them.
+
+The first two steps do not overlap: the first turns on an annotation pointing elsewhere, the second on
 there being no annotation to point anywhere. Neither admits a case that another spec owns.
 
 **Twenty-four of the forty-nine obligations are discharged by nothing, or by a test about something
@@ -39,7 +47,7 @@ else.** Eleven have no test at all: `US-0013-0001`, `-0002`, `-0004`, `-0005`, `
 `-0009`, `-0010`, and `TC-0013-0022`, `-0023`, `-0024`. Five more are discharged by substring
 assertions over the shipped `qfai-sdd/SKILL.md` that carry none of the obligation they are annotated
 to. Two are self-referential coverage placeholders whose annotated `describe` tests the diff
-detector. Those eighteen rows carry 162 of the matrix's 287 `❌` cells between them. Six further
+detector. Those eighteen rows carry 162 of the matrix's 305 `❌` cells between them. Six further
 wording rows carry another 44.
 
 The remaining twenty-five rows are scored on their merits and range widely. `US-0013-0014`,
@@ -57,7 +65,7 @@ contradicting its own acceptance criterion. See Findings 1, 2, 3 and 8.
 
 Section "Every `❌` cell, named" accounts for all 312 of them in named groups whose coordinates are
 fully enumerated, so that "one justification per `❌`" is checkable rather than asserted, and section
-"Every `⚠️` cell, named" does the same for all 105 partial scores, which the PASS criterion also
+"Every `⚠️` cell, named" does the same for all 91 partial scores, which the PASS criterion also
 requires a rationale for.
 
 ## What was measured, and how
@@ -294,12 +302,12 @@ in this pack's *report* scope because the validator scans the whole test tree; t
 | ------------ | ---------------------- | ----------- | ---------- | ---------- | --------------- | -------------- | ----------------- | ------------- | --------------- | ------ |
 | US-0013-0001 | ❌                     | ❌          | ❌         | ❌         | ❌              | ❌             | ❌                | ❌            | ❌              | ❌     |
 | US-0013-0002 | ❌                     | ❌          | ❌         | ❌         | ❌              | ❌             | ❌                | ❌            | ❌              | ❌     |
-| US-0013-0003 | ⚠️                     | ✅          | ✅         | ⚠️         | ⚠️              | ⚠️             | ⚠️                | ⚠️            | ⚠️              | ❌     |
+| US-0013-0003 | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
 | US-0013-0004 | ❌                     | ❌          | ❌         | ❌         | ❌              | ❌             | ❌                | ❌            | ❌              | ❌     |
 | US-0013-0005 | ❌                     | ❌          | ❌         | ❌         | ❌              | ❌             | ❌                | ❌            | ❌              | ❌     |
 | US-0013-0006 | ❌                     | ❌          | ❌         | ❌         | ❌              | ❌             | ❌                | ❌            | ❌              | ❌     |
 | US-0013-0007 | ❌                     | ❌          | ❌         | ❌         | ❌              | ❌             | ❌                | ❌            | ❌              | ❌     |
-| US-0013-0008 | ✅                     | ✅          | ✅         | ⚠️         | ⚠️              | ✅             | ⚠️                | ⚠️            | ⚠️              | ⚠️     |
+| US-0013-0008 | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
 | US-0013-0009 | ❌                     | ❌          | ❌         | ❌         | ❌              | ❌             | ❌                | ❌            | ❌              | ❌     |
 | US-0013-0010 | ❌                     | ❌          | ❌         | ❌         | ❌              | ❌             | ❌                | ❌            | ❌              | ❌     |
 | US-0013-0011 | ✅                     | ✅          | ✅         | ⚠️         | ⚠️              | ❌             | ❌                | ⚠️            | ⚠️              | ⚠️     |
@@ -342,7 +350,7 @@ in this pack's *report* scope because the validator scans the whole test tree; t
 | TC-0013-0034 | ✅                     | ✅          | ❌         | ❌         | ❌              | ❌             | ❌                | ⚠️            | ⚠️              | ⚠️     |
 | TC-0013-0035 | ✅                     | ✅          | ✅         | ✅         | ⚠️              | ⚠️             | ❌                | ⚠️            | ✅              | ⚠️     |
 
-Totals across the nine scored depth columns, 441 cells (49 rows × 9): **✅ 64 / ⚠️ 90 / ❌ 287**.
+Totals across the nine scored depth columns, 441 cells (49 rows × 9): **✅ 58 / ⚠️ 78 / ❌ 305**.
 
 `Status` is the row verdict and is not a scored cell, so it is excluded from that total and from the
 grand total at the end. Its distribution across the 49 rows, for reading only, is ✅ 0 / ⚠️ 17 /
@@ -424,7 +432,7 @@ when the reason is stated. No row reaches `✅`.
 
 ## Every ❌ cell, named
 
-The matrix carries **287** `❌` scored cells and the business rule table carries **28** — **315 in
+The matrix carries **305** `❌` scored cells and the business rule table carries **28** — **333 in
 all**. They are accounted for below in six groups. Every group names every coordinate it covers and
 states its count, and the six counts sum to 312:
 
@@ -436,7 +444,8 @@ states its count, and the six counts sum to 312:
 | 4. Six wording rows that address their direction and nothing else  | 45     |
 | 5. Remaining scored cells of the twenty-five tested rows           | 80     |
 | 6. Business rule scored columns                                   | 28      |
-| **Total**                                                         | **315** |
+| 7. Two stories answered from no e2e case                          | 18      |
+| **Total**                                                         | **333** |
 
 ### Group 1 — eleven obligations with no test at all (99 cells)
 
@@ -774,6 +783,21 @@ zero-byte or wrong-typed value is fed to any SUT.
 `Equivalence partitions`, `Normal path` or `Oracle strength`, so those three columns contribute
 nothing to this group.
 
+### Group 7 — the 18 ❌ cells of the two stories answered from no e2e case
+
+Coordinates: `US-0013-0003` and `US-0013-0008`, each × all nine scored columns.
+
+Both stories' coverage comes from `tests/core/sddPreflight.test.ts`,
+`tests/cli/commands/sddPreflight.test.ts` and `tests/validators/importLite.test.ts`. Those cases run
+the preflight and assert real outcomes, and none of them sits in `<testsDir>/e2e/**`, which is where
+a `US-*` obligation is answered — `.qfai/assistant/catalog/test-layers.md` fixes that by ID type and
+`QFAI-ATDD-111` is the gate. Neither story has an e2e case at all.
+
+So the behaviour is exercised and the obligation is unanswered, and those are different claims. This
+matrix scores the second. Step 3 of "What credits a cell" states the rule, and these eighteen cells
+are where it bites: every one of them was scored from a case outside the layer, and the depth the
+cases do reach is recorded in the `Findings` rather than in a mark the obligation has not earned.
+
 ### Group 6 — the 28 ❌ cells of the business rule scored columns
 
 **`Conditional branches`, 1 cell** — `BR-0013-0019`.
@@ -848,21 +872,15 @@ nothing to this group.
 
 ## Every ⚠️ cell, named
 
-90 scored depth cells in the matrix and 13 scored cells in the business rule table are `⚠️` —
+78 scored depth cells in the matrix and 13 scored cells in the business rule table are `⚠️` —
 **105 in all**. The PASS criterion requires a documented rationale for each, so each is named here,
 grouped by column with a per-coordinate reason.
 
 ### Matrix depth cells (91)
 
-**`Equivalence partitions`, 13 cells** — `US-0013-0003`, `US-0013-0012`, `TC-0013-0003`, `-0014`,
+**`Equivalence partitions`, 12 cells** — `US-0013-0012`, `TC-0013-0003`, `-0014`,
 `-0017`, `-0018`, `-0019`, `-0020`, `-0021`, `-0025`, `-0028`, `-0029`, `-0032`.
 
-- `US-0013-0003` — four partitions of the pack input have a representative with a distinct outcome:
-  ready, pack absent, blocking OQ present, required markdown missing. Counting the import-lite
-  entrypoint adds a fifth, the import-lite source that `AC-0013-0003` names beside the pack, with
-  representatives at distinct outcomes. The partition
-  `AC-0013-0003` requires — a pack that is incomplete or contradictory and on which SDD **continues**
-  — is unrepresented, and the blocking-OQ partition is fixed with the outcome the AC forbids.
 - `US-0013-0012` — resolvable, absent-pointer and pointer-to-missing-pack each have a representative
   across two files. Duplicate, which the story names in its own sentence ("missing/duplicate
   ambiguity"), has none.
@@ -928,16 +946,9 @@ grouped by column with a per-coordinate reason.
   the same file under `TDD-0011` and belongs to a different obligation. No case plants an
   evidence-format fault and requires a report.
 
-**`Edge cases`, 13 cells** — `US-0013-0003`, `-0008`, `-0011`, `-0012`, `-0013`, `-0014`,
+**`Edge cases`, 11 cells** — `US-0013-0011`, `-0012`, `-0013`, `-0014`,
 `TC-0013-0025`, `-0026`, `-0027`, `-0029`, `-0030`, `-0031`, `-0033`.
 
-- `US-0013-0003`, `US-0013-0008` — real edges are covered in `sddPreflight.test.ts`: a pack directory
-  present only under a non-canonical name, reported with the naming detail; a deferred OQ with no
-  entry in `13_Deferred.md`; unscoped disposition guidance lines in the OQ register that must be
-  ignored; and a Mermaid blocker required **not** to be reported twice for an absent Story Workshop.
-  Untested on both: an empty pack directory, a required name present as a directory, a zero-byte
-  required file, and an unreadable `discussion-*` pack directory — the discussion root being
-  unreadable is supplied, the pack directory is not.
 - `US-0013-0011`, `TC-0013-0025` — one edge is guarded deliberately:
   `expect((parsed.screens ?? []).length).toBeGreaterThan(0)` stops an empty `screens` list passing the
   per-screen loop vacuously. No other edge is identified: a `primary_tasks` that is `null` or a
@@ -963,14 +974,9 @@ grouped by column with a per-coordinate reason.
   instead of `QFAI-AUD-020` or alongside it; a screen with no `primary_tasks` key; and two screens
   where only one is over the ceiling.
 
-**`Boundary values`, 11 cells** — `US-0013-0003`, `-0008`, `-0011`, `-0013`, `-0014`,
+**`Boundary values`, 9 cells** — `US-0013-0011`, `-0013`, `-0014`,
 `TC-0013-0017`, `-0021`, `-0027`, `-0030`, `-0033`, `-0035`.
 
-- `US-0013-0003`, `US-0013-0008` — the required-file count is exercised at its two adjacent values:
-  a complete pack is `ready`, and a pack with one required markdown file removed reports the
-  missing-file blocker. That is the boundary that matters. Two gaps keep both off `✅`: a sixteenth
-  file is never supplied, and both preflight suites declare their own literal list of required names
-  rather than importing the source constant, so a requirement **removed** from the source stays invisible.
 - `US-0013-0011`, `TC-0013-0027` — the 0-versus-1 `primary_tasks` boundary is exercised in both
   directions. Nothing sits at the ceiling, the e2e asserts `not.toBe(0)` rather than a specific exit
   code, and the deprecation-window boundary is pinned only as the literal `1.10.0` inside a message
@@ -988,15 +994,9 @@ grouped by column with a per-coordinate reason.
 - `TC-0013-0035` — two of the three required fields have a missing-field case (`acceptance`, `id`).
   `label` has none, and neither does an item with zero keys or an item carrying two extra keys.
 
-**`Special values`, 8 cells** — `US-0013-0003`, `US-0013-0014`, `TC-0013-0016`, `-0018`, `-0026`,
+**`Special values`, 7 cells** — `US-0013-0014`, `TC-0013-0016`, `-0018`, `-0026`,
 `-0027`, `-0033`, `-0035`.
 
-- `US-0013-0003` — malformed, scalar, null and legacy-only `prototyping.yaml`, plus absent, are each
-  supplied and each required not to block. That is five special shapes of one artifact, and counting
-  the import-lite entrypoint supplies a sixth: a required markdown file present but below the
-  minimum-content threshold, seeded as a five-character `06_REQ.md`. It is `⚠️` rather than `✅`
-  because that case's only oracle is that the pack comes back `blocked`, which the fourteen absent
-  files already produce — so nothing in it shows the minimum-content check fired at all.
 - `US-0013-0014` — count 1, a two-task screen, and an all-malformed list whose parsed result is empty
   are all supplied. No `null` item, no empty map, no non-string field.
 - `TC-0013-0016` — the omitted-key case is a genuine special value: `baseBranch` absent must yield
@@ -1016,27 +1016,10 @@ grouped by column with a per-coordinate reason.
   detail to survive alongside the `QFAI-AUD-001` empty signal. Not supplied: `null`, an empty map, a
   field present but empty, and a field present but not a string.
 
-**`State transitions`, 2 cells** — `US-0013-0003`, `US-0013-0008`.
-
-Both are `⚠️` for the same reason and it is worth stating precisely, because they are two of the four
-cells above `❌` in this column across the whole pack. `sddPreflight.test.ts` does exercise a genuine
-multi-step process with five cases: a summary written into a run-scoped directory and mirrored to the
-latest pointer, an earlier run's summary still readable after a later preflight, an older run not
-overwriting a newer run's pointer, the pointer's own run id read when the newer directory is gone, and
-the pointer still refreshed when this run is the newest. That is real state-transition work. It is
-over the **summary artifact**, not over the pack-readiness verdict the two stories name: the
-incomplete-to-ready progression each story exists to gate has no case, and no invalid transition is
-attempted or rejected.
-
-**`Combinatorial`, 17 cells** — `US-0013-0003`, `-0008`, `-0011`, `-0012`, `-0013`, `-0014`,
+**`Combinatorial`, 15 cells** — `US-0013-0011`, `-0012`, `-0013`, `-0014`,
 `TC-0013-0018`, `-0021`, `-0026`, `-0027`, `-0029`, `-0030`, `-0031`, `-0032`, `-0033`, `-0034`,
 `-0035`.
 
-- `US-0013-0003`, `US-0013-0008` — two crosses are deliberate: a missing required file crossed with
-  the Story Workshop Mermaid check, with the second required **not** to fire so that one defect is not
-  reported under two headings; and a contradictory non-ui classification crossed with an absent
-  `prototyping.yaml`. Not crossed: a blocking OQ with a missing file, a deferred OQ with a naming
-  fault, or a malformed side artifact with missing required markdown.
 - `US-0013-0011`, `TC-0013-0026`, `TC-0013-0027` — the e2e crosses the lane with the full
   `runValidate` pipeline and a real config file and requires the process exit code as well as the
   finding, which is the cross the story is about. Not crossed: an empty `primary_tasks` together with
@@ -1077,19 +1060,10 @@ attempted or rejected.
   and a rejected shape in one list. The mixed list is also never crossed with an over-ceiling count or
   with `uiux.audit.enabled: false`.
 
-**`Oracle strength`, 18 cells** — `US-0013-0003`, `-0008`, `-0011`, `-0013`, `TC-0013-0003`, `-0007`,
+**`Oracle strength`, 16 cells** — `US-0013-0011`, `-0013`, `TC-0013-0003`, `-0007`,
 `-0014`, `-0017`, `-0019`, `-0020`, `-0021`, `-0025`, `-0027`, `-0028`, `-0030`, `-0031`, `-0032`,
 `-0034`.
 
-- `US-0013-0003`, `US-0013-0008` — blockers are asserted by content (`OQ-0009`, the missing-file
-  blocker text `sddPreflight.ts` builds,
-  `Blocking OQ`) and the summary file is read back and checked, which is a real oracle that a
-  one-line change to the emission reddens. Three things cap both. The positive case asserts
-  `blockers` is empty, which certifies "nothing blocks" rather than "this check passed". The
-  missing-file assertion matches only that message's fixed prefix and never the file removed, while
-  the emission joins the missing names into it. And one case pairs its runtime verdict with an
-  assertion on the shipped Stage 0 playbook's wording, so half of what it proves is that two
-  documents agree with the code rather than that the code behaves.
 - `US-0013-0011` — **the two directions are not equally supported, and this is the clearest instance
   in the pack.** A mutation that removes the empty-`primary_tasks` check reddens the refusal case in
   three ways at once: the exit code, the `QFAI-AUD-001` match and the `order_create` match. The
@@ -1344,7 +1318,7 @@ rather than by the spec.
 `QFAI-ATDD-133` requires the stage evidence to carry a `## Coverage Depth Matrix` section that links
 to this file and restates the counted totals beside it. Those totals are:
 
-**✅ 76 / ⚠️ 103 / ❌ 315**, with `n/a 7`, across all 501 scored cells — 441 matrix depth cells and
+**✅ 70 / ⚠️ 91 / ❌ 333**, with `n/a 7`, across all 501 scored cells — 441 matrix depth cells and
 60 business rule scored cells. `Status` is a row verdict, not a mark, and is excluded from all four
 counts.
 

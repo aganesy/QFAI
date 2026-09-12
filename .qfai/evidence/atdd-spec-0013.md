@@ -278,7 +278,7 @@ obligation admits.
 ## Coverage Depth Matrix
 
 See `.qfai/evidence/coverage-depth-spec-0013.md`.
-Totals: ✅ 76 / ⚠️ 103 / ❌ 315, with 7 not applicable, across 501 scored cells —
+Totals: ✅ 70 / ⚠️ 91 / ❌ 333, with 7 not applicable, across 501 scored cells —
 441 matrix depth cells (49 rows × 9 columns) and 60 business rule cells
 (20 rows × 3 columns). `Status` is a row verdict, not a mark, and is outside
 every total.
@@ -309,8 +309,8 @@ None.
   eight unbackfilled rows and no backfilled one; all eight gap reasons check
   out against the files they name; the validate gate reproduces at `error=0`,
   and fails on a missing matrix at the revision the mutations were taken at,
-  which is why it is recorded over this tree; the matrix totals — ✅ 76 /
-  ⚠️ 103 / ❌ 315 with `n/a` 7 across 501 cells — agree with the tables, and
+  which is why it is recorded over this tree; the matrix totals — ✅ 70 /
+  ⚠️ 91 / ❌ 333 with `n/a` 7 across 501 cells — agree with the tables, and
   every `❌` and `⚠️` cell carries exactly one justification, with no
   coordinate missing and none listed that does not carry the mark; and the
   four rows naming `auditProfile.ts` keep every mark when read against the
