@@ -45,7 +45,7 @@ const GENERATED_ROOTS = [
  * tracked.
  */
 const CITED_GENERATED_PATH =
-  /\.qfai\/(?:review|review_archive|report|discussion|output)\/(?:[A-Za-z0-9._/*+-]|\{[A-Za-z0-9._/*+,-]+\})+/g;
+  /\.qfai\/(?:review|review_archive|report|discussion|output)\/(?:[A-Za-z0-9._/*?+-]|\{[A-Za-z0-9._/*?+,-]+\})+/g;
 
 /**
  * A line that says a path is not provenance.
@@ -269,9 +269,18 @@ function trackedPaths(): { files: ReadonlySet<string>; directories: ReadonlySet<
 
 const tracked = trackedPaths();
 
-/** Evidence files the repository carries, in path order. */
+/**
+ * Evidence files the repository carries, in path order.
+ *
+ * Markdown and JSON both: a decision record is written as JSON, its question,
+ * answer and scope are free text, and a path cited in one of those fields is a
+ * claim about an artifact exactly as a path in a Markdown record is.
+ */
 const evidenceFiles = [...tracked.files]
-  .filter((file) => file.startsWith(".qfai/evidence/") && file.endsWith(".md"))
+  .filter(
+    (file) =>
+      file.startsWith(".qfai/evidence/") && (file.endsWith(".md") || file.endsWith(".json")),
+  )
   .sort();
 
 /**
@@ -339,20 +348,45 @@ const escapeForRegExp = (literal: string): string => literal.replace(/[.+?^${}()
  * as green.
  */
 function globToRegExp(cited: string): RegExp {
-  // `**/` is translated as a whole, and as optional: `report/**/*.json` names
-  // every JSON under the tree including one sitting directly in it, and a
+  // Segment by segment, because a globstar crosses separators only where it is
+  // the whole segment — which is the rule the scaffold dialect in this package
+  // implements, and two dialects for one notation is two answers for one tree.
+  // A non-final `**` takes its own separator with it, so `report/**/*.json`
+  // names every JSON under the tree including one sitting directly in it: a
   // translation that leaves the separator behind demands a directory nobody
   // wrote.
-  const source = cited
-    .split(/(\*\*\/|\*\*|\*)/)
+  const segments = cited.split("/");
+  let source = "";
+  for (const [index, segment] of segments.entries()) {
+    const last = index === segments.length - 1;
+    if (segment === "**") {
+      source += last ? ".*" : "(?:[^/]+/)*";
+      continue;
+    }
+    source += segmentToRegExp(segment);
+    if (!last) source += "/";
+  }
+  return new RegExp(`^${source}$`);
+}
+
+/**
+ * One path segment as a regular expression over one path segment.
+ *
+ * `*` and `?` are the two wildcards, and neither crosses a separator. An
+ * embedded globstar is not a globstar: the dialect degrades `a**b` to a single
+ * `*`, and reading it as cross-segment lets `discussion-**.md` — which names
+ * files in the tree itself — match a file inside a pack instead.
+ */
+function segmentToRegExp(segment: string): string {
+  return segment
+    .replace(/\*\*+/g, "*")
+    .split(/([*?])/)
     .map((part) => {
-      if (part === "**/") return "(?:[^/]+/)*";
-      if (part === "**") return ".*";
       if (part === "*") return "[^/]*";
+      if (part === "?") return "[^/]";
       return escapeForRegExp(part);
     })
     .join("");
-  return new RegExp(`^${source}$`);
 }
 
 /**
@@ -388,8 +422,13 @@ function expandBraces(cited: string): string[] {
 function resolves(cited: string): boolean {
   // Every name, not one of them: a brace list claims all of what it names, and
   // a check that any member resolves passes a pack missing two of three.
+  // Whenever expansion changed the citation, not only where it produced several
+  // names: a one-member list is still a list, and resolving the brace token
+  // itself reports a tracked artifact as missing.
   const names = expandBraces(cited);
-  if (names.length > 1) return names.every((name) => resolves(name));
+  if (names.length !== 1 || names[0] !== cited) {
+    return names.every((name) => resolves(name));
+  }
   const root = GENERATED_ROOTS.find((candidate) => cited.startsWith(candidate));
   if (root === undefined || !staysInsideRoot(cited, root)) return false;
   if (cited.includes("*")) {
@@ -516,6 +555,14 @@ describe("what the scan counts as a citation", () => {
     ]);
   });
 
+  it("takes a one-character wildcard", () => {
+    // The dialect supports `?`, and a grammar that stops before it leaves the
+    // pack directory to be checked in place of the file set the citation named.
+    expect(matches("- `.qfai/discussion/pack/?9_missing.md`")).toEqual([
+      ".qfai/discussion/pack/?9_missing.md",
+    ]);
+  });
+
   it("counts nothing on a line that says the path is not provenance", () => {
     // A record explaining why an artifact is absent writes the path like any
     // other, and would otherwise need a backlog entry for a citation it just
@@ -556,6 +603,44 @@ describe("a glob is a claim about a set", () => {
     // holding anything at all would pass it.
     const pack = ".qfai/review/review-20260912000000000";
     expect(resolves(`${pack}/{review_request.md,R01_*.md,summary.json}`)).toBe(false);
+  });
+
+  it("resolves a one-member brace list", () => {
+    // A list of one is still a list. Resolving the brace token itself reports a
+    // tracked artifact as missing.
+    expect(resolves(".qfai/discussion/{discussion-20260330153902875}")).toBe(
+      resolves(".qfai/discussion/discussion-20260330153902875"),
+    );
+  });
+
+  it("keeps a globstar inside its segment unless it is the whole segment", () => {
+    // `discussion-**.md` names files in the tree itself. Read as cross-segment
+    // it matches a file inside a pack, and a pattern nothing satisfies resolves.
+    expect(
+      globToRegExp(".qfai/discussion/discussion-**.md").test(
+        ".qfai/discussion/discussion-1/01_Context.md",
+      ),
+    ).toBe(false);
+    expect(
+      globToRegExp(".qfai/discussion/discussion-**.md").test(".qfai/discussion/discussion-1.md"),
+    ).toBe(true);
+    // A whole-segment globstar still crosses them.
+    expect(
+      globToRegExp(".qfai/discussion/**/01_Context.md").test(
+        ".qfai/discussion/discussion-1/01_Context.md",
+      ),
+    ).toBe(true);
+  });
+
+  it("reads a one-character wildcard", () => {
+    // The dialect supports `?`, and a token grammar that stops before it left
+    // the pack directory to be checked in place of the file set named.
+    expect(globToRegExp(".qfai/report/validate.?.json").test(".qfai/report/validate.1.json")).toBe(
+      true,
+    );
+    expect(globToRegExp(".qfai/report/validate.?.json").test(".qfai/report/validate.12.json")).toBe(
+      false,
+    );
   });
 
   it("does not measure a path that names the tree itself", () => {
