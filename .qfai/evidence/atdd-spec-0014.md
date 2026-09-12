@@ -164,7 +164,7 @@ first mutation passes it and fails the literal check below it instead.
 ## Coverage Depth Matrix
 
 See `.qfai/evidence/coverage-depth-spec-0014.md`.
-Totals: ✅ 14 / ⚠️ 60 / ❌ 70, with 3 not applicable, across 147 scored cells —
+Totals: ✅ 13 / ⚠️ 61 / ❌ 70, with 3 not applicable, across 147 scored cells —
 126 matrix depth cells (14 rows × 9 columns) and 21 business rule cells
 (7 rows × 3 columns). `Status` is a row verdict, not a mark, and is outside
 every total.

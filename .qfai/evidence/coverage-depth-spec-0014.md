@@ -60,7 +60,7 @@ gate and no case on the claim that distinguishes it.
 
 Section "Every `❌` cell, named" enumerates all 79 of them — 70 scored, 9 in the non-scored `Status`
 columns — so that "one justification per `❌`" is checkable rather than asserted, and section
-"Every `⚠️` cell, named" does the same for all 72 partial scores, 60 of which are scored cells the
+"Every `⚠️` cell, named" does the same for all 73 partial scores, 61 of which are scored cells the
 PASS criterion also requires a rationale for.
 
 ## What was measured, and how
@@ -193,7 +193,7 @@ to the story can hold a cell at `⚠️`; no cell reaches `✅`.
 | US-0014-0020 | ⚠️                     | ⚠️          | ⚠️         | ⚠️         | ⚠️              | ⚠️             | ⚠️                | ⚠️            | ⚠️              | ⚠️     |
 | TC-0014-0009 | ❌                     | ❌          | ❌         | ❌         | ❌              | ❌             | ❌                | ❌            | ❌              | ❌     |
 | TC-0014-0018 | ⚠️                     | ⚠️          | ⚠️         | ❌         | ❌              | ❌             | ❌                | ❌            | ⚠️              | ⚠️     |
-| TC-0014-0019 | ❌                     | ✅          | ⚠️         | ❌         | ❌              | ❌             | ❌                | ❌            | ⚠️              | ⚠️     |
+| TC-0014-0019 | ❌                     | ⚠️          | ⚠️         | ❌         | ❌              | ❌             | ❌                | ❌            | ⚠️              | ⚠️     |
 | TC-0014-0028 | ❌                     | ❌          | ❌         | ❌         | ❌              | ❌             | ❌                | ❌            | ❌              | ❌     |
 | TC-0014-0029 | ❌                     | ❌          | ❌         | ❌         | ❌              | ❌             | ❌                | ❌            | ❌              | ❌     |
 | TC-0014-0033 | ⚠️                     | ⚠️          | ⚠️         | ⚠️         | ⚠️              | ⚠️             | ⚠️                | ⚠️            | ⚠️              | ❌     |
@@ -201,7 +201,7 @@ to the story can hold a cell at `⚠️`; no cell reaches `✅`.
 | TC-0014-0035 | ⚠️                     | ⚠️          | ❌         | ❌         | ❌              | ❌             | ❌                | ❌            | ⚠️              | ⚠️     |
 | TC-0014-0036 | ✅                     | ⚠️          | ✅         | ✅         | ⚠️              | ⚠️             | ✅                | ✅            | ⚠️              | ⚠️     |
 
-14 rows × the 9 depth columns = **126 scored cells: ✅ 9 / ⚠️ 52 / ❌ 65**.
+14 rows × the 9 depth columns = **126 scored cells: ✅ 8 / ⚠️ 53 / ❌ 65**.
 
 `Status` is the row verdict, not a mark, so it is outside the scored population. For reference, its
 14 cells read **✅ 0 / ⚠️ 9 / ❌ 5**.
@@ -644,8 +644,8 @@ leaves both markers undefined. This row has **six `❌` depth cells** and no `�
 
 ## Every ⚠️ cell, named
 
-52 depth cells and 9 `Status` cells in the matrix, and 8 scored cells and 3 `Status` cells in the
-business rule table, are `⚠️` — 72 in all, of which 60 are scored. The PASS criterion requires a
+53 depth cells and 9 `Status` cells in the matrix, and 8 scored cells and 3 `Status` cells in the
+business rule table, are `⚠️` — 73 in all, of which 61 are scored. The PASS criterion requires a
 documented rationale for each, so each is named here.
 
 ### Matrix depth cells
@@ -808,6 +808,13 @@ documented rationale for each, so each is named here.
   `expect(validateSrc).toContain("runCanonicalUixValidators")`, which the import statement alone
   satisfies — deleting every call while leaving the import keeps it green. The `not.toMatch`
   half is stronger, since re-adding either legacy aggregator name reddens it.
+- **TC-0014-0019 × Normal path** — the compliant direction is exercised, but over a proxy for
+  the surface the obligation names. The case reads `src/core/validators/index.ts` and
+  `src/core/types.ts`; the package surface is what `package.json#exports` publishes, which is
+  `dist/index.mjs`, `dist/index.cjs` and `dist/index.d.ts`. A legacy namespace re-entering through
+  a re-export in `src/index.ts`, through a retained `dist/` artifact, or through any other shipped
+  path leaves the case green — the same blind spot this row carries `❌` in `Edge cases` for. The
+  direction does run and its assertions are real, so the cell is capped rather than empty.
 - **TC-0014-0019 × Error path** — the obligation is negative in shape and the assertions are
   negative over the real tree, which is the right shape for "does not reappear": re-introducing
   `validators/legacy` or `runLegacyUixCompatibilityValidators` into either file reddens the case.
@@ -1135,7 +1142,7 @@ them is repaired here; this artifact scores coverage and does not edit tests, le
 `QFAI-ATDD-133` requires the stage evidence to carry a `## Coverage Depth Matrix` section that links
 to this file and restates the counted totals beside it. Those totals are:
 
-**✅ 14 / ⚠️ 60 / ❌ 70**, with `n/a` 3, across all 147 scored cells — 126 matrix depth cells (14
+**✅ 13 / ⚠️ 61 / ❌ 70**, with `n/a` 3, across all 147 scored cells — 126 matrix depth cells (14
 rows × 9 columns) and 21 business rule cells (7 rows × 3 columns). The `Status` columns of both
 tables hold row verdicts rather than marks and are outside that population; for reference the
 matrix's 14 read `⚠️ 9 / ❌ 5` and the business rule table's 7 read `⚠️ 3 / ❌ 4`.
