@@ -465,6 +465,14 @@ describe("cross-AI rules surface (.agents/rules/ master)", () => {
       expect(text).toMatch(/in\s+the\s+shape\s+the\s+answer\s+has/);
       expect(text).toMatch(/a\s+plain\s+request\s+for\s+the\s+value/);
       expect(text).toMatch(/not\s+the\s+same\s+as\s+"always\s+a\s+list\s+of\s+choices"/);
+      // The parts differ by shape. An unconditional list of them sends the open
+      // path looking for metadata it has none of — what each choice means, and
+      // how many may be chosen.
+      expect(text).toMatch(/What\s+is\s+being\s+asked,\s+and\s+what\s+depends\s+on\s+the\s+answer/);
+      // And what decides is the candidate set, not the value's type: one count
+      // out of the four a platform supports is a choice however scalar it looks.
+      expect(text).toMatch(/whether\s+a\s+finite\s+set\s+of/);
+      expect(text).toMatch(/no\s+finite\s+set\s+of\s+candidates/);
     });
 
     // The form and the count are independent. Without this the rule reads as a

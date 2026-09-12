@@ -41,12 +41,19 @@ stated constraint exists to avoid.
 Every question to the user goes through the host's structured question tool
 where it is callable, and through § 5's fallback where it is not. No question
 reaches the user as a bare paragraph: whichever path carries it, it arrives with
-its parts — what is being asked, what each answer means, and how many answers
-may be given.
+its parts.
 
-That is not the same as "always a list of choices". A question whose answer is a
-name, a number or a sentence has no choices to enumerate, and § 2 sends it down
-the tool's free-text path. § 5 carries the same distinction.
+| The question   | Its parts                                                               |
+| -------------- | ----------------------------------------------------------------------- |
+| Offers choices | What is being asked, what each choice means, and how many may be chosen |
+| Is open        | What is being asked, and what depends on the answer                     |
+
+That is not the same as "always a list of choices", and it is not the same as
+"a scalar answer is open" either. **What decides is whether a finite set of
+candidates exists**, not what type the value has: one deployment count out of
+the four the platform supports is a choice, and a release name nobody has picked
+is open. § 2 sends the open one down the tool's free-text path and § 5 carries
+the same distinction.
 
 There is no class of question light enough to skip it. A yes-or-no, a
 confirmation, a "just checking" — each is a question, and each goes through the
@@ -65,9 +72,11 @@ The description is the work. A label alone asks the user to infer the
 consequence, and inferring it is the reasoning the agent already did and did not
 write down.
 
-Where the answer is genuinely open — a name, a number, a sentence — the tool's
-own free-text path covers it. That is a different answer shape, not an exception
-to this rule.
+Where the answer is genuinely open — no finite set of candidates to choose from —
+the tool's own free-text path covers it. That is a different answer shape, not an
+exception to this rule. A name, a number or a sentence is usually of that kind and
+is not of that kind by type: where the value has to be one of a known few, the set
+is what the user needs to see, and free text loses it.
 
 ## 3. Recommend
 
@@ -127,7 +136,7 @@ Where there are choices, that is a numbered list keeping every part the tool
 would have carried: the label, the description of what each choice means, the
 recommendation, and **how many options may be chosen**.
 
-Where the answer is open — a name, a number, a sentence — it is a plain request
+Where the answer is open — no finite set of candidates — it is a plain request
 for the value, naming what depends on it. Inventing two options so an open
 answer fits a numbered list is the guess § 3 refuses, wearing the fallback's
 shape.
