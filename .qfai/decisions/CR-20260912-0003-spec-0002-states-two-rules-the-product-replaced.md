@@ -66,11 +66,11 @@ from the options below, and sweep the ledger rows that rest on them.
 
 ## Options (at least 3) and recommendation
 
-| #   | Option                                                                                                                                             | Cost                                                     | Risk                                                                                                     | Recommended |
-| --- | -------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------- | -------------------------------------------------------------------------------------------------------- | ----------- |
+| #   | Option                                                                                                                                              | Cost                                                     | Risk                                                                                                      | Recommended |
+| --- | --------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------- | --------------------------------------------------------------------------------------------------------- | ----------- |
 | 1   | Narrow the spec to the product: REQ-0012 and AC-0002-0008 bind the screen explorations only; REQ-0005 and AC-0002-0010 say the artifact is optional | Edit four upstream statements; re-point four ledger rows | Records today's behaviour as intended. If either narrowing was a regression, it becomes the specification | ✅          |
-| 2   | Restore the product to the spec: reinstate a winner check, and make `prototyping.yaml` a readiness blocker for UI-bearing packs                     | New validator work, and a breaking change for adopters   | Reverses a deliberate design move without the record of why it was made                                  |             |
-| 3   | Retire the four obligations: withdraw REQ-0012, AC-0002-0008, REQ-0005's requiredness half and AC-0002-0010, and delete the rows resting on them    | Smallest edit                                            | Loses the record that the question was ever settled, so the next reader re-derives it                    |             |
+| 2   | Restore the product to the spec: reinstate a winner check, and make `prototyping.yaml` a readiness blocker for UI-bearing packs                     | New validator work, and a breaking change for adopters   | Reverses a deliberate design move without the record of why it was made                                   |             |
+| 3   | Retire the four obligations: withdraw REQ-0012, AC-0002-0008, REQ-0005's requiredness half and AC-0002-0010, and delete the rows resting on them    | Smallest edit                                            | Loses the record that the question was ever settled, so the next reader re-derives it                     |             |
 
 Option 1 is recommended because the narrowing is documented in the tree and was
 made on purpose: the direction interview asks the user rather than letting an
@@ -80,12 +80,12 @@ spec catching up, not the product going back.
 
 ## Blocked downstream items
 
-| Item                 | Kind         | Why it depends on the artifact                                          |
-| -------------------- | ------------ | ----------------------------------------------------------------------- |
-| `spec-0002/TDD-0008` | `ledger-row` | `TC-0002-0008` asks that discussion completion not require a direction  |
+| Item                 | Kind         | Why it depends on the artifact                                             |
+| -------------------- | ------------ | -------------------------------------------------------------------------- |
+| `spec-0002/TDD-0008` | `ledger-row` | `TC-0002-0008` asks that discussion completion not require a direction     |
 | `spec-0002/TDD-0009` | `ledger-row` | `TC-0002-0009` asks that a pack asserting a single final winner be refused |
-| `spec-0002/TDD-0010` | `ledger-row` | second row on `TC-0002-0009`                                            |
-| `spec-0002/TDD-0012` | `ledger-row` | `TC-0002-0011` asks that the wording match the active requiredness rule |
+| `spec-0002/TDD-0010` | `ledger-row` | second row on `TC-0002-0009`                                               |
+| `spec-0002/TDD-0012` | `ledger-row` | `TC-0002-0011` asks that the wording match the active requiredness rule    |
 
 - Not blocked by this CR: `spec-0002/TDD-0001` and `spec-0002/TDD-0011`. Their
   obligations — pack readiness, and the non-UI sidecar skip — are untouched by
