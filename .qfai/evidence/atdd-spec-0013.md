@@ -44,23 +44,34 @@ both cells.
   the titles they name, and the `Evidence` cells of the four rows below rewritten
   as pointers into this file. No `Status` moved.
 - This file created.
+- `TDD-0020` and `TDD-0030` taken again when their test files gained the cases
+  their obligations named: the prototyping preflight refusing an empty
+  `primary_tasks`, and a structured item missing `label`. `TDD-0029` taken again
+  with them, because it shares the second file. The three rows now carry the
+  revision of that run in their `Evidence` cells.
 
 ## Commands executed + key outputs
 
-Every command ran from `packages/qfai`. The clean-tree runs were taken at
-revision `649d8111147436408c90cbbe1b9f9b07e34da8cb`. Each mutation was reverted
+Every command ran from `packages/qfai`. The clean-tree runs for `TDD-0024` were taken
+at revision `649d8111147436408c90cbbe1b9f9b07e34da8cb`. Those for `TDD-0020`,
+`TDD-0029` and `TDD-0030` were taken at
+`working-tree+87f61d33f95fdc477763bd387fcd7d8645a80da8b7e6735a49f753cd09deead6`,
+with `d4b59da759e80dc2c6018b92b8d6f9154e1e4dd7` as `HEAD`. Each mutation was reverted
 from a copy of the pre-mutation bytes, and the tree re-addressed afterwards to
 confirm it had returned to the clean value.
 
 | Row        | Mutation                                          | Killed              |
 | ---------- | ------------------------------------------------- | ------------------- |
-| `TDD-0020` | the empty-list test forced false                  | 3 of 4              |
+| `TDD-0020` | the empty-list test and the preflight check forced false | 4 of 5 |
+| `TDD-0020` | the preflight check forced false, alone | 1 of 5 |
 | `TDD-0024` | the pointer-to-pack match made unconditional      | 1 of 4              |
-| `TDD-0029` | a fourth key added to the required set            | 4 of 6              |
-| `TDD-0029` | the legacy string branch emptied                  | 1 of 6              |
-| `TDD-0030` | the shape finding's rule code renamed             | 4 of 6              |
+| `TDD-0029` | `acceptance` taken out of the required set | 5 of 7 |
+| `TDD-0029` | the legacy string branch emptied | 1 of 7 |
+| `TDD-0030` | `label` taken out of the missing-key filter | 1 of 7 |
+| `TDD-0030` | the shape finding's rule code renamed | 5 of 7 |
 
-Refactor verify: 25 passed. Checkpoint: 8986 passed, exit 0.
+Refactor verify: 25 passed at the first revision and 62 at the second. Checkpoint:
+8986 passed at the first and 9468 at the second, exit 0 both times.
 
 The checkpoint holds two files of the `core` project out, named in its command:
 `tests/core/prFixMonitor.test.ts` and `tests/core/prMergePlan.test.ts` drive a
@@ -78,8 +89,10 @@ invoked rather than with the tree.
 
 ## Test volume estimate
 
-Not applicable. This run authored no test; it records proof for rows whose tests
-already exist.
+Two cases, one per row taken again: the preflight refusal in
+`sddPrimaryTasksLane.test.ts` and the missing `label` in
+`primaryTasksStructured.test.ts`. `TDD-0029` shares the second file, and `TDD-0024`
+records proof for a test that already existed.
 
 ## Coverage obligations checklist
 
@@ -97,18 +110,19 @@ No row changed status. Every row below was already `done`.
 | `TDD-0029` | `TC-0013-0034`  | integration | falsifiability | done   |
 | `TDD-0030` | `TC-0013-0035`  | integration | falsifiability | done   |
 
-Three of the four reach part of a multi-clause obligation. The part each reaches
+One of the four reaches part of a multi-clause obligation. The part each reaches
 is recorded with the row, so the evidence says what it proves rather than
 restating what the test case asks for.
 
 | Row        | Reached by the recorded case                                                             | Not reached                                                                                                            |
 | ---------- | ---------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
-| `TDD-0020` | The lane fails at `error`, and the message names the file, the screen and the rule token | That `/qfai-prototyping` preflight then refuses. No case drives a preflight; the nearest is in the end-to-end file `TDD-0022` names, asserting a non-zero `runValidate` exit carrying the rule token |
+| `TDD-0020` | The lane fails at `error`, and the message names the file, the screen and the rule token; the `/qfai-prototyping` preflight then refuses, its UI contract check naming the file and the screen | Nothing the obligation names |
 | `TDD-0024` | A missing pointer and an absent pack each raise a recovery error                         | A pointer resolving to a duplicate pack. No case supplies one, and none can: the resolver calls `findPacks` once over one directory, and two entries of one directory cannot share a name, so `matches.length > 1` is unreachable through this API. The branch is defensive code, and the row proves the two conditions that are reachable |
-| `TDD-0030` | An item missing `id`, one missing `acceptance`, one carrying an extra key, and a list where every item is malformed | An item missing `label`. Excluding `label` from the missing-key filter leaves all six cases green |
+| `TDD-0030` | An item missing `id`, one missing `label`, one missing `acceptance`, one carrying an extra key, and a list where every item is malformed | Nothing the obligation names |
 
-The refactor-verify and checkpoint runs are shared by all four rows, so each
-entry records the same pair:
+`TDD-0020`, `TDD-0029` and `TDD-0030` share the refactor-verify and checkpoint
+runs of the second revision, which their entries record. `TDD-0024` records
+those of the first:
 
 - Refactor verify command: npx vitest run tests/integration/sddUiTemplate.test.ts tests/integration/sddPrimaryTasksLane.test.ts tests/e2e/spec0013UiContractPrimaryTasksE2E.test.ts tests/core/activeDiscussionPack.test.ts tests/core/surfaceTypePopulate.test.ts tests/integration/primaryTasksStructured.test.ts
 - Refactor verify result: Test Files 6 passed (6); Tests 25 passed (25)
@@ -126,19 +140,19 @@ and did not run.
 - Selector: TC-0013-0026: QFAI-AUD-001 aligned lane fails when primary_tasks is empty
 - TC-ref: TC-0013-0026
 - Run output retained: no
-- Backfill note: the row's cell recorded a verdict with no command and no output, so nothing of the original run survives. The test was re-run for the GREEN below, and the mutation below was applied and reverted to establish that the test discriminates. No reviewer verdict is recorded because none can be reconstructed.
+- Backfill note: the row's cell recorded a verdict with no command and no output, so nothing of the original run survives. The proof below was taken again when the file gained the case for the preflight refusal the obligation names: the tests were re-run for the GREEN, and the mutations were applied and reverted to establish that each of the row's cases discriminates. No reviewer verdict is recorded because none can be reconstructed.
 
 - RED failure mode: falsifiability
 
 #### Round 1
 
-- Round 1: Revision: 649d8111147436408c90cbbe1b9f9b07e34da8cb
-- Round 1: Satisfied-by: packages/qfai/src/core/validators/designAudit.ts, checkContractHierarchyFromScreens — the empty-list test that opens the `QFAI-AUD-001` branch.
+- Round 1: Revision: working-tree+87f61d33f95fdc477763bd387fcd7d8645a80da8b7e6735a49f753cd09deead6
+- Round 1: Satisfied-by: packages/qfai/src/core/validators/designAudit.ts, checkContractHierarchyFromScreens — the empty-list test that opens the `QFAI-AUD-001` branch; and packages/qfai/src/core/doctor.ts, buildPrototypingUiContractsCheck — the check that stops the prototyping preflight on a screen with no primary task.
 - Round 1: Falsifiability command: npx vitest run tests/integration/sddPrimaryTasksLane.test.ts
-- Round 1: Falsifiability result: Test Files 1 failed (1); Tests 3 failed, 1 passed (4). This row's own case fails on the absent finding.
+- Round 1: Falsifiability result: Test Files 1 failed (1); Tests 4 failed, 1 passed (5). Both of this row's cases fail: the lane case on the absent finding, and the preflight case on a UI contract check that reads `ok`.
 
-The edit, in `checkContractHierarchyFromScreens` — the empty-list branch that
-opens `QFAI-AUD-001`:
+The edits, one per case — the empty-list branch that opens `QFAI-AUD-001`, and
+the preflight's refusal:
 
 ```diff
    for (const screen of screens) {
@@ -146,22 +160,33 @@ opens `QFAI-AUD-001`:
 +    if (false) {
        // sourceRef is `<rel-path>#<screenId>` — split so the message names
 ```
-- Round 1: Falsifiability revision: working-tree+2931d34aa471bfb18f339e1a1d66f4bf091412090a43cf61665b2282ee4700fb
+
+```diff
+   const withoutTasks = screens.filter((screen) => screen.primaryTasks.length === 0);
+-  if (withoutTasks.length > 0) {
++  if (false) {
+     return {
+```
+
+- Round 1: Falsifiability revision: working-tree+ce534d01b504b21a2f843bfb9d3c5d45086b1ce3b2dcb2a2b73330a7b7ddd136
 - Round 1: GREEN command: npx vitest run tests/integration/sddPrimaryTasksLane.test.ts
-- Round 1: GREEN result: Test Files 1 passed (1); Tests 4 passed (4)
-- Round 1: RED test hash: dd54681a79a41a321eff0d7aecac91ad559688a61a4530155ddfad172b6428b7
+- Round 1: GREEN result: Test Files 1 passed (1); Tests 5 passed (5)
+- Round 1: RED test hash: 00eaf917cdbd617aac0c34206cd04ea4b8d18d6013fccc5a0791275f1f40fd20
 - Round 1: RED test manifest: packages/qfai/tests/integration/sddPrimaryTasksLane.test.ts
 
-Forcing the test false silences the finding for an empty list and for a legacy
-contract alike, so three of the file's four cases die. The surviving case is the
-one this row's sibling owns.
+Forcing the empty-list test false silences the finding for an empty list and for
+a legacy contract alike, so the lane case dies together with the two sibling
+cases that read it; the surviving case is the sibling's non-empty contract. The
+preflight edit is independent of the lane. Applied alone, at
+`working-tree+f299ca3d4ad82f0da999ce5bcc1f41185988059606916b8d2ef96ea549477929`,
+it fails the preflight case and nothing else: Tests 1 failed, 4 passed (5).
 
-- Refactor verify command: npx vitest run tests/integration/sddUiTemplate.test.ts tests/integration/sddPrimaryTasksLane.test.ts tests/e2e/spec0013UiContractPrimaryTasksE2E.test.ts tests/core/activeDiscussionPack.test.ts tests/core/surfaceTypePopulate.test.ts tests/integration/primaryTasksStructured.test.ts
-- Refactor verify result: Test Files 6 passed (6); Tests 25 passed (25)
-- Refactor verify revision: 649d8111147436408c90cbbe1b9f9b07e34da8cb
+- Refactor verify command: npx vitest run tests/integration/sddUiTemplate.test.ts tests/integration/sddPrimaryTasksLane.test.ts tests/e2e/spec0013UiContractPrimaryTasksE2E.test.ts tests/core/activeDiscussionPack.test.ts tests/core/surfaceTypePopulate.test.ts tests/integration/primaryTasksStructured.test.ts tests/cli/doctor.test.ts
+- Refactor verify result: Test Files 7 passed (7); Tests 62 passed (62)
+- Refactor verify revision: working-tree+87f61d33f95fdc477763bd387fcd7d8645a80da8b7e6735a49f753cd09deead6
 - Checkpoint verification command: npx vitest run --project integration --project e2e --project cli --project core --exclude 'tests/core/prFixMonitor.test.ts' --exclude 'tests/core/prMergePlan.test.ts'
-- Checkpoint verification result: PASS — exit 0; Test Files 532 passed (540); Tests 8986 passed (9029)
-- Checkpoint verification revision: 649d8111147436408c90cbbe1b9f9b07e34da8cb
+- Checkpoint verification result: PASS — exit 0; Test Files 547 passed (555); Tests 9468 passed (9550)
+- Checkpoint verification revision: working-tree+87f61d33f95fdc477763bd387fcd7d8645a80da8b7e6735a49f753cd09deead6
 
 ### TDD-0024
 
@@ -209,16 +234,16 @@ pointer against the packs on disk:
 - Selector: TC-0013-0034: structured primary_tasks accepted
 - TC-ref: TC-0013-0034
 - Run output retained: no
-- Backfill note: the row's cell recorded a verdict with no command and no output, so nothing of the original run survives. The test was re-run for the GREEN below, and the mutation below was applied and reverted to establish that the test discriminates. No reviewer verdict is recorded because none can be reconstructed.
+- Backfill note: the row's cell recorded a verdict with no command and no output, so nothing of the original run survives. The proof below was taken again when the test file this row shares with `TDD-0030` gained a case, which moved the file its RED test hash is taken over: the tests were re-run for the GREEN, and the mutations were applied and reverted to establish that the test discriminates. No reviewer verdict is recorded because none can be reconstructed.
 
 - RED failure mode: falsifiability
 
 #### Round 1
 
-- Round 1: Revision: 649d8111147436408c90cbbe1b9f9b07e34da8cb
+- Round 1: Revision: working-tree+87f61d33f95fdc477763bd387fcd7d8645a80da8b7e6735a49f753cd09deead6
 - Round 1: Satisfied-by: packages/qfai/src/core/contracts/screenContracts.ts, REQUIRED_PRIMARY_TASK_KEYS — the closed set a structured item is measured against.
 - Round 1: Falsifiability command: npx vitest run tests/integration/primaryTasksStructured.test.ts
-- Round 1: Falsifiability result: Test Files 1 failed (1); Tests 4 failed, 2 passed (6). This row's acceptance case fails on the complete item it is meant to admit.
+- Round 1: Falsifiability result: Test Files 1 failed (1); Tests 5 failed, 2 passed (7). This row's acceptance case fails on the complete item it is meant to admit.
 
 The edit, in `screenContracts.ts` — the closed set a structured item is
 measured against:
@@ -228,39 +253,35 @@ measured against:
 +const REQUIRED_PRIMARY_TASK_KEYS = ["id", "label"] as const;
 ```
 
-Which four die, re-run at this tree:
+Which five die:
 
 ```text
  ✓ TC-0013-0034 > string-only items pass (legacy shape, three string entries — within band)
  × TC-0013-0034 > complete structured {id,label,acceptance} items pass
  × TC-0013-0035 > rejects a structured item missing 'acceptance'
+ × TC-0013-0035 > rejects a structured item missing 'label'
  × TC-0013-0035 > rejects a structured item missing 'id'
  ✓ TC-0013-0035 > surfaces QFAI-AUD-021 shape findings even when every entry is malformed (parsed list empty)
  × TC-0013-0035 > rejects a structured item carrying an extra key (closed schema)
 ```
 
-The set is one closed schema read from both directions, which is why four move
-rather than two: `acceptance` leaving the required list makes it an **extra**
-key, so the complete item is rejected and the extra-key case's message names a
-different key; and `missing 'id'` fails because the reported `missingKeys` set
-changes with the list it is filtered from.
-- Round 1: Falsifiability revision: working-tree+e9c87b9362c368ec472519a028f2a933c792d5228d3460dbcd53ccd142d86c82
+The set is one closed schema read from both directions, which is why the
+rejection cases move with the acceptance case: `acceptance` leaving the required
+list makes it an **extra** key on every item that carries one, so the complete
+item is rejected, and the first finding each rejection case reads is now about
+another item or another key than the one it names. The all-malformed case
+survives because none of its items carries `acceptance`, so its first finding
+still reports the missing `id`.
+
+- Round 1: Falsifiability revision: working-tree+fc27f757d877a45855674ed359d50467ad12b3083b05719a2ff85bafbb08f6d8
 - Round 1: GREEN command: npx vitest run tests/integration/primaryTasksStructured.test.ts
-- Round 1: GREEN result: Test Files 1 passed (1); Tests 6 passed (6)
-- Round 1: RED test hash: d798fda11f10e7516c51e3b1aaee98a7c9ab6fd5c86b1e78303e2234803d2c6e
+- Round 1: GREEN result: Test Files 1 passed (1); Tests 7 passed (7)
+- Round 1: RED test hash: 42ed4fd14d1e12d580570121fe033e4d7afc2d3ecad4e946af7f605e42860c0f
 - Round 1: RED test manifest: packages/qfai/tests/integration/primaryTasksStructured.test.ts
 
-The obligation admits two shapes, so it carries two mutations.
-
-**Mutation A — the structured shape.** Adding a fourth required key rejects
-every item. Three of the four rejection cases fail too: they name the key they
-expect to be reported missing, and the mutation adds a second one to every
-finding. The fourth survives because its items already omit `id` — the first
-finding still reports `id`, so the added key does not displace it and the
-assertion holds.
-
-**Mutation B — the legacy string shape.** In the same file, the branch that
-turns a bare string entry into a task:
+The obligation admits two shapes, so it carries two mutations. The one above
+takes the structured shape. The legacy string shape is taken by emptying, in
+the same file, the branch that turns a bare string entry into a task:
 
 ```diff
      if (typeof entry === "string") {
@@ -273,20 +294,20 @@ turns a bare string entry into a task:
 ```
 
 - Round 1: Second falsifiability command: npx vitest run tests/integration/primaryTasksStructured.test.ts
-- Round 1: Second falsifiability result: Test Files 1 failed (1); Tests 1 failed, 5 passed (6). The failure is this row's legacy-shape case, `string-only items pass (legacy shape, three string entries — within band)`.
-- Round 1: Second falsifiability revision: working-tree+5d4e6d6a8aaa683edefad7e062fd1c321f1df9891df0b3155dbcd968f0bf28b0
+- Round 1: Second falsifiability result: Test Files 1 failed (1); Tests 1 failed, 6 passed (7). The failure is the legacy-shape case of this row, `string-only items pass (legacy shape, three string entries — within band)`.
+- Round 1: Second falsifiability revision: working-tree+4c4e7a9753d7c4f021cd0f620ffba25218d1b00e509410e910929e998e05ed29
 
 A legacy string then contributes no task, so a screen carrying three of them
-parses as empty and the lane reports it. Mutation A leaves that case green and
-mutation B leaves the structured case green, so the pair covers both shapes the
-obligation admits.
+parses as empty and the lane reports it. The first mutation leaves that case
+green and the second leaves the structured case green, so the pair covers both
+shapes the obligation admits.
 
-- Refactor verify command: npx vitest run tests/integration/sddUiTemplate.test.ts tests/integration/sddPrimaryTasksLane.test.ts tests/e2e/spec0013UiContractPrimaryTasksE2E.test.ts tests/core/activeDiscussionPack.test.ts tests/core/surfaceTypePopulate.test.ts tests/integration/primaryTasksStructured.test.ts
-- Refactor verify result: Test Files 6 passed (6); Tests 25 passed (25)
-- Refactor verify revision: 649d8111147436408c90cbbe1b9f9b07e34da8cb
+- Refactor verify command: npx vitest run tests/integration/sddUiTemplate.test.ts tests/integration/sddPrimaryTasksLane.test.ts tests/e2e/spec0013UiContractPrimaryTasksE2E.test.ts tests/core/activeDiscussionPack.test.ts tests/core/surfaceTypePopulate.test.ts tests/integration/primaryTasksStructured.test.ts tests/cli/doctor.test.ts
+- Refactor verify result: Test Files 7 passed (7); Tests 62 passed (62)
+- Refactor verify revision: working-tree+87f61d33f95fdc477763bd387fcd7d8645a80da8b7e6735a49f753cd09deead6
 - Checkpoint verification command: npx vitest run --project integration --project e2e --project cli --project core --exclude 'tests/core/prFixMonitor.test.ts' --exclude 'tests/core/prMergePlan.test.ts'
-- Checkpoint verification result: PASS — exit 0; Test Files 532 passed (540); Tests 8986 passed (9029)
-- Checkpoint verification revision: 649d8111147436408c90cbbe1b9f9b07e34da8cb
+- Checkpoint verification result: PASS — exit 0; Test Files 547 passed (555); Tests 9468 passed (9550)
+- Checkpoint verification revision: working-tree+87f61d33f95fdc477763bd387fcd7d8645a80da8b7e6735a49f753cd09deead6
 
 ### TDD-0030
 
@@ -296,45 +317,48 @@ obligation admits.
 - Selector: TC-0013-0035: incomplete / open structured primary_tasks rejected
 - TC-ref: TC-0013-0035
 - Run output retained: no
-- Backfill note: the row's cell recorded a verdict with no command and no output, so nothing of the original run survives. The test was re-run for the GREEN below, and the mutation below was applied and reverted to establish that the test discriminates. No reviewer verdict is recorded because none can be reconstructed.
+- Backfill note: the row's cell recorded a verdict with no command and no output, so nothing of the original run survives. The proof below was taken again when the file gained the case for a structured item missing `label`, which the obligation names: the tests were re-run for the GREEN, and the mutations were applied and reverted to establish that each rejection case discriminates. No reviewer verdict is recorded because none can be reconstructed.
 
 - RED failure mode: falsifiability
 
 #### Round 1
 
-- Round 1: Revision: 649d8111147436408c90cbbe1b9f9b07e34da8cb
-- Round 1: Satisfied-by: packages/qfai/src/core/validators/designAudit.ts, shapeFindingFor — the rule code a shape violation is reported under.
+- Round 1: Revision: working-tree+87f61d33f95fdc477763bd387fcd7d8645a80da8b7e6735a49f753cd09deead6
+- Round 1: Satisfied-by: packages/qfai/src/core/contracts/screenContracts.ts, extractPrimaryTasks — the filter that reports each required key a structured item lacks.
 - Round 1: Falsifiability command: npx vitest run tests/integration/primaryTasksStructured.test.ts
-- Round 1: Falsifiability result: Test Files 1 failed (1); Tests 4 failed, 2 passed (6). Every rejection case fails; the finding is no longer reported under the code they read.
+- Round 1: Falsifiability result: Test Files 1 failed (1); Tests 1 failed, 6 passed (7). The `label` case fails, and it is the only one: an item without `label` now conforms.
 
-The edit, in `shapeFindingFor` — the rule code a shape violation is reported
-under:
+The edit, in `extractPrimaryTasks` — `label` taken out of the missing-key filter:
 
 ```diff
-   return {
--    ruleId: "QFAI-AUD-021",
-+    ruleId: "QFAI-AUD-001",
-     dimension: "visualHierarchy",
-     severityTier: 1,
--    message: `[QFAI-AUD-021] ${filePath}: screen '${screenId}' primary_task ${shape.taskRef} ${detail}`,
-+    message: `[QFAI-AUD-001] ${filePath}: screen '${screenId}' primary_task ${shape.taskRef} ${detail}`,
+       const missingKeys = REQUIRED_PRIMARY_TASK_KEYS.filter((key) => {
++        if (key === "label") return false;
+         const v = record[key];
 ```
-- Round 1: Falsifiability revision: working-tree+31eb23a6df91e77744655424faf54d2f2bcd603df00be8a19eee4a04997d638b
+
+- Round 1: Falsifiability revision: working-tree+a095a7432fa19d772471bb41f5b44e526887f9754d3809e271e714bb7e7f320c
 - Round 1: GREEN command: npx vitest run tests/integration/primaryTasksStructured.test.ts
-- Round 1: GREEN result: Test Files 1 passed (1); Tests 6 passed (6)
-- Round 1: RED test hash: d798fda11f10e7516c51e3b1aaee98a7c9ab6fd5c86b1e78303e2234803d2c6e
+- Round 1: GREEN result: Test Files 1 passed (1); Tests 7 passed (7)
+- Round 1: RED test hash: 42ed4fd14d1e12d580570121fe033e4d7afc2d3ecad4e946af7f605e42860c0f
 - Round 1: RED test manifest: packages/qfai/tests/integration/primaryTasksStructured.test.ts
-- Refactor verify command: npx vitest run tests/integration/sddUiTemplate.test.ts tests/integration/sddPrimaryTasksLane.test.ts tests/e2e/spec0013UiContractPrimaryTasksE2E.test.ts tests/core/activeDiscussionPack.test.ts tests/core/surfaceTypePopulate.test.ts tests/integration/primaryTasksStructured.test.ts
-- Refactor verify result: Test Files 6 passed (6); Tests 25 passed (25)
-- Refactor verify revision: 649d8111147436408c90cbbe1b9f9b07e34da8cb
+
+The other rejection cases each read the rule code a shape violation is reported
+under. Renaming it in `shapeFindingFor` from `QFAI-AUD-021` to `QFAI-AUD-001`, at
+`working-tree+8b407774e71bfca16a613b5cf97feddf07e1df6f042a26e8d00eb35c35ff6835`,
+fails all five of them and leaves the two acceptance cases passing: Tests 5
+failed, 2 passed (7).
+
+- Refactor verify command: npx vitest run tests/integration/sddUiTemplate.test.ts tests/integration/sddPrimaryTasksLane.test.ts tests/e2e/spec0013UiContractPrimaryTasksE2E.test.ts tests/core/activeDiscussionPack.test.ts tests/core/surfaceTypePopulate.test.ts tests/integration/primaryTasksStructured.test.ts tests/cli/doctor.test.ts
+- Refactor verify result: Test Files 7 passed (7); Tests 62 passed (62)
+- Refactor verify revision: working-tree+87f61d33f95fdc477763bd387fcd7d8645a80da8b7e6735a49f753cd09deead6
 - Checkpoint verification command: npx vitest run --project integration --project e2e --project cli --project core --exclude 'tests/core/prFixMonitor.test.ts' --exclude 'tests/core/prMergePlan.test.ts'
-- Checkpoint verification result: PASS — exit 0; Test Files 532 passed (540); Tests 8986 passed (9029)
-- Checkpoint verification revision: 649d8111147436408c90cbbe1b9f9b07e34da8cb
+- Checkpoint verification result: PASS — exit 0; Test Files 547 passed (555); Tests 9468 passed (9550)
+- Checkpoint verification revision: working-tree+87f61d33f95fdc477763bd387fcd7d8645a80da8b7e6735a49f753cd09deead6
 
 ## Coverage Depth Matrix
 
 See `.qfai/evidence/coverage-depth-spec-0013.md`.
-Totals: ✅ 65 / ⚠️ 117 / ❌ 312, with 7 not applicable, across 501 scored cells —
+Totals: ✅ 66 / ⚠️ 116 / ❌ 312, with 7 not applicable, across 501 scored cells —
 441 matrix depth cells (49 rows × 9 columns) and 60 business rule cells
 (20 rows × 3 columns). `Status` is a row verdict, not a mark, and is outside
 every total.
@@ -376,7 +400,7 @@ None.
   the mark; and the four rows naming `auditProfile.ts` keep every mark when read
   against the eight sibling-pack cases that drive that entrypoint.
 - What that verdict does not cover: the matrix has been rescored since, and the
-  totals this file now restates are ✅ 65 / ⚠️ 117 / ❌ 312 with `n/a` 7. The
+  totals this file now restates are ✅ 66 / ⚠️ 116 / ❌ 312 with `n/a` 7. The
   entrypoint conclusion in the line above is among the claims withdrawn — the
   four rows no longer keep every mark, because the module each obligation names
   is reached by no case this pack owns. The gate is `PENDING` for that reason:
