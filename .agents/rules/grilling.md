@@ -93,7 +93,8 @@ was unavailable. A session is never skipped for want of a tool.
 in host-sized batches. The frontier is not recomputed between them, no answer is
 acted on until the round is exhausted, and each batch is read for a closing
 answer before the next is put. Batching is how one round reaches a host that
-cannot show it whole; it never makes two rounds.
+cannot show it whole; it never makes two rounds, and `user-questions.md` § 4
+carries the rest of its mechanics.
 
 ## The shape of a question
 
@@ -200,6 +201,10 @@ uncertainty.
 - Work running in the background did not stall the round — only the questions
   downstream of it waited.
 - The session ended by asking for confirmation, not by starting work.
+
+## Related
+
+- The form each question in a round arrives in: `user-questions.md`
 
 ## Scope of this file
 
