@@ -20,6 +20,10 @@ acted on; a finding names something and can be fixed or argued with.
 - Progress log: `.qfai/evidence/prototyping/progress.md`
 - Root `DESIGN.md` (read-only context: `# Brand Philosophy`,
   `audience.emotion`, `audience.do_not_look_like`).
+- Session record: `.qfai/evidence/prototyping/grilling.md` — what this prototype
+  is for, what would count as better, and what is out of bounds. The four axes
+  are fixed and say nothing about this prototype's purpose, so a reviewer without
+  it grades every prototype against the same generic bar.
 
 ## Outputs — two files, two schemas
 

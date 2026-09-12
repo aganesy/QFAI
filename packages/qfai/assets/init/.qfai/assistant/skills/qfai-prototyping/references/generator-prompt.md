@@ -10,7 +10,11 @@ identity.
 1. Root `DESIGN.md` (front-matter tokens + `# Brand Philosophy` body).
 2. `.qfai/specs/spec-*/01_Spec.md` and `03_Acceptance-Criteria.md`.
 3. `.qfai/contracts/ui/*.yaml`.
-4. Cycles 1..9: `iter-(NN-1)/review.json` (critique, scores,
+4. `.qfai/evidence/prototyping/grilling.md` — what this prototype is for, what
+   would count as better, and what is out of bounds. Every cycle, not only the
+   first: the contracts say what the screens are, and this says which of the
+   shapes satisfying them the user asked for.
+5. Cycles 1..9: `iter-(NN-1)/review.json` (critique, scores,
    `layoutAntiPatternsDetected`, `designMdViolations`,
    `pivotDirective`), `iter-(NN-2)/review.json` when present, and
    `progress.md`.

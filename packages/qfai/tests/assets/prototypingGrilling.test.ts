@@ -20,6 +20,8 @@ const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), ".."
 const TREES = ["packages/qfai/assets/init/.qfai", ".qfai"];
 const SKILL = "assistant/skills/qfai-prototyping/SKILL.md";
 const RULE = ".agents/rules/grilling.md";
+const GENERATOR_PROMPT = "assistant/skills/qfai-prototyping/references/generator-prompt.md";
+const REVIEWER_PROMPT = "assistant/skills/qfai-prototyping/references/reviewer-prompt.md";
 
 /** Collapse markdown soft wraps so assertions pin wording, not the wrap column. */
 const unwrap = (markdown: string): string => markdown.replace(/\s*\n\s*/g, " ");
@@ -44,6 +46,15 @@ function boundaryTable(skill: string): string[][] {
         .map((cell) => cell.trim()),
     )
     .filter((cells) => !cells.every((cell) => /^-+$/.test(cell)));
+}
+
+/** The `ask-user` bucket's entries, unwrapped. */
+function askUserBucket(skill: string): string {
+  const block = new RegExp(
+    "- ask-user:" + "\\n" + "([" + "\\s\\S" + "]*?)" + "\\n" + "- hard-required:",
+  ).exec(skill);
+  expect(block, "the ask-user bucket is gone").not.toBeNull();
+  return unwrap(block?.[1] ?? "");
 }
 
 describe.each(TREES)("%s — prototyping and grilling", (tree) => {
@@ -82,16 +93,21 @@ describe.each(TREES)("%s — prototyping and grilling", (tree) => {
     }
   });
 
-  it("blocks handoff on the user's answer", async () => {
-    // Convergence is the reviewer's verdict on four fixed axes. It is not the
-    // user's answer to the question the loop was built to make answerable, and
-    // a process that goes from converged to certified never asks for one.
+  it("blocks handoff on the session, not on one answer", async () => {
+    // Convergence is the reviewer's verdict on four fixed axes, and it can
+    // make several decisions answerable at once. The method ends a session on
+    // an empty frontier and the user's confirmation, so reducing the
+    // checkpoint to one question would route to handoff with the rest open.
     const skill = await read(SKILL);
+    expectPhrase(skill, "**Resume the session against the converged prototype**");
     expectPhrase(
       skill,
-      "**Put the question the loop was built to answer back to the user, against the converged prototype**",
+      "the reaction and everything it raises are a new frontier, not one question",
     );
-    expectPhrase(skill, "Blocking: `H` does not start until they answer");
+    expectPhrase(
+      skill,
+      "Blocking: `H` does not start until the session ends — the frontier empty and the user confirming",
+    );
     expectPhrase(skill, "convergence is the reviewer's verdict on four axes, not the user's");
     // And the no-question route stops rather than certifying an unpicked design.
     expectPhrase(skill, "the run stops there rather than certifying a design nobody picked");
@@ -105,14 +121,22 @@ describe.each(TREES)("%s — prototyping and grilling", (tree) => {
     expectPhrase(skill, "**Accepted** — the prototype is what they picked — goes to `H`");
     expectPhrase(
       skill,
-      "goes back to `C1..9` as the next cycle, carrying their answer as the pivot",
+      "takes the cycle-0 reset (`references/iteration-loop.md#sealed-loop`), carrying their answer as the pivot",
     );
+    // Not the next cycle: convergence seals the loop, and `iterate --cycle N`
+    // past the accepted index exits 2 without writing — so a next-cycle route
+    // would refuse the one command that can build what the user asked for.
+    expectPhrase(
+      skill,
+      "a next-cycle route would refuse the one command that can build what they asked for",
+    );
+    expectPhrase(skill, "Cycle 0 is the documented escape hatch out of a sealed loop");
     expectPhrase(
       skill,
       "certifying the unchanged iteration would ship the design they turned down",
     );
     // The loop's own bound still applies, so the branch cannot run forever.
-    expectPhrase(skill, "Cycle 9 bounds this like any other cycle.");
+    expectPhrase(skill, "the cycle budget starts again with it");
   });
 
   it("carries the session's answers into the loop", async () => {
@@ -158,13 +182,57 @@ describe.each(TREES)("%s — prototyping and grilling", (tree) => {
     expectPhrase(skill, "no session narrows it");
   });
 
-  it("puts the pre-loop decisions in ask-user", async () => {
-    // They are the decisions this skill's own run raises before it builds
-    // anything, so they are its operations and belong in the bucket.
+  it("leaves the session's decisions to the session's own policy", async () => {
+    // The buckets classify the operations this skill performs. A frontier
+    // decision is the session's, and listing it here would let an orchestrator
+    // treat an open-ended session as part of this section's 0-1 prompt policy
+    // instead of running it to its own end condition.
     const skill = await read(SKILL);
-    const askUser = /- ask-user:\n([\s\S]*?)\n- hard-required:/.exec(skill)?.[1] ?? "";
-    expect(unwrap(askUser)).toContain("what the prototype is for");
-    expect(unwrap(askUser)).toContain("asked again against it");
+    const askUser = askUserBucket(skill);
+    expect(askUser).toContain("asked again against it");
+    expect(askUser).not.toContain("what the prototype is for");
+    expectPhrase(
+      skill,
+      "the session's own decisions are classified there rather than in this skill's buckets",
+    );
+  });
+
+  it("grills only what the frozen inputs leave open", async () => {
+    // The specs, the UI contracts and DESIGN.md answer some of these already,
+    // and the method reads a fact rather than asking about it. A session that
+    // re-opens a frozen requirement produces an answer that drifts from it.
+    const skill = await read(SKILL);
+    expectPhrase(skill, "**Only what the inputs leave open.**");
+    expectPhrase(skill, "a question they answer is not on the frontier");
+    expectPhrase(skill, "produces an answer that drifts from it");
+  });
+
+  it("scopes every row to the lineage it applies to", async () => {
+    // One invocation runs a lineage per spec and screen, so a record with no
+    // key applies every answer to each of them. `global` is written rather
+    // than inferred from a missing key, because a missing key is also what an
+    // unscoped row looks like.
+    const skill = await read(SKILL);
+    expectPhrase(skill, "**Every row names what it applies to**");
+    expectPhrase(skill, "`<spec-id>/<screen>`");
+    expectPhrase(skill, "`global` is a real answer and not a default");
+    expectPhrase(
+      skill,
+      "reads the rows matching its own lineage plus the `global` ones, and nothing else",
+    );
+  });
+
+  it("hands the record to the delegated roles, not only to this skill", async () => {
+    // The generator and the reviewer run from injected contracts. A record
+    // named only in the parent skill is one the roles that build and grade the
+    // prototype never read.
+    const generator = await read(GENERATOR_PROMPT);
+    expectPhrase(generator, "`.qfai/evidence/prototyping/grilling.md`");
+    expectPhrase(generator, "Every cycle, not only the first");
+
+    const reviewer = await read(REVIEWER_PROMPT);
+    expectPhrase(reviewer, "Session record: `.qfai/evidence/prototyping/grilling.md`");
+    expectPhrase(reviewer, "grades every prototype against the same generic bar");
   });
 
   it("agrees with the rule master it points at", async () => {

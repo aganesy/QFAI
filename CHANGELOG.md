@@ -24,9 +24,21 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   handoff: convergence is the reviewer's verdict on four fixed axes, not the
   user's on the question. Under a no-question mode the run stops there rather
   than certifying a design nobody picked. An answer that rejects the prototype,
-  or picks a direction it does not implement, goes back through a cycle carrying
-  that answer as the pivot: recording a choice does not change the HTML, and
-  certifying the unchanged iteration would ship the design the user turned down.
+  or picks a direction it does not implement, takes the cycle-0 reset carrying
+  that answer as the pivot — recording a choice does not change the HTML, and
+  convergence seals the loop, so a next-cycle route would be refused by the one
+  command that can build what was asked for.
+
+  The checkpoint resumes the session rather than asking one question, because
+  convergence can make several decisions answerable at once and a session ends on
+  an empty frontier and the user's confirmation.
+
+  Every row of the session record names the lineage it applies to — a spec and
+  screen, a spec, or `global` — since one invocation runs a lineage per spec and
+  screen, and a generator or reviewer reads its own rows plus the global ones.
+
+  The record is named in the generator's and the reviewer's own prompt contracts,
+  not only in the parent skill, because those are what the delegated roles read.
 
   The session's answers go to `.qfai/evidence/prototyping/grilling.md`, and the
   generator and the reviewer both read it. The generator runs from contracts and
@@ -35,8 +47,6 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   one the loop contradicts on the next cycle.
 
   The scope floor is unchanged.
-
-### Added
 
 - **A lint lane refuses a tracked file under the scratch directory.** `tmp/` is
   the sole staging area for scratch output and nothing there is committed, but
