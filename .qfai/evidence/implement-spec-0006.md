@@ -515,7 +515,7 @@ and must stay there until the three reviews run. Nothing about this is recoverab
 the engineer's report more carefully.
 
 Disk state verified after the failures: no stray `git worktree` was left behind (only the main
-tree is registered), the working tree is clean apart from `.qfai/report/validate.log`, `HEAD` is
+tree is registered), the working tree is clean apart from `.qfai/report/validate.log`, `HEAD` is <!-- qfai:not-a-citation -->
 `bfc14f1b`, and the new module's blob is unchanged. So a resumed session can dispatch the same
 three reviewers against the same revision with no reconstruction work.
 
@@ -1222,7 +1222,7 @@ packaging; correctly not fixed from this row.
   than shipped silently. The minimal type would be `{ workflowsDir, modified }`.
 - **8**: `title` is retained despite having zero consumers in `src/`, because `DoctorCheck.title` is a
   required field and removing it is a `--format json` surface change no row owns. Correct.
-- **1**: `.qfai/report/validate.log` going clean between snapshots has a mundane cause — I staged and
+- **1**: `.qfai/report/validate.log` going clean between snapshots has a mundane cause — I staged and <!-- qfai:not-a-citation -->
   committed it in `bfc14f1b`. Nothing reverted it.
 
 ## Items processed
@@ -7039,7 +7039,7 @@ group and every member transitions in the same ledger write.
   0 except `validate`, whose exit 1 is structurally unavoidable against a standing `error=2` baseline.
   Counts `info=4 warning=352 error=2` — **delta 0 / 0 / 0** against the Stage 0 baseline, checked three
   independent ways: the `counts:` line of the as-found run, the `counts:` line of a **freshly rebuilt**
-  run, and the `git diff` of `.qfai/report/validate.log`, in which the `errors:` and `warnings:` lines do
+  run, and the `git diff` of `.qfai/report/validate.log`, in which the `errors:` and `warnings:` lines do <!-- qfai:not-a-citation -->
   not appear as changed at all. `TDDLIST_TEST_FILE_MISSING = 0`, spec-0006 `TDDLIST_SELECTOR_UNRESOLVED
   = 0`, `QFAI-TEST-001 = 0`.
 

@@ -70,20 +70,27 @@ const NOT_A_CITATION = "<!-- qfai:not-a-citation -->";
  * audited hash beside the name is what makes the second safe, and for most of
  * these packs that content is not in this repository at all: it has to come from
  * whoever holds the run.
- *
- * ## What the first census measured
- *
- * The two checks below are exact in both directions, and an entry added beside a
- * new record satisfies both: the first sees it recorded, and the second sees it
- * still cited and still unresolved. A ceiling is what makes "may only shrink" a
- * rule rather than a description. Lower it as entries clear; raising it is the
- * edit a reviewer is meant to see, because it admits the provenance this guard
- * exists to refuse.
  */
-const CENSUS_CEILING = 93;
 
-/** The census itself, as measured. */
-const UNRESOLVED_CITATION_BACKLOG: ReadonlyArray<readonly [string, string]> = [
+/**
+ * How many citations the first census measured.
+ *
+ * Exact, not a ceiling. A ceiling alone lets one repair pay for one new record:
+ * the length stays where it was, every entry is still recorded, and nothing is
+ * stale. Repairing an entry moves it to `CLEARED` below and leaves this list
+ * untouched, so the only way to reach this number after adding a citation is to
+ * remove one that was really there — and either edit is visible.
+ */
+const INITIAL_CENSUS_SIZE = 93;
+
+/**
+ * Every citation the first census found unresolved. **Append nothing here.**
+ *
+ * A record added today does not belong to a census taken before it existed. When
+ * one of these is repaired, its key goes to `CLEARED`; this list stays as
+ * measured.
+ */
+const INITIAL_CENSUS: ReadonlyArray<readonly [string, string]> = [
   [".qfai/evidence/atdd-spec-0017.md", ".qfai/review/review-2026082*/R0*.md"],
   [".qfai/evidence/implement-spec-0003.md", ".qfai/review/review-*"],
   [".qfai/evidence/implement-spec-0006.md", ".qfai/review/review-20260818*"],
@@ -209,6 +216,20 @@ const UNRESOLVED_CITATION_BACKLOG: ReadonlyArray<readonly [string, string]> = [
   [".qfai/evidence/sdd-spec-0012.md", ".qfai/review/review-20260417070000000"],
 ];
 
+/**
+ * Census entries that have since been repaired.
+ *
+ * An entry leaves the backlog by arriving here, and the case below holds that it
+ * really is repaired — the path resolves, or the record no longer cites it. The
+ * list is the progress the census is meant to produce, and it is the only list
+ * that grows.
+ */
+const CLEARED: ReadonlyArray<readonly [string, string]> = [
+  [".qfai/evidence/atdd-spec-0017.md", ".qfai/report/validate.log"],
+  [".qfai/evidence/implement-spec-0003.md", ".qfai/report/validate.log"],
+  [".qfai/evidence/implement-spec-0006.md", ".qfai/report/validate.log"],
+];
+
 /** Every path git tracks, and every directory one of them lies under. */
 function trackedPaths(): { files: ReadonlySet<string>; directories: ReadonlySet<string> } {
   // `git ls-files`, not `readdir`: these trees are ignored, so a developer
@@ -319,9 +340,13 @@ function resolves(cited: string): boolean {
   const root = GENERATED_ROOTS.find((candidate) => cited.startsWith(candidate));
   if (root === undefined || !staysInsideRoot(cited, root)) return false;
   if (cited.includes("*")) {
+    // Directories as well as files: `.qfai/discussion/discussion-*` names a set
+    // of packs, and an anchored pattern matches no file below one of them — so
+    // reading files alone reports a citation unresolved while the tree holds
+    // every pack it names.
     const pattern = globToRegExp(cited);
-    for (const file of tracked.files) {
-      if (pattern.test(file)) return true;
+    for (const candidate of [...tracked.files, ...tracked.directories]) {
+      if (pattern.test(candidate)) return true;
     }
     return false;
   }
@@ -329,6 +354,11 @@ function resolves(cited: string): boolean {
 }
 
 const key = ([file, cited]: readonly [string, string]): string => `${file} -> ${cited}`;
+
+/** The census, minus what has been repaired since. */
+const UNRESOLVED_CITATION_BACKLOG: ReadonlyArray<readonly [string, string]> = INITIAL_CENSUS.filter(
+  (entry) => !new Set(CLEARED.map(key)).has(key(entry)),
+);
 
 describe("a committed record cites what the repository has", () => {
   it("reads the evidence the repository carries", async () => {
@@ -356,13 +386,27 @@ describe("a committed record cites what the repository has", () => {
     ).toEqual([]);
   });
 
-  it("never grows the backlog past the census it started from", () => {
+  it("keeps the census at what it measured", () => {
+    // Exact. A repair moves its key to `CLEARED` and leaves this list alone, so
+    // the length only moves when a citation is added to a census taken before
+    // that record existed — which is the edit this refuses.
     expect(
-      UNRESOLVED_CITATION_BACKLOG.length,
-      "the backlog is longer than the census it started from — a record added today may not take " +
-        "an entry. Lower the ceiling as entries clear; raising it admits the provenance this guard " +
-        "exists to refuse",
-    ).toBeLessThanOrEqual(CENSUS_CEILING);
+      INITIAL_CENSUS.length,
+      "the census is not the size it was measured at. A record added today does not belong in it: " +
+        "repair moves a key to CLEARED and leaves the census as it stands",
+    ).toBe(INITIAL_CENSUS_SIZE);
+  });
+
+  it("clears only what is really repaired", async () => {
+    const measured = new Set((await measureCitations()).map(key));
+    const notRepaired: string[] = [];
+    for (const entry of CLEARED) {
+      if (measured.has(key(entry)) && !resolves(entry[1])) notRepaired.push(key(entry));
+    }
+    expect(
+      notRepaired.sort(),
+      "a cleared entry is still cited and still unresolved — it is in the backlog, not out of it",
+    ).toEqual([]);
   });
 
   it("keeps the backlog to what is still unresolved", async () => {

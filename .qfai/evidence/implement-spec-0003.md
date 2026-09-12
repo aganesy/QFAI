@@ -165,7 +165,7 @@ both revisions, so the verdicts are composed against `19e45607`.
 
 - Tier: T1 (group G0, anchor AC-0003-0015)
 - TC-ref: TC-0003-0018
-- Round 1: Revision: working-tree+c6ae96154ef4 (HEAD 4d76ad29018415e7264adb6a3811a9b26f81a50c; pre-existing orchestrator-owned modifications: `.qfai/report/validate.log`, `.qfai/specs/spec-0003/tdd/test-list.md` — not touched by this run). Pinned: HEAD advanced to 19e456070f3ab3d46c3052df4244d2038183062f mid-run via orchestrator commits touching only `.qfai/decisions/` and `.qfai/specs/spec-0003/tdd/test-list.md`; `git diff 4d76ad29..19e45607 -- packages/qfai/` is empty, so every file this observation covered is byte-identical at both revisions.
+- Round 1: Revision: working-tree+c6ae96154ef4 (HEAD 4d76ad29018415e7264adb6a3811a9b26f81a50c; pre-existing orchestrator-owned modifications: `.qfai/report/validate.log`, `.qfai/specs/spec-0003/tdd/test-list.md` — not touched by this run). Pinned: HEAD advanced to 19e456070f3ab3d46c3052df4244d2038183062f mid-run via orchestrator commits touching only `.qfai/decisions/` and `.qfai/specs/spec-0003/tdd/test-list.md`; `git diff 4d76ad29..19e45607 -- packages/qfai/` is empty, so every file this observation covered is byte-identical at both revisions. <!-- qfai:not-a-citation -->
 - Satisfied-by: historical cycle of this row (v1.7.18, GREEN 2026-04-19 per ledger cell); RED not re-observable without weakening a correct test
 - RED failure mode: falsifiability
 - Round 1: Falsifiability command: `cd packages/qfai && npx vitest run tests/cli/init.test.ts -t "appends QFAI entries to root .gitignore on init"` (with mutation applied)
@@ -180,7 +180,7 @@ both revisions, so the verdicts are composed against `19e45607`.
 
 - Tier: T2 (solo — deletion/migration logic over a user-owned file)
 - TC-ref: TC-0003-0019
-- Round 1: Revision: working-tree+c6ae96154ef4 (HEAD 4d76ad29018415e7264adb6a3811a9b26f81a50c; pre-existing orchestrator-owned modifications: `.qfai/report/validate.log`, `.qfai/specs/spec-0003/tdd/test-list.md` — not touched by this run). Pinned: HEAD advanced to 19e456070f3ab3d46c3052df4244d2038183062f mid-run via orchestrator commits touching only `.qfai/decisions/` and `.qfai/specs/spec-0003/tdd/test-list.md`; `git diff 4d76ad29..19e45607 -- packages/qfai/` is empty, so every file this observation covered is byte-identical at both revisions.
+- Round 1: Revision: working-tree+c6ae96154ef4 (HEAD 4d76ad29018415e7264adb6a3811a9b26f81a50c; pre-existing orchestrator-owned modifications: `.qfai/report/validate.log`, `.qfai/specs/spec-0003/tdd/test-list.md` — not touched by this run). Pinned: HEAD advanced to 19e456070f3ab3d46c3052df4244d2038183062f mid-run via orchestrator commits touching only `.qfai/decisions/` and `.qfai/specs/spec-0003/tdd/test-list.md`; `git diff 4d76ad29..19e45607 -- packages/qfai/` is empty, so every file this observation covered is byte-identical at both revisions. <!-- qfai:not-a-citation -->
 - Satisfied-by: historical cycle of this row (v1.7.18, GREEN 2026-04-19 per ledger cell); RED not re-observable without weakening a correct test
 - RED failure mode: falsifiability
 - Round 1: Falsifiability command: `cd packages/qfai && npx vitest run tests/cli/init.test.ts -t "strips legacy review-\*/ negation lines when migrating from old managed block"` (with mutation applied; run repeated with same mutation to capture assertion body then location — identical failure)
@@ -195,7 +195,7 @@ both revisions, so the verdicts are composed against `19e45607`.
 
 - Tier: T1 (group G0, anchor AC-0003-0015)
 - TC-ref: TC-0003-0020
-- Round 1: Revision: working-tree+c6ae96154ef4 (HEAD 4d76ad29018415e7264adb6a3811a9b26f81a50c; pre-existing orchestrator-owned modifications: `.qfai/report/validate.log`, `.qfai/specs/spec-0003/tdd/test-list.md` — not touched by this run). Pinned: HEAD advanced to 19e456070f3ab3d46c3052df4244d2038183062f mid-run via orchestrator commits touching only `.qfai/decisions/` and `.qfai/specs/spec-0003/tdd/test-list.md`; `git diff 4d76ad29..19e45607 -- packages/qfai/` is empty, so every file this observation covered is byte-identical at both revisions.
+- Round 1: Revision: working-tree+c6ae96154ef4 (HEAD 4d76ad29018415e7264adb6a3811a9b26f81a50c; pre-existing orchestrator-owned modifications: `.qfai/report/validate.log`, `.qfai/specs/spec-0003/tdd/test-list.md` — not touched by this run). Pinned: HEAD advanced to 19e456070f3ab3d46c3052df4244d2038183062f mid-run via orchestrator commits touching only `.qfai/decisions/` and `.qfai/specs/spec-0003/tdd/test-list.md`; `git diff 4d76ad29..19e45607 -- packages/qfai/` is empty, so every file this observation covered is byte-identical at both revisions. <!-- qfai:not-a-citation -->
 - Satisfied-by: historical cycle of this row (v1.7.18, GREEN 2026-04-19 per ledger cell); RED not re-observable without weakening a correct test
 - RED failure mode: falsifiability
 - Round 1: Falsifiability command: `cd packages/qfai && npx vitest run tests/cli/init.test.ts -t "does not track review-\*/ subdirectories after init"` (with mutation applied)
@@ -349,7 +349,7 @@ Per finding-provenance rules, advisory findings are never implemented as code by
 - Round 1: TDD-0052 regression check: `npx vitest run tests/integration/shippedWorkflowOwnership.test.ts -t "TC-0003-0052"` — exit 0, 3 passed / 3 skipped (the 0052 describe is unaffected; the new SHIPPED/RETIRED exports planned for GREEN do not match its removal-export name filter `/prune|remove|delete|unlink/i`).
 - Round 1: lint: `npx eslint tests/integration/shippedWorkflowOwnership.test.ts --max-warnings 0` — exit 0.
 - Round 1: typecheck: `npx tsc --noEmit -p tsconfig.json` — exit 0 (src project). Standalone scoped check of the test file with base strict flags — exit 0.
-- Round 1: Revision (post-implementation): working-tree+22bc8684 on HEAD 2f557d2012b16f66bb20c174103ef5aba36add78 (dirty entries: `packages/qfai/src/cli/commands/init.ts` [blob 22bc8684, +9/−2] with the GREEN exports, `packages/qfai/tests/integration/shippedWorkflowOwnership.test.ts` [blob 68292b87, unchanged since RED], `tests/integration/qfai-traceability.md` [blob 1bbb453a, +1 line], the orchestrator-owned `.qfai/specs/spec-0003/tdd/test-list.md`, and the generated `.qfai/report/validate.log` rewritten as a side effect of the ordered validate run)
+- Round 1: Revision (post-implementation): working-tree+22bc8684 on HEAD 2f557d2012b16f66bb20c174103ef5aba36add78 (dirty entries: `packages/qfai/src/cli/commands/init.ts` [blob 22bc8684, +9/−2] with the GREEN exports, `packages/qfai/tests/integration/shippedWorkflowOwnership.test.ts` [blob 68292b87, unchanged since RED], `tests/integration/qfai-traceability.md` [blob 1bbb453a, +1 line], the orchestrator-owned `.qfai/specs/spec-0003/tdd/test-list.md`, and the generated `.qfai/report/validate.log` rewritten as a side effect of the ordered validate run) <!-- qfai:not-a-citation -->
 - Round 1: GREEN command: `cd packages/qfai && npx vitest run tests/integration/shippedWorkflowOwnership.test.ts -t "TC-0003-0045"`
 - Round 1: GREEN result: exit 0 — 3/3 passed (TDD-0052's 3 reported skipped under the filter). Production change (init.ts only, +9/−2): (1) new `export const SHIPPED_WORKFLOW_NAMES: ReadonlySet<string> = new Set<string>(["qfai-validate.yml"])` — the in-binary write-set list per the shipped-workflows contract, a literal, not a runtime glob of the asset tree or the adopter's disk; (2) the existing `RETIRED_WORKFLOW_NAMES` constant made a named export (value unchanged, empty). Nothing else was needed: the write-set equality passed with the exports alone because the generic create-only asset copy writes exactly the one shipped name into a fresh adopter's workflows directory. No copy-set resolver (belongs to TDD-0051), no provenance logic.
 - Refactor: none needed; the two name lists sit as a documented pair beside `pruneMatchingEntries`, the primitive that consumes the retired list. Tests stayed green.
@@ -408,7 +408,7 @@ Per finding-provenance rules, advisory findings are never implemented as code by
 - Round 1: lint: `npx eslint src/cli/lib/provenance.ts tests/integration/shippedWorkflowOwnership.test.ts --max-warnings 0` — exit 0.
 - Round 1: typecheck: `npx tsc --noEmit -p tsconfig.json` — exit 0 (the seam module is inside the src project and typechecks).
 - Round 1: shipping lint (new src file with comments): `npx tsx scripts/lint-shipping.ts` — clean, 448 files scanned, exit 0 (seam JSDoc carries no internal IDs or version markers).
-- Round 1: Revision (post-implementation): working-tree+a2d77fdb on HEAD 8052de5e457a6f5abee7828beba02af314b25ea0 (dirty entries: new untracked `packages/qfai/src/cli/lib/provenance.ts` [blob a2d77fdb, 137 lines, GREEN implementation], `packages/qfai/tests/integration/shippedWorkflowOwnership.test.ts` [blob 069ad825, +131 vs HEAD, unchanged since RED], `tests/integration/qfai-traceability.md` [blob 0f17bcbb, +1], orchestrator-owned `.qfai/specs/spec-0003/tdd/test-list.md`, generated `.qfai/report/validate.log` from the ordered validate run. `init.ts` is byte-identical to HEAD — the oracle mutation was fully reverted.)
+- Round 1: Revision (post-implementation): working-tree+a2d77fdb on HEAD 8052de5e457a6f5abee7828beba02af314b25ea0 (dirty entries: new untracked `packages/qfai/src/cli/lib/provenance.ts` [blob a2d77fdb, 137 lines, GREEN implementation], `packages/qfai/tests/integration/shippedWorkflowOwnership.test.ts` [blob 069ad825, +131 vs HEAD, unchanged since RED], `tests/integration/qfai-traceability.md` [blob 0f17bcbb, +1], orchestrator-owned `.qfai/specs/spec-0003/tdd/test-list.md`, generated `.qfai/report/validate.log` from the ordered validate run. `init.ts` is byte-identical to HEAD — the oracle mutation was fully reverted.) <!-- qfai:not-a-citation -->
 - Round 1: GREEN command: `cd packages/qfai && npx vitest run tests/integration/shippedWorkflowOwnership.test.ts -t "TC-0003-0046"`
 - Round 1: GREEN result: exit 0 — 4/4 passed (6 sibling tests skipped by the filter). Production change confined to the owning module `provenance.ts`: `readInstallProvenance` reads `.qfai/install-provenance.json` under the given root; absent/unreadable file, malformed JSON, and missing/invalid `workflows` key each resolve `{ workflows: {} }` without throwing (two scoped try/catch for the two async/parse failure classes, then pure type-narrowing via an `isRecordObject` predicate and a per-entry shape check — no bare `as` anywhere; entries missing the full string shape are dropped). `resolveWorkflowFileState` implements the full five-row contract state table (the function shape is total over its inputs, so all rows are required): no-entry+absent=absent, no-entry+present=adopter-owned, entry+present+digest-equal=installed, entry+present+digest-differs=modified (also when no packaged digest is supplied), entry+absent=declined. NOT wired into `runInit` — init wiring belongs to later rows.
 - Round 1: gatekeeper advisory discharge (it2 legs (b)(c) previously inferred): the GREEN run executes all three legs of it2 in one passing it() — the loop iterates `absent`, `no-workflows-key`, `malformed`, seeds each fixture on disk, and each `expect(readInstallProvenance(dir)).resolves.toEqual({ workflows: {} })` assertion ran against the real reader (selector output: `Tests 4 passed | 6 skipped`, it2 green). The legs are now executed, not inferred.
@@ -509,7 +509,7 @@ Per finding-provenance rules, advisory findings are never implemented as code by
 ## Final gates and Revision
 
 - Gates: `npx eslint src/shared/provenance.ts tests/integration/shippedWorkflowOwnership.test.ts --max-warnings 0` — exit 0; `npx tsc --noEmit -p tsconfig.json` — exit 0; `npx tsx scripts/lint-shipping.ts` — clean, 448 files, exit 0; `npx prettier --check` over the three touched files — clean. (During Round 1 a `prettier --write` was applied to the test file after recording the first run — formatting only, blob 499bc821 → 44b6d40c; the import-path update then produced the final blob.)
-- Revision (final): working-tree+2ced1def on HEAD 42aacf03c3fcfa1a8111c0337f03b3b8256f49c8. Dirty entries: `packages/qfai/src/cli/lib/provenance.ts` → `packages/qfai/src/shared/provenance.ts` [git rename, blob 398f0b14 = pre-move a2d77fdb + 3 JSDoc lines], `packages/qfai/tests/integration/shippedWorkflowOwnership.test.ts` [blob 2ced1def, +305/−10 vs HEAD: appended describe + inline type imports + updated import path + prettier re-wraps], `tests/integration/qfai-traceability.md` [blob 10d4bee0, +1 annotation line], and generated `.qfai/report/validate.log` from the validate proof run (same artifact class prior rounds disclosed).
+- Revision (final): working-tree+2ced1def on HEAD 42aacf03c3fcfa1a8111c0337f03b3b8256f49c8. Dirty entries: `packages/qfai/src/cli/lib/provenance.ts` → `packages/qfai/src/shared/provenance.ts` [git rename, blob 398f0b14 = pre-move a2d77fdb + 3 JSDoc lines], `packages/qfai/tests/integration/shippedWorkflowOwnership.test.ts` [blob 2ced1def, +305/−10 vs HEAD: appended describe + inline type imports + updated import path + prettier re-wraps], `tests/integration/qfai-traceability.md` [blob 10d4bee0, +1 annotation line], and generated `.qfai/report/validate.log` from the validate proof run (same artifact class prior rounds disclosed). <!-- qfai:not-a-citation -->
 
 #### TDD-0047 (gate-completed)
 
@@ -568,7 +568,7 @@ Per finding-provenance rules, advisory findings are never implemented as code by
 
 ## Round 1 — GREEN
 
-- Revision (post-implementation): working-tree+15c81172 on HEAD 7fcbcf17a0f527b590e96b69f131398d6a55af34. Dirty entries: `packages/qfai/src/cli/commands/init.ts` [blob 5a159f2a, +82 lines], `packages/qfai/src/shared/provenance.ts` [blob 52e6953e, +37/−2], `packages/qfai/tests/integration/shippedWorkflowOwnership.test.ts` [blob 15c81172 — **byte-identical to the RED blob**; GREEN was reached purely by production code], `tests/integration/qfai-traceability.md` [blob fe610a53, +1 annotation line], and generated `.qfai/report/validate.log` from the validate proof run.
+- Revision (post-implementation): working-tree+15c81172 on HEAD 7fcbcf17a0f527b590e96b69f131398d6a55af34. Dirty entries: `packages/qfai/src/cli/commands/init.ts` [blob 5a159f2a, +82 lines], `packages/qfai/src/shared/provenance.ts` [blob 52e6953e, +37/−2], `packages/qfai/tests/integration/shippedWorkflowOwnership.test.ts` [blob 15c81172 — **byte-identical to the RED blob**; GREEN was reached purely by production code], `tests/integration/qfai-traceability.md` [blob fe610a53, +1 annotation line], and generated `.qfai/report/validate.log` from the validate proof run. <!-- qfai:not-a-citation -->
 - GREEN command: `cd packages/qfai && npx vitest run tests/integration/shippedWorkflowOwnership.test.ts -t "TC-0003-0054"`
 - GREEN result: exit 0 — 3/3 passed (15 siblings skipped by the filter). The previously-unreached it2 field assertions now execute and pass: `entry.sha256 === sha256(read-back-immediately-after-init bytes)` (the WRITTEN bytes), `entry.installedByVersion === package.json#version` (both sides resolve the same `packages/qfai/package.json`; runtime side via `resolveToolVersion()`), `installedAt` matches the ISO-8601 shape and `Date.parse`s.
 - Production change (writer in the owning module, wiring in init):
@@ -667,7 +667,7 @@ Per finding-provenance rules, advisory findings are never implemented as code by
 
 ## Round 1 — GREEN
 
-- Revision (post-implementation): working-tree+6c26982b on HEAD d38469c4c25b6c73dbe176084e4b46feb147655c. Dirty entries: `packages/qfai/src/cli/commands/init.ts` [blob ed60cf51, +64/−3], `packages/qfai/tests/integration/shippedWorkflowOwnership.test.ts` [blob 6c26982b — **byte-identical to the RED blob**; GREEN purely by production code], `tests/integration/qfai-traceability.md` [blob d8f1fcd0, +1 annotation line], generated `.qfai/report/validate.log` from the validate proof run.
+- Revision (post-implementation): working-tree+6c26982b on HEAD d38469c4c25b6c73dbe176084e4b46feb147655c. Dirty entries: `packages/qfai/src/cli/commands/init.ts` [blob ed60cf51, +64/−3], `packages/qfai/tests/integration/shippedWorkflowOwnership.test.ts` [blob 6c26982b — **byte-identical to the RED blob**; GREEN purely by production code], `tests/integration/qfai-traceability.md` [blob d8f1fcd0, +1 annotation line], generated `.qfai/report/validate.log` from the validate proof run. <!-- qfai:not-a-citation -->
 - GREEN command: `cd packages/qfai && npx vitest run tests/integration/shippedWorkflowOwnership.test.ts -t "TC-0003-0051"`
 - GREEN result: exit 0 — 4/4 passed. it1's three membership sub-assertions (declined EXCLUDED / absent INCLUDED / adopter-owned INCLUDED) now execute against the real resolver; it2's declined-file-stays-absent passes through a real `runInit`; it3's unfiltered-primitive control still passes (it asserts the primitive, not init); it4's single-read guard still passes (see below).
 - Production change (all in `init.ts`; module-homing decision recorded): `resolveWorkflowCopySet(shippedNames, record, presentOnDisk) -> Set` exported from **`init.ts`**, deliberately NOT from `provenance.ts` — the copy set is the write path's set-construction policy, and its siblings (`SHIPPED_WORKFLOW_NAMES`, `RETIRED_WORKFLOW_NAMES`, the pre-init capture) all live in `init.ts`; `provenance.ts` stays the record/state module without acquiring init's copy policy, and no re-export indirection is needed since the test observes the init namespace. Pure predicate: excluded iff `record.workflows[name] !== undefined && !presentOnDisk.has(name)` (the declined pair); everything else stays in — adopter-owned/installed/modified names in the set are harmless because the copy itself remains create-only skip. Wiring: `captureShippedWorkflowPreInitState` (TDD-0054's single snapshot) extended to also collect `presentOnDisk` from the SAME per-name `exists` probe (still exactly ONE `readInstallProvenance` call site — it4 holds); `runInit` computes the copy set from that snapshot BEFORE the root copy and feeds the complement (`shipped minus copySet`) as `.github/workflows/<name>` entries to `copyTemplateTree`'s existing `exclude` option (exact-relative-path matching verified in `copyFiles`) — no new filesystem primitive, the contract's no-parallel-implementation rule holds.
@@ -776,7 +776,7 @@ TC-0003-0051's third bullet words the control as "create-only 判定を無効化
 ## Final gates and Revision
 
 - Gates: `npx eslint src/cli/commands/init.ts tests/integration/shippedWorkflowOwnership.test.ts --max-warnings 0` — exit 0; `npx tsc --noEmit -p tsconfig.json` — exit 0; `npx prettier --check` over the touched files — clean.
-- Revision (final): working-tree+556e2345 on HEAD 8f29a0ffc7a05773ae5066b05e923b6df811a07f. Dirty entries: `packages/qfai/tests/integration/shippedWorkflowOwnership.test.ts` [blob 556e2345 — unchanged since the classification run], `tests/integration/qfai-traceability.md` [blob f06d2bce, +1 annotation line], generated `.qfai/report/validate.log` from the validate proof run. `init.ts` is byte-identical to HEAD.
+- Revision (final): working-tree+556e2345 on HEAD 8f29a0ffc7a05773ae5066b05e923b6df811a07f. Dirty entries: `packages/qfai/tests/integration/shippedWorkflowOwnership.test.ts` [blob 556e2345 — unchanged since the classification run], `tests/integration/qfai-traceability.md` [blob f06d2bce, +1 annotation line], generated `.qfai/report/validate.log` from the validate proof run. `init.ts` is byte-identical to HEAD. <!-- qfai:not-a-citation -->
 
 #### TDD-0048 (gate-completed) — Phase A closure + first full checkpoint
 
@@ -841,7 +841,7 @@ starts next.
 
 ## Round 1 — RED
 
-- Round 1: Revision: working-tree+7e886e5a on HEAD 283bcd439d19dea193d18bbb24160321289e59f1 (dirty entries at the RED run: NEW `packages/qfai/tests/integration/shippedWorkflowTopology.test.ts` [blob 7e886e5a — the TDD-0035 describe only, 3 it()], pre-existing `M .qfai/report/validate.log` + `M .qfai/specs/spec-0003/tdd/test-list.md` [orchestrator-owned]; NO production or asset file touched — the shipped set is the 1-file HEAD state)
+- Round 1: Revision: working-tree+7e886e5a on HEAD 283bcd439d19dea193d18bbb24160321289e59f1 (dirty entries at the RED run: NEW `packages/qfai/tests/integration/shippedWorkflowTopology.test.ts` [blob 7e886e5a — the TDD-0035 describe only, 3 it()], pre-existing `M .qfai/report/validate.log` + `M .qfai/specs/spec-0003/tdd/test-list.md` [orchestrator-owned]; NO production or asset file touched — the shipped set is the 1-file HEAD state) <!-- qfai:not-a-citation -->
 - Round 1: RED command: `cd packages/qfai && npx vitest run tests/integration/shippedWorkflowTopology.test.ts -t "TC-0003-0035"`
 - Round 1: RED result: exit 1 — **2 failed / 1 passed**. Per-it():
   1. `no shipped file references another shipped file, including the uses: ./.github/workflows/ form` — **First-run PASS (vacuous, disclosed — NOT a RED)**: with exactly one shipped file the sibling-name loop iterates zero pairs and `qfai-validate.yml` contains no `./.github/workflows/` mention. This is the oracle-strength "loop over a collection empty by construction" hazard at this revision; it becomes non-vacuous at GREEN (2 files) and its discrimination is proven by the mutation round below.
@@ -876,7 +876,7 @@ starts next.
 
 ## Final Revision (this item)
 
-- working-tree on HEAD 283bcd439d19dea193d18bbb24160321289e59f1. Item-owned dirty entries: NEW `packages/qfai/tests/integration/shippedWorkflowTopology.test.ts` [blob 7e886e5a], NEW `packages/qfai/assets/init/root/.github/workflows/qfai-tests.yml` [blob 2ee82950], `M packages/qfai/src/cli/commands/init.ts` [blob ba56df30, SHIPPED_WORKFLOW_NAMES +1 name only], `M tests/integration/qfai-traceability.md` [blob e590d153, +1 annotation line]. Regenerated `.qfai/report/validate.log` from the validate proof run; `M .qfai/specs/spec-0003/tdd/test-list.md` is pre-existing orchestrator-owned state, untouched by this agent.
+- working-tree on HEAD 283bcd439d19dea193d18bbb24160321289e59f1. Item-owned dirty entries: NEW `packages/qfai/tests/integration/shippedWorkflowTopology.test.ts` [blob 7e886e5a], NEW `packages/qfai/assets/init/root/.github/workflows/qfai-tests.yml` [blob 2ee82950], `M packages/qfai/src/cli/commands/init.ts` [blob ba56df30, SHIPPED_WORKFLOW_NAMES +1 name only], `M tests/integration/qfai-traceability.md` [blob e590d153, +1 annotation line]. Regenerated `.qfai/report/validate.log` from the validate proof run; `M .qfai/specs/spec-0003/tdd/test-list.md` is pre-existing orchestrator-owned state, untouched by this agent. <!-- qfai:not-a-citation -->
 
 ### TDD-0034
 
@@ -889,7 +889,7 @@ starts next.
 
 ## Round 1 — first run (classification observation)
 
-- Round 1: Revision: working-tree+8f6a19c7 on HEAD 283bcd439d19dea193d18bbb24160321289e59f1 (dirty entries at the first run: `packages/qfai/tests/integration/shippedWorkflowTopology.test.ts` [blob 8f6a19c7 — TDD-0035 describe + appended TDD-0034 describe, prettier-clean before the run], plus ITEM-1's already-recorded deltas [`qfai-tests.yml` blob 2ee82950, `init.ts` blob ba56df30, traceability +TC-0003-0035], pre-existing orchestrator-owned `M .qfai/report/validate.log` / `M .qfai/specs/spec-0003/tdd/test-list.md`)
+- Round 1: Revision: working-tree+8f6a19c7 on HEAD 283bcd439d19dea193d18bbb24160321289e59f1 (dirty entries at the first run: `packages/qfai/tests/integration/shippedWorkflowTopology.test.ts` [blob 8f6a19c7 — TDD-0035 describe + appended TDD-0034 describe, prettier-clean before the run], plus ITEM-1's already-recorded deltas [`qfai-tests.yml` blob 2ee82950, `init.ts` blob ba56df30, traceability +TC-0003-0035], pre-existing orchestrator-owned `M .qfai/report/validate.log` / `M .qfai/specs/spec-0003/tdd/test-list.md`) <!-- qfai:not-a-citation -->
 - Round 1: RED command (label: **First-run**, not RED): `cd packages/qfai && npx vitest run tests/integration/shippedWorkflowTopology.test.ts -t "TC-0003-0034"`
 - Round 1: RED result: exit 0 — **4 passed / 3 skipped (TDD-0035 siblings)**. Per-it(), all first-run passes, disclosed:
   1. `a planted actions/ directory is rejected by the .github child allow-list` — First-run PASS. Planted `actions/probe/action.yml` into a mkdtemp copy; predicate reports `.github/actions`.
@@ -924,7 +924,7 @@ starts next.
 
 ## Final Revision (group GB1 final tree)
 
-- working-tree on HEAD 283bcd439d19dea193d18bbb24160321289e59f1. Dirty entries: NEW `packages/qfai/tests/integration/shippedWorkflowTopology.test.ts` [blob 8f6a19c7, 260 lines], NEW `packages/qfai/assets/init/root/.github/workflows/qfai-tests.yml` [blob 2ee82950, 58 lines — byte-identical since ITEM-1 GREEN], `M packages/qfai/src/cli/commands/init.ts` [blob ba56df30 — unchanged since ITEM-1], `M tests/integration/qfai-traceability.md` [blob 868004df, +2 annotation lines total], regenerated `.qfai/report/validate.log`, pre-existing orchestrator-owned `M .qfai/specs/spec-0003/tdd/test-list.md` (untouched by this agent).
+- working-tree on HEAD 283bcd439d19dea193d18bbb24160321289e59f1. Dirty entries: NEW `packages/qfai/tests/integration/shippedWorkflowTopology.test.ts` [blob 8f6a19c7, 260 lines], NEW `packages/qfai/assets/init/root/.github/workflows/qfai-tests.yml` [blob 2ee82950, 58 lines — byte-identical since ITEM-1 GREEN], `M packages/qfai/src/cli/commands/init.ts` [blob ba56df30 — unchanged since ITEM-1], `M tests/integration/qfai-traceability.md` [blob 868004df, +2 annotation lines total], regenerated `.qfai/report/validate.log`, pre-existing orchestrator-owned `M .qfai/specs/spec-0003/tdd/test-list.md` (untouched by this agent). <!-- qfai:not-a-citation -->
 
 #### Group GB1 (TDD-0035 + TDD-0034) — gate-completed
 
@@ -1028,7 +1028,7 @@ starts next.
 ## Final gates and Revision
 
 - Gates: `npx eslint tests/helpers/shippedWorkflowFixtures.ts tests/integration/shippedWorkflowPins.test.ts tests/integration/shippedWorkflowTopology.test.ts tests/integration/shippedWorkflowOwnership.test.ts tests/assets/assets.test.ts --max-warnings 0` — exit 0; `npx tsc --noEmit -p tsconfig.json` — exit 0; prettier — clean over all touched files; `bash packages/qfai/scripts/check-no-internal-version-leakage.sh` — exit 0 with the pinned YAML (`OK: no internal spec ids, version markers, or schemaVersion fields leaked`); `pnpm verify:pack` — exit 0 (`summary: ok=15 info=2 warning=1 error=0`).
-- Revision (final): working-tree on HEAD 3848ed22943ffbef1810c127a05c646ca83c6610. Item-owned dirty entries: `M packages/qfai/assets/init/root/.github/workflows/qfai-validate.yml` [blob 190d2679 — 3 SHA pins + 1 version-free comment line; oracle mutation reverted byte-identical], `M packages/qfai/tests/assets/assets.test.ts` [blob e4ae2af8 — DTC-26 subsumption, annotation retained], NEW `packages/qfai/tests/integration/shippedWorkflowPins.test.ts` [blob d1583b02 — post-consolidation], `M packages/qfai/tests/integration/shippedWorkflowTopology.test.ts` [blob 6095b3c0 — helper migration only], `M packages/qfai/tests/integration/shippedWorkflowOwnership.test.ts` [blob 4ca8e6b8 — helper migration only], NEW `packages/qfai/tests/helpers/shippedWorkflowFixtures.ts` [blob 53af55ce], `M tests/integration/qfai-traceability.md` [blob 467c8037, +1 annotation line]. Regenerated `.qfai/report/validate.log`; `M .qfai/specs/spec-0003/tdd/test-list.md` pre-existing orchestrator-owned, untouched.
+- Revision (final): working-tree on HEAD 3848ed22943ffbef1810c127a05c646ca83c6610. Item-owned dirty entries: `M packages/qfai/assets/init/root/.github/workflows/qfai-validate.yml` [blob 190d2679 — 3 SHA pins + 1 version-free comment line; oracle mutation reverted byte-identical], `M packages/qfai/tests/assets/assets.test.ts` [blob e4ae2af8 — DTC-26 subsumption, annotation retained], NEW `packages/qfai/tests/integration/shippedWorkflowPins.test.ts` [blob d1583b02 — post-consolidation], `M packages/qfai/tests/integration/shippedWorkflowTopology.test.ts` [blob 6095b3c0 — helper migration only], `M packages/qfai/tests/integration/shippedWorkflowOwnership.test.ts` [blob 4ca8e6b8 — helper migration only], NEW `packages/qfai/tests/helpers/shippedWorkflowFixtures.ts` [blob 53af55ce], `M tests/integration/qfai-traceability.md` [blob 467c8037, +1 annotation line]. Regenerated `.qfai/report/validate.log`; `M .qfai/specs/spec-0003/tdd/test-list.md` pre-existing orchestrator-owned, untouched. <!-- qfai:not-a-citation -->
 
 #### TDD-0030 (gate-completed)
 
@@ -1076,7 +1076,7 @@ starts next.
 
 ## Round 1 — RED
 
-- Round 1: Revision: working-tree+af61cd42 on HEAD 67447549 (dirty entries at the RED run: `packages/qfai/tests/integration/shippedWorkflowPins.test.ts` [blob af61cd42 — widened it3 + appended TDD-0031 describe, prettier-clean before the run], `M packages/qfai/tests/cli/init.test.ts` [carry-over fix above], regenerated `.qfai/report/validate.log`. NO asset change yet — `qfai-validate.yml` at its committed TDD-0030 state, blob 190d2679.)
+- Round 1: Revision: working-tree+af61cd42 on HEAD 67447549 (dirty entries at the RED run: `packages/qfai/tests/integration/shippedWorkflowPins.test.ts` [blob af61cd42 — widened it3 + appended TDD-0031 describe, prettier-clean before the run], `M packages/qfai/tests/cli/init.test.ts` [carry-over fix above], regenerated `.qfai/report/validate.log`. NO asset change yet — `qfai-validate.yml` at its committed TDD-0030 state, blob 190d2679.) <!-- qfai:not-a-citation -->
 - Round 1: RED command: `cd packages/qfai && npx vitest run tests/integration/shippedWorkflowPins.test.ts -t "TC-0003-0031"`
 - Round 1: RED result: exit 1 — **1 failed / 2 passed** (3 TDD-0030 siblings skipped). Per-it():
   1. `every SHA-pinned step's name carries a readable version without a leading letter` — **FAILED**: `AssertionError: expected [ …(3) ] to deeply equal []`, received
@@ -1117,7 +1117,7 @@ starts next.
 ## Final gates and Revision
 
 - Gates: eslint / tsc / prettier — all exit 0 (recorded in the refactor verify above); `bash packages/qfai/scripts/check-no-internal-version-leakage.sh` — exit 0 with the pinned + named YAML; `pnpm verify:pack` — exit 0 (`summary: ok=15 info=2 warning=1 error=0`).
-- Revision (final): working-tree on HEAD 67447549 (`feat(assets): pin every shipped uses: reference to a full commit SHA (TDD-0030)`). Item-owned dirty entries: `M packages/qfai/assets/init/root/.github/workflows/qfai-validate.yml` [blob 5ec223e9 — three step-name lines only; oracle mutation reverted byte-identical], `M packages/qfai/tests/integration/shippedWorkflowPins.test.ts` [blob af61cd42 — widened it3 + TDD-0031 describe], `M packages/qfai/tests/cli/init.test.ts` [blob 7e1af141 — carry-over DTC-26 fix], `M tests/integration/qfai-traceability.md` [blob d0f9828f, +1 annotation line], regenerated `.qfai/report/validate.log`. Row parks at `refactor` for the GB2 group review; ledger untouched.
+- Revision (final): working-tree on HEAD 67447549 (`feat(assets): pin every shipped uses: reference to a full commit SHA (TDD-0030)`). Item-owned dirty entries: `M packages/qfai/assets/init/root/.github/workflows/qfai-validate.yml` [blob 5ec223e9 — three step-name lines only; oracle mutation reverted byte-identical], `M packages/qfai/tests/integration/shippedWorkflowPins.test.ts` [blob af61cd42 — widened it3 + TDD-0031 describe], `M packages/qfai/tests/cli/init.test.ts` [blob 7e1af141 — carry-over DTC-26 fix], `M tests/integration/qfai-traceability.md` [blob d0f9828f, +1 annotation line], regenerated `.qfai/report/validate.log`. Row parks at `refactor` for the GB2 group review; ledger untouched. <!-- qfai:not-a-citation -->
 
 #### TDD-0030 correction note (appended during the GB2 turn)
 
@@ -1145,7 +1145,7 @@ Correction (TDD-0031 turn, disclosed there in full): `init.test.ts:132-133` subs
 ## Final gates and Revision
 
 - Gates: eslint / tsc / prettier — all exit 0 (recorded in the refactor verify above); `bash packages/qfai/scripts/check-no-internal-version-leakage.sh` — exit 0 with the pinned + named YAML; `pnpm verify:pack` — exit 0 (`summary: ok=15 info=2 warning=1 error=0`).
-- Revision (final, post review-fix): working-tree on HEAD 67447549 (`feat(assets): pin every shipped uses: reference to a full commit SHA (TDD-0030)`). Item-owned dirty entries: `M packages/qfai/assets/init/root/.github/workflows/qfai-validate.yml` [blob 5ec223e9 — three step-name lines only; oracle mutation reverted byte-identical], `M packages/qfai/tests/integration/shippedWorkflowPins.test.ts` [blob 77adf2e9 — widened it3 + TDD-0031 describe + review-fix comment rework], `M packages/qfai/tests/cli/init.test.ts` [blob 7e1af141 — carry-over DTC-26 fix], `M tests/integration/qfai-traceability.md` [blob d0f9828f, +1 annotation line], regenerated `.qfai/report/validate.log`. Row parks at `refactor` for the GB2 group review; ledger untouched.
+- Revision (final, post review-fix): working-tree on HEAD 67447549 (`feat(assets): pin every shipped uses: reference to a full commit SHA (TDD-0030)`). Item-owned dirty entries: `M packages/qfai/assets/init/root/.github/workflows/qfai-validate.yml` [blob 5ec223e9 — three step-name lines only; oracle mutation reverted byte-identical], `M packages/qfai/tests/integration/shippedWorkflowPins.test.ts` [blob 77adf2e9 — widened it3 + TDD-0031 describe + review-fix comment rework], `M packages/qfai/tests/cli/init.test.ts` [blob 7e1af141 — carry-over DTC-26 fix], `M tests/integration/qfai-traceability.md` [blob d0f9828f, +1 annotation line], regenerated `.qfai/report/validate.log`. Row parks at `refactor` for the GB2 group review; ledger untouched. <!-- qfai:not-a-citation -->
 
 #### Group GB2 (TDD-0031) — gate-completed
 
@@ -1202,7 +1202,7 @@ Correction (TDD-0031 turn, disclosed there in full): `init.test.ts:132-133` subs
   - **DR-0003-0008:** `packages/qfai/scripts/check-no-internal-version-leakage.sh` is EDIT-FORBIDDEN and was never edited, not even transiently — the ruled falsifiability mutation is test-side only. The TC's "guard diff is empty" bullet is realized as content-pin assertions on the committed script (it3). The `INTERNAL_VERSION_RE` literal is already byte-pinned by TDD-0031's SSOT-sync assertion in the same file (runs in every whole-file run); it3 references it in a comment and pins the complementary surfaces instead of duplicating it.
   - **TDD-0056 split:** TC-0003-0033 verify bullet 3 (pre-build lint-shipping's distributed-YAML rule evaluating BEFORE comment-line skipping, detecting own-line trailers) was split off to TDD-0056 (spec-0017-blocked) and is deliberately NOT covered by this describe. The split is written into the describe's leading comment.
   - **Advisory 56:** the planted fixture uses the trailer `# v6.1.0` (dot-bearing so it matches the guard's version pattern; no at-sign so TDD-0030's widened DTC-26 tree-wide `@v<digit>` scan stays clean over this test source). Confirmed by every whole-file run.
-  - Planted violations live ONLY on temp copies (mkdtemp-staged package fixture); the shipped tree, the guard script, `src/**` and `.qfai/**` were not authored (the validate run below regenerates `.qfai/report/validate.log` as a side effect, same as prior rows).
+  - Planted violations live ONLY on temp copies (mkdtemp-staged package fixture); the shipped tree, the guard script, `src/**` and `.qfai/**` were not authored (the validate run below regenerates `.qfai/report/validate.log` as a side effect, same as prior rows). <!-- qfai:not-a-citation -->
 
 ## Round 1 — first run (classification observation)
 
@@ -1254,7 +1254,7 @@ Correction (TDD-0031 turn, disclosed there in full): `init.test.ts:132-133` subs
 
 ## Final Revision
 
-- working-tree on HEAD 7f6d0f9fdee81a25923eda44b1b969686cbb3958. Item-owned dirty entries: `M packages/qfai/tests/integration/shippedWorkflowPins.test.ts` [blob **c6f4ecd5**, 383 lines — unchanged since the first run; falsifiability mutation reverted byte-identical], `M tests/integration/qfai-traceability.md` [blob **dddc0fac**, +1 annotation line], regenerated `.qfai/report/validate.log` (validate side effect). Evidence: this file + `tdd-0033-validate.log` under `tmp/` (untracked, gitignored). Ledger untouched (orchestrator-owned).
+- working-tree on HEAD 7f6d0f9fdee81a25923eda44b1b969686cbb3958. Item-owned dirty entries: `M packages/qfai/tests/integration/shippedWorkflowPins.test.ts` [blob **c6f4ecd5**, 383 lines — unchanged since the first run; falsifiability mutation reverted byte-identical], `M tests/integration/qfai-traceability.md` [blob **dddc0fac**, +1 annotation line], regenerated `.qfai/report/validate.log` (validate side effect). Evidence: this file + `tdd-0033-validate.log` under `tmp/` (untracked, gitignored). Ledger untouched (orchestrator-owned). <!-- qfai:not-a-citation -->
 
 #### TDD-0033 (gate-completed)
 
@@ -1306,7 +1306,7 @@ Correction (TDD-0031 turn, disclosed there in full): `init.test.ts:132-133` subs
 
 ## Round 1 — RED
 
-- Round 1: Revision: working-tree+31e9d963 on HEAD 4c2e0a89afe628df9bb3137f8a69a7a4cdc5bc33 (TDD-0033's commit). Dirty entries at the RED run: NEW `packages/qfai/tests/integration/shippedWorkflows.test.ts` [blob 31e9d963 — TDD-0027 describe only, prettier-clean before the run], pre-existing orchestrator-owned `M .qfai/specs/spec-0003/tdd/test-list.md` + `M .qfai/report/validate.log`. NO asset change yet — both YAMLs at their committed state.
+- Round 1: Revision: working-tree+31e9d963 on HEAD 4c2e0a89afe628df9bb3137f8a69a7a4cdc5bc33 (TDD-0033's commit). Dirty entries at the RED run: NEW `packages/qfai/tests/integration/shippedWorkflows.test.ts` [blob 31e9d963 — TDD-0027 describe only, prettier-clean before the run], pre-existing orchestrator-owned `M .qfai/specs/spec-0003/tdd/test-list.md` + `M .qfai/report/validate.log`. NO asset change yet — both YAMLs at their committed state. <!-- qfai:not-a-citation -->
 - Round 1: RED command: `cd packages/qfai && npx vitest run tests/integration/shippedWorkflows.test.ts -t "TC-0003-0027"`
 - Round 1: RED result: exit 1 — **3 failed / 3 passed**. Per-it():
   1. `every job has a job-reachable permissions block (job-level or workflow-level map)` — **FAILED** (natural RED): 6 violations, all six shipped jobs named — `qfai-tests.yml: job "unit"/"component"/"integration"/"api"/"e2e" has no reachable permissions: block` + `qfai-validate.yml: job "validate" has no reachable permissions: block`. Non-vacuity guard passed (6 jobs collected).
@@ -1345,7 +1345,7 @@ Correction (TDD-0031 turn, disclosed there in full): `init.test.ts:132-133` subs
 
 ## Revision (at item close — file grows with TDD-0055 next, same GB3 turn)
 
-- working-tree on HEAD 4c2e0a89. Item-owned dirty entries: NEW `packages/qfai/tests/integration/shippedWorkflows.test.ts` [blob **31e9d963**], `M packages/qfai/assets/init/root/.github/workflows/qfai-validate.yml` [blob **17e2325d** — concurrency + permissions only; oracle mutation reverted byte-identical], `M packages/qfai/assets/init/root/.github/workflows/qfai-tests.yml` [blob **cc2f2ac0** — concurrency + 5x permissions/timeout], `M tests/integration/qfai-traceability.md` [blob **e3a18292**, +1 annotation line], regenerated `.qfai/report/validate.log`; pre-existing orchestrator-owned `M .qfai/specs/spec-0003/tdd/test-list.md` (untouched by this agent). Row parks at `refactor` for the GB3 group review.
+- working-tree on HEAD 4c2e0a89. Item-owned dirty entries: NEW `packages/qfai/tests/integration/shippedWorkflows.test.ts` [blob **31e9d963**], `M packages/qfai/assets/init/root/.github/workflows/qfai-validate.yml` [blob **17e2325d** — concurrency + permissions only; oracle mutation reverted byte-identical], `M packages/qfai/assets/init/root/.github/workflows/qfai-tests.yml` [blob **cc2f2ac0** — concurrency + 5x permissions/timeout], `M tests/integration/qfai-traceability.md` [blob **e3a18292**, +1 annotation line], regenerated `.qfai/report/validate.log`; pre-existing orchestrator-owned `M .qfai/specs/spec-0003/tdd/test-list.md` (untouched by this agent). Row parks at `refactor` for the GB3 group review. <!-- qfai:not-a-citation -->
 - GB3 final tree (after TDD-0055, same turn): test file grew to blob **d4ffed15** (281 lines, +TDD-0055 describe — this row's six its byte-unchanged within it), `qfai-validate.yml` → blob **07d89de7** (+TDD-0055's checkout `with:` block; this row's concurrency/permissions lines unchanged), `qfai-tests.yml` unchanged at **cc2f2ac0**, traceability → blob **5cf1ed3b** (+TC-0003-0028). Full closure re-verified on the final tree: 180/180 + eslint/tsc/prettier + leakage guard + `pnpm verify:pack` all green (recorded in TDD-0055.md).
 
 ### TDD-0055
@@ -1358,7 +1358,7 @@ Correction (TDD-0031 turn, disclosed there in full): `init.test.ts:132-133` subs
 
 ## Round 1 — RED
 
-- Round 1: Revision: working-tree+d4ffed15 on HEAD 4c2e0a89afe628df9bb3137f8a69a7a4cdc5bc33. Dirty entries at the RED run: `packages/qfai/tests/integration/shippedWorkflows.test.ts` [blob d4ffed15 — TDD-0027 describe + appended TDD-0055 describe, prettier-clean before the run], plus ITEM-1's already-recorded deltas (`qfai-validate.yml` blob 17e2325d, `qfai-tests.yml` blob cc2f2ac0, traceability +TC-0003-0027), pre-existing orchestrator-owned `M .qfai/specs/spec-0003/tdd/test-list.md` / regenerated `.qfai/report/validate.log`. The checkout step had NO `with:` block at this point.
+- Round 1: Revision: working-tree+d4ffed15 on HEAD 4c2e0a89afe628df9bb3137f8a69a7a4cdc5bc33. Dirty entries at the RED run: `packages/qfai/tests/integration/shippedWorkflows.test.ts` [blob d4ffed15 — TDD-0027 describe + appended TDD-0055 describe, prettier-clean before the run], plus ITEM-1's already-recorded deltas (`qfai-validate.yml` blob 17e2325d, `qfai-tests.yml` blob cc2f2ac0, traceability +TC-0003-0027), pre-existing orchestrator-owned `M .qfai/specs/spec-0003/tdd/test-list.md` / regenerated `.qfai/report/validate.log`. The checkout step had NO `with:` block at this point. <!-- qfai:not-a-citation -->
 - Round 1: RED command: `cd packages/qfai && npx vitest run tests/integration/shippedWorkflows.test.ts -t "TC-0003-0028"`
 - Round 1: RED result: exit 1 — **1 failed / 1 passed** (6 TDD-0027 siblings skipped). Per-it():
   1. `every checkout step sets persist-credentials: false` — **FAILED** (natural RED): `AssertionError: expected [ Array(1) ] to deeply equal []`, received `"qfai-validate.yml: job \"validate\" checkout step does not set persist-credentials: false"`. Non-vacuity guard passed: 1 checkout step collected across the set — disclosed as instructed: the qfai-tests skeleton jobs check nothing out and contribute zero checkouts, which is exactly why the `checkoutCount >= 1` guard exists.
@@ -1393,7 +1393,7 @@ Correction (TDD-0031 turn, disclosed there in full): `init.test.ts:132-133` subs
 
 ## Final Revision (group GB3 final tree)
 
-- working-tree on HEAD 4c2e0a89afe628df9bb3137f8a69a7a4cdc5bc33. Item-owned dirty entries: NEW `packages/qfai/tests/integration/shippedWorkflows.test.ts` [blob **d4ffed15**, 281 lines — TDD-0027 + TDD-0055 describes], `M packages/qfai/assets/init/root/.github/workflows/qfai-validate.yml` [blob **07d89de7** — ITEM-1 concurrency/permissions + this row's checkout `with:` block; both oracle mutations reverted byte-identical], `M packages/qfai/assets/init/root/.github/workflows/qfai-tests.yml` [blob **cc2f2ac0** — unchanged since ITEM-1 GREEN], `M tests/integration/qfai-traceability.md` [blob **5cf1ed3b**, +2 annotation lines total for GB3], regenerated `.qfai/report/validate.log`; pre-existing orchestrator-owned `M .qfai/specs/spec-0003/tdd/test-list.md` (untouched by this agent). Both rows park at `refactor` for the GB3 group review.
+- working-tree on HEAD 4c2e0a89afe628df9bb3137f8a69a7a4cdc5bc33. Item-owned dirty entries: NEW `packages/qfai/tests/integration/shippedWorkflows.test.ts` [blob **d4ffed15**, 281 lines — TDD-0027 + TDD-0055 describes], `M packages/qfai/assets/init/root/.github/workflows/qfai-validate.yml` [blob **07d89de7** — ITEM-1 concurrency/permissions + this row's checkout `with:` block; both oracle mutations reverted byte-identical], `M packages/qfai/assets/init/root/.github/workflows/qfai-tests.yml` [blob **cc2f2ac0** — unchanged since ITEM-1 GREEN], `M tests/integration/qfai-traceability.md` [blob **5cf1ed3b**, +2 annotation lines total for GB3], regenerated `.qfai/report/validate.log`; pre-existing orchestrator-owned `M .qfai/specs/spec-0003/tdd/test-list.md` (untouched by this agent). Both rows park at `refactor` for the GB3 group review. <!-- qfai:not-a-citation -->
 
 #### Group GB3 (TDD-0027 + TDD-0055) — gate-completed
 
@@ -1451,7 +1451,7 @@ Correction (TDD-0031 turn, disclosed there in full): `init.test.ts:132-133` subs
 
 ## Round 1 — RED
 
-- Round 1: Revision: working-tree+7f4e033a on HEAD ac9d19f7c9e644bdbdd627fcab06e5423faafd5b (GB3's commit). Dirty entries at the RED run: `M packages/qfai/tests/integration/shippedWorkflows.test.ts` [blob 7f4e033a — appended TDD-0029 describe + module-scope `packageRoot` const + fs/path/url imports + one header sentence; prettier-clean before the run], regenerated `.qfai/report/validate.log`. NO asset change yet — `qfai-validate.yml` at its committed GB3 state (blob 07d89de7).
+- Round 1: Revision: working-tree+7f4e033a on HEAD ac9d19f7c9e644bdbdd627fcab06e5423faafd5b (GB3's commit). Dirty entries at the RED run: `M packages/qfai/tests/integration/shippedWorkflows.test.ts` [blob 7f4e033a — appended TDD-0029 describe + module-scope `packageRoot` const + fs/path/url imports + one header sentence; prettier-clean before the run], regenerated `.qfai/report/validate.log`. NO asset change yet — `qfai-validate.yml` at its committed GB3 state (blob 07d89de7). <!-- qfai:not-a-citation -->
 - Round 1: RED command: `cd packages/qfai && npx vitest run tests/integration/shippedWorkflows.test.ts -t "TC-0003-0029"`
 - Round 1: RED result: exit 1 — **1 failed / 3 passed** (8 siblings skipped). Per-it():
   1. `every install step keeps all five branches: pnpm, Yarn Berry, Yarn Classic, npm and the no-lockfile fallback` — **First-run PASS (born-green, disclosed)**: the validate install step retained all five branch markers (`pnpm install --frozen-lockfile` / `yarn install --immutable` / `yarn install --frozen-lockfile` / `npm ci` / `npm install --no-audit --no-fund`) and all three `[ -f <lockfile> ]` probes through GB3 (which never touched the install step). Non-vacuity guard passed: 1 install step collected.
@@ -1490,7 +1490,7 @@ Correction (TDD-0031 turn, disclosed there in full): `init.test.ts:132-133` subs
 
 ## Revision (final)
 
-- working-tree on HEAD ac9d19f7c9e644bdbdd627fcab06e5423faafd5b. Item-owned dirty entries: `M packages/qfai/tests/integration/shippedWorkflows.test.ts` [blob **7f4e033a**, 458 lines — +TDD-0029 describe, +`packageRoot` const and fs/path/url imports, +one header sentence; unchanged since the RED run], `M packages/qfai/assets/init/root/.github/workflows/qfai-validate.yml` [blob **c3024de9** — one comment line: the engines citation 18.0.0 → 20.19.0; oracle mutation reverted byte-identical], `M tests/integration/qfai-traceability.md` [blob **dcdacaff**, +1 annotation line], regenerated `.qfai/report/validate.log`. Row parks at `refactor` for the GB4 group review.
+- working-tree on HEAD ac9d19f7c9e644bdbdd627fcab06e5423faafd5b. Item-owned dirty entries: `M packages/qfai/tests/integration/shippedWorkflows.test.ts` [blob **7f4e033a**, 458 lines — +TDD-0029 describe, +`packageRoot` const and fs/path/url imports, +one header sentence; unchanged since the RED run], `M packages/qfai/assets/init/root/.github/workflows/qfai-validate.yml` [blob **c3024de9** — one comment line: the engines citation 18.0.0 → 20.19.0; oracle mutation reverted byte-identical], `M tests/integration/qfai-traceability.md` [blob **dcdacaff**, +1 annotation line], regenerated `.qfai/report/validate.log`. Row parks at `refactor` for the GB4 group review. <!-- qfai:not-a-citation -->
 
 #### Group GB4 (TDD-0029) — gate-completed; Phase B complete
 
@@ -1577,7 +1577,7 @@ Correction (TDD-0031 turn, disclosed there in full): `init.test.ts:132-133` subs
 
 ## Revision (at item close — file grows with TDD-0039/0040 next, same GC1 turn)
 
-- working-tree on HEAD 07ec701c. Item-owned dirty entries: NEW `packages/qfai/tests/integration/shippedWorkflowDetection.test.ts` [blob **1654a4dd**], `M packages/qfai/tests/helpers/shippedWorkflowFixtures.ts` [blob **68242400**], `M packages/qfai/assets/init/root/.github/workflows/qfai-tests.yml` [blob **18e26c24** — oracle mutation reverted byte-identical], `M tests/integration/qfai-traceability.md` (+1 line), regenerated `.qfai/report/validate.log`. Row parks at `refactor` for the GC1 group review.
+- working-tree on HEAD 07ec701c. Item-owned dirty entries: NEW `packages/qfai/tests/integration/shippedWorkflowDetection.test.ts` [blob **1654a4dd**], `M packages/qfai/tests/helpers/shippedWorkflowFixtures.ts` [blob **68242400**], `M packages/qfai/assets/init/root/.github/workflows/qfai-tests.yml` [blob **18e26c24** — oracle mutation reverted byte-identical], `M tests/integration/qfai-traceability.md` (+1 line), regenerated `.qfai/report/validate.log`. Row parks at `refactor` for the GC1 group review. <!-- qfai:not-a-citation -->
 
 ### TDD-0039
 
@@ -1622,7 +1622,7 @@ Correction (TDD-0031 turn, disclosed there in full): `init.test.ts:132-133` subs
 
 ## Revision (at item close — file grows with TDD-0040 next, same GC1 turn)
 
-- working-tree on HEAD 07ec701c. Item-owned dirty entries: `M packages/qfai/tests/integration/shippedWorkflowDetection.test.ts` [blob **ab2ab3cc**], `M packages/qfai/assets/init/root/.github/workflows/qfai-tests.yml` [blob **af574de3** — stage-2 shell; oracle mutation reverted byte-identical], plus ITEM-1's deltas (`shippedWorkflowFixtures.ts` 68242400), `M tests/integration/qfai-traceability.md` (+2 GC1 lines so far), regenerated `.qfai/report/validate.log`. Row parks at `refactor` for the GC1 group review.
+- working-tree on HEAD 07ec701c. Item-owned dirty entries: `M packages/qfai/tests/integration/shippedWorkflowDetection.test.ts` [blob **ab2ab3cc**], `M packages/qfai/assets/init/root/.github/workflows/qfai-tests.yml` [blob **af574de3** — stage-2 shell; oracle mutation reverted byte-identical], plus ITEM-1's deltas (`shippedWorkflowFixtures.ts` 68242400), `M tests/integration/qfai-traceability.md` (+2 GC1 lines so far), regenerated `.qfai/report/validate.log`. Row parks at `refactor` for the GC1 group review. <!-- qfai:not-a-citation -->
 
 ### TDD-0040
 
@@ -1672,7 +1672,7 @@ Correction (TDD-0031 turn, disclosed there in full): `init.test.ts:132-133` subs
 
 ## Final Revision (group GC1 final tree)
 
-- working-tree on HEAD 07ec701c. GC1-owned dirty entries: NEW `packages/qfai/tests/integration/shippedWorkflowDetection.test.ts` [blob **027b3c10**, 395 lines — three describes], `M packages/qfai/assets/init/root/.github/workflows/qfai-tests.yml` [blob **44b31aae**, 185 lines — detection job + shell (classification + fail-open) + lane wiring + verdict job; all three oracle mutations reverted byte-identical], `M packages/qfai/tests/helpers/shippedWorkflowFixtures.ts` [blob **68242400** — additive exports, unchanged since ITEM-1], `M tests/integration/qfai-traceability.md` [blob **60c8a640**, +3 GC1 annotation lines], regenerated `.qfai/report/validate.log`. All three rows park at `refactor` for the GC1 group review.
+- working-tree on HEAD 07ec701c. GC1-owned dirty entries: NEW `packages/qfai/tests/integration/shippedWorkflowDetection.test.ts` [blob **027b3c10**, 395 lines — three describes], `M packages/qfai/assets/init/root/.github/workflows/qfai-tests.yml` [blob **44b31aae**, 185 lines — detection job + shell (classification + fail-open) + lane wiring + verdict job; all three oracle mutations reverted byte-identical], `M packages/qfai/tests/helpers/shippedWorkflowFixtures.ts` [blob **68242400** — additive exports, unchanged since ITEM-1], `M tests/integration/qfai-traceability.md` [blob **60c8a640**, +3 GC1 annotation lines], regenerated `.qfai/report/validate.log`. All three rows park at `refactor` for the GC1 group review. <!-- qfai:not-a-citation -->
 
 #### Group GC1 (TDD-0038 + TDD-0039 + TDD-0040) — gate-completed
 
@@ -1768,7 +1768,7 @@ Correction (TDD-0031 turn, disclosed there in full): `init.test.ts:132-133` subs
   - Installing-job scope, disclosed honestly per the TC: the five test lanes ship install-less by the skeleton's staging design (their bodies land with later revisions), so the count today is exactly 1 — the validate lane. The oracle counts install-bearing jobs (`/\b(?:pnpm|yarn|npm)\s+(?:install|ci)\b/` over run bodies), so it names any job the moment one gains an install step; whether an enabled lane's future body may install is that revision's scoping call, judged then against this AC's count-of-one. The TDD-0036 probe deliberately uses the runner's preinstalled node and installs nothing, keeping this count intact.
   - Secret oracle is two-layered: raw per-line regexes (`\bsecrets\s*\.` context references; `\bsecrets\s*:` declarations / passing blocks / `secrets: inherit`) name file:line, and a parsed-YAML key walk (`countKeyOccurrences(doc, "secrets") === 0`) catches forms the line regexes cannot see (flow style, odd spacing).
   - Legitimately-passing assertions, all disclosed: all three its passed first-run — zero secrets was true from the set's birth, and detection/verdict shipped with `timeout-minutes` and without installs in GC1. No manufactured failure; the discriminating power is demonstrated by the two mutations below.
-- Round 1: Revision: working-tree+3dfe1abc on HEAD 56b34b94. Dirty entries at the first run: `packages/qfai/tests/integration/shippedWorkflowInertness.test.ts` [blob 3dfe1abc — TDD-0036 describe + this row's, prettier-clean before the run], `M packages/qfai/assets/init/root/.github/workflows/qfai-tests.yml` [blob 3d24e730 — TDD-0036's landed change], `M tests/integration/qfai-traceability.md` (TC-0003-0036 annotation), orchestrator-owned `.qfai/report/validate.log`.
+- Round 1: Revision: working-tree+3dfe1abc on HEAD 56b34b94. Dirty entries at the first run: `packages/qfai/tests/integration/shippedWorkflowInertness.test.ts` [blob 3dfe1abc — TDD-0036 describe + this row's, prettier-clean before the run], `M packages/qfai/assets/init/root/.github/workflows/qfai-tests.yml` [blob 3d24e730 — TDD-0036's landed change], `M tests/integration/qfai-traceability.md` (TC-0003-0036 annotation), orchestrator-owned `.qfai/report/validate.log`. <!-- qfai:not-a-citation -->
 - Round 1: First-run command: `cd packages/qfai && npx vitest run tests/integration/shippedWorkflowInertness.test.ts -t "TC-0003-0037"`
 - Round 1: First-run result: exit 0 — **3 passed / 0 failed** (born-green; TDD-0036's describe correctly skipped under the selector filter). No production change was owed by this row. Satisfied-by: TDD-0035 (orchestrator authoring - the install-less lane skeleton), TDD-0038/0039/0040 (detection and verdict jobs authored install-less), TDD-0027 and TDD-0055 (per-job permissions and timeout-minutes), TDD-0036 (the probe step that deliberately uses the runner's preinstalled node and installs nothing). The zero-secrets property held from the shipped set's birth - no secrets token has ever existed under the shipped workflows path, independently confirmed by qa-gatekeeper#4 with a repository-wide history search. Row-ID form recorded per the gatekeeper#4 advisory; the earlier prose named groups, not rows.
 - Round 1: RED-equivalent (falsifiability, in-cycle, real asset — this is also the row's ORACLE PROOF): mutation named "planted secrets context reference" — added `QFAI_LEAKED: ${{ secrets.QFAI_LEAKED }}` to the verdict step's `env:` block in the REAL `qfai-tests.yml` (blob 3d24e730 → mutated blob **193d0065**). Same selector: exit 1 — **1 failed / 2 passed**: it2 `expected [ Array(1) ] to deeply equal []` with the violation named `qfai-tests.yml:219: secret context reference`. Failure mode: assertion (planted surface named by the violation string; no crash).
@@ -3241,7 +3241,7 @@ it, and `grep -n "TC-0003-0041"` over the whole log returns **nothing**, i.e. th
 discharged and the row is not flagged anywhere.
 
 Side effect, disclosed: the `validate` run rewrites its own pointer file
-`.qfai/report/validate.log` (run id + timestamp only; the file's own header says it is written by
+`.qfai/report/validate.log` (run id + timestamp only; the file's own header says it is written by <!-- qfai:not-a-citation -->
 every run and must not be hand-edited). It is generated churn from the mandated discharge command,
 not an authored edit.
 
@@ -3488,7 +3488,7 @@ spec-0003 (row 42).
 which is the expected ledger-write warning: `test-list.md` is the orchestrator's artifact and was
 deliberately not touched.
 
-Side effect, disclosed: the `validate` run rewrote its own pointer file `.qfai/report/validate.log`
+Side effect, disclosed: the `validate` run rewrote its own pointer file `.qfai/report/validate.log` <!-- qfai:not-a-citation -->
 (run id + timestamp). Generated churn from the mandated discharge command, not an authored edit.
 
 **Legitimately-passing assertions disclosed (in order):**
@@ -4098,7 +4098,7 @@ HEAD unchanged: `4bb82aff0461527279e391181129e6eb142e82f9`.
 | `packages/qfai/tests/cli/init.test.ts` | `c863024786a0a1d185a84faad13449a36c8d3699` | modified (DTC-26 subsumption) |
 | `tests/integration/qfai-traceability.md` | `65f54f8e9cf62ca6b448d2ca4542c2b897f0f0fb` | modified (+1 annotation line) |
 
-`git status --porcelain` also carries two entries this row did not author: `.qfai/report/validate.log` (regenerated by the mandated validate proof, as in every prior row of this run) and `.qfai/specs/spec-0003/tdd/test-list.md` (the orchestrator's own ledger write for the RED row — a whole-table reflow; this row never edits that file).
+`git status --porcelain` also carries two entries this row did not author: `.qfai/report/validate.log` (regenerated by the mandated validate proof, as in every prior row of this run) and `.qfai/specs/spec-0003/tdd/test-list.md` (the orchestrator's own ledger write for the RED row — a whole-table reflow; this row never edits that file). <!-- qfai:not-a-citation -->
 
 ## Row parks at `refactor`
 
@@ -4446,7 +4446,7 @@ HEAD unchanged: `eba8f5b9a7ff2d07babfa5ab95e94e4c2bfb32bd`.
 | `packages/qfai/tests/helpers/shippedWorkflowFixtures.ts` | `1e59fa08a63b4926ab6d6e837a52d81f6fc023cf` | carried 129: `normalizeHeaderLabel`, `HEADER_PLACEHOLDER_VALUE_RE`, `parseHeaderTable` |
 | `tests/integration/qfai-traceability.md` | `1f07379a7b3f1b886e3bf3f272b451b9013a8493` | +1 annotation line |
 
-`git status --porcelain` also carries `.qfai/report/validate.log`, regenerated by the mandated validate proof (as in every prior row of this run). This row edits no file under `.qfai/`.
+`git status --porcelain` also carries `.qfai/report/validate.log`, regenerated by the mandated validate proof (as in every prior row of this run). This row edits no file under `.qfai/`. <!-- qfai:not-a-citation -->
 
 ## Cadence note
 
