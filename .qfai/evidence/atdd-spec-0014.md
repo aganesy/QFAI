@@ -48,7 +48,10 @@ unchanged; the reason is under Gaps.
 
 ## Commands executed + key outputs
 
-Every command ran from `packages/qfai`. The clean-tree runs were taken at
+Every `vitest` command ran from `packages/qfai`; the validate gate ran from the
+repository root, which is where its `node packages/qfai/dist/cli/index.mjs` path
+resolves. From `packages/qfai` that same string names a `packages/qfai` inside
+`packages/qfai` and does not exist. The clean-tree runs were taken at
 revision `649d8111147436408c90cbbe1b9f9b07e34da8cb`. Each mutation was reverted
 from a copy of the pre-mutation bytes, and the tree re-addressed afterwards to
 confirm it had returned to the clean value.
@@ -62,12 +65,23 @@ below are over the selected cases, not over the file.
 | `TDD-0019` falsifiability A | 1 of 5   | 1 failed            |
 | `TDD-0019` falsifiability B | 1 of 5   | 1 failed            |
 | Refactor verify           | all      | 126 passed          |
-| Checkpoint                | all      | 9063 passed, exit 0 |
+| Checkpoint                | all      | 9081 passed, exit 0 |
 
 ## Test volume estimate
 
-Not applicable. This run authored no test; it records proof for rows whose tests
-already exist.
+The estimate is owed by the spec's obligations rather than by what this run
+authored, so "no test was authored" does not make it inapplicable.
+
+| Layer       | Raw count | Signal | Evidence                     | Notes                                                        |
+| ----------- | --------: | -----: | ---------------------------- | ------------------------------------------------------------ |
+| E2E         |         5 |      0 | `US-0014-0013` … `-0020`     | five active stories; one, `US-0014-0020`, has an annotated file under `tests/e2e/**`, whose cases are inside a `describe.skip` marked test-first. None has a case that runs |
+| API         |         0 |      0 | no `CON-API-*` declared      | nothing owed                                                  |
+| Integration |         9 |      4 | `TC-0014-0009` … `-0036`     | nine declared test cases; four carry a row that names a file that exists and runs |
+
+The signal column counts obligations with a case that runs, not rows at `done`:
+four of the nine test cases have one, and no user story does. That gap is the
+subject of the Coverage Depth Matrix rather than of this run, which authored no
+test and moved no `Status`.
 
 ## Coverage obligations checklist
 
@@ -189,8 +203,8 @@ first mutation passes it and fails the literal check below it instead.
 - Refactor verify result: Test Files 4 passed (4); Tests 126 passed (126)
 - Refactor verify revision: 649d8111147436408c90cbbe1b9f9b07e34da8cb
 - Checkpoint verification command: npx vitest run --project integration --project e2e --project cli --project core --exclude 'tests/core/prFixMonitor.test.ts' --exclude 'tests/core/prMergePlan.test.ts' --exclude 'tests/integration/dbSchemaDriftEngine.test.ts' --exclude 'tests/assets/mdschemaRouting.test.ts' --exclude 'tests/assets/mdschemaSchemas.test.ts'
-- Checkpoint verification result: PASS — exit 0; Test Files 533 passed (541); Tests 9063 passed (9145)
-- Checkpoint verification revision: 09f6f3b362ffc1ceac2a8fa6087d4029da4aed61
+- Checkpoint verification result: PASS — exit 0; Test Files 534 passed (542); Tests 9081 passed (9163)
+- Checkpoint verification revision: 915f4d5b5355e6bdc87398a031de681464399292
 - Checkpoint verification note: three suites are excluded beyond the two the
   command already excluded, and each is excluded for a dependency this checkout
   does not install rather than for anything about this branch.
@@ -309,6 +323,17 @@ what the row claims.
 So the half that is falsifiable is not the obligation, and the half that is the
 obligation is not falsifiable. The row needs a case that drives a verify run and
 observes the canonical findings in its output.
+
+**That case now exists, and it arrived from main rather than from this run.**
+`verifySemanticsSpec0014.test.ts` holds `a verify run surfaces a canonical group
+finding`, which calls `validateProject` under the `verify` profile and asserts
+the forbidden-sidecar finding in its output; its own comment names the
+falsifying change as deleting the two `runCanonicalUixValidators` call sites
+while keeping the import — the mutation this withdrawal reports as surviving.
+So the gap is closed and `TDD-0018` is backfillable. This run does not backfill
+it: the case is not the one the row's `Selector` names, and re-pointing a
+selector and taking a fresh observation is the next run's work rather than a
+correction to this record.
 
 `TDD-0035` is not backfilled. Its obligation names the command line and says so
 twice: `TC-0014-0035` reads "run `qfai prototyping certify --scope saas-package`
