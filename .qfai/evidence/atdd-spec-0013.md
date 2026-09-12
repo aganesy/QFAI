@@ -55,7 +55,7 @@ both cells.
 Every command ran from `packages/qfai`. The clean-tree runs for `TDD-0024` were taken
 at revision `649d8111147436408c90cbbe1b9f9b07e34da8cb`. Those for `TDD-0020`,
 `TDD-0029` and `TDD-0030` were taken at
-`working-tree+87f61d33f95fdc477763bd387fcd7d8645a80da8b7e6735a49f753cd09deead6`,
+`working-tree+6fb16efd07f3f84741a144ed4cfb6924947303775e708bd0070c947e3aa0b78d`,
 with `d4b59da759e80dc2c6018b92b8d6f9154e1e4dd7` as `HEAD`. Each mutation was reverted
 from a copy of the pre-mutation bytes, and the tree re-addressed afterwards to
 confirm it had returned to the clean value.
@@ -146,10 +146,10 @@ and did not run.
 
 #### Round 1
 
-- Round 1: Revision: working-tree+87f61d33f95fdc477763bd387fcd7d8645a80da8b7e6735a49f753cd09deead6
+- Round 1: Revision: working-tree+6fb16efd07f3f84741a144ed4cfb6924947303775e708bd0070c947e3aa0b78d
 - Round 1: Satisfied-by: packages/qfai/src/core/validators/designAudit.ts, checkContractHierarchyFromScreens — the empty-list test that opens the `QFAI-AUD-001` branch; and packages/qfai/src/core/doctor.ts, buildPrototypingUiContractsCheck — the check that stops the prototyping preflight on a screen with no primary task.
 - Round 1: Falsifiability command: npx vitest run tests/integration/sddPrimaryTasksLane.test.ts
-- Round 1: Falsifiability result: Test Files 1 failed (1); Tests 4 failed, 1 passed (5). Both of this row's cases fail: the lane case on the absent finding, and the preflight case on a UI contract check that reads `ok`.
+- Round 1: Falsifiability result: Test Files 1 failed (1); Tests 4 failed, 1 passed (5). Both of this row's cases fail: the lane case on the absent finding, and the preflight case on `qfai prototyping preflight` exiting 0 over the contract it has to refuse.
 
 The edits, one per case — the empty-list branch that opens `QFAI-AUD-001`, and
 the preflight's refusal:
@@ -168,25 +168,25 @@ the preflight's refusal:
      return {
 ```
 
-- Round 1: Falsifiability revision: working-tree+ce534d01b504b21a2f843bfb9d3c5d45086b1ce3b2dcb2a2b73330a7b7ddd136
+- Round 1: Falsifiability revision: working-tree+d3c1c8e9ccd62bcdb6ae1b7d76d388f7dc097eb7b2f76c5cc71e6081f921eb8c
 - Round 1: GREEN command: npx vitest run tests/integration/sddPrimaryTasksLane.test.ts
 - Round 1: GREEN result: Test Files 1 passed (1); Tests 5 passed (5)
-- Round 1: RED test hash: 00eaf917cdbd617aac0c34206cd04ea4b8d18d6013fccc5a0791275f1f40fd20
+- Round 1: RED test hash: cb0467ec3070442a73780dae84ca4e9c75718f4b932a72480b9ed966ae2888b1
 - Round 1: RED test manifest: packages/qfai/tests/integration/sddPrimaryTasksLane.test.ts
 
 Forcing the empty-list test false silences the finding for an empty list and for
 a legacy contract alike, so the lane case dies together with the two sibling
 cases that read it; the surviving case is the sibling's non-empty contract. The
 preflight edit is independent of the lane. Applied alone, at
-`working-tree+f299ca3d4ad82f0da999ce5bcc1f41185988059606916b8d2ef96ea549477929`,
+`working-tree+715bf5db785170b2b2460c13ca8540f30e2e2aa287be9786d527c22c590d0532`,
 it fails the preflight case and nothing else: Tests 1 failed, 4 passed (5).
 
 - Refactor verify command: npx vitest run tests/integration/sddUiTemplate.test.ts tests/integration/sddPrimaryTasksLane.test.ts tests/e2e/spec0013UiContractPrimaryTasksE2E.test.ts tests/core/activeDiscussionPack.test.ts tests/core/surfaceTypePopulate.test.ts tests/integration/primaryTasksStructured.test.ts tests/cli/doctor.test.ts
 - Refactor verify result: Test Files 7 passed (7); Tests 62 passed (62)
-- Refactor verify revision: working-tree+87f61d33f95fdc477763bd387fcd7d8645a80da8b7e6735a49f753cd09deead6
+- Refactor verify revision: working-tree+6fb16efd07f3f84741a144ed4cfb6924947303775e708bd0070c947e3aa0b78d
 - Checkpoint verification command: npx vitest run --project integration --project e2e --project cli --project core --exclude 'tests/core/prFixMonitor.test.ts' --exclude 'tests/core/prMergePlan.test.ts'
 - Checkpoint verification result: PASS — exit 0; Test Files 547 passed (555); Tests 9468 passed (9550)
-- Checkpoint verification revision: working-tree+87f61d33f95fdc477763bd387fcd7d8645a80da8b7e6735a49f753cd09deead6
+- Checkpoint verification revision: working-tree+6fb16efd07f3f84741a144ed4cfb6924947303775e708bd0070c947e3aa0b78d
 
 ### TDD-0024
 
@@ -240,7 +240,7 @@ pointer against the packs on disk:
 
 #### Round 1
 
-- Round 1: Revision: working-tree+87f61d33f95fdc477763bd387fcd7d8645a80da8b7e6735a49f753cd09deead6
+- Round 1: Revision: working-tree+6fb16efd07f3f84741a144ed4cfb6924947303775e708bd0070c947e3aa0b78d
 - Round 1: Satisfied-by: packages/qfai/src/core/contracts/screenContracts.ts, REQUIRED_PRIMARY_TASK_KEYS — the closed set a structured item is measured against.
 - Round 1: Falsifiability command: npx vitest run tests/integration/primaryTasksStructured.test.ts
 - Round 1: Falsifiability result: Test Files 1 failed (1); Tests 5 failed, 2 passed (7). This row's acceptance case fails on the complete item it is meant to admit.
@@ -273,7 +273,7 @@ another item or another key than the one it names. The all-malformed case
 survives because none of its items carries `acceptance`, so its first finding
 still reports the missing `id`.
 
-- Round 1: Falsifiability revision: working-tree+fc27f757d877a45855674ed359d50467ad12b3083b05719a2ff85bafbb08f6d8
+- Round 1: Falsifiability revision: working-tree+37038454e27eb82828e673dc7b06f1ff1ddf79cb835bc00b556a4f017140b802
 - Round 1: GREEN command: npx vitest run tests/integration/primaryTasksStructured.test.ts
 - Round 1: GREEN result: Test Files 1 passed (1); Tests 7 passed (7)
 - Round 1: RED test hash: 42ed4fd14d1e12d580570121fe033e4d7afc2d3ecad4e946af7f605e42860c0f
@@ -295,7 +295,7 @@ the same file, the branch that turns a bare string entry into a task:
 
 - Round 1: Second falsifiability command: npx vitest run tests/integration/primaryTasksStructured.test.ts
 - Round 1: Second falsifiability result: Test Files 1 failed (1); Tests 1 failed, 6 passed (7). The failure is the legacy-shape case of this row, `string-only items pass (legacy shape, three string entries — within band)`.
-- Round 1: Second falsifiability revision: working-tree+4c4e7a9753d7c4f021cd0f620ffba25218d1b00e509410e910929e998e05ed29
+- Round 1: Second falsifiability revision: working-tree+859131b08ab33abfce9e9a658459256c9c229c3bb2fa87858c63eabb9024a101
 
 A legacy string then contributes no task, so a screen carrying three of them
 parses as empty and the lane reports it. The first mutation leaves that case
@@ -304,10 +304,10 @@ shapes the obligation admits.
 
 - Refactor verify command: npx vitest run tests/integration/sddUiTemplate.test.ts tests/integration/sddPrimaryTasksLane.test.ts tests/e2e/spec0013UiContractPrimaryTasksE2E.test.ts tests/core/activeDiscussionPack.test.ts tests/core/surfaceTypePopulate.test.ts tests/integration/primaryTasksStructured.test.ts tests/cli/doctor.test.ts
 - Refactor verify result: Test Files 7 passed (7); Tests 62 passed (62)
-- Refactor verify revision: working-tree+87f61d33f95fdc477763bd387fcd7d8645a80da8b7e6735a49f753cd09deead6
+- Refactor verify revision: working-tree+6fb16efd07f3f84741a144ed4cfb6924947303775e708bd0070c947e3aa0b78d
 - Checkpoint verification command: npx vitest run --project integration --project e2e --project cli --project core --exclude 'tests/core/prFixMonitor.test.ts' --exclude 'tests/core/prMergePlan.test.ts'
 - Checkpoint verification result: PASS — exit 0; Test Files 547 passed (555); Tests 9468 passed (9550)
-- Checkpoint verification revision: working-tree+87f61d33f95fdc477763bd387fcd7d8645a80da8b7e6735a49f753cd09deead6
+- Checkpoint verification revision: working-tree+6fb16efd07f3f84741a144ed4cfb6924947303775e708bd0070c947e3aa0b78d
 
 ### TDD-0030
 
@@ -323,7 +323,7 @@ shapes the obligation admits.
 
 #### Round 1
 
-- Round 1: Revision: working-tree+87f61d33f95fdc477763bd387fcd7d8645a80da8b7e6735a49f753cd09deead6
+- Round 1: Revision: working-tree+6fb16efd07f3f84741a144ed4cfb6924947303775e708bd0070c947e3aa0b78d
 - Round 1: Satisfied-by: packages/qfai/src/core/contracts/screenContracts.ts, extractPrimaryTasks — the filter that reports each required key a structured item lacks.
 - Round 1: Falsifiability command: npx vitest run tests/integration/primaryTasksStructured.test.ts
 - Round 1: Falsifiability result: Test Files 1 failed (1); Tests 1 failed, 6 passed (7). The `label` case fails, and it is the only one: an item without `label` now conforms.
@@ -336,7 +336,7 @@ The edit, in `extractPrimaryTasks` — `label` taken out of the missing-key filt
          const v = record[key];
 ```
 
-- Round 1: Falsifiability revision: working-tree+a095a7432fa19d772471bb41f5b44e526887f9754d3809e271e714bb7e7f320c
+- Round 1: Falsifiability revision: working-tree+c0d5ecd3d9dfc6bab6ff4c4442dea3793ee1c40c4ddea089070d40753c0e2db3
 - Round 1: GREEN command: npx vitest run tests/integration/primaryTasksStructured.test.ts
 - Round 1: GREEN result: Test Files 1 passed (1); Tests 7 passed (7)
 - Round 1: RED test hash: 42ed4fd14d1e12d580570121fe033e4d7afc2d3ecad4e946af7f605e42860c0f
@@ -344,16 +344,16 @@ The edit, in `extractPrimaryTasks` — `label` taken out of the missing-key filt
 
 The other rejection cases each read the rule code a shape violation is reported
 under. Renaming it in `shapeFindingFor` from `QFAI-AUD-021` to `QFAI-AUD-001`, at
-`working-tree+8b407774e71bfca16a613b5cf97feddf07e1df6f042a26e8d00eb35c35ff6835`,
+`working-tree+c60db41fe9908ec31eed3d068b04fb7bce7367af4ec703f6413c3f5ebd6419cf`,
 fails all five of them and leaves the two acceptance cases passing: Tests 5
 failed, 2 passed (7).
 
 - Refactor verify command: npx vitest run tests/integration/sddUiTemplate.test.ts tests/integration/sddPrimaryTasksLane.test.ts tests/e2e/spec0013UiContractPrimaryTasksE2E.test.ts tests/core/activeDiscussionPack.test.ts tests/core/surfaceTypePopulate.test.ts tests/integration/primaryTasksStructured.test.ts tests/cli/doctor.test.ts
 - Refactor verify result: Test Files 7 passed (7); Tests 62 passed (62)
-- Refactor verify revision: working-tree+87f61d33f95fdc477763bd387fcd7d8645a80da8b7e6735a49f753cd09deead6
+- Refactor verify revision: working-tree+6fb16efd07f3f84741a144ed4cfb6924947303775e708bd0070c947e3aa0b78d
 - Checkpoint verification command: npx vitest run --project integration --project e2e --project cli --project core --exclude 'tests/core/prFixMonitor.test.ts' --exclude 'tests/core/prMergePlan.test.ts'
 - Checkpoint verification result: PASS — exit 0; Test Files 547 passed (555); Tests 9468 passed (9550)
-- Checkpoint verification revision: working-tree+87f61d33f95fdc477763bd387fcd7d8645a80da8b7e6735a49f753cd09deead6
+- Checkpoint verification revision: working-tree+6fb16efd07f3f84741a144ed4cfb6924947303775e708bd0070c947e3aa0b78d
 
 ## Coverage Depth Matrix
 
