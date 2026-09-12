@@ -2997,7 +2997,7 @@ const OPEN_QUESTION_COLUMN_LABEL = /^OQ-ID$/i;
  * is the note it is. Whatever the token holds is read as the value, so a
  * misspelling is reported rather than trimmed into one of the four.
  */
-const STATUS_FIELD = /(?:status|disposition)\s*:\s*([^\s#]+)/i;
+const STATUS_FIELD = /(?:status|disposition)\s*:\s*([^\s#]+)/gi;
 const STATUS_FIELD_LINE = /^\s*(?:[-*+]\s*)?(?:status|disposition)\s*:\s*([^\s#]+)/i;
 
 /** The heading the schema puts a register's live entries under. */
@@ -3054,6 +3054,7 @@ function readRegister(text: string): RegisterReading {
   const entries = new Set<string>();
   const declared: DeclaredStatus[] = [];
   let currentId = "";
+  let inTable = false;
   let idColumn: number | null = null;
   let statusColumn: number | null = null;
 
@@ -3061,38 +3062,40 @@ function readRegister(text: string): RegisterReading {
     // The separator row is part of the table it underlines, so it does not end
     // one: resetting on it threw away the columns the header had just resolved.
     if (isSeparatorRow(line)) continue;
-    const cells = tableCells(line);
-
-    if (cells.length > 0 && isSeparatorRow(lines[index + 1])) {
-      // A register's table is the one keyed by question. Without that, a
-      // glossary of the statuses themselves reads as a table of rows declaring
-      // them, and an untouched template reports itself.
-      const key = cells.findIndex((cell) => OPEN_QUESTION_COLUMN_LABEL.test(cell));
-      const status = cells.findIndex((cell) => cell.trim().toLowerCase() === "status");
-      idColumn = key === -1 ? null : key;
-      statusColumn = key === -1 || status === -1 ? null : status;
-      continue;
-    }
-    // Out of the table, so the next one resolves its own columns.
-    if (cells.length === 0) {
+    const separated = hasCellSeparator(line);
+    if (inTable && !separated) {
+      inTable = false;
       idColumn = null;
       statusColumn = null;
     }
 
-    const opened =
-      cells.length > 0
-        ? idColumn === null
-          ? null
-          : keyedCellId(cells[idColumn] ?? "")
-        : openedEntryId(line);
+    if (!inTable && separated && isSeparatorRow(lines[index + 1])) {
+      // A register's table is the one keyed by question. Without that, a
+      // glossary of the statuses themselves reads as a table of rows declaring
+      // them, and an untouched template reports itself.
+      const cells = rowCells(line);
+      const key = cells.findIndex((cell) => OPEN_QUESTION_COLUMN_LABEL.test(cell));
+      const status = cells.findIndex((cell) => cell.toLowerCase() === "status");
+      idColumn = key === -1 ? null : key;
+      statusColumn = key === -1 || status === -1 ? null : status;
+      inTable = true;
+      continue;
+    }
+
+    const cells = inTable ? rowCells(line) : [];
+    const opened = inTable
+      ? idColumn === null
+        ? null
+        : keyedCellId(cells[idColumn] ?? "")
+      : openedEntryId(line);
     if (opened !== null) {
       entries.add(opened);
       currentId = opened;
     }
 
-    if (cells.length > 0) {
+    if (inTable) {
       if (statusColumn === null) continue;
-      const cell = (cells[statusColumn] ?? "").trim();
+      const cell = cells[statusColumn] ?? "";
       // An empty cell on a real question row is a missing status, which the
       // register contract does not allow — but the template's own `0 items`
       // placeholder carries no question and declares nothing.
@@ -3115,7 +3118,21 @@ function readRegister(text: string): RegisterReading {
     // and as a metadata line of its own. A sentence elsewhere quoting a status
     // declares nothing, which is what keeps a register that explains its own
     // notation from answering for the question it named last.
-    const statusMatch = (opened !== null ? STATUS_FIELD : STATUS_FIELD_LINE).exec(line);
+    //
+    // Every occurrence on an entry's own line, not the first: an entry may
+    // quote a value in the sentence that states its own — `from Status:
+    // deferred to ...` — and reading one of the two leaves the register
+    // declaring a status it does not hold. Both are read, so the blocking one
+    // cannot be hidden behind the other.
+    if (opened !== null) {
+      for (const match of line.matchAll(STATUS_FIELD)) {
+        if (match[1] !== undefined) {
+          declared.push({ id: currentId || UNLABELLED_OQ, raw: statusValue(match[1]) });
+        }
+      }
+      continue;
+    }
+    const statusMatch = STATUS_FIELD_LINE.exec(line);
     if (statusMatch?.[1] !== undefined) {
       declared.push({ id: currentId || UNLABELLED_OQ, raw: statusValue(statusMatch[1]) });
     }
@@ -3155,26 +3172,41 @@ function parseInvalidOpenQuestionStatuses(text: string): InvalidOpenQuestionStat
 }
 
 /**
- * The cells of a Markdown table row, or none when the line is not one.
+ * Whether a line carries a cell boundary.
  *
- * A separator row carries no value, and neither does a line that merely holds a
- * pipe, so both come back empty rather than as a row of dashes.
+ * The outer pipes of a table row are optional, so the leading one cannot be
+ * what identifies a row: a register written without them had every line
+ * rejected, and the gate saw neither its entries nor its statuses. What makes a
+ * row a row is the separator beneath the header, which is why the reader tracks
+ * the table rather than testing each line on its own.
  */
-function tableCells(line: string): string[] {
-  if (!line.trim().startsWith("|")) return [];
-  // Through the shared splitter, which keeps an escaped pipe inside a cell: a
-  // question reading `choose A \| B` otherwise shifts every column after it,
-  // and the status is then read from the cell beside the one that holds it.
-  const cells = splitMarkdownRow(line).map((cell) => cell.trim());
-  if (cells.every((cell) => /^:?-{3,}:?$/.test(cell))) return [];
-  return cells;
+function hasCellSeparator(line: string): boolean {
+  return /(?:^|[^\\])\|/.test(line);
 }
 
-/** Whether `line` is the dashes under a table's header row. */
+/**
+ * The cells of one row.
+ *
+ * Through the shared splitter, which drops the optional outer pipes and keeps
+ * an escaped pipe inside the cell holding it: a question reading `choose A \| B`
+ * otherwise shifts every column after it, and the status is then read from the
+ * cell beside the one that holds it.
+ */
+function rowCells(line: string): string[] {
+  return splitMarkdownRow(line).map((cell) => cell.trim());
+}
+
+/**
+ * Whether `line` is the dashes under a table's header row.
+ *
+ * Two cells at least, so a thematic break and a front-matter fence — both
+ * written `---` — are not read as the top of a table.
+ */
 function isSeparatorRow(line: string | undefined): boolean {
   const trimmed = (line ?? "").trim();
-  if (!trimmed.startsWith("|")) return false;
-  return splitMarkdownRow(trimmed).every((cell) => /^:?-{3,}:?$/.test(cell.trim()));
+  if (trimmed === "" || !hasCellSeparator(trimmed)) return false;
+  const cells = rowCells(trimmed);
+  return cells.length > 1 && cells.every((cell) => /^:?-{3,}:?$/.test(cell));
 }
 
 function isReleaseCandidate(initiativeText: string): boolean {

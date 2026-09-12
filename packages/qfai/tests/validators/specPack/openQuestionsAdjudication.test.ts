@@ -358,6 +358,24 @@ describe("the register it reads, and the notation it reads it in", () => {
     expect(codes(text)).toEqual([]);
   });
 
+  it("reads a table whose outer pipes are left off", () => {
+    // The outer pipes are optional in the notation, so the leading one cannot
+    // be what identifies a row. Required, every line of such a table was
+    // rejected and the gate saw neither the entry nor its status.
+    const table = ["OQ-ID   | Status", "------- | -------------", "OQ-0007 | unadjudicated", ""];
+    expect(codes(doc(table))).toEqual(["QFAI-SPACK-102"]);
+  });
+
+  it("reads every status field an entry's own line carries", () => {
+    // An entry may quote a value in the sentence that states its own. Reading
+    // one of the two leaves the register declaring a status it does not hold,
+    // and the blocking one is the one that goes missing.
+    const text = doc([
+      "- OQ-0007 — change the text from Status: deferred to the new value. Status: unadjudicated.",
+    ]);
+    expect(codes(text)).toEqual(["QFAI-SPACK-102"]);
+  });
+
   it("reads the id column the header names, wherever it sits", () => {
     // The schema requires an `OQ-ID` column and does not say it comes first.
     // Read from the first cell, a conforming reordered table has no row id at
