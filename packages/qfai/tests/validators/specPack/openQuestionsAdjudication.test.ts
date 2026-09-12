@@ -328,6 +328,60 @@ describe("the register it reads, and the notation it reads it in", () => {
     expect(issues[0]?.refs).toEqual(["OQ-0007"]);
   });
 
+  it("reports a bullet entry that declares no status", () => {
+    // The third notation: one bullet per question. Counted only as a place a
+    // status could attach to, an entry written this way owed none.
+    const text = doc(["- OQ-0007 — which retention window applies"]);
+    const issues = collectOpenQuestionsGateIssues(ENTRY, text, false);
+    expect(issues.map((issue) => issue.code)).toEqual(["E_OQ_STATUS_UNPARSEABLE"]);
+    expect(issues[0]?.refs).toEqual(["OQ-0007"]);
+  });
+
+  it("reads only the section the schema puts live entries under", () => {
+    // A register carries other sections — a resolved list, a carry-forward
+    // note — and names questions in them. Read over the whole document, a
+    // question settled elsewhere is one this gate reports, and a status quoted
+    // there blocks a stage nothing is waiting on.
+    const text = [
+      "# 08 Open Questions",
+      "",
+      "## Open Questions",
+      "",
+      "- 0 open questions in this spec.",
+      "",
+      "## Resolved (previous wave)",
+      "",
+      "- OQ-0007 — which retention window applies. Status: unadjudicated when it",
+      "  was asked; the decision that settled it is DR-0001-0002.",
+      "",
+    ].join("\n");
+    expect(codes(text)).toEqual([]);
+  });
+
+  it("reads the id column the header names, wherever it sits", () => {
+    // The schema requires an `OQ-ID` column and does not say it comes first.
+    // Read from the first cell, a conforming reordered table has no row id at
+    // all, so its empty status is discarded and the entry owes nothing.
+    const table = [
+      "| Question | OQ-ID   | Status |",
+      "| -------- | ------- | ------ |",
+      "| which    | OQ-0007 |        |",
+      "",
+    ].join("\n");
+    const issues = collectOpenQuestionsGateIssues(ENTRY, doc([table]), false);
+    expect(issues.map((issue) => issue.code)).toEqual(["E_OQ_STATUS_UNPARSEABLE"]);
+    expect(issues[0]?.refs).toEqual(["OQ-0007"]);
+  });
+
+  it("reads the whole token a status line states", () => {
+    // Cut at the first non-letter, `open_pending` and `open123` were read as
+    // the valid status `open`, and a value outside the four passed as one.
+    for (const value of ["open_pending", "open123", "open-ish"]) {
+      const text = doc(["### OQ-0007: which retention window applies", "", `- Status: ${value}`]);
+      expect(codes(text), value).toEqual(["E_OQ_STATUS_UNPARSEABLE"]);
+    }
+  });
+
   it("does not read a sentence about a status as one", () => {
     // Prose naming the value is how a register explains itself, and read as a
     // declaration it answers for whichever question was named last.

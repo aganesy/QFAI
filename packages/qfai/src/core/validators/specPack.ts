@@ -1529,9 +1529,14 @@ async function validateSpecPackEntry(
     }
   }
 
-  issues.push(
-    ...collectOpenQuestionsGateIssues(entry, texts["15_Open-questions.md"] ?? "", releaseCandidate),
-  );
+  // Through the bounded reader rather than the required-file collector's text:
+  // that one substitutes an empty string for a register it cannot read, so a
+  // permission error or a pipe at the name passed as a pack with no questions.
+  const register = await readRegisterFile(entry.openQuestionsPath);
+  issues.push(...register.issues);
+  if (register.text !== undefined) {
+    issues.push(...collectOpenQuestionsGateIssues(entry, register.text, releaseCandidate));
+  }
   const deltaText = texts["18_delta.md"];
   if (deltaText !== undefined) {
     issues.push(...validateDeltaGate(entry, deltaText));
@@ -1955,36 +1960,52 @@ async function isAbsent(target: string): Promise<boolean> {
  * nobody took.
  */
 async function collectRegisterIssues(register: string): Promise<Issue[]> {
+  const read = await readRegisterFile(register);
+  if (read.text === undefined) return [...read.issues];
+  return [
+    ...collectUnadjudicatedDecisions(register, read.text),
+    ...collectUnreadableStatuses(register, read.text),
+  ];
+}
+
+/**
+ * One register's text, or the finding that says why there is none.
+ *
+ * Separate from the checks above because both open-question gates need it: the
+ * layered one reads a register per spec, and the spec-pack one used the
+ * required-file collector's text instead — which substitutes an empty string
+ * for a file it cannot read, so an unreadable register there was a register
+ * with no questions in it.
+ */
+async function readRegisterFile(
+  register: string,
+): Promise<{ text?: string; issues: readonly Issue[] }> {
   // Through the bounded reader, on the path a link resolves to: a FIFO at this
   // name blocks the command in `open` itself, and a register is a file the
   // adopter writes, so the gate cannot assume what is at it.
   const target = await realpath(register).catch(() => register);
   const bytes = await readBoundedRegularFile(target, REGISTER_MAX_BYTES);
-  if (bytes !== undefined) {
-    const text = bytes.toString("utf-8");
-    return [
-      ...collectUnadjudicatedDecisions(register, text),
-      ...collectUnreadableStatuses(register, text),
-    ];
-  }
+  if (bytes !== undefined) return { text: bytes.toString("utf-8"), issues: [] };
   // Absent is the ordinary answer — a tree with no shared register, a spec
   // whose questions file is not written yet — and reports nothing. Anything
   // else is a register that is there and was not read, and reading that as
   // absence is how a decision nobody took passes a gate that never opened the
   // file.
-  if (await isAbsent(register)) return [];
-  return [
-    issue(
-      "QFAI-SPACK-103",
-      "This open-question register is present and could not be read, so the decisions in it were not checked.",
-      "error",
-      register,
-      "specPack.openQuestionsUnreadable",
-      [],
-      "canonical",
-      "Make the path a regular file this run can read, under 4 MiB — not a directory, a device, a pipe or a link that resolves to one.",
-    ),
-  ];
+  if (await isAbsent(register)) return { issues: [] };
+  return {
+    issues: [
+      issue(
+        "QFAI-SPACK-103",
+        "This open-question register is present and could not be read, so the decisions in it were not checked.",
+        "error",
+        register,
+        "specPack.openQuestionsUnreadable",
+        [],
+        "canonical",
+        "Make the path a regular file this run can read, under 4 MiB — not a directory, a device, a pipe or a link that resolves to one.",
+      ),
+    ],
+  };
 }
 
 /**
@@ -1997,40 +2018,29 @@ async function collectRegisterIssues(register: string): Promise<Issue[]> {
  * heading that opens a subsection for it.
  */
 function extractOpenQuestionEntryIds(text: string): string[] {
-  const ids = new Set<string>();
-  for (const line of maskNonSpecRegions(text.replace(/\r\n/g, "\n")).split("\n")) {
-    const id = entryIdOf(line);
-    if (id !== null) ids.add(id);
-  }
-  return [...ids];
-}
-
-/** The question one line keys an entry for: a subsection heading, or a row. */
-function entryIdOf(line: string): string | null {
-  const heading = /^#{1,6}\s+(OQ-[A-Za-z0-9_-]+)\b/i.exec(line.trim())?.[1];
-  if (heading !== undefined) {
-    return OPEN_QUESTION_COLUMN_LABEL.test(heading) ? null : heading;
-  }
-  const keyed = /^(OQ-[A-Za-z0-9_-]+)$/i.exec(tableCells(line)[0]?.trim() ?? "")?.[1];
-  if (keyed === undefined || OPEN_QUESTION_COLUMN_LABEL.test(keyed)) return null;
-  return keyed;
+  return readRegister(text).entries;
 }
 
 /**
- * The question a status line below this one belongs to, or `null`.
+ * The question a line opens an entry for, outside a table.
  *
- * Every entry form above, plus the list item some registers open an entry
- * with. What it is not is any line that merely names a question: a
- * `Depends on: OQ-0008` note between a heading and its status would otherwise
- * hand the status to the question the note points at, and report the entry
- * that owns it as declaring none.
+ * A subsection heading, or a list item that starts with the id — the two ways
+ * a register writes an entry that is not a row. What it is not is any line that
+ * merely names a question: a `Depends on: OQ-0008` note between a heading and
+ * its status would otherwise hand the status to the question the note points
+ * at, and report the entry that owns it as declaring none.
  */
-function attributedIdOf(line: string): string | null {
-  const entry = entryIdOf(line);
-  if (entry !== null) return entry;
-  const bullet = /^\s*[-*+]\s+(OQ-[A-Za-z0-9_-]+)\b/i.exec(line)?.[1];
-  if (bullet === undefined || OPEN_QUESTION_COLUMN_LABEL.test(bullet)) return null;
-  return bullet;
+function openedEntryId(line: string): string | null {
+  const opener = /^(?:#{1,6}|[-*+])\s+(OQ-[A-Za-z0-9_-]+)\b/i.exec(line.trim())?.[1];
+  if (opener === undefined || OPEN_QUESTION_COLUMN_LABEL.test(opener)) return null;
+  return opener;
+}
+
+/** The id a table cell is keyed by, where the cell is one. */
+function keyedCellId(cell: string): string | null {
+  const id = /^(OQ-[A-Za-z0-9_-]+)$/i.exec(cell.trim())?.[1];
+  if (id === undefined || OPEN_QUESTION_COLUMN_LABEL.test(id)) return null;
+  return id;
 }
 
 /** A register entry whose status is not one of the four, or is not there. */
@@ -2176,18 +2186,12 @@ export function collectOpenQuestionsGateIssues(
 /**
  * The questions this register opens an entry for.
  *
- * Masked, like the status scan: a register documenting its own notation writes
- * an example row, and an id read out of it is a question nobody asked. Read
- * line by line rather than as a scan over the whole text, so a field naming
- * another question — `Depends on: OQ-0008` — stays the reference it is.
+ * The same reading the status scan uses, so the two agree about which entries
+ * exist: a status attributed to a question this does not name is a status
+ * nothing is compared against.
  */
 function extractOpenQuestionIds(text: string): string[] {
-  const ids = new Set<string>();
-  for (const line of maskNonSpecRegions(text.replace(/\r\n/g, "\n")).split("\n")) {
-    const id = attributedIdOf(line);
-    if (id !== null) ids.add(id);
-  }
-  return Array.from(ids);
+  return readRegister(text).entries;
 }
 
 function validateDeltaGate(entry: SpecEntry, text: string): Issue[] {
@@ -2988,66 +2992,118 @@ const OPEN_QUESTION_COLUMN_LABEL = /^OQ-ID$/i;
 /**
  * The status field, and the same field anchored to a line of its own.
  *
- * The value is one word, so what follows it is the note it is: `deferred
- * (trigger = ...)` parks a question with the point that takes it up, and
- * `Status: deferred.` mid-sentence is an entry written as a single bullet. A
- * misspelling is still a word, so it is still read and still reported.
+ * The value is the token after the colon, so a note beside it — `deferred
+ * (trigger = ...)`, which parks a question with the point that takes it up —
+ * is the note it is. Whatever the token holds is read as the value, so a
+ * misspelling is reported rather than trimmed into one of the four.
  */
-const STATUS_FIELD = /(?:status|disposition)\s*:\s*([A-Za-z][A-Za-z-]*)/i;
-const STATUS_FIELD_LINE = /^\s*(?:[-*+]\s*)?(?:status|disposition)\s*:\s*([A-Za-z][A-Za-z-]*)/i;
+const STATUS_FIELD = /(?:status|disposition)\s*:\s*([^\s#]+)/i;
+const STATUS_FIELD_LINE = /^\s*(?:[-*+]\s*)?(?:status|disposition)\s*:\s*([^\s#]+)/i;
+
+/** The heading the schema puts a register's live entries under. */
+const OPEN_QUESTIONS_HEADING = "Open Questions";
+
+/** What a status is attributed to where no entry has been opened yet. */
+const UNLABELLED_OQ = "(unlabeled-oq)";
 
 /** One status a register declares, as written. */
 type DeclaredStatus = { id: string; raw: string };
 
 /**
- * Every status a register declares, valid or not.
+ * The register's live section, masked and split into lines.
  *
- * Two notations are in use and both are read: a `Status` cell in the table the
- * template writes, and a `status:` line under a subsection. Read as a search
- * across every cell, a row whose question text happens to be one of the four
- * values answered for the row — so the column is resolved from the header and
- * only that cell is read.
+ * The schema puts live entries under `## Open Questions` and lets a register
+ * carry others beside it — a resolved list, a carry-forward note, a record of
+ * a wave. Read over the whole document, an id written in one of those is a
+ * question this gate reports, and an `unadjudicated` quoted there blocks a
+ * stage nothing is waiting on.
+ *
+ * Masked before the section is cut, so a heading written inside a fenced
+ * example does not open a section of its own — and a register that documents
+ * its own notation writes exactly that.
+ *
+ * A register with no such heading is read whole. The section is where a
+ * conforming document puts its entries; a document that does not have one is
+ * off-schema, and reading nothing there would take the gate off it entirely.
  */
-function readDeclaredStatuses(text: string): DeclaredStatus[] {
-  // Masked first: a register that documents its own notation writes an example
-  // table in a fenced block, and read as live data it fails the document for
-  // showing what a row looks like.
-  const lines = maskNonSpecRegions(text.replace(/\r\n/g, "\n")).split("\n");
+function openQuestionsLines(text: string): string[] {
+  const masked = maskNonSpecRegions(text.replace(/\r\n/g, "\n"));
+  const sections = extractMarkdownSections(masked, OPEN_QUESTIONS_HEADING);
+  if (sections.length === 0) return masked.split("\n");
+  return sections.flatMap((section) => section.split("\n"));
+}
+
+/** What one register declares: the entries it opens, and the statuses on them. */
+type RegisterReading = { entries: string[]; declared: DeclaredStatus[] };
+
+/**
+ * Every entry the live section opens, and every status it declares.
+ *
+ * One pass, because the two answers are read from the same lines and have to
+ * agree about which entry a line belongs to: a status attributed to a question
+ * the entry scan did not open is a status nothing is compared against.
+ *
+ * Three notations are in use and all three are read: a row in the table the
+ * template writes, a `status:` line under a subsection, and the field inline on
+ * an entry written as one bullet. Both column positions are resolved from the
+ * header rather than assumed, because the schema requires an `OQ-ID` column and
+ * does not require it to come first.
+ */
+function readRegister(text: string): RegisterReading {
+  const lines = openQuestionsLines(text);
+  const entries = new Set<string>();
   const declared: DeclaredStatus[] = [];
   let currentId = "";
+  let idColumn: number | null = null;
   let statusColumn: number | null = null;
 
   for (const [index, line] of lines.entries()) {
-    const rowId = attributedIdOf(line);
-    if (rowId !== null) currentId = rowId;
-
     // The separator row is part of the table it underlines, so it does not end
-    // one: resetting on it threw away the column the header had just resolved.
+    // one: resetting on it threw away the columns the header had just resolved.
     if (isSeparatorRow(line)) continue;
     const cells = tableCells(line);
-    if (cells.length === 0) {
-      // Out of the table, so the next one resolves its own column.
-      statusColumn = null;
-    } else if (isSeparatorRow(lines[index + 1])) {
+
+    if (cells.length > 0 && isSeparatorRow(lines[index + 1])) {
       // A register's table is the one keyed by question. Without that, a
       // glossary of the statuses themselves reads as a table of rows declaring
       // them, and an untouched template reports itself.
-      const keyed = cells.some((cell) => OPEN_QUESTION_COLUMN_LABEL.test(cell));
-      const header = cells.findIndex((cell) => cell.toLowerCase() === "status");
-      statusColumn = keyed && header !== -1 ? header : null;
-    } else if (statusColumn !== null) {
-      const cell = cells[statusColumn] ?? "";
+      const key = cells.findIndex((cell) => OPEN_QUESTION_COLUMN_LABEL.test(cell));
+      const status = cells.findIndex((cell) => cell.trim().toLowerCase() === "status");
+      idColumn = key === -1 ? null : key;
+      statusColumn = key === -1 || status === -1 ? null : status;
+      continue;
+    }
+    // Out of the table, so the next one resolves its own columns.
+    if (cells.length === 0) {
+      idColumn = null;
+      statusColumn = null;
+    }
+
+    const opened =
+      cells.length > 0
+        ? idColumn === null
+          ? null
+          : keyedCellId(cells[idColumn] ?? "")
+        : openedEntryId(line);
+    if (opened !== null) {
+      entries.add(opened);
+      currentId = opened;
+    }
+
+    if (cells.length > 0) {
+      if (statusColumn === null) continue;
+      const cell = (cells[statusColumn] ?? "").trim();
       // An empty cell on a real question row is a missing status, which the
       // register contract does not allow — but the template's own `0 items`
       // placeholder carries no question and declares nothing.
       if (cell !== "" && cell !== "-") {
-        // The status is the cell's first word. Registers in this repository
-        // write `resolved (2026-05-06)`, and the date beside the value is a
-        // note rather than a second status — while a misspelling is still the
-        // first word, and still reported.
-        declared.push({ id: currentId || "(unlabeled-oq)", raw: cell.split(/\s+/)[0] ?? cell });
-      } else if (rowId !== null) {
-        declared.push({ id: rowId, raw: "" });
+        // The status is the cell's first word. Registers here write
+        // `resolved (2026-05-06)`, and the date beside the value is a note
+        // rather than a second status — while a misspelling is still the first
+        // word, and still reported.
+        declared.push({ id: currentId || UNLABELLED_OQ, raw: statusValue(cell.split(/\s+/)[0]) });
+      } else if (opened !== null) {
+        declared.push({ id: opened, raw: "" });
       }
       continue;
     }
@@ -3059,13 +3115,28 @@ function readDeclaredStatuses(text: string): DeclaredStatus[] {
     // and as a metadata line of its own. A sentence elsewhere quoting a status
     // declares nothing, which is what keeps a register that explains its own
     // notation from answering for the question it named last.
-    const statusMatch = (rowId !== null ? STATUS_FIELD : STATUS_FIELD_LINE).exec(line);
-    if (statusMatch?.[1]) {
-      declared.push({ id: currentId || "(unlabeled-oq)", raw: statusMatch[1] });
+    const statusMatch = (opened !== null ? STATUS_FIELD : STATUS_FIELD_LINE).exec(line);
+    if (statusMatch?.[1] !== undefined) {
+      declared.push({ id: currentId || UNLABELLED_OQ, raw: statusValue(statusMatch[1]) });
     }
   }
 
-  return declared;
+  return { entries: [...entries], declared };
+}
+
+/**
+ * The status a written value states.
+ *
+ * Sentence punctuation after it is not part of it: an entry written as one
+ * bullet ends the field mid-sentence, and `deferred.` is that value. Nothing
+ * else is trimmed, so `open_pending` stays the value it is and is reported.
+ */
+function statusValue(raw: string | undefined): string {
+  return (raw ?? "").replace(/[.,;:]+$/, "");
+}
+
+function readDeclaredStatuses(text: string): DeclaredStatus[] {
+  return readRegister(text).declared;
 }
 
 function parseOpenQuestionStatuses(text: string): OpenQuestionStatus[] {

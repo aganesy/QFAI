@@ -52,6 +52,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   declaring no status at all is reported too — a question whose state nobody
   wrote down is the one the new value would otherwise have named.
 
+  Entries are read from `## Open Questions`, the section the schema puts them
+  under, in all three notations a register uses: a row in the table the
+  template writes, a subsection with a `status:` line, and an entry written as
+  one bullet with the field inline. A register naming a settled question in a
+  resolved list beside that section is not reporting an open one.
+
   The shared policy register is read before the run decides the tree holds no
   spec pack, so a pack being established policy-first has its decisions checked
   rather than skipped. A register that is present and cannot be read —
