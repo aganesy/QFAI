@@ -121,6 +121,20 @@ authorized reset rather than an edit beside it.
   `packages/qfai/tests/validators/uix/threeLayer.test.ts`,
   `packages/qfai/tests/validators/uix/screenContract.test.ts`,
   and under option 2 `packages/qfai/tests/core/sddPreflight.test.ts`
+- Product files, option 2 only — the option is implementation work, and the
+  scope has to authorise what it edits:
+  `packages/qfai/assets/init/.qfai/assistant/skills/qfai-discussion/**` and its
+  root mirror, which carry the direction interview;
+  `packages/qfai/assets/init/.qfai/assistant/skills/qfai-sdd/**` and its mirror,
+  whose Phase 0 reads the recorded direction;
+  `packages/qfai/src/core/preflight/sddPreflight.ts`, which must block on a
+  missing `prototyping.yaml`; a new validator source for the single-winner
+  violation; and the three shipped documents carrying the optional-artifact
+  sentence. The tests that pin the behaviour being removed move with it:
+  `packages/qfai/tests/assets/designDirectionInterview.test.ts`,
+  `packages/qfai/tests/assets/sddStage0PrototypingOptional.test.ts`,
+  `packages/qfai/tests/assets/assets.test.ts` and
+  `packages/qfai/tests/core/sddPreflight.test.ts`.
 - Contracts: `none`
 - Schema: `none`
 - Upstream paths edited under this CR:
@@ -145,6 +159,13 @@ Which of the three options settles each statement? They may be settled
 differently: option 1 for the direction rule and option 3 for the requiredness
 rule is a coherent answer, since the second is a sentence the product already
 states in three places and the first is a rule the product still partly keeps.
+
+`Approved option` takes one value, so a split answer is written as one — `1A/3B`
+means option 1 for statement A, the direction rule, and option 3 for statement
+B, the requiredness rule. A single digit means the same option for both. The
+nine combinations are not listed as nine options, because the two statements are
+independent and a table of every pairing would ask the user to read nine rows to
+make two choices.
 
 ## Approved actions (owner skill rerun plan)
 
@@ -198,7 +219,16 @@ states in three places and the first is a rule the product still partly keeps.
      `spec-0002/TDD-0009` — `current e2e guidance test pass`;
      `spec-0002/TDD-0010` — `current preflight unit test pass`;
      `spec-0002/TDD-0012` — `current three-layer validator pass`.
-     No test is deleted with any of them.
+     No test is deleted with any of them, and each retired row's test needs a
+     disposition rather than a file that merely survives. `TDD-0012`'s selector,
+     `legacy 4-axis format is error`, names a case that asserts
+     `validateThreeLayerModel` emits `UIX-VAL-3LAYER-LEGACY-FORMAT`. That is a
+     real behaviour of a live validator, and withdrawing `TC-0002-0011` takes
+     away its obligation rather than its subject, so the case **stays and is
+     left unowned by this spec** — not re-pointed at `TDD-0011`, whose selector
+     is a different case in the same file. An unowned case pinning live
+     behaviour is the honest end state here; giving it to a row that does not
+     describe it would be the defect this Change Request exists to remove.
      `packages/qfai/tests/integration/discussionSkillTemplateIntegration.test.ts`,
      `packages/qfai/tests/e2e/discussionHardeningE2E.test.ts` and
      `packages/qfai/tests/core/sddPreflight.test.ts` all carry coverage for
