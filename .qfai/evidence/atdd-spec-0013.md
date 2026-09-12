@@ -2,8 +2,8 @@
 
 ## Objective
 
-Carry the proof for nine of this spec's twelve `done` ledger rows. The other
-three are blocked and the reasons are under Gaps.
+Carry the proof for five of this spec's twelve `done` ledger rows. The other
+seven are not backfilled and the reasons are under Gaps.
 
 ## Inputs reviewed (files/paths)
 
@@ -23,17 +23,20 @@ command and no output, so the reviewer verdicts and pack seals a completed entry
 normally carries cannot be recorded and are not invented.
 
 No row can produce an observed RED — every implementation shipped long before
-this record — so all nine take the falsifiability path.
+this record — so all five take the falsifiability path.
 
 Seven rows carried a `Selector` written as a summary of the obligation rather
 than a test's title. Each was corrected to the title of the case that carries
 the obligation, after reading the `Verify` line of its test case against what
-the test asserts. Two rows already named their titles verbatim.
+the test asserts. Two rows already named their titles verbatim. A `Selector`
+correction stands on its own: it makes the row name a case that can be run, and
+says nothing about whether that case discharges the obligation. Four rows
+therefore carry a corrected `Selector` and keep their original `Evidence` cell.
 
 ## Work performed (what changed, where)
 
 - `.qfai/specs/spec-0013/tdd/test-list.md` — seven `Selector` cells rewritten to
-  the titles they name, and the `Evidence` cells of the nine rows below rewritten
+  the titles they name, and the `Evidence` cells of the five rows below rewritten
   as pointers into this file. No `Status` moved.
 - This file created.
 
@@ -46,17 +49,22 @@ confirm it had returned to the clean value.
 
 | Row        | Mutation                                          | Killed              |
 | ---------- | ------------------------------------------------- | ------------------- |
-| `TDD-0019` | the template's `primary_tasks` key renamed        | 1 of 2              |
 | `TDD-0020` | the empty-list test forced false                  | 3 of 4              |
-| `TDD-0021` | the empty-list test forced true                   | 1 of 4              |
 | `TDD-0023` | the resolved pack path altered                    | 1 of 4              |
 | `TDD-0024` | the pointer-to-pack match made unconditional      | 1 of 4              |
-| `TDD-0025` | the companion check forced to "absent"            | 2 of 6              |
-| `TDD-0026` | the drift finding's rule code renamed             | 1 of 6              |
 | `TDD-0029` | a fourth key added to the required set            | 4 of 6              |
 | `TDD-0030` | the shape finding's rule code renamed             | 4 of 6              |
 
-Refactor verify: 25 passed. Checkpoint: 8986 passed.
+Refactor verify: 25 passed. Checkpoint: 8986 passed, exit 0.
+
+The checkpoint holds two files of the `core` project out, named in its command:
+`tests/core/prFixMonitor.test.ts` and `tests/core/prMergePlan.test.ts` drive a
+PowerShell script, and this container has no `pwsh`, so all eighteen of their
+cases fail on `spawn pwsh ENOENT` whatever the tree holds. They run in
+continuous integration, which does have it.
+
+Validate gate: `npx qfai validate --profile atdd --fail-on error --spec 0013`
+at the same revision — `counts: info=2 warning=0 error=0`, exit 0.
 
 ## Test volume estimate
 
@@ -74,59 +82,22 @@ No row changed status. Every row below was already `done`.
 
 | TDD-ID     | Obligation      | Layer       | RED provenance | Status |
 | ---------- | --------------- | ----------- | -------------- | ------ |
-| `TDD-0019` | `TC-0013-0025`  | integration | falsifiability | done   |
 | `TDD-0020` | `TC-0013-0026`  | integration | falsifiability | done   |
-| `TDD-0021` | `TC-0013-0027`  | integration | falsifiability | done   |
 | `TDD-0023` | `TC-0013-0028`  | integration | falsifiability | done   |
 | `TDD-0024` | `TC-0013-0029`  | integration | falsifiability | done   |
-| `TDD-0025` | `TC-0013-0030`  | integration | falsifiability | done   |
-| `TDD-0026` | `TC-0013-0031`  | integration | falsifiability | done   |
 | `TDD-0029` | `TC-0013-0034`  | integration | falsifiability | done   |
 | `TDD-0030` | `TC-0013-0035`  | integration | falsifiability | done   |
 
-The refactor-verify and checkpoint runs are shared by all nine rows, so each
+The refactor-verify and checkpoint runs are shared by all five rows, so each
 entry records the same pair:
 
 - Refactor verify command: npx vitest run tests/integration/sddUiTemplate.test.ts tests/integration/sddPrimaryTasksLane.test.ts tests/e2e/spec0013UiContractPrimaryTasksE2E.test.ts tests/core/activeDiscussionPack.test.ts tests/core/surfaceTypePopulate.test.ts tests/integration/primaryTasksStructured.test.ts
 - Refactor verify result: Test Files 6 passed (6); Tests 25 passed (25)
-- Checkpoint verification command: npx vitest run --project integration --project e2e --project cli --project core
+- Checkpoint verification command: npx vitest run --project integration --project e2e --project cli --project core --exclude 'tests/core/prFixMonitor.test.ts' --exclude 'tests/core/prMergePlan.test.ts'
 - Checkpoint verification result: PASS — exit 0; Test Files 532 passed (540); Tests 8986 passed (9029)
 
-Two files of the `core` project were held out of the checkpoint:
-`tests/core/prFixMonitor.test.ts` and `tests/core/prMergePlan.test.ts`. Both
-drive a PowerShell script, and this container has no `pwsh`, so all eighteen of
-their cases fail on `spawn pwsh ENOENT` whatever the tree holds. They run in
-continuous integration, which does have it. Eight further files and 43 cases in
-those projects declare themselves inactive and did not run.
-
-### TDD-0019
-
-- TDD-ID: TDD-0019
-- Layer: integration
-- Test file: packages/qfai/tests/integration/sddUiTemplate.test.ts
-- Selector: TC-0013-0025: shipped ui-contract.sample.yaml carries a primary_tasks list per screen
-- TC-ref: TC-0013-0025
-- Run output retained: no
-- Backfill note: the row's cell recorded a verdict with no command and no output, so nothing of the original run survives. The test was re-run for the GREEN below, and the mutation below was applied and reverted to establish that the test discriminates. No reviewer verdict is recorded because none can be reconstructed.
-- RED failure mode: falsifiability
-
-#### Round 1
-
-- Round 1: Revision: 649d8111147436408c90cbbe1b9f9b07e34da8cb
-- Round 1: Satisfied-by: packages/qfai/assets/init/.qfai/assistant/skills/qfai-sdd/templates/contracts/ui-contract.sample.yaml — the per-screen `primary_tasks` key the shipped template carries.
-- Round 1: Falsifiability command: npx vitest run tests/integration/sddUiTemplate.test.ts
-- Round 1: Falsifiability result: Test Files 1 failed (1); Tests 1 failed, 1 passed (2). This row's own case fails on the absent slot.
-- Round 1: Falsifiability revision: working-tree+79766e61bb534ba0571ab93cad0b16e7001a2fa2c95e01128db5ad409d8bf435
-- Round 1: GREEN command: npx vitest run tests/integration/sddUiTemplate.test.ts
-- Round 1: GREEN result: Test Files 1 passed (1); Tests 2 passed (2)
-- Round 1: RED test hash: 7380b434efd79ab4b798fa3bc80b41bf076567b1e50df1b60c54b72bd801e55c
-- Round 1: RED test manifest: packages/qfai/tests/integration/sddUiTemplate.test.ts
-- Refactor verify command: npx vitest run tests/integration/sddUiTemplate.test.ts tests/integration/sddPrimaryTasksLane.test.ts tests/e2e/spec0013UiContractPrimaryTasksE2E.test.ts tests/core/activeDiscussionPack.test.ts tests/core/surfaceTypePopulate.test.ts tests/integration/primaryTasksStructured.test.ts
-- Refactor verify result: Test Files 6 passed (6); Tests 25 passed (25)
-- Refactor verify revision: 649d8111147436408c90cbbe1b9f9b07e34da8cb
-- Checkpoint verification command: npx vitest run --project integration --project e2e --project cli --project core
-- Checkpoint verification result: PASS — exit 0; Test Files 532 passed (540); Tests 8986 passed (9029)
-- Checkpoint verification revision: 649d8111147436408c90cbbe1b9f9b07e34da8cb
+Eight further files and 43 cases in those projects declare themselves inactive
+and did not run.
 
 ### TDD-0020
 
@@ -158,41 +129,7 @@ one this row's sibling owns.
 - Refactor verify command: npx vitest run tests/integration/sddUiTemplate.test.ts tests/integration/sddPrimaryTasksLane.test.ts tests/e2e/spec0013UiContractPrimaryTasksE2E.test.ts tests/core/activeDiscussionPack.test.ts tests/core/surfaceTypePopulate.test.ts tests/integration/primaryTasksStructured.test.ts
 - Refactor verify result: Test Files 6 passed (6); Tests 25 passed (25)
 - Refactor verify revision: 649d8111147436408c90cbbe1b9f9b07e34da8cb
-- Checkpoint verification command: npx vitest run --project integration --project e2e --project cli --project core
-- Checkpoint verification result: PASS — exit 0; Test Files 532 passed (540); Tests 8986 passed (9029)
-- Checkpoint verification revision: 649d8111147436408c90cbbe1b9f9b07e34da8cb
-
-### TDD-0021
-
-- TDD-ID: TDD-0021
-- Layer: integration
-- Test file: packages/qfai/tests/integration/sddPrimaryTasksLane.test.ts
-- Selector: TC-0013-0027: QFAI-AUD-001 aligned lane passes when primary_tasks is non-empty
-- TC-ref: TC-0013-0027
-- Run output retained: no
-- Backfill note: the row's cell recorded a verdict with no command and no output, so nothing of the original run survives. The test was re-run for the GREEN below, and the mutation below was applied and reverted to establish that the test discriminates. No reviewer verdict is recorded because none can be reconstructed.
-- RED failure mode: falsifiability
-
-#### Round 1
-
-- Round 1: Revision: 649d8111147436408c90cbbe1b9f9b07e34da8cb
-- Round 1: Satisfied-by: packages/qfai/src/core/validators/designAudit.ts, checkContractHierarchyFromScreens — the same empty-list test, read in the passing direction.
-- Round 1: Falsifiability command: npx vitest run tests/integration/sddPrimaryTasksLane.test.ts
-- Round 1: Falsifiability result: Test Files 1 failed (1); Tests 1 failed, 3 passed (4). Only this row's own case fails.
-- Round 1: Falsifiability revision: working-tree+6a357e439a51f76e496fb8268a6e6b43ebe4bce5ea597f2f89a4cbcb2af8b17c
-- Round 1: GREEN command: npx vitest run tests/integration/sddPrimaryTasksLane.test.ts
-- Round 1: GREEN result: Test Files 1 passed (1); Tests 4 passed (4)
-- Round 1: RED test hash: dd54681a79a41a321eff0d7aecac91ad559688a61a4530155ddfad172b6428b7
-- Round 1: RED test manifest: packages/qfai/tests/integration/sddPrimaryTasksLane.test.ts
-
-This row needs the opposite mutation from its sibling. Silencing the finding
-leaves "passes when non-empty" true for the wrong reason, so the test that
-discriminates is the one that fails when the finding fires on a populated list.
-
-- Refactor verify command: npx vitest run tests/integration/sddUiTemplate.test.ts tests/integration/sddPrimaryTasksLane.test.ts tests/e2e/spec0013UiContractPrimaryTasksE2E.test.ts tests/core/activeDiscussionPack.test.ts tests/core/surfaceTypePopulate.test.ts tests/integration/primaryTasksStructured.test.ts
-- Refactor verify result: Test Files 6 passed (6); Tests 25 passed (25)
-- Refactor verify revision: 649d8111147436408c90cbbe1b9f9b07e34da8cb
-- Checkpoint verification command: npx vitest run --project integration --project e2e --project cli --project core
+- Checkpoint verification command: npx vitest run --project integration --project e2e --project cli --project core --exclude 'tests/core/prFixMonitor.test.ts' --exclude 'tests/core/prMergePlan.test.ts'
 - Checkpoint verification result: PASS — exit 0; Test Files 532 passed (540); Tests 8986 passed (9029)
 - Checkpoint verification revision: 649d8111147436408c90cbbe1b9f9b07e34da8cb
 
@@ -221,7 +158,7 @@ discriminates is the one that fails when the finding fires on a populated list.
 - Refactor verify command: npx vitest run tests/integration/sddUiTemplate.test.ts tests/integration/sddPrimaryTasksLane.test.ts tests/e2e/spec0013UiContractPrimaryTasksE2E.test.ts tests/core/activeDiscussionPack.test.ts tests/core/surfaceTypePopulate.test.ts tests/integration/primaryTasksStructured.test.ts
 - Refactor verify result: Test Files 6 passed (6); Tests 25 passed (25)
 - Refactor verify revision: 649d8111147436408c90cbbe1b9f9b07e34da8cb
-- Checkpoint verification command: npx vitest run --project integration --project e2e --project cli --project core
+- Checkpoint verification command: npx vitest run --project integration --project e2e --project cli --project core --exclude 'tests/core/prFixMonitor.test.ts' --exclude 'tests/core/prMergePlan.test.ts'
 - Checkpoint verification result: PASS — exit 0; Test Files 532 passed (540); Tests 8986 passed (9029)
 - Checkpoint verification revision: 649d8111147436408c90cbbe1b9f9b07e34da8cb
 
@@ -250,76 +187,7 @@ discriminates is the one that fails when the finding fires on a populated list.
 - Refactor verify command: npx vitest run tests/integration/sddUiTemplate.test.ts tests/integration/sddPrimaryTasksLane.test.ts tests/e2e/spec0013UiContractPrimaryTasksE2E.test.ts tests/core/activeDiscussionPack.test.ts tests/core/surfaceTypePopulate.test.ts tests/integration/primaryTasksStructured.test.ts
 - Refactor verify result: Test Files 6 passed (6); Tests 25 passed (25)
 - Refactor verify revision: 649d8111147436408c90cbbe1b9f9b07e34da8cb
-- Checkpoint verification command: npx vitest run --project integration --project e2e --project cli --project core
-- Checkpoint verification result: PASS — exit 0; Test Files 532 passed (540); Tests 8986 passed (9029)
-- Checkpoint verification revision: 649d8111147436408c90cbbe1b9f9b07e34da8cb
-
-### TDD-0025
-
-- TDD-ID: TDD-0025
-- Layer: integration
-- Test file: packages/qfai/tests/core/surfaceTypePopulate.test.ts
-- Selector: TC-0013-0030: populateSurfaceTypeIfUiCompanion auto-populates frontmatter
-- TC-ref: TC-0013-0030
-- Run output retained: no
-- Backfill note: the row's cell recorded a verdict with no command and no output, so nothing of the original run survives. The test was re-run for the GREEN below, and the mutation below was applied and reverted to establish that the test discriminates. No reviewer verdict is recorded because none can be reconstructed.
-- RED failure mode: falsifiability
-
-#### Round 1
-
-- Round 1: Revision: 649d8111147436408c90cbbe1b9f9b07e34da8cb
-- Round 1: Satisfied-by: packages/qfai/src/core/detection/surfaceType.ts, populateSurfaceTypeIfUiCompanion — the companion check that gates the write.
-- Round 1: Falsifiability command: npx vitest run tests/core/surfaceTypePopulate.test.ts
-- Round 1: Falsifiability result: Test Files 1 failed (1); Tests 2 failed, 4 passed (6). Both cases under this row's obligation fail.
-- Round 1: Falsifiability revision: working-tree+fb1a46558f3457c1660f805f2a7003333eecd0ec8b62dfdadae2819eb3b70d70
-- Round 1: GREEN command: npx vitest run tests/core/surfaceTypePopulate.test.ts
-- Round 1: GREEN result: Test Files 1 passed (1); Tests 6 passed (6)
-- Round 1: RED test hash: 89ef6d78d6a7d9db85d6123ae04ccf235c1843d0bea39a118c4b5d15ddb35fed
-- Round 1: RED test manifest: packages/qfai/tests/core/surfaceTypePopulate.test.ts
-
-The idempotence case dies with the write case, which is correct: a function that
-never writes is trivially idempotent, and the case asserts the key is present
-after two runs rather than that nothing happened.
-
-- Refactor verify command: npx vitest run tests/integration/sddUiTemplate.test.ts tests/integration/sddPrimaryTasksLane.test.ts tests/e2e/spec0013UiContractPrimaryTasksE2E.test.ts tests/core/activeDiscussionPack.test.ts tests/core/surfaceTypePopulate.test.ts tests/integration/primaryTasksStructured.test.ts
-- Refactor verify result: Test Files 6 passed (6); Tests 25 passed (25)
-- Refactor verify revision: 649d8111147436408c90cbbe1b9f9b07e34da8cb
-- Checkpoint verification command: npx vitest run --project integration --project e2e --project cli --project core
-- Checkpoint verification result: PASS — exit 0; Test Files 532 passed (540); Tests 8986 passed (9029)
-- Checkpoint verification revision: 649d8111147436408c90cbbe1b9f9b07e34da8cb
-
-### TDD-0026
-
-- TDD-ID: TDD-0026
-- Layer: integration
-- Test file: packages/qfai/tests/core/surfaceTypePopulate.test.ts
-- Selector: D-SURFACE-TYPE-MISSING warns on companion-without-frontmatter
-- TC-ref: TC-0013-0031
-- Run output retained: no
-- Backfill note: the row's cell recorded a verdict with no command and no output, so nothing of the original run survives. The test was re-run for the GREEN below, and the mutation below was applied and reverted to establish that the test discriminates. No reviewer verdict is recorded because none can be reconstructed.
-- RED failure mode: falsifiability
-
-#### Round 1
-
-- Round 1: Revision: 649d8111147436408c90cbbe1b9f9b07e34da8cb
-- Round 1: Satisfied-by: packages/qfai/src/core/validators/surfaceTypeDrift.ts — the rule code the drift finding carries.
-- Round 1: Falsifiability command: npx vitest run tests/core/surfaceTypePopulate.test.ts
-- Round 1: Falsifiability result: Test Files 1 failed (1); Tests 1 failed, 5 passed (6). Only this row's own case fails.
-- Round 1: Falsifiability revision: working-tree+c2330cee63af18d074f9be51e5fe54685366f3d54b0dfcece06e0065356c388f
-- Round 1: GREEN command: npx vitest run tests/core/surfaceTypePopulate.test.ts
-- Round 1: GREEN result: Test Files 1 passed (1); Tests 6 passed (6)
-- Round 1: RED test hash: 89ef6d78d6a7d9db85d6123ae04ccf235c1843d0bea39a118c4b5d15ddb35fed
-- Round 1: RED test manifest: packages/qfai/tests/core/surfaceTypePopulate.test.ts
-
-The silence case holds under the mutation, which is the boundary worth naming:
-it asserts no finding of this code appears, and a finding carrying a different
-code satisfies it. The pair discriminates on the code only in the emitting
-direction.
-
-- Refactor verify command: npx vitest run tests/integration/sddUiTemplate.test.ts tests/integration/sddPrimaryTasksLane.test.ts tests/e2e/spec0013UiContractPrimaryTasksE2E.test.ts tests/core/activeDiscussionPack.test.ts tests/core/surfaceTypePopulate.test.ts tests/integration/primaryTasksStructured.test.ts
-- Refactor verify result: Test Files 6 passed (6); Tests 25 passed (25)
-- Refactor verify revision: 649d8111147436408c90cbbe1b9f9b07e34da8cb
-- Checkpoint verification command: npx vitest run --project integration --project e2e --project cli --project core
+- Checkpoint verification command: npx vitest run --project integration --project e2e --project cli --project core --exclude 'tests/core/prFixMonitor.test.ts' --exclude 'tests/core/prMergePlan.test.ts'
 - Checkpoint verification result: PASS — exit 0; Test Files 532 passed (540); Tests 8986 passed (9029)
 - Checkpoint verification revision: 649d8111147436408c90cbbe1b9f9b07e34da8cb
 
@@ -353,7 +221,7 @@ second one to every finding.
 - Refactor verify command: npx vitest run tests/integration/sddUiTemplate.test.ts tests/integration/sddPrimaryTasksLane.test.ts tests/e2e/spec0013UiContractPrimaryTasksE2E.test.ts tests/core/activeDiscussionPack.test.ts tests/core/surfaceTypePopulate.test.ts tests/integration/primaryTasksStructured.test.ts
 - Refactor verify result: Test Files 6 passed (6); Tests 25 passed (25)
 - Refactor verify revision: 649d8111147436408c90cbbe1b9f9b07e34da8cb
-- Checkpoint verification command: npx vitest run --project integration --project e2e --project cli --project core
+- Checkpoint verification command: npx vitest run --project integration --project e2e --project cli --project core --exclude 'tests/core/prFixMonitor.test.ts' --exclude 'tests/core/prMergePlan.test.ts'
 - Checkpoint verification result: PASS — exit 0; Test Files 532 passed (540); Tests 8986 passed (9029)
 - Checkpoint verification revision: 649d8111147436408c90cbbe1b9f9b07e34da8cb
 
@@ -382,7 +250,7 @@ second one to every finding.
 - Refactor verify command: npx vitest run tests/integration/sddUiTemplate.test.ts tests/integration/sddPrimaryTasksLane.test.ts tests/e2e/spec0013UiContractPrimaryTasksE2E.test.ts tests/core/activeDiscussionPack.test.ts tests/core/surfaceTypePopulate.test.ts tests/integration/primaryTasksStructured.test.ts
 - Refactor verify result: Test Files 6 passed (6); Tests 25 passed (25)
 - Refactor verify revision: 649d8111147436408c90cbbe1b9f9b07e34da8cb
-- Checkpoint verification command: npx vitest run --project integration --project e2e --project cli --project core
+- Checkpoint verification command: npx vitest run --project integration --project e2e --project cli --project core --exclude 'tests/core/prFixMonitor.test.ts' --exclude 'tests/core/prMergePlan.test.ts'
 - Checkpoint verification result: PASS — exit 0; Test Files 532 passed (540); Tests 8986 passed (9029)
 - Checkpoint verification revision: 649d8111147436408c90cbbe1b9f9b07e34da8cb
 
@@ -411,20 +279,61 @@ Recorded per row above, and summarized in the table under
 
 ## Gaps / Open risks
 
-**One row cannot carry a pointer at all.** `TDD-0022` declares `Layer: e2e`, and
-an `e2e` row's obligation is read from a `US-Refs` column. This ledger has only a
-`TC-Refs` column, so the row's obligation reads as empty and no evidence entry
-can match it. The row does name a real user story, `US-0013-0011`, in the column
-it has. Adding the column is a change to the table every row shares, not to this
-row, and it belongs with the `Boundary` column the same ledger owes.
+Seven of the pack's twelve `done` rows are not backfilled. Six name an
+obligation the code states the opposite of, or one no test reaches; the seventh
+cannot carry a pointer at all.
 
-**Two rows contradict their tests.** `TDD-0027` and `TDD-0028` name
-`TC-0013-0032` and `TC-0013-0033`, which specify a `primary_tasks` count band of
-3..7. The validator's lower bound was removed; the tests now assert that one
-through seven emit nothing. The specification and the code state opposite
-things, and writing evidence would fix that contradiction into the record. The
-`Selector` of both rows is reported unresolved, which is the one signal this
-drift does raise.
+| Row        | Obligation     | What stops it                                                     |
+| ---------- | -------------- | ----------------------------------------------------------------- |
+| `TDD-0019` | `TC-0013-0025` | The obligation contradicts a sibling test case                    |
+| `TDD-0021` | `TC-0013-0027` | Half the obligation is stated the other way round by the product  |
+| `TDD-0022` | `US-0013-0011` | The ledger has no `US-Refs` column for an `e2e` row to read       |
+| `TDD-0025` | `TC-0013-0030` | The test drives a helper no production path calls                 |
+| `TDD-0026` | `TC-0013-0031` | The obligation says `warning`; the validator emits `error`        |
+| `TDD-0027` | `TC-0013-0032` | The count band the obligation states was removed from the product |
+| `TDD-0028` | `TC-0013-0033` | The same band                                                     |
+
+Each of the four rows this run reverted keeps its corrected `Selector`, so the
+row names a case that can be run, and keeps its original `Evidence` cell, so it
+claims no more than it did before.
+
+**`TC-0013-0025` cannot be satisfied as written.** It requires every `screens[]`
+entry of the shipped template to carry a literal `primary_tasks: []`.
+`TC-0013-0026`, in the same pack, requires the validate lane to fail at `error`
+on exactly that value. A template shipping an empty list would hand the author a
+contract that fails on first use, so the template ships filled entries and the
+test asserts only that the key is present and is a list. The narrower assertion
+is the right one; the obligation above it is the half that needs a Change
+Request.
+
+**`TC-0013-0027` has two halves and the product answers the second one the other
+way.** The lane passing silently on a non-empty list is covered. Pre-existing
+slot-less contracts, which the obligation calls informational and non-blocking,
+are emitted at `error` past sunset — the covering case says so in its own title.
+
+**`TC-0013-0030` names `/qfai-sdd`; the test names a helper.**
+`populateSurfaceTypeIfUiCompanion` has no caller anywhere in `src`, and the
+obligation's second half — that `resolveAllUiBearingSpecs()` still requires the
+frontmatter as the strict signal — is not exercised at all.
+
+**`TC-0013-0031` specifies `warning` during the deprecation window.**
+`validateSurfaceTypeDrift` sets `error` with no window logic, and the covering
+case asserts `error` under a `describe` still named "warns". `AC-0013-0023`,
+`BR-0013-0018` and `US-0013-0013` say the same thing as the test case, so either
+the window closed and four spec layers are stale, or the escalation was early.
+
+**`TDD-0022` cannot carry a pointer at all.** It declares `Layer: e2e`, and an
+`e2e` row's obligation is read from a `US-Refs` column. This ledger has only
+`TC-Refs`, so the obligation reads as empty and no evidence entry can match it.
+The row does name a real user story in the column it has. Adding the column
+changes the table every row shares, and it belongs with the `Boundary` column
+the same ledger owes.
+
+**`TDD-0027` and `TDD-0028` name a count band the product dropped.**
+`TC-0013-0032` and `TC-0013-0033` state a `primary_tasks` band of 3..7. The
+validator's lower bound was removed and the tests now assert that one through
+seven emit nothing. The `Selector` of both rows is reported unresolved, which is
+the one signal this drift raises on its own.
 
 **One rule is emitted from two places.** `QFAI-AUD-001` is built independently
 in `checkContractsHierarchy` and in `checkContractHierarchyFromScreens`, both
@@ -435,5 +344,6 @@ pair, so a change to one can silently diverge from the other.
 
 ## Final status
 
-PASS for the nine rows recorded here. The pack is not clean; the rows above
-are listed rather than claimed.
+PASS for the five rows recorded here. This is a per-row verdict, not a stage
+verdict: the pack is not clean, seven of its twelve `done` rows are listed above
+rather than claimed, and the scoped validate run below does not reach zero.
