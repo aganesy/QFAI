@@ -70,7 +70,7 @@ export function extractManagedRulesSection(template: string): string | null {
  * it would add a heading and connect no rule.
  */
 export function needsManagedRulesSection(existing: string, section: string): boolean {
-  if (existing.includes(QFAI_AGENT_RULES_BEGIN)) {
+  if (managedSection(existing).begin !== -1) {
     return false;
   }
   const masters = citedRuleMasters(section);
@@ -92,9 +92,8 @@ export function needsManagedRulesSection(existing: string, section: string): boo
  * run has no reason to look at the file again.
  */
 export function hasUnclosedRulesSection(existing: string): boolean {
-  const start = existing.indexOf(QFAI_AGENT_RULES_BEGIN);
-  if (start === -1) return false;
-  return existing.indexOf(QFAI_AGENT_RULES_END, start + QFAI_AGENT_RULES_BEGIN.length) === -1;
+  const { begin, end } = managedSection(existing);
+  return begin !== -1 && end === -1;
 }
 
 /**
@@ -206,21 +205,62 @@ export function citedRuleMastersOutsideCode(text: string): readonly string[] {
  * nowhere real to write.
  */
 function outsideFences(lines: readonly string[]): boolean[] {
-  let open: string | null = null;
+  let open: { character: string; length: number } | null = null;
   return lines.map((line) => {
-    const fence = /^\s{0,3}(`{3,}|~{3,})/.exec(line)?.[1];
-    if (fence !== undefined) {
-      if (open === null) {
-        open = fence[0] ?? null;
-        return false;
-      }
-      // A fence closes on its own character, so a ``` inside a ~~~ block is
-      // content rather than the end of it.
-      if (fence.startsWith(open)) open = null;
+    const fence = /^ {0,3}(`{3,}|~{3,})(.*)$/.exec(line);
+    if (fence === null) return open === null;
+    const run = fence[1] ?? "";
+    const rest = fence[2] ?? "";
+    if (open === null) {
+      // A backtick fence may not carry a backtick in its info string. Such a
+      // line opens nothing, so it is ordinary content.
+      if (run.startsWith("`") && rest.includes("`")) return true;
+      open = { character: run[0] ?? "`", length: run.length };
       return false;
     }
-    return open === null;
+    // A block closes on its own character, on a run at least as long as the
+    // one that opened it, with nothing after it but spaces. A line carrying an
+    // info string is an opener, and an opener inside a block is content — so
+    // treating it as a closer resumes the scan in the middle of an example.
+    if (run[0] === open.character && run.length >= open.length && rest.trim() === "") {
+      open = null;
+    }
+    return false;
   });
+}
+
+/**
+ * Where the managed section's markers sit, ignoring any inside a fenced block.
+ *
+ * A document showing what the section looks like carries a marker pair in an
+ * example. Found by scanning the text, that example is the managed section: the
+ * file reads as connected, and a bullet meant for the rule list is written into
+ * the example instead, where it instructs nobody.
+ */
+function managedSection(existing: string): {
+  lines: string[];
+  open: boolean[];
+  newline: string;
+  begin: number;
+  end: number;
+} {
+  // A Windows checkout keeps CRLF, and a template bullet is LF. Splicing one
+  // into the other leaves a file with mixed endings, which a formatter then
+  // rewrites whole — a one-line change turning into a diff over the file.
+  const newline = existing.includes("\r\n") ? "\r\n" : "\n";
+  const lines = existing.split(newline);
+  const open = outsideFences(lines);
+  const begin = lines.findIndex(
+    (line, index) => open[index] === true && line.includes(QFAI_AGENT_RULES_BEGIN),
+  );
+  const end =
+    begin === -1
+      ? -1
+      : lines.findIndex(
+          (line, index) =>
+            index > begin && open[index] === true && line.includes(QFAI_AGENT_RULES_END),
+        );
+  return { lines, open, newline, begin, end };
 }
 /** The template's bullets for the masters `existing` does not already cite. */
 function pendingBullets(existing: string, section: string, masters: readonly string[]): string[] {
@@ -260,25 +300,16 @@ export function addRuleCitations(
   section: string,
   masters: readonly string[],
 ): string {
-  const start = existing.indexOf(QFAI_AGENT_RULES_BEGIN);
-  if (start === -1) return existing;
-  const endAt = existing.indexOf(QFAI_AGENT_RULES_END, start + QFAI_AGENT_RULES_BEGIN.length);
-  if (endAt === -1) return existing;
+  const { lines, open, newline, begin, end } = managedSection(existing);
+  if (begin === -1 || end === -1) return existing;
 
   const bullets = pendingBullets(existing, section, masters);
   if (bullets.length === 0) return existing;
 
-  // A Windows checkout keeps CRLF, and a template bullet is LF. Splicing one
-  // into the other leaves a file with mixed endings, which a formatter then
-  // rewrites whole — a one-line change turning into a diff over the file.
-  const newline = existing.includes("\r\n") ? "\r\n" : "\n";
-  const managed = existing.slice(start, endAt);
-  const lines = managed.split(newline);
-  const open = outsideFences(lines);
   // After the last rule bullet, not the last line: the section closes with
   // prose, and a bullet after it would read as part of that paragraph.
   let insertAfter = -1;
-  for (let index = 0; index < lines.length; index += 1) {
+  for (let index = begin + 1; index < end; index += 1) {
     const line = lines[index];
     if (open[index] !== true) continue;
     if (line !== undefined && line.startsWith("- ") && citedRuleMasters(line).length > 0) {
@@ -290,11 +321,11 @@ export function addRuleCitations(
     // rewritten as something else. Discarding the bullets here would leave a
     // rule the run shipped uncited for good, so they go at the end of the
     // section as their own block, separated from whatever precedes them.
-    const trailing = lines.at(-1) === "" ? 1 : 0;
-    lines.splice(lines.length - trailing, 0, "", ...bullets, "");
-    return `${existing.slice(0, start)}${lines.join(newline)}${existing.slice(endAt)}`;
+    const trailing = lines[end - 1] === "" ? 1 : 0;
+    lines.splice(end - trailing, 0, "", ...bullets, "");
+    return lines.join(newline);
   }
 
   lines.splice(insertAfter + 1, 0, ...bullets);
-  return `${existing.slice(0, start)}${lines.join(newline)}${existing.slice(endAt)}`;
+  return lines.join(newline);
 }

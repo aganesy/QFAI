@@ -42,7 +42,10 @@ import {
   QFAI_AGENT_RULES_BEGIN,
   QFAI_AGENT_RULES_END,
   citedRuleMasters,
+  citedRuleMastersOutsideCode,
   extractManagedRulesSection,
+  hasUnclosedRulesSection,
+  needsManagedRulesSection,
 } from "../../src/core/agentEntryPoints.js";
 import { getInitAssetsDir } from "../../src/shared/assets.js";
 
@@ -730,5 +733,63 @@ describe("a citation inside a fence is an example, not a citation", () => {
       const fence = after.split("```markdown")[1]?.split("```")[0] ?? "";
       expect(fence.split("\n").filter((line) => line.startsWith("- "))).toHaveLength(others.length);
     });
+  });
+});
+
+describe("a marker pair inside an example is an example", () => {
+  it("does not read a fenced section as the managed one", () => {
+    const template = [
+      QFAI_AGENT_RULES_BEGIN,
+      "",
+      "- `.agents/rules/grilling.md` — interview the decision tree.",
+      "",
+      QFAI_AGENT_RULES_END,
+    ].join("\n");
+    // A project documenting what the section looks like. Read as the managed
+    // section, the bullet is written into the example, where it instructs
+    // nobody while the run reports a successful update.
+    const existing = [
+      "# Our house rules",
+      "",
+      "Ours looks like this:",
+      "",
+      "````markdown",
+      QFAI_AGENT_RULES_BEGIN,
+      "",
+      "- `.agents/rules/temporary-files.md` — scratch goes under `tmp/`.",
+      "",
+      QFAI_AGENT_RULES_END,
+      "````",
+      "",
+    ].join("\n");
+
+    expect(addRuleCitations(existing, template, [".agents/rules/grilling.md"])).toBe(existing);
+    expect(hasUnclosedRulesSection(existing)).toBe(false);
+    // Nothing outside the example cites a rule, so the file still needs the
+    // section — which is what the caller falls through to appending.
+    expect(needsManagedRulesSection(existing, template)).toBe(true);
+  });
+
+  it("keeps an opening fence inside a block from closing it", () => {
+    const template = [
+      QFAI_AGENT_RULES_BEGIN,
+      "",
+      "- `.agents/rules/grilling.md` — interview the decision tree.",
+      "",
+      QFAI_AGENT_RULES_END,
+    ].join("\n");
+    // A closing fence carries no info string, so the inner line is content. Read
+    // as a closer, every bullet after it counts as a live citation.
+    const existing = [
+      "# Our house rules",
+      "",
+      "````",
+      "```markdown",
+      "- `.agents/rules/temporary-files.md` — scratch goes under `tmp/`.",
+      "````",
+      "",
+    ].join("\n");
+
+    expect(citedRuleMastersOutsideCode(existing)).toEqual([]);
   });
 });
