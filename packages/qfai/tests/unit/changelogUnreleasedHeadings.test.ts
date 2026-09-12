@@ -140,7 +140,7 @@ describe("the unreleased section groups its entries by type", () => {
     ).toEqual([]);
   });
 
-  it("passes on the section a release cut leaves behind", async () => {
+  it("passes on the section a release cut leaves behind", () => {
     // The state every release pull request is in: the work moved under its
     // version heading and `## [Unreleased]` reopened empty. That is correct,
     // and a rule that read an empty section as a parse failure failed the
