@@ -547,7 +547,7 @@ describe("evidence and verdicts carry a revision", () => {
 describe("the working-tree address has one notation", () => {
   const REVISION = "649d8111147436408c90cbbe1b9f9b07e34da8cb";
   /** Recorded for a clean checkout of that revision. */
-  const RECORDED = "working-tree+c5d867c413a95d1911c347d5202c14436fd1265fda5ef5adca6d895dc36e4194";
+  const RECORDED = "working-tree+9db30736b90c82632997700e828d17c398e99abf5de012e2f41e4fafcfc0d888";
 
   const sha256 = (input: Buffer): Buffer => createHash("sha256").update(input).digest();
   const sha256Hex = (input: Buffer): string => sha256(input).toString("hex");
@@ -573,6 +573,7 @@ describe("the working-tree address has one notation", () => {
       mode: "0644",
       bytes: Buffer.from("export const a = 1;\n"),
     },
+    { path: Buffer.from("src/gone.ts"), kind: "absent", mode: "0000", bytes: Buffer.alloc(0) },
     { path: Buffer.from("src/link"), kind: "symlink", mode: "0777", bytes: Buffer.from("a.ts") },
     {
       path: Buffer.from("src/run.sh"),
@@ -580,7 +581,6 @@ describe("the working-tree address has one notation", () => {
       mode: "0755",
       bytes: Buffer.from("#!/bin/sh\n"),
     },
-    { path: Buffer.from("src/gone.ts"), kind: "absent", mode: "0000", bytes: Buffer.alloc(0) },
     { path: Buffer.from("tmp/hold"), kind: "dir", mode: "0755", bytes: Buffer.alloc(0) },
   ];
 

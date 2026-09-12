@@ -2883,7 +2883,9 @@ result, so the assertion cannot be tightened without drift.
       );
       const issues = await validateTddList(root, defaultConfig);
       const found = issues.find((i) => i.code === "QFAI-TDDLIST-008");
-      expect(found?.message).toContain("Revision naming a git rev or working-tree+<sha256>");
+      expect(found?.message).toContain(
+        "Revision naming a git rev or working-tree+<64 lowercase hex>",
+      );
     });
   });
 

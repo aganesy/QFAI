@@ -47,17 +47,15 @@ check. Gate item 10 rejects any other shape wherever a revision is recorded:
        --exclude-per-directory=.gitignore -z -- . "${exclude[@]}"
      ```
 
-     **Git names the files. It does not read them.** An earlier form of this
-     procedure hashed the bytes of `git diff HEAD`, and a diff is a rendering
-     rather than a state. `core.autocrlf`, `core.fileMode`, `core.eol`,
-     `diff.algorithm`, `diff.indentHeuristic`, `diff.interHunkContext`,
-     `diff.orderFile`, and a `.gitattributes` driver's `binary`, `textconv`,
-     `xfuncname` or `clean` each give one tree two renderings, and every one of
-     them is a checkout-local setting a reviewer need not share. No list of
-     pinned flags closes that class: the tree names the driver and the checkout
-     configures it, so the next setting is the next address for the same files.
-     Reading the bytes off the filesystem closes it by construction. There is
-     nothing left to configure.
+     **Git names the files. It does not read them.** A diff is a rendering
+     rather than a state, and what renders it is checkout-local: `core.autocrlf`,
+     `core.fileMode`, `core.eol`, `diff.algorithm`, `diff.indentHeuristic` and a
+     `.gitattributes` driver's `binary`, `textconv`, `xfuncname` or `clean` each
+     give one tree two renderings, and a reviewer need share none of those
+     settings. Pinning them cannot close the class either: the tree names the
+     driver and the checkout configures it, so the next setting is the next
+     address for the same files. The bytes come off the filesystem, where there
+     is nothing to configure.
 
      Three things still come from git, and each is pinned above.
 
@@ -121,7 +119,7 @@ check. Gate item 10 rejects any other shape wherever a revision is recorded:
 
      **The bytes are what the filesystem holds**, read with no conversion of any
      kind — never through `git show`, `git cat-file` or a checkout filter, which
-     is the whole of why the diff is gone. **On a `symlink` the bytes are the
+     is why git does not read them. **On a `symlink` the bytes are the
      link's own payload** — what the link points at, as bytes — never the
      target's contents: the two are both defensible readings, so producer and
      reviewer could compute different addresses for one tree, and a dangling
