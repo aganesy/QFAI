@@ -185,11 +185,16 @@ is one input among several and the decision is not the griller's to re-derive.
 know what an earlier one recommended, so the record supplies it: a session that
 settled a decision agent-to-agent records, in the stage's Work Orders Summary,
 the decision and the `Agent instance` that recommended it. `Recommended and
-unadjudicated` is read off that record, not off recollection. A stage that ran no
-agent-to-agent grilling session records no such row, and an otherwise complete
-Work Orders Summary without one is the evidence for `none`. What is a `REVISE`
-is a summary that records such a session and then omits the row for a decision
-it settled, or one too incomplete to tell those two apart.
+unadjudicated` is read off that record, not off recollection.
+
+**The record answers either way, and silence answers nothing.** A stage that ran
+no agent-to-agent grilling session writes one row reading `grilling: none`; a
+stage that ran one writes a row per decision it settled. A summary carrying
+neither is incomplete, and that is the `REVISE` — not an inference in either
+direction. Absence of rows cannot be read as evidence for `none`, because a
+table that omitted a required row looks exactly like a table that had none to
+write, and the reviewer would attest `none` over the very decision the record
+exists to expose.
 
 The field asks about the artifact **as it now stands**. A recommendation the
 artifact no longer carries, and one the user has since settled, are both outside
@@ -207,6 +212,13 @@ replacement reviewer is issued the next ordinal and starts at round 1, because i
 nobody's review. Counting per instance would restart the budget every round, so it could never be
 exhausted and the escalation exit that opens when it is would never open; counting a replacement
 against its predecessor's series would exhaust it a round early.
+
+**The ordinal is bounded, or the budget is not.** A fresh series starts a fresh two rounds, so an
+orchestrator that replaced the reviewer after every round 1 would reset the budget for ever and the
+escalation could never arrive. At most **two series per artifact per role**: ordinal 2 is the last
+one that opens, and a further conflict escalates to the user with the conflict named instead of
+opening a third. This is the cap `review-convergence.md` puts on the post-escalation verification
+review, applied to the other way a gate can be made unbounded.
 
 - Reviewers must verify Drift Protocol enforcement.
 - Reviewers must verify test-layer policy enforcement when relevant.
@@ -280,7 +292,7 @@ failure, not a licence to skip the gate or to self-review.
 ```text
 Task title: <short>
 Role: <sub-agent role>
-Review series: <reviewed artifact> + <reviewer role>   # review work orders only; the budget is counted per series
+Review series: <reviewed artifact> + <reviewer role> + <replacement ordinal>   # review work orders only; the budget is counted per series
 Goal: <what to decide/produce>
 Inputs (refs):
 - <file/section>
@@ -301,7 +313,7 @@ Acceptance bar: <accept when ...> | <rework when ...>   # never `PASS`/`REVISE`:
 Reviewer role: <sub-agent role that produced this response>   # REQUIRED — a `Result:` line with no speaker is a report, not a verdict
 Reviewed artifact: <path/anchor this verdict rules on>        # REQUIRED — bounds the ruling; a PASS here clears nothing else
 Round: 1 | 2 | 2b
-Review series: <reviewed artifact> + <reviewer role>          # the budget is counted per series, not per instance
+Review series: <reviewed artifact> + <reviewer role> + <replacement ordinal>   # the budget is counted per series, not per instance
 Result: PASS | REVISE
 Reviewed revision: <git rev> | working-tree+<content hash>
 Audited evidence hash: <content hash of the evidence read>   # one line per TDD-ID on a T1 group

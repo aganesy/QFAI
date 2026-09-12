@@ -23,10 +23,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   Two fields carry it. A reviewer response declares `Recommended and
 unadjudicated`, read off a Work Orders Summary row the session writes rather
   than off recollection, and scoped to the artifact as it now stands. A stage
-  that ran no such session records no row, and an otherwise complete summary
-  without one is the evidence for `none`. A `Review series` — the reviewed
+  that ran no such session writes one row reading `grilling: none`, and a summary
+  carrying neither that nor a decision row is incomplete — silence is not the
+  answer, because an omitted row looks exactly like nothing to record. A `Review series` — the reviewed
   artifact, the role, and an ordinal that rises each time the review is handed
-  to a replacement — carries the round budget across a host that answers round
+  to a replacement, capped at two series per artifact per role so a fresh
+  reviewer cannot reset the budget for ever — carries the round budget across a host that answers round
   2 with a fresh sub-agent, which a count per agent instance restarted every
   round, and keeps a replacement from inheriting the round its predecessor
   spent.

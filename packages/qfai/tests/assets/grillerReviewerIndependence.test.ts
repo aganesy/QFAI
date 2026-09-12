@@ -88,7 +88,7 @@ describe("a griller's recommendations and reviewer independence", () => {
       expectPhrase(content, "The work order and the response both carry a `Review series` value");
       expectPhrase(
         content,
-        "Review series: <reviewed artifact> + <reviewer role>   # review work orders only",
+        "Review series: <reviewed artifact> + <reviewer role> + <replacement ordinal>   # review work orders only",
       );
     });
 
@@ -126,6 +126,10 @@ describe("a griller's recommendations and reviewer independence", () => {
         content,
         "counting a replacement against its predecessor's series would exhaust it a round early",
       );
+      // A fresh series buys a fresh two rounds, so an unbounded supply of
+      // replacements is an unbounded budget and the escalation never arrives.
+      expectPhrase(content, "**The ordinal is bounded, or the budget is not.**");
+      expectPhrase(content, "At most **two series per artifact per role**");
     });
 
     it(`${tree}: reopens an unadjudicated recommendation instead of rerouting it`, async () => {
@@ -148,11 +152,12 @@ describe("a griller's recommendations and reviewer independence", () => {
       // Required unconditionally, the ordinary `none` response becomes a
       // `REVISE` over provenance that never existed.
       const content = await read(tree);
-      expectPhrase(
-        content,
-        "an otherwise complete Work Orders Summary without one is the evidence for `none`",
-      );
-      expectPhrase(content, "or one too incomplete to tell those two apart");
+      expectPhrase(content, "**The record answers either way, and silence answers nothing.**");
+      expectPhrase(content, "writes one row reading `grilling: none`");
+      // Silence cannot be the answer: an omitted row and no session to record look
+      // identical in the table, so reading absence as `none` clears the decision
+      // the record exists to expose.
+      expectPhrase(content, "Absence of rows cannot be read as evidence for `none`");
     });
 
     it(`${tree}: makes the attestation a required field`, async () => {
@@ -167,7 +172,10 @@ describe("a griller's recommendations and reviewer independence", () => {
         content,
         "Recommended and unadjudicated: none | <decisions in THIS artifact as it now stands that this reviewer recommended and no user has since settled>",
       );
-      expectPhrase(content, "Review series: <reviewed artifact> + <reviewer role>");
+      expectPhrase(
+        content,
+        "Review series: <reviewed artifact> + <reviewer role> + <replacement ordinal>",
+      );
       // A false value has to weigh what a false authorship value weighs, or the
       // field is one the gate does not act on.
       expectPhrase(
