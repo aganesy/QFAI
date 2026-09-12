@@ -1366,7 +1366,7 @@ function normalizeAuditArtifact(value: string): string {
 }
 
 const GATE_COMPLETED_EVIDENCE_FIELD =
-  /^\s*(?:\|\s*)?(?:[-*][ \t]+)?(?:\*\*)?(?:Spec review(?:ed revision| pack(?: seal)?)?|Spec audited evidence hash|Code quality review(?:ed revision| pack(?: seal)?)?|Code quality audited evidence hash|Prototype parity|Checkpoint verification (?:command|result|seal))(?:\*\*)?\s*(?::|\|)/i;
+  /^\s*(?:\|\s*)?(?:[-*][ \t]+)?(?:\*\*)?(?:Spec review(?:ed revision| pack(?: seal)?)?|Spec audited evidence hash|Code quality review(?:ed revision| pack(?: seal)?)?|Code quality audited evidence hash|Prototype parity(?: reviewed revision| review pack(?: seal)?| audited evidence hash)?|Checkpoint verification (?:command|result|seal))(?:\*\*)?\s*(?::|\|)/i;
 
 const PHASE_AUTHORED_EVIDENCE_FIELD =
   /^\s*(?:\|\s*)?(?:[-*][ \t]+)?(?:\*\*)?(?:Round[ \t]+\d+:[ \t]*)?(?:TDD-ID|Layer|Test file|Selector|TC-ref|US-ref|CON-API-ref|Revision|RED revision|Replacement proof revision|RED test hash|RED test manifest|RED command|RED result|GREEN command|GREEN result|Satisfied-by|Falsifiability command|Falsifiability result|Falsifiability revision|reviewer verdict|RED failure mode|Refactor verify command|Refactor verify result|Oracle proof|qa-gatekeeper|Shared-artifact re-verify|Surface artifacts)(?:\*\*)?\s*(?::|\|)/i;
@@ -2548,10 +2548,22 @@ const BACKFILL_EXEMPT_FIELDS: ReadonlySet<string> = new Set([
  */
 type ParityVerdict = "absent" | "pass" | "revise" | "not-applicable" | "unrecognized";
 
+/**
+ * How many clauses `references/ui-affecting.md` defines. A verdict naming any
+ * other number names no routing decision a reader could re-run.
+ */
+const UI_AFFECTING_CLAUSES = 3;
+
+/** `PASS (clause N)`, for a clause the reference defines. */
+const PARITY_PASS_FORM = new RegExp(
+  `^PASS\\s*\\(\\s*clause\\s+[1-${UI_AFFECTING_CLAUSES}]\\s*\\)$`,
+  "i",
+);
+
 function parityVerdict(section: string): ParityVerdict {
   const value = rowEvidenceFieldValue(section, "Prototype parity");
   if (value === null) return "absent";
-  if (/^PASS\s*\(\s*clause\s+\d+\s*\)$/i.test(value)) return "pass";
+  if (PARITY_PASS_FORM.test(value)) return "pass";
   if (/^REVISE\b/i.test(value)) return "revise";
   if (/^n\/a\s*\(\s*not\s+UI-affecting\s*\)$/i.test(value)) return "not-applicable";
   return "unrecognized";
@@ -2702,6 +2714,12 @@ function missingCompletedEvidenceFields(
   // names none under the evidence tree leaves a hash over fields alone, and a
   // screenshot replaced after the PASS moves nothing the gate reads.
   const manifest = rowEvidenceFieldValue(section, "Surface artifacts");
+  // Two manifests are two sets of captures, and only the last is read: a
+  // capture only the first one named could be replaced with nothing moving.
+  const manifests = evidenceFieldOccurrences(section, "Surface artifacts").filter(
+    ({ round }) => round === null,
+  );
+  if (manifests.length > 1) missing.push("exactly one Surface artifacts");
   if (parity === "pass" && manifest !== null) {
     // An entry that is absolute or leaves the tree addresses no record, and
     // dropped beside a valid one it left part of the manifest out of the hash:

@@ -51,7 +51,7 @@ releases completion.
       output in its place, since `/qfai-prototyping` rejects `cli` and leaves no prototype to compare
       against — **and that reviewer's response is in the round's review pack**: its own
       `R0N_product-surface-reviewer.md` file with a matching `reviewers[]` entry in `summary.json`,
-      like the two verdicts above (`review-artifact-layout.md`). `Prototype parity: PASS` in the
+      like the two verdicts above (`review-artifact-layout.md`). `Prototype parity: PASS (clause N)` in the
       evidence entry records the verdict on either target — the field name does not change — and it
       is not the verdict. The `--profile tdd` run this list ends on reads that response only where
       the pack the entry names is present, and reports no `QFAI-REVIEW-*` finding, so on a checkout

@@ -1800,7 +1800,15 @@ REVISE — needs new production behaviour
     // Read by its first word, `n/a (UI-affecting)` passed as a row with no
     // surface and skipped the review, the captures and the hash; a verdict with
     // no clause names no declaration the routing can be re-run against.
-    for (const value of ["looks right", "PASS", "PASS (unknown)", "n/a (UI-affecting)", "N/A"]) {
+    for (const value of [
+      "looks right",
+      "PASS",
+      "PASS (unknown)",
+      "PASS (clause 0)",
+      "PASS (clause 999)",
+      "n/a (UI-affecting)",
+      "N/A",
+    ]) {
       it(`names the forms a parity value takes when it holds ${value}`, async () => {
         await withProject(async (root) => {
           const [issue] = await unresolved(root, withParity([`- Prototype parity: ${value}`]));
@@ -1922,6 +1930,34 @@ REVISE — needs new production behaviour
       });
     });
 
+    it("refuses a second Surface artifacts field", async () => {
+      // Only the last manifest is read, so a capture only the first one named
+      // could be replaced with nothing the gate recomputes moving.
+      await withProject(async (root) => {
+        const twice = verdictEntry().replace(
+          "- qa-gatekeeper: PASS",
+          [`- Surface artifacts: ${HTML_CAPTURE}`, "- qa-gatekeeper: PASS"].join("\n"),
+        );
+        const [issue] = await unresolved(root, twice, { surfaceArtifacts: CAPTURES });
+        expect(issue?.message).toContain("exactly one Surface artifacts");
+      });
+    });
+
+    it("ends the phase-authored subject at whichever parity field comes first", async () => {
+      // Written before the verdict line, the sibling fields fell inside the
+      // subject, audited hash included, and no recorded hash could match it.
+      await withProject(async (root) => {
+        const [verdict, ...siblings] = VERDICT;
+        const reordered = verdictEntry()
+          .replace([verdict, ...siblings].join("\n") + "\n", "")
+          .replace("- Spec review: PASS", [...siblings, verdict, "- Spec review: PASS"].join("\n"));
+        expect(reordered.indexOf(siblings[0] ?? "")).toBeLessThan(
+          reordered.indexOf("- Spec review: PASS"),
+        );
+        const issues = await unresolved(root, reordered, { surfaceArtifacts: CAPTURES });
+        expect(issues).toEqual([]);
+      });
+    });
     it("refuses a manifest entry that is not a repository-relative path", async () => {
       // Dropped beside a valid capture, the entry left part of the manifest out
       // of the hash, so replacing that capture moved nothing.
