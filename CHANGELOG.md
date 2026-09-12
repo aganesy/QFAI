@@ -4,36 +4,7 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ## [Unreleased]
 
-### Fixed
-
-- **The audited evidence hash says what its extraction produces, not only which
-  fields it reads** (#1616). Naming the fields settled which lines are taken and
-  left open what they become, so two readers taking the same fields computed
-  different digests: the list marker, the `Round N: ` prefix, a field's fenced
-  value, the heading line, the field order and the separator were each
-  undetermined. A recorded value was reproducible only inside the run that wrote
-  it, which is not a check.
-
-  The extraction is a region of the entry rather than a selection out of it: it
-  runs from the row's heading to the first field the subject could not have
-  read, keeps every line inside verbatim including a field's fenced value, drops
-  a reviewer's own verdict line, and synthesizes the heading. That is what
-  `npx qfai validate` gate item 10 computes today, so a second party recomputing
-  a recorded digest gets the recorded digest. A selection would have had to fix
-  an order, a separator and a spelling as well, each a further way to disagree.
-
-  Four values share these words and are not one: three ledger fields carrying
-  three reviewer roles' verdicts by these same four steps — the third is the
-  parity hash a UI-affecting row owes — and the working-tree revision, which
-  addresses a tree rather than a subject. The reference says which two the
-  completion gate recomputes today and which one it does not, so nobody takes
-  the third for a checked field — as do the implement skill's gate item and the
-  record contract, which promised a recomputation no code performs.
-
-  A round with several review attempts qualifies its verdict field, and the
-  extraction now drops that form too: the contract said every verdict line goes
-  and the code matched only the unqualified one, so a multi-attempt round gave
-  the reviewer and the gate two digests.
+### Added
 
 - **A design is grilled before it is fixed, and every stage does it** (#1591,
   #1594, #1595). A grilling session interviews an unfixed design as a tree of
@@ -111,8 +82,6 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   and in the authoring tree, and ending the run with nothing deleted if they
   decline.
 
-### Added
-
 - **`qfai validate` reports a spec stage whose grilling session left no trace**
   (#1605). `QFAI-GRILL-001`, at warning, on spec evidence whose
   `## Pre-draft Grilling` section is missing or carries no phase row — a heading
@@ -157,6 +126,39 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   keeps its description and declares `disable-model-invocation: true` beside it —
   which the Claude Code surface honours and the Codex surface does not, so a
   skill that must never run unattended needs a guard of its own.
+
+- **A spec stage cannot complete over a decision nobody took** (#1678). An open
+  question and an unanswered decision were the same word. A question parked on
+  purpose is what `08_Open-questions.md` is for, and a stage completes over it;
+  a decision a grilling session put to the user, and nobody answered, is the
+  pack claiming a design nobody chose.
+
+  The `unadjudicated` status names the second one, in the spec register and the
+  shared policy one alike. It is an error wherever the SDD gates run — the
+  `sdd`, `full` and `verify` profiles — rather than a warning outside a release
+  candidate, which is how the `open` count behaves. No existing pack carries the
+  value, so nothing has to be migrated to it. What to do instead is in the
+  finding: ask again and record the answer, or — where the user closed the
+  questions and the decision is the agent's to make — record it as an assumption
+  and park it as `deferred` with the point that takes it up.
+
+  The gate reads a register in the notations registers are written in: a
+  `Status` column, a `status:` line under a subsection, and `Disposition`, which
+  is the word the discussion pack's register uses for the same field. An entry
+  declaring no status at all is reported too — a question whose state nobody
+  wrote down is the one the new value would otherwise have named.
+
+  Entries are read from `## Open Questions`, the section the schema puts them
+  under, in all three notations a register uses: a row in the table the
+  template writes, a subsection with a `status:` line, and an entry written as
+  one bullet with the field inline. A register naming a settled question in a
+  resolved list beside that section is not reporting an open one.
+
+  The shared policy register is read before the run decides the tree holds no
+  spec pack, so a pack being established policy-first has its decisions checked
+  rather than skipped. A register that is present and cannot be read —
+  a directory, a device, a pipe at the name, or a size past 4 MiB — reports
+  `QFAI-SPACK-103` instead of passing as a pack with no questions in it.
 
 - **The question-form rule is put in front of the agent on every turn** (#1610).
   A `UserPromptSubmit` hook emits it as context, naming the rule master and the
@@ -208,8 +210,6 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   options and a recommendation for intent drift, the single correct repair for
   defect drift, which the protocol records with `Approved option: -`. Grilling
   decides what the change should be; the protocol decides whether it happens.
-
-### Added
 
 - **`/qfai-prototyping` states which questions it grills and which it builds**
   (#1602). The loop exists for questions that need something to react to — how
@@ -293,272 +293,6 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   report sat on the default branch with `git status` clean. The report is
   untracked and deleted, and the lane catches the next one.
 
-### Fixed
-
-- **The autopilot tailoring contract now covers every shipped skill** (#1642).
-  It was held against a hardcoded list of seven, so the two grilling skills were
-  outside it and nothing reported that they carried no tailoring rule at all.
-  The list is read off the tree, the way the Reviewer-Gate validator picks its
-  own subjects, and both skills carry the rule.
-
-  The rule also now sanctions what the validator already allowed: `hard-required`
-  takes the undefaultable inputs a skill itself consumes, declared per skill and
-  checked against that declaration. The bucket is what a run cannot proceed
-  without, and no prototype can enumerate that for a skill it does not know — so
-  the sentence forbade `qfai-configure`'s `testFileGlobs` proposal and the
-  grilling subject a session cannot start without.
-
-- **A grilling loop runs before a spec phase freezes its first draft** (#1598).
-  The phase's drafting agent is interviewed by a griller; the orchestrator holds
-  the loop, routes it, and does not answer its questions. It runs before Phase 0,
-  Phase 1, Phase 2 and Phase 3, and each escalated decision reaches the user as a
-  structured question.
-
-  This is not the Reviewer Gate and does not replace it. The gate reads a drafted
-  artifact and answers whether it is right; a contradiction, an unconsidered case
-  and a choice that does not fit the existing code all enter before the draft, so
-  by the time a reviewer reads the artifact they are premises, and an artifact
-  coherently built on a premise nobody chose returns `PASS`.
-
-  The first draft is the freeze point, because once an artifact exists a decision
-  argued against it is a change to something written rather than a choice among
-  options.
-
-  The trigger is this invocation's first write in the phase, not whether the
-  artifact already exists. Most runs are `UPDATE:APPEND` or `UPDATE:MODIFY`
-  against artifacts that do, so a rule keyed on existence would never fire on
-  the ordinary path. Phase 2c is on the list for the same reason: it makes
-  contract choices after Phase 0 has written.
-
-  One session per phase, over every routed drafting role's decisions. Grilling
-  one author leaves the others free to settle their own before their own writes.
-
-  Every decision the session settled that authoritative evidence did not answer
-  goes to the user before any author writes — not only the ones the round budget
-  left open. A decision the author accepted from the griller is not open, so the
-  convergence rules do not escalate it, and an agent-to-agent decision nobody
-  adjudicated makes the artifact one no reviewer can clear. Escalating the
-  residue alone would hand the authors a settled set whose agreed half fails
-  review.
-
-  The phase records a run-or-skip line and, per settled decision, a work-order
-  row naming who adjudicated it. A phase whose subject is settled has nothing to
-  grill, and that skip is indistinguishable from an omitted session unless it is
-  written down; the two adjudications point opposite ways, and one marker for
-  both told the reviewer nothing it could act on.
-
-  A no-question run reaches nobody, so the decision is opened as a question, the
-  phase's row reads `escalated`, and **the phase does not write** — its work
-  order stays `PENDING`, which blocks completion and leaves the stage resumable.
-  That is the gate, because a spec pack's open-question file is not one: it
-  carries open questions as a matter of course, so nothing there stops a run.
-
-  Where the structured question tool is not callable, the escalation takes the
-  rule's fallback rather than being skipped.
-
-  A fact only the user holds goes to the user rather than to an author. No
-  author can answer an unpublished constraint, and the convergence rules
-  escalate decisions rather than facts, so without this it sat on the frontier
-  until the budget ended and took every decision waiting on it along.
-
-  The phase row carries when its session ended and when the phase first wrote,
-  the first recorded before that write — a row holding only the outcome reads the
-  same whether the session ran before the phase, after it, or not at all. `run`
-  means zero escalations, and each phase's settled count equals the number of
-  decision rows carrying that phase, so a count has something behind it.
-
-  The record's chronology is per state: `run` carries both times, `skipped` has
-  no session to have ended, and an `escalated` phase does not write. Requiring
-  both of every state would make two legitimate states unrecordable, and a state
-  nobody can record honestly is one an agent records dishonestly.
-
-  Phase 2c takes one row per expansion — `2c.1` upward — since its scope is
-  recomputed after every contract write, and a single row records the first
-  checkpoint while leaving every later one indistinguishable from one that never
-  happened.
-
-  The session covers every routed drafting role, `solution-architect` included,
-  and the user's answer is put back into the tree: a decision whose prerequisite
-  was open could not enter either agent round, so the rounds repeat until no node
-  is open. The constitution counts as authoritative evidence beside the specs and
-  contracts, since both this skill and the primitive rank it above them.
-
-  A throwaway built to answer a question the frozen inputs cannot is not the
-  phase writing. The freeze names the files it covers — the policy layer, the
-  spec packs and the contracts — so a UI-bearing phase can build the thing its
-  own method asks for.
-
-  Agreement between agents closes a node without settling the decision. Those are
-  one state read for two purposes: _open_ is about the round — is there anything
-  left to ask — and _settled_ is about the decision — has anyone with the standing
-  to take it done so. Conflating them is how an agreed answer reaches a draft as
-  though it were chosen.
-
-  A decision row names its phase, as the title's first field, because the shared
-  work-order schema has no column for it. The disposition rewrites keep those
-  fields: a reopened decision the user later resolves would otherwise drop the
-  key the gate selects on, and the rows a dispute produced are the ones it most
-  needs to find. Without that key a row cannot be
-  assigned to a phase, so an omitted row passes by being counted against another.
-
-  A decision is persisted by the drafting agent that owns its artifact, not by
-  the orchestrator: `07_Decisions.md` and `09_delta.md` are primary artifacts,
-  and on a CREATE run the file may not exist, so writing it is authoring.
-
-  Every distinct position reaches the user with whose it is. Phase 2 routes three
-  authors, so merging two answers before the user sees them hands them a choice
-  the full set was never asked to adjudicate.
-
-  Phase 2c gets a checkpoint per expansion rather than one per phase, because its
-  scope is recomputed after every contract write.
-
-  The gate asks only about the phases the loop covers. Phase 2b and Phase 4
-  produce no design decision, so a row for them would either reject valid
-  evidence or claim a session that was never owed. The canonical evidence
-  template carries the section, so a template-derived run has the heading the
-  gate reads.
-
-  The fixed phase order is unchanged: the loop is a step inside a phase, not one
-  of its own.
-
-### Changed
-
-- **A later `qfai init` cites a rule master it is shipping for the first time**
-  (#1643). Create-only left an existing `AGENTS.md`, `CLAUDE.md` or
-  `.github/copilot-instructions.md` alone, so a rule the same run wrote into
-  `.agents/rules/` was cited by nothing. A nominal re-init may now add a bullet
-  to those three files — one line per master the run's own copy report says it
-  wrote, lifted from the shipped template, and nothing else in the file changes.
-
-  The write refuses what it cannot make safely and says which file and why: a
-  symbolic link at the target or at any directory below the project root, a hard
-  link with more than one name, bytes that are not valid UTF-8, and a file that
-  changed while the run was working. A file that opens the managed section and
-  never closes it is reported rather than skipped in silence. A file with no
-  markers that cites rules anyway keeps the list it has, and gains only the
-  masters it does not name.
-
-- **`/qfai-discussion` runs its interview as a grilling session** (#1597). Step
-  one of its process read "Run the core interview" and named no method, so an
-  agent that asked nothing had followed it. It now runs the session through the
-  `qfai-grilling` skill, over every topic in the coverage checklist.
-
-  The policy moves with it. A design choice is not an equivalent-option pick,
-  and a skill that treats it as one records a design nobody agreed to as
-  decided, so the decisions the interview raises are `ask-user` and the
-  `auto-decide` entry says what equivalent means.
-
-  Authoring waits for the session to end. A pack drafted mid-session records a
-  design that was still being decided, and the draft is what the rest of the run
-  then defends. The completion matrix makes that blocking, because a pack
-  authored mid-session is indistinguishable from one authored after — same
-  fifteen files, same coverage, same register — and the missing thing is that
-  anyone agreed.
-
-  The guard covers the pack — the fifteen files and the UI sidecars — rather
-  than every write. Three writes are not that authoring and happen when the
-  process reaches them: the research summary the session reads, the register
-  entry or labelled assumption the session's own ending produces, and a
-  throwaway artifact built to make a question answerable where talking cannot.
-
-  A session has four endings and three of them let authoring start: `confirmed`
-  (no node open, the user confirming), `user-closed` (`proceed` or `done` —
-  lookups finished, each decision still open becoming a labelled assumption) and
-  `no-question` (`--auto` — each remaining decision registered open, and the open
-  count then blocks). `stopped` does not: the rule says a stop ends the session
-  and no further work follows it, so a pack drafted after one is the run doing
-  what the user told it not to.
-
-  The stage evidence carries a `## Grilling Session` row, which is what the
-  Reviewer Gate reads the condition off. A skipped session and a completed one
-  present the same pack, so without the row a reviewer would have to block every
-  run or accept a claim it cannot check. The row records when the session ended
-  **and** when authoring began, the first written before the pack is — a row
-  holding only the final state reads the same whether the session ran first, ran
-  after, or never ran.
-
-  No ending authorizes authoring while a `hard-required` input the invocation
-  consumes is missing. Registering an open question does not make an input
-  defaultable: the value is what the run needs, and a question about it is not
-  one.
-
-  The zero-open-question condition moved to the conditions every pack is held to.
-  A run is `--auto` or not independently of whether it has a surface, so listed
-  only under the UI-bearing shape it let a non-UI `--auto` pack complete with its
-  decisions still open.
-
-  The research protocol runs before the interview rather than after it. A
-  decision settled before the research bearing on it is settled against evidence
-  nobody had.
-
-  For a UI-bearing target the design direction is settled inside that session
-  too, and the later step records it rather than asking it. Asked where it used
-  to be, the visual choice came after five steps had already authored the pack it
-  governs.
-
-  The step reads the primitive's body rather than naming it: a host that loads
-  skill bodies lazily hands the agent the reference and not the procedure, and an
-  agent with the reference alone improvises the interview — which is the
-  methodless interview this change replaces, wearing its name.
-
-- **A reviewer that recommended a decision the agents adopted cannot clear it**
-  (#1600). A grilling session puts a recommended answer beside each question,
-  and who settled the decision now decides what follows. Where the user chose
-  from the recommendation, the decision is theirs and the griller may review the
-  artifact. Where an agent adopted it with nobody adjudicating, the artifact
-  carries something nobody decided: the reviewer returns `REVISE` and names the
-  decision, which is reopened and put to the user or recorded open where no
-  question can be asked.
-
-  The reason is correlation rather than memory. A reset context cannot defer to
-  what it does not remember, but a fresh instance of the same agent, on the same
-  model, over the same evidence, re-derives the preference that produced the
-  recommendation.
-
-  Two fields carry it. A reviewer response declares `Recommended and
-unadjudicated`, read off a Work Orders Summary row the session writes rather
-  than off recollection, and scoped to the artifact as it now stands. A stage
-  that ran no such session writes one row reading `grilling: none`, and a summary
-  carrying neither that nor a decision row is incomplete — silence is not the
-  answer, because an omitted row looks exactly like nothing to record. A `Review series` — the reviewed
-  artifact, the role, and an ordinal that rises each time the review is handed
-  to a replacement, capped at two series per artifact per role so a fresh
-  reviewer cannot reset the budget for ever — carries the round budget across a host that answers round
-  2 with a fresh sub-agent, which a count per agent instance restarted every
-  round, and keeps a replacement from inheriting the round its predecessor
-  spent.
-
-  A non-`none` answer is not settled by a handoff. Handing the review to
-  another reviewer answers an authorship conflict; against an unadjudicated
-  recommendation it launders the decision, because the replacement attests
-  `none` truthfully while the artifact still carries what nobody chose.
-
-- **A grilling session's outcome has a named home** (#1604). A settled
-  discussion decision goes to `99_delta.md`; one the session could not settle
-  goes to the open-question register. Answering a question later moves its
-  register row as well as writing the log, because readiness reads the register
-  and an answer recorded only in the log left the pack blocked on a settled
-  question. A settled spec decision needs its `DL-*` entry in the delta as well
-  as `07_Decisions.md`, because `npx qfai report` reads the Decision Log alone.
-
-  Each destination is the artifact that holds that outcome: a rejected visual
-  direction to the delta section the template requires of a UI-bearing pack,
-  every disposition change to the append-only log including the `created` event
-  that opens a question, and rejection and reopening to the dispositions the
-  register already carries.
-
-  A closure the user asked for is not an open question. Where `proceed` or
-  `done` ends the asking, what is still open becomes a labelled assumption and
-  no register row, because readiness requires the open count to reach zero and
-  registering it would block the pack on the closure the user asked for.
-  `--auto` keeps the register row: nobody saw the question there.
-
-  A spec pack's open-question file is a record and not a gate. It carries open
-  questions as a matter of course, so a decision the user must settle goes to
-  the user during the stage rather than being written down and left.
-
-### Added
-
 - **Grilling reminders at the three moments a decision gets made quietly**
   (#1606). Before a design artifact is written, before work is delegated, and
   before a plan is fixed, a hook puts `.agents/rules/grilling.md` in front of
@@ -583,220 +317,6 @@ unadjudicated`, read off a Work Orders Summary row the session writes rather
   and ship to adopters with the settings file. A project that already has a
   `.claude/settings.json` receives them on the next `qfai init`, through the
   same per-group merge that carries the earlier reminders.
-
-### Changed
-
-- **Each reminder group carries a marker of its own** (#1606). The merge that
-  brings hooks into a project's existing settings tells one group from another
-  by the status messages its entries carry, so groups sharing a message are one
-  group to it — and a project holding either would be credited with both and
-  never receive the other. The run report now names the reminder hooks as a
-  set, rather than the one reminder that used to be the only one.
-
-- **Every question to the user arrives in the shape its answer has** (#1611). Article X
-  said the tool must be used where available and never said whether any question
-  was outside that, so a light one could read as outside it — and the light one
-  is where an agent goes when it would rather not ask. None is exempt now.
-
-  Availability is judged for the question in front of the agent, not from what
-  the host supports in general: a tool a mode withholds, and one that cannot
-  carry the answer's shape, both take the fallback. The fallback keeps that
-  shape — numbered choices where a listable set of candidates exists, a plain request
-  for the value where none does.
-
-### Removed
-
-- **`.qfai/report/validate.log` is no longer tracked** (#1582). Every local
-  `qfai validate` rewrites it, so `git add -A` carried it into whatever commit
-  was open — 113 of them, the six most recent about spec prose, CI checkout
-  behaviour and CLI performance.
-
-  The directory already declared it ignored; the file had been force-added past
-  that, and a tracked path bypasses ignore rules, so the disagreement was
-  invisible to `git check-ignore`.
-
-  It is live local state rather than a leftover: `doctor --clean-run-logs`
-  reads its `run_log:` and `run_id:` pointers to keep a referenced run
-  directory from being pruned. That is the argument for untracking rather than
-  deleting — one machine's record of which runs it kept means nothing in
-  another clone. An absent file is already handled as "nothing pinned".
-
-  A pull removes the local copy; the next validate run writes a fresh one.
-
-### Fixed
-
-- **The FIFO refusal test runs its assertion against a fixture that exists**
-  (#1580). It decided whether the platform could host a FIFO by reading
-  `mkfifo`'s exit status. Git Bash ships `mkfifo`, so on Windows it exits `0`
-  and creates the FIFO inside the MSYS layer, where the running process — using
-  Win32 — cannot see it at all. The row therefore did not skip: `init` found no
-  collision, wrote the template, and the assertion compared a real file against
-  `isFIFO()`.
-
-  It now checks the fixture instead of the tool, so it asserts where a FIFO was
-  planted and skips where none was. The local package suite goes green, which
-  it had not been on this platform.
-
-### Removed
-
-- **The archetype tie-breaker, which nothing called** (#1583).
-  `core/skill/archetypeTieBreaker.ts` resolved two archetypes sharing an
-  aggregate taste-interview score. Its only importer was its own test, it was
-  not on the export surface, and the input it needed — a score from a taste
-  interview — is not produced anywhere since rating was removed.
-
-  The alphabetical tie-break it implemented is stated in the brand catalog's
-  Selection Guide, which is what an agent reads, and a guard already pins that
-  sentence.
-
-### Fixed
-
-- **A ledger `Selector` must now name a test its own `Test file` contains**
-  (#1586). `TDDLIST_SELECTOR_UNRESOLVED` accepted a selector whose last
-  identifier-shaped word appeared anywhere in the file. The last word of
-  `renders the header` is `header`, which is in almost any test file, so a row
-  could claim a completed test the file did not hold and report nothing.
-
-  Resolution is now containment of the selector's own text, which is what
-  `TDDLIST_STALE_STATUS` already required. Across this repository's own ledgers
-  the rule goes from 50 findings to 209 over 12 files, every one a `warning`:
-  the error count is unchanged, so `--fail-on error` and the backlog ratchet are
-  unaffected.
-
-  A selector no runner could match is the shape the strict check is for. Run
-  each of `spec-0002`'s previously accepted selectors through `vitest -t`
-  against its own test file and four of the six select zero tests.
-
-  Strictness makes one reading in `selector-granularity.md` reachable for the
-  first time: a bare cell holding commas was a comma-separated list before the
-  array form existed, and read as a single name such a row can never resolve
-  again. Those cells now get one bounded second reading, adopted only when the
-  file contains every part. A name that legitimately holds a comma is matched
-  whole first, and the array form — a one-element array included — is taken
-  verbatim and never re-split.
-
-- **The remediation for an unreplaced `DESIGN.md` names a step that exists.**
-  `QFAI-DCON-034` told an operator to run `/qfai-discussion`, "which emits the
-  draft". That stage stopped emitting it when authoring moved to `/qfai-sdd`
-  Phase 0, so the instruction could not be followed. It now names the stage
-  that writes the file, and says Phase 0 refuses to freeze a sample.
-
-  `QFAI-DCON-030`'s remediation and three source comments carried the same
-  stale attribution.
-
-  A sweep holds it: no source file may name `/qfai-discussion` on a line that
-  also names `DESIGN.md` or brand intent. Naming the discussion pack as where
-  the direction was recorded still passes — recording is not authoring.
-
-- **The sanctioned ledger backfill can now satisfy the gate that reads it**
-  (#1574). `execution-ledger.md` sanctions backfilling a `done` row whose
-  original run is gone: record the loss in the evidence file and point the cell
-  at that entry. `QFAI-TDDLIST-008` then judged that entry against an
-  unconditional set of 22 fields, three of which are seals recomputed from
-  artifacts on disk.
-
-  A gone run produced no review pack, so there was no seal to record and none
-  that could honestly be written. The sanctioned shape and the gate could not
-  both be satisfied, and the backfill was unreachable.
-
-  An entry now declares the loss with two fields — `Run output retained: no`,
-  read as an exact value, and `Backfill note` saying what was run. That drops
-  the reviewer-pack and seal fields from the required set and nothing else:
-  identity, the RED failure mode, the round block, and the verify and checkpoint
-  commands with their results are all reproducible by re-running the test.
-
-  The exemption is reported rather than applied quietly. `done` is read as
-  reviewed, so a row exempt from the verdicts emits
-  `QFAI-TDDLIST-019` at `warning` and is visible in the same output
-  an operator already reads. A project that will carry no row whose review it cannot verify treats
-  warnings as failures and gets the unconditional set back.
-
-- **The review payload schema stops citing a field it has never had**
-  (#1560). It said a payload that reviewed nothing is rejected "no matter what
-  its axes claim". The payload carries eleven required fields and none of them
-  is a score, so the sentence named something that does not exist.
-
-  A guard pins every statement of the stop condition to the three finding
-  arrays: each named document is checked for all three, and no prototyping
-  document may write a value off the axis ordinal in code-span form. The axes
-  themselves stay nameable — the reviewer still scores four of them and the
-  transcription row still records them.
-
-- **The specs decide convergence the way the loop does** (#1565). The prototype
-  loop stops when the latest iteration has `blockingFindings`,
-  `layoutAntiPatternsDetected` and `designMdViolations` all empty, and records
-  `stopReason: "converged"`. `spec-0012` and two CLI contracts stated it as all
-  four UX axes at `exceptional` and named `stopReason: "axes-exceptional"` —
-  a value no run has ever written.
-
-  That one bites a consumer: `--check-convergence` was specified to exit 0 on
-  it, so anyone building from the contract built for a state the tool cannot
-  produce. The blocked-cause summary was specified with `axes-below-exceptional`
-  as its third category, where the command prints `blockingFindings`.
-
-  The four axes are still scored by the reviewer and still reported. They
-  stopped deciding the stop, and the rows that made them gate are gone while
-  the rows describing them as reported remain.
-
-  A guard reads `STOP_REASONS` out of the source and fails on any spec or CLI
-  contract naming a value that enum does not carry. It found two more than a
-  read-through had: the DESIGN.md hash-mismatch path was given a fifth
-  `stopReason` nothing declares, and the max-iterations terminator was still
-  stated at the retired 15-cycle budget's `index === 14`.
-
-### Changed
-
-- **The user picks the brand direction, at the one stage that asks** (#1473).
-  `/qfai-discussion` now puts candidate themes to the user and records the
-  choice in `01_Context.md#Design Direction`: the adopted theme, what departs
-  from it, and what stays ordinary. `/qfai-sdd` Phase 0 authors `DESIGN.md`
-  from that record, and a UI-bearing pack without one stops rather than
-  picking a brand.
-
-  An assistant used to choose one of eight archetypes from its own reading of
-  the product, and the user first met the result as twelve hex values in a
-  file. Nothing downstream asked, so the decision with the largest effect on
-  how the product looks was the one nobody was consulted about.
-
-  The candidates are named themes rather than adjectives, because the user is
-  choosing rather than specifying, and they lean conventional: novelty in the
-  shape of a screen costs the user what they already know and buys nothing a
-  brand can hold. The brand lives on the accent — the primary hue and the
-  typeface pairing.
-
-  Planner-first is unchanged for what it was about. The screen explorations
-  are still carried unranked; the prototype loop is what ranks them. A
-  cli-only pack is asked for no direction, since nothing downstream reads a
-  theme for a surface that renders no tokens. An unattended run records the
-  most conventional candidate as an assumption and opens it as a question
-  rather than blocking.
-
-### Fixed
-
-- **The layout anti-pattern vocabulary is one list again** (#1517). The specs
-  named it twice and the registry shipped a third set. One identifier out of
-  eight was the same in all three, and `spec-0012` required the capture pass to
-  emit two tokens its own whitelist rejected. It also named `QFAI-PROT-025` for
-  an unregistered token; nothing emits that code, and the validator has always
-  reported `QFAI-PROT-002`.
-
-  Every spec row now names
-  `packages/qfai/assets/validators/layoutAntiPatterns.json` instead of copying
-  its contents, so adding or retiring an entry no longer needs eleven rows
-  edited. The CLI contract stops reserving two identifiers against a detection
-  nobody has written.
-
-  A sweep holds it: no spec or CLI contract may cite an identifier the registry
-  does not declare, unless the same line says that is what it is. It found
-  thirteen references that a read-through had missed.
-
-  The seven navigation and state defects the old lists named — an orphan page,
-  a dead-end flow, a hidden state, a broken back link, unlabelled navigation, a
-  missing empty state, a missing error state — are detected by nothing. That is
-  now an open question on the pack with options and a recommendation, rather
-  than a shipped promise.
-
-### Added
 
 - **`DESIGN.md` says where its numbers came from** (#1474). `brand.theme`
   names the published theme the token values were taken from, in a form a
@@ -854,244 +374,6 @@ unadjudicated`, read off a Work Orders Summary row the session writes rather
   the review happens in a later step, and they are computed rather than
   recorded by the reviewer because a hand-written number is the one nobody can
   reproduce.
-
-### Fixed
-
-- **Exit 64 is explained by what the loop reads** (#1560). `isConverged` stops
-  the prototype loop when `designMdViolations`, `layoutAntiPatternsDetected`
-  and `blockingFindings` are all empty. Six places still described the same
-  exit as all four UX axes at `exceptional` — the goal, the stop-condition
-  table, the loop reference, the generator prompt and the `--help` text.
-
-  The four axes are still scored and still reported. They stopped deciding the
-  stop, so an agent told to keep iterating until they read `exceptional` would
-  work past a run that had already converged, and an operator reading the help
-  would look for a cause nothing checked.
-
-  A sweep holds it: no paragraph in the prototyping skill may state the stop
-  and a score from the axis ordinal together.
-
-### Changed
-
-- **Root `DESIGN.md` is authored where it is frozen** (#1472). `/qfai-sdd`
-  Phase 0 now writes the file if it is missing, from the design direction the
-  discussion pack recorded; `/qfai-discussion` interviews for that direction
-  and records it, and writes nothing outside its own pack.
-
-  Phase 0 used to stop and send the user back to `/qfai-discussion` for a file
-  it then froze, so the brand was decided one skill before the gate that
-  checks it. The interview questions stay in
-  `qfai-discussion/references/design-dna-intake.md`; the mapping from answer
-  to field moves to the new `qfai-sdd/references/design-md-authoring.md`,
-  beside the archetype catalog.
-
-  Discussion's completion and review gates now check the two reference
-  registries in `04_Sources.md` — the input Phase 0 reads — instead of a file
-  that does not exist yet. A cli-only pack is unaffected: it records no brand
-  direction and gets no `DESIGN.md`.
-
-- **The test runner stops asking for more forks than the machine has** (#1528).
-  `DECLARED_START` is ten, and on a four-core runner that asked for ten forks
-  where four fit. A fifth fork does not run — it waits for a core — and the
-  waiting is charged to the fork, so the suite reported as though it were
-  ten-way parallel while running four-way.
-
-  Whole package suite, four cores, back to back:
-
-  | forks | wall    | collect (summed) | tests (summed) |
-  | ----- | ------- | ---------------- | -------------- |
-  | 10    | 307.4 s | 347.8 s          | 1999.2 s       |
-  | 4     | 253.0 s | 109.6 s          | 703.6 s        |
-
-  Summed test time falls to a third while the same 11 338 cases run with the
-  same outcomes. On the wall clock ten is 21.5% slower, outside the ten percent
-  the adoption rule allows — where the fourteen-core comparison that adopted ten
-  put it at 3.48%, inside it.
-
-  The declaration is unchanged and still ten. What the runner is handed is
-  `Math.min(DECLARED_START, availableParallelism())`, so a machine with ten
-  cores or more is unaffected. `QFAI_TEST_MAX_WORKERS` stays uncapped: a
-  comparison that could not oversubscribe could not measure what
-  oversubscribing costs. `DR-0017-0010` records the decision.
-
-- **The prototyping envelope bans runtime dependencies, not markup** (#1479).
-  `generator-prompt.md` opened its envelope constraints with "No component
-  library beyond Tailwind + Lucide", which also refused transposing a block
-  from a component catalogue — an operation that installs nothing.
-
-  The real constraint is the line beside it: one self-contained file loaded
-  from a CDN, which has no package manager to run an install with. The clause
-  now says that, and names the one authoring path the gate genuinely cannot
-  see — CSS behind a `<link>`, whose href is never fetched, so a literal
-  inside it is drift nobody reports.
-
-  It also states the permission plainly: transposing a catalogue block and
-  re-binding its palette classes to `DESIGN.md` tokens is the expected way to
-  build a screen. `designMdViolations.ts` judges the values a document states
-  and has no way to read where the markup came from, so a transposed block
-  passes once `bg-blue-500` becomes `bg-primary`. Both halves of the
-  scanner / prompt pair now say so, and
-  `designMdViolationsTransposition.test.ts` runs a catalogue block through the
-  gate in both bindings.
-
-### Fixed
-
-- **Prototype captures are checked for accessibility** (#1485). The
-  accessibility phase — image alternatives, document language, skip link,
-  heading hierarchy — was reachable only from `validate`, and the loop writes
-  exactly the artifact it wants: one capture per screen per cycle. Nothing
-  read them with it, so every screen went unchecked.
-
-  It now runs over the accepted iteration's captures beside the token re-scan,
-  and reports what it finds, naming the screen. Reported, never blocking:
-  replacing "any layout shape stops the loop" with "any accessibility finding
-  stops the loop" would repeat the mistake with better sources. The reviewer
-  reads them and decides what belongs in `blockingFindings`.
-
-- **The shipped-document version guard read every triple of numbers as a
-  version** (#1551). `WCAG 3.3.2` failed the same check as `qfai 1.11.1`, so an
-  init-template document could not cite an accessibility criterion by its
-  number — the one form of it a reader can look up.
-
-  A version is now a number something names as one: a leading `v`, or a tool
-  or package name in front of it. A bare triple is left alone, which is what a
-  published standard's clause number is. The guard still rejects a real pin,
-  and a second case asserts both columns so the narrowing cannot be widened
-  back by accident.
-
-  The prototype review criterion on labels now names `WCAG 3.3.2` where it
-  previously pointed at a rule file that carries the number, so the reader of
-  the criterion has the citation in front of them.
-
-- **Two codes shared the `lap-` prefix with a registry that did not declare
-  them** (#1499). `layoutAntiPatternsDetected[]` has one vocabulary and two
-  writers: the reviewer writes the codes it judges, and `iterate --capture`
-  computes `lap-009` (two declared screens whose captures are byte-identical)
-  and `lap-010` (a declared route the capture could not reach).
-
-  Only the first writer's codes were registered. The specification, the CLI
-  contract and the command's own warning all say the other two are counted in
-  that array, so a reviewer recording one — as the warning tells it to —
-  produced `QFAI-PROT-002` for a code the tool itself printed.
-
-  Both are now declared in `layoutAntiPatterns.json`, each naming the screen
-  contract as its authority, which is the same authority
-  `lap-007-state-not-represented` names. A row reads the emitted codes out of
-  the capture pass and fails when one is unregistered, so a third code cannot
-  be added on one side alone.
-
-- **The handoff says what to install, not to rebuild** (#1480). It handed an
-  implementer a screenshot and a paragraph and said "reimplement with
-  project-native patterns", which is an instruction to rebuild by hand at the
-  exact point a component could be installed.
-
-  `prototype-handoff.yaml` now carries `procurement`: what realises each
-  screen region, and for an authored region, what was looked for and did not
-  serve. The reviewer checks the implementation against it instead of judging
-  a resemblance.
-
-  It also settles what the prototype never showed. Responsive behaviour, dark
-  mode, focus states and the detail of an empty state come from the adopted
-  design system's default, which answers them consistently with each other.
-  `implementationNotes` keeps what is genuinely prose.
-
-- **Every layout anti-pattern names what makes it a defect** (#1484). An
-  entry now carries a `source`, and the loader drops one that does not: a
-  published heuristic, an accessibility criterion, or the contract the screen
-  is built to — never this project deciding it dislikes something. A rule with
-  no authority behind it cannot be argued with, only obeyed, which is how the
-  registry came to hold five conventional layouts.
-
-  `lap-006-overcrowded-sidebar` is retired with them. It reported a sidebar
-  carrying ten or more links, and no published source states a navigation
-  count as a defect; the threshold was this repository's own.
-
-  Definitions are pinned rather than researched per run. `certify` re-scans
-  the captures, so a check whose answer depends on what a search returned that
-  morning cannot agree with itself.
-
-- **A concurrency guard that passed because the filesystem undid what it
-  staged** (#1477). `provenanceHostileTree` has a row asserting that a holder
-  reclaimed mid-section leaves its successor's lock alone. It failed about once
-  in thirty-five runs on a loaded machine, and passed the rest — for the wrong
-  reason.
-
-  The fixture removed the lock and published a different directory at the same
-  name. Every identity check in the primitive reads `dev`/`ino`, and a
-  directory inode freed one syscall earlier is handed straight back to the next
-  `mkdir`: measured at 25 reuses in 25 runs. At the filesystem level the
-  successor was the same object, so the release took its _this is mine_ branch
-  and the row exercised the opposite of what it is named for.
-
-  On the rare run where the inode was not reused, the code behaved correctly —
-  it reported the dispossession, retried, and reclaimed a planted lock nobody
-  was renewing — and the assertions, written for the other branch, failed.
-
-  The fixture now stages the successor before removing the lock, so the freed
-  inode cannot be handed to it, and asserts the two differ. It renews the
-  successor's marker for the duration, because a lock with no holder behind it
-  is reclaimable by design. The row's outcome is now the honest one: the
-  dispossessed holder reports the loss instead of writing, and the successor's
-  lock is untouched.
-
-### Fixed
-
-- **A declared contrast floor is now the one a prototype is measured against**
-  (#1481). `accessibility.contrast_ratio_min` is a required key in `DESIGN.md`,
-  and nothing read it as a threshold. It was parsed, checked for finiteness and
-  hashed into the lock, and that was all.
-
-  The one check that computed contrast, `QFAI-MOCK-008`, compared against a
-  hard-coded AA constant and read HTML blocks inside documents rather than
-  iteration captures. So a project declaring a stricter ratio than AA was
-  measured against AA, and a project declaring AA had no capture measured at
-  all — while every other required token in `DESIGN.md` was enforced against the
-  captures.
-
-  `findDesignMdViolations` gains a sixth clause, on the same captures as the
-  other five, with a new violation kind `contrast`. A pair is read from a
-  declaration block that states both a text colour and a background, in a rule
-  body or an inline attribute, with `:root` tokens resolved. Where a pack
-  declares no floor, WCAG AA stands in.
-
-  A pair is judged only when both sides resolve to a colour the ratio
-  computation accepts, so a named colour, `hsl()`, a value carrying alpha or a
-  shorthand with more than a colour in it is skipped rather than guessed at.
-
-- **Two spec packs mandated a prose-critique floor the code does not have**
-  (#1503). QFAI-PROT-002 applies a cap and selects the unit from the text: a
-  critique carrying CJK is measured in CJK characters, anything else in
-  whitespace-separated words, and neither unit has a lower bound.
-
-  `spec-0012` and `spec-0004` stated the band
-  `200..500 words OR 600..2500 characters` as a requirement, in a requirement,
-  a user story, an acceptance criterion, two business rules, an example and two
-  test cases. That is wrong twice over. The lower bound was removed, and the OR
-  was never how the unit is chosen — an English critique carries no CJK
-  characters, so a rule passing on either unit would pass every English text
-  however long.
-
-  `DR-0277` records the cap and the selected unit, and supersedes
-  `DR-0001-0003`, whose rejected alternative was argued against on the strength
-  of the floor. The boundary rows now match the cases that run: only the upper
-  edge of each unit rejects.
-
-- **Thirty-two files told an agent which language to answer in** (#1500).
-  Every document under `.instruction/` opened with a block fixing output to one
-  language, which the constitution's Absolute Rule — answer in the user's
-  working language — already decides.
-
-  This is the same block, in the directory it was copied out of. It reached
-  `constitution/agent-selection.md` that way, overrode the Absolute Rule for
-  every operator working in another language, and was removed there. The guard
-  written with that removal swept only what ships, so the originals stayed, and
-  a comment naming the removal cannot stop a re-port from a directory nobody
-  sweeps.
-
-  The blocks are gone and `outputLanguageSingleSource.test.ts` now sweeps
-  `.instruction/` with the same matcher that guards the shipped tree.
-
-### Added
 
 - **Review criteria that walk every declared task** (#1489). The prototype loop
   used to rate four axes. Rating went because a number painted on a judgement
@@ -1287,7 +569,493 @@ unadjudicated`, read off a Work Orders Summary row the session writes rather
   a vocabulary nothing defined, and a checklist nothing loaded on its own. Both
   are replaced by a reference to the master.
 
+### Changed
+
+- **A later `qfai init` cites a rule master it is shipping for the first time**
+  (#1643). Create-only left an existing `AGENTS.md`, `CLAUDE.md` or
+  `.github/copilot-instructions.md` alone, so a rule the same run wrote into
+  `.agents/rules/` was cited by nothing. A nominal re-init may now add a bullet
+  to those three files — one line per master the run's own copy report says it
+  wrote, lifted from the shipped template, and nothing else in the file changes.
+
+  The write refuses what it cannot make safely and says which file and why: a
+  symbolic link at the target or at any directory below the project root, a hard
+  link with more than one name, bytes that are not valid UTF-8, and a file that
+  changed while the run was working. A file that opens the managed section and
+  never closes it is reported rather than skipped in silence. A file with no
+  markers that cites rules anyway keeps the list it has, and gains only the
+  masters it does not name.
+
+- **`/qfai-discussion` runs its interview as a grilling session** (#1597). Step
+  one of its process read "Run the core interview" and named no method, so an
+  agent that asked nothing had followed it. It now runs the session through the
+  `qfai-grilling` skill, over every topic in the coverage checklist.
+
+  The policy moves with it. A design choice is not an equivalent-option pick,
+  and a skill that treats it as one records a design nobody agreed to as
+  decided, so the decisions the interview raises are `ask-user` and the
+  `auto-decide` entry says what equivalent means.
+
+  Authoring waits for the session to end. A pack drafted mid-session records a
+  design that was still being decided, and the draft is what the rest of the run
+  then defends. The completion matrix makes that blocking, because a pack
+  authored mid-session is indistinguishable from one authored after — same
+  fifteen files, same coverage, same register — and the missing thing is that
+  anyone agreed.
+
+  The guard covers the pack — the fifteen files and the UI sidecars — rather
+  than every write. Three writes are not that authoring and happen when the
+  process reaches them: the research summary the session reads, the register
+  entry or labelled assumption the session's own ending produces, and a
+  throwaway artifact built to make a question answerable where talking cannot.
+
+  A session has four endings and three of them let authoring start: `confirmed`
+  (no node open, the user confirming), `user-closed` (`proceed` or `done` —
+  lookups finished, each decision still open becoming a labelled assumption) and
+  `no-question` (`--auto` — each remaining decision registered open, and the open
+  count then blocks). `stopped` does not: the rule says a stop ends the session
+  and no further work follows it, so a pack drafted after one is the run doing
+  what the user told it not to.
+
+  The stage evidence carries a `## Grilling Session` row, which is what the
+  Reviewer Gate reads the condition off. A skipped session and a completed one
+  present the same pack, so without the row a reviewer would have to block every
+  run or accept a claim it cannot check. The row records when the session ended
+  **and** when authoring began, the first written before the pack is — a row
+  holding only the final state reads the same whether the session ran first, ran
+  after, or never ran.
+
+  No ending authorizes authoring while a `hard-required` input the invocation
+  consumes is missing. Registering an open question does not make an input
+  defaultable: the value is what the run needs, and a question about it is not
+  one.
+
+  The zero-open-question condition moved to the conditions every pack is held to.
+  A run is `--auto` or not independently of whether it has a surface, so listed
+  only under the UI-bearing shape it let a non-UI `--auto` pack complete with its
+  decisions still open.
+
+  The research protocol runs before the interview rather than after it. A
+  decision settled before the research bearing on it is settled against evidence
+  nobody had.
+
+  For a UI-bearing target the design direction is settled inside that session
+  too, and the later step records it rather than asking it. Asked where it used
+  to be, the visual choice came after five steps had already authored the pack it
+  governs.
+
+  The step reads the primitive's body rather than naming it: a host that loads
+  skill bodies lazily hands the agent the reference and not the procedure, and an
+  agent with the reference alone improvises the interview — which is the
+  methodless interview this change replaces, wearing its name.
+
+- **A reviewer that recommended a decision the agents adopted cannot clear it**
+  (#1600). A grilling session puts a recommended answer beside each question,
+  and who settled the decision now decides what follows. Where the user chose
+  from the recommendation, the decision is theirs and the griller may review the
+  artifact. Where an agent adopted it with nobody adjudicating, the artifact
+  carries something nobody decided: the reviewer returns `REVISE` and names the
+  decision, which is reopened and put to the user or recorded open where no
+  question can be asked.
+
+  The reason is correlation rather than memory. A reset context cannot defer to
+  what it does not remember, but a fresh instance of the same agent, on the same
+  model, over the same evidence, re-derives the preference that produced the
+  recommendation.
+
+  Two fields carry it. A reviewer response declares `Recommended and
+unadjudicated`, read off a Work Orders Summary row the session writes rather
+  than off recollection, and scoped to the artifact as it now stands. A stage
+  that ran no such session writes one row reading `grilling: none`, and a summary
+  carrying neither that nor a decision row is incomplete — silence is not the
+  answer, because an omitted row looks exactly like nothing to record. A `Review series` — the reviewed
+  artifact, the role, and an ordinal that rises each time the review is handed
+  to a replacement, capped at two series per artifact per role so a fresh
+  reviewer cannot reset the budget for ever — carries the round budget across a host that answers round
+  2 with a fresh sub-agent, which a count per agent instance restarted every
+  round, and keeps a replacement from inheriting the round its predecessor
+  spent.
+
+  A non-`none` answer is not settled by a handoff. Handing the review to
+  another reviewer answers an authorship conflict; against an unadjudicated
+  recommendation it launders the decision, because the replacement attests
+  `none` truthfully while the artifact still carries what nobody chose.
+
+- **A grilling session's outcome has a named home** (#1604). A settled
+  discussion decision goes to `99_delta.md`; one the session could not settle
+  goes to the open-question register. Answering a question later moves its
+  register row as well as writing the log, because readiness reads the register
+  and an answer recorded only in the log left the pack blocked on a settled
+  question. A settled spec decision needs its `DL-*` entry in the delta as well
+  as `07_Decisions.md`, because `npx qfai report` reads the Decision Log alone.
+
+  Each destination is the artifact that holds that outcome: a rejected visual
+  direction to the delta section the template requires of a UI-bearing pack,
+  every disposition change to the append-only log including the `created` event
+  that opens a question, and rejection and reopening to the dispositions the
+  register already carries.
+
+  A closure the user asked for is not an open question. Where `proceed` or
+  `done` ends the asking, what is still open becomes a labelled assumption and
+  no register row, because readiness requires the open count to reach zero and
+  registering it would block the pack on the closure the user asked for.
+  `--auto` keeps the register row: nobody saw the question there.
+
+  A spec pack's open-question file is a record and not a gate. It carries open
+  questions as a matter of course, so a decision the user must settle goes to
+  the user during the stage rather than being written down and left.
+
+- **Each reminder group carries a marker of its own** (#1606). The merge that
+  brings hooks into a project's existing settings tells one group from another
+  by the status messages its entries carry, so groups sharing a message are one
+  group to it — and a project holding either would be credited with both and
+  never receive the other. The run report now names the reminder hooks as a
+  set, rather than the one reminder that used to be the only one.
+
+- **Every question to the user arrives in the shape its answer has** (#1611). Article X
+  said the tool must be used where available and never said whether any question
+  was outside that, so a light one could read as outside it — and the light one
+  is where an agent goes when it would rather not ask. None is exempt now.
+
+  Availability is judged for the question in front of the agent, not from what
+  the host supports in general: a tool a mode withholds, and one that cannot
+  carry the answer's shape, both take the fallback. The fallback keeps that
+  shape — numbered choices where a listable set of candidates exists, a plain request
+  for the value where none does.
+
+- **The user picks the brand direction, at the one stage that asks** (#1473).
+  `/qfai-discussion` now puts candidate themes to the user and records the
+  choice in `01_Context.md#Design Direction`: the adopted theme, what departs
+  from it, and what stays ordinary. `/qfai-sdd` Phase 0 authors `DESIGN.md`
+  from that record, and a UI-bearing pack without one stops rather than
+  picking a brand.
+
+  An assistant used to choose one of eight archetypes from its own reading of
+  the product, and the user first met the result as twelve hex values in a
+  file. Nothing downstream asked, so the decision with the largest effect on
+  how the product looks was the one nobody was consulted about.
+
+  The candidates are named themes rather than adjectives, because the user is
+  choosing rather than specifying, and they lean conventional: novelty in the
+  shape of a screen costs the user what they already know and buys nothing a
+  brand can hold. The brand lives on the accent — the primary hue and the
+  typeface pairing.
+
+  Planner-first is unchanged for what it was about. The screen explorations
+  are still carried unranked; the prototype loop is what ranks them. A
+  cli-only pack is asked for no direction, since nothing downstream reads a
+  theme for a surface that renders no tokens. An unattended run records the
+  most conventional candidate as an assumption and opens it as a question
+  rather than blocking.
+
+- **Root `DESIGN.md` is authored where it is frozen** (#1472). `/qfai-sdd`
+  Phase 0 now writes the file if it is missing, from the design direction the
+  discussion pack recorded; `/qfai-discussion` interviews for that direction
+  and records it, and writes nothing outside its own pack.
+
+  Phase 0 used to stop and send the user back to `/qfai-discussion` for a file
+  it then froze, so the brand was decided one skill before the gate that
+  checks it. The interview questions stay in
+  `qfai-discussion/references/design-dna-intake.md`; the mapping from answer
+  to field moves to the new `qfai-sdd/references/design-md-authoring.md`,
+  beside the archetype catalog.
+
+  Discussion's completion and review gates now check the two reference
+  registries in `04_Sources.md` — the input Phase 0 reads — instead of a file
+  that does not exist yet. A cli-only pack is unaffected: it records no brand
+  direction and gets no `DESIGN.md`.
+
+- **The test runner stops asking for more forks than the machine has** (#1528).
+  `DECLARED_START` is ten, and on a four-core runner that asked for ten forks
+  where four fit. A fifth fork does not run — it waits for a core — and the
+  waiting is charged to the fork, so the suite reported as though it were
+  ten-way parallel while running four-way.
+
+  Whole package suite, four cores, back to back:
+
+  | forks | wall    | collect (summed) | tests (summed) |
+  | ----- | ------- | ---------------- | -------------- |
+  | 10    | 307.4 s | 347.8 s          | 1999.2 s       |
+  | 4     | 253.0 s | 109.6 s          | 703.6 s        |
+
+  Summed test time falls to a third while the same 11 338 cases run with the
+  same outcomes. On the wall clock ten is 21.5% slower, outside the ten percent
+  the adoption rule allows — where the fourteen-core comparison that adopted ten
+  put it at 3.48%, inside it.
+
+  The declaration is unchanged and still ten. What the runner is handed is
+  `Math.min(DECLARED_START, availableParallelism())`, so a machine with ten
+  cores or more is unaffected. `QFAI_TEST_MAX_WORKERS` stays uncapped: a
+  comparison that could not oversubscribe could not measure what
+  oversubscribing costs. `DR-0017-0010` records the decision.
+
+- **The prototyping envelope bans runtime dependencies, not markup** (#1479).
+  `generator-prompt.md` opened its envelope constraints with "No component
+  library beyond Tailwind + Lucide", which also refused transposing a block
+  from a component catalogue — an operation that installs nothing.
+
+  The real constraint is the line beside it: one self-contained file loaded
+  from a CDN, which has no package manager to run an install with. The clause
+  now says that, and names the one authoring path the gate genuinely cannot
+  see — CSS behind a `<link>`, whose href is never fetched, so a literal
+  inside it is drift nobody reports.
+
+  It also states the permission plainly: transposing a catalogue block and
+  re-binding its palette classes to `DESIGN.md` tokens is the expected way to
+  build a screen. `designMdViolations.ts` judges the values a document states
+  and has no way to read where the markup came from, so a transposed block
+  passes once `bg-blue-500` becomes `bg-primary`. Both halves of the
+  scanner / prompt pair now say so, and
+  `designMdViolationsTransposition.test.ts` runs a catalogue block through the
+  gate in both bindings.
+
+- **The constitution reaches the rule about how much code to write** (#1459).
+  Article VII settles which behaviours a change carries and Article IX asks a
+  preflight to look for work already done. Neither said anything about the
+  amount of code that answers a requirement once it is accepted, so the ladder
+  in `.agents/rules/minimal-implementation.md` was reachable from the rule
+  register and from nowhere an agent passes through on its way to writing code.
+
+  Each article now points at it, and the ladder itself stays in one file:
+
+  | Article | What it gains                                                                       |
+  | ------- | ----------------------------------------------------------------------------------- |
+  | VII     | The first rung — whether a thing needs to exist — while the scope is still open     |
+  | IX      | The reuse rungs: the standard library, the platform, and the installed dependencies |
+
+  Article IX's preflight looked for duplicate implementations inside the
+  repository only. A helper the standard library already ships was outside
+  anything it asked about.
+
+- **The lint toolchain leaves the end-of-life eslint 9 line** (#1450). Every
+  release in that line is marked deprecated by the registry, and 9.39.5 is the
+  last one there will be, so no update inside the declared `^9.8.0` range could
+  clear it. The range is `^10.10.0` now, alongside `@eslint/js` at `^10.0.1`
+  and `typescript-eslint` at `^8.70.0` — the first of its line to accept
+  eslint 10 as a peer.
+
+  The new major adds two rules to `eslint:recommended`, and both reported
+  defects rather than style:
+
+  | Rule                    | Sites | What it names                                                   |
+  | ----------------------- | ----- | --------------------------------------------------------------- |
+  | `no-useless-assignment` | 34    | an initializer that every path overwrites before reading it     |
+  | `preserve-caught-error` | 22    | a `throw` inside a `catch` that dropped the error it reports on |
+
+  Every site is fixed rather than suppressed. A dead initializer becomes a type
+  annotation, so the compiler proves the variable is assigned on each path
+  instead of a placeholder standing in for a path that assigns nothing. A
+  rethrow carries `{ cause }`, so the original error survives in the one that
+  replaces it and a stack trace still reaches the failure.
+
+  `typescript-eslint` also names six type assertions its earlier release could
+  not see as unnecessary. Five are removed. The sixth becomes a return type on
+  the callback that builds the value, which is what the assertion stood in for.
+
+  eslint 10 runs on `^20.19.0 || ^22.13.0 || >=24`, narrower than the
+  `>=20.19.0` this repository declares. It is a development dependency, so the
+  floor the published package promises is unchanged. The cost is that a
+  contributor on Node 21, or on 22.0 through 22.12, cannot run the lint lane.
+
+- **Every Triage section in a delta ledger names the round it records**
+  (#1467). Seven ledgers disabled `MD024/no-duplicate-heading` per file, because
+  a ledger recording several rounds needed several identical `## Triage`
+  headings and the rule rejects those. The heading may name its round now, so
+  each section is `## Triage (CHG-005)` or the like and nothing collides. One
+  section per file stays bare: the file's own table, which belongs to no round.
+
+  The same applies to a round's other parts in `_policies/10_delta.md`. Sixteen
+  headings — `Impact-Cascade Verification`, `ID Stability`,
+  `Distributed-Surface Impact` and the rest — repeated once per round, and each
+  now carries its round the way the spec ledgers' operations and notes sections
+  already do.
+
+  No file disables `MD024` any more, and the three dogfooding lanes are
+  unmoved, which is what says every renamed heading is still one the triage
+  rules read.
+
+- **`W-STALE-REFERENCE` carries the severity it means, instead of reading the
+  calendar** (#1433). The rule reported `warning` before `2026-12-01` and
+  `error` from that date, so the same tree graded differently according to the
+  day it was validated. On the cutoff every project holding a stale reference
+  would have gone from a passing gate to a failing one at once — with no
+  upgrade, no changelog entry and no commit to point at — and meanwhile no
+  green leg could be re-created and no red one bisected.
+
+  The finding is a `warning`, the severity its code letter names. Nothing an
+  adopter runs today answers differently, because that is what the rule already
+  reported; what goes away is the escalation nobody had committed to. Raising
+  this rule later is a change to announce here, not a date to arrive.
+
+  `STALE_REFERENCE_SUNSET`, `staleReferenceSeverity` and the injected clock
+  `validateStaleReferences` accepted are deleted. The suite moves the system
+  clock across the former cutoff instead of holding a seam of its own, so a
+  rule that went back to reading the real one would fail it.
+
+- **Five delta ledgers put their triage rows under the rules that read them**
+  (#1436). `QFAI-TRIAGE-008` reports a Triage heading the triage rules do not
+  recognise, and every `QFAI-TRIAGE-*` rule skips such a section outright. Seven
+  headings in this repository were in that state, so those rows were not passing
+  the rules — they were escaping them.
+
+  `spec-0004`, `spec-0006`, `spec-0008`, `spec-0013` and `spec-0015` now name
+  every triage section `## Triage`, exactly, with the qualifier that used to sit
+  in the heading moved into the body. Two of the tables recorded the same rows
+  under different column names, and those are relabelled to the names the rules
+  read: `Source (REQ)` to `Source`, `Target` to `Subject`, `Existing Spec` taken
+  from the pack the file belongs to, and `UPDATE:APPEND` split across
+  `Operation` and `Sub-op`.
+
+  A `## Triage` section runs to the next H1 or H2, so a sibling `### Operations`
+  or `### Notes` would sit inside it and have its table read as a triage table.
+  Those siblings are promoted alongside, into the flat round layout the rest of
+  each file already uses. A ledger records one `## Triage` per round, so the
+  repeated heading is the shape rather than a slip, and `MD024` is disabled per
+  file with that reason stated in place.
+
+  All five files reach zero and leave the `sdd` and `full` pins: 103 errors to
+  98, and 1065 to 1060. `spec-0012/09_delta.md` and `_policies/10_delta.md`
+  carry the same heading and stay pinned.
+
+- **The two cross-round ledgers put their triage rows under the rules that read
+  them** (#1436). `spec-0012/09_delta.md` and `_policies/10_delta.md` name every
+  triage section `## Triage` now, exactly, so `QFAI-TRIAGE-*` reads the rows
+  instead of skipping the section.
+
+  Three of the tables record the same rows under other column names, and each is
+  relabelled to the names the rules read. `REQ-ID` and `Source (REQ)` become
+  `Source`; `Title` becomes `Subject`; `Target` becomes `Existing Spec` where it
+  named a pack, and the pack the file belongs to fills it where it named a file.
+  `UPDATE:APPEND` splits across `Operation` and `Sub-op`, which is the form
+  `QFAI-TRIAGE-003` accepts.
+
+  `Sub-op` holds one of `APPEND`, `MODIFY` and `REMOVE`, so a row naming more
+  than one becomes one row per sub-operation. The columns recording what each
+  round touched and added already separate the two halves, and they are carried
+  on each resulting row.
+
+  One `CREATE` row named `spec-0017` as its `Existing Spec`. A `CREATE` has no
+  existing spec — that is what `QFAI-TRIAGE-009` requires `-` for — and the pack
+  being created belongs in the subject, where it now sits.
+
+  A `## Triage` section runs to the next H1 or H2, so each round's other parts
+  are promoted beside the table rather than left inside its section. Both files
+  reach zero and leave the pins, which the five ledgers above have already
+  taken to 98 and 1060: `sdd` 98 errors to 96, `full` 1060 to 1058.
+
+- **A canonical Triage heading may name the round it records** (#1447).
+  `QFAI-TRIAGE-008` required the heading to be exactly `## Triage`, and its
+  remedy told authors to write one such heading per round. A delta ledger is
+  append-only and records several rounds, so following that produced a file of
+  identical H2s — which `markdownlint`'s `MD024` rejects in its default
+  configuration, and which leaves every section anchor pointing at the first.
+
+  The heading may now carry a parenthesised qualifier: `## Triage (2026-05-24)`
+  is canonical and its rows are read exactly as an unqualified section's are.
+  Parentheses are the only accepted form, so `## Triage Table`,
+  `## Triage-Table` and `## Triage — 2026-05-24` still report, which is what the
+  rule exists to catch.
+
+  Nothing that conformed before stops conforming: the bare `## Triage` is
+  unchanged, and both delta templates ship it. The two delta schemas accept the
+  qualifier as well, so the shape lane and the triage rules read the same
+  heading.
+
+- **The UI definition consumption protocol is in English** (#1501). The document
+  ships in `catalog/`, so it is read by adopters with no connection to this
+  repository's history, and four of its sentences were Japanese. They say what
+  they said.
+
+  The file is struck from the approved-Japanese list in the asset guard rather
+  than left there. A translated entry that stays on the list is a slot the next
+  untranslated document can take.
+
+- **A written or edited file restates the implementation rule** (#1465).
+  `.claude/settings.json` carried three hook entries, all restating
+  documentation clarity and all matching Markdown. An agent that wrote Markdown
+  was reminded how to write it; an agent that wrote source was reminded of
+  nothing. A rule read once at the start of a long session is the one that
+  drifts.
+
+  A fourth entry restates `.agents/rules/minimal-implementation.md` after every
+  `Write` and `Edit`: the reuse questions, the marker a deliberate shortcut
+  carries, and the list the ladder never trims — validation at a trust boundary,
+  error handling, security, accessibility, and anything the spec asks for.
+
+  It carries no path condition. The condition is a permission-rule scope matched
+  against the path, so naming source by extension means enumerating a language
+  set, and a language left out is a hook that is silently absent exactly where
+  the rule is needed. The cost is one extra line on a Markdown edit.
+
+  The entry ships in the `qfai init` template as well, and it reaches a project
+  that already carries the clarity hooks, because the merge decides per group.
+
+- **Two review documents stop restating how much code to write** (#1461). The
+  Copilot review instructions and the universal development checklist each held
+  their own KISS, YAGNI and DRY section. Neither was the source, both were
+  written separately, and they already said different things about the same
+  question.
+
+  Both now point at `.agents/rules/minimal-implementation.md` and state no
+  ladder of their own. What was not in the ladder stays where it was: cognitive
+  load, which is a finding whatever the amount of code, and the Rule of Three,
+  which is a floor on sharing rather than a rung.
+
+  SOLID, separation of concerns, fail-fast and the rest are untouched. They are
+  a different subject from how much code answers a requirement.
+
+- **Every agent card carries a minimal-implementation obligation** (#1462).
+  Seven of the nineteen cards said something about simplicity, each in its own
+  words. Twelve said nothing — among them every test-stage role and every
+  planning role, which is why the ladder reached neither stage.
+
+  All nineteen now point at `.agents/rules/minimal-implementation.md`, and what
+  the line asks of the role depends on the stage:
+
+  | Stage                   | What the role owes                                                              |
+  | ----------------------- | ------------------------------------------------------------------------------- |
+  | Requirements and design | The first rung, whether the thing needs to exist, while the scope is still open |
+  | Implementation          | The reuse rungs, and the marker on a deliberate shortcut                        |
+  | Tests                   | How a test is built — never how many obligations are covered                    |
+  | Review                  | A finding that names what to cut and what replaces it                           |
+  | Documentation           | Scripts and workflows the role changes; prose keeps its own standard            |
+
+  The test-stage wording is the one that had to be written down. A rule that
+  says "write less", reaching the role that decides coverage, is a way to lose
+  tests.
+
+  The seven cards that carried prose keep everything that was not the ladder —
+  SOLID, separation of concerns, fail-fast and the rest are a different subject,
+  and only the restated rungs are struck.
+
 ### Removed
+
+- **`.qfai/report/validate.log` is no longer tracked** (#1582). Every local
+  `qfai validate` rewrites it, so `git add -A` carried it into whatever commit
+  was open — 113 of them, the six most recent about spec prose, CI checkout
+  behaviour and CLI performance.
+
+  The directory already declared it ignored; the file had been force-added past
+  that, and a tracked path bypasses ignore rules, so the disagreement was
+  invisible to `git check-ignore`.
+
+  It is live local state rather than a leftover: `doctor --clean-run-logs`
+  reads its `run_log:` and `run_id:` pointers to keep a referenced run
+  directory from being pruned. That is the argument for untracking rather than
+  deleting — one machine's record of which runs it kept means nothing in
+  another clone. An absent file is already handled as "nothing pinned".
+
+  A pull removes the local copy; the next validate run writes a fresh one.
+
+- **The archetype tie-breaker, which nothing called** (#1583).
+  `core/skill/archetypeTieBreaker.ts` resolved two archetypes sharing an
+  aggregate taste-interview score. Its only importer was its own test, it was
+  not on the export surface, and the input it needed — a score from a taste
+  interview — is not produced anywhere since rating was removed.
+
+  The alphabetical tie-break it implemented is stated in the brand catalog's
+  Selection Guide, which is what an agent reads, and a guard already pins that
+  sentence.
 
 - **The design-system presence validator** (#1516). It reported `UIX-VAL-DS01`
   when a UI-bearing pack had no design-system sidecar, and `UIX-VAL-DS02` when
@@ -1314,6 +1082,427 @@ unadjudicated`, read off a Work Orders Summary row the session writes rather
   and still runs.
 
 ### Fixed
+
+- **The autopilot tailoring contract now covers every shipped skill** (#1642).
+  It was held against a hardcoded list of seven, so the two grilling skills were
+  outside it and nothing reported that they carried no tailoring rule at all.
+  The list is read off the tree, the way the Reviewer-Gate validator picks its
+  own subjects, and both skills carry the rule.
+
+  The rule also now sanctions what the validator already allowed: `hard-required`
+  takes the undefaultable inputs a skill itself consumes, declared per skill and
+  checked against that declaration. The bucket is what a run cannot proceed
+  without, and no prototype can enumerate that for a skill it does not know — so
+  the sentence forbade `qfai-configure`'s `testFileGlobs` proposal and the
+  grilling subject a session cannot start without.
+
+- **A grilling loop runs before a spec phase freezes its first draft** (#1598).
+  The phase's drafting agent is interviewed by a griller; the orchestrator holds
+  the loop, routes it, and does not answer its questions. It runs before Phase 0,
+  Phase 1, Phase 2 and Phase 3, and each escalated decision reaches the user as a
+  structured question.
+
+  This is not the Reviewer Gate and does not replace it. The gate reads a drafted
+  artifact and answers whether it is right; a contradiction, an unconsidered case
+  and a choice that does not fit the existing code all enter before the draft, so
+  by the time a reviewer reads the artifact they are premises, and an artifact
+  coherently built on a premise nobody chose returns `PASS`.
+
+  The first draft is the freeze point, because once an artifact exists a decision
+  argued against it is a change to something written rather than a choice among
+  options.
+
+  The trigger is this invocation's first write in the phase, not whether the
+  artifact already exists. Most runs are `UPDATE:APPEND` or `UPDATE:MODIFY`
+  against artifacts that do, so a rule keyed on existence would never fire on
+  the ordinary path. Phase 2c is on the list for the same reason: it makes
+  contract choices after Phase 0 has written.
+
+  One session per phase, over every routed drafting role's decisions. Grilling
+  one author leaves the others free to settle their own before their own writes.
+
+  Every decision the session settled that authoritative evidence did not answer
+  goes to the user before any author writes — not only the ones the round budget
+  left open. A decision the author accepted from the griller is not open, so the
+  convergence rules do not escalate it, and an agent-to-agent decision nobody
+  adjudicated makes the artifact one no reviewer can clear. Escalating the
+  residue alone would hand the authors a settled set whose agreed half fails
+  review.
+
+  The phase records a run-or-skip line and, per settled decision, a work-order
+  row naming who adjudicated it. A phase whose subject is settled has nothing to
+  grill, and that skip is indistinguishable from an omitted session unless it is
+  written down; the two adjudications point opposite ways, and one marker for
+  both told the reviewer nothing it could act on.
+
+  A no-question run reaches nobody, so the decision is opened as a question, the
+  phase's row reads `escalated`, and **the phase does not write** — its work
+  order stays `PENDING`, which blocks completion and leaves the stage resumable.
+  That is the gate, because a spec pack's open-question file is not one: it
+  carries open questions as a matter of course, so nothing there stops a run.
+
+  Where the structured question tool is not callable, the escalation takes the
+  rule's fallback rather than being skipped.
+
+  A fact only the user holds goes to the user rather than to an author. No
+  author can answer an unpublished constraint, and the convergence rules
+  escalate decisions rather than facts, so without this it sat on the frontier
+  until the budget ended and took every decision waiting on it along.
+
+  The phase row carries when its session ended and when the phase first wrote,
+  the first recorded before that write — a row holding only the outcome reads the
+  same whether the session ran before the phase, after it, or not at all. `run`
+  means zero escalations, and each phase's settled count equals the number of
+  decision rows carrying that phase, so a count has something behind it.
+
+  The record's chronology is per state: `run` carries both times, `skipped` has
+  no session to have ended, and an `escalated` phase does not write. Requiring
+  both of every state would make two legitimate states unrecordable, and a state
+  nobody can record honestly is one an agent records dishonestly.
+
+  Phase 2c takes one row per expansion — `2c.1` upward — since its scope is
+  recomputed after every contract write, and a single row records the first
+  checkpoint while leaving every later one indistinguishable from one that never
+  happened.
+
+  The session covers every routed drafting role, `solution-architect` included,
+  and the user's answer is put back into the tree: a decision whose prerequisite
+  was open could not enter either agent round, so the rounds repeat until no node
+  is open. The constitution counts as authoritative evidence beside the specs and
+  contracts, since both this skill and the primitive rank it above them.
+
+  A throwaway built to answer a question the frozen inputs cannot is not the
+  phase writing. The freeze names the files it covers — the policy layer, the
+  spec packs and the contracts — so a UI-bearing phase can build the thing its
+  own method asks for.
+
+  Agreement between agents closes a node without settling the decision. Those are
+  one state read for two purposes: _open_ is about the round — is there anything
+  left to ask — and _settled_ is about the decision — has anyone with the standing
+  to take it done so. Conflating them is how an agreed answer reaches a draft as
+  though it were chosen.
+
+  A decision row names its phase, as the title's first field, because the shared
+  work-order schema has no column for it. The disposition rewrites keep those
+  fields: a reopened decision the user later resolves would otherwise drop the
+  key the gate selects on, and the rows a dispute produced are the ones it most
+  needs to find. Without that key a row cannot be
+  assigned to a phase, so an omitted row passes by being counted against another.
+
+  A decision is persisted by the drafting agent that owns its artifact, not by
+  the orchestrator: `07_Decisions.md` and `09_delta.md` are primary artifacts,
+  and on a CREATE run the file may not exist, so writing it is authoring.
+
+  Every distinct position reaches the user with whose it is. Phase 2 routes three
+  authors, so merging two answers before the user sees them hands them a choice
+  the full set was never asked to adjudicate.
+
+  Phase 2c gets a checkpoint per expansion rather than one per phase, because its
+  scope is recomputed after every contract write.
+
+  The gate asks only about the phases the loop covers. Phase 2b and Phase 4
+  produce no design decision, so a row for them would either reject valid
+  evidence or claim a session that was never owed. The canonical evidence
+  template carries the section, so a template-derived run has the heading the
+  gate reads.
+
+  The fixed phase order is unchanged: the loop is a step inside a phase, not one
+  of its own.
+
+- **The FIFO refusal test runs its assertion against a fixture that exists**
+  (#1580). It decided whether the platform could host a FIFO by reading
+  `mkfifo`'s exit status. Git Bash ships `mkfifo`, so on Windows it exits `0`
+  and creates the FIFO inside the MSYS layer, where the running process — using
+  Win32 — cannot see it at all. The row therefore did not skip: `init` found no
+  collision, wrote the template, and the assertion compared a real file against
+  `isFIFO()`.
+
+  It now checks the fixture instead of the tool, so it asserts where a FIFO was
+  planted and skips where none was. The local package suite goes green, which
+  it had not been on this platform.
+
+- **A ledger `Selector` must now name a test its own `Test file` contains**
+  (#1586). `TDDLIST_SELECTOR_UNRESOLVED` accepted a selector whose last
+  identifier-shaped word appeared anywhere in the file. The last word of
+  `renders the header` is `header`, which is in almost any test file, so a row
+  could claim a completed test the file did not hold and report nothing.
+
+  Resolution is now containment of the selector's own text, which is what
+  `TDDLIST_STALE_STATUS` already required. Across this repository's own ledgers
+  the rule goes from 50 findings to 209 over 12 files, every one a `warning`:
+  the error count is unchanged, so `--fail-on error` and the backlog ratchet are
+  unaffected.
+
+  A selector no runner could match is the shape the strict check is for. Run
+  each of `spec-0002`'s previously accepted selectors through `vitest -t`
+  against its own test file and four of the six select zero tests.
+
+  Strictness makes one reading in `selector-granularity.md` reachable for the
+  first time: a bare cell holding commas was a comma-separated list before the
+  array form existed, and read as a single name such a row can never resolve
+  again. Those cells now get one bounded second reading, adopted only when the
+  file contains every part. A name that legitimately holds a comma is matched
+  whole first, and the array form — a one-element array included — is taken
+  verbatim and never re-split.
+
+- **The remediation for an unreplaced `DESIGN.md` names a step that exists.**
+  `QFAI-DCON-034` told an operator to run `/qfai-discussion`, "which emits the
+  draft". That stage stopped emitting it when authoring moved to `/qfai-sdd`
+  Phase 0, so the instruction could not be followed. It now names the stage
+  that writes the file, and says Phase 0 refuses to freeze a sample.
+
+  `QFAI-DCON-030`'s remediation and three source comments carried the same
+  stale attribution.
+
+  A sweep holds it: no source file may name `/qfai-discussion` on a line that
+  also names `DESIGN.md` or brand intent. Naming the discussion pack as where
+  the direction was recorded still passes — recording is not authoring.
+
+- **The sanctioned ledger backfill can now satisfy the gate that reads it**
+  (#1574). `execution-ledger.md` sanctions backfilling a `done` row whose
+  original run is gone: record the loss in the evidence file and point the cell
+  at that entry. `QFAI-TDDLIST-008` then judged that entry against an
+  unconditional set of 22 fields, three of which are seals recomputed from
+  artifacts on disk.
+
+  A gone run produced no review pack, so there was no seal to record and none
+  that could honestly be written. The sanctioned shape and the gate could not
+  both be satisfied, and the backfill was unreachable.
+
+  An entry now declares the loss with two fields — `Run output retained: no`,
+  read as an exact value, and `Backfill note` saying what was run. That drops
+  the reviewer-pack and seal fields from the required set and nothing else:
+  identity, the RED failure mode, the round block, and the verify and checkpoint
+  commands with their results are all reproducible by re-running the test.
+
+  The exemption is reported rather than applied quietly. `done` is read as
+  reviewed, so a row exempt from the verdicts emits
+  `QFAI-TDDLIST-019` at `warning` and is visible in the same output
+  an operator already reads. A project that will carry no row whose review it cannot verify treats
+  warnings as failures and gets the unconditional set back.
+
+- **The review payload schema stops citing a field it has never had**
+  (#1560). It said a payload that reviewed nothing is rejected "no matter what
+  its axes claim". The payload carries eleven required fields and none of them
+  is a score, so the sentence named something that does not exist.
+
+  A guard pins every statement of the stop condition to the three finding
+  arrays: each named document is checked for all three, and no prototyping
+  document may write a value off the axis ordinal in code-span form. The axes
+  themselves stay nameable — the reviewer still scores four of them and the
+  transcription row still records them.
+
+- **The specs decide convergence the way the loop does** (#1565). The prototype
+  loop stops when the latest iteration has `blockingFindings`,
+  `layoutAntiPatternsDetected` and `designMdViolations` all empty, and records
+  `stopReason: "converged"`. `spec-0012` and two CLI contracts stated it as all
+  four UX axes at `exceptional` and named `stopReason: "axes-exceptional"` —
+  a value no run has ever written.
+
+  That one bites a consumer: `--check-convergence` was specified to exit 0 on
+  it, so anyone building from the contract built for a state the tool cannot
+  produce. The blocked-cause summary was specified with `axes-below-exceptional`
+  as its third category, where the command prints `blockingFindings`.
+
+  The four axes are still scored by the reviewer and still reported. They
+  stopped deciding the stop, and the rows that made them gate are gone while
+  the rows describing them as reported remain.
+
+  A guard reads `STOP_REASONS` out of the source and fails on any spec or CLI
+  contract naming a value that enum does not carry. It found two more than a
+  read-through had: the DESIGN.md hash-mismatch path was given a fifth
+  `stopReason` nothing declares, and the max-iterations terminator was still
+  stated at the retired 15-cycle budget's `index === 14`.
+
+- **The layout anti-pattern vocabulary is one list again** (#1517). The specs
+  named it twice and the registry shipped a third set. One identifier out of
+  eight was the same in all three, and `spec-0012` required the capture pass to
+  emit two tokens its own whitelist rejected. It also named `QFAI-PROT-025` for
+  an unregistered token; nothing emits that code, and the validator has always
+  reported `QFAI-PROT-002`.
+
+  Every spec row now names
+  `packages/qfai/assets/validators/layoutAntiPatterns.json` instead of copying
+  its contents, so adding or retiring an entry no longer needs eleven rows
+  edited. The CLI contract stops reserving two identifiers against a detection
+  nobody has written.
+
+  A sweep holds it: no spec or CLI contract may cite an identifier the registry
+  does not declare, unless the same line says that is what it is. It found
+  thirteen references that a read-through had missed.
+
+  The seven navigation and state defects the old lists named — an orphan page,
+  a dead-end flow, a hidden state, a broken back link, unlabelled navigation, a
+  missing empty state, a missing error state — are detected by nothing. That is
+  now an open question on the pack with options and a recommendation, rather
+  than a shipped promise.
+
+- **Exit 64 is explained by what the loop reads** (#1560). `isConverged` stops
+  the prototype loop when `designMdViolations`, `layoutAntiPatternsDetected`
+  and `blockingFindings` are all empty. Six places still described the same
+  exit as all four UX axes at `exceptional` — the goal, the stop-condition
+  table, the loop reference, the generator prompt and the `--help` text.
+
+  The four axes are still scored and still reported. They stopped deciding the
+  stop, so an agent told to keep iterating until they read `exceptional` would
+  work past a run that had already converged, and an operator reading the help
+  would look for a cause nothing checked.
+
+  A sweep holds it: no paragraph in the prototyping skill may state the stop
+  and a score from the axis ordinal together.
+
+- **Prototype captures are checked for accessibility** (#1485). The
+  accessibility phase — image alternatives, document language, skip link,
+  heading hierarchy — was reachable only from `validate`, and the loop writes
+  exactly the artifact it wants: one capture per screen per cycle. Nothing
+  read them with it, so every screen went unchecked.
+
+  It now runs over the accepted iteration's captures beside the token re-scan,
+  and reports what it finds, naming the screen. Reported, never blocking:
+  replacing "any layout shape stops the loop" with "any accessibility finding
+  stops the loop" would repeat the mistake with better sources. The reviewer
+  reads them and decides what belongs in `blockingFindings`.
+
+- **The shipped-document version guard read every triple of numbers as a
+  version** (#1551). `WCAG 3.3.2` failed the same check as `qfai 1.11.1`, so an
+  init-template document could not cite an accessibility criterion by its
+  number — the one form of it a reader can look up.
+
+  A version is now a number something names as one: a leading `v`, or a tool
+  or package name in front of it. A bare triple is left alone, which is what a
+  published standard's clause number is. The guard still rejects a real pin,
+  and a second case asserts both columns so the narrowing cannot be widened
+  back by accident.
+
+  The prototype review criterion on labels now names `WCAG 3.3.2` where it
+  previously pointed at a rule file that carries the number, so the reader of
+  the criterion has the citation in front of them.
+
+- **Two codes shared the `lap-` prefix with a registry that did not declare
+  them** (#1499). `layoutAntiPatternsDetected[]` has one vocabulary and two
+  writers: the reviewer writes the codes it judges, and `iterate --capture`
+  computes `lap-009` (two declared screens whose captures are byte-identical)
+  and `lap-010` (a declared route the capture could not reach).
+
+  Only the first writer's codes were registered. The specification, the CLI
+  contract and the command's own warning all say the other two are counted in
+  that array, so a reviewer recording one — as the warning tells it to —
+  produced `QFAI-PROT-002` for a code the tool itself printed.
+
+  Both are now declared in `layoutAntiPatterns.json`, each naming the screen
+  contract as its authority, which is the same authority
+  `lap-007-state-not-represented` names. A row reads the emitted codes out of
+  the capture pass and fails when one is unregistered, so a third code cannot
+  be added on one side alone.
+
+- **The handoff says what to install, not to rebuild** (#1480). It handed an
+  implementer a screenshot and a paragraph and said "reimplement with
+  project-native patterns", which is an instruction to rebuild by hand at the
+  exact point a component could be installed.
+
+  `prototype-handoff.yaml` now carries `procurement`: what realises each
+  screen region, and for an authored region, what was looked for and did not
+  serve. The reviewer checks the implementation against it instead of judging
+  a resemblance.
+
+  It also settles what the prototype never showed. Responsive behaviour, dark
+  mode, focus states and the detail of an empty state come from the adopted
+  design system's default, which answers them consistently with each other.
+  `implementationNotes` keeps what is genuinely prose.
+
+- **Every layout anti-pattern names what makes it a defect** (#1484). An
+  entry now carries a `source`, and the loader drops one that does not: a
+  published heuristic, an accessibility criterion, or the contract the screen
+  is built to — never this project deciding it dislikes something. A rule with
+  no authority behind it cannot be argued with, only obeyed, which is how the
+  registry came to hold five conventional layouts.
+
+  `lap-006-overcrowded-sidebar` is retired with them. It reported a sidebar
+  carrying ten or more links, and no published source states a navigation
+  count as a defect; the threshold was this repository's own.
+
+  Definitions are pinned rather than researched per run. `certify` re-scans
+  the captures, so a check whose answer depends on what a search returned that
+  morning cannot agree with itself.
+
+- **A concurrency guard that passed because the filesystem undid what it
+  staged** (#1477). `provenanceHostileTree` has a row asserting that a holder
+  reclaimed mid-section leaves its successor's lock alone. It failed about once
+  in thirty-five runs on a loaded machine, and passed the rest — for the wrong
+  reason.
+
+  The fixture removed the lock and published a different directory at the same
+  name. Every identity check in the primitive reads `dev`/`ino`, and a
+  directory inode freed one syscall earlier is handed straight back to the next
+  `mkdir`: measured at 25 reuses in 25 runs. At the filesystem level the
+  successor was the same object, so the release took its _this is mine_ branch
+  and the row exercised the opposite of what it is named for.
+
+  On the rare run where the inode was not reused, the code behaved correctly —
+  it reported the dispossession, retried, and reclaimed a planted lock nobody
+  was renewing — and the assertions, written for the other branch, failed.
+
+  The fixture now stages the successor before removing the lock, so the freed
+  inode cannot be handed to it, and asserts the two differ. It renews the
+  successor's marker for the duration, because a lock with no holder behind it
+  is reclaimable by design. The row's outcome is now the honest one: the
+  dispossessed holder reports the loss instead of writing, and the successor's
+  lock is untouched.
+
+- **A declared contrast floor is now the one a prototype is measured against**
+  (#1481). `accessibility.contrast_ratio_min` is a required key in `DESIGN.md`,
+  and nothing read it as a threshold. It was parsed, checked for finiteness and
+  hashed into the lock, and that was all.
+
+  The one check that computed contrast, `QFAI-MOCK-008`, compared against a
+  hard-coded AA constant and read HTML blocks inside documents rather than
+  iteration captures. So a project declaring a stricter ratio than AA was
+  measured against AA, and a project declaring AA had no capture measured at
+  all — while every other required token in `DESIGN.md` was enforced against the
+  captures.
+
+  `findDesignMdViolations` gains a sixth clause, on the same captures as the
+  other five, with a new violation kind `contrast`. A pair is read from a
+  declaration block that states both a text colour and a background, in a rule
+  body or an inline attribute, with `:root` tokens resolved. Where a pack
+  declares no floor, WCAG AA stands in.
+
+  A pair is judged only when both sides resolve to a colour the ratio
+  computation accepts, so a named colour, `hsl()`, a value carrying alpha or a
+  shorthand with more than a colour in it is skipped rather than guessed at.
+
+- **Two spec packs mandated a prose-critique floor the code does not have**
+  (#1503). QFAI-PROT-002 applies a cap and selects the unit from the text: a
+  critique carrying CJK is measured in CJK characters, anything else in
+  whitespace-separated words, and neither unit has a lower bound.
+
+  `spec-0012` and `spec-0004` stated the band
+  `200..500 words OR 600..2500 characters` as a requirement, in a requirement,
+  a user story, an acceptance criterion, two business rules, an example and two
+  test cases. That is wrong twice over. The lower bound was removed, and the OR
+  was never how the unit is chosen — an English critique carries no CJK
+  characters, so a rule passing on either unit would pass every English text
+  however long.
+
+  `DR-0277` records the cap and the selected unit, and supersedes
+  `DR-0001-0003`, whose rejected alternative was argued against on the strength
+  of the floor. The boundary rows now match the cases that run: only the upper
+  edge of each unit rejects.
+
+- **Thirty-two files told an agent which language to answer in** (#1500).
+  Every document under `.instruction/` opened with a block fixing output to one
+  language, which the constitution's Absolute Rule — answer in the user's
+  working language — already decides.
+
+  This is the same block, in the directory it was copied out of. It reached
+  `constitution/agent-selection.md` that way, overrode the Absolute Rule for
+  every operator working in another language, and was removed there. The guard
+  written with that removal swept only what ships, so the originals stayed, and
+  a comment naming the removal cannot stop a re-port from a directory nobody
+  sweeps.
+
+  The blocks are gone and `outputLanguageSingleSource.test.ts` now sweeps
+  `.instruction/` with the same matcher that guards the shipped tree.
 
 - **One document decides output language** (#1530). The constitution states an
   Absolute Rule — write every output in the language the user is working in —
@@ -1776,226 +1965,34 @@ unadjudicated`, read off a Work Orders Summary row the session writes rather
   some document under `constitution/` somewhere, and a whole-file search would
   pass on exactly the state this replaces.
 
-### Changed
+- **The audited evidence hash says what its extraction produces, not only which
+  fields it reads** (#1616). Naming the fields settled which lines are taken and
+  left open what they become, so two readers taking the same fields computed
+  different digests: the list marker, the `Round N: ` prefix, a field's fenced
+  value, the heading line, the field order and the separator were each
+  undetermined. A recorded value was reproducible only inside the run that wrote
+  it, which is not a check.
 
-- **The constitution reaches the rule about how much code to write** (#1459).
-  Article VII settles which behaviours a change carries and Article IX asks a
-  preflight to look for work already done. Neither said anything about the
-  amount of code that answers a requirement once it is accepted, so the ladder
-  in `.agents/rules/minimal-implementation.md` was reachable from the rule
-  register and from nowhere an agent passes through on its way to writing code.
+  The extraction is a region of the entry rather than a selection out of it: it
+  runs from the row's heading to the first field the subject could not have
+  read, keeps every line inside verbatim including a field's fenced value, drops
+  a reviewer's own verdict line, and synthesizes the heading. That is what
+  `npx qfai validate` gate item 10 computes today, so a second party recomputing
+  a recorded digest gets the recorded digest. A selection would have had to fix
+  an order, a separator and a spelling as well, each a further way to disagree.
 
-  Each article now points at it, and the ladder itself stays in one file:
+  Four values share these words and are not one: three ledger fields carrying
+  three reviewer roles' verdicts by these same four steps — the third is the
+  parity hash a UI-affecting row owes — and the working-tree revision, which
+  addresses a tree rather than a subject. The reference says which two the
+  completion gate recomputes today and which one it does not, so nobody takes
+  the third for a checked field — as do the implement skill's gate item and the
+  record contract, which promised a recomputation no code performs.
 
-  | Article | What it gains                                                                       |
-  | ------- | ----------------------------------------------------------------------------------- |
-  | VII     | The first rung — whether a thing needs to exist — while the scope is still open     |
-  | IX      | The reuse rungs: the standard library, the platform, and the installed dependencies |
-
-  Article IX's preflight looked for duplicate implementations inside the
-  repository only. A helper the standard library already ships was outside
-  anything it asked about.
-
-- **The lint toolchain leaves the end-of-life eslint 9 line** (#1450). Every
-  release in that line is marked deprecated by the registry, and 9.39.5 is the
-  last one there will be, so no update inside the declared `^9.8.0` range could
-  clear it. The range is `^10.10.0` now, alongside `@eslint/js` at `^10.0.1`
-  and `typescript-eslint` at `^8.70.0` — the first of its line to accept
-  eslint 10 as a peer.
-
-  The new major adds two rules to `eslint:recommended`, and both reported
-  defects rather than style:
-
-  | Rule                    | Sites | What it names                                                   |
-  | ----------------------- | ----- | --------------------------------------------------------------- |
-  | `no-useless-assignment` | 34    | an initializer that every path overwrites before reading it     |
-  | `preserve-caught-error` | 22    | a `throw` inside a `catch` that dropped the error it reports on |
-
-  Every site is fixed rather than suppressed. A dead initializer becomes a type
-  annotation, so the compiler proves the variable is assigned on each path
-  instead of a placeholder standing in for a path that assigns nothing. A
-  rethrow carries `{ cause }`, so the original error survives in the one that
-  replaces it and a stack trace still reaches the failure.
-
-  `typescript-eslint` also names six type assertions its earlier release could
-  not see as unnecessary. Five are removed. The sixth becomes a return type on
-  the callback that builds the value, which is what the assertion stood in for.
-
-  eslint 10 runs on `^20.19.0 || ^22.13.0 || >=24`, narrower than the
-  `>=20.19.0` this repository declares. It is a development dependency, so the
-  floor the published package promises is unchanged. The cost is that a
-  contributor on Node 21, or on 22.0 through 22.12, cannot run the lint lane.
-
-- **Every Triage section in a delta ledger names the round it records**
-  (#1467). Seven ledgers disabled `MD024/no-duplicate-heading` per file, because
-  a ledger recording several rounds needed several identical `## Triage`
-  headings and the rule rejects those. The heading may name its round now, so
-  each section is `## Triage (CHG-005)` or the like and nothing collides. One
-  section per file stays bare: the file's own table, which belongs to no round.
-
-  The same applies to a round's other parts in `_policies/10_delta.md`. Sixteen
-  headings — `Impact-Cascade Verification`, `ID Stability`,
-  `Distributed-Surface Impact` and the rest — repeated once per round, and each
-  now carries its round the way the spec ledgers' operations and notes sections
-  already do.
-
-  No file disables `MD024` any more, and the three dogfooding lanes are
-  unmoved, which is what says every renamed heading is still one the triage
-  rules read.
-
-- **`W-STALE-REFERENCE` carries the severity it means, instead of reading the
-  calendar** (#1433). The rule reported `warning` before `2026-12-01` and
-  `error` from that date, so the same tree graded differently according to the
-  day it was validated. On the cutoff every project holding a stale reference
-  would have gone from a passing gate to a failing one at once — with no
-  upgrade, no changelog entry and no commit to point at — and meanwhile no
-  green leg could be re-created and no red one bisected.
-
-  The finding is a `warning`, the severity its code letter names. Nothing an
-  adopter runs today answers differently, because that is what the rule already
-  reported; what goes away is the escalation nobody had committed to. Raising
-  this rule later is a change to announce here, not a date to arrive.
-
-  `STALE_REFERENCE_SUNSET`, `staleReferenceSeverity` and the injected clock
-  `validateStaleReferences` accepted are deleted. The suite moves the system
-  clock across the former cutoff instead of holding a seam of its own, so a
-  rule that went back to reading the real one would fail it.
-
-- **Five delta ledgers put their triage rows under the rules that read them**
-  (#1436). `QFAI-TRIAGE-008` reports a Triage heading the triage rules do not
-  recognise, and every `QFAI-TRIAGE-*` rule skips such a section outright. Seven
-  headings in this repository were in that state, so those rows were not passing
-  the rules — they were escaping them.
-
-  `spec-0004`, `spec-0006`, `spec-0008`, `spec-0013` and `spec-0015` now name
-  every triage section `## Triage`, exactly, with the qualifier that used to sit
-  in the heading moved into the body. Two of the tables recorded the same rows
-  under different column names, and those are relabelled to the names the rules
-  read: `Source (REQ)` to `Source`, `Target` to `Subject`, `Existing Spec` taken
-  from the pack the file belongs to, and `UPDATE:APPEND` split across
-  `Operation` and `Sub-op`.
-
-  A `## Triage` section runs to the next H1 or H2, so a sibling `### Operations`
-  or `### Notes` would sit inside it and have its table read as a triage table.
-  Those siblings are promoted alongside, into the flat round layout the rest of
-  each file already uses. A ledger records one `## Triage` per round, so the
-  repeated heading is the shape rather than a slip, and `MD024` is disabled per
-  file with that reason stated in place.
-
-  All five files reach zero and leave the `sdd` and `full` pins: 103 errors to
-  98, and 1065 to 1060. `spec-0012/09_delta.md` and `_policies/10_delta.md`
-  carry the same heading and stay pinned.
-
-- **The two cross-round ledgers put their triage rows under the rules that read
-  them** (#1436). `spec-0012/09_delta.md` and `_policies/10_delta.md` name every
-  triage section `## Triage` now, exactly, so `QFAI-TRIAGE-*` reads the rows
-  instead of skipping the section.
-
-  Three of the tables record the same rows under other column names, and each is
-  relabelled to the names the rules read. `REQ-ID` and `Source (REQ)` become
-  `Source`; `Title` becomes `Subject`; `Target` becomes `Existing Spec` where it
-  named a pack, and the pack the file belongs to fills it where it named a file.
-  `UPDATE:APPEND` splits across `Operation` and `Sub-op`, which is the form
-  `QFAI-TRIAGE-003` accepts.
-
-  `Sub-op` holds one of `APPEND`, `MODIFY` and `REMOVE`, so a row naming more
-  than one becomes one row per sub-operation. The columns recording what each
-  round touched and added already separate the two halves, and they are carried
-  on each resulting row.
-
-  One `CREATE` row named `spec-0017` as its `Existing Spec`. A `CREATE` has no
-  existing spec — that is what `QFAI-TRIAGE-009` requires `-` for — and the pack
-  being created belongs in the subject, where it now sits.
-
-  A `## Triage` section runs to the next H1 or H2, so each round's other parts
-  are promoted beside the table rather than left inside its section. Both files
-  reach zero and leave the pins, which the five ledgers above have already
-  taken to 98 and 1060: `sdd` 98 errors to 96, `full` 1060 to 1058.
-
-- **A canonical Triage heading may name the round it records** (#1447).
-  `QFAI-TRIAGE-008` required the heading to be exactly `## Triage`, and its
-  remedy told authors to write one such heading per round. A delta ledger is
-  append-only and records several rounds, so following that produced a file of
-  identical H2s — which `markdownlint`'s `MD024` rejects in its default
-  configuration, and which leaves every section anchor pointing at the first.
-
-  The heading may now carry a parenthesised qualifier: `## Triage (2026-05-24)`
-  is canonical and its rows are read exactly as an unqualified section's are.
-  Parentheses are the only accepted form, so `## Triage Table`,
-  `## Triage-Table` and `## Triage — 2026-05-24` still report, which is what the
-  rule exists to catch.
-
-  Nothing that conformed before stops conforming: the bare `## Triage` is
-  unchanged, and both delta templates ship it. The two delta schemas accept the
-  qualifier as well, so the shape lane and the triage rules read the same
-  heading.
-
-- **The UI definition consumption protocol is in English** (#1501). The document
-  ships in `catalog/`, so it is read by adopters with no connection to this
-  repository's history, and four of its sentences were Japanese. They say what
-  they said.
-
-  The file is struck from the approved-Japanese list in the asset guard rather
-  than left there. A translated entry that stays on the list is a slot the next
-  untranslated document can take.
-
-- **A written or edited file restates the implementation rule** (#1465).
-  `.claude/settings.json` carried three hook entries, all restating
-  documentation clarity and all matching Markdown. An agent that wrote Markdown
-  was reminded how to write it; an agent that wrote source was reminded of
-  nothing. A rule read once at the start of a long session is the one that
-  drifts.
-
-  A fourth entry restates `.agents/rules/minimal-implementation.md` after every
-  `Write` and `Edit`: the reuse questions, the marker a deliberate shortcut
-  carries, and the list the ladder never trims — validation at a trust boundary,
-  error handling, security, accessibility, and anything the spec asks for.
-
-  It carries no path condition. The condition is a permission-rule scope matched
-  against the path, so naming source by extension means enumerating a language
-  set, and a language left out is a hook that is silently absent exactly where
-  the rule is needed. The cost is one extra line on a Markdown edit.
-
-  The entry ships in the `qfai init` template as well, and it reaches a project
-  that already carries the clarity hooks, because the merge decides per group.
-
-- **Two review documents stop restating how much code to write** (#1461). The
-  Copilot review instructions and the universal development checklist each held
-  their own KISS, YAGNI and DRY section. Neither was the source, both were
-  written separately, and they already said different things about the same
-  question.
-
-  Both now point at `.agents/rules/minimal-implementation.md` and state no
-  ladder of their own. What was not in the ladder stays where it was: cognitive
-  load, which is a finding whatever the amount of code, and the Rule of Three,
-  which is a floor on sharing rather than a rung.
-
-  SOLID, separation of concerns, fail-fast and the rest are untouched. They are
-  a different subject from how much code answers a requirement.
-
-- **Every agent card carries a minimal-implementation obligation** (#1462).
-  Seven of the nineteen cards said something about simplicity, each in its own
-  words. Twelve said nothing — among them every test-stage role and every
-  planning role, which is why the ladder reached neither stage.
-
-  All nineteen now point at `.agents/rules/minimal-implementation.md`, and what
-  the line asks of the role depends on the stage:
-
-  | Stage                   | What the role owes                                                              |
-  | ----------------------- | ------------------------------------------------------------------------------- |
-  | Requirements and design | The first rung, whether the thing needs to exist, while the scope is still open |
-  | Implementation          | The reuse rungs, and the marker on a deliberate shortcut                        |
-  | Tests                   | How a test is built — never how many obligations are covered                    |
-  | Review                  | A finding that names what to cut and what replaces it                           |
-  | Documentation           | Scripts and workflows the role changes; prose keeps its own standard            |
-
-  The test-stage wording is the one that had to be written down. A rule that
-  says "write less", reaching the role that decides coverage, is a way to lose
-  tests.
-
-  The seven cards that carried prose keep everything that was not the ladder —
-  SOLID, separation of concerns, fail-fast and the rest are a different subject,
-  and only the restated rungs are struck.
+  A round with several review attempts qualifies its verdict field, and the
+  extraction now drops that form too: the contract said every verdict line goes
+  and the code matched only the unqualified one, so a multi-attempt round gave
+  the reviewer and the gate two digests.
 
 ## [1.11.1] - 2026-09-10
 
