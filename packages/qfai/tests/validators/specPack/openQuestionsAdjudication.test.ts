@@ -169,6 +169,30 @@ describe("the register it reads, and the notation it reads it in", () => {
     expect(codes(table)).toEqual(["QFAI-SPACK-102"]);
   });
 
+  it("reads the status beside a note in the same cell", () => {
+    // The registers in this repository write `resolved (2026-05-06)`. The date
+    // is a note beside the value, not a second status.
+    const table = [
+      "| OQ-ID   | Status                |",
+      "| ------- | --------------------- |",
+      "| OQ-0007 | resolved (2026-05-06) |",
+      "| OQ-0008 | unadjudicated (asked) |",
+      "",
+    ].join("\n");
+    expect(codes(table)).toEqual(["QFAI-SPACK-102"]);
+    // And a misspelling is still the first word, and still reported.
+    expect(
+      codes(
+        [
+          "| OQ-ID   | Status               |",
+          "| ------- | -------------------- |",
+          "| OQ-0007 | unadjudicted (asked) |",
+          "",
+        ].join("\n"),
+      ),
+    ).toContain("E_OQ_STATUS_UNPARSEABLE");
+  });
+
   it("reports a question row with no status at all", () => {
     const table = [
       "| OQ-ID   | Question | Status |",

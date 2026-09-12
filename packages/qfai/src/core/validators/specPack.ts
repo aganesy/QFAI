@@ -2920,7 +2920,11 @@ function readDeclaredStatuses(text: string): DeclaredStatus[] {
       // register contract does not allow — but the template's own `0 items`
       // placeholder carries no question and declares nothing.
       if (cell !== "" && cell !== "-") {
-        declared.push({ id: currentId || "(unlabeled-oq)", raw: cell });
+        // The status is the cell's first word. Registers in this repository
+        // write `resolved (2026-05-06)`, and the date beside the value is a
+        // note rather than a second status — while a misspelling is still the
+        // first word, and still reported.
+        declared.push({ id: currentId || "(unlabeled-oq)", raw: cell.split(/\s+/)[0] ?? cell });
       } else if (rowId !== null) {
         declared.push({ id: rowId, raw: "" });
       }
