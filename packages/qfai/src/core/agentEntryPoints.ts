@@ -214,6 +214,11 @@ function terminatorOf(line: string | undefined): string {
   return (line ?? "").endsWith("\r") ? "\r" : "";
 }
 
+/** The Markdown container prefix a line carries, as written. */
+function containerOf(line: string | undefined): string {
+  return /^[ \t]{0,3}(?:> ?)*/.exec((line ?? "").replace(/\r$/, ""))?.[0]?.trim() ?? "";
+}
+
 /**
  * Which lines of a document are outside every fenced block.
  *
@@ -221,10 +226,20 @@ function terminatorOf(line: string | undefined): string {
  * the fence, the bullets stay examples while the run reports having cited them;
  * counted as a rule list, they send a hand-wired file down a path that has
  * nowhere real to write.
+ *
+ * A fence belongs to the container it opened in. An unclosed one inside a block
+ * quote ends where the quote does, and a scanner holding it open past that
+ * reads the rest of the document as an example — including a real managed
+ * section, which is then appended a second time.
  */
 function outsideFences(lines: readonly string[]): boolean[] {
-  let open: { character: string; length: number } | null = null;
+  let open: { character: string; length: number; container: string } | null = null;
   return lines.map((raw) => {
+    const container = containerOf(raw);
+    if (open !== null && container !== open.container) {
+      // The container the fence opened in has ended, and so has the fence.
+      open = null;
+    }
     const line = plainLine(raw);
     const fence = /^ {0,3}(`{3,}|~{3,})(.*)$/.exec(line);
     if (fence === null) return open === null;
@@ -234,7 +249,7 @@ function outsideFences(lines: readonly string[]): boolean[] {
       // A backtick fence may not carry a backtick in its info string. Such a
       // line opens nothing, so it is ordinary content.
       if (run.startsWith("`") && rest.includes("`")) return true;
-      open = { character: run[0] ?? "`", length: run.length };
+      open = { character: run[0] ?? "`", length: run.length, container };
       return false;
     }
     // A block closes on its own character, on a run at least as long as the

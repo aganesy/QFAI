@@ -867,6 +867,36 @@ describe("what the citation scan reads a line as", () => {
     expect(addRuleCitations(existing, template, [".agents/rules/grilling.md"])).toBe(existing);
   });
 
+  it("ends a quoted fence where the block quote ends", () => {
+    // An unclosed fence inside a block quote closes with the quote. Held open
+    // past it, the real section below reads as an example and a later run
+    // appends a second one.
+    const existing = [
+      "# Our house rules",
+      "",
+      "> An example we never closed:",
+      ">",
+      "> ```markdown",
+      "> - `.agents/rules/temporary-files.md` — scratch goes under `tmp/`.",
+      "",
+      QFAI_AGENT_RULES_BEGIN,
+      "",
+      "- `.agents/rules/temporary-files.md` — scratch goes under `tmp/`.",
+      "",
+      QFAI_AGENT_RULES_END,
+      "",
+    ].join("\n");
+
+    // The section below the quote is the real one.
+    expect(needsManagedRulesSection(existing, template)).toBe(false);
+    expect(hasUnclosedRulesSection(existing)).toBe(false);
+    const merged = addRuleCitations(existing, template, [".agents/rules/grilling.md"]);
+    expect(merged).toContain(".agents/rules/grilling.md");
+    // And the bullet went into the section, not into the quoted example.
+    const quoted = merged.split("\n").filter((line) => line.startsWith(">"));
+    expect(quoted.some((line) => line.includes("grilling.md"))).toBe(false);
+  });
+
   it("keeps a wrapped bullet with its own continuation", () => {
     // The continuation explains the bullet above it. Inserting between the two
     // leaves it describing a rule it was never about.

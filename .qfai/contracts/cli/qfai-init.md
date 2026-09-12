@@ -199,7 +199,8 @@ in between would be replaced by a merge of the contents before it. Both are
 checks rather than locks, and what they buy is a window of one statement.
 
 **What a fenced block is.** An example, wherever it sits — a block quote's `>`
-prefix does not hide it. Neither a rule path nor a managed marker inside one is
+prefix does not hide it, and a fence opened inside one ends where the quote
+does. Neither a rule path nor a managed marker inside one is
 read as live: the file is not hand-wired by it, the example is not mistaken for
 the section, and nothing is written into it.
 
