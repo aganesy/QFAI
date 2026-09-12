@@ -31,13 +31,19 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   fifteen files, same coverage, same register — and the missing thing is that
   anyone agreed.
 
-  The session has three endings and authoring waits for any of them: its own
-  condition (no node open — the frontier empty and no lookup still running — and
-  the user confirming), the user's word, or, under a no-question mode, every
-  remaining decision registered as an open question. That last one is an ending
-  rather than an exemption: `--auto` reaches no confirmation, and a guard waiting
-  for one would stop the run before it could write the open questions that block
-  its completion.
+  The guard covers the pack — the fifteen files and the UI sidecars — rather
+  than every write. Three writes are not that authoring and happen when the
+  process reaches them: the research summary the session reads, the register
+  entry or labelled assumption the session's own ending produces, and a
+  throwaway artifact built to make a question answerable where talking cannot.
+
+  A session has four endings and three of them let authoring start: `confirmed`
+  (no node open, the user confirming), `user-closed` (`proceed` or `done` —
+  lookups finished, each decision still open becoming a labelled assumption) and
+  `no-question` (`--auto` — each remaining decision registered open, and the open
+  count then blocks). `stopped` does not: the rule says a stop ends the session
+  and no further work follows it, so a pack drafted after one is the run doing
+  what the user told it not to.
 
   The stage evidence carries a `## Grilling Session` row, which is what the
   Reviewer Gate reads the condition off. A skipped session and a completed one
@@ -57,8 +63,6 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   skill bodies lazily hands the agent the reference and not the procedure, and an
   agent with the reference alone improvises the interview — which is the
   methodless interview this change replaces, wearing its name.
-
-### Changed
 
 - **A reviewer that recommended a decision the agents adopted cannot clear it**
   (#1600). A grilling session puts a recommended answer beside each question,

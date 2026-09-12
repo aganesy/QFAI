@@ -21,6 +21,7 @@ const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), ".."
 const TREES = ["packages/qfai/assets/init/.qfai", ".qfai"];
 const SKILL = "assistant/skills/qfai-discussion/SKILL.md";
 const MATRIX = "assistant/skills/qfai-discussion/references/discussion-completion-matrix.md";
+const REVIEW_REQUEST = "assistant/skills/qfai-discussion/templates/review/review_request.md";
 
 /** Collapse markdown soft wraps so assertions pin wording, not the wrap column. */
 const unwrap = (markdown: string): string => markdown.replace(/\s*\n\s*/g, " ");
@@ -101,7 +102,12 @@ describe.each(TREES)("%s — the discussion interview", (tree) => {
     // visual choice asked there is asked after the thing it governs is written
     // — which the pre-authoring guard exists to stop.
     const skill = await read(SKILL);
-    expectPhrase(skill, "the design-direction decisions in `references/design-dna-intake.md`");
+    expectPhrase(skill, "the design-direction decisions in");
+    expectPhrase(skill, "`references/design-dna-intake.md`");
+    // A cli-only pack is UI-bearing and has no brand questions, so the
+    // condition is the visual surface rather than the UI-bearing flag.
+    expectPhrase(skill, "where any classified surface is");
+    expectPhrase(skill, "Not every UI-bearing target: a cli-only pack is UI-bearing");
     expectPhrase(
       skill,
       "a user-owned visual choice asked there is asked after the thing it governs",
@@ -124,30 +130,61 @@ describe.each(TREES)("%s — the discussion interview", (tree) => {
     expect(autoDecide).toMatch(/demonstrably equivalent, which a design choice is not/i);
   });
 
-  it("holds authoring until the session has ended, by any of its routes", async () => {
+  it("holds the pack's authoring until the session has ended", async () => {
     // A pack drafted mid-session records a design still being decided, and from
-    // then on the run defends the draft rather than the decision. Under a
-    // no-question mode no confirmation can arrive, so a guard waiting for one
-    // would stop the run before it could write the open questions that block
-    // its completion.
+    // then on the run defends the draft rather than the decision.
     const skill = await read(SKILL);
-    expectPhrase(skill, "Artifact authoring does not start until the session has ended");
-    expectPhrase(skill, "the frontier empty **and** no fact lookup still running");
-    expectPhrase(skill, "with every remaining decision\nregistered as an open question");
-    expectPhrase(skill, "The no-question route is an ending, not an exemption.");
+    expectPhrase(skill, "**Authoring the pack**");
+    expectPhrase(skill, "does not start until the session has ended");
   });
 
-  it("requires both halves of the end condition", async () => {
-    // When every remaining decision waits on a lookup, the frontier is empty
-    // while the tree still holds open nodes, and authoring there begins before
-    // the lookup can raise the questions it was dispatched to answer.
-    const matrix = await read(MATRIX);
+  it("scopes the guard to the pack, not to every write", async () => {
+    // Three writes are necessary before or during the session, and a guard over
+    // every write makes the process unexecutable: the research the session
+    // reads, the records a no-question ending produces — which are what block
+    // completion — and a throwaway artifact the method calls for where talking
+    // cannot settle a question.
+    const skill = await read(SKILL);
+    expectPhrase(skill, "Three writes are not that authoring");
     expectPhrase(
-      matrix,
-      "no node open — the frontier empty\n   **and** no fact lookup still running",
+      skill,
+      "The session reads it. Held back, the decisions are settled against evidence nobody had",
     );
-    expectPhrase(matrix, "Both halves of the first condition");
-    expectPhrase(matrix, "Not\n   at a count");
+    expectPhrase(
+      skill,
+      "a no-question run cannot write the open questions that block its completion",
+    );
+    expectPhrase(skill, "It is not the pack, and it is not kept");
+  });
+
+  it("lets three endings authorize authoring and stops on the fourth", async () => {
+    // `stop` ends the session immediately and no further work follows it, so a
+    // closure that authorizes proceeding and a cancellation cannot share a
+    // value — a pack drafted after `stop` is the run doing exactly what the
+    // user told it not to.
+    const skill = await read(SKILL);
+    for (const ending of ["`confirmed`", "`user-closed`", "`no-question`", "`stopped`"]) {
+      expectPhrase(skill, ending);
+    }
+    expectPhrase(skill, "the frontier empty **and** no fact lookup still running");
+    expectPhrase(skill, "each decision still open becomes a labelled assumption");
+    expectPhrase(skill, "**Does not start.** Report every open decision as open and end the run");
+    expectPhrase(skill, "a pack drafted after `stop` is the run doing exactly what the");
+  });
+
+  it("accepts each ending that authorizes authoring, and no others", async () => {
+    // A gate that took only the natural ending would block every run the user
+    // closed with `proceed` or `done`, which the method explicitly permits.
+    const matrix = await read(MATRIX);
+    expectPhrase(matrix, "`Ended` reading one of the three endings that authorize it");
+    expectPhrase(matrix, "every decision still open recorded as a labelled assumption");
+    expectPhrase(matrix, "`stopped` never completes");
+    // When every remaining decision waits on a lookup the frontier is empty
+    // while the tree still holds open nodes, so authoring there begins before
+    // the lookup can raise the questions it was dispatched to answer.
+    expectPhrase(matrix, "the frontier empty **and** no fact lookup still running");
+    expectPhrase(matrix, "Both halves of the `confirmed` condition");
+    expectPhrase(matrix, "Not at a count");
   });
 
   it("leaves a record the reviewer can check the claim against", async () => {
@@ -156,7 +193,15 @@ describe.each(TREES)("%s — the discussion interview", (tree) => {
     // claim it cannot verify.
     const skill = await read(SKILL);
     expectPhrase(skill, "## Grilling Session");
-    expectPhrase(skill, "`Ended` is `confirmed`, `user-closed` or `no-question`.");
+    expectPhrase(
+      skill,
+      "`Ended` is `confirmed`, `user-closed`, `no-question` or `stopped`, and only the first three authorize authoring",
+    );
+    // The reviewer is handed the row rather than sent looking for it: a row it
+    // has to find is one it can return `PASS` without reading.
+    const request = await read(REVIEW_REQUEST);
+    expectPhrase(request, "## Grilling Session");
+    expectPhrase(request, "a row it has to\n> go looking for is one it can pass without reading");
     expectPhrase(skill, "accept a claim it cannot check");
     // And the gate reads the row rather than the event.
     expectPhrase(
@@ -166,6 +211,6 @@ describe.each(TREES)("%s — the discussion interview", (tree) => {
 
     const matrix = await read(MATRIX);
     expectPhrase(matrix, "The stage evidence's `## Grilling Session` row");
-    expectPhrase(matrix, "the row reads `no-question`");
+    expectPhrase(matrix, "The no-question row is the one to read carefully");
   });
 });

@@ -14,22 +14,31 @@ Blocking for every pack, UI-bearing or not:
    resolves to a `sources[].id`, and at least one `reflection[]` entry records an apply decision.
    `npx qfai validate --profile discussion --fail-on error` reports `QFAI-RESEARCH-*` until it is.
 2. The stage evidence's `## Grilling Session` row shows the session ended before authoring began,
-   the way `.agents/rules/grilling.md` says a session ends: no node open — the frontier empty
-   **and** no fact lookup still running — and the user confirming the understanding is shared. Not
-   at a count, and not on the questions running out.
+   with `Ended` reading one of the three endings that authorize it:
 
-   Both halves of the first condition, because when every remaining decision waits on a lookup the
-   frontier is empty while the tree still holds open nodes, and authoring there begins before the
-   lookup can raise the questions it was dispatched to answer.
+   | Ended         | Also required                                                                     |
+   | ------------- | --------------------------------------------------------------------------------- |
+   | `confirmed`   | No node open — the frontier empty **and** no fact lookup still running            |
+   | `user-closed` | Lookups finished, and every decision still open recorded as a labelled assumption |
+   | `no-question` | Every remaining decision registered open, so item 7 below is what blocks          |
+
+   `stopped` never completes: the user ended the run, and a pack authored after that is the run
+   doing what they told it not to.
+
+   Both halves of the `confirmed` condition, because when every remaining decision waits on a
+   lookup the frontier is empty while the tree still holds open nodes, and authoring there begins
+   before the lookup can raise the questions it was dispatched to answer.
+
+   Not at a count, and not on the questions running out.
 
    This is blocking rather than advisory because the failure it catches leaves no other trace. A
    pack authored mid-session looks exactly like one authored after: fifteen files, every topic
    covered, every open question registered. What is missing is that someone agreed to what is in
    them, and nothing downstream can tell.
 
-   Under a no-question mode the confirmation has nobody to give it, so the row reads `no-question`
-   and the session's remaining decisions are registered as open questions instead. Item 7 below is
-   then what blocks: an open count above zero closes nothing.
+   The no-question row is the one to read carefully: `--auto` can reach nobody, so waiting for a
+   confirmation would stop the run before it could write the open questions that are what block it.
+   Item 7 below does that work instead — an open count above zero closes nothing.
 
 ## UI-bearing Packs
 

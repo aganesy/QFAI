@@ -73,8 +73,11 @@ A **cli-only** pack (`primary_surface: cli`, no visual secondary surface) stays 
 1. Run `.qfai/assistant/constitution/research-first-protocol.md` before any other artifact is authored, record its `research_summary` output in the `## Research Summary` section of `04_Sources.md`, then register source traceability there. Its `best_practices` / `anti_patterns` are inputs to every step below, not a late fill-in.
 2. Read `.qfai/assistant/skills/qfai-grilling/SKILL.md`, then run the core interview
    for concept, scope, stakeholders, and constraints as a grilling session through
-   that skill, covering every topic in `references/discussion-coverage-checklist.md` **and**, for a UI-bearing target, the
-   design-direction decisions in `references/design-dna-intake.md`. The method is
+   that skill, covering every topic in `references/discussion-coverage-checklist.md` **and**, where any classified surface is
+   `web`, `mobile`, `desktop` or `mixed`, the design-direction decisions in
+   `references/design-dna-intake.md`. Not every UI-bearing target: a cli-only pack is UI-bearing
+   and the brand questions do not apply to it, because nothing downstream reads a `visual.*` token
+   tree for one. The method is
    `.agents/rules/grilling.md` and this step does not restate it. "Run the interview" named no
    method, and an interview with no method is the agent deciding and reporting.
    **Read the file, do not work from the name.** A host that loads a skill body lazily gives an
@@ -117,15 +120,32 @@ The full completion logic, including the UI-bearing blocking conditions, is in
 `references/discussion-completion-matrix.md`. It must stay consistent with the canonical
 sidecar family declared above and with `templates/uiux/00_index.md#Forbidden Legacy Files`.
 
-Artifact authoring does not start until the session has ended — on its own condition (no node
-open, which means the frontier empty **and** no fact lookup still running, and the user
-confirming), on the user's word, or, under a no-question mode, with every remaining decision
-registered as an open question. A pack drafted mid-session records a design that was still being
-decided, and the draft is what the rest of the run then defends.
+**Authoring the pack** — the fifteen mandatory files and the UI sidecars, as the artifacts a
+reader takes the design from — does not start until the session has ended. A pack drafted
+mid-session records a design that was still being decided, and the draft is what the rest of the
+run then defends.
 
-The no-question route is an ending, not an exemption. `--auto` can reach no confirmation, so a
-guard that waited for one would stop the run before it could write the open questions that are
-what blocks its completion.
+Three writes are not that authoring, and happen when the process reaches them:
+
+| Write                                                                       | When                       | Why it is not authoring                                                                                                |
+| --------------------------------------------------------------------------- | -------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| The research summary in `04_Sources.md`                                     | Step 1, before the session | The session reads it. Held back, the decisions are settled against evidence nobody had                                 |
+| A register entry or a labelled assumption the session's own ending produces | As the session ends        | It records what the session did. Withheld, a no-question run cannot write the open questions that block its completion |
+| A throwaway artifact built to make a question answerable                    | Mid-session                | The method calls for it where talking cannot settle the question. It is not the pack, and it is not kept               |
+
+A session has four endings, and three of them let authoring start:
+
+| Ended         | What the user did                                                                                                | Authoring                                                                                               |
+| ------------- | ---------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------- |
+| `confirmed`   | Confirmed on the session's own condition: no node open — the frontier empty **and** no fact lookup still running | Starts                                                                                                  |
+| `user-closed` | Said `proceed`, `done`, or words to that effect                                                                  | Starts. Lookups already running are finished and each decision still open becomes a labelled assumption |
+| `no-question` | Nothing — `--auto` reached nobody                                                                                | Starts. Each remaining decision is registered open, and the open count is then what blocks completion   |
+| `stopped`     | Said `stop`                                                                                                      | **Does not start.** Report every open decision as open and end the run                                  |
+
+`stopped` is the one the vocabulary must keep separate. The rule says a stop ends the session
+immediately and no further work follows it, so a closure that authorizes proceeding and a
+cancellation cannot share a value — a pack drafted after `stop` is the run doing exactly what the
+user told it not to.
 
 Before declaring completion, you MUST:
 
@@ -144,6 +164,7 @@ Before declaring completion, you MUST:
 Reviewer checks must confirm:
 
 - the stage evidence's `## Grilling Session` row shows the session ended before authoring began,
+  with `Ended` one of `confirmed`, `user-closed` or `no-question`;
   and every decision it settled is recorded where `references/oq-and-deferred-rules.md` says;
 - the cycle's review pack was written per `references/review-cycle-playbook.md`, i.e. the three
   required artifacts exist under a `.qfai/review/review-YYYYMMDDhhmmssSSS/` directory;
@@ -184,7 +205,7 @@ session condition off:
 | confirmed | empty | none in flight | 12 | 0 |
 ```
 
-`Ended` is `confirmed`, `user-closed` or `no-question`. Without the record a skipped session and a
+`Ended` is `confirmed`, `user-closed`, `no-question` or `stopped`, and only the first three authorize authoring. Without the record a skipped session and a
 completed one present the same pack — fifteen files, every topic covered, every open question
 registered — so the reviewer would have to block every run or accept a claim it cannot check.
 
