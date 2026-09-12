@@ -4,6 +4,8 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ## [Unreleased]
 
+### Added
+
 - **A design is grilled before it is fixed, and every stage does it** (#1591,
   #1594, #1595). A grilling session interviews an unfixed design as a tree of
   open decisions. The frontier is the decisions answerable now, put as one round
@@ -79,8 +81,6 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   destructive and so is asked for first — naming what goes in the evidence tree
   and in the authoring tree, and ending the run with nothing deleted if they
   decline.
-
-### Added
 
 - **`qfai validate` reports a spec stage whose grilling session left no trace**
   (#1605). `QFAI-GRILL-001`, at warning, on spec evidence whose
