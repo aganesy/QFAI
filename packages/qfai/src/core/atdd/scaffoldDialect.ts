@@ -440,7 +440,13 @@ export function compileGlob(pattern: string): string {
       if (close !== -1) {
         const body = pattern.slice(index + 1, close);
         const negated = body.startsWith("!") || body.startsWith("^");
-        source += `[${negated ? "^" : ""}${compileClassBody(body.slice(negated ? 1 : 0))}]`;
+        // A class never reaches across a separator, whatever it spells. A
+        // range holding `/` — `[.-9]` does — otherwise matched the separator
+        // itself, and a destination the project's own scan cannot reach was
+        // accepted as one it could. Negated, the separator joins what is
+        // excluded; positive, a lookahead holds it out of a set that spells it.
+        const members = compileClassBody(body.slice(negated ? 1 : 0));
+        source += negated ? `[^/${members}]` : `(?!/)[${members}]`;
         index = close;
         continue;
       }
@@ -459,7 +465,7 @@ export function compileGlob(pattern: string): string {
  * compiles a class over the characters of the word `digit`, which matches none
  * of the names the pattern was written for.
  */
-function findClassClose(pattern: string, open: number): number {
+export function findClassClose(pattern: string, open: number): number {
   let index = open + 1;
   if (pattern[index] === "!" || pattern[index] === "^") index += 1;
   if (pattern[index] === "]") index += 1;

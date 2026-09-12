@@ -6,7 +6,7 @@ import { fileURLToPath } from "node:url";
 
 import { describe, expect, it } from "vitest";
 
-import { compileGlob } from "../../src/core/atdd/scaffoldDialect.js";
+import { compileGlob, findClassClose } from "../../src/core/atdd/scaffoldDialect.js";
 
 // Anchored to this file rather than to `process.cwd()`, for the reason the
 // clarification-budget suite gives: a runner launched from the repo root would
@@ -119,6 +119,20 @@ function citationsIn(line: string): string[] {
       // ends where the emphasis does, and a trailing `**` is not a wildcard.
       if (opener !== "" && line.startsWith(opener, index)) break;
       const character = line[index] ?? "";
+      if (character === "[") {
+        // Through the compiler's own scanner: an initial `]` is a member and an
+        // inner `[` is one too, so the generic stack closed `[]a]` at the first
+        // `]` and read `[[]` as unbalanced — discarding a citation the matcher
+        // resolves.
+        const close = findClassClose(line, index);
+        // Bounded to the token: a class that never closes inside the citation
+        // would otherwise borrow a `]` out of the sentence around it.
+        const body = close === -1 ? "" : line.slice(index, close);
+        if (close !== -1 && body.trim() === body && !body.includes(" ")) {
+          index = close + 1;
+          continue;
+        }
+      }
       const closer = GROUP_CLOSERS[character];
       if (closer !== undefined) {
         closers.push(closer);
@@ -627,25 +641,36 @@ function namesASet(cited: string): boolean {
  * so `.qfai/report/.*` still resolves and a plain wildcard does not.
  */
 function hidesADotName(cited: string, candidate: string): boolean {
-  const parts = cited.split("/");
-  return candidate
-    .split("/")
-    .some((segment) => segment.startsWith(".") && !parts.some((part) => spells(part, segment)));
+  return !alignsWithDotPolicy(cited.split("/"), candidate.split("/"));
 }
 
 /**
- * Whether one pattern segment asks for a dot-leading name rather than allowing
- * it.
+ * Whether the pattern matches the candidate with every dot-leading segment
+ * spelled, segment against the segment it matched.
  *
- * The test is what the segment does with the same name minus its dot: `*` and
- * `**` match both, so neither asks for the dot; `.gitignore`, `.*` and
- * `[.]gitignore` match only the one that has it. Reading the source text for a
- * leading dot instead rejected the third, which is a spelling as explicit as
- * the first.
+ * Checking each candidate segment against the whole pattern instead let one
+ * explicit `.cache` vouch for a second the wildcard beside it consumed, so
+ * provenance reached through a hidden directory nobody named read as valid.
+ * `**` consumes whole segments and spells none of them, which is what a
+ * wildcard is; every other segment is compiled on its own and asked what it
+ * does with the same name minus its dot.
  */
-function spells(part: string, segment: string): boolean {
+function alignsWithDotPolicy(parts: readonly string[], segments: readonly string[]): boolean {
+  const [part, ...rest] = parts;
+  if (part === undefined) return segments.length === 0;
+  if (part === "**") {
+    for (let taken = 0; taken <= segments.length; taken += 1) {
+      if (taken > 0 && (segments[taken - 1] ?? "").startsWith(".")) break;
+      if (alignsWithDotPolicy(rest, segments.slice(taken))) return true;
+    }
+    return false;
+  }
+  const segment = segments[0];
+  if (segment === undefined) return false;
   const pattern = new RegExp(`^${compileGlob(part)}$`);
-  return pattern.test(segment) && !pattern.test(segment.slice(1));
+  if (!pattern.test(segment)) return false;
+  if (segment.startsWith(".") && pattern.test(segment.slice(1))) return false;
+  return alignsWithDotPolicy(rest, segments.slice(1));
 }
 
 /**
@@ -893,6 +918,8 @@ describe("what the scan counts as a citation", () => {
 
 describe("a glob is a claim about a set", () => {
   const matchesLine = (line: string): string[] => citationsIn(line);
+  /** A pattern compiled the way the writer's own destination check compiles it. */
+  const compiled = (pattern: string): RegExp => new RegExp(`^${compileGlob(pattern)}$`);
 
   it("resolves when at least one tracked path matches", () => {
     // `.qfai/specs/**` is not a generated root, so a glob under one of those is
@@ -949,6 +976,35 @@ describe("a glob is a claim about a set", () => {
     expect(hidesADotName(".qfai/report/.gitignore", control)).toBe(false);
     expect(hidesADotName(".qfai/report/.*", control)).toBe(false);
     expect(hidesADotName(".qfai/report/[.]gitignore", control)).toBe(false);
+  });
+
+  it("reads a dot-leading name at the position that matched it", () => {
+    // Checked against the whole pattern, one explicitly written `.cache`
+    // vouched for a second the wildcard beside it consumed, so provenance
+    // reached through a hidden directory nobody named read as valid.
+    const cited = ".qfai/report/.cache/*/summary.json";
+    expect(globToRegExp(cited).test(".qfai/report/.cache/.cache/summary.json")).toBe(true);
+    expect(hidesADotName(cited, ".qfai/report/.cache/.cache/summary.json")).toBe(true);
+    expect(hidesADotName(cited, ".qfai/report/.cache/run-1/summary.json")).toBe(false);
+  });
+
+  it("keeps a class off the separator, whatever it spells", () => {
+    // A range holding `/` — `[.-9]` does — otherwise matched the separator,
+    // and a destination the project's own scan cannot reach was accepted.
+    expect(compiled("tests[.-9]integration/x.json").test("tests/integration/x.json")).toBe(false);
+    expect(compiled("tests[.-9]integration/x.json").test("tests0integration/x.json")).toBe(true);
+    // Negated, the separator joins what the class excludes.
+    expect(compiled("tests[!a]integration").test("tests/integration")).toBe(false);
+    expect(compiled("tests[!a]integration").test("testsbintegration")).toBe(true);
+  });
+
+  it("keeps a class whose first member is a bracket whole", () => {
+    // The compiler reads an initial `]` as a member and an inner `[` as one,
+    // so a generic bracket stack closed the first at its first `]` and read the
+    // second as unbalanced — discarding a citation the matcher resolves.
+    for (const cited of [".qfai/report/[]a]validate.json", ".qfai/report/[[]validate.json"]) {
+      expect(citationsIn(`- \`${cited}\``), cited).toEqual([cited]);
+    }
   });
 
   it("keeps a named class whole while scanning", () => {
