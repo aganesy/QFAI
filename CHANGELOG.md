@@ -104,6 +104,82 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Added
 
+- **`/qfai-prototyping` states which questions it grills and which it builds**
+  (#1602). The loop exists for questions that need something to react to — how
+  it should feel, which layout carries the task. The questions around it are
+  settled by talking first: what the prototype is for, what would count as
+  better, what is out of bounds.
+
+  Each mistake costs something different, and the skill says which. Running the
+  loop on a question a sentence would have settled spends cycles building an
+  answer nobody needed; talking through one the loop should answer spends a
+  whole session on rephrasing, which is where a session balloons.
+
+  A finished prototype makes a decision answerable and does not take it. The
+  question is asked again against it — an agent that builds one, judges it and
+  carries on has decided on the user's behalf, with more evidence than before
+  and still not the user's answer, so the loop now blocks on that answer before
+  handoff: convergence is the reviewer's verdict on four fixed axes, not the
+  user's on the question. Under a no-question mode the run stops there rather
+  than certifying a design nobody picked. An answer that rejects the prototype,
+  or picks a direction it does not implement, takes the cycle-0 reset carrying
+  that answer as the pivot — recording a choice does not change the HTML, and
+  convergence seals the loop, so a next-cycle route would be refused by the one
+  command that can build what was asked for.
+
+  The checkpoint resumes the session rather than asking one question, because
+  convergence can make several decisions answerable at once and a session ends on
+  an empty frontier and the user's confirmation.
+
+  Every row of the session record names the lineage it applies to — a spec and
+  screen, a spec, or `global` — since one invocation runs a lineage per spec and
+  screen, and a generator or reviewer reads its own rows plus the global ones.
+
+  The record is named in the generator's and the reviewer's own prompt contracts,
+  not only in the parent skill, because those are what the delegated roles read,
+  and both carry the lineage filter — an unfiltered read lets one screen's answer
+  constrain another's.
+
+  It is written before the first cycle whether or not the session settled
+  anything, because a required input a delegated role cannot find is an error it
+  guesses past, and an empty session written down is a different statement from a
+  missing file. It is tracked rather than ignored with the regenerable stage
+  evidence: nothing reproduces these answers, and a fresh clone or another
+  worktree would otherwise grade against none of them. The migration that
+  carries the nested `.qfai/evidence/.gitignore` forward gains the same two
+  lines, because that file's `*` overrides a root negation on every project
+  initialized before the root block grew its own. An upgrade to an existing
+  managed block migrates the re-ignore too, where that block ignores the
+  evidence tree — without it the appended negation would expose the captures and
+  the mutation log that block was keeping out.
+
+  Recording an answer replaces the row for the same scoped decision rather than
+  adding beside it. The delegated prompts read every row matching their lineage,
+  so a superseded pivot would still steer the next cycle.
+
+  The cycle-0 reset is asked for before it runs, naming what it destroys: it
+  keeps `iter-00` and deletes `iter-01` upward, so every later capture, review
+  payload and critique goes. Answering a design question is not consent to a
+  destructive operation.
+
+  A `proceed` or `done` finishes the lookups and records what is still open as
+  labelled assumptions — the user ended the asking, not the work. The
+  converged-prototype choice is not among them: it is what the loop was run to
+  answer, so it is asked again and its answer takes the accepted or rejected
+  route. A closure cannot assume the one choice the whole run exists to obtain.
+  A `stop` ends the run rather than resetting, and the ten-cycle budget is
+  counted across rejection resets rather than restarting with each — an unbounded
+  chain of ten-cycle loops is the budget removed by the one route that looks like
+  keeping it.
+
+  The session's answers go to `.qfai/evidence/prototyping/grilling.md`, and the
+  generator and the reviewer both read it. The generator runs from contracts and
+  a fixed prompt and the reviewer from four fixed axes, neither of which says
+  anything about this prototype's purpose — so an answer with no destination is
+  one the loop contradicts on the next cycle.
+
+  The scope floor is unchanged.
+
 - **A lint lane refuses a tracked file under the scratch directory.** `tmp/` is
   the sole staging area for scratch output and nothing there is committed, but
   an ignore rule does not stop tracking a file already in the index: a scratch
