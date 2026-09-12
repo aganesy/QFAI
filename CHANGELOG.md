@@ -4,6 +4,38 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ## [Unreleased]
 
+### Fixed
+
+- **A committed record is held to the artifacts the repository carries**
+  (#1652). Evidence files name paths under the generated trees — a review pack,
+  a validate report, a discussion pack — and those trees are ignored. On every
+  clone but the author's the claim arrives without its subject: a reader cannot
+  open what the record points at, and neither can the stage seal, which
+  resolves the recorded review pack under the repository root. A guard now
+  measures every citation in the committed evidence against the tracked tree,
+  with the names that do not resolve today held as a list that may only shrink.
+
+  A citation is read as the dialect writes it — a brace list, an extended
+  group, a bracket expression, a one-character wildcard — and each is resolved
+  through the repository's own glob compiler rather than a second
+  implementation of the same notation. A citation opens only where the text
+  before it is not path text, so a runner's temporary directory or another
+  clone's path is not read as this repository's file, and a wildcard does not
+  stand in for a dot-leading name that has to be written.
+
+  A record that explains why an artifact is absent says so with
+  `<!-- qfai:not-a-citation -->` on the line, or on the line before a fenced
+  block for the paths it names inside it.
+
+- **A glob's bracket expression names a set on both sides** (#1652). A class
+  was compiled by scanning for the first `]`, which stops inside a named class
+  such as `[[:digit:]]` and leaves a pattern matching the letters of the name.
+  The class's real terminator is found now, and each named class is written out
+  as the members a regular expression takes — so a project whose test glob uses
+  one is no longer told the file it generated does not match it.
+
+## [1.12.0] - 2026-09-12
+
 ### Added
 
 - **A design is grilled before it is fixed, and every stage does it** (#1591,
@@ -1984,34 +2016,6 @@ unadjudicated`, read off a Work Orders Summary row the session writes rather
   stale every verdict in the spec when any cell moved. A record re-attestation
   closes it, because the revision has not moved — and it is not a rubber stamp,
   since what it re-signs is a judgement over a subject that has grown.
-
-- **A committed record is held to the artifacts the repository carries**
-  (#1652). Evidence files name paths under the generated trees — a review pack,
-  a validate report, a discussion pack — and those trees are ignored. On every
-  clone but the author's the claim arrives without its subject: a reader cannot
-  open what the record points at, and neither can the stage seal, which
-  resolves the recorded review pack under the repository root. A guard now
-  measures every citation in the committed evidence against the tracked tree,
-  with the names that do not resolve today held as a list that may only shrink.
-
-  A citation is read as the dialect writes it — a brace list, an extended
-  group, a bracket expression, a one-character wildcard — and each is resolved
-  through the repository's own glob compiler rather than a second
-  implementation of the same notation. A citation opens only where the text
-  before it is not path text, so a runner's temporary directory or another
-  clone's path is not read as this repository's file, and a wildcard does not
-  stand in for a dot-leading name that has to be written.
-
-  A record that explains why an artifact is absent says so with
-  `<!-- qfai:not-a-citation -->` on the line, or on the line before a fenced
-  block for the paths it names inside it.
-
-- **A glob's bracket expression names a set on both sides** (#1652). A class
-  was compiled by scanning for the first `]`, which stops inside a named class
-  such as `[[:digit:]]` and leaves a pattern matching the letters of the name.
-  The class's real terminator is found now, and each named class is written out
-  as the members a regular expression takes — so a project whose test glob uses
-  one is no longer told the file it generated does not match it.
 
 ## [1.11.1] - 2026-09-10
 
