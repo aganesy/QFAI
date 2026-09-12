@@ -67,6 +67,24 @@ Applies to `unavailable`, and to `saturated` once the retry budget is exhausted.
   - `User action needed: <settings or tooling changes required — or "none; wait for a delegation slot to free" when the class is saturated>`
   - `Retry condition: rerun after the required delegation succeeds`
 
+### Sanctioned exception: a read-only fact lookup
+
+One delegation may continue without a sub-agent: reading a fact the environment
+already holds, where the skill that dispatched it may read that fact itself.
+Reading the file and dispatching a sub-agent to read it are two ways of doing one
+job, so the dispatch is an optimisation, and losing it removes the optimisation
+rather than the job.
+
+The exception is bounded by what it covers.
+
+- **Reading, never authoring.** A primary artifact and a blocking review stay
+  under the hard stop whatever their class.
+- **The class is still reported**, with every fact that stayed unread named, and
+  every decision downstream of one held open.
+- **A skill claiming it MUST cite this section.** A skill that merely carries on
+  has taken the override this section exists to replace, and a reader cannot tell
+  that apart from a skill that never read the rule.
+
 ### Commit Scoping (MUST)
 
 - A delegated agent stages only the paths it declared as deliverables in its
@@ -101,6 +119,12 @@ Every major artifact in the stage should include this table schema:
   It exists so an author→reviewer collision is detectable after the fact from the evidence alone;
   the same instance appearing in an authoring step and in a review step over the same artifact is
   a reviewer-independence violation.
+- **A grilling session that settled a decision agent-to-agent adds a row for it**, with
+  `Task title` = `grilling: <the decision>` and `Agent instance` = the agent whose
+  recommendation was adopted. That row is what a later reviewer reads its
+  `Recommended and unadjudicated` answer off: a reset instance holds no memory of the
+  session, so without the row the field cannot be answered honestly and the review has
+  nothing to check against.
 - `PENDING` records a gate that could not be run — the only honest status for the exhausted-budget
   branch below, which mandates it. It is never a substitute for `PASS`: DONE stays blocked while
   any row is `PENDING`, and the stage stays resumable. A skill that allows only `PASS`/`REVISE`
@@ -129,6 +153,56 @@ review in this run.
 - This definition governs every skill. Skill-local wording (e.g. `qfai-configure`'s "a reviewer
   who did not modify the config") is an instance of it, not a competing rule.
 
+#### A griller's recommendations, and what they disqualify
+
+A grilling session puts a recommended answer beside each question
+(`.agents/rules/grilling.md`). Who settled the decision decides what happens
+next.
+
+| The decision was settled                              | What follows                                                |
+| ----------------------------------------------------- | ----------------------------------------------------------- |
+| By the user, from the recommendation among the inputs | The decision is theirs. The griller may review the artifact |
+| Agent to agent, with no user adjudication             | The artifact is wrong, and no reviewer can clear it         |
+
+**The second row is not a routing problem.** A decision is the user's
+(`.agents/rules/grilling.md`), and a run that could not ask records it as an
+open question rather than adopting it. An agent-adopted recommendation is
+therefore an artifact carrying something nobody decided, and handing it to a
+different reviewer would launder it. The reviewer **MUST** return `REVISE` and
+name the decision: it is reopened and put to the user, or recorded open where
+no question can be asked.
+
+The first row needs a reason, because the intuitive one is wrong. A sub-agent
+starting with a reset context cannot defer to something it does not remember,
+so deference is not the risk. **Correlation** is: a fresh instance of the same
+agent, on the same model, over the same evidence, re-derives the preference
+that produced the recommendation and finds it good on the merits. Resetting the
+context removes the memory, not the disposition — which is why role name alone
+never establishes independence either. Where the user chose, that disposition
+is one input among several and the decision is not the griller's to re-derive.
+
+**A reviewer cannot attest to what it cannot see.** A reset instance does not
+know what an earlier one recommended, so the record supplies it: a session that
+settled a decision agent-to-agent records, in the stage's Work Orders Summary,
+the decision and the `Agent instance` that recommended it. `Recommended and
+unadjudicated` is read off that record, not off recollection, and a review whose
+stage has no such record has nothing to check the field against — which is
+itself a `REVISE`.
+
+The field asks about the artifact **as it now stands**. A recommendation the
+artifact no longer carries, and one the user has since settled, are both outside
+it: the first is not under review, and the second is the user's decision by the
+first row above. Read as a history of everything ever recommended, the field
+would disqualify a reviewer over something nobody is being asked to judge.
+
+**Review rounds are one series, whatever instance serves them.** The budget is
+two rounds per reviewer per artifact, and a host may answer round 2 with a fresh
+sub-agent under a new `Agent instance`. The work order and the response both
+carry a `Review series` value — the reviewed artifact plus the role — and the budget is counted per
+series. Counting per instance would restart it every round, so the budget could
+never be exhausted and the escalation exit that opens when it is would never
+open.
+
 - Reviewers must verify Drift Protocol enforcement.
 - Reviewers must verify test-layer policy enforcement when relevant.
 - Do not treat test volume ratios or floors as hard gates unless the skill explicitly says so.
@@ -147,15 +221,17 @@ the shipped-asset line ceiling; the rules are unchanged by the move.
 
 A finding outside the reviewing stage's remit is recorded and deferred, never blocking:
 
-| Stage              | In scope                                                          | Out of scope (record and defer)                |
-| ------------------ | ----------------------------------------------------------------- | ---------------------------------------------- |
-| `/qfai-discussion` | Requirement clarity, scope boundary, decision traceability        | Spec structure, runtime behavior               |
-| `/qfai-sdd`        | Spec / contract consistency, testability, traceability edges      | Runtime enforcement correctness, code quality  |
-| `/qfai-atdd`       | Obligation coverage, layer placement, annotation validity         | Implementation structure                       |
-| `/qfai-implement`  | Code quality, spec alignment of the item, RED/GREEN evidence      | Upstream spec content, contract design         |
-| `/qfai-configure`  | Config / manifest validity and the surfaces the run generated     | Spec content, implementation structure         |
-| `/qfai-verify`     | Gate execution, evidence completeness, report / artifact fidelity | Authoring quality of the artifacts it verifies |
-| `/web-research`    | Source authority and freshness, citation accuracy, claim support  | Spec content, implementation structure         |
+| Stage              | In scope                                                                                            | Out of scope (record and defer)                                                         |
+| ------------------ | --------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------- |
+| `/qfai-discussion` | Requirement clarity, scope boundary, decision traceability                                          | Spec structure, runtime behavior                                                        |
+| `/qfai-sdd`        | Spec / contract consistency, testability, traceability edges                                        | Runtime enforcement correctness, code quality                                           |
+| `/qfai-atdd`       | Obligation coverage, layer placement, annotation validity                                           | Implementation structure                                                                |
+| `/qfai-implement`  | Code quality, spec alignment of the item, RED/GREEN evidence                                        | Upstream spec content, contract design                                                  |
+| `/qfai-configure`  | Config / manifest validity and the surfaces the run generated                                       | Spec content, implementation structure                                                  |
+| `/qfai-verify`     | Gate execution, evidence completeness, report / artifact fidelity                                   | Authoring quality of the artifacts it verifies                                          |
+| `/web-research`    | Source authority and freshness, citation accuracy, claim support                                    | Spec content, implementation structure                                                  |
+| `/qfai-grilling`   | Decisions asked rather than assumed, facts naming where they were read, the session's end condition | The merit of what the user decided, and the artifacts the invoking stage writes from it |
+| `/qfai-grill`      | The same, reported to the user rather than to a stage                                               | The merit of what the user decided; there is no artifact to review                      |
 
 **Fallback for any stage not listed.** A stage that references this baseline without a
 row above has, as its remit, the artifacts that stage itself produces; everything
@@ -175,7 +251,7 @@ starts routing blocking reviewers, so the in/out split is not re-derived per run
   reviewing stage's own completion contract names, and that contract is what drains it (`.qfai/assistant/constitution/drift-protocol.md#the-record-defect-queue`). **The class needs a drain: only a stage whose completion conditions require that queue drained may use it — today `/qfai-implement` alone, so `/qfai-sdd`, `/qfai-atdd`, `/qfai-configure`, `/qfai-verify`, `/qfai-discussion` and `/web-research` reviewers MUST NOT, and there the finding keeps the class it would otherwise have had.** An entry closes only on a repaired record, re-attested in a new pack where a reviewer hashed it; `record:unchecked` is a bug report against `validateTddList` and never a substitute for the repair —
   a record rule worth a round is worth a validator code.
 - **Integrity is not record class.** Evidence copied from another round or a sibling row, an anchor resolving to a run other than the one it names, and a false
-  `Authored/edited under review` attestation claim work that was not done or independence the reviewer lacked. `agents/qa-gatekeeper.md` and the response rules below refuse a `PASS`
+  `Authored/edited under review` or `Recommended and unadjudicated` attestation claim work that was not done or independence the reviewer lacked. `agents/qa-gatekeeper.md` and the response rules below refuse a `PASS`
   built on them, so they stay `blocking` as `defect:code-quality` and are never filed as `record:*` — which covers an honestly produced record that is merely wrong.
 - A `none` advisory takes the Change Request / Open Question path (`.qfai/assistant/constitution/drift-protocol.md#reviewer-originated-obligations`); a `record:*` advisory takes the queue above. Neither goes to the implementer.
 - Only `blocking` findings — those citing a behaviour-governing obligation or a defect class — force `REVISE`.
@@ -199,6 +275,7 @@ failure, not a licence to skip the gate or to self-review.
 ```text
 Task title: <short>
 Role: <sub-agent role>
+Review series: <reviewed artifact> + <reviewer role>   # review work orders only; the budget is counted per series
 Goal: <what to decide/produce>
 Inputs (refs):
 - <file/section>
@@ -219,10 +296,12 @@ Acceptance bar: <accept when ...> | <rework when ...>   # never `PASS`/`REVISE`:
 Reviewer role: <sub-agent role that produced this response>   # REQUIRED — a `Result:` line with no speaker is a report, not a verdict
 Reviewed artifact: <path/anchor this verdict rules on>        # REQUIRED — bounds the ruling; a PASS here clears nothing else
 Round: 1 | 2 | 2b
+Review series: <reviewed artifact> + <reviewer role>          # the budget is counted per series, not per instance
 Result: PASS | REVISE
 Reviewed revision: <git rev> | working-tree+<content hash>
 Audited evidence hash: <content hash of the evidence read>   # one line per TDD-ID on a T1 group
 Authored/edited under review: none | <artifact refs this reviewer authored or edited in this run>
+Recommended and unadjudicated: none | <decisions in THIS artifact as it now stands that this reviewer recommended and no user has since settled>
 Findings:
 - <issue> | Severity: blocking|advisory | Traces to: <AC-*/BR-*/TC-*/CON-*/rule-name|defect:correctness|defect:security|defect:code-quality|record:<CODE>|none>
 Required fixes:
@@ -283,7 +362,7 @@ post-escalation verification review of a user-named fix.
   allowed to move under them: an honest, independent verdict on a tree that no longer exists is the
   normal failure this field addresses. If the tree changed mid-review, say so and name the revision
   the ruling is pinned to.
-- `Reviewer role`, `Reviewed artifact` and `Authored/edited under review` are REQUIRED. A response omitting any of them is not a valid review verdict and MUST NOT satisfy a completion gate — re-request it rather than reading a bare `Result:` line out of it, which is how a doer's self-assessment gets counted as a reviewer's ruling.
+- `Reviewer role`, `Reviewed artifact`, `Review series`, `Authored/edited under review` and `Recommended and unadjudicated` are REQUIRED. A response omitting any of them is not a valid review verdict and MUST NOT satisfy a completion gate — re-request it rather than reading a bare `Result:` line out of it, which is how a doer's self-assessment gets counted as a reviewer's ruling.
 - Anything other than `none` is a declared independence conflict: the verdict cannot be `PASS`,
   and the review must be handed to a non-participating reviewer (see
   `Definition: independent reviewer`).
