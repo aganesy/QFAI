@@ -25,9 +25,11 @@ existing somewhere in the repository is not coverage here. Ownership is read in 
    anywhere, every unannotated case that produces its outcome is scored, and the record names all
    of them rather than the first one found. Three files are in this position, for the same two
    obligations, and the inventory below lists each with its run. What it selects is a case that
-   RUNS the preflight, not one that describes it: three further unannotated files name the surface
-   — two assert substrings of a shipped playbook or skill document, one parses the `sdd preflight`
-   argv without invoking it — and none produces either obligation's outcome, so none is scored.
+   RUNS the preflight, not one that describes it. Other unannotated cases name the surface without
+   producing either outcome — asserting the wording of a shipped playbook or skill document, or
+   parsing the `sdd preflight` argv without invoking it — and none of those is scored.
+   `tests/cli/args.test.ts` and `tests/assets/sddStage0PrototypingOptional.test.ts` are two of them.
+   The set is open and the rule decides it, so this is a rule rather than a census.
 
 The two steps do not overlap: the first turns on an annotation pointing elsewhere, the second on
 there being no annotation to point anywhere. Neither admits a case that another spec owns.
@@ -105,9 +107,10 @@ shapes. Most of the down-marks turn on a shape none of the three supplies: a pac
 incomplete and on which generation continues, an empty pack directory, a required name present as
 a directory, a zero-byte required file, an unreadable `discussion-*` pack — the discussion root
 being unreadable is supplied, the pack directory is not — and a sixteenth required file. The rest
-turn on reasons an entry path cannot reach: the pairs left uncrossed under `Combinatorial`, the
-required-file list the command's own suite declares for itself instead of importing the source
-constant, and the oracle caps named below.
+turn on reasons an entry path cannot reach, chiefly these: the pairs left uncrossed under
+`Combinatorial`, the required-file lists the counted suites declare for themselves instead of
+importing the source constant, the absent incomplete-to-ready progression under `State
+transitions`, and the oracle caps named below.
 
 Six of the sixteen carry no ledger row, and are likewise scored from the pack:
 
@@ -910,7 +913,8 @@ grouped by column with a per-coordinate reason.
   entry in `13_Deferred.md`; unscoped disposition guidance lines in the OQ register that must be
   ignored; and a Mermaid blocker required **not** to be reported twice for an absent Story Workshop.
   Untested on both: an empty pack directory, a required name present as a directory, a zero-byte
-  required file, and an unreadable pack.
+  required file, and an unreadable `discussion-*` pack directory — the discussion root being
+  unreadable is supplied, the pack directory is not.
 - `US-0013-0011`, `TC-0013-0025` — one edge is guarded deliberately:
   `expect((parsed.screens ?? []).length).toBeGreaterThan(0)` stops an empty `screens` list passing the
   per-screen loop vacuously. No other edge is identified: a `primary_tasks` that is `null` or a
@@ -942,8 +946,8 @@ grouped by column with a per-coordinate reason.
 - `US-0013-0003`, `US-0013-0008` — the required-file count is exercised at its two adjacent values:
   a complete pack is `ready`, and a pack with one required markdown file removed reports the
   missing-file blocker. That is the boundary that matters. Two gaps keep both off `✅`: a sixteenth
-  file is never supplied, and the test declares its own literal list of required names rather than
-  importing the source constant, so a requirement **removed** from the source stays invisible.
+  file is never supplied, and both counted suites declare their own literal list of required names
+  rather than importing the source constant, so a requirement **removed** from the source stays invisible.
 - `US-0013-0011`, `TC-0013-0027` — the 0-versus-1 `primary_tasks` boundary is exercised in both
   directions. Nothing sits at the ceiling, the e2e asserts `not.toBe(0)` rather than a specific exit
   code, and the deprecation-window boundary is pinned only as the literal `1.10.0` inside a message
@@ -1060,9 +1064,9 @@ attempted or rejected.
   one-line change to the emission reddens. Three things cap both. The positive case asserts
   `blockers` is empty, which certifies "nothing blocks" rather than "this check passed". The
   missing-file assertion matches only that message's fixed prefix and never the file removed, while
-  the emission joins the missing names into it. And two scored cases carry a document's wording as
-  their oracle rather than a behaviour: one the shipped Stage 0 playbook, one in the command's own
-  suite asserting substrings of `qfai-sdd/SKILL.md` without running the command.
+  the emission joins the missing names into it. And one case pairs its runtime verdict with an
+  assertion on the shipped Stage 0 playbook's wording, so half of what it proves is that two
+  documents agree with the code rather than that the code behaves.
 - `US-0013-0011` — **the two directions are not equally supported, and this is the clearest instance
   in the pack.** A mutation that removes the empty-`primary_tasks` check reddens the refusal case in
   three ways at once: the exit code, the `QFAI-AUD-001` match and the `order_create` match. The
