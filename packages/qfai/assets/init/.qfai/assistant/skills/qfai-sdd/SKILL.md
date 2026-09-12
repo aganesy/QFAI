@@ -198,7 +198,8 @@ Author↔reviewer separation (MUST): drafting roles and reviewing roles above ar
 list, but no sub-agent may review an artifact it drafted or edited in this run. `independent` is
 defined normatively in
 `.qfai/assistant/constitution/shared-skill-delegation-baseline.md#definition-independent-reviewer-normative`,
-and every reviewer response must carry its `Authored/edited under review:` attestation.
+and every reviewer response must carry its `Authored/edited under review:` and
+`Recommended and unadjudicated:` attestations.
 
 Reviewer routing is fixed by `.qfai/assistant/manifest/agent-routing.yml` and `.qfai/assistant/manifest/review-profiles.yml`.
 
