@@ -141,6 +141,7 @@
     "tests/cli/initConfigRefinementWrite.test.ts",
     "tests/cli/initNoDesignSeed.test.ts",
     "tests/cli/initRepairsUnfollowableLinks.test.ts",
+    "tests/cli/initRuleMasterUpdates.test.ts",
     "tests/cli/initRunReport.test.ts",
     "tests/cli/initTestGlobDerivation.test.ts",
     "tests/cli/prototypingRescope.test.ts",
