@@ -13,15 +13,15 @@ carries a status retiring it, so all twenty are active and all twenty own a row.
 the nine depth columns of the matrix and the `Positive case` / `Negative case` /
 `Conditional branches` columns of the business rule table.
 
-**Twenty-three of the forty-nine obligations are discharged by nothing, or by a test about something
+**Twenty-four of the forty-nine obligations are discharged by nothing, or by a test about something
 else.** Eleven have no test at all: `US-0013-0001`, `-0002`, `-0004`, `-0005`, `-0006`, `-0007`,
 `-0009`, `-0010`, and `TC-0013-0022`, `-0023`, `-0024`. Five more are discharged by substring
 assertions over the shipped `qfai-sdd/SKILL.md` that carry none of the obligation they are annotated
 to. Two are self-referential coverage placeholders whose annotated `describe` tests the diff
-detector. Those eighteen rows carry 162 of the matrix's 287 `❌` cells between them. Five further
+detector. Those eighteen rows carry 162 of the matrix's 286 `❌` cells between them. Six further
 wording rows carry another 44.
 
-The remaining twenty-three rows are scored on their merits and range widely. `US-0013-0014`,
+The remaining twenty-five rows are scored on their merits and range widely. `US-0013-0014`,
 `TC-0013-0035`, `TC-0013-0033` and `TC-0013-0026` are the strongest work in the pack: a closed-schema
 rejection suite naming the offending field and item in every message, a ceiling exercised on both
 sides with the SUT's own constant imported into the assertion, and a lane refusal required to name the
@@ -34,15 +34,15 @@ spec-0013 annotation anywhere. `US-0013-0011` and `TC-0013-0025` are narrow, and
 records the disagreement. A fifth, `US-0013-0003`, is covered by tests that fix its direction while
 contradicting its own acceptance criterion. See Findings 1, 2, 3 and 8.
 
-Committed, because it is a governance record. Section "Every `❌` cell, named" accounts for all 313 of
+Committed, because it is a governance record. Section "Every `❌` cell, named" accounts for all 312 of
 them in named groups whose coordinates are fully enumerated, so that "one justification per `❌`" is
 checkable rather than asserted, and section "Every `⚠️` cell, named" does the same for all 105 partial
 scores, which the PASS criterion also requires a rationale for.
 
 ## What was measured, and how
 
-Every score below rests on a test run, not on a reading of a ledger. The thirteen files that carry
-spec-0013 coverage were located by reading the tests and the source, then executed. All thirteen pass:
+Every score below rests on a test run, not on a reading of a ledger. The fourteen files that carry
+spec-0013 coverage were located by reading the tests and the source, then executed. All fourteen pass:
 
 | File                                                          | Result     |
 | ------------------------------------------------------------- | ---------- |
@@ -59,10 +59,14 @@ spec-0013 coverage were located by reading the tests and the source, then execut
 | `tests/core/surfaceTypePopulate.test.ts`                      | 6 passed   |
 | `tests/integration/primaryTasksBand.test.ts`                  | 8 passed   |
 | `tests/integration/primaryTasksStructured.test.ts`            | 6 passed   |
-|                                                               | **184**    |
+| `tests/integration/spec0013ActivePointerSurfaceType.test.ts`  | 8 passed   |
+|                                                               | **192**    |
 
-Three of those files carry no ledger row and are scored anyway, because the obligation is read from
-the pack rather than from the ledger:
+Two sets are counted here and they are not the same set. Thirteen files carry a `QFAI:SPEC-0013`
+annotation; `sddPreflight.test.ts` carries none and is scored anyway, because the obligation is read
+from the pack rather than from an annotation. Every annotated file is in the table.
+
+Four of the fourteen carry no ledger row, and are likewise scored from the pack:
 
 - `sddTriage.test.ts` holds the whole of `TC-0013-0018` and `TC-0013-0019`.
 - `spec0013ActivePointerSurfaceTypeE2E.test.ts` holds the acceptance layer of `US-0013-0012`,
@@ -71,6 +75,10 @@ the pack rather than from the ledger:
   spec-0013 annotation of any kind, and the ledger names it nowhere; it drives `runSddPreflight` over
   seeded discussion packs and is the only place in the repository where either user story's outcome
   is produced.
+- `spec0013ActivePointerSurfaceType.test.ts` carries eight annotations, `TC-0013-0028` … `-0035`, and
+  one case for each. It is the integration acceptance layer for all eight, and the ledger names it
+  nowhere, so eight obligations draw coverage from a file no ledger row reaches. Its cases are scored
+  alongside the sibling files that hold the same eight ids.
 
 **The ledger's shape.** Thirty rows: fifteen at `exception` (`TDD-0001` … `-0015`), three at `todo`
 (`TDD-0016` … `-0018`), twelve at `done` (`TDD-0019` … `-0030`). Coverage below is scored from the
@@ -142,8 +150,8 @@ row, and it caps every row's `Status` at `⚠️`.
 | `tests/integration/spec0014SaasPackageCertify.test.ts`         | 1                         |
 
 **No spec-0013 obligation depends on a skipped test.** All sixteen belong to spec-0004, spec-0006,
-spec-0008 and spec-0014. None of the thirteen files that carry spec-0013 coverage contains a `.skip`,
-`.only` or `.todo` modifier of any kind, and all 184 of their cases ran. The sixteen findings are
+spec-0008 and spec-0014. None of the fourteen files that carry spec-0013 coverage contains a `.skip`,
+`.only` or `.todo` modifier of any kind, and all 192 of their cases ran. The sixteen findings are
 in this pack's *report* scope because the validator scans the whole test tree; they are not in its
 *coverage* scope, and they contribute to no cell in this matrix.
 
@@ -198,10 +206,10 @@ in this pack's *report* scope because the validator scans the whole test tree; t
 | TC-0013-0031 | ✅                     | ✅          | ✅         | ⚠️         | ❌              | ❌             | ❌                | ⚠️            | ⚠️              | ❌     |
 | TC-0013-0032 | ⚠️                     | ⚠️          | ❌         | ❌         | ❌              | ❌             | ❌                | ⚠️            | ⚠️              | ❌     |
 | TC-0013-0033 | ✅                     | ✅          | ✅         | ⚠️         | ⚠️              | ⚠️             | ❌                | ⚠️            | ✅              | ❌     |
-| TC-0013-0034 | ⚠️                     | ✅          | ❌         | ❌         | ❌              | ❌             | ❌                | ❌            | ⚠️              | ⚠️     |
+| TC-0013-0034 | ✅                     | ✅          | ❌         | ❌         | ❌              | ❌             | ❌                | ⚠️            | ⚠️              | ⚠️     |
 | TC-0013-0035 | ✅                     | ✅          | ✅         | ✅         | ⚠️              | ⚠️             | ❌                | ⚠️            | ✅              | ⚠️     |
 
-Totals across the nine scored depth columns, 441 cells (49 rows × 9): **✅ 63 / ⚠️ 91 / ❌ 287**.
+Totals across the nine scored depth columns, 441 cells (49 rows × 9): **✅ 64 / ⚠️ 91 / ❌ 286**.
 
 `Status` is the row verdict and is not a scored cell, so it is excluded from that total and from the
 grand total at the end. Its distribution across the 49 rows, for reading only, is ✅ 0 / ⚠️ 17 /
@@ -212,14 +220,14 @@ Per scored depth column, 49 cells each:
 
 | Column                 | ✅  | ⚠️  | ❌  |
 | ---------------------- | --- | --- | --- |
-| Equivalence partitions | 12  | 14  | 23  |
+| Equivalence partitions | 13  | 13  | 23  |
 | Normal path            | 25  | 6   | 18  |
 | Error path             | 11  | 3   | 35  |
 | Edge cases             | 2   | 13  | 34  |
 | Boundary values        | 1   | 11  | 37  |
 | Special values         | 1   | 8   | 40  |
 | State transitions      | 2   | 2   | 45  |
-| Combinatorial          | 0   | 16  | 33  |
+| Combinatorial          | 0   | 17  | 32  |
 | Oracle strength        | 9   | 18  | 22  |
 
 The shape of that table is the pack's central fact: twenty-five rows have a passing normal path, two
@@ -278,9 +286,9 @@ when the reason is stated. No row reaches `✅`.
 
 ## Every ❌ cell, named
 
-The matrix carries **287** `❌` scored cells and the business rule table carries **26** — **313 in
-all**. They are accounted for below in seven groups. Every group names every coordinate it covers and
-states its count, and the seven counts sum to 313:
+The matrix carries **286** `❌` scored cells and the business rule table carries **26** — **312 in
+all**. They are accounted for below in six groups. Every group names every coordinate it covers and
+states its count, and the six counts sum to 312:
 
 | Group                                                             | Cells   |
 | ----------------------------------------------------------------- | ------- |
@@ -288,9 +296,9 @@ states its count, and the seven counts sum to 313:
 | 2. Five wording rows whose assertion carries none of the obligation | 45    |
 | 3. Two placeholder rows whose test has another subject            | 18      |
 | 4. Six wording rows that address their direction and nothing else  | 44     |
-| 5. Remaining scored cells of the twenty-three tested rows         | 81      |
+| 5. Remaining scored cells of the twenty-five tested rows           | 80     |
 | 6. Business rule scored columns                                   | 26      |
-| **Total**                                                         | **313** |
+| **Total**                                                         | **312** |
 
 ### Group 1 — eleven obligations with no test at all (99 cells)
 
@@ -471,7 +479,7 @@ sentence that carries the obligation, rather than a token naming an artifact. Ev
   passes on any line containing "Plan" before "finalize". `TC-0013-0006`'s `/lower-to-upper/` and
   `TC-0013-0013`'s describe are the same shape.
 
-### Group 5 — remaining scored cells of the twenty-three tested rows (81 cells)
+### Group 5 — remaining scored cells of the twenty-five tested rows (80 cells)
 
 **5a. `State transitions`, 21 cells.** Coordinates: `US-0013-0011`, `US-0013-0012`, `US-0013-0014`,
 `TC-0013-0014`, `-0015`, `-0016`, `-0017`, `-0018`, `-0019`, `-0020`, `-0021`, `-0025`, `-0026`,
@@ -531,14 +539,16 @@ zero-byte or wrong-typed value is fed to any SUT.
   the escape character, and no maximum-length cell. The string domain's edges are untouched on both.
 - `TC-0013-0025` — the row's only count is "≥ 1 primary_task per screen", asserted as a regular
   expression over the agent guide's prose rather than as a count over the template.
-- `US-0013-0012`, `TC-0013-0029` — the candidate count is an ordered domain exercised at 3 and at 1
-  and never at 0, which is the value at which "name the candidate dirs" has nothing to name and the
-  message's construction would break.
+- `US-0013-0012`, `TC-0013-0029` — the candidate count is an ordered domain exercised at 3, at 2 and
+  at 1, and never at 0, which is the value at which "name the candidate dirs" has nothing to name and
+  the message's construction would break. All three counts sit in the interior; the one edge that
+  changes the message's shape has no case.
 - `TC-0013-0031` — the deprecation window is a temporal boundary and the case asserts one hard-coded
   severity on one side of it.
 - `TC-0013-0032` — the row is the documentation half; nothing in it sits at a limit.
-- `TC-0013-0034` — the three-entry fixtures sit mid-range by construction, and the case's own name
-  calls them "within band", a band that no longer exists in the product.
+- `TC-0013-0034` — every fixture for this row, the mixed list included, carries exactly three entries
+  and so sits mid-range by construction. One case's own name calls that "within band", a band that no
+  longer exists in the product.
 
 **5d. `Error path`, 12 cells.** Coordinates: `TC-0013-0015`, `-0016`, `-0017`, `-0018`, `-0019`,
 `-0020`, `-0025`, `-0027`, `-0028`, `-0030`, `-0032`, `-0034`.
@@ -566,7 +576,8 @@ zero-byte or wrong-typed value is fed to any SUT.
   fence is supplied to `populateSurfaceTypeIfUiCompanion`.
 - `TC-0013-0032` — nothing plants a document missing the sentence and requires the assertion to fire,
   and no count on the declared floor side is required to warn.
-- `TC-0013-0034` — the rejection direction belongs to `TC-0013-0035`; within this row nothing fails.
+- `TC-0013-0034` — the rejection direction belongs to `TC-0013-0035`; within this row nothing fails,
+  in either covering file. The mixed list is asserted accepted, not rejected.
 
 **5e. `Edge cases`, 10 cells.** Coordinates: `TC-0013-0014`, `-0015`, `-0016`, `-0017`, `-0019`,
 `-0020`, `-0021`, `-0028`, `-0032`, `-0034`.
@@ -590,10 +601,11 @@ zero-byte or wrong-typed value is fed to any SUT.
 - `TC-0013-0032` — the artifact the row names, `templates/contracts/ui-spec.yaml`, does not exist, and
   no case observes its absence; the test silently reads a differently named file instead.
 - `TC-0013-0034` — an item that is neither string nor map (a number, a nested list), an empty-string
-  item, and a structured item whose `acceptance` is the empty string are untested.
+  item, and a structured item whose `acceptance` is the empty string are untested. The mixed list
+  adds a shape, not an edge: both of its member kinds are well-formed.
 
-**5f. `Combinatorial`, 9 cells.** Coordinates: `TC-0013-0014`, `-0015`, `-0016`, `-0017`, `-0019`,
-`-0020`, `-0025`, `-0028`, `-0034`.
+**5f. `Combinatorial`, 8 cells.** Coordinates: `TC-0013-0014`, `-0015`, `-0016`, `-0017`, `-0019`,
+`-0020`, `-0025`, `-0028`.
 
 - `TC-0013-0014`, `TC-0013-0017` — `EX-0013-0010` crosses four conditions at once: a modified
   `_policies` file, a configured `baseBranch` of `origin/develop`, a `SpecDiffResult` with all three
@@ -610,11 +622,9 @@ zero-byte or wrong-typed value is fed to any SUT.
   blocks; nothing requires the guide's instruction and the template's slot to agree, which is the
   row's actual subject.
 - `TC-0013-0028` — exactly one pack exists in the fixture and exactly one pointer; nothing is crossed.
-- `TC-0013-0034` — string-only and structured items are never combined in one list, which is
-  precisely the fixture `EX-0013-0020` describes ("one item `"Review orders"` (string-only) and one
-  `{id: t1, …}` (structured)"). The pack's own example shape is constructed by no case.
+  Both covering cases build that same single-pack fixture.
 
-**Group 5 count check.** 21 + 16 + 13 + 12 + 10 + 9 = **81**. No cell of any tested row is `❌` in
+**Group 5 count check.** 21 + 16 + 13 + 12 + 10 + 8 = **80**. No cell of any tested row is `❌` in
 `Equivalence partitions`, `Normal path` or `Oracle strength`, so those three columns contribute
 nothing to this group.
 
@@ -683,8 +693,8 @@ grouped by column with a per-coordinate reason.
 
 ### Matrix depth cells (91)
 
-**`Equivalence partitions`, 14 cells** — `US-0013-0003`, `US-0013-0012`, `TC-0013-0003`, `-0014`,
-`-0017`, `-0018`, `-0019`, `-0020`, `-0021`, `-0025`, `-0028`, `-0029`, `-0032`, `-0034`.
+**`Equivalence partitions`, 13 cells** — `US-0013-0003`, `US-0013-0012`, `TC-0013-0003`, `-0014`,
+`-0017`, `-0018`, `-0019`, `-0020`, `-0021`, `-0025`, `-0028`, `-0029`, `-0032`.
 
 - `US-0013-0003` — four partitions of the pack input have a representative with a distinct outcome:
   ready, pack absent, blocking OQ present, required markdown missing. The partition
@@ -721,9 +731,6 @@ grouped by column with a per-coordinate reason.
 - `TC-0013-0032` — the warning half has one real input, a nine-task screen that produces a live
   `QFAI-AUD-020`. The documentation half reads two shipped files as they stand, so its compliant and
   violating partitions are unrepresented.
-- `TC-0013-0034` — the two accepted shapes each have a representative with the right expectation. The
-  mixed list the window implies, and that `EX-0013-0020` writes out in full, is supplied by no case
-  anywhere in the pack.
 
 **`Normal path`, 6 cells** — `TC-0013-0001`, `-0005`, `-0006`, `-0007`, `-0013`, `-0032`.
 
@@ -861,8 +868,9 @@ over the **summary artifact**, not over the pack-readiness verdict the two stori
 incomplete-to-ready progression each story exists to gate has no case, and no invalid transition is
 attempted or rejected.
 
-**`Combinatorial`, 16 cells** — `US-0013-0003`, `-0008`, `-0011`, `-0012`, `-0013`, `-0014`,
-`TC-0013-0018`, `-0021`, `-0026`, `-0027`, `-0029`, `-0030`, `-0031`, `-0032`, `-0033`, `-0035`.
+**`Combinatorial`, 17 cells** — `US-0013-0003`, `-0008`, `-0011`, `-0012`, `-0013`, `-0014`,
+`TC-0013-0018`, `-0021`, `-0026`, `-0027`, `-0029`, `-0030`, `-0031`, `-0032`, `-0033`, `-0034`,
+`-0035`.
 
 - `US-0013-0003`, `US-0013-0008` — two crosses are deliberate: a missing required file crossed with
   the Story Workshop Mermaid check, with the second required **not** to fire so that one defect is not
@@ -879,9 +887,12 @@ attempted or rejected.
   non-matching candidate on disk, which is a real pair and the sharper of the two failure modes. Not
   crossed: a duplicate with an absent pointer, or a valid pointer with an unreadable pack directory.
 - `US-0013-0013`, `TC-0013-0030`, `TC-0013-0031` — companion presence against frontmatter presence is
-  a two-by-two grid and three of its four cells have a case. The fourth — no companion, key already
-  present, which must be left alone and must emit nothing — has no case. Nothing crosses two specs in
-  one fixture either, so nothing establishes that the finding names the right spec among several.
+  a two-by-two grid and three of its four cells have a case. `TC-0013-0031` adds a second cross: two
+  specs in one fixture, one with a UI companion and one without, with the finding required to name the
+  first and to be absent for the second. That establishes the finding names the right spec among
+  several, which a single-spec fixture cannot. The grid's fourth cell — no companion, key already
+  present, which must be left alone and must emit nothing — still has no case, and `TC-0013-0030`
+  crosses nothing beyond the grid.
 - `TC-0013-0018` — two crosses are constructed on purpose: `a\|b` and `path\\|file` each cross a
   literal backslash with a pipe at a different adjacency, and every case populates two cells of the
   row at once. Not crossed: a line break with a pipe, a line break with a backslash, and more than two
@@ -898,6 +909,13 @@ attempted or rejected.
   finding to be absent while the shape finding fires. Not crossed on any of the four: an over-ceiling
   count with a shape fault, a missing field with an extra key on the same item, the guide's wording
   with the warning's wording, and any of them with `uiux.audit.enabled: false`.
+- `TC-0013-0034` — the cross the row's own example names is constructed: one list carrying a legacy
+  string item and two complete structured items together, required to emit neither `QFAI-AUD-021` nor
+  `QFAI-AUD-020`. That is the shape `EX-0013-0020` writes out, and it discriminates a validator that
+  handles each item kind only when the list is uniform. It stays `⚠️` because `EX-0013-0020` puts a
+  third kind in that same list — an item missing `acceptance` — and no case anywhere mixes an accepted
+  and a rejected shape in one list. The mixed list is also never crossed with an over-ceiling count or
+  with `uiux.audit.enabled: false`.
 
 **`Oracle strength`, 18 cells** — `US-0013-0003`, `-0008`, `-0011`, `-0013`, `TC-0013-0003`, `-0007`,
 `-0014`, `-0017`, `-0019`, `-0020`, `-0021`, `-0025`, `-0027`, `-0028`, `-0030`, `-0031`, `-0032`,
@@ -977,12 +995,12 @@ attempted or rejected.
   reddens it. The two documentation assertions are `toMatch(/at most 7/)` over prose with no tie to
   that constant, so a ceiling change reddens one assertion and leaves two documents silently wrong.
 - `TC-0013-0034` — three finding codes are required absent, which is a whole-lane check and would
-  catch a regression that started rejecting either accepted shape. Absence assertions over
-  hand-written fixtures cannot establish that the shape checker ran at all: a mutation making
-  `extractPrimaryTasks` return no findings for every input keeps both cases green, and the
-  discriminating evidence lives in `TC-0013-0035`.
+  catch a regression that started rejecting any accepted shape. Absence assertions over hand-written
+  fixtures cannot establish that the shape checker ran at all: a mutation making `extractPrimaryTasks`
+  return no findings for every input keeps all three cases green, and the discriminating evidence
+  lives in `TC-0013-0035`. The mixed-list case widens the input and inherits the same limit.
 
-**Depth `⚠️` count check.** 14 + 6 + 3 + 13 + 11 + 8 + 2 + 16 + 18 = **91**.
+**Depth `⚠️` count check.** 13 + 6 + 3 + 13 + 11 + 8 + 2 + 17 + 18 = **91**.
 
 ### Business rule table (14)
 
@@ -1038,8 +1056,9 @@ attempted or rejected.
 - `BR-0013-0017` — the rule branches on absent, missing and duplicate. Absent and missing each have a
   case with a distinct fixture and a pinned message, in two files. Duplicate has none.
 - `BR-0013-0020` — the rule is conditioned on the deprecation window, and the in-window branch is
-  exercised thoroughly on both shapes. The window's other side has no case, and nothing in the product
-  or the tests states what closes it.
+  exercised thoroughly on all three accepted shapes: string-only, structured, and the two mixed in one
+  list. The window's other side has no case, and nothing in the product or the tests states what
+  closes it.
 
 ## Findings
 
@@ -1062,12 +1081,13 @@ them is repaired here; this artifact scores coverage and does not edit tests, le
 2. **`D-SURFACE-TYPE-MISSING` is emitted at `error` and specified at `warning`.**
    `validateSurfaceTypeDrift` sets `const severity = "error" as const` with no deprecation-window
    logic. `AC-0013-0023`, `BR-0013-0018`, `TC-0013-0031` and `US-0013-0013` all require `warning`
-   during the window, sunsetting to `error` at window close. The two covering cases pin `error`, and
+   during the window, sunsetting to `error` at window close. All three covering cases pin `error`, and
    the comment beside each describes a version-computed comparison the files do not perform — it says
    "Comparing against `deprecationSeverity` breaks if the validator hard-codes again", beside a
-   hard-coded literal, in both `surfaceTypePopulate.test.ts` and
-   `spec0013ActivePointerSurfaceTypeE2E.test.ts`. Either the window closed and four spec layers are
-   stale, or the escalation happened early. The comments should be corrected in either case.
+   hard-coded literal, in `surfaceTypePopulate.test.ts`, `spec0013ActivePointerSurfaceType.test.ts`
+   and `spec0013ActivePointerSurfaceTypeE2E.test.ts`. No identifier named `deprecationSeverity` exists
+   anywhere in `packages/qfai/src/**`. Either the window closed and four spec layers are stale, or the
+   escalation happened early. The comments should be corrected in either case.
 3. **`TC-0013-0027` and `BR-0013-0016` specify slot-less UI contracts as non-blocking; the product
    blocks them.** Both state that pre-existing contracts predating the slot are "informational rather
    than blocking" under deprecation-window semantics. The covering case is named "legacy slot-less
@@ -1075,11 +1095,17 @@ them is repaired here; this artifact scores coverage and does not edit tests, le
    finding is produced. The test file's own header comment still describes the old behaviour
    ("slot-absent (legacy) UI contracts -> QFAI-AUD-001 at severity=info"), contradicting the case
    twenty-five lines below it.
-4. **One stale test name survives the band change.**
-   `primaryTasksStructured.test.ts` has a case named
-   `string-only items pass (legacy shape, three string entries — within band)`. Its behaviour does not
-   depend on a band; only the name is stale. A reader scanning for the band's remaining enforcement
-   finds it here first.
+4. **Two case names describe coverage the case does not have.**
+   - `primaryTasksStructured.test.ts` has a case named
+     `string-only items pass (legacy shape, three string entries — within band)`. Its behaviour does
+     not depend on a band; only the name is stale. A reader scanning for the band's remaining
+     enforcement finds it here first.
+   - `spec0013ActivePointerSurfaceType.test.ts` names its `TC-0013-0033` case
+     `boundary: count 8 warns; 2, 3 and 7 do not` and supplies counts 2, 3 and 8 only. Count 7, the
+     ceiling itself and the sharper half of the boundary, is named in the title and absent from the
+     body. It is covered in `primaryTasksBand.test.ts`, so the obligation is not uncovered; the name
+     is what overstates. A reader auditing the ceiling from case names alone would record 7 as
+     exercised twice and would not notice if the sibling file dropped it.
 5. **Three obligations name artifacts or fields the product does not have.**
    - `TC-0013-0025`, `BR-0013-0015` and `EX-0013-0015` require every `screens[]` entry in the shipped
      template to carry a literal `primary_tasks: []`. The template ships two structured entries per
@@ -1158,7 +1184,7 @@ rather than by the spec.
 `QFAI-ATDD-133` requires the stage evidence to carry a `## Coverage Depth Matrix` section that links
 to this file and restates the counted totals beside it. Those totals are:
 
-**✅ 75 / ⚠️ 105 / ❌ 313**, with `n/a 8`, across all 501 scored cells — 441 matrix depth cells and
+**✅ 76 / ⚠️ 105 / ❌ 312**, with `n/a 8`, across all 501 scored cells — 441 matrix depth cells and
 60 business rule scored cells. `Status` is a row verdict, not a mark, and is excluded from all four
 counts.
 

@@ -273,7 +273,7 @@ obligation admits.
 ## Coverage Depth Matrix
 
 See `.qfai/evidence/coverage-depth-spec-0013.md`.
-Totals: ✅ 75 / ⚠️ 105 / ❌ 313, with 8 not applicable, across 501 scored cells —
+Totals: ✅ 76 / ⚠️ 105 / ❌ 312, with 8 not applicable, across 501 scored cells —
 441 matrix depth cells (49 rows × 9 columns) and 60 business rule cells
 (20 rows × 3 columns). `Status` is a row verdict, not a mark, and is outside
 every total.
