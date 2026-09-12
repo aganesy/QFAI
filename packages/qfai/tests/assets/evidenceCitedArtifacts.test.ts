@@ -35,19 +35,70 @@ const GENERATED_ROOTS = [
 ] as const;
 
 /**
- * A path into one of those trees, as an evidence file writes it.
+ * A citation as the scan records it.
  *
- * The wildcard is inside the character class on purpose. Without it a match
- * stops at the first wildcard, so a glob naming a set of packs is measured as
- * the prefix before it — a path nothing has, recorded as an entry a later exact
- * citation could inherit. Matching the whole token is what lets the filter below
- * recognise a glob at all. The plus is in it for the same reason: a report
- * scoped to several specs is named `validate.spec-0003+0004.json`, and a class
- * stopping at the plus measures a prefix nothing has while the real file is
- * tracked.
+ * Sentence punctuation after a path is not part of it, and a directory is
+ * written with or without its trailing separator. One spelling here is what
+ * lets a disclaimer naming `.qfai/report/run-123/` cover the `run-123` the scan
+ * produces from the line below it.
  */
-const CITED_GENERATED_PATH =
-  /\.qfai\/(?:review|review_archive|report|discussion|output)\/(?:[?*+@!]\([A-Za-z0-9._/*?+|-]+\)|\{[A-Za-z0-9._/*?+,-]*\}|[A-Za-z0-9._/*?+-])+/g;
+function normalizeCitation(cited: string): string {
+  return cited.replace(/[.,;:]+$/, "").replace(/\/+$/, "");
+}
+
+/** Where a citation can start: the root, which is the only fixed part. */
+const CITED_GENERATED_ROOT = /\.qfai\/(?:review|review_archive|report|discussion|output)\//g;
+
+/** The characters a citation carries outside a group. */
+const CITATION_CHARACTER = /[A-Za-z0-9._/*?+-]/;
+
+/**
+ * Every citation a line carries, taken whole.
+ *
+ * A regular expression cannot balance, and the dialect nests: `@(a|+(b|c))` is
+ * a valid pattern, and a class that stops at the first `)` cuts the token to
+ * something the tree does not have — which is measured as the root, discarded,
+ * and the artifacts it really named go unchecked. So the root is found by
+ * pattern and the rest is scanned, counting `(` against `)` and `{` against
+ * `}`.
+ */
+function citationsIn(line: string): string[] {
+  const found: string[] = [];
+  for (const start of [...line.matchAll(CITED_GENERATED_ROOT)]) {
+    const from = start.index;
+    if (from === undefined) continue;
+    let index = from + start[0].length;
+    const closers: string[] = [];
+    let balanced = true;
+    while (index < line.length) {
+      const character = line[index] ?? "";
+      if (character === "(" || character === "{") {
+        closers.push(character === "(" ? ")" : "}");
+      } else if (character === ")" || character === "}") {
+        if (closers.at(-1) !== character) {
+          balanced = false;
+          break;
+        }
+        closers.pop();
+      } else if (CITATION_CHARACTER.test(character)) {
+        // An ordinary path character, inside a group or out.
+      } else if (closers.length > 0 && (character === "|" || character === ",")) {
+        // The separators a group's alternatives use.
+      } else if ((character === "@" || character === "!") && line[index + 1] === "(") {
+        // An extglob introducer, which is one only where a group follows it.
+      } else {
+        break;
+      }
+      index += 1;
+    }
+    // An unbalanced group is not one, and the text before it opened is a prefix
+    // nothing has — recording it would be the very entry this scan avoids.
+    if (!balanced || closers.length > 0) continue;
+    const cited = line.slice(from, index);
+    if (cited.length > start[0].length) found.push(cited);
+  }
+  return found;
+}
 
 /**
  * A line that says a path is not provenance.
@@ -327,8 +378,8 @@ async function measureCitations(): Promise<[string, string][]> {
     text.split("\n").forEach((line, index) => {
       const covered = disclaimed[index];
       if (covered === "all") return;
-      for (const match of line.match(CITED_GENERATED_PATH) ?? []) {
-        const cited = match.replace(/[.,;:]+$/, "").replace(/\/+$/, "");
+      for (const match of citationsIn(line)) {
+        const cited = normalizeCitation(match);
         // `continue`, not `return`: one line can carry several citations, and
         // leaving the line on the first one that is seen, root-only or
         // disclaimed loses every citation after it.
@@ -386,7 +437,9 @@ function disclaimedByLine(text: string): Array<"all" | Set<string> | undefined> 
 /** The paths a marker names, or `null` when the line carries no marker naming any. */
 function disclaimedPaths(line: string): Set<string> | null {
   const marker = /<!--\s*qfai:not-a-citation([^>]*?)-->/.exec(line);
-  const named = marker?.[1]?.match(CITED_GENERATED_PATH) ?? [];
+  // Normalized the way a measured citation is, so a marker naming a directory
+  // with its conventional trailing separator covers the path the scan produces.
+  const named = citationsIn(marker?.[1] ?? "").map(normalizeCitation);
   return named.length === 0 ? null : new Set(named);
 }
 
@@ -576,8 +629,7 @@ describe("a committed record cites what the repository has", () => {
 });
 
 describe("what the scan counts as a citation", () => {
-  const matches = (line: string): string[] =>
-    NOT_A_CITATION.test(line) ? [] : (line.match(CITED_GENERATED_PATH) ?? []);
+  const matches = (line: string): string[] => (NOT_A_CITATION.test(line) ? [] : citationsIn(line));
 
   it("takes a scoped report's whole filename", () => {
     // A class stopping at the plus measures a prefix nothing has, and reports
@@ -614,12 +666,42 @@ describe("what the scan counts as a citation", () => {
     ]);
   });
 
+  it("takes a nested group whole", () => {
+    // The dialect compiles alternatives recursively, so a group can hold one.
+    // Cut at the first `)`, what is left is a prefix nothing has.
+    const cited = ".qfai/review/@(review-a|+(review-b|review-c))/summary.json";
+    expect(matches("- `" + cited + "`")).toEqual([cited]);
+  });
+
+  it("drops a group that never closes", () => {
+    // The text before it opened is a prefix nothing has, and recording it would
+    // be the very entry this scan exists to avoid.
+    expect(matches("- `.qfai/review/@(review-a|review-b/summary.json`")).toEqual([]);
+  });
+
   it("takes a one-character wildcard", () => {
     // The dialect supports `?`, and a grammar that stops before it leaves the
     // pack directory to be checked in place of the file set the citation named.
     expect(matches("- `.qfai/discussion/pack/?9_missing.md`")).toEqual([
       ".qfai/discussion/pack/?9_missing.md",
     ]);
+  });
+
+  it("covers a disclaimed directory written with its separator", () => {
+    // The scan strips the trailing separator from the line below, so a marker
+    // keeping it would name a path the scan never produces.
+    const text = [
+      "<!-- qfai:not-a-citation .qfai/report/run-123/ -->",
+      "```text",
+      "wrote .qfai/report/run-123/ and .qfai/report/validate.json",
+      "```",
+      "",
+    ].join("\n");
+    const covered = disclaimedByLine(text)[2];
+    expect(covered).not.toBe("all");
+    expect(covered instanceof Set && covered.has(".qfai/report/run-123")).toBe(true);
+    // And only that path: the transcript's other citation is still measured.
+    expect(covered instanceof Set && covered.has(".qfai/report/validate.json")).toBe(false);
   });
 
   it("counts nothing on a line that says the path is not provenance", () => {
@@ -633,7 +715,7 @@ describe("what the scan counts as a citation", () => {
 });
 
 describe("a glob is a claim about a set", () => {
-  const matchesLine = (line: string): string[] => line.match(CITED_GENERATED_PATH) ?? [];
+  const matchesLine = (line: string): string[] => citationsIn(line);
 
   it("resolves when at least one tracked path matches", () => {
     // `.qfai/specs/**` is not a generated root, so a glob under one of those is
