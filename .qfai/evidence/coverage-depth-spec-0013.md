@@ -848,7 +848,7 @@ format boundary — `lockedAt`, an ISO 8601 timestamp — is asserted by nothing
 - `TC-0013-0028` — exactly one pack exists in the fixture and exactly one pointer; nothing is crossed.
   Both covering cases build that same single-pack fixture.
 
-**Group 5 count check.** 21 + 16 + 13 + 12 + 10 + 8 = **80**. No cell of any tested row is `❌` in
+**Group 5 count check.** 24 + 17 + 14 + 12 + 10 + 8 = **85**. No cell of any tested row is `❌` in
 `Equivalence partitions`, `Normal path` or `Oracle strength`, so those three columns contribute
 nothing to this group.
 
@@ -918,7 +918,9 @@ obligation, and a mark is the second claim.
   its thirty-five rows (`TC-0013-0001` … `-0012`), which the rule's first bullet forbids outright.
 - `BR-0013-0011` — the rule forbids a half-wired validator and names renaming an export without
   updating the import as breakage. No fixture constructs either half-state.
-- `BR-0013-0012`, `-0013`, `-0014` — no test of any kind.
+- `BR-0013-0013`, `-0014` — no test of any kind. `BR-0013-0012` was in this list
+  and is not: `designContractReadiness.test.ts` reaches it, and its negative cell
+  is `✅`.
 - `BR-0013-0015` — the negative is a template with the slot removed or renamed. No such template is
   constructed, so the per-screen assertion's discriminating power is unestablished.
 
@@ -927,7 +929,7 @@ obligation, and a mark is the second claim.
 
 - `BR-0013-0005` — the condition is that `none` is allowed only with no contract impact and a written
   rationale. Neither branch is exercised.
-- `BR-0013-0012` — the condition is a missing or unreadable `DESIGN.md` halting Phase 0. No test.
+
 - `BR-0013-0013` — the condition is that `09_delta.md` history annotations are tolerated while active
   rows are not. No test reads either surface, so the branch that distinguishes them is never taken.
 - `BR-0013-0014` — the condition is that new design contracts enter only through an explicit slice
@@ -1448,16 +1450,21 @@ them is repaired here; this artifact scores coverage and does not edit tests, le
    open, sdd-gated OQ, and `sddPreflight.test.ts` pins that. Meanwhile `TC-0013-0003` asserts that
    `SKILL.md` states the criterion's wording verbatim. The story, the runtime and the skill guidance
    do not agree, and the pack contains both halves of the contradiction.
-9. **Two regular expressions match the frontmatter key anywhere in the document, and they are loose
-   in the same direction.** `validateSurfaceTypeDrift`'s `SURFACE_TYPE_FRONTMATTER_RE` is
-   `/^\s*surface_type\s*:\s*ui-bearing\s*$/im`, and `resolveAllUiBearingSpecs()`'s
-   `UI_BEARING_MARKER_RE` is the unanchored `/surface_type:\s*ui-bearing/im`. Both are tested against
-   the whole of `01_Spec.md` rather than its frontmatter block.
+9. **Three regular expressions match the frontmatter key anywhere in the document, and they are
+   loose in the same direction.** `validateSurfaceTypeDrift`'s `SURFACE_TYPE_FRONTMATTER_RE` is
+   `/^\s*surface_type\s*:\s*ui-bearing\s*$/im`; `resolveAllUiBearingSpecs()`'s
+   `UI_BEARING_MARKER_RE` is the unanchored `/surface_type:\s*ui-bearing/im`; and
+   `src/core/detection/surfaceType.ts` defines a third of the same shape, which
+   `populateSurfaceTypeIfUiCompanion` tests against the body. All three read the whole of
+   `01_Spec.md` rather than its frontmatter block.
 
    A spec that mentions `surface_type: ui-bearing` in prose, in a fenced example or in a migration
-   note therefore suppresses the drift finding **and** is accepted as UI-bearing by the resolver the
-   same spec layer calls the strict signal. Tightening one without the other leaves the false
-   positive in place. No case in the pack supplies such a document.
+   note therefore suppresses the drift finding, is accepted as UI-bearing by the resolver the same
+   spec layer calls the strict signal, **and** is left unpopulated by the auto-populator, which
+   returns `reason: "already-present"` for a key that is present nowhere the reader looks.
+   The third is the one that leaves a real defect behind rather than a false verdict: the
+   frontmatter the populator exists to add is never added. Tightening any one of them alone leaves
+   the same document accepted by the other two. No case in the pack supplies such a document.
 
 Two smaller observations that belong with the above but do not need their own numbered entry. First,
 `06_Test-Cases.md` declares no `Type` on twelve of its thirty-five rows (`TC-0013-0001` …
