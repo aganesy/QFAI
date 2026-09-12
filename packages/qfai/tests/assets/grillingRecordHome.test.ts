@@ -41,6 +41,51 @@ describe("a grilling session records into the artifacts that exist", () => {
       expectPhrase(content, "`13_Deferred.md`");
     });
 
+    it(`${tree}: every disposition change reaches the append-only log`, async () => {
+      // The log's own rules say every disposition change is appended and list
+      // `created` among the actions, so a question registered without one is
+      // missing the first event in its history while every later one is there.
+      const content = await read(tree, DISCUSSION);
+      expectPhrase(content, "a `created` row in `12_OQ-Resolution-Log.md`");
+      for (const action of ["resolved", "deferred", "rejected", "reopened"]) {
+        expectPhrase(content, `\`12_OQ-Resolution-Log.md\` as \`${action}\``);
+      }
+      expectPhrase(content, "moved to `Disposition: rejected`");
+      expectPhrase(content, "moved back to `Disposition: open`");
+    });
+
+    it(`${tree}: a closure the user asked for is not left open`, async () => {
+      // `proceed` / `done` ends the asking, and the rule records what is still
+      // open as a labelled assumption. Registering those as open instead blocks
+      // the pack on the closure the user asked for, since readiness requires
+      // the open count to reach zero.
+      const content = await read(tree, DISCUSSION);
+      expectPhrase(content, "**A closure the user asked for is not an open question.**");
+      expectPhrase(content, "a labelled assumption and no register row");
+      // The two kinds the rule never assumes stay open whatever closes the asking.
+      expectPhrase(content, "a decision some document requires the user to make and record");
+      expectPhrase(content, "an input declared undefaultable");
+      // `--auto` is the opposite case: nobody saw the question.
+      expectPhrase(content, "the assumption is recorded **and** a register row opened against it");
+    });
+
+    it(`${tree}: a rejected visual direction reaches its own section`, async () => {
+      // The delta template requires `## Rejected Visual Directions` of a
+      // UI-bearing pack and gives it different columns, so routing one to the
+      // generic table leaves the required section empty.
+      const content = await read(tree, DISCUSSION);
+      expectPhrase(content, "`99_delta.md`, under `## Rejected Visual Directions`");
+    });
+
+    it(`${tree}: the spec pack says its open-question file is not a gate`, async () => {
+      // A spec pack carries open questions as a matter of course, so nothing
+      // requires the file to be empty. A reader who assumes it gates the way a
+      // discussion register does will write a decision down and leave it.
+      const content = await read(tree, SDD);
+      expectPhrase(content, "**`08_Open-questions.md` is a record here, not a gate.**");
+      expectPhrase(content, "goes to the user during the stage");
+    });
+
     it(`${tree}: the discussion pack gains no file for it`, async () => {
       // The fifteen-file set is fixed and pinned by mdschema. A new file would
       // reach the schema, the completion matrix and the forbidden-legacy list

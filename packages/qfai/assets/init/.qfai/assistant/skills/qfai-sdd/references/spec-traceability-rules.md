@@ -634,6 +634,14 @@ its own.
 reads `## Decision Log` alone for Change Type metrics, so a decision recorded
 only in `07_Decisions.md` reports as zero entries.
 
+**`08_Open-questions.md` is a record here, not a gate.** A spec pack carries
+open questions as a matter of course, so no stage requires the file to be
+empty — unlike a discussion pack, where readiness blocks on the register. A
+decision the session could not settle therefore blocks nothing on its own, and
+one the user must settle goes to the user during the stage rather than being
+written down and left. Writing it down instead is how a stage completes with a
+design nobody decided.
+
 The record states what was chosen and why. How the session reached it is in the
 history, and repeating it here costs a reader the one thing the record is for.
 
