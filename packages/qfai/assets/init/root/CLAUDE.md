@@ -23,8 +23,11 @@ the master rather than this file.
 - `.agents/rules/user-questions.md` — every question to the user arrives as a structured choice; where the tool cannot carry one, numbered plain-text choices keep the same parts.
 
 This section, markers included, is the only part `npx qfai init` writes. A
-repository that already had a `CLAUDE.md` gets it appended once; a later run
-sees the start marker and leaves the section exactly as you have edited it.
+repository that already had a `CLAUDE.md` gets it appended once. A later run adds a
+line for a rule master this file names nowhere — a rule that shipped after the
+section was written, which would otherwise arrive with nothing pointing at it —
+and says which. It changes nothing else: a line you removed stays removed, and
+your own prose inside the markers keeps its place.
 
 <!-- qfai:cross-ai-rules:end -->
 

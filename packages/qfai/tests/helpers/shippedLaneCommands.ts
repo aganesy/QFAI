@@ -1429,8 +1429,11 @@ export const ALLOWED_INIT_CONTENT: ReadonlyMap<string, string> = new Map([
   // `qfai init` into a temp root and hash what it wrote, then drop the added bullet and confirm
   // both previous digests come back byte for byte. That check is what keeps a re-pin a review of
   // one line per file.
-  ["AGENTS.md", "c197b064a585305094b6342abe34dddfd7e199a16961aeb29a80c0b89b589f66"],
-  ["CLAUDE.md", "399dfc78f737fd771579c475fc0d231dfe24f288817074752b19f39401231a1e"],
+  // The ownership sentence changed with the citation upgrade: a later run now
+  // adds a line for a master the file names nowhere, and says which, so the
+  // promise that it leaves the section exactly as edited was no longer true.
+  ["AGENTS.md", "09b458ccd5ae8bf20c1e557ca2a27df64d344df3e1df17701e9a3965f65863a3"],
+  ["CLAUDE.md", "a562518f5b7285fd24ecc4f6fe8a0cc04c09f78208ae1d308341af2a12c57409"],
   // Inside `.claude/`, and pinned anyway — see the paragraph above the path set.
   // These are the hooks that restate a rule at the moment it applies: the writing
   // rule when a pull request, issue or review is posted through the GitHub tools

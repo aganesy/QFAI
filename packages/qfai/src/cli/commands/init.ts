@@ -2858,23 +2858,76 @@ async function ensureAgentEntryPointRules(
         skipped.push(target);
         continue;
       }
-      const additions = ruleCitationLines(section, missing);
+
+      // Cite only a master that is actually there. The create-only copy above
+      // skips a destination already occupied by a directory or a dangling link,
+      // and a citation to one of those is a pointer to nothing — worse than the
+      // silence it replaces, because the file now claims the rule is available.
+      const landed: string[] = [];
+      for (const master of missing) {
+        const masterPath = path.join(destRoot, ...master.split("/"));
+        if ((await readTextFileIfPresent(masterPath)) !== null) {
+          landed.push(master);
+        }
+      }
+      const additions = landed.length === 0 ? [] : ruleCitationLines(section, landed);
       if (additions.length === 0) {
         skipped.push(target);
         continue;
       }
+
+      // The end marker bounds the insertion. A hand-edited file can keep the
+      // start marker and lose this one, and `lastIndexOf` answers -1 there — the
+      // slices below would then put the file's whole head after its tail.
+      const endAt = existing.lastIndexOf(QFAI_AGENT_RULES_END);
+      if (endAt === -1) {
+        error(
+          `  WARNING: ${formatReportPath(target)} keeps the managed section's start marker and no end ` +
+            `marker, so ${landed.join(", ")} was not cited. Restore the end marker, or add the line by hand.`,
+        );
+        skipped.push(target);
+        continue;
+      }
+
       if (dryRun) {
-        info(`  would update: ${target} (cite ${missing.join(", ")})`);
+        info(`  would update: ${formatReportPath(target)} (cite ${landed.join(", ")})`);
         copied.push(target);
         continue;
       }
+
+      // A link points this write at a file outside the destination, and a file
+      // shared with another project is not this run's to edit.
+      const linkStat = await lstat(target).catch(() => null);
+      if (linkStat?.isSymbolicLink() === true) {
+        error(
+          `  WARNING: ${formatReportPath(target)} is a symbolic link, so ${landed.join(", ")} was not ` +
+            `cited. Writing through it would edit a file this run does not own.`,
+        );
+        skipped.push(target);
+        continue;
+      }
+
+      // Read again before writing. An editor, or a second init, may have
+      // written since `existing` was taken, and a merge onto that snapshot
+      // replaces their edit without saying so.
+      const current = await readTextFileIfPresent(target);
+      if (current !== existing) {
+        error(
+          `  WARNING: ${formatReportPath(target)} changed while this run was reading it, so ` +
+            `${landed.join(", ")} was not cited. Re-run once the file is settled.`,
+        );
+        skipped.push(target);
+        continue;
+      }
+
       // Inserted before the end marker, so the project's own prose inside the
       // section keeps its place and nothing already there is rewritten.
-      const at = existing.lastIndexOf(QFAI_AGENT_RULES_END);
-      const head = existing.slice(0, at).replace(/\s*$/, "");
-      const tail = existing.slice(at);
+      const head = existing.slice(0, endAt).replace(/\s*$/, "");
+      const tail = existing.slice(endAt);
       await writeFile(target, `${head}\n${additions.join("\n")}\n\n${tail}`, "utf-8");
-      info(`  updated: ${target} (cited ${missing.join(", ")}; nothing else changed)`);
+      info(
+        `  updated: ${formatReportPath(target)} (cited ${landed.join(", ")}; nothing else changed)`,
+      );
       copied.push(target);
       continue;
     }

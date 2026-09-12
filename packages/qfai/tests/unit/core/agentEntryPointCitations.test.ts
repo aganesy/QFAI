@@ -88,3 +88,21 @@ describe("a rule that shipped after the section was written", () => {
     expect(missingRuleCitations(current, SECTION)).toEqual([]);
   });
 });
+
+describe("what the citation upgrade refuses to do", () => {
+  it("cites only a master whose bullet the template carries", () => {
+    // A master the section never mentions has no bullet to lift, so there is
+    // nothing to insert and the run says nothing rather than composing a line
+    // the template would not recognise.
+    expect(ruleCitationLines(SECTION, [".agents/rules/nowhere.md"])).toEqual([]);
+  });
+
+  it("leaves a file whose end marker is gone to its owner", () => {
+    // `lastIndexOf` answers -1 there, and the slices around it would put the
+    // file's whole head after its tail. The branch is entered by the start
+    // marker alone, so a hand-edited file reaches it.
+    const halfMarked = OLDER_INSTALL.replace(QFAI_AGENT_RULES_END, "");
+    expect(halfMarked.includes(QFAI_AGENT_RULES_BEGIN)).toBe(true);
+    expect(halfMarked.lastIndexOf(QFAI_AGENT_RULES_END)).toBe(-1);
+  });
+});
