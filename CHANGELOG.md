@@ -24,6 +24,39 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   The rule master says it has a reminder, so a hook that stops firing does not
   read as a rule nobody wrote one for.
 
+- **The execution stages grill at two points** (#1601). `/qfai-implement`,
+  `/qfai-atdd` and `/qfai-verify` open a session at the preflight, over what the
+  confidence check left uncertain, and one on detection — a contradiction in the
+  spec, an unconsidered case or a technical obstacle surfacing mid-run stops the
+  work rather than being decided alone. Each runs until its frontier is empty,
+  however many rounds that takes. These stages read a spec closely enough
+  for its gaps to show, and the agent that finds one is the least able to judge
+  alone what the spec ought to have said.
+
+  Article IX already required a confidence check and said to ask targeted
+  questions when confidence was low, naming no method. It names one now.
+
+  A session, declared the way the rule requires, rather than a question outside
+  one: those are ordinary clarifications capped by Article VI, and a cap on the
+  question that would have prevented the wrong build is the failure this gate
+  exists to catch.
+
+  What is bounded is the subject, not the length. The session covers what the
+  preflight left uncertain, or what was detected, and nothing else —
+  re-interrogating a settled spec and ledger every run would stop the micro-cycle
+  and invite the drift these stages exist to avoid.
+
+  Only one outcome is the Drift Protocol's. Where the session concludes that
+  settled input must change, the protocol governs: stop the dependent work, raise
+  the Change Request, wait for approval. Where it concludes the obstacle is this
+  run's to solve — an unavailable dependency, an approach that failed — the run
+  solves it, and there is nothing upstream to approve.
+
+  What a session contributes to a Change Request is what its class asks for:
+  options and a recommendation for intent drift, the single correct repair for
+  defect drift, which the protocol records with `Approved option: -`. Grilling
+  decides what the change should be; the protocol decides whether it happens.
+
 ### Added
 
 - **A lint lane refuses a tracked file under the scratch directory.** `tmp/` is
