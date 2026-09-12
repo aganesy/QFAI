@@ -49,8 +49,10 @@ Route the ask through
 Do not open a second path for it. The cap constrains this stage as it does every
 other, so the reason the budget is not the obstacle is the exemption rather than
 the scope: a question whose subject is a decision the skill declares mandatory is
-an approval, and a question inside a grilling session is a grilling question.
-Both are exempt.
+an approval, and a question inside a grilling session whose subject is a decision
+the design has left open is a grilling question. Both are exempt. A question
+inside a session whose subject is something else is an ordinary clarification and
+is capped like any other.
 
 **Offer candidates, not adjectives.** "Which of these three" is a choice a
 user can make from a page; "how would you describe the brand" asks them to

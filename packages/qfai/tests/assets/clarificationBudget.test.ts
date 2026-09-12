@@ -306,11 +306,14 @@ describe("the clarification budget is countable", () => {
     });
 
     it(`${tree}: every enumeration of the survivors names all three classes`, async () => {
-      // The failure mode this closes is one statement written in five places and
-      // updated in four. An agent reads whichever it reaches: the per-question
+      // Every enumeration of the surviving classes has to name the same three,
+      // because an agent acts on whichever one it reaches. The per-question
       // classification bullet decides whether a grilling item in a mixed prompt
-      // is counted, and Article X is the compaction-reload target, so an omission
-      // there ends a session after a summarise that Article VI says continues.
+      // is counted, and Article X is the compaction-reload target, so a list that
+      // omits a class there ends a session the article says continues.
+      //
+      // Read together in one case: separate cases pass while a single list is
+      // stale, which is the state that produces the contradiction.
       const content = await read(tree, CONSTITUTION);
       expectPhrase(content, "its grilling and approval questions are\n  exempt");
       expectPhrase(
@@ -329,6 +332,22 @@ describe("the clarification budget is countable", () => {
       expectNoPhrase(content, "only its approval questions are exempt");
     });
 
+    it(`${tree}: the confirmation that closes a session is exempt with its questions`, async () => {
+      // Condition 2 of the session's end is the user's confirmation, and that is
+      // not itself a decision the design left open — so outside the exempt class
+      // it is an ordinary clarification. A spent budget then makes the second
+      // half of the end condition unaskable, and the session can be neither
+      // continued nor closed. Asserted where the class is defined and where the
+      // exemption is stated, because either alone leaves the other free to drop
+      // it.
+      const content = await read(tree, CONSTITUTION);
+      expectPhrase(
+        content,
+        "The confirmation that\n  closes a session is in this class with its questions",
+      );
+      expectPhrase(content, "That closing confirmation is exempt with the\n  questions");
+    });
+
     it(`${tree}: the discussion intake does not claim the cap skips its stage`, async () => {
       // It said the cap constrains non-discussion commands, which was the
       // article's old opening repeated downstream. With one scope the reason the
@@ -336,7 +355,17 @@ describe("the clarification budget is countable", () => {
       const content = await read(tree, DESIGN_DNA_INTAKE);
       expectNoPhrase(content, "non-discussion commands are what the cap constrains");
       expectPhrase(content, "The cap constrains this stage as it does every\nother");
-      expectPhrase(content, "a question inside a grilling session is a grilling question");
+      expectPhrase(
+        content,
+        "a question inside a grilling session whose subject is a decision\nthe design has left open is a grilling question",
+      );
+      // The classification is by subject in both documents. A restatement that
+      // exempts whatever is asked during a session hands the stage an uncapped
+      // path for clarifications that have nothing to do with the design.
+      expectPhrase(
+        content,
+        "whose subject is something else is an ordinary clarification and\nis capped like any other",
+      );
     });
 
     it(`${tree}: the article's scope and the baseline's applied scope are one set`, async () => {

@@ -60,9 +60,16 @@ describe("the design direction is the user's decision", () => {
       // question reach it, so both are named here: dropping either leaves the
       // document explaining the cap away for a case it no longer covers.
       expect(intake).toContain(
-        "is an approval, and a question inside a grilling session is a grilling question",
+        "is an approval, and a question inside a grilling session whose subject is a" +
+          " decision the design has left open is a grilling question",
       );
       expect(intake).toContain("Both are exempt.");
+      // Each class is a subject test, not a location test. Without the last
+      // sentence a session turns every question asked during it into an exempt
+      // one, and an ordinary clarification escapes the cap by timing.
+      expect(intake).toContain(
+        "whose subject is something else is an ordinary clarification and is capped",
+      );
     });
 
     it(`${tree}: an unattended run records an assumption instead of blocking`, async () => {

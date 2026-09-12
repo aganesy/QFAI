@@ -165,7 +165,10 @@ Default policy:
   whose prerequisites are already settled, and it ends when none are left rather
   than at a count. A cap would end a session by arithmetic with decisions still
   open, and an agent that then proceeded on labelled assumptions would be
-  assuming exactly what the session existed to settle.
+  assuming exactly what the session existed to settle. The confirmation that
+  closes a session is in this class with its questions: it is the session's own
+  end condition, so counting it would leave a session that can be neither
+  continued nor closed.
 - An **approval** — a question asked because a document requires a recorded
   human decision before the work may proceed — does **not** spend budget.
   Approvals are unbounded by construction: SDD triage requires an `Approved By`
@@ -195,8 +198,10 @@ Default policy:
   exhausting the budget does not end one. Its questions are decisions the user
   owns, asked a round at a time, and the session ends on its own condition: no
   open decision whose prerequisites are settled, and the user's confirmation that
-  the understanding is shared. A session cut short by the budget would hand back
-  a design with decisions assumed rather than asked.
+  the understanding is shared. That closing confirmation is exempt with the
+  questions, or a spent budget would make the second half of the condition
+  unaskable and the session unendable. A session cut short by the budget would
+  hand back a design with decisions assumed rather than asked.
 - **Approval questions are exempt.** A question whose subject is a user decision
   the skill declares mandatory — a per-row triage approval in `/qfai-sdd`, a
   destructive-operation confirmation, an escalation under
