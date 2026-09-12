@@ -26,8 +26,8 @@ one at a time would leave the pack self-contradictory between records. They are
 settled **separately**: the decision section puts one question per item, and an
 approval names an option for each.
 
-The count band drift is not here. It is
-`CR-20260913-0001`, whose blocked set and this one do not overlap.
+The count band drift is not here: it is a separate contradiction about a
+different obligation, and it blocks different rows.
 
 ### 1. Two test cases in one pack require opposite things of one value
 
@@ -182,12 +182,10 @@ the rows open today.
 
 - Not blocked by this CR: every other `spec-0013` row. The pack's other
   obligations do not read the template's slot value, the legacy-contract window,
-  the surface-type helper or the drift finding's severity. `TDD-0016` is parked
-  by `CR-20260912-0003` and not by this record.
-- Overlapping open CRs: `CR-20260913-0001` blocks `spec-0013/TDD-0027` and
-  `TDD-0028` over the count band, and `CR-20260912-0003` reaches
-  `spec-0013/TDD-0016`. Neither set overlaps this one, so the effective halt on
-  the pack is the union of seven rows rather than any one record's four.
+  the surface-type helper or the drift finding's severity. `TDD-0016`, the row
+  for the lock write, is not blocked here either: its obligation is about which
+  stage writes the lock, which none of these four items touches.
+- Overlapping open CRs: `none`.
 
 ## Impact scope
 
