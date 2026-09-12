@@ -234,7 +234,8 @@ than inventing it.
 
 A session with no user answering has neither half of the end condition above
 available to it. **The budget does not supply one.** Two rounds, then every
-decision still open goes to the user — and the session is still open when it
+decision the user has not settled goes to the user, agreed ones included — and
+the session is still open when it
 gets there, because the user has not yet ended it in any of the four ways. Three
 subjects skip the rounds and go at once — product or business intent no
 authoritative artifact answers, a decision contradicting a spec, a contract or a

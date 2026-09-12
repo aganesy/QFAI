@@ -126,7 +126,7 @@ A grilling session between agents has no user answering its questions, so the
 end condition the session rule states — an empty frontier and the user's
 confirmation — cannot be reached from inside it. Two agents can also agree on a
 wrong premise with nobody watching. These rules bound the **rounds** such a
-session may take before what is still open goes to the user.
+session may take before every decision the user has not settled goes to the user.
 
 **They do not end the session.** It ends where every session ends, in one of the
 four the session rule names: with a user present, the user ends it; under a

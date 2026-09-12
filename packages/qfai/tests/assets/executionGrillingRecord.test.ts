@@ -183,6 +183,10 @@ describe.each(TREES)("%s — the execution stages record their sessions", (tree)
     expectPhrase(body, "the four endings `.agents/rules/grilling.md` names");
     expectPhrase(body, "only the first three let the work go on");
     expectPhrase(body, "**The closing answer goes under that table too**");
+    expectPhrase(
+      body,
+      "**and a decision still waiting is an open line under that `Session` as well**",
+    );
     expectPhrase(body, 'Closed S2: "proceed"');
   });
 
@@ -238,6 +242,9 @@ describe.each(TREES)("%s — the execution stages record their sessions", (tree)
       "and after which the stage wrote, carries a `Work resumed` later than its own `Ended at`",
     );
     expectPhrase(body, "**A run that did not resume writes `none — <why>` instead**");
+    // An unanswered escalation is a decision nobody took, so an ended row keeps
+    // it in the register.
+    expectPhrase(body, "**An escalation line still waiting on an answer is an open node**");
     expectPhrase(body, "which the gate accepts on those three endings and on no other");
     expectPhrase(body, "A blank is neither, and is a `REVISE` — **except on a `stopped` row**");
     // The field that says which tree the session ended against is validated,

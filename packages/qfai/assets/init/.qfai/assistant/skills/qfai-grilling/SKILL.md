@@ -206,7 +206,8 @@ simple.
 
 **A session between agents cannot reach condition 2 on its own**, because no
 user is there to confirm. A budget bounds its rounds: two, then every decision
-still open goes to the user, with three subjects escalating at once — product
+the user has not settled goes to the user — the ones the agents agreed on as
+well as the ones still open — with three subjects escalating at once — product
 or business intent no authoritative artifact answers, a decision contradicting
 a spec, a contract or a recorded decision, and a decision resting on nothing
 authoritative (`.qfai/assistant/constitution/review-convergence.md`).

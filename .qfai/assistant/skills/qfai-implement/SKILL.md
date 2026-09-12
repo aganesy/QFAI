@@ -202,7 +202,9 @@ work go on.
   agent's own assumptions off as a closure the user made.
 - **The escalated decisions go under that table too.** One line per decision
   a session between agents sent to the user, naming the `Session` it came from
-  and what the user answered, or that no answer has come yet. A decision the
+  and what the user answered, or that no answer has come yet — **and a decision
+  still waiting is an open line under that `Session` as well**, because an
+  escalation nobody answered is a decision nobody took. A decision the
   agents agreed on is among them: agreement between agents settles nothing, so
   it reaches the user like one left open. `Escalated` counts these lines, and
   the gate reconciles the two the way it reconciles `Open` with the register.
@@ -472,7 +474,7 @@ Use the shared schema (per-row `Status (PASS/REVISE/PENDING)` column, reviewer r
   says `session opened` — one for the preflight session, all of them inside this run's own block — **except a session the user stopped**, which is reported in the stage's output rather than written, as the table below sets out, so its absence is not a `REVISE`. Every `Ended` is one of the four endings the rule master
   names, every row's `Ended at` is at or after the run-started time on
   a `### /qfai-implement — run started` block whose time equals the one this
-  run's work order states, and each row's `Open` count matches the register lines naming that row's `Session`, **and its `Escalated` count matches the escalation lines naming it** — a count checked against nothing lets a row claim `0` over decisions that never reached the user. **Every row's `Revision` is a git rev or `working-tree+<hash>`**, as the record requires, and a blank or any other value is a `REVISE`: it is the one field saying which tree the session ended against. **A row whose ending lets the work go on, and after which the stage wrote,
+  run's work order states, and each row's `Open` count matches the register lines naming that row's `Session`, **and its `Escalated` count matches the escalation lines naming it** — a count checked against nothing lets a row claim `0` over decisions that never reached the user. **An escalation line still waiting on an answer is an open node**: it is also an `Open` line under the same `Session`, so a row that ended over it keeps the decision in the register instead of losing it behind a valid ending. **Every row's `Revision` is a git rev or `working-tree+<hash>`**, as the record requires, and a blank or any other value is a `REVISE`: it is the one field saying which tree the session ended against. **A row whose ending lets the work go on, and after which the stage wrote,
   carries a `Work resumed` later than its own `Ended at`** — that ordering is
   the whole reason both times are recorded, and an earlier one is a session
   recorded after the edit it was meant to precede. **A run that did not resume
