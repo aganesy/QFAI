@@ -107,9 +107,22 @@ optional side artifact (`REQ-0015`, `AC-0013-0009`). **`2B` reverses it**, and
 that pack's own delta records the blocker being removed. `2B` is not approved
 without the `spec-0013` re-derivation beside it.
 
-Both are owner re-derivations in the rerun plan, not cross-spec
+`spec-0004` and `spec-0012` are reached by `2a`, and by one edit: that
+sub-option authorises the design-contract gate to exempt a pack which has not
+reached prototyping, and those two packs are where the gate is specified
+(`REQ-0025` / `AC-0004-0008`, and `DR-0012-0020`).
+
+All four are owner re-derivations in the rerun plan, not cross-spec
 re-verifications: what disagrees is a requirement, and re-running a test
 confirms the observation rather than the requirement it was taken against.
+
+`spec-0013` carries one more prerequisite. Its `03_Acceptance-Criteria.md`
+declares `AC-0013-0009` twice, so a rerun keyed to that id sweeps whichever of
+the two it finds. The renumbering is its own item and `2B` waits on it.
+
+`spec-0010/TDD-0011` is parked with this Change Request. It is at `todo` and
+targets `TC-0010-0007`, the producer obligation every statement-A outcome
+re-derives.
 
 ## Constraints to preserve
 

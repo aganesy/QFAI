@@ -86,12 +86,20 @@ spec catching up, not the product going back.
 
 ## Blocked downstream items
 
-| Item                 | Kind         | Why it depends on the artifact                                             |
-| -------------------- | ------------ | -------------------------------------------------------------------------- |
-| `spec-0002/TDD-0008` | `ledger-row` | `TC-0002-0008` asks that discussion completion not require a direction     |
-| `spec-0002/TDD-0009` | `ledger-row` | `TC-0002-0009` asks that a pack asserting a single final winner be refused |
-| `spec-0002/TDD-0010` | `ledger-row` | second row on `TC-0002-0009`                                               |
-| `spec-0002/TDD-0012` | `ledger-row` | `TC-0002-0011` asks that the wording match the active requiredness rule    |
+| Item                 | Kind         | Why it depends on the artifact                                                                                 |
+| -------------------- | ------------ | -------------------------------------------------------------------------------------------------------------- |
+| `spec-0002/TDD-0008` | `ledger-row` | `TC-0002-0008` asks that discussion completion not require a direction                                         |
+| `spec-0002/TDD-0009` | `ledger-row` | `TC-0002-0009` asks that a pack asserting a single final winner be refused                                     |
+| `spec-0002/TDD-0010` | `ledger-row` | second row on `TC-0002-0009`                                                                                   |
+| `spec-0002/TDD-0012` | `ledger-row` | `TC-0002-0011` asks that the wording match the active requiredness rule                                        |
+| `spec-0010/TDD-0011` | `ledger-row` | `TC-0010-0007` asks that discussion author root `DESIGN.md`, the producer every statement-A outcome re-derives |
+
+**`spec-0010/TDD-0011` is another pack's row, and it belongs here anyway.** It
+is at `todo`, so nothing has been observed against it yet, and its obligation is
+the one the `spec-0010` re-derivation moves. Left out of this set the open-CR
+preflight does not suppress it, and `/qfai-implement` may advance it against a
+requirement already known to change — producing a RED, a GREEN and a reviewer
+verdict on a producer nobody has settled.
 
 **`spec-0002/TDD-0011` is not in this set.** Its obligation is sound, its test
 discharges it, and no A/B outcome moves either. The two repairs the matrix asks
@@ -99,7 +107,7 @@ for — giving `non-UI skip` a fixture that makes the guard load-bearing, and
 removing the three annotations `threeLayer.test.ts` declares that this spec's
 table does not hold — do edit the file its recorded observation covers, so the
 row owes a fresh observation. That is the shared-artifact re-verification of step
-3, which needs no approval from this Change Request and no reset.
+7, which needs no approval from this Change Request and no reset.
 
 Listing it here would have blocked it: the open-CR preflight suppresses every
 row in this set until the user settles two product decisions the row has nothing
@@ -121,16 +129,34 @@ to do with. A row whose obligation is unchanged waits on nobody.
 a test.** Both belong in the owner rerun rather than in the cross-spec sweep,
 because what disagrees is a requirement and not an observation.
 
-| Pack        | What it requires                                                                                                     | Which outcome reaches it                                                                                                        |
-| ----------- | -------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
-| `spec-0010` | `US-0010-0009`, `AC-0010-0007` and `BR-0010-0007`: `/qfai-discussion` authors root `DESIGN.md` before downstream use | Every statement-A outcome. Options 1 and 3 keep a product that contradicts it; option 2 moves the producer somewhere else again |
-| `spec-0013` | `REQ-0015` and `AC-0013-0009`: the SDD preflight does not block on a missing or old-format optional side artifact    | Statement B option 2 only, which makes an absent or malformed `prototyping.yaml` block                                          |
+| Pack        | What it requires                                                                                                                    | Which outcome reaches it                                                                                                        |
+| ----------- | ----------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
+| `spec-0010` | `US-0010-0009`, `AC-0010-0007` and `BR-0010-0007`: `/qfai-discussion` authors root `DESIGN.md` before downstream use                | Every statement-A outcome. Options 1 and 3 keep a product that contradicts it; option 2 moves the producer somewhere else again |
+| `spec-0013` | `REQ-0015` and the side-artifact `AC-0013-0009`: the SDD preflight does not block on a missing or old-format optional side artifact | Statement B option 2 only, which makes an absent or malformed `prototyping.yaml` block                                          |
+| `spec-0004` | `REQ-0025` and `AC-0004-0008`: a missing or unparseable root `DESIGN.md` emits `QFAI-DCON-030` at error                             | Sub-option `2a` only, which exempts a pack that has not reached prototyping                                                     |
+| `spec-0012` | `DR-0012-0020`: SDD Phase 0 freezes the `DESIGN.md` digest into `.qfai/contracts/design/DESIGN.md.lock.yaml`                        | Sub-option `2a` only, which moves that write into `/qfai-prototyping`                                                           |
 
 `spec-0010` is the one no option escapes. This Change Request records
 `/qfai-sdd` as the current producer, and that is already the disagreement:
 whichever way statement A is settled, one of the two packs is left specifying a
 producer the product does not have. Options 1 and 3 settle nothing there, so
 they owe the re-derivation as much as option 2 does.
+
+`spec-0004` and `spec-0012` are reached only by `2a`, and by the same edit: that
+sub-option authorises the design-contract gate to exempt a pack which has not
+reached prototyping, and those two packs are where the gate's current behaviour
+is specified. Four `done` rows name the test file that edit touches —
+`spec-0004/TDD-0008`, `-0009`, `-0010` and `spec-0012/TDD-0355`, all on
+`packages/qfai/tests/core/validators/designContractReadiness.test.ts` — so the
+cross-spec sweep reaches them as well, and under `2a` the sweep is
+seventeen rows plus these four.
+
+**The `spec-0013` criterion has to be disambiguated first.**
+`.qfai/specs/spec-0013/03_Acceptance-Criteria.md` declares `AC-0013-0009` twice,
+under "Delta Rejected Guardrails" and under "Optional Side Artifact Does Not
+Block Preflight", and `TC-0013-0009` cites the ambiguous id for the first. A
+rerun keyed to the id would sweep whichever the reader finds. Renumbering it is
+a separate owner edit, recorded as its own item, and `2B` waits on it.
 
 `spec-0013` is reached only by `2B`, and that option reverses it outright —
 its own `09_delta.md` records the required-`prototyping.yaml` blocker being
@@ -151,7 +177,41 @@ taken against.
   `.qfai/specs/spec-0002/05_Examples.md`,
   `.qfai/specs/spec-0002/06_Test-Cases.md`,
   `.qfai/specs/spec-0002/07_Decisions.md`
-- Plans: `.qfai/specs/spec-0002/10_Plan.md`
+
+  **Under every statement-A outcome, `spec-0010` as well** — the owner
+  re-derivation below writes it, and `QFAI-DRIFT-001` reads this list rather
+  than the prose:
+  `.qfai/specs/spec-0010/01_Spec.md`,
+  `.qfai/specs/spec-0010/02_User-stories.md`,
+  `.qfai/specs/spec-0010/03_Acceptance-Criteria.md`,
+  `.qfai/specs/spec-0010/04_Business-Rules.md`,
+  `.qfai/specs/spec-0010/05_Examples.md`,
+  `.qfai/specs/spec-0010/06_Test-Cases.md`,
+  `.qfai/specs/spec-0010/07_Decisions.md`,
+  `.qfai/specs/spec-0010/09_delta.md`,
+  `.qfai/specs/spec-0010/tdd/test-list.md`.
+
+  **Under `2B`, `spec-0013` too**, for the same reason:
+  `.qfai/specs/spec-0013/01_Spec.md`,
+  `.qfai/specs/spec-0013/03_Acceptance-Criteria.md`,
+  `.qfai/specs/spec-0013/04_Business-Rules.md`,
+  `.qfai/specs/spec-0013/06_Test-Cases.md`,
+  `.qfai/specs/spec-0013/09_delta.md`,
+  `.qfai/specs/spec-0013/tdd/test-list.md`.
+
+  **Under `2a`, `spec-0004` and `spec-0012`**, whose obligations the design-gate
+  change moves:
+  `.qfai/specs/spec-0004/01_Spec.md`,
+  `.qfai/specs/spec-0004/03_Acceptance-Criteria.md`,
+  `.qfai/specs/spec-0004/09_delta.md`,
+  `.qfai/specs/spec-0012/07_Decisions.md`,
+  `.qfai/specs/spec-0012/09_delta.md`.
+
+  No `10_Plan.md` is in this list, for any pack. `QFAI-DRIFT-001` reads every
+  path here as authorisation, so naming one would waive any change to it —
+  including `spec-0002`'s `TC-0002-0026` repair, which belongs to a Change
+  Request nobody has written.
+
 - Tests: `spec-0002/TDD-0008`, `spec-0002/TDD-0009`, `spec-0002/TDD-0010`,
   `spec-0002/TDD-0011`, `spec-0002/TDD-0012`, and `spec-0002/TDD-0001` under
   option 2 only —
@@ -293,8 +353,9 @@ and refusing `3A/1B` for want of one would make a valid split unrecordable.
 
 ## Approved actions (owner skill rerun plan)
 
-**Two owner re-derivations come first, and their scope is the requirement
-rather than the test.**
+**Four items come first. Three are owner re-derivations whose scope is the
+requirement rather than the test, and one is the renumbering the third waits
+on.**
 
 1. **`spec-0010`, under every statement-A outcome.** `/qfai-sdd` re-derives
    `US-0010-0009`, `AC-0010-0007` and `BR-0010-0007` against whichever producer
@@ -306,8 +367,25 @@ rather than the test.**
    the same sweep. **`2B` is not approved without it**: approving the option
    alone would leave two active packs prescribing opposite preflight behaviour,
    with the product free to satisfy either.
+3. **`spec-0013`'s duplicate acceptance-criterion id, under `2B` only, and
+   before item 2.** `.qfai/specs/spec-0013/03_Acceptance-Criteria.md` declares
+   `AC-0013-0009` twice — "Delta Rejected Guardrails" and "Optional Side
+   Artifact Does Not Block Preflight" — and `TC-0013-0009` cites the ambiguous
+   id for the first. The side-artifact criterion takes the pack's next free id,
+   and every reference to it moves in the same edit. Until that lands, a rerun
+   keyed to `AC-0013-0009` sweeps whichever of the two it finds.
+4. **`spec-0004` and `spec-0012`, under `2a` only.** `/qfai-sdd` re-derives
+   `spec-0004`'s `REQ-0025` and `AC-0004-0008`, and `spec-0012`'s
+   `DR-0012-0020`, to say that the design-contract gate exempts a pack which has
+   not reached prototyping. The downstream sweep then reaches
+   `spec-0004/TDD-0008`, `-0009`, `-0010` and `spec-0012/TDD-0355`, the four
+   `done` rows naming
+   `packages/qfai/tests/core/validators/designContractReadiness.test.ts`. **`2a`
+   is not approved without this**: the gate is where `QFAI-DCON-030` is
+   specified, and changing it while those packs still require the old behaviour
+   leaves the product satisfying neither.
 
-3. `/qfai-sdd` rerun scope: the statements the chosen option names, plus the
+5. `/qfai-sdd` rerun scope: the statements the chosen option names, plus the
    `06_Test-Cases.md` rows that read them.
 
    The seven ledger rows the seeding contract requires and this pack does not
@@ -326,7 +404,7 @@ rather than the test.**
    two. It is recorded in `.qfai/evidence/coverage-depth-spec-0002.md` and needs
    its own.
 
-4. Downstream ledger sweep. The two statements are settled independently, so the
+6. Downstream ledger sweep. The two statements are settled independently, so the
    plan is read per statement and not per bundle, so every dependent identifier
    is assigned to one of them here rather than left in the combined option
    bodies — a split cannot be applied from a list that names only part of a
@@ -351,7 +429,7 @@ rather than the test.**
    Nothing in statement A's list touches statement B's rows or the reverse, so
    `1A/2B` is option 1 applied to A's rows and option 2 applied to B's, with no
    overlap to resolve. `TDD-0011` is re-verified under every combination —
-   not reset — for a reason belonging to neither statement, given at step 3.
+   not reset — for a reason belonging to neither statement, given at step 7.
 
    The three option bodies below each describe **both** statements, because that
    is how they are compared. Applying one to a single statement means taking only
@@ -506,7 +584,7 @@ rather than the test.**
      other rows; `packages/qfai/tests/validators/uix/threeLayer.test.ts` stays
      with `spec-0002/TDD-0011`.
 
-5. `spec-0002/TDD-0011` is **re-verified, not reset**, under every option. Its
+7. `spec-0002/TDD-0011` is **re-verified, not reset**, under every option. Its
    obligation `TC-0002-0010` does not move and its case `skips non-UI packs` is
    not edited; what changes is the file around it — the annotations, and the
    sibling case's fixture. A `CR-*` reset is for a row whose obligation an
@@ -520,14 +598,17 @@ rather than the test.**
    Recording only the hash would leave the row asserting a verification nobody
    performed, which is the shape of defect this Change Request exists to clear.
 
-6. Reserve every retired `TDD-ID` in the ledger's `## TDD-ID reservations`
+8. Reserve every retired `TDD-ID` in the ledger's `## TDD-ID reservations`
    section before the row is deleted. The ledger allocates the next id as
    `max + 1`, so deleting the highest row hands its number to the next one
    written, and two runs then share an identifier that this Change Request is
    the only record of. Option 1 reserves `spec-0002/TDD-0010`; option 2 the
-   same; option 3 reserves `TDD-0008`, `TDD-0009`, `TDD-0010` and `TDD-0012`,
-   the last of which is the current maximum and so the one that would be reused
-   first.
+   same; option 3 reserves `spec-0002/TDD-0008`, `spec-0002/TDD-0009`,
+   `spec-0002/TDD-0010` and `spec-0002/TDD-0012`, the last of which is that
+   pack's current maximum and so the one that would be reused first. **Every id
+   here carries its pack**, because this Change Request now touches four of
+   them and `spec-0010` has a `TDD-0008` of its own: a deleted row cannot say
+   afterwards which ledger it came from, so the reservation has to.
 
 ## Resolution
 
