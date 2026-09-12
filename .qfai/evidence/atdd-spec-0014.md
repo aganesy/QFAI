@@ -60,17 +60,20 @@ allows it. Both cells are unchanged, and what the repair would be is under Gaps.
 
 ## Commands executed + key outputs
 
-Every `vitest` command ran from `packages/qfai`; the validate gate ran from the
-repository root, which is where its `node packages/qfai/dist/cli/index.mjs` path
-resolves. From `packages/qfai` that same string names a `packages/qfai` inside
-`packages/qfai` and does not exist. The clean-tree runs of the **first** pass were taken at revision
+Every bare `vitest` command ran from `packages/qfai`. **The two checkpoint
+commands and the validate gate ran from the repository root**, and each says so
+in its own text: the checkpoints carry `pnpm -C packages/qfai`, which names the
+package from outside it, and the gate carries
+`node packages/qfai/dist/cli/index.mjs`. Run from `packages/qfai`, either
+string names a `packages/qfai` inside `packages/qfai` and does not exist — so
+the directory is not a detail a reader has to supply, it is readable off the
+command. The clean-tree runs of the **first** pass were taken at revision
 `649d8111147436408c90cbbe1b9f9b07e34da8cb`, and that is the only address this
-preamble carries. Later runs are addressed where they are recorded and the two
-disagree by construction, because each pass ran against the tree it produced:
-the re-taken GREEN and its mutation name `09f6f3b`, the refactor verification
-and the item checkpoint name `db8cd210`, and the seven-job checkpoint names the
-merge commit `879079199019a43767e893f4366056e493d8a798`. Read a run's own
-revision, never this one, when reproducing it. Each mutation was reverted
+preamble carries. **Every later run is addressed where it is recorded, and this
+paragraph no longer repeats those addresses.** They disagree by construction,
+because each pass ran against the tree it produced, and a second copy of the map
+here went stale the first time a run was re-taken. Read a run's own revision,
+never this one, when reproducing it. Each mutation was reverted
 from a copy of the pre-mutation bytes, and the tree re-addressed afterwards to
 confirm it had returned to the clean value.
 
@@ -265,9 +268,9 @@ first mutation passes it and fails the literal check below it instead.
 - Refactor verify command: npx vitest run tests/integration/verifySemanticsSpec0014.test.ts tests/cli/commands/prototypingIterate.test.ts tests/integration/cli/commands/prototypingCertify.saasPackage.test.ts tests/integration/cli/commands/prototypingCertify.upgradeScope.test.ts
 - Refactor verify result: Test Files 4 passed (4); Tests 127 passed (127)
 - Refactor verify revision: db8cd210a3b71ffd82591dda52ed250af76d812d
-- Checkpoint item test command: pnpm -C packages/qfai build && npx vitest run tests/integration/verifySemanticsSpec0014.test.ts --reporter=verbose
+- Checkpoint item test command: pnpm -C packages/qfai build && pnpm -C packages/qfai exec vitest run tests/integration/verifySemanticsSpec0014.test.ts --reporter=verbose
 - Checkpoint item test result: Test Files 1 passed (1); Tests 6 passed (6). The verbose output names the row's `Selector` entry among the tests it ran — `TC-0014-0019: removed compatibility surface > package surface exposes no legacy namespace or compatibility category` — which is what the per-item step asks of a file-scoped run.
-- Checkpoint item test revision: 3a1eeb3fa4127c7703bfdaac1550f294becb0119
+- Checkpoint item test revision: 434caaabeca8513a1a830943d4dcbeade10b9507
 - Checkpoint verification command: pnpm -C packages/qfai build && pnpm -C packages/qfai test:core && pnpm -C packages/qfai test:validators && pnpm -C packages/qfai test:integration && pnpm -C packages/qfai test:e2e && pnpm -C packages/qfai test:cli && pnpm -C packages/qfai test:unit && pnpm -C packages/qfai test:scripts
 - Checkpoint verification result: FAIL — six of seven slices green, nothing filtered out; the seven together cover every project `vitest.workspace.ts` declares. `core` 3179 passed / 32 skipped, `validators` 959 / 2, `integration` 1490 / 23, `e2e` 3892 / 21, `cli` 893 / 7, `unit` 745 / 8. `scripts` reports 1 failed / 696 passed
 - Checkpoint verification revision: 3a1eeb3fa4127c7703bfdaac1550f294becb0119
