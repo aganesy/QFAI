@@ -38,7 +38,7 @@ Skill-specific examples:
 
 When unsure, read inputs in this order:
 
-- P1: `.qfai/assistant/constitution/*`
+- P1: `.qfai/assistant/constitution/*`, and `.qfai/assistant/skills/qfai-grilling/SKILL.md` before the interview in step 2
 - P2: `.qfai/assistant/manifest/agent-routing.yml` + `.qfai/assistant/manifest/review-profiles.yml` + `.qfai/assistant/catalog/*`; from `.qfai/assistant/manifest/agent-catalog.yml` read the acting `orchestrator`'s and each routed role's entry (`owned_artifacts` / `tool_profile` / `permission_profile` / `specialization_tags`), not the whole file — its `developer_instructions` bodies mirror the agent cards (`.qfai/assistant/constitution/constitution.md` Article III)
 - P3: the pack under work — `.qfai/discussion/discussion-YYYYMMDDhhmmssSSS/**`
 - P4: what the project already settled (`.qfai/specs/_policies/**`, active `.qfai/specs/*/01_Spec.md`, `.qfai/contracts/**`, `qfai.config.yaml`)
@@ -70,15 +70,37 @@ A **cli-only** pack (`primary_surface: cli`, no visual secondary surface) stays 
 
 ## Required Process
 
-1. Run the core interview for concept, scope, stakeholders, and constraints.
-2. Run `.qfai/assistant/constitution/research-first-protocol.md` before any other artifact is authored, record its `research_summary` output in the `## Research Summary` section of `04_Sources.md`, then register source traceability there. Its `best_practices` / `anti_patterns` are inputs to every step below, not a late fill-in.
+1. Run `.qfai/assistant/constitution/research-first-protocol.md` before any other artifact is authored, record its `research_summary` output in the `## Research Summary` section of `04_Sources.md`, then register source traceability there. Its `best_practices` / `anti_patterns` are inputs to every step below, not a late fill-in.
+2. Read `.qfai/assistant/skills/qfai-grilling/SKILL.md`, then run the core interview
+   for concept, scope, stakeholders, and constraints as a grilling session through
+   that skill, covering every topic in `references/discussion-coverage-checklist.md` **and**, where any classified surface is
+   `web`, `mobile`, `desktop` or `mixed`, the design-direction decisions in
+   `references/design-dna-intake.md`. Not every UI-bearing target: a cli-only pack is UI-bearing
+   and the brand questions do not apply to it, because nothing downstream reads a `visual.*` token
+   tree for one. The method is
+   `.agents/rules/grilling.md` and this step does not restate it. An interview with no method is
+   the agent deciding and reporting.
+   **Read the file, do not work from the name.** A host that loads a skill body lazily gives an
+   agent the reference and not the procedure, and an agent with the reference alone improvises an
+   interview that looks like the method and answers to nothing. If the file is absent, stop and
+   report that `npx qfai init` installs it.
+   The design-direction decisions belong in this session because step 9 runs after steps 3 to 8
+   have authored the pack, and a user-owned visual choice asked there is asked after the thing it
+   governs is written.
+   Step 1's findings are inputs to the session's tree, not a later fill-in: a decision settled
+   before the research that bears on it is settled against evidence nobody had, and the method
+   reads a fact rather than asking about it.
 3. Run Inception Deck and include at least one Mermaid diagram.
 4. Run Story Workshop, capture user stories and user flows; HTML+CSS mock is optional fallback only.
 5. Capture scope, REQ, NFR, glossary, constraints, and policies.
 6. Run Example Mapping per `references/example-mapping-guide.md` and capture `Example Seeds`.
 7. Update `11_OQ-Register.md`, resolve OQs until open count is zero, and move deferred items to `13_Deferred.md`; take the canonical field definitions for both files from `references/oq-and-deferred-rules.md`.
 8. Generate the exploration-first sidecar family for UI-bearing targets.
-9. Interview for the design direction per `references/design-dna-intake.md`, ask the user to choose one of the candidate themes, and record the choice in `01_Context.md#Design Direction`. Required when any classified surface — primary or secondary — is `web`, `mobile`, `desktop` or `mixed`; skip for cli-only and non-ui targets. The answers, not a rendered brand file, are the handoff: `/qfai-sdd` Phase 0 authors root `DESIGN.md` from them.
+9. Record the design direction settled in step 2's session — the chosen theme and the
+   `references/design-dna-intake.md` answers behind it — in `01_Context.md#Design Direction`. The choice is
+   made in the session, not here; this step writes it down. Required when any classified surface — primary or
+   secondary — is `web`, `mobile`, `desktop` or `mixed`; skip for cli-only and non-ui targets. The answers,
+   not a rendered brand file, are the handoff: `/qfai-sdd` Phase 0 authors root `DESIGN.md` from them.
 10. Generate `prototyping.yaml` only when the latest discussion pack targets a prototyping execution surface (`web`, `mobile`, `desktop`, `mixed`) and an explicit prototyping recommendation is useful. A cli-only pack emits none — `/qfai-prototyping` rejects `cli`.
 11. Request review and record the Reviewer result, following `references/review-cycle-playbook.md` for pack layout, cycle rules, and the `summary.json` fields. It owns the write paths under `.qfai/review/review-YYYYMMDDhhmmssSSS/`, which is the only tree `npx qfai validate` reads.
 
@@ -98,6 +120,35 @@ The full completion logic, including the UI-bearing blocking conditions, is in
 `references/discussion-completion-matrix.md`. It must stay consistent with the canonical
 sidecar family declared above and with `templates/uiux/00_index.md#Forbidden Legacy Files`.
 
+**Authoring the pack** — the fifteen mandatory files and the UI sidecars, as the artifacts a
+reader takes the design from — does not start until the session has ended. A pack drafted
+mid-session records a design that was still being decided, and the draft is what the rest of the
+run then defends.
+
+Three writes are not that authoring, and happen when the process reaches them:
+
+| Write                                                                       | When                       | Why it is not authoring                                                                                                |
+| --------------------------------------------------------------------------- | -------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| The research summary in `04_Sources.md`                                     | Step 1, before the session | The session reads it. Held back, the decisions are settled against evidence nobody had                                 |
+| A register entry or a labelled assumption the session's own ending produces | As the session ends        | It records what the session did. Withheld, a no-question run cannot write the open questions that block its completion |
+| A throwaway artifact built to make a question answerable                    | Mid-session                | The method calls for it where talking cannot settle the question. It is not the pack, and it is not kept               |
+
+A session has four endings, and three of them let authoring start:
+
+| Ended         | What the user did                                                                                                | Authoring                                                                                               |
+| ------------- | ---------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------- |
+| `confirmed`   | Confirmed on the session's own condition: no node open — the frontier empty **and** no fact lookup still running | Starts                                                                                                  |
+| `user-closed` | Said `proceed`, `done`, or words to that effect                                                                  | Starts. Lookups already running are finished and each decision still open becomes a labelled assumption |
+| `no-question` | Nothing — `--auto` reached nobody                                                                                | Starts. Each remaining decision is registered open, and the open count is then what blocks completion   |
+| `stopped`     | Said `stop`                                                                                                      | **Does not start.** Report every open decision as open and end the run                                  |
+
+**No ending authorizes authoring while a `hard-required` input this invocation consumes is missing.** Those are excluded from both assumption paths: an interactive closure still asks for them, and a no-question run stops and names them. Registering an open question does not make an input defaultable — the value is what the run needs, and a question about it is not one.
+
+`stopped` is the one the vocabulary must keep separate. The rule says a stop ends the session
+immediately and no further work follows it, so a closure that authorizes proceeding and a
+cancellation cannot share a value — a pack drafted after `stop` is the run doing exactly what the
+user told it not to.
+
 Before declaring completion, you MUST:
 
 - verify all 15 mandatory output files exist and are populated;
@@ -114,6 +165,9 @@ Before declaring completion, you MUST:
 
 Reviewer checks must confirm:
 
+- the stage evidence's `## Grilling Session` row shows the session ended before authoring began,
+  with `Ended` one of `confirmed`, `user-closed` or `no-question`;
+  and every decision it settled is recorded where `references/oq-and-deferred-rules.md` says;
 - the cycle's review pack was written per `references/review-cycle-playbook.md`, i.e. the three
   required artifacts exist under a `.qfai/review/review-YYYYMMDDhhmmssSSS/` directory;
 - the 15-file discussion pack is complete; `Disposition: open` count is zero in `11_OQ-Register.md`;
@@ -144,6 +198,23 @@ Follow `.qfai/assistant/constitution/shared-skill-delegation-baseline.md`.
 
 Use the shared schema (per-row `Status (PASS/REVISE/PENDING)` column, reviewer response `Reviewer role:` + `Reviewed artifact:` + `Result: PASS | REVISE`). A response missing the role or artifact line is not a verdict; re-request it.
 
+The stage evidence also carries `## Grilling Session`, which is what the Reviewer Gate reads its
+session condition off:
+
+```text
+| Ended | Ended at | Authoring began | Frontier | Lookups | Decisions | Escalated |
+| ----- | -------- | --------------- | -------- | ------- | --------- | --------- |
+| confirmed | 2026-01-01T09:14:00Z | 2026-01-01T09:15:20Z | empty | none in flight | 12 | 0 |
+```
+
+**Both times, and the first written before the pack is.** A row holding only the final state reads the same whether the session ran first, ran after, or never ran: it is written at the end either way. Writing `Ended at` before the first pack file makes the order a record rather than a claim.
+
+What it still cannot do is prove a session happened — the agent writes its own record. It establishes the order, which is the part a later reader has no other way to recover.
+
+`Ended` is `confirmed`, `user-closed`, `no-question` or `stopped`, and only the first three authorize authoring. Without the record a skipped session and a
+completed one present the same pack — fifteen files, every topic covered, every open question
+registered — so the reviewer would have to block every run or accept a claim it cannot check.
+
 ## Completion Message & Next Actions (MUST)
 
 You MUST end the user-facing output with a handoff sentence to `/qfai-sdd` in the active user language.
@@ -159,8 +230,13 @@ The skill collapses avoidable per-session prompts to 0-1 by classifying every de
   - output formatting
   - ID / sequence numbering
   - append-vs-create on subject overlap
-  - equivalent-option pick
+  - equivalent-option pick — demonstrably equivalent, which a design choice is not: moving one
+    here is how a design nobody agreed to gets recorded as decided
 - ask-user:
+  - every decision the interview puts on the frontier, over every topic in
+    `references/discussion-coverage-checklist.md`. Running the interview is what this skill
+    performs, so these are its own operations
+  - the confirmation that closes the session
   - CREATE / DELETE / SPLIT / MERGE / SUPERSEDE / UPDATE:REMOVE triage operations (each with a prompt template that names the target and rationale)
   - destructive operations (rm / overwrite / force-push)
   - version-pin changes (`package.json#version`, branch pin)
@@ -169,7 +245,13 @@ The skill collapses avoidable per-session prompts to 0-1 by classifying every de
   - brand intent
   - `primarySpecId` (when absent from inputs)
 
-A skill MAY narrow any of the three buckets (drop an entry the skill cannot reach), and MAY instantiate a category entry — `approval-required governance operations` — with the operations its own run cannot authorize for itself. It MUST NOT introduce an entry outside the prototype's categories. Widening triggers a Reviewer-Gate finding.
+A skill MAY narrow any of the three buckets (drop an entry the skill cannot reach), and
+MAY instantiate a category entry — `approval-required governance operations` — with the
+operations its own run cannot authorize for itself. `hard-required` also takes the
+undefaultable inputs this skill itself consumes, declared per skill and checked against
+that declaration; the bucket is what a run cannot proceed without, and no prototype can
+enumerate that for a skill it does not know. Otherwise a skill MUST NOT introduce an
+entry outside the prototype's categories. Widening triggers a Reviewer-Gate finding.
 
 Route every ask-user and hard-required item through the protocol in [User Questions (AskUserQuestion Protocol)](#user-questions-askuserquestion-protocol) above, including its `--auto` no-question rule.
 

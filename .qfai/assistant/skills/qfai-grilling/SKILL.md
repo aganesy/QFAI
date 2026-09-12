@@ -32,12 +32,19 @@ user agrees the understanding is shared.
 
 ## Preconditions
 
-| Condition                           | Effect                                                          |
-| ----------------------------------- | --------------------------------------------------------------- |
-| A design that is not yet fixed      | Proceed                                                         |
-| The work is already specified       | Do not invoke; the spec is the authority                        |
-| A no-question mode is active        | Run without asking; open every decision left over as a question |
-| An ambiguity met while implementing | Not a session; an ordinary clarification under its own budget   |
+| Condition                           | Effect                                                                    |
+| ----------------------------------- | ------------------------------------------------------------------------- |
+| A design that is not yet fixed      | Proceed                                                                   |
+| The work is already specified       | Do not invoke; the spec is the authority                                  |
+| A no-question mode is active        | Run without asking; open every decision left over as a question           |
+| An ambiguity met while implementing | Not a session on its own — an ordinary clarification under its own budget |
+| An execution stage declaring one    | A session. Article IX names two, at the preflight and on detection        |
+
+The last two rows are the same rule from both sides: meeting an ambiguity does
+not start a session, and a stage that **declares** one has started it. What
+separates them is the declaration, which is what makes the class decidable when
+the question is asked rather than arguable afterwards
+(`.qfai/assistant/constitution/constitution.md` Article IX).
 
 **A no-question mode silences the questions, not the session.** An invocation
 told not to ask — `--auto`, or whatever the host spells it as — settles what the
@@ -184,6 +191,14 @@ on nothing authoritative. That is the one place a session ends on a count, and
 it counts rounds between agents rather than questions put to a user
 (`.qfai/assistant/constitution/review-convergence.md`).
 
+**A session under a no-question mode cannot reach condition 2 either**, because
+there is a user and the mode forbids asking them. It ends when nothing on the
+frontier is still waiting: every decision the evidence settled is settled, and
+every one it did not is opened as a question where the stage's own gate reads it
+(`.qfai/assistant/constitution/constitution.md` Article X, rule 6). The register
+write is the ending — without one, a stage that resolved its whole frontier by
+inspection would wait forever for a confirmation nobody may give.
+
 ### The user ends it whenever they say so
 
 Completion is how a session ends on its own. It is not the only way one ends.
@@ -309,6 +324,15 @@ Every decision this skill meets falls in one of three named buckets.
 - hard-required:
   - grilling subject (the design to interrogate; a session has no default for
     what it is about)
+
+The asking is what this skill performs, so its `ask-user` entries are its own operations
+rather than an entry added to the prototype. A skill MAY narrow any of the three buckets (drop an entry the skill cannot reach), and
+MAY instantiate a category entry — `approval-required governance operations` — with the
+operations its own run cannot authorize for itself. `hard-required` also takes the
+undefaultable inputs this skill itself consumes, declared per skill and checked against
+that declaration; the bucket is what a run cannot proceed without, and no prototype can
+enumerate that for a skill it does not know. Otherwise a skill MUST NOT introduce an
+entry outside the prototype's categories. Widening triggers a Reviewer-Gate finding.
 
 The buckets are the method, not a tuning surface. Moving a frontier decision to
 `auto-decide` is the agent answering its own question, which this skill exists

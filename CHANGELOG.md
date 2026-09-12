@@ -21,13 +21,144 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   which the Claude Code surface honours and the Codex surface does not, so a
   skill that must never run unattended needs a guard of its own.
 
+- **The question-form rule is put in front of the agent on every turn** (#1610).
+  A `UserPromptSubmit` hook emits it as context, naming the rule master and the
+  one line an agent reaches past when it would rather not ask.
+
+  Every turn rather than once at session start, because the moment a question
+  forms is unpredictable and a session-start reminder is gone by the time the
+  context is compacted — which is when a long session starts reaching for an
+  exception.
+
+  It reminds and never blocks: judging whether a question should have been a
+  structured choice needs intent, and a false positive on a hook that fires every
+  turn stops the session outright. Like the reminders already there, it runs
+  `node` directly and prints fixed text, with no shell, no file reads and no
+  network.
+
+  The rule master says it has a reminder, so a hook that stops firing does not
+  read as a rule nobody wrote one for.
+
+- **The execution stages grill at two points** (#1601). `/qfai-implement`,
+  `/qfai-atdd` and `/qfai-verify` open a session at the preflight, over what the
+  confidence check left uncertain, and one on detection — a contradiction in the
+  spec, an unconsidered case or a technical obstacle surfacing mid-run stops the
+  work rather than being decided alone. Each runs until its frontier is empty,
+  however many rounds that takes. These stages read a spec closely enough
+  for its gaps to show, and the agent that finds one is the least able to judge
+  alone what the spec ought to have said.
+
+  Article IX already required a confidence check and said to ask targeted
+  questions when confidence was low, naming no method. It names one now.
+
+  A session, declared the way the rule requires, rather than a question outside
+  one: those are ordinary clarifications capped by Article VI, and a cap on the
+  question that would have prevented the wrong build is the failure this gate
+  exists to catch.
+
+  What is bounded is the subject, not the length. The session covers what the
+  preflight left uncertain, or what was detected, and nothing else —
+  re-interrogating a settled spec and ledger every run would stop the micro-cycle
+  and invite the drift these stages exist to avoid.
+
+  Only one outcome is the Drift Protocol's. Where the session concludes that
+  settled input must change, the protocol governs: stop the dependent work, raise
+  the Change Request, wait for approval. Where it concludes the obstacle is this
+  run's to solve — an unavailable dependency, an approach that failed — the run
+  solves it, and there is nothing upstream to approve.
+
+  What a session contributes to a Change Request is what its class asks for:
+  options and a recommendation for intent drift, the single correct repair for
+  defect drift, which the protocol records with `Approved option: -`. Grilling
+  decides what the change should be; the protocol decides whether it happens.
+
+### Added
+
 - **A lint lane refuses a tracked file under the scratch directory.** `tmp/` is
   the sole staging area for scratch output and nothing there is committed, but
   an ignore rule does not stop tracking a file already in the index: a scratch
   report sat on the default branch with `git status` clean. The report is
   untracked and deleted, and the lane catches the next one.
 
+### Fixed
+
+- **The autopilot tailoring contract now covers every shipped skill** (#1642).
+  It was held against a hardcoded list of seven, so the two grilling skills were
+  outside it and nothing reported that they carried no tailoring rule at all.
+  The list is read off the tree, the way the Reviewer-Gate validator picks its
+  own subjects, and both skills carry the rule.
+
+  The rule also now sanctions what the validator already allowed: `hard-required`
+  takes the undefaultable inputs a skill itself consumes, declared per skill and
+  checked against that declaration. The bucket is what a run cannot proceed
+  without, and no prototype can enumerate that for a skill it does not know — so
+  the sentence forbade `qfai-configure`'s `testFileGlobs` proposal and the
+  grilling subject a session cannot start without.
+
 ### Changed
+
+- **`/qfai-discussion` runs its interview as a grilling session** (#1597). Step
+  one of its process read "Run the core interview" and named no method, so an
+  agent that asked nothing had followed it. It now runs the session through the
+  `qfai-grilling` skill, over every topic in the coverage checklist.
+
+  The policy moves with it. A design choice is not an equivalent-option pick,
+  and a skill that treats it as one records a design nobody agreed to as
+  decided, so the decisions the interview raises are `ask-user` and the
+  `auto-decide` entry says what equivalent means.
+
+  Authoring waits for the session to end. A pack drafted mid-session records a
+  design that was still being decided, and the draft is what the rest of the run
+  then defends. The completion matrix makes that blocking, because a pack
+  authored mid-session is indistinguishable from one authored after — same
+  fifteen files, same coverage, same register — and the missing thing is that
+  anyone agreed.
+
+  The guard covers the pack — the fifteen files and the UI sidecars — rather
+  than every write. Three writes are not that authoring and happen when the
+  process reaches them: the research summary the session reads, the register
+  entry or labelled assumption the session's own ending produces, and a
+  throwaway artifact built to make a question answerable where talking cannot.
+
+  A session has four endings and three of them let authoring start: `confirmed`
+  (no node open, the user confirming), `user-closed` (`proceed` or `done` —
+  lookups finished, each decision still open becoming a labelled assumption) and
+  `no-question` (`--auto` — each remaining decision registered open, and the open
+  count then blocks). `stopped` does not: the rule says a stop ends the session
+  and no further work follows it, so a pack drafted after one is the run doing
+  what the user told it not to.
+
+  The stage evidence carries a `## Grilling Session` row, which is what the
+  Reviewer Gate reads the condition off. A skipped session and a completed one
+  present the same pack, so without the row a reviewer would have to block every
+  run or accept a claim it cannot check. The row records when the session ended
+  **and** when authoring began, the first written before the pack is — a row
+  holding only the final state reads the same whether the session ran first, ran
+  after, or never ran.
+
+  No ending authorizes authoring while a `hard-required` input the invocation
+  consumes is missing. Registering an open question does not make an input
+  defaultable: the value is what the run needs, and a question about it is not
+  one.
+
+  The zero-open-question condition moved to the conditions every pack is held to.
+  A run is `--auto` or not independently of whether it has a surface, so listed
+  only under the UI-bearing shape it let a non-UI `--auto` pack complete with its
+  decisions still open.
+
+  The research protocol runs before the interview rather than after it. A
+  decision settled before the research bearing on it is settled against evidence
+  nobody had.
+
+  For a UI-bearing target the design direction is settled inside that session
+  too, and the later step records it rather than asking it. Asked where it used
+  to be, the visual choice came after five steps had already authored the pack it
+  governs.
+
+  The step reads the primitive's body rather than naming it: a host that loads
+  skill bodies lazily hands the agent the reference and not the procedure, and an
+  agent with the reference alone improvises the interview — which is the
+  methodless interview this change replaces, wearing its name.
 
 - **A reviewer that recommended a decision the agents adopted cannot clear it**
   (#1600). A grilling session puts a recommended answer beside each question,
@@ -45,10 +176,21 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
   Two fields carry it. A reviewer response declares `Recommended and
 unadjudicated`, read off a Work Orders Summary row the session writes rather
-  than off recollection, and scoped to the artifact as it now stands. A `Review
-series` — the reviewed artifact plus the role — carries the round budget
-  across a host that answers round 2 with a fresh sub-agent, which a count per
-  agent instance restarted every round.
+  than off recollection, and scoped to the artifact as it now stands. A stage
+  that ran no such session writes one row reading `grilling: none`, and a summary
+  carrying neither that nor a decision row is incomplete — silence is not the
+  answer, because an omitted row looks exactly like nothing to record. A `Review series` — the reviewed
+  artifact, the role, and an ordinal that rises each time the review is handed
+  to a replacement, capped at two series per artifact per role so a fresh
+  reviewer cannot reset the budget for ever — carries the round budget across a host that answers round
+  2 with a fresh sub-agent, which a count per agent instance restarted every
+  round, and keeps a replacement from inheriting the round its predecessor
+  spent.
+
+  A non-`none` answer is not settled by a handoff. Handing the review to
+  another reviewer answers an authorship conflict; against an unadjudicated
+  recommendation it launders the decision, because the replacement attests
+  `none` truthfully while the artifact still carries what nobody chose.
 
 - **A grilling session's outcome has a named home** (#1604). A settled
   discussion decision goes to `99_delta.md`; one the session could not settle
