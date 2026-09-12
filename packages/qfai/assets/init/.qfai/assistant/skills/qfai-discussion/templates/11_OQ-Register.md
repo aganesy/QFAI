@@ -14,6 +14,13 @@
 - Allowed `Disposition`: `open`, `resolved`, `deferred`, `rejected`.
 - Before discussion completion, `Disposition: open` must be zero.
 - For `deferred` and `rejected`, `Rationale` is mandatory.
-- `Options` must include at least two alternatives and one recommended option.
-- `Recommendation` must explicitly state the recommended option.
+- `Options` must include at least two alternatives and one recommended option —
+  for a question that offers a choice.
+- `Recommendation` must explicitly state the recommended option, where one is
+  permitted.
+- **A question asking for a fact is the exception to both.** Nothing is being
+  decided, so there are no alternatives and nothing to recommend: write `fact`
+  in `Options` and `—` in `Recommendation`, and say in `Rationale` what the
+  value is for. Inventing two options and a preferred one to fill the columns
+  records a decision nobody made.
 - All 11 columns are mandatory for every row.
