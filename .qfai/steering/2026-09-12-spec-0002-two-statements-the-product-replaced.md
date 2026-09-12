@@ -94,6 +94,23 @@ observation covers while its obligation stands. No test is deleted under any
 combination except `3bB`, whose disposition is the deletion of
 `legacy 4-axis format is error`.
 
+## Two other packs are reached, and a test re-run does not settle either
+
+`spec-0010` requires `/qfai-discussion` to author root `DESIGN.md`
+(`US-0010-0009`, `AC-0010-0007`, `BR-0010-0007`), and the Change Request records
+`/qfai-sdd` as the producer. **Every statement-A outcome reaches it**, the two
+that change nothing there included: settling A without re-deriving `spec-0010`
+leaves one of the two packs specifying a producer the product does not have.
+
+`spec-0013` requires the SDD preflight not to block on a missing or old-format
+optional side artifact (`REQ-0015`, `AC-0013-0009`). **`2B` reverses it**, and
+that pack's own delta records the blocker being removed. `2B` is not approved
+without the `spec-0013` re-derivation beside it.
+
+Both are owner re-derivations in the rerun plan, not cross-spec
+re-verifications: what disagrees is a requirement, and re-running a test
+confirms the observation rather than the requirement it was taken against.
+
 ## Constraints to preserve
 
 The four rows are still `Status = done`, and the ledger is untouched. Two edges
