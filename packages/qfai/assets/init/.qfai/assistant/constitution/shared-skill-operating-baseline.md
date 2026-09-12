@@ -146,8 +146,13 @@ There is one base, and it is the project root.
   withholds, or one that cannot carry the answer's shape, is unavailable for that
   question and takes the fallback below.
 - When AskUserQuestion supports structured choices, prefer structured choices over free-text input.
-- If AskUserQuestion is unavailable, ask the same question in a normal message with explicit numbered choices.
-- Preserve structured choice semantics when falling back.
+- If AskUserQuestion is unavailable, ask the same question in a normal message
+  **in the shape its answer has**: explicit numbered choices where there are
+  choices, and a plain request for the value where the answer is a name, a
+  number or a sentence. Inventing options to make an open answer fit a numbered
+  list is the failure the form rule names, and the fallback is not a licence for
+  it.
+- Where there are choices, preserve structured choice semantics when falling back.
 - State why AskUserQuestion was unavailable.
 - The three buckets of a skill's `## Default Autopilot Policy` say who settles a
   decision:
