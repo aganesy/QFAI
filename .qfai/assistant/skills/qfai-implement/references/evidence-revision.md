@@ -29,119 +29,105 @@ check. Gate item 10 rejects any other shape wherever a revision is recorded:
   a rev, and honest about not being as good: it says "this observation was made
   against a state that was never committed".
 
-  **The procedure, exactly.** "A hash over HEAD, the diff and the untracked
-  files" is not one value: producer and reviewer can each pick a defensible
-  separator, diff option or record shape and get different answers for the same
-  tree, and then an ordinary uncommitted item is stale for nobody's mistake.
-  Four steps, the same shape as `Audited evidence hash`:
-  1. **Collect**, from the repository root, with every option that moves the
-     bytes pinned on the command line:
+  **The procedure, exactly.** "A hash over HEAD and the working tree" is not one
+  value: producer and reviewer can each pick a defensible separator, record shape
+  or way of reading a file and get different answers for the same tree, and then
+  an ordinary uncommitted item is stale for nobody's mistake. Four steps, the
+  same shape as `Audited evidence hash`:
+  1. **Collect**, from the repository root, the paths and nothing else:
 
      ```bash
      root=$(git rev-parse --show-toplevel)
      exclude=(':(exclude,glob).qfai/specs/*/tdd/test-list.md'
               ':(exclude,glob).qfai/evidence/**'
               ':(exclude,glob).qfai/review/**')
-     git -C "$root" rev-parse HEAD
-     git -C "$root" -c core.quotePath=false -c core.fileMode=true -c diff.submodule=short \
-       -c diff.suppressBlankEmpty=false diff HEAD \
-       --no-color --no-ext-diff --no-textconv -O/dev/null --ignore-submodules=none --text --full-index --no-renames \
-       --diff-algorithm=myers --indent-heuristic --src-prefix=a/ --dst-prefix=b/ --unified=3 --inter-hunk-context=0 \
-       -- . "${exclude[@]}"
-     git -C "$root" -c core.quotePath=false ls-files --others --exclude-standard -z -- . "${exclude[@]}"
+     git --no-replace-objects -C "$root" rev-parse HEAD
+     git -C "$root" -c core.quotePath=false ls-files -z -- . "${exclude[@]}"
+     git -C "$root" -c core.quotePath=false ls-files --others \
+       --exclude-per-directory=.gitignore -z -- . "${exclude[@]}"
      ```
 
-     Each of those is there because leaving it off lets one tree have two
-     addresses.
+     **Git names the files. It does not read them.** An earlier form of this
+     procedure hashed the bytes of `git diff HEAD`, and a diff is a rendering
+     rather than a state. `core.autocrlf`, `core.fileMode`, `core.eol`,
+     `diff.algorithm`, `diff.indentHeuristic`, `diff.interHunkContext`,
+     `diff.orderFile`, and a `.gitattributes` driver's `binary`, `textconv`,
+     `xfuncname` or `clean` each give one tree two renderings, and every one of
+     them is a checkout-local setting a reviewer need not share. No list of
+     pinned flags closes that class: the tree names the driver and the checkout
+     configures it, so the next setting is the next address for the same files.
+     Reading the bytes off the filesystem closes it by construction. There is
+     nothing left to configure.
 
-     | Pinned                                                          | Without it                                                                                                                                                                                                                                                                         |
-     | --------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-     | `-C "$root"`                                                    | `ls-files --others` enumerates only what is under the current directory, and reports paths relative to it — so where the agent stood changes the address                                                                                                                           |
-     | `-c core.quotePath=false` and `-z`                              | A path holding non-ASCII or a control character comes back in a quoted display spelling, and the config changes that spelling for the same tree                                                                                                                                    |
-     | `--full-index`                                                  | The `index` line abbreviates to `core.abbrev`, which differs per environment                                                                                                                                                                                                       |
-     | `--src-prefix=a/ --dst-prefix=b/`                               | `diff.noprefix` and `diff.mnemonicPrefix` rewrite the headers                                                                                                                                                                                                                      |
-     | `--no-renames` and `--diff-algorithm=myers`                     | `diff.renames` and `diff.algorithm` change the hunks for identical content                                                                                                                                                                                                         |
-     | `-O/dev/null`                                                   | `diff.orderFile` reorders the file patches, so two changed files come out in different orders for one tree. An empty order file cancels it; `-c diff.orderFile=` does not — git reads the empty value as a path and exits `fatal`                                                  |
-     | `-c diff.submodule=short` and `--ignore-submodules=none`        | `diff.submodule` has three formats for one changed submodule, and a configured `ignore` can drop the change from the diff entirely                                                                                                                                                 |
-     | `--indent-heuristic`                                            | `diff.indentHeuristic` shifts a hunk boundary to a more readable place, so the same change comes out with a different line inside the hunk                                                                                                                                         |
-     | `--unified=3`                                                   | `diff.context` changes how many lines surround each hunk, and with them the bytes                                                                                                                                                                                                  |
-     | `--inter-hunk-context=0` and `-c diff.suppressBlankEmpty=false` | `diff.interHunkContext` merges two nearby hunks into one, and `diff.suppressBlankEmpty` changes the prefix on an empty context line                                                                                                                                                |
-     | `--no-textconv`                                                 | A `.gitattributes` diff driver with `textconv` converts a file before diffing, and can render a real change as an empty diff. `--no-ext-diff` does not cover it                                                                                                                    |
-     | `--text`                                                        | A `.gitattributes` driver marked `binary` in one checkout and not in another gives the same change a binary patch here and a text patch there. Treating everything as text settles it, and a binary file's own change moves the address, which `Binary files ... differ` never did |
-     | `-c core.fileMode=true`                                         | With it off, an executable bit that changed on a tracked file produces no diff at all — the same tree, a different behaviour under test and packaging, and an address that never moved. Checkouts disagree about this setting by default                                           |
-     | `-- . "${exclude[@]}"`                                          | The exclusions below are part of the command, not a later filter. Applied afterwards they are a second operation two implementations can disagree about, and skipped altogether a ledger write during the phase moves the address the phase is recording                           |
+     Three things still come from git, and each is pinned above.
 
-     **A dirty submodule stops the address.** The short format writes the same
-     `-dirty` marker whatever changed inside it, and the superproject's
-     `ls-files --others` does not reach those files — so an arbitrary change in
-     a dirty submodule leaves the address exactly where it was, and a verdict
-     taken before it reads as fresh. Commit or stash the submodule's work and
-     take the address again, or record the observation against the submodule's
-     own tree. Do not record an address over a dirty submodule.
+     | Pinned                               | Without it                                                                                                                                                          |
+     | ------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+     | `-c core.quotePath=false` and `-z`   | A path holding non-ASCII or a control character comes back in a quoted display spelling, and the config changes that spelling for the same tree                     |
+     | `--no-replace-objects`               | A local replacement ref makes `rev-parse HEAD` print one object while every later read of `HEAD` sees another, so the recorded rev names a tree nobody observed     |
+     | `--exclude-per-directory=.gitignore` | `--exclude-standard` also reads `.git/info/exclude` and `core.excludesFile`, which live outside the tree — one producer's untracked file is another's invisible one |
 
-     **A clean filter stops the address.** A `.gitattributes` `filter=` attribute
-     runs a locally configured command over a tracked file before it is compared,
-     and a normalizing one turns a real change into an empty diff — the tests
-     read different bytes and the address does not move. Nothing on the command
-     line neutralizes it, because the driver is named by the tree and configured
-     by the checkout. Check with
-     `git -C "$root" ls-files -z | git -C "$root" check-attr --stdin -z filter`
-     and stop where any path answers with a filter other than `unspecified`.
-     Record the observation against a checkout that configures none.
+     **An unborn HEAD has no address.** Before the first commit `rev-parse HEAD`
+     exits with `fatal: ambiguous argument 'HEAD'`, and an observation with no
+     revision to anchor to is not one this form can record. Commit, then take
+     the address.
 
-     **A path hidden from the index stops the address.** `assume-unchanged`
-     makes git skip a changed tracked file, and `skip-worktree` makes it ignore
-     one that is not on disk at all; the untracked walk reaches neither, so two
-     materially different filesystems take one address. `git -C "$root" ls-files
--v` marks them — a lowercase status letter for the first, `S` for the
-     second. Clear the bits and take the address again.
+     **A submodule stops the address.** The superproject's path for it is a
+     directory whatever the submodule holds — dirty, clean, or never
+     initialized — so an arbitrary change inside leaves the address exactly
+     where it was, and a verdict taken before it reads as fresh. Record the
+     observation against the submodule's own tree instead. Do not record an
+     address over a repository holding one.
 
-     **An uninitialized submodule stops the address.** Git does not call it
-     dirty: the diff is empty and the directory is empty, exactly as for an
-     initialized submodule at the recorded commit, while the commands and tests
-     see a filesystem with nothing in it. `git -C "$root" submodule status`
-     writes a leading `-` for that state. Initialize it and take the address
-     again.
+     **A tracked path the filesystem does not have stops the address.**
+     `skip-worktree` and a sparse checkout both leave a path in the index and
+     not on disk, so its record cannot be read at all. `ls-files -v` marks the
+     first with `S`. Materialize the paths and take the address again.
 
      **An untracked embedded repository stops the address.** `ls-files --others`
      reports one entry for it — the directory, with a trailing separator — and
      never the files under it, so every change inside leaves the address where
-     it was, the same way a dirty submodule does. An entry ending in the path
-     separator is that case. Register it as a submodule, remove it, or record
-     the observation against its own tree. Do not record an address over one.
+     it was. An entry ending in the path separator is that case. Register it as
+     a submodule, remove it, or record the observation against its own tree.
 
   2. **Exclude.** `.qfai/specs/*/tdd/test-list.md`, `.qfai/evidence/**` and
-     `.qfai/review/**`, in the pathspecs above, so **both** the diff and the
-     untracked list carry them — they are
-     the record of the observation, not the thing observed. The review pack is
-     on that list for the same reason the others are: a project may legitimately
-     track `.qfai/review/**`, and then every reviewer answer written into it
-     moved the address the previous reviewer had just recorded, so items 7-8
-     could not agree on one revision and a correct item never reached `done`.
-     What protects the pack is a pack seal, not the audit hash — see
-     `#review-pack-seal`.
+     `.qfai/review/**`, in the pathspecs above, so **both** lists carry them —
+     they are the record of the observation, not the thing observed. The review
+     pack is on that list for the same reason the others are: a project may
+     legitimately track `.qfai/review/**`, and then every reviewer answer
+     written into it moved the address the previous reviewer had just recorded,
+     so items 7-8 could not agree on one revision and a correct item never
+     reached `done`. What protects the pack is a pack seal, not the audit hash —
+     see `#review-pack-seal`.
 
-  3. **Serialize.** `HEAD` + NUL + the rev; then `DIFF` + NUL + the SHA-256 of
-     the diff bytes; then one record per untracked file,
-     `path + NUL + kind + NUL + mode + NUL + the SHA-256 of its bytes`, sorted
-     by path in byte order. `kind` is `file` / `symlink` / `dir` and `mode` is
-     the octal permission bits. **On a `symlink` the bytes are the link's own
-     payload** — what the link points at, as bytes — never the target's
-     contents: the two are both defensible readings, so producer and reviewer
-     could compute different addresses for one tree, and a dangling link has no
-     second reading at all. Read it through a byte-returning call (`readlink(2)`,
-     or `fs.readlink` with a buffer encoding), never through a command's stdout:
-     `readlink` adds a trailing newline unless given `-n`, and a shell
-     substitution strips trailing newlines — including one that is part of the
-     target. **No command-output terminator is serialized.** On a `dir` the hash is over the empty string; the entries under it
-     are records of their own. The point of `mode`: a tracked diff carries a mode change, and
-     without these an uncommitted `chmod +x` on a new script left the address
-     unmoved — same bytes, different behaviour under test, CI and packaging,
+  3. **Serialize.** `HEAD` + NUL + the rev; then one record per path from both
+     lists, `path + NUL + kind + NUL + mode + NUL + the SHA-256 of its bytes`,
+     sorted by path in byte order. A path appears once: the two lists do not
+     overlap. `kind` is `file` / `symlink` / `dir` and `mode` is the octal
+     permission bits.
+
+     **The bytes are what the filesystem holds**, read with no conversion of any
+     kind — never through `git show`, `git cat-file` or a checkout filter, which
+     is the whole of why the diff is gone. **On a `symlink` the bytes are the
+     link's own payload** — what the link points at, as bytes — never the
+     target's contents: the two are both defensible readings, so producer and
+     reviewer could compute different addresses for one tree, and a dangling
+     link has no second reading at all. Read it through a byte-returning call
+     (`readlink(2)`, or `fs.readlink` with a buffer encoding), never through a
+     command's stdout: `readlink` adds a trailing newline unless given `-n`, and
+     a shell substitution strips trailing newlines — including one that is part
+     of the target. **No command-output terminator is serialized.** On a `dir`
+     the hash is over the empty string; the entries under it are records of
+     their own.
+
+     The point of `mode`: an uncommitted `chmod +x` on a script leaves every
+     byte where it was and changes what happens under test, CI and packaging,
      with a reviewer PASS taken before it still reading as fresh.
-     Join the records with
-     `\n`. Path, boundary and order are all in it on purpose: contents alone
-     collide — renaming a file, or swapping the contents of two, leaves the hash
-     unchanged.
+
+     Join the records with `\n`. Path, boundary and order are all in it on
+     purpose: contents alone collide — renaming a file, or swapping the contents
+     of two, leaves the hash unchanged.
+
      **How each part is written is fixed, for the reason the `symlink` clause
      gives.** Each of these has two defensible readings, and leaving one open
      lets two honest implementations address the same tree differently — the one
@@ -161,15 +147,15 @@ check. Gate item 10 rejects any other shape wherever a revision is recorded:
      so one producer's uppercase suffix and another's lowercase are two
      addresses for one tree.
 
-  An empty diff and an empty untracked list still contribute their records, so
-  "clean but uncommitted" has a value rather than a special case.
+  Every tracked path contributes a record whether or not it differs from `HEAD`,
+  so "clean but uncommitted" has a value rather than a special case, and an
+  empty untracked list needs no sentinel.
 
   **The ledger is excluded from it.** Phase Green step 3 writes `green` and
   Refactor step 3 writes `refactor` into `test-list.md` between the
   observations, and gate item 10 requires the refactor-verify run and the two
-  reviews to name the **same** revision — so a hash over the whole of
-  `git diff HEAD` moved on its own bookkeeping and no uncommitted item could
-  reach `done`. Compute it
+  reviews to name the **same** revision — so a hash over every path moved on the
+  phase's own bookkeeping and no uncommitted item could reach `done`. Compute it
   over the tree **minus `.qfai/specs/*/tdd/test-list.md` and `.qfai/evidence/**`\*\*:
   those are the record of the observation, not the thing observed. Everything the
   observation is about — production code, tests, fixtures — stays in.

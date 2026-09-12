@@ -606,58 +606,33 @@ describe("the working-tree address has one notation", () => {
       // Run from the repository root, or `ls-files --others` enumerates only
       // what is under the current directory and names it relative to there.
       expect(text).toContain("git rev-parse --show-toplevel");
-      expect(text).toContain("ls-files --others --exclude-standard -z");
-      // Every option that moves the bytes is on the command line, so a config
-      // difference between producer and reviewer cannot change the address.
+      // Git names the files. It does not read them: every rendering setting a
+      // diff consults is a setting a reviewer need not share, and no list of
+      // pinned flags closes that class.
+      expect(text).toContain("Git names the files. It does not read them");
+      expect(text).toContain("The bytes are what the filesystem holds");
       expect(text).toContain("core.quotePath=false");
-      expect(text).toContain("--full-index");
-      expect(text).toContain("--src-prefix=a/ --dst-prefix=b/");
-      expect(text).toContain("--no-renames");
-      expect(text).toContain("--diff-algorithm=myers");
-      expect(text).toContain("--unified=3");
-      expect(text).toContain("--no-textconv");
-      // An empty order file, not an empty config value: git reads the latter as
-      // a path and exits fatal, so the remediation would break every tracked
-      // change it was meant to stabilise.
-      expect(text).toContain("-O/dev/null");
-      expect(text).toContain("-c diff.submodule=short");
-      expect(text).toContain("--ignore-submodules=none");
-      expect(text).toContain("--inter-hunk-context=0");
-      // A hunk boundary shifted for readability moves a line between the hunk and
-      // its context, so the same tree comes out as different bytes.
-      expect(text).toContain("--indent-heuristic");
+      // A local replacement ref makes the recorded rev name a tree nobody read.
+      expect(text).toContain("--no-replace-objects");
+      // `--exclude-standard` reads exclusions from outside the tree, so one
+      // producer's untracked file is another's invisible one.
+      expect(text).toContain("--exclude-per-directory=.gitignore");
       // Declared and not applied is the same as not declared: a ledger write
       // during the phase moves the address the phase is recording.
       expect(text).toContain(":(exclude,glob).qfai/evidence/**");
       expect(text).toContain(":(exclude,glob).qfai/review/**");
       expect(text).toContain(":(exclude,glob).qfai/specs/*/tdd/test-list.md");
       expect(text).toContain('-- . "${exclude[@]}"');
-      // A driver marked binary in one checkout and not in another gives one
-      // change two shapes, and `Binary files ... differ` never moved at all.
-      expect(text).toContain("--text");
-      // An untracked embedded repository reports one directory entry and never
-      // the files under it, so every change inside leaves the address alone.
+      // States that leave the address where it was while the filesystem the
+      // tests read is a different one.
+      expect(text).toContain("An unborn HEAD has no address");
+      expect(text).toContain("A submodule stops the address");
+      expect(text).toContain("A tracked path the filesystem does not have stops the address");
       expect(text).toContain("An untracked embedded repository stops the address");
-      expect(text).toContain("Do not record an address over one");
       // Decoding a path that is not valid UTF-8 turns distinct names into one.
       expect(text).toContain("Bytes, never a decoded string");
-      // An executable bit that changed on a tracked file produced no diff at all
-      // where the setting is off, and checkouts disagree about it by default.
-      expect(text).toContain("-c core.fileMode=true");
-      // Three states git does not call dirty, each of which leaves the address
-      // where it was while the filesystem the tests read is a different one.
-      expect(text).toContain("A clean filter stops the address");
-      expect(text).toContain("check-attr --stdin -z filter");
-      expect(text).toContain("A path hidden from the index stops the address");
-      expect(text).toContain("An uninitialized submodule stops the address");
       // A link to a 0640 file reports 0640 followed and 0777 as itself.
       expect(text).toContain("Read without following the link");
-      expect(text).toContain("diff.indentHeuristic");
-      expect(text).toContain("-c diff.suppressBlankEmpty=false");
-      // The short format cannot tell two dirty submodule states apart, so an
-      // address over one would not move for an arbitrary change inside it.
-      expect(text).toContain("A dirty submodule stops the address");
-      expect(text).toContain("Do not record an address over a dirty submodule");
       // A symlink payload read through a command gains or loses a newline.
       expect(text).toContain("No command-output terminator is serialized");
     });
