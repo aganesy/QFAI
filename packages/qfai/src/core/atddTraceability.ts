@@ -2538,14 +2538,28 @@ function resolveTestKindFromPath(
     return null;
   }
   const directories = toPosixPath(relative).split("/").slice(0, -1);
-  let root_ = -1;
+  let testRoot = -1;
   directories.forEach((directory, index) => {
     if (TEST_ROOT_SEGMENTS.has(directory) || directory === testsDirName) {
-      root_ = index;
+      testRoot = index;
     }
   });
-  const layer = root_ < 0 ? undefined : directories[root_ + 1];
-  return layer === undefined ? null : (ATDD_LAYER_SEGMENTS.get(layer) ?? null);
+  if (testRoot >= 0) {
+    const layer = directories[testRoot + 1];
+    return layer === undefined ? null : (ATDD_LAYER_SEGMENTS.get(layer) ?? null);
+  }
+  // No test root to anchor on: a package may keep its suite under `spec/`,
+  // `acceptance/` or a name of its own, and refusing every such path would
+  // report a whole package's coverage missing. The deepest layer directory
+  // answers instead — the one closest to the test, so an ancestor that shares
+  // a layer's name still loses to the directory the test is in.
+  for (const directory of [...directories].reverse()) {
+    const kind = ATDD_LAYER_SEGMENTS.get(directory);
+    if (kind !== undefined) {
+      return kind;
+    }
+  }
+  return null;
 }
 
 /**

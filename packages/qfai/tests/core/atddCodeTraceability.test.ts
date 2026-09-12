@@ -1077,6 +1077,36 @@ describe("acceptance tests outside paths.testsDir", () => {
     });
   });
 
+  it("a suite under a root of its own name is still read", async () => {
+    await withProject(async (root) => {
+      await seedSpec(root, "0001", ["US-0001"], ["TC-0001"]);
+      await seedTest(root, "integration", "a.test.ts", "/* QFAI:SPEC-0001:TC-0001 */");
+      // `spec/acceptance/` matches no conventional test root. With no segment to
+      // anchor on, the deepest layer directory answers, so the suite is read
+      // rather than reported as missing coverage.
+      const dir = path.join(root, "packages", "app", "spec", "acceptance", "e2e");
+      await mkdir(dir, { recursive: true });
+      await writeFile(
+        path.join(dir, "journey.test.ts"),
+        [
+          "/* QFAI:SPEC-0001:US-0001 */",
+          "describe('suite', () => {",
+          "  it('runs', () => {});",
+          "});",
+          "",
+        ].join("\n"),
+        "utf-8",
+      );
+
+      const result = await evaluateAtddCodeTraceability(
+        root,
+        withProjectGlobs(["packages/*/spec/**/*.test.ts"]),
+      );
+
+      expect(result.missing.us).toEqual([]);
+    });
+  });
+
   it("a malformed project glob does not abort the run", async () => {
     await withProject(async (root) => {
       await seedSpec(root, "0001", ["US-0001"], ["TC-0001"]);

@@ -222,15 +222,21 @@ answer to a cell qfai cannot read, never a supported spelling: fix the cell
 whose suites live one per package can name at most one of them there, and the
 acceptance tests of every other package sit outside the scan. The scan therefore
 also reads the project's own `validation.traceability.testFileGlobs`, minus its
-`testFileExcludeGlobs`, and a file collected that way is answered by the
-**deepest** `e2e` / `api` / `integration` directory in its path — the one that
-holds the test. `packages/checkout/tests/integration/pay.test.ts` answers an
-`L3` obligation exactly as `<testsDir>/integration/pay.test.ts` does.
+`testFileExcludeGlobs`, and a file collected that way is answered by the layer
+directory **inside its own test root**: the segment after the deepest `tests`,
+`test` or `__tests__` on the path, or after the configured `paths.testsDir`
+basename. `packages/checkout/tests/integration/pay.test.ts` answers an `L3`
+obligation exactly as `<testsDir>/integration/pay.test.ts` does.
 
-Deepest rather than outermost, because a file's ancestors are project structure
-and a package may legitimately be called `api`: reading outwards,
-`packages/api/tests/integration/pay.test.ts` is an API test, and its `L3`
-annotation is then reported both uncovered and forbidden.
+Anchoring it there rather than scanning ancestors is what keeps a package name
+out of the answer. A package may legitimately be called `api`, and reading any
+ancestor makes every test under it an API test —
+`packages/api/tests/unit/pay.test.ts` included, which owes ATDD nothing.
+
+**A suite under a root of its own name** — `packages/app/spec/acceptance/e2e/**`
+— has no segment to anchor on. There the **deepest** layer directory answers,
+so the suite is read rather than reported missing, and the directory closest to
+the test still wins over any ancestor that shares a layer's name.
 
 Three things that does not change.
 

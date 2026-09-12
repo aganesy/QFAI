@@ -1357,11 +1357,32 @@ export async function validateTestTodoStubs(
     ]),
   );
 
-  const { files, truncated, limit } = await collectFilesByGlobs(root, {
-    globs: Array.from(globs),
-    ignore: excludeGlobs,
-    limit: DEFAULT_GLOB_FILE_LIMIT,
-  });
+  let collected;
+  try {
+    collected = await collectFilesByGlobs(root, {
+      globs: Array.from(globs),
+      ignore: excludeGlobs,
+      limit: DEFAULT_GLOB_FILE_LIMIT,
+      // In the stream, not after it. A caller's globs may match a whole
+      // monorepo, and files this gate does not own would otherwise spend the
+      // limit before its own reach it — reported as an `info`, which
+      // `--fail-on error` passes.
+      ...(options.fileFilter
+        ? {
+            filter: (absolutePath: string) =>
+              (options.fileFilter ?? (() => true))(
+                path.relative(root, absolutePath).replace(/\\/g, "/"),
+              ),
+          }
+        : {}),
+    });
+  } catch {
+    // A malformed glob is the user's to fix and has its own finding from the
+    // validator that reads the same list. Rejecting here would abort the
+    // whole batch and take that finding down with the rest.
+    return [];
+  }
+  const { files, truncated, limit } = collected;
 
   const skippedTestSeverity = "error";
 
@@ -1369,9 +1390,6 @@ export async function validateTestTodoStubs(
   const unscannedExtensions = new Set<string>();
   for (const absFile of files) {
     const relFile = path.relative(root, absFile).replace(/\\/g, "/");
-    if (options.fileFilter && !options.fileFilter(relFile)) {
-      continue;
-    }
     // No dialect means qfai knows no stub construct for this extension. Reading
     // the file and reporting nothing would be the original defect: a clean
     // result that means "not checked", presented as "no stubs".
