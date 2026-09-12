@@ -77,7 +77,25 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   project with no evidence tree is not reported on, and evidence another
   stage wrote is not a spec stage's to answer for.
 
-### Added
+- **A skill a host cannot register now fails validation** (#1640). `description:`
+  does two jobs at once — it is what a host reads to register a skill, and what
+  it reads to decide whether to offer the skill to the model. Leaving it out to
+  stop the second loses the first: the skill is not loaded, and the user cannot
+  invoke it by name either. `name:` is read the same way. `QFAI-SKILLS-015`
+  reports either field missing or unusable, at error severity, for every direct
+  skill the loader would open.
+
+  A `name:` is usable when it is lowercase letters, digits and single hyphens,
+  at most 64 characters, and the skill's own directory — the three things a
+  host requires to list the skill and key it by. A value outside them registers
+  nothing, or registers a skill under a name the user will not find.
+
+  **Breaking for a project whose skills are missing those fields**: a
+  `validate --fail-on error` run that passed before this release fails after it.
+  Repair is one line per skill. A skill that should not be offered to the model
+  keeps its description and declares `disable-model-invocation: true` beside it —
+  which the Claude Code surface honours and the Codex surface does not, so a
+  skill that must never run unattended needs a guard of its own.
 
 - **The question-form rule is put in front of the agent on every turn** (#1610).
   A `UserPromptSubmit` hook emits it as context, naming the rule master and the
