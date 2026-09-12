@@ -143,9 +143,9 @@ describe("the grilling primitive", () => {
 // primitive, and the split is what separates a session the user asked for from
 // one a skill started.
 //
-// Two things make that split real rather than declared. The entry point carries
-// no `description:`, which is what a host reads to decide whether to offer a
-// skill to the model. And without the primitive it stops instead of
+// Two things make that split real rather than declared. The entry point declares
+// `disable-model-invocation: true`, which is what a host reads to decide whether
+// the agent may fire a skill. And without the primitive it stops instead of
 // interviewing from memory — an improvised interview reads exactly like the
 // method, so nothing downstream could tell the two apart.
 describe("the grill entry point", () => {
