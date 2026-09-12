@@ -70,6 +70,7 @@
     "tests/assets/gateCommandHome.test.ts",
     "tests/assets/grillerReviewerIndependence.test.ts",
     "tests/assets/grillingHooks.test.ts",
+    "tests/assets/grillingRuleMaster.test.ts",
     "tests/assets/grillingRecordHome.test.ts",
     "tests/assets/grillingSkill.test.ts",
     "tests/assets/implementCheckpointVerification.test.ts",
