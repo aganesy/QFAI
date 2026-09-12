@@ -1405,6 +1405,20 @@ const REVIEWER_APPENDED_ROUND_FIELD =
   /^\s*(?:\|\s*)?(?:[-*][ \t]+)?(?:\*\*)?(?:Round[ \t]+\d+:[ \t]*)?reviewer verdict(?:[ \t]*\(attempt[ \t]+\d+\))?(?:\*\*)?[ \t]*(?::|\|)[ \t]*(.*)$/i;
 
 /**
+ * What the reviewer wrote on the verdict line itself, with the field name's
+ * markup stripped.
+ *
+ * The bold-colon form this repository already uses —
+ * `- **Round 1: reviewer verdict (attempt 1):**` — closes its emphasis AFTER
+ * the colon, so the capture is `**` rather than nothing. Read as a value, that
+ * line looks answered and the fenced verdict below it stays in the subject the
+ * reviewer who wrote it hashes, which is the one line that cannot be there.
+ */
+function inlineVerdictValue(captured: string | undefined): string {
+  return (captured ?? "").replace(/\*+/g, "").trim();
+}
+
+/**
  * The index of the last line of the fenced value that starts at or after
  * `start`, or `start - 1` when no fence follows — so the caller resumes on the
  * next line and drops nothing it did not mean to.
@@ -1444,7 +1458,7 @@ function phaseAuthoredEvidence(section: string, tddId: string): string {
       kept.push(originalLines[index] ?? "");
       continue;
     }
-    if ((verdict[1] ?? "").trim().length === 0) {
+    if (inlineVerdictValue(verdict[1]).length === 0) {
       index = Math.min(fencedEvidenceValueEnd(originalLines, index + 1), end - 1);
     }
   }

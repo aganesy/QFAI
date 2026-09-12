@@ -50,8 +50,12 @@ procedure, in four steps:
      value, opening fence through closing fence;
    - a reviewer's own `reviewer verdict` line is dropped wherever it falls
      inside the region — **including its `(attempt M)` form**, which a round
-     with several review attempts records — with the fenced value that follows
-     an empty one: hashing a reviewer's own answer into what that reviewer
+     with several review attempts records, and the bold-colon spelling whose
+     emphasis closes after the colon — with the fenced value that follows an
+     empty one. **A value is empty once the field name's own markup is taken
+     off it**: read literally, `- **Round 1: reviewer verdict (attempt 1):**`
+     ends in two asterisks, and a reader who counts those as an answer keeps the
+     fence below: hashing a reviewer's own answer into what that reviewer
      hashes is the one line that cannot be in its own subject;
    - the heading is **synthesized** as `### <TDD-ID>` rather than copied, so an
      entry whose heading carries extra text hashes the same before and after

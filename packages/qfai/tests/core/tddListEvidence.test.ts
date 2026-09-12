@@ -59,14 +59,18 @@ function withoutReviewerVerdicts(text: string): string {
   const lines = text.split("\n");
   const kept: string[] = [];
   for (let index = 0; index < lines.length; index += 1) {
-    const verdict = /^\s*(?:- )?(?:Round[ \t]+\d+:[ \t]*)?reviewer verdict[ \t]*:[ \t]*(.*)$/i.exec(
-      lines[index] ?? "",
-    );
+    const verdict =
+      /^\s*(?:- )?(?:\*\*)?(?:Round[ \t]+\d+:[ \t]*)?reviewer verdict(?:[ \t]*\(attempt[ \t]+\d+\))?(?:\*\*)?[ \t]*:[ \t]*(.*)$/i.exec(
+        lines[index] ?? "",
+      );
     if (verdict === null) {
       kept.push(lines[index] ?? "");
       continue;
     }
-    if ((verdict[1] ?? "").trim().length > 0) continue;
+    // Bold emphasis closes AFTER the colon in the form this repository writes,
+    // so the capture is the markup rather than a value. Stripping it first is
+    // what makes an empty value read as empty.
+    if ((verdict[1] ?? "").replace(/\*+/g, "").trim().length > 0) continue;
     let cursor = index + 1;
     while (cursor < lines.length && (lines[cursor] ?? "").trim().length === 0) cursor += 1;
     if (!/^\s*```/.test(lines[cursor] ?? "")) continue;
@@ -1494,6 +1498,34 @@ describe("QFAI-TDDLIST-008", () => {
         ".qfai/evidence/implement-spec-0001.md": evidence,
       });
       expect(codes).toContain("QFAI-TDDLIST-008");
+    });
+  });
+
+  it("drops a bold-colon verdict and its fence, as the contract says to", async () => {
+    await withProject(async (root) => {
+      // The form this repository writes: emphasis closing AFTER the colon, and
+      // the `(attempt M)` qualifier a round with several review attempts
+      // records. Read naively the capture is `**` rather than nothing, so the
+      // label is dropped and the fence beneath it is not — leaving the
+      // reviewer's own answer in the subject that reviewer hashes.
+      const evidence = completeEntry("Unit").replace(
+        "- Refactor verify command: npm test",
+        [
+          "- **Round 1: reviewer verdict (attempt 1):**",
+          "```text",
+          "REVISE — the assertion names no boundary",
+          "```",
+          "- Refactor verify command: npm test",
+        ].join("\n"),
+      );
+      const codes = await runOn(root, ledger([{ status: "done", evidence: IMPLEMENT_POINTER }]), {
+        ".qfai/evidence/implement-spec-0001.md": evidence,
+      });
+
+      // The hashes in `completeEntry` are computed over the subject the
+      // contract defines, so the row completes only if the validator drops
+      // both lines the same way.
+      expect(codes).not.toContain("QFAI-TDDLIST-008");
     });
   });
 
