@@ -38,8 +38,9 @@ obligation, chosen by what it asserts.
 - `.qfai/specs/spec-0014/tdd/test-list.md` — the `Selector` of `TDD-0035`
   rewritten to the title it names, and the `Evidence` cells of `TDD-0018`,
   `TDD-0019` and `TDD-0035` rewritten as pointers into this file. `TDD-0033` and
-  `TDD-0034` are `unit`, so their proof is in
-  `.qfai/evidence/implement-spec-0014.md`. No `Status` moved.
+  `TDD-0034` are `unit`, so they belong to
+  `.qfai/evidence/implement-spec-0014.md`, which records neither and says why.
+  No `Status` moved.
 - This file created.
 
 ## Commands executed + key outputs
@@ -201,7 +202,7 @@ TestFileSca…' not to contain '"compatibility"'`.
 #### Round 1
 
 - Round 1: Revision: 649d8111147436408c90cbbe1b9f9b07e34da8cb
-- Round 1: Satisfied-by: packages/qfai/src/cli/commands/prototypingCertify.ts — the certificate body's conditional `scope` field.
+- Round 1: Satisfied-by: packages/qfai/src/cli/commands/prototypingCertify.ts::runPrototypingCertify — the certificate body's conditional `scope` field.
 - Round 1: Falsifiability command: npx vitest run tests/integration/cli/commands/prototypingCertify.saasPackage.test.ts -t 'certify --scope saas-package seals a scope-limited certificate'
 - Round 1: Falsifiability result: Test Files 1 failed (1); Tests 1 failed, 1 passed (2 of the file's 2 selected), on `expected undefined to be 'saas-package'`.
 - Round 1: Falsifiability revision: working-tree+fedb7acf0fa804aaaf25cab36939479ca8521973762ca046b060d2a4ef5da720
@@ -233,7 +234,7 @@ direction is a defect.
 ## Coverage Depth Matrix
 
 See `.qfai/evidence/coverage-depth-spec-0014.md`.
-Totals: ✅ 16 / ⚠️ 59 / ❌ 69, with 3 not applicable, across 147 scored cells —
+Totals: ✅ 16 / ⚠️ 58 / ❌ 70, with 3 not applicable, across 147 scored cells —
 126 matrix depth cells (14 rows × 9 columns) and 21 business rule cells
 (7 rows × 3 columns). `Status` is a row verdict, not a mark, and is outside
 every total.
