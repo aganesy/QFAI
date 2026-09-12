@@ -1545,7 +1545,9 @@ function completedEvidenceAuditHash(
   const records = [`${evidenceFile}\0${sha256(phaseAuthoredEvidence(section, tddId))}`];
   if (matrixRecord !== null) records.push(matrixRecord);
   records.push(...surfaceRecords);
-  records.sort();
+  // By bytes: a capture name outside ASCII sorts differently by UTF-16 code unit,
+  // and a reviewer ordering records by path bytes computed another hash.
+  records.sort((left, right) => Buffer.from(left).compare(Buffer.from(right)));
   return sha256(records.join("\n"));
 }
 
@@ -2603,19 +2605,24 @@ const SURFACE_ARTIFACT_ROOT = ".qfai/evidence/";
  * Listed twice, one capture is still one record.
  */
 function surfaceArtifactPaths(manifest: string): string[] {
-  const paths = manifest
+  const paths = manifestLines(manifest)
+    .map((line) => safeRepoRelativePath(line))
+    .filter((entry): entry is string => entry?.startsWith(SURFACE_ARTIFACT_ROOT) === true);
+  return [...new Set(paths)];
+}
+
+/** A manifest's entries: one per nonblank line, bullet and code span removed. */
+function manifestLines(manifest: string): string[] {
+  return manifest
     .replace(/\r\n/g, "\n")
     .split("\n")
     .map((line) =>
-      safeRepoRelativePath(
-        line
-          .trim()
-          .replace(/^[-*]\s+/, "")
-          .replace(/^`([^`]*)`$/, "$1"),
-      ),
+      line
+        .trim()
+        .replace(/^[-*]\s+/, "")
+        .replace(/^`([^`]*)`$/, "$1"),
     )
-    .filter((entry): entry is string => entry?.startsWith(SURFACE_ARTIFACT_ROOT) === true);
-  return [...new Set(paths)];
+    .filter((line) => line.length > 0);
 }
 
 /** Minimum phase and review evidence required once a row reaches `done`. */
@@ -2695,8 +2702,20 @@ function missingCompletedEvidenceFields(
   // names none under the evidence tree leaves a hash over fields alone, and a
   // screenshot replaced after the PASS moves nothing the gate reads.
   const manifest = rowEvidenceFieldValue(section, "Surface artifacts");
-  if (parity === "pass" && manifest !== null && surfaceArtifactPaths(manifest).length === 0) {
-    missing.push(`Surface artifacts naming a capture under ${SURFACE_ARTIFACT_ROOT}`);
+  if (parity === "pass" && manifest !== null) {
+    // An entry that is absolute or leaves the tree addresses no record, and
+    // dropped beside a valid one it left part of the manifest out of the hash:
+    // replacing that capture moved nothing.
+    const unaddressable = manifestLines(manifest).filter(
+      (line) => safeRepoRelativePath(line) === null,
+    );
+    if (unaddressable.length > 0) {
+      missing.push(
+        `Surface artifacts naming repository-relative paths, not ${unaddressable.join(", ")}`,
+      );
+    } else if (surfaceArtifactPaths(manifest).length === 0) {
+      missing.push(`Surface artifacts naming a capture under ${SURFACE_ARTIFACT_ROOT}`);
+    }
   }
   const rounds = evidenceRoundNumbers(section);
   if (rounds.length === 0 || rounds[0] !== 1) missing.push("Round 1 evidence block");

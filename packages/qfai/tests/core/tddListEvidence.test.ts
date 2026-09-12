@@ -154,7 +154,7 @@ function phaseAuditHash(
   const records = [`${evidenceFile}\0${digest(artifact)}`];
   if (matrixRecord !== null) records.push(matrixRecord);
   records.push(...surfaceRecords);
-  records.sort();
+  records.sort((left, right) => Buffer.from(left).compare(Buffer.from(right)));
   return digest(records.join("\n"));
 }
 
@@ -1922,6 +1922,35 @@ REVISE — needs new production behaviour
       });
     });
 
+    it("refuses a manifest entry that is not a repository-relative path", async () => {
+      // Dropped beside a valid capture, the entry left part of the manifest out
+      // of the hash, so replacing that capture moved nothing.
+      for (const entry of ["/tmp/screen.png", "../outside/screen.png"]) {
+        await withProject(async (root) => {
+          const [issue] = await unresolved(root, verdictEntry([SCREENSHOT, entry]), {
+            surfaceArtifacts: { [SCREENSHOT]: CAPTURES[SCREENSHOT] },
+          });
+          expect(issue?.message, entry).toContain(
+            "Surface artifacts naming repository-relative paths",
+          );
+        });
+      }
+    });
+
+    it("orders capture records by the bytes of their paths", async () => {
+      // A supplementary-plane name and a high BMP name sort one way by UTF-16
+      // code unit and the other way by UTF-8 byte. A reviewer ordering by path
+      // bytes, as the contract says, computed a hash the gate did not.
+      const high = `.qfai/evidence/prototyping/${String.fromCodePoint(0xff21)}.png`;
+      const astral = `.qfai/evidence/prototyping/${String.fromCodePoint(0x1f600)}.png`;
+      const captures = { [high]: Buffer.from([1]), [astral]: Buffer.from([2]) };
+      await withProject(async (root) => {
+        const issues = await unresolved(root, verdictEntry([high, astral]), {
+          surfaceArtifacts: captures,
+        });
+        expect(issues).toEqual([]);
+      });
+    });
     it("reads the parity pack as the product-surface-reviewer's own verdict", async () => {
       await withProject(async (root) => {
         const [issue] = await unresolved(root, verdictEntry(), {
