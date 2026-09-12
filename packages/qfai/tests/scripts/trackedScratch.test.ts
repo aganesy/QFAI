@@ -117,7 +117,7 @@ describe("nothing under the scratch directory is tracked", () => {
     expect(check(root).status).toBe(0);
   });
 
-  it("holds this repository", async () => {
+  it("holds this repository", () => {
     // The guard's own subject. A tracked file here is the defect it exists for,
     // and the check above runs against temporary trees only.
     expect(check(repoRoot).status).toBe(0);
