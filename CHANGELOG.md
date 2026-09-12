@@ -6,6 +6,21 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Added
 
+- **A skill a host cannot register now fails validation** (#1640). `description:`
+  does two jobs at once — it is what a host reads to register a skill, and what
+  it reads to decide whether to offer the skill to the model. Leaving it out to
+  stop the second loses the first: the skill is not loaded, and the user cannot
+  invoke it by name either. `name:` is read the same way. `QFAI-SKILLS-015`
+  reports either field missing or unusable, at error severity, for every direct
+  skill the loader would open.
+
+  **Breaking for a project whose skills are missing those fields**: a
+  `validate --fail-on error` run that passed before this release fails after it.
+  Repair is one line per skill. A skill that should not be offered to the model
+  keeps its description and declares `disable-model-invocation: true` beside it —
+  which the Claude Code surface honours and the Codex surface does not, so a
+  skill that must never run unattended needs a guard of its own.
+
 - **A lint lane refuses a tracked file under the scratch directory.** `tmp/` is
   the sole staging area for scratch output and nothing there is committed, but
   an ignore rule does not stop tracking a file already in the index: a scratch

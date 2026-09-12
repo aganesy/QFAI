@@ -1,6 +1,6 @@
 import { constants } from "node:fs";
 import type { FileHandle } from "node:fs/promises";
-import { access, lstat, open, readdir, readFile, stat } from "node:fs/promises";
+import { access, lstat, open, readdir, readFile, realpath, stat } from "node:fs/promises";
 import path from "node:path";
 
 import {
@@ -336,7 +336,11 @@ export async function validateAssistantAssets(root: string, config: QfaiConfig):
     // the adopter's tree holds, and a FIFO does not fail on open — it blocks
     // until somebody writes to it, which would hang the run instead of
     // reporting the skill.
-    const bytes = await readBoundedRegularFile(entryPoint, SKILL_DOCUMENT_MAX_BYTES);
+    // Resolved first, because the host opens through a link and the bounded
+    // reader refuses one at the final component. What the reader then decides
+    // is what the host would find at the other end: a regular file, or not.
+    const resolved = await realpath(entryPoint).catch(() => entryPoint);
+    const bytes = await readBoundedRegularFile(resolved, SKILL_DOCUMENT_MAX_BYTES);
     if (bytes === undefined) {
       issues.push(
         issue(
@@ -1177,10 +1181,17 @@ function isUnfilledValue(raw: string): boolean {
 /**
  * The ceiling on a skill entry point this pass reads.
  *
- * A `SKILL.md` is prose and front matter; a file past this is not one, and
- * buffering it to find that out is what the ceiling exists to avoid.
+ * The bound is there for the kind rather than for the size: the reader that
+ * refuses a FIFO and a device takes one, and a document is refused only if it
+ * passes this.
+ *
+ * SIMPLIFIED: no host states a size limit, so this number is the reader's
+ * requirement rather than a rule about skills — and it applies only to the
+ * entry points the document crawl did not reach, which reads without a bound.
+ * Lift when: a host documents a limit of its own, or an adopter reports a
+ * `SKILL.md` refused for its size.
  */
-const SKILL_DOCUMENT_MAX_BYTES = 1024 * 1024;
+const SKILL_DOCUMENT_MAX_BYTES = 8 * 1024 * 1024;
 
 async function collectSkillEntryPoints(skillsDir: string): Promise<string[]> {
   const entries = await readdir(skillsDir, { withFileTypes: true }).catch(() => []);
@@ -1248,6 +1259,33 @@ function extractReviewerGateSection(content: string): string | null {
 }
 
 /**
+ * A skill whose `name:` a host cannot key it by.
+ *
+ * Its own finding rather than a clause in the description one: the two fields
+ * fail independently, and a document missing both should say so twice rather
+ * than name whichever was checked first.
+ */
+function collectSkillNameIssue(
+  skillFile: string,
+  frontMatter: Record<string, unknown> | undefined,
+): Issue[] {
+  const name = frontMatter?.["name"];
+  if (typeof name === "string" && name.trim() !== "") return [];
+  return [
+    issue(
+      "QFAI-SKILLS-015",
+      "SKILL.md carries no usable `name:`. A host reads that field to key the skill, so without it the skill is not registered and the user cannot invoke it by name.",
+      "error",
+      skillFile,
+      "skills.name",
+      undefined,
+      "change",
+      "Give `name:` the name a user invokes the skill by — the skill directory's own name is the convention this repository follows.",
+    ),
+  ];
+}
+
+/**
  * Whether a skill's front matter lets a host register it at all.
  *
  * A host reads `description:` for two jobs at once: whether to register the
@@ -1284,9 +1322,13 @@ function collectSkillRegistrationIssues(skillFile: string, content: string): Iss
     ];
   }
   const frontMatter = skillFrontmatterMapping(content);
+  // Both fields, because every host reads both: the name is what a user invokes
+  // and what a host keys the skill by, and the description is what it registers
+  // and offers. A document carrying one without the other is not loaded.
+  const missingName = collectSkillNameIssue(skillFile, frontMatter);
   const description = frontMatter?.["description"];
   if (typeof description === "string" && description.trim() !== "") {
-    return [];
+    return missingName;
   }
   const optsOut = frontMatter?.["disable-model-invocation"] === true;
   // A key that is there and unusable is repaired by replacing its value. Told
@@ -1304,8 +1346,9 @@ function collectSkillRegistrationIssues(skillFile: string, content: string): Iss
     : "Add `description:` to the front matter";
   const beside = optsOut
     ? ", and keep `disable-model-invocation: true` beside it."
-    : ", with `disable-model-invocation: true` beside it when the model should not fire the skill.";
+    : ". To keep the model from firing it on the Claude Code surface, declare `disable-model-invocation: true` beside it — and where it must not run unattended anywhere, guard the skill itself, because the Codex surface honours no such field.";
   return [
+    ...missingName,
     issue(
       "QFAI-SKILLS-015",
       problem + why,

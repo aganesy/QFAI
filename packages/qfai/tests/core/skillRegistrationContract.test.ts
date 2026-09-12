@@ -244,9 +244,14 @@ describe("a skill carries what a host needs to register it", () => {
     const root = await projectWithSkillDocument(
       ["---", "---", "", "# qfai-example", ""].join("\n"),
     );
-    const [finding] = await registrationFindings(root);
-    expect(finding?.message).toContain("has no `description:`");
-    expect(finding?.suggested_action).toContain("Add `description:`");
+    const findings = await registrationFindings(root);
+    // The empty block declares neither field, so both are reported.
+    expect(findings.map((finding) => finding.rule ?? "")).toEqual(
+      expect.arrayContaining([expect.anything()]),
+    );
+    const description = findings.find((finding) => finding.message.includes("description:"));
+    expect(description?.message).toContain("has no `description:`");
+    expect(description?.suggested_action).toContain("Add `description:`");
   });
 
   it("follows a symlinked skill directory", async () => {
@@ -294,5 +299,45 @@ describe("a skill carries what a host needs to register it", () => {
     );
 
     expect(findings.map((finding) => finding.code)).toContain("QFAI-SKILLS-014");
+  });
+
+  it("reports a skill with no usable name", async () => {
+    // The host keys the skill by it, and the user invokes it by it.
+    const root = await projectWithSkillDocument(
+      ["---", 'description: "Does the thing."', "---", "", "# a skill", ""].join("\n"),
+    );
+    const [finding] = await registrationFindings(root);
+    expect(finding?.message).toContain("no usable `name:`");
+    expect(finding?.suggested_action).toContain("the name a user invokes");
+  });
+
+  it("follows a readable symlink to the entry point", async () => {
+    // The host opens through the link. Refusing one here reported a skill it
+    // loads without trouble.
+    const root = await projectWithSkill(['description: "Does the thing."']);
+    const skillDir = path.join(root, ".qfai", "assistant", "skills", "qfai-example");
+    const real = path.join(root, "elsewhere", "SKILL.md");
+    await mkdir(path.dirname(real), { recursive: true });
+    await writeFile(
+      real,
+      ["---", "name: qfai-example", 'description: "Does the thing."', "---", ""].join("\n"),
+      "utf-8",
+    );
+    await rm(path.join(skillDir, "SKILL.md"));
+    try {
+      await symlink(real, path.join(skillDir, "SKILL.md"));
+    } catch {
+      // A host without symlink permission cannot exercise this case.
+      return;
+    }
+
+    expect(await registrationFindings(root)).toEqual([]);
+  });
+
+  it("says the opt-out is one surface's, in the action as well as the message", async () => {
+    const root = await projectWithSkill(['argument-hint: "<subject>"']);
+    const [finding] = await registrationFindings(root);
+    expect(finding?.suggested_action).toContain("Claude Code surface");
+    expect(finding?.suggested_action).toContain("guard the skill itself");
   });
 });
