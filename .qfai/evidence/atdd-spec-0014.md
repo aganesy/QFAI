@@ -57,8 +57,9 @@ below are over the selected cases, not over the file.
 
 | Run                       | Selected | Result              |
 | ------------------------- | -------- | ------------------- |
-| `TDD-0019` GREEN          | 1 of 5   | 1 passed            |
-| `TDD-0019` falsifiability | 1 of 5   | 1 failed            |
+| `TDD-0019` GREEN            | 1 of 5   | 1 passed            |
+| `TDD-0019` falsifiability A | 1 of 5   | 1 failed            |
+| `TDD-0019` falsifiability B | 1 of 5   | 1 failed            |
 | `TDD-0035` GREEN            | 2 of 2   | 2 passed            |
 | `TDD-0035` falsifiability A | 2 of 2   | 1 failed, 1 passed  |
 | `TDD-0035` falsifiability B | 2 of 2   | 1 failed, 1 passed  |
@@ -132,6 +133,29 @@ That is the removed surface reappearing, which is the obligation stated as a
 change. The case reads the source text rather than the type, which is why a
 type-only edit is observable at run time: `expected 'import type { ScCoverage,
 TestFileSca…' not to contain '"compatibility"'`.
+
+The surface has two halves, and the mutation above reaches one. A second
+mutation puts the legacy aggregator back on the package surface, in
+`packages/qfai/src/core/validators/index.ts` line 71:
+
+```diff
+ export { runCanonicalUixValidators } from "./uix/canonical.js";
++export { runCanonicalUixValidators as runLegacyUixCompatibilityValidators } from "./uix/canonical.js";
+```
+
+The name is what the obligation forbids, whatever it points at, and the case
+fails on it.
+
+- Round 1: Second falsifiability command: npx vitest run tests/integration/verifySemanticsSpec0014.test.ts -t 'TC-0014-0019'
+- Round 1: Second falsifiability result: Test Files 1 failed (1); Tests 1 failed (1 of the file's 5 selected), on the `runLegacyUixCompatibilityValidators` assertion.
+- Round 1: Second falsifiability revision: working-tree+10267bf65a45b59090a24d478a7112887fc9c6d763c93e01d7486d0302090129
+
+Two of the case's four assertions are falsified this way, and the other two are
+not, for reasons worth recording rather than leaving to a reader to discover.
+The `validators/legacy` path string would need the deleted module back to be
+reintroduced honestly. The union-shape regular expression is unanchored at its
+right end, so it still matches a union that has been widened, which is why the
+first mutation passes it and fails the literal check below it instead.
 
 - Refactor verify command: npx vitest run tests/integration/verifySemanticsSpec0014.test.ts tests/cli/commands/prototypingIterate.test.ts tests/integration/cli/commands/prototypingCertify.saasPackage.test.ts tests/integration/cli/commands/prototypingCertify.upgradeScope.test.ts
 - Refactor verify result: Test Files 4 passed (4); Tests 126 passed (126)
