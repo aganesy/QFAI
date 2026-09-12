@@ -4,6 +4,8 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ## [Unreleased]
 
+### Added
+
 - **A design is grilled before it is fixed, and every stage does it** (#1591,
   #1594, #1595). A grilling session interviews an unfixed design as a tree of
   open decisions. The frontier is the decisions answerable now, put as one round
@@ -80,8 +82,6 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   and in the authoring tree, and ending the run with nothing deleted if they
   decline.
 
-### Added
-
 - **`qfai validate` reports a spec stage whose grilling session left no trace**
   (#1605). `QFAI-GRILL-001`, at warning, on spec evidence whose
   `## Pre-draft Grilling` section is missing or carries no phase row — a heading
@@ -126,6 +126,39 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   keeps its description and declares `disable-model-invocation: true` beside it —
   which the Claude Code surface honours and the Codex surface does not, so a
   skill that must never run unattended needs a guard of its own.
+
+- **A spec stage cannot complete over a decision nobody took** (#1678). An open
+  question and an unanswered decision were the same word. A question parked on
+  purpose is what `08_Open-questions.md` is for, and a stage completes over it;
+  a decision a grilling session put to the user, and nobody answered, is the
+  pack claiming a design nobody chose.
+
+  The `unadjudicated` status names the second one, in the spec register and the
+  shared policy one alike. It is an error wherever the SDD gates run — the
+  `sdd`, `full` and `verify` profiles — rather than a warning outside a release
+  candidate, which is how the `open` count behaves. No existing pack carries the
+  value, so nothing has to be migrated to it. What to do instead is in the
+  finding: ask again and record the answer, or — where the user closed the
+  questions and the decision is the agent's to make — record it as an assumption
+  and park it as `deferred` with the point that takes it up.
+
+  The gate reads a register in the notations registers are written in: a
+  `Status` column, a `status:` line under a subsection, and `Disposition`, which
+  is the word the discussion pack's register uses for the same field. An entry
+  declaring no status at all is reported too — a question whose state nobody
+  wrote down is the one the new value would otherwise have named.
+
+  Entries are read from `## Open Questions`, the section the schema puts them
+  under, in all three notations a register uses: a row in the table the
+  template writes, a subsection with a `status:` line, and an entry written as
+  one bullet with the field inline. A register naming a settled question in a
+  resolved list beside that section is not reporting an open one.
+
+  The shared policy register is read before the run decides the tree holds no
+  spec pack, so a pack being established policy-first has its decisions checked
+  rather than skipped. A register that is present and cannot be read —
+  a directory, a device, a pipe at the name, or a size past 4 MiB — reports
+  `QFAI-SPACK-103` instead of passing as a pack with no questions in it.
 
 - **The question-form rule is put in front of the agent on every turn** (#1610).
   A `UserPromptSubmit` hook emits it as context, naming the rule master and the

@@ -77,13 +77,18 @@ describe("a grilling session records into the artifacts that exist", () => {
       expectPhrase(content, "`99_delta.md`, under `## Rejected Visual Directions`");
     });
 
-    it(`${tree}: the spec pack says its open-question file is not a gate`, async () => {
+    it(`${tree}: the spec pack says which of its open-question statuses gates`, async () => {
       // A spec pack carries open questions as a matter of course, so nothing
-      // requires the file to be empty. A reader who assumes it gates the way a
-      // discussion register does will write a decision down and leave it.
+      // requires the file to be empty. What stops a stage is one status on one
+      // row, and a reader who takes the whole file for a gate — or for none —
+      // will write a decision down and leave it.
       const content = await read(tree, SDD);
-      expectPhrase(content, "**`08_Open-questions.md` is a record here, not a gate.**");
+      expectPhrase(
+        content,
+        "**`08_Open-questions.md` is a record, and one of its statuses is a gate.**",
+      );
       expectPhrase(content, "goes to the user during the stage");
+      expectPhrase(content, "`unadjudicated` | Put to the user, and nobody answered");
     });
 
     it(`${tree}: the discussion pack gains no file for it`, async () => {
