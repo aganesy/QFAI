@@ -16,7 +16,10 @@ export type AgentFrontmatterParseResult =
       error: string;
     };
 
-const FRONTMATTER_PATTERN = /^---\r?\n([\s\S]*?)\r?\n---(?:\r?\n|$)/;
+// The body is optional: `---` on one line and `---` on the next is a closed,
+// empty block, and requiring a line between them read it as a block that never
+// closes — which sends the caller to repair delimiters that are already right.
+const FRONTMATTER_PATTERN = /^---\r?\n(?:([\s\S]*?)\r?\n)?---(?:\r?\n|$)/;
 
 /**
  * The opening delimiter on its own.

@@ -1,6 +1,6 @@
 import { constants } from "node:fs";
 import type { FileHandle } from "node:fs/promises";
-import { access, open, readdir, readFile, stat } from "node:fs/promises";
+import { access, lstat, open, readdir, readFile, stat } from "node:fs/promises";
 import path from "node:path";
 
 import {
@@ -337,13 +337,13 @@ export async function validateAssistantAssets(root: string, config: QfaiConfig):
       issues.push(
         issue(
           "QFAI-SKILLS-014",
-          `skills 配下の文書を読み込めませんでした（${describeReadError(cause)}）。参照到達性を判定できないため、権限と I/O を確認してください。`,
+          `A skill's entry point could not be read (${describeReadError(cause)}), so the host cannot load it either.`,
           "error",
           entryPoint,
           "skills.documentReadable",
           undefined,
           "canonical",
-          "メッセージが示す I/O エラーを解消してください（読み取り権限の付与、切れた symlink の張り直し、materialise されていないファイルの取得など）。skills 配下から外すべき文書であれば削除してください。",
+          "Clear the I/O fault the message names — grant read permission, repair a broken symlink, fetch a file that was never materialised — or delete the document if it does not belong under `skills`.",
         ),
       );
       continue;
@@ -1174,7 +1174,14 @@ async function collectSkillEntryPoints(skillsDir: string): Promise<string[]> {
   const entries = await readdir(skillsDir, { withFileTypes: true }).catch(() => []);
   const found: string[] = [];
   for (const entry of entries) {
-    if (!entry.isDirectory()) continue;
+    // A symlinked skill directory is a shape this CLI itself writes, and
+    // `isDirectory()` is false for the link. What matters is what it resolves
+    // to, so the link is followed before it is excluded.
+    const isDirectory = entry.isDirectory()
+      ? true
+      : entry.isSymbolicLink() &&
+        ((await stat(path.join(skillsDir, entry.name)).catch(() => null))?.isDirectory() ?? false);
+    if (!isDirectory) continue;
     const file = path.join(skillsDir, entry.name, "SKILL.md");
     // Absent is the ordinary answer for a directory that holds no skill. Any
     // other failure — a directory this process may not traverse, an I/O fault —
@@ -1182,7 +1189,15 @@ async function collectSkillEntryPoints(skillsDir: string): Promise<string[]> {
     // the silence the caller's read exists to break.
     const probe = await stat(file)
       .then((stats) => (stats.isFile() ? "file" : "other"))
-      .catch((cause: unknown) => (isEnoent(cause) ? "absent" : "error"));
+      .catch(async (cause: unknown) => {
+        // A dangling symlink resolves to nothing and reports `ENOENT`, which is
+        // the same answer as a directory holding no skill. `lstat` tells them
+        // apart: the link is there, the host cannot load it, and the read below
+        // is what says so.
+        if (!isEnoent(cause)) return "error";
+        const link = await lstat(file).catch(() => null);
+        return link === null ? "absent" : "error";
+      });
     if (probe === "file" || probe === "error") found.push(file);
   }
   return found.sort((a, b) => a.localeCompare(b));

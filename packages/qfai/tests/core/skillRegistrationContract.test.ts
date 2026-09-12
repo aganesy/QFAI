@@ -14,7 +14,7 @@
  * that should not be offered to the model says so with
  * `disable-model-invocation: true` beside it.
  */
-import { chmod, mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
+import { chmod, mkdir, mkdtemp, rm, symlink, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
@@ -236,5 +236,39 @@ describe("a skill carries what a host needs to register it", () => {
 
     await chmod(file, 0o600);
     expect(findings).toHaveLength(1);
+  });
+
+  it("reads an empty block as a block with no description", async () => {
+    // `---` and `---` on the next line is closed and empty. Read as unclosed,
+    // the operator is sent to repair delimiters that are already right.
+    const root = await projectWithSkillDocument(
+      ["---", "---", "", "# qfai-example", ""].join("\n"),
+    );
+    const [finding] = await registrationFindings(root);
+    expect(finding?.message).toContain("has no `description:`");
+    expect(finding?.suggested_action).toContain("Add `description:`");
+  });
+
+  it("follows a symlinked skill directory", async () => {
+    // A shape this CLI writes itself. `isDirectory()` is false for the link, so
+    // excluding on it left the skill unchecked by anything.
+    const root = await projectWithSkill(['description: "Does the thing."']);
+    const skills = path.join(root, ".qfai", "assistant", "skills");
+    const real = path.join(root, "elsewhere", "qfai-linked");
+    await mkdir(real, { recursive: true });
+    await writeFile(
+      path.join(real, "SKILL.md"),
+      ["---", "name: qfai-linked", "---", "", "## qfai-linked", ""].join("\n"),
+      "utf-8",
+    );
+    try {
+      await symlink(real, path.join(skills, "qfai-linked"), "junction");
+    } catch {
+      // A host without permission to link cannot exercise this case.
+      return;
+    }
+
+    const codes = (await registrationFindings(root)).map((finding) => finding.code);
+    expect(codes).toContain("QFAI-SKILLS-015");
   });
 });
