@@ -49,9 +49,10 @@ procedure, in four steps:
      any prose between the fields, and the fenced block that is a field's
      value, opening fence through closing fence;
    - a reviewer's own `reviewer verdict` line is dropped wherever it falls
-     inside the region, with the fenced value that follows an empty one:
-     hashing a reviewer's own answer into what that reviewer hashes is the one
-     line that cannot be in its own subject;
+     inside the region — **including its `(attempt M)` form**, which a round
+     with several review attempts records — with the fenced value that follows
+     an empty one: hashing a reviewer's own answer into what that reviewer
+     hashes is the one line that cannot be in its own subject;
    - the heading is **synthesized** as `### <TDD-ID>` rather than copied, so an
      entry whose heading carries extra text hashes the same before and after
      that text is tidied.
@@ -244,8 +245,8 @@ and a screenshot replaced after that verdict moves nothing.
 
 That is a gap in the gate, not in this contract: the subject above is what the
 `product-surface-reviewer` computes and what a recomputation would have to
-reproduce. Stated here so a reader does not take the parity field for a checked
-one, and recorded as its own issue for the gate to close.
+reproduce. It is stated here so a reader does not take the parity field for a
+checked one.
 
 **A T1 coherent group is one pass and several rows**
 (`../../skills/qfai-implement/references/volume-policy.md`).

@@ -76,10 +76,17 @@ per round (`round-evidence.md`) — is recomputed here from the
 (`evidence-revision.md#review-pack-seal`), and a mismatch means that pack was
 edited after its attempt closed.
 
-Each reviewer verdict's `Audited evidence hash` is **recomputed** here over the
-entry's phase-authored fields: the revision excludes `.qfai/evidence/**`, so
-this is the only thing that tells a verdict passed on the evidence as read from
-one passed on evidence edited afterwards.
+The `Spec` and `Code quality` verdicts' `Audited evidence hash` is
+**recomputed** here over the entry's phase-authored fields: the revision
+excludes `.qfai/evidence/**`, so this is the only thing that tells a verdict
+passed on the evidence as read from one passed on evidence edited afterwards.
+
+**The `Prototype parity` verdict's hash is not recomputed here, and not
+required.** Its subject reaches outside the entry — the surface artifacts the
+row's manifest names — and nothing builds it, so a UI row completes whether the
+field is recorded or not, and a replaced capture moves no value this gate reads.
+The reviewer still computes and records it; what is missing is the half that
+checks it back.
 
 A verdict carrying a `Record re-attestation` is compared against **that** hash
 and not the superseded original — a record repair moved the bytes the original

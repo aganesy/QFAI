@@ -1396,8 +1396,13 @@ function hasPhaseAuthoredFieldAfterGate(section: string): boolean {
  * opens N+1), so every legitimate review-fix -> Round 2 row disagreed with the
  * hash recomputed here and reported as unresolved.
  */
+// The `(attempt M)` qualifier is part of the field name a round with several
+// review attempts records (`round-evidence.md`), so a pattern that stopped at
+// `reviewer verdict` left those lines in the subject the reviewer who wrote
+// them hashes — and a reviewer following the contract then computed a different
+// digest from the gate for every valid multi-attempt round.
 const REVIEWER_APPENDED_ROUND_FIELD =
-  /^\s*(?:\|\s*)?(?:[-*][ \t]+)?(?:\*\*)?(?:Round[ \t]+\d+:[ \t]*)?reviewer verdict(?:\*\*)?[ \t]*(?::|\|)[ \t]*(.*)$/i;
+  /^\s*(?:\|\s*)?(?:[-*][ \t]+)?(?:\*\*)?(?:Round[ \t]+\d+:[ \t]*)?reviewer verdict(?:[ \t]*\(attempt[ \t]+\d+\))?(?:\*\*)?[ \t]*(?::|\|)[ \t]*(.*)$/i;
 
 /**
  * The index of the last line of the fenced value that starts at or after

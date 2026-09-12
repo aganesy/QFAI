@@ -27,7 +27,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   parity hash a UI-affecting row owes — and the working-tree revision, which
   addresses a tree rather than a subject. The reference says which two the
   completion gate recomputes today and which one it does not, so nobody takes
-  the third for a checked field.
+  the third for a checked field — as do the implement skill's gate item and the
+  record contract, which promised a recomputation no code performs.
+
+  A round with several review attempts qualifies its verdict field, and the
+  extraction now drops that form too: the contract said every verdict line goes
+  and the code matched only the unqualified one, so a multi-attempt round gave
+  the reviewer and the gate two digests.
 
 - **A design is grilled before it is fixed, and every stage does it** (#1591,
   #1594, #1595). A grilling session interviews an unfixed design as a tree of

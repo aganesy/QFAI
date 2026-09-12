@@ -65,6 +65,8 @@ describe.each(TREES)("%s — the audit hash's extraction is one text", (tree) =>
 
   it("drops a reviewer's own verdict line from what that reviewer hashes", async () => {
     await expectPhrase("a reviewer's own `reviewer verdict` line is dropped wherever it falls");
+    // A round with several review attempts qualifies the field name.
+    await expectPhrase("**including its `(attempt M)` form**");
     await expectPhrase("the one line that cannot be in its own subject");
   });
 
@@ -105,5 +107,8 @@ describe.each(TREES)("%s — the audit hash's extraction is one text", (tree) =>
     );
     await expectPhrase("a screenshot replaced after that verdict moves nothing");
     await expectPhrase("That is a gap in the gate, not in this contract");
+    await expectPhrase(
+      "It is stated here so a reader does not take the parity field for a checked one.",
+    );
   });
 });

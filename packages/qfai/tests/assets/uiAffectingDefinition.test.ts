@@ -363,7 +363,12 @@ describe("UI-affecting is defined once and referenced everywhere", () => {
       const record = await read(tree, RECORD_CONTRACT);
       expect(record).toContain("item 9's `Prototype parity reviewed revision` shares");
       expect(record).toContain(
-        "Each reviewer verdict's `Audited evidence hash` is **recomputed** here",
+        "The `Spec` and `Code quality` verdicts' `Audited evidence hash` is\n**recomputed** here",
+      );
+      // The parity hash is not recomputed today, and the contract says so
+      // rather than promising a check no code performs.
+      expect(record).toContain(
+        "**The `Prototype parity` verdict's hash is not recomputed here, and not\nrequired.**",
       );
       const item10 = skill.split(/\r?\n/).find((line) => line.startsWith("10. `test-list.md`"));
       expect(item10).toBeDefined();
