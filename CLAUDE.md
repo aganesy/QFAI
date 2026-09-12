@@ -22,9 +22,9 @@ Quality-First AI (QFAI) — specification-driven development の検証フレー�
   question count.
 - Every question to the user arrives in the shape its answer has, in the form
   `.claude/rules/user-questions.md` (master: `.agents/rules/user-questions.md`)
-  sets out: a structured choice, or a plain request where the answer is a name,
-  a number or a sentence. Where the host's tool cannot carry it, the plain-text
-  fallback keeps the same parts.
+  sets out: a structured choice where a finite set of candidates exists, or a
+  plain request where none does. Where the host's tool cannot carry it, the
+  plain-text fallback keeps the same parts.
 - All temporary/scratch files go in `tmp/` — working-tree files only; a test's `mkdtemp` sandbox under `os.tmpdir()` is out of scope (see `.claude/rules/temporary-files.md`, master: `.agents/rules/temporary-files.md`).
 - Do not create new directories or files at the repository root without explicit user approval; editing existing root files is allowed (see `.claude/rules/root-additions-policy.md`, master: `.agents/rules/root-additions-policy.md`).
 - Traceability chain (REQ -> Spec -> Code -> Test) must be maintained; TDD-IDs and TC-Refs must not collide or reference unregistered entries.

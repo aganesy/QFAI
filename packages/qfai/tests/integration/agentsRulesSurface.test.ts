@@ -512,14 +512,14 @@ describe("cross-AI rules surface (.agents/rules/ master)", () => {
     ])("%s points at the question form", async (rel) => {
       const text = await readFile(path.join(ROOT, rel), "utf-8");
       expect(text).toContain("user-questions.md");
-      // A round can hold a question asking for a fact, and this same rule says
-      // such a question carries no options and no recommended answer. A
-      // fallback demanding numbered choices for the whole round contradicts
-      // that, in the one document that states both.
+      // A round can hold a question the tool cannot carry, so the fallback has
+      // to say what shape each answer takes. The classifier is the candidate
+      // set: a user-held fact with four supported values both asks for a fact
+      // and offers choices, so a fact-based split prescribes both shapes at
+      // once for one question.
       expect(text).toMatch(/in\s+the\s+shape\s+each\s+answer\s+has/);
-      expect(text).toMatch(
-        /a\s+plain\s+request\s+for\s+the\s+value\s+where\s+it\s+asks\s+for\s+a\s+fact/,
-      );
+      expect(text).toMatch(/numbered\s+choices\s+where\s+a\s+finite\s+set\s+of\s+candidates/);
+      expect(text).toMatch(/not\s+whether\s+the\s+question\s+asks\s+for\s+a\s+fact/);
     });
   });
 

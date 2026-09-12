@@ -99,9 +99,12 @@ common case, and forcing it through loses the constraint.
 **The whole round falls back, not the question that triggered it.** Splitting a
 round across two carriers costs the thing a round exists for: the user seeing
 what is being decided together. So the round is asked as a normal message **in
-the shape each answer has** — numbered choices where the question offers
-choices, a plain request for the value where it asks for a fact — keeping the
-choice semantics where there are choices, and saying why the tool was not used.
+the shape each answer has** — numbered choices where a finite set of candidates
+exists, a plain request for the value where none does — keeping the choice
+semantics where there are choices, and saying why the tool was not used. The
+classifier is the candidate set, not whether the question asks for a fact: a
+fact with four supported values is a choice, and `user-questions.md` states the
+whole of that.
 Where the reason is the third one, say which question it could not carry: the
 other two are about the tool, and naming a question there would invent a cause.
 `user-questions.md` § 5 owns the rest of that fallback.

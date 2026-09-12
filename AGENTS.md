@@ -87,8 +87,8 @@ QFAI パッケージの版番号 (`X.Y.Z`) は AI が選ばない。ユーザが
   fixed; a session ends on an empty frontier and the user's confirmation,
   never at a question count)
 - `user-questions.md` (every question to the user arrives in the shape its
-  answer has — a structured choice, or a plain request where the answer is a
-  name, a number or a sentence; where the host's tool cannot carry it, the
+  answer has — a structured choice where a finite set of candidates exists, or a
+  plain request where none does; where the host's tool cannot carry it, the
   plain-text fallback keeps the same parts)
 
 `.claude/rules/` はこれらへの symlink。Windows では Git の `core.symlinks=true` と
