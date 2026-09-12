@@ -238,6 +238,7 @@ const INITIAL_CENSUS: ReadonlyArray<readonly [string, string]> = [
  */
 const CLEARED: ReadonlyArray<readonly [string, string]> = [
   [".qfai/evidence/atdd-spec-0017.md", ".qfai/report/validate.log"],
+  [".qfai/evidence/implement-spec-0003.md", ".qfai/review/review-*"],
   [".qfai/evidence/implement-spec-0003.md", ".qfai/report/validate.log"],
   [".qfai/evidence/implement-spec-0006.md", ".qfai/report/validate.log"],
 ];
@@ -319,10 +320,12 @@ async function measureCitations(): Promise<[string, string][]> {
 function namesSomethingInside(cited: string): boolean {
   const root = GENERATED_ROOTS.find((candidate) => cited.startsWith(candidate));
   if (root === undefined) return false;
-  // Only a glob made of nothing but wildcards names the tree. `review/**/*.json`
-  // carries a literal after the wildcard segment and claims a set of files, so
-  // judging by the first segment alone let an absent set through.
-  return cited.slice(root.length).replace(/[*/]/g, "").length > 0;
+  // Those two spellings and no others. Removing every wildcard and separator
+  // before deciding exempts `review/*/*` and `review/**/*` as well, and those
+  // name descendants: when the tree tracks none, the citation is dropped before
+  // it can be reported unresolved.
+  const inside = cited.slice(root.length);
+  return inside !== "" && inside !== "*" && inside !== "**";
 }
 
 const escapeForRegExp = (literal: string): string => literal.replace(/[.+?^${}()|[\]\\]/g, "\\$&");
@@ -516,6 +519,10 @@ describe("a glob is a claim about a set", () => {
     // describing what is ignored rather than claiming an artifact.
     expect(namesSomethingInside(".qfai/review/*")).toBe(false);
     expect(namesSomethingInside(".qfai/review/**")).toBe(false);
+    // A deeper all-wildcard glob names descendants rather than the tree, so it
+    // is measured and has to resolve like any other set-naming citation.
+    expect(namesSomethingInside(".qfai/review/*/*")).toBe(true);
+    expect(namesSomethingInside(".qfai/review/**/*")).toBe(true);
     expect(namesSomethingInside(".qfai/review/review-2026082*")).toBe(true);
     expect(namesSomethingInside(".qfai/report/validate.json")).toBe(true);
     // A literal after the wildcard-only segment is still a claim about a set.
