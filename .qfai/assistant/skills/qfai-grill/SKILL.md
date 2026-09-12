@@ -169,11 +169,13 @@ the primitive's, because the decisions are.
     an empty argument is asked for rather than guessed)
 
 The asking is what this skill performs, so its `ask-user` entries are its own operations
-rather than an entry added to the prototype. A skill MAY narrow any of the three buckets
-(drop an entry the skill cannot reach), and MAY instantiate a category entry —
-`approval-required governance operations` — with the operations its own run cannot
-authorize for itself. It MUST NOT introduce an entry outside the prototype's categories.
-Widening triggers a Reviewer-Gate finding.
+rather than an entry added to the prototype. A skill MAY narrow any of the three buckets (drop an entry the skill cannot reach), and
+MAY instantiate a category entry — `approval-required governance operations` — with the
+operations its own run cannot authorize for itself. `hard-required` also takes the
+undefaultable inputs this skill itself consumes, declared per skill and checked against
+that declaration; the bucket is what a run cannot proceed without, and no prototype can
+enumerate that for a skill it does not know. Otherwise a skill MUST NOT introduce an
+entry outside the prototype's categories. Widening triggers a Reviewer-Gate finding.
 
 ## Related
 

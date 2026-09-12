@@ -53,6 +53,9 @@ function skillPath(tree: string, skillId: string): string {
   return path.join(repoRoot, tree, "assistant", "skills", skillId, "SKILL.md");
 }
 
+/** Collapse markdown soft wraps so assertions pin wording, not the wrap column. */
+const unwrap = (markdown: string): string => markdown.split(/\s+/).join(" ");
+
 /** The `## Default Autopilot Policy` block, heading excluded. */
 function policyBlock(content: string): string {
   const heading = /^##\s+Default Autopilot Policy\s*$/m.exec(content);
@@ -85,18 +88,26 @@ function bucketEntries(block: string, bucket: string): string[] {
 
 describe.each(TREES)("%s — Default Autopilot Policy tailoring contract", (tree) => {
   it.each(QFAI_SKILLS)("%s permits narrowing in all three buckets", async (skillId) => {
-    const block = policyBlock(await readFile(skillPath(tree, skillId), "utf-8"));
+    // Soft wraps fall wherever the prose reaches the column, so the block is
+    // read as one line: an assertion that also pins the wrap position fails on
+    // an edit that changed nothing it is about.
+    const block = unwrap(policyBlock(await readFile(skillPath(tree, skillId), "utf-8")));
 
     // The narrowing permission must not be scoped to auto-decide alone.
     expect(block).not.toContain("MAY narrow the auto-decide bucket");
-    expect(block).toMatch(/A skill MAY narrow any of the\s+three buckets/);
+    expect(block).toMatch(/A skill MAY narrow any of the three buckets/);
     // Widening stays prohibited in every bucket. Instantiating the ask-user
     // category with the skill's own human-authorized operations is not
     // widening — without that distinction `/qfai-implement` had no legal way
     // to name the waiver and the Change-Request escalation it does gate on.
-    expect(block).toMatch(/MUST NOT introduce an entry outside the\s+prototype's categories/);
-    expect(block).toMatch(/MAY instantiate a\s+category entry/);
-    expect(block).toMatch(/approval-required governance\s+operations/);
+    expect(block).toMatch(/MUST NOT introduce an entry outside the prototype's categories/);
+    // `hard-required` is the exception, because the bucket is what a run cannot
+    // proceed without and no prototype can enumerate that for a skill it does
+    // not know. The validator checks those against a per-skill declaration, so
+    // the sentence has to sanction what the validator already allows.
+    expect(block).toMatch(/undefaultable inputs this skill itself consumes/);
+    expect(block).toMatch(/MAY instantiate a category entry/);
+    expect(block).toMatch(/approval-required governance operations/);
   });
 
   it.each(QFAI_SKILLS)("%s still satisfies the Reviewer-Gate parser", async (skillId) => {

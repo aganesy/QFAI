@@ -20,6 +20,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   The list is read off the tree, the way the Reviewer-Gate validator picks its
   own subjects, and both skills carry the rule.
 
+  The rule also now sanctions what the validator already allowed: `hard-required`
+  takes the undefaultable inputs a skill itself consumes, declared per skill and
+  checked against that declaration. The bucket is what a run cannot proceed
+  without, and no prototype can enumerate that for a skill it does not know — so
+  the sentence forbade `qfai-configure`'s `testFileGlobs` proposal and the
+  grilling subject a session cannot start without.
+
 ### Changed
 
 - **A reviewer that recommended a decision the agents adopted cannot clear it**
