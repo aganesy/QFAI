@@ -14,11 +14,10 @@
  * each. A release renames this heading to `## [X.Y.Z]` and ships that structure
  * as the published notes.
  *
- * The counts below are the backlog, not the target. They may only fall. Holding
- * the current number rather than demanding one is what lets this land while
- * other branches are open: consolidating the groups is a single edit to the one
- * file every open pull request touches, so it wants a quiet moment, and until
- * it comes the count must at least stop climbing.
+ * The groups are merged and the record below is empty, so every type is held at
+ * one. What the record exists for is a backlog: a number in it is a count this
+ * section carries today and may not exceed, and striking it goes in the same
+ * commit as the merge that earns it.
  *
  * Released sections are out of scope. They are published history, and rewriting
  * them is a separate decision from stopping the next one from shipping this way.
@@ -37,19 +36,14 @@ const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), ".."
 const CHANGE_TYPES = ["Added", "Changed", "Deprecated", "Removed", "Fixed", "Security"];
 
 /**
- * How many headings of each type `## [Unreleased]` carries today.
+ * Types this section is allowed more than one heading of.
  *
- * A type absent from this record is held at one, so a section's first
- * `### Security` needs no entry here. Consolidating a type means striking its
- * number down to 1 in the same commit — left as it is, the number is a slot the
- * next parallel merge can take.
+ * Empty, which is the finished state: every type is held at one. It is a record
+ * rather than a constant so a future backlog has somewhere to be written down
+ * and worked off, the way this one was — a number left here after its groups
+ * are merged is a slot the next parallel merge can take.
  */
-const HEADING_BACKLOG: Readonly<Record<string, number>> = {
-  Added: 5,
-  Changed: 5,
-  Fixed: 8,
-  Removed: 3,
-};
+const HEADING_BACKLOG: Readonly<Record<string, number>> = {};
 
 /** The lines under `## [Unreleased]`, up to the first released section. */
 function unreleasedSection(changelog: string): string[] {
