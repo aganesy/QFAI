@@ -5,6 +5,7 @@ import type { QfaiConfig } from "../config.js";
 import { resolvePath } from "../config.js";
 import {
   atddTestKindDirs,
+  deriveTestFileExtensions,
   evaluateAtddCodeTraceability,
   PLANNED_CONTRACT_KEY,
   TC_VERIFIED_BY_KEY,
@@ -386,6 +387,41 @@ type AtddTraceabilitySummary = {
   };
 };
 
+/**
+ * A configured test glob this stage could not read an extension out of.
+ *
+ * The stage scans its own three directories, and the extensions it looks for
+ * come from `validation.traceability.testFileGlobs` — with a documented
+ * fallback to the JS and TypeScript set when that yields nothing. The fallback
+ * is right for a project that configured no globs. For a project that
+ * configured some and got nothing out of them, it scans extensions the project
+ * does not use, finds no annotation, and reports every obligation as uncovered
+ * — a configuration defect wearing the face of missing tests.
+ *
+ * `QFAI-TRACE-124` reports the same configuration under the `sdd` and
+ * `full` profiles. This is the stage's own code because the consequence is
+ * the stage's: the gate the operator was told to run is the one that has to
+ * say why it found nothing.
+ */
+function collectUnreadableTestGlobs(root: string, config: QfaiConfig): Issue[] {
+  const globs = config.validation.traceability.testFileGlobs.filter(
+    (glob) => glob.trim().length > 0,
+  );
+  if (globs.length === 0 || deriveTestFileExtensions(globs).size > 0) return [];
+  return [
+    issue(
+      "QFAI-ATDD-134",
+      `No extension could be read out of the configured test globs (${globs.join(", ")}), so this stage scanned for the default JavaScript and TypeScript set instead. A project whose acceptance tests are written in another language has none of them scanned, and every obligation is reported as uncovered.`,
+      "error",
+      path.join(root, "qfai.config.yaml"),
+      "atddCodeTraceability.testFileGlobs",
+      globs,
+      "canonical",
+      "Give `validation.traceability.testFileGlobs` patterns that end in the extensions your tests use — `tests/**/*.py`, or `tests/**/*.{ts,tsx}` — and run `/qfai-configure` to set them against the real layout.",
+    ),
+  ];
+}
+
 export async function validateAtddCodeTraceability(
   root: string,
   config: QfaiConfig,
@@ -405,6 +441,8 @@ export async function validateAtddCodeTraceability(
   // Display paths must follow the configured testsDir; the scan already does.
   const dirs = atddTestKindDirs(config.paths.testsDir);
   const issues: Issue[] = [];
+
+  issues.push(...collectUnreadableTestGlobs(root, config));
 
   issues.push(
     ...buildUnknownIssues(

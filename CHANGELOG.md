@@ -297,6 +297,19 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **The ATDD stage says when it could not read the globs it was given**
+  (#1703). `QFAI-ATDD-134`. The stage scans its own three directories, and the
+  extensions it looks for come from `validation.traceability.testFileGlobs`,
+  with a fallback to the JavaScript and TypeScript set when that yields none.
+
+  The fallback is right for a project that configured nothing. For a project
+  that configured globs and got no extension out of them, the stage scanned
+  extensions the project does not use, found no annotation, and reported every
+  obligation as uncovered — a configuration defect wearing the face of missing
+  tests. `QFAI-TRACE-124` says the same thing under the `sdd` and `full`
+  profiles, and is not in this profile’s gate list, so the gate the skill tells
+  the operator to run said nothing at all.
+
 - **The autopilot tailoring contract now covers every shipped skill** (#1642).
   It was held against a hardcoded list of seven, so the two grilling skills were
   outside it and nothing reported that they carried no tailoring rule at all.
