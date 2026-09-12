@@ -208,6 +208,70 @@ describe("the prompt half is scoped to the section that states the contract", ()
     expect(await commitAndRun(PROMPT_REL, edited)).toMatch(/R-PROMPT-SCANNER-DRIFT/);
   });
 
+  it("reads a quoted heading as an example, not as where the section ends", async () => {
+    // A prompt is a document about writing, so it quotes what it forbids. Taken
+    // as live, the quoted heading opens a section of its own that swallows
+    // everything to the next real heading — so an edit under `## Example`, which
+    // owes the scanner nothing, is read as an edit to the contract.
+    const fence = "```";
+    const quoting = [
+      "# Generator prompt",
+      "",
+      SCOPE_HEADING,
+      "",
+      "- No color literal outside the design document.",
+      "",
+      "## Example",
+      "",
+      `${fence}markdown`,
+      SCOPE_HEADING,
+      "",
+      "- No color literal outside the design document.",
+      fence,
+      "",
+      "- One file per screen.",
+      "",
+    ].join("\n");
+    await seed(PROMPT_REL, quoting);
+    await git("add", "-A");
+    await git("commit", "-qm", "quote the heading in an example");
+
+    const edited = quoting.replace("- One file per screen.", "- One file per screen or view.");
+
+    expect(await commitAndRun(PROMPT_REL, edited)).not.toMatch(/R-PROMPT-SCANNER-DRIFT/);
+  });
+
+  it("fires on every edit to a prompt whose only such heading is quoted", async () => {
+    // The reproduction from the other side: with no live section the contract
+    // is somewhere this guard cannot see, which is the case to be loudest
+    // about. Read as live, the example stands in for the section that is gone
+    // and an unpaired edit passes with nothing to flag it.
+    const fence = "```";
+    const exampleOnly = [
+      "# Generator prompt",
+      "",
+      "## Constraints",
+      "",
+      "- Color literals are fine.",
+      "",
+      "## The wording this replaced",
+      "",
+      `${fence}markdown`,
+      SCOPE_HEADING,
+      "",
+      "- No color literal outside the design document.",
+      fence,
+      "",
+    ].join("\n");
+    await seed(PROMPT_REL, exampleOnly);
+    await git("add", "-A");
+    await git("commit", "-qm", "leave the heading only inside an example");
+
+    const edited = exampleOnly.replace("- Color literals are fine.", "- Anything goes.");
+
+    expect(await commitAndRun(PROMPT_REL, edited)).toMatch(/R-PROMPT-SCANNER-DRIFT/);
+  });
+
   it("fires on an edit inside a later section when an earlier one is untouched", async () => {
     const twoSections = `${PROMPT_WITH_SECTIONS}\n${SCOPE_HEADING}\n\n- No shadow literal.\n`;
     await seed(PROMPT_REL, twoSections);

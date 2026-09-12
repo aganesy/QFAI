@@ -3092,38 +3092,44 @@ describe("qfai init", () => {
   // gain the line that re-ignores its contents. What counts as having hidden it
   // is the whole question: a project may write the evidence tree, or the
   // directory itself when it tracks the rest of its audit trail.
-  it.each([".qfai/evidence/*", ".qfai/evidence/prototyping/"])(
-    "keeps the prototype captures ignored for a block carrying `%s`",
-    async (existingIgnore) => {
-      const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-"));
-      try {
-        const block = [
-          QFAI_GITIGNORE_MARKER,
-          ".qfai/report/*",
-          existingIgnore,
-          ".qfai/discussion/*",
-          ".qfai/review/*",
-          ".qfai/state.json",
-          "",
-        ].join("\n");
-        await writeFile(path.join(root, ".gitignore"), block, "utf-8");
+  // The anchored spellings are in the list because a leading slash anchors a
+  // pattern to the directory its `.gitignore` sits in, which for the managed
+  // block is the project root — the same set, written the way a contributor
+  // who knows the syntax writes it.
+  it.each([
+    ".qfai/evidence/*",
+    ".qfai/evidence/prototyping/",
+    "/.qfai/evidence/*",
+    "/.qfai/evidence/prototyping/",
+  ])("keeps the prototype captures ignored for a block carrying `%s`", async (existingIgnore) => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-"));
+    try {
+      const block = [
+        QFAI_GITIGNORE_MARKER,
+        ".qfai/report/*",
+        existingIgnore,
+        ".qfai/discussion/*",
+        ".qfai/review/*",
+        ".qfai/state.json",
+        "",
+      ].join("\n");
+      await writeFile(path.join(root, ".gitignore"), block, "utf-8");
 
-        await runInit({ dir: root, force: false, dryRun: false, yes: true });
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
 
-        // Asserted by position, because git applies the last matching pattern:
-        // the contents ignore has to land above the re-inclusion of the
-        // directory and of the one record inside it.
-        const lines = (await readFile(path.join(root, ".gitignore"), "utf-8")).split("\n");
-        const contents = lines.indexOf(".qfai/evidence/prototyping/*");
-        expect(contents, "the contents ignore is missing").toBeGreaterThan(-1);
-        expect(contents).toBeLessThan(lines.indexOf("!.qfai/evidence/prototyping/"));
-        expect(contents).toBeLessThan(lines.indexOf("!.qfai/evidence/prototyping/grilling.md"));
-        expect(lines.filter((line) => line === ".qfai/evidence/prototyping/*")).toHaveLength(1);
-      } finally {
-        await removeTempTree(root);
-      }
-    },
-  );
+      // Asserted by position, because git applies the last matching pattern:
+      // the contents ignore has to land above the re-inclusion of the
+      // directory and of the one record inside it.
+      const lines = (await readFile(path.join(root, ".gitignore"), "utf-8")).split("\n");
+      const contents = lines.indexOf(".qfai/evidence/prototyping/*");
+      expect(contents, "the contents ignore is missing").toBeGreaterThan(-1);
+      expect(contents).toBeLessThan(lines.indexOf("!.qfai/evidence/prototyping/"));
+      expect(contents).toBeLessThan(lines.indexOf("!.qfai/evidence/prototyping/grilling.md"));
+      expect(lines.filter((line) => line === ".qfai/evidence/prototyping/*")).toHaveLength(1);
+    } finally {
+      await removeTempTree(root);
+    }
+  });
 
   it("adds no contents ignore where the project hid none of that tree", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-"));

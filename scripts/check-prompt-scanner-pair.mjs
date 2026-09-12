@@ -225,14 +225,54 @@ function computeChangedSetFromGit(base) {
  * no change at all. Two sections are also a different text from one, which is
  * what makes appending one count as the change it is.
  */
+/**
+ * Which lines sit inside a fenced code block, fence lines included.
+ *
+ * A prompt is a document about writing, so it quotes what it forbids. An
+ * example carrying this guard's own heading would otherwise read as the live
+ * contract, and renaming the real one would then look like no change at all.
+ *
+ * A fence closes on the same character, at least as long as the one that
+ * opened it, which is what lets a longer fence quote a shorter one.
+ */
+function fencedLines(lines) {
+  const inside = new Array(lines.length).fill(false);
+  let open = null;
+  for (let i = 0; i < lines.length; i += 1) {
+    const fence = /^ {0,3}(`{3,}|~{3,})(.*)$/.exec(lines[i]);
+    if (open === null) {
+      // An opening fence may carry an info string; a backtick fence may not
+      // carry a backtick in it, which is how CommonMark keeps inline code from
+      // opening one.
+      if (fence && !(fence[1].startsWith("`") && fence[2].includes("`"))) {
+        open = fence[1];
+        inside[i] = true;
+      }
+      continue;
+    }
+    inside[i] = true;
+    if (
+      fence &&
+      fence[1][0] === open[0] &&
+      fence[1].length >= open.length &&
+      fence[2].trim().length === 0
+    ) {
+      open = null;
+    }
+  }
+  return inside;
+}
+
 function scopedSections(text) {
   const lines = text.split("\n");
+  const fenced = fencedLines(lines);
+  const isHeading = (i) => !fenced[i] && /^## (?!#)/.test(lines[i]);
   const found = [];
   for (let start = 0; start < lines.length; start += 1) {
-    if (lines[start].trim() !== PROMPT_SCOPE_HEADING) continue;
+    if (fenced[start] || lines[start].trim() !== PROMPT_SCOPE_HEADING) continue;
     let end = lines.length;
     for (let i = start + 1; i < lines.length; i += 1) {
-      if (/^## (?!#)/.test(lines[i])) {
+      if (isHeading(i)) {
         end = i;
         break;
       }

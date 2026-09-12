@@ -2698,6 +2698,25 @@ const PROTOTYPING_COVERING_IGNORES: readonly string[] = [
   ".qfai/evidence/prototyping/",
 ];
 
+/**
+ * An ignore line as the list above spells it.
+ *
+ * A leading slash anchors a pattern to the directory its `.gitignore` sits in,
+ * which for the managed block is the project root — the same set the unanchored
+ * spelling matches, written the way a contributor who knows the syntax writes
+ * it. Compared literally, that spelling reads as a project with no rule to
+ * preserve, and the re-inclusion below then cancels the rule it has.
+ *
+ * SIMPLIFIED: equality against a list, after dropping the anchor.
+ * Lift when: a project is found whose ignore covers that directory by some
+ * other pattern, at which point the answer is gitignore matching rather than a
+ * longer list. A wrong answer here adds an ignore line a later run can remove,
+ * so the cost of the narrow read is bounded.
+ */
+function asIgnoreLine(line: string): string {
+  return line.startsWith("/") ? line.slice(1) : line;
+}
+
 /** The line that keeps the re-included prototyping directory's contents ignored. */
 const PROTOTYPING_CONTENTS_IGNORE = ".qfai/evidence/prototyping/*";
 
@@ -2748,9 +2767,10 @@ function rebuildManagedBlock(existingBlock: string): string {
   // Conditional on an existing ignore, because a project that deleted every one
   // of them to keep its audit trail tracked would otherwise have it re-hidden —
   // the regression the rule above exists to stop.
+  const ignores = lines.map((line) => asIgnoreLine(line));
   const reIgnore =
-    PROTOTYPING_COVERING_IGNORES.some((line) => present.has(line)) &&
-    !present.has(PROTOTYPING_CONTENTS_IGNORE)
+    ignores.some((line) => PROTOTYPING_COVERING_IGNORES.includes(line)) &&
+    !ignores.includes(PROTOTYPING_CONTENTS_IGNORE)
       ? [PROTOTYPING_CONTENTS_IGNORE]
       : [];
 
