@@ -15,10 +15,15 @@ links: ["spec-0002"]
 ## Context
 
 Four rows of `.qfai/specs/spec-0002/tdd/test-list.md` sat at `done` over
-obligations the product contradicts. Three of them also named a test title that
-no longer exists, and nothing reported it: the selector check falls back to the
-last identifier-shaped token of a selector, and on a Japanese title those tokens
-are technical nouns that appear in the named file for unrelated reasons.
+obligations the product contradicts. Three of them also name a test title that no
+longer exists.
+
+Those three **are** reported. `selectorResolves` requires the selector text to
+appear in the file in full and carries no token fallback, so
+`TDDLIST_SELECTOR_UNRESOLVED` names all three — at `warning`, which fails
+nothing, which is why they survived at `done`. The issue this work came from
+describes a fallback that the validator no longer has; the reporting gap it
+infers from that is not the gap.
 
 Repairing the selectors alone would have made the rows resolve while still
 discharging nothing, so the obligations were examined first. Two upstream
@@ -54,13 +59,19 @@ at while the criterion says the opposite of what that sentence says.
 needs the user's decision, per statement — they may be settled differently.
 
 Once it resolves, the ledger sweep is enumerated in its approved-actions
-section, and it differs per option — do not apply one option's sweep to
-another's approval. Option 1 resets `TDD-0008`, `TDD-0009` and `TDD-0012` and
-retires `TDD-0010`. Option 2 resets those three plus `TDD-0001`, whose test file
-the preflight change edits, and retires `TDD-0010` as well. Option 3 retires all
-four and resets none. `TDD-0011` is reset under every option, because the two
-annotation repairs edit the file its observation covers. No test is deleted
-under any of them.
+section. It is read **per statement**, because the two may be settled
+differently — do not apply one option's whole bundle to a split approval.
+
+Statement A, the direction rule, owns `TDD-0008`, `TDD-0009` and `TDD-0010`.
+Statement B, the requiredness rule, owns `TDD-0012`. So for `1A/3B`: option 1 on
+A resets `TDD-0008` and `TDD-0009` and retires `TDD-0010`, and option 3 on B
+retires `TDD-0012`. Option 2 on A additionally blocks and resets `TDD-0001`,
+whose test file the preflight change edits; option 2 on B does not.
+
+`TDD-0011` is in neither statement's list. It is **re-verified, not reset**,
+under every combination, because the annotation repairs edit the file its
+observation covers while its obligation stands. No test is deleted under any
+combination.
 
 ## Constraints to preserve
 

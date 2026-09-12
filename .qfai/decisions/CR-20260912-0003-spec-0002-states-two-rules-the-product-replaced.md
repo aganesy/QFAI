@@ -171,8 +171,15 @@ make two choices.
 ## Approved actions (owner skill rerun plan)
 
 1. `/qfai-sdd` rerun scope: the statements the chosen option names, plus the
-   `06_Test-Cases.md` rows that read them, and the `10_Plan.md` row citing
-   `TC-0002-0026`, which this spec's table does not declare.
+   `06_Test-Cases.md` rows that read them.
+
+   The `10_Plan.md` row citing `TC-0002-0026`, which this spec's table does not
+   declare, is **not** in this Change Request. It is independent of both
+   statements, the approval record here covers only A and B, and folding an
+   unrelated repair into an intent CR means approving one thing and authorising
+   two. It is recorded in `.qfai/evidence/coverage-depth-spec-0002.md` and needs
+   its own.
+
 2. Downstream ledger sweep. The two statements are settled independently, so the
    plan is read per statement and not per bundle. Statement A is the direction
    rule — `REQ-0012`, `AC-0002-0008`, `DR-0002-0001`, `DR-0002-0003`, and
@@ -181,17 +188,23 @@ make two choices.
    `AC-0002-0010`, and `TC-0002-0011` under them, which `TDD-0012` rests on.
    Nothing in statement A's list touches statement B's rows or the reverse, so
    `1A/2B` is option 1 applied to A's rows and option 2 applied to B's, with no
-   overlap to resolve. `TDD-0011` is reset under every combination for a reason
-   belonging to neither statement, given at step 3.
+   overlap to resolve. `TDD-0011` is re-verified under every combination —
+   not reset — for a reason belonging to neither statement, given at step 3.
 
    The three option bodies below each describe **both** statements, because that
    is how they are compared. Applying one to a single statement means taking only
    the rows and files that statement's list names.
 
-   **Option 1 — narrow the spec to the product.** `/qfai-sdd` re-derives
-   `REQ-0012`, `AC-0002-0008`, `DR-0002-0001`, `DR-0002-0003`, `REQ-0005` and
-   `AC-0002-0010` to the narrower statements, and `TC-0002-0008`, `-0009` and
-   `-0011` follow them.
+   **Option 1 — narrow the spec to the product.** `/qfai-sdd` re-derives every
+   layer that carries the two rules, the same set option 3 withdraws them from:
+   `01_Spec.md` (`REQ-0012`, `REQ-0005`), `02_User-stories.md` (`US-0002-0005`),
+   `03_Acceptance-Criteria.md` (`AC-0002-0008`, `AC-0002-0010`),
+   `04_Business-Rules.md` (`BR-0002-0008`, `BR-0002-0010`), `05_Examples.md`
+   (`EX-0002-0008`, `EX-0002-0009`, `EX-0002-0011`), `06_Test-Cases.md`
+   (`TC-0002-0008`, `-0009`, `-0011`) and `07_Decisions.md` (`DR-0002-0001`,
+   `DR-0002-0003`). Narrowing a rule at the requirement and leaving the story,
+   the business rule and the example stating the old one is the same failure as
+   withdrawing it at the requirement alone.
    - Reset to `todo`, recording this CR's ID in `DR-ID`:
      `spec-0002/TDD-0008`, `spec-0002/TDD-0009`, `spec-0002/TDD-0012`
    - Retire: `spec-0002/TDD-0010` — `current preflight unit test pass`
@@ -262,8 +275,13 @@ make two choices.
    sibling case's fixture. A `CR-*` reset is for a row whose obligation an
    upstream change invalidated, and nothing here invalidates this one, so
    resetting it would claim a drift that did not happen. What the row needs is a
-   fresh observation over the edited file: re-run its selector, re-record the
-   `RED test hash` its manifest now computes to, and leave `Status` at `done`.
+   fresh observation over the edited file, and the full procedure rather than a
+   re-run and a new hash: the shared-artifact re-verify block
+   `.qfai/assistant/skills/qfai-implement/references/checkpoint-verification.md`
+   defines, recorded where that contract puts it, with the selector re-run, the
+   `RED test hash` its manifest now computes to, and `Status` left at `done`.
+   Recording only the hash would leave the row asserting a verification nobody
+   performed, which is the shape of defect this Change Request exists to clear.
 
 4. Reserve every retired `TDD-ID` in the ledger's `## TDD-ID reservations`
    section before the row is deleted. The ledger allocates the next id as
