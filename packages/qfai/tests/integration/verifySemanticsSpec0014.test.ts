@@ -12,6 +12,7 @@ import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 
 import { defaultConfig } from "../../src/core/config.js";
+import { validateProject } from "../../src/core/validate.js";
 import { runCanonicalUixValidators } from "../../src/core/validators/uix/canonical.js";
 
 const tempDirs: string[] = [];
@@ -76,7 +77,10 @@ describe("TC-0014-0009: stale sidecar migration guidance", () => {
 
 // QFAI:SPEC-0014:TC-0014-0018
 describe("TC-0014-0018: canonical UIX in verify path", () => {
-  it("validate.ts imports and invokes runCanonicalUixValidators", async () => {
+  it("validate.ts imports the canonical group and no retired one", async () => {
+    // Source text, and only about which symbols are named. Whether the group
+    // is reached is the case below: an import line satisfies every assertion
+    // here with both call sites deleted.
     const validateSrc = await readFile(
       path.join(repoRoot, "packages", "qfai", "src", "core", "validate.ts"),
       "utf-8",
@@ -85,6 +89,35 @@ describe("TC-0014-0018: canonical UIX in verify path", () => {
     expect(validateSrc).toContain("runCanonicalUixValidators");
     expect(validateSrc).toContain('from "./validators/index.js"');
     expect(validateSrc).not.toMatch(/runLegacyUixCompatibilityValidators|runAllUixValidators/);
+  });
+
+  it("a verify run surfaces a canonical group finding", async () => {
+    // The obligation is that full-scan verify DEPENDS on the canonical groups,
+    // and a dependency is observable only by running the thing that depends.
+    // Reading the source for a symbol name does not see it, and calling the
+    // group directly measures the group's own rule instead of the wiring.
+    //
+    // The falsifying change is deleting the two `runCanonicalUixValidators`
+    // call sites in `src/core/validate.ts` while keeping the import. That
+    // leaves the case above green and reddens this one.
+    const root = await newTempDir();
+    const packDir = path.join(root, ".qfai", "discussion", "discussion-20260101000000000");
+    await mkdir(path.join(packDir, "uiux"), { recursive: true });
+    await writeFile(path.join(packDir, "01_Context.md"), "# Context\n\n- surface: web\n", "utf-8");
+    // A forbidden legacy sidecar — the same input the direct-call case uses, so
+    // the two differ only in how the validator is reached.
+    await writeFile(
+      path.join(packDir, "uiux", "12_design_system.md"),
+      "## Visual Theme\n\nReal content\n\n## Color Palette\n\nReal content\n\n## Do's and Don'ts\n\nReal content\n",
+      "utf-8",
+    );
+
+    const result = await validateProject(root, undefined, { profile: "verify" });
+
+    expect(
+      result.issues.map((issue) => issue.code),
+      "the verify profile must carry the canonical UIX group's findings",
+    ).toContain("UIX-VAL-3LAYER-FORBIDDEN-FILE");
   });
 
   it("runCanonicalUixValidators reaches the latest pack from a repo root", async () => {
