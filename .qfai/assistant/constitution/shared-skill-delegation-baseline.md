@@ -153,6 +153,14 @@ recommendation the artifact carries unadjudicated has contributed to it, so the
 same obligation applies: declare the conflict and hand those items to a
 non-participating reviewer.
 
+The reviewer response carries its own field for this. `Authored/edited under
+review` asks about editing, and a griller that recommended a decision without
+touching the artifact answers `none` to it truthfully — so the gate would accept
+the response as independent and admit the `PASS` this rule forbids.
+**`Recommended and unadjudicated` is the field that catches it**, and a
+non-`none` value there disqualifies the reviewer for the decisions it names,
+exactly as a non-`none` authorship value does for the artifacts it names.
+
 Round 1 and round 2 of a review stay one reviewer with one budget. Treating
 them as separate reviewers because the context reset would restart the
 per-reviewer counter every round, so the two-round budget could never be
@@ -204,7 +212,7 @@ starts routing blocking reviewers, so the in/out split is not re-derived per run
   reviewing stage's own completion contract names, and that contract is what drains it (`.qfai/assistant/constitution/drift-protocol.md#the-record-defect-queue`). **The class needs a drain: only a stage whose completion conditions require that queue drained may use it — today `/qfai-implement` alone, so `/qfai-sdd`, `/qfai-atdd`, `/qfai-configure`, `/qfai-verify`, `/qfai-discussion` and `/web-research` reviewers MUST NOT, and there the finding keeps the class it would otherwise have had.** An entry closes only on a repaired record, re-attested in a new pack where a reviewer hashed it; `record:unchecked` is a bug report against `validateTddList` and never a substitute for the repair —
   a record rule worth a round is worth a validator code.
 - **Integrity is not record class.** Evidence copied from another round or a sibling row, an anchor resolving to a run other than the one it names, and a false
-  `Authored/edited under review` attestation claim work that was not done or independence the reviewer lacked. `agents/qa-gatekeeper.md` and the response rules below refuse a `PASS`
+  `Authored/edited under review` or `Recommended and unadjudicated` attestation claim work that was not done or independence the reviewer lacked. `agents/qa-gatekeeper.md` and the response rules below refuse a `PASS`
   built on them, so they stay `blocking` as `defect:code-quality` and are never filed as `record:*` — which covers an honestly produced record that is merely wrong.
 - A `none` advisory takes the Change Request / Open Question path (`.qfai/assistant/constitution/drift-protocol.md#reviewer-originated-obligations`); a `record:*` advisory takes the queue above. Neither goes to the implementer.
 - Only `blocking` findings — those citing a behaviour-governing obligation or a defect class — force `REVISE`.
@@ -252,6 +260,7 @@ Result: PASS | REVISE
 Reviewed revision: <git rev> | working-tree+<content hash>
 Audited evidence hash: <content hash of the evidence read>   # one line per TDD-ID on a T1 group
 Authored/edited under review: none | <artifact refs this reviewer authored or edited in this run>
+Recommended and unadjudicated: none | <decisions this reviewer recommended that were adopted without the user>
 Findings:
 - <issue> | Severity: blocking|advisory | Traces to: <AC-*/BR-*/TC-*/CON-*/rule-name|defect:correctness|defect:security|defect:code-quality|record:<CODE>|none>
 Required fixes:

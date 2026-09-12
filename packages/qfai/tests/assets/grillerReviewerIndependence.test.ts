@@ -28,10 +28,39 @@ describe("a griller's recommendations and reviewer independence", () => {
       // A recommendation the user chose from is one input among several, and the
       // decision is theirs. One an agent adopted with nobody adjudicating became
       // the artifact, and reviewing it is reviewing your own proposal.
+      // The whole row each time, outcome included. Pinning the labels alone
+      // leaves the two verdicts free to swap or vanish while the suite stays
+      // green — and the failure that allows is a reviewer passing its own
+      // unadjudicated recommendation.
       const content = await read(tree);
       expectPhrase(content, "#### A griller's recommendations, and what they disqualify");
-      expectPhrase(content, "By the user, from the recommendation among the inputs");
-      expectPhrase(content, "Agent to agent, the recommendation adopted with no user adjudication");
+      // Matched with the column padding left free: the widths are the
+      // formatter's, the row is the contract.
+      expect(content).toMatch(
+        /\|\s*By the user, from the recommendation among the inputs\s*\|\s*Yes — the decision is the user's\s*\|/,
+      );
+      expect(content).toMatch(
+        /\|\s*Agent to agent, the recommendation adopted with no user adjudication\s*\|\s*No — the recommendation became the artifact\s*\|/,
+      );
+    });
+
+    it(`${tree}: the reviewer response has a field that catches a recommendation`, async () => {
+      // `Authored/edited under review` asks about editing. A griller that
+      // recommended a decision and touched nothing answers `none` to it
+      // truthfully, and the gate then reads the response as independent and
+      // admits the PASS this rule forbids.
+      const content = await read(tree);
+      expectPhrase(content, "**`Recommended and unadjudicated` is the field that catches it**");
+      expectPhrase(
+        content,
+        "Recommended and unadjudicated: none | <decisions this reviewer recommended that were adopted without the user>",
+      );
+      // A false value here has to weigh what a false authorship value weighs, or
+      // the new field is a formality the gate does not act on.
+      expectPhrase(
+        content,
+        "`Authored/edited under review` or `Recommended and unadjudicated` attestation claim work that was not done",
+      );
     });
 
     it(`${tree}: names correlation rather than memory as the risk`, async () => {
