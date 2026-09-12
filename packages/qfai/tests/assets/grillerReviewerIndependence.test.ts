@@ -74,7 +74,7 @@ describe("a griller's recommendations and reviewer independence", () => {
       // a reset instance can only guess at.
       const content = await read(tree);
       expectPhrase(content, "**A grilling session adds a row for every decision it settled**");
-      expectPhrase(content, "`Task title` = `grilling(<adjudication>): <the decision>`");
+      expectPhrase(content, "`Task title` = `grilling(<where>/<adjudication>): <the decision>`");
       // The field asks what THIS reviewer recommended, so the row names the
       // recommender. "Whose recommendation was adopted" is undefined for the
       // ordinary case where the user chose something else.
@@ -90,7 +90,11 @@ describe("a griller's recommendations and reviewer independence", () => {
       // artifact wrong until somebody decides. One marker for both makes them
       // indistinguishable in the row the reviewer is told to rely on.
       const content = await read(tree);
+      expectPhrase(content, "**`<where>` is the stage's own name for where the session ran**");
       expectPhrase(content, "**`<adjudication>` is `user` or `agents`**");
+      // A row that cannot be assigned to a place is one an omission elsewhere
+      // can be counted against.
+      expectPhrase(content, "a row that cannot be assigned to a place");
       expectPhrase(content, "tells the reviewer nothing it can act on");
       // One format, so a gate selecting the prefix finds every row rather than
       // skipping the ones that carry the adjudication.

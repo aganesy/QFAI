@@ -92,15 +92,19 @@ Phase 0 is a mandatory output of this skill, so its own artifacts belong on this
   names the authoritative artifact that answered the phase's decisions. A missing row is the
   finding: an omitted session and an empty frontier are the same absence, and only the written skip
   tells them apart (`references/sdd-pre-draft-grilling.md`).
-- Every row carries when its session ended and when the phase first wrote, and the first is earlier.
-  A row holding only the outcome reads the same whether the session ran before the phase, after it,
-  or not at all.
+- Every row carries the times its state has — `Ended at` on `run` and `escalated`, `Wrote at` on
+  `run` and `skipped` — and where both are present the first is earlier. A row holding only the
+  outcome reads the same whether the session ran before the phase, after it, or not at all;
+  requiring both of every state would instead make two legitimate states unrecordable.
+- Phase 2c carries one row per expansion, `2c.1` upward, in the order they ran. Its scope is
+  recomputed after every contract write, so a single row records the first checkpoint and leaves
+  every later one indistinguishable from a checkpoint that never happened.
 - A row reads `run` only with zero escalations. One escalation makes it `escalated`, and an
   `escalated` row needs a `PENDING` work order for it — an escalation nobody answered is a design
   decision nobody took, and `08_Open-questions.md` does not block a spec stage.
-- Each phase's settled count equals the number of `grilling(...)` rows carrying that phase in
-  `## Work Orders Summary`. Without the key the count is a number nobody can check, and a phase
-  claiming four settled decisions with no rows behind them passes while a reviewer looking for what
-  it recommended finds nothing.
+- Each phase's settled count equals the number of `grilling(<phase>/...)` rows in
+  `## Work Orders Summary` — the phase is the title's first field, because the shared schema has no
+  column for it. Without that key a row cannot be assigned to a phase, so an omitted row passes by
+  being counted against another, and a reviewer looking for what it recommended finds nothing.
 - Every `grilling(...)` row names who adjudicated the decision, `user` or `agents`. A reviewer reads
   its `Recommended and unadjudicated` answer off these rows and holds no memory of the session.

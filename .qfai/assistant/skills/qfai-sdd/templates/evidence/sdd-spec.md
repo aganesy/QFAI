@@ -102,10 +102,11 @@ npx qfai validate --profile sdd --fail-on error --format github
 > The settled count equals the number of `grilling(...)` rows below carrying
 > this phase.
 
-| Phase | Session | Ended at  | Wrote at  | Frontier                 | Evidence             |
-| ----- | ------- | --------- | --------- | ------------------------ | -------------------- |
-| 0     | run     | <ISO8601> | <ISO8601> | <n> settled, 0 escalated | #work-orders-summary |
-| 1     | skipped | -         | <ISO8601> | empty: answered by <ref> | -                    |
+| Phase | Session   | Ended at  | Wrote at  | Frontier                   | Evidence             |
+| ----- | --------- | --------- | --------- | -------------------------- | -------------------- |
+| 0     | run       | <ISO8601> | <ISO8601> | <n> settled, 0 escalated   | #work-orders-summary |
+| 1     | skipped   | -         | <ISO8601> | empty: answered by <ref>   | -                    |
+| 2c.1  | escalated | <ISO8601> | -         | <n> settled, <n> escalated | #work-orders-summary |
 
 ## Work Orders Summary
 

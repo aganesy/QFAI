@@ -106,6 +106,20 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   means zero escalations, and each phase's settled count equals the number of
   decision rows carrying that phase, so a count has something behind it.
 
+  The record's chronology is per state: `run` carries both times, `skipped` has
+  no session to have ended, and an `escalated` phase does not write. Requiring
+  both of every state would make two legitimate states unrecordable, and a state
+  nobody can record honestly is one an agent records dishonestly.
+
+  Phase 2c takes one row per expansion — `2c.1` upward — since its scope is
+  recomputed after every contract write, and a single row records the first
+  checkpoint while leaving every later one indistinguishable from one that never
+  happened.
+
+  A decision row names its phase, as the title's first field, because the shared
+  work-order schema has no column for it. Without that key a row cannot be
+  assigned to a phase, so an omitted row passes by being counted against another.
+
   A decision is persisted by the drafting agent that owns its artifact, not by
   the orchestrator: `07_Decisions.md` and `09_delta.md` are primary artifacts,
   and on a CREATE run the file may not exist, so writing it is authoring.

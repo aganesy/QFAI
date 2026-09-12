@@ -53,7 +53,10 @@ conversation is already over.
 recomputed after every contract write and the reconciliation repeats until no
 write adds work, so a frontier collected before the first write cannot hold the
 decisions of a spec the third write brought in. Each re-expansion that brings
-decision-bearing work runs its own round before the next mutation.
+decision-bearing work runs its own round before the next mutation, **and writes
+its own row**: `2c.1`, `2c.2`, and so on, in the order they ran. One row for the
+phase would record the first checkpoint and leave every later one unrecorded,
+which is the same evidence a run that skipped them produces.
 
 ## Who plays what
 
@@ -139,11 +142,20 @@ nobody can be asked.
 
 Two records, both in the stage evidence, and the quality gate reads both.
 
-**A run-or-skip line per phase**, under `## Pre-draft Grilling`, each carrying
-when its session ended and when the phase first wrote — the first recorded
-before that write. A row holding only the outcome reads the same whether the
-session ran before the phase, after it, or not at all, because it is written at
-the end either way:
+**A run-or-skip line per phase**, under `## Pre-draft Grilling`, carrying what
+its state has: a row holding only the outcome reads the same whether the session
+ran before the phase, after it, or not at all, because it is written at the end
+either way.
+
+| State       | `Ended at`                                              | `Wrote at`                                  |
+| ----------- | ------------------------------------------------------- | ------------------------------------------- |
+| `run`       | When the session ended, written before the phase writes | When the phase wrote. Later than `Ended at` |
+| `skipped`   | `-` — no session ran                                    | When the phase wrote                        |
+| `escalated` | When the session ended                                  | `-` — an escalated phase does not write     |
+
+Where both are present the first is earlier, and that is the whole check. A
+single mandatory pair would make two legitimate states unrecordable, and a state
+nobody can record honestly is one an agent records dishonestly:
 
 ```text
 | Phase | Session   | Frontier                  | Evidence             |
@@ -169,8 +181,10 @@ outcome — but an omitted session and a legitimate skip are the same absence, s
 the skip is written down and the absence of a row is the finding.
 
 **A work-order row per settled decision**, under `## Work Orders Summary`, with
-`Task title` = `grilling(<adjudication>): <the decision>` and the shared
-schema's columns. `Agent instance` is the agent that made the recommendation,
+`Task title` = `grilling(<phase>/<adjudication>): <the decision>` and the shared
+schema's columns — the phase first, because the schema has no column for it and a
+row that cannot be assigned to a phase is one an omission elsewhere is counted
+against. `Agent instance` is the agent that made the recommendation,
 taken or not. The adjudication says who settled it:
 
 | Adjudication | Meaning for a later reviewer                                    |

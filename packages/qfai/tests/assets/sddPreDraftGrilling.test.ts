@@ -151,7 +151,11 @@ describe.each(TREES)("%s — the pre-draft grilling loop", (tree) => {
     // rows, holding no memory of the session. One marker for both outcomes
     // makes the two indistinguishable in the row it is told to rely on.
     const loop = await read(LOOP);
-    expectPhrase(loop, "`Task title` = `grilling(<adjudication>): <the decision>`");
+    expectPhrase(loop, "`Task title` = `grilling(<phase>/<adjudication>): <the decision>`");
+    // The phase is first because the shared schema has no column for it, and a
+    // row that cannot be assigned to a phase is one an omission elsewhere is
+    // counted against.
+    expectPhrase(loop, "the phase first, because the schema has no column for it");
     expectPhrase(loop, "The griller may review the artifact");
     expectPhrase(loop, "The reviewer returns `REVISE` and names it");
 
@@ -173,14 +177,23 @@ describe.each(TREES)("%s — the pre-draft grilling loop", (tree) => {
     // And `run` cannot carry one: a `run` row with an escalation in its count
     // reads as finished while a user-owned decision is open.
     expectPhrase(gate, "A row reads `run` only with zero escalations");
-    // The count is checkable, because each decision row carries its phase.
-    expectPhrase(gate, "Each phase's settled count equals the number of `grilling(...)` rows");
-    expectPhrase(gate, "a number nobody can check");
-    // And the order is recorded rather than claimed.
+    // The count is checkable, because the phase is the title's first field. A
+    // row that cannot be assigned to a phase is one an omission elsewhere is
+    // counted against.
     expectPhrase(
       gate,
-      "when its session ended and when the phase first wrote, and the first is earlier",
+      "Each phase's settled count equals the number of `grilling(<phase>/...)` rows",
     );
+    expectPhrase(gate, "an omitted row passes by being counted against another");
+    // The order is recorded rather than claimed, per state: requiring both
+    // times of every state would make two legitimate ones unrecordable, and a
+    // state nobody can record honestly gets recorded dishonestly.
+    expectPhrase(gate, "Every row carries the times its state has");
+    expectPhrase(gate, "where both are present the first is earlier");
+    expectPhrase(gate, "would instead make two legitimate states unrecordable");
+    // Phase 2c recomputes its scope after every contract write, so one row
+    // records the first checkpoint and hides every later one.
+    expectPhrase(gate, "Phase 2c carries one row per expansion, `2c.1` upward");
   });
 
   it("keeps the escalation reachable on a host without the tool", async () => {
@@ -249,7 +262,9 @@ describe.each(TREES)("%s — the pre-draft grilling loop", (tree) => {
     // decisions of a spec the third write brought in.
     const loop = await read(LOOP);
     expectPhrase(loop, "**Phase 2c gets a checkpoint per expansion, not one per phase.**");
-    expectPhrase(loop, "runs its own round before the next mutation");
+    expectPhrase(loop, "runs its own round before the next mutation, **and writes its own row**");
+    expectPhrase(loop, "`2c.1`, `2c.2`, and so on, in the order they ran");
+    expectPhrase(loop, "the same evidence a run that skipped them produces");
   });
 
   it("leaves the artifact write with the agent that owns it", async () => {
@@ -282,8 +297,9 @@ describe.each(TREES)("%s — the pre-draft grilling loop", (tree) => {
     // before the phase, after it, or not at all — it is written at the end
     // either way.
     const loop = await read(LOOP);
-    expectPhrase(loop, "when its session ended and when the phase first wrote");
-    expectPhrase(loop, "the first recorded before that write");
+    expectPhrase(loop, "carrying what its state has");
+    expectPhrase(loop, "Where both are present the first is earlier, and that is the whole check");
+    expectPhrase(loop, "a state nobody can record honestly is one an agent records dishonestly");
   });
 
   it("cites the method rather than restating it", async () => {

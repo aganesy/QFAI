@@ -120,7 +120,7 @@ Every major artifact in the stage should include this table schema:
   the same instance appearing in an authoring step and in a review step over the same artifact is
   a reviewer-independence violation.
 - **A grilling session adds a row for every decision it settled**, with
-  `Task title` = `grilling(<adjudication>): <the decision>` and `Agent instance` = the
+  `Task title` = `grilling(<where>/<adjudication>): <the decision>` and `Agent instance` = the
   agent that **made the recommendation**, whether or not it was taken. That row is what a
   later reviewer reads its `Recommended and unadjudicated` answer off: a reset instance
   holds no memory of the session, so without the row the field cannot be answered
@@ -128,8 +128,11 @@ Every major artifact in the stage should include this table schema:
   recommended, so the recommender is what the row has to name — "the agent whose
   recommendation was adopted" is undefined for the ordinary case where the user chose
   something else.
-- **`<adjudication>` is `user` or `agents`**, and it is in the title because the schema has
-  no column for it. The two outcomes point opposite ways — a user-settled decision leaves
+- **`<where>` is the stage's own name for where the session ran** — a phase for a spec
+  stage, `-` for a stage that has one session — and **`<adjudication>` is `user` or
+  `agents`**. Both are in the title because the schema has no column for either, and a
+  row that cannot be assigned to a place is one an omission elsewhere can be counted
+  against. The two outcomes point opposite ways — a user-settled decision leaves
   the griller free to review the artifact, an agent-settled one makes the artifact wrong
   until somebody decides — so a row recording only that a session happened tells the
   reviewer nothing it can act on. One format, always parenthesized, so a gate selecting
