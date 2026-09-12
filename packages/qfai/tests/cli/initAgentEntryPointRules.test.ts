@@ -771,13 +771,6 @@ describe("a marker pair inside an example is an example", () => {
   });
 
   it("keeps an opening fence inside a block from closing it", () => {
-    const template = [
-      QFAI_AGENT_RULES_BEGIN,
-      "",
-      "- `.agents/rules/grilling.md` — interview the decision tree.",
-      "",
-      QFAI_AGENT_RULES_END,
-    ].join("\n");
     // A closing fence carries no info string, so the inner line is content. Read
     // as a closer, every bullet after it counts as a live citation.
     const existing = [
