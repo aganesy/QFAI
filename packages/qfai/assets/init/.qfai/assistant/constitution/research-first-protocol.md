@@ -79,5 +79,12 @@ research_summary:
 
 ## Storage
 
-- `research_summary` はカレントの discussion-pack の `04_Sources.md` 内（`## Research Summary` セクション）に記録
-- グローバルには永続保存しない
+- `research_summary` goes to the invoking stage's own evidence when it is
+  produced, and is carried into the artifact that consumes it when that artifact
+  is authored. For `/qfai-discussion` that artifact is the pack's
+  `04_Sources.md`, under its `## Research Summary` section.
+- The evidence first, because a stage may hold authoring until something
+  authorizes it. Writing the summary straight into the artifact creates the
+  artifact, and a run cancelled before that authorization leaves it behind as
+  the newest of its kind — which is what every later reader then picks up.
+- Not persisted globally. The evidence belongs to the run that produced it.
