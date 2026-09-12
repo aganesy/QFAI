@@ -24,6 +24,7 @@ const SKILL = "assistant/skills/qfai-sdd/SKILL.md";
 const LOOP = "assistant/skills/qfai-sdd/references/sdd-pre-draft-grilling.md";
 const CHECKLISTS = "assistant/skills/qfai-sdd/references/sdd-phase-checklists.md";
 const GATE = "assistant/skills/qfai-sdd/references/sdd-quality-gate.md";
+const EVIDENCE_TEMPLATE = "assistant/skills/qfai-sdd/templates/evidence/sdd-spec.md";
 const PRIMITIVE = "assistant/skills/qfai-grilling/SKILL.md";
 
 /** Collapse markdown soft wraps so assertions pin wording, not the wrap column. */
@@ -132,7 +133,16 @@ describe.each(TREES)("%s — the pre-draft grilling loop", (tree) => {
     expectPhrase(loop, "an omitted session and a legitimate skip are the same absence");
 
     const gate = await read(GATE);
-    expectPhrase(gate, "`## Pre-draft Grilling` carries a row for every phase this run entered");
+    expectPhrase(gate, "carries a row for every **grilling-covered** phase this run entered");
+    // Phase 2b and Phase 4 produce no design decision, so requiring a row for
+    // them would either reject valid evidence or force a row claiming a
+    // session that was never owed.
+    expectPhrase(gate, "Phase 0, 1, 2, 2c and 3, and only those");
+    // And the canonical evidence template carries the section, or every
+    // template-derived run fails a gate on a heading it was never given.
+    const template = await read(EVIDENCE_TEMPLATE);
+    expectPhrase(template, "## Pre-draft Grilling");
+    expectPhrase(template, "`Session` is `run`, `skipped` or `escalated`");
     expectPhrase(gate, "A\n  missing row is the finding");
   });
 
@@ -141,12 +151,40 @@ describe.each(TREES)("%s — the pre-draft grilling loop", (tree) => {
     // rows, holding no memory of the session. One marker for both outcomes
     // makes the two indistinguishable in the row it is told to rely on.
     const loop = await read(LOOP);
-    expectPhrase(loop, "`Task title` = `grilling: <the decision>`");
+    expectPhrase(loop, "`Task title` = `grilling(<adjudication>): <the decision>`");
     expectPhrase(loop, "The griller may review the artifact");
     expectPhrase(loop, "The reviewer returns `REVISE` and names it");
 
     const gate = await read(GATE);
-    expectPhrase(gate, "names who adjudicated the decision, `user` or\n  `agents`");
+    expectPhrase(gate, "names who adjudicated the decision, `user`\n  or `agents`");
+  });
+
+  it("blocks on an escalation nobody answered", async () => {
+    // `08_Open-questions.md` does not gate a spec stage, so a no-question run
+    // could record `run`, write the phase, and reach DONE with a user-owned
+    // design choice unset. Writing anyway encodes a decision nobody took, by
+    // the one path where nobody can be asked.
+    const loop = await read(LOOP);
+    expectPhrase(loop, "the phase's row reads `escalated`, and **the\nphase does not write**");
+    expectPhrase(loop, "stays `PENDING`, which\nblocks DONE and leaves the stage resumable");
+
+    const gate = await read(GATE);
+    expectPhrase(
+      gate,
+      "No row reads `escalated` unless the stage also carries a `PENDING` work order",
+    );
+  });
+
+  it("keeps the escalation reachable on a host without the tool", async () => {
+    // A host that offers no structured question tool is not a reason to skip
+    // the escalation; it is the reason the rule has a fallback, and the parts
+    // survive it.
+    const loop = await read(LOOP);
+    expectPhrase(
+      loop,
+      "where it is\n   callable for that question and through the same rule's fallback",
+    );
+    expectPhrase(loop, "it is the reason the fallback exists");
   });
 
   it("cites the method rather than restating it", async () => {
@@ -173,9 +211,24 @@ describe.each(TREES)("%s — the pre-draft grilling loop", (tree) => {
     // interviewing an author on a two-round budget is neither, so the loop
     // routed through a skill that would have rejected it.
     const primitive = await read(PRIMITIVE);
-    expectPhrase(primitive, "the griller puts the round to the author agent");
-    expectPhrase(primitive, "That is a different answerer, not a delegated\nquestion");
+    expectPhrase(primitive, "the griller puts the round to the authors");
+    expectPhrase(primitive, "That is a different answerer, not a delegated question");
     expectPhrase(primitive, "the one place a count ends a session");
+    // Exactly one role puts the round, or an author is asked twice and the
+    // two answers have no tie-break.
+    expectPhrase(
+      primitive,
+      "**Who puts the round depends on the mode, and exactly one role does.**",
+    );
+    // And a frontier holding several authors' decisions needs round
+    // semantics: everyone sees the whole round, every answer lands before the
+    // frontier moves, and a disagreement is a decision rather than an average.
+    expectPhrase(primitive, "The round goes to **every author whose decisions it contains**");
+    expectPhrase(primitive, "**Every answer is collected before the frontier is recomputed.**");
+    expectPhrase(
+      primitive,
+      "**Two authors answering one question differently is itself a decision**",
+    );
   });
 
   it("leaves the fixed phase order alone", async () => {

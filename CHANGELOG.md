@@ -51,6 +51,21 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   written down; the two adjudications point opposite ways, and one marker for
   both told the reviewer nothing it could act on.
 
+  A no-question run reaches nobody, so the decision is opened as a question, the
+  phase's row reads `escalated`, and **the phase does not write** — its work
+  order stays `PENDING`, which blocks completion and leaves the stage resumable.
+  That is the gate, because a spec pack's open-question file is not one: it
+  carries open questions as a matter of course, so nothing there stops a run.
+
+  Where the structured question tool is not callable, the escalation takes the
+  rule's fallback rather than being skipped.
+
+  The gate asks only about the phases the loop covers. Phase 2b and Phase 4
+  produce no design decision, so a row for them would either reject valid
+  evidence or claim a session that was never owed. The canonical evidence
+  template carries the section, so a template-derived run has the heading the
+  gate reads.
+
   The fixed phase order is unchanged: the loop is a step inside a phase, not one
   of its own.
 

@@ -87,8 +87,11 @@ answer its questions.
    budget the convergence rules set.
 3. Put to the user **every decision the session settled that authoritative
    evidence did not** — not only the ones still open after the budget. Both
-   positions and a recommendation, through `AskUserQuestion`
-   (`.agents/rules/user-questions.md`).
+   positions and a recommendation, through `AskUserQuestion` where it is
+   callable for that question and through the same rule's fallback where it is
+   not — numbered choices carrying the same parts
+   (`.agents/rules/user-questions.md`). A host without the tool is not a reason
+   to skip the escalation; it is the reason the fallback exists.
 4. Record each outcome where `references/spec-traceability-rules.md` says, and
    hand the authors the settled set before any of them writes.
 
@@ -107,9 +110,16 @@ what they already decided.
 A decision the user settles is an input to the write, not a note beside it. A
 draft that contradicts one is the Drift Protocol's subject, not this loop's.
 
-Under a no-question mode step 3 has nobody to reach, and the decision is opened
-as a question rather than assumed. `08_Open-questions.md` does not block a spec
-stage today, so the escalation is visible in the pack and not yet a gate.
+Under a no-question mode step 3 has nobody to reach. The decision is opened as a
+question rather than assumed, the phase's row reads `escalated`, and **the
+phase does not write**: the stage's grilling work order stays `PENDING`, which
+blocks DONE and leaves the stage resumable.
+
+That is the gate, because `08_Open-questions.md` is not one — a spec pack
+carries open questions as a matter of course, so nothing there stops a run.
+Writing the phase anyway would encode a design decision nobody took, which is
+the outcome the whole loop exists to prevent, reached by the one path where
+nobody can be asked.
 
 ## What the phase records
 
@@ -130,8 +140,9 @@ outcome — but an omitted session and a legitimate skip are the same absence, s
 the skip is written down and the absence of a row is the finding.
 
 **A work-order row per settled decision**, under `## Work Orders Summary`, with
-`Task title` = `grilling: <the decision>` and the shared schema's columns. The
-row carries who adjudicated it:
+`Task title` = `grilling(<adjudication>): <the decision>` and the shared
+schema's columns. `Agent instance` is the agent that made the recommendation,
+taken or not. The adjudication says who settled it:
 
 | Adjudication | Meaning for a later reviewer                                    |
 | ------------ | --------------------------------------------------------------- |

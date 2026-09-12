@@ -120,17 +120,20 @@ Every major artifact in the stage should include this table schema:
   the same instance appearing in an authoring step and in a review step over the same artifact is
   a reviewer-independence violation.
 - **A grilling session adds a row for every decision it settled**, with
-  `Task title` = `grilling: <the decision>` and `Agent instance` = the agent whose
-  recommendation was adopted. That row is what a later reviewer reads its
-  `Recommended and unadjudicated` answer off: a reset instance holds no memory of the
-  session, so without the row the field cannot be answered honestly and the review has
-  nothing to check against.
-- **The row names who adjudicated the decision**, `user` or `agents`. The two outcomes
-  point opposite ways — a user-settled decision leaves the griller free to review the
-  artifact, an agent-settled one makes the artifact wrong until somebody decides — so a
-  row that records only that a session happened tells the reviewer nothing it can act on.
-  Where the schema has no column for it, `Task title` carries it as
-  `grilling(<adjudication>): <the decision>`.
+  `Task title` = `grilling(<adjudication>): <the decision>` and `Agent instance` = the
+  agent that **made the recommendation**, whether or not it was taken. That row is what a
+  later reviewer reads its `Recommended and unadjudicated` answer off: a reset instance
+  holds no memory of the session, so without the row the field cannot be answered
+  honestly and the review has nothing to check against. The field asks what this reviewer
+  recommended, so the recommender is what the row has to name — "the agent whose
+  recommendation was adopted" is undefined for the ordinary case where the user chose
+  something else.
+- **`<adjudication>` is `user` or `agents`**, and it is in the title because the schema has
+  no column for it. The two outcomes point opposite ways — a user-settled decision leaves
+  the griller free to review the artifact, an agent-settled one makes the artifact wrong
+  until somebody decides — so a row recording only that a session happened tells the
+  reviewer nothing it can act on. One format, always parenthesized, so a gate selecting
+  `grilling(` finds every row.
 - `PENDING` records a gate that could not be run — the only honest status for the exhausted-budget
   branch below, which mandates it. It is never a substitute for `PASS`: DONE stays blocked while
   any row is `PENDING`, and the stage stays resumable. A skill that allows only `PASS`/`REVISE`

@@ -74,7 +74,14 @@ describe("a griller's recommendations and reviewer independence", () => {
       // a reset instance can only guess at.
       const content = await read(tree);
       expectPhrase(content, "**A grilling session adds a row for every decision it settled**");
-      expectPhrase(content, "`Task title` = `grilling: <the decision>`");
+      expectPhrase(content, "`Task title` = `grilling(<adjudication>): <the decision>`");
+      // The field asks what THIS reviewer recommended, so the row names the
+      // recommender. "Whose recommendation was adopted" is undefined for the
+      // ordinary case where the user chose something else.
+      expectPhrase(
+        content,
+        "the agent that **made the recommendation**, whether or not it was taken",
+      );
     });
 
     it(`${tree}: the row says who adjudicated, not only that a session ran`, async () => {
@@ -83,10 +90,14 @@ describe("a griller's recommendations and reviewer independence", () => {
       // artifact wrong until somebody decides. One marker for both makes them
       // indistinguishable in the row the reviewer is told to rely on.
       const content = await read(tree);
-      expectPhrase(content, "**The row names who adjudicated the decision**, `user` or `agents`");
+      expectPhrase(content, "**`<adjudication>` is `user` or `agents`**");
       expectPhrase(content, "tells the reviewer nothing it can act on");
-      // A schema without a column for it still has to carry the value.
-      expectPhrase(content, "`grilling(<adjudication>): <the decision>`");
+      // One format, so a gate selecting the prefix finds every row rather than
+      // skipping the ones that carry the adjudication.
+      expectPhrase(
+        content,
+        "always parenthesized, so a gate selecting `grilling(` finds every row",
+      );
     });
 
     it(`${tree}: the work order carries the series, not only the response`, async () => {

@@ -83,6 +83,23 @@ npx qfai validate --profile sdd --fail-on error --format github
 - `.qfai/report/run-<timestamp>/` (run id: <run-id>, status: pass | fail)
 - `.qfai/report/specs-coverage/<spec-id>.md`
 
+## Pre-draft Grilling
+
+> One row per grilling-covered phase this run entered — Phase 0, 1, 2, 2c and 3,
+> and only those. Phase 2b and Phase 4 produce no design decision and run no
+> session.
+> `Session` is `run`, `skipped` or `escalated`. A `skipped` row names the
+> authoritative artifact that answered the phase's decisions, because an omitted
+> session and an empty frontier are the same absence otherwise.
+> An `escalated` row needs a `PENDING` work order below: an escalation nobody
+> answered is a design decision nobody took, and `08_Open-questions.md` does not
+> block a spec stage.
+
+| Phase | Session | Frontier                      | Evidence             |
+| ----- | ------- | ----------------------------- | -------------------- |
+| 0     | run     | <n settled, n escalated>      | #work-orders-summary |
+| 1     | skipped | empty: answered by <artifact> | -                    |
+
 ## Work Orders Summary
 
 > The shared schema from

@@ -85,10 +85,16 @@ Phase 0 is a mandatory output of this skill, so its own artifacts belong on this
 - Evidence file exists.
 - Work Orders Summary exists.
 - Reviewer result exists.
-- `## Pre-draft Grilling` carries a row for every phase this run entered, each `run` or `skipped`,
-  and a `skipped` row names the authoritative artifact that answered the phase's decisions. A
-  missing row is the finding: an omitted session and an empty frontier are the same absence, and
-  only the written skip tells them apart (`references/sdd-pre-draft-grilling.md`).
-- Every `grilling:` row in `## Work Orders Summary` names who adjudicated the decision, `user` or
-  `agents`. A reviewer reads its `Recommended and unadjudicated` answer off these rows and holds no
-  memory of the session.
+- `## Pre-draft Grilling` carries a row for every **grilling-covered** phase this run entered —
+  Phase 0, 1, 2, 2c and 3, and only those. Phase 2b and Phase 4 produce no design decision and run
+  no session, so requiring a row for them would either reject valid evidence or force a row claiming
+  a session that was never owed. Each row reads `run`, `skipped` or `escalated`; a `skipped` row
+  names the authoritative artifact that answered the phase's decisions. A missing row is the
+  finding: an omitted session and an empty frontier are the same absence, and only the written skip
+  tells them apart (`references/sdd-pre-draft-grilling.md`).
+- No row reads `escalated` unless the stage also carries a `PENDING` work order for it. An
+  escalation nobody answered is a design decision nobody took, and `08_Open-questions.md` does not
+  block a spec stage.
+- Every `grilling(...)` row in `## Work Orders Summary` names who adjudicated the decision, `user`
+  or `agents`. A reviewer reads its `Recommended and unadjudicated` answer off these rows and holds
+  no memory of the session.

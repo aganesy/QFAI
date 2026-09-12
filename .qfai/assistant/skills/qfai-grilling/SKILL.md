@@ -236,15 +236,31 @@ session, to whoever is answering it.
 
 Who that is depends on the mode. In a session with a user, it is the user, and
 the agent they are talking to is the one that asks. In a session between agents
-there is no user to reach, so the griller puts the round to the author agent and
-the orchestrator holds both. That is a different answerer, not a delegated
-question: nothing hands the asking to a third agent, and the orchestrator still
-answers nothing itself.
+there is no user to reach, so the griller puts the round to the authors and the
+orchestrator holds both. That is a different answerer, not a delegated question:
+nothing hands the asking to a third agent, and the orchestrator still answers
+nothing itself.
+
+A round between agents may have several authors, because one frontier can hold
+decisions belonging to different drafting roles.
+
+- The round goes to **every author whose decisions it contains**, each seeing
+  the whole round. A decision reads differently beside the ones next to it, and
+  an author shown only its own share cannot say so.
+- **Every answer is collected before the frontier is recomputed.** Recomputing
+  on the first reply settles the rest against a tree that moved under them.
+- **Two authors answering one question differently is itself a decision**, and
+  it joins the frontier rather than being averaged or decided by the griller. If
+  the budget ends with it open, it escalates like any other.
 
 ### Orchestrator Protocol (MUST)
 
-- The orchestrator computes the frontier, puts each round, and reads the
-  answers. It does not decide a frontier question on the user's behalf.
+- The orchestrator computes the frontier and reads the answers. It does not
+  decide a frontier question on anyone's behalf.
+- **Who puts the round depends on the mode, and exactly one role does.** With a
+  user, the orchestrator puts it. Between agents, the griller puts it and the
+  orchestrator does not — a session where both do is one where an author is
+  asked twice and the two answers have no tie-break.
 - It MUST NOT record an answer the user did not give, and MUST NOT self-approve
   the session's end condition.
 
