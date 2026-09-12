@@ -217,7 +217,8 @@ against its predecessor's series would exhaust it a round early.
 orchestrator that replaced the reviewer after every round 1 would reset the budget for ever and the
 escalation could never arrive. At most **two series per artifact per role**: ordinal 2 is the last
 one that opens, and a further conflict escalates to the user with the conflict named instead of
-opening a third. This is the cap `review-convergence.md` puts on the post-escalation verification
+opening a third. This is the cap `.qfai/assistant/constitution/review-convergence.md` puts on the
+post-escalation verification
 review, applied to the other way a gate can be made unbounded.
 
 - Reviewers must verify Drift Protocol enforcement.
