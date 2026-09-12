@@ -59,9 +59,15 @@ function withoutReviewerVerdicts(text: string): string {
   const lines = text.split("\n");
   const kept: string[] = [];
   for (let index = 0; index < lines.length; index += 1) {
+    // A table row `| <label> | <value> |` is the same field as `<label>: <value>`.
+    const line = lines[index] ?? "";
+    const tableRow = /^\s*\|([^|]*)\|([^|]*)\|\s*$/.exec(line);
+    const asField = tableRow
+      ? `${(tableRow[1] ?? "").trim()}: ${(tableRow[2] ?? "").trim()}`
+      : line;
     const verdict =
       /^\s*(?:- )?(?:\*\*)?(?:Round[ \t]+\d+:[ \t]*)?reviewer verdict(?:[ \t]*\(attempt[ \t]+\d+\))?(?:\*\*)?[ \t]*:[ \t]*(.*)$/i.exec(
-        lines[index] ?? "",
+        asField,
       );
     if (verdict === null) {
       kept.push(lines[index] ?? "");
@@ -1634,6 +1640,110 @@ describe("QFAI-TDDLIST-008", () => {
 - Round 2: GREEN command: npm test
 - Round 2: GREEN result: 1 passed
 - Refactor verify command: npm test`,
+        )
+        .replaceAll(
+          "reviewed revision: abc1230000000000000000000000000000000000",
+          `reviewed revision: ${secondRoundRevision}`,
+        );
+      const codes = await runOn(
+        root,
+        ledger([{ status: "done", evidence: IMPLEMENT_POINTER }]),
+        { ".qfai/evidence/implement-spec-0001.md": evidence },
+        { revision: secondRoundRevision },
+      );
+      expect(codes).not.toContain("QFAI-TDDLIST-008");
+    });
+  });
+
+  it("reads a qualified REVISE as the verdict that opens the next round", async () => {
+    // The `(attempt M)` qualifier is part of the field name a multi-attempt round
+    // writes. The round check read only the bare name, so it found no verdict
+    // here and reported round 2 as opened by nothing.
+    await withProject(async (root) => {
+      const secondRoundRevision = "bcd1230000000000000000000000000000000000";
+      const evidence = completeEntry("Unit")
+        .replace(
+          "- Refactor verify command: npm test",
+          [
+            "- Round 1: reviewer verdict (attempt 2): REVISE — needs new production behaviour",
+            "- Round 2: Revision: " + secondRoundRevision,
+            "- Round 2: RED revision: def7890000000000000000000000000000000000",
+            "- Round 2: RED command: npm test",
+            "- Round 2: RED result: 1 failed",
+            "- Round 2: GREEN command: npm test",
+            "- Round 2: GREEN result: 1 passed",
+            "- Refactor verify command: npm test",
+          ].join("\n"),
+        )
+        .replaceAll(
+          "reviewed revision: abc1230000000000000000000000000000000000",
+          `reviewed revision: ${secondRoundRevision}`,
+        );
+      const codes = await runOn(
+        root,
+        ledger([{ status: "done", evidence: IMPLEMENT_POINTER }]),
+        { ".qfai/evidence/implement-spec-0001.md": evidence },
+        { revision: secondRoundRevision },
+      );
+      expect(codes).not.toContain("QFAI-TDDLIST-008");
+    });
+  });
+
+  it("reads a bold-colon REVISE as the verdict that opens the next round", async () => {
+    // The emphasis closes after the colon, so the raw value began with `**` and a
+    // check for `REVISE` at its start never matched.
+    await withProject(async (root) => {
+      const secondRoundRevision = "bcd1230000000000000000000000000000000000";
+      const evidence = completeEntry("Unit")
+        .replace(
+          "- Refactor verify command: npm test",
+          [
+            "- **Round 1: reviewer verdict:** REVISE — needs new production behaviour",
+            "- Round 2: Revision: " + secondRoundRevision,
+            "- Round 2: RED revision: def7890000000000000000000000000000000000",
+            "- Round 2: RED command: npm test",
+            "- Round 2: RED result: 1 failed",
+            "- Round 2: GREEN command: npm test",
+            "- Round 2: GREEN result: 1 passed",
+            "- Refactor verify command: npm test",
+          ].join("\n"),
+        )
+        .replaceAll(
+          "reviewed revision: abc1230000000000000000000000000000000000",
+          `reviewed revision: ${secondRoundRevision}`,
+        );
+      const codes = await runOn(
+        root,
+        ledger([{ status: "done", evidence: IMPLEMENT_POINTER }]),
+        { ".qfai/evidence/implement-spec-0001.md": evidence },
+        { revision: secondRoundRevision },
+      );
+      expect(codes).not.toContain("QFAI-TDDLIST-008");
+    });
+  });
+
+  it("drops a table verdict with an empty cell and its fence from the subject", async () => {
+    // An empty value cell leaves only its closing `|` in the capture. Read as a
+    // value, it kept the fence below in the hash the gate computes, while the
+    // reviewer following the contract dropped it.
+    await withProject(async (root) => {
+      const secondRoundRevision = "bcd1230000000000000000000000000000000000";
+      const evidence = completeEntry("Unit")
+        .replace(
+          "- Refactor verify command: npm test",
+          [
+            "| Round 1: reviewer verdict | |",
+            "```text",
+            "REVISE — needs new production behaviour",
+            "```",
+            "- Round 2: Revision: " + secondRoundRevision,
+            "- Round 2: RED revision: def7890000000000000000000000000000000000",
+            "- Round 2: RED command: npm test",
+            "- Round 2: RED result: 1 failed",
+            "- Round 2: GREEN command: npm test",
+            "- Round 2: GREEN result: 1 passed",
+            "- Refactor verify command: npm test",
+          ].join("\n"),
         )
         .replaceAll(
           "reviewed revision: abc1230000000000000000000000000000000000",

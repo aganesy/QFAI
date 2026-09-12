@@ -52,7 +52,8 @@ procedure, in four steps:
      inside the region — **including its `(attempt M)` form**, which a round
      with several review attempts records, and the bold-colon spelling whose
      emphasis closes after the colon — with the fenced value that follows an
-     empty one. **A value is empty once the field name's own markup is taken
+     empty one, **and the blank lines between that label and its fence**: they
+     separate the label from its value, and they go where the value goes. **A value is empty once the field name's own markup is taken
      off it**: read literally, `- **Round 1: reviewer verdict (attempt 1):**`
      ends in two asterisks, and a reader who counts those as an answer keeps the
      fence below: hashing a reviewer's own answer into what that reviewer

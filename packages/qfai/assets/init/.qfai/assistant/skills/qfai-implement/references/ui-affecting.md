@@ -263,10 +263,13 @@ reviewer returned. So item 9's entry carries both:
   there is no reviewer and no rendered evidence, so the hash is omitted and the revision alone
   carries it.
 
-Gate item 10 re-checks both against the current tree, alongside items 3, 5, 7 and 8: item 9's
-`Reviewed revision` must agree with the `Revision` items 5, 7 and 8 share, and the hash is
-recomputed over the same inputs. A mismatch means the surface moved under the verdict — the row
-re-runs the clauses and, if one still fires, takes a fresh parity review before `done`.
+Gate item 10 re-checks the revision against the current tree, alongside items 3, 5, 7 and 8: item
+9's `Reviewed revision` must agree with the `Revision` items 5, 7 and 8 share. **It does not yet
+recompute the hash, or require it**, and it does not read this verdict's review pack or seal
+either: the completion gate reads the `Spec` and `Code quality` roles only. A capture replaced
+after the parity review therefore moves nothing the gate reads. Record the hash anyway — the
+reviewer computes it, and it is what a recomputation will be checked against when the gate learns
+to.
 
 ### Rows completed before this field existed
 

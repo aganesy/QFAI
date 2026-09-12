@@ -1108,13 +1108,36 @@ interface EvidenceFieldOccurrence {
   value: string;
 }
 
+/**
+ * The `(attempt M)` qualifier a round with several review attempts writes
+ * after `reviewer verdict` (`round-evidence.md`). It is part of the field
+ * name, so a reader that stopped at the bare name read no verdict at all from
+ * a valid multi-attempt round and reported the round as never closed.
+ */
+const ATTEMPT_QUALIFIER = "(?:[ \\t]*\\(attempt[ \\t]+\\d+\\))?";
+const ATTEMPT_QUALIFIER_TAIL = /\s*\(attempt\s+\d+\)\s*$/i;
+
+/**
+ * A bullet field's inline value with the field name's own markup taken off.
+ *
+ * The bold-colon spelling — `- **Round 1: reviewer verdict:** REVISE` — closes
+ * its emphasis after the colon, so the raw capture begins with `**` and a
+ * check for `REVISE` at the start of the value never matched it.
+ */
+function inlineFieldValue(captured: string | undefined): string {
+  return (captured ?? "")
+    .replace(/^\*+/, "")
+    .trim()
+    .replace(/^`([^`]*)`$/, "$1");
+}
+
 function evidenceFieldOccurrences(section: string, field: string): EvidenceFieldOccurrence[] {
   const normalized = section.replace(/\r\n/g, "\n");
   const originalLines = normalized.split("\n");
   const visibleLines = maskEvidenceRegions(normalized).split("\n");
   const escaped = field.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   const bulletPattern = new RegExp(
-    `^\\s*(?:[-*][ \\t]+)?(?:\\*\\*)?(?:Round[ \\t]+(\\d+):[ \\t]*)?${escaped}(?:\\*\\*)?[ \\t]*:[ \\t]*(.*)$`,
+    `^\\s*(?:[-*][ \\t]+)?(?:\\*\\*)?(?:Round[ \\t]+(\\d+):[ \\t]*)?${escaped}${ATTEMPT_QUALIFIER}(?:\\*\\*)?[ \\t]*:[ \\t]*(.*)$`,
     "i",
   );
   const occurrences: EvidenceFieldOccurrence[] = [];
@@ -1125,7 +1148,7 @@ function evidenceFieldOccurrences(section: string, field: string): EvidenceField
       for (let cellIndex = 0; cellIndex < cells.length - 1; cellIndex += 1) {
         const rawLabel = (cells[cellIndex] ?? "").replace(/^\*\*|\*\*$/g, "").trim();
         const roundMatch = /^Round\s+(\d+):\s*(.*)$/i.exec(rawLabel);
-        const label = (roundMatch?.[2] ?? rawLabel).trim();
+        const label = (roundMatch?.[2] ?? rawLabel).replace(ATTEMPT_QUALIFIER_TAIL, "").trim();
         if (label.toLowerCase() !== field.toLowerCase()) continue;
         const value = (cells[cellIndex + 1] ?? "").trim().replace(/^`([^`]*)`$/, "$1");
         const resolved =
@@ -1142,7 +1165,7 @@ function evidenceFieldOccurrences(section: string, field: string): EvidenceField
 
     const match = bulletPattern.exec(visibleLine);
     if (!match) continue;
-    const value = (match[2] ?? "").trim().replace(/^`([^`]*)`$/, "$1");
+    const value = inlineFieldValue(match[2]);
     const resolved = value.length > 0 ? value : fencedEvidenceValue(originalLines, lineIndex + 1);
     if (resolved !== null) {
       occurrences.push({ round: match[1] ? Number(match[1]) : null, value: resolved });
@@ -1415,7 +1438,12 @@ const REVIEWER_APPENDED_ROUND_FIELD =
  * reviewer who wrote it hashes, which is the one line that cannot be there.
  */
 function inlineVerdictValue(captured: string | undefined): string {
-  return (captured ?? "").replace(/\*+/g, "").trim();
+  // A table row's value cell ends in its closing `|`, which is all an empty
+  // cell leaves in the capture: read as a value, it kept the fence below it.
+  return (captured ?? "")
+    .replace(/\|\s*$/, "")
+    .replace(/\*+/g, "")
+    .trim();
 }
 
 /**
