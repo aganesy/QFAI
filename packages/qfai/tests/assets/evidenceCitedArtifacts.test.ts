@@ -56,7 +56,8 @@ const CITATION_CHARACTER = /[A-Za-z0-9._/*?+-]/;
 const GROUP_CLOSERS: Readonly<Record<string, string>> = { "(": ")", "{": "}", "[": "]" };
 
 /**
- * Whether the root found at `from` opens a citation, or ends one.
+ * The emphasis run that opens the citation at `from`, or `null` where there is
+ * no citation there at all.
  *
  * The root is searched for anywhere on the line, so a path that merely holds it
  * — `/tmp/run-42/.qfai/report/validate.json`, a name belonging to a machine or
@@ -64,11 +65,13 @@ const GROUP_CLOSERS: Readonly<Record<string, string>> = { "(": ")", "{": "}", "[
  * this repository's own tracked file. The record then read as clone-readable
  * provenance for a file nobody had.
  *
- * A citation opens where the text before it is not path text. The one exception
- * is the explicit `./` prefix, which writes a repository-relative path rather
- * than a longer one.
+ * A citation opens where the text before it is not path text. Two exceptions:
+ * the explicit `./` prefix, which writes a repository-relative path rather than
+ * a longer one, and the Markdown emphasis a record wraps a name in. The run that
+ * opened the citation is returned, because it is also what closes it — a
+ * trailing `**` is emphasis rather than a wildcard.
  */
-function opensACitation(line: string, from: number): boolean {
+function citationOpener(line: string, from: number): string | null {
   let start = from;
   if (start >= 2 && line.slice(start - 2, start) === "./") start -= 2;
   // Markdown emphasis around a path is not part of it. A run of `*` or `_` is
@@ -77,10 +80,13 @@ function opensACitation(line: string, from: number): boolean {
   // which is why the run is read rather than the one character before the root.
   let opener = start;
   while (opener > 0 && EMPHASIS_CHARACTER.test(line[opener - 1] ?? "")) opener -= 1;
-  if (opener < start && (opener === 0 || !CITATION_CHARACTER.test(line[opener - 1] ?? ""))) {
-    start = opener;
-  }
-  return start === 0 || !CITATION_CHARACTER.test(line[start - 1] ?? "");
+  const emphasis =
+    opener < start && (opener === 0 || !CITATION_CHARACTER.test(line[opener - 1] ?? ""))
+      ? line.slice(opener, start)
+      : "";
+  const before = emphasis === "" ? start : opener;
+  if (before !== 0 && CITATION_CHARACTER.test(line[before - 1] ?? "")) return null;
+  return emphasis;
 }
 
 /** The two characters Markdown wraps emphasis in. */
@@ -100,11 +106,15 @@ function citationsIn(line: string): string[] {
   for (const start of [...line.matchAll(CITED_GENERATED_ROOT)]) {
     const from = start.index;
     if (from === undefined) continue;
-    if (!opensACitation(line, from)) continue;
+    const opener = citationOpener(line, from);
+    if (opener === null) continue;
     let index = from + start[0].length;
     const closers: string[] = [];
     let usable = true;
     while (index < line.length) {
+      // The run that opened the citation closes it: a path written in emphasis
+      // ends where the emphasis does, and a trailing `**` is not a wildcard.
+      if (opener !== "" && line.startsWith(opener, index)) break;
       const character = line[index] ?? "";
       const closer = GROUP_CLOSERS[character];
       if (closer !== undefined) {
@@ -766,6 +776,21 @@ describe("what the scan counts as a citation", () => {
     expect(matches("- `./.qfai/report/validate.json`")).toEqual([".qfai/report/validate.json"]);
   });
 
+  it("reads a path a record wrote in emphasis", () => {
+    // `*` and `_` are a wildcard and an ordinary name character inside a path,
+    // and emphasis delimiters around one. Read as path text, a record that
+    // stressed a name was a record whose name nothing measured.
+    for (const line of [
+      "- **.qfai/report/missing.json**",
+      "- _.qfai/report/missing.json_",
+      "- __.qfai/report/missing.json__",
+    ]) {
+      expect(matches(line), line).toEqual([".qfai/report/missing.json"]);
+    }
+    // A run that is path text, not emphasis, still ends the citation before it.
+    expect(matches("- `x_.qfai/report/missing.json`")).toEqual([]);
+  });
+
   it("takes a brace list whole", () => {
     // Cut at the brace, the token left is the pack directory, and a tracked
     // pack holding anything at all then passes a citation whose every named
@@ -876,6 +901,24 @@ describe("a glob is a claim about a set", () => {
         ".qfai/discussion/discussion-1/a/b/c.md",
       ),
     ).toBe(true);
+  });
+
+  it("reads a bracket expression as the set it names", () => {
+    // A class with no wildcard beside it went to exact-path lookup, so a
+    // citation naming a tracked file by one reported that file as missing.
+    expect(namesASet(".qfai/report/validate.spec-00[0-9][0-9].json")).toBe(true);
+    expect(namesASet(".qfai/report/validate.json")).toBe(false);
+    expect(globToRegExp(".qfai/report/0[1]_Context.md").test(".qfai/report/01_Context.md")).toBe(
+      true,
+    );
+    // The named classes the matcher accepts are written out, so a class the
+    // pattern spells is the set it spells rather than the letters of its name.
+    expect(
+      globToRegExp(".qfai/report/TC-[[:digit:]][[:digit:]].json").test(".qfai/report/TC-04.json"),
+    ).toBe(true);
+    expect(
+      globToRegExp(".qfai/report/TC-[[:digit:]][[:digit:]].json").test(".qfai/report/TC-dg.json"),
+    ).toBe(false);
   });
 
   it("does not let a wildcard stand in for a name that has to be written", () => {

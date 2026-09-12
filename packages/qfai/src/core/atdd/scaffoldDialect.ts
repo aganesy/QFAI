@@ -518,7 +518,7 @@ function compileClassBody(body: string): string {
       const members = end === -1 ? undefined : POSIX_CLASS_MEMBERS[body.slice(index + 2, end)];
       if (members !== undefined) {
         source += members;
-        index = (end as number) + 2;
+        index = end + 2;
         continue;
       }
     }
