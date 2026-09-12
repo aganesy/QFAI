@@ -8,12 +8,26 @@ each one, and when asking stops.
 
 ## Scope
 
-| Target                            | Applies                                          |
-| --------------------------------- | ------------------------------------------------ |
-| A design not yet fixed            | Every round, until the end condition below holds |
-| A decision the user owns          | Always asked, never assumed                      |
-| A fact the environment can settle | Never asked; looked up                           |
-| Work already specified            | Outside this rule — the spec is the authority    |
+This rule governs a **grilling session**: a mode entered deliberately, to interrogate a design
+before it is fixed. It is not a posture an agent adopts because a question came up.
+
+| Target                            | Applies                                                                         |
+| --------------------------------- | ------------------------------------------------------------------------------- |
+| A session, once entered           | Every round, until §6 ends it                                                   |
+| A decision the user owns          | Asked, never assumed — except under a no-question mode                          |
+| A fact the environment can settle | Never asked; looked up                                                          |
+| A question outside a session      | Outside this rule — an ordinary clarification, under whatever budget governs it |
+| Work already specified            | Outside this rule — the spec is the authority                                   |
+
+The fourth row is what keeps the third from being a way around a question budget. An
+ambiguity met while implementing is a clarification, and it is capped like any other; a
+session is a declared mode with a frontier and an end condition, and its questions are
+the design's own open decisions.
+
+A **no-question mode** — an invocation told not to ask, however the host spells it — is
+not entered and not continued. Such a run proceeds on labelled assumptions, or stops and
+names what it cannot assume, exactly as it would without this rule. An agent does not get
+to ask by declaring a session.
 
 ## 1. The design tree
 
@@ -81,8 +95,13 @@ running exploration wait for it; the rest of the frontier is asked meanwhile.
 
 A session **completes** on two things, both required:
 
-1. The frontier is empty.
+1. No node is open — the frontier is empty **and** no fact lookup is still running.
 2. The user confirms the understanding is shared.
+
+Condition 1 is about the whole tree, not the frontier alone. When every remaining decision
+waits on a lookup the frontier is empty by §2 while the tree still holds open nodes, and
+completing there would close the session before the lookup could raise the questions it
+was dispatched to answer.
 
 There is no question cap. A design is not finished being interrogated because a
 number was reached.
@@ -106,8 +125,16 @@ not assumed. Nothing above outranks that, and an agent that kept asking because
 condition 1 was unmet has read this rule as a licence to ignore the user.
 
 A user who closes the questions instead — **proceed**, **done**, or an answer to
-that effect — ends the asking. The agent continues, and every decision still
-open is recorded as an assumption and labelled as one.
+that effect — ends the asking. The agent continues, and each decision still open
+is recorded as an assumption and labelled as one.
+
+**Two kinds of node are never assumed, whatever the user answered.** A decision some
+document requires the user to make and record, and an input declared undefaultable, are
+outside the assumption path: they are still asked, and where a no-question mode forbids
+asking, the run stops and names them instead. Closing the questions waives the agent's
+own uncertainty — never an authorization the user has not given. Assuming one of those
+would record a choice the user never made, and a release, a deletion or a merge taken on
+such an assumption is exactly the damage the requirement exists to prevent.
 
 ## 7. When talking cannot settle it
 

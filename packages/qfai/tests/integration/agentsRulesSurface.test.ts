@@ -191,6 +191,16 @@ describe("cross-AI rules surface (.agents/rules/ master)", () => {
       const text = await readFile(path.join(ROOT, MASTER), "utf-8");
       expect(text).toMatch(/both required/i);
       expect(text).toMatch(/confirms the understanding is shared/);
+      // And the first half is the whole tree, not the frontier. With every
+      // remaining decision waiting on a lookup the frontier is empty while the
+      // tree still holds open nodes, so "the frontier is empty" alone would
+      // complete the session before the lookup could raise its questions.
+      // Asserted on the numbered condition, not only on the paragraph under it:
+      // narrowing the condition and leaving the paragraph is a document that
+      // contradicts itself and an agent that reads the condition.
+      expect(text).toMatch(
+        /1\. No node is open — the frontier is empty \*\*and\*\* no fact lookup/,
+      );
     });
 
     it("lets the user end the session whatever the frontier holds", async () => {
@@ -217,9 +227,49 @@ describe("cross-AI rules surface (.agents/rules/ master)", () => {
       );
     });
 
+    it("never lets a closed question become an unmade authorization", async () => {
+      // The dangerous reading. "Every decision still open becomes a labelled
+      // assumption" would put a decision some document requires the user to
+      // record, and an input declared undefaultable, on the assumption path —
+      // so a release, a deletion or a merge could ride a choice nobody made.
+      const text = await readFile(path.join(ROOT, MASTER), "utf-8");
+      expect(text).toMatch(/never assumed, whatever the user answered/);
+      expect(text).toMatch(/an authorization the user has not given/);
+    });
+
+    it("is a mode, not a posture, so it cannot widen a question budget", async () => {
+      // Without this the rule reads as "no cap whenever a design is unfixed",
+      // which any invocation meeting an ambiguity could claim.
+      const text = await readFile(path.join(ROOT, MASTER), "utf-8");
+      expect(text).toMatch(/a mode entered deliberately/);
+      expect(text).toMatch(/not a posture an agent adopts/);
+      expect(text).toMatch(/an ordinary clarification, under whatever budget governs it/);
+    });
+
+    it("is not entered under a no-question mode", async () => {
+      // An invocation told not to ask must not be made to ask by this rule.
+      const text = await readFile(path.join(ROOT, MASTER), "utf-8");
+      expect(text).toMatch(/no-question mode/);
+      expect(text).toMatch(/not entered and not continued/);
+    });
+
     it.each(["AGENTS.md", "CLAUDE.md"])("%s cites the rule master", async (rel) => {
       const text = await readFile(path.join(ROOT, rel), "utf-8");
       expect(text).toContain("grilling.md");
+    });
+
+    // `.github/copilot-instructions.md` is deliberately absent from the pair above.
+    // `qfai init` generates it from the shipped rule list and `--force` rewrites
+    // it, so a citation added by hand here is discarded on the next run. The
+    // reference is real work owed to Copilot; it belongs with the shipped list it
+    // is generated from, which is why this asserts the generator rather than the
+    // output.
+    it("leaves the generated Copilot instructions to the shipped rule list", async () => {
+      const init = await readFile(
+        path.join(ROOT, "packages/qfai/src/cli/commands/init.ts"),
+        "utf-8",
+      );
+      expect(init).toContain("copilot-instructions.md");
     });
   });
 
