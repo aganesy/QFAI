@@ -217,7 +217,10 @@ exists to make detectable.
 **A row gains a disposition when its decision stops being open.** The field reads
 the artifact as it now stands, and the row is the only record of what was
 settled, so the two part company the moment a decision is adjudicated or
-withdrawn. The session that adjudicates or withdraws it amends the row in place —
+withdrawn. Whoever closes it amends the row in place, and usually no grilling session is
+running when that happens: the reviewer that reopened the decision, the user
+answering it directly, or the agent that removed it as the requested fix. The
+obligation follows the act, not the session —
 `Task title` becomes `grilling: <the decision> (settled by the user)` or
 `(withdrawn from the artifact)` — so the next reviewer reads the disposition
 rather than inferring it. Without that, a live row and a closed one look
@@ -239,7 +242,16 @@ carry a `Review series` value — the reviewed artifact, the role, and a replace
 starts at 1 and rises each time the review is handed to a non-participating reviewer — and the
 budget is counted per series. A reset instance serving round 2 keeps the series it was issued; a
 replacement reviewer is issued the next ordinal and starts at round 1, because it is continuing
-nobody's review. Counting per instance would restart the budget every round, so it could never be
+nobody's review.
+
+**The two are told apart by a record, not by the instance.** Both arrive as a fresh `Agent instance`
+on the same artifact, role and evidence, so nothing observable at dispatch separates them. What
+separates them is why the handoff happened: a replacement is issued **only** where the previous
+response in the series declared a conflict — a non-`none` `Authored/edited under review` — or where
+the orchestrator records an equivalent disqualification in the Work Orders Summary. Absent that
+record the dispatch is a reset and keeps the series, whatever instance serves it. So an orchestrator
+cannot mint budget by calling a reset a replacement: the ordinal only moves behind a declared
+conflict somebody wrote down. Counting per instance would restart the budget every round, so it could never be
 exhausted and the escalation exit that opens when it is would never open; counting a replacement
 against its predecessor's series would exhaust it a round early.
 
@@ -250,13 +262,22 @@ one that opens, and a further conflict escalates to the user with the conflict n
 opening a third. This is the cap `.qfai/assistant/constitution/review-convergence.md` puts on the
 post-escalation verification review, applied to the other way a gate can be made unbounded.
 
-**A special round is not a new series.** The one permitted verification review and the one-shot
-corrective review are narrowly scoped and terminal, so a conflict discovered inside either is
-handed to a non-participating reviewer **within the same series**, which finishes the round it was
-opened for. Opening a new series there would do one of two wrong things: reopen a general two-round
-budget the escalation has already spent, or leave the special review unfinished because its
-replacement is serving a round 1 that has no remit. The ordinal rises on a handoff that opens a
-general series, and on nothing else.
+**A special round is not a new series of the artifact it follows.** The one permitted verification
+review is scoped to a named fix on the same artifact, so a conflict discovered inside it is handed
+to a non-participating reviewer **within the same series**, which finishes the round it was opened
+for. Opening a new series there would do one of two wrong things: reopen a general two-round budget
+the escalation has already spent, or leave the verification unfinished because its replacement is
+serving a round 1 that has no remit.
+
+The corrective review is the other case and takes the opposite answer, because
+`.qfai/assistant/constitution/review-convergence.md` makes it a **separate artifact** with a remit of
+its own. Its series names that artifact, at ordinal 1, and is terminal: one round, no second, and no
+replacement ordinal after it. Sharing the originating artifact's series would have let a corrective
+review inherit a spent budget and would have made the two artifacts' rounds indistinguishable in the
+record.
+
+The ordinal rises on a handoff that opens a general series on the same artifact, and on nothing
+else.
 
 - Reviewers must verify Drift Protocol enforcement.
 - Reviewers must verify test-layer policy enforcement when relevant.
