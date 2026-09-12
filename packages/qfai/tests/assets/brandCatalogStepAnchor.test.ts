@@ -197,9 +197,10 @@ describe("brand catalog step anchor", () => {
   it("keeps the tie-break decidable from the inputs the selection actually has", async () => {
     // "highest visual-theme weight wins" named a number the catalog does not
     // publish for any archetype, and nothing in the authoring reference or the
-    // intake produces one — `src/core/skill/archetypeTieBreaker.ts` takes it
-    // from a caller that does not exist. Two agents on the same pack could
-    // therefore pick different archetypes and different tokens.
+    // intake produces one. Two agents on the same pack could therefore pick
+    // different archetypes and different tokens. The helper that consumed that
+    // number is gone; the tie-break the Selection Guide states is what an agent
+    // reads, and this row is what holds it.
     const catalog = await readFile(catalogPath, "utf-8");
     expect(catalog).not.toMatch(/visual-theme weight wins/);
     expect(catalog).toMatch(/contradict fewer entries of `audience\.do_not_look_like`/);

@@ -2580,8 +2580,20 @@ describe("qfai init", () => {
       const instrDir = path.join(root, ".github", "instructions");
       await mkdir(instrDir, { recursive: true });
       const fifo = path.join(instrDir, "code-review.instructions.md");
-      const made = spawnSync("mkfifo", [fifo]);
-      if (made.status !== 0) return; // no mkfifo on this platform — nothing to assert
+      // Verify the fixture, not the tool's exit status. Git Bash ships
+      // `mkfifo`, so on Windows it exits 0 and creates a FIFO inside the MSYS
+      // emulation layer — which this process, using Win32, cannot see at all
+      // (`lstat` gives ENOENT). Reading the exit status let the row run with
+      // no fixture: `init` found no collision, wrote the template, and the
+      // assertion compared a real file against `isFIFO()`.
+      spawnSync("mkfifo", [fifo]);
+      let planted = false;
+      try {
+        planted = (await lstat(fifo)).isFIFO();
+      } catch {
+        planted = false;
+      }
+      if (!planted) return; // no FIFO this process can see — nothing to assert
 
       await runInit({ dir: root, force: true, dryRun: false, yes: true });
 
