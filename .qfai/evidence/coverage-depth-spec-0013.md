@@ -47,7 +47,7 @@ else.** Eleven have no test at all: `US-0013-0001`, `-0002`, `-0004`, `-0005`, `
 `-0009`, `-0010`, and `TC-0013-0022`, `-0023`, `-0024`. Five more are discharged by substring
 assertions over the shipped `qfai-sdd/SKILL.md` that carry none of the obligation they are annotated
 to. Two are self-referential coverage placeholders whose annotated `describe` tests the diff
-detector. Those eighteen rows carry 162 of the matrix's 305 `❌` cells between them. Six further
+detector. Those eighteen rows carry 162 of the matrix's 307 `❌` cells between them. Six further
 wording rows carry another 44.
 
 The remaining twenty-five rows are scored on their merits and range widely. `US-0013-0014`,
@@ -312,8 +312,8 @@ in this pack's *report* scope because the validator scans the whole test tree; t
 | US-0013-0010 | ❌                     | ❌          | ❌         | ❌         | ❌              | ❌             | ❌                | ❌            | ❌              | ❌     |
 | US-0013-0011 | ✅                     | ✅          | ✅         | ⚠️         | ⚠️              | ❌             | ❌                | ⚠️            | ⚠️              | ⚠️     |
 | US-0013-0012 | ⚠️                     | ✅          | ✅         | ⚠️         | ❌              | ❌             | ❌                | ⚠️            | ✅              | ⚠️     |
-| US-0013-0013 | ✅                     | ✅          | ✅         | ⚠️         | ⚠️              | ❌             | ✅                | ⚠️            | ⚠️              | ❌     |
-| US-0013-0014 | ✅                     | ✅          | ✅         | ⚠️         | ⚠️              | ⚠️             | ❌                | ⚠️            | ✅              | ❌     |
+| US-0013-0013 | ✅                     | ✅          | ✅         | ⚠️         | ⚠️              | ❌             | ❌                | ⚠️            | ⚠️              | ❌     |
+| US-0013-0014 | ✅                     | ✅          | ✅         | ⚠️         | ⚠️              | ⚠️             | ❌                | ⚠️            | ❌              | ❌     |
 | TC-0013-0001 | ❌                     | ⚠️          | ❌         | ❌         | ❌              | ❌             | ❌                | ❌            | ❌              | ❌     |
 | TC-0013-0002 | ❌                     | ❌          | ❌         | ❌         | ❌              | ❌             | ❌                | ❌            | ❌              | ❌     |
 | TC-0013-0003 | ⚠️                     | ✅          | ⚠️         | ❌         | ❌              | ❌             | ❌                | ❌            | ⚠️              | ❌     |
@@ -350,7 +350,7 @@ in this pack's *report* scope because the validator scans the whole test tree; t
 | TC-0013-0034 | ✅                     | ✅          | ❌         | ❌         | ❌              | ❌             | ❌                | ⚠️            | ⚠️              | ⚠️     |
 | TC-0013-0035 | ✅                     | ✅          | ✅         | ✅         | ⚠️              | ⚠️             | ❌                | ⚠️            | ✅              | ⚠️     |
 
-Totals across the nine scored depth columns, 441 cells (49 rows × 9): **✅ 58 / ⚠️ 78 / ❌ 305**.
+Totals across the nine scored depth columns, 441 cells (49 rows × 9): **✅ 56 / ⚠️ 78 / ❌ 307**.
 
 `Status` is the row verdict and is not a scored cell, so it is excluded from that total and from the
 grand total at the end. Its distribution across the 49 rows, for reading only, is ✅ 0 / ⚠️ 17 /
@@ -432,7 +432,7 @@ when the reason is stated. No row reaches `✅`.
 
 ## Every ❌ cell, named
 
-The matrix carries **305** `❌` scored cells and the business rule table carries **28** — **333 in
+The matrix carries **307** `❌` scored cells and the business rule table carries **28** — **335 in
 all**. They are accounted for below in six groups. Every group names every coordinate it covers and
 states its count, and the six counts sum to 312:
 
@@ -445,7 +445,8 @@ states its count, and the six counts sum to 312:
 | 5. Remaining scored cells of the twenty-five tested rows           | 80     |
 | 6. Business rule scored columns                                   | 28      |
 | 7. Two stories answered from no e2e case                          | 18      |
-| **Total**                                                         | **333** |
+| 8. Two story cells credited to a case bound elsewhere             | 2       |
+| **Total**                                                         | **335** |
 
 ### Group 1 — eleven obligations with no test at all (99 cells)
 
@@ -782,6 +783,20 @@ zero-byte or wrong-typed value is fed to any SUT.
 **Group 5 count check.** 21 + 16 + 13 + 12 + 10 + 8 = **80**. No cell of any tested row is `❌` in
 `Equivalence partitions`, `Normal path` or `Oracle strength`, so those three columns contribute
 nothing to this group.
+
+### Group 8 — the 2 ❌ cells credited to a case bound elsewhere
+
+Coordinates: `US-0013-0013 × State transitions` and `US-0013-0014 × Oracle strength`.
+
+Both were `✅` on a case an annotation binds to another obligation, which step 1 of "What credits a
+cell" forbids. The only idempotency transition is in `surfaceTypePopulate.test.ts` under
+`TC-0013-0030`, and the story's own e2e cases invoke each operation once, so no transition is
+observed for the story at all. The accepted-structured oracle is under `TC-0013-0034`; the story's
+normal case supplies nine legacy strings and its error case only checks rejection, so neither
+discriminates the structured form the story names.
+
+A case bound elsewhere can still show the behaviour works. What it cannot do is answer this
+obligation, and a mark is the second claim.
 
 ### Group 7 — the 18 ❌ cells of the two stories answered from no e2e case
 
@@ -1318,7 +1333,7 @@ rather than by the spec.
 `QFAI-ATDD-133` requires the stage evidence to carry a `## Coverage Depth Matrix` section that links
 to this file and restates the counted totals beside it. Those totals are:
 
-**✅ 70 / ⚠️ 91 / ❌ 333**, with `n/a 7`, across all 501 scored cells — 441 matrix depth cells and
+**✅ 68 / ⚠️ 91 / ❌ 335**, with `n/a 7`, across all 501 scored cells — 441 matrix depth cells and
 60 business rule scored cells. `Status` is a row verdict, not a mark, and is excluded from all four
 counts.
 
