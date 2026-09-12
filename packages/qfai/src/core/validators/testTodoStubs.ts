@@ -847,13 +847,10 @@ export const STUB_SOURCE_FILE_PATTERN = `**/*.{${STUB_SOURCE_EXTENSIONS.join(","
  */
 export function stubSourceFilePattern(projectGlobs: readonly string[]): string {
   const extensions = new Set([
-    ...STUB_SOURCE_EXTENSIONS.map((ext) => `.${ext}`),
-    ...globExtensions(projectGlobs),
+    ...STUB_SOURCE_EXTENSIONS,
+    ...globExtensions(projectGlobs).map((ext) => ext.slice(1)),
   ]);
-  return `**/*.{${[...extensions]
-    .map((ext) => ext.slice(1))
-    .sort()
-    .join(",")}}`;
+  return `**/*.{${[...extensions].sort().join(",")}}`;
 }
 
 /**
@@ -1313,8 +1310,8 @@ function globExtensions(globs: readonly string[]): string[] {
         // The alternative's own last dotted segment: `{test.zig,spec.zig}`
         // names `.zig` twice, and rejecting an alternative for carrying a dot
         // dropped the extension a project had selected outright.
-        const extension = part.trim().toLowerCase().split(".").at(-1) ?? "";
-        if (/^[a-z0-9_+-]+$/.test(extension)) {
+        const extension = part.trim().split(".").at(-1) ?? "";
+        if (/^[A-Za-z0-9_+-]+$/.test(extension)) {
           found.push(`.${extension}`);
         }
       }
@@ -1322,9 +1319,14 @@ function globExtensions(globs: readonly string[]): string[] {
     }
     const literal = /\.([a-zA-Z0-9_+-]+)$/.exec(glob);
     if (literal) {
-      found.push(`.${(literal[1] ?? "").toLowerCase()}`);
+      found.push(`.${literal[1] ?? ""}`);
     }
   }
+  // **As the project spelled them.** A glob is matched against a path, and on a
+  // case-sensitive filesystem `*.ts` does not reach `pay.TS`. Lowercasing here
+  // built a canonical glob that missed the file the project had selected, and
+  // an `it.todo` carrier in it then cleared coverage with no finding. The
+  // comparison that follows collection lowercases its own copy instead.
   return found;
 }
 
@@ -1444,8 +1446,9 @@ export async function validateTestTodoStubs(
           // `unscannedExtensions`, and a suite in a language with no dialect
           // reads as a clean scan rather than an unscannable one. What the
           // intersection is for is the file an extension-**broad** glob sweeps
-          // in, which names nothing.
-          ...globExtensions(globs),
+          // in, which names nothing. Lowercased for the comparison only — the
+          // glob that collected the file keeps the project's own spelling.
+          ...globExtensions(globs).map((ext) => ext.toLowerCase()),
         ]);
   const wanted = (absolutePath: string): boolean => {
     if (sourceExtensions && !sourceExtensions.has(path.extname(absolutePath).toLowerCase())) {

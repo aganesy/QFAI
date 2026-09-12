@@ -19,6 +19,7 @@ import { SCAFFOLD_PLACEHOLDER_MARKER } from "../../src/core/atdd/scaffold.js";
 import { scaffoldPlaceholderScannedFilter } from "../../src/core/validators/scaffoldPlaceholder.js";
 import {
   STUB_SOURCE_FILE_PATTERN,
+  stubSourceFilePattern,
   validateTestTodoStubs,
 } from "../../src/core/validators/testTodoStubs.js";
 
@@ -516,6 +517,22 @@ describe("the ATDD gate's file selection", () => {
     });
 
     expect(issues.map((issue) => issue.code)).toContain("QFAI-TEST-002");
+  });
+
+  it("keeps the spelling a project glob gave its extension", async () => {
+    const root = await newTempDir();
+    const config = atddConfig(["packages/**/*.TS"]);
+    // The canonical globs are matched against paths. Lowercasing the extension
+    // built `*.ts`, which on a case-sensitive filesystem does not reach the
+    // file the project selected, and the stub in it cleared coverage silently.
+    await writeTestFile(root, "tests/integration/pay.TS", `it${TODO}("pays");\n`);
+
+    const issues = await validateTestTodoStubs(root, config, {
+      globs: atddAcceptanceTestGlobs(root, config, stubSourceFilePattern(["packages/**/*.TS"])),
+      fileFilter: atddAcceptanceLayerFilter(root, config),
+    });
+
+    expect(issues.map((issue) => issue.code)).toContain("QFAI-TEST-001");
   });
 
   it("stands aside for a marked skeleton the placeholder validator scans", async () => {
