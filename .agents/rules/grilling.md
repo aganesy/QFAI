@@ -60,8 +60,14 @@ made at the start.
 
 ## 2. The frontier
 
-The frontier is every decision whose prerequisites are all settled — every
-decision it depended on answered, and every fact it depended on read.
+The frontier is every node that can be settled now: every decision whose
+prerequisites are all settled — every decision it depended on answered, and
+every fact it depended on read — and every fact only the user holds whose own
+prerequisites are settled.
+
+A user-held fact is on the frontier because nothing else can put it there.
+Left out, the decision below it waits on a node no round ever asks, so §6's
+first condition can never be met and the session cannot complete.
 
 Those are the only questions that can honestly be asked yet. A question whose
 answer depends on an unanswered one cannot be answered — it can only be guessed
@@ -92,6 +98,11 @@ a line of its own.
 That shape is what makes a round answerable by number. A user who agrees with
 every recommendation says so once; a user who disagrees with the third names the
 third.
+
+**A question asking for a fact carries no recommended answer.** There is nothing
+to recommend: the agent does not hold the value, a guessed one is the corruption
+§1 warns about, and offering it invites the user to accept it. Name the fact, say
+what depends on it, and leave the answer to them.
 
 ## 5. Facts and decisions are not asked the same way
 
@@ -147,13 +158,18 @@ way: the closure covers the tree as it finally stands, not only the nodes that
 were open at the moment it arrived. Otherwise a decision that surfaced a second
 later could be neither asked, assumed nor reported.
 
-**Two kinds of node are never assumed, whatever the user answered.** A decision some
+**Two kinds of node are never assumed when the questions close.** A decision some
 document requires the user to make and record, and an input declared undefaultable, are
-outside the assumption path: they are still asked, and where a no-question mode forbids
-asking, the run stops and names them instead. Closing the questions waives the agent's
-own uncertainty — never an authorization the user has not given. Assuming one of those
-would record a choice the user never made, and a release, a deletion or a merge taken on
-such an assumption is exactly the damage the requirement exists to prevent.
+outside the assumption path that `proceed` and `done` open: they are still asked, and
+where a no-question mode forbids asking, the run stops and names them instead. Closing
+the questions waives the agent's own uncertainty — never an authorization the user has
+not given. Assuming one of those would record a choice the user never made, and a
+release, a deletion or a merge taken on such an assumption is exactly the damage the
+requirement exists to prevent.
+
+**A `stop` is not that closure, and nothing above qualifies it.** There the run ends
+where it stands: both kinds are reported as open, unasked and unassumed. That withholds
+the authorization as completely as asking would, and it is what the user asked for.
 
 ## 7. When talking cannot settle it
 

@@ -240,8 +240,8 @@ describe("cross-AI rules surface (.agents/rules/ master)", () => {
       // assumption" would put a decision some document requires the user to
       // record, and an input declared undefaultable, on the assumption path —
       // so a release, a deletion or a merge could ride a choice nobody made.
-      const text = await readFile(path.join(ROOT, MASTER), "utf-8");
-      expect(text).toMatch(/never assumed, whatever the user answered/);
+      const text = flatten(await readFile(path.join(ROOT, MASTER), "utf-8"));
+      expect(text).toMatch(/never assumed when the questions close/);
       expect(text).toMatch(/an authorization the user has not given/);
     });
 
@@ -305,6 +305,44 @@ describe("cross-AI rules surface (.agents/rules/ master)", () => {
       const text = flatten(await readFile(path.join(ROOT, MASTER), "utf-8"));
       expect(text).toMatch(
         /Asked, never assumed — except under a no-question mode, or after the user closes the questions/,
+      );
+    });
+
+    it("puts a user-held fact on the frontier so a round can reach it", async () => {
+      // The frontier decides what a round asks. Defined over decisions alone, a
+      // fact only the user holds is settleable by nobody: the decision below it
+      // waits on a node no round ever puts, and the first end condition can
+      // never be met.
+      const text = flatten(await readFile(path.join(ROOT, MASTER), "utf-8"));
+      expect(text).toMatch(/every fact only the user holds whose own prerequisites are settled/);
+      expect(text).toMatch(
+        /A user-held fact is on the frontier because nothing else can put it there/,
+      );
+      expect(text).toMatch(/the session cannot complete/);
+    });
+
+    it("asks for a fact without recommending a value", async () => {
+      // The question shape requires a recommended answer, and a factual value
+      // has none the agent honestly holds. Recommending one is the guess the
+      // fact clause forbids, and it arrives pre-accepted.
+      const text = flatten(await readFile(path.join(ROOT, MASTER), "utf-8"));
+      expect(text).toMatch(/A question asking for a fact carries no recommended answer/);
+      expect(text).toMatch(/a guessed one is the corruption/);
+      expect(text).toMatch(/leave the answer to them/);
+    });
+
+    it("keeps a stop authoritative over the mandatory-question carve-out", async () => {
+      // "Never assumed, whatever the user answered — still asked" reads as a
+      // licence to keep asking after a `stop`, which the rule elsewhere says
+      // ends the run where it stands. The carve-out belongs to the closure
+      // path, not to every answer.
+      const text = flatten(await readFile(path.join(ROOT, MASTER), "utf-8"));
+      expect(text).toMatch(/never assumed when the questions close/);
+      expect(text).toMatch(/the assumption path that `proceed` and `done` open/);
+      expect(text).toMatch(/A `stop` is not that closure, and nothing above qualifies it/);
+      expect(text).toMatch(/reported as open, unasked and unassumed/);
+      expect(text, "the carve-out must not read as applying to every answer").not.toMatch(
+        /never assumed, whatever the user answered/,
       );
     });
 
