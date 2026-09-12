@@ -72,16 +72,21 @@ below are over the selected cases, not over the file.
 The estimate is owed by the spec's obligations rather than by what this run
 authored, so "no test was authored" does not make it inapplicable.
 
-| Layer       | Raw count | Signal | Evidence                     | Notes                                                        |
-| ----------- | --------: | -----: | ---------------------------- | ------------------------------------------------------------ |
-| E2E         |         5 |      0 | `US-0014-0013` … `-0020`     | five active stories; one, `US-0014-0020`, has an annotated file under `tests/e2e/**`, whose cases are inside a `describe.skip` marked test-first. None has a case that runs |
-| API         |         0 |      0 | no `CON-API-*` declared      | nothing owed                                                  |
-| Integration |         9 |      4 | `TC-0014-0009` … `-0036`     | nine declared test cases; four carry a row that names a file that exists and runs |
+| Layer       | Raw count | Signal | Evidence                                           | Notes                                                        |
+| ----------- | --------: | -----: | -------------------------------------------------- | ------------------------------------------------------------ |
+| E2E         |         5 |     50 | `US-0014-0013`, `-0014`, `-0018`, `-0019`, `-0020` | five required stories, none deferred. `E2E_s` 50 is above its 5–25 band: this spec declares as many stories as integration cases, and its four remaining test cases are `unit`, which this skill does not own. Distribution accepted and recorded |
+| API         |         0 |      0 | no `CON-API-*` referenced                          | nothing owed                                                  |
+| Integration |         5 |     50 | `TC-0014-0009`, `-0018`, `-0019`, `-0035`, `-0036` | the five `TC-*` whose `Level` is `integration`. `-0028`, `-0029`, `-0033` and `-0034` are `unit` and are excluded from `#TC`; no `CON-DB-*` is referenced, so nothing is added to it |
 
-The signal column counts obligations with a case that runs, not rows at `done`:
-four of the nine test cases have one, and no user story does. That gap is the
-subject of the Coverage Depth Matrix rather than of this run, which authored no
-test and moved no `Status`.
+`total` is 10, so both non-zero shares are 50.
+
+`Signal` is a share of the obligation total, not a count of what is covered. How
+many of these obligations have a case that runs is the Coverage Depth Matrix's
+question, and its answer here is that no story does — `US-0014-0020` has an
+annotated file under `tests/e2e/**` whose cases sit inside a `describe.skip`
+marked test-first — and that four of the nine declared test cases carry a row
+naming a file that exists and runs. This run authored no test and moved no
+`Status`.
 
 ## Coverage obligations checklist
 
@@ -189,8 +194,19 @@ The name is what the obligation forbids, whatever it points at, and the case
 fails on it.
 
 - Round 1: Second falsifiability command: npx vitest run tests/integration/verifySemanticsSpec0014.test.ts -t 'TC-0014-0019'
-- Round 1: Second falsifiability result: Test Files 1 failed (1); Tests 1 failed (1 of the file's 5 selected), on the `runLegacyUixCompatibilityValidators` assertion.
-- Round 1: Second falsifiability revision: working-tree+10267bf65a45b59090a24d478a7112887fc9c6d763c93e01d7486d0302090129
+- Round 1: Second falsifiability result: Test Files 1 failed (1); Tests 1 failed (1 of the file's 6 selected), on the `runLegacyUixCompatibilityValidators` assertion.
+- Round 1: Second falsifiability revision: working-tree+0010eec58d8657672a11b6c886981f18d9897d38a885d12489fbb94f3f27c010
+- Round 1: Second falsifiability re-taken. The previous address was computed at
+  `649d8111147436408c90cbbe1b9f9b07e34da8cb`, where this round was first
+  observed, and stayed there when the round moved to
+  `09f6f3b362ffc1ceac2a8fa6087d4029da4aed61`. A working-tree address folds its
+  own `HEAD` into itself, so the recorded value addressed a tree the round no
+  longer names — the same defect the first mutation was re-taken for, in the
+  half that was left behind. The mutation was applied again on the round's
+  revision and the address recomputed there. The file holds six cases rather
+  than five, and the mutation still kills the selected one on the same
+  assertion. The nine-character abbreviation the note above records governs this
+  address too.
 
 Two of the case's four assertions are falsified this way, and the other two are
 not, for reasons worth recording rather than leaving to a reader to discover.
@@ -200,28 +216,39 @@ right end, so it still matches a union that has been widened, which is why the
 first mutation passes it and fails the literal check below it instead.
 
 - Refactor verify command: npx vitest run tests/integration/verifySemanticsSpec0014.test.ts tests/cli/commands/prototypingIterate.test.ts tests/integration/cli/commands/prototypingCertify.saasPackage.test.ts tests/integration/cli/commands/prototypingCertify.upgradeScope.test.ts
-- Refactor verify result: Test Files 4 passed (4); Tests 126 passed (126)
-- Refactor verify revision: 649d8111147436408c90cbbe1b9f9b07e34da8cb
-- Checkpoint verification command: npx vitest run --project integration --project e2e --project cli --project core --exclude 'tests/core/prFixMonitor.test.ts' --exclude 'tests/core/prMergePlan.test.ts' --exclude 'tests/integration/dbSchemaDriftEngine.test.ts' --exclude 'tests/assets/mdschemaRouting.test.ts' --exclude 'tests/assets/mdschemaSchemas.test.ts'
-- Checkpoint verification result: PASS — exit 0; Test Files 534 passed (542); Tests 9081 passed (9163)
-- Checkpoint verification revision: 915f4d5b5355e6bdc87398a031de681464399292
-- Checkpoint verification note: three suites are excluded beyond the two the
-  command already excluded, and each is excluded for a dependency this checkout
-  does not install rather than for anything about this branch.
-  `tests/integration/dbSchemaDriftEngine.test.ts` refuses without an in-process
-  Postgres engine, and `tests/assets/mdschemaRouting.test.ts` and
-  `tests/assets/mdschemaSchemas.test.ts` need the `@jackchuka/mdschema`
-  entry point. Run without the exclusions the same command reports twelve
-  failures in those three files and nothing else, and all seven `test` slices of
-  CI — which install the full toolchain — pass on this revision. CI is the run
-  that decides the merge; this one is the local reproduction with the gap named.
-  The eight files and eighty-two cases the run did not execute are the declared
-  inactive suites and the conditional skips described above.
-- Superseded checkpoint: the earlier record was `npx vitest run --project integration --project cli`
-  at `649d8111147436408c90cbbe1b9f9b07e34da8cb` — Test Files 187 passed (191);
-  Tests 2258 passed (2277). That revision is an ancestor of this commit rather
-  than its merge base, and the `integration` project has gained cases since, so
-  the run described a suite this commit no longer has.
+- Refactor verify result: Test Files 4 passed (4); Tests 127 passed (127)
+- Refactor verify revision: db8cd210a3b71ffd82591dda52ed250af76d812d
+- Checkpoint item test command: npx vitest run tests/integration/verifySemanticsSpec0014.test.ts --reporter=verbose
+- Checkpoint item test result: Test Files 1 passed (1); Tests 6 passed (6). The verbose output names the row's `Selector` entry among the tests it ran — `TC-0014-0019: removed compatibility surface > package surface exposes no legacy namespace or compatibility category` — which is what the per-item step asks of a file-scoped run.
+- Checkpoint item test revision: db8cd210a3b71ffd82591dda52ed250af76d812d
+- Checkpoint verification command: pnpm -C packages/qfai test:core && pnpm -C packages/qfai test:validators && pnpm -C packages/qfai test:integration && pnpm -C packages/qfai test:e2e && pnpm -C packages/qfai test:cli && pnpm -C packages/qfai test:unit && pnpm -C packages/qfai test:scripts
+- Checkpoint verification result: PASS — seven of seven green, nothing filtered out; the seven slices together cover every project `vitest.workspace.ts` declares
+- Checkpoint verification revision: db8cd210a3b71ffd82591dda52ed250af76d812d
+- Checkpoint verification note: the seven commands ran as the seven parallel jobs
+  of the `test` matrix at
+  https://github.com/aganesy/QFAI/actions/runs/34698239422, and their conclusions
+  were read back from the check runs on this revision rather than inferred from
+  a green badge.
+  That is the environment in which the set can be run whole. Run here as one
+  unfiltered `npx vitest run`, the same suite reports Test Files 1 failed, 697
+  passed, 8 skipped (706) and Tests 1 failed, 11537 passed, 92 skipped (11630),
+  exiting 1. The one failure is in `tests/scripts/ownWorkflowTopology.test.ts`,
+  whose case writes the release workflow's own association gate to a temporary
+  script and runs it under `bash`. That gate calls `jq`, which this checkout
+  does not have and the runner image does, so the assertion reads a gate that
+  declined for want of a tool rather than a gate that ran and refused. It is
+  unrelated to this spec, and that a test depends on an undeclared external tool
+  and fails with an assertion message naming something else is recorded as a
+  finding of its own.
+- Superseded checkpoint: two earlier records. The first was
+  `npx vitest run --project integration --project cli` at
+  `649d8111147436408c90cbbe1b9f9b07e34da8cb`, whose revision is an ancestor of
+  this commit rather than its merge base and whose `integration` project has
+  gained cases since. The second selected four of the seven projects and
+  excluded five files by name at
+  `915f4d5b5355e6bdc87398a031de681464399292`; every `unit`, `validators` and
+  `scripts` test was outside it, so it was not the whole-repository set the
+  per-spec step asks for whatever its exclusions were justified by.
 
 ## Coverage Depth Matrix
 
@@ -233,10 +260,18 @@ every total.
 
 ## Work Orders Summary
 
-| Role                | Task                                                     | Status (PASS/REVISE/PENDING) |
-| ------------------- | -------------------------------------------------------- | ---------------------------- |
-| test-design-analyst | Score the fourteen obligations and write the matrix      | PASS                         |
-| completion-reviewer | Audit every claim this file and the matrix make          | REVISE                       |
+| Role                | Task                                                          | Status (PASS/REVISE/PENDING) |
+| ------------------- | -------------------------------------------------------------- | ---------------------------- |
+| test-design-analyst | Score the fourteen obligations and write the matrix           | PASS                         |
+| devops-ci-engineer  | Run the refactor verification, the per-item file-scoped test and the unfiltered suite, and report the counts | PASS |
+| completion-reviewer | Audit every claim this file and the matrix make               | REVISE                       |
+
+The `devops-ci-engineer` order returned the three command blocks with their
+summary lines and exit codes, and nothing else: it wrote no file and changed no
+status. Its output is what the `Refactor verify`, `Checkpoint item test` and
+`Checkpoint verification` fields above record. The mutation runs and the address
+recomputation are not in it — a mutation dirties the tree the suite would be
+measured against, so they were taken separately and before it.
 
 ## Reviewer response
 
