@@ -66,11 +66,11 @@ from the options below, and sweep the ledger rows that rest on them.
 
 ## Options (at least 3) and recommendation
 
-| #   | Option                                                                                                                                              | Cost                                                                                                                                                                                                                                                          | Risk                                                                                                                                                                                                              | Recommended |
-| --- | --------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------- |
-| 1   | Narrow the spec to the product: REQ-0012 and AC-0002-0008 bind the screen explorations only; REQ-0005 and AC-0002-0010 say the artifact is optional | Edit four upstream statements. Reset `TDD-0008`, `-0009`, `-0012`; **retire `TDD-0010`**; re-verify `TDD-0011` in place. **Plus the `spec-0010` owner re-derivation**, both chains and its ledger, which every statement-A outcome owes                       | Records today's behaviour as intended. If either narrowing was a regression, it becomes the specification. One row is removed rather than re-pointed                                                              | ✅          |
-| 2   | Restore the product to the spec: reinstate a winner check, and make `prototyping.yaml` a readiness blocker for UI-bearing packs                     | New validator work, a breaking change for adopters, and — for the requiredness half — a `spec-0013` owner re-derivation it cannot be approved without                                                                                                         | Reverses a deliberate design move without the record of why it was made. `2B` reverses `spec-0013` REQ-0015 outright, so approving it alone would leave two active packs prescribing opposite preflight behaviour |             |
-| 3   | Retire the four obligations: withdraw REQ-0012, AC-0002-0008, REQ-0005's requiredness half and AC-0002-0010, and delete the rows resting on them    | Smallest edit **to `spec-0002`**, and the `spec-0010` re-derivation beside it like every other statement-A outcome. Retiring the direction rule here leaves `spec-0010`'s own copy of it to be withdrawn or restated, which is an edit rather than an absence | Loses the record that the question was ever settled, so the next reader re-derives it                                                                                                                             |             |
+| #   | Option                                                                                                                                                                                                                                                                                        | Cost                                                                                                                                                                                                                                                          | Risk                                                                                                                                                                                                              | Recommended |
+| --- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------- |
+| 1   | Narrow the spec to the product: REQ-0012 and AC-0002-0008 bind the screen explorations only; REQ-0005 and AC-0002-0010 say the artifact is optional                                                                                                                                           | Edit four upstream statements. Reset `TDD-0008`, `-0009`, `-0012`; **retire `TDD-0010`**; re-verify `TDD-0011` in place. **Plus the `spec-0010` owner re-derivation**, both chains and its ledger, which every statement-A outcome owes                       | Records today's behaviour as intended. If either narrowing was a regression, it becomes the specification. One row is removed rather than re-pointed                                                              | ✅          |
+| 2   | Restore the product to the spec: reinstate a winner check, and make `prototyping.yaml` a readiness blocker for packs with a visual prototyping surface (`web`, `mobile`, `desktop`, `mixed`) — not for every UI-bearing pack, since a cli-only one is UI-bearing and cannot emit the artifact | New validator work, a breaking change for adopters, and — for the requiredness half — a `spec-0013` owner re-derivation it cannot be approved without                                                                                                         | Reverses a deliberate design move without the record of why it was made. `2B` reverses `spec-0013` REQ-0015 outright, so approving it alone would leave two active packs prescribing opposite preflight behaviour |             |
+| 3   | Retire the four obligations: withdraw REQ-0012, AC-0002-0008, REQ-0005's requiredness half and AC-0002-0010, and delete the rows resting on them                                                                                                                                              | Smallest edit **to `spec-0002`**, and the `spec-0010` re-derivation beside it like every other statement-A outcome. Retiring the direction rule here leaves `spec-0010`'s own copy of it to be withdrawn or restated, which is an edit rather than an absence | Loses the record that the question was ever settled, so the next reader re-derives it                                                                                                                             |             |
 
 **Every outcome owes `spec-0010` a re-derivation, this one included.** That pack
 requires `/qfai-discussion` to author root `DESIGN.md` **and** owns the direction
@@ -271,7 +271,9 @@ with its own approval; `2B` cannot be approved until it has landed.
   `isPrototypingRequiredForDiscussionPack` returns a constant `false` and the
   artifact never enters `missingSideArtifacts`, so the preflight branch receives
   nothing however it is written and requiredness has to be derived from the
-  validated UI-bearing classification instead; a new validator source for the single-winner
+  validated **surface** classification instead — a visual prototyping surface
+  (`web`, `mobile`, `desktop`, `mixed`), never the UI-bearing flag, which a
+  cli-only pack also carries while the playbook forbids it the artifact; a new validator source for the single-winner
   violation **and every path that makes it run** —
   `packages/qfai/src/core/validators/uix/canonical.ts`, whose
   `CANONICAL_UIX_VALIDATORS` list is the only way `qfai validate` reaches a UIX
@@ -463,7 +465,9 @@ internally contradictory.
 2. **`spec-0013`, under `2B` only, and not before the duplicate id is
    repaired.** `/qfai-sdd` re-derives `REQ-0015` and the side-artifact
    `AC-0013-0009` — with the story, business rule, example and test case beneath
-   them — to say that a UI-bearing pack owes `prototyping.yaml`. **`2B` is not
+   them — to say that a pack **with a visual prototyping surface** (`web`,
+   `mobile`, `desktop` or `mixed`) owes `prototyping.yaml`. **Not "UI-bearing"**,
+   for the reason two paragraphs below. **`2B` is not
    approved without it**: approving the option alone would leave two active
    packs prescribing opposite preflight behaviour, with the product free to
    satisfy either. And it is not approved before the duplicate id lands either:
@@ -613,8 +617,9 @@ internally contradictory.
    `2A` with no letter authorises neither, and withdrawing every producer
    without naming a replacement leaves a new UI project unable to enter
    prototyping at all. Beside that: a validator that emits the single-winner violation
-   `TC-0002-0009` names, a preflight that blocks a UI-bearing pack missing
-   `prototyping.yaml`, and the three shipped documents rewritten to say the
+   `TC-0002-0009` names, a preflight that blocks a pack with a visual
+   prototyping surface missing `prototyping.yaml` — and lets a cli-only one
+   through, which is UI-bearing and cannot produce it — and the three shipped documents rewritten to say the
    artifact is required. This is the option with the largest blast radius, and
    the direction interview it removes was itself added to stop an assistant
    inventing a brand.
