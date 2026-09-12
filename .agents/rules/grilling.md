@@ -161,6 +161,11 @@ could never end, and the rule would forbid the mode it elsewhere describes. What
 stops that run from being treated as agreed is the open questions it leaves, not
 the absence of an ending.
 
+**A session between agents reaches none of these on its own.** Its budget ends
+the rounds between agents, not the session: every decision still open goes to
+the user, who ends it in one of the four. How many went is a count a record
+carries, never an ending of its own.
+
 **`stopped` is the one that does not let the work continue.** The other three
 close the asking; this one ends the session, and an agent that carried on
 because the frontier happened to be empty has read the stop as an answer.

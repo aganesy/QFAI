@@ -32,26 +32,19 @@ user agrees the understanding is shared.
 
 ## Preconditions
 
-| Condition                                                     | Effect                                                          |
-| ------------------------------------------------------------- | --------------------------------------------------------------- |
-| A design that is not yet fixed                                | Proceed                                                         |
-| A decision this invocation must take that no artifact settles | Proceed, over that decision and nothing wider                   |
-| Settled input the work reveals to be wrong                    | Proceed, over what the Change Request should ask for            |
-| The decision is one the spec already settles                  | Do not invoke; the spec is the authority                        |
-| A no-question mode is active                                  | Run without asking; open every decision left over as a question |
-| A single-reading ambiguity met while implementing             | Not a session; an ordinary clarification under its own budget   |
+| Condition                           | Effect                                                                    |
+| ----------------------------------- | ------------------------------------------------------------------------- |
+| A design that is not yet fixed      | Proceed                                                                   |
+| The work is already specified       | Do not invoke; the spec is the authority                                  |
+| A no-question mode is active        | Run without asking; open every decision left over as a question           |
+| An ambiguity met while implementing | Not a session on its own — an ordinary clarification under its own budget |
+| An execution stage declaring one    | A session. Article IX names two, at the preflight and on detection        |
 
-**Rows two and three are why an execution stage may invoke this.** A spec settles
-what to build and leaves a run its own decisions — a seam's shape, what an oracle
-observes, which of several admissible shapes a test takes. Those are unfixed designs the
-fourth row does not cover, and left to the moment the code needs an answer they
-are decided silently, which is the failure this method exists to catch. Row three
-is the same point at the other end: the interview settles what a Change Request
-should ask for, and the Drift Protocol carries the change, so a session there is
-not a second route to editing settled input.
-
-Row six is what stays out. One ambiguity with one reading is a question, not a
-tree, and answering it is an ordinary clarification.
+The last two rows are the same rule from both sides: meeting an ambiguity does
+not start a session, and a stage that **declares** one has started it. What
+separates them is the declaration, which is what makes the class decidable when
+the question is asked rather than arguable afterwards
+(`.qfai/assistant/constitution/constitution.md` Article IX).
 
 **A no-question mode silences the questions, not the session.** An invocation
 told not to ask — `--auto`, or whatever the host spells it as — settles what the
@@ -62,12 +55,6 @@ value and label it an assumption beside that open question
 (`.qfai/assistant/constitution/constitution.md` Article X, rule 6). What is
 forbidden is the assumption with no open question against it. Declaring a
 session is still not a way to ask.
-
-**That is an ending, and it is the one such a run takes.** It is `no-question`,
-one of the four `.agents/rules/grilling.md` names under **The four endings**,
-and this skill adds none of its own. The agent never confirms on the user's
-behalf: the ending records that nobody was asked, and the open decisions are
-what stop the stage completing.
 
 ## The design tree
 
@@ -203,6 +190,21 @@ contradicting a spec, a contract or a recorded decision, and a decision resting
 on nothing authoritative. That is the one place a session ends on a count, and
 it counts rounds between agents rather than questions put to a user
 (`.qfai/assistant/constitution/review-convergence.md`).
+
+**A session under a no-question mode cannot reach condition 2 either**, because
+there is a user and the mode forbids asking them. It ends when nothing on the
+frontier is still waiting: every decision the evidence settled is settled, and
+every one it did not is opened as a question where the stage's own gate reads it
+(`.qfai/assistant/constitution/constitution.md` Article X, rule 6). The register
+write is the ending — without one, a stage that resolved its whole frontier by
+inspection would wait forever for a confirmation nobody may give.
+
+**Those endings have names, and there are four of them.**
+`.agents/rules/grilling.md` carries them under **The four endings**:
+`confirmed` when the user confirms an empty tree, `user-closed` when they close
+the asking, `no-question` for the register write above, and `stopped` when they
+stop the session. A stage that records a session names one of them, and this
+skill adds none of its own — the agent never confirms on the user's behalf.
 
 ### The user ends it whenever they say so
 

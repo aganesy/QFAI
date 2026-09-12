@@ -170,12 +170,14 @@ Use the shared schema.
 ### Reviewer Gate (MUST)
 
 - Follow `.qfai/assistant/constitution/shared-skill-delegation-baseline.md#reviewer-gate-baseline`.
-- The stage evidence's `## Grilling Session` section is present, every row's
-  `Ended` is one of the endings the method defines, every `Revision` is this
-  run's, and each row's `Open` count matches the questions listed under the
-  table. A run that skipped the session leaves the same tree as one that ran it,
-  and an evidence file is updated in place — so the section and its revision are
-  what tell a fresh session from an absent one and from last week's.
+- The stage evidence's `## Grilling Session` section carries a row for the
+  preflight session and one for every session detection opened; every `Ended` is
+  one of the four endings the rule master names; every `Work resumed` is later
+  than its own `Ended at` and inside this run; and each row's `Open` count
+  matches the questions listed under the table. A run that skipped a session
+  leaves the same tree as one that ran it, and an evidence file is updated in
+  place, so the rows are what tell a fresh session from an absent one and from
+  last week's.
 - **A `no-question` row with a non-zero `Open` is a `REVISE`.** Article X, rule 6
   says the stage cannot complete over a decision nobody took, and nobody was
   asked. A `user-closed` row with open decisions **passes**: the user saw them
@@ -215,6 +217,57 @@ Follow `.qfai/assistant/constitution/shared-skill-operating-baseline.md#stage-0-
 ## Delta Rejected Guard (Mandatory)
 
 Follow `.qfai/assistant/constitution/shared-skill-operating-baseline.md#delta-rejected-guard-mandatory`.
+
+## Grilling (MANDATORY)
+
+Article IX of `.qfai/assistant/constitution/constitution.md` owns both sessions
+this stage runs, and `.agents/rules/grilling.md` owns the method. Neither is
+restated here.
+
+- **At the preflight.** A session over what the confidence check left uncertain,
+  and nothing else. The bound is on the subject: the spec and the ledger are
+  settled input, and re-interrogating them each run would stop the cycle and
+  invite the drift this stage avoids.
+- **On detection.** A contradiction in the spec, an unconsidered case or a
+  technical obstacle surfacing mid-run stops the work and opens a session over
+  what was detected, rather than being decided alone.
+- **Neither session changes settled input.** Where one concludes that settled
+  input must change, `.qfai/assistant/constitution/drift-protocol.md` governs:
+  stop the dependent work, raise the Change Request, wait for approval. Where it
+  concludes the obstacle is this run's to solve, the run solves it — nothing
+  upstream changes, so there is nothing to approve.
+- **Record both sessions where the gate reads them.** The method writes no
+  artifact of its own, so a run that grilled and a run that skipped it leave the
+  same tree. `.qfai/evidence/atdd-<spec-id>.md` carries a `## Grilling Session`
+  section holding one row per session:
+
+  ```text
+  | Ended | Ended at | Work resumed | Subject | Frontier | Lookups | Decisions | Open | Escalated |
+  | ----- | -------- | ------------ | ------- | -------- | ------- | --------- | ---- | --------- |
+  | confirmed | 2026-01-01T09:14:00Z | 2026-01-01T09:15:20Z | preflight | empty | none in flight | 4 | 0 | 0 |
+  | user-closed | 2026-01-01T11:02:00Z | 2026-01-01T11:04:10Z | an acceptance criterion the spec does not cover | empty | none in flight | 2 | 1 | 0 |
+  ```
+
+  The shape `/qfai-discussion` already writes, with `Subject` in place of that
+  stage's lone `Authoring began`: this stage holds more than one session, so a
+  row says which. `Work resumed` is when the stage next wrote — the first acceptance test for the preflight session,
+  the first edit made after a detected one.
+
+  **Both times, and the second later than the first.** A row holding only the
+  ending reads the same whether the session ran before the work or after it,
+  because it is written at the end either way. What the pair records is the
+  order, which is the part a later reader has no other way to recover. It still
+  cannot prove a session happened: the agent writes its own record.
+
+  `Ended` is `confirmed`, `user-closed`, `no-question` or `stopped` — the four
+  endings `.agents/rules/grilling.md` names — and only the first three let the
+  work go on.
+
+- **The open questions go under that table, in the same section.** One line per
+  decision left open, carrying the decision and the labelled assumption written
+  in its place where a document required a value. That is the register this
+  stage's gate reads, and it is here so a reader finds the count and the
+  questions it counts in one place.
 
 ## CRITICAL CONSTRAINTS (Read First)
 
@@ -400,10 +453,10 @@ the heading cannot:
   row's section**, not a section of its own: the list is closed, and nesting
   attributes it to a row (`references/review-fix-rounds.md`).
 - **Grilling Session** — one row per session, with the open questions listed
-  under the table. Each is written when that session ends, the preflight one
-  before this run writes an acceptance test, because a row holding only the final
-  state reads the same whether the session ran first, ran after, or never ran.
-  The Reviewer Gate reads it (`## Grilling`).
+  under the table. Each is written when that session ends, and its `Work resumed`
+  when the stage next wrote, because a row holding only the ending reads the same
+  whether the session ran before the work or after it. The Reviewer Gate reads it
+  (`## Grilling (MANDATORY)`).
 - **Coverage Depth Matrix** — a link to
   `.qfai/evidence/coverage-depth-<spec-id>.md` and the `✅`/`⚠️`/`❌` totals.
   The matrix and its per-`❌` justifications live in that committed file;
@@ -425,10 +478,11 @@ Template:
 ## Grilling Session
 
 <!-- One row per session, written when each ends. See this skill's
-     `## Grilling` section; the open questions go under the table. -->
+     `## Grilling (MANDATORY)` section; the open questions go under the
+     table. -->
 
-| Ended | Ended at | Revision | Before | Decisions | Open | Escalated |
-| ----- | -------- | -------- | ------ | --------- | ---- | --------- |
+| Ended | Ended at | Work resumed | Subject | Frontier | Lookups | Decisions | Open | Escalated |
+| ----- | -------- | ------------ | ------- | -------- | ------- | --------- | ---- | --------- |
 
 ## Work performed (what changed, where)
 

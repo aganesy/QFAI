@@ -6,27 +6,42 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Added
 
-- **The execution stages open a grilling round before they change anything**
-  (#1601). Article IX already required a preflight confidence check and already
-  said to ask targeted questions when confidence was low. It did not say what
-  those questions were, so a run that asked none had followed it — and these
-  stages read a spec closely enough for its gaps to show.
+- **Every grilling session leaves a record, and the stage's gate reads it**
+  (#1601). A run that held the session and a run that skipped it produced the
+  same spec, the same ledger and the same code, so a reviewer could only block
+  every run or accept a claim it could not check.
 
-  `/qfai-implement`, `/qfai-atdd` and `/qfai-verify` each carry a `## Grilling`
-  section that loads `qfai-grilling/SKILL.md` and cites
-  `.agents/rules/grilling.md` rather than restating the method, and each names
-  the decisions its own stage is about to take.
+  `/qfai-implement`, `/qfai-atdd` and `/qfai-verify` now write a
+  `## Grilling Session` section into their stage evidence, one row per session:
+  the preflight one and any that detection opened. It is the shape
+  `/qfai-discussion` already writes, with a `Subject` column in place of that
+  stage's single `Authoring began`, because these stages hold more than one
+  session. The open questions go under the same table, so the count and the
+  questions it counts are in one place.
 
-  Two bounds keep it from becoming a second design phase.
+  A row carries both times — when the session ended, and when the stage next
+  wrote. A row holding only the ending reads the same whether the session ran
+  before the work or after it, because it is written at the end either way. It
+  still cannot prove a session happened; the agent writes its own record.
 
-  | Bound                                                                                  | Why                                                                                                                                                       |
-  | -------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
-  | The session's subject is the invocation, not the spec                                  | Re-interviewing settled input every run stops the micro-cycle and reopens decisions somebody already took. A tree that small usually empties in one round |
-  | A contradiction found later decides what the change asks for, never whether to make it | The Drift Protocol carries the change. Grilling is not a second route to editing settled input                                                            |
+  `.agents/rules/grilling.md` names the four endings a row may hold, so a gate
+  and a record share one vocabulary.
 
-  Under `--auto` the session runs without asking: every decision left over is
-  recorded as an open question where the stage's gate sees it, and a defaulted
-  value is labelled an assumption beside it.
+  | Ending        | The work may proceed                                     |
+  | ------------- | -------------------------------------------------------- |
+  | `confirmed`   | Yes                                                      |
+  | `user-closed` | Yes                                                      |
+  | `no-question` | Yes, and whatever gates the work reports those questions |
+  | `stopped`     | No. Report every open decision as open                   |
+
+  Each stage's Reviewer Gate reads the rows and gives each ending a verdict: a
+  `no-question` row with an open decision is a REVISE, because nobody was asked;
+  the same count under `user-closed` passes, because the user saw them and
+  closed the asking.
+
+  A session between agents reaches none of the four on its own. Its budget ends
+  the rounds between agents, and the decisions still open go to the user, who
+  ends it.
 
 ### Added
 
@@ -47,6 +62,39 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
   The rule master says it has a reminder, so a hook that stops firing does not
   read as a rule nobody wrote one for.
+
+- **The execution stages grill at two points** (#1601). `/qfai-implement`,
+  `/qfai-atdd` and `/qfai-verify` open a session at the preflight, over what the
+  confidence check left uncertain, and one on detection — a contradiction in the
+  spec, an unconsidered case or a technical obstacle surfacing mid-run stops the
+  work rather than being decided alone. Each runs until its frontier is empty,
+  however many rounds that takes. These stages read a spec closely enough
+  for its gaps to show, and the agent that finds one is the least able to judge
+  alone what the spec ought to have said.
+
+  Article IX already required a confidence check and said to ask targeted
+  questions when confidence was low, naming no method. It names one now.
+
+  A session, declared the way the rule requires, rather than a question outside
+  one: those are ordinary clarifications capped by Article VI, and a cap on the
+  question that would have prevented the wrong build is the failure this gate
+  exists to catch.
+
+  What is bounded is the subject, not the length. The session covers what the
+  preflight left uncertain, or what was detected, and nothing else —
+  re-interrogating a settled spec and ledger every run would stop the micro-cycle
+  and invite the drift these stages exist to avoid.
+
+  Only one outcome is the Drift Protocol's. Where the session concludes that
+  settled input must change, the protocol governs: stop the dependent work, raise
+  the Change Request, wait for approval. Where it concludes the obstacle is this
+  run's to solve — an unavailable dependency, an approach that failed — the run
+  solves it, and there is nothing upstream to approve.
+
+  What a session contributes to a Change Request is what its class asks for:
+  options and a recommendation for intent drift, the single correct repair for
+  defect drift, which the protocol records with `Approved option: -`. Grilling
+  decides what the change should be; the protocol decides whether it happens.
 
 ### Added
 
