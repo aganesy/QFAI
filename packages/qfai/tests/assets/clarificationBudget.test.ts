@@ -91,9 +91,10 @@ describe("the clarification budget binds a stage", () => {
       expectPhrase(content, "## User Questions (AskUserQuestion Protocol)");
       expectPhrase(content, "**at most 5 clarifying questions per invocation**");
       expectPhrase(content, "is an **approval** and spends\n  nothing");
-      expectPhrase(content, "bundling one into a prompt does not exempt the clarifications");
-      expectPhrase(content, "On exhaustion, do not ask a sixth clarification");
-      expectPhrase(content, "a required approval may still be asked");
+      expectPhrase(content, "is a **grilling question** and spends nothing");
+      expectPhrase(content, "bundling either into a prompt does not exempt the clarifications");
+      expectPhrase(content, "On\n  exhaustion, do not ask a sixth clarification");
+      expectPhrase(content, "grilling\n  questions and a required approval may still be asked");
       expectPhrase(content, "constitution.md#article-vi--clarification-budget-avoid-endless-qa");
     });
   }
@@ -303,6 +304,19 @@ describe("the clarification budget is countable", () => {
       expectPhrase(content, "Every invocation MUST minimize clarifying questions.");
       expectPhrase(content, "`/qfai-discussion`\nincluded");
       expectNoPhrase(content, "Non-discussion commands MUST minimize questions.");
+    });
+
+    it(`${tree}: the baseline's end condition is the whole tree, and the confirmation is exempt`, async () => {
+      // The frontier emptying is not the tree settling: when every remaining
+      // decision waits on a lookup the frontier is empty while the tree is not,
+      // and completing there closes the session before the lookup can raise the
+      // questions it was dispatched to answer. The confirmation that closes the
+      // session is a grilling question too — counted, a spent budget makes the
+      // second half of the condition unaskable.
+      const content = await read(tree, OPERATING);
+      expectPhrase(content, "the session ends when no node is open");
+      expectPhrase(content, "no fact lookup still running");
+      expectPhrase(content, "That closing\n  confirmation is a grilling question too");
     });
 
     it(`${tree}: every enumeration of the survivors names all three classes`, async () => {

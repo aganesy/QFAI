@@ -162,10 +162,12 @@ There is one base, and it is the project root.
   after which the skill proceeds with labelled assumptions instead of asking. Classify each question, not the prompt: a question asked
   because a document requires a recorded human decision (an SDD triage
   `Approved By`, a reviewer-gate escalation) is an **approval** and spends
-  nothing, and bundling one into a prompt does not exempt the clarifications
-  beside it. On exhaustion, do not ask a sixth clarification — proceed with
-  explicit, labelled assumptions and record them in the output, as `--auto`
-  does; a required approval may still be asked. See
+  nothing, a question inside a grilling session whose subject is a decision the
+  design has left open is a **grilling question** and spends nothing, and
+  bundling either into a prompt does not exempt the clarifications beside it. On
+  exhaustion, do not ask a sixth clarification — proceed with explicit, labelled
+  assumptions and record them in the output, as `--auto` does; grilling
+  questions and a required approval may still be asked. See
   `.qfai/assistant/constitution/constitution.md#article-vi--clarification-budget-avoid-endless-qa`.
 - When `--auto` is active, ask nothing: MUST NOT use AskUserQuestion and MUST NOT ask
   via plain text. Proceed with explicit assumptions and record them in the outputs.
@@ -174,8 +176,12 @@ There is one base, and it is the project root.
 - Grilling questions, mandatory approval questions and `hard-required` inputs are
   exempt from the budget, and exhaustion waives none of them. A grilling session
   has no question cap: its questions are decisions the user owns, asked a round
-  at a time, and the session ends when no open decision has its prerequisites
-  settled and the user confirms the understanding is shared — never at a count.
+  at a time, and the session ends when no node is open — no decision whose
+  prerequisites are settled, and no fact lookup still running — and the user
+  confirms the understanding is shared, never at a count. That closing
+  confirmation is a grilling question too, so it is exempt with them: counted,
+  it would make the second half of the condition unaskable under a spent budget
+  and leave a session that can be neither continued nor closed.
   Approvals MUST still be asked, and a missing `hard-required` input **that this
   invocation actually consumes** MUST be asked for rather than assumed — if it
   stays missing, stop instead of guessing. A `hard-required` input the requested
