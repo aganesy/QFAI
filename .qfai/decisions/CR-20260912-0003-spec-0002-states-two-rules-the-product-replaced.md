@@ -256,12 +256,12 @@ with its own approval; `2B` cannot be approved until it has landed.
   reduction to the approved outcome keeps each path only where its condition
   holds:
 
-  | Path                                    | Kept under                                                                  |
-  | --------------------------------------- | --------------------------------------------------------------------------- |
-  | `.qfai/specs/_policies/05_Contracts.md` | every statement-A outcome, for the producer prose; and `2a`, for `DCON-031` |
-  | `.qfai/specs/_policies/06_Glossary.md`  | `1A` and `3A`                                                               |
-  | `.qfai/specs/_policies/08_Decisions.md` | `2B`, for `DR-0240`                                                         |
-  | `.qfai/specs/_policies/10_delta.md`     | any outcome that keeps one of the three above                               |
+  | Path                                    | Kept under                                                                                                 |
+  | --------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
+  | `.qfai/specs/_policies/05_Contracts.md` | every statement-A outcome, for the producer prose; and `2a`, for `DCON-031`                                |
+  | `.qfai/specs/_policies/06_Glossary.md`  | every statement-A outcome, for the `DESIGN.md` entry; and `1A` and `3A`, for the `exploration-first` entry |
+  | `.qfai/specs/_policies/08_Decisions.md` | `2B`, for `DR-0240`                                                                                        |
+  | `.qfai/specs/_policies/10_delta.md`     | any outcome that keeps one of the three above                                                              |
 
   **`spec-0012/03_Acceptance-Criteria.md` is here because `AC-0012-0035` tells
   the user what to do about a mismatch**, and what it tells them is to "re-run
@@ -304,10 +304,10 @@ with its own approval; `2B` cannot be approved until it has landed.
 
 - Tests: `spec-0002/TDD-0008`, `spec-0002/TDD-0009`, `spec-0002/TDD-0010`,
   `spec-0002/TDD-0011`, `spec-0002/TDD-0012`, and `spec-0002/TDD-0001` under
-  option 2 only —
+  `2B` only —
   `packages/qfai/tests/validators/uix/threeLayer.test.ts`,
   `packages/qfai/tests/validators/uix/screenContract.test.ts`,
-  and under option 2 `packages/qfai/tests/core/sddPreflight.test.ts`
+  and under `2B` `packages/qfai/tests/core/sddPreflight.test.ts`
 - Product files, option 2 only — the option is implementation work, and the
   scope has to authorise what it edits. **The paths are split by statement**,
   because a split approval such as `1A/2B` reduces this section to the outcome
@@ -316,68 +316,83 @@ with its own approval; `2B` cannot be approved until it has landed.
   one cannot omit edits it selected.
 
   **Under `2A` — withdrawing the direction selection from discussion:**
-  `packages/qfai/assets/init/.qfai/assistant/skills/qfai-discussion/**` and its
-  root mirror, which carry the direction interview;
-  `packages/qfai/assets/init/.qfai/assistant/skills/qfai-sdd/**` and its mirror,
-  whose Phase 0 reads the recorded direction; a new validator source for the
-  single-winner violation and every path that makes it run, enumerated below;
-  `packages/qfai/tests/assets/designDirectionInterview.test.ts`; and
-  `packages/qfai/tests/assets/discussionGrilling.test.ts`, which requires the
-  design direction to be asked inside the discussion session and asserts the
-  phrases this option removes, so leaving it out ends the option in a red suite
-  or in an edit this approval does not name.
+
+  - `packages/qfai/assets/init/.qfai/assistant/skills/qfai-discussion/**` and
+    its root mirror, which carry the direction interview.
+  - `packages/qfai/assets/init/.qfai/assistant/skills/qfai-sdd/**` and its
+    mirror, whose Phase 0 reads the recorded direction.
+  - A new validator source for the single-winner violation, and every path that
+    makes it run: `packages/qfai/src/core/validators/uix/canonical.ts`, whose
+    `CANONICAL_UIX_VALIDATORS` list is the only way `qfai validate` reaches a
+    UIX validator; the export that puts the new module on that surface; the
+    emitted finding-code registry; and the regression tests that pin both.
+  - `packages/qfai/src/core/prototyping/mode.ts` with
+    `packages/qfai/tests/unit/cli/commands/prototypingIterate.modeDiscriminator.test.ts`.
+    An error-severity code on that surface has to be classified as relaxable or
+    hard in exploration mode, and that test holds the two lists equal to the
+    reachable set: a new code classified in neither fails it by construction,
+    and leaves exploration behaviour undefined. `spec-0012/TDD-0522` owns that
+    test and takes the in-place re-verification.
+  - `packages/qfai/tests/assets/designDirectionInterview.test.ts`, which pins
+    the interview this statement removes.
+  - `packages/qfai/tests/assets/discussionGrilling.test.ts`, which requires the
+    design direction to be asked inside the discussion session and asserts the
+    phrases this option removes, so leaving it out ends the option in a red
+    suite or in an edit this approval does not name.
+  - `packages/qfai/tests/integration/discussionSkillTemplateIntegration.test.ts`
+    and `packages/qfai/tests/e2e/discussionHardeningE2E.test.ts`, which require
+    the discussion checklist to review a design direction and the skill to frame
+    one. Their rows are named in the block for either statement below.
+
+  The winner validator also reaches `spec-0014`. It joins
+  `CANONICAL_UIX_VALIDATORS`, which
+  `packages/qfai/tests/integration/verifySemanticsSpec0014.test.ts` imports and
+  runs, and `spec-0014/TDD-0009`, `TDD-0018` and `TDD-0019` are `done` rows
+  naming that file. Their obligations do not move, so they take the in-place
+  re-verification rather than a reset.
 
   **Under `2B` — restoring the requiredness of `prototyping.yaml`:**
-  `packages/qfai/src/core/preflight/sddPreflight.ts` with
-  `packages/qfai/tests/core/sddPreflight.test.ts`;
-  `packages/qfai/src/core/discussionPack.ts`;
-  `packages/qfai/tests/assets/sddStage0PrototypingOptional.test.ts`; and the
-  three shipped documents carrying the optional-artifact sentence, with
-  `packages/qfai/tests/assets/assets.test.ts`.
 
-  The rest of this bullet says what each of those is for.
+  - `packages/qfai/src/core/preflight/sddPreflight.ts` with
+    `packages/qfai/tests/core/sddPreflight.test.ts`. The preflight has to block
+    a pack with a visual prototyping surface that is missing `prototyping.yaml`.
+  - `packages/qfai/src/core/discussionPack.ts`, which is what would give the
+    preflight something to report. `isPrototypingRequiredForDiscussionPack`
+    returns a constant `false` and the artifact never enters
+    `missingSideArtifacts`, so the preflight branch receives nothing however it
+    is written. Requiredness has to be derived from the validated **surface**
+    classification instead — a visual prototyping surface (`web`, `mobile`,
+    `desktop`, `mixed`), never the UI-bearing flag, which a cli-only pack also
+    carries while the playbook forbids it the artifact.
+  - The three shipped documents carrying the optional-artifact sentence:
+    `packages/qfai/README.md`,
+    `packages/qfai/assets/init/.qfai/assistant/skills/qfai-discussion/SKILL.md`
+    and
+    `packages/qfai/assets/init/.qfai/assistant/skills/qfai-discussion/references/discussion-artifact-rules.md`,
+    the last two with their root mirrors.
+  - `packages/qfai/tests/assets/assets.test.ts`, two of whose cases require that
+    sentence in the README, and
+    `packages/qfai/tests/assets/sddStage0PrototypingOptional.test.ts`. Both pin
+    the optionality this statement removes.
 
-  `packages/qfai/src/core/preflight/sddPreflight.ts` must block on a
-  missing `prototyping.yaml`, **and `packages/qfai/src/core/discussionPack.ts`,
-  which is what would give it something to report**:
-  `isPrototypingRequiredForDiscussionPack` returns a constant `false` and the
-  artifact never enters `missingSideArtifacts`, so the preflight branch receives
-  nothing however it is written and requiredness has to be derived from the
-  validated **surface** classification instead — a visual prototyping surface
-  (`web`, `mobile`, `desktop`, `mixed`), never the UI-bearing flag, which a
-  cli-only pack also carries while the playbook forbids it the artifact; a new validator source for the single-winner
-  violation **and every path that makes it run** —
-  `packages/qfai/src/core/validators/uix/canonical.ts`, whose
-  `CANONICAL_UIX_VALIDATORS` list is the only way `qfai validate` reaches a UIX
-  validator, the export that puts the new module on that surface, the emitted
-  finding-code registry, and the regression tests that pin both —
-  **and `packages/qfai/src/core/prototyping/mode.ts` with
-  `packages/qfai/tests/unit/cli/commands/prototypingIterate.modeDiscriminator.test.ts`**,
-  because an error-severity code on that surface has to be classified as
-  relaxable or hard in exploration mode and that test holds the two lists equal
-  to the reachable set: a new code classified in neither fails it by
-  construction, and leaves exploration behaviour undefined. `spec-0012/TDD-0522`
-  owns that test and takes the in-place re-verification; and the three
-  shipped documents carrying the optional-artifact sentence, of which
-  `packages/qfai/README.md` is one and is outside both skill-directory
-  wildcards — two cases in `assets.test.ts` require that sentence there, so a
-  rerun following the enumerated paths alone would leave the public README
-  asserting optionality and those cases failing. The tests that pin the behaviour being removed move with it:
-  `packages/qfai/tests/assets/designDirectionInterview.test.ts`,
-  `packages/qfai/tests/assets/sddStage0PrototypingOptional.test.ts`,
-  `packages/qfai/tests/assets/assets.test.ts` and
-  `packages/qfai/tests/core/sddPreflight.test.ts`.
-  **Two further files are edited and another spec owns them.**
+  The requiredness derivation also reaches `spec-0013`.
+  `packages/qfai/tests/core/activeDiscussionPack.test.ts` imports
+  `discussionPack.ts`, and `spec-0013/TDD-0023` and `TDD-0024` name that file.
+  Their obligations do not move, so they take the in-place re-verification
+  rather than a reset.
+
+  **Under `2A` or `2B` — `spec-0010`'s rows, through the discussion skill.** Both
+  statements rewrite the shipped `qfai-discussion/SKILL.md`: `2A` withdraws its
+  direction interview, and `2B` its optional-artifact sentence. Three test files
+  read that asset, and eight `done` rows name them.
+  `packages/qfai/tests/assets/uiuxSidecar.test.ts` is named by
+  `spec-0010/TDD-0001` … `TDD-0005`,
   `packages/qfai/tests/integration/discussionSkillTemplateIntegration.test.ts`
-  is named by `spec-0010/TDD-0006` and `TDD-0007`, and
-  `packages/qfai/tests/e2e/discussionHardeningE2E.test.ts` by
-  `spec-0010/TDD-0008` — three `done` rows whose recorded observations this
-  option's edits invalidate. **Five more are reached through the asset rather
-  than the test.** `packages/qfai/tests/assets/uiuxSidecar.test.ts` reads the
-  shipped `qfai-discussion/SKILL.md` this option rewrites, and
-  `spec-0010/TDD-0001` … `TDD-0005` are `done` rows naming that file. The
+  by `TDD-0006` and `TDD-0007`, and
+  `packages/qfai/tests/e2e/discussionHardeningE2E.test.ts` by `TDD-0008`. The
   procedure matches a reverse-dependent path, not only a file edited directly,
-  so the sweep covers all eight.
+  so the sweep covers all eight under either statement. This block is kept when
+  either statement's option 2 is approved.
 
   **Under `2a`, nine more.** That sub-option rewrites the shipped
   `qfai-prototyping/SKILL.md`, and two test files read it. Seven `done` rows
@@ -389,21 +404,12 @@ with its own approval; `2B` cannot be approved until it has landed.
   direction-selection step adds a category, so the rows a sub-option invalidates
   are not only the ones whose test file has the skill's name in it. The same
   procedure reaches all nine, and they owe fresh verification in the same
-  change. The cross-spec ownership procedure
-  (`.qfai/assistant/skills/qfai-implement/references/cross-spec-ownership.md`)
-  runs before either file is written, and **every row enumerated above** owes
-  fresh verification in the same change.
+  change.
 
-  **Two more sets, from the product edits rather than the assets.** Under
-  statement A option 2 the winner validator joins `CANONICAL_UIX_VALIDATORS` in
-  `packages/qfai/src/core/validators/uix/canonical.ts`, which
-  `packages/qfai/tests/integration/verifySemanticsSpec0014.test.ts` imports and
-  runs — `spec-0014/TDD-0009`, `TDD-0018` and `TDD-0019` are `done` rows naming
-  that file. Under `2B` the requiredness derivation edits
-  `packages/qfai/src/core/discussionPack.ts`, which
-  `packages/qfai/tests/core/activeDiscussionPack.test.ts` imports —
-  `spec-0013/TDD-0023` and `TDD-0024` name that one. Neither set's obligation
-  moves, so both take the in-place re-verification rather than a reset. Without it option 2 finishes with another
+  Whichever of these blocks the approval keeps, the cross-spec ownership
+  procedure (`.qfai/assistant/skills/qfai-implement/references/cross-spec-ownership.md`)
+  runs before any file in it is written, and every row it enumerates owes fresh
+  verification in the same change. Without that, option 2 finishes with another
   spec's rows attesting to behaviour the product no longer has.
 
 **This section is reduced to the approved outcome before `Status: approved` is
@@ -623,12 +629,12 @@ internally contradictory.
    contradicting both the product and the packs it just repaired, so the policy
    rerun is part of the approval, scoped by outcome:
 
-   | Outcome                   | Policy statement re-derived                                                                                                                     |
-   | ------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
-   | every statement-A outcome | `_policies/05_Contracts.md`'s prose declaring root `DESIGN.md` to be `/qfai-discussion` output — no outcome keeps discussion as the producer    |
-   | `1A`, `3A`                | `_policies/06_Glossary.md`'s `exploration-first` entry, which asserts the broad no-direction-in-discussion rule these two narrow or retire      |
-   | `2B`                      | `_policies/08_Decisions.md`'s `DR-0240`, adopted globally, which says readiness must not require `prototyping.yaml` — the blocker `2B` restores |
-   | `2a`                      | `DCON-031` in `_policies/05_Contracts.md`, below                                                                                                |
+   | Outcome                   | Policy statement re-derived                                                                                                                                                                                                                                 |
+   | ------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+   | every statement-A outcome | `_policies/05_Contracts.md`'s prose declaring root `DESIGN.md` to be `/qfai-discussion` output, and `_policies/06_Glossary.md`'s `DESIGN.md` entry, which says discussion authors the file and SDD freezes it — no outcome keeps discussion as the producer |
+   | `1A`, `3A`                | `_policies/06_Glossary.md`'s `exploration-first` entry, which asserts the broad no-direction-in-discussion rule these two narrow or retire                                                                                                                  |
+   | `2B`                      | `_policies/08_Decisions.md`'s `DR-0240`, adopted globally, which says readiness must not require `prototyping.yaml` — the blocker `2B` restores                                                                                                             |
+   | `2a`                      | `DCON-031` in `_policies/05_Contracts.md`, below                                                                                                                                                                                                            |
 
    Each carries its `_policies/10_delta.md` record, and every path is in
    `## Impact scope`.
@@ -767,10 +773,10 @@ internally contradictory.
    produce one. Which stage replaces it is a decision rather than a detail, so
    option 2 is offered as two, the same way option 3 is:
 
-   | Option | Who authors `DESIGN.md`                                                                                                                                                                                                                                                                                                                                                                                                                               |
-   | ------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-   | `2a`   | `/qfai-prototyping` gains a direction-selection step and authors the file **and `.qfai/contracts/design/DESIGN.md.lock.yaml`**, with its tests. The prototyping contract requires both before execution and `prototyping iterate` rejects a run without the lock, so assigning the authoring alone leaves a new UI project unable to start. Discussion still chooses nothing, and the contract that has prototyping read it read-only changes with it |
-   | `2b`   | `/qfai-sdd` Phase 0 authors it from the spec, with no interview anywhere. The requirement is met with no user-facing choice, and whatever a brand needs that a spec does not carry is lost. **It narrows `US-0002-0005` with the rest of statement A**: that story requires prototyping to remain where the direction is chosen, and `2b` moves the authoring to `/qfai-sdd`, so leaving the story as written would contradict the option settling it |
+   | Option | Who authors `DESIGN.md`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
+   | ------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+   | `2a`   | `/qfai-prototyping` gains a direction-selection step and authors the file **and `.qfai/contracts/design/DESIGN.md.lock.yaml`**, with its tests. The prototyping skill lists both among its inputs, and the lock is what freezes the file: `prototyping iterate` refuses a lock that is malformed, unreadable or mismatched. It does not refuse a missing one — a run with no lock proceeds unfrozen — so authoring the file without writing the lock would leave every run unfrozen with nothing reporting it. `2a` keeps that branch as it is: the step that authors the file writes the lock, as `/qfai-sdd` Phase 0 does today. Discussion still chooses nothing, and the contract that has prototyping read it read-only changes with it |
+   | `2b`   | `/qfai-sdd` Phase 0 authors it from the spec, with no interview anywhere. The requirement is met with no user-facing choice, and whatever a brand needs that a spec does not carry is lost. **It narrows `US-0002-0005` with the rest of statement A**: that story requires prototyping to remain where the direction is chosen, and `2b` moves the authoring to `/qfai-sdd`, so leaving the story as written would contradict the option settling it                                                                                                                                                                                                                                                                                        |
 
    `2A` with no letter authorises neither, and withdrawing every producer
    without naming a replacement leaves a new UI project unable to enter

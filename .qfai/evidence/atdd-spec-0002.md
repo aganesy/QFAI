@@ -119,7 +119,7 @@ projects above declare themselves inactive and did not run.
 ## Coverage Depth Matrix
 
 See `.qfai/evidence/coverage-depth-spec-0002.md`.
-Totals: ✅ 11 / ⚠️ 16 / ❌ 92, with 1 not applicable, across 120 scored cells —
+Totals: ✅ 11 / ⚠️ 17 / ❌ 91, with 1 not applicable, across 120 scored cells —
 108 matrix depth cells (12 rows × 9 columns) and 12 business rule cells
 (4 rows × 3 columns). `Status` is a row verdict, not a mark, and is outside
 every total.
@@ -144,11 +144,11 @@ Recorded per row above, and summarized in the table under
 Four of the pack's six ledger rows are not backfilled, and none of them can be
 until the row is true.
 
-| Row                        | What stops it                                                                                                    |
-| -------------------------- | ---------------------------------------------------------------------------------------------------------------- |
-| `TDD-0008`                 | `TC-0002-0008` asks that a planner-first pass be preserved. Nothing in the package emits a planner-first finding.  |
-| `TDD-0009`, `TDD-0010`     | `TC-0002-0009` asks that a planner-first violation be emitted. Same: the validator that did so was retired.        |
-| `TDD-0012`                 | `TC-0002-0011` names README and skill wording. Its test file reads neither, and no case in it covers the README.   |
+| Row                    | What stops it                                                                                                                                                                         |
+| ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `TDD-0008`             | `TC-0002-0008` asks that a planner-first pass be preserved. Nothing in the package emits a planner-first finding.                                                                     |
+| `TDD-0009`, `TDD-0010` | `TC-0002-0009` asks that a planner-first violation be emitted. Same: the validator that did so was retired.                                                                           |
+| `TDD-0012`             | `TC-0002-0011` names README and skill wording. The row names `threeLayer.test.ts`, which reads neither. The case that reads both is in `assets.test.ts`, which the row does not name. |
 
 `TDD-0009` and `TDD-0010` also share one obligation with no `Boundary` between
 them, which is a separate finding on the ledger.
