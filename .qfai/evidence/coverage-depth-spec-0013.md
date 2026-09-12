@@ -13,6 +13,12 @@ carries a status retiring it, so all twenty are active and all twenty own a row.
 the nine depth columns of the matrix and the `Positive case` / `Negative case` /
 `Conditional branches` columns of the business rule table.
 
+**What credits a cell.** A cell is credited only to a case that runs and that the pack binds to the
+obligation. Binding is by annotation: a case carrying `QFAI:SPEC-0013:TC-0013-NNNN` is bound to that
+obligation, and a case annotated for another spec is not, whatever it exercises. A test existing
+somewhere in the repository is therefore not coverage here. The rule has one visible consequence in
+this pack, set out under "The `auditProfile.ts` entrypoint" below.
+
 **Twenty-four of the forty-nine obligations are discharged by nothing, or by a test about something
 else.** Eleven have no test at all: `US-0013-0001`, `-0002`, `-0004`, `-0005`, `-0006`, `-0007`,
 `-0009`, `-0010`, and `TC-0013-0022`, `-0023`, `-0024`. Five more are discharged by substring
@@ -116,16 +122,98 @@ Seven negative results are load-bearing and were checked directly rather than in
    `primaryTasksBand.test.ts` separately requires `screen.primaryTasks.length` to be greater than
    zero on that same file. An empty slot would fail the `QFAI-AUD-001` lane the same pack mandates.
 
+### The `auditProfile.ts` entrypoint
+
+Four obligations name a module no spec-0013 case imports. `US-0013-0014`, `TC-0013-0034`,
+`TC-0013-0035` and `BR-0013-0020` each require **`auditProfile.ts`** to accept both the legacy
+string-only and the structured `{id, label, acceptance}` `primary_tasks` item shapes during the
+deprecation window; `AC-0013-0025` and `01_Spec.md` REQ-0164 use the same name. Every
+spec-0013-annotated case that scores those four rows calls `validateDesignAudit` from
+`designAudit.ts` instead. `auditProfile.ts` re-exports that function and adds `runAuditProfile` as a
+pass-through; two test files in the repository import it, and neither carries a spec-0013 annotation.
+
+The entrypoint is exercised, by a sibling pack. Two suites drive `runAuditProfile` over eight cases
+and all eight pass:
+
+```text
+$ cd packages/qfai && npx vitest run \
+    tests/unit/core/validators/auditProfileDualShape.test.ts \
+    tests/unit/core/validators/auditProfileBandReject.test.ts --reporter=verbose
+ ✓ |unit| tests/unit/core/validators/auditProfileBandReject.test.ts > TC-0004-0070: QFAI-AUD-020 ceiling warn + missing acceptance reject (error/boundary) > 9 primary_tasks fires QFAI-AUD-020 (warning) naming the ceiling
+ ✓ |unit| tests/unit/core/validators/auditProfileBandReject.test.ts > TC-0004-0070: QFAI-AUD-020 ceiling warn + missing acceptance reject (error/boundary) > structured primary_task missing 'acceptance' is rejected (QFAI-AUD-021 error)
+ ✓ |unit| tests/unit/core/validators/auditProfileBandReject.test.ts > TC-0004-0070: QFAI-AUD-020 ceiling warn + missing acceptance reject (error/boundary) > count exactly 7 (the ceiling) does NOT trigger QFAI-AUD-020
+ ✓ |unit| tests/unit/core/validators/auditProfileBandReject.test.ts > TC-0004-0070: QFAI-AUD-020 ceiling warn + missing acceptance reject (error/boundary) > a single primary_task does NOT trigger QFAI-AUD-020
+ ✓ |unit| tests/unit/core/validators/auditProfileDualShape.test.ts > TC-0004-0069: auditProfile accepts string-only AND structured primary_tasks (normal) > string-only primary_tasks (legacy) pass during the deprecation window
+ ✓ |unit| tests/unit/core/validators/auditProfileDualShape.test.ts > TC-0004-0069: auditProfile accepts string-only AND structured primary_tasks (normal) > structured {id,label,acceptance} primary_tasks (closed schema) pass
+ ✓ |unit| tests/unit/core/validators/auditProfileDualShape.test.ts > TC-0004-0069: auditProfile accepts string-only AND structured primary_tasks (normal) > mixed sibling contracts (one string-only + one structured) both pass simultaneously
+ ✓ |unit| tests/unit/core/validators/auditProfileDualShape.test.ts > TC-0004-0069: auditProfile accepts string-only AND structured primary_tasks (normal) > auditProfile.runAuditProfile delegates to validateDesignAudit (same observable behavior)
+
+ Test Files  2 passed (2)
+      Tests  8 passed (8)
+```
+
+They carry `QFAI:SPEC-0004:TC-0004-0069` and `QFAI:SPEC-0004:TC-0004-0070`, so the crediting rule
+binds them to spec-0004 and they raise no cell here. That is the split `10_Plan.md` writes down:
+"Validator-implementation side is shared with spec-0004 (Source REQ-0164); this slice owns the SDD
+authoring + doc + template surface." The last of the eight is the seam itself — it feeds one contract
+to both entrypoints and requires the same finding codes back — so the two surfaces are held together
+by a spec-0004 case, not by a spec-0013 one.
+
+Read against those eight cases, **every scored cell of the four rows keeps its mark**. Each mark turns
+on something none of the eight changes: either a fixture shape none of them supplies — a `null` item,
+an empty map, a field present but not a string, a count of 0, one list carrying a legacy string, a
+complete structured item and an incomplete one at once, a second state in one workspace — or a
+discriminator that a sibling row of this pack owns rather than the scored row. None turns on which
+module the fixture is fed to. No cell here is `❌` or `⚠️` for want of a run against
+`auditProfile.ts`, and none is raised because one exists elsewhere.
+
 ### Annotation coverage
 
-The repository's ATDD scan reads two prose files and no tests.
-`.qfai/report/atdd-traceability/summary.json` records `scan.matchedFileCount: 2`, and both matches are
-annotation carriers — `tests/integration/qfai-traceability.md` and `tests/e2e/qfai-traceability.md` —
-under the repo-root `tests/` tree, while the package's real suite lives at `packages/qfai/tests/**`
-and is not scanned at all. Every obligation in this pack is therefore reported `coveredByCarrierOnly`,
-and none is reported missing: all thirty-five `TC-0013-*` and all fourteen `US-0013-*` sit under
-`coveredByCarrierOnly`, `missing` holds nothing from this spec, and `tcCensus` records
-`{declared: 35, exempt: 0, owed: 35}`.
+The repository's ATDD scan reads two prose files and no tests. Its report lands under `.qfai/report/`,
+which the repository ignores in full, so the commands that produce the numbers stand in place of a
+path nobody can open.
+
+The scan's globs are `tests/{e2e,api,integration}/**/*.{feature,markdown,md,ts}`. The repo-root
+`tests/` tree holds two files in all, and both are annotation carriers:
+
+```text
+$ find tests -type f
+tests/e2e/qfai-traceability.md
+tests/integration/qfai-traceability.md
+```
+
+The package's real suite lives at `packages/qfai/tests/**`, which no glob reaches, so none of its 700
+test files is scanned. Every obligation in this pack is therefore reported `coveredByCarrierOnly`,
+and none is reported missing:
+
+```text
+$ node packages/qfai/dist/cli/index.mjs validate --profile atdd --fail-on never
+$ node -e 'const s=require("./.qfai/report/atdd-traceability/summary.json");
+  const p=i=>i.startsWith("SPEC-0013:");
+  console.log(JSON.stringify({matchedFileCount:s.scan.matchedFileCount,
+    carrierOnlyTc:s.coveredByCarrierOnly.tc.filter(p).length,
+    carrierOnlyUs:s.coveredByCarrierOnly.us.filter(p).length,
+    missingTc:s.missing.tc.filter(p).length, missingUs:s.missing.us.filter(p).length,
+    excludedUnitComponentTc:s.excludedUnitComponentTc.filter(p).length,
+    tcCensus:s.tcCensus.find(e=>e.spec==="0013")},null,1))'
+{
+ "matchedFileCount": 2,
+ "carrierOnlyTc": 35,
+ "carrierOnlyUs": 14,
+ "missingTc": 0,
+ "missingUs": 0,
+ "excludedUnitComponentTc": 0,
+ "tcCensus": {
+  "spec": "0013",
+  "declared": 35,
+  "exempt": 0,
+  "owed": 35
+ }
+}
+```
+
+All thirty-five `TC-0013-*` and all fourteen `US-0013-*` sit under `coveredByCarrierOnly`, `missing`
+holds nothing from this spec, and `tcCensus` records `{declared: 35, exempt: 0, owed: 35}`.
 
 `excludedUnitComponentTc` holds no spec-0013 entry, so no row in this pack is exempt from the
 annotation obligation — the eleven rows that declare `Level: integration` owe it explicitly, and the
@@ -135,19 +223,23 @@ row, and it caps every row's `Status` at `⚠️`.
 
 ### Skipped tests
 
-`QFAI-TEST-003` reports **16 skipped tests** in this pack's recorded scope
-(`.qfai/report/validate.spec-0013.json`). They sit in eight files:
+`QFAI-TEST-003` reports **16 skipped tests** in this pack's recorded scope. The report of a
+spec-scoped run lands under the ignored `.qfai/report/` as well, so the finding is reproduced here by
+the run that raises it. `tdd` is the profile that carries the stub gate over the package suite; the
+sixteen sit in eight files, all `describe.skip`:
 
-| File                                                           | Skipped `describe` blocks |
-| -------------------------------------------------------------- | ------------------------- |
-| `tests/e2e/spec0004SaasPackageAndPackLocationE2E.test.ts`      | 3                         |
-| `tests/integration/spec0004SaasPackageAndPackLocation.test.ts` | 3                         |
-| `tests/e2e/spec0006DoctorRemediationE2E.test.ts`               | 3                         |
-| `tests/integration/spec0006DoctorRemediation.test.ts`          | 3                         |
-| `tests/e2e/spec0008AtddScaffoldE2E.test.ts`                    | 1                         |
-| `tests/integration/spec0008AtddScaffold.test.ts`               | 1                         |
-| `tests/e2e/spec0014SaasPackageCertifyE2E.test.ts`              | 1                         |
-| `tests/integration/spec0014SaasPackageCertify.test.ts`         | 1                         |
+```text
+$ node packages/qfai/dist/cli/index.mjs validate --profile tdd --spec 0013 --fail-on never \
+    | grep -oP '^\[error\] QFAI-TEST-003 Skipped test found: \K\S+ at [^:]+' | sort | uniq -c
+      3 describe.skip at packages/qfai/tests/e2e/spec0004SaasPackageAndPackLocationE2E.test.ts
+      3 describe.skip at packages/qfai/tests/e2e/spec0006DoctorRemediationE2E.test.ts
+      1 describe.skip at packages/qfai/tests/e2e/spec0008AtddScaffoldE2E.test.ts
+      1 describe.skip at packages/qfai/tests/e2e/spec0014SaasPackageCertifyE2E.test.ts
+      3 describe.skip at packages/qfai/tests/integration/spec0004SaasPackageAndPackLocation.test.ts
+      3 describe.skip at packages/qfai/tests/integration/spec0006DoctorRemediation.test.ts
+      1 describe.skip at packages/qfai/tests/integration/spec0008AtddScaffold.test.ts
+      1 describe.skip at packages/qfai/tests/integration/spec0014SaasPackageCertify.test.ts
+```
 
 **No spec-0013 obligation depends on a skipped test.** All sixteen belong to spec-0004, spec-0006,
 spec-0008 and spec-0014. None of the fourteen files that carry spec-0013 coverage contains a `.skip`,
