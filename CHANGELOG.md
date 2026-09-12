@@ -4,6 +4,40 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ## [Unreleased]
 
+### Fixed
+
+- **The working-tree address is written one way** (#1651). The procedure said
+  "a hash over HEAD and the working tree", and that is not one value: a
+  producer and a reviewer could each pick a defensible separator, record shape
+  or way of reading a file, get different answers for the same tree, and leave
+  an ordinary uncommitted item stale for nobody's mistake.
+
+  Git names the paths and the bytes come off the filesystem, because a diff is
+  a rendering and what renders it — `core.autocrlf`, `core.eol`, a
+  `.gitattributes` driver — is checkout-local. Each record carries the path,
+  the kind, the mode and the SHA-256 of the bytes, and how every part is
+  written is fixed: a mode is four octal digits, a digest is 64 lowercase
+  characters, a symlink's bytes are its own payload, and the sequence is hashed
+  as bytes rather than as a decoded string. Directories are in it too, so
+  removing the execute bit from a source directory moves the address.
+
+  A state the records cannot describe stops the address rather than being
+  recorded as clean: an unborn `HEAD`, a submodule, an untracked embedded
+  repository, a link used as a directory, a file with several links, and a path
+  the process cannot read. The tree has to hold still while it is read, so the
+  writers are stopped first. Collecting twice is a check on that, not a proof of
+  it, because a writer repeating one change can hand both runs the same mixture
+  of old and new files. The ledger's
+  own directory is read from the project's configuration rather than assumed,
+  so a project that moved its specs is not hashing its own bookkeeping writes.
+
+  The recorded value is checked where it is committed, and in the one case the
+  procedure produces: `working-tree+` followed by 64 lowercase hexadecimal
+  characters. Freshness is compared exactly, so accepting both cases would let
+  one tree be recorded as two revisions and read a correct row as stale.
+
+## [1.12.0] - 2026-09-12
+
 ### Added
 
 - **A design is grilled before it is fixed, and every stage does it** (#1591,
@@ -1984,36 +2018,6 @@ unadjudicated`, read off a Work Orders Summary row the session writes rather
   stale every verdict in the spec when any cell moved. A record re-attestation
   closes it, because the revision has not moved — and it is not a rubber stamp,
   since what it re-signs is a judgement over a subject that has grown.
-
-- **The working-tree address is written one way** (#1651). The procedure said
-  "a hash over HEAD and the working tree", and that is not one value: a
-  producer and a reviewer could each pick a defensible separator, record shape
-  or way of reading a file, get different answers for the same tree, and leave
-  an ordinary uncommitted item stale for nobody's mistake.
-
-  Git names the paths and the bytes come off the filesystem, because a diff is
-  a rendering and what renders it — `core.autocrlf`, `core.eol`, a
-  `.gitattributes` driver — is checkout-local. Each record carries the path,
-  the kind, the mode and the SHA-256 of the bytes, and how every part is
-  written is fixed: a mode is four octal digits, a digest is 64 lowercase
-  characters, a symlink's bytes are its own payload, and the sequence is hashed
-  as bytes rather than as a decoded string. Directories are in it too, so
-  removing the execute bit from a source directory moves the address.
-
-  A state the records cannot describe stops the address rather than being
-  recorded as clean: an unborn `HEAD`, a submodule, an untracked embedded
-  repository, a link used as a directory, a file with several links, and a path
-  the process cannot read. The tree has to hold still while it is read, so the
-  writers are stopped first. Collecting twice is a check on that, not a proof of
-  it, because a writer repeating one change can hand both runs the same mixture
-  of old and new files. The ledger's
-  own directory is read from the project's configuration rather than assumed,
-  so a project that moved its specs is not hashing its own bookkeeping writes.
-
-  The recorded value is checked where it is committed, and in the one case the
-  procedure produces: `working-tree+` followed by 64 lowercase hexadecimal
-  characters. Freshness is compared exactly, so accepting both cases would let
-  one tree be recorded as two revisions and read a correct row as stale.
 
 ## [1.11.1] - 2026-09-10
 
