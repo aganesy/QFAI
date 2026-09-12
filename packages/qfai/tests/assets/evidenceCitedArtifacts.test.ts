@@ -307,8 +307,10 @@ async function measureCitations(): Promise<[string, string][]> {
 function namesSomethingInside(cited: string): boolean {
   const root = GENERATED_ROOTS.find((candidate) => cited.startsWith(candidate));
   if (root === undefined) return false;
-  const firstSegment = cited.slice(root.length).split("/")[0] ?? "";
-  return firstSegment.replace(/\*/g, "").length > 0;
+  // Only a glob made of nothing but wildcards names the tree. `review/**/*.json`
+  // carries a literal after the wildcard segment and claims a set of files, so
+  // judging by the first segment alone let an absent set through.
+  return cited.slice(root.length).replace(/[*/]/g, "").length > 0;
 }
 
 const escapeForRegExp = (literal: string): string => literal.replace(/[.+?^${}()|[\]\\]/g, "\\$&");
@@ -490,5 +492,8 @@ describe("a glob is a claim about a set", () => {
     expect(namesSomethingInside(".qfai/review/**")).toBe(false);
     expect(namesSomethingInside(".qfai/review/review-2026082*")).toBe(true);
     expect(namesSomethingInside(".qfai/report/validate.json")).toBe(true);
+    // A literal after the wildcard-only segment is still a claim about a set.
+    expect(namesSomethingInside(".qfai/review/**/*.json")).toBe(true);
+    expect(namesSomethingInside(".qfai/review/**/summary.json")).toBe(true);
   });
 });
