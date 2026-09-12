@@ -138,6 +138,13 @@ There is one base, and it is the project root.
 ## User Questions (AskUserQuestion Protocol)
 
 - When a question to the user is needed, use AskUserQuestion if the tool is available.
+  **No question is exempt** — a confirmation and a yes-or-no take the same path as
+  anything else, because an exception is what an agent reaches for when it would
+  rather not ask. The form a question takes is owned by
+  `.agents/rules/user-questions.md`; this section is where it binds a skill.
+- Availability is judged for **this question in this invocation**. A tool the mode
+  withholds, or one that cannot carry the answer's shape, is unavailable for that
+  question and takes the fallback below.
 - When AskUserQuestion supports structured choices, prefer structured choices over free-text input.
 - If AskUserQuestion is unavailable, ask the same question in a normal message with explicit numbered choices.
 - Preserve structured choice semantics when falling back.

@@ -337,9 +337,24 @@ If confidence is low, ask targeted questions or run additional repo inspection.
 
 When an agent needs to ask the user a question, it **MUST** use the AskUserQuestion tool if available.
 
+**No question is exempt.** A confirmation, a yes-or-no, a "just checking" — each
+is a question and each takes this path. There is no class light enough to skip
+it, and the reason is what an exception gets used for: an agent looking for one
+is an agent that would rather not ask, and the question it skips is the one it
+was least sure of. `.agents/rules/user-questions.md` owns the form a question
+takes and states the whole of it; this article is where the obligation binds.
+
+**This is the form, not the count.** Article VI bounds how many clarifying
+questions an invocation asks; this article bounds what each of them looks like.
+Exhausting that budget changes the count and nothing here — the questions that
+survive exhaustion still arrive as structured choices.
+
 Rules:
 
 1. **MUST use AskUserQuestion** when the tool is available in the current environment.
+   Availability is judged for **this question in this invocation**, not from what the
+   host supports in general: a tool a mode withholds, or one that cannot carry the
+   answer's shape, is unavailable for that question and takes rule 3.
 2. **MUST prefer structured choices** (radio/multi-select) over free-text input when AskUserQuestion supports them.
 3. **Fallback**: If AskUserQuestion is technically unavailable, the agent MUST present the same question
    as a normal message with explicit numbered choices.

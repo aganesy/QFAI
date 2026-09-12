@@ -513,3 +513,46 @@ describe("the clarification budget is countable", () => {
     });
   }
 });
+
+describe("the question form binds every question", () => {
+  for (const tree of QFAI_TREES) {
+    it(`${tree}: Article X admits no exempt question`, async () => {
+      // An exception is where an agent goes when it would rather not ask, and
+      // the question it skips is the one it was least sure of. Stated as the
+      // reason rather than a bare prohibition, because a prohibition invites a
+      // search for the case it does not cover.
+      const content = await read(tree, CONSTITUTION);
+      expectPhrase(content, "**No question is exempt.**");
+      expectPhrase(content, "would rather not ask");
+      expectPhrase(content, "`.agents/rules/user-questions.md`");
+    });
+
+    it(`${tree}: Article X separates the form from the count`, async () => {
+      // Read as one rule, an exhausted budget would look like permission to
+      // drop the structured form too, and the questions that survive exhaustion
+      // are the mandatory ones.
+      const content = await read(tree, CONSTITUTION);
+      expectPhrase(content, "**This is the form, not the count.**");
+      expectPhrase(
+        content,
+        "the questions that\nsurvive exhaustion still arrive as structured choices",
+      );
+    });
+
+    it(`${tree}: availability is judged per question, not per host`, async () => {
+      // A tool the host carries but this mode withholds, and a tool that cannot
+      // carry the answer's shape, are both the fallback's case. Judged from what
+      // the host supports in general, neither would be.
+      const content = await read(tree, CONSTITUTION);
+      expectPhrase(content, "**this question in this invocation**");
+      expectPhrase(content, "cannot carry the\n   answer's shape");
+    });
+
+    it(`${tree}: the operating baseline carries both, where a skill reads them`, async () => {
+      const content = await read(tree, OPERATING);
+      expectPhrase(content, "**No question is exempt**");
+      expectPhrase(content, "**this question in this invocation**");
+      expectPhrase(content, "`.agents/rules/user-questions.md`");
+    });
+  }
+});
