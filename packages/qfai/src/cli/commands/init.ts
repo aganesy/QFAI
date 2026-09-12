@@ -2953,9 +2953,10 @@ async function ensureAgentEntryPointRules(
       }
       const refusal = await refuseUnsafeEntryPointRewrite(target, existing, destRoot);
       if (refusal !== null) {
-        error(
-          `  WARNING: ${formatReportPath(target)} was left unchanged. ${refusal}${pendingNote(uncited)}`,
-        );
+        // No pending note here: this branch reads the uncited masters off the
+        // shipped template rather than off the copy report, so the next run
+        // finds them again and tries once more.
+        error(`  WARNING: ${formatReportPath(target)} was left unchanged. ${refusal}`);
         skipped.push(target);
         continue;
       }
@@ -3045,9 +3046,16 @@ async function citeNewMastersInCopilotInstructions(
   if (newlyWritten.length === 0) return;
 
   const target = path.join(destRoot, ".github", "copilot-instructions.md");
-  // Absent: `syncIntegrationWrappers` writes it whole later in this run, from
-  // the same source, so it will carry every master already.
-  if ((await lstat(target).catch(() => null)) === null) return;
+  // Absent — and only absent. `syncIntegrationWrappers` writes the file whole
+  // later in this run, from the same source, so it will carry every master
+  // already. Any other failure means a file is there and something is wrong
+  // with reaching it, which the bounded read below reports rather than passing
+  // over in silence.
+  const present = await lstat(target).then(
+    () => true,
+    (cause: unknown) => !isEnoent(cause),
+  );
+  if (!present) return;
 
   // One open, one descriptor, a ceiling on the read. The file belongs to the
   // adopter: a FIFO blocks until a writer closes it, a device never ends, and an
@@ -3207,6 +3215,13 @@ async function reclaimEntryPointStaging(destRoot: string): Promise<void> {
  * itself stays that way, and one the project had made group-writable does not
  * come back read-only. Ownership goes with it where the platform has it: an
  * init run under `sudo` would otherwise hand the adopter's file to root.
+ *
+ * SIMPLIFIED: mode and ownership only. A POSIX ACL, an extended attribute or a
+ * security label on the original is not carried to the staging inode, so a
+ * rename drops it — and Node exposes no portable way either to read one or to
+ * detect that a file has any.
+ * Lift when: a dependency this project already carries can read and apply them,
+ * or an adopter reports access lost through this path.
  */
 async function replaceEntryPointFile(
   target: string,
@@ -3279,7 +3294,12 @@ async function keepOwner(staging: string, original: Stats): Promise<string | nul
     await chown(staging, original.uid, original.gid);
     return null;
   } catch (cause: unknown) {
-    return `Its owner could not be kept: ${describeError(cause)}. Renaming over it would leave the file owned by this run, and its owner unable to edit it.`;
+    // The code alone. Node puts the full path in the message, and a checkout
+    // whose path carries a newline or an escape sequence would then forge
+    // report lines through a warning — the separately printed target goes
+    // through `formatReportPath` for exactly that reason.
+    const code = hasErrnoCode(cause) ? cause.code : "unknown";
+    return `Its owner could not be kept (${code}). Renaming over it would leave the file owned by this run, and its owner unable to edit it.`;
   }
 }
 

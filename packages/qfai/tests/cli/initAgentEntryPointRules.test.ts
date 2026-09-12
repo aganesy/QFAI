@@ -867,6 +867,44 @@ describe("what the citation scan reads a line as", () => {
     expect(addRuleCitations(existing, template, [".agents/rules/grilling.md"])).toBe(existing);
   });
 
+  it("reads a fence opened as a list item's content", () => {
+    // `- ```markdown` opens a block. Left unopened, the example inside reads as
+    // live and the file is classified as hand-wired.
+    const existing = [
+      "# Our house rules",
+      "",
+      "- Ours looks like this:",
+      "",
+      "  ```markdown",
+      "  - `.agents/rules/temporary-files.md` — scratch goes under `tmp/`.",
+      "  ```",
+      "",
+    ].join("\n");
+
+    expect(citedRuleMastersOutsideCode(existing)).toEqual([]);
+    expect(needsManagedRulesSection(existing, template)).toBe(true);
+  });
+
+  it("does not add a second blank line to an emptied section", () => {
+    // The section already closes with one. A run that promised a bullet should
+    // not also rewrite the whitespace around it.
+    const existing = [
+      QFAI_AGENT_RULES_BEGIN,
+      "",
+      "We keep our own summary here instead.",
+      "",
+      QFAI_AGENT_RULES_END,
+      "",
+    ].join("\n");
+
+    const merged = addRuleCitations(existing, template, [".agents/rules/grilling.md"]);
+    const lines = merged.split("\n");
+    const added = lines.findIndex((line) => line.includes("grilling.md"));
+    const end = lines.findIndex((line) => line.includes(QFAI_AGENT_RULES_END));
+    expect(added).toBeGreaterThan(0);
+    // One blank between the bullet and the closing marker, not two.
+    expect(lines.slice(added + 1, end).filter((line) => line.trim() === "")).toHaveLength(1);
+  });
   it("ends a quoted fence where the block quote ends", () => {
     // An unclosed fence inside a block quote closes with the quote. Held open
     // past it, the real section below reads as an example and a later run

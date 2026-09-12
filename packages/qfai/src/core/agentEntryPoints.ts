@@ -209,14 +209,33 @@ function plainLine(line: string | undefined): string {
   return (line ?? "").replace(/\r$/, "").replace(/^[ \t]{0,3}(?:> ?)+/, "");
 }
 
+/**
+ * A line as a fence scanner reads it: containers removed, marker and all.
+ *
+ * A fence can open as a list item's content — `- ```markdown` — and a scan that
+ * leaves the marker in place never sees it, so the example inside reads as
+ * live. The bullet scan cannot share this: it needs the marker it strips here.
+ */
+function fenceLine(line: string | undefined): string {
+  return plainLine(line).replace(/^[ \t]*(?:[-*+]|\d+[.)])[ \t]+/, "");
+}
+
+/**
+ * What a line sits inside, as far as a fence is concerned.
+ *
+ * The block quote alone. A fence opened inside one ends where the quote does —
+ * held open past that, the scan reads the rest of the document as part of an
+ * example. A list marker is deliberately not in here: a line beginning `- `
+ * inside a fence is content, and reading it as a container would close the
+ * block on its first bullet.
+ */
+function containerOf(line: string | undefined): string {
+  return /^[ \t]{0,3}(?:> ?)*/.exec((line ?? "").replace(/\r$/, ""))?.[0]?.trim() ?? "";
+}
+
 /** The terminator `line` carried, so an inserted line keeps its neighbour's. */
 function terminatorOf(line: string | undefined): string {
   return (line ?? "").endsWith("\r") ? "\r" : "";
-}
-
-/** The Markdown container prefix a line carries, as written. */
-function containerOf(line: string | undefined): string {
-  return /^[ \t]{0,3}(?:> ?)*/.exec((line ?? "").replace(/\r$/, ""))?.[0]?.trim() ?? "";
 }
 
 /**
@@ -240,7 +259,7 @@ function outsideFences(lines: readonly string[]): boolean[] {
       // The container the fence opened in has ended, and so has the fence.
       open = null;
     }
-    const line = plainLine(raw);
+    const line = fenceLine(raw);
     const fence = /^ {0,3}(`{3,}|~{3,})(.*)$/.exec(line);
     if (fence === null) return open === null;
     const run = fence[1] ?? "";
@@ -378,13 +397,16 @@ export function addRuleCitations(
     // rule the run shipped uncited for good, so they go at the end of the
     // section as their own block, separated from whatever precedes them.
     const terminator = terminatorOf(lines[end]);
-    const blank = plainLine(lines[end - 1]).trim() === "" ? 1 : 0;
+    // Where the section already closes with a blank line, that line is the
+    // separator below the bullets: adding another leaves two, so a run that
+    // promised one bullet also rewrote the section's whitespace.
+    const closing = plainLine(lines[end - 1]).trim() === "";
     lines.splice(
-      end - blank,
+      end - (closing ? 1 : 0),
       0,
       terminator,
       ...bullets.map((bullet) => `${bullet}${terminator}`),
-      terminator,
+      ...(closing ? [] : [terminator]),
     );
     return lines.join("\n");
   }
