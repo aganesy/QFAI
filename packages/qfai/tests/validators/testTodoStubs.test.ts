@@ -488,4 +488,20 @@ describe("the ATDD gate's file selection", () => {
     // the ATDD gate green over a suite whose tests do not run.
     expect(issues.map((issue) => issue.code)).toContain("QFAI-TEST-003");
   });
+
+  it("reports a marked file the placeholder validator's globs do not collect", async () => {
+    const root = await newTempDir();
+    const config = atddConfig(["packages/*/tests/**/*.test.ts"]);
+    // `pay.ts` sits in a scanned directory and matches no scaffold basename
+    // pattern, so `D-SCAFFOLD-PLACEHOLDER` never opens it. Standing aside on
+    // the directory alone would leave the file reported by neither.
+    await writeTestFile(root, "tests/integration/pay.ts", scaffolded());
+
+    const issues = await validateTestTodoStubs(root, config, {
+      globs: ["tests/integration/**/*.ts"],
+      placeholderScanned: scaffoldPlaceholderScannedFilter(root, config),
+    });
+
+    expect(issues.map((issue) => issue.code)).toContain("QFAI-TEST-003");
+  });
 });

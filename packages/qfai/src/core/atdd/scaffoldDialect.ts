@@ -480,6 +480,18 @@ function compileGlobMatchers(patterns: readonly string[], matchWholePath: boolea
   return matchers;
 }
 
+/**
+ * Basenames `SCAFFOLD_PLACEHOLDER_GLOBS` collect, as matchers.
+ *
+ * Exported for the one caller that has to answer "does that validator scan this
+ * file" without running its scan. Basename rather than whole path: every
+ * placeholder glob names a basename pattern under a globstar, and the
+ * directory half is the caller's own containment check.
+ */
+export function scaffoldPlaceholderBasenameMatchers(): RegExp[] {
+  return compileGlobMatchers(SCAFFOLD_PLACEHOLDER_GLOBS, false);
+}
+
 /** Where the writer will put the skeleton, when the caller knows it. */
 export type ScaffoldDialectOptions = {
   /**

@@ -61,10 +61,11 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   is the safe direction of the two.
 
   The scaffold marker still hands an unfilled skeleton to
-  `D-SCAFFOLD-PLACEHOLDER`, but only where that validator looks. It scans four
-  directories under `paths.testsDir`; this gate also reads a package-local
-  acceptance suite, and a marked skeleton there was exempt here and unseen
-  there, leaving the ATDD gate green over a suite that does not run.
+  `D-SCAFFOLD-PLACEHOLDER`, but only where that validator looks — both halves of
+  its scan, the four directories under `paths.testsDir` and the writer's own
+  basename patterns. A marked skeleton outside either was exempt from this gate
+  and uncollected by that one, leaving the ATDD gate green over a suite that
+  does not run.
 
 ### Added
 

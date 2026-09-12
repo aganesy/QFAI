@@ -49,7 +49,10 @@ import { readFile } from "node:fs/promises";
 
 import { resolvePath, type QfaiConfig } from "../config.js";
 import { SCAFFOLD_PLACEHOLDER_MARKER } from "../atdd/scaffold.js";
-import { SCAFFOLD_PLACEHOLDER_GLOBS } from "../atdd/scaffoldDialect.js";
+import {
+  SCAFFOLD_PLACEHOLDER_GLOBS,
+  scaffoldPlaceholderBasenameMatchers,
+} from "../atdd/scaffoldDialect.js";
 import { atddTestKindDirs, collectTcLevels, isOutsideAtddObligation } from "../atddTraceability.js";
 import {
   listValidateCycleKeys,
@@ -103,12 +106,14 @@ export function scaffoldPlaceholderScanDirs(testsDir: string): string[] {
 }
 
 /**
- * Whether a repository-relative path is inside the scan above.
+ * Whether this validator's scan reaches a repository-relative path.
  *
- * Containment rather than a glob, because the question is which validator owns
- * the file rather than which files to open, and the two scans spell their
- * selection differently: this one takes the writer's dialect patterns, the stub
- * gate takes the ATDD layer globs.
+ * Both halves of that scan, because either alone is wrong. The directories are
+ * the four above; the basenames are the writer's own dialect patterns, which is
+ * what the scan globs with. A marked file in one of those directories whose
+ * name the writer would never emit — `pay.ts` beside `pay.test.ts` — is not
+ * collected there, so a caller standing aside for it leaves it reported by
+ * nobody.
  */
 export function scaffoldPlaceholderScannedFilter(
   root: string,
@@ -117,7 +122,11 @@ export function scaffoldPlaceholderScannedFilter(
   const scanned = scaffoldPlaceholderScanDirs(resolvePath(root, config, "testsDir")).map((dir) =>
     path.resolve(dir),
   );
+  const basenames = scaffoldPlaceholderBasenameMatchers();
   return (relativePath: string): boolean => {
+    if (!basenames.some((matcher) => matcher.test(path.basename(relativePath)))) {
+      return false;
+    }
     const absolute = path.resolve(root, relativePath);
     return scanned.some((dir) => {
       const inside = path.relative(dir, absolute);
