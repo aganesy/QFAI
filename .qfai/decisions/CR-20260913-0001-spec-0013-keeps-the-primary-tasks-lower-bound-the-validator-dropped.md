@@ -3,7 +3,7 @@
 - ID: `CR-20260913-0001`
 - Title: `spec-0013 keeps the primary_tasks lower bound the validator dropped`
 - Raised by: `qfai-implement`
-- Raised at: `2026-09-13T00:00:00Z`
+- Raised at: `2026-09-12T19:06:27Z`
 - Class: `intent`
 - Status: `open`
 - Approved by: `-`
@@ -127,6 +127,7 @@ because what they were rejected against is still written where they are.
   `.qfai/specs/spec-0013/09_delta.md`,
   `.qfai/specs/spec-0013/tdd/test-list.md`,
   `.qfai/specs/spec-0004/01_Spec.md`,
+  `.qfai/specs/spec-0004/02_User-stories.md`,
   `.qfai/specs/spec-0004/03_Acceptance-Criteria.md`,
   `.qfai/specs/spec-0004/04_Business-Rules.md`,
   `.qfai/specs/spec-0004/05_Examples.md`,
@@ -162,11 +163,11 @@ and leave the spec as it stands.
    artifact classes and `.qfai/assistant/constitution/drift-protocol.md` gives
    each its own:
 
-   | Invocation            | Scope                                                                                                                                                                                                                                                     | Mode        | CR reference lands in                         |
-   | --------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------- | --------------------------------------------- |
-   | `/qfai-sdd spec-0013` | The nine statements under `## Proposed change`, plus `10_Plan.md`'s band item                                                                                                                                                                             | `re-derive` | `spec-0013/09_delta.md` and `07_Decisions.md` |
-   | `/qfai-sdd spec-0004` | Every statement that carries the band: `REQ-0164` and its Consumer View sentence, `AC-0004-0037`, `BR-0004-0031`, the example, `TC-0004-0070`, the `OQ-0158` resolution, the plan item, and `DR-0004-0014` — a third decision adopting `DR-0267` verbatim | `re-derive` | `spec-0004/09_delta.md` and `07_Decisions.md` |
-   | `/qfai-sdd`           | `_policies/08_Decisions.md` — `DR-0267`, superseded or rewritten by the option                                                                                                                                                                            | `re-derive` | `_policies/10_delta.md` and `08_Decisions.md` |
+   | Invocation            | Scope                                                                                                                                                                                                                                                                                                                                    | Mode        | CR reference lands in                         |
+   | --------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------- | --------------------------------------------- |
+   | `/qfai-sdd spec-0013` | The nine statements under `## Proposed change`, plus `10_Plan.md`'s band item                                                                                                                                                                                                                                                            | `re-derive` | `spec-0013/09_delta.md` and `07_Decisions.md` |
+   | `/qfai-sdd spec-0004` | Every statement that carries the band: `REQ-0164` and its Consumer View sentence, `US-0004-0038` — which requires the finding to name a recommended count band — `AC-0004-0037`, `BR-0004-0031`, the example, `TC-0004-0070`, the `OQ-0158` resolution, the plan item, and `DR-0004-0014` — a third decision adopting `DR-0267` verbatim | `re-derive` | `spec-0004/09_delta.md` and `07_Decisions.md` |
+   | `/qfai-sdd`           | `_policies/08_Decisions.md` — `DR-0267`, superseded or rewritten by the option                                                                                                                                                                                                                                                           | `re-derive` | `_policies/10_delta.md` and `08_Decisions.md` |
 
    `re-derive` in all three: the statements change what they say, and
    `confirm-only` writes nothing but this Change Request's reference. A bare
@@ -183,8 +184,21 @@ and leave the spec as it stands.
      the layout defines** — `Status`, `Context`, `Decision`, `Consequences`,
      `Related` — and the Drift Protocol forbids inventing another, so there is
      no `Superseded by` field to write.
-   - **Option 2**: `DR-0267` and `DR-0013-0003` rewritten to state a ceiling,
-     with their `Rejected` lists re-derived against the new statement.
+   - **Option 2**: **all three** rewritten to state a ceiling — `DR-0267`,
+     `DR-0013-0003` and `DR-0004-0014`. The third is a composite record that
+     adopts `DR-0267` verbatim alongside `DR-0268` and `DR-0274`, which this
+     Change Request does not reach: only its band entry is rewritten, and the
+     other two choices stay as they are. Leaving it out, as an earlier draft of
+     this step did, left one of the three still adopting `3..7` after the option
+     had been applied.
+
+     **The re-derived trade-offs go in `Consequences`.** The layout defines
+     `Status`, `Context`, `Decision`, `Consequences` and `Related`, and the
+     Drift Protocol forbids inventing another — so an instruction to re-derive a
+     `Rejected` list either asks for a field the layout does not define, or
+     entrenches one that exists today outside it. What a rewritten record owes
+     is the reason the alternatives were not taken, and `Consequences` is where
+     that belongs.
 3. Downstream ledger sweep, under options 1 and 2. Reset to `todo`, recording
    this CR's ID in their `DR-ID` column: `spec-0013/TDD-0027`,
    `spec-0013/TDD-0028`, `spec-0004/TDD-0050`. None is retired: every
