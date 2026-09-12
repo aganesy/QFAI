@@ -84,7 +84,7 @@ below are over the selected cases, not over the file.
 | `TDD-0019` falsifiability B | 1 of 6   | 1 failed                  |
 | `TDD-0019` checkpoint item  | all 6    | 6 passed                  |
 | Refactor verify             | all      | 127 passed                |
-| Checkpoint                  | all      | seven of seven CI slices  |
+| Checkpoint                  | all      | six of seven slices green |
 
 ## Test volume estimate
 
@@ -265,14 +265,24 @@ first mutation passes it and fails the literal check below it instead.
 - Refactor verify command: npx vitest run tests/integration/verifySemanticsSpec0014.test.ts tests/cli/commands/prototypingIterate.test.ts tests/integration/cli/commands/prototypingCertify.saasPackage.test.ts tests/integration/cli/commands/prototypingCertify.upgradeScope.test.ts
 - Refactor verify result: Test Files 4 passed (4); Tests 127 passed (127)
 - Refactor verify revision: db8cd210a3b71ffd82591dda52ed250af76d812d
-- Checkpoint item test command: npx vitest run tests/integration/verifySemanticsSpec0014.test.ts --reporter=verbose
+- Checkpoint item test command: pnpm -C packages/qfai build && npx vitest run tests/integration/verifySemanticsSpec0014.test.ts --reporter=verbose
 - Checkpoint item test result: Test Files 1 passed (1); Tests 6 passed (6). The verbose output names the row's `Selector` entry among the tests it ran — `TC-0014-0019: removed compatibility surface > package surface exposes no legacy namespace or compatibility category` — which is what the per-item step asks of a file-scoped run.
-- Checkpoint item test revision: db8cd210a3b71ffd82591dda52ed250af76d812d
-- Checkpoint verification command: pnpm -C packages/qfai test:core && pnpm -C packages/qfai test:validators && pnpm -C packages/qfai test:integration && pnpm -C packages/qfai test:e2e && pnpm -C packages/qfai test:cli && pnpm -C packages/qfai test:unit && pnpm -C packages/qfai test:scripts
-- Checkpoint verification result: PASS — seven of seven green, nothing filtered out; the seven slices together cover every project `vitest.workspace.ts` declares
-- Checkpoint verification revision: 879079199019a43767e893f4366056e493d8a798
-- Checkpoint verification note: the seven commands ran as the seven parallel jobs
-  of the `test` matrix at
+- Checkpoint item test revision: 3a1eeb3fa4127c7703bfdaac1550f294becb0119
+- Checkpoint verification command: pnpm -C packages/qfai build && pnpm -C packages/qfai test:core && pnpm -C packages/qfai test:validators && pnpm -C packages/qfai test:integration && pnpm -C packages/qfai test:e2e && pnpm -C packages/qfai test:cli && pnpm -C packages/qfai test:unit && pnpm -C packages/qfai test:scripts
+- Checkpoint verification result: FAIL — six of seven slices green, nothing filtered out; the seven together cover every project `vitest.workspace.ts` declares. `core` 3179 passed / 32 skipped, `validators` 959 / 2, `integration` 1490 / 23, `e2e` 3892 / 21, `cli` 893 / 7, `unit` 745 / 8. `scripts` reports 1 failed / 696 passed
+- Checkpoint verification revision: 3a1eeb3fa4127c7703bfdaac1550f294becb0119
+- Checkpoint verification note: the run above was taken here, on the tree under
+  review, and its revision is this branch's head rather than a merge tree. The
+  one failure is environmental and is recorded as its own issue: the release
+  workflow's association gate filters its REST response with `jq`, the case
+  executes that gate body through `bash`, and this machine has no `jq` on the
+  path — so the filter emits nothing, the gate declines, and the case reports the
+  workflow as never tagging. The same case passes in CI, where `jq` is present.
+  Six slices carry every obligation this record relies on, and none of them is in
+  `scripts`.
+
+  **The earlier run this record carried is superseded.** For completeness it ran
+  as the seven parallel jobs of the `test` matrix at
   https://github.com/aganesy/QFAI/actions/runs/34698239422, and their conclusions
   were read back from the check runs rather than inferred from a green badge.
   **The revision above is the tree those jobs checked out**, which is not this
@@ -284,10 +294,10 @@ first mutation passes it and fails the literal check below it instead.
   recorded. Its second parent `db8cd210` is the branch head the observation
   belongs to, and its first is the base tip at the time; the item-level test
   revision above is that branch head, because that run was taken here.
-  That is the environment in which the set can be run whole. Run here as one
-  unfiltered `npx vitest run`, the same suite reports Test Files 1 failed, 697
-  passed, 8 skipped (706) and Tests 1 failed, 11537 passed, 92 skipped (11630),
-  exiting 1. The one failure is in `tests/scripts/ownWorkflowTopology.test.ts`,
+  Run here as one unfiltered `npx vitest run`, the same suite reports Test
+  Files 1 failed, 697 passed, 8 skipped (706) and Tests 1 failed, 11537 passed,
+  92 skipped (11630), exiting 1. The one failure is in
+  `tests/scripts/ownWorkflowTopology.test.ts`,
   whose case writes the release workflow's own association gate to a temporary
   script and runs it under `bash`. That gate calls `jq`, which this checkout
   does not have and the runner image does, so the assertion reads a gate that

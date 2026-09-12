@@ -90,7 +90,18 @@ PASS criterion also requires a rationale for.
 Every score below rests on a test run, not on a reading of a ledger. The ledger is a usable starting
 point for this pack — all seven `done` rows name a file that exists on disk — but three of its rows
 point somewhere the obligation is not discharged, and six of the files that carry coverage appear
-in no row at all. The files below were located by reading the tests and the source, then executed:
+in no row at all. The files below were located by reading the tests and the source, then executed
+together, by one command at one revision:
+
+```text
+pnpm -C packages/qfai build
+npx vitest run --reporter=verbose <the thirteen files below>
+```
+
+The build comes first because two of the thirteen read `packages/qfai/dist/**`. The run reports
+`Test Files 11 passed | 2 skipped (13)` and `Tests 259 passed | 4 skipped (263)`, exit 0, at
+revision `3a1eeb3fa4127c7703bfdaac1550f294becb0119`. The per-file counts below are that run's, read
+from its verbose output, and they sum to its totals:
 
 | File                                                                      | Result        |
 | ------------------------------------------------------------------------- | ------------- |
