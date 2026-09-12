@@ -634,13 +634,23 @@ its own.
 reads `## Decision Log` alone for Change Type metrics, so a decision recorded
 only in `07_Decisions.md` reports as zero entries.
 
-**`08_Open-questions.md` is a record here, not a gate.** A spec pack carries
-open questions as a matter of course, so no stage requires the file to be
-empty — unlike a discussion pack, where readiness blocks on the register. A
-decision the session could not settle therefore blocks nothing on its own, and
-one the user must settle goes to the user during the stage rather than being
-written down and left. Writing it down instead is how a stage completes with a
-design nobody decided.
+**`08_Open-questions.md` is a record, and one of its statuses is a gate.** A
+spec pack carries open questions as a matter of course, so no stage requires the
+file to be empty — unlike a discussion pack, where readiness blocks on the
+register. What blocks is the status on the row.
+
+| Status          | What it says                                                      | Blocks the stage |
+| --------------- | ----------------------------------------------------------------- | ---------------- |
+| `open`          | Still being worked                                                | No               |
+| `deferred`      | Parked on purpose; Notes name the decision point that takes it up | No               |
+| `resolved`      | Notes name the decision that settled it                           | No               |
+| `unadjudicated` | Put to the user, and nobody answered                              | Yes              |
+
+A decision the user must settle goes to the user during the stage. Where the
+stage ends with it unanswered, the row says `unadjudicated` and validation stops
+the stage there: writing it down as an ordinary open question instead is how a
+stage completes with a design nobody decided. The same status, in the same
+column, applies to `_policies/09_Open-questions.md`.
 
 The record states what was chosen and why. How the session reached it is in the
 history, and repeating it here costs a reader the one thing the record is for.
