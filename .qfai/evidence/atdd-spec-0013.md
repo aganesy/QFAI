@@ -327,9 +327,10 @@ oracle for what its obligation names; the last cannot carry a pointer at all.
 | `TDD-0027` | `TC-0013-0032` | The count band the obligation states was removed from the product |
 | `TDD-0028` | `TC-0013-0033` | The same band                                                     |
 
-Three keep a corrected `Selector`, so the row names a case that can be run;
-`TDD-0023` and `TDD-0026` are unchanged. All five keep their original `Evidence`
-cell, so none claims more than it did before.
+Three of the five rows whose `Selector` was examined keep a corrected one, so
+the row names a case that can be run; `TDD-0023` and `TDD-0026` are unchanged.
+All eight rows above keep their original `Evidence` cell, so none claims more
+than it did before.
 
 **`TC-0013-0025` cannot be satisfied as written.** It requires every `screens[]`
 entry of the shipped template to carry a literal `primary_tasks: []`.

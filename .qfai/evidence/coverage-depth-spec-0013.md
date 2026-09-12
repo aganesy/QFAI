@@ -34,10 +34,10 @@ spec-0013 annotation anywhere. `US-0013-0011` and `TC-0013-0025` are narrow, and
 records the disagreement. A fifth, `US-0013-0003`, is covered by tests that fix its direction while
 contradicting its own acceptance criterion. See Findings 1, 2, 3 and 8.
 
-Committed, because it is a governance record. Section "Every `❌` cell, named" accounts for all 312 of
-them in named groups whose coordinates are fully enumerated, so that "one justification per `❌`" is
-checkable rather than asserted, and section "Every `⚠️` cell, named" does the same for all 105 partial
-scores, which the PASS criterion also requires a rationale for.
+Section "Every `❌` cell, named" accounts for all 312 of them in named groups whose coordinates are
+fully enumerated, so that "one justification per `❌`" is checkable rather than asserted, and section
+"Every `⚠️` cell, named" does the same for all 105 partial scores, which the PASS criterion also
+requires a rationale for.
 
 ## What was measured, and how
 
@@ -1094,7 +1094,7 @@ them is repaired here; this artifact scores coverage and does not edit tests, le
    contracts emit QFAI-AUD-001 at severity=error (past sunset)" and asserts that no `info`-severity
    finding is produced. The test file's own header comment still describes the old behaviour
    ("slot-absent (legacy) UI contracts -> QFAI-AUD-001 at severity=info"), contradicting the case
-   twenty-five lines below it.
+   further down the same file.
 4. **Two case names describe coverage the case does not have.**
    - `primaryTasksStructured.test.ts` has a case named
      `string-only items pass (legacy shape, three string entries — within band)`. Its behaviour does
@@ -1119,8 +1119,10 @@ them is repaired here; this artifact scores coverage and does not edit tests, le
    - `TC-0013-0032`, `BR-0013-0019`, `AC-0013-0024`, `EX-0013-0019`, `US-0013-0014`, REQ-0164 and
      `10_Plan.md` name `templates/contracts/ui-spec.yaml`. No file of that name exists under
      `packages/qfai/assets/**`.
-6. **Six of the thirty ledger selectors do not resolve.** Each was checked by running vitest with the
-   selector as `-t`; all six match zero cases.
+6. **Six of the twenty-seven runnable ledger selectors do not resolve.** Twenty-seven of the thirty
+   rows name a test file; the three `todo` rows carry `—` there, so no selector can be run against
+   them. Each of the twenty-seven was checked by running vitest with the selector as `-t`; six match
+   zero cases.
 
    | Row        | Status    | Selector quotes                                                          | The describe is named                                                              |
    | ---------- | --------- | ------------------------------------------------------------------------ | ---------------------------------------------------------------------------------- |
