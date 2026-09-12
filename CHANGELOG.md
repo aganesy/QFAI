@@ -26,6 +26,7 @@ unadjudicated`, read off a Work Orders Summary row the session writes rather
 series` — the reviewed artifact plus the role — carries the round budget
   across a host that answers round 2 with a fresh sub-agent, which a count per
   agent instance restarted every round.
+
 - **A rerun of `qfai init` cites a rule that shipped after the section was
   written** (#1643). The cross-AI rules block is written once, so a later release
   that adds a master copied the master into an existing adopter's tree with no
