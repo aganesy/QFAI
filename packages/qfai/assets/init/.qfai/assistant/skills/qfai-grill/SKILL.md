@@ -170,9 +170,10 @@ the primitive's, because the decisions are.
 
 The two ask-user entries instantiate the prototype's `decisions a grilling session
 puts to the user` category. A skill MAY narrow any of the three buckets (drop an entry the skill cannot reach), and
-MAY instantiate a category entry — `approval-required governance operations`, and
-`decisions a grilling session puts to the user` — with the operations its own run cannot
-authorize for itself. It MUST NOT introduce an entry outside the prototype's categories.
+MAY instantiate a category entry: `approval-required governance operations` with the
+operations its own run cannot authorize for itself, and `decisions a grilling session
+puts to the user` with the decisions on its own frontier and the confirmation that closes
+the session. It MUST NOT introduce an entry outside the prototype's categories.
 Widening triggers a Reviewer-Gate finding.
 
 ## Related
