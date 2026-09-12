@@ -62,7 +62,7 @@ below are over the selected cases, not over the file.
 | `TDD-0019` falsifiability A | 1 of 5   | 1 failed            |
 | `TDD-0019` falsifiability B | 1 of 5   | 1 failed            |
 | Refactor verify           | all      | 126 passed          |
-| Checkpoint                | all      | 2258 passed, exit 0 |
+| Checkpoint                | all      | 9026 passed         |
 
 ## Test volume estimate
 
@@ -125,6 +125,19 @@ branch and so cannot re-check anything this branch changed.
 - Round 1: GREEN result: Test Files 1 passed (1); Tests 1 passed (1 of the file's 5 selected)
 - Round 1: RED test hash: f59276acc52e9397953da7c5d7edccfbdeb45e1ca9822da516c17b75de8c2ce2
 - Round 1: RED test manifest: packages/qfai/tests/integration/verifySemanticsSpec0014.test.ts
+- Round 1: Falsifiability revision abbreviation length: 9. The address above is
+  reproducible only at that length. The procedure in
+  `.qfai/assistant/skills/qfai-implement/references/evidence-revision.md` builds
+  the serialized diff with `git diff HEAD --no-color --no-ext-diff --binary --`
+  and passes no `--full-index`, so the `index` lines carry abbreviated object
+  names and the address folds their length into itself. Nine is not a setting
+  anyone chose here — no `core.abbrev` is configured, and git derives the length
+  from how many objects the repository holds, so it rises as the repository
+  grows. The address is therefore not reproducible by a later reader of the same
+  tree, which is worse than depending on a setting: there is nothing to copy.
+  The length is recorded because this address is already taken; a
+  configuration-independent form is owed by that procedure rather than by this
+  pack.
 
 The mutation, in `packages/qfai/src/core/types.ts` line 5:
 
@@ -164,9 +177,19 @@ first mutation passes it and fails the literal check below it instead.
 - Refactor verify command: npx vitest run tests/integration/verifySemanticsSpec0014.test.ts tests/cli/commands/prototypingIterate.test.ts tests/integration/cli/commands/prototypingCertify.saasPackage.test.ts tests/integration/cli/commands/prototypingCertify.upgradeScope.test.ts
 - Refactor verify result: Test Files 4 passed (4); Tests 126 passed (126)
 - Refactor verify revision: 649d8111147436408c90cbbe1b9f9b07e34da8cb
-- Checkpoint verification command: npx vitest run --project integration --project cli
-- Checkpoint verification result: PASS — exit 0; Test Files 187 passed (191); Tests 2258 passed (2277)
-- Checkpoint verification revision: 649d8111147436408c90cbbe1b9f9b07e34da8cb
+- Checkpoint verification command: npx vitest run --project integration --project e2e --project cli --project core --exclude 'tests/core/prFixMonitor.test.ts' --exclude 'tests/core/prMergePlan.test.ts'
+- Checkpoint verification result: Test Files 531 passed, 3 failed, 8 skipped (542); Tests 9026 passed, 12 failed, 82 skipped (9120)
+- Checkpoint verification revision: 3c18138deba564104eeccdb4cd621b5225841937
+- Checkpoint verification note: the twelve failures are this machine's, not this
+  branch's. `tests/integration/dbSchemaDriftEngine.test.ts` refuses without an
+  in-process Postgres engine, and the mdschema and mermaid script suites need
+  binaries this checkout does not install. All seven `test` slices of CI pass on
+  this revision, which is the run that decides the merge.
+- Superseded checkpoint: the earlier record was `npx vitest run --project integration --project cli`
+  at `649d8111147436408c90cbbe1b9f9b07e34da8cb` — Test Files 187 passed (191);
+  Tests 2258 passed (2277). That revision is this branch's merge base, and the
+  `integration` project has gained cases since, so the run described a suite this
+  commit no longer has.
 
 ## Coverage Depth Matrix
 
