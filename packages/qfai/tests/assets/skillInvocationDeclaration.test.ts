@@ -1,18 +1,19 @@
 /**
- * How a shipped skill declares who may invoke it.
+ * How a shipped skill declares that the agent may not fire it.
  *
- * A host reads `description:` to decide whether to offer a skill at all, and
- * `disable-model-invocation: true` to decide whether the agent may fire it.
- * Those are two questions, and answering the second by leaving the first out
- * answers neither reliably: on a host that requires a description, a skill
- * without one registers nowhere, so the front door disappears instead of
- * narrowing.
+ * Whether a skill carries the `description:` a host needs to register it is a
+ * validator's subject, because it is true of any project's skills. What is left
+ * is narrower and belongs here: that `disable-model-invocation` says the same
+ * thing in the front matter and in the body, in both directions.
  *
- * So the declaration is explicit, and this suite holds it for every skill in
- * the directory rather than for the one skill that uses it today. A rule that
- * names a skill reads as an exception to the next person who finds it, and the
- * next user-invoked skill would be written without anything asking it the same
- * question.
+ * The field is one line of metadata whose effect is invisible in the file that
+ * carries it. Removed while tidying, the skill quietly becomes one the agent
+ * fires on its own; added without a word of explanation, it reads as a setting
+ * rather than a decision. Pairing it with the body's account of it makes either
+ * half alone a failure.
+ *
+ * Read off the skills directory rather than written against the one skill that
+ * declares it today, so the next user-invoked skill is asked the same question.
  */
 
 import { readdir, readFile } from "node:fs/promises";
@@ -51,25 +52,13 @@ function body(raw: string): string {
   return (match?.[1] ?? raw).replace(/\s*\n\s*/g, " ");
 }
 
-describe.each(QFAI_TREES)("%s: every skill says who may invoke it", (tree) => {
+describe.each(QFAI_TREES)("%s: the opt-out is stated once, in two places", (tree) => {
   it("finds the skills it reads the directory for", async () => {
     // An empty read passes every case below without asking anything, and the
     // two ways to get one — a moved directory, a filter that matches nothing —
     // look identical to a green run.
     const names = await skillNames(tree);
     expect(names.length, `${tree}/${SKILLS_DIR} holds no qfai-* skill`).toBeGreaterThan(0);
-  });
-
-  it("gives every skill a description", async () => {
-    // Including the ones the agent may not fire. Omitting the description is
-    // the tempting way to keep a skill out of the model's reach, and it works
-    // only on a host that tolerates a skill without one; the rest register
-    // nothing, which loses the user's front door too.
-    const missing: string[] = [];
-    for (const skill of await skillNames(tree)) {
-      if (!/^description:/m.test(frontMatter(await readSkill(tree, skill)))) missing.push(skill);
-    }
-    expect(missing, "a skill with no description is offered by nothing").toEqual([]);
   });
 
   it("writes the opt-out as a declaration or not at all", async () => {
@@ -86,16 +75,17 @@ describe.each(QFAI_TREES)("%s: every skill says who may invoke it", (tree) => {
     expect(wrong, `${OPT_OUT_FIELD} carries no value but \`true\``).toEqual([]);
   });
 
-  it("explains the opt-out in the body of the skill that declares it", async () => {
-    // A front-matter line nobody can source is a line the next contributor
-    // removes while tidying unknown metadata. Naming the field in the body is
-    // what turns it from a setting into a decision with a reason attached.
-    const unexplained: string[] = [];
+  it("says it in the front matter and the body, or in neither", async () => {
+    // Both halves of one statement, so neither can go alone. A declaration the
+    // body never accounts for is a setting the next contributor tidies away; an
+    // account with no declaration behind it describes a skill the agent is in
+    // fact free to fire, and reads as though it does not.
+    const unpaired: string[] = [];
     for (const skill of await skillNames(tree)) {
       const raw = await readSkill(tree, skill);
-      if (!new RegExp(`^${OPT_OUT_FIELD}: true$`, "m").test(frontMatter(raw))) continue;
-      if (!body(raw).includes(OPT_OUT_FIELD)) unexplained.push(skill);
+      const declared = new RegExp(`^${OPT_OUT_FIELD}: true$`, "m").test(frontMatter(raw));
+      if (declared !== body(raw).includes(OPT_OUT_FIELD)) unpaired.push(skill);
     }
-    expect(unexplained, "the body never says what the opt-out does").toEqual([]);
+    expect(unpaired, `${OPT_OUT_FIELD} is declared and explained, or neither`).toEqual([]);
   });
 });
