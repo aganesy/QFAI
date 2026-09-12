@@ -4,6 +4,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ## [Unreleased]
 
+### Fixed
+
+- **The autopilot tailoring contract now covers every shipped skill** (#1642).
+  It was held against a hardcoded list of seven, so the two grilling skills were
+  outside it and nothing reported that they carried no tailoring rule at all.
+  The list is read off the tree, the way the Reviewer-Gate validator picks its
+  own subjects, and both skills carry the rule.
+
 ### Changed
 
 - **A reviewer that recommended a decision the agents adopted cannot clear it**

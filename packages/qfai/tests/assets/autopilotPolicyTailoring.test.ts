@@ -20,7 +20,7 @@
  * governance contract fails here rather than in `qfai validate`.
  */
 
-import { readFile } from "node:fs/promises";
+import { readdir, readFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -32,17 +32,22 @@ import { parseAutopilotPolicy } from "../../src/core/validators/autopilotPolicy.
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "..", "..");
 
 /** Source tree first, then the generated root mirror `sync:ssot` writes. */
-const TREES = ["packages/qfai/assets/init/.qfai", ".qfai"];
+const SOURCE_TREE = "packages/qfai/assets/init/.qfai";
+const TREES = [SOURCE_TREE, ".qfai"];
 
-const QFAI_SKILLS = [
-  "qfai-atdd",
-  "qfai-configure",
-  "qfai-discussion",
-  "qfai-implement",
-  "qfai-prototyping",
-  "qfai-sdd",
-  "qfai-verify",
-];
+/**
+ * Every shipped `qfai-*` skill, read off the tree rather than listed here.
+ *
+ * A list would have to be edited by whoever adds a skill, and a skill left off
+ * it is exactly the one whose policy nobody has checked. The Reviewer-Gate
+ * validator picks its subjects the same way.
+ */
+const QFAI_SKILLS = (
+  await readdir(path.join(repoRoot, SOURCE_TREE, "assistant", "skills"), { withFileTypes: true })
+)
+  .filter((entry) => entry.isDirectory() && entry.name.startsWith("qfai-"))
+  .map((entry) => entry.name)
+  .sort();
 
 function skillPath(tree: string, skillId: string): string {
   return path.join(repoRoot, tree, "assistant", "skills", skillId, "SKILL.md");
@@ -84,14 +89,14 @@ describe.each(TREES)("%s — Default Autopilot Policy tailoring contract", (tree
 
     // The narrowing permission must not be scoped to auto-decide alone.
     expect(block).not.toContain("MAY narrow the auto-decide bucket");
-    expect(block).toMatch(/A skill MAY narrow any of the three buckets/);
+    expect(block).toMatch(/A skill MAY narrow any of the\s+three buckets/);
     // Widening stays prohibited in every bucket. Instantiating the ask-user
     // category with the skill's own human-authorized operations is not
     // widening — without that distinction `/qfai-implement` had no legal way
     // to name the waiver and the Change-Request escalation it does gate on.
-    expect(block).toMatch(/MUST NOT introduce an entry outside the prototype's categories/);
-    expect(block).toMatch(/MAY instantiate a category entry/);
-    expect(block).toMatch(/approval-required governance operations/);
+    expect(block).toMatch(/MUST NOT introduce an entry outside the\s+prototype's categories/);
+    expect(block).toMatch(/MAY instantiate a\s+category entry/);
+    expect(block).toMatch(/approval-required governance\s+operations/);
   });
 
   it.each(QFAI_SKILLS)("%s still satisfies the Reviewer-Gate parser", async (skillId) => {

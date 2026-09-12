@@ -310,6 +310,13 @@ Every decision this skill meets falls in one of three named buckets.
   - grilling subject (the design to interrogate; a session has no default for
     what it is about)
 
+The asking is what this skill performs, so its `ask-user` entries are its own operations
+rather than an entry added to the prototype. A skill MAY narrow any of the three buckets
+(drop an entry the skill cannot reach), and MAY instantiate a category entry —
+`approval-required governance operations` — with the operations its own run cannot
+authorize for itself. It MUST NOT introduce an entry outside the prototype's categories.
+Widening triggers a Reviewer-Gate finding.
+
 The buckets are the method, not a tuning surface. Moving a frontier decision to
 `auto-decide` is the agent answering its own question, which this skill exists
 to stop.

@@ -168,6 +168,13 @@ the primitive's, because the decisions are.
   - grilling subject (the design to interrogate; the argument supplies it, and
     an empty argument is asked for rather than guessed)
 
+The asking is what this skill performs, so its `ask-user` entries are its own operations
+rather than an entry added to the prototype. A skill MAY narrow any of the three buckets
+(drop an entry the skill cannot reach), and MAY instantiate a category entry —
+`approval-required governance operations` — with the operations its own run cannot
+authorize for itself. It MUST NOT introduce an entry outside the prototype's categories.
+Widening triggers a Reviewer-Gate finding.
+
 ## Related
 
 - The method this skill runs: `.qfai/assistant/skills/qfai-grilling/SKILL.md`
