@@ -28,10 +28,15 @@ this record — so all five take the falsifiability path.
 Seven rows carried a `Selector` written as a summary of the obligation rather
 than a test's title. Each was corrected to the title of the case that carries
 the obligation, after reading the `Verify` line of its test case against what
-the test asserts. Two rows already named their titles verbatim. A `Selector`
-correction stands on its own: it makes the row name a case that can be run, and
-says nothing about whether that case discharges the obligation. Four rows
-therefore carry a corrected `Selector` and keep their original `Evidence` cell.
+the test asserts. Two more — `TDD-0023` and `TDD-0026` — already named the tail
+of their `describe` title, without the leading test-case id, and resolve because
+the runner matches a substring.
+
+A `Selector` correction stands on its own: it makes the row name a case that can
+be run, and says nothing about whether that case discharges the obligation.
+Three of the four rows this run leaves unbackfilled therefore carry a corrected
+`Selector` and keep their original `Evidence` cell; the fourth, `TDD-0026`, is
+unchanged in both.
 
 ## Work performed (what changed, where)
 
@@ -59,8 +64,8 @@ Refactor verify: 25 passed. Checkpoint: 8986 passed, exit 0.
 
 The checkpoint holds two files of the `core` project out, named in its command:
 `tests/core/prFixMonitor.test.ts` and `tests/core/prMergePlan.test.ts` drive a
-PowerShell script, and this container has no `pwsh`, so all eighteen of their
-cases fail on `spawn pwsh ENOENT` whatever the tree holds. They run in
+PowerShell script, and this container has no `pwsh`, so eighteen of their
+nineteen cases fail on `spawn pwsh ENOENT` whatever the tree holds. They run in
 continuous integration, which does have it.
 
 Validate gate: `npx qfai validate --profile atdd --fail-on error --spec 0013`
@@ -87,6 +92,16 @@ No row changed status. Every row below was already `done`.
 | `TDD-0024` | `TC-0013-0029`  | integration | falsifiability | done   |
 | `TDD-0029` | `TC-0013-0034`  | integration | falsifiability | done   |
 | `TDD-0030` | `TC-0013-0035`  | integration | falsifiability | done   |
+
+Three of the five reach part of a multi-clause obligation. The part each reaches
+is recorded with the row, so the evidence says what it proves rather than
+restating what the test case asks for.
+
+| Row        | Reached by the recorded case                                                             | Not reached                                                                                                            |
+| ---------- | ---------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
+| `TDD-0020` | The lane fails at `error`, and the message names the file, the screen and the rule token | That `/qfai-prototyping` preflight then refuses. One case asserts it, in the end-to-end file `TDD-0022` names            |
+| `TDD-0023` | The helper returns the pack `state.json#discussion.currentId` names                      | That it does so without scanning modification times. A case under the sibling test case asserts it, by reading the source |
+| `TDD-0024` | A missing pointer and an absent pack each raise a recovery error                         | A pointer resolving to a duplicate pack. No case supplies one                                                            |
 
 The refactor-verify and checkpoint runs are shared by all five rows, so each
 entry records the same pair:
@@ -264,9 +279,10 @@ every total.
 
 ## Work Orders Summary
 
-| Role                | Task                                                    | Status (PASS/REVISE/PENDING) |
-| ------------------- | ------------------------------------------------------- | ---------------------------- |
-| test-design-analyst | Score the thirty-five obligations and write the matrix  | PASS                         |
+| Role                | Task                                                     | Status (PASS/REVISE/PENDING) |
+| ------------------- | -------------------------------------------------------- | ---------------------------- |
+| test-design-analyst | Score the forty-nine obligations and write the matrix    | PASS                         |
+| completion-reviewer | Audit every claim this file makes against the repository | PENDING                      |
 
 ## Cross-spec obligations
 
@@ -293,9 +309,9 @@ cannot carry a pointer at all.
 | `TDD-0027` | `TC-0013-0032` | The count band the obligation states was removed from the product |
 | `TDD-0028` | `TC-0013-0033` | The same band                                                     |
 
-Each of the four rows this run reverted keeps its corrected `Selector`, so the
-row names a case that can be run, and keeps its original `Evidence` cell, so it
-claims no more than it did before.
+Three of the four keep a corrected `Selector`, so the row names a case that can
+be run; `TDD-0026` is unchanged. All four keep their original `Evidence` cell,
+so none claims more than it did before.
 
 **`TC-0013-0025` cannot be satisfied as written.** It requires every `screens[]`
 entry of the shipped template to carry a literal `primary_tasks: []`.
@@ -344,6 +360,7 @@ pair, so a change to one can silently diverge from the other.
 
 ## Final status
 
-PASS for the five rows recorded here. This is a per-row verdict, not a stage
-verdict: the pack is not clean, seven of its twelve `done` rows are listed above
-rather than claimed, and the scoped validate run below does not reach zero.
+PASS for the five rows recorded here, each for the part of its obligation named
+under "Ledger rows advanced". This is a per-row verdict, not a stage verdict:
+the pack is not clean, and seven of its twelve `done` rows are listed under Gaps
+rather than claimed.
