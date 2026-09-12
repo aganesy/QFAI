@@ -12,12 +12,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   a decision a grilling session put to the user, and nobody answered, is the
   pack claiming a design nobody chose.
 
-  `status: unadjudicated` is the second one, and it fails validation at every
-  profile rather than warning outside a release candidate. No existing pack
-  carries the value, so nothing has to be migrated to it. What to do instead is
-  in the finding: ask again and record the answer, or — where the user closed
-  the questions and the decision is the agent's to make — record it as an
-  assumption and park it as `deferred` with the point that takes it up.
+  The `unadjudicated` status names the second one, in the spec register and the
+  shared policy one alike. It is an error wherever the SDD gates run — the
+  `sdd`, `full` and `verify` profiles — rather than a warning outside a release
+  candidate, which is how the `open` count behaves. No existing pack carries the
+  value, so nothing has to be migrated to it. What to do instead is in the
+  finding: ask again and record the answer, or — where the user closed the
+  questions and the decision is the agent's to make — record it as an assumption
+  and park it as `deferred` with the point that takes it up.
 
 - **The question-form rule is put in front of the agent on every turn** (#1610).
   A `UserPromptSubmit` hook emits it as context, naming the rule master and the

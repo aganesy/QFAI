@@ -1554,6 +1554,19 @@ async function validateLayeredSpecEntry(
     );
   }
 
+  // A decision nobody settled blocks the stage wherever its register lives:
+  // the spec's own, and the shared policy one. Both are read here because the
+  // layered layouts carry no other open-question gate, and this is the layout
+  // `qfai init` generates.
+  for (const register of [
+    entry.openQuestionsPath,
+    path.join(entry.sharedDir, "09_Open-questions.md"),
+  ]) {
+    const text = await readFile(register, "utf-8").catch(() => null);
+    if (text === null) continue;
+    issues.push(...collectUnadjudicatedDecisions(register, text));
+  }
+
   const missingSharedFiles = await collectMissingLayeredSharedRequiredFiles(entry);
   if (missingSharedFiles.length > 0) {
     issues.push(
@@ -1895,6 +1908,40 @@ async function fileExists(target: string): Promise<boolean> {
   }
 }
 
+/**
+ * A decision the user was asked for and nobody settled, in one register.
+ *
+ * Separate from the rest of the open-question gate because it applies wherever
+ * a register lives — per spec, and under `_policies` — while the `open` count
+ * is a release-candidate rule the layered layouts have never carried. Unlike
+ * `open`, it does not soften outside a release candidate: the pack is claiming
+ * a design nobody chose, and a stage that completes over it has recorded the
+ * agent's preference as the project's decision.
+ */
+export function collectUnadjudicatedDecisions(registerPath: string, text: string): Issue[] {
+  const ids = Array.from(
+    new Set(
+      parseOpenQuestionStatuses(text)
+        .filter((item) => item.status === "unadjudicated")
+        .map((item) => item.id)
+        .filter((id) => id.length > 0),
+    ),
+  );
+  if (ids.length === 0) return [];
+  return [
+    issue(
+      "QFAI-SPACK-102",
+      `A decision was put to the user and nobody settled it: ${ids.join(", ")}`,
+      "error",
+      registerPath,
+      "specPack.openQuestionsUnadjudicated",
+      ids,
+      "canonical",
+      "Put the decision to the user and record the answer, or — where it is the agent's to make and the user has closed the questions — record it as an assumption and set the status to `deferred` with the next decision point.",
+    ),
+  ];
+}
+
 export function validateOpenQuestionsGate(
   entry: SpecEntry,
   text: string,
@@ -1916,32 +1963,7 @@ export function validateOpenQuestionsGate(
   const severity = releaseCandidate ? "error" : "warning";
   const issues: Issue[] = [];
 
-  // A decision the user was asked for and never took. Unlike `open`, this one
-  // does not soften outside a release candidate: the pack is claiming a design
-  // nobody chose, and a stage that completes over it has recorded the agent's
-  // preference as the project's decision.
-  const unadjudicatedIds = Array.from(
-    new Set(
-      statuses
-        .filter((item) => item.status === "unadjudicated")
-        .map((item) => item.id)
-        .filter((id) => id.length > 0),
-    ),
-  );
-  if (unadjudicatedIds.length > 0) {
-    issues.push(
-      issue(
-        "QFAI-SPACK-102",
-        `A decision was put to the user and nobody settled it: ${unadjudicatedIds.join(", ")}`,
-        "error",
-        entry.openQuestionsPath,
-        "specPack.openQuestionsUnadjudicated",
-        unadjudicatedIds,
-        "canonical",
-        "Put the decision to the user and record the answer, or — where it is the agent's to make and the user has closed the questions — record it as an assumption and set `status: deferred` with the next decision point.",
-      ),
-    );
-  }
+  issues.push(...collectUnadjudicatedDecisions(entry.openQuestionsPath, text));
 
   if (openIds.length > 0) {
     const message = releaseCandidate
@@ -1993,11 +2015,21 @@ export function validateOpenQuestionsGate(
   return issues;
 }
 
+/**
+ * The column label, which is not a question.
+ *
+ * The register's table heads its first column `OQ-ID`, and read as an id it is
+ * a question with no status — so the shipped template reported itself as
+ * unparseable the moment the table notation was read at all. Every real id
+ * carries digits.
+ */
+const OPEN_QUESTION_COLUMN_LABEL = /^OQ-ID$/i;
+
 function extractOpenQuestionIds(text: string): string[] {
   const ids = new Set<string>();
   for (const match of text.matchAll(/\b(OQ-[A-Za-z0-9_-]+)\b/gi)) {
     const id = match[1];
-    if (id) {
+    if (id && !OPEN_QUESTION_COLUMN_LABEL.test(id)) {
       ids.add(id);
     }
   }
@@ -2011,7 +2043,7 @@ function parseInvalidOpenQuestionStatuses(text: string): InvalidOpenQuestionStat
 
   for (const line of lines) {
     const idMatch = /\b(OQ-[A-Za-z0-9_-]+)\b/i.exec(line);
-    if (idMatch?.[1]) {
+    if (idMatch?.[1] && !OPEN_QUESTION_COLUMN_LABEL.test(idMatch[1])) {
       currentId = idMatch[1];
     }
 
@@ -2829,8 +2861,21 @@ function parseOpenQuestionStatuses(text: string): OpenQuestionStatus[] {
 
   for (const line of lines) {
     const idMatch = /\b(OQ-[A-Za-z0-9_-]+)\b/i.exec(line);
-    if (idMatch?.[1]) {
+    if (idMatch?.[1] && !OPEN_QUESTION_COLUMN_LABEL.test(idMatch[1])) {
       currentId = idMatch[1];
+    }
+
+    // The template writes a row per question, so the status is a cell rather
+    // than a line of its own. Reading only the standalone form left every
+    // template row unparsed, which is the shape the shipped packs are in.
+    const cells = tableCells(line);
+    const cellStatus = cells.find((cell) => OPEN_QUESTION_STATUSES.has(cell.toLowerCase()));
+    if (cells.length > 0 && cellStatus !== undefined) {
+      statuses.push({
+        id: currentId || "(unlabeled-oq)",
+        status: cellStatus.toLowerCase() as OpenQuestionStatus["status"],
+      });
+      continue;
     }
 
     const statusMatch =
@@ -2847,6 +2892,26 @@ function parseOpenQuestionStatuses(text: string): OpenQuestionStatus[] {
   }
 
   return statuses;
+}
+
+/** The statuses a register may declare, in either notation. */
+const OPEN_QUESTION_STATUSES = new Set(["open", "resolved", "deferred", "unadjudicated"]);
+
+/**
+ * The cells of a Markdown table row, or none when the line is not one.
+ *
+ * A separator row carries no value, and neither does a line that merely holds a
+ * pipe, so both come back empty rather than as a row of dashes.
+ */
+function tableCells(line: string): string[] {
+  const trimmed = line.trim();
+  if (!trimmed.startsWith("|") || !trimmed.endsWith("|")) return [];
+  const cells = trimmed
+    .slice(1, -1)
+    .split("|")
+    .map((cell) => cell.trim());
+  if (cells.every((cell) => /^:?-{3,}:?$/.test(cell))) return [];
+  return cells;
 }
 
 function isReleaseCandidate(initiativeText: string): boolean {

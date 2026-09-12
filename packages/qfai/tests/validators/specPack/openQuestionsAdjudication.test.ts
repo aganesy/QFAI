@@ -51,7 +51,8 @@ describe("a decision the user was asked for and never took blocks the stage", ()
       doc(["- OQ-0007 — which retention window applies", "  - status: unadjudicated"]),
       false,
     );
-    expect(issues[0]?.suggested_action).toContain("status: deferred");
+    expect(issues[0]?.suggested_action).toContain("set the status to");
+    expect(issues[0]?.suggested_action).toContain("deferred");
   });
 });
 
@@ -79,5 +80,34 @@ describe("what the new status does not change", () => {
     expect(codes(doc(["- OQ-0008 — which region is live", "  - status: pending"]))).toContain(
       "E_OQ_STATUS_UNPARSEABLE",
     );
+  });
+});
+
+describe("the register it reads, and the notation it reads it in", () => {
+  it("reads the status out of the table the template writes", () => {
+    // The template records one row per question, so the status is a cell. Read
+    // only as a standalone line, every shipped row went unparsed — which is the
+    // shape the packs this gate exists for are in.
+    const table = [
+      "# 08 Open Questions",
+      "",
+      "## Open Questions",
+      "",
+      "| OQ-ID   | Question                  | Owner | Due | Status        | Notes |",
+      "| ------- | ------------------------- | ----- | --- | ------------- | ----- |",
+      "| OQ-0007 | which retention window    | ops   | -   | unadjudicated | -     |",
+      "| OQ-0008 | which region is live      | ops   | -   | deferred      | -     |",
+      "",
+    ].join("\n");
+    const issues = validateOpenQuestionsGate(ENTRY, table, false);
+    expect(issues.map((issue) => issue.code)).toEqual(["QFAI-SPACK-102"]);
+    expect(issues[0]?.refs).toEqual(["OQ-0007"]);
+  });
+
+  it("does not read a separator row as a status", () => {
+    const table = ["| OQ-ID   | Status |", "| ------- | ------ |", "| OQ-0007 | open   |", ""].join(
+      "\n",
+    );
+    expect(codes(table)).toEqual(["E_OQ_OPEN_RELEASE_BLOCK"]);
   });
 });

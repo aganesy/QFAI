@@ -14,7 +14,8 @@ Use this file for the full quality gate checklist behind `/qfai-sdd`.
 - Every `01_Spec.md` declares a valid `Status:` (active / superseded / deprecated / removed).
 - `superseded` specs declare `Superseded-by: spec-NNNN` pointing to an existing spec.
 - `deprecated` / `removed` specs declare `Deprecated-at: YYYY-MM-DD`.
-- No `08_Open-questions.md` entry carries `status: unadjudicated`. A question
+- No `08_Open-questions.md` or `_policies/09_Open-questions.md` entry carries the
+  `unadjudicated` status. A question
   parked on purpose is `deferred`, with the decision point that takes it up; a
   decision the user was asked for and never took blocks the stage, because
   completing there records a design nobody chose.
