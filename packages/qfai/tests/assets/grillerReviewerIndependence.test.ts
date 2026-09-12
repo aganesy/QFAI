@@ -58,6 +58,40 @@ describe("a griller's recommendations and reviewer independence", () => {
       expectPhrase(content, "removes the memory, not the disposition");
     });
 
+    it(`${tree}: scopes the attestation to the artifact as it stands`, async () => {
+      // Read as a history of everything ever recommended, the field disqualifies
+      // a reviewer over a decision the artifact no longer carries, or one the
+      // user has since settled — which the first row calls theirs.
+      const content = await read(tree);
+      expectPhrase(content, "The field asks about the artifact **as it now stands**.");
+      expectPhrase(content, "the second is the user's decision by the first row above");
+      expectPhrase(content, "decisions in THIS artifact as it now stands");
+    });
+
+    it(`${tree}: the work orders schema holds the row the field is read off`, async () => {
+      // The paragraph above sends a reviewer to a record. Without a row for it
+      // in the schema there is no record to read, and the mandatory field is one
+      // a reset instance can only guess at.
+      const content = await read(tree);
+      expectPhrase(
+        content,
+        "**A grilling session that settled a decision agent-to-agent adds a row for it**",
+      );
+      expectPhrase(content, "`Task title` = `grilling: <the decision>`");
+    });
+
+    it(`${tree}: the work order carries the series, not only the response`, async () => {
+      // Round 2 is dispatched, so the series has to reach the sub-agent serving
+      // it. Present only in the response, a reset instance would have to invent
+      // the value it is asked to report.
+      const content = await read(tree);
+      expectPhrase(content, "The work order and the response both carry a `Review series` value");
+      expectPhrase(
+        content,
+        "Review series: <reviewed artifact> + <reviewer role>   # review work orders only",
+      );
+    });
+
     it(`${tree}: gives the reviewer something to attest from`, async () => {
       // A reset instance does not know what an earlier one recommended, so a
       // mandatory field it cannot fill truthfully is a formality. The record
@@ -84,11 +118,11 @@ describe("a griller's recommendations and reviewer independence", () => {
       const content = await read(tree);
       expectPhrase(
         content,
-        "`Authored/edited under review` and `Recommended and unadjudicated` are REQUIRED",
+        "`Review series`, `Authored/edited under review` and `Recommended and unadjudicated` are REQUIRED",
       );
       expectPhrase(
         content,
-        "Recommended and unadjudicated: none | <decisions this reviewer recommended that were adopted without the user>",
+        "Recommended and unadjudicated: none | <decisions in THIS artifact as it now stands that this reviewer recommended and no user has since settled>",
       );
       expectPhrase(content, "Review series: <reviewed artifact> + <reviewer role>");
       // A false value has to weigh what a false authorship value weighs, or the

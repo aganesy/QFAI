@@ -101,6 +101,12 @@ Every major artifact in the stage should include this table schema:
   It exists so an author→reviewer collision is detectable after the fact from the evidence alone;
   the same instance appearing in an authoring step and in a review step over the same artifact is
   a reviewer-independence violation.
+- **A grilling session that settled a decision agent-to-agent adds a row for it**, with
+  `Task title` = `grilling: <the decision>` and `Agent instance` = the agent whose
+  recommendation was adopted. That row is what a later reviewer reads its
+  `Recommended and unadjudicated` answer off: a reset instance holds no memory of the
+  session, so without the row the field cannot be answered honestly and the review has
+  nothing to check against.
 - `PENDING` records a gate that could not be run — the only honest status for the exhausted-budget
   branch below, which mandates it. It is never a substitute for `PASS`: DONE stays blocked while
   any row is `PENDING`, and the stage stays resumable. A skill that allows only `PASS`/`REVISE`
@@ -165,10 +171,16 @@ unadjudicated` is read off that record, not off recollection, and a review whose
 stage has no such record has nothing to check the field against — which is
 itself a `REVISE`.
 
+The field asks about the artifact **as it now stands**. A recommendation the
+artifact no longer carries, and one the user has since settled, are both outside
+it: the first is not under review, and the second is the user's decision by the
+first row above. Read as a history of everything ever recommended, the field
+would disqualify a reviewer over something nobody is being asked to judge.
+
 **Review rounds are one series, whatever instance serves them.** The budget is
 two rounds per reviewer per artifact, and a host may answer round 2 with a fresh
-sub-agent under a new `Agent instance`. The work order carries a `Review series`
-value — the reviewed artifact plus the role — and the budget is counted per
+sub-agent under a new `Agent instance`. The work order and the response both
+carry a `Review series` value — the reviewed artifact plus the role — and the budget is counted per
 series. Counting per instance would restart it every round, so the budget could
 never be exhausted and the escalation exit that opens when it is would never
 open.
@@ -243,6 +255,7 @@ failure, not a licence to skip the gate or to self-review.
 ```text
 Task title: <short>
 Role: <sub-agent role>
+Review series: <reviewed artifact> + <reviewer role>   # review work orders only; the budget is counted per series
 Goal: <what to decide/produce>
 Inputs (refs):
 - <file/section>
@@ -268,7 +281,7 @@ Result: PASS | REVISE
 Reviewed revision: <git rev> | working-tree+<content hash>
 Audited evidence hash: <content hash of the evidence read>   # one line per TDD-ID on a T1 group
 Authored/edited under review: none | <artifact refs this reviewer authored or edited in this run>
-Recommended and unadjudicated: none | <decisions this reviewer recommended that were adopted without the user>
+Recommended and unadjudicated: none | <decisions in THIS artifact as it now stands that this reviewer recommended and no user has since settled>
 Findings:
 - <issue> | Severity: blocking|advisory | Traces to: <AC-*/BR-*/TC-*/CON-*/rule-name|defect:correctness|defect:security|defect:code-quality|record:<CODE>|none>
 Required fixes:
@@ -329,7 +342,7 @@ post-escalation verification review of a user-named fix.
   allowed to move under them: an honest, independent verdict on a tree that no longer exists is the
   normal failure this field addresses. If the tree changed mid-review, say so and name the revision
   the ruling is pinned to.
-- `Reviewer role`, `Reviewed artifact`, `Authored/edited under review` and `Recommended and unadjudicated` are REQUIRED. A response omitting any of them is not a valid review verdict and MUST NOT satisfy a completion gate — re-request it rather than reading a bare `Result:` line out of it, which is how a doer's self-assessment gets counted as a reviewer's ruling.
+- `Reviewer role`, `Reviewed artifact`, `Review series`, `Authored/edited under review` and `Recommended and unadjudicated` are REQUIRED. A response omitting any of them is not a valid review verdict and MUST NOT satisfy a completion gate — re-request it rather than reading a bare `Result:` line out of it, which is how a doer's self-assessment gets counted as a reviewer's ruling.
 - Anything other than `none` is a declared independence conflict: the verdict cannot be `PASS`,
   and the review must be handed to a non-participating reviewer (see
   `Definition: independent reviewer`).

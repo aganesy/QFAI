@@ -80,12 +80,12 @@ describe("reviewer response provenance", () => {
 
   it("makes both provenance fields a hard requirement of a valid verdict", async () => {
     for (const content of await readShipped(BASELINE)) {
-      // All four. The recommendation attestation joined them because a response
-      // omitting it was still a valid verdict, and the gate read silence as
-      // independence.
+      // All five. A response short of any of them leaves the gate reading
+      // silence as independence, or as a fresh reviewer where the budget needs
+      // a continuing series.
       expect(content).toContain(
-        "`Reviewer role`, `Reviewed artifact`, `Authored/edited under review` and " +
-          "`Recommended and unadjudicated` are REQUIRED.",
+        "`Reviewer role`, `Reviewed artifact`, `Review series`, `Authored/edited under review` " +
+          "and `Recommended and unadjudicated` are REQUIRED.",
       );
       expect(content).toContain("MUST NOT satisfy a completion gate");
       // A response short of them is re-requested, not mined for its `Result:` line.
