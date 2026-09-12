@@ -55,6 +55,9 @@ const CITATION_CHARACTER = /[A-Za-z0-9._/*?+-]/;
 /** What closes each kind of group a citation can open. */
 const GROUP_CLOSERS: Readonly<Record<string, string>> = { "(": ")", "{": "}", "[": "]" };
 
+/** The characters a citation carries only inside a group. */
+const IN_GROUP_CHARACTER = /[|,!^:=]/;
+
 /**
  * The emphasis run that opens the citation at `from`, or `null` where there is
  * no citation there at all.
@@ -134,12 +137,12 @@ function citationsIn(line: string): string[] {
         closers.pop();
       } else if (CITATION_CHARACTER.test(character)) {
         // An ordinary path character, inside a group or out.
-      } else if (
-        closers.length > 0 &&
-        (character === "|" || character === "," || character === "!" || character === "^")
-      ) {
-        // The separators a group's alternatives use, and the two spellings of a
-        // negated bracket class.
+      } else if (closers.length > 0 && IN_GROUP_CHARACTER.test(character)) {
+        // The separators a group's alternatives use, the two spellings of a
+        // negated bracket class, and the delimiters of a named class inside
+        // one — `[[:digit:]]` is a pattern the compiler resolves, and a scan
+        // that stopped at its first `:` left both closers open and threw the
+        // whole citation away.
       } else if ((character === "@" || character === "!") && line[index + 1] === "(") {
         // An extglob introducer, which is one only where a group follows it.
       } else {
@@ -624,14 +627,25 @@ function namesASet(cited: string): boolean {
  * so `.qfai/report/.*` still resolves and a plain wildcard does not.
  */
 function hidesADotName(cited: string, candidate: string): boolean {
-  const spellings = cited.split("/").filter((part) => part.startsWith("."));
+  const parts = cited.split("/");
   return candidate
     .split("/")
-    .some(
-      (segment) =>
-        segment.startsWith(".") &&
-        !spellings.some((part) => new RegExp(`^${compileGlob(part)}$`).test(segment)),
-    );
+    .some((segment) => segment.startsWith(".") && !parts.some((part) => spells(part, segment)));
+}
+
+/**
+ * Whether one pattern segment asks for a dot-leading name rather than allowing
+ * it.
+ *
+ * The test is what the segment does with the same name minus its dot: `*` and
+ * `**` match both, so neither asks for the dot; `.gitignore`, `.*` and
+ * `[.]gitignore` match only the one that has it. Reading the source text for a
+ * leading dot instead rejected the third, which is a spelling as explicit as
+ * the first.
+ */
+function spells(part: string, segment: string): boolean {
+  const pattern = new RegExp(`^${compileGlob(part)}$`);
+  return pattern.test(segment) && !pattern.test(segment.slice(1));
 }
 
 /**
@@ -930,9 +944,19 @@ describe("a glob is a claim about a set", () => {
     expect(globToRegExp(".qfai/report/**").test(control)).toBe(true);
     expect(hidesADotName(".qfai/report/**", control)).toBe(true);
     expect(hidesADotName(".qfai/report/**", ".qfai/report/validate.json")).toBe(false);
-    // Spelled, it is a name like any other.
+    // Spelled, it is a name like any other — including a spelling whose own
+    // text does not start with the dot it asks for.
     expect(hidesADotName(".qfai/report/.gitignore", control)).toBe(false);
     expect(hidesADotName(".qfai/report/.*", control)).toBe(false);
+    expect(hidesADotName(".qfai/report/[.]gitignore", control)).toBe(false);
+  });
+
+  it("keeps a named class whole while scanning", () => {
+    // The compiler resolves `[[:digit:]]`, and a scan that stopped at its first
+    // `:` left both closers open and threw the citation away — so a set written
+    // in the supported notation reached no check at all.
+    const cited = ".qfai/report/validate.[[:digit:]][[:digit:]].json";
+    expect(citationsIn(`- \`${cited}\``)).toEqual([cited]);
   });
 
   it("claims every name in a brace list", () => {
