@@ -1,5 +1,21 @@
 {
   "hooks": {
+    "UserPromptSubmit": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "statusMessage": "QFAI structured-question reminder",
+            "command": "node",
+            "args": [
+              "-e",
+              "console.log(JSON.stringify({hookSpecificOutput:{hookEventName:'UserPromptSubmit',additionalContext:\"QFAI user questions (.agents/rules/user-questions.md). Every question you put to the user this turn goes through the host's structured question tool where it is callable, and through that rule's fallback where it is not \\u2014 carrying the same parts either way. No question is light enough to skip it: a yes-or-no, a confirmation and a \\\"just checking\\\" are each a question. Read the rule rather than working from this line.\"}}))"
+            ]
+          }
+        ]
+      }
+    ],
     "PreToolUse": [
       {
         "matcher": "mcp__github__(create_pull_request|update_pull_request|issue_write|add_issue_comment|pull_request_review_write|add_comment_to_pending_review|add_reply_to_pull_request_comment)",
