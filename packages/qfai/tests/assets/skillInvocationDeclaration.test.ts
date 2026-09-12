@@ -24,6 +24,7 @@ import { fileURLToPath } from "node:url";
 
 import { describe, expect, it } from "vitest";
 
+import { skillFrontmatterMapping } from "../../src/core/agentFrontmatter.js";
 import { collectCanonicalSkillIds } from "../../src/cli/commands/init.js";
 
 // tests/assets/<this file> -> tests -> packages/qfai -> packages -> repo root
@@ -58,6 +59,21 @@ function optOutLines(frontMatterText: string): string[] {
   return frontMatterText.match(OPT_OUT_KEY_LINE) ?? [];
 }
 
+/**
+ * Whether the host receives the opt-out, read through the same parser the
+ * validator uses.
+ *
+ * YAML has more than one way to write a mapping, and the host acts on the
+ * parsed value rather than on the line it was written as. A suite matching
+ * lines alone answers a narrower question, and the two disagree in the
+ * permissive direction: a flow-style block declares the opt-out while the lines
+ * show none, and a skill whose body then never explains it passes as a skill
+ * that opted out of nothing.
+ */
+function declaresOptOut(raw: string): boolean {
+  return skillFrontmatterMapping(raw)?.[OPT_OUT_FIELD] === true;
+}
+
 function skillNames(tree: string): Promise<string[]> {
   return collectCanonicalSkillIds(path.join(repoRoot, tree, ASSISTANT_DIR));
 }
@@ -88,15 +104,18 @@ describe.each(QFAI_TREES)("%s: the opt-out is stated once, in two places", (tree
   });
 
   it("writes the opt-out once, as a declaration, or not at all", async () => {
-    // Three ways to state nothing while reading like a decision: `false`, which
-    // is what the host assumes already; a spelling this suite would not see but
-    // the host would; and a second line further down, which decides the value
-    // while the first one is what a reader finds.
+    // Four ways to leave the next reader with the wrong answer: `false`, which
+    // is what the host assumes already; a second line further down, which
+    // decides the value while the first is what a reader finds; a quoted key;
+    // and a flow-style mapping, which the host acts on and no line shows. The
+    // subject is every skill the host reads an opt-out from, plus every one
+    // that wrote the key without declaring anything.
     const wrong: string[] = [];
     for (const skill of await skillNames(tree)) {
-      const lines = optOutLines(frontMatter(await readSkill(tree, skill)));
-      if (lines.length === 0) continue;
-      if (lines.length > 1 || lines[0] !== CANONICAL_OPT_OUT) wrong.push(skill);
+      const raw = await readSkill(tree, skill);
+      const lines = optOutLines(frontMatter(raw));
+      if (lines.length === 0 && !declaresOptOut(raw)) continue;
+      if (lines.length !== 1 || lines[0] !== CANONICAL_OPT_OUT) wrong.push(skill);
     }
     expect(wrong, `${OPT_OUT_FIELD} is written once, as \`${CANONICAL_OPT_OUT}\``).toEqual([]);
   });
@@ -107,8 +126,8 @@ describe.each(QFAI_TREES)("%s: the opt-out is stated once, in two places", (tree
     // account with no declaration behind it describes a skill the agent is in
     // fact free to fire, and reads as though it does not.
     //
-    // Both halves read the thing the reader reads. The front-matter half is
-    // the key line the host acts on, not the field's name somewhere in the
+    // Both halves read the thing that acts. The front-matter half is the
+    // parsed value the host receives, not the field's name somewhere in the
     // block: a commented-out declaration leaves the body's account standing
     // over a skill the agent is once again free to fire. The body half is a
     // paragraph that names the field and says who invokes the skill, since
@@ -117,7 +136,7 @@ describe.each(QFAI_TREES)("%s: the opt-out is stated once, in two places", (tree
     const unpaired: string[] = [];
     for (const skill of await skillNames(tree)) {
       const raw = await readSkill(tree, skill);
-      const declared = optOutLines(frontMatter(raw)).includes(CANONICAL_OPT_OUT);
+      const declared = declaresOptOut(raw);
       const explained = paragraphs(raw).some(
         (block) => block.includes(OPT_OUT_FIELD) && /\buser\b/i.test(block),
       );
