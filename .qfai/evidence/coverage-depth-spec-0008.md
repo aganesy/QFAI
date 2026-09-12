@@ -2,16 +2,24 @@
 
 ## Scope
 
-This matrix scores the eighteen test cases `06_Test-Cases.md` declares — `TC-0008-0001` through
+This matrix scores the eight user stories `02_User-stories.md` declares — `US-0008-0001` through
+`US-0008-0008` — and the eighteen test cases `06_Test-Cases.md` declares — `TC-0008-0001` through
 `TC-0008-0018` — against the tests that actually discharge them in `packages/qfai/tests/**`. The
-obligation set is read from `06_Test-Cases.md` in full, not from the rows of
+obligation set is read from those two files in full, not from the rows of
 `.qfai/specs/spec-0008/tdd/test-list.md`, so a case whose ledger row was never updated is still
-scored here. The business rule table below it carries all twelve `BR-0008-*` of
-`04_Business-Rules.md`; none of the twelve headings carries a `Status:` retiring it, so all twelve
-are active and all twelve own a row.
+scored here, and a story, which seeds no ledger row at all, is scored too. No story carries a
+`- x-qfai-status: planned` meta line, so all eight are active and all eight own a row. The business
+rule table below it carries all twelve `BR-0008-*` of `04_Business-Rules.md`; none of the twelve
+headings carries a `Status:` retiring it, so all twelve are active and all twelve own a row.
+
+**A `US-*` row is scored against the files that declare the story**, which is what an annotation
+does. The behaviour under a story is often exercised somewhere else in the tree, and that coverage
+is scored on the `TC-*` row whose annotation carries it. Reading it a second time into the story
+would report an obligation owed to the E2E layer as discharged by a layer that holds no test for it,
+so the two readings are kept apart and each story's entry names what stands beside it.
 
 **Most cells are `❌` for a reason worth stating precisely, because it is not the obvious one.**
-Sixteen of the eighteen obligations do have a passing annotated test — only `TC-0008-0009` and
+Sixteen of the eighteen test cases do have a passing annotated test — only `TC-0008-0009` and
 `TC-0008-0010` have none. What ten of those sixteen do not have is a test that exercises a
 behaviour. `TC-0008-0001` … `-0008`, `-0011` and `-0012` are discharged by assertions that read a
 Markdown or TypeScript **source file** and check that a substring is present in it: that `SKILL.md`
@@ -20,14 +28,15 @@ contains the words `Raw count`, that `atddTraceability.ts` contains the identifi
 cases pass, and they pass for every implementation of the behaviour they name, including an absent
 one. A category column asks how thoroughly a behaviour is exercised; where the only case reads a
 document about the behaviour, no category beyond `Normal path` has anything to score, and `Oracle
-strength` has nothing to certify. That is the shape of rows 1-8, 11 and 12, and it is why they
+strength` has nothing to certify. That is the shape of those ten test-case rows, and it is why they
 carry eight `❌` each rather than two or three.
 
-The remaining six rows are the opposite case and are scored on their merits: `TC-0008-0013` and
-`TC-0008-0014` exercise `qfai atdd scaffold` against temp-directory fixtures, and `TC-0008-0015` …
-`-0018` run real predicates over the shipped guidance artifact with a planted-violation control.
+The remaining six test-case rows are the opposite case and are scored on their merits:
+`TC-0008-0013` and `TC-0008-0014` exercise `qfai atdd scaffold` against temp-directory fixtures, and
+`TC-0008-0015` … `-0018` run real predicates over the shipped guidance artifact with a
+planted-violation control.
 
-Committed, because it is a governance record. Section "Every `❌` cell, named" enumerates all 135 of
+Committed, because it is a governance record. Section "Every `❌` cell, named" enumerates all 192 of
 them so that "one justification per `❌`" is checkable rather than asserted, and section "Every `⚠️`
 cell, named" does the same for the partial scores, which the PASS criterion also requires a rationale
 for.
@@ -55,10 +64,29 @@ nothing to any cell.
 `TC-0008-0009` and `TC-0008-0010` carry no annotation anywhere in `packages/qfai/**`. That was
 checked directly, not inferred from the ledger's empty `Test file` column.
 
+The story rows rest on the same kind of run. Two files carry a `QFAI:SPEC-0008:US-*` annotation:
+
+| File                                                   | Result        |
+| ------------------------------------------------------ | ------------- |
+| `tests/e2e/spec0008CredentialReuseGuidanceE2E.test.ts` | 2 passed      |
+| `tests/e2e/spec0008AtddScaffoldE2E.test.ts`            | 2 **skipped** |
+
+The second is `describe.skip` for its whole suite, so it contributes nothing to any cell. The other
+six stories carry no annotation in `packages/qfai/**` at all. `tests/e2e/qfai-traceability.md` lists
+all eight, and its own opening line says it is an annotation carrier and not a test.
+
 ## The matrix
 
 | US/TC ID     | Equivalence partitions | Normal path | Error path | Edge cases | Boundary values | Special values | State transitions | Combinatorial | Oracle strength | Status |
 | ------------ | ---------------------- | ----------- | ---------- | ---------- | --------------- | -------------- | ----------------- | ------------- | --------------- | ------ |
+| US-0008-0001 | ❌                     | ❌          | ❌         | ❌         | ❌              | ❌             | ❌                | ❌            | ❌              | ❌     |
+| US-0008-0002 | ❌                     | ❌          | ❌         | ❌         | ❌              | ❌             | ❌                | ❌            | ❌              | ❌     |
+| US-0008-0003 | ❌                     | ❌          | ❌         | ❌         | ❌              | ❌             | ❌                | ❌            | ❌              | ❌     |
+| US-0008-0004 | ❌                     | ❌          | ❌         | ❌         | ❌              | ❌             | ❌                | ❌            | ❌              | ❌     |
+| US-0008-0005 | ❌                     | ❌          | ❌         | ❌         | ❌              | ❌             | ❌                | ❌            | ❌              | ❌     |
+| US-0008-0006 | ❌                     | ❌          | ❌         | ❌         | ❌              | ❌             | ❌                | ❌            | ❌              | ❌     |
+| US-0008-0007 | ❌                     | ❌          | ❌         | ❌         | ❌              | ❌             | ❌                | ❌            | ❌              | ❌     |
+| US-0008-0008 | ⚠️                     | ✅          | ❌         | ❌         | ❌              | ❌             | ❌                | ❌            | ✅              | ⚠️     |
 | TC-0008-0001 | ❌                     | ✅          | ❌         | ❌         | ❌              | ❌             | ❌                | ❌            | ❌              | ❌     |
 | TC-0008-0002 | ❌                     | ✅          | ❌         | ❌         | ❌              | ❌             | ❌                | ❌            | ❌              | ❌     |
 | TC-0008-0003 | ❌                     | ✅          | ❌         | ❌         | ❌              | ❌             | ❌                | ❌            | ❌              | ❌     |
@@ -78,9 +106,11 @@ checked directly, not inferred from the ledger's empty `Test file` column.
 | TC-0008-0017 | ⚠️                     | ✅          | ❌         | ✅         | ❌              | ❌             | ❌                | ❌            | ✅              | ⚠️     |
 | TC-0008-0018 | ⚠️                     | ✅          | ❌         | ⚠️         | ❌              | ❌             | ❌                | ❌            | ✅              | ⚠️     |
 
-Totals by `Status`: **✅ 2 / ⚠️ 4 / ❌ 12**.
+Totals across the nine depth columns of 26 rows — 8 stories and 18 test cases, 234 cells:
+**✅ 37 / ⚠️ 12 / ❌ 185**.
 
-Totals across the nine depth columns, 162 cells: **✅ 35 / ⚠️ 11 / ❌ 116**.
+Only the mark cells are scored. `US/TC ID` holds an identifier and `Status` holds the row verdict,
+so neither is in that total. Over the same 26 rows the verdicts read **✅ 2 / ⚠️ 5 / ❌ 19**.
 
 ### Business rule coverage
 
@@ -104,7 +134,11 @@ cases cite, not from the rule's number.
 | BR-0008-0011 | ✅            | ✅            | ⚠️                   | TC-0008-0016, TC-0008-0017               | ✅     |
 | BR-0008-0012 | ✅            | ⚠️            | n/a                  | TC-0008-0018                             | ⚠️     |
 
-Totals across the three scored columns, 36 cells: **✅ 8 / ⚠️ 14 / n/a 7 / ❌ 7**.
+Totals across the three scored columns — `Positive case`, `Negative case` and
+`Conditional branches` — over 12 rows, 36 cells: **✅ 8 / ⚠️ 14 / n/a 7 / ❌ 7**.
+
+`BR ID`, `Covering TC` and `Status` hold identifiers and the row verdict, so none of them is in that
+total. Over the same 12 rows the verdicts read **✅ 1 / ⚠️ 6 / ❌ 5**.
 
 `n/a` is used only where the rule states no condition, so there is no branch to cover. It is not
 used anywhere an obligation exists and is unmet.
@@ -118,10 +152,72 @@ states.
 
 ## Every ❌ cell, named
 
-The matrix carries 116 `❌` depth cells plus 12 in `Status`, and the business rule table below it
-carries 7 more — 135 in all. Each is named below with its own reason.
+The matrix carries 185 `❌` depth cells and the business rule table below it carries 7 — 192 in all.
+Each is named below with its own reason.
 A row's `Status` is `❌` when the obligation is not discharged at the depth the case describes; that
-verdict is stated once per row and is not repeated per cell.
+verdict is the row's own, is stated once per row, and is not one of the 192.
+
+### US-0008-0001 … US-0008-0007 — the seven stories with no test
+
+`tests/e2e/qfai-traceability.md` lists all seven and declares itself a carrier rather than a test.
+`US-0008-0007` also has `tests/e2e/spec0008AtddScaffoldE2E.test.ts`, whose entire `describe` is
+`.skip`: its two case titles name the normal, error, boundary and state directions, and a skipped
+case exercises none of them. Nothing else in `packages/qfai/**` carries a `QFAI:SPEC-0008:US-*`
+annotation for any of the seven.
+
+- **Equivalence partitions**, **Normal path**, **Error path**, **Edge cases**, **Boundary values**,
+  **Special values**, **State transitions**, **Combinatorial**, **Oracle strength** — nine cells on
+  each of the seven rows, 63 in all, each `❌` because the row has no running case at any depth. A
+  list entry supplies no input, takes no path and carries no assertion that can fail, so `⚠️` would
+  overstate every one of them.
+- **Status** — `❌` on all seven: the obligation is undischarged at the layer that owes it.
+
+What stands beside each story, and why it is scored on a `TC-*` row instead:
+
+- `US-0008-0001` — the estimator the story asks for has no implementation in `packages/qfai/src/**`
+  at all. `tests/assets/atddVolumeSignalDefinition.test.ts` requires the shipped guidance to state
+  the three signal formulas, which is a wording check of the kind `TC-0008-0001` is scored on.
+- `US-0008-0002`, `US-0008-0003`, `US-0008-0004` — the three coverage obligations.
+  `tests/core/atddCodeTraceability.test.ts` exercises the scan that grades them, `QFAI-ATDD-111`,
+  `-112` and `-113` included, and carries no `US-*` annotation. Detecting a missing E2E test is a
+  different obligation from writing one. This repository also has no `tests/api/**` root, so
+  `US-0008-0003` has no layer its coverage could come from.
+- `US-0008-0005` — the reviewer gate is addressed by `TC-0008-0005` … `TC-0008-0008`, every one of
+  them an assertion that a phrase is present in `SKILL.md`.
+- `US-0008-0006` — the artifact the story asks for is this matrix, and `TC-0008-0011` and
+  `TC-0008-0012` are its test cases.
+- `US-0008-0007` — the scaffold has thirteen passing integration cases under `TC-0008-0013` and
+  eight under `TC-0008-0014`. The story's own layer has the skipped suite named above.
+
+### US-0008-0008 — Worker-Scoped Credential-Reuse Guidance
+
+Declared by `tests/e2e/spec0008CredentialReuseGuidanceE2E.test.ts`, two passing cases that run
+`qfai init` into a temp directory, follow the credential-guidance link out of the delivered
+`SKILL.md`, resolve it against the delivered skill directory and read the artifact that arrives.
+Two depth cells are `✅`, and the oracle behind them was measured: renaming the seventh rule's
+heading in the shipped artifact fails the first case, and restoring it returns 2 passed. Six depth
+cells are `❌`; the row's one `⚠️` is stated under "Every `⚠️` cell, named".
+
+- **Error path** — both cases read the tree `qfai init` produces. Neither constructs a delivery with
+  the artifact dropped, the link removed or the file truncated and requires a failure. The two
+  guards that would notice — an undefined link, a missing rule — fire on a regression of the real
+  tree rather than on a supplied input.
+- **Edge cases** — initialising over a directory that already holds a skill tree, and the upgrade
+  that rewrites one, are the two deliveries an adopter meets after the first, and neither is
+  exercised.
+- **Boundary values** — the obligation has no numeric, date, length or ordered domain. The rule
+  count is fixed at seven by the spec and the tree is read as delivered, so no value sits at an edge.
+- **Special values** — no empty, absent or truncated artifact is supplied; the delivered bytes are
+  the only input.
+- **State transitions** — initialise and read is a single step, and the story names no further
+  state.
+- **Combinatorial** — delivery is crossed with nothing: not with the initialisation mode, not with a
+  pre-existing tree, and not with the backend-agnosticism condition the second case checks on its
+  own.
+- **Status** — `⚠️`: the delivery half of the story is exercised end to end against a real
+  `qfai init` and with a measured oracle. The half the story is written for — a suite that
+  authenticates once per worker — cannot be exercised here, and the artifact says so itself: QFAI's
+  own suite has zero credentials.
 
 ### TC-0008-0001 — Volume Estimate Produces Signal Table
 
@@ -465,11 +561,15 @@ disclaimer.
 
 ## Every ⚠️ cell, named
 
-11 depth cells in the matrix and 14 scored cells in the business rule table are `⚠️`. The PASS
-criterion requires a documented rationale for each, so each is named here.
+12 depth cells in the matrix and 14 scored cells in the business rule table are `⚠️` — 26 in all.
+The PASS criterion requires a documented rationale for each, so each is named here.
 
 ### Matrix
 
+- **US-0008-0008 × Equivalence partitions** — the seven rules, the companion rule and the cross-link
+  are nine valid partitions of the delivered artifact, each with its own predicate. The invalid
+  partition has no representative: a delivery that lost the artifact, or kept it under a name the
+  link does not spell, is never constructed.
 - **TC-0008-0008 × Error path** — the self-approval prohibition is addressed, as a phrase required to
   be present in `SKILL.md`, not as an attempted self-approval that is refused.
 - **TC-0008-0012 × Error path** — the incomplete verdict is addressed, as a phrase required to be
@@ -561,7 +661,7 @@ criterion requires a documented rationale for each, so each is named here.
 
 ## Findings
 
-Six things were found while producing this matrix that the reviewing stage should act on. None of
+Seven things were found while producing this matrix that the reviewing stage should act on. None of
 them is repaired here; this artifact scores coverage and does not edit tests, ledgers or specs.
 
 1. **The ledger is stale for `TDD-0015` … `TDD-0018`.** All four rows read `Status = todo`,
@@ -599,9 +699,16 @@ them is repaired here; this artifact scores coverage and does not edit tests, le
    override, `scaffoldEscalateCycles: 0`, the fail-soft path and the counter reset — and that is
    exactly the coverage `TC-0008-0013` and `TC-0008-0014` are marked down above for lacking. Moving
    it to L3, or splitting the validator half out, would close several `⚠️` cells.
+7. **Seven of the eight stories have no test at the layer that owes them.** `US-0008-0001` …
+   `US-0008-0006` have none at all. `US-0008-0007`'s only E2E file is a `describe.skip` suite whose
+   header says it waits for a scaffold subcommand that has since shipped — the same stale skip
+   `tests/integration/spec0008AtddScaffold.test.ts` carries. Unskipping that E2E file is the cheapest
+   of the seven gaps to close, because the behaviour beneath it already has twenty-one passing
+   integration cases.
 
 ## Follow-up this matrix does not discharge
 
-There is no `.qfai/evidence/atdd-spec-0008.md`. `QFAI-ATDD-133` requires the stage evidence to carry
-a `## Coverage Depth Matrix` section that links to this file and restates the counted totals beside
-it. That file belongs to the ATDD stage and is not written here.
+`.qfai/evidence/atdd-spec-0008.md` carries the `## Coverage Depth Matrix` section `QFAI-ATDD-133`
+requires: a link to this file and the counted totals beside it, and no table. The judgement behind
+each cell stays here, which is where the PASS criterion reads it; the stage evidence restates the
+count and nothing else.

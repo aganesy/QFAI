@@ -2,38 +2,48 @@
 
 ## Scope
 
-This matrix scores the five active test cases `06_Test-Cases.md` declares — `TC-0002-0001`,
-`-0008`, `-0009`, `-0010` and `-0011`, all at `Level: L3` — against the tests that actually
-discharge them in `packages/qfai/tests/**`. The obligation set is read from `06_Test-Cases.md` in
-full, not from the rows of `.qfai/specs/spec-0002/tdd/test-list.md`. `TC-0002-0002` … `-0007` were
-removed from the active table when the `discussionDesignHardening` validator and the
-exploration-sidecar family were retired, so they are not scored. The business rule table below
-carries all four active `BR-0002-*` of `04_Business-Rules.md`; `BR-0002-0002` … `-0007` were removed
-in the same retirement, and none of the four remaining rows carries a status retiring it, so all
-four own a row.
+This matrix scores the seven active user stories `02_User-stories.md` declares — `US-0002-0001`,
+`-0002`, `-0003`, `-0005`, `-0008`, `-0009` and `-0010` — and the five active test cases
+`06_Test-Cases.md` declares — `TC-0002-0001`, `-0008`, `-0009`, `-0010` and `-0011`, all at
+`Level: L3` — against the tests that actually discharge them in `packages/qfai/tests/**`. The
+obligation set is read from those two files in full, not from the rows of
+`.qfai/specs/spec-0002/tdd/test-list.md`. `TC-0002-0002` … `-0007` were removed from the active
+table when the `discussionDesignHardening` validator and the exploration-sidecar family were
+retired, so they are not scored; `US-0002-0004`, `-0006` and `-0007` were retired with them and have
+no `US-*` block left to score. None of the seven remaining stories carries a
+`- x-qfai-status: planned` meta line, so all seven are active and all seven own a row. The business
+rule table below carries all four active `BR-0002-*` of `04_Business-Rules.md`; `BR-0002-0002` …
+`-0007` were removed in the same retirement, and none of the four remaining rows carries a status
+retiring it, so all four own a row.
+
+**A `US-*` row is scored against the files that declare the story**, which is what an annotation
+does. No file in `packages/qfai/tests/**` carries a `QFAI:SPEC-0002:US-*` annotation, so every story
+here is declared by prose alone. Where the behaviour under a story is exercised, that coverage is
+scored on the `TC-*` row whose obligation it discharges; reading it a second time into the story
+would report an obligation owed to the E2E layer as met by a layer that holds no test for it.
 
 **The ledger is not a coverage source for this pack, and the matrix does not read it.** Three of its
 six `done` rows name a `Selector` that appears in no file in the repository, and a fourth names one
 that resolves to a test about a different behaviour. A `Status` column that says `done` over a
-selector nothing can run is a claim, not a measurement. Every score below comes from a test that was
-located in the tree and executed.
+selector nothing can run is a claim, not a measurement. Every test-case score below comes from a test
+that was located in the tree and executed.
 
 **Two obligations name a behaviour that no longer has an implementation.** `TC-0002-0008` and
 `TC-0002-0009` describe a planner-first pass and a planner-first violation. The validator that
 produced them, `discussionDesignHardening`, does not appear anywhere in `packages/qfai/src/**`; the
 pack's own notes record that it was retired together with the exploration-sidecar family. Those two
-rows carry seventeen of the matrix's twenty-eight `❌` depth cells between them, and the reason is
-not thin testing — it is an obligation with no subject left to test.
+rows carry seventeen of the twenty-eight `❌` depth cells the five test-case rows hold, and the
+reason is not thin testing — it is an obligation with no subject left to test.
 
-Committed, because it is a governance record. Section "Every `❌` cell, named" enumerates all 34 of
+Committed, because it is a governance record. Section "Every `❌` cell, named" enumerates all 92 of
 them so that "one justification per `❌`" is checkable rather than asserted, and section "Every `⚠️`
-cell, named" does the same for all 20 partial scores, which the PASS criterion also requires a
+cell, named" does the same for all 16 partial scores, which the PASS criterion also requires a
 rationale for.
 
 ## What was measured, and how
 
-Every score rests on a test run. Six files were located by reading the tests themselves rather than
-the ledger's `Test file` column, and all six were executed:
+Every test-case score rests on a test run. Six files were located by reading the tests themselves
+rather than the ledger's `Test file` column, and all six were executed:
 
 | File                                                | Result                                                 |
 | --------------------------------------------------- | ------------------------------------------------------ |
@@ -58,6 +68,11 @@ Two negative results are load-bearing and were checked directly rather than infe
    classification argument and returns a constant `false`, and `inspectLatestDiscussionPack` assigns
    `const prototypingRequired = false`. The rule lives entirely in guidance prose.
 
+The story rows rest on a search rather than on a run, because there is nothing to run: no file under
+`packages/qfai/**` carries a `QFAI:SPEC-0002:US-*` annotation. All seven stories are listed in
+`tests/e2e/qfai-traceability.md`, whose opening line states that it is an annotation carrier and not
+a test.
+
 ### One test that names a behaviour it does not exercise
 
 `tests/validators/uix/threeLayer.test.ts` contains `it("non-UI skip")`, whose title reads as the
@@ -79,15 +94,24 @@ this matrix.
 
 | US/TC ID     | Equivalence partitions | Normal path | Error path | Edge cases | Boundary values | Special values | State transitions | Combinatorial | Oracle strength | Status |
 | ------------ | ---------------------- | ----------- | ---------- | ---------- | --------------- | -------------- | ----------------- | ------------- | --------------- | ------ |
+| US-0002-0001 | ❌                     | ❌          | ❌         | ❌         | ❌              | ❌             | ❌                | ❌            | ❌              | ❌     |
+| US-0002-0002 | ❌                     | ❌          | ❌         | ❌         | ❌              | ❌             | ❌                | ❌            | ❌              | ❌     |
+| US-0002-0003 | ❌                     | ❌          | ❌         | ❌         | ❌              | ❌             | ❌                | ❌            | ❌              | ❌     |
+| US-0002-0005 | ❌                     | ❌          | ❌         | ❌         | ❌              | ❌             | ❌                | ❌            | ❌              | ❌     |
+| US-0002-0008 | ❌                     | ❌          | ❌         | ❌         | ❌              | ❌             | ❌                | ❌            | ❌              | ❌     |
+| US-0002-0009 | ❌                     | ❌          | ❌         | ❌         | ❌              | ❌             | ❌                | ❌            | ❌              | ❌     |
+| US-0002-0010 | ❌                     | ❌          | ❌         | ❌         | ❌              | ❌             | ❌                | ❌            | ❌              | ❌     |
 | TC-0002-0001 | ⚠️                     | ✅          | ✅         | ⚠️         | ⚠️              | ❌             | ❌                | ⚠️            | ⚠️              | ⚠️     |
 | TC-0002-0008 | ❌                     | ✅          | ❌         | ❌         | ❌              | ❌             | ❌                | ❌            | ❌              | ❌     |
 | TC-0002-0009 | ❌                     | ❌          | ❌         | ❌         | ❌              | ❌             | ❌                | ❌            | ❌              | ❌     |
 | TC-0002-0010 | ⚠️                     | ✅          | ✅         | ❌         | ❌              | ❌             | ❌                | ⚠️            | ✅              | ⚠️     |
 | TC-0002-0011 | ⚠️                     | ⚠️          | ❌         | ⚠️         | ❌              | ❌             | ❌                | ❌            | ⚠️              | ❌     |
 
-Totals across the nine depth columns, 45 cells (5 rows × 9): **✅ 6 / ⚠️ 11 / ❌ 28**.
+Totals across the nine depth columns of 12 rows — 7 stories and 5 test cases, 108 cells:
+**✅ 6 / ⚠️ 11 / ❌ 91**.
 
-Totals by `Status`, 5 cells: **✅ 0 / ⚠️ 2 / ❌ 3**.
+Only the mark cells are scored. `US/TC ID` holds an identifier and `Status` holds the row verdict,
+so neither is in that total. Over the same 12 rows the verdicts read **✅ 0 / ⚠️ 2 / ❌ 10**.
 
 No row reaches `Status = ✅`. The two `⚠️` rows are the two whose obligations are genuinely
 exercised in both directions; both are capped by the layer defect described under Findings.
@@ -105,19 +129,55 @@ active, so none is omitted. `Covering TC` is derived from each rule's `AC-Refs` 
 | BR-0002-0009 | ✅            | ✅            | ✅                   | TC-0002-0010               | ⚠️     |
 | BR-0002-0010 | ⚠️            | ⚠️            | ⚠️                   | TC-0002-0011               | ❌     |
 
-Totals across the three scored columns, 12 cells: **✅ 5 / ⚠️ 5 / n/a 1 / ❌ 1**.
+Totals across the three scored columns — `Positive case`, `Negative case` and
+`Conditional branches` — over 4 rows, 12 cells: **✅ 5 / ⚠️ 5 / n/a 1 / ❌ 1**.
 
-Totals by `Status`, 4 cells: **✅ 0 / ⚠️ 2 / ❌ 2**.
+`BR ID`, `Covering TC` and `Status` hold identifiers and the row verdict, so none of them is in that
+total. Over the same 4 rows the verdicts read **✅ 0 / ⚠️ 2 / ❌ 2**.
 
 `n/a` is used once, for `BR-0002-0001`, which states the 15-file requirement unconditionally and so
 has no branch to cover. It is not used anywhere an obligation exists and is unmet.
 
 ## Every ❌ cell, named
 
-The matrix carries 28 `❌` depth cells plus 3 in `Status`; the business rule table carries 1 in its
-scored columns plus 2 in its `Status` column — 34 in all. Each is named below with its own reason.
+The matrix carries 91 `❌` depth cells and the business rule table carries 1 in its scored columns —
+92 in all. Each is named below with its own reason.
 A row's `Status` is `❌` when the obligation is not discharged at the depth the case describes; that
-verdict is stated once per row and is not repeated per cell.
+verdict is the row's own, is stated once per row, and is not one of the 92.
+
+### The seven stories — `US-0002-0001`, `-0002`, `-0003`, `-0005`, `-0008`, `-0009` and `-0010`
+
+Every story in this pack is declared by `tests/e2e/qfai-traceability.md` and by nothing else. That
+file says of itself that it is an annotation carrier and not a test, and the tree agrees: a search
+of `packages/qfai/**` returns no `QFAI:SPEC-0002:US-*` annotation at all.
+
+- **Equivalence partitions**, **Normal path**, **Error path**, **Edge cases**, **Boundary values**,
+  **Special values**, **State transitions**, **Combinatorial**, **Oracle strength** — nine cells on
+  each of the seven rows, 63 in all, each `❌` because the row has no case at any depth. A list
+  entry supplies no input, takes no path and carries no assertion that can fail, so `⚠️` would
+  overstate every one of them.
+- **Status** — `❌` on all seven: the obligation is undischarged at the layer that owes it.
+
+What stands beside each story, and why it is scored on a `TC-*` row instead:
+
+- `US-0002-0001` — the story asks for the fifteen-file pack to be produced by a discussion run.
+  Nothing drives one. Readiness over a hand-seeded pack is `TC-0002-0001`'s obligation.
+- `US-0002-0002` — the story asks that discussion stop until `Disposition: open` is zero, and the
+  four active `AC-*` name the fifteen-file structure, the planner-first posture, the non-UI skip and
+  the `prototyping.yaml` wording. None names open-question completion, so the story has neither an
+  acceptance criterion nor a test case of its own. `tests/core/sddPreflight.test.ts` blocks a
+  downstream `/qfai-sdd` start on a blocking open question, which gates the next stage rather than
+  stopping this one.
+- `US-0002-0003` — the exploration-first sidecars whose requiredness the story's detection was to
+  control were retired. The classification that survives is exercised under `TC-0002-0010`.
+- `US-0002-0005` — the planner-first posture is addressed in shipped wording, scored under
+  `TC-0002-0008` and `TC-0002-0009`.
+- `US-0002-0008` — like `US-0002-0002`, no active `AC-*` names the handoff. `runSddPreflight` is the
+  handoff, and the cases that drive it are read under `TC-0002-0001`.
+- `US-0002-0009` — the safe skip is exercised by `it("skips non-UI packs")` and scored under
+  `TC-0002-0010`.
+- `US-0002-0010` — the sidecar-family completeness cases in `tests/validators/uix/threeLayer.test.ts`
+  cover the validator side, and are scored under `TC-0002-0010` as well.
 
 ### TC-0002-0001 — 15 files pass readiness
 
@@ -248,6 +308,8 @@ discussion `SKILL.md`, the SDD execution playbook, `discussion-artifact-rules.md
 
 ### The ❌ cells of the business rule table
 
+One scored cell, and the two row verdicts that sit outside the count but still owe a reason.
+
 - **BR-0002-0008 × Negative case** — the rule states that discussion must not finalize a selected
   direction, winning direction or design system. Its negative is an artifact that does finalize one,
   run through something that rejects it. Nothing supplies such an artifact, and nothing would reject
@@ -261,9 +323,10 @@ discussion `SKILL.md`, the SDD execution playbook, `discussion-artifact-rules.md
 
 ## Every ⚠️ cell, named
 
-11 depth cells and 2 `Status` cells in the matrix, and 5 scored cells and 2 `Status` cells in the
-business rule table, are `⚠️` — 20 in all. The PASS criterion requires a documented rationale for
-each, so each is named here.
+11 depth cells in the matrix and 5 scored cells in the business rule table are `⚠️` — 16 in all. The
+PASS criterion requires a documented rationale for each, so each is named here. Four rows also carry
+a `⚠️` verdict. Those are outside the count and are named here too, because a verdict weaker than
+the cells beneath it needs a reason of its own.
 
 ### Matrix depth cells
 
@@ -415,8 +478,8 @@ repaired here; this artifact scores coverage and does not edit tests, ledgers or
 `QFAI-ATDD-133` requires the stage evidence to carry a `## Coverage Depth Matrix` section that links
 this file and restates the counted totals beside it. Those totals are:
 
-**✅ 11 / ⚠️ 20 / ❌ 34**, with `n/a 1`, across all 66 scored cells — 45 matrix depth cells, 5
-matrix `Status` cells, 12 business rule scored cells and 4 business rule `Status` cells.
+**✅ 11 / ⚠️ 16 / ❌ 92**, with `n/a 1`, across 120 scored cells — 108 matrix depth cells (12 rows ×
+9 columns) and 12 business rule cells (4 rows × 3 columns). The 16 row verdicts are outside them.
 
 Four of the pack's six ledger rows carry no evidence, and none of them can until the row is true.
 `.qfai/evidence/atdd-spec-0002.md` records which row is blocked by what.

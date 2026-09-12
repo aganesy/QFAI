@@ -162,15 +162,17 @@ inactive and did not run.
 ## Coverage Depth Matrix
 
 See `.qfai/evidence/coverage-depth-spec-0008.md`.
-Totals: ✅ 35 / ⚠️ 11 / ❌ 116 across the nine depth columns of eighteen rows,
-and ✅ 8 / ⚠️ 14 / ❌ 7 with 7 not applicable across the twelve business rules.
+Totals: ✅ 45 / ⚠️ 26 / ❌ 192, with 7 not applicable, across 270 scored cells —
+234 matrix depth cells (26 rows × 9 columns) and 36 business rule cells
+(12 rows × 3 columns). `Status` is a row verdict, not a mark, and is outside
+every total.
 
 ## Work Orders Summary
 
-| Role                | Task                                                | Status (PASS/REVISE/PENDING) |
-| ------------------- | --------------------------------------------------- | ---------------------------- |
-| test-design-analyst | Score the eighteen obligations and write the matrix | PASS                         |
-| completion-reviewer | Audit the matrix against the depth checklist        | PASS                         |
+| Role                | Task                                                  | Status (PASS/REVISE/PENDING) |
+| ------------------- | ----------------------------------------------------- | ---------------------------- |
+| test-design-analyst | Score the twenty-six obligations and write the matrix | PASS                         |
+| completion-reviewer | Audit the matrix against the depth checklist          | PASS                         |
 
 ## Cross-spec obligations
 
