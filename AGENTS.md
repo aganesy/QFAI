@@ -86,9 +86,10 @@ QFAI パッケージの版番号 (`X.Y.Z`) は AI が選ばない。ユーザが
 - `grilling.md` (interview the decision tree in rounds before a design is
   fixed; a session ends on an empty frontier and the user's confirmation,
   never at a question count)
-- `user-questions.md` (every question to the user arrives as a structured
-  choice; where the host's tool cannot carry one, numbered plain-text choices
-  keep the same parts)
+- `user-questions.md` (every question to the user arrives in the shape its
+  answer has — a structured choice, or a plain request where the answer is a
+  name, a number or a sentence; where the host's tool cannot carry it, the
+  plain-text fallback keeps the same parts)
 
 `.claude/rules/` はこれらへの symlink。Windows では Git の `core.symlinks=true` と
 Developer Mode が必要で、無い場合は `.claude/rules/*.md` がパス文字列だけの

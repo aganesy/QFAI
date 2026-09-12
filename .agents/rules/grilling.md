@@ -86,8 +86,11 @@ session; the same forty asked one at a time is a worse one.
 
 Ask through the host's structured question tool. Where the host has no such
 tool, or it is unavailable in the current mode, ask the same round as a normal
-message with numbered choices, keep the choice semantics, and say why the tool
-was unavailable. A session is never skipped for want of a tool.
+message **in the shape each answer has** — numbered choices where the question
+offers choices, a plain request for the value where it asks for a fact — keep
+the choice semantics where there are choices, and say why the tool was
+unavailable. `user-questions.md` § 5 owns the rest of that fallback. A session
+is never skipped for want of a tool.
 
 **Where the tool takes fewer questions than the round holds**, deliver the round
 in host-sized batches. The frontier is not recomputed between them, no answer is

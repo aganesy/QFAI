@@ -4154,7 +4154,8 @@ async function pruneOrphanCodexProfiles(
 }
 
 type CodexAgentProfilePlan =
-  { status: "render"; toml: string } | { status: "unavailable"; reason: string };
+  | { status: "render"; toml: string }
+  | { status: "unavailable"; reason: string };
 
 /** Renders one profile, or says why the agent cannot get one. */
 async function planCodexAgentProfile(
@@ -4406,7 +4407,9 @@ async function readCanonicalAgentMarkdown(
 }
 
 type BoundedRead =
-  { status: "ok"; content: string } | { status: "absent" } | { status: "rejected"; reason: string };
+  | { status: "ok"; content: string }
+  | { status: "absent" }
+  | { status: "rejected"; reason: string };
 
 /**
  * A canonical agent document is a few kilobytes of markdown; a catalog is
@@ -6890,7 +6893,7 @@ function buildCopilotInstructions(): string {
     "- `.agents/rules/minimal-implementation.md` — the order to try solutions in once a behaviour is agreed; mark a deliberate shortcut with its ceiling and the condition that lifts it.",
     "- `.agents/rules/interface-clarity.md` — what may appear on a screen or in terminal output; text explaining how to work a control is a defect report against that control.",
     "- `.agents/rules/grilling.md` — interview the decision tree in rounds before a design is fixed; a session ends on an empty frontier and the user's confirmation, never at a question count.",
-    "- `.agents/rules/user-questions.md` — every question to the user arrives as a structured choice; where the tool cannot carry one, numbered plain-text choices keep the same parts.",
+    "- `.agents/rules/user-questions.md` — every question arrives in the shape its answer has: a structured choice, or a plain request for an open answer; the fallback keeps the same parts.",
     "",
   ].join("\n");
 }
