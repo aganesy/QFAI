@@ -150,14 +150,21 @@ describe("the grilling primitive", () => {
 // method, so nothing downstream could tell the two apart.
 describe("the grill entry point", () => {
   for (const tree of QFAI_TREES) {
-    it(`${tree}: carries no description, and says why`, async () => {
+    it(`${tree}: declares the opt-out rather than relying on a missing description`, async () => {
+      // Omitting the description keeps a skill out of the model's reach only on
+      // a host that tolerates one without it. A host that requires the field
+      // registers nothing instead, which loses the front door entirely — so the
+      // opt-out is declared and the description kept.
       const raw = await readSkill(tree, ENTRY);
-      expect(frontMatter(raw), "a description is what makes a skill model-invoked").not.toMatch(
+      expect(frontMatter(raw), "a host that requires a description registers nothing").toMatch(
         /^description:/m,
       );
-      // Stated in the body, so the absence reads as a decision rather than an
-      // oversight someone helpfully fills in.
-      expect(flat(raw)).toMatch(/carries no `description:`, and that is the mechanism/);
+      expect(frontMatter(raw), "the opt-out is what keeps the agent from firing it").toMatch(
+        /^disable-model-invocation: true$/m,
+      );
+      // Stated in the body, so the mechanism reads as a decision rather than a
+      // setting someone helpfully removes.
+      expect(flat(raw)).toMatch(/`disable-model-invocation: true` is the mechanism/);
       expect(flat(raw)).toMatch(/reached only when the user names it/);
     });
 
@@ -202,6 +209,47 @@ describe("the grill entry point", () => {
         if (stats?.isFile() !== true) missing.push(rel);
       }
       expect(missing, "cited path that does not exist in this tree").toEqual([]);
+    });
+  }
+});
+
+// The skill bodies restate the method, so a clause the rule master gained after
+// they were written leaves two mandatory instructions on one subject. Each case
+// names the compliant path that goes missing without it.
+describe("the primitive carries the master's clauses", () => {
+  for (const tree of QFAI_TREES) {
+    it(`${tree}: a fact only the user holds has a node and a place on the frontier`, async () => {
+      // An environment lookup cannot find it and it is not a decision, so two
+      // node kinds leave it nowhere — and the decision below it then waits on a
+      // node no round asks.
+      const text = flat(await readSkill(tree, SKILL));
+      expect(text).toMatch(/Fact only the user holds/);
+      expect(text).toMatch(/no lookup reaches it, and it is not a decision either/);
+      expect(text).toMatch(/nothing else can put it there/);
+    });
+
+    it(`${tree}: a question for a fact carries no recommended answer`, async () => {
+      const text = flat(await readSkill(tree, SKILL));
+      expect(text).toMatch(/no options and no recommended answer/);
+    });
+
+    it(`${tree}: a frontier larger than the tool is batched, not split into rounds`, async () => {
+      // A host taking fewer questions than the frontier holds leaves the step
+      // unexecutable: the agent either makes an invalid call or recomputes the
+      // frontier early, which is a second round wearing one round's name.
+      const text = flat(await readSkill(tree, SKILL));
+      expect(text).toMatch(/host-sized batches/);
+      expect(text).toMatch(/frontier is not recomputed between them/);
+      expect(text).toMatch(/it never makes two rounds/);
+    });
+
+    it(`${tree}: a session between agents has an end`, async () => {
+      // No user is present to satisfy the second condition, so an unconditional
+      // end condition makes the session uncompletable.
+      const text = flat(await readSkill(tree, SKILL));
+      expect(text).toMatch(/session between agents cannot reach condition 2/);
+      expect(text).toMatch(/two rounds, then every decision still open goes to the user/);
+      expect(text).toMatch(/review-convergence\.md/);
     });
   }
 });

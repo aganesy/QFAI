@@ -54,20 +54,34 @@ session is still not a way to ask.
 The subject sits at the root. Below it hang two kinds of node, and a node hangs
 off whatever it depends on.
 
-| Node     | Settled by                                    | State while open |
-| -------- | --------------------------------------------- | ---------------- |
-| Decision | The user, when asked                          | Open             |
-| Fact     | The agent, by reading or dispatching a lookup | Open, in flight  |
+| Node                       | Settled by                                    | State while open |
+| -------------------------- | --------------------------------------------- | ---------------- |
+| Decision                   | The user, when asked                          | Open             |
+| Fact the environment holds | The agent, by reading or dispatching a lookup | Open, in flight  |
+| Fact only the user holds   | The user, when asked                          | Open             |
 
-Both kinds are prerequisites, so a decision waiting on a fact is on the tree as
+**A fact the environment does not hold is still a fact.** An unpublished date, a
+constraint that lives in a contract, a number only the user knows: no lookup
+reaches it, and it is not a decision either. Ask for it as the value it is, with
+no options and no recommended answer — nothing is being decided, so there is
+nothing to recommend, and a recommended value the agent does not hold is a guess
+the user is invited to accept.
+
+All three are prerequisites, so a decision waiting on a fact is on the tree as
 exactly that. The tree is not written once: each answer changes what the
 remaining nodes are, so it is the current state of what is settled, not a plan
 made at the start.
 
 ## The frontier
 
-The frontier is every decision whose prerequisites are all settled — every
-decision it depended on answered, and every fact it depended on read.
+The frontier is every node that can be settled now: every decision whose
+prerequisites are all settled — every decision it depended on answered, and
+every fact it depended on read — and every user-held fact whose own
+prerequisites are settled.
+
+A user-held fact belongs there because nothing else can put it there. Left off,
+the decision below it waits on a node no round ever asks, so the frontier never
+empties and the session cannot complete.
 
 Those are the only questions that can honestly be asked yet. A question whose
 answer depends on an unanswered one cannot be answered, only guessed at, and a
@@ -86,6 +100,13 @@ re-opens it.
 Two questions never share a round when one depends on the other; the dependent
 one belongs to a later round. The next round is never written ahead of the
 answers it is computed from.
+
+**Where the host's question tool takes fewer questions than the frontier holds**,
+deliver the round in host-sized batches. The frontier is not recomputed between
+them, no answer is acted on until the round is exhausted, and each batch is read
+for a closing answer before the next is put. Batching is how one round reaches a
+host that cannot show it whole; it never makes two rounds, and
+`.agents/rules/user-questions.md` carries the rest of its mechanics.
 
 ## Facts are not asked
 
@@ -153,6 +174,15 @@ questions it was dispatched to answer.
 There is no question cap. A design is not finished being interrogated because a
 number was reached, and a short session is not evidence that the design was
 simple.
+
+**A session between agents cannot reach condition 2**, because no user is there
+to confirm. It ends on a budget instead: two rounds, then every decision still
+open goes to the user, with three subjects escalating at once —
+product or business intent no authoritative artifact answers, a decision
+contradicting a spec, a contract or a recorded decision, and a decision resting
+on nothing authoritative. That is the one place a session ends on a count, and
+it counts rounds between agents rather than questions put to a user
+(`.qfai/assistant/constitution/review-convergence.md`).
 
 ### The user ends it whenever they say so
 

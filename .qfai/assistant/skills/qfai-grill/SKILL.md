@@ -1,6 +1,8 @@
 ---
 name: qfai-grill
 title: QFAI Grill (User-invoked design interrogation)
+description: "Run a grilling session on anything: a design, a product direction, a piece of writing. Needs no repository and writes no files. Invoked by the user, never by the agent."
+disable-model-invocation: true
 argument-hint: "<the design, problem or decision to interrogate>"
 allowed-tools: [Read, Glob, Grep, Bash, TodoWrite, Task, Agent]
 mode: interactive-by-default
@@ -14,11 +16,14 @@ Run a grilling session on whatever the argument names. This skill holds no
 method of its own: it directs the run to `qfai-grilling`, which is the one
 implementation.
 
-**This skill carries no `description:`, and that is the mechanism, not an
-omission.** A host offers a skill to the model from its description, so a skill
-without one is reached only when the user names it. That is the whole difference
-between the two: a session the user asked for, and a session a skill started.
-Adding a description here would erase it.
+**`disable-model-invocation: true` is the mechanism, and it is stated rather
+than implied.** A host offers a skill to the model from its description, so
+omitting the description keeps it out of reach — on a host that tolerates a
+skill without one. Others require it and register nothing, which loses the front
+door the skill exists to be. Declaring the opt-out keeps the skill loadable
+everywhere and reached only when the user names it, which is the whole
+difference between the two: a session the user asked for, and a session a skill
+started.
 
 ## What this is for
 
@@ -166,4 +171,4 @@ project_memory:
 - This skill states no method. The method is `qfai-grilling`, read at session start; a step performed here that the primitive does not describe is a second method.
 - Without the primitive the run stops and names it. An improvised interview reads exactly like the method and answers to nothing.
 - No file is written. There is no invoking stage, so the record is what the user is shown.
-- The agent never fires this skill on its own. It carries no `description:`, which is what keeps a host from offering it.
+- The agent never fires this skill on its own. `disable-model-invocation: true` is what keeps a host from offering it, and it is declared rather than left to the absence of a description — a host that requires one would otherwise register nothing.
