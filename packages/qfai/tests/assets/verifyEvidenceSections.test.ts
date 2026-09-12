@@ -30,6 +30,7 @@ const EXPECTED_SECTIONS = [
   "Objective",
   "Inputs reviewed (files/paths)",
   "Decisions made (with rationale)",
+  "Grilling Session",
   "Work performed (what changed, where)",
   "Commands executed + key outputs",
   "QFAI gates",

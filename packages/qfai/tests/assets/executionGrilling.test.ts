@@ -71,6 +71,7 @@ for (const tree of TREES) {
         // Re-interviewing the spec every run stops the micro-cycle and reopens
         // decisions somebody already took. The bound is what keeps the round
         // affordable enough to run every time.
+        expectPhrase(section, "A session, not a round");
         expectPhrase(section, "Subject: this invocation");
         expectPhrase(section, "those are settled input");
       });
@@ -90,11 +91,11 @@ for (const tree of TREES) {
         // The method writes no artifact, so a run that grilled and one that did
         // not leave the same tree. The record is the only thing between them.
         expectPhrase(section, "## Grilling Session");
-        expectPhrase(section, "before the first");
-        expectPhrase(section, "The Reviewer Gate reads this section");
+        expectPhrase(section, "That is the register this stage's gate reads");
         // An invocation told not to ask can obtain no confirmation, so without
         // this ending the session it is required to hold could never finish.
-        expectPhrase(section, "which is the ending every `--auto`");
+        expectPhrase(section, "one row per session");
+        expectPhrase(section, "the gate requires it to be **this** run's");
       });
 
       it(`${stage}: the gate is told to read it`, async () => {
@@ -106,7 +107,8 @@ for (const tree of TREES) {
         expectPhrase(gate, "`## Grilling Session` section is present");
         // A count that agrees with the register still describes a stage that is
         // not done: Article X says it cannot complete over a decision nobody took.
-        expectPhrase(gate, "A non-zero `Open` is a `REVISE`, whatever it matches");
+        expectPhrase(gate, "A `no-question` row with a non-zero `Open` is a `REVISE`");
+        expectPhrase(gate, "A `user-closed` row with open decisions **passes**");
       });
 
       it(`${stage}: carries no copy of the shared mechanics`, async () => {
@@ -125,7 +127,10 @@ for (const tree of TREES) {
         constitution.indexOf("## Article X"),
       );
       expect(article, "Article IX not found").not.toBe("");
-      expectPhrase(article, "targeted questions are one grilling round");
+      expectPhrase(article, "targeted questions are a grilling session");
+      // Stopping after the first frontier takes every decision that depended on
+      // its answers silently, which is what a round-shaped anchor permitted.
+      expectPhrase(article, "rounds run until the frontier is empty");
       expectPhrase(article, ".agents/rules/grilling.md");
       expectPhrase(article, "Its subject is this invocation, not the spec");
       expectPhrase(article, "constitution/drift-protocol.md");

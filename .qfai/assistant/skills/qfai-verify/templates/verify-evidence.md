@@ -9,6 +9,7 @@ Required sections (all of them, in this order):
 - Objective
 - Inputs reviewed (files/paths)
 - Decisions made (with rationale)
+- Grilling Session
 - Work performed (what changed, where)
 - Commands executed + key outputs
 - QFAI gates
@@ -25,6 +26,14 @@ Required sections (all of them, in this order):
 ## Inputs reviewed (files/paths)
 
 ## Decisions made (with rationale)
+
+## Grilling Session
+
+<!-- One row per session, written when each ends. See the skill's `## Grilling`
+     section; the open questions go under the table. -->
+
+| Ended | Ended at | Revision | Before | Decisions | Open | Escalated |
+| ----- | -------- | -------- | ------ | --------- | ---- | --------- |
 
 ## Work performed (what changed, where)
 

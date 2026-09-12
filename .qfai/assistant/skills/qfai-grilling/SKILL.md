@@ -43,7 +43,7 @@ user agrees the understanding is shared.
 
 **Rows two and three are why an execution stage may invoke this.** A spec settles
 what to build and leaves a run its own decisions — a seam's shape, what an oracle
-observes, which gates a verify run answers for. Those are unfixed designs the
+observes, which of several admissible shapes a test takes. Those are unfixed designs the
 fourth row does not cover, and left to the moment the code needs an answer they
 are decided silently, which is the failure this method exists to catch. Row three
 is the same point at the other end: the interview settles what a Change Request
@@ -63,13 +63,11 @@ value and label it an assumption beside that open question
 forbidden is the assumption with no open question against it. Declaring a
 session is still not a way to ask.
 
-**That is an ending, and it is the one such a run takes.** The general end
-condition needs the user's confirmation, and an invocation told not to ask
-cannot obtain one — so a run with no ending available could never finish a
-session it is required to hold. The session ends `no-question` when the evidence
-is exhausted and every remaining decision is open in the register, and the
-agent never confirms on the user's behalf: the ending records that nobody was
-asked, and the open decisions are what stop the stage completing.
+**That is an ending, and it is the one such a run takes.** It is `no-question`,
+one of the four `.agents/rules/grilling.md` names under **The four endings**,
+and this skill adds none of its own. The agent never confirms on the user's
+behalf: the ending records that nobody was asked, and the open decisions are
+what stop the stage completing.
 
 ## The design tree
 

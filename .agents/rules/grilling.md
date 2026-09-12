@@ -143,6 +143,28 @@ questions and some need fifty, so a fixed ceiling either truncates the hard case
 or looks arbitrary on the easy one. When a session runs long the cause is
 usually a subject too large to hold at once. Break it up and grill the pieces.
 
+### The four endings
+
+A session ends in exactly one of these, and a record of one names which:
+
+| Ending        | Reached when                                                                                                       | The work may proceed                                     |
+| ------------- | ------------------------------------------------------------------------------------------------------------------ | -------------------------------------------------------- |
+| `confirmed`   | Both conditions above: no node open, and the user confirms                                                         | Yes                                                      |
+| `user-closed` | The user answered `proceed` or `done`; each decision still open is recorded as an assumption and labelled          | Yes                                                      |
+| `no-question` | A no-question mode was active: the evidence settled what it could and every decision left over is an open question | Yes, and whatever gates the work reports those questions |
+| `stopped`     | The user stopped the session                                                                                       | No. Report every open decision as open                   |
+
+**`no-question` is an ending, not an exemption.** The completing condition needs
+the user's confirmation, and an invocation told not to ask cannot obtain one —
+so without a name for how such a run finishes, a session it was required to hold
+could never end, and the rule would forbid the mode it elsewhere describes. What
+stops that run from being treated as agreed is the open questions it leaves, not
+the absence of an ending.
+
+**`stopped` is the one that does not let the work continue.** The other three
+close the asking; this one ends the session, and an agent that carried on
+because the frontier happened to be empty has read the stop as an answer.
+
 ### When the user ends it
 
 Completing is how a session ends on its own. It is not the only way one ends.

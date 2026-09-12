@@ -66,45 +66,58 @@ Do not read discussion-pack UI/UX sidecars. UI-bearing acceptance tests consume 
 
 ## Grilling
 
-Article IX's preflight round runs here. This section carries what is local to
-this stage — the round's subject, what reopens it, and where the record goes.
+Article IX's preflight session runs here. This section carries what is local to
+this stage — the session's subject, what reopens it, and where the record goes.
 The method is `.qfai/assistant/skills/qfai-grilling/SKILL.md`, read before the
-round and followed as written; `.agents/rules/grilling.md` is the rule it
+session and followed as written; `.agents/rules/grilling.md` is the rule it
 implements. Neither is restated here, and a stage-local copy of either would
 give an execution run one instruction and the primitive another.
 
+- **A session, not a round.** Rounds run until the frontier is empty, because a
+  round is only what is answerable now: stopping after the first one and editing
+  code leaves every decision that depended on those answers taken silently. The
+  tree is usually small enough that one round empties it, which is what makes
+  the session affordable every time — not a licence to stop there.
 - **Subject: this invocation.** The tree holds the decisions this run is about to
-  take — which layer an obligation is answered from where its
-  `Level` leaves room, what a case's oracle must observe, and what a fixture has
-  to construct for it. It does not hold the spec, the acceptance criteria or the
+  take — what a case's oracle must observe, what a fixture has to
+  construct for it, and which of several admissible shapes a test takes. **Not
+  the layer**: an obligation's home is routed deterministically from its `Level`,
+  including every unreadable spelling, and a grilling answer that moved one would
+  put the test where the coverage contract does not look. It does not hold the spec, the acceptance criteria or the
   ledger rows: those are settled input, and re-interviewing them each pass
-  reopens what somebody already decided. A tree that small usually empties in one
-  round.
+  reopens what somebody already decided.
 - **Reopen on a contradiction, and hand the answer to the Drift Protocol.**
-  An obligation two layers could answer, a `Level` that
-  routes to a home the obligation cannot be observed from, or an acceptance
-  criterion no test can reach as written. Open a round over **what the change should ask for**, never over
+  An acceptance criterion no test can reach as written, or
+  an obligation whose `Level` names a home the behaviour cannot be observed
+  from. Open a session over **what the change should ask for**, never over
   whether to make it. `.qfai/assistant/constitution/drift-protocol.md` carries
   the change — STOP, Change Request, the user's approval, the owner rerun — and a
-  round is not a second route to editing settled input.
-- **Record the session where the gate reads it.** The method writes no artifact
-  of its own, so a run that grilled and a run that skipped it leave the same
-  tree. `.qfai/evidence/atdd-<spec-id>.md` carries a `## Grilling Session` section, written when the
-  session ends and before the first acceptance test this run writes:
+  session is not a second route to editing settled input.
+- **Record every session where the gate reads it.** The method writes no
+  artifact of its own, so a run that grilled and a run that skipped it leave the
+  same tree. `.qfai/evidence/atdd-<spec-id>.md` carries a `## Grilling Session` section holding **one
+  row per session** — the preflight one, and any a contradiction reopened:
 
   ```text
-  | Ended | Ended at | Decisions | Open | Escalated |
-  | ----- | -------- | --------- | ---- | --------- |
-  | confirmed | 2026-01-01T09:14:00Z | 4 | 0 | 0 |
+  | Ended | Ended at | Revision | Before | Decisions | Open | Escalated |
+  | ----- | -------- | -------- | ------ | --------- | ---- | --------- |
+  | confirmed | 2026-01-01T09:14:00Z | a1b2c3d | first write | 4 | 0 | 0 |
+  | user-closed | 2026-01-01T11:02:00Z | a1b2c3d | CR-20260101-0001 | 2 | 1 | 0 |
   ```
 
-  `Ended` takes one of the endings the method defines: `confirmed` where the
-  user confirmed, `user-closed` where they ended the asking, and `no-question`
-  where the invocation was told not to ask — which is the ending every `--auto`
-  run takes, because no confirmation can arrive and the agent never gives one on
-  the user's behalf. `Open` counts the decisions left open, and each is recorded in this stage's own open-question register. The Reviewer Gate
-  reads this section: a stage whose evidence carries none of it is a stage whose
-  round nobody can distinguish from a skipped one, and that is a `REVISE`.
+  `Ended` takes one of the endings the method defines: `confirmed`,
+  `user-closed`, `no-question` or `stopped`. `Revision` is the tree the session
+  ended against, and the gate requires it to be **this** run's — an evidence file
+  is updated in place, so a row left by an earlier invocation would otherwise let
+  a later run skip the session entirely. `Before` says what the session preceded:
+  `first write` for the preflight one, and the Change Request or the edit that
+  surfaced the contradiction for a reopened one.
+
+- **The open questions go under that table, in the same section.** One line per
+  decision left open, carrying the decision, the labelled assumption written in
+  its place where a document required a value, and nothing else. That is the
+  register this stage's gate reads, and it is here so a reader finds the count
+  and the questions it counts in one place.
 
 ## Read Set Contract (Mandatory)
 
@@ -157,15 +170,18 @@ Use the shared schema.
 ### Reviewer Gate (MUST)
 
 - Follow `.qfai/assistant/constitution/shared-skill-delegation-baseline.md#reviewer-gate-baseline`.
-- The stage evidence's `## Grilling Session` section is present, its `Ended` is
-  one of the endings the method defines, and its `Open` count matches the open
-  questions recorded. A run that skipped the round leaves the same tree as one
-  that ran it, so this section is the only thing that tells them apart.
-- **A non-zero `Open` is a `REVISE`, whatever it matches.** Article X, rule 6
-  says the stage cannot complete over a decision nobody took, so a count that
-  agrees with the register still describes a stage that is not done. The
-  questions go to the user and the stage is re-run against their answers; a
-  matching count is what makes the record honest, not what makes it passable.
+- The stage evidence's `## Grilling Session` section is present, every row's
+  `Ended` is one of the endings the method defines, every `Revision` is this
+  run's, and each row's `Open` count matches the questions listed under the
+  table. A run that skipped the session leaves the same tree as one that ran it,
+  and an evidence file is updated in place — so the section and its revision are
+  what tell a fresh session from an absent one and from last week's.
+- **A `no-question` row with a non-zero `Open` is a `REVISE`.** Article X, rule 6
+  says the stage cannot complete over a decision nobody took, and nobody was
+  asked. A `user-closed` row with open decisions **passes**: the user saw them
+  and closed the asking, and the method records each as a labelled assumption.
+  A `stopped` row is a `REVISE` whatever it counts — the user ended the session,
+  so the stage reports every open decision rather than proceeding.
 - Final completion gate MUST be delegated to an independent `completion-reviewer`.
 - ATDD-specific reviewer checks:
   - coverage obligations met: E2E covers `US`, API covers `CON-API`, Integration covers every declared `CON-DB` (`QFAI-ATDD-115`) — a contract **this spec owns** but outside the current slice deferred with `-- x-qfai-status: planned` on a line of its own, never silently uncovered — and every `TC` **whose `Level` routes to an ATDD home** — `L3`/`L4`/`L5`, no `Level`, an unreadable spelling, or `system` / `acceptance` — is covered from the directory that `Level` routes to. A **sibling spec's** uncovered `CON-DB` is not that case, and the reviewer must not ask for that edit: `QFAI-ATDD-115` is filed against `.qfai/contracts/**` and survives `--spec`, so it reaches this gate without becoming this run's work — record it as a cross-spec obligation and leave the contract file alone (CRITICAL CONSTRAINTS), because marking it `planned` defers the owning spec's DB test and hides a real gap. `L1`/`Unit` and `L2`/`Component` owe nothing here (CRITICAL CONSTRAINTS): the ledger covers them. An existing L1/L2 annotation in `tests/integration/**` is not a violation — the validator declines to count it and declines to flag it — so do not require one to be added, and do not require an existing one to be removed;
@@ -383,8 +399,8 @@ the heading cannot:
   the section. A rework round is a `#### Round N` block nested **inside that
   row's section**, not a section of its own: the list is closed, and nesting
   attributes it to a row (`references/review-fix-rounds.md`).
-- **Grilling Session** — one row recording how the preflight round ended, its
-  decision counts, and how many are still open. Written when the session ends and
+- **Grilling Session** — one row per session, with the open questions listed
+  under the table. Each is written when that session ends, the preflight one
   before this run writes an acceptance test, because a row holding only the final
   state reads the same whether the session ran first, ran after, or never ran.
   The Reviewer Gate reads it (`## Grilling`).
@@ -408,11 +424,11 @@ Template:
 
 ## Grilling Session
 
-<!-- One row, written when the session ends and before the first acceptance test
-     this run writes. See this skill's `## Grilling` section. -->
+<!-- One row per session, written when each ends. See this skill's
+     `## Grilling` section; the open questions go under the table. -->
 
-| Ended | Ended at | Decisions | Open | Escalated |
-| ----- | -------- | --------- | ---- | --------- |
+| Ended | Ended at | Revision | Before | Decisions | Open | Escalated |
+| ----- | -------- | -------- | ------ | --------- | ---- | --------- |
 
 ## Work performed (what changed, where)
 
