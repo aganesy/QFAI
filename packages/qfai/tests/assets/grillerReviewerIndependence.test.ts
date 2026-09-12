@@ -73,11 +73,35 @@ describe("a griller's recommendations and reviewer independence", () => {
       // in the schema there is no record to read, and the mandatory field is one
       // a reset instance can only guess at.
       const content = await read(tree);
+      expectPhrase(content, "**A grilling session adds a row for every decision it settled**");
+      expectPhrase(content, "`Task title` = `grilling(<where>/<adjudication>): <the decision>`");
+      // The field asks what THIS reviewer recommended, so the row names the
+      // recommender. "Whose recommendation was adopted" is undefined for the
+      // ordinary case where the user chose something else.
       expectPhrase(
         content,
-        "**A grilling session that settled a decision agent-to-agent adds a row for it**",
+        "the agent that **made the recommendation**, whether or not it was taken",
       );
-      expectPhrase(content, "`Task title` = `grilling: <the decision>`");
+    });
+
+    it(`${tree}: the row says who adjudicated, not only that a session ran`, async () => {
+      // The two outcomes point opposite ways: a user-settled decision leaves
+      // the griller free to review the artifact, an agent-settled one makes the
+      // artifact wrong until somebody decides. One marker for both makes them
+      // indistinguishable in the row the reviewer is told to rely on.
+      const content = await read(tree);
+      expectPhrase(content, "**`<where>` is the stage's own name for where the session ran**");
+      expectPhrase(content, "**`<adjudication>` is `user` or `agents`**");
+      // A row that cannot be assigned to a place is one an omission elsewhere
+      // can be counted against.
+      expectPhrase(content, "a row that cannot be assigned to a place");
+      expectPhrase(content, "tells the reviewer nothing it can act on");
+      // One format, so a gate selecting the prefix finds every row rather than
+      // skipping the ones that carry the adjudication.
+      expectPhrase(
+        content,
+        "always parenthesized, so a gate selecting `grilling(` finds every row",
+      );
     });
 
     it(`${tree}: the work order carries the series, not only the response`, async () => {
@@ -171,7 +195,10 @@ describe("a griller's recommendations and reviewer independence", () => {
       // `REVISE` over provenance that never existed.
       const content = await read(tree);
       expectPhrase(content, "**The record answers either way, and silence answers nothing.**");
-      expectPhrase(content, "writes one row reading `grilling: none`");
+      expectPhrase(content, "writes one row reading `grilling(-/none): none`");
+      // Parenthesized like every other grilling row: a gate that selects on
+      // those fields skips any row that drops them.
+      expectPhrase(content, "`grilling(-/none): none` row records a fact rather than a step");
       // Silence cannot be the answer: an omitted row and no session to record look
       // identical in the table, so reading absence as `none` clears the decision
       // the record exists to expose.
