@@ -59,7 +59,7 @@ describe.each(TREES)("%s — the discussion interview", (tree) => {
     expectPhrase(skill, "as a grilling session through that skill");
     // The body is read, not the name: a host that loads skill bodies lazily
     // hands the agent the reference and not the procedure, and an agent with
-    // the reference alone improvises the interview this step replaces.
+    // the reference alone improvises an interview that reads like the method.
     expectPhrase(skill, "Read `.qfai/assistant/skills/qfai-grilling/SKILL.md`");
     expectPhrase(skill, "**Read the file, do not work from the name.**");
     expectPhrase(skill, "stop and report that `npx qfai init` installs it");
@@ -150,6 +150,10 @@ describe.each(TREES)("%s — the discussion interview", (tree) => {
       skill,
       "The session reads it. Held back, the decisions are settled against evidence nobody had",
     );
+    // And the exemption names where it goes. Left as the pack file it used to
+    // be, the row would license the write the cancellation guard forbids.
+    expectPhrase(skill, "The research summary in this run's stage evidence");
+    expectPhrase(skill, "no pack directory exists yet");
     expectPhrase(
       skill,
       "a no-question run cannot write the open questions that block its completion",
@@ -251,5 +255,57 @@ describe.each(TREES)("%s — the discussion interview", (tree) => {
     const matrix = await read(MATRIX);
     expectPhrase(matrix, "The stage evidence's `## Grilling Session` row");
     expectPhrase(matrix, "The no-question row is the one to read carefully");
+  });
+
+  it("gives the record a home before the pack has one", async () => {
+    // `Ended at` is required before the first pack file, and nothing named a
+    // file the run may write at that moment. A row with nowhere to go until the
+    // pack exists can only be written after drafting, which is the order the
+    // requirement was added to rule out.
+    const skill = await read(SKILL);
+    expectPhrase(skill, "`.qfai/evidence/discussion-<YYYYMMDDhhmmssSSS>.md`");
+    expectPhrase(skill, "before anything else is written");
+    expectPhrase(skill, "can only be written after drafting");
+  });
+
+  it("keeps a cancelled run from leaving a pack behind", async () => {
+    // The research output used to land in a freshly stamped pack directory
+    // before the session ran. A run the user stops there leaves one file under
+    // the greatest timestamp, and the resolver picks it over the last complete
+    // pack, so every later reader reports a project that looks broken.
+    const skill = await read(SKILL);
+    expectPhrase(
+      skill,
+      "**Nothing is written under `.qfai/discussion/` until an ending authorizes authoring.**",
+    );
+    expectPhrase(skill, "resolved by the greatest timestamp with no completeness check");
+    // The summary still has somewhere to be, and reaches the pack when one opens.
+    expectPhrase(skill, "record its `research_summary` output in this run's stage evidence");
+    expectPhrase(skill, "carry it into the `## Research Summary` section of `04_Sources.md`");
+  });
+
+  it("hands the reviewer the two fields it rules on", async () => {
+    // The reviewer is told to rule on whether the session ended before
+    // authoring began, and the template carried neither time. A row holding the
+    // final state alone reads the same whichever order it happened in.
+    const request = await read(REVIEW_REQUEST);
+    expectPhrase(request, "| Ended | Ended at | Authoring began | Frontier |");
+    expectPhrase(request, "Both times, because they are what that ruling compares");
+  });
+
+  it("keeps an approval-required decision out of the closure's assumptions", async () => {
+    // `proceed` closes the questions, not the authorizations. The visual
+    // direction is the case here: the intake document says only the user may
+    // choose a theme, so a closure that assumed it would have the run make the
+    // one choice that document reserves.
+    const skill = await read(SKILL);
+    expectPhrase(
+      skill,
+      "**Nor while a decision some document requires the user to make and record is open.**",
+    );
+    expectPhrase(skill, "only the user may choose a theme");
+    expectPhrase(skill, "waives the agent's own uncertainty, never an authorization");
+    // And the ending's own row says it, since that is the line an agent reads.
+    expectPhrase(skill, "except one a document requires the user to make and record");
   });
 });
