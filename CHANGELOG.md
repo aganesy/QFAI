@@ -51,6 +51,30 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **A ledger `Selector` must now name a test its own `Test file` contains**
+  (#1586). `TDDLIST_SELECTOR_UNRESOLVED` accepted a selector whose last
+  identifier-shaped word appeared anywhere in the file. The last word of
+  `renders the header` is `header`, which is in almost any test file, so a row
+  could claim a completed test the file did not hold and report nothing.
+
+  Resolution is now containment of the selector's own text, which is what
+  `TDDLIST_STALE_STATUS` already required. Across this repository's own ledgers
+  the rule goes from 50 findings to 209 over 12 files, every one a `warning`:
+  the error count is unchanged, so `--fail-on error` and the backlog ratchet are
+  unaffected.
+
+  A selector no runner could match is the shape the strict check is for. Run
+  each of `spec-0002`'s previously accepted selectors through `vitest -t`
+  against its own test file and four of the six select zero tests.
+
+  Strictness makes one reading in `selector-granularity.md` reachable for the
+  first time: a bare cell holding commas was a comma-separated list before the
+  array form existed, and read as a single name such a row can never resolve
+  again. Those cells now get one bounded second reading, adopted only when the
+  file contains every part. A name that legitimately holds a comma is matched
+  whole first, and the array form — a one-element array included — is taken
+  verbatim and never re-split.
+
 - **The remediation for an unreplaced `DESIGN.md` names a step that exists.**
   `QFAI-DCON-034` told an operator to run `/qfai-discussion`, "which emits the
   draft". That stage stopped emitting it when authoring moved to `/qfai-sdd`

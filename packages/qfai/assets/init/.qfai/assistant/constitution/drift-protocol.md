@@ -169,13 +169,12 @@ re-scoped by the one role this whitelist grants no row write — obeying this li
 whitelist above it, and obeying the whitelist left the row unsplittable by anyone.
 
 One limit is worth stating, because the `Selector` condition is narrower than it reads.
-`selectorResolves` is deliberately lenient: it accepts verbatim containment, then containment of
-the selector's last identifier-shaped token. So a `Selector` that is materially wrong — one that
-misdescribes which obligations its row covers — but happens to share a trailing token with its
-test file still **resolves**, the condition is false, and this carve-out does **not** authorise
-repairing it. That is the conservative direction and it is intended: only a selector the runner's
-own file could not match is repairable here, and a merely misdescribing one stays an upstream
-change.
+`selectorResolves` is containment of the selector's own text: a cell resolves when the test file
+contains it as written. So a `Selector` that is materially wrong — one that misdescribes which
+obligations its row covers — but is spelled the way some test in that file is spelled still
+**resolves**, the condition is false, and this carve-out does **not** authorise repairing it. That
+is the conservative direction and it is intended: only a selector the runner's own file could not
+match is repairable here, and a merely misdescribing one stays an upstream change.
 
 ### Why the Decision Record is on this list
 
