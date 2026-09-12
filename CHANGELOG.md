@@ -118,7 +118,7 @@ series` — the reviewed artifact plus the role — carries the round budget
   Availability is judged for the question in front of the agent, not from what
   the host supports in general: a tool a mode withholds, and one that cannot
   carry the answer's shape, both take the fallback. The fallback keeps that
-  shape — numbered choices where a finite set of candidates exists, a plain request
+  shape — numbered choices where a listable set of candidates exists, a plain request
   for the value where none does.
 
 ### Removed

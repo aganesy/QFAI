@@ -104,7 +104,7 @@ common case, and forcing it through loses the constraint.
 **The whole round falls back, not the question that triggered it.** Splitting a
 round across two carriers costs the thing a round exists for: the user seeing
 what is being decided together. So the round is asked as a normal message **in
-the shape each answer has** — numbered choices where a finite set of candidates
+the shape each answer has** — numbered choices where a listable set of candidates
 exists, a plain request for the value where none does — keeping the choice
 semantics where there are choices, and saying why the tool was not used. The
 classifier is the candidate set, not whether the question asks for a fact: a

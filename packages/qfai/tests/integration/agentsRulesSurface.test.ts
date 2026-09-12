@@ -456,7 +456,7 @@ describe("cross-AI rules surface (.agents/rules/ master)", () => {
     });
 
     // The fallback carries the answer's shape, not a list unconditionally. A
-    // question whose answer has no finite set of candidates has none to
+    // question whose answer has no listable set of candidates has none to
     // enumerate, and requiring a list there has an agent invent two options to
     // fit it — which is the guess the recommendation clause refuses, in another
     // costume.
@@ -471,8 +471,8 @@ describe("cross-AI rules surface (.agents/rules/ master)", () => {
       expect(text).toMatch(/What\s+is\s+being\s+asked,\s+and\s+what\s+depends\s+on\s+the\s+answer/);
       // And what decides is the candidate set, not the value's type: one count
       // out of the four a platform supports is a choice however scalar it looks.
-      expect(text).toMatch(/whether\s+a\s+finite\s+set\s+of/);
-      expect(text).toMatch(/no\s+finite\s+set\s+of\s+candidates/);
+      expect(text).toMatch(/whether\s+a\s+listable\s+set\s+of/);
+      expect(text).toMatch(/no\s+listable\s+set\s+of\s+candidates/);
     });
 
     // Finite is not the same as listable. A port between 1 and 65535 has a
@@ -538,7 +538,7 @@ describe("cross-AI rules surface (.agents/rules/ master)", () => {
       // and offers choices, so a fact-based split prescribes both shapes at
       // once for one question.
       expect(text).toMatch(/in\s+the\s+shape\s+each\s+answer\s+has/);
-      expect(text).toMatch(/numbered\s+choices\s+where\s+a\s+finite\s+set\s+of\s+candidates/);
+      expect(text).toMatch(/numbered\s+choices\s+where\s+a\s+listable\s+set\s+of\s+candidates/);
       expect(text).toMatch(/not\s+whether\s+the\s+question\s+asks\s+for\s+a\s+fact/);
     });
 
@@ -753,4 +753,19 @@ describe("cross-AI rules surface (.agents/rules/ master)", () => {
       expect(text).toContain("grilling.md");
     });
   });
+});
+
+describe("the question templates follow the answer's shape", () => {
+  // Two templates an agent reads at startup. Requiring options and a
+  // recommendation every time leaves an open value with no compliant form: the
+  // agent invents candidates, or breaks one of the two rules.
+  it.each([["AGENTS.md"], [".instruction/00_universal/communication.md"]])(
+    "%s branches rows 3 and 4 on the answer",
+    async (rel) => {
+      const text = await readFile(path.join(ROOT, rel), "utf-8");
+      expect(text).toMatch(/where\s+the\s+answer\s+has\s+a\s+listable\s+set\s+of\s+candidates/);
+      expect(text).toMatch(/where\s+a\s+choice\s+is\s+being\s+made/);
+      expect(text).toMatch(/user-questions\.md/);
+    },
+  );
 });

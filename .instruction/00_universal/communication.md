@@ -26,12 +26,18 @@ version: 1.1.0
 ## 質問の書き方（型）
 
 ```
-1. 現状理解: 〜だと理解している
-2. 不明点: どこが分からないかを具体化
-3. 選択肢: 考えられる案を列挙
-4. 推奨案と理由: どれを推すか、なぜか
-5. 追加で欲しい情報: 決定に必要な入力を明示
+1. What is understood so far
+2. What is unclear, stated specifically
+3. The choices, where the answer has a listable set of candidates
+4. The recommended one and why, where a choice is being made
+5. What else would settle it
 ```
+
+Rows 3 and 4 follow the answer's shape rather than being filled in every time.
+An answer with no listable set of candidates is a plain request for the value,
+and a question asking for a fact carries no recommendation at all:
+`.agents/rules/user-questions.md` settles both, and inventing candidates to fill
+a row is the guess it exists to prevent.
 
 ## 進捗報告
 

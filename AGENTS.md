@@ -87,7 +87,7 @@ QFAI パッケージの版番号 (`X.Y.Z`) は AI が選ばない。ユーザが
   fixed; a session ends on an empty frontier and the user's confirmation,
   never at a question count)
 - `user-questions.md` (every question to the user arrives in the shape its
-  answer has — a structured choice where a finite set of candidates exists, or a
+  answer has — a structured choice where a listable set of candidates exists, or a
   plain request where none does; where the host's tool cannot carry it, the
   plain-text fallback keeps the same parts)
 
@@ -202,13 +202,19 @@ Planテンプレート:
 - レビュー完了基準は DoD およびローカル CI（format/lint/型/テスト）通過とする。
 - 追加の確認サイクル数や待機時間は、作業の文脈に応じて調整する。
 
-質問テンプレート:
+Question template:
 
-1. 現状理解
-2. 不明点
-3. 選択肢
-4. 推奨案と理由
-5. 追加で欲しい情報
+1. What is understood so far
+2. What is unclear
+3. The choices, where the answer has a listable set of candidates
+4. The recommended one and why, where a choice is being made
+5. What else would settle it
+
+Rows 3 and 4 follow the answer's shape rather than being filled in every time.
+An answer with no listable set of candidates is a plain request for the value,
+and a question asking for a fact carries no recommendation at all:
+`.agents/rules/user-questions.md` settles both, and inventing candidates to fill
+a row is the guess it exists to prevent.
 
 ## サブエージェント/分担（必要時）
 

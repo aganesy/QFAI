@@ -49,7 +49,7 @@ its parts.
 | Is open        | What is being asked, and what depends on the answer                     |
 
 That is not the same as "always a list of choices", and it is not the same as
-"a scalar answer is open" either. **What decides is whether a finite set of
+"a scalar answer is open" either. **What decides is whether a listable set of
 candidates exists**, not what type the value has: one deployment count out of
 the four the platform supports is a choice, and a release name nobody has picked
 is open. § 2 sends the open one down the tool's free-text path and § 5 carries
@@ -92,7 +92,7 @@ The description is the work. A label alone asks the user to infer the
 consequence, and inferring it is the reasoning the agent already did and did not
 write down.
 
-Where the answer is genuinely open — no finite set of candidates to choose from —
+Where the answer is genuinely open — no listable set of candidates to choose from —
 the tool's own free-text path covers it. That is a different answer shape, not an
 exception to this rule. A name, a number or a sentence is usually of that kind and
 is not of that kind by type: where the value has to be one of a known few, the set
@@ -163,7 +163,7 @@ Where there are choices, that is a numbered list keeping every part the tool
 would have carried: the label, the description of what each choice means, the
 recommendation, and **how many options may be chosen**.
 
-Where the answer is open — no finite set of candidates — it is a plain request
+Where the answer is open — no listable set of candidates — it is a plain request
 for the value, naming what depends on it. Inventing two options so an open
 answer fits a numbered list is the guess § 3 refuses, wearing the fallback's
 shape.
