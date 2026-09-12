@@ -15,10 +15,16 @@ worth asking. It decides only what a question looks like when it is put.
 | How many questions to ask                   | Outside this rule — see § 6                 |
 
 **Callable, not present.** A host may carry a structured-question capability
-that this invocation cannot use — a mode that withholds it, a permission that
-was not granted. That is the fallback's case, not a violation. Judge
-availability at the moment the question is asked, never from what the host
+that this invocation cannot use — a mode that offers no structured tool, a
+permission that was not granted. That is the fallback's case, not a violation.
+Judge availability at the moment the question is asked, never from what the host
 supports in general.
+
+**A mode that asks nothing is a different case.** Where the invocation is
+forbidden to ask at all — `--auto` is the one QFAI ships — there is no question
+whose availability this rule could judge. It is silenced, and the run proceeds
+on a recorded assumption or stops. Reading it as an unavailability would send it
+to the fallback and ask in plain text what the mode forbids asking.
 
 **Callable for this question, not in general.** A tool that cannot carry the
 answer's shape is not callable for that question either. The common case is a
