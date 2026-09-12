@@ -504,8 +504,12 @@ it says so and names what carries it now.
    `tests/validators/uix/screenContract.test.ts` declares `TC-0002-0020` through `TC-0002-0024`.
    None of those five appears in `06_Test-Cases.md`, whose active table holds five rows of its own.
    The annotations point at obligations that were removed or never registered.
-   `tests/validators/uix/threeLayer.test.ts` is in the same position, declaring `TC-0002-0011`,
-   `TC-0002-0012` and `TC-0002-0026` beside the one obligation it does reach, `TC-0002-0010`.
+   `tests/validators/uix/threeLayer.test.ts` is in a different position, and only partly the same
+   one: of the three ids it declares beside the obligation it reaches, `TC-0002-0012` and
+   `TC-0002-0026` appear in no table, while **`TC-0002-0011` is live** — an active row of
+   `06_Test-Cases.md` that `TDD-0012` still names. That annotation is misplaced rather than
+   dangling: the file reads no README and no `SKILL.md`, so it cannot discharge a wording
+   obligation, and removing it is a different act from removing an id nothing declares.
    The two files need different routes. `threeLayer.test.ts` is the file `TDD-0011`'s recorded
    observation covers, so editing it stales that observation and the row owes a fresh one. The
    route is the shared-artifact re-verification `CR-20260912-0003` step 3 sets out, which keeps

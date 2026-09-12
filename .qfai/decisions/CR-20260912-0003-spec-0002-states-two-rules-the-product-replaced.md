@@ -162,11 +162,18 @@ to do with. A row whose obligation is unchanged waits on nobody.
   shipped `qfai-discussion/SKILL.md` this option rewrites, and
   `spec-0010/TDD-0001` … `TDD-0005` are `done` rows naming that file. The
   procedure matches a reverse-dependent path, not only a file edited directly,
-  so the sweep covers all eight. The cross-spec ownership procedure
+  so the sweep covers all eight.
+
+  **Under `2a`, seven more.** That sub-option rewrites the shipped
+  `qfai-prototyping/SKILL.md`, which `packages/qfai/tests/skill/prototypingSkill.test.ts`
+  reads — and `spec-0004/TDD-0006` and `spec-0012/TDD-0294`, `-0295`, `-0345`,
+  `-0346`, `-0360` and `-0396` are `done` rows naming that test. The same
+  procedure reaches them, and they owe fresh verification in the same change. The cross-spec ownership procedure
   (`.qfai/assistant/skills/qfai-implement/references/cross-spec-ownership.md`)
   runs before either file is written, and those three rows owe fresh
   verification in the same change. Without it option 2 finishes with another
   spec's rows attesting to behaviour the product no longer has.
+
 - Contracts: `packages/qfai/assets/init/.qfai/assistant/skills/qfai-prototyping/references/design-md-spec.md`
   and its root mirror, **under `2a` only**. That document has Phase 0 author
   `DESIGN.md` and prototyping read it as read-only context, and `2a` moves the
@@ -234,6 +241,15 @@ and refusing `3A/1B` for want of one would make a valid split unrecordable.
 
 1. `/qfai-sdd` rerun scope: the statements the chosen option names, plus the
    `06_Test-Cases.md` rows that read them.
+
+   The seven ledger rows the seeding contract requires and this pack does not
+   have are **not** in this Change Request either. That gap predates both
+   statements and is independent of them: Phase 2b would seed the rows and
+   migrate the column on any rerun this CR triggers, so a recovering session
+   would perform an unapproved repair under an approval that covers A and B. It
+   is recorded in `.qfai/evidence/coverage-depth-spec-0002.md` finding 7 and
+   needs its own record; a rerun under this one leaves the ledger as it found
+   it.
 
    The `10_Plan.md` row citing `TC-0002-0026`, which this spec's table does not
    declare, is **not** in this Change Request. It is independent of both
@@ -326,10 +342,10 @@ and refusing `3A/1B` for want of one would make a valid split unrecordable.
    produce one. Which stage replaces it is a decision rather than a detail, so
    option 2 is offered as two, the same way option 3 is:
 
-   | Option | Who authors `DESIGN.md`                                                                                                                                                                              |
-   | ------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-   | `2a`   | `/qfai-prototyping` gains a direction-selection step and authors the file, with its tests. Discussion still chooses nothing, and the contract that has prototyping read it read-only changes with it |
-   | `2b`   | `/qfai-sdd` Phase 0 authors it from the spec, with no interview anywhere. The requirement is met with no user-facing choice, and whatever a brand needs that a spec does not carry is lost           |
+   | Option | Who authors `DESIGN.md`                                                                                                                                                                                                                                                                                                                                                                                                                               |
+   | ------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+   | `2a`   | `/qfai-prototyping` gains a direction-selection step and authors the file **and `.qfai/contracts/design/DESIGN.md.lock.yaml`**, with its tests. The prototyping contract requires both before execution and `prototyping iterate` rejects a run without the lock, so assigning the authoring alone leaves a new UI project unable to start. Discussion still chooses nothing, and the contract that has prototyping read it read-only changes with it |
+   | `2b`   | `/qfai-sdd` Phase 0 authors it from the spec, with no interview anywhere. The requirement is met with no user-facing choice, and whatever a brand needs that a spec does not carry is lost. **It narrows `US-0002-0005` with the rest of statement A**: that story requires prototyping to remain where the direction is chosen, and `2b` moves the authoring to `/qfai-sdd`, so leaving the story as written would contradict the option settling it |
 
    `2A` with no letter authorises neither, and withdrawing every producer
    without naming a replacement leaves a new UI project unable to enter
@@ -339,8 +355,9 @@ and refusing `3A/1B` for want of one would make a valid split unrecordable.
    artifact is required. This is the option with the largest blast radius, and
    the direction interview it removes was itself added to stop an assistant
    inventing a brand.
-   - **No row is reset.** This option is `confirm-only`, so no upstream
-     statement moves, and
+   - **No row is reset.** No upstream statement moves under this option — the
+     mode is `re-derive` so the rerun can rewrite `TDD-0012`'s identity, and the
+     statements come back unchanged — and
      `.qfai/assistant/skills/qfai-implement/references/checkpoint-verification.md`
      admits the approved reset only for a row an approved **upstream** change has
      invalidated. `TDD-0008`, `TDD-0009` and `TDD-0012` keep the obligations they

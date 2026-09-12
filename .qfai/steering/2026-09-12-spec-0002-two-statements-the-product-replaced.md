@@ -67,8 +67,10 @@ Statement B, the requiredness rule, owns `TDD-0012`. So for `1A/3bB`: option 1
 on A resets `TDD-0008` and `TDD-0009` and retires `TDD-0010`, and option 3 on B
 retires `TDD-0012` and deletes the legacy-format case its disposition names.
 
-Option 2 resets nothing. It is `confirm-only`, so no obligation moves, and the
-approved reset is for a row an approved upstream change invalidated. Its rows
+Option 2 resets nothing. No obligation moves under it, and the approved reset is
+for a row an approved upstream change invalidated. Its rerun mode is `re-derive`
+nonetheless — `confirm-only` writes nothing but the CR reference, and the rerun
+has to rewrite `TDD-0012`'s identity. Its rows
 take the in-place shared-artifact re-verification plus falsifiability evidence
 for each corrected assertion. Option 2 on **B** reaches `TDD-0001` as well:
 restoring the preflight check for `prototyping.yaml` edits
@@ -109,5 +111,6 @@ rows parked will not find them parked.
 - `.qfai/evidence/coverage-depth-spec-0002.md`, findings 1 through 7 — finding 6
   carries the annotation-repair routes `TDD-0011`'s re-verification depends on,
   and finding 7 the seven ledger rows the seeding contract requires and this
-  pack does not have
+  pack does not have — which is read, not acted on: that gap is outside
+  `CR-20260912-0003` and needs a record of its own
 - `.qfai/assistant/skills/qfai-implement/references/execution-ledger.md`, the status lifecycle
