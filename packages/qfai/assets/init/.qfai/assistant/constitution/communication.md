@@ -60,7 +60,9 @@ When an agent needs to ask the user a question, the following rules apply (see a
    and is likewise not `--auto`; rule 4 is activated by the `--auto` flag alone.
 6. **A grilling session has no cap**: its questions spend no clarification budget, and exhausting that budget
    does not end one. It ends when no node is open — no decision whose prerequisites are settled, and no fact
-   lookup still running — and the user confirms the understanding is shared.
+   lookup still running — and the user confirms the understanding is shared. That closing confirmation is a
+   grilling question too, so rule 5 keeps it askable: counted, a spent budget would leave a session that can
+   be neither continued nor closed.
 
 All SKILL.md files MUST include a
 `## User Questions (AskUserQuestion Protocol)` section with MUST-level wording.

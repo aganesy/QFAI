@@ -323,17 +323,14 @@ describe("the clarification budget is countable", () => {
       expectNoPhrase(content, "Non-discussion commands MUST minimize questions.");
     });
 
-    it(`${tree}: the baseline's end condition is the whole tree, and the confirmation is exempt`, async () => {
+    it(`${tree}: the baseline's end condition is the whole tree`, async () => {
       // The frontier emptying is not the tree settling: when every remaining
       // decision waits on a lookup the frontier is empty while the tree is not,
       // and completing there closes the session before the lookup can raise the
-      // questions it was dispatched to answer. The confirmation that closes the
-      // session is a grilling question too — counted, a spent budget makes the
-      // second half of the condition unaskable.
+      // questions it was dispatched to answer.
       const content = await read(tree, OPERATING);
       expectPhrase(content, "the session ends when no node is open");
       expectPhrase(content, "no fact lookup still running");
-      expectPhrase(content, "That closing\n  confirmation is a grilling question too");
     });
 
     it(`${tree}: every enumeration of the survivors names all three classes`, async () => {
@@ -376,15 +373,25 @@ describe("the clarification budget is countable", () => {
       // not itself a decision the design left open — so outside the exempt class
       // it is an ordinary clarification. A spent budget then makes the second
       // half of the end condition unaskable, and the session can be neither
-      // continued nor closed. Asserted where the class is defined and where the
-      // exemption is stated, because either alone leaves the other free to drop
-      // it.
+      // continued nor closed. Three documents state the classification and each
+      // is reachable on its own, so they are read together: the rule list in
+      // particular is what an agent follows after exhaustion, where a list that
+      // keeps the questions but not the confirmation is the deadlock itself.
       const content = await read(tree, CONSTITUTION);
       expectPhrase(
         content,
         "The confirmation that\n  closes a session is in this class with its questions",
       );
       expectPhrase(content, "That closing confirmation is exempt with the\n  questions");
+
+      const baseline = await read(tree, OPERATING);
+      expectPhrase(baseline, "That closing\n  confirmation is a grilling question too");
+
+      const rules = await read(tree, COMMUNICATION);
+      expectPhrase(
+        rules,
+        "That closing confirmation is a\n   grilling question too, so rule 5 keeps it askable",
+      );
     });
 
     it(`${tree}: a session is entered deliberately, so the class is decidable`, async () => {
