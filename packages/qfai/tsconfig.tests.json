@@ -65,6 +65,7 @@
     "tests/assets/designDirectionInterview.test.ts",
     "tests/assets/finalChecklistGateParity.test.ts",
     "tests/assets/gateCommandHome.test.ts",
+    "tests/assets/grillingSkill.test.ts",
     "tests/assets/implementCheckpointVerification.test.ts",
     "tests/assets/implementPlanPhase.test.ts",
     "tests/assets/implementRedSubstepHeadings.test.ts",

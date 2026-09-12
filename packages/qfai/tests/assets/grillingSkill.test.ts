@@ -109,7 +109,11 @@ describe("the grilling primitive", () => {
       // so that an adopter reads no dead pointer. That only holds while the
       // pointers it does carry resolve.
       const raw = await read(tree);
-      const cited = [...raw.matchAll(/`(\.qfai\/[^`#]+?\.md)(?:#[^`]*)?`/g)].map((m) => m[1]);
+      // The group is optional to the type checker even though the pattern
+      // cannot match without it, so narrow rather than assert.
+      const cited = [...raw.matchAll(/`(\.qfai\/[^`#]+?\.md)(?:#[^`]*)?`/g)].flatMap((match) =>
+        match[1] === undefined ? [] : [match[1]],
+      );
       expect(cited.length, "the body cites no tree path at all").toBeGreaterThan(0);
 
       const missing: string[] = [];
