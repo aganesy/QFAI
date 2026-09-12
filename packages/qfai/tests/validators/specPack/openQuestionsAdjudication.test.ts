@@ -290,6 +290,24 @@ describe("the register it reads, and the notation it reads it in", () => {
     expect(codes(text)).toEqual([]);
   });
 
+  it("reads a status written inline on the entry's own bullet", () => {
+    // Registers here write a whole entry as one bullet, with the field in the
+    // middle of the sentence and a note after it. Read only as a line of its
+    // own, the entry declared nothing and the blocking value was invisible.
+    const entry = (status: string): string =>
+      [
+        "# 08 Open Questions",
+        "",
+        "## Open Questions",
+        "",
+        `- OQ-0007 — which retention window applies. Owner: ops. Status: ${status}. The`,
+        "  answer of record is in the decision this cites.",
+        "",
+      ].join("\n");
+    expect(codes(entry("deferred"))).toEqual([]);
+    expect(codes(entry("unadjudicated"))).toEqual(["QFAI-SPACK-102"]);
+  });
+
   it("keeps a status with the entry that owns it", () => {
     // A field naming another question sits between the heading and the status
     // all the time. Read as the entry it names, the status below it answers for

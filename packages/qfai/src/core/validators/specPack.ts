@@ -2985,6 +2985,17 @@ const OPEN_QUESTION_STATUSES = new Set(["open", "resolved", "deferred", "unadjud
  */
 const OPEN_QUESTION_COLUMN_LABEL = /^OQ-ID$/i;
 
+/**
+ * The status field, and the same field anchored to a line of its own.
+ *
+ * The value is one word, so what follows it is the note it is: `deferred
+ * (trigger = ...)` parks a question with the point that takes it up, and
+ * `Status: deferred.` mid-sentence is an entry written as a single bullet. A
+ * misspelling is still a word, so it is still read and still reported.
+ */
+const STATUS_FIELD = /(?:status|disposition)\s*:\s*([A-Za-z][A-Za-z-]*)/i;
+const STATUS_FIELD_LINE = /^\s*(?:[-*+]\s*)?(?:status|disposition)\s*:\s*([A-Za-z][A-Za-z-]*)/i;
+
 /** One status a register declares, as written. */
 type DeclaredStatus = { id: string; raw: string };
 
@@ -3041,12 +3052,14 @@ function readDeclaredStatuses(text: string): DeclaredStatus[] {
       continue;
     }
 
-    // `Disposition` is this field under the word the discussion pack uses for
-    // it, and registers here are written both ways. Anchored to the start of
-    // the line so a sentence quoting a status does not declare one, and the
-    // value is the first token so a parenthetical beside it — `deferred (trigger
-    // = ...)` — reads as the note it is rather than hiding the status.
-    const statusMatch = /^\s*(?:[-*]\s*)?(?:status|disposition)\s*:\s*([^\s#]+)/i.exec(line);
+    // The field, in either word: `Disposition` is this one under the name the
+    // discussion pack's register uses, and registers here are written both
+    // ways. It is read in two places and no others — on a line that opens an
+    // entry, where an entry written as one bullet carries the field inline,
+    // and as a metadata line of its own. A sentence elsewhere quoting a status
+    // declares nothing, which is what keeps a register that explains its own
+    // notation from answering for the question it named last.
+    const statusMatch = (rowId !== null ? STATUS_FIELD : STATUS_FIELD_LINE).exec(line);
     if (statusMatch?.[1]) {
       declared.push({ id: currentId || "(unlabeled-oq)", raw: statusMatch[1] });
     }
