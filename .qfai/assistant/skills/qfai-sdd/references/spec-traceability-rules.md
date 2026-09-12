@@ -624,11 +624,15 @@ Template: `templates/specs/spec/16_Traceability-ledger.md`.
 A session run inside a spec stage records into the spec pack, not into a file of
 its own.
 
-| Outcome                               | Home                                                                                |
-| ------------------------------------- | ----------------------------------------------------------------------------------- |
-| A decision the session settled        | `07_Decisions.md`                                                                   |
-| A decision the session did not settle | `08_Open-questions.md`                                                              |
-| A decision at the policy layer        | `_policies/08_Decisions.md`, with its open half in `_policies/09_Open-questions.md` |
+| Outcome                               | Home                                                                                      |
+| ------------------------------------- | ----------------------------------------------------------------------------------------- |
+| A decision the session settled        | `07_Decisions.md`, **and** a `### DL-NNNN` entry in `09_delta.md` under `## Decision Log` |
+| A decision the session did not settle | `08_Open-questions.md`                                                                    |
+| A decision at the policy layer        | `_policies/08_Decisions.md`, with its open half in `_policies/09_Open-questions.md`       |
+
+**Both halves of the first row, or the decision is invisible.** `npx qfai report`
+reads `## Decision Log` alone for Change Type metrics, so a decision recorded
+only in `07_Decisions.md` reports as zero entries.
 
 The record states what was chosen and why. How the session reached it is in the
 history, and repeating it here costs a reader the one thing the record is for.

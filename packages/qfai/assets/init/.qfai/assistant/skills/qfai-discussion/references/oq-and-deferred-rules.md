@@ -43,15 +43,20 @@ Use this file for canonical field definitions in `/qfai-discussion`.
 ## Where a grilling session's outcome goes
 
 A session produces decisions and open questions, and both have a home already.
-No new file: this register and the decision record are the two halves, and a
-third artifact would hold nothing they do not.
+No new file: the pack's fifteen carry them, and a third artifact would hold
+nothing they do not.
 
-| Outcome                               | Home                                                   |
-| ------------------------------------- | ------------------------------------------------------ |
-| A decision the session settled        | The pack's decision record                             |
-| A decision the session did not settle | `11_OQ-Register.md`, `Disposition: open`               |
-| An open question answered later       | `12_OQ-Resolution-Log.md`                              |
-| A question deliberately put off       | `13_Deferred.md`, with the metadata this file requires |
+| Outcome                               | Home                                                                                                   |
+| ------------------------------------- | ------------------------------------------------------------------------------------------------------ |
+| A decision the session settled        | `99_delta.md`, under `## Change History`, with any option it turned down under `## Rejected Decisions` |
+| A decision the session did not settle | `11_OQ-Register.md`, `Disposition: open`                                                               |
+| An open question answered later       | `12_OQ-Resolution-Log.md`, **and** the register row moved to `Disposition: resolved`                   |
+| A question deliberately put off       | `13_Deferred.md`, and the register row moved to `Disposition: deferred`                                |
+
+**The register is what readiness reads.** Writing an answer only into the
+resolution log leaves the row `open`, so the pack stays blocked on a question
+that has been answered. Every row the last two outcomes touch is moved in the
+register in the same edit.
 
 Record what was chosen and why, not how the session went. A rejected option
 belongs in the record only where knowing it was rejected changes a later

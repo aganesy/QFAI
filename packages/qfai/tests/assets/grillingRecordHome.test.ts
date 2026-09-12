@@ -30,6 +30,13 @@ describe("a grilling session records into the artifacts that exist", () => {
       const content = await read(tree, DISCUSSION);
       expectPhrase(content, "## Where a grilling session's outcome goes");
       expectPhrase(content, "`11_OQ-Register.md`, `Disposition: open`");
+      // Named files, not a description. "the pack's decision record" matched
+      // nothing in the fifteen, so an agent could not tell where to write.
+      expectPhrase(content, "`99_delta.md`, under `## Change History`");
+      // Readiness reads the register. An answer written only to the log
+      // leaves the row open, so the pack stays blocked on a settled question.
+      expectPhrase(content, "**The register is what readiness reads.**");
+      expectPhrase(content, "moved to `Disposition: resolved`");
       expectPhrase(content, "`12_OQ-Resolution-Log.md`");
       expectPhrase(content, "`13_Deferred.md`");
     });
@@ -47,6 +54,10 @@ describe("a grilling session records into the artifacts that exist", () => {
       const content = await read(tree, SDD);
       expectPhrase(content, "## Where a grilling session's outcome goes");
       expectPhrase(content, "`07_Decisions.md`");
+      // `qfai report` reads the Decision Log alone, so a decision recorded
+      // only in `07_Decisions.md` reports as zero entries.
+      expectPhrase(content, "a `### DL-NNNN` entry in `09_delta.md`");
+      expectPhrase(content, "**Both halves of the first row, or the decision is invisible.**");
       expectPhrase(content, "`08_Open-questions.md`");
       expectPhrase(content, "`_policies/08_Decisions.md`");
     });
