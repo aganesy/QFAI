@@ -468,7 +468,8 @@ export function compileGlob(pattern: string): string {
         // accepted as one it could. Negated, the separator joins what is
         // excluded; positive, a lookahead holds it out of a set that spells it.
         const members = compileClassBody(body.slice(negated ? 1 : 0));
-        const compiled = negated ? `[^/${members}]` : `(?!/)[${members}]`;
+        const compiled =
+          members === null ? NEVER_MATCHES : negated ? `[^/${members}]` : `(?!/)[${members}]`;
         // A class the author wrote wrongly — a descending range, say — matches
         // nothing, which is what the project's own scan does with it. Left to
         // build a regular expression it threw instead, out of a command whose
@@ -549,20 +550,27 @@ const POSIX_CLASS_MEMBERS: Readonly<Record<string, string>> = {
 };
 
 /**
- * One bracket expression's members, as a regular expression writes them.
+ * One bracket expression's members, as a regular expression writes them, or
+ * `null` where the expression holds an element this table cannot write.
  *
  * Ranges pass through — `a-z` means the same on both sides — and only the two
- * characters that would end the class early are escaped. A name this table does
- * not carry is left as the characters it is, which is what an unknown class is.
+ * characters that would end the class early are escaped. A named class the
+ * table does not carry, an equivalence class (`[=a=]`) and a collating symbol
+ * (`[.a.]`) each make the project's own scan match nothing with the whole
+ * expression. Copied in as characters, `[[:TC:]]` accepted the `T` a skeleton
+ * name starts with, for a file that scan never collects.
  */
-function compileClassBody(body: string): string {
+function compileClassBody(body: string): string | null {
   let source = "";
   let index = 0;
   while (index < body.length) {
-    if (body.startsWith("[:", index)) {
-      const end = body.indexOf(":]", index + 2);
-      const members = end === -1 ? undefined : POSIX_CLASS_MEMBERS[body.slice(index + 2, end)];
-      if (members !== undefined) {
+    const marker = body[index] === "[" ? body[index + 1] : undefined;
+    if (marker === ":" || marker === "=" || marker === ".") {
+      const end = body.indexOf(`${marker}]`, index + 2);
+      if (end !== -1) {
+        const members =
+          marker === ":" ? POSIX_CLASS_MEMBERS[body.slice(index + 2, end)] : undefined;
+        if (members === undefined) return null;
         source += members;
         index = end + 2;
         continue;

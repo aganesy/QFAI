@@ -228,18 +228,18 @@ const NOT_A_CITATION = /<!--\s*qfai:not-a-citation[^>]*-->/;
  * untouched, so the only way to reach this number after adding a citation is to
  * remove one that was really there — and either edit is visible.
  */
-const INITIAL_CENSUS_SIZE = 93;
+const INITIAL_CENSUS_SIZE = 127;
 
 /**
  * The census keys themselves, as one digest.
  *
  * A length alone is not the no-growth rule: replacing a repaired entry with a
- * new one keeps it at 93, and every other check then passes while a fresh
+ * new one keeps it at 127, and every other check then passes while a fresh
  * citation inherits the retired slot. The digest moves for any substitution, and
  * does not move when an entry is repaired — repair adds to `CLEARED` and leaves
  * the census alone.
  */
-const INITIAL_CENSUS_DIGEST = "f0754587d775d81ffddaf020f6f49d44629489c25a07337e1e83a9b20eef7763";
+const INITIAL_CENSUS_DIGEST = "61beb69a762bcf0d473e43f8aa8d91155aa1fa926391ab79d6e3e8bca8b521f9";
 
 /**
  * Every citation the first census found unresolved. **Append nothing here.**
@@ -248,145 +248,199 @@ const INITIAL_CENSUS_DIGEST = "f0754587d775d81ffddaf020f6f49d44629489c25a07337e1
  * one of these is repaired, its key goes to `CLEARED`; this list stays as
  * measured.
  */
-const INITIAL_CENSUS: ReadonlyArray<readonly [string, string]> = [
-  [".qfai/evidence/atdd-spec-0017.md", ".qfai/review/review-2026082*/R0*.md"],
-  [".qfai/evidence/implement-spec-0003.md", ".qfai/review/review-*"],
-  [".qfai/evidence/implement-spec-0006.md", ".qfai/review/review-20260818*"],
-  [".qfai/evidence/sdd-spec-0012.md", ".qfai/discussion/discussion-20260414195449523/**"],
-  [".qfai/evidence/sdd-spec-0012.md", ".qfai/discussion/discussion-20260418093755100/**"],
-  [".qfai/evidence/sdd-spec-0012.md", ".qfai/review/review-20260416195500000/**"],
-  [".qfai/evidence/atdd-spec-0017.md", ".qfai/report/run-20260822024224027"],
-  [".qfai/evidence/atdd-spec-0017.md", ".qfai/report/specs-coverage/spec-0017.md"],
-  [".qfai/evidence/atdd-spec-0017.md", ".qfai/report/validate.log"],
-  [".qfai/evidence/atdd-spec-0017.md", ".qfai/review/review-20260820200000000"],
+const INITIAL_CENSUS: ReadonlyArray<Citation> = [
+  [".qfai/evidence/atdd-spec-0017.md", ".qfai/report/run-20260822024224027", 1],
+  [".qfai/evidence/atdd-spec-0017.md", ".qfai/report/specs-coverage/spec-0017.md", 1],
+  [".qfai/evidence/atdd-spec-0017.md", ".qfai/review/review-2026082*/R0*.md", 1],
+  [".qfai/evidence/atdd-spec-0017.md", ".qfai/review/review-2026082*/R0*.md", 2],
+  [".qfai/evidence/atdd-spec-0017.md", ".qfai/review/review-20260820200000000", 1],
+  [".qfai/evidence/atdd-spec-0017.md", ".qfai/review/review-20260820200000000", 2],
   [
     ".qfai/evidence/atdd-spec-0017.md",
     ".qfai/review/review-20260820200000000/R02_completion-reviewer.md",
+    1,
   ],
   [
     ".qfai/evidence/atdd-spec-0017.md",
     ".qfai/review/review-20260820200000000/R03_qa-gatekeeper.md",
+    1,
   ],
-  [".qfai/evidence/atdd-spec-0017.md", ".qfai/review/review-20260820220000000"],
-  [".qfai/evidence/atdd-spec-0017.md", ".qfai/review/review-20260821000000000"],
-  [".qfai/evidence/atdd-spec-0017.md", ".qfai/review/review-20260821020000000"],
-  [".qfai/evidence/atdd-spec-0017.md", ".qfai/review/review-20260821040000000"],
-  [".qfai/evidence/atdd-spec-0017.md", ".qfai/review/review-20260821060000000"],
-  [".qfai/evidence/atdd-spec-0017.md", ".qfai/review/review-20260821080000000"],
-  [".qfai/evidence/atdd-spec-0017.md", ".qfai/review/review-20260821100000000"],
-  [".qfai/evidence/atdd-spec-0017.md", ".qfai/review/review-20260821120000000"],
-  [".qfai/evidence/atdd-spec-0017.md", ".qfai/review/review-20260821140000000"],
-  [".qfai/evidence/atdd-spec-0017.md", ".qfai/review/review-20260821160000000"],
-  [".qfai/evidence/atdd-spec-0017.md", ".qfai/review/review-20260821180000000"],
-  [".qfai/evidence/atdd-spec-0017.md", ".qfai/review/review-20260821200000000"],
-  [".qfai/evidence/atdd-spec-0017.md", ".qfai/review/review-20260822030000000"],
-  [".qfai/evidence/atdd-spec-0017.md", ".qfai/review/review-20260822060000000"],
-  [".qfai/evidence/atdd-spec-0017.md", ".qfai/review/review-20260822090000000"],
-  [".qfai/evidence/atdd-spec-0017.md", ".qfai/review/review-20260822120000000"],
-  [".qfai/evidence/atdd-spec-0017.md", ".qfai/review/review-20260822150000000"],
-  [".qfai/evidence/atdd-spec-0017.md", ".qfai/review/review-20260822180000000"],
-  [".qfai/evidence/atdd-spec-0017.md", ".qfai/review/review-20260823000000000"],
-  [".qfai/evidence/coverage-depth-spec-0002.md", ".qfai/report/atdd-traceability/summary.json"],
-  [".qfai/evidence/discussion-20260330153902875.md", ".qfai/discussion/README.md"],
-  [".qfai/evidence/discussion-20260415161758193.md", ".qfai/discussion/README.md"],
-  [".qfai/evidence/discussion-20260415203030886.md", ".qfai/review/review-20260415203030887"],
+  [".qfai/evidence/atdd-spec-0017.md", ".qfai/review/review-20260820220000000", 1],
+  [".qfai/evidence/atdd-spec-0017.md", ".qfai/review/review-20260821000000000", 1],
+  [".qfai/evidence/atdd-spec-0017.md", ".qfai/review/review-20260821020000000", 1],
+  [".qfai/evidence/atdd-spec-0017.md", ".qfai/review/review-20260821040000000", 1],
+  [".qfai/evidence/atdd-spec-0017.md", ".qfai/review/review-20260821060000000", 1],
+  [".qfai/evidence/atdd-spec-0017.md", ".qfai/review/review-20260821080000000", 1],
+  [".qfai/evidence/atdd-spec-0017.md", ".qfai/review/review-20260821100000000", 1],
+  [".qfai/evidence/atdd-spec-0017.md", ".qfai/review/review-20260821120000000", 1],
+  [".qfai/evidence/atdd-spec-0017.md", ".qfai/review/review-20260821140000000", 1],
+  [".qfai/evidence/atdd-spec-0017.md", ".qfai/review/review-20260821160000000", 1],
+  [".qfai/evidence/atdd-spec-0017.md", ".qfai/review/review-20260821180000000", 1],
+  [".qfai/evidence/atdd-spec-0017.md", ".qfai/review/review-20260821200000000", 1],
+  [".qfai/evidence/atdd-spec-0017.md", ".qfai/review/review-20260822030000000", 1],
+  [".qfai/evidence/atdd-spec-0017.md", ".qfai/review/review-20260822060000000", 1],
+  [".qfai/evidence/atdd-spec-0017.md", ".qfai/review/review-20260822090000000", 1],
+  [".qfai/evidence/atdd-spec-0017.md", ".qfai/review/review-20260822120000000", 1],
+  [".qfai/evidence/atdd-spec-0017.md", ".qfai/review/review-20260822150000000", 1],
+  [".qfai/evidence/atdd-spec-0017.md", ".qfai/review/review-20260822180000000", 1],
+  [".qfai/evidence/atdd-spec-0017.md", ".qfai/review/review-20260823000000000", 1],
+  [".qfai/evidence/coverage-depth-spec-0002.md", ".qfai/report/atdd-traceability/summary.json", 1],
+  [".qfai/evidence/discussion-20260330153902875.md", ".qfai/discussion/README.md", 1],
+  [".qfai/evidence/discussion-20260330153902875.md", ".qfai/discussion/README.md", 2],
+  [".qfai/evidence/discussion-20260415161758193.md", ".qfai/discussion/README.md", 1],
+  [".qfai/evidence/discussion-20260415203030886.md", ".qfai/review/review-20260415203030887", 1],
+  [".qfai/evidence/discussion-20260416023323603.md", ".qfai/discussion/README.md", 1],
   [
     ".qfai/evidence/discussion-20260416023323603.md",
     ".qfai/discussion/discussion-20260416023323603/01..14",
+    1,
   ],
-  [".qfai/evidence/discussion-20260416023323603.md", ".qfai/discussion/README.md"],
-  [".qfai/evidence/discussion-20260416023323603.md", ".qfai/review/review-20260416023323603"],
+  [".qfai/evidence/discussion-20260416023323603.md", ".qfai/review/review-20260416023323603", 1],
   [
     ".qfai/evidence/discussion-20260416023323603.md",
     ".qfai/review/review-20260416023323603/R01_completion-reviewer.md",
+    1,
   ],
   [
     ".qfai/evidence/discussion-20260416023323603.md",
     ".qfai/review/review-20260416023323603/R02_requirements-reviewer.md",
+    1,
   ],
   [
     ".qfai/evidence/discussion-20260416023323603.md",
     ".qfai/review/review-20260416023323603/R03_architecture-reviewer.md",
+    1,
   ],
-  [".qfai/evidence/discussion-20260416092414328.md", ".qfai/review/review-20260416092414328"],
-  [".qfai/evidence/discussion-20260416195444737.md", ".qfai/discussion/README.md"],
-  [".qfai/evidence/discussion-20260416195444737.md", ".qfai/review/review-20260416195500000"],
-  [".qfai/evidence/discussion-20260418170937652.md", ".qfai/discussion/README.md"],
+  [".qfai/evidence/discussion-20260416092414328.md", ".qfai/review/review-20260416092414328", 1],
+  [".qfai/evidence/discussion-20260416195444737.md", ".qfai/discussion/README.md", 1],
+  [".qfai/evidence/discussion-20260416195444737.md", ".qfai/review/review-20260416195500000", 1],
+  [".qfai/evidence/discussion-20260416195444737.md", ".qfai/review/review-20260416195500000", 2],
+  [".qfai/evidence/discussion-20260418170937652.md", ".qfai/discussion/README.md", 1],
   [
     ".qfai/evidence/discussion-20260418170937652.md",
     ".qfai/review/review-20260418170937652/R03_architecture-reviewer.md",
+    1,
   ],
-  [".qfai/evidence/implement-spec-0003.md", ".qfai/report/validate.log"],
-  [".qfai/evidence/implement-spec-0003.md", ".qfai/review/review-20260805190301000"],
-  [".qfai/evidence/implement-spec-0003.md", ".qfai/review/review-20260805190302000"],
-  [".qfai/evidence/implement-spec-0003.md", ".qfai/review/review-20260805192001000"],
-  [".qfai/evidence/implement-spec-0003.md", ".qfai/review/review-20260805192002000"],
-  [".qfai/evidence/implement-spec-0003.md", ".qfai/review/review-20260805193501000"],
-  [".qfai/evidence/implement-spec-0003.md", ".qfai/review/review-20260805195501000"],
-  [".qfai/evidence/implement-spec-0003.md", ".qfai/review/review-20260805202001000"],
-  [".qfai/evidence/implement-spec-0003.md", ".qfai/review/review-20260805204501000"],
-  [".qfai/evidence/implement-spec-0003.md", ".qfai/review/review-20260805210001000"],
-  [".qfai/evidence/implement-spec-0003.md", ".qfai/review/review-20260805212001000"],
-  [".qfai/evidence/implement-spec-0003.md", ".qfai/review/review-20260805214501000"],
-  [".qfai/evidence/implement-spec-0003.md", ".qfai/review/review-20260805221501000"],
-  [".qfai/evidence/implement-spec-0003.md", ".qfai/review/review-20260805224501000"],
-  [".qfai/evidence/implement-spec-0003.md", ".qfai/review/review-20260805224502000"],
-  [".qfai/evidence/implement-spec-0003.md", ".qfai/review/review-20260806001501000"],
-  [".qfai/evidence/implement-spec-0003.md", ".qfai/review/review-20260806001502000"],
-  [".qfai/evidence/implement-spec-0003.md", ".qfai/review/review-20260806010001000"],
-  [".qfai/evidence/implement-spec-0003.md", ".qfai/review/review-20260806014501000"],
-  [".qfai/evidence/implement-spec-0003.md", ".qfai/review/review-20260806023001000"],
-  [".qfai/evidence/implement-spec-0003.md", ".qfai/review/review-20260806073001000"],
-  [".qfai/evidence/implement-spec-0003.md", ".qfai/review/review-20260806220001000"],
-  [".qfai/evidence/implement-spec-0003.md", ".qfai/review/review-20260806220002000"],
-  [".qfai/evidence/implement-spec-0003.md", ".qfai/review/review-20260807030001000"],
-  [".qfai/evidence/implement-spec-0003.md", ".qfai/review/review-20260807120001000"],
-  [".qfai/evidence/implement-spec-0003.md", ".qfai/review/review-20260807180001000"],
-  [".qfai/evidence/implement-spec-0006.md", ".qfai/report/atdd-traceability/summary.json"],
-  [".qfai/evidence/implement-spec-0006.md", ".qfai/report/validate.json"],
-  [".qfai/evidence/implement-spec-0006.md", ".qfai/report/validate.log"],
-  [".qfai/evidence/implement-spec-0017.md", ".qfai/review/review-20260820140000000"],
-  [".qfai/evidence/sdd-spec-0012.md", ".qfai/discussion/discussion-20260415014056471"],
-  [".qfai/evidence/sdd-spec-0012.md", ".qfai/discussion/discussion-20260516144141078"],
-  [".qfai/evidence/sdd-spec-0012.md", ".qfai/discussion/README.md"],
+  [".qfai/evidence/implement-spec-0003.md", ".qfai/review/review-20260805190301000", 1],
+  [".qfai/evidence/implement-spec-0003.md", ".qfai/review/review-20260805190302000", 1],
+  [".qfai/evidence/implement-spec-0003.md", ".qfai/review/review-20260805192001000", 1],
+  [".qfai/evidence/implement-spec-0003.md", ".qfai/review/review-20260805192002000", 1],
+  [".qfai/evidence/implement-spec-0003.md", ".qfai/review/review-20260805193501000", 1],
+  [".qfai/evidence/implement-spec-0003.md", ".qfai/review/review-20260805195501000", 1],
+  [".qfai/evidence/implement-spec-0003.md", ".qfai/review/review-20260805202001000", 1],
+  [".qfai/evidence/implement-spec-0003.md", ".qfai/review/review-20260805204501000", 1],
+  [".qfai/evidence/implement-spec-0003.md", ".qfai/review/review-20260805210001000", 1],
+  [".qfai/evidence/implement-spec-0003.md", ".qfai/review/review-20260805212001000", 1],
+  [".qfai/evidence/implement-spec-0003.md", ".qfai/review/review-20260805214501000", 1],
+  [".qfai/evidence/implement-spec-0003.md", ".qfai/review/review-20260805221501000", 1],
+  [".qfai/evidence/implement-spec-0003.md", ".qfai/review/review-20260805224501000", 1],
+  [".qfai/evidence/implement-spec-0003.md", ".qfai/review/review-20260805224502000", 1],
+  [".qfai/evidence/implement-spec-0003.md", ".qfai/review/review-20260806001501000", 1],
+  [".qfai/evidence/implement-spec-0003.md", ".qfai/review/review-20260806001502000", 1],
+  [".qfai/evidence/implement-spec-0003.md", ".qfai/review/review-20260806010001000", 1],
+  [".qfai/evidence/implement-spec-0003.md", ".qfai/review/review-20260806014501000", 1],
+  [".qfai/evidence/implement-spec-0003.md", ".qfai/review/review-20260806023001000", 1],
+  [".qfai/evidence/implement-spec-0003.md", ".qfai/review/review-20260806073001000", 1],
+  [".qfai/evidence/implement-spec-0003.md", ".qfai/review/review-20260806220001000", 1],
+  [".qfai/evidence/implement-spec-0003.md", ".qfai/review/review-20260806220002000", 1],
+  [".qfai/evidence/implement-spec-0003.md", ".qfai/review/review-20260807030001000", 1],
+  [".qfai/evidence/implement-spec-0003.md", ".qfai/review/review-20260807120001000", 1],
+  [".qfai/evidence/implement-spec-0003.md", ".qfai/review/review-20260807180001000", 1],
+  [".qfai/evidence/implement-spec-0006.md", ".qfai/report/atdd-traceability/summary.json", 1],
+  [".qfai/evidence/implement-spec-0006.md", ".qfai/report/validate.json", 1],
+  [".qfai/evidence/implement-spec-0006.md", ".qfai/report/validate.log", 1],
+  [".qfai/evidence/implement-spec-0006.md", ".qfai/review/review-20260818*", 1],
+  [".qfai/evidence/implement-spec-0006.md", ".qfai/review/review-20260818*", 2],
+  [".qfai/evidence/implement-spec-0006.md", ".qfai/review/review-20260818*", 3],
+  [".qfai/evidence/implement-spec-0006.md", ".qfai/review/review-20260818*", 4],
+  [".qfai/evidence/implement-spec-0006.md", ".qfai/review/review-20260818*", 5],
+  [".qfai/evidence/implement-spec-0017.md", ".qfai/review/review-20260820140000000", 1],
+  [".qfai/evidence/sdd-spec-0012.md", ".qfai/discussion/README.md", 1],
+  [".qfai/evidence/sdd-spec-0012.md", ".qfai/discussion/README.md", 2],
+  [".qfai/evidence/sdd-spec-0012.md", ".qfai/discussion/discussion-20260414195449523/**", 1],
+  [".qfai/evidence/sdd-spec-0012.md", ".qfai/discussion/discussion-20260415014056471", 1],
+  [".qfai/evidence/sdd-spec-0012.md", ".qfai/discussion/discussion-20260418093755100/**", 1],
+  [".qfai/evidence/sdd-spec-0012.md", ".qfai/discussion/discussion-20260516144141078", 1],
   [
     ".qfai/evidence/sdd-spec-0012.md",
     ".qfai/report/preflight/run-20260911090607227/preflight_summary.md",
+    1,
   ],
-  [".qfai/evidence/sdd-spec-0012.md", ".qfai/report/run-20260518132742559"],
-  [".qfai/evidence/sdd-spec-0012.md", ".qfai/report/run-20260518175405426"],
-  [".qfai/evidence/sdd-spec-0012.md", ".qfai/report/validate-sdd.json"],
-  [".qfai/evidence/sdd-spec-0012.md", ".qfai/report/validate.json"],
-  [".qfai/evidence/sdd-spec-0012.md", ".qfai/report/validate.log"],
+  [
+    ".qfai/evidence/sdd-spec-0012.md",
+    ".qfai/report/preflight/run-20260911090607227/preflight_summary.md",
+    2,
+  ],
+  [".qfai/evidence/sdd-spec-0012.md", ".qfai/report/run-20260518132742559", 1],
+  [".qfai/evidence/sdd-spec-0012.md", ".qfai/report/run-20260518175405426", 1],
+  [".qfai/evidence/sdd-spec-0012.md", ".qfai/report/run-20260518175405426", 2],
+  [".qfai/evidence/sdd-spec-0012.md", ".qfai/report/validate-sdd.json", 1],
+  [".qfai/evidence/sdd-spec-0012.md", ".qfai/report/validate.json", 1],
+  [".qfai/evidence/sdd-spec-0012.md", ".qfai/report/validate.json", 2],
+  [".qfai/evidence/sdd-spec-0012.md", ".qfai/report/validate.json", 3],
+  [".qfai/evidence/sdd-spec-0012.md", ".qfai/report/validate.json", 4],
+  [".qfai/evidence/sdd-spec-0012.md", ".qfai/report/validate.log", 1],
+  [".qfai/evidence/sdd-spec-0012.md", ".qfai/report/validate.log", 2],
+  [".qfai/evidence/sdd-spec-0012.md", ".qfai/report/validate.log", 3],
+  [".qfai/evidence/sdd-spec-0012.md", ".qfai/report/validate.log", 4],
+  [".qfai/evidence/sdd-spec-0012.md", ".qfai/report/validate.log", 5],
+  [".qfai/evidence/sdd-spec-0012.md", ".qfai/report/validate.log", 6],
+  [".qfai/evidence/sdd-spec-0012.md", ".qfai/report/validate.log", 7],
+  [".qfai/evidence/sdd-spec-0012.md", ".qfai/report/validate.log", 8],
+  [".qfai/evidence/sdd-spec-0012.md", ".qfai/report/validate.log", 9],
+  [".qfai/evidence/sdd-spec-0012.md", ".qfai/report/validate.log", 10],
+  [".qfai/evidence/sdd-spec-0012.md", ".qfai/report/validate.log", 11],
+  [".qfai/evidence/sdd-spec-0012.md", ".qfai/report/validate.log", 12],
+  [".qfai/evidence/sdd-spec-0012.md", ".qfai/report/validate.log", 13],
+  [".qfai/evidence/sdd-spec-0012.md", ".qfai/report/validate.log", 14],
+  [".qfai/evidence/sdd-spec-0012.md", ".qfai/report/validate.log", 15],
+  [".qfai/evidence/sdd-spec-0012.md", ".qfai/report/validate.log", 16],
+  [".qfai/evidence/sdd-spec-0012.md", ".qfai/report/validate.log", 17],
+  [".qfai/evidence/sdd-spec-0012.md", ".qfai/report/validate.log", 18],
+  [".qfai/evidence/sdd-spec-0012.md", ".qfai/report/validate.log", 19],
+  [".qfai/evidence/sdd-spec-0012.md", ".qfai/report/validate.log", 20],
+  [".qfai/evidence/sdd-spec-0012.md", ".qfai/report/validate.log", 21],
+  [".qfai/evidence/sdd-spec-0012.md", ".qfai/report/validate.log", 22],
   [
     ".qfai/evidence/sdd-spec-0012.md",
     ".qfai/review/review-20260415060932/R01_completion-reviewer.md",
+    1,
+  ],
+  [
+    ".qfai/evidence/sdd-spec-0012.md",
+    ".qfai/review/review-20260415060932/R01_completion-reviewer.md",
+    2,
   ],
   [
     ".qfai/evidence/sdd-spec-0012.md",
     ".qfai/review/review-20260415060932/R02_architecture-reviewer.md",
+    1,
   ],
-  [".qfai/evidence/sdd-spec-0012.md", ".qfai/review/review-20260415060932/review_request.md"],
-  [".qfai/evidence/sdd-spec-0012.md", ".qfai/review/review-20260415060932/summary.json"],
-  [".qfai/evidence/sdd-spec-0012.md", ".qfai/review/review-20260415161758193"],
-  [".qfai/evidence/sdd-spec-0012.md", ".qfai/review/review-20260416070000000/summary.json"],
-  [".qfai/evidence/sdd-spec-0012.md", ".qfai/review/review-20260416195500000"],
-  [".qfai/evidence/sdd-spec-0012.md", ".qfai/review/review-20260417070000000"],
+  [
+    ".qfai/evidence/sdd-spec-0012.md",
+    ".qfai/review/review-20260415060932/R02_architecture-reviewer.md",
+    2,
+  ],
+  [".qfai/evidence/sdd-spec-0012.md", ".qfai/review/review-20260415060932/review_request.md", 1],
+  [".qfai/evidence/sdd-spec-0012.md", ".qfai/review/review-20260415060932/summary.json", 1],
+  [".qfai/evidence/sdd-spec-0012.md", ".qfai/review/review-20260415161758193", 1],
+  [".qfai/evidence/sdd-spec-0012.md", ".qfai/review/review-20260416070000000/summary.json", 1],
+  [".qfai/evidence/sdd-spec-0012.md", ".qfai/review/review-20260416195500000", 1],
+  [".qfai/evidence/sdd-spec-0012.md", ".qfai/review/review-20260416195500000/**", 1],
+  [".qfai/evidence/sdd-spec-0012.md", ".qfai/review/review-20260417070000000", 1],
 ];
 
 /**
  * Census entries that have since been repaired.
  *
  * An entry leaves the backlog by arriving here, and the case below holds that it
- * really is repaired — the path resolves, or the record no longer cites it. The
+ * really is repaired — the path resolves, or the record no longer cites it that
+ * many times. Removing any one citation of a path renumbers the rest from one,
+ * so the entry that stops being measured, and moves here, is the highest. The
  * list is the progress the census is meant to produce, and it is the only list
  * that grows.
  */
-const CLEARED: ReadonlyArray<readonly [string, string]> = [
-  [".qfai/evidence/atdd-spec-0017.md", ".qfai/report/validate.log"],
-  [".qfai/evidence/implement-spec-0003.md", ".qfai/review/review-*"],
-  [".qfai/evidence/implement-spec-0003.md", ".qfai/report/validate.log"],
-];
+const CLEARED: ReadonlyArray<Citation> = [];
 
 /** Every path git tracks, and every directory one of them lies under. */
 function trackedPaths(): { files: ReadonlySet<string>; directories: ReadonlySet<string> } {
@@ -454,29 +508,44 @@ function staysInsideRoot(cited: string, root: string): boolean {
   return !normalized.split("/").includes("..") && normalized.startsWith(root);
 }
 
-/** Every citation the committed evidence carries, as `[evidence file, path]`. */
-async function measureCitations(): Promise<[string, string][]> {
-  const measured: [string, string][] = [];
+/** A citation: the evidence file, the path it cites, and which citation of that path it is. */
+type Citation = readonly [file: string, cited: string, occurrence: number];
+
+/**
+ * Every citation the committed evidence carries, numbered per path within its
+ * file.
+ *
+ * Each occurrence is its own claim. Counted once per file, a section added
+ * beside an old one could cite the same absent pack again and be covered by the
+ * backlog entry the old section holds.
+ */
+async function measureCitations(): Promise<Citation[]> {
+  const measured: Citation[] = [];
   for (const file of evidenceFiles) {
-    const text = await readFile(path.join(repoRoot, file), "utf-8");
-    // Per file, so the same path cited twice in one record is one obligation.
-    const seen = new Set<string>();
-    const disclaimed = disclaimedByLine(text);
-    text.split("\n").forEach((line, index) => {
-      const covered = disclaimed[index];
-      if (covered === "all") return;
-      for (const match of citationsIn(line)) {
-        const cited = normalizeCitation(match);
-        // `continue`, not `return`: one line can carry several citations, and
-        // leaving the line on the first one that is seen, root-only or
-        // disclaimed loses every citation after it.
-        if (covered?.has(cited) === true) continue;
-        if (seen.has(cited) || !namesSomethingInside(cited)) continue;
-        seen.add(cited);
-        measured.push([file, cited]);
-      }
-    });
+    measured.push(...citationsOf(file, await readFile(path.join(repoRoot, file), "utf-8")));
   }
+  return measured;
+}
+
+/** The citations one evidence file's text carries, numbered per path. */
+function citationsOf(file: string, text: string): Citation[] {
+  const measured: Citation[] = [];
+  const occurrences = new Map<string, number>();
+  const disclaimed = disclaimedByLine(text);
+  text.split("\n").forEach((line, index) => {
+    const covered = disclaimed[index];
+    if (covered === "all") return;
+    for (const match of citationsIn(line)) {
+      const cited = normalizeCitation(match);
+      // `continue`, not `return`: one line can carry several citations, and
+      // leaving the line on the first one that is root-only or disclaimed loses
+      // every citation after it.
+      if (covered?.has(cited) === true || !namesSomethingInside(cited)) continue;
+      const occurrence = (occurrences.get(cited) ?? 0) + 1;
+      occurrences.set(cited, occurrence);
+      measured.push([file, cited, occurrence]);
+    }
+  });
   return measured;
 }
 
@@ -562,8 +631,8 @@ function namesSomethingInside(cited: string): boolean {
  * report as well as the draft.
  */
 function expandBraces(cited: string): string[] {
-  const open = cited.indexOf("{");
-  if (open === -1) return [cited];
+  const open = outsideClasses(cited).find((index) => cited[index] === "{");
+  if (open === undefined) return [cited];
   const close = matchingBrace(cited, open);
   if (close === -1) return [cited];
   const before = cited.slice(0, open);
@@ -573,10 +642,30 @@ function expandBraces(cited: string): string[] {
   );
 }
 
+/**
+ * The indices of `text` from `start` on that are not inside a bracket
+ * expression.
+ *
+ * A brace or a comma inside a class is a member of it: `[{}].json` names
+ * `{.json` and `}.json`, and read as a brace list it named neither.
+ */
+function outsideClasses(text: string, start = 0): number[] {
+  const indices: number[] = [];
+  for (let index = start; index < text.length; index += 1) {
+    const close = text[index] === "[" ? findClassClose(text, index) : -1;
+    if (close !== -1) {
+      index = close;
+      continue;
+    }
+    indices.push(index);
+  }
+  return indices;
+}
+
 /** The index of the `}` matching the `{` at `open`, or `-1` when it has none. */
 function matchingBrace(cited: string, open: number): number {
   let depth = 0;
-  for (let index = open; index < cited.length; index += 1) {
+  for (const index of outsideClasses(cited, open)) {
     if (cited[index] === "{") depth += 1;
     if (cited[index] === "}") {
       depth -= 1;
@@ -591,23 +680,22 @@ function matchingBrace(cited: string, open: number): number {
  *
  * A list can hold a list — `{a,{b,c}}` — and splitting on every comma makes
  * names carrying a stray brace, which resolve nowhere. Only the commas outside
- * a nested pair separate this list's members.
+ * a nested pair and outside a class separate this list's members.
  */
 function topLevelAlternatives(body: string): string[] {
   const parts: string[] = [];
   let depth = 0;
-  let current = "";
-  for (const character of body) {
+  let from = 0;
+  for (const index of outsideClasses(body)) {
+    const character = body[index];
     if (character === "{") depth += 1;
     if (character === "}") depth -= 1;
     if (character === "," && depth === 0) {
-      parts.push(current.trim());
-      current = "";
-      continue;
+      parts.push(body.slice(from, index).trim());
+      from = index + 1;
     }
-    current += character;
   }
-  parts.push(current.trim());
+  parts.push(body.slice(from).trim());
   return parts;
 }
 
@@ -615,12 +703,9 @@ function topLevelAlternatives(body: string): string[] {
  * A glob as a regular expression over a whole path.
  *
  * Delegated to the dialect this package already implements, rather than written
- * again here. Two implementations of one notation are two answers for one tree,
- * and every round of review on this file found another construct the second one
- * did not know: a one-character wildcard, a brace list, an extended group, a
- * quantified extended group, an empty alternative. The shared compiler knows
- * them because it was written against the same matcher the project's own globs
- * are read by.
+ * again here. Two implementations of one notation give two answers for one
+ * tree, and the shared compiler is the one written against the matcher the
+ * project's own globs are read by.
  *
  * A record naming a set still claims the set exists, so a glob is resolved like
  * a single path rather than skipped — the tree carried three matching nothing at
@@ -710,14 +795,41 @@ function segmentAdmits(part: string, segment: string): boolean {
 /**
  * One segment's alternatives, where it is written as a list of them.
  *
- * A brace list and an `@(…)` group name a set and nothing else, so each member
- * is a pattern in its own right. Every other form — a repetition group, a plain
- * wildcard — is one pattern, and comes back as itself.
+ * A brace list names a set, and so does a segment that is one extended group:
+ * `@(…)` and `?(…)` match one member, so each member is a pattern in its own
+ * right. `+(…)` and `*(…)` match a run of members, and a name's leading dot is
+ * spelled by the first, so each member comes back followed by the group again.
+ * Every other form — a plain wildcard, a group beside other text — is one
+ * pattern, and comes back as itself.
  */
 function topLevelAlternativesOf(part: string): string[] {
-  const body = /^@\((.*)\)$/s.exec(part)?.[1];
-  if (body === undefined) return expandBraces(part);
-  return splitAlternatives(body).flatMap((alternative) => expandBraces(alternative));
+  const quantifier = part[0];
+  if (
+    quantifier === undefined ||
+    !"@?+*".includes(quantifier) ||
+    part[1] !== "(" ||
+    groupClose(part, 1) !== part.length - 1
+  ) {
+    return expandBraces(part);
+  }
+  const body = part.slice(2, -1);
+  const members = splitAlternatives(body).flatMap((alternative) => expandBraces(alternative));
+  return quantifier === "+" || quantifier === "*"
+    ? members.map((member) => `${member}*(${body})`)
+    : members;
+}
+
+/** The index of the `)` closing the group opened at `open`, or `-1`. */
+function groupClose(part: string, open: number): number {
+  let depth = 0;
+  for (const index of outsideClasses(part, open)) {
+    if (part[index] === "(") depth += 1;
+    if (part[index] === ")") {
+      depth -= 1;
+      if (depth === 0) return index;
+    }
+  }
+  return -1;
 }
 
 /** One group body's alternatives, at the top level of that body. */
@@ -782,10 +894,10 @@ function resolves(cited: string): boolean {
   return tracked.files.has(cited) || tracked.directories.has(cited);
 }
 
-const key = ([file, cited]: readonly [string, string]): string => `${file} -> ${cited}`;
+const key = ([file, cited, occurrence]: Citation): string => `${file} -> ${cited} #${occurrence}`;
 
 /** The census, minus what has been repaired since. */
-const UNRESOLVED_CITATION_BACKLOG: ReadonlyArray<readonly [string, string]> = INITIAL_CENSUS.filter(
+const UNRESOLVED_CITATION_BACKLOG: ReadonlyArray<Citation> = INITIAL_CENSUS.filter(
   (entry) => !new Set(CLEARED.map(key)).has(key(entry)),
 );
 
@@ -1092,6 +1204,62 @@ describe("a glob is a claim about a set", () => {
     expect(compiled("@([T,]|x)*.test.ts").test("abc.test.ts")).toBe(false);
     expect(() => compiled("[z-a]*.test.ts")).not.toThrow();
     expect(compiled("[z-a]*.test.ts").test("TC-0000-0000.test.ts")).toBe(false);
+  });
+
+  it("matches nothing with a class holding an element it cannot write", () => {
+    // Copied in as characters, `[[:TC:]]` accepted the `T` a skeleton name
+    // starts with, while the project's own scan collects nothing for it. The
+    // same holds negated, beside known members, and for the equivalence and
+    // collating forms.
+    for (const pattern of [
+      "[[:TC:]]*.test.ts",
+      "[![:TC:]]*.test.ts",
+      "[a[:TC:]]*.test.ts",
+      "[[:digit:][:TC:]]*.test.ts",
+      "[[=T=]]*.test.ts",
+      "[[.T.]]*.test.ts",
+    ]) {
+      expect(compiled(pattern).test("TC-0000-0000.test.ts"), pattern).toBe(false);
+    }
+    expect(compiled("[[:alpha:]]*.test.ts").test("TC-0000-0000.test.ts")).toBe(true);
+  });
+
+  it("keeps a brace inside a class a member of the class", () => {
+    // Read as a brace list, `[{}]` lost both members and the tracked `{.json`
+    // it names read as missing. A comma inside a class is a member too.
+    expect(expandBraces(".qfai/report/[{}].json")).toEqual([".qfai/report/[{}].json"]);
+    expect(globToRegExp(".qfai/report/[{}].json").test(".qfai/report/{.json")).toBe(true);
+    expect(expandBraces(".qfai/report/{a,[,]b}.json")).toEqual([
+      ".qfai/report/a.json",
+      ".qfai/report/[,]b.json",
+    ]);
+  });
+
+  it("reads the alternative that spells a dot-leading name in any quantified group", () => {
+    // `?(…)`, `+(…)` and `*(…)` admit a spelled `.gitignore` as `@(…)` does, and
+    // asked of the whole group, a wildcard sibling matching `gitignore` read the
+    // spelling as that wildcard's reach.
+    const control = ".qfai/report/.gitignore";
+    for (const quantifier of ["?", "+", "*"]) {
+      expect(hidesADotName(`.qfai/report/${quantifier}(.gitignore|g*)`, control), quantifier).toBe(
+        false,
+      );
+      expect(hidesADotName(`.qfai/report/${quantifier}(a*|g*)`, control), quantifier).toBe(true);
+    }
+  });
+
+  it("counts each citation of a path, not the path once per record", () => {
+    // Counted once per file, a section added beside an old one could cite the
+    // same absent pack and pass on the backlog entry the old section holds.
+    const text = [
+      "- `.qfai/review/review-20260101000000000`",
+      "",
+      "- `.qfai/review/review-20260101000000000` again, in a later section",
+    ].join("\n");
+    expect(citationsOf(".qfai/evidence/x.md", text).map(key)).toEqual([
+      ".qfai/evidence/x.md -> .qfai/review/review-20260101000000000 #1",
+      ".qfai/evidence/x.md -> .qfai/review/review-20260101000000000 #2",
+    ]);
   });
   it("keeps a class off the separator, whatever it spells", () => {
     // A range holding `/` — `[.-9]` does — otherwise matched the separator,
