@@ -159,9 +159,12 @@ describe("cross-AI rules surface (.agents/rules/ master)", () => {
   // user's attention on what the repository already states, and dropping the end
   // condition turns the whole rule into advice.
   //
-  // Entry-point citation and the shipped copy are asserted where they are added,
-  // so that the owner of `AGENTS.md`, `CLAUDE.md` and the shipped templates is the
-  // change that writes those lines rather than this one.
+  // Both root entry points cite it, per the procedure in `.agents/rules/README.md`.
+  // A master no entry point names is loaded by nothing: Codex reads `AGENTS.md` and
+  // Claude Code reads `CLAUDE.md`, and `.claude/rules/` is not a directory either
+  // of them walks. The shipped copy is separate — it is asserted where it lands,
+  // because `initAgentEntryPointRules.test.ts` requires a shipped master to be
+  // cited by the shipped templates, so copy and citation are one change.
   describe("grilling rule", () => {
     const MASTER = ".agents/rules/grilling.md";
 
@@ -176,7 +179,7 @@ describe("cross-AI rules surface (.agents/rules/ master)", () => {
         /answerable by number/,
         /dispatch a sub-agent/,
         /question cap/i,
-        /Stop grilling and build a prototype/,
+        /Stop grilling and build something to react to/,
       ]) {
         expect(text).toMatch(clause);
       }
@@ -188,6 +191,35 @@ describe("cross-AI rules surface (.agents/rules/ master)", () => {
       const text = await readFile(path.join(ROOT, MASTER), "utf-8");
       expect(text).toMatch(/both required/i);
       expect(text).toMatch(/confirms the understanding is shared/);
+    });
+
+    it("lets the user end the session whatever the frontier holds", async () => {
+      // The completion condition is how a session ends on its own, not the only
+      // way one ends. Read as the only way, a "stop" answer with the frontier
+      // still full directs the agent to keep asking — against the constitution,
+      // which aborts the invocation on it.
+      const text = await readFile(path.join(ROOT, MASTER), "utf-8");
+      expect(text).toMatch(/ends the session immediately, frontier empty or not/);
+      expect(text).toMatch(/reported as open,\s*not assumed/);
+      // And the softer close, which ends the asking rather than the work.
+      expect(text).toMatch(/ends the asking/);
+    });
+
+    it("leaves the reaction artifact to the stage the session runs in", async () => {
+      // "Build a prototype" names a stage with its own preconditions — a frozen
+      // design document and a spec set — so a session running before those exist
+      // would be directed into a stage that cannot start.
+      const text = await readFile(path.join(ROOT, MASTER), "utf-8");
+      expect(text).toMatch(/build something to react to/);
+      expect(text).toMatch(/belongs to the stage the session is running in/);
+      expect(text, "naming a stage puts its preconditions on this rule").not.toMatch(
+        /qfai-prototyping/,
+      );
+    });
+
+    it.each(["AGENTS.md", "CLAUDE.md"])("%s cites the rule master", async (rel) => {
+      const text = await readFile(path.join(ROOT, rel), "utf-8");
+      expect(text).toContain("grilling.md");
     });
   });
 

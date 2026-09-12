@@ -17,16 +17,27 @@ each one, and when asking stops.
 
 ## 1. The design tree
 
-The subject sits at the root. Every node below it is a decision, and a decision
-hangs off the decision it depends on.
+The subject sits at the root. Below it hang two kinds of node, and a node hangs
+off whatever it depends on:
 
-The tree is not written once. Each answer changes what the remaining decisions
-are, so the tree is the current state of what is settled and what is not, not a
-plan made at the start.
+| Node     | Settled by                                    | State while open |
+| -------- | --------------------------------------------- | ---------------- |
+| Decision | The user, when asked                          | Open             |
+| Fact     | The agent, by reading or dispatching a lookup | Open, in flight  |
+
+Both kinds are prerequisites, so a decision that waits on a fact is on the tree
+as exactly that. Without the second kind the model cannot say which questions a
+running lookup holds up, and §5's rule about that would have nothing to point
+at.
+
+The tree is not written once. Each answer changes what the remaining nodes are,
+so the tree is the current state of what is settled and what is not, not a plan
+made at the start.
 
 ## 2. The frontier
 
-The frontier is every decision whose prerequisites are all settled.
+The frontier is every decision whose prerequisites are all settled — every
+decision it depended on answered, and every fact it depended on read.
 
 Those are the only questions that can honestly be asked yet. A question whose
 answer depends on an unanswered one cannot be answered — it can only be guessed
@@ -68,7 +79,7 @@ running exploration wait for it; the rest of the frontier is asked meanwhile.
 
 ## 6. The end condition
 
-Two things, both required:
+A session **completes** on two things, both required:
 
 1. The frontier is empty.
 2. The user confirms the understanding is shared.
@@ -76,16 +87,40 @@ Two things, both required:
 There is no question cap. A design is not finished being interrogated because a
 number was reached.
 
+That is why a grilling question spends no clarification budget. A budget bounds
+the questions asked to resolve ambiguity in a request; these are the decisions
+the design itself leaves open, and a cap on them ends the session with decisions
+still open — which the agent would then proceed on as labelled assumptions,
+assuming exactly what the session existed to settle.
+
 An agent that answers its own decisions has broken this rule. It has not read it
 liberally, and a short session is not evidence that the design was simple.
+
+### The user ends it whenever they say so
+
+Completion is how a session ends on its own. It is not the only way one ends.
+
+A user's **stop** ends the session immediately, frontier empty or not: ask
+nothing further and do no further work. The open decisions are reported as open,
+not assumed. Nothing above outranks that, and an agent that kept asking because
+condition 1 was unmet has read this rule as a licence to ignore the user.
+
+A user who closes the questions instead — **proceed**, **done**, or an answer to
+that effect — ends the asking. The agent continues, and every decision still
+open is recorded as an assumption and labelled as one.
 
 ## 7. When talking cannot settle it
 
 A question about how something should look, or how it should feel to use, needs
 something to react to. No number of rounds produces that.
 
-Stop grilling and build a prototype. The reaction to it is the answer, and the
-questions it raises are a new frontier.
+Stop grilling and build something to react to. The reaction is the answer, and
+the questions it raises are a new frontier.
+
+What that artifact is belongs to the stage the session is running in, and this
+rule does not choose it or move the work to another stage. A sketch inside the
+current stage is the usual answer. Reaching for a later stage's artifact is that
+stage's own decision, under its own preconditions.
 
 ## Related
 

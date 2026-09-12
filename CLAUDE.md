@@ -16,6 +16,10 @@ Quality-First AI (QFAI) — specification-driven development の検証フレー�
   `.claude/rules/interface-clarity.md` (master:
   `.agents/rules/interface-clarity.md`). Text explaining how to work a control
   is a defect report against that control.
+- Interrogate an unfixed design in the rounds `.claude/rules/grilling.md`
+  (master: `.agents/rules/grilling.md`) sets out: ask only the decisions whose
+  prerequisites are settled, read the facts rather than asking for them, and
+  stop when the user says so or confirms the understanding is shared.
 - All temporary/scratch files go in `tmp/` — working-tree files only; a test's `mkdtemp` sandbox under `os.tmpdir()` is out of scope (see `.claude/rules/temporary-files.md`, master: `.agents/rules/temporary-files.md`).
 - Do not create new directories or files at the repository root without explicit user approval; editing existing root files is allowed (see `.claude/rules/root-additions-policy.md`, master: `.agents/rules/root-additions-policy.md`).
 - Traceability chain (REQ -> Spec -> Code -> Test) must be maintained; TDD-IDs and TC-Refs must not collide or reference unregistered entries.
