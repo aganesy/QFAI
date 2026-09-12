@@ -30,7 +30,17 @@ directory.
 1. Write `<name>.md` here as a plain document.
 2. Add a row to the table above. `agentsRulesSurface.test.ts` reads this file
    as the register and fails on a master it does not list.
-3. Add the symlink `.claude/rules/<name>.md` (`ln -s ../../.agents/rules/<name>.md`).
+3. Add the symlink `.claude/rules/<name>.md`, then check what you got:
+
+   ```sh
+   MSYS=winsymlinks:nativestrict ln -s ../../.agents/rules/<name>.md .claude/rules/<name>.md
+   git ls-files -s .claude/rules/<name>.md   # 120000 is a link, 100644 is a copy
+   ```
+
+   The environment variable is inert outside Git Bash on Windows and required
+   inside it — see the section below. The check is what tells the two apart,
+   because both look right in the working tree.
+
 4. List it in `AGENTS.md` and in `CLAUDE.md`, the two entry points at the
    repository root.
 5. If Copilot must see the rule, add a one-line reference in
@@ -47,12 +57,28 @@ directory.
 
 ## Symlinks on Windows
 
-Git for Windows checks out `.claude/rules/*.md` as symlinks only when both hold:
+Creating a link and checking one out fail differently, and only the second
+failure is obvious.
+
+### Creating one
+
+In Git Bash, `ln -s` copies the target instead of linking to it. Native links
+need `MSYS=winsymlinks:nativestrict`, as step 3 above sets. A copy looks correct
+and passes the integration test, which accepts content equal to the master as
+one of its valid shapes — so it survives until someone edits the master and the
+copy stays behind.
+
+`git ls-files -s` is what tells them apart: mode `120000` is a link, `100644` a
+copy.
+
+### Checking one out
+
+Git for Windows writes `.claude/rules/*.md` as symlinks only when both hold:
 
 - the repository was cloned with `core.symlinks=true`;
 - the user has Developer Mode on, or holds the `SeCreateSymbolicLinkPrivilege` right.
 
-Otherwise each link becomes a one-line text file containing the relative
-target path, such as `../../.agents/rules/version-discipline.md`. The
-integration test accepts that form as long as the path resolves to the master.
-On such a checkout, read the master under `.agents/rules/` directly.
+Otherwise each link becomes a one-line text file containing the relative target
+path, such as `../../.agents/rules/version-discipline.md`. The integration test
+accepts that form as long as the path resolves to the master. On such a
+checkout, read the master under `.agents/rules/` directly.
