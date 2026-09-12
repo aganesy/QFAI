@@ -2,9 +2,9 @@
 
 ## Objective
 
-Carry the proof for two of the five `Integration` rows of this spec's ledger
-whose `Evidence` cells predate the pointer grammar. `TDD-0009`, `TDD-0018` and
-`TDD-0036` are not backfilled; the reasons are under Gaps.
+Carry the proof for one of the five `Integration` rows of this spec's ledger
+whose `Evidence` cells predate the pointer grammar. `TDD-0009`, `TDD-0018`,
+`TDD-0035` and `TDD-0036` are not backfilled; the reasons are under Gaps.
 
 ## Inputs reviewed (files/paths)
 
@@ -22,8 +22,8 @@ command and no output, so the reviewer verdicts and pack seals a completed entry
 normally carries cannot be recorded and are not invented.
 
 No row can produce an observed RED — every implementation shipped long before
-this record — so both take the falsifiability path, and the mutation recorded
-per row is what that path asks for. A mutation earns the row only if it
+this record — so the recorded row takes the falsifiability path, and its two
+mutations are what that path asks for. A mutation earns the row only if it
 falsifies the row's own obligation; one that reddens a neighbouring predicate
 proves that predicate instead.
 
@@ -33,13 +33,14 @@ this row's test discriminates.
 
 `TDD-0035` carried a `Selector` written as a summary of the obligation rather
 than a test's title. It was corrected to the title of the block that carries the
-obligation, chosen by what it asserts.
+obligation, so the row names a case that can be run. Its `Evidence` cell is
+unchanged; the reason is under Gaps.
 
 ## Work performed (what changed, where)
 
 - `.qfai/specs/spec-0014/tdd/test-list.md` — the `Selector` of `TDD-0035`
-  rewritten to the title it names, and the `Evidence` cells of `TDD-0019` and
-  `TDD-0035` rewritten as pointers into this file. `TDD-0033` and
+  rewritten to the title it names, and the `Evidence` cell of `TDD-0019`
+  rewritten as a pointer into this file. `TDD-0033` and
   `TDD-0034` are `unit`, so they belong to
   `.qfai/evidence/implement-spec-0014.md`, which records neither and says why.
   No `Status` moved.
@@ -60,9 +61,6 @@ below are over the selected cases, not over the file.
 | `TDD-0019` GREEN            | 1 of 5   | 1 passed            |
 | `TDD-0019` falsifiability A | 1 of 5   | 1 failed            |
 | `TDD-0019` falsifiability B | 1 of 5   | 1 failed            |
-| `TDD-0035` GREEN            | 2 of 2   | 2 passed            |
-| `TDD-0035` falsifiability A | 2 of 2   | 1 failed, 1 passed  |
-| `TDD-0035` falsifiability B | 2 of 2   | 1 failed, 1 passed  |
 | Refactor verify           | all      | 126 passed          |
 | Checkpoint                | all      | 2258 passed, exit 0 |
 
@@ -84,7 +82,6 @@ evidence its cell points at.
 | TDD-ID     | Obligation     | Layer       | RED provenance | Status |
 | ---------- | -------------- | ----------- | -------------- | ------ |
 | `TDD-0019` | `TC-0014-0019` | integration | falsifiability | done   |
-| `TDD-0035` | `TC-0014-0035` | integration | falsifiability | done   |
 
 Four files and nineteen cases in those projects declare themselves inactive and
 did not run, each through `describe.skip` carrying the marker
@@ -164,77 +161,10 @@ first mutation passes it and fails the literal check below it instead.
 - Checkpoint verification result: PASS — exit 0; Test Files 187 passed (191); Tests 2258 passed (2277)
 - Checkpoint verification revision: 649d8111147436408c90cbbe1b9f9b07e34da8cb
 
-### TDD-0035
-
-- TDD-ID: TDD-0035
-- Layer: integration
-- Test file: packages/qfai/tests/integration/cli/commands/prototypingCertify.saasPackage.test.ts
-- Selector: certify --scope saas-package seals a scope-limited certificate
-- TC-ref: TC-0014-0035
-- Run output retained: no
-- Backfill note: the row's cell recorded a verdict with no command and no output, so nothing of the original run survives. The test was re-run for the GREEN below, and the mutation below was applied and reverted to establish that the test discriminates. No reviewer verdict is recorded because none can be reconstructed.
-
-- RED failure mode: falsifiability
-
-#### Round 1
-
-- Round 1: Revision: 649d8111147436408c90cbbe1b9f9b07e34da8cb
-- Round 1: Satisfied-by: packages/qfai/src/cli/commands/prototypingCertify.ts::runPrototypingCertify — the certificate body's conditional `scope` field.
-- Round 1: Falsifiability command: npx vitest run tests/integration/cli/commands/prototypingCertify.saasPackage.test.ts -t 'certify --scope saas-package seals a scope-limited certificate'
-- Round 1: Falsifiability result: Test Files 1 failed (1); Tests 1 failed, 1 passed (2 of the file's 2 selected), on `expected undefined to be 'saas-package'`.
-- Round 1: Falsifiability revision: working-tree+fedb7acf0fa804aaaf25cab36939479ca8521973762ca046b060d2a4ef5da720
-- Round 1: GREEN command: npx vitest run tests/integration/cli/commands/prototypingCertify.saasPackage.test.ts -t 'certify --scope saas-package seals a scope-limited certificate'
-- Round 1: GREEN result: Test Files 1 passed (1); Tests 2 passed (2 of the file's 2 selected)
-- Round 1: RED test hash: f30c3f411f42ae69e34e5a4c5b2ac752e656e258b40d2f42a3879c5f0a98448a
-- Round 1: RED test manifest: packages/qfai/tests/integration/cli/commands/prototypingCertify.saasPackage.test.ts
-
-The mutation, in `packages/qfai/src/cli/commands/prototypingCertify.ts` line
-1200, deletes the line:
-
-```diff
--    ...(isSaasPackageScope ? { scope: "saas-package" as const } : {}),
-```
-
-The selector is the block holding the file's two cases, which observe the same
-boundary from both sides. The case asserting the scoped invocation writes
-`scope` dies. Its partner, asserting a default invocation writes no `scope`,
-stays green: the mutation removes the field in both directions, and only one
-direction is a defect.
-
-The seal has a second half. `notes` must name every gate the scope skips, and
-the mutation above cannot reach it: the case dies on its first assertion, so the
-notes assertions never run. A second mutation drops one gate from the list the
-notes are built from, in the same file at line 1178:
-
-```diff
--    ? SAAS_PACKAGE_SKIPPED_GATES.map(formatSaasPackageSkipNote)
-+    ? SAAS_PACKAGE_SKIPPED_GATES.slice(1).map(formatSaasPackageSkipNote)
-```
-
-`scope` is still sealed correctly, so the first assertion passes and the case
-reaches the loop over the gate list, where the dropped gate fails on `expected
-false to be true`. The two mutations partition the seal's two properties: each
-kills one and leaves the other intact.
-
-- Round 1: Second falsifiability command: npx vitest run tests/integration/cli/commands/prototypingCertify.saasPackage.test.ts -t 'certify --scope saas-package seals a scope-limited certificate'
-- Round 1: Second falsifiability result: Test Files 1 failed (1); Tests 1 failed, 1 passed (2 of the file's 2 selected), on `expected false to be true` at the gate loop. The `scope` assertion above it passes.
-- Round 1: Second falsifiability revision: working-tree+2b06e6064bb878975707183a782a499fca4e27c04577902594ddfb0a388755f2
-
-The seal's third clause is not covered by either mutation, and the coverage
-matrix records it: `expect(cert.scope).not.toBe("full")` sits after the line
-that pins `scope` to `saas-package` and cannot fail while that line passes.
-
-- Refactor verify command: npx vitest run tests/integration/verifySemanticsSpec0014.test.ts tests/cli/commands/prototypingIterate.test.ts tests/integration/cli/commands/prototypingCertify.saasPackage.test.ts tests/integration/cli/commands/prototypingCertify.upgradeScope.test.ts
-- Refactor verify result: Test Files 4 passed (4); Tests 126 passed (126)
-- Refactor verify revision: 649d8111147436408c90cbbe1b9f9b07e34da8cb
-- Checkpoint verification command: npx vitest run --project integration --project cli
-- Checkpoint verification result: PASS — exit 0; Test Files 187 passed (191); Tests 2258 passed (2277)
-- Checkpoint verification revision: 649d8111147436408c90cbbe1b9f9b07e34da8cb
-
 ## Coverage Depth Matrix
 
 See `.qfai/evidence/coverage-depth-spec-0014.md`.
-Totals: ✅ 15 / ⚠️ 59 / ❌ 70, with 3 not applicable, across 147 scored cells —
+Totals: ✅ 14 / ⚠️ 60 / ❌ 70, with 3 not applicable, across 147 scored cells —
 126 matrix depth cells (14 rows × 9 columns) and 21 business rule cells
 (7 rows × 3 columns). `Status` is a row verdict, not a mark, and is outside
 every total.
@@ -298,6 +228,21 @@ So the half that is falsifiable is not the obligation, and the half that is the
 obligation is not falsifiable. The row needs a case that drives a verify run and
 observes the canonical findings in its output.
 
+`TDD-0035` is not backfilled. Its obligation names the command line and says so
+twice: `TC-0014-0035` reads "run `qfai prototyping certify --scope saas-package`
+against a SaaS-tenant project", and its type column calls it the CLI shape.
+
+Both cases under the row's selector enter by calling `runPrototypingCertify`
+with the scope as an argument. The seal itself is discriminated — one mutation
+kills the `scope` field, a second drops a gate from the notes, and each leaves
+the other intact — but the parsing and dispatch that turn the flag into that
+argument are exercised by nothing that runs. The only case invoking the command
+line sits in a block that is skipped. A parser that stopped forwarding the flag
+would leave both cases green.
+
+So the row proves the seal and not the entry path the obligation names. It needs
+a case that drives the command line.
+
 `TDD-0036` is not backfilled either, for a different reason. Its obligation,
 `TC-0014-0036`, holds two boundaries: `--upgrade-scope full` is refused while a
 gate is still missing, and accepted once every gate passes. Two cases in
@@ -314,6 +259,6 @@ it stands and needs a Change Request that decomposes it.
 
 ## Final status
 
-PASS for the two rows recorded here. This is a per-row verdict, not a stage
-verdict: the pack is not clean, and `TDD-0009`, `TDD-0018` and `TDD-0036` are
-listed rather than claimed.
+PASS for the one row recorded here. This is a per-row verdict, not a stage
+verdict: the pack is not clean, and `TDD-0009`, `TDD-0018`, `TDD-0035` and
+`TDD-0036` are listed rather than claimed.

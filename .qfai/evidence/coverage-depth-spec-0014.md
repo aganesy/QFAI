@@ -60,7 +60,7 @@ gate and no case on the claim that distinguishes it.
 
 Section "Every `❌` cell, named" enumerates all 79 of them — 70 scored, 9 in the non-scored `Status`
 columns — so that "one justification per `❌`" is checkable rather than asserted, and section
-"Every `⚠️` cell, named" does the same for all 71 partial scores, 59 of which are scored cells the
+"Every `⚠️` cell, named" does the same for all 72 partial scores, 60 of which are scored cells the
 PASS criterion also requires a rationale for.
 
 ## What was measured, and how
@@ -199,9 +199,9 @@ to the story can hold a cell at `⚠️`; no cell reaches `✅`.
 | TC-0014-0033 | ⚠️                     | ⚠️          | ⚠️         | ⚠️         | ⚠️              | ⚠️             | ⚠️                | ⚠️            | ⚠️              | ❌     |
 | TC-0014-0034 | ⚠️                     | ✅          | ❌         | ⚠️         | ❌              | ❌             | ✅                | ⚠️            | ✅              | ⚠️     |
 | TC-0014-0035 | ⚠️                     | ⚠️          | ❌         | ❌         | ❌              | ❌             | ❌                | ❌            | ⚠️              | ⚠️     |
-| TC-0014-0036 | ✅                     | ✅          | ✅         | ✅         | ⚠️              | ⚠️             | ✅                | ✅            | ⚠️              | ⚠️     |
+| TC-0014-0036 | ✅                     | ⚠️          | ✅         | ✅         | ⚠️              | ⚠️             | ✅                | ✅            | ⚠️              | ⚠️     |
 
-14 rows × the 9 depth columns = **126 scored cells: ✅ 11 / ⚠️ 50 / ❌ 65**.
+14 rows × the 9 depth columns = **126 scored cells: ✅ 9 / ⚠️ 52 / ❌ 65**.
 
 `Status` is the row verdict, not a mark, so it is outside the scored population. For reference, its
 14 cells read **✅ 0 / ⚠️ 9 / ❌ 5**.
@@ -246,8 +246,8 @@ The scored population is 147 cells: 126 matrix depth cells plus 21 business rule
 
 | Mark | Matrix depth | Business rule | Scored total |
 | ---- | ------------ | ------------- | ------------ |
-| ✅   | 10           | 5             | 15           |
-| ⚠️   | 51           | 8             | 59           |
+| ✅   | 9            | 5             | 14           |
+| ⚠️   | 52           | 8             | 60           |
 | ❌   | 65           | 5             | 70           |
 | n/a  | 0            | 3             | 3            |
 | Sum  | 126          | 21            | 147          |
@@ -908,6 +908,12 @@ documented rationale for each, so each is named here.
   clause — sits sixteen lines after `expect(cert.scope).toBe("saas-package")` and cannot fail while
   that line passes. The clause's real content, that no other field asserts full completion, is
   checked by nothing.
+- **TC-0014-0036 × Normal path** — both directions the obligation names run end to end and the
+  certificate is read back, but every one of the sixteen cases enters by calling
+  `runPrototypingCertify` with `upgradeScopeFull` as an argument. The obligation names the command
+  line, and the parsing and dispatch that turn `--upgrade-scope full` into that argument are
+  exercised by nothing that runs: the only case invoking the flag sits in a skipped block. A
+  dispatch that stopped mapping the flag would leave all sixteen green.
 - **TC-0014-0036 × Boundary values** — the ordered domain is mtime, and it is exercised on both
   sides of two distinct freshness gates: a full-profile signal older than the certificate refuses, a
   full-profile signal newer than the certificate but older than the canonical signal refuses, and a
@@ -1030,8 +1036,9 @@ documented rationale for each, so each is named here.
   deletion to cycle 0 is unverified, and because the rule's stated purpose — that stale runtime
   state is never re-read afterwards — is asserted by nothing.
 - **BR-0014-0025 × Status** — the behavioural clauses are the best-covered obligation in this pack:
-  real CLI-level runs, five refusal causes, an SSOT-derived gate list, mtime freshness gates in both
-  directions, and a recovery message pinned against the loop it used to create. It is capped at `⚠️`
+  five refusal causes, an SSOT-derived gate list, mtime freshness gates in both directions, and a
+  recovery message pinned against the loop it used to create. Every one of those runs enters through
+  the function rather than the command line, which both test cases name. It is capped at `⚠️`
   by the undocumented fourth clause, and by the "MUST NOT claim full DONE" clause being carried by a
   tautological assertion rather than by a check over the certificate's other fields.
 
@@ -1128,7 +1135,7 @@ them is repaired here; this artifact scores coverage and does not edit tests, le
 `QFAI-ATDD-133` requires the stage evidence to carry a `## Coverage Depth Matrix` section that links
 to this file and restates the counted totals beside it. Those totals are:
 
-**✅ 15 / ⚠️ 59 / ❌ 70**, with `n/a` 3, across all 147 scored cells — 126 matrix depth cells (14
+**✅ 14 / ⚠️ 60 / ❌ 70**, with `n/a` 3, across all 147 scored cells — 126 matrix depth cells (14
 rows × 9 columns) and 21 business rule cells (7 rows × 3 columns). The `Status` columns of both
 tables hold row verdicts rather than marks and are outside that population; for reference the
 matrix's 14 read `⚠️ 9 / ❌ 5` and the business rule table's 7 read `⚠️ 3 / ❌ 4`.
