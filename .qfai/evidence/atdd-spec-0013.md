@@ -57,6 +57,7 @@ confirm it had returned to the clean value.
 | `TDD-0020` | the empty-list test forced false                  | 3 of 4              |
 | `TDD-0024` | the pointer-to-pack match made unconditional      | 1 of 4              |
 | `TDD-0029` | a fourth key added to the required set            | 4 of 6              |
+| `TDD-0029` | the legacy string branch emptied                  | 1 of 6              |
 | `TDD-0030` | the shape finding's rule code renamed             | 4 of 6              |
 
 Refactor verify: 25 passed. Checkpoint: 8986 passed, exit 0.
@@ -201,11 +202,36 @@ one this row's sibling owns.
 - Round 1: RED test hash: d798fda11f10e7516c51e3b1aaee98a7c9ab6fd5c86b1e78303e2234803d2c6e
 - Round 1: RED test manifest: packages/qfai/tests/integration/primaryTasksStructured.test.ts
 
-Adding a fourth required key rejects every item, so three of the four rejection
-cases fail too — they name the key they expect to be reported missing, and the
-mutation adds a second one to every finding. The fourth survives because its
-items already omit `id`: the first finding still reports `id`, so the added key
-does not displace it and the assertion holds.
+The obligation admits two shapes, so it carries two mutations.
+
+**Mutation A — the structured shape.** Adding a fourth required key rejects
+every item. Three of the four rejection cases fail too: they name the key they
+expect to be reported missing, and the mutation adds a second one to every
+finding. The fourth survives because its items already omit `id` — the first
+finding still reports `id`, so the added key does not displace it and the
+assertion holds.
+
+**Mutation B — the legacy string shape.** In the same file, the branch that
+turns a bare string entry into a task:
+
+```diff
+     if (typeof entry === "string") {
+-      const trimmed = entry.trim();
+-      if (trimmed.length > 0) {
+-        primaryTasks.push(trimmed);
+-      }
+       continue;
+     }
+```
+
+- Round 1: Second falsifiability command: npx vitest run tests/integration/primaryTasksStructured.test.ts
+- Round 1: Second falsifiability result: Test Files 1 failed (1); Tests 1 failed, 5 passed (6). The failure is this row's legacy-shape case, `string-only items pass (legacy shape, three string entries — within band)`.
+- Round 1: Second falsifiability revision: working-tree+5d4e6d6a8aaa683edefad7e062fd1c321f1df9891df0b3155dbcd968f0bf28b0
+
+A legacy string then contributes no task, so a screen carrying three of them
+parses as empty and the lane reports it. Mutation A leaves that case green and
+mutation B leaves the structured case green, so the pair covers both shapes the
+obligation admits.
 
 - Refactor verify command: npx vitest run tests/integration/sddUiTemplate.test.ts tests/integration/sddPrimaryTasksLane.test.ts tests/e2e/spec0013UiContractPrimaryTasksE2E.test.ts tests/core/activeDiscussionPack.test.ts tests/core/surfaceTypePopulate.test.ts tests/integration/primaryTasksStructured.test.ts
 - Refactor verify result: Test Files 6 passed (6); Tests 25 passed (25)
