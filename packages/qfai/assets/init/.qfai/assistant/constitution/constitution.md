@@ -139,7 +139,11 @@ Whenever practical, reference:
 
 ## Article VI — Clarification budget (avoid endless Q&A)
 
-Non-discussion commands MUST minimize questions.
+Every command MUST minimize clarifying questions. The article binds each of
+them alike: a stage does not escape it by being about discussion, and a
+discussion does not become cheap by sitting inside one. What separates a stage
+that asks a lot from one that asks little is how many of its questions are
+grilling questions, which the exemption below takes out of the count.
 
 Default policy:
 
@@ -180,6 +184,16 @@ Default policy:
 
 ### What does not count (MUST)
 
+- **Grilling questions are exempt.** A question asked inside a grilling
+  session — the interview `.agents/rules/grilling.md` defines, which walks a
+  design tree in rounds until the frontier is empty — is not a clarification
+  against this budget. Such questions are unbounded and MUST still be asked
+  after the budget is exhausted. A session ends on an empty frontier and the
+  user's confirmation, so a cap would end it on a number instead: some plans
+  need three questions and some need fifty, and a ceiling either truncates the
+  first kind or looks arbitrary on the second. The exemption covers the session,
+  not the stage it runs in — an ordinary clarification asked beside one spends
+  budget as usual.
 - **Approval questions are exempt.** A question whose subject is a user decision
   the skill declares mandatory — a per-row triage approval in `/qfai-sdd`, a
   destructive-operation confirmation, an escalation under
@@ -248,6 +262,13 @@ Exhaustion silences clarifications only. A **required approval is still asked**:
 it never spent budget, and Article X's `--auto` no-question mode is not in force
 here — only its assumption-recording behaviour is. Silently stopping is not a
 sanctioned move, and neither is asking a sixth clarification anyway.
+
+**A grilling session survives exhaustion too**, and for the same reason: its
+questions never spent budget, so there is none left to run out of. A session
+already under way continues to its own end condition, and a stage reached after
+exhaustion still opens one where its work calls for it. Treating a spent budget
+as the end of a session would put the design decisions back where this article
+found them — settled quietly, on an assumption nobody was asked about.
 
 ---
 
@@ -324,6 +345,14 @@ Rules:
    inputs that invocation actually consumes MUST still be asked. A user's
    `proceed` / `done` answer enters that same mode and is likewise not `--auto`;
    this rule is activated by the `--auto` flag alone.
+6. **A grilling session does not reach the user under `--auto`.** Its questions
+   are exempt from the Article VI budget, not from rule 4: a no-question mode
+   asks nothing, whatever the question is for. The session still runs — it
+   settles what the repository settles and dispatches sub-agents for the facts —
+   and every decision left over is recorded as an **open question**, never as an
+   assumption. Rule 4's assumptions are the defaultable ones, and a design
+   decision nobody has taken is not among them; recorded as an assumption it
+   would read as settled to whoever finds it next.
 
 This article survives context compaction because `.qfai/assistant/constitution/constitution.md` is a P1 reload target.
 

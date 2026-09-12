@@ -180,6 +180,15 @@ There is one base, and it is the project root.
   Under an explicit `--auto` the question is not asked at all — that run stops
   and names the missing input instead of inventing one. See
   `.qfai/assistant/constitution/constitution.md` Article VI.
+- **Grilling questions are exempt too, and unbounded.** A question asked inside
+  the interview `.agents/rules/grilling.md` defines spends no budget, and a
+  session runs to its own end condition — an empty frontier and the user's
+  confirmation — rather than to a count. An exhausted budget does not close one,
+  because its questions never opened it. The exemption covers the session, not
+  the stage around it: an ordinary clarification asked beside one still spends a
+  unit. Under an explicit `--auto` the session asks nothing and records each
+  decision it could not settle as an open question, never as an assumption
+  (Article X, rule 6).
 
 ## Canonical qfai Launcher (Mandatory)
 

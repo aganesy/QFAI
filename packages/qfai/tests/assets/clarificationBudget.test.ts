@@ -43,9 +43,16 @@ describe("the clarification budget binds a stage", () => {
       expectPhrase(content, "## Article VI — Clarification budget (avoid endless Q&A)");
       expectPhrase(content, "**at most 5 clarifying questions per invocation**");
       expectPhrase(content, "The unit is one\n  top-level skill or command invocation");
-      // The article binds every non-discussion command, so the unit cannot be a
-      // canonical stage: `/qfai-configure` and `/web-research` are neither.
+      // The article binds every command, so the unit cannot be a canonical
+      // stage: `/qfai-configure` and `/web-research` are neither.
       expectPhrase(content, "`/qfai-configure` or `/web-research`");
+      // A command-level carve-out and the grilling exemption are two mechanisms
+      // for one job, and the carve-out is the worse of them: it says nothing
+      // about which questions a stage may ask, only which stage may ask a lot.
+      // With both present a reader has to decide which governs a design
+      // question inside `/qfai-configure`, and the answers differ.
+      expectPhrase(content, "Every command MUST minimize clarifying questions.");
+      expectNoPhrase(content, "Non-discussion commands MUST minimize questions.");
       expectPhrase(content, "It is not per session and not per\n  conversation.");
       // "5 clarifying questions total" left the scope open to four readings.
       expectNoPhrase(content, "clarifying questions total");
@@ -82,6 +89,53 @@ describe("the clarification budget binds a stage", () => {
       // Exhaustion must not import Article X's blanket no-question mode, or a
       // required approval would become unaskable and unskippable at once.
       expectPhrase(content, "A **required approval is still asked**");
+    });
+
+    it(`${tree}: Article VI exempts a grilling question and leaves it unbounded`, async () => {
+      // Without this the two documents an agent loads contradict each other: the
+      // grilling rule ends a session on an empty frontier, the budget ends it at
+      // five, and a design with more than five open branches has no compliant
+      // path. The exemption is what makes the rule reachable inside a stage.
+      const content = await read(tree, CONSTITUTION);
+      expectPhrase(content, "**Grilling questions are exempt.**");
+      expectPhrase(content, "`.agents/rules/grilling.md`");
+      expectPhrase(content, "Such questions are unbounded and MUST still be asked");
+      // Scoped to the session. Without this the exemption reads as "a stage that
+      // grills may ask anything", which empties the budget wherever a session
+      // has run.
+      expectPhrase(content, "The exemption covers the session,\n  not the stage it runs in");
+    });
+
+    it(`${tree}: a spent budget does not end a grilling session`, async () => {
+      // Exhaustion mandates proceeding on labelled assumptions. Applied to a
+      // session that had not finished, that is exactly the failure the session
+      // exists to prevent — a design decision settled quietly — reached by a
+      // route the exemption above would otherwise leave open.
+      const content = await read(tree, CONSTITUTION);
+      expectPhrase(content, "**A grilling session survives exhaustion too**");
+      expectPhrase(content, "its\nquestions never spent budget");
+      expectPhrase(content, "a stage reached after\nexhaustion still opens one");
+    });
+
+    it(`${tree}: --auto silences a grilling session without inventing its answers`, async () => {
+      // Rule 4 forbids every question; the session requires the user's decision.
+      // Without rule 6 an `--auto` run that reaches a design choice has no
+      // compliant path at all. It resolves toward the open question, because an
+      // assumption is what makes an unsettled design read as settled.
+      const content = await read(tree, CONSTITUTION);
+      expectPhrase(content, "**A grilling session does not reach the user under `--auto`.**");
+      expectPhrase(content, "exempt from the Article VI budget, not from rule 4");
+      expectPhrase(content, "recorded as an **open question**, never as an\n   assumption");
+    });
+
+    it(`${tree}: the operating baseline carries the grilling exemption too`, async () => {
+      // Article VI reaches a skill through this file. An exemption stated only
+      // in the constitution reaches none of them.
+      const content = await read(tree, OPERATING);
+      expectPhrase(content, "**Grilling questions are exempt too, and unbounded.**");
+      expectPhrase(content, "An exhausted budget does not close one");
+      expectPhrase(content, "The exemption covers the session, not\n  the stage around it");
+      expectPhrase(content, "never as an assumption");
     });
 
     it(`${tree}: the operating baseline restates the budget where questions are asked`, async () => {
