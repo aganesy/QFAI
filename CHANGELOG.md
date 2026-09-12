@@ -6,6 +6,24 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Added
 
+- **A user-invoked entry point for a grilling session** (#1595).
+  `.qfai/assistant/skills/qfai-grill/SKILL.md` runs a session on whatever its
+  argument names. It needs no repository, no spec and no prior stage, and it
+  writes no file: there is no invoking stage, so the record is what the user is
+  shown.
+
+  It states no method. The method is read from the primitive at session start,
+  and a step performed here that the primitive does not describe is a second
+  method. Without the primitive the run stops and names the missing file rather
+  than interviewing from memory — an improvised interview reads exactly like the
+  method and answers to nothing, so nothing downstream could tell a session that
+  skipped the frontier from one that honoured it.
+
+  The agent never fires it. The skill carries no `description:`, which is what a
+  host reads to decide whether to offer a skill to the model, so this one is
+  reached only when the user names it. That absence is the whole difference
+  between a session the user asked for and a session a skill started.
+
 - **A model-invoked skill that holds the interview method** (#1594).
   `.qfai/assistant/skills/qfai-grilling/SKILL.md` is the one implementation: a
   skill that needs a design interrogated invokes it rather than writing rounds
