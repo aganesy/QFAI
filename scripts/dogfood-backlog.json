@@ -2,7 +2,7 @@
   "$comment": "Errors each dogfooding profile reports on this repository's own artifacts, per file. Read by scripts/check-dogfood-backlog.mjs. Every number may only go down; a file that reaches zero is struck from its profile rather than left at 0, so the slot cannot be reused. A file absent from a profile is held at zero for that profile. Re-pin one profile with `node scripts/check-dogfood-backlog.mjs --profile <name> --pin`.",
   "profiles": {
     "tdd": {
-      ".qfai/specs/spec-0002/tdd/test-list.md": 13,
+      ".qfai/specs/spec-0002/tdd/test-list.md": 9,
       ".qfai/specs/spec-0003/tdd/test-list.md": 75,
       ".qfai/specs/spec-0004/tdd/test-list.md": 100,
       ".qfai/specs/spec-0006/tdd/test-list.md": 58,
@@ -37,8 +37,7 @@
       ".qfai/discussion/discussion-20260418170937652": 2,
       ".qfai/evidence/atdd-spec-0012.md": 1,
       ".qfai/specs/spec-0001": 1,
-      ".qfai/specs/spec-0002": 1,
-      ".qfai/specs/spec-0002/tdd/test-list.md": 13,
+      ".qfai/specs/spec-0002/tdd/test-list.md": 9,
       ".qfai/specs/spec-0003": 1,
       ".qfai/specs/spec-0003/tdd/test-list.md": 75,
       ".qfai/specs/spec-0004": 1,
