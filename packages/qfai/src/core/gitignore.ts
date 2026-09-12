@@ -135,12 +135,6 @@ export const QFAI_GITIGNORE_GOVERNANCE_NEGATIONS: readonly string[] = [
   // rest of `.qfai/evidence/prototyping/`, so a fresh clone, another worktree or
   // a later checkout grades against none of the user's decisions.
   "!.qfai/evidence/prototyping/",
-  // …and re-ignored immediately, because re-including the directory would
-  // otherwise expose every descendant with no later rule of its own —
-  // `mutation-log.jsonl`, `iter-NN/` screenshots and HTML, `progress.md`. Those
-  // are the regenerable stage evidence the block exists to keep out, and a
-  // `git add .` would stage them. Only the leaf below is negated back.
-  ".qfai/evidence/prototyping/*",
   "!.qfai/evidence/prototyping/grilling.md",
   "!.qfai/evidence/change-request-*.md",
   "!.qfai/evidence/decision-*.md",
@@ -307,6 +301,18 @@ export const QFAI_GITIGNORE_BLOCK = [
   // whose `.gitignore` predates this line must not start failing validation
   // over it.
   ".qfai/state.json.lock",
+  // Re-ignores the contents of the one evidence directory the negations below
+  // re-include. `.qfai/evidence/*` does not reach inside it — a single `*` does
+  // not cross a `/` — so without this line, un-ignoring the directory exposes
+  // every file in it: `mutation-log.jsonl`, each `iter-NN/` screenshot and HTML
+  // snapshot, `progress.md`. Those are the regenerable stage evidence this
+  // block exists to keep out, and `git add .` would stage them.
+  //
+  // Above the negations on purpose, and it is an ignore rather than one of
+  // them. Git applies the last matching pattern, so the order that works is:
+  // ignore the directory, re-include it so git descends, re-ignore its
+  // contents, re-include the one record.
+  ".qfai/evidence/prototyping/*",
   // Article XI rule 3, the one mandated ignore that is not under `.qfai/`.
   // Anchored: rule 2 names the repository-root staging area, and an unanchored
   // `tmp/` would also swallow a `src/**/tmp/` a project tracks on purpose.

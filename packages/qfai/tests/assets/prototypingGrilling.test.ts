@@ -13,6 +13,8 @@ import { fileURLToPath } from "node:url";
 
 import { describe, expect, it } from "vitest";
 
+import { QFAI_GITIGNORE_BLOCK } from "../../src/core/gitignore.js";
+
 // tests/assets/<this file> -> tests -> packages/qfai -> packages -> repo root
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "..", "..");
 
@@ -258,27 +260,28 @@ describe.each(TREES)("%s — prototyping and grilling", (tree) => {
     expectPhrase(skill, "**It is a user decision, not stage evidence.**");
     expectPhrase(skill, "The managed ignore block negates this path");
 
-    const gitignore = await readFile(
-      path.join(repoRoot, "packages/qfai/src/core/gitignore.ts"),
-      "utf-8",
-    );
-    expect(gitignore).toContain('"!.qfai/evidence/prototyping/grilling.md"');
-    // Git never descends into an ignored directory, so the parent is undone
-    // first — and re-ignored immediately after, or re-including the directory
-    // exposes every descendant with no later rule of its own and `git add .`
-    // stages the regenerable evidence this block exists to keep out.
+    // Asserted against the block the writer emits, not against the source that
+    // builds it: git applies the last matching pattern, so what decides is the
+    // order of the lines as they land in a project's `.gitignore`.
+    const lines = QFAI_GITIGNORE_BLOCK.split("\n");
     const order = [
-      "!.qfai/evidence/prototyping/",
+      // Ignore the directory's contents…
       ".qfai/evidence/prototyping/*",
+      // …re-include the directory, because git never descends into an ignored
+      // one and nothing inside can be re-included until it does…
+      "!.qfai/evidence/prototyping/",
+      // …and re-include the one record. Everything else in there —
+      // `mutation-log.jsonl`, the `iter-NN/` captures, `progress.md` — stays
+      // ignored by the first line, which is why it has to be there at all.
       "!.qfai/evidence/prototyping/grilling.md",
-    ].map((line) => gitignore.indexOf(`"${line}"`));
+    ].map((line) => lines.indexOf(line));
     expect(
       order.every((at) => at > -1),
-      "a line of the three is missing",
+      "a line of the three is missing from the managed block",
     ).toBe(true);
     expect(
       [...order].sort((a, b) => a - b),
-      "the three are out of order",
+      "the three are out of order, so the last matching pattern is the wrong one",
     ).toEqual(order);
   });
 

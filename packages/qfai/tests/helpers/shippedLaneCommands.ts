@@ -1410,9 +1410,17 @@ export const ALLOWED_INIT_CONTENT: ReadonlyMap<string, string> = new Map([
   //
   //     .qfai/review_archive/*
   //
+  // Re-pinned again for the prototyping session record, which is a user decision
+  // rather than regenerable stage evidence — three lines, in the order git reads
+  // them, because the last matching pattern is what decides:
+  //
+  //     .qfai/evidence/prototyping/*
+  //     !.qfai/evidence/prototyping/
+  //     !.qfai/evidence/prototyping/grilling.md
+  //
   // Derived the way its predecessors were — `qfai init` into a temp root, then
   // reading what it wrote.
-  [".gitignore", "bba1090962529e016912dc9a0a80a23e500805c384ea4d6328c6d4c91536a70e"],
+  [".gitignore", "b046b80dd993b2e374f66ebd3562e996875a69a056c53f5a845752d69195c94e"],
   // One bullet each, inside the managed cross-AI rules block: the
   // `documentation-clarity.md` master that the same run seeds beside them.
   // Removing that line from both files reproduces the previous digests
