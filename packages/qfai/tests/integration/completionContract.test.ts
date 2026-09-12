@@ -214,7 +214,7 @@ describe("TC-0003-0054: old template deprecation marking", () => {
 // spec-0002: Canonical entrypoint wiring / old aggregator deprecation
 // ---------------------------------------------------------------------------
 
-// QFAI:SPEC-0004:TC-0004-0035
+// QFAI:SPEC-0004:TC-0004-0002
 describe("TC-0004-0035: canonical entrypoint wiring", () => {
   it("validateProject source calls runCanonicalUixValidators", async () => {
     const validateSrc = await readFile(

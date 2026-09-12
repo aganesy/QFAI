@@ -147,7 +147,6 @@ describe("watch-it-fail enforcement and resubmission", () => {
 // spec-0006: Wording alignment + routing consistency
 // ---------------------------------------------------------------------------
 
-// QFAI:SPEC-0012:TC-0012-0042
 describe("TC-0012-0042: wording alignment implementation mode", () => {
   it("SKILL.md claims match implementation keywords", async () => {
     const content = await readFile(implementSkillPath, "utf-8");
@@ -159,7 +158,6 @@ describe("TC-0012-0042: wording alignment implementation mode", () => {
   });
 });
 
-// QFAI:SPEC-0012:TC-0012-0043
 describe("TC-0012-0043: aspirational language detection", () => {
   it("SKILL.md does not use vague aspirational phrases without concrete criteria", async () => {
     const content = await readFile(implementSkillPath, "utf-8");
@@ -168,7 +166,6 @@ describe("TC-0012-0043: aspirational language detection", () => {
   });
 });
 
-// QFAI:SPEC-0012:TC-0012-0044
 describe("TC-0012-0044: routing consistency", () => {
   it("SKILL.md routing matches handoff contract targets", async () => {
     const content = await readFile(implementSkillPath, "utf-8");
@@ -183,7 +180,6 @@ describe("TC-0012-0044: routing consistency", () => {
   });
 });
 
-// QFAI:SPEC-0012:TC-0012-0045
 describe("TC-0012-0045: routing contradiction detection", () => {
   it("no contradictory routing in SKILL.md handoff contracts", async () => {
     const content = await readFile(implementSkillPath, "utf-8");
