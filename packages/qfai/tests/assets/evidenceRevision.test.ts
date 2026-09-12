@@ -697,7 +697,20 @@ describe("the working-tree address has one notation", () => {
       // from, and is created, removed and re-moded like any other.
       expect(text).toContain("others=(ls-files --others --exclude-per-directory=.gitignore -z)");
       expect(text).toContain('${others[@]}" --directory');
-      expect(text).toContain("every entry of the third pass that no listed path lies under");
+      expect(text).toContain("every entry of the third pass that ends in the separator");
+      // That pass names untracked files too, so read as directories they are a
+      // second record for one path, and two readers derive two addresses.
+      expect(text).toContain("an entry without the separator is a file the second list");
+      // `GIT_DIR` and `GIT_WORK_TREE` choose the repository, so a root resolved
+      // before they are cleared belongs to another one.
+      expect(text).toContain('root=$(env "${unset[@]}" git rev-parse --show-toplevel)');
+      // A drive-qualified directory is outside the worktree, and a pathspec
+      // naming it is refused.
+      expect(text).toContain("/*|..|../*|[A-Za-z]:/*) ;;");
+      // The tracked list names a submodule as it names a file; only its mode
+      // says what it is.
+      expect(text).toContain('ls-files --stage -z -- . "${exclude[@]}"');
+      expect(text).toContain("an entry whose mode is `160000`");
       // That pass reports the topmost untracked directory only, whatever
       // pathspec it is given, so an empty one inside another is named by no
       // list and derivable from no path. The ceiling is written down, with what

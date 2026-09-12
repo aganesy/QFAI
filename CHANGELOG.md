@@ -2000,10 +2000,13 @@ unadjudicated`, read off a Work Orders Summary row the session writes rather
   as bytes rather than as a decoded string. Directories are in it too, so
   removing the execute bit from a source directory moves the address.
 
-  Three states stop the address rather than being recorded as clean: an unborn
-  `HEAD`, a submodule, and an untracked embedded repository. Collection is
-  repeated until two consecutive runs agree, so a tree edited while it is being
-  read cannot produce an address for a state that never existed. The ledger's
+  A state the records cannot describe stops the address rather than being
+  recorded as clean: an unborn `HEAD`, a submodule, an untracked embedded
+  repository, a link used as a directory, a file with several links, and a path
+  the process cannot read. The tree has to hold still while it is read, so the
+  writers are stopped first. Collecting twice is a check on that, not a proof of
+  it, because a writer repeating one change can hand both runs the same mixture
+  of old and new files. The ledger's
   own directory is read from the project's configuration rather than assumed,
   so a project that moved its specs is not hashing its own bookkeeping writes.
 

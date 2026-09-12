@@ -37,7 +37,19 @@ check. Gate item 10 rejects any other shape wherever a revision is recorded:
   1. **Collect**, from the repository root, the paths and nothing else:
 
      ```bash
-     root=$(git rev-parse --show-toplevel)
+     # Every repository-local variable cleared, not a chosen few, and before
+     # anything reads the repository: `GIT_DIR` and `GIT_WORK_TREE` choose the
+     # repository itself, so a root resolved under them is a sibling's. Pathspec
+     # magic is read from the environment as well as from the argument, and
+     # `GIT_INDEX_FILE` names the index the listings read. Under
+     # `GIT_LITERAL_PATHSPECS=1` the exclusions are names to match rather than
+     # patterns; under an alternate index a deleted path is listed by neither
+     # command, so its `absent` record goes missing. `git rev-parse
+     # --local-env-vars` is the list itself, so nothing here has to stay in
+     # step with a version of git.
+     unset=()
+     for name in $(git rev-parse --local-env-vars); do unset+=(-u "$name"); done
+     root=$(env "${unset[@]}" git rev-parse --show-toplevel)
      specs=$(npx qfai doctor --format json | node -e 'let s="";
        process.stdin.on("data", (d) => (s += d)).on("end", () => {
          const check = JSON.parse(s).checks.find((c) => c.id === "paths.specsDir");
@@ -48,23 +60,13 @@ check. Gate item 10 rejects any other shape wherever a revision is recorded:
      case "$specs" in
        # Outside the worktree: nothing it holds is in the address, and a
        # pathspec pointing there is refused outright. `..` exactly is that
-       # case as much as `../x` is.
-       /*|..|../*) ;;
+       # case as much as `../x` is, and so is a path on another drive.
+       /*|..|../*|[A-Za-z]:/*) ;;
        # Every glob character in the configured name escaped, so a directory
        # really called `[specs]` is matched rather than read as a class.
        *) exclude+=(":(exclude,glob)$(printf '%s' "$specs" |
             sed 's/[][*?\\]/\\&/g')/*/tdd/test-list.md") ;;
      esac
-     # Every repository-local variable cleared, not a chosen few: pathspec
-     # magic is read from the environment as well as from the argument, and
-     # `GIT_INDEX_FILE` names the index the listings read. Under
-     # `GIT_LITERAL_PATHSPECS=1` the exclusions are names to match rather than
-     # patterns; under an alternate index a deleted path is listed by neither
-     # command, so its `absent` record goes missing. `git rev-parse
-     # --local-env-vars` is the list itself, so nothing here has to stay in
-     # step with a version of git.
-     unset=()
-     for name in $(git rev-parse --local-env-vars); do unset+=(-u "$name"); done
      common=(env "${unset[@]}"
              git -C "$root" -c core.quotePath=false -c core.ignoreCase=false)
      others=(ls-files --others --exclude-per-directory=.gitignore -z)
@@ -72,6 +74,9 @@ check. Gate item 10 rejects any other shape wherever a revision is recorded:
      "${common[@]}" ls-files --deduplicate -z -- . "${exclude[@]}"
      "${common[@]}" "${others[@]}" -- . "${exclude[@]}"
      "${common[@]}" "${others[@]}" --directory -- . "${exclude[@]}"
+     # Read for its modes only: the tracked list above names a submodule as it
+     # names a file.
+     "${common[@]}" ls-files --stage -z -- . "${exclude[@]}"
      ```
 
      **The ledger's directory is read, not assumed.** `paths.specsDir` is a
@@ -120,9 +125,11 @@ check. Gate item 10 rejects any other shape wherever a revision is recorded:
      **A submodule stops the address.** The superproject's path for it is a
      directory whatever the submodule holds — dirty, clean, or never
      initialized — so an arbitrary change inside leaves the address exactly
-     where it was, and a verdict taken before it reads as fresh. Record the
-     observation against the submodule's own tree instead. Do not record an
-     address over a repository holding one.
+     where it was, and a verdict taken before it reads as fresh. The tracked
+     list names it as it names a file, and `lstat` reads an ordinary directory;
+     the last command is what shows it, as an entry whose mode is `160000`.
+     Record the observation against the submodule's own tree instead. Do not
+     record an address over a repository holding one.
 
      **A tracked path the filesystem does not have is a record, not a stop.** An
      uncommitted deletion, a rename, a sparse checkout and `skip-worktree` all
@@ -145,7 +152,10 @@ check. Gate item 10 rejects any other shape wherever a revision is recorded:
      tracks files, and `ls-files --others` names a directory only for the
      embedded repository the clause above stops on. So the directories come from
      two places: every path component of every path in the first two lists, and
-     every entry of the third pass that no listed path lies under. A directory's
+     every entry of the third pass that ends in the separator and that no listed
+     path lies under. The third pass names untracked files as well as
+     directories, so an entry without the separator is a file the second list
+     already holds, not a directory. A directory's
      mode is in the address for the reason a file's is — removing the execute
      bit from `src/` changes what the tests can read while every file under it
      keeps its bytes, and a PASS taken before it would still read as fresh.
