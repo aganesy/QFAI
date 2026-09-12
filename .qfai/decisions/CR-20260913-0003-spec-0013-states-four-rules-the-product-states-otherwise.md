@@ -217,9 +217,9 @@ the rows open today.
   `packages/qfai/src/core/validators/designAudit.ts`; `3a` reaches
   `packages/qfai/src/core/detection/surfaceType.ts` and the `/qfai-sdd` skill
   under `packages/qfai/assets/init/` with its root mirror. **This list is
-  reduced to the approved outcomes before `Status: approved` is written**:
-  `QFAI-DRIFT-001` reads a path here and not the condition beside it, so under
-  the recommended set — `1a/2a/3c/4a` — the only product edits are the test-side
+  reduced to the approved outcomes before `Status: approved` is written**, so
+  what an approval covers is read off the paths rather than off the conditions
+  beside them. Under the recommended set — `1a/2a/3c/4a` — the only product edits are the test-side
   corrections named below, and every path in this paragraph is struck.
 
   The test files above are in scope under every outcome, because each item's
