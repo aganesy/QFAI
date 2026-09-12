@@ -222,7 +222,37 @@ every total.
 | Role                | Task                                                     | Status (PASS/REVISE/PENDING) |
 | ------------------- | -------------------------------------------------------- | ---------------------------- |
 | test-design-analyst | Score the fourteen obligations and write the matrix      | PASS                         |
-| completion-reviewer | Audit every claim this file and the matrix make          | PENDING                      |
+| completion-reviewer | Audit every claim this file and the matrix make          | REVISE                       |
+
+## Reviewer response
+
+- Role: completion-reviewer
+- Status: REVISE, budget spent
+- Review series: .qfai/evidence/atdd-spec-0014.md + completion-reviewer
+- Rounds: 1 `REVISE`, 2 `REVISE`, 2b `ESCALATE`
+- Subject: every claim this file and the Coverage Depth Matrix make
+- What each round found, and what it cost:
+  - Round 1 reproduced the recorded row exactly — both falsifiability mutations,
+    the GREEN run and the refactor-verify run, including the quoted assertion
+    message — and verified the matrix cell by cell. It blocked on three
+    statements the repository does not support: a fifth totals table left behind
+    by a rescore, an absolute in the `TDD-0018` withdrawal that experiment
+    falsifies, and a validate gate recorded at a count the run does not produce
+    under a command that cannot resolve to this branch.
+  - Round 2 verified those three and found a sixth totals site the same rescore
+    had left behind.
+  - Round 2b verified that one and escalated on a paragraph interpreting the
+    superseded checkpoint as though it described the new one.
+- Every finding above is repaired. The budget is spent as
+  `.qfai/assistant/constitution/review-convergence.md` defines it — two rounds
+  plus one verification review — so no further round may run, and whether this
+  pack reaches DONE on the repaired record is the user's decision rather than a
+  reviewer's.
+- Residual risk the reviews name and this record does not close: the census in
+  the matrix is held by review alone. `QFAI-ATDD-133` checks that a totals
+  section exists and never compares a number, and four rescores have now each
+  left one figure behind. Until something reads the numbers, the next rescore
+  will do it again.
 
 ## Cross-spec obligations
 
