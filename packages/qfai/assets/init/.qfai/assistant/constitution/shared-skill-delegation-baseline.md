@@ -129,6 +129,35 @@ review in this run.
 - This definition governs every skill. Skill-local wording (e.g. `qfai-configure`'s "a reviewer
   who did not modify the config") is an instance of it, not a competing rule.
 
+#### A griller's recommendations, and what they disqualify
+
+A grilling session puts a recommended answer beside each question
+(`.agents/rules/grilling.md`). Who settled the decision decides whether the
+agent that recommended it may review the artifact that carries it.
+
+| The decision was settled                                             | The griller may review it                   |
+| -------------------------------------------------------------------- | ------------------------------------------- |
+| By the user, from the recommendation among the inputs                | Yes — the decision is the user's            |
+| Agent to agent, the recommendation adopted with no user adjudication | No — the recommendation became the artifact |
+
+The reason is not memory. A sub-agent that starts with a reset context cannot
+defer to something it does not remember. The risk is **correlation**: a fresh
+instance of the same agent, on the same model, over the same repository
+evidence, is close to the same function over close to the same inputs, and will
+tend to re-derive the preference that produced the recommendation. Resetting
+the context removes the memory, not the disposition — which is why role name
+alone never establishes independence either.
+
+This is a case of the rule above, not an exception to it. A griller whose
+recommendation the artifact carries unadjudicated has contributed to it, so the
+same obligation applies: declare the conflict and hand those items to a
+non-participating reviewer.
+
+Round 1 and round 2 of a review stay one reviewer with one budget. Treating
+them as separate reviewers because the context reset would restart the
+per-reviewer counter every round, so the two-round budget could never be
+exhausted and the escalation exit that hangs off it would never open.
+
 - Reviewers must verify Drift Protocol enforcement.
 - Reviewers must verify test-layer policy enforcement when relevant.
 - Do not treat test volume ratios or floors as hard gates unless the skill explicitly says so.
