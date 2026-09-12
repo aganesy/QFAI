@@ -278,7 +278,7 @@ obligation admits.
 ## Coverage Depth Matrix
 
 See `.qfai/evidence/coverage-depth-spec-0013.md`.
-Totals: ✅ 68 / ⚠️ 91 / ❌ 335, with 7 not applicable, across 501 scored cells —
+Totals: ✅ 74 / ⚠️ 103 / ❌ 317, with 7 not applicable, across 501 scored cells —
 441 matrix depth cells (49 rows × 9 columns) and 60 business rule cells
 (20 rows × 3 columns). `Status` is a row verdict, not a mark, and is outside
 every total.
@@ -300,7 +300,12 @@ None.
 - Status: PASS
 - Reviewed revision: c751cb050caa9e78a1ff5e622fc5abd738d126c2
 - Review series: .qfai/evidence/coverage-depth-spec-0013.md + completion-reviewer
-- Rounds: 1 `REVISE`, 2 `REVISE`, 2b `PASS`
+- Rounds: 1 `REVISE`, 2 `REVISE`, 2b `PASS`; the matrix moved again afterwards
+  under later review, so the verdict above covers the revision it names and not
+  the tree as it now stands. What changed after it: four cell corrections and
+  one reversal, each recorded in the commit that made it. The `2b` budget is
+  spent, so no further round may run — whether the corrected record is accepted
+  is a decision above the reviewer.
 - Subject: every claim this file makes, checked against the files it names
 - Result: the four recorded rows reproduce their GREEN commands, their
   refactor-verify run and the checkpoint exactly as recorded, and every
@@ -309,8 +314,8 @@ None.
   eight unbackfilled rows and no backfilled one; all eight gap reasons check
   out against the files they name; the validate gate reproduces at `error=0`,
   and fails on a missing matrix at the revision the mutations were taken at,
-  which is why it is recorded over this tree; the matrix totals — ✅ 68 /
-  ⚠️ 91 / ❌ 335 with `n/a` 7 across 501 cells — agree with the tables, and
+  which is why it is recorded over this tree; the matrix totals — ✅ 74 /
+  ⚠️ 103 / ❌ 317 with `n/a` 7 across 501 cells — agree with the tables, and
   every `❌` and `⚠️` cell carries exactly one justification, with no
   coordinate missing and none listed that does not carry the mark; and the
   four rows naming `auditProfile.ts` keep every mark when read against the
