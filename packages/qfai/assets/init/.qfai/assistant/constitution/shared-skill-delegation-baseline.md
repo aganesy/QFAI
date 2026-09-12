@@ -67,6 +67,24 @@ Applies to `unavailable`, and to `saturated` once the retry budget is exhausted.
   - `User action needed: <settings or tooling changes required — or "none; wait for a delegation slot to free" when the class is saturated>`
   - `Retry condition: rerun after the required delegation succeeds`
 
+### Sanctioned exception: a read-only fact lookup
+
+One delegation may continue without a sub-agent: reading a fact the environment
+already holds, where the skill that dispatched it may read that fact itself.
+Reading the file and dispatching a sub-agent to read it are two ways of doing one
+job, so the dispatch is an optimisation, and losing it removes the optimisation
+rather than the job.
+
+The exception is bounded by what it covers.
+
+- **Reading, never authoring.** A primary artifact and a blocking review stay
+  under the hard stop whatever their class.
+- **The class is still reported**, with every fact that stayed unread named, and
+  every decision downstream of one held open.
+- **A skill claiming it MUST cite this section.** A skill that merely carries on
+  has taken the override this section exists to replace, and a reader cannot tell
+  that apart from a skill that never read the rule.
+
 ### Commit Scoping (MUST)
 
 - A delegated agent stages only the paths it declared as deliverables in its
@@ -147,15 +165,17 @@ the shipped-asset line ceiling; the rules are unchanged by the move.
 
 A finding outside the reviewing stage's remit is recorded and deferred, never blocking:
 
-| Stage              | In scope                                                          | Out of scope (record and defer)                |
-| ------------------ | ----------------------------------------------------------------- | ---------------------------------------------- |
-| `/qfai-discussion` | Requirement clarity, scope boundary, decision traceability        | Spec structure, runtime behavior               |
-| `/qfai-sdd`        | Spec / contract consistency, testability, traceability edges      | Runtime enforcement correctness, code quality  |
-| `/qfai-atdd`       | Obligation coverage, layer placement, annotation validity         | Implementation structure                       |
-| `/qfai-implement`  | Code quality, spec alignment of the item, RED/GREEN evidence      | Upstream spec content, contract design         |
-| `/qfai-configure`  | Config / manifest validity and the surfaces the run generated     | Spec content, implementation structure         |
-| `/qfai-verify`     | Gate execution, evidence completeness, report / artifact fidelity | Authoring quality of the artifacts it verifies |
-| `/web-research`    | Source authority and freshness, citation accuracy, claim support  | Spec content, implementation structure         |
+| Stage              | In scope                                                                                            | Out of scope (record and defer)                                                         |
+| ------------------ | --------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------- |
+| `/qfai-discussion` | Requirement clarity, scope boundary, decision traceability                                          | Spec structure, runtime behavior                                                        |
+| `/qfai-sdd`        | Spec / contract consistency, testability, traceability edges                                        | Runtime enforcement correctness, code quality                                           |
+| `/qfai-atdd`       | Obligation coverage, layer placement, annotation validity                                           | Implementation structure                                                                |
+| `/qfai-implement`  | Code quality, spec alignment of the item, RED/GREEN evidence                                        | Upstream spec content, contract design                                                  |
+| `/qfai-configure`  | Config / manifest validity and the surfaces the run generated                                       | Spec content, implementation structure                                                  |
+| `/qfai-verify`     | Gate execution, evidence completeness, report / artifact fidelity                                   | Authoring quality of the artifacts it verifies                                          |
+| `/web-research`    | Source authority and freshness, citation accuracy, claim support                                    | Spec content, implementation structure                                                  |
+| `/qfai-grilling`   | Decisions asked rather than assumed, facts naming where they were read, the session's end condition | The merit of what the user decided, and the artifacts the invoking stage writes from it |
+| `/qfai-grill`      | The same, reported to the user rather than to a stage                                               | The merit of what the user decided; there is no artifact to review                      |
 
 **Fallback for any stage not listed.** A stage that references this baseline without a
 row above has, as its remit, the artifacts that stage itself produces; everything

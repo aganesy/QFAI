@@ -394,7 +394,10 @@ describe("cross-AI rules surface (.agents/rules/ master)", () => {
         /No exceptions/i,
         /short\s+label/,
         /Recommend/,
-        /numbered\s+list/,
+        // The whole clause, not the phrase: "numbered list" also appears in
+        // the counter-example two paragraphs down, so the short token stays
+        // green with the requirement itself deleted.
+        /Where\s+there\s+are\s+choices,\s+that\s+is\s+a\s+numbered\s+list\s+keeping\s+every\s+part/,
         /question\s+budget/i,
       ]) {
         expect(text).toMatch(clause);

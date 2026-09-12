@@ -145,7 +145,9 @@ There is one base, and it is the project root.
 - Availability is judged for **this question in this invocation**. A tool the mode
   withholds, or one that cannot carry the answer's shape, is unavailable for that
   question and takes the fallback below.
-- When AskUserQuestion supports structured choices, prefer structured choices over free-text input.
+- Where the question has choices and AskUserQuestion supports them, prefer structured choices over free-text input.
+  An open answer — a name, a number, a sentence — takes the free-text path instead; the preference
+  ranks two ways of asking one question, and never turns an open answer into a choice.
 - If AskUserQuestion is unavailable, ask the same question in a normal message
   **in the shape its answer has**: explicit numbered choices where there are
   choices, and a plain request for the value where the answer is a name, a

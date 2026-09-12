@@ -363,7 +363,11 @@ Rules:
    Availability is judged for **this question in this invocation**, not from what the
    host supports in general: a tool a mode withholds, or one that cannot carry the
    answer's shape, is unavailable for that question and takes rule 3.
-2. **MUST prefer structured choices** (radio/multi-select) over free-text input when AskUserQuestion supports them.
+2. **MUST prefer structured choices** (radio/multi-select) over free-text input **where the
+   question has choices** and AskUserQuestion supports them. Where the answer is open — a name, a
+   number, a sentence — the free-text path is the one that carries it, and narrowing it into options
+   is the failure rule 3 names. The preference ranks two ways of asking one question; it does not
+   turn an open answer into a choice.
 3. **Fallback**: If AskUserQuestion is unavailable for this question, the agent MUST present the same
    question as a normal message, **in the shape its answer has**: explicit numbered choices where
    there are choices, and a plain request for the value where the answer is a name, a number or a

@@ -543,6 +543,11 @@ describe("the question form binds every question", () => {
       // `qfai-configure`'s replacement glob — and demanding options there would
       // have an agent invent two to narrow an answer nobody wanted narrowed.
       expectPhrase(content, "the form its answer shape calls for");
+      // Rule 2 is the other half. An unscoped "prefer structured choices"
+      // orders the narrowing that the open-value path forbids, and the two
+      // rules then contradict each other in one article.
+      expectPhrase(content, "**where the question has choices**");
+      expectPhrase(content, "it does not turn an open answer into a choice");
       expectPhrase(content, "the tool's free-text path where the\nanswer is a name");
       // The fallback carries the shape too. Routing every unsupported answer
       // shape to a numbered list would have an agent invent options for exactly
@@ -562,6 +567,10 @@ describe("the question form binds every question", () => {
       expectPhrase(content, "**this question in this\n   invocation**");
       expectPhrase(content, "`.agents/rules/user-questions.md` owns the form");
       expectPhrase(content, "that is an answer shape, not an exception");
+      // The MUST itself, scoped. Left unqualified it orders a structured choice
+      // whenever the tool supports one, which is an order to narrow the open
+      // answer the clause above protects.
+      expectPhrase(content, "where the question has choices and the tool supports them");
       // Rule 3 itself, not only the clauses around it. Pinning those while
       // leaving the numbered rule loose would let the fallback revert to
       // numbered-only, or shed the selection constraint, with this suite still
