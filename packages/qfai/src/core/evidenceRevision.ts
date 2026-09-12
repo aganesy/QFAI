@@ -17,8 +17,16 @@
  * and a ledger grammar that forbade `+` turned every such row into
  * `QFAI-TDDLIST-011` while the review gate called the identical
  * string correct.
+ *
+ * **The `working-tree+` digest is lowercase and the rev is not.** A git rev is
+ * whatever `git rev-parse` printed, and a human quoting an abbreviated one may
+ * upper-case it. The content address is produced by the four-step procedure,
+ * which fixes its notation, so accepting both cases there would let one producer
+ * write an uppercase suffix and another a lowercase one for the same tree — and
+ * the freshness comparison is exact, so the two read as different revisions and
+ * a correct row never reaches `done`.
  */
-export const REVISION_FORM_SOURCE = "(?:[0-9a-fA-F]{7,64}|working-tree\\+[0-9a-fA-F]{64})";
+export const REVISION_FORM_SOURCE = "(?:[0-9a-fA-F]{7,64}|working-tree\\+[0-9a-f]{64})";
 
 /** {@link REVISION_FORM_SOURCE} anchored, for testing a whole value. */
 export const REVISION_FORM = new RegExp(`^${REVISION_FORM_SOURCE}$`);

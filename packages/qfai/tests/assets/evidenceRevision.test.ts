@@ -29,6 +29,8 @@ import { fileURLToPath } from "node:url";
 
 import { describe, expect, it } from "vitest";
 
+import { REVISION_FORM } from "../../src/core/evidenceRevision.js";
+
 // tests/assets/<this file> -> packages/qfai -> packages -> repo root
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "..", "..");
 const QFAI_TREES = ["packages/qfai/assets/init/.qfai", ".qfai"];
@@ -586,10 +588,15 @@ describe("the working-tree address has one notation", () => {
       // The whole of what git printed, not a fixed width: a repository created
       // with the SHA-256 object format prints 64 characters, and a rule naming
       // 40 would have its producer truncate a real revision.
-      expect(text).toContain("The whole of what `git rev-parse HEAD` printed");
+      expect(text).toContain("The object id `git rev-parse HEAD` printed");
       expect(text).toContain("a SHA-256 repository gives 64 characters where a SHA-1 one gives 40");
-      // The three spellings of one mode, and the two of one path.
-      expect(text).toContain("Three octal digits, no prefix and no padding");
+      // Every mode has one spelling, including one below `0100` and one with a
+      // special bit: three digits cannot hold `4755`, and "no padding" has no
+      // answer for `064`.
+      expect(text).toContain("Exactly four octal digits, zero-padded, no prefix");
+      expect(text).toContain("the mode masked with `07777`");
+      // The captured output ends in a newline; a shell substitution drops it.
+      expect(text).toContain("with its trailing newline removed");
       expect(text).toContain("The repository-relative bytes `-z` returned, unquoted and unescaped");
       expect(text).toContain("between records, and none after the last");
       // The address is compared as a string, so the final digest has a case too.
@@ -614,5 +621,32 @@ describe("the working-tree address has one notation", () => {
     expect(address({ ...HEX_FULL_NO_TRAILING, revision: REVISION.slice(0, 12) })).not.toBe(
       RECORDED,
     );
+  });
+});
+
+/**
+ * The spelling the gates accept, and the one the procedure produces.
+ *
+ * Two producers whose addresses differ only in case pass the form check and
+ * fail the freshness comparison, which is exact — so a correct row never
+ * reaches `done` and nothing says why. The document fixes the notation; this is
+ * the gate agreeing with it.
+ */
+describe("the revision form accepts one spelling of a content address", () => {
+  const digest = "a".repeat(64);
+
+  it("accepts the lowercase address the procedure produces", () => {
+    expect(REVISION_FORM.test(`working-tree+${digest}`)).toBe(true);
+  });
+
+  it("refuses an uppercase address for the same tree", () => {
+    expect(REVISION_FORM.test(`working-tree+${digest.toUpperCase()}`)).toBe(false);
+  });
+
+  it("still accepts a git rev in either case", () => {
+    // Not the procedure's output: a rev is whatever git printed, and a human
+    // quoting an abbreviated one may upper-case it.
+    expect(REVISION_FORM.test("4d76ad29018415e7264adb6a3811a9b26f81a50c")).toBe(true);
+    expect(REVISION_FORM.test("4D76AD29018415E7264ADB6A3811A9B26F81A50C")).toBe(true);
   });
 });
