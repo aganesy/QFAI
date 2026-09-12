@@ -26,7 +26,7 @@ const repoRoot = path.resolve(
   "..",
 );
 
-import { validateOpenQuestionsGate } from "../../../src/core/validators/specPack.js";
+import { collectOpenQuestionsGateIssues } from "../../../src/core/validators/specPack.js";
 import type { SpecEntry } from "../../../src/core/specLayout.js";
 
 const ENTRY = { openQuestionsPath: "spec-0042/08_Open-questions.md" } as unknown as SpecEntry;
@@ -35,11 +35,11 @@ const doc = (rows: readonly string[]): string =>
   ["# 08 Open Questions", "", "## Open Questions", "", ...rows, ""].join("\n");
 
 const codes = (text: string, releaseCandidate = false): string[] =>
-  validateOpenQuestionsGate(ENTRY, text, releaseCandidate).map((issue) => issue.code);
+  collectOpenQuestionsGateIssues(ENTRY, text, releaseCandidate).map((issue) => issue.code);
 
 describe("a decision the user was asked for and never took blocks the stage", () => {
   it("reports it, and names the question", () => {
-    const issues = validateOpenQuestionsGate(
+    const issues = collectOpenQuestionsGateIssues(
       ENTRY,
       doc(["- OQ-0007 — which retention window applies", "  - status: unadjudicated"]),
       false,
@@ -53,13 +53,13 @@ describe("a decision the user was asked for and never took blocks the stage", ()
     // question still being worked is not a claim. This one is a claim.
     const rows = ["- OQ-0007 — which retention window applies", "  - status: unadjudicated"];
     for (const releaseCandidate of [false, true]) {
-      const issues = validateOpenQuestionsGate(ENTRY, doc(rows), releaseCandidate);
+      const issues = collectOpenQuestionsGateIssues(ENTRY, doc(rows), releaseCandidate);
       expect(issues[0]?.severity, String(releaseCandidate)).toBe("error");
     }
   });
 
   it("says what to do instead", async () => {
-    const issues = validateOpenQuestionsGate(
+    const issues = collectOpenQuestionsGateIssues(
       ENTRY,
       doc(["- OQ-0007 — which retention window applies", "  - status: unadjudicated"]),
       false,
@@ -79,7 +79,7 @@ describe("what the new status does not change", () => {
 
   it("keeps `open` a warning at the merge gate", () => {
     const rows = ["- OQ-0007 — which retention window applies", "  - status: open"];
-    const issues = validateOpenQuestionsGate(ENTRY, doc(rows), false);
+    const issues = collectOpenQuestionsGateIssues(ENTRY, doc(rows), false);
     expect(issues.map((issue) => issue.code)).toEqual(["E_OQ_OPEN_RELEASE_BLOCK"]);
     expect(issues[0]?.severity).toBe("warning");
   });
@@ -112,7 +112,7 @@ describe("the register it reads, and the notation it reads it in", () => {
       "| OQ-0008 | which region is live      | ops   | -   | deferred      | -     |",
       "",
     ].join("\n");
-    const issues = validateOpenQuestionsGate(ENTRY, table, false);
+    const issues = collectOpenQuestionsGateIssues(ENTRY, table, false);
     expect(issues.map((issue) => issue.code)).toEqual(["QFAI-SPACK-102"]);
     expect(issues[0]?.refs).toEqual(["OQ-0007"]);
   });
@@ -201,7 +201,7 @@ describe("the register it reads, and the notation it reads it in", () => {
       "| OQ-0007 | which    | -      |",
       "",
     ].join("\n");
-    const issues = validateOpenQuestionsGate(ENTRY, table, false);
+    const issues = collectOpenQuestionsGateIssues(ENTRY, table, false);
     // The placeholder row declares nothing and is not a question.
     expect(issues.map((issue) => issue.code)).toEqual(["E_OQ_STATUS_UNPARSEABLE"]);
     expect(issues[0]?.message).toContain("OQ-0007=(none)");

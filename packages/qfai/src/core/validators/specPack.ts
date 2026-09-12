@@ -1526,7 +1526,7 @@ async function validateSpecPackEntry(
   }
 
   issues.push(
-    ...validateOpenQuestionsGate(entry, texts["15_Open-questions.md"] ?? "", releaseCandidate),
+    ...collectOpenQuestionsGateIssues(entry, texts["15_Open-questions.md"] ?? "", releaseCandidate),
   );
   const deltaText = texts["18_delta.md"];
   if (deltaText !== undefined) {
@@ -1982,7 +1982,7 @@ export function collectUnadjudicatedDecisions(registerPath: string, text: string
   ];
 }
 
-export function validateOpenQuestionsGate(
+export function collectOpenQuestionsGateIssues(
   entry: SpecEntry,
   text: string,
   releaseCandidate: boolean,
