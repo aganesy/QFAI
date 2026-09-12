@@ -1113,22 +1113,30 @@ interface EvidenceFieldOccurrence {
  * after `reviewer verdict` (`round-evidence.md`). It is part of the field
  * name, so a reader that stopped at the bare name read no verdict at all from
  * a valid multi-attempt round and reported the round as never closed.
+ *
+ * Read on that field only. Accepted on every field, `Round 1: Revision
+ * (attempt 2)` satisfied a field the round contract records once per round.
  */
 const ATTEMPT_QUALIFIER = "(?:[ \\t]*\\(attempt[ \\t]+\\d+\\))?";
 const ATTEMPT_QUALIFIER_TAIL = /\s*\(attempt\s+\d+\)\s*$/i;
+const ATTEMPT_QUALIFIED_FIELD = "reviewer verdict";
+
+function takesAttemptQualifier(field: string): boolean {
+  return field.toLowerCase() === ATTEMPT_QUALIFIED_FIELD;
+}
 
 /**
  * A bullet field's inline value with the field name's own markup taken off.
  *
  * The bold-colon spelling — `- **Round 1: reviewer verdict:** REVISE` — closes
  * its emphasis after the colon, so the raw capture begins with `**` and a
- * check for `REVISE` at the start of the value never matched it.
+ * check for `REVISE` at the start of the value never matched it. Only that
+ * closing `**` is taken off: a value may itself begin with asterisks, as a
+ * selector opening with a globstar does.
  */
-function inlineFieldValue(captured: string | undefined): string {
-  return (captured ?? "")
-    .replace(/^\*+/, "")
-    .trim()
-    .replace(/^`([^`]*)`$/, "$1");
+function inlineFieldValue(captured: string | undefined, closesAfterColon: boolean): string {
+  const raw = captured ?? "";
+  return (closesAfterColon ? raw.replace(/^\*\*/, "") : raw).trim().replace(/^`([^`]*)`$/, "$1");
 }
 
 function evidenceFieldOccurrences(section: string, field: string): EvidenceFieldOccurrence[] {
@@ -1136,8 +1144,11 @@ function evidenceFieldOccurrences(section: string, field: string): EvidenceField
   const originalLines = normalized.split("\n");
   const visibleLines = maskEvidenceRegions(normalized).split("\n");
   const escaped = field.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const qualifier = takesAttemptQualifier(field) ? ATTEMPT_QUALIFIER : "";
+  // Group 1 is the emphasis opening the label and group 3 one closing it before
+  // the colon; an opening with no closing there closes after the colon.
   const bulletPattern = new RegExp(
-    `^\\s*(?:[-*][ \\t]+)?(?:\\*\\*)?(?:Round[ \\t]+(\\d+):[ \\t]*)?${escaped}${ATTEMPT_QUALIFIER}(?:\\*\\*)?[ \\t]*:[ \\t]*(.*)$`,
+    `^\\s*(?:[-*][ \\t]+)?(\\*\\*)?(?:Round[ \\t]+(\\d+):[ \\t]*)?${escaped}${qualifier}(\\*\\*)?[ \\t]*:[ \\t]*(.*)$`,
     "i",
   );
   const occurrences: EvidenceFieldOccurrence[] = [];
@@ -1148,7 +1159,10 @@ function evidenceFieldOccurrences(section: string, field: string): EvidenceField
       for (let cellIndex = 0; cellIndex < cells.length - 1; cellIndex += 1) {
         const rawLabel = (cells[cellIndex] ?? "").replace(/^\*\*|\*\*$/g, "").trim();
         const roundMatch = /^Round\s+(\d+):\s*(.*)$/i.exec(rawLabel);
-        const label = (roundMatch?.[2] ?? rawLabel).replace(ATTEMPT_QUALIFIER_TAIL, "").trim();
+        const roundLabel = roundMatch?.[2] ?? rawLabel;
+        const label = (
+          takesAttemptQualifier(field) ? roundLabel.replace(ATTEMPT_QUALIFIER_TAIL, "") : roundLabel
+        ).trim();
         if (label.toLowerCase() !== field.toLowerCase()) continue;
         const value = (cells[cellIndex + 1] ?? "").trim().replace(/^`([^`]*)`$/, "$1");
         const resolved =
@@ -1165,10 +1179,10 @@ function evidenceFieldOccurrences(section: string, field: string): EvidenceField
 
     const match = bulletPattern.exec(visibleLine);
     if (!match) continue;
-    const value = inlineFieldValue(match[2]);
+    const value = inlineFieldValue(match[4], match[1] !== undefined && match[3] === undefined);
     const resolved = value.length > 0 ? value : fencedEvidenceValue(originalLines, lineIndex + 1);
     if (resolved !== null) {
-      occurrences.push({ round: match[1] ? Number(match[1]) : null, value: resolved });
+      occurrences.push({ round: match[2] ? Number(match[2]) : null, value: resolved });
     }
   }
   return occurrences;
@@ -1389,7 +1403,7 @@ function normalizeAuditArtifact(value: string): string {
 }
 
 const GATE_COMPLETED_EVIDENCE_FIELD =
-  /^\s*(?:\|\s*)?(?:[-*][ \t]+)?(?:\*\*)?(?:Spec review(?:ed revision| pack(?: seal)?)?|Spec audited evidence hash|Code quality review(?:ed revision| pack(?: seal)?)?|Code quality audited evidence hash|Prototype parity|Checkpoint verification (?:command|result|seal))(?:\*\*)?\s*(?::|\|)/i;
+  /^\s*(?:\|\s*)?(?:[-*][ \t]+)?(?:\*\*)?(?:Spec review(?:ed revision| pack(?: seal)?)?|Spec audited evidence hash|Code quality review(?:ed revision| pack(?: seal)?)?|Code quality audited evidence hash|Prototype parity(?: reviewed revision| review pack(?: seal)?| audited evidence hash)?|Checkpoint verification (?:command|result|seal|revision|note))(?:\*\*)?\s*(?::|\|)/i;
 
 const PHASE_AUTHORED_EVIDENCE_FIELD =
   /^\s*(?:\|\s*)?(?:[-*][ \t]+)?(?:\*\*)?(?:Round[ \t]+\d+:[ \t]*)?(?:TDD-ID|Layer|Test file|Selector|TC-ref|US-ref|CON-API-ref|Revision|RED revision|Replacement proof revision|RED test hash|RED test manifest|RED command|RED result|GREEN command|GREEN result|Satisfied-by|Falsifiability command|Falsifiability result|Falsifiability revision|reviewer verdict|RED failure mode|Refactor verify command|Refactor verify result|Oracle proof|qa-gatekeeper|Shared-artifact re-verify)(?:\*\*)?\s*(?::|\|)/i;

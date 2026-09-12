@@ -72,9 +72,8 @@ procedure, in four steps:
    step 3 records under the evidence file's path. `npx qfai validate` computes
    the completion subject exactly this way, so a digest recorded by a reviewer
    who followed this paragraph is the digest gate item 10 recomputes — which is
-   what lets a second party check one at all. Before this paragraph, six choices
-   were each open and a recorded value was reproducible only inside the run that
-   wrote it.
+   what lets a second party check one at all. Without it, six choices are left
+   open, and a recorded value is reproducible only inside the run that wrote it.
 
    The fields, per subject:
 

@@ -1759,6 +1759,59 @@ describe("QFAI-TDDLIST-008", () => {
     });
   });
 
+  it("reads a selector that begins with a globstar as written", async () => {
+    // Taking every leading asterisk off a value, as the bold-colon spelling's
+    // closing emphasis needed, turned `**/sample` into `/sample`, and the row
+    // then disagreed with its own ledger selector.
+    await withProject(async (root) => {
+      const evidence = completeEntry("Unit").replace("- Selector: sample", "- Selector: **/sample");
+      const issues = await runIssuesOn(
+        root,
+        ledger([{ status: "done", evidence: IMPLEMENT_POINTER, selector: "**/sample" }]),
+        { ".qfai/evidence/implement-spec-0001.md": evidence },
+      );
+      expect(issues.map((issue) => issue.message).join("\n")).not.toContain(
+        "Selector matching ledger value",
+      );
+    });
+  });
+
+  it("does not read the attempt qualifier on a field that records one value per round", async () => {
+    // `(attempt M)` belongs to the reviewer verdict. Read on every field, a
+    // malformed `Round 1: Revision (attempt 2)` satisfied the round's revision.
+    await withProject(async (root) => {
+      const evidence = completeEntry("Unit").replace(
+        "- Round 1: Revision: abc1230000000000000000000000000000000000",
+        "- Round 1: Revision (attempt 2): abc1230000000000000000000000000000000000",
+      );
+      const codes = await runOn(root, ledger([{ status: "done", evidence: IMPLEMENT_POINTER }]), {
+        ".qfai/evidence/implement-spec-0001.md": evidence,
+      });
+      expect(codes).toContain("QFAI-TDDLIST-008");
+    });
+  });
+
+  for (const sibling of [
+    "- Prototype parity reviewed revision: abc1230000000000000000000000000000000000",
+    "- Checkpoint verification revision: abc1230000000000000000000000000000000000",
+  ]) {
+    it(`ends the audited subject at ${sibling.slice(2, sibling.indexOf(":"))} when it comes first`, async () => {
+      // The region ends at the first stage-completion field or labelled
+      // sibling. A sibling the gate did not recognise stayed in the subject it
+      // computed, and the reviewer's digest over the documented region failed.
+      await withProject(async (root) => {
+        const evidence = completeEntry("Unit").replace(
+          "- qa-gatekeeper: PASS",
+          `- qa-gatekeeper: PASS\n${sibling}`,
+        );
+        const codes = await runOn(root, ledger([{ status: "done", evidence: IMPLEMENT_POINTER }]), {
+          ".qfai/evidence/implement-spec-0001.md": evidence,
+        });
+        expect(codes).not.toContain("QFAI-TDDLIST-008");
+      });
+    });
+  }
+
   it("keeps a fenced reviewer verdict out of the audited subject", async () => {
     await withProject(async (root) => {
       const secondRoundRevision = "bcd1230000000000000000000000000000000000";
