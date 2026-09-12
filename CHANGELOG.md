@@ -6,6 +6,32 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **The FIFO refusal test runs its assertion against a fixture that exists**
+  (#1580). It decided whether the platform could host a FIFO by reading
+  `mkfifo`'s exit status. Git Bash ships `mkfifo`, so on Windows it exits `0`
+  and creates the FIFO inside the MSYS layer, where the running process — using
+  Win32 — cannot see it at all. The row therefore did not skip: `init` found no
+  collision, wrote the template, and the assertion compared a real file against
+  `isFIFO()`.
+
+  It now checks the fixture instead of the tool, so it asserts where a FIFO was
+  planted and skips where none was. The local package suite goes green, which
+  it had not been on this platform.
+
+### Removed
+
+- **The archetype tie-breaker, which nothing called** (#1583).
+  `core/skill/archetypeTieBreaker.ts` resolved two archetypes sharing an
+  aggregate taste-interview score. Its only importer was its own test, it was
+  not on the export surface, and the input it needed — a score from a taste
+  interview — is not produced anywhere since rating was removed.
+
+  The alphabetical tie-break it implemented is stated in the brand catalog's
+  Selection Guide, which is what an agent reads, and a guard already pins that
+  sentence.
+
+### Fixed
+
 - **The remediation for an unreplaced `DESIGN.md` names a step that exists.**
   `QFAI-DCON-034` told an operator to run `/qfai-discussion`, "which emits the
   draft". That stage stopped emitting it when authoring moved to `/qfai-sdd`
