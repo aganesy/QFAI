@@ -3495,13 +3495,13 @@ async function readTestFileContent(root: string, testFile: string): Promise<stri
  *
  * A cell is never split on commas. A comma is legal inside a single vitest/jest name — this repo
  * has `falls back to the built-in set, and labels it, when the file is absent` — so a comma split
- * would invent entries that match nothing.
+ * would invent entries that match nothing. Cells persisted under the older comma rule are read by
+ * `legacyCommaEntries`, which splits only once the file is known to contain every part.
  *
- * The array form has to be parsed here rather than left to the containment check below. An array
- * reaching that check unsplit matched on its **last** element alone, via the last-identifier
- * fallback: `["missing_test","existing_test"]` resolved on `existing_test` and reported nothing
- * about the missing first one, which is the whole failure `TDDLIST_SELECTOR_UNRESOLVED` exists to
- * report.
+ * The array form has to be parsed here rather than left to the containment check below. That check
+ * compares the cell's text against the file, and no test file contains the literal
+ * `["one_test","another_test"]` — so an array reaching it unsplit is reported whether or not both
+ * of its tests exist, and the row's real state is unreadable either way.
  */
 function selectorEntries(selector: string): string[] {
   const trimmed = selector.trim();
@@ -3525,42 +3525,7 @@ function selectorEntries(selector: string): string[] {
   return [trimmed];
 }
 
-/**
- * Whether a ledger `Selector` names something present in the test file.
- *
- * Selectors are written in whatever the project's runner accepts —
- * `tests/x_test.py::TestA::test_b`, `describe > renders header`,
- * `"renders the header"` — so this is a containment check, not a parse. Two
- * chances to match, in order of strength:
- *
- * 1. the selector text after any `path::` prefix appears verbatim;
- * 2. its last identifier-shaped token appears.
- *
- * Deliberately lenient. Both consumers treat a match as evidence *for* the
- * test's presence, so a false negative costs a warning that a false positive
- * would silently swallow.
- *
- * **Every entry must resolve**, not just one. A row carrying several entries is claiming all of
- * them; one surviving element cannot vouch for a deleted sibling.
- */
-function selectorResolves(selector: string, content: string): boolean {
-  return selectorEntries(selector).every((entry) => entryResolves(entry, content));
-}
-
-function entryResolves(entry: string, content: string): boolean {
-  const withoutPath = normalizeSelector(entry);
-  if (withoutPath === null) {
-    return false;
-  }
-  if (withoutPath.length >= 3 && content.includes(withoutPath)) {
-    return true;
-  }
-  const tokens = withoutPath.match(/[A-Za-z_][A-Za-z0-9_]{2,}/g);
-  const last = tokens?.[tokens.length - 1];
-  return last !== undefined && content.includes(last);
-}
-
-/** The selector reduced to what both checks compare: quotes off, `path::` prefix off. */
+/** The selector reduced to what the check compares: quotes off, `path::` prefix off. */
 function normalizeSelector(selector: string): string | null {
   const trimmed = selector.replace(/^[`"']+|[`"']+$/g, "").trim();
   if (trimmed.length === 0) {
@@ -3572,34 +3537,76 @@ function normalizeSelector(selector: string): string | null {
 }
 
 /**
- * The same containment check WITHOUT the last-identifier fallback.
+ * Whether a ledger `Selector` names something present in the test file.
  *
- * `CR-20260818-0001`, approved 2026-08-23, option A. `selectorResolves` is deliberately lenient
- * because its other consumer treats a match as evidence *for* a test's presence, where a false
- * negative costs a warning and a false positive would swallow one. `TDDLIST_STALE_STATUS` reads it
- * in the opposite direction — a match is evidence the row's `todo` is STALE — so the same leniency
- * inverts: the last identifier of "renders the header" is `header`, which appears in almost any test
- * file, and the rule fires on rows whose test genuinely does not exist.
+ * Selectors are written in whatever the project's runner accepts —
+ * `tests/x_test.py::TestA::test_b`, `describe > renders header`,
+ * `"renders the header"` — so this is containment, not a parse: the selector text, after any
+ * `path::` prefix is dropped, must appear in the file as written.
  *
- * A rule whose entire value is being trusted cannot afford that. The carve-out is here rather than in
- * `selectorResolves` so the other consumer keeps the leniency `drift-protocol.md` chose on purpose,
- * and the trade is stated: a row whose test exists under a slightly reworded title stops being
- * reported as stale — a false negative replacing a false positive, on a `warning` with no error-level
- * consequence.
+ * **No token fallback.** Matching only the selector's last identifier-shaped word would accept
+ * `header` for "renders the header", and `header` appears in almost any test file. Both rules that
+ * read this treat the answer as decisive — one reports a `done` row whose test is absent, the other
+ * reports a `todo` row whose test is present — so an answer that near-always says "resolved" leaves
+ * the first rule reporting nothing and the second reporting everything.
  *
- * **Each `::` segment is required separately, not the joined string**, and that is a deliberate
- * departure from the option's literal wording ("verbatim containment of the selector"). A pytest
- * selector normalises to `TestX::test_reconcile_head`, and no Python file contains that text — the
- * class and the method are on different lines. Requiring the joined form turned a shape the suite
- * already covers into a false negative, which is the same defect this is repairing, pointed the other
- * way. Requiring every segment keeps the strictness where it matters: a one-segment selector like
- * `validates the header` must still appear in full, so the `header` fallback stays dead.
+ * The trade is stated: a test that exists under a reworded title no longer resolves, so its row is
+ * reported until its `Selector` is corrected. That is the reportable state — the ledger cell and the
+ * test have diverged — and both rules are `warning`, so nothing fails on it.
+ *
+ * **Each `::` segment is required separately, not the joined string.** A pytest selector normalises
+ * to `TestX::test_reconcile_head`, and no Python file contains that text, because the class and the
+ * method are on different lines. Requiring every segment keeps the strictness where it matters: a
+ * one-segment selector like `validates the header` must still appear in full.
+ *
+ * **Every entry must resolve**, not just one. A row carrying several entries is claiming all of
+ * them; one surviving element cannot vouch for a deleted sibling.
+ *
+ * The second reading below is `selector-granularity.md` § Reading a cell written under the old
+ * comma rule: before the array form a multi-entry cell was a comma-separated list, and read as one
+ * name such a row can never resolve again.
  */
-function selectorResolvesVerbatim(selector: string, content: string): boolean {
-  return selectorEntries(selector).every((entry) => entryResolvesVerbatim(entry, content));
+function selectorResolves(selector: string, content: string): boolean {
+  const entries = selectorEntries(selector);
+  if (entries.every((entry) => entryResolves(entry, content))) {
+    return true;
+  }
+  const legacy = legacyCommaEntries(selector, entries);
+  return legacy !== null && legacy.every((part) => entryResolves(part, content));
 }
 
-function entryResolvesVerbatim(entry: string, content: string): boolean {
+/**
+ * A bare comma-bearing cell re-read as the entry list it meant before the array form.
+ *
+ * `selector-granularity.md` § Reading a cell written under the old comma rule, step 2: ledgers
+ * already persisted in projects hold `renders the header, renders the footer` meaning two names, and
+ * read as one entry that row can never resolve again. The split is adopted only when the file
+ * contains **every** part, so it cannot invent entries out of one name that legitimately holds a
+ * comma — the caller has already tried that reading and it wins when it answers.
+ *
+ * `null` for the two cells this must not touch:
+ *
+ * - the **JSON array form**, including a one-element array, which § Entry form makes the explicit
+ *   way to write a single name that would otherwise read as a list;
+ * - a cell with no comma, where the split would return the entry the caller just rejected.
+ *
+ * The array form is recognised by what `selectorEntries` returned rather than by parsing again: a
+ * bare cell comes back as the trimmed cell itself, and a parsed element never equals the `[…]` text
+ * it came from.
+ */
+function legacyCommaEntries(selector: string, entries: string[]): string[] | null {
+  const only = entries.length === 1 ? entries[0] : undefined;
+  if (only === undefined || only !== selector.trim()) {
+    return null;
+  }
+  const parts = only
+    .split(",")
+    .map((part) => part.trim())
+    .filter((part) => part.length > 0);
+  return parts.length > 1 ? parts : null;
+}
+
+function entryResolves(entry: string, content: string): boolean {
   const withoutPath = normalizeSelector(entry);
   if (withoutPath === null) {
     return false;
@@ -5255,7 +5262,7 @@ async function validateSpecTddList(
     const testFileContent = await readTestFileContent(root, cell(ref, "Test file"));
     if (testFileContent === null) continue;
     const selector = cell(ref, "Selector");
-    if (!selectorResolvesVerbatim(selector, testFileContent)) continue;
+    if (!selectorResolves(selector, testFileContent)) continue;
     issues.push(
       issue(
         "TDDLIST_STALE_STATUS",
