@@ -119,12 +119,24 @@ Every major artifact in the stage should include this table schema:
   It exists so an author→reviewer collision is detectable after the fact from the evidence alone;
   the same instance appearing in an authoring step and in a review step over the same artifact is
   a reviewer-independence violation.
-- **A grilling session that settled a decision agent-to-agent adds a row for it**, with
-  `Task title` = `grilling: <the decision>` and `Agent instance` = the agent whose
-  recommendation was adopted. That row is what a later reviewer reads its
-  `Recommended and unadjudicated` answer off: a reset instance holds no memory of the
-  session, so without the row the field cannot be answered honestly and the review has
-  nothing to check against.
+- **A grilling session adds a row for every decision it settled**, with
+  `Task title` = `grilling(<where>/<adjudication>): <the decision>` and `Agent instance` = the
+  agent that **made the recommendation**, whether or not it was taken. That row is what a
+  later reviewer reads its `Recommended and unadjudicated` answer off: a reset instance
+  holds no memory of the session, so without the row the field cannot be answered
+  honestly and the review has nothing to check against. The field asks what this reviewer
+  recommended, so the recommender is what the row has to name — "the agent whose
+  recommendation was adopted" is undefined for the ordinary case where the user chose
+  something else.
+- **`<where>` is the stage's own name for where the session ran** — a phase for a spec
+  stage, `-` for a stage that has one session — and **`<adjudication>` is `user` or
+  `agents`**. Both are in the title because the schema has no column for either, and a
+  row that cannot be assigned to a place is one an omission elsewhere can be counted
+  against. The two outcomes point opposite ways — a user-settled decision leaves
+  the griller free to review the artifact, an agent-settled one makes the artifact wrong
+  until somebody decides — so a row recording only that a session happened tells the
+  reviewer nothing it can act on. One format, always parenthesized, so a gate selecting
+  `grilling(` finds every row.
 - `PENDING` records a gate that could not be run — the only honest status for the exhausted-budget
   branch below, which mandates it. It is never a substitute for `PASS`: DONE stays blocked while
   any row is `PENDING`, and the stage stays resumable. A skill that allows only `PASS`/`REVISE`
@@ -190,7 +202,7 @@ unadjudicated` is read off that record, not off recollection.
 **The record answers either way, and silence answers nothing.** The question the
 field asks is whether any decision was settled agent-to-agent, so the record
 answers that and not whether a session ran. A stage that settled none writes one
-row reading `grilling: none` — whether it ran no session at all, or ran one that
+row reading `grilling(-/none): none` — whether it ran no session at all, or ran one that
 escalated every decision and settled nothing. A stage that settled some writes a
 row per decision. A summary carrying neither is incomplete, and that is the
 `REVISE` — not an inference in either direction. Absence of rows cannot be read
@@ -208,7 +220,7 @@ took, and that is true however the review was routed. The reviewer's own
 recommendations are covered because they are a subset, and the dual-role table
 above is what decides whether that reviewer may rule at all.
 
-The `grilling: none` row records a fact rather than a step, so it names no agent:
+The `grilling(-/none): none` row records a fact rather than a step, so it names no agent:
 `Agent instance` is `n/a`, `Role`, `Input (refs)` and `Output (refs)` are `-`,
 and `Status` is `PASS`. Writing a role or an instance there would invent
 provenance for work nobody did, which is the failure the `Agent instance` column
@@ -221,8 +233,10 @@ withdrawn. Whoever closes it amends the row in place, and usually no grilling se
 running when that happens: the reviewer that reopened the decision, the user
 answering it directly, or the agent that removed it as the requested fix. The
 obligation follows the act, not the session —
-`Task title` becomes `grilling: <the decision> (settled by the user)` or
-`(withdrawn from the artifact)` — so the next reviewer reads the disposition
+`Task title` becomes `grilling(<where>/user): <the decision> (settled by the user)` or
+`grilling(<where>/withdrawn): <the decision> (withdrawn from the artifact)` — the
+parenthesized fields survive the rewrite, because a gate that selects on them
+skips any row that drops them, and these are the rows a dispute produced — so the next reviewer reads the disposition
 rather than inferring it. Without that, a live row and a closed one look
 identical, and a reviewer deriving `none` from the artifact has to contradict the
 record to do it, or keep a stale non-`none` value that blocks a `PASS` nothing is

@@ -246,15 +246,65 @@ sections below add only what is specific to a session; where they and the
 baseline overlap, the baseline governs.
 
 One thing is delegated and one only: reading a fact the environment holds. The
-questions are never delegated — a round is put to the user by the agent the user
-is talking to.
+questions are never delegated — a round is put by the agent that holds the
+session, to whoever is answering it.
+
+Who that is depends on the mode. In a session with a user, it is the user, and
+the agent they are talking to is the one that asks. In a session between agents
+there is no user to reach, so the griller puts the round to the authors and the
+orchestrator holds both. That is a different answerer, not a delegated question:
+nothing hands the asking to a third agent, and the orchestrator still answers
+nothing itself.
+
+A round between agents may have several authors, because one frontier can hold
+decisions belonging to different drafting roles.
+
+- The round goes to **every author whose decisions it contains**, each seeing
+  the whole round. A decision reads differently beside the ones next to it, and
+  an author shown only its own share cannot say so.
+- **Every answer is collected before the frontier is recomputed.** Recomputing
+  on the first reply settles the rest against a tree that moved under them.
+- **Two authors answering one question differently is itself a decision**, and
+  it joins the frontier rather than being averaged or decided by the griller. If
+  the budget ends with it open, it escalates like any other.
+- **A fact only the user holds goes to the user, not to an author.** No author
+  can answer an unpublished constraint or an intention nobody wrote down, and
+  the convergence rules escalate decisions rather than facts — so without this
+  the fact sits on the frontier until the budget ends, taking every decision
+  waiting on it with it. It escalates immediately, as a request for the value
+  rather than a choice. Under a no-question mode it reaches nobody, and what
+  follows depends on the fact rather than on its kind: where the consuming
+  document declares the value undefaultable the run stops and names it
+  (`.qfai/assistant/constitution/constitution.md` Article X, rule 4), and where
+  the document has a default that default is recorded as a labelled assumption
+  beside the open question, which is the ordinary no-question path. Stopping on
+  every user-held fact would block a run over a defaultable date.
 
 ### Orchestrator Protocol (MUST)
 
-- The orchestrator computes the frontier, puts each round, and reads the
-  answers. It does not decide a frontier question on the user's behalf.
-- It MUST NOT record an answer the user did not give, and MUST NOT self-approve
-  the session's end condition.
+- The orchestrator computes the frontier and reads the answers. It does not
+  decide a frontier question on anyone's behalf.
+- **Who puts the round depends on the mode, and exactly one role does.** With a
+  user, the orchestrator puts it. Between agents, the griller puts it and the
+  orchestrator does not — a session where both do is one where an author is
+  asked twice and the two answers have no tie-break.
+- It MUST NOT record an answer **as the user's** that the user did not give, and
+  MUST NOT self-approve the session's end condition. An author's answer in an
+  agent-to-agent round is recorded as that author's position, with whose it is:
+  the round cannot be recomputed, a disagreement cannot be kept, and an
+  escalation cannot carry the positions to the user unless the answers are
+  held.
+- **Agreement closes a node; it does not settle a decision.** Where the authors
+  and the griller land on one answer, the node leaves the frontier — there is
+  nothing left to put in a further round, and a rule that kept it there would
+  re-ask a question everyone has answered. It is not settled: only the user's
+  answer or authoritative evidence settles one, and an agreed answer nobody
+  adjudicated is what a stage records as `agents` and puts to the user.
+
+  The two are one state read for two purposes. _Open_ is about the round — is
+  there anything to ask. _Settled_ is about the decision — has anyone with the
+  standing to take it done so. Conflating them is how an agreed answer reaches a
+  draft as though it were chosen.
 
 ### Capability Probe (MUST)
 
@@ -295,7 +345,10 @@ invoking stage's. What it confirms about the session is:
 - no decision was recorded that the user did not answer, and none was assumed
   that the assumption path excludes;
 - a fact taken as settled names where it was read;
-- the session ended on its own condition or on the user's word, not on a count.
+- the session ended on its own condition or on the user's word — or, between
+  agents, on the round budget that is the one place a count ends a session
+  (`.qfai/assistant/constitution/review-convergence.md`). A count anywhere else
+  is the finding.
 
 - Reviewer independence is defined normatively in
   `.qfai/assistant/constitution/shared-skill-delegation-baseline.md#definition-independent-reviewer-normative`.
