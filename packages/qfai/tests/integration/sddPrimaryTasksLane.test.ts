@@ -13,12 +13,13 @@
 // QFAI:SPEC-0013:TC-0013-0026
 // QFAI:SPEC-0013:TC-0013-0027
 
-import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
 import { describe, expect, it } from "vitest";
 
+import { runDoctor } from "../../src/cli/commands/doctor.js";
 import { defaultConfig } from "../../src/core/config.js";
 import { validateDesignAudit } from "../../src/core/validators/designAudit.js";
 
@@ -59,6 +60,43 @@ async function withWorkspace(
   } finally {
     await rm(root, { recursive: true, force: true });
   }
+}
+
+type PreflightCheck = { id: string; severity: string; message: string };
+
+/**
+ * What `qfai prototyping preflight` answers over a workspace: its exit code, and
+ * the check that reads the UI contracts. The command is `doctor --profile
+ * prototyping`; the other checks it runs fail in a bare workspace too, so the
+ * contract check is what says why.
+ */
+async function prototypingPreflight(
+  root: string,
+): Promise<{ exitCode: number; uiContracts: PreflightCheck | undefined }> {
+  const outPath = path.join(root, ".qfai", "report", "preflight.json");
+  const exitCode = await runDoctor({
+    root,
+    rootExplicit: true,
+    format: "json",
+    outPath,
+    profile: "prototyping",
+  });
+  const report: unknown = JSON.parse(await readFile(outPath, "utf-8"));
+  const checks: unknown[] =
+    typeof report === "object" &&
+    report !== null &&
+    "checks" in report &&
+    Array.isArray(report.checks)
+      ? report.checks
+      : [];
+  const uiContracts = checks.find(
+    (check): check is PreflightCheck =>
+      typeof check === "object" &&
+      check !== null &&
+      "id" in check &&
+      check.id === "prototyping.uiContracts",
+  );
+  return { exitCode, uiContracts };
 }
 
 function uiContractWithEmptyPrimaryTasks(): string {
@@ -116,6 +154,22 @@ describe("TC-0013-0026: QFAI-AUD-001 aligned lane fails when primary_tasks is em
       expect(message).toMatch(/order_create/);
       // 3. Rule token: QFAI-AUD-001 appears in the message.
       expect(message).toMatch(/QFAI-AUD-001/);
+    });
+  });
+
+  it("stops the /qfai-prototyping preflight on the screen with no primary task", async () => {
+    // The obligation names the stage refusing to start as well as the lane
+    // failing. The preflight read no primary task, so the contract the lane
+    // refuses was one the stage started on.
+    await withWorkspace({ uiContract: uiContractWithEmptyPrimaryTasks() }, async (root) => {
+      const { exitCode, uiContracts } = await prototypingPreflight(root);
+      expect(exitCode).not.toBe(0);
+      expect(uiContracts?.severity).toBe("error");
+      expect(uiContracts?.message).toMatch(/\.qfai\/contracts\/ui\/sample\.yaml#order_create/);
+    });
+    await withWorkspace({ uiContract: uiContractWithPopulatedPrimaryTasks() }, async (root) => {
+      const { uiContracts } = await prototypingPreflight(root);
+      expect(uiContracts?.severity).toBe("ok");
     });
   });
 });
