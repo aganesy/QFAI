@@ -379,6 +379,114 @@ describe("cross-AI rules surface (.agents/rules/ master)", () => {
     });
   });
 
+  // The form a question arrives in is the same wherever an agent works, so the
+  // master ships and both copies are held to the same clauses.
+  describe("user-questions rule", () => {
+    const MASTERS = [
+      ".agents/rules/user-questions.md",
+      "packages/qfai/assets/init/root/.agents/rules/user-questions.md",
+    ];
+
+    it.each(MASTERS)("%s states every clause", async (rel) => {
+      const text = await readFile(path.join(ROOT, rel), "utf-8");
+      // One token per clause that no other clause in the file carries.
+      for (const clause of [
+        /No exceptions/i,
+        /short\s+label/,
+        /Recommend/,
+        /numbered\s+plain-text\s+choices/,
+        /question\s+budget/i,
+      ]) {
+        expect(text).toMatch(clause);
+      }
+    });
+
+    // An exception is where an agent goes when it would rather not ask, and the
+    // question it skips is the one it was least sure of. Stated as a reason
+    // rather than a prohibition, because a prohibition invites a search for the
+    // case it does not cover.
+    it.each(MASTERS)("%s admits no light question", async (rel) => {
+      const text = await readFile(path.join(ROOT, rel), "utf-8");
+      expect(text).toMatch(/no\s+class\s+of\s+question\s+light\s+enough\s+to\s+skip\s+it/);
+      expect(text).toMatch(/would\s+rather\s+not\s+ask/);
+    });
+
+    // Availability is judged per question, not per host. A tool present but
+    // withheld in this mode is the fallback's case; a tool that cannot carry the
+    // answer's shape — a multiple-answer question put to exclusive options — is
+    // not callable for that question, and forcing it loses the constraint.
+    it.each(MASTERS)("%s judges the tool per question", async (rel) => {
+      const text = await readFile(path.join(ROOT, rel), "utf-8");
+      expect(text).toMatch(/at\s+the\s+moment\s+the\s+question\s+is\s+asked/);
+      expect(text).toMatch(/Callable\s+for\s+this\s+question,\s+not\s+in\s+general/);
+      expect(text).toMatch(/one\s+yes-or-no\s+per\s+option/);
+    });
+
+    // A recommendation invented to satisfy a host that requires one is the
+    // failure the clause exists to prevent, so the conflict resolves the other
+    // way: the cheapest option to reverse goes first, and the description says
+    // the choice is close.
+    it.each(MASTERS)("%s never invents a recommendation", async (rel) => {
+      const text = await readFile(path.join(ROOT, rel), "utf-8");
+      expect(text).toMatch(/Where\s+no\s+option\s+is\s+better,\s+say\s+that\s+too/);
+      expect(text).toMatch(/cheapest\s+to\s+reverse/);
+    });
+
+    // Reading the limit off the tool is what keeps the rule followable on a host
+    // that takes fewer questions than any number written here would assume.
+    it.each(MASTERS)("%s reads the host's limit rather than naming one", async (rel) => {
+      const text = await readFile(path.join(ROOT, rel), "utf-8");
+      expect(text).toMatch(/Read\s+the\s+limit\s+off\s+the\s+tool/);
+      expect(text).toMatch(/Do\s+not\s+hard-code\s+a\s+number/);
+      // The three properties a split has to respect, or it becomes a way to ask
+      // past a cap, to override a stop, or to act on half a set.
+      expect(text).toMatch(/set\s+is\s+fixed\s+before\s+the\s+first\s+call/i);
+      expect(text).toMatch(/Read\s+each\s+batch's\s+answers\s+for\s+a\s+stop/);
+      expect(text).toMatch(/No\s+answer\s+is\s+acted\s+on\s+until\s+the\s+set\s+is\s+exhausted/);
+    });
+
+    // The selection constraint is the part a numbered list loses, and losing it
+    // changes the question: "pick one" and "pick all that apply" are different.
+    it.each(MASTERS)("%s keeps the selection constraint in the fallback", async (rel) => {
+      const text = await readFile(path.join(ROOT, rel), "utf-8");
+      expect(text).toMatch(/how\s+many\s+options\s+may\s+be\s+chosen/);
+      expect(text).toMatch(/Say\s+why\s+the\s+tool\s+was\s+not\s+callable/);
+    });
+
+    // The form and the count are independent. Without this the rule reads as a
+    // licence to ask more, and a well-shaped question that should not be asked
+    // is still one that should not be asked.
+    it.each(MASTERS)("%s says what it is not", async (rel) => {
+      const text = await readFile(path.join(ROOT, rel), "utf-8");
+      expect(text).toMatch(/Not\s+a\s+question\s+budget/);
+      expect(text).toMatch(/Not\s+a\s+reason\s+to\s+ask\s+more/);
+      expect(text).toMatch(/what\s+the\s+environment\s+can\s+settle/);
+    });
+
+    it.each([
+      "AGENTS.md",
+      "CLAUDE.md",
+      ".github/copilot-instructions.md",
+      "packages/qfai/assets/init/root/AGENTS.md",
+      "packages/qfai/assets/init/root/CLAUDE.md",
+      "packages/qfai/src/cli/commands/init.ts",
+    ])("%s cites the rule master", async (rel) => {
+      const text = await readFile(path.join(ROOT, rel), "utf-8");
+      expect(text).toContain("user-questions.md");
+    });
+
+    // The two rules divide one subject: which questions to ask, and what each
+    // one looks like. A grilling round is delivered under this rule's § 4, so
+    // the pointer is what stops the mechanics being written twice.
+    it.each([
+      ".agents/rules/grilling.md",
+      "packages/qfai/assets/init/root/.agents/rules/grilling.md",
+    ])("%s points at the question form", async (rel) => {
+      const text = await readFile(path.join(ROOT, rel), "utf-8");
+      expect(text).toContain("user-questions.md");
+    });
+  });
+
   // A decision tree is a thing an adopter's project has as much as this one
   // does, so the master is shipped and both copies are held to the same
   // clauses.
