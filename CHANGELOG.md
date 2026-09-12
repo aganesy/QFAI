@@ -15,8 +15,8 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   `CR-20260913-0001` records both sides, blocks the three rows whose
   obligations the product contradicts — two of one pack and one of another that
   shares the decision — and says which it leaves alone, and puts the part
-  a rerun cannot settle by following the product: two decision records chose the
-  band, the removal overturned them on the opposite rationale, and whether a
+  a rerun cannot settle by following the product: three decision records chose
+  the band, the removal overturned them on the opposite rationale, and whether a
   reversed decision is rewritten or superseded is the user's to choose.
 
 ## [1.12.0] - 2026-09-12
