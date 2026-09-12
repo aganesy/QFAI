@@ -64,7 +64,8 @@ Decide whether the target is UI-bearing with `references/ui-bearing-playbook.md`
 
 Every UI-bearing pack must produce, as primary truth: `uiux/00_index.md`, `uiux/40_screen_contracts.md`, `uiux/50_review_input_bundle.md`. That is the whole family, on every UI-bearing surface including `cli`.
 
-Discussion writes no file outside its own pack. The brand SSOT — root `DESIGN.md` — is authored by `/qfai-sdd` Phase 0 from what this pack records: the classification in `01_Context.md`, the reference registries in `04_Sources.md`, and the `uiux/` sidecars. Interview for it here, in the depth `references/design-dna-intake.md` sets out, and record the answers; do not write the file.
+Discussion authors no design artifact outside its own pack. Its run also writes this stage's evidence and the cycle's review pack, which record what the run did rather than specify anything.
+The brand SSOT — root `DESIGN.md` — is authored by `/qfai-sdd` Phase 0 from what this pack records: the classification in `01_Context.md`, the reference registries in `04_Sources.md`, and the `uiux/` sidecars. Interview for it here, in the depth `references/design-dna-intake.md` sets out, and record the answers; do not write the file.
 
 A **cli-only** pack (`primary_surface: cli`, no visual secondary surface) stays `ui_bearing: true` and keeps all three sidecars, but the brand questions do not apply to it: `/qfai-prototyping` rejects `cli`, so no downstream reader consumes a `visual.*` token tree, and `/qfai-sdd` Phase 0 skips the freeze. The test is the whole classified surface set — `primary_surface` **and** every `secondary_surfaces` entry. See `references/ui-bearing-playbook.md#visual-prototyping-surfaces-vs-cli`.
 
@@ -154,14 +155,22 @@ A session has four endings, and three of them let authoring start:
 
 **No ending authorizes authoring while a `hard-required` input this invocation consumes is missing.** Those are excluded from both assumption paths: an interactive closure still asks for them, and a no-question run stops and names them. Registering an open question does not make an input defaultable — the value is what the run needs, and a question about it is not one.
 
-**Nor while a decision some document requires the user to make and record is open.** The
-`hard-required` bound above does not reach it: that one is about an input the run consumes,
-and this is a decision the run is not permitted to take. The visual direction is the case
-this skill has — `references/design-dna-intake.md` says only the user may choose a theme —
-and a closure that turned it into a labelled assumption would have the run choose it, which
-is the one thing the document forbids. The rule states the same bound from its side: closing
-the questions waives the agent's own uncertainty, never an authorization the user has not
-given.
+**An interactive closure does not assume a decision some document requires the user to make
+and record.** `proceed` and `done` end the asking while the user is still there, so a
+decision they own is put again rather than assumed. The `hard-required` bound above does not
+reach it: that one is about an input the run consumes, and this is a decision the run is not
+permitted to take. The visual direction is the case this skill has —
+`references/design-dna-intake.md` says only the user may choose a theme. The rule states the
+same bound from its side: closing the questions waives the agent's own uncertainty, never an
+authorization the user has not given.
+
+**`--auto` is the other case, and its answer is already written.** Nobody is there to put the
+question to, so the documented path holds: take the most conventional candidate, record it
+`chosen_by: assumption`, open it in `11_OQ-Register.md`, and author — the open count is what
+blocks completion. That is the rule's own shape for a no-question mode, the defaulted value
+written down **and** labelled beside the open question. What is forbidden is the assumption
+on its own, and a bar on authoring here would produce neither: no pack, and so nowhere to
+register the question that was supposed to block it.
 
 `stopped` is the one the vocabulary must keep separate. The rule says a stop ends the session
 immediately and no further work follows it, so a closure that authorizes proceeding and a

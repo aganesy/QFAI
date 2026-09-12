@@ -301,11 +301,43 @@ describe.each(TREES)("%s — the discussion interview", (tree) => {
     const skill = await read(SKILL);
     expectPhrase(
       skill,
-      "**Nor while a decision some document requires the user to make and record is open.**",
+      "**An interactive closure does not assume a decision some document requires the user to make and record.**",
     );
     expectPhrase(skill, "only the user may choose a theme");
     expectPhrase(skill, "waives the agent's own uncertainty, never an authorization");
     // And the ending's own row says it, since that is the line an agent reads.
     expectPhrase(skill, "except one a document requires the user to make and record");
+  });
+
+  it("leaves the no-question path its documented answer", async () => {
+    // The bound is an interactive closure's. Applied to `--auto` it bars the
+    // one path written down for a visual run with nobody to ask, and bars it
+    // into a state that produces neither half: no pack, and so nowhere to
+    // register the question the bar was supposed to leave blocking.
+    const skill = await read(SKILL);
+    expectPhrase(skill, "**`--auto` is the other case, and its answer is already written.**");
+    expectPhrase(skill, "record it `chosen_by: assumption`, open it in `11_OQ-Register.md`");
+    expectPhrase(skill, "What is forbidden is the assumption on its own");
+  });
+
+  it("says which writes the pack-only rule was about", async () => {
+    // Read as every write, it forbids the stage evidence this run opens first —
+    // and it never covered the review pack either, which the cycle writes
+    // outside the pack by design.
+    const skill = await read(SKILL);
+    expectPhrase(skill, "Discussion authors no design artifact outside its own pack");
+    expectPhrase(skill, "record what the run did rather than specify anything");
+  });
+
+  it("agrees with the protocol whose output it redirects", async () => {
+    // The constitution outranks the skill and sits at P1 in its own read order,
+    // so a storage contract sending the summary straight into the pack is the
+    // instruction an agent follows — and it rebuilds the partial pack this
+    // change exists to prevent.
+    const protocol = await read("assistant/constitution/research-first-protocol.md");
+    expectPhrase(protocol, "goes to the invoking stage's own evidence when it is");
+    expectPhrase(protocol, "carried into the artifact that consumes it");
+    expectPhrase(protocol, "a run cancelled before that authorization leaves it behind");
+    expectPhrase(protocol, "Not persisted globally");
   });
 });
