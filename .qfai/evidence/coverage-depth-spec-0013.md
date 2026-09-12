@@ -132,7 +132,7 @@ turn on reasons an entry path cannot reach, chiefly these: the pairs left uncros
 importing the source constant, the absent incomplete-to-ready progression under `State
 transitions`, and the oracle caps named below.
 
-Six of the sixteen carry no ledger row, and are likewise scored from the pack:
+Seven of the seventeen carry no ledger row, and are likewise scored from the pack:
 
 - `sddTriage.test.ts` holds the whole of `TC-0013-0018` and `TC-0013-0019`.
 - `spec0013ActivePointerSurfaceTypeE2E.test.ts` holds the acceptance layer of `US-0013-0012`,
@@ -142,6 +142,10 @@ Six of the sixteen carry no ledger row, and are likewise scored from the pack:
   packs, `tests/cli/commands/sddPreflight.test.ts` drives the command around it, and
   `tests/validators/importLite.test.ts` drives the same function from the import-lite entrypoint.
   Neither story has an annotated case anywhere, which is what puts all three under step 2.
+- `tests/core/validators/designContractReadiness.test.ts` holds the half of `TC-0013-0022` a test can
+  reach — a missing root `DESIGN.md` required to raise `QFAI-DCON-030` at `error`. It carries no
+  annotation for any spec and no ledger row names it, so step 2 claims it for the one obligation
+  that has no annotated case.
 - `spec0013ActivePointerSurfaceType.test.ts` carries eight annotations, `TC-0013-0028` … `-0035`, and
   one case for each. It is the integration acceptance layer for all eight, and the ledger names it
   nowhere, so eight obligations draw coverage from a file no ledger row reaches. Its cases are scored
@@ -327,7 +331,7 @@ $ node packages/qfai/dist/cli/index.mjs validate --profile tdd --spec 0013 --fai
 
 **No spec-0013 obligation depends on a skipped test.** All sixteen belong to spec-0004, spec-0006,
 spec-0008 and spec-0014. None of the seventeen files that carry spec-0013 coverage contains a `.skip`,
-`.only` or `.todo` modifier of any kind, and all 298 of their cases ran. The sixteen findings are
+`.only` or `.todo` modifier of any kind, and all 361 of their cases ran. The sixteen findings are
 in this pack's *report* scope because the validator scans the whole test tree; they are not in its
 *coverage* scope, and they contribute to no cell in this matrix.
 

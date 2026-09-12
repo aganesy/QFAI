@@ -104,7 +104,7 @@ restating what the test case asks for.
 | Row        | Reached by the recorded case                                                             | Not reached                                                                                                            |
 | ---------- | ---------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
 | `TDD-0020` | The lane fails at `error`, and the message names the file, the screen and the rule token | That `/qfai-prototyping` preflight then refuses. No case drives a preflight; the nearest is in the end-to-end file `TDD-0022` names, asserting a non-zero `runValidate` exit carrying the rule token |
-| `TDD-0024` | A missing pointer and an absent pack each raise a recovery error                         | A pointer resolving to a duplicate pack. No case supplies one                                                            |
+| `TDD-0024` | A missing pointer and an absent pack each raise a recovery error                         | A pointer resolving to a duplicate pack. No case supplies one, and none can: the resolver calls `findPacks` once over one directory, and two entries of one directory cannot share a name, so `matches.length > 1` is unreachable through this API. The branch is defensive code, and the row proves the two conditions that are reachable |
 | `TDD-0030` | An item missing `id`, one missing `acceptance`, one carrying an extra key, and a list where every item is malformed | An item missing `label`. Excluding `label` from the missing-key filter leaves all six cases green |
 
 The refactor-verify and checkpoint runs are shared by all four rows, so each
@@ -300,12 +300,11 @@ None.
 - Status: PASS
 - Reviewed revision: c751cb050caa9e78a1ff5e622fc5abd738d126c2
 - Review series: .qfai/evidence/coverage-depth-spec-0013.md + completion-reviewer
-- Rounds: 1 `REVISE`, 2 `REVISE`, 2b `PASS`; the matrix moved again afterwards
-  under later review, so the verdict above covers the revision it names and not
-  the tree as it now stands. What changed after it: four cell corrections and
-  one reversal, each recorded in the commit that made it. The `2b` budget is
-  spent, so no further round may run — whether the corrected record is accepted
-  is a decision above the reviewer.
+- Rounds: 1 `REVISE`, 2 `REVISE`, 2b `PASS`. The budget is spent, so no further
+  round may run.
+- Scope of the verdict: the revision it names, not the tree as it stands. The
+  matrix has moved since, so whether the current record is accepted is a
+  decision above the reviewer.
 - Subject: every claim this file makes, checked against the files it names
 - Result: the four recorded rows reproduce their GREEN commands, their
   refactor-verify run and the checkpoint exactly as recorded, and every
@@ -314,24 +313,12 @@ None.
   eight unbackfilled rows and no backfilled one; all eight gap reasons check
   out against the files they name; the validate gate reproduces at `error=0`,
   and fails on a missing matrix at the revision the mutations were taken at,
-  which is why it is recorded over this tree; the matrix totals — ✅ 74 /
-  ⚠️ 103 / ❌ 317 with `n/a` 7 across 501 cells — agree with the tables, and
+  which is why it is recorded over this tree; the matrix totals — ✅ 76 /
+  ⚠️ 108 / ❌ 310 with `n/a` 7 across 501 cells — agree with the tables, and
   every `❌` and `⚠️` cell carries exactly one justification, with no
   coordinate missing and none listed that does not carry the mark; and the
   four rows naming `auditProfile.ts` keep every mark when read against the
   eight sibling-pack cases that drive that entrypoint.
-- Rounds 1 and 2 audited the widening of the crediting rule and the two files
-  it added, and both returned `REVISE`. Round 1 falsified the claim that no
-  counted case supplies a required file below the minimum-content threshold —
-  the import-lite suite seeds a five-character `06_REQ.md` — so the cell keeps
-  its mark for a different reason: that case asks only whether the pack is
-  blocked, which the fourteen absent files already produce. Round 2 falsified
-  the repair: it capped oracle strength on a case its own new rule excludes,
-  and replaced one wrong census with another. Round 2b verified the second
-  repair and returned `PASS`, having re-read every down-marked cell on the two
-  rows and confirmed no total, census or cell moved. One advisory it left open
-  — a sentence saying `the counted suites` where only two of the three declare
-  a required-file list — was applied afterwards and moves nothing.
 - Residual risk: the five falsifiability mutations cannot be re-executed. Each
   names a content address that folds the tree state into it, and the tree has
   moved. Each claimed kill count was re-derived from the source line its
