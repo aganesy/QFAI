@@ -4,6 +4,28 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ## [Unreleased]
 
+### Fixed
+
+- **The audit hash says which matrix its coverage-depth slice comes from**
+  (#1624). Step 3 adds a record for the part of the matrix that belongs to the
+  row's obligation and said nothing about when that part is read. Two reviewer
+  roles derived opposite values from one record — one taking the matrix as it
+  stood at the verdict, one as it stood at the verdict's `Reviewed revision` —
+  and both readings followed from the text. The values differ by a whole
+  record, so every hash in a spec split on a reading whenever a change added an
+  obligation to the matrix.
+
+  The slice is taken as the matrix stands when the verdict is taken. The other
+  reading has nothing to read: `Reviewed revision` excludes the evidence tree,
+  so it addresses no state of the matrix, while the completion gate recomputes
+  from the working tree — the reviewer hashes what the gate will hash.
+
+  A matrix that later names the row's obligation stales that row's verdicts,
+  which is the slice's price rather than a defect: hashing the file whole would
+  stale every verdict in the spec when any cell moved. A record re-attestation
+  closes it, because the revision has not moved — and it is not a rubber stamp,
+  since what it re-signs is a judgement over a subject that has grown.
+
 - **A design is grilled before it is fixed, and every stage does it** (#1591,
   #1594, #1595). A grilling session interviews an unfixed design as a tree of
   open decisions. The frontier is the decisions answerable now, put as one round
