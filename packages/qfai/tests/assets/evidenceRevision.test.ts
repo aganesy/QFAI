@@ -626,6 +626,21 @@ describe("the working-tree address has one notation", () => {
       // A hunk boundary shifted for readability moves a line between the hunk and
       // its context, so the same tree comes out as different bytes.
       expect(text).toContain("--indent-heuristic");
+      // Declared and not applied is the same as not declared: a ledger write
+      // during the phase moves the address the phase is recording.
+      expect(text).toContain(":(exclude,glob).qfai/evidence/**");
+      expect(text).toContain(":(exclude,glob).qfai/review/**");
+      expect(text).toContain(":(exclude,glob).qfai/specs/*/tdd/test-list.md");
+      expect(text).toContain('-- . "${exclude[@]}"');
+      // A driver marked binary in one checkout and not in another gives one
+      // change two shapes, and `Binary files ... differ` never moved at all.
+      expect(text).toContain("--text");
+      // An untracked embedded repository reports one directory entry and never
+      // the files under it, so every change inside leaves the address alone.
+      expect(text).toContain("An untracked embedded repository stops the address");
+      expect(text).toContain("Do not record an address over one");
+      // Decoding a path that is not valid UTF-8 turns distinct names into one.
+      expect(text).toContain("Bytes, never a decoded string");
       expect(text).toContain("diff.indentHeuristic");
       expect(text).toContain("-c diff.suppressBlankEmpty=false");
       // The short format cannot tell two dirty submodule states apart, so an

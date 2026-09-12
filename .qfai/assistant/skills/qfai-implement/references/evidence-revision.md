@@ -37,31 +37,37 @@ check. Gate item 10 rejects any other shape wherever a revision is recorded:
   1. **Collect**, from the repository root, with every option that moves the
      bytes pinned on the command line:
 
-     ```sh
+     ```bash
      root=$(git rev-parse --show-toplevel)
+     exclude=(':(exclude,glob).qfai/specs/*/tdd/test-list.md'
+              ':(exclude,glob).qfai/evidence/**'
+              ':(exclude,glob).qfai/review/**')
      git -C "$root" rev-parse HEAD
      git -C "$root" -c core.quotePath=false -c diff.submodule=short -c diff.suppressBlankEmpty=false diff HEAD \
-       --no-color --no-ext-diff --no-textconv -O/dev/null --ignore-submodules=none --binary --full-index --no-renames \
-       --diff-algorithm=myers --indent-heuristic --src-prefix=a/ --dst-prefix=b/ --unified=3 --inter-hunk-context=0 --
-     git -C "$root" -c core.quotePath=false ls-files --others --exclude-standard -z
+       --no-color --no-ext-diff --no-textconv -O/dev/null --ignore-submodules=none --text --full-index --no-renames \
+       --diff-algorithm=myers --indent-heuristic --src-prefix=a/ --dst-prefix=b/ --unified=3 --inter-hunk-context=0 \
+       -- . "${exclude[@]}"
+     git -C "$root" -c core.quotePath=false ls-files --others --exclude-standard -z -- . "${exclude[@]}"
      ```
 
      Each of those is there because leaving it off lets one tree have two
      addresses.
 
-     | Pinned                                                          | Without it                                                                                                                                                                                                                        |
-     | --------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-     | `-C "$root"`                                                    | `ls-files --others` enumerates only what is under the current directory, and reports paths relative to it — so where the agent stood changes the address                                                                          |
-     | `-c core.quotePath=false` and `-z`                              | A path holding non-ASCII or a control character comes back in a quoted display spelling, and the config changes that spelling for the same tree                                                                                   |
-     | `--full-index`                                                  | The `index` line abbreviates to `core.abbrev`, which differs per environment                                                                                                                                                      |
-     | `--src-prefix=a/ --dst-prefix=b/`                               | `diff.noprefix` and `diff.mnemonicPrefix` rewrite the headers                                                                                                                                                                     |
-     | `--no-renames` and `--diff-algorithm=myers`                     | `diff.renames` and `diff.algorithm` change the hunks for identical content                                                                                                                                                        |
-     | `-O/dev/null`                                                   | `diff.orderFile` reorders the file patches, so two changed files come out in different orders for one tree. An empty order file cancels it; `-c diff.orderFile=` does not — git reads the empty value as a path and exits `fatal` |
-     | `-c diff.submodule=short` and `--ignore-submodules=none`        | `diff.submodule` has three formats for one changed submodule, and a configured `ignore` can drop the change from the diff entirely                                                                                                |
-     | `--indent-heuristic`                                            | `diff.indentHeuristic` shifts a hunk boundary to a more readable place, so the same change comes out with a different line inside the hunk                                                                                        |
-     | `--unified=3`                                                   | `diff.context` changes how many lines surround each hunk, and with them the bytes                                                                                                                                                 |
-     | `--inter-hunk-context=0` and `-c diff.suppressBlankEmpty=false` | `diff.interHunkContext` merges two nearby hunks into one, and `diff.suppressBlankEmpty` changes the prefix on an empty context line                                                                                               |
-     | `--no-textconv`                                                 | A `.gitattributes` diff driver with `textconv` converts a file before diffing, and can render a real change as an empty diff. `--no-ext-diff` does not cover it                                                                   |
+     | Pinned                                                          | Without it                                                                                                                                                                                                                                                                         |
+     | --------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+     | `-C "$root"`                                                    | `ls-files --others` enumerates only what is under the current directory, and reports paths relative to it — so where the agent stood changes the address                                                                                                                           |
+     | `-c core.quotePath=false` and `-z`                              | A path holding non-ASCII or a control character comes back in a quoted display spelling, and the config changes that spelling for the same tree                                                                                                                                    |
+     | `--full-index`                                                  | The `index` line abbreviates to `core.abbrev`, which differs per environment                                                                                                                                                                                                       |
+     | `--src-prefix=a/ --dst-prefix=b/`                               | `diff.noprefix` and `diff.mnemonicPrefix` rewrite the headers                                                                                                                                                                                                                      |
+     | `--no-renames` and `--diff-algorithm=myers`                     | `diff.renames` and `diff.algorithm` change the hunks for identical content                                                                                                                                                                                                         |
+     | `-O/dev/null`                                                   | `diff.orderFile` reorders the file patches, so two changed files come out in different orders for one tree. An empty order file cancels it; `-c diff.orderFile=` does not — git reads the empty value as a path and exits `fatal`                                                  |
+     | `-c diff.submodule=short` and `--ignore-submodules=none`        | `diff.submodule` has three formats for one changed submodule, and a configured `ignore` can drop the change from the diff entirely                                                                                                                                                 |
+     | `--indent-heuristic`                                            | `diff.indentHeuristic` shifts a hunk boundary to a more readable place, so the same change comes out with a different line inside the hunk                                                                                                                                         |
+     | `--unified=3`                                                   | `diff.context` changes how many lines surround each hunk, and with them the bytes                                                                                                                                                                                                  |
+     | `--inter-hunk-context=0` and `-c diff.suppressBlankEmpty=false` | `diff.interHunkContext` merges two nearby hunks into one, and `diff.suppressBlankEmpty` changes the prefix on an empty context line                                                                                                                                                |
+     | `--no-textconv`                                                 | A `.gitattributes` diff driver with `textconv` converts a file before diffing, and can render a real change as an empty diff. `--no-ext-diff` does not cover it                                                                                                                    |
+     | `--text`                                                        | A `.gitattributes` driver marked `binary` in one checkout and not in another gives the same change a binary patch here and a text patch there. Treating everything as text settles it, and a binary file's own change moves the address, which `Binary files ... differ` never did |
+     | `-- . "${exclude[@]}"`                                          | The exclusions below are part of the command, not a later filter. Applied afterwards they are a second operation two implementations can disagree about, and skipped altogether a ledger write during the phase moves the address the phase is recording                           |
 
      **A dirty submodule stops the address.** The short format writes the same
      `-dirty` marker whatever changed inside it, and the superproject's
@@ -71,10 +77,16 @@ check. Gate item 10 rejects any other shape wherever a revision is recorded:
      take the address again, or record the observation against the submodule's
      own tree. Do not record an address over a dirty submodule.
 
-     The exclusions below apply to both the diff and the untracked list.
+     **An untracked embedded repository stops the address.** `ls-files --others`
+     reports one entry for it — the directory, with a trailing separator — and
+     never the files under it, so every change inside leaves the address where
+     it was, the same way a dirty submodule does. An entry ending in the path
+     separator is that case. Register it as a submodule, remove it, or record
+     the observation against its own tree. Do not record an address over one.
 
   2. **Exclude.** `.qfai/specs/*/tdd/test-list.md`, `.qfai/evidence/**` and
-     `.qfai/review/**`, from **both** the diff and the untracked list — they are
+     `.qfai/review/**`, in the pathspecs above, so **both** the diff and the
+     untracked list carry them — they are
      the record of the observation, not the thing observed. The review pack is
      on that list for the same reason the others are: a project may legitimately
      track `.qfai/review/**`, and then every reviewer answer written into it
@@ -115,11 +127,12 @@ check. Gate item 10 rejects any other shape wherever a revision is recorded:
      | The `HEAD` record's rev   | The object id `git rev-parse HEAD` printed, with its trailing newline removed and no abbreviation. Its length is the repository's object format, so a SHA-256 repository gives 64 characters where a SHA-1 one gives 40. Capturing stdout as bytes keeps the newline; a shell substitution drops it, and the two would address one tree differently |
      | `mode`                    | Exactly four octal digits, zero-padded, no prefix: `0644`, `0755`, `4755`, `0064`. The permission and special bits — the mode masked with `07777` — so a `setuid` bit moves the address and a mode below `0100` still has a spelling. Not `0o644`, and not git's six-digit tree mode                                                                |
      | A path                    | The repository-relative bytes `-z` returned, unquoted and unescaped                                                                                                                                                                                                                                                                                 |
-     | The join                  | A single `\n` between records, and none after the last                                                                                                                                                                                                                                                                                              |
+     | The join                  | A single `\n` byte between records, and none after the last                                                                                                                                                                                                                                                                                         |
+     | The sequence as a whole   | Bytes, never a decoded string. A path `-z` returns need not be valid UTF-8, and decoding turns every invalid byte into one replacement character — so two distinct names become one, and two producers address one tree differently. Concatenate the records as bytes and hash those                                                                |
 
-  4. **Hash.** SHA-256 of that string; record its 64 lowercase hexadecimal
-     characters. Lowercase here too: the recorded address is compared as a
-     string, so one producer's uppercase suffix and another's lowercase are two
+  4. **Hash.** SHA-256 of those bytes; record its 64 lowercase hexadecimal
+     characters. Lowercase here too: the recorded address is compared as text,
+     so one producer's uppercase suffix and another's lowercase are two
      addresses for one tree.
 
   An empty diff and an empty untracked list still contribute their records, so
