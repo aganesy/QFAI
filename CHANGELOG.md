@@ -4,6 +4,23 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ## [Unreleased]
 
+### Fixed
+
+- **The ATDD stage says when it could not read the globs it was given**
+  (#1703). `QFAI-ATDD-134`. The stage scans its own three directories, and the
+  extensions it looks for come from `validation.traceability.testFileGlobs`,
+  with a fallback to the JavaScript and TypeScript set when that yields none.
+
+  The fallback is right for a project that configured nothing. For a project
+  that configured globs and got no extension out of them, the stage scanned
+  extensions the project does not use, found no annotation, and reported every
+  obligation as uncovered — a configuration defect wearing the face of missing
+  tests. `QFAI-TRACE-124` says the same thing under the `sdd` and `full`
+  profiles, and is not in this profile’s gate list, so the gate the skill tells
+  the operator to run said nothing at all.
+
+## [1.12.0] - 2026-09-12
+
 ### Added
 
 - **A design is grilled before it is fixed, and every stage does it** (#1591,
@@ -1984,19 +2001,6 @@ unadjudicated`, read off a Work Orders Summary row the session writes rather
   stale every verdict in the spec when any cell moved. A record re-attestation
   closes it, because the revision has not moved — and it is not a rubber stamp,
   since what it re-signs is a judgement over a subject that has grown.
-
-- **The ATDD stage says when it could not read the globs it was given**
-  (#1703). `QFAI-ATDD-134`. The stage scans its own three directories, and the
-  extensions it looks for come from `validation.traceability.testFileGlobs`,
-  with a fallback to the JavaScript and TypeScript set when that yields none.
-
-  The fallback is right for a project that configured nothing. For a project
-  that configured globs and got no extension out of them, the stage scanned
-  extensions the project does not use, found no annotation, and reported every
-  obligation as uncovered — a configuration defect wearing the face of missing
-  tests. `QFAI-TRACE-124` says the same thing under the `sdd` and `full`
-  profiles, and is not in this profile’s gate list, so the gate the skill tells
-  the operator to run said nothing at all.
 
 ## [1.11.1] - 2026-09-10
 
