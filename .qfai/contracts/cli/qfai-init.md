@@ -143,7 +143,98 @@ The obligations that are specific to this command:
   `pruneStaleQfaiWrappers` cover generated wrapper directories QFAI owns
   entirely; `.github/workflows/` is adopter-authored and is not one of them.
 - Running init twice into the same tree writes nothing and changes no
-  provenance entry.
+  provenance entry, **with one exception**: the rule citations below.
+
+### Rule citations in an existing entry point
+
+Create-only leaves an `AGENTS.md`, a `CLAUDE.md` or a
+`.github/copilot-instructions.md` the project already has. A rule master the
+same run writes into `.agents/rules/` would then be cited by nothing, so init
+adds one bullet for it and only for it.
+
+**What it may change.** One bullet line per rule master the run's own copy
+report says it wrote, lifted from the shipped template rather than composed,
+inserted after the last rule bullet — inside the managed markers where the file
+has them, and anywhere in the list where it does not, because the Copilot file
+is generated whole and carries none.
+
+**What it may not.** Anything else in the file. A bullet the project deleted is
+not restored, because that master's file is on disk and the copy skips it.
+Prose the project wrote inside the section survives. The heading is never
+duplicated: an existing section is edited in place, and the append path is for a
+file that has no section at all.
+
+**A file with no markers that cites rules anyway** was wired in by hand. The
+masters it does not name go into the list it keeps, one bullet each; the section
+is not appended on top, which would restate every citation the file already has.
+Nothing records a bullet as removed there, so an uncited master is one the file
+never named. Where the citations are not a bullet list a line can be added to —
+prose, a numbered list — the run names the masters to add and writes nothing.
+
+**What it refuses, naming the file and the reason.** A symbolic link at the
+target or at any path component below the destination root, a hard link with
+more than one name, a file whose bytes are not valid UTF-8, and a file that
+changed between the read and the write. The append path refuses the same four:
+it writes to the same file, and a link there reaches whatever it points at. An
+unreadable Copilot file is reported and skipped rather than failing the run.
+
+**What it reports and leaves alone.** A file carrying the begin marker without
+the end marker. It reads as connected, so nothing appends the section, and there
+is no closed region to insert a citation into — the run names the missing marker
+instead, because a silent skip leaves the rule uncited and gives the next run no
+reason to look at the file again.
+
+**How it writes.** The merged text is staged beside the target and renamed over
+it, so an interrupted write leaves the adopter's file as it was. The staging
+file is created owner-only and takes the target's own mode before the rename: a
+file the project kept to itself is not published by being rewritten. Where the
+run does not already own the file, it restores the owner too, and refuses the
+write when it cannot — a renamed file owned by whoever ran init is one its owner
+may no longer edit.
+
+The walk that refuses a linked path component runs again immediately before the
+rename, and so does the comparison with the bytes that were read: a parent
+replaced in between would have the write land wherever it now points, and a save
+in between would be replaced by a merge of the contents before it. Both are
+checks rather than locks, and what they buy is a window of one statement.
+
+**What a fenced block is.** An example, wherever it sits — a block quote's `>`
+prefix does not hide it, and a fence opened inside one ends where the quote
+does. Neither a rule path nor a managed marker inside one is
+read as live: the file is not hand-wired by it, the example is not mistaken for
+the section, and nothing is written into it.
+
+**What a bullet is.** The whole list item, continuation lines included. A
+citation is added after the last of them, so the project's own explanation stays
+under the bullet it explains.
+
+A staging file an earlier run was killed before renaming is removed at the start
+of the next one. Two things bound that: the name has to be one the writer could
+have produced — the prefix, a version 4 identifier, the suffix — and the file has
+to have sat still for an hour, so a second init running now keeps the file it is
+about to rename.
+
+**What it reads.** The Copilot file belongs to the adopter, so it is opened
+once, refused unless it is an ordinary file, and read to a ceiling. A larger one
+is reported and left alone rather than buffered and decoded whole for the sake of
+one line. A file carrying no rule list to add a line to — a project that wrote
+its own instructions — is reported too, naming the masters: the wrapper sync
+skips an existing file, so nothing else will carry them.
+
+**Under `--force` the Copilot file belongs to the wrapper sync**, which writes it
+whole from the same source later in the run. Nothing is added to it here, and no
+refusal is reported for it, because a refusal would name a file this run goes on
+to replace.
+
+**What a refusal does not do.** Queue the citation for later. A master this run
+copied is one no later run offers again, because the file is on disk and the
+next copy skips it. The refusal names the masters that stayed uncited, and
+repairing the file does not bring them with it.
+
+**What the signal cannot tell.** A project that deleted both the bullet and the
+master gets both back: the same run writes the file again, so the citation
+follows it. Separating that from a first-time rule needs a record of what an
+earlier run wrote, which init does not keep.
 
 Reporting drift on an already-installed shipped workflow is **not** this
 command's job — it belongs to `qfai doctor`
