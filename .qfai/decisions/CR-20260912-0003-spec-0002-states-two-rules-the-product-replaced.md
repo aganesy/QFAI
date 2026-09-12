@@ -145,6 +145,7 @@ authorized reset rather than an edit beside it.
   `.qfai/specs/spec-0002/05_Examples.md`,
   `.qfai/specs/spec-0002/06_Test-Cases.md`,
   `.qfai/specs/spec-0002/07_Decisions.md`,
+  `.qfai/specs/spec-0002/09_delta.md`,
   `.qfai/specs/spec-0002/10_Plan.md`,
   `.qfai/specs/spec-0002/tdd/test-list.md`
 
@@ -172,9 +173,20 @@ make two choices.
 1. `/qfai-sdd` rerun scope: the statements the chosen option names, plus the
    `06_Test-Cases.md` rows that read them, and the `10_Plan.md` row citing
    `TC-0002-0026`, which this spec's table does not declare.
-2. Downstream ledger sweep. Each option produces a different split, so all three
-   are enumerated: what is approved is the list for the option chosen, and a
-   mixed answer takes the direction row from each.
+2. Downstream ledger sweep. The two statements are settled independently, so the
+   plan is read per statement and not per bundle. Statement A is the direction
+   rule — `REQ-0012`, `AC-0002-0008`, `DR-0002-0001`, `DR-0002-0003`, and
+   `TC-0002-0008` / `TC-0002-0009` under them, which `TDD-0008`, `TDD-0009` and
+   `TDD-0010` rest on. Statement B is the requiredness rule — `REQ-0005`,
+   `AC-0002-0010`, and `TC-0002-0011` under them, which `TDD-0012` rests on.
+   Nothing in statement A's list touches statement B's rows or the reverse, so
+   `1A/2B` is option 1 applied to A's rows and option 2 applied to B's, with no
+   overlap to resolve. `TDD-0011` is reset under every combination for a reason
+   belonging to neither statement, given at step 3.
+
+   The three option bodies below each describe **both** statements, because that
+   is how they are compared. Applying one to a single statement means taking only
+   the rows and files that statement's list names.
 
    **Option 1 — narrow the spec to the product.** `/qfai-sdd` re-derives
    `REQ-0012`, `AC-0002-0008`, `DR-0002-0001`, `DR-0002-0003`, `REQ-0005` and
@@ -209,10 +221,16 @@ make two choices.
      check does not touch. Keeping it would preserve the duplicate row this CR
      exists to clear.
 
-   **Option 3 — retire the four obligations.** `/qfai-sdd` re-derives
-   `01_Spec.md`, `03_Acceptance-Criteria.md` and `06_Test-Cases.md` to withdraw
-   `REQ-0012`, `AC-0002-0008`, `REQ-0005`'s requiredness half, `AC-0002-0010`,
-   `TC-0002-0008`, `TC-0002-0009` and `TC-0002-0011`.
+   **Option 3 — retire the four obligations.** `/qfai-sdd` re-derives every layer
+   that carries them, not only the three that name them most visibly:
+   `01_Spec.md` (`REQ-0012`, `REQ-0005`'s requiredness half),
+   `02_User-stories.md` (`US-0002-0005`), `03_Acceptance-Criteria.md`
+   (`AC-0002-0008`, `AC-0002-0010`), `04_Business-Rules.md` (`BR-0002-0008`,
+   `BR-0002-0010`), `05_Examples.md` (`EX-0002-0008`, `EX-0002-0009`,
+   `EX-0002-0011`) and `06_Test-Cases.md` (`TC-0002-0008`, `TC-0002-0009`,
+   `TC-0002-0011`). A withdrawal that stops at the requirement leaves the story,
+   the rule and the example asserting what was withdrawn, which is the state this
+   Change Request exists to end rather than to reproduce one layer down.
    - Reset to `todo`: none.
    - Retire, each with its `Evidence` cell verbatim:
      `spec-0002/TDD-0008` — `current template integration test pass`;
@@ -224,22 +242,37 @@ make two choices.
      `legacy 4-axis format is error`, names a case that asserts
      `validateThreeLayerModel` emits `UIX-VAL-3LAYER-LEGACY-FORMAT`. That is a
      real behaviour of a live validator, and withdrawing `TC-0002-0011` takes
-     away its obligation rather than its subject, so the case **stays and is
-     left unowned by this spec** — not re-pointed at `TDD-0011`, whose selector
-     is a different case in the same file. An unowned case pinning live
-     behaviour is the honest end state here; giving it to a row that does not
-     describe it would be the defect this Change Request exists to remove.
+     away its obligation rather than its subject. The retirement procedure
+     requires each surviving test to be deleted or re-pointed, and "left
+     unowned" is neither, so this retirement carries an open item rather than a
+     disposition: **name the obligation that owns the legacy-format finding, or
+     delete the case.** It may not be re-pointed at `TDD-0011`, whose selector is
+     a different case in the same file. Deleting it drops the only assertion
+     that `validateThreeLayerModel` emits `UIX-VAL-3LAYER-LEGACY-FORMAT`, so the
+     choice is a real one and option 3 cannot complete until it is made.
      `packages/qfai/tests/integration/discussionSkillTemplateIntegration.test.ts`,
      `packages/qfai/tests/e2e/discussionHardeningE2E.test.ts` and
      `packages/qfai/tests/core/sddPreflight.test.ts` all carry coverage for
      other rows; `packages/qfai/tests/validators/uix/threeLayer.test.ts` stays
      with `spec-0002/TDD-0011`.
 
-3. `spec-0002/TDD-0011` is reset to `todo` under every option, recording this
-   CR's ID in `DR-ID`. Its obligation does not move; the reset is what lets the
-   two annotation repairs edit the file its observation covers. It owes a fresh
-   RED afterwards, and its `Selector` stays `skips non-UI packs` — that case
-   discriminates the guard and the repair is to the file around it.
+3. `spec-0002/TDD-0011` is **re-verified, not reset**, under every option. Its
+   obligation `TC-0002-0010` does not move and its case `skips non-UI packs` is
+   not edited; what changes is the file around it — the annotations, and the
+   sibling case's fixture. A `CR-*` reset is for a row whose obligation an
+   upstream change invalidated, and nothing here invalidates this one, so
+   resetting it would claim a drift that did not happen. What the row needs is a
+   fresh observation over the edited file: re-run its selector, re-record the
+   `RED test hash` its manifest now computes to, and leave `Status` at `done`.
+
+4. Reserve every retired `TDD-ID` in the ledger's `## TDD-ID reservations`
+   section before the row is deleted. The ledger allocates the next id as
+   `max + 1`, so deleting the highest row hands its number to the next one
+   written, and two runs then share an identifier that this Change Request is
+   the only record of. Option 1 reserves `spec-0002/TDD-0010`; option 2 the
+   same; option 3 reserves `TDD-0008`, `TDD-0009`, `TDD-0010` and `TDD-0012`,
+   the last of which is the current maximum and so the one that would be reused
+   first.
 
 ## Resolution
 

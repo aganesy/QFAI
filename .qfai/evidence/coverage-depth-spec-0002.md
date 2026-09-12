@@ -457,7 +457,9 @@ it says so and names what carries it now.
    sidecars present, so the guard is the only thing producing the empty result, or retire it. Both
    are edits to the file `TDD-0011`'s recorded observation covers, so either one restarts that
    row's cycle. `CR-20260912-0003` carries `TDD-0011` for that reason — not because its obligation
-   is in doubt, but because the repair to this file moves the observation the row rests on.
+   is in doubt, but because the repair to this file moves the observation the row rests on. It is
+   re-verified there rather than reset: nothing upstream invalidates `TC-0002-0010`, so the row owes
+   a fresh observation over the edited file and keeps its `done`.
 4. **Four ledger rows recorded a completion that was never measured.** `TDD-0008`, `TDD-0009` and
    `TDD-0010` sat at `Status = done` over selectors that a search of `packages/qfai/tests/**` does
    not find. `TDD-0012` names a selector that does resolve — `legacy 4-axis format is error` — to a
