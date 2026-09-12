@@ -198,11 +198,33 @@ as evidence for `none`, because a table that omitted a required row looks exactl
 like a table that had none to write, and the reviewer would attest `none` over
 the very decision the record exists to expose.
 
+**The field asks about the artifact, not about the reviewer.** It reports any
+decision the artifact still carries that an agent recommended and agents adopted
+with nobody adjudicating — whichever agent recommended it. Scoped to the
+reviewer's own recommendations it would answer `none` truthfully whenever a
+different agent made them, which is the common case and the one the record was
+built to catch: what is wrong is that the artifact carries a decision nobody
+took, and that is true however the review was routed. The reviewer's own
+recommendations are covered because they are a subset, and the dual-role table
+above is what decides whether that reviewer may rule at all.
+
 The `grilling: none` row records a fact rather than a step, so it names no agent:
 `Agent instance` is `n/a`, `Role`, `Input (refs)` and `Output (refs)` are `-`,
 and `Status` is `PASS`. Writing a role or an instance there would invent
 provenance for work nobody did, which is the failure the `Agent instance` column
 exists to make detectable.
+
+**A row gains a disposition when its decision stops being open.** The field reads
+the artifact as it now stands, and the row is the only record of what was
+settled, so the two part company the moment a decision is adjudicated or
+withdrawn. The session that adjudicates or withdraws it amends the row in place —
+`Task title` becomes `grilling: <the decision> (settled by the user)` or
+`(withdrawn from the artifact)` — so the next reviewer reads the disposition
+rather than inferring it. Without that, a live row and a closed one look
+identical, and a reviewer deriving `none` from the artifact has to contradict the
+record to do it, or keep a stale non-`none` value that blocks a `PASS` nothing is
+wrong with. Amending is not deleting: the decision, the agent instance and the
+fact that it was once open all stay.
 
 The field asks about the artifact **as it now stands**. A recommendation the
 artifact no longer carries, and one the user has since settled, are both outside
@@ -334,7 +356,7 @@ Result: PASS | REVISE
 Reviewed revision: <git rev> | working-tree+<content hash>
 Audited evidence hash: <content hash of the evidence read>   # one line per TDD-ID on a T1 group
 Authored/edited under review: none | <artifact refs this reviewer authored or edited in this run>
-Recommended and unadjudicated: none | <decisions in THIS artifact as it now stands that this reviewer recommended and no user has since settled>
+Recommended and unadjudicated: none | <decisions in THIS artifact as it now stands that any agent recommended and adopted with no user adjudication>
 Findings:
 - <issue> | Severity: blocking|advisory | Traces to: <AC-*/BR-*/TC-*/CON-*/rule-name|defect:correctness|defect:security|defect:code-quality|record:<CODE>|none>
 Required fixes:

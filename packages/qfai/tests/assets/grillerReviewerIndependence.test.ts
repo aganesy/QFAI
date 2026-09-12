@@ -132,6 +132,24 @@ describe("a griller's recommendations and reviewer independence", () => {
       expectPhrase(content, "At most **two series per artifact per role**");
     });
 
+    it(`${tree}: asks about the artifact rather than about the reviewer`, async () => {
+      // Scoped to the reviewer's own recommendations the field answers `none`
+      // truthfully whenever a different agent made them, which is the common
+      // case and the one the record exists to catch.
+      const content = await read(tree);
+      expectPhrase(content, "**The field asks about the artifact, not about the reviewer.**");
+      expectPhrase(content, "whichever agent recommended it");
+    });
+
+    it(`${tree}: gives a closed decision a disposition on its row`, async () => {
+      // A live row and a closed one look identical, so a reviewer deriving
+      // `none` from the artifact would have to contradict the record.
+      const content = await read(tree);
+      expectPhrase(content, "**A row gains a disposition when its decision stops being open.**");
+      expectPhrase(content, "(settled by the user)");
+      expectPhrase(content, "Amending is not deleting");
+    });
+
     it(`${tree}: reopens an unadjudicated recommendation instead of rerouting it`, async () => {
       // The handoff remedy answers an authorship conflict. Applied to a
       // recommendation nobody adjudicated, the replacement attests `none`
@@ -170,7 +188,7 @@ describe("a griller's recommendations and reviewer independence", () => {
       );
       expectPhrase(
         content,
-        "Recommended and unadjudicated: none | <decisions in THIS artifact as it now stands that this reviewer recommended and no user has since settled>",
+        "Recommended and unadjudicated: none | <decisions in THIS artifact as it now stands that any agent recommended and adopted with no user adjudication>",
       );
       expectPhrase(
         content,
