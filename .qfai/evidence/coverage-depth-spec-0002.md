@@ -470,11 +470,12 @@ repaired here; this artifact scores coverage and does not edit tests, ledgers or
    `tests/validators/uix/screenContract.test.ts`, are outside the scanned root, so their annotations
    discharge nothing. Until that is resolved, no amount of testing can move an `L3` obligation in
    this repository out of carrier-only.
-6. **Two annotated files carry test-case IDs that no longer exist.**
-   `tests/validators/uix/threeLayer.test.ts` declares `TC-0002-0012` and `TC-0002-0026`, and
+6. **An annotated file carries test-case IDs that no longer exist.**
    `tests/validators/uix/screenContract.test.ts` declares `TC-0002-0020` through `TC-0002-0024`.
-   None of those seven appears in `06_Test-Cases.md`, whose active table holds five rows. The
-   annotations point at obligations that were removed or never registered.
+   None of those five appears in `06_Test-Cases.md`, whose active table holds five rows of its own.
+   The annotations point at obligations that were removed or never registered.
+   `tests/validators/uix/threeLayer.test.ts` was in the same position, declaring `TC-0002-0012` and
+   `TC-0002-0026`; it now declares only `TC-0002-0010`, the one obligation of this spec it reaches.
 7. **The ledger is seven rows short of what seeds it.** `qfai-sdd`'s Phase 2b seeds
    `tdd/test-list.md` in four groups, and one of them is "one `Layer = E2E` row per **active**
    `US-*` from `02_User-stories.md` (obligation in `US-Refs`, `TC-Refs` = `-`)"
