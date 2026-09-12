@@ -4,6 +4,24 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ## [Unreleased]
 
+### Fixed
+
+- **Four spec-0013 rules the product states otherwise are recorded where the
+  Drift Protocol looks for them** (#1629). Two test cases in one pack require
+  opposite things of one value: the UI contract template must ship an empty
+  task list, and the validate lane must fail at error on exactly that value.
+  A legacy-contract rule is written without the sunset condition its business
+  rule carries, three lines below a file comment describing the behaviour that
+  sunset replaced. An obligation naming a stage is covered by a test that
+  drives a helper no code calls. And a finding specified as a warning inside a
+  deprecation window is emitted as an unconditional error, because the
+  version-keyed severity mechanism those four layers name was retired.
+
+  `CR-20260913-0003` states each side, blocks the four ledger rows that carry
+  the disputed obligations, names what it leaves alone and which other open
+  records reach the same pack, and puts one question per item with its own
+  options — so a reader can settle them separately rather than as a bundle.
+
 ## [1.12.0] - 2026-09-12
 
 ### Added
@@ -1986,22 +2004,6 @@ unadjudicated`, read off a Work Orders Summary row the session writes rather
   stale every verdict in the spec when any cell moved. A record re-attestation
   closes it, because the revision has not moved — and it is not a rubber stamp,
   since what it re-signs is a judgement over a subject that has grown.
-
-- **Four spec-0013 rules the product states otherwise are recorded where the
-  Drift Protocol looks for them** (#1629). Two test cases in one pack require
-  opposite things of one value: the UI contract template must ship an empty
-  task list, and the validate lane must fail at error on exactly that value.
-  A legacy-contract rule is written without the sunset condition its business
-  rule carries, three lines below a file comment describing the behaviour that
-  sunset replaced. An obligation naming a stage is covered by a test that
-  drives a helper no code calls. And a finding specified as a warning inside a
-  deprecation window is emitted as an unconditional error, because the
-  version-keyed severity mechanism those four layers name was retired.
-
-  `CR-20260913-0003` states each side, blocks the four ledger rows that carry
-  the disputed obligations, names what it leaves alone and which other open
-  records reach the same pack, and puts one question per item with its own
-  options — so a reader can settle them separately rather than as a bundle.
 
 ## [1.11.1] - 2026-09-10
 
