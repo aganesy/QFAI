@@ -8,11 +8,17 @@ whose `Evidence` cells predate the pointer grammar. `TDD-0009`, `TDD-0018`,
 
 ## Inputs reviewed (files/paths)
 
-- `.qfai/specs/spec-0014/06_Test-Cases.md`
-- `.qfai/specs/spec-0014/03_Acceptance-Criteria.md`
+- `.qfai/specs/spec-0014/01_Spec.md`
 - `.qfai/specs/spec-0014/02_User-stories.md`
+- `.qfai/specs/spec-0014/03_Acceptance-Criteria.md`
 - `.qfai/specs/spec-0014/04_Business-Rules.md`
+- `.qfai/specs/spec-0014/05_Examples.md`
+- `.qfai/specs/spec-0014/06_Test-Cases.md`
 - `.qfai/specs/spec-0014/tdd/test-list.md`
+- `qfai.config.yaml` — for the surface resolution the `US-*` obligations are scoped by
+- `.qfai/contracts/api/` and `.qfai/contracts/db/` — scanned and empty, which is
+  why no `CON-API-*` or `CON-DB-*` is owed and the volume estimate's API row is
+  zero rather than absent
 - `packages/qfai/tests/integration/verifySemanticsSpec0014.test.ts`
 - `packages/qfai/tests/integration/cli/commands/prototypingCertify.saasPackage.test.ts`
 - `packages/qfai/tests/integration/cli/commands/prototypingCertify.upgradeScope.test.ts`
@@ -185,7 +191,7 @@ type-only edit is observable at run time: `expected 'import type { ScCoverage,
 TestFileSca…' not to contain '"compatibility"'`.
 
 The surface has two halves, and the mutation above reaches one. A second
-mutation puts the legacy aggregator back on the package surface, in
+mutation puts the legacy aggregator name back in the validators barrel, in
 `packages/qfai/src/core/validators/index.ts` line 71:
 
 ```diff
@@ -195,6 +201,16 @@ mutation puts the legacy aggregator back on the package surface, in
 
 The name is what the obligation forbids, whatever it points at, and the case
 fails on it.
+
+**The barrel is not the package entrypoint**, and the row's assertion reads the
+barrel's source text rather than the exported surface: `src/core/index.ts`
+re-exports validator modules selectively and does not re-export this file, so a
+name added here would not reach a consumer. What the mutation establishes is
+that the case discriminates the text it reads, which is what an oracle proof
+owes. Whether the obligation's own subject — the name being absent from what the
+package exposes — is asserted anywhere is a coverage question, and the matrix
+scores it: this row's `Oracle strength` is `⚠️` for reading source text rather
+than the surface.
 
 - Round 1: Second falsifiability command: npx vitest run tests/integration/verifySemanticsSpec0014.test.ts -t 'TC-0014-0019'
 - Round 1: Second falsifiability result: Test Files 1 failed (1); Tests 1 failed (1 of the file's 6 selected), on the `runLegacyUixCompatibilityValidators` assertion.
@@ -231,7 +247,13 @@ first mutation passes it and fails the literal check below it instead.
   of the `test` matrix at
   https://github.com/aganesy/QFAI/actions/runs/34698239422, and their conclusions
   were read back from the check runs on this revision rather than inferred from
-  a green badge.
+  a green badge. **What those jobs checked out is the merge commit**, not this
+  branch head: `ci.yml` restricts `push` runs to the default branch, so the run
+  is a `pull_request` one and its unqualified checkout takes the generated merge
+  of this branch with the base tip. The revision recorded above is the branch
+  head the observation belongs to; the tree CI executed is that head merged with
+  whatever the base was at the time, and this record cannot name it because the
+  merge commit is not addressable from here.
   That is the environment in which the set can be run whole. Run here as one
   unfiltered `npx vitest run`, the same suite reports Test Files 1 failed, 697
   passed, 8 skipped (706) and Tests 1 failed, 11537 passed, 92 skipped (11630),
@@ -276,6 +298,17 @@ every total.
 | test-design-analyst | Score the fourteen obligations and write the matrix           | PASS                         |
 | devops-ci-engineer  | Run the refactor verification, the per-item file-scoped test and the unfiltered suite, and report the counts | PASS |
 | completion-reviewer | Audit every claim this file and the matrix make               | REVISE                       |
+
+**Four mandatory roles have no order here, and that is part of the escalation.**
+`agent-routing.yml` requires `qa-strategist` in coverage, `delivery-planner` and
+`acceptance-test-engineer` in RED, and `qa-gatekeeper` in review. This run
+dispatched none of them: it authored no test and moved no `Status`, so the work
+those roles own did not happen — and a work order recorded for work nobody
+performed is the invented provenance the summary exists to prevent. The shared
+fields the template asks for — agent instance, inputs, outputs — are absent for
+the same reason on the rows that are here: the two that ran are recorded with
+what they returned, and nothing is written for the rest. A stage missing four
+mandatory roles cannot pass its own gate, which is what `ESCALATED` says.
 
 The `devops-ci-engineer` order returned the three command blocks with their
 summary lines and exit codes, and nothing else: it wrote no file and changed no
@@ -451,10 +484,6 @@ permitted verification round escalated rather than clearing them.
 escalation, and no such decision is recorded, so this stage is not `PASS`
 whatever is true of the row's own fields. Escalation is not failure: the
 artifact stays where it is and the decision is above the reviewer.
-
-A per-row `PASS` was recorded here and was wrong. It read as a qualified stage
-verdict, and a qualifier is not an approval — an unapproved artifact presented
-as passing is the state the gate exists to prevent, whatever the qualifier says.
 
 Nothing about the pack is claimed either. `TDD-0009`, `TDD-0018`, `TDD-0035` and
 `TDD-0036` are listed rather than backfilled, each with the reason it is not.

@@ -57,7 +57,7 @@ a layout rule the product contradicts. Only the first can be repaired by writing
   `uiEvidenceArtifacts.test.ts` require a project carrying only the legacy layout to produce zero
   issues. See Findings 4.
 
-`TC-0014-0009`, `TC-0014-0028` and `TC-0014-0029` carry 27 of the matrix's 65 `❌` depth cells
+`TC-0014-0009`, `TC-0014-0028` and `TC-0014-0029` carry 27 of the matrix's 64 `❌` depth cells
 between them.
 
 The rest of the pack ranges widely. `TC-0014-0036` is the strongest work here: sixteen passing cases
