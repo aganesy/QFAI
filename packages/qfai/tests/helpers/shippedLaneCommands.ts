@@ -1441,8 +1441,14 @@ export const ALLOWED_INIT_CONTENT: ReadonlyMap<string, string> = new Map([
   // `qfai init` into a temp root and hash what it wrote, then drop the added bullet and confirm
   // both previous digests come back byte for byte. That check is what keeps a re-pin a review of
   // one line per file.
-  ["AGENTS.md", "fff9e2105f4a99c915825653117b1607306c7f6c861002d630043d2ab5722570"],
-  ["CLAUDE.md", "7203ba754c0aec9979c72252ab9813c914ef544475707c903a7949be5d61fe04"],
+  // Re-pinned for the sentence that describes what a later run does. It said the
+  // run leaves the section exactly as edited; it now adds a bullet for a rule
+  // being shipped into the project for the first time, and says that a bullet
+  // the project deleted stays deleted. Restoring the old sentence in both files
+  // reproduces `fff9e210…` and `7203ba75…` byte for byte, which is what makes
+  // this a review of one sentence per file.
+  ["AGENTS.md", "d3d39ba436dfbb657845fd0f339e18a174cba0ad38ca8137c116415ca8efa64a"],
+  ["CLAUDE.md", "5b6487bad9c1b9f46901650be64f04cb3aaf000d9d3c51327ec7c62653f64001"],
   // Inside `.claude/`, and pinned anyway — see the paragraph above the path set.
   // These are the hooks that restate a rule at the moment it applies: the writing
   // rule when a pull request, issue or review is posted through the GitHub tools
