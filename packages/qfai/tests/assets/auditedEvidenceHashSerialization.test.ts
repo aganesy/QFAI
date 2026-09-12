@@ -53,8 +53,14 @@ describe.each(TREES)("%s — the audit hash's extraction is one text", (tree) =>
   });
 
   it("ends the region at the first field the subject could not have read", async () => {
-    await expectPhrase("for a completion subject, the first field a reviewer writes");
+    await expectPhrase(
+      "the first of the stage-completion fields a reviewer writes at the end of the entry",
+    );
     await expectPhrase("for the GREEN subject, the first field written after the GREEN");
+    // A mid-entry round verdict is a reviewer field with a later round after
+    // it, so stopping there drops round 2 from every reworked row.
+    await expectPhrase("**A `Round N: reviewer verdict` is not that boundary.**");
+    await expectPhrase("stopping there would drop round 2 from every row that took a REVISE");
   });
 
   it("drops a reviewer's own verdict line from what that reviewer hashes", async () => {
@@ -77,7 +83,6 @@ describe.each(TREES)("%s — the audit hash's extraction is one text", (tree) =>
     // A contract no tool implements is the state this paragraph was written
     // for: the recorded values were reproducible only by their own run.
     await expectPhrase("computes the completion subject exactly this way");
-    await expectPhrase("`phaseAuthoredEvidence` in `packages/qfai/src/core/validators/tddList.ts`");
     await expectPhrase("reproducible only inside the run that wrote it");
   });
 
@@ -86,7 +91,19 @@ describe.each(TREES)("%s — the audit hash's extraction is one text", (tree) =>
     // gate requires.
     await expectPhrase("**Three ledger fields carry an audited evidence hash");
     await expectPhrase("`Prototype parity audited evidence hash`");
-    await expectPhrase("omitting the third is how a compliant UI row loses the parity hash");
     await expectPhrase("The working-tree revision is a fourth value with a fourth name");
+  });
+
+  it("says which of the three the gate recomputes today", async () => {
+    // Documenting an unenforced field as enforced is the defect one level on
+    // from the one this file fixes.
+    await expectPhrase(
+      "**Two of the three are recomputed by `npx qfai validate` today, and the parity",
+    );
+    await expectPhrase(
+      "It neither requires nor recomputes `Prototype parity audited evidence hash`",
+    );
+    await expectPhrase("a screenshot replaced after that verdict moves nothing");
+    await expectPhrase("That is a gap in the gate, not in this contract");
   });
 });

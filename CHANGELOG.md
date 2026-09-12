@@ -25,7 +25,9 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   Four values share these words and are not one: three ledger fields carrying
   three reviewer roles' verdicts by these same four steps — the third is the
   parity hash a UI-affecting row owes — and the working-tree revision, which
-  addresses a tree rather than a subject.
+  addresses a tree rather than a subject. The reference says which two the
+  completion gate recomputes today and which one it does not, so nobody takes
+  the third for a checked field.
 
 ### Added
 

@@ -31,9 +31,19 @@ procedure, in four steps:
    **region of the entry**, not a selection of lines out of it:
 
    - it runs from the row's heading to the line before the **first field the
-     subject could not have read** — for a completion subject, the first field
-     a reviewer writes; for the GREEN subject, the first field written after
-     the GREEN; for the RED subject, the first field written after the RED;
+     subject could not have read** — for a completion subject, the first of the
+     stage-completion fields a reviewer writes at the end of the entry
+     (`Spec review`, `Code quality review`, `Prototype parity`,
+     `Checkpoint verification` and their labelled siblings); for the GREEN
+     subject, the first field written after the GREEN; for the RED subject, the
+     first field written after the RED.
+
+     **A `Round N: reviewer verdict` is not that boundary.** It is a reviewer's
+     field and it sits mid-entry, with a later round's phase-authored evidence
+     after it — so stopping there would drop round 2 from every row that took a
+     REVISE. The region runs past it and the line itself is dropped, which is
+     the clause below;
+
    - every line inside it is kept **verbatim** — the leading `- ` list marker,
      the `Round N: ` prefix, the `#### Round N` headings, the blank lines and
      any prose between the fields, and the fenced block that is a field's
@@ -53,12 +63,12 @@ procedure, in four steps:
    which is the one thing a boundary needs from them.
 
    Joined as they stand, those lines are the artifact step 2 normalizes and
-   step 3 records under the evidence file's path. `npx qfai validate`'s gate
-   item 10 computes the completion subject exactly this way
-   (`phaseAuthoredEvidence` in `packages/qfai/src/core/validators/tddList.ts`),
-   and stating it here is what lets a second party recompute a recorded digest
-   at all: before this paragraph, six choices were each open and a recorded
-   value was reproducible only inside the run that wrote it.
+   step 3 records under the evidence file's path. `npx qfai validate` computes
+   the completion subject exactly this way, so a digest recorded by a reviewer
+   who followed this paragraph is the digest gate item 10 recomputes — which is
+   what lets a second party check one at all. Before this paragraph, six choices
+   were each open and a recorded value was reproducible only inside the run that
+   wrote it.
 
    The fields, per subject:
 
@@ -218,11 +228,24 @@ working-tree revision.** A row records `Spec audited evidence hash`,
 `Code quality audited evidence hash` and — on a UI-affecting row —
 `Prototype parity audited evidence hash`, one per named reviewer role, each
 computed by these same four steps over that role's own subject. The words
-differ only by the role they belong to, and omitting the third is how a
-compliant UI row loses the parity hash its gate requires. The working-tree
-revision is a fourth value with a fourth name:
+differ only by the role they belong to. The working-tree revision is a fourth
+value with a fourth name:
 `../../skills/qfai-implement/references/evidence-revision.md` defines it, and it
 addresses a tree rather than a subject.
+
+**Two of the three are recomputed by `npx qfai validate` today, and the parity
+one is not.** The completion gate reads `Spec` and `Code quality`, recomputes
+each against the entry, and refuses a row whose recorded value disagrees. It
+neither requires nor recomputes `Prototype parity audited evidence hash`, and
+the subject that field names — the entry plus each surface artifact the row's
+`Surface artifacts` manifest lists — is not built by any code. A UI row can
+therefore reach `done` with the parity verdict recorded and its hash absent,
+and a screenshot replaced after that verdict moves nothing.
+
+That is a gap in the gate, not in this contract: the subject above is what the
+`product-surface-reviewer` computes and what a recomputation would have to
+reproduce. Stated here so a reader does not take the parity field for a checked
+one, and recorded as its own issue for the gate to close.
 
 **A T1 coherent group is one pass and several rows**
 (`../../skills/qfai-implement/references/volume-policy.md`).
