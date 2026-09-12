@@ -24,13 +24,10 @@ describe("validateAtddCodeTraceability", () => {
       const reportPath = path.join(root, ".qfai", "report", "atdd-traceability", "summary.json");
       const summary = await readFile(reportPath, "utf-8");
       expect(summary).toContain('"missing"');
-      // Both scan totals reach the report. They are the same number here and
-      // are not in a repository whose test globs also match a unit suite, so a
-      // reader needs the one the coverage rules were computed from.
-      expect(JSON.parse(summary).scan).toMatchObject({
-        matchedFileCount: 3,
-        countedFileCount: 3,
-      });
+      // The scan total reaches the report, and it counts only what an
+      // acceptance layer owns — so a reader can take it for "acceptance tests
+      // scanned" without discounting anything.
+      expect(JSON.parse(summary).scan).toMatchObject({ matchedFileCount: 3 });
     });
   });
 
@@ -965,28 +962,32 @@ describe("acceptance tests outside paths.testsDir", () => {
 
       expect(result.missing.us).toEqual([]);
       expect(result.missing.tc).toEqual([]);
-      expect(result.scan.countedFileCount).toBe(2);
+      expect(result.scan.matchedFileCount).toBe(2);
     });
   });
 
-  it("the deepest layer directory owns a file that sits under two", async () => {
+  it("the layer is the segment inside the test root, not an ancestor", async () => {
     await withProject(async (root) => {
-      await seedSpec(root, "0001", [], ["TC-0001"]);
-      await seedApiContract(root, "CON-API-0001");
-      // The directory holding the test names its layer. Reading outwards would
-      // answer `e2e` here and would answer `api` for every test in a package
-      // called `api`, which is the shape this rule exists to get right.
-      await seedPackageTest(root, "checkout", "e2e/api", "contract.test.ts", [
-        "/* QFAI:CON-API-0001 */",
+      await seedSpec(root, "0001", ["US-0001"], ["TC-0001"]);
+      // A package may be called `api`. Scanning ancestors put every test under
+      // it in the API layer — including this unit suite, which owes ATDD
+      // nothing and would have had its stub block the gate.
+      await seedPackageTest(root, "api", "unit", "pure.test.ts", ["/* no annotation */"]);
+      await seedPackageTest(root, "api", "integration", "pay.test.ts", [
+        "/* QFAI:SPEC-0001:TC-0001 */",
       ]);
-      await seedTest(root, "integration", "a.test.ts", "/* QFAI:SPEC-0001:TC-0001 */");
+      await seedTest(root, "e2e", "a.test.ts", "/* QFAI:SPEC-0001:US-0001 */");
 
       const result = await evaluateAtddCodeTraceability(
         root,
         withProjectGlobs(["packages/*/tests/**/*.test.ts"]),
       );
 
-      expect(result.missing.conApi).toEqual([]);
+      expect(result.missing.tc).toEqual([]);
+      expect(result.forbidden.tcInApi).toEqual([]);
+      // Two acceptance files: the package's integration suite and the e2e
+      // carrier. The unit suite is dropped before it is counted.
+      expect(result.scan.matchedFileCount).toBe(2);
     });
   });
 
@@ -1005,7 +1006,7 @@ describe("acceptance tests outside paths.testsDir", () => {
         withProjectGlobs(["packages/*/tests/**/*.test.ts"]),
       );
 
-      expect(result.scan.countedFileCount).toBe(2);
+      expect(result.scan.matchedFileCount).toBe(2);
       expect(result.skippedTestFiles).toEqual([]);
     });
   });
@@ -1076,7 +1077,26 @@ describe("acceptance tests outside paths.testsDir", () => {
     });
   });
 
-  it("reports the matched and the counted file totals separately", async () => {
+  it("a malformed project glob does not abort the run", async () => {
+    await withProject(async (root) => {
+      await seedSpec(root, "0001", ["US-0001"], ["TC-0001"]);
+      await seedTest(root, "e2e", "a.test.ts", "/* QFAI:SPEC-0001:US-0001 */");
+      await seedTest(root, "integration", "a.test.ts", "/* QFAI:SPEC-0001:TC-0001 */");
+
+      // The pattern is valid YAML and invalid as a glob. Letting it reject
+      // turns every other result in the batch into a generic incomplete run,
+      // and the finding the user can act on — the invalid-glob configuration
+      // one — never reaches them.
+      const result = await evaluateAtddCodeTraceability(
+        root,
+        withProjectGlobs(["packages/*/tests/**/*.test.ts", "a b"]),
+      );
+
+      expect(result.scan.matchedFileCount).toBe(0);
+      expect(result.scan.truncated).toBe(false);
+    });
+  });
+  it("a file in no acceptance layer never costs a collection slot", async () => {
     await withProject(async (root) => {
       await seedSpec(root, "0001", ["US-0001"], ["TC-0001"]);
       await seedTest(root, "e2e", "a.test.ts", "/* QFAI:SPEC-0001:US-0001 */");
@@ -1088,11 +1108,12 @@ describe("acceptance tests outside paths.testsDir", () => {
         withProjectGlobs(["packages/*/tests/**/*.test.ts"]),
       );
 
-      // Three files match the globs and two are owned by a layer. One number
-      // cannot say both, and a reader taking the matched count for "acceptance
-      // tests scanned" reads a healthy scan as a broken one.
-      expect(result.scan.matchedFileCount).toBe(3);
-      expect(result.scan.countedFileCount).toBe(2);
+      // Three files match the globs and two are owned by a layer. The third is
+      // dropped while the stream runs, not after: a project glob may match a
+      // whole monorepo, and files no rule reads would otherwise spend the
+      // collection limit before the later packages' suites are reached.
+      expect(result.scan.matchedFileCount).toBe(2);
+      expect(result.scan.truncated).toBe(false);
     });
   });
 });

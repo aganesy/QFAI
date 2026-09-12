@@ -16,10 +16,10 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
   The scan now also collects from the project's own
   `validation.traceability.testFileGlobs`, minus its `testFileExcludeGlobs`, and
-  a file collected that way is answered by the **deepest** `e2e` / `api` /
-  `integration` directory in its path — the one holding the test. A file's
-  ancestors are project structure, and a package may legitimately be called
-  `api`. The globs are used as written: a base is
+  a file collected that way is answered by the segment **inside its test
+  root** — `<package>/tests/<layer>/**`. Read from any ancestor instead, every
+  test of a package called `api` lands in the API layer, including its unit
+  suite. The globs are used as written: a base is
   never derived by slicing one, because a glob whose directory part carries a
   wildcard slices to a base with the wildcard still in it, and a layer glob
   synthesized under that base addresses a directory the project never
@@ -34,10 +34,20 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   `QFAI-ATDD-105` keeps its subject: a file under `paths.testsDir` that no layer
   owns.
 
-  `summary.json` gains `scan.countedFileCount` beside `matchedFileCount`. The two
-  were the same number while only the layer directories were collected and are
-  not any more, and a reader taking the matched count for "acceptance tests
-  scanned" would read a healthy scan as a broken one.
+  A file in no acceptance layer is dropped while the stream runs, before it is
+  counted against the collection limit. A project glob may match a whole
+  monorepo, and files no acceptance rule reads would otherwise spend the limit
+  on the first packages and never reach the later ones — reported only as an
+  `info`, which `--fail-on error` passes. `scan.matchedFileCount` therefore
+  counts acceptance files rather than glob matches.
+
+  A malformed `validation.traceability.testFileGlobs` entry no longer rejects
+  the whole validator batch. It degrades to an empty scan, so the finding the
+  user can act on still reaches them alongside every other result.
+
+  The missing-coverage remediations name the package's own suite as well as
+  `paths.testsDir`, so an author following the canonical fix does not build a
+  parallel central suite the shipped skill tells them not to build.
 
 ### Removed
 

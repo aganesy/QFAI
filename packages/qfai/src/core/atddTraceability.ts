@@ -187,17 +187,14 @@ export type AtddSpecRefs = Map<string, Map<string, Set<string>>>;
 
 export type AtddTraceabilityScan = {
   globs: string[];
-  matchedFileCount: number;
   /**
-   * How many of the matched files an acceptance layer owns.
+   * Files collected, which is also the number an acceptance layer owns.
    *
-   * Separate from `matchedFileCount` because the two stopped being the same
-   * number once the project's own test globs were read: those match its unit
-   * and component suites as well, and a reader taking the matched count for
-   * "acceptance tests scanned" reads a healthy scan as a broken one, or the
-   * reverse. This is the count the coverage rules are computed from.
+   * The collector drops a file in no acceptance layer before it is counted,
+   * so this is the count the coverage rules are computed from rather than a
+   * match total a reader has to discount.
    */
-  countedFileCount: number;
+  matchedFileCount: number;
   truncated: boolean;
   limit: number;
 };
@@ -459,17 +456,37 @@ export async function evaluateAtddCodeTraceability(
   const apiRoot = path.join(testsRoot, "api");
   const integrationRoot = path.join(testsRoot, "integration");
 
+  const scanTestsDirName = testsDirName(root, config);
   const scanGlobs = buildAtddScanGlobs(
     root,
     testsRoot,
     deriveAtddFilePattern(config.validation.traceability.testFileGlobs),
     config.validation.traceability.testFileGlobs,
   );
-  const scanResult = await collectTestFiles(
-    root,
-    scanGlobs,
-    config.validation.traceability.testFileExcludeGlobs,
-  );
+  const acceptanceLayer = atddAcceptanceLayerFilter(root, config);
+  let scanResult: CollectFilesByGlobsResult;
+  try {
+    scanResult = await collectTestFiles(
+      root,
+      scanGlobs,
+      config.validation.traceability.testFileExcludeGlobs,
+      // A project glob may match a whole monorepo. Charging the limit for files
+      // no acceptance rule reads would spend it on the first packages and never
+      // reach the later ones, and the truncation that reports it is an `info`.
+      (file) => acceptanceLayer(path.relative(root, file)),
+    );
+  } catch {
+    // A malformed `testFileGlobs` entry is the user's to fix and already has a
+    // finding: `QFAI-TRACE-124`, from the validator that reads the same list.
+    // Rejecting here instead would abort the whole batch and replace every
+    // other result with a generic incomplete run.
+    scanResult = {
+      files: [],
+      truncated: false,
+      matchedFileCount: 0,
+      limit: DEFAULT_GLOB_FILE_LIMIT,
+    };
+  }
 
   const usRefs: AtddSpecRefs = new Map<string, Map<string, Set<string>>>();
   const tcRefs: AtddSpecRefs = new Map<string, Map<string, Set<string>>>();
@@ -478,7 +495,6 @@ export async function evaluateAtddCodeTraceability(
 
   const computedSuiteCarriers: string[] = [];
   const skippedTestFiles: string[] = [];
-  let countedFileCount = 0;
   const unknown: AtddUnknownRef[] = [];
   const unknownDedup = new Set<string>();
   // Scanned files that declare a test a runner would collect. Filled while the
@@ -502,27 +518,25 @@ export async function evaluateAtddCodeTraceability(
   for (const file of scanResult.files) {
     const kind = resolveTestKind(file, {
       root,
+      testsDirName: scanTestsDirName,
       e2eRoot,
       apiRoot,
       integrationRoot,
     });
     if (!kind) {
-      // Recorded, not dropped. A correctly annotated test outside the three
-      // scanned roots contributes nothing to coverage and used to vanish with
-      // no diagnostic — which is how `qfai atdd scaffold` could write files
-      // that every gate then reported as zero coverage.
+      // Dropped, not recorded. A unit or component suite owes ATDD nothing
+      // wherever it sits, and every conventional `tests/unit` tree is matched
+      // by an ordinary `tests/**` glob — so recording them here would tell an
+      // operator to move each one into `integration/`, which is the
+      // all-integration collapse `catalog/test-layers.md` lists as an
+      // anti-pattern.
       //
-      // Only for a file under `testsDir`. The scan now also reads the project's
-      // own test globs, and most of what those match is a unit or component
-      // suite that owes ATDD nothing: telling an operator to move every one of
-      // them into `integration/` is the all-integration collapse
-      // `catalog/test-layers.md` forbids.
-      if (isWithinPath(testsRoot, file)) {
-        skippedTestFiles.push(toPosixPath(path.relative(root, file)));
-      }
+      // The diagnostic this branch used to carry has an owner that can scope
+      // it: `collectUncountedTestFiles` reads the directories qfai itself
+      // writes to, which is where output the toolkit produced and then ignored
+      // actually lands.
       continue;
     }
-    countedFileCount += 1;
 
     // Two readings of the same file, and they must not be the same string.
     // `text` is masked so an id inside a literal is not read as an annotation;
@@ -760,7 +774,6 @@ export async function evaluateAtddCodeTraceability(
     scan: {
       globs: scanGlobs,
       matchedFileCount: scanResult.matchedFileCount,
-      countedFileCount,
       truncated: scanResult.truncated,
       limit: scanResult.limit,
     },
@@ -2442,8 +2455,10 @@ async function collectTestFiles(
   root: string,
   globs: string[],
   excludeGlobs: readonly string[] = [],
+  filter?: (absolutePath: string) => boolean,
 ): Promise<CollectFilesByGlobsResult> {
   return collectFilesByGlobs(root, {
+    ...(filter ? { filter } : {}),
     globs,
     // The project's own exclusions travel with its own globs. Without them a
     // path the project declared and then withdrew is collected here alone, and
@@ -2468,7 +2483,13 @@ const ATDD_LAYER_SEGMENTS = new Map<string, AtddTestKind>([
 
 function resolveTestKind(
   filePath: string,
-  roots: { root: string; e2eRoot: string; apiRoot: string; integrationRoot: string },
+  roots: {
+    root: string;
+    testsDirName: string;
+    e2eRoot: string;
+    apiRoot: string;
+    integrationRoot: string;
+  },
 ): AtddTestKind | null {
   if (isWithinPath(roots.e2eRoot, filePath)) {
     return "e2e";
@@ -2479,47 +2500,95 @@ function resolveTestKind(
   if (isWithinPath(roots.integrationRoot, filePath)) {
     return "integration";
   }
-  return resolveTestKindFromPath(roots.root, filePath);
+  return resolveTestKindFromPath(roots.root, filePath, roots.testsDirName);
 }
+
+/**
+ * Directory names a test suite is rooted at.
+ *
+ * The layer is read from the segment **after** one of these, not from any
+ * ancestor that happens to share a layer's name. Scanning ancestors put every
+ * test of a package called `api` — including its unit suite — in the API layer,
+ * and `packages/api/tests/helpers/` has no deeper layer segment to correct it.
+ *
+ * The configured `paths.testsDir` basename joins this set per project, so a
+ * project that renamed the directory is read the same way.
+ */
+const TEST_ROOT_SEGMENTS = new Set(["tests", "test", "__tests__"]);
 
 /**
  * The layer a file outside `paths.testsDir` declares by where it sits.
  *
- * The **deepest** layer directory wins. A file's ancestors are project
- * structure — package names, `src`, `tests` — and a package may legitimately be
- * called `api`: under `packages/*\u002ftests/**`, reading outwards classifies
- * `packages/api/tests/integration/pay.test.ts` as an API test, which then
- * reports its `L3` annotation as both uncovered and forbidden. The directory
- * that holds the test is the one that names its layer.
+ * One segment decides it: the one immediately inside the deepest test root on
+ * the path. That is the shape the contract describes — `<testsDir>/<layer>/**` —
+ * and reading it there rather than anywhere in the path keeps a package name
+ * out of the answer.
  *
- * `null` for a path outside the repository root, which has no segments this can
- * read.
+ * `null` for a path outside the repository root, for one with no test root on
+ * it, and for a file sitting directly in a test root with no layer directory
+ * between them.
  */
-function resolveTestKindFromPath(root: string, filePath: string): AtddTestKind | null {
+function resolveTestKindFromPath(
+  root: string,
+  filePath: string,
+  testsDirName: string,
+): AtddTestKind | null {
   const relative = path.relative(root, filePath);
   if (relative.length === 0 || relative.startsWith("..") || path.isAbsolute(relative)) {
     return null;
   }
   const directories = toPosixPath(relative).split("/").slice(0, -1);
-  for (const directory of [...directories].reverse()) {
-    const kind = ATDD_LAYER_SEGMENTS.get(directory);
-    if (kind !== undefined) {
-      return kind;
+  let root_ = -1;
+  directories.forEach((directory, index) => {
+    if (TEST_ROOT_SEGMENTS.has(directory) || directory === testsDirName) {
+      root_ = index;
     }
+  });
+  const layer = root_ < 0 ? undefined : directories[root_ + 1];
+  return layer === undefined ? null : (ATDD_LAYER_SEGMENTS.get(layer) ?? null);
+}
+
+/**
+ * The basename `resolveTestKindFromPath` reads as a test root for this project.
+ *
+ * Empty when `paths.testsDir` is the repository root: there the layer directories
+ * sit at the top level and the containment check answers for them, so taking
+ * the checkout's own directory name as a test root would only let an unrelated
+ * path match it.
+ */
+function testsDirName(root: string, config: QfaiConfig): string {
+  const testsRoot = resolvePath(root, config, "testsDir");
+  if (path.relative(root, testsRoot) === "") {
+    return "";
   }
-  return null;
+  const base = toPosixPath(testsRoot).replace(/\/+$/, "");
+  return base.slice(base.lastIndexOf("/") + 1);
 }
 
 /**
  * Whether a repository-relative path sits in an acceptance layer.
  *
- * The same question `resolveTestKindFromPath` answers, for a caller that has a
- * path and no scan: the stub gate, which reads the acceptance suites and must
- * not read a unit or component one.
+ * The stub gate's filter. It asks the same question the scan asks and gets it
+ * from the same function, so a file the scan declines cannot be a file the gate
+ * reads — which is what keeps a unit test's stub from blocking a gate that owns
+ * none of it.
  */
-export function isAtddAcceptanceLayerPath(relativePath: string): boolean {
-  const directories = toPosixPath(relativePath).split("/").slice(0, -1);
-  return directories.some((directory) => ATDD_LAYER_SEGMENTS.has(directory));
+export function atddAcceptanceLayerFilter(
+  root: string,
+  config: QfaiConfig,
+): (relativePath: string) => boolean {
+  const testsRoot = resolvePath(root, config, "testsDir");
+  const roots = {
+    root,
+    testsDirName: testsDirName(root, config),
+    e2eRoot: path.join(testsRoot, "e2e"),
+    apiRoot: path.join(testsRoot, "api"),
+    integrationRoot: path.join(testsRoot, "integration"),
+  };
+  // The whole of `resolveTestKind`, not the path half. A layout rooted at the
+  // repository (`testsDir: "."`) puts the layer directories at the top level,
+  // where no test-root segment precedes them and only containment answers.
+  return (relativePath) => resolveTestKind(path.resolve(root, relativePath), roots) !== null;
 }
 
 function isWithinPath(base: string, target: string): boolean {

@@ -380,7 +380,6 @@ type AtddTraceabilitySummary = {
   };
   scan: {
     matchedFileCount: number;
-    countedFileCount: number;
     truncated: boolean;
     limit: number;
     globs: string[];
@@ -437,7 +436,8 @@ export async function validateAtddCodeTraceability(
         // that have not opted in — while the unscoped reading must not become
         // "annotate every US in the repository", which is the annotation-only
         // E2E tree `catalog/test-layers.md` forbids.
-        "tests/e2e/** に `QFAI:SPEC-XXXX:US-YYYY` 注釈を追加し、上記の US を少なくとも1回参照してください。surface typing を宣言している場合、対象は user-facing surface の spec のみです。どの spec も宣言していない場合は全 spec が対象のままです（`.qfai/assistant/catalog/test-layers.md#atdd-annotation-hard-gate`）。",
+        "tests/e2e/** に `QFAI:SPEC-XXXX:US-YYYY` 注釈を追加し、上記の US を少なくとも1回参照してください。surface typing を宣言している場合、対象は user-facing surface の spec のみです。どの spec も宣言していない場合は全 spec が対象のままです（`.qfai/assistant/catalog/test-layers.md#atdd-annotation-hard-gate`）。" +
+          ATDD_PACKAGE_SUITE_HINT,
         { relatedFiles: usAttribution.relatedFiles },
       ),
     );
@@ -680,7 +680,8 @@ export async function validateAtddCodeTraceability(
         "atddCodeTraceability.coverage.conApiToApiTests",
         result.missing.conApi,
         "change",
-        "tests/api/** に `QFAI:CON-API-XXXX` 注釈を追加し、`.qfai/contracts/api` の宣言済み CON-API を全件参照してください。",
+        "tests/api/** に `QFAI:CON-API-XXXX` 注釈を追加し、`.qfai/contracts/api` の宣言済み CON-API を全件参照してください。" +
+          ATDD_PACKAGE_SUITE_HINT,
       ),
     );
   }
@@ -734,7 +735,7 @@ export async function validateAtddCodeTraceability(
         "atddCodeTraceability.coverage.conDbToIntegrationTests",
         result.missing.conDb,
         "change",
-        `${dirs.integration} に \`QFAI:CON-DB-XXXX\` 注釈を追加し、\`.qfai/contracts/db\` の宣言済み CON-DB を全件参照してください。まだスライスに含まれない契約は \`-- x-qfai-status: planned\` で延期できます。`,
+        `${dirs.integration} に \`QFAI:CON-DB-XXXX\` 注釈を追加し、\`.qfai/contracts/db\` の宣言済み CON-DB を全件参照してください。まだスライスに含まれない契約は \`-- x-qfai-status: planned\` で延期できます。${ATDD_PACKAGE_SUITE_HINT}`,
       ),
     );
   }
@@ -936,6 +937,17 @@ function formatMissingTcGroups(
     .join(" / ");
 }
 
+/**
+ * Added to every remediation that names a layer directory.
+ *
+ * The scan reads each package's own test root as well as `paths.testsDir`, so a
+ * fix naming only the configured one sends an author to build a parallel
+ * central suite — which `catalog/test-layers.md` and the `qfai-atdd` skill both
+ * tell them not to do.
+ */
+const ATDD_PACKAGE_SUITE_HINT =
+  "A package with a suite of its own answers from the same layer directory inside that package's own test root, selected by `validation.traceability.testFileGlobs`. The path above is where a project with one suite writes; do not add a second central suite beside a package that already has one.";
+
 function buildMissingTcFix(
   grouped: Map<AtddTestKind, string[]>,
   dirs: Record<AtddTestKind, string>,
@@ -943,7 +955,7 @@ function buildMissingTcFix(
   const perHome = orderedMissingTcGroups(grouped)
     .map(([kind, refs]) => `${dirs[kind]}: ${refs.join(", ")}`)
     .join(" / ");
-  return `各 TC の宣言 Level が指すディレクトリに \`QFAI:SPEC-XXXX:TC-YYYY\` 注釈を追加してください（L3/Integration -> ${dirs.integration}、L4/API -> ${dirs.api}、L5/E2E -> ${dirs.e2e}、Level 未宣言は ${dirs.integration}）: ${perHome}`;
+  return `各 TC の宣言 Level が指すディレクトリに \`QFAI:SPEC-XXXX:TC-YYYY\` 注釈を追加してください（L3/Integration -> ${dirs.integration}、L4/API -> ${dirs.api}、L5/E2E -> ${dirs.e2e}、Level 未宣言は ${dirs.integration}）: ${perHome}${ATDD_PACKAGE_SUITE_HINT}`;
 }
 
 function buildUnknownIssues(
@@ -1093,7 +1105,6 @@ async function writeAtddTraceabilityReport(
     },
     scan: {
       matchedFileCount: result.scan.matchedFileCount,
-      countedFileCount: result.scan.countedFileCount,
       truncated: result.scan.truncated,
       limit: result.scan.limit,
       globs: result.scan.globs,
@@ -1188,7 +1199,6 @@ function buildSummaryMarkdown(summary: AtddTraceabilitySummary): string {
   lines.push("## Scan");
   lines.push("");
   lines.push(`- matchedFileCount: ${summary.scan.matchedFileCount}`);
-  lines.push(`- countedFileCount: ${summary.scan.countedFileCount}`);
   lines.push(`- truncated: ${summary.scan.truncated ? "true" : "false"}`);
   lines.push(`- limit: ${summary.scan.limit}`);
   lines.push("- globs:");

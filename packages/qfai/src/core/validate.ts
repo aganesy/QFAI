@@ -107,7 +107,7 @@ import {
   validateImportLiteEvidencePresence,
   STUB_SOURCE_FILE_PATTERN,
 } from "./validators/index.js";
-import { atddAcceptanceTestGlobs, isAtddAcceptanceLayerPath } from "./atddTraceability.js";
+import { atddAcceptanceLayerFilter, atddAcceptanceTestGlobs } from "./atddTraceability.js";
 import type { HtmlMockTiming } from "./validators/index.js";
 import { readSafe } from "./validators/utils.js";
 
@@ -927,7 +927,7 @@ async function runAtddValidators(
     // before reading anything.
     ...(await validateTestTodoStubs(root, config, {
       globs: atddAcceptanceTestGlobs(root, config, STUB_SOURCE_FILE_PATTERN),
-      fileFilter: isAtddAcceptanceLayerPath,
+      fileFilter: atddAcceptanceLayerFilter(root, config),
     })),
   ];
 }

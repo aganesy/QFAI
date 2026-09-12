@@ -14,6 +14,12 @@ export type CollectFilesByGlobOptions = {
   globs: string[];
   ignore?: string[];
   limit?: number;
+  /**
+   * Keeps a matched file, or drops it before it is counted against `limit`.
+   *
+   * Takes the absolute path, which is what the stream yields.
+   */
+  filter?: (absolutePath: string) => boolean;
 };
 
 export type CollectFilesByGlobsResult = {
@@ -60,12 +66,20 @@ export async function collectFilesByGlobs(
   const files: string[] = [];
   let truncated = false;
   for await (const entry of stream) {
+    const file = String(entry);
+    // Applied before the limit is charged, not after collection. A caller whose
+    // globs also match files it does not own would otherwise spend the whole
+    // budget on them and never reach the ones it does — and the truncation that
+    // reports it is an `info`, so the run still passes `--fail-on error`.
+    if (options.filter && !options.filter(file)) {
+      continue;
+    }
     if (files.length >= limit) {
       truncated = true;
       destroyStream(stream);
       break;
     }
-    files.push(String(entry));
+    files.push(file);
   }
   const matchedFileCount = files.length;
   return { files, truncated, matchedFileCount, limit };

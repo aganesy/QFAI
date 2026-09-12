@@ -12,8 +12,8 @@ import { afterEach, describe, expect, it } from "vitest";
 
 import { defaultConfig, type QfaiConfig } from "../../src/core/config.js";
 import {
+  atddAcceptanceLayerFilter,
   atddAcceptanceTestGlobs,
-  isAtddAcceptanceLayerPath,
 } from "../../src/core/atddTraceability.js";
 import { validateTestTodoStubs } from "../../src/core/validators/testTodoStubs.js";
 
@@ -417,7 +417,7 @@ describe("the ATDD gate's file selection", () => {
           atddConfig(["packages/*/tests/**/*.test.ts"]),
           "**/*.ts",
         ),
-        fileFilter: isAtddAcceptanceLayerPath,
+        fileFilter: atddAcceptanceLayerFilter(root, atddConfig(["packages/*/tests/**/*.test.ts"])),
       },
     );
 
@@ -437,7 +437,7 @@ describe("the ATDD gate's file selection", () => {
           atddConfig(["packages/*/tests/**/*.test.ts"]),
           "**/*.ts",
         ),
-        fileFilter: isAtddAcceptanceLayerPath,
+        fileFilter: atddAcceptanceLayerFilter(root, atddConfig(["packages/*/tests/**/*.test.ts"])),
       },
     );
 
