@@ -187,7 +187,7 @@ restated here.
   tree, and nothing else in the record can be checked against them.
 - **The open questions go under that table, in the same section.** One line per
   **node** left open — a decision, or a fact only the user holds — naming the
-  session's `Subject` it belongs to and carrying the labelled assumption written
+  `Session` it belongs to and carrying the labelled assumption written
   in its place where a document required a value. That is the register this
   stage's gate reads, and it is here so a reader finds the count and the
   questions it counts in one place.
