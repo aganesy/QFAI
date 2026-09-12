@@ -135,6 +135,12 @@ export const QFAI_GITIGNORE_GOVERNANCE_NEGATIONS: readonly string[] = [
   // rest of `.qfai/evidence/prototyping/`, so a fresh clone, another worktree or
   // a later checkout grades against none of the user's decisions.
   "!.qfai/evidence/prototyping/",
+  // …and re-ignored immediately, because re-including the directory would
+  // otherwise expose every descendant with no later rule of its own —
+  // `mutation-log.jsonl`, `iter-NN/` screenshots and HTML, `progress.md`. Those
+  // are the regenerable stage evidence the block exists to keep out, and a
+  // `git add .` would stage them. Only the leaf below is negated back.
+  ".qfai/evidence/prototyping/*",
   "!.qfai/evidence/prototyping/grilling.md",
   "!.qfai/evidence/change-request-*.md",
   "!.qfai/evidence/decision-*.md",

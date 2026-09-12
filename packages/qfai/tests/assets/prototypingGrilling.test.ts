@@ -72,9 +72,13 @@ describe.each(TREES)("%s — prototyping and grilling", (tree) => {
     expectPhrase(skill, "## What is grilled, and what is prototyped");
 
     const rows = boundaryTable(skill);
+    // The right heading says the loop makes these answerable, not that it
+    // settles them: the checkpoint after convergence returns exactly these
+    // decisions to the user, so a heading claiming the loop settled them
+    // licenses the agent-owned decision the workflow then forbids.
     expect(rows[0], "the heading row is gone or reworded").toEqual([
       "Settled by talking, before the loop",
-      "Settled by the loop",
+      "Made answerable by the loop, settled by the user against it",
     ]);
     const grilled = rows.slice(1).map((row) => row[0]);
     const prototyped = rows.slice(1).map((row) => row[1]);
@@ -143,6 +147,11 @@ describe.each(TREES)("%s — prototyping and grilling", (tree) => {
     // And a `stop` is not a rejection: it ends the run rather than resetting.
     expectPhrase(skill, "**Stopped** — the user said `stop` — ends the run there");
     expectPhrase(skill, "a stop ends the session immediately and a reset is further work");
+    // And `proceed` / `done` are closures rather than rejections: the user
+    // ended the asking, not the work, so a reset is work they did not ask for.
+    expectPhrase(skill, "**Closed** — `proceed` or `done` — finishes the running lookups");
+    expectPhrase(skill, "the user ended the asking, not the work");
+    expectPhrase(skill, "The two kinds the method never assumes are still asked");
   });
 
   it("carries the session's answers into the loop", async () => {
@@ -154,6 +163,11 @@ describe.each(TREES)("%s — prototyping and grilling", (tree) => {
     expectPhrase(skill, "`.qfai/evidence/prototyping/grilling.md`");
     expectPhrase(skill, "under `## Session` for the decisions");
     expectPhrase(skill, "`## Escalated` for anything the user has yet to settle");
+    // An answered escalation leaves the open section, or the same decision
+    // reads as settled and open at once — and the delegated prompts consume
+    // every matching row.
+    expectPhrase(skill, "**and remove its row from `## Escalated`**");
+    expectPhrase(skill, "the current state of the tree, not its history");
     // Both consumers, named where each lists its inputs.
     const evaluator = /## Evaluator Inputs \(Mandatory\)([\s\S]*?)^## /m.exec(skill)?.[1] ?? "";
     expect(unwrap(evaluator)).toContain(".qfai/evidence/prototyping/grilling.md");
@@ -249,8 +263,23 @@ describe.each(TREES)("%s — prototyping and grilling", (tree) => {
       "utf-8",
     );
     expect(gitignore).toContain('"!.qfai/evidence/prototyping/grilling.md"');
-    // Git never descends into an ignored directory, so the parent is undone too.
-    expect(gitignore).toContain('"!.qfai/evidence/prototyping/"');
+    // Git never descends into an ignored directory, so the parent is undone
+    // first — and re-ignored immediately after, or re-including the directory
+    // exposes every descendant with no later rule of its own and `git add .`
+    // stages the regenerable evidence this block exists to keep out.
+    const order = [
+      "!.qfai/evidence/prototyping/",
+      ".qfai/evidence/prototyping/*",
+      "!.qfai/evidence/prototyping/grilling.md",
+    ].map((line) => gitignore.indexOf(`"${line}"`));
+    expect(
+      order.every((at) => at > -1),
+      "a line of the three is missing",
+    ).toBe(true);
+    expect(
+      [...order].sort((a, b) => a - b),
+      "the three are out of order",
+    ).toEqual(order);
   });
 
   it("hands the record to the delegated roles, not only to this skill", async () => {

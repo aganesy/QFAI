@@ -69,6 +69,8 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   evidence: nothing reproduces these answers, and a fresh clone or another
   worktree would otherwise grade against none of them.
 
+  A `proceed` or `done` finishes the lookups, records what is still open as
+  labelled assumptions and hands off — the user ended the asking, not the work.
   A `stop` ends the run rather than resetting, and the ten-cycle budget is
   counted across rejection resets rather than restarting with each — an unbounded
   chain of ten-cycle loops is the budget removed by the one route that looks like
