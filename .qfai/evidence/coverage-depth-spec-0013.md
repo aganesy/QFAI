@@ -1135,13 +1135,16 @@ them is repaired here; this artifact scores coverage and does not edit tests, le
    open, sdd-gated OQ, and `sddPreflight.test.ts` pins that. Meanwhile `TC-0013-0003` asserts that
    `SKILL.md` states the criterion's wording verbatim. The story, the runtime and the skill guidance
    do not agree, and the pack contains both halves of the contradiction.
-9. **`validateSurfaceTypeDrift` matches its frontmatter key anywhere in the document.**
-   `SURFACE_TYPE_FRONTMATTER_RE` is `/^\s*surface_type\s*:\s*ui-bearing\s*$/im` and is tested against
-   the whole of `01_Spec.md`, not against the frontmatter block. A spec that mentions
-   `surface_type: ui-bearing` in prose, in a fenced example, or in a migration note suppresses the
-   finding while carrying no frontmatter key, and `resolveAllUiBearingSpecs()` — which the same spec
-   layer says is the strict signal — would still exclude it. No case in the pack supplies such a
-   document.
+9. **Two regular expressions match the frontmatter key anywhere in the document, and they are loose
+   in the same direction.** `validateSurfaceTypeDrift`'s `SURFACE_TYPE_FRONTMATTER_RE` is
+   `/^\s*surface_type\s*:\s*ui-bearing\s*$/im`, and `resolveAllUiBearingSpecs()`'s
+   `UI_BEARING_MARKER_RE` is the unanchored `/surface_type:\s*ui-bearing/im`. Both are tested against
+   the whole of `01_Spec.md` rather than its frontmatter block.
+
+   A spec that mentions `surface_type: ui-bearing` in prose, in a fenced example or in a migration
+   note therefore suppresses the drift finding **and** is accepted as UI-bearing by the resolver the
+   same spec layer calls the strict signal. Tightening one without the other leaves the false
+   positive in place. No case in the pack supplies such a document.
 
 Two smaller observations that belong with the above but do not need their own numbered entry. First,
 `06_Test-Cases.md` declares no `Type` on twelve of its thirty-five rows (`TC-0013-0001` …

@@ -2,8 +2,8 @@
 
 ## Objective
 
-Carry the proof for five of this spec's twelve `done` ledger rows. The other
-seven are not backfilled and the reasons are under Gaps.
+Carry the proof for four of this spec's twelve `done` ledger rows. The other
+eight are not backfilled and the reasons are under Gaps.
 
 ## Inputs reviewed (files/paths)
 
@@ -23,7 +23,7 @@ command and no output, so the reviewer verdicts and pack seals a completed entry
 normally carries cannot be recorded and are not invented.
 
 No row can produce an observed RED — every implementation shipped long before
-this record — so all five take the falsifiability path.
+this record — so all four take the falsifiability path.
 
 Seven rows carried a `Selector` written as a summary of the obligation rather
 than a test's title. Each was corrected to the title of the case that carries
@@ -34,14 +34,14 @@ the runner matches a substring.
 
 A `Selector` correction stands on its own: it makes the row name a case that can
 be run, and says nothing about whether that case discharges the obligation.
-Three of the four rows this run leaves unbackfilled therefore carry a corrected
-`Selector` and keep their original `Evidence` cell; the fourth, `TDD-0026`, is
-unchanged in both.
+Three of the five rows this run leaves unbackfilled with a corrected `Selector`
+keep their original `Evidence` cell; `TDD-0023` and `TDD-0026` are unchanged in
+both cells.
 
 ## Work performed (what changed, where)
 
 - `.qfai/specs/spec-0013/tdd/test-list.md` — seven `Selector` cells rewritten to
-  the titles they name, and the `Evidence` cells of the five rows below rewritten
+  the titles they name, and the `Evidence` cells of the four rows below rewritten
   as pointers into this file. No `Status` moved.
 - This file created.
 
@@ -55,7 +55,6 @@ confirm it had returned to the clean value.
 | Row        | Mutation                                          | Killed              |
 | ---------- | ------------------------------------------------- | ------------------- |
 | `TDD-0020` | the empty-list test forced false                  | 3 of 4              |
-| `TDD-0023` | the resolved pack path altered                    | 1 of 4              |
 | `TDD-0024` | the pointer-to-pack match made unconditional      | 1 of 4              |
 | `TDD-0029` | a fourth key added to the required set            | 4 of 6              |
 | `TDD-0030` | the shape finding's rule code renamed             | 4 of 6              |
@@ -88,22 +87,21 @@ No row changed status. Every row below was already `done`.
 | TDD-ID     | Obligation      | Layer       | RED provenance | Status |
 | ---------- | --------------- | ----------- | -------------- | ------ |
 | `TDD-0020` | `TC-0013-0026`  | integration | falsifiability | done   |
-| `TDD-0023` | `TC-0013-0028`  | integration | falsifiability | done   |
 | `TDD-0024` | `TC-0013-0029`  | integration | falsifiability | done   |
 | `TDD-0029` | `TC-0013-0034`  | integration | falsifiability | done   |
 | `TDD-0030` | `TC-0013-0035`  | integration | falsifiability | done   |
 
-Three of the five reach part of a multi-clause obligation. The part each reaches
+Three of the four reach part of a multi-clause obligation. The part each reaches
 is recorded with the row, so the evidence says what it proves rather than
 restating what the test case asks for.
 
 | Row        | Reached by the recorded case                                                             | Not reached                                                                                                            |
 | ---------- | ---------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
 | `TDD-0020` | The lane fails at `error`, and the message names the file, the screen and the rule token | That `/qfai-prototyping` preflight then refuses. No case drives a preflight; the nearest is in the end-to-end file `TDD-0022` names, asserting a non-zero `runValidate` exit carrying the rule token |
-| `TDD-0023` | The helper returns the pack `state.json#discussion.currentId` names                      | That it does so without scanning modification times. A case under the sibling test case asserts it, by reading the source |
 | `TDD-0024` | A missing pointer and an absent pack each raise a recovery error                         | A pointer resolving to a duplicate pack. No case supplies one                                                            |
+| `TDD-0030` | An item missing `id`, one missing `acceptance`, one carrying an extra key, and a list where every item is malformed | An item missing `label`. Excluding `label` from the missing-key filter leaves all six cases green |
 
-The refactor-verify and checkpoint runs are shared by all five rows, so each
+The refactor-verify and checkpoint runs are shared by all four rows, so each
 entry records the same pair:
 
 - Refactor verify command: npx vitest run tests/integration/sddUiTemplate.test.ts tests/integration/sddPrimaryTasksLane.test.ts tests/e2e/spec0013UiContractPrimaryTasksE2E.test.ts tests/core/activeDiscussionPack.test.ts tests/core/surfaceTypePopulate.test.ts tests/integration/primaryTasksStructured.test.ts
@@ -141,35 +139,6 @@ Forcing the test false silences the finding for an empty list and for a legacy
 contract alike, so three of the file's four cases die. The surviving case is the
 one this row's sibling owns.
 
-- Refactor verify command: npx vitest run tests/integration/sddUiTemplate.test.ts tests/integration/sddPrimaryTasksLane.test.ts tests/e2e/spec0013UiContractPrimaryTasksE2E.test.ts tests/core/activeDiscussionPack.test.ts tests/core/surfaceTypePopulate.test.ts tests/integration/primaryTasksStructured.test.ts
-- Refactor verify result: Test Files 6 passed (6); Tests 25 passed (25)
-- Refactor verify revision: 649d8111147436408c90cbbe1b9f9b07e34da8cb
-- Checkpoint verification command: npx vitest run --project integration --project e2e --project cli --project core --exclude 'tests/core/prFixMonitor.test.ts' --exclude 'tests/core/prMergePlan.test.ts'
-- Checkpoint verification result: PASS — exit 0; Test Files 532 passed (540); Tests 8986 passed (9029)
-- Checkpoint verification revision: 649d8111147436408c90cbbe1b9f9b07e34da8cb
-
-### TDD-0023
-
-- TDD-ID: TDD-0023
-- Layer: integration
-- Test file: packages/qfai/tests/core/activeDiscussionPack.test.ts
-- Selector: active pack resolved from state.json#discussion.currentId
-- TC-ref: TC-0013-0028
-- Run output retained: no
-- Backfill note: the row's cell recorded a verdict with no command and no output, so nothing of the original run survives. The test was re-run for the GREEN below, and the mutation below was applied and reverted to establish that the test discriminates. No reviewer verdict is recorded because none can be reconstructed.
-- RED failure mode: falsifiability
-
-#### Round 1
-
-- Round 1: Revision: 649d8111147436408c90cbbe1b9f9b07e34da8cb
-- Round 1: Satisfied-by: packages/qfai/src/core/discussionPack.ts, resolveActiveDiscussionPack — the path it returns for the pack the pointer names.
-- Round 1: Falsifiability command: npx vitest run tests/core/activeDiscussionPack.test.ts
-- Round 1: Falsifiability result: Test Files 1 failed (1); Tests 1 failed, 3 passed (4). Only this row's own case fails.
-- Round 1: Falsifiability revision: working-tree+42e4c18da50aab10d10eec68a1777bcf971a1b2c3b586da67af18d726dd795e7
-- Round 1: GREEN command: npx vitest run tests/core/activeDiscussionPack.test.ts
-- Round 1: GREEN result: Test Files 1 passed (1); Tests 4 passed (4)
-- Round 1: RED test hash: f707c0a49fe7893d759c7aebc8859047777f9b9505d50f0e7d4f202f30f13d71
-- Round 1: RED test manifest: packages/qfai/tests/core/activeDiscussionPack.test.ts
 - Refactor verify command: npx vitest run tests/integration/sddUiTemplate.test.ts tests/integration/sddPrimaryTasksLane.test.ts tests/e2e/spec0013UiContractPrimaryTasksE2E.test.ts tests/core/activeDiscussionPack.test.ts tests/core/surfaceTypePopulate.test.ts tests/integration/primaryTasksStructured.test.ts
 - Refactor verify result: Test Files 6 passed (6); Tests 25 passed (25)
 - Refactor verify revision: 649d8111147436408c90cbbe1b9f9b07e34da8cb
@@ -293,7 +262,7 @@ None.
 
 - Role: completion-reviewer
 - Status: PASS
-- Reviewed revision: a485d63e135f661d3b4f26b273fc5f54ff5386d6
+- Reviewed revision: pending re-take
 - Subject: every claim this file makes, checked against the files it names
 - Result: the five recorded rows reproduce their commands and counts; the
   evidence-entry contract holds, with `QFAI-TDDLIST-008` and `-009` silent and
@@ -312,23 +281,24 @@ Recorded per row above, and summarized in the table under
 
 ## Gaps / Open risks
 
-Seven of the pack's twelve `done` rows are not backfilled. Six name an
-obligation the code states the opposite of, or one no test reaches; the seventh
-cannot carry a pointer at all.
+Eight of the pack's twelve `done` rows are not backfilled. Six name an
+obligation the code states the opposite of, or one no test reaches; one has no
+oracle for what its obligation names; the last cannot carry a pointer at all.
 
 | Row        | Obligation     | What stops it                                                     |
 | ---------- | -------------- | ----------------------------------------------------------------- |
 | `TDD-0019` | `TC-0013-0025` | The obligation contradicts a sibling test case                    |
 | `TDD-0021` | `TC-0013-0027` | Half the obligation is stated the other way round by the product  |
 | `TDD-0022` | `US-0013-0011` | The ledger has no `US-Refs` column for an `e2e` row to read       |
+| `TDD-0023` | `TC-0013-0028` | Ignoring the pointer entirely leaves the row's own case green     |
 | `TDD-0025` | `TC-0013-0030` | The test drives a helper no production path calls                 |
 | `TDD-0026` | `TC-0013-0031` | The obligation says `warning`; the validator emits `error`        |
 | `TDD-0027` | `TC-0013-0032` | The count band the obligation states was removed from the product |
 | `TDD-0028` | `TC-0013-0033` | The same band                                                     |
 
-Three of the four keep a corrected `Selector`, so the row names a case that can
-be run; `TDD-0026` is unchanged. All four keep their original `Evidence` cell,
-so none claims more than it did before.
+Three keep a corrected `Selector`, so the row names a case that can be run;
+`TDD-0023` and `TDD-0026` are unchanged. All five keep their original `Evidence`
+cell, so none claims more than it did before.
 
 **`TC-0013-0025` cannot be satisfied as written.** It requires every `screens[]`
 entry of the shipped template to carry a literal `primary_tasks: []`.
@@ -355,6 +325,14 @@ case asserts `error` under a `describe` still named "warns". `AC-0013-0023`,
 `BR-0013-0018` and `US-0013-0013` say the same thing as the test case, so either
 the window closed and four spec layers are stale, or the escalation was early.
 
+**`TDD-0023`'s test does not discriminate what its obligation names.**
+`TC-0013-0028` asks that the helper return the pack
+`state.json#discussion.currentId` names, without scanning modification times.
+Replacing the pointer match with the whole candidate list — so `currentId` is
+ignored entirely — leaves the row's own case green, because its fixture builds
+one pack and returning the sole directory satisfies it. Only a `TDD-0024` case
+dies. A mutation that cannot redden the row is not an oracle for it.
+
 **`TDD-0022` cannot carry a pointer at all.** It declares `Layer: e2e`, and an
 `e2e` row's obligation is read from a `US-Refs` column. This ledger has only
 `TC-Refs`, so the obligation reads as empty and no evidence entry can match it.
@@ -377,7 +355,7 @@ pair, so a change to one can silently diverge from the other.
 
 ## Final status
 
-PASS for the five rows recorded here, each for the part of its obligation named
+PASS for the four rows recorded here, each for the part of its obligation named
 under "Ledger rows advanced". This is a per-row verdict, not a stage verdict:
-the pack is not clean, and seven of its twelve `done` rows are listed under Gaps
+the pack is not clean, and eight of its twelve `done` rows are listed under Gaps
 rather than claimed.
