@@ -278,7 +278,7 @@ obligation admits.
 ## Coverage Depth Matrix
 
 See `.qfai/evidence/coverage-depth-spec-0013.md`.
-Totals: ✅ 76 / ⚠️ 108 / ❌ 310, with 7 not applicable, across 501 scored cells —
+Totals: ✅ 65 / ⚠️ 117 / ❌ 312, with 7 not applicable, across 501 scored cells —
 441 matrix depth cells (49 rows × 9 columns) and 60 business rule cells
 (20 rows × 3 columns). `Status` is a row verdict, not a mark, and is outside
 every total.
@@ -288,7 +288,7 @@ every total.
 | Role                | Task                                                     | Status (PASS/REVISE/PENDING) |
 | ------------------- | -------------------------------------------------------- | ---------------------------- |
 | test-design-analyst | Score the forty-nine obligations and write the matrix    | PASS                         |
-| completion-reviewer | Audit every claim this file makes against the repository | PASS                         |
+| completion-reviewer | Audit every claim this file makes against the repository | PENDING |
 
 ## Cross-spec obligations
 
@@ -311,12 +311,19 @@ None.
   eight unbackfilled rows and no backfilled one; all eight gap reasons check
   out against the files they name; the validate gate reproduces at `error=0`,
   and fails on a missing matrix at the revision the mutations were taken at,
-  which is why it is recorded over this tree; the matrix totals — ✅ 76 /
-  ⚠️ 108 / ❌ 310 with `n/a` 7 across 501 cells — agree with the tables, and
-  every `❌` and `⚠️` cell carries exactly one justification, with no
-  coordinate missing and none listed that does not carry the mark; and the
-  four rows naming `auditProfile.ts` keep every mark when read against the
-  eight sibling-pack cases that drive that entrypoint.
+  which is why it is recorded over this tree; the matrix totals at that
+  revision — ✅ 76 / ⚠️ 105 / ❌ 312 with `n/a` 8 across 501 cells — agree with
+  the tables there, and every `❌` and `⚠️` cell carries exactly one
+  justification, with no coordinate missing and none listed that does not carry
+  the mark; and the four rows naming `auditProfile.ts` keep every mark when read
+  against the eight sibling-pack cases that drive that entrypoint.
+- What that verdict does not cover: the matrix has been rescored since, and the
+  totals this file now restates are ✅ 65 / ⚠️ 117 / ❌ 312 with `n/a` 7. The
+  entrypoint conclusion in the line above is among the claims withdrawn — the
+  four rows no longer keep every mark, because the module each obligation names
+  is reached by no case this pack owns. The gate is `PENDING` for that reason:
+  the verdict stands for the revision it names, and no reviewer has read the
+  current artifact.
 - Residual risk: the five falsifiability mutations cannot be re-executed. Each
   names a content address that folds the tree state into it, and the tree has
   moved. Each claimed kill count was re-derived from the source line its
@@ -332,9 +339,10 @@ Recorded per row above, and summarized in the table under
 
 ## Gaps / Open risks
 
-Eight of the pack's twelve `done` rows are not backfilled. Six name an
-obligation the code states the opposite of, or one no test reaches; one has no
-oracle for what its obligation names; the last cannot carry a pointer at all.
+Eight of the pack's twelve `done` rows are not backfilled. Four name an
+obligation the product states the opposite of, and one an obligation a sibling
+in the same pack contradicts. The other three have a case that runs and no
+oracle for what the row's own obligation names.
 
 | Row        | Obligation     | What stops it                                                     |
 | ---------- | -------------- | ----------------------------------------------------------------- |

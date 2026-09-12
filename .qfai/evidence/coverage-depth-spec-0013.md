@@ -42,7 +42,7 @@ to. Two are self-referential coverage placeholders whose annotated `describe` te
 detector. Those seventeen rows carry 153 of the matrix's 285 `❌` cells between them. Six further
 wording rows carry another 44.
 
-The remaining twenty-five rows are scored on their merits and range widely. `US-0013-0014`,
+The remaining twenty-six rows are scored on their merits and range widely. `US-0013-0014`,
 `TC-0013-0035`, `TC-0013-0033` and `TC-0013-0026` are the strongest work in the pack: a closed-schema
 rejection suite naming the offending field and item in every message, a ceiling exercised on both
 sides with the SUT's own constant imported into the assertion, and a lane refusal required to name the
@@ -349,10 +349,10 @@ in this pack's *report* scope because the validator scans the whole test tree; t
 | US-0013-0008 | ✅                     | ✅          | ✅         | ⚠️         | ⚠️              | ✅             | ❌                | ⚠️            | ⚠️              | ⚠️     |
 | US-0013-0009 | ❌                     | ❌          | ❌         | ❌         | ❌              | ❌             | ❌                | ❌            | ❌              | ❌     |
 | US-0013-0010 | ❌                     | ❌          | ❌         | ❌         | ❌              | ❌             | ❌                | ❌            | ❌              | ❌     |
-| US-0013-0011 | ✅                     | ✅          | ✅         | ⚠️         | ⚠️              | ❌             | ❌                | ⚠️            | ⚠️              | ⚠️     |
+| US-0013-0011 | ✅ | ✅ | ⚠️ | ⚠️ | ⚠️ | ❌ | ❌ | ⚠️ | ⚠️ | ⚠️ |
 | US-0013-0012 | ⚠️                     | ✅          | ✅         | ⚠️         | ❌              | ❌             | ❌                | ⚠️            | ✅              | ⚠️     |
-| US-0013-0013 | ✅                     | ✅          | ✅         | ⚠️         | ⚠️              | ❌             | ❌                | ⚠️            | ⚠️              | ❌     |
-| US-0013-0014 | ✅                     | ✅          | ✅         | ⚠️         | ⚠️              | ⚠️             | ❌                | ⚠️            | ❌              | ❌     |
+| US-0013-0013 | ✅ | ⚠️ | ✅ | ⚠️ | ⚠️ | ❌ | ❌ | ⚠️ | ⚠️ | ❌ |
+| US-0013-0014 | ✅ | ⚠️ | ⚠️ | ⚠️ | ⚠️ | ⚠️ | ❌ | ⚠️ | ❌ | ❌ |
 | TC-0013-0001 | ❌                     | ⚠️          | ❌         | ❌         | ❌              | ❌             | ❌                | ❌            | ❌              | ❌     |
 | TC-0013-0002 | ❌                     | ❌          | ❌         | ❌         | ❌              | ❌             | ❌                | ❌            | ❌              | ❌     |
 | TC-0013-0003 | ⚠️                     | ✅          | ⚠️         | ❌         | ❌              | ❌             | ❌                | ❌            | ⚠️              | ❌     |
@@ -377,19 +377,19 @@ in this pack's *report* scope because the validator scans the whole test tree; t
 | TC-0013-0022 | ⚠️                     | ⚠️          | ✅         | ⚠️         | ❌              | ❌             | ❌                | ⚠️            | ⚠️              | ⚠️     |
 | TC-0013-0023 | ❌                     | ❌          | ❌         | ❌         | ❌              | ❌             | ❌                | ❌            | ❌              | ❌     |
 | TC-0013-0024 | ❌                     | ❌          | ❌         | ❌         | ❌              | ❌             | ❌                | ❌            | ❌              | ❌     |
-| TC-0013-0025 | ⚠️                     | ✅          | ❌         | ⚠️         | ❌              | ❌             | ❌                | ❌            | ⚠️              | ⚠️     |
-| TC-0013-0026 | ✅                     | ✅          | ✅         | ⚠️         | ✅              | ⚠️             | ❌                | ⚠️            | ✅              | ⚠️     |
+| TC-0013-0025 | ⚠️ | ❌ | ❌ | ⚠️ | ❌ | ❌ | ❌ | ❌ | ⚠️ | ⚠️ |
+| TC-0013-0026 | ✅ | ✅ | ⚠️ | ⚠️ | ✅ | ⚠️ | ❌ | ⚠️ | ✅ | ⚠️ |
 | TC-0013-0027 | ✅                     | ✅          | ❌         | ⚠️         | ⚠️              | ⚠️             | ❌                | ⚠️            | ⚠️              | ❌     |
 | TC-0013-0028 | ⚠️                     | ✅          | ❌         | ❌         | ❌              | ❌             | ❌                | ❌            | ⚠️              | ⚠️     |
 | TC-0013-0029 | ⚠️                     | ✅          | ✅         | ⚠️         | ❌              | ❌             | ❌                | ⚠️            | ✅              | ⚠️     |
-| TC-0013-0030 | ✅                     | ✅          | ❌         | ⚠️         | ⚠️              | ❌             | ✅                | ⚠️            | ⚠️              | ❌     |
+| TC-0013-0030 | ✅ | ⚠️ | ❌ | ⚠️ | ⚠️ | ❌ | ✅ | ⚠️ | ⚠️ | ❌ |
 | TC-0013-0031 | ✅                     | ✅          | ✅         | ⚠️         | ❌              | ❌             | ❌                | ⚠️            | ⚠️              | ❌     |
 | TC-0013-0032 | ⚠️                     | ⚠️          | ❌         | ❌         | ❌              | ❌             | ❌                | ⚠️            | ⚠️              | ❌     |
 | TC-0013-0033 | ✅                     | ✅          | ✅         | ⚠️         | ⚠️              | ⚠️             | ❌                | ⚠️            | ✅              | ❌     |
-| TC-0013-0034 | ✅                     | ✅          | ❌         | ❌         | ❌              | ❌             | ❌                | ⚠️            | ⚠️              | ⚠️     |
-| TC-0013-0035 | ✅                     | ✅          | ✅         | ✅         | ⚠️              | ⚠️             | ❌                | ⚠️            | ✅              | ⚠️     |
+| TC-0013-0034 | ✅ | ⚠️ | ❌ | ❌ | ❌ | ❌ | ❌ | ⚠️ | ⚠️ | ⚠️ |
+| TC-0013-0035 | ✅ | ⚠️ | ⚠️ | ✅ | ⚠️ | ⚠️ | ❌ | ⚠️ | ✅ | ⚠️ |
 
-Totals across the nine scored depth columns, 441 cells (49 rows × 9): **✅ 63 / ⚠️ 93 / ❌ 285**.
+Totals across the nine scored depth columns, 441 cells (49 rows × 9): **✅ 53 / ⚠️ 102 / ❌ 286**.
 
 `Status` is the row verdict and is not a scored cell, so it is excluded from that total and from the
 grand total at the end. Its distribution across the 49 rows, for reading only, is ✅ 0 / ⚠️ 18 /
@@ -401,8 +401,8 @@ Per scored depth column, 49 cells each:
 | Column                 | ✅  | ⚠️  | ❌  |
 | ---------------------- | --- | --- | --- |
 | Equivalence partitions | 13  | 14  | 22  |
-| Normal path            | 25  | 6   | 18  |
-| Error path             | 12  | 3   | 34  |
+| Normal path | 19 | 11 | 19 |
+| Error path | 8 | 7 | 34 |
 | Edge cases             | 2   | 14  | 33  |
 | Boundary values        | 1   | 11  | 37  |
 | Special values         | 1   | 8   | 40  |
@@ -410,7 +410,7 @@ Per scored depth column, 49 cells each:
 | Combinatorial          | 0   | 18  | 31  |
 | Oracle strength        | 8   | 19  | 22  |
 
-The shape of that table is the pack's central fact: twenty-five rows have a passing normal path, one
+The shape of that table is the pack's central fact: nineteen rows have a passing normal path, one
 row in the whole pack observes a state transition, one row exercises a boundary in both directions,
 and no row reaches `✅` on combinatorial coverage. Coverage here is wide at the happy path and thin
 everywhere the checklist asks for depth.
@@ -442,14 +442,14 @@ is cited by at least one `TC-0013-*`. The other derivation route, each rule's ow
 | BR-0013-0012 | ⚠️            | ✅            | ⚠️                   | TC-0013-0022                                    | ⚠️     |
 | BR-0013-0013 | ❌            | ❌            | ❌                   | TC-0013-0023                                    | ❌     |
 | BR-0013-0014 | ❌            | ❌            | ❌                   | TC-0013-0024                                    | ❌     |
-| BR-0013-0015 | ✅            | ❌            | ❌                   | TC-0013-0025                                    | ❌     |
+| BR-0013-0015 | ❌ | ❌ | ❌ | TC-0013-0025 | ❌ |
 | BR-0013-0016 | ✅            | ✅            | ❌                   | TC-0013-0026, TC-0013-0027                      | ❌     |
 | BR-0013-0017 | ✅            | ✅            | ⚠️                   | TC-0013-0028, TC-0013-0029                      | ⚠️     |
 | BR-0013-0018 | ⚠️            | ✅            | ❌                   | TC-0013-0030, TC-0013-0031                      | ❌     |
 | BR-0013-0019 | ⚠️            | ⚠️            | ❌                   | TC-0013-0032, TC-0013-0033                      | ❌     |
 | BR-0013-0020 | ✅            | ✅            | ⚠️                   | TC-0013-0034, TC-0013-0035                      | ⚠️     |
 
-Totals across the three scored columns, 60 cells: **✅ 13 / ⚠️ 15 / n/a 7 / ❌ 25**.
+Totals across the three scored columns, 60 cells: **✅ 12 / ⚠️ 15 / n/a 7 / ❌ 26**.
 
 `Status` here is likewise a row verdict and is not counted. Its distribution across the 20 rows is
 ✅ 0 / ⚠️ 5 / ❌ 15.
@@ -473,7 +473,7 @@ when the reason is stated. No row reaches `✅`.
 
 The matrix carries **285** `❌` scored cells and the business rule table carries **25** — **310 in
 all**. They are accounted for below in seven groups. Every group names every coordinate it covers
-and states its count, and the seven counts sum to 310:
+and states its count, and the seven counts sum to 312:
 
 | Group                                                             | Cells   |
 | ----------------------------------------------------------------- | ------- |
@@ -481,10 +481,10 @@ and states its count, and the seven counts sum to 310:
 | 2. Five wording rows whose assertion carries none of the obligation | 45    |
 | 3. Two placeholder rows whose test has another subject            | 18      |
 | 4. Six wording rows that address their direction and nothing else  | 45     |
-| 5. Remaining scored cells of the twenty-six tested rows            | 85     |
-| 6. Business rule scored columns                                   | 25      |
+| 5. Remaining scored cells of the twenty-six tested rows | 86 |
+| 6. Business rule scored columns | 26 |
 | 7. Two story cells credited to a case bound elsewhere             | 2       |
-| **Total**                                                         | **310** |
+| **Total** | **312** |
 
 ### Group 1 — ten obligations with no test at all (90 cells)
 
@@ -529,7 +529,7 @@ The cause is one with several faces:
   `TC-0013-0023` that is the whole of the gap: the document is present and the six names it must not
   carry are a closed list, so the assertion is writable and only missing.
 
-Per column, the reason each cell is `❌` rather than `⚠️`, stated once for all eleven rows:
+Per column, the reason each cell is `❌` rather than `⚠️`, stated once for all ten rows:
 
 - **Equivalence partitions** — no artifact, pack or invocation is classified by anything, so the
   compliant and violating partitions each row names are both unrepresented as inputs.
@@ -686,7 +686,7 @@ sentence that carries the obligation, rather than a token naming an artifact. Ev
   passes on any line containing "Plan" before "finalize". `TC-0013-0006`'s `/lower-to-upper/` and
   `TC-0013-0013`'s describe are the same shape.
 
-### Group 5 — remaining scored cells of the twenty-six tested rows (85 cells)
+### Group 5 — remaining scored cells of the twenty-six tested rows (86 cells)
 
 **5a. `State transitions`, 24 cells.** Coordinates: `US-0013-0003`, `US-0013-0008`,
 `US-0013-0011`, `US-0013-0012`, `US-0013-0014`,
@@ -848,9 +848,18 @@ format boundary — `lockedAt`, an ISO 8601 timestamp — is asserted by nothing
 - `TC-0013-0028` — exactly one pack exists in the fixture and exactly one pointer; nothing is crossed.
   Both covering cases build that same single-pack fixture.
 
-**Group 5 count check.** 24 + 17 + 14 + 12 + 10 + 8 = **85**. No cell of any tested row is `❌` in
-`Equivalence partitions`, `Normal path` or `Oracle strength`, so those three columns contribute
-nothing to this group.
+**5g. `Normal path`, 1 cell.** Coordinate: `TC-0013-0025`.
+
+The row requires every `screens[]` entry of the shipped template to carry a literal
+`primary_tasks: []`. The template ships two structured entries per screen and
+`sddUiTemplate.test.ts` asserts only that the value is a list, so the declared normal condition is
+absent from the product and from every assertion. This is the `❌` its sibling obligation forces:
+`TC-0013-0026` requires that same value to fail the audit lane, so a case written for either
+falsifies the other (Findings 5).
+
+**Group 5 count check.** 24 + 17 + 14 + 12 + 10 + 8 + 1 = **86**. No cell of any tested row is `❌`
+in `Equivalence partitions` or `Oracle strength`, so those two columns contribute nothing to this
+group.
 
 ### Group 7 — the 2 ❌ cells credited to a case bound elsewhere
 
@@ -866,7 +875,7 @@ discriminates the structured form the story names.
 A case bound elsewhere can still show the behaviour works. What it cannot do is answer this
 obligation, and a mark is the second claim.
 
-### Group 6 — the 25 ❌ cells of the business rule scored columns
+### Group 6 — the 26 ❌ cells of the business rule scored columns
 
 **`Conditional branches`, 1 cell** — `BR-0013-0019`.
 
@@ -876,7 +885,13 @@ obligation, and a mark is the second claim.
   silent. So one branch is covered, the other is covered backwards, and no case distinguishes the
   band the rule states.
 
-**`Positive case`, 7 cells** — `BR-0013-0004`, `-0005`, `-0006`, `-0007`, `-0008`, `-0013`, `-0014`.
+**`Positive case`, 8 cells** — `BR-0013-0004`, `-0005`, `-0006`, `-0007`, `-0008`, `-0013`,
+`-0014`, `-0015`.
+
+- `BR-0013-0015` — the rule's positive case is the shipped template carrying the empty slot, which
+  is the same condition `TC-0013-0025` declares and the same one the template does not meet. The
+  covering case asserts the key is present and is a list, which the filled template satisfies, so
+  the direction the rule states has no case at all rather than a partial one.
 
 - `BR-0013-0008` — the rule's first bullet, the shipped template's `Type` legend, was credited to an
   assertion in a file written for the `Level` column that carries no spec-0013 annotation, and the
@@ -944,11 +959,11 @@ obligation, and a mark is the second claim.
 
 ## Every ⚠️ cell, named
 
-93 scored depth cells in the matrix and 15 scored cells in the business rule table are `⚠️` —
-**108 in all**. The PASS criterion requires a documented rationale for each, so each is named here,
+102 scored depth cells in the matrix and 15 scored cells in the business rule table are `⚠️` —
+**117 in all**. The PASS criterion requires a documented rationale for each, so each is named here,
 grouped by column with a per-coordinate reason.
 
-### Matrix depth cells (93)
+### Matrix depth cells (102)
 
 **`Equivalence partitions`, 14 cells** — `US-0013-0003`, `US-0013-0012`, `TC-0013-0003`, `-0014`,
 `-0017`, `-0018`, `-0019`, `-0020`, `-0021`, `-0022`, `-0025`, `-0028`, `-0029`, `-0032`.
@@ -1001,7 +1016,18 @@ grouped by column with a per-coordinate reason.
   `QFAI-AUD-020`. The documentation half reads two shipped files as they stand, so its compliant and
   violating partitions are unrepresented.
 
-**`Normal path`, 6 cells** — `TC-0013-0001`, `-0005`, `-0006`, `-0007`, `-0022`, `-0032`.
+**`Normal path`, 11 cells** — `US-0013-0013`, `US-0013-0014`, `TC-0013-0001`, `-0005`, `-0006`,
+`-0007`, `-0022`, `-0030`, `-0032`, `-0034`, `-0035`.
+
+- `US-0013-0013` and `TC-0013-0030` — the population runs and its result is asserted, but every
+  covering case calls `populateSurfaceTypeIfUiCompanion` itself, and that helper has no caller
+  anywhere in `packages/qfai/src/**`. What the obligation names is `/qfai-sdd` performing the
+  population, so the product could ship without the step wired at all and both cells stay green.
+- `US-0013-0014`, `TC-0013-0034` and `TC-0013-0035` — both `primary_tasks` item shapes are accepted
+  and the acceptance is asserted, but through `validateDesignAudit` in `designAudit.ts`. Each
+  obligation names `auditProfile.ts`, whose own cases carry a spec-0004 annotation and are bound
+  there by the crediting rule, so a broken re-export or a `runAuditProfile` that stopped delegating
+  moves no cell of this pack. The behaviour is covered; the entrypoint the row names is not.
 
 - `TC-0013-0022` — the happy path of the validator half is asserted: the complete file set yields
   no issue at all. The happy path of the obligation is Phase 0 producing the lock, and no case
@@ -1024,7 +1050,18 @@ grouped by column with a per-coordinate reason.
   appears in none of the three artifacts and in no assertion; what is pinned is a ceiling with no
   floor, in a file the row does not name.
 
-**`Error path`, 3 cells** — `TC-0013-0003`, `-0014`, `-0021`.
+**`Error path`, 7 cells** — `US-0013-0011`, `US-0013-0014`, `TC-0013-0003`, `-0014`, `-0021`,
+`-0026`, `-0035`.
+
+- `US-0013-0011` and `TC-0013-0026` — the refusal is produced and the message is required to name
+  the file, the screen and the rule token, which is a real error oracle. Both obligations put the
+  refusal in the `/qfai-prototyping` preflight, and every selected case stops at `runValidate` or
+  `validateDesignAudit`; nothing drives that preflight. A preflight that proceeded despite
+  `QFAI-AUD-001` leaves both cells green.
+- `US-0013-0014` and `TC-0013-0035` — the closed-schema rejection is driven and the message names
+  the offending field and item. It is the same entrypoint gap the `Normal path` entry above records:
+  the rejection is observed through `designAudit.ts`, and `auditProfile.ts` is what the obligation
+  names.
 
 - `TC-0013-0003` — the stop direction is pinned as an exact sentence
   (`"Stop only when there is no usable source at all"`), which is the right shape for a documentation
@@ -1283,7 +1320,7 @@ rested on is over the run-summary artifact, and this column is scored per obliga
   return no findings for every input keeps all three cases green, and the discriminating evidence
   lives in `TC-0013-0035`. The mixed-list case widens the input and inherits the same limit.
 
-**Depth `⚠️` count check.** 14 + 6 + 3 + 14 + 11 + 8 + 0 + 18 + 19 = **93**.
+**Depth `⚠️` count check.** 14 + 11 + 7 + 14 + 11 + 8 + 0 + 18 + 19 = **102**.
 
 ### Business rule table (15)
 
@@ -1480,11 +1517,11 @@ rather than by the spec.
 `QFAI-ATDD-133` requires the stage evidence to carry a `## Coverage Depth Matrix` section that links
 to this file and restates the counted totals beside it. Those totals are:
 
-**✅ 76 / ⚠️ 108 / ❌ 310**, with `n/a 7`, across all 501 scored cells — 441 matrix depth cells and
+**✅ 65 / ⚠️ 117 / ❌ 312**, with `n/a 7`, across all 501 scored cells — 441 matrix depth cells and
 60 business rule scored cells. `Status` is a row verdict, not a mark, and is excluded from all four
 counts.
 
-Six obligations in this pack cannot be moved by testing alone. `US-0013-0009` and `TC-0013-0024`
+Seven obligations in this pack cannot be moved by testing alone. `US-0013-0009` and `TC-0013-0024`
 name artifacts and fields the product does not carry and have never had a test. `TC-0013-0022` is
 half of that case: the Phase 0 write it names has no callable function, and the halt-on-missing-file
 it also names has one, which is tested.
@@ -1503,7 +1540,9 @@ brand contracts removed — so the assertion is writable today against artifacts
 Its cells are `❌` for missing coverage, which a test can fix, and not for an obligation no test
 could reach.
 `TC-0013-0032`, `TC-0013-0033` and `TC-0013-0027` declare behaviour the product deliberately changed,
-and their tests already fix the current behaviour correctly. All six need the spec reconciled with
-the code through a Change Request before any test can raise their scores. `US-0013-0003` needs its own
-acceptance criterion reconciled with it before either can be scored honestly at all. Until those are
+and their tests already fix the current behaviour correctly. All seven need the spec reconciled with
+the code through a Change Request before any test can raise their scores. `US-0013-0003` is an eighth
+of the same kind and is counted apart from the seven, because what it needs reconciled is its own
+acceptance criterion rather than the product: until that is settled neither it nor the criterion can
+be scored honestly at all. Until those are
 settled, the honest verdict for all of them is the one recorded above.
