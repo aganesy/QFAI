@@ -189,3 +189,30 @@ Gate item 10 runs the same four steps. A row with no coverage-depth file, or
 none whose matrix names its obligation, has one record rather than a
 placeholder — an absent artifact contributes nothing, not a name with an empty
 hash.
+
+**The slice is taken from the matrix as it stands when the verdict is taken**,
+not from the matrix at the verdict's `Reviewed revision`. Two readers derived
+opposite values from the sentence above, and this is which one the contract
+means.
+
+`Reviewed revision` excludes `.qfai/evidence/**`, so it addresses no state of
+the matrix at all — there is no "the matrix at that revision" to read. Gate
+item 10 recomputes at `done`, from the working tree, so a verdict whose slice
+came from anywhere else is a value the gate cannot reproduce. That settles it:
+the reviewer hashes what the gate will hash.
+
+**A matrix that later names this row's obligation therefore stales this row's
+verdicts**, and that is the intended cost of the slice rather than a defect in
+it. Hashing the file whole would stale every verdict in the spec when any
+obligation's cell moved; the slice narrows that to the rows whose own
+obligation the change touched.
+
+**A re-attestation closes it, and a re-attestation is not a rubber stamp.** The
+`Reviewed revision` has not moved — the matrix is outside it by construction —
+so `.qfai/assistant/constitution/drift-protocol.md`'s record re-attestation is
+available: the role that issued the verdict re-reads the entry, **reads the
+slice that is now in its subject**, and emits the re-attestation with the same
+revision, the same `Result` and a recomputed hash. What it re-signs is a
+judgement over a subject that has grown, so a role that would now answer
+differently records that answer instead. A fresh round is what a changed
+`Reviewed revision` calls for, and this is not that case.
