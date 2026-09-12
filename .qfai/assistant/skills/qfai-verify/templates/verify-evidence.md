@@ -33,8 +33,8 @@ Required sections (all of them, in this order):
      `## Grilling (MANDATORY)` section; the open questions go under the
      table. -->
 
-| Ended | Ended at | Work resumed | Subject | Frontier | Lookups | Decisions | Open | Escalated |
-| ----- | -------- | ------------ | ------- | -------- | ------- | --------- | ---- | --------- |
+| Ended | Ended at | Revision | Work resumed | Subject | Frontier | Lookups | Decisions | Open | Escalated |
+| ----- | -------- | -------- | ------------ | ------- | -------- | ------- | --------- | ---- | --------- |
 
 ## Work performed (what changed, where)
 

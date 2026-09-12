@@ -20,9 +20,11 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   questions it counts are in one place.
 
   A row carries both times — when the session ended, and when the stage next
-  wrote. A row holding only the ending reads the same whether the session ran
-  before the work or after it, because it is written at the end either way. It
-  still cannot prove a session happened; the agent writes its own record.
+  wrote — and this run's `Revision` beside them. A row holding only the ending
+  reads the same whether the session ran before the work or after it, because it
+  is written at the end either way; and the times alone bound no invocation,
+  since an evidence file is updated in place and last week's row satisfies them
+  too. It still cannot prove a session happened; the agent writes its own record.
 
   `.agents/rules/grilling.md` names the four endings a row may hold, so a gate
   and a record share one vocabulary.
@@ -42,8 +44,6 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   A session between agents reaches none of the four on its own. Its budget ends
   the rounds between agents, and the decisions still open go to the user, who
   ends it.
-
-### Added
 
 - **The question-form rule is put in front of the agent on every turn** (#1610).
   A `UserPromptSubmit` hook emits it as context, naming the rule master and the

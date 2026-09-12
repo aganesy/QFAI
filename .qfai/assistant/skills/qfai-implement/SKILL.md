@@ -80,6 +80,11 @@ restated here.
 - **On detection.** A contradiction in the spec, an unconsidered case or a
   technical obstacle surfacing mid-run stops the work and opens a session over
   what was detected, rather than being decided alone.
+- **What this stage's session holds, and what it does not.** The decisions of
+  this invocation: the seam's shape, the production approach behind the row's
+  assertion, and what the refactor step will and will not touch. **Not the
+  ledger row's obligation** — that is settled input, and re-interviewing it each
+  pass reopens what somebody already decided.
 - **Neither session changes settled input.** Where one concludes that settled
   input must change, `.qfai/assistant/constitution/drift-protocol.md` governs:
   stop the dependent work, raise the Change Request, wait for approval. Where it
@@ -87,14 +92,20 @@ restated here.
   upstream changes, so there is nothing to approve.
 - **Record both sessions where the gate reads them.** The method writes no
   artifact of its own, so a run that grilled and a run that skipped it leave the
-  same tree. `.qfai/evidence/implement-<spec-id>.md` carries a `## Grilling Session`
-  section holding one row per session:
+  same tree. The record goes in **the evidence file this run's row owns**, by
+  the rule gate item 10 uses: `.qfai/evidence/implement-<spec-id>.md`, and
+  `.qfai/evidence/atdd-<spec-id>.md` for an `E2E` / `API` / `Integration` row
+  whose `Pre-split-evidence` marker does not send it back here. One file, the
+  one that row's reviewers read — writing to both leaves two records going stale
+  independently, and writing only here leaves the artifact the reviewer opens
+  without the section its gate requires. That file carries a
+  `## Grilling Session` section holding one row per session:
 
   ```text
-  | Ended | Ended at | Work resumed | Subject | Frontier | Lookups | Decisions | Open | Escalated |
-  | ----- | -------- | ------------ | ------- | -------- | ------- | --------- | ---- | --------- |
-  | confirmed | 2026-01-01T09:14:00Z | 2026-01-01T09:15:20Z | preflight | empty | none in flight | 4 | 0 | 0 |
-  | user-closed | 2026-01-01T11:02:00Z | 2026-01-01T11:04:10Z | the ledger row's obligation contradicts a contract | empty | none in flight | 2 | 1 | 0 |
+  | Ended | Ended at | Revision | Work resumed | Subject | Frontier | Lookups | Decisions | Open | Escalated |
+  | ----- | -------- | -------- | ------------ | ------- | -------- | ------- | --------- | ---- | --------- |
+  | confirmed | 2026-01-01T09:14:00Z | a1b2c3d | 2026-01-01T09:15:20Z | preflight | empty | none in flight | 4 | 0 | 0 |
+  | user-closed | 2026-01-01T11:02:00Z | a1b2c3d | 2026-01-01T11:04:10Z | the ledger row's obligation contradicts a contract | empty | none in flight | 2 | 1 | 0 |
   ```
 
   The shape `/qfai-discussion` already writes, with `Subject` in place of that
@@ -107,6 +118,15 @@ restated here.
   because it is written at the end either way. What the pair records is the
   order, which is the part a later reader has no other way to recover. It still
   cannot prove a session happened: the agent writes its own record.
+
+  **`Revision` is what says the row belongs to this run**, written in the
+  notation `.qfai/assistant/skills/qfai-implement/references/evidence-revision.md`
+  defines — a git rev, or `working-tree+<hash>` for an uncommitted tree. The
+  two times order a session against the work, and nothing in them bounds the
+  invocation: an evidence file is updated in place, so a row left by last
+  week's run has a valid ending, an `Ended at` before its own `Work resumed`,
+  and a consistent count. Without an address the gate can compare, a stage that
+  skipped the session is indistinguishable from one that held it.
 
   `Ended` is `confirmed`, `user-closed`, `no-question` or `stopped` — the four
   endings `.agents/rules/grilling.md` names — and only the first three let the
@@ -359,8 +379,8 @@ Use the shared schema (per-row `Status (PASS/REVISE/PENDING)` column, reviewer r
 - Delegate final completion gate to an independent Reviewer.
 - The stage evidence's `## Grilling Session` section carries a row for the
   preflight session and one for every session detection opened; every `Ended` is
-  one of the four endings the rule master names; every `Work resumed` is later
-  than its own `Ended at` and inside this run; and each row's `Open` count
+  one of the four endings the rule master names; every `Revision` is this run's
+  and every `Work resumed` is later than its own `Ended at`; and each row's `Open` count
   matches the questions listed under the table. A run that skipped a session
   leaves the same tree as one that ran it, and an evidence file is updated in
   place, so the rows are what tell a fresh session from an absent one and from
@@ -494,8 +514,10 @@ Required sections:
 - Objective
 - Items processed (TDD-ID, TC-Refs, final status)
 - `## Grilling Session` — one row per session, with the open questions listed
-  under the table. Each is written when that session ends, and its `Work resumed`
-  when the stage next wrote (`## Grilling (MANDATORY)`)
+  under the table. Each is written when that session ends, and carries this run's
+  `Revision` beside the time the stage next wrote (`## Grilling (MANDATORY)`). A
+  run whose row owns `atdd-<spec-id>.md` writes the section there instead, by the
+  same rule gate item 10 uses
 - **Per item, one `### TDD-NNNN` section** carrying the contract below — the single home for that item's RED/GREEN commands and output, in whichever of the two files the row's `Layer` names. The ledger's `Evidence` cell anchors here and holds only the one-word outcomes, because a GFM cell cannot hold a newline or a bare `|` (`references/execution-ledger.md#evidence-cell-contract`)
 - Test results summary
 - Exception items (if any) with DR-IDs

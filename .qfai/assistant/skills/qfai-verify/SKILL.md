@@ -56,59 +56,6 @@ When unsure, read inputs in this order:
 - P3: `.qfai/specs/<spec-id>/07_Decisions.md` + `.qfai/specs/_policies/08_Decisions.md` (Decision Records, `DR-*`; if no spec yet, state "not applicable")
 - P4: other artifacts (01_Spec.md, contracts, evidence, optional legacy `scenario.feature` / coverage ledgers)
 
-## Grilling
-
-Article IX's preflight session runs here. This section carries what is local to
-this stage — the session's subject, what reopens it, and where the record goes.
-The method is `.qfai/assistant/skills/qfai-grilling/SKILL.md`, read before the
-session and followed as written; `.agents/rules/grilling.md` is the rule it
-implements. Neither is restated here, and a stage-local copy of either would
-give an execution run one instruction and the primitive another.
-
-- **A session, not a round.** Rounds run until the frontier is empty, because a
-  round is only what is answerable now: stopping after the first one and editing
-  code leaves every decision that depended on those answers taken silently. The
-  tree is usually small enough that one round empties it, which is what makes
-  the session affordable every time — not a licence to stop there.
-- **Subject: this invocation.** The tree holds the decisions this run is about to
-  take — what evidence a finding needs before it is reported as
-  one, and how a gate the environment cannot execute is recorded. **Not which
-  gates apply**: the declared scope and the mandatory completion list fix that,
-  and whether this environment can run one is a fact to inspect. It does not hold the spec, the acceptance criteria or the
-  ledger rows: those are settled input, and re-interviewing them each pass
-  reopens what somebody already decided.
-- **Reopen on a contradiction, and hand the answer to the Drift Protocol.**
-  A gate whose criterion contradicts the artifact it reads,
-  or a finding the spec gives no way to clear. Open a session over **what the change should ask for**, never over
-  whether to make it. `.qfai/assistant/constitution/drift-protocol.md` carries
-  the change — STOP, Change Request, the user's approval, the owner rerun — and a
-  session is not a second route to editing settled input.
-- **Record every session where the gate reads it.** The method writes no
-  artifact of its own, so a run that grilled and a run that skipped it leave the
-  same tree. `.qfai/evidence/verify-<spec-id>.md` carries a `## Grilling Session` section holding **one
-  row per session** — the preflight one, and any a contradiction reopened:
-
-  ```text
-  | Ended | Ended at | Revision | Before | Decisions | Open | Escalated |
-  | ----- | -------- | -------- | ------ | --------- | ---- | --------- |
-  | confirmed | 2026-01-01T09:14:00Z | a1b2c3d | first write | 4 | 0 | 0 |
-  | user-closed | 2026-01-01T11:02:00Z | a1b2c3d | CR-20260101-0001 | 2 | 1 | 0 |
-  ```
-
-  `Ended` takes one of the endings the method defines: `confirmed`,
-  `user-closed`, `no-question` or `stopped`. `Revision` is the tree the session
-  ended against, and the gate requires it to be **this** run's — an evidence file
-  is updated in place, so a row left by an earlier invocation would otherwise let
-  a later run skip the session entirely. `Before` says what the session preceded:
-  `first write` for the preflight one, and the Change Request or the edit that
-  surfaced the contradiction for a reopened one.
-
-- **The open questions go under that table, in the same section.** One line per
-  decision left open, carrying the decision, the labelled assumption written in
-  its place where a document required a value, and nothing else. That is the
-  register this stage's gate reads, and it is here so a reader finds the count
-  and the questions it counts in one place.
-
 ## Verify Scope Rule (Mandatory)
 
 - `/qfai-verify` MUST always run full-scan verification **within the declared scope**.
@@ -162,8 +109,8 @@ Use the shared schema.
 - Follow `.qfai/assistant/constitution/shared-skill-delegation-baseline.md#reviewer-gate-baseline`.
 - The stage evidence's `## Grilling Session` section carries a row for the
   preflight session and one for every session detection opened; every `Ended` is
-  one of the four endings the rule master names; every `Work resumed` is later
-  than its own `Ended at` and inside this run; and each row's `Open` count
+  one of the four endings the rule master names; every `Revision` is this run's
+  and every `Work resumed` is later than its own `Ended at`; and each row's `Open` count
   matches the questions listed under the table. A run that skipped a session
   leaves the same tree as one that ran it, and an evidence file is updated in
   place, so the rows are what tell a fresh session from an absent one and from
@@ -219,6 +166,12 @@ restated here.
 - **On detection.** A contradiction in the spec, an unconsidered case or a
   technical obstacle surfacing mid-run stops the work and opens a session over
   what was detected, rather than being decided alone.
+- **What this stage's session holds, and what it does not.** The decisions of
+  this invocation: what evidence a finding needs before it is reported as one,
+  and how a gate the environment cannot execute is recorded. **Not which gates
+  apply** — the declared scope and the mandatory completion list fix that, and
+  whether this environment can run one is a fact to inspect rather than a
+  decision to take.
 - **Neither session changes settled input.** Where one concludes that settled
   input must change, `.qfai/assistant/constitution/drift-protocol.md` governs:
   stop the dependent work, raise the Change Request, wait for approval. Where it
@@ -230,10 +183,10 @@ restated here.
   section holding one row per session:
 
   ```text
-  | Ended | Ended at | Work resumed | Subject | Frontier | Lookups | Decisions | Open | Escalated |
-  | ----- | -------- | ------------ | ------- | -------- | ------- | --------- | ---- | --------- |
-  | confirmed | 2026-01-01T09:14:00Z | 2026-01-01T09:15:20Z | preflight | empty | none in flight | 4 | 0 | 0 |
-  | user-closed | 2026-01-01T11:02:00Z | 2026-01-01T11:04:10Z | a gate the spec requires and no lane runs | empty | none in flight | 2 | 1 | 0 |
+  | Ended | Ended at | Revision | Work resumed | Subject | Frontier | Lookups | Decisions | Open | Escalated |
+  | ----- | -------- | -------- | ------------ | ------- | -------- | ------- | --------- | ---- | --------- |
+  | confirmed | 2026-01-01T09:14:00Z | a1b2c3d | 2026-01-01T09:15:20Z | preflight | empty | none in flight | 4 | 0 | 0 |
+  | user-closed | 2026-01-01T11:02:00Z | a1b2c3d | 2026-01-01T11:04:10Z | a gate the spec requires and no lane runs | empty | none in flight | 2 | 1 | 0 |
   ```
 
   The shape `/qfai-discussion` already writes, with `Subject` in place of that
@@ -246,6 +199,15 @@ restated here.
   because it is written at the end either way. What the pair records is the
   order, which is the part a later reader has no other way to recover. It still
   cannot prove a session happened: the agent writes its own record.
+
+  **`Revision` is what says the row belongs to this run**, written in the
+  notation `.qfai/assistant/skills/qfai-implement/references/evidence-revision.md`
+  defines — a git rev, or `working-tree+<hash>` for an uncommitted tree. The
+  two times order a session against the work, and nothing in them bounds the
+  invocation: an evidence file is updated in place, so a row left by last
+  week's run has a valid ending, an `Ended at` before its own `Work resumed`,
+  and a consistent count. Without an address the gate can compare, a stage that
+  skipped the session is indistinguishable from one that held it.
 
   `Ended` is `confirmed`, `user-closed`, `no-question` or `stopped` — the four
   endings `.agents/rules/grilling.md` names — and only the first three let the

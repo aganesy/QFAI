@@ -95,6 +95,18 @@ describe.each(TREES)("%s — the execution stages record their sessions", (tree)
     expectPhrase(primitive, "the agent never confirms on the user's behalf");
   });
 
+  it("gives each stage one grilling section rather than two", async () => {
+    // Two sections defining the same record is two contracts, and a run
+    // compliant with either fails the other. `## Grilling Session` is not one
+    // of them: that is the evidence heading, quoted inside a template block.
+    const HEADINGS = ["## Grilling", "## Grilling (MANDATORY)"];
+    for (const skill of STAGES) {
+      const body = await read(`assistant/skills/${skill}/SKILL.md`);
+      const declared = body.split("\n").filter((line) => HEADINGS.includes(line.trimEnd()));
+      expect(declared, `${skill} declares ${declared.length} grilling sections`).toHaveLength(1);
+    }
+  });
+
   it.each(STAGES)("%s carries the section and one row per session", async (skill) => {
     const body = await grilling(skill);
     expectPhrase(body, "**Record both sessions where the gate reads them.**");
@@ -109,13 +121,13 @@ describe.each(TREES)("%s — the execution stages record their sessions", (tree)
     const body = await grilling(skill);
     expectPhrase(
       body,
-      "| Ended | Ended at | Work resumed | Subject | Frontier | Lookups | Decisions | Open | Escalated |",
+      "| Ended | Ended at | Revision | Work resumed | Subject | Frontier | Lookups | Decisions | Open | Escalated |",
     );
     expectPhrase(body, "The shape `/qfai-discussion` already writes");
     expectPhrase(body, "this stage holds more than one session, so a row says which");
   });
 
-  it.each(STAGES)("%s records both times, not the ending alone", async (skill) => {
+  it.each(STAGES)("%s bounds the row to this run as well as this order", async (skill) => {
     // A row holding only the ending is written at the end either way, so it
     // reads the same whether the session ran before the work or after it.
     const body = await grilling(skill);
@@ -125,6 +137,10 @@ describe.each(TREES)("%s — the execution stages record their sessions", (tree)
       body,
       "It still cannot prove a session happened: the agent writes its own record.",
     );
+    // The times order a session against the work and bound no invocation: an
+    // evidence file is updated in place, so last week's row reads as valid.
+    expectPhrase(body, "**`Revision` is what says the row belongs to this run**");
+    expectPhrase(body, "nothing in them bounds the invocation");
   });
 
   it.each(STAGES)("%s names the four endings and what they authorize", async (skill) => {
@@ -147,6 +163,15 @@ describe.each(TREES)("%s — the execution stages record their sessions", (tree)
     expectPhrase(body, "a reader finds the count and the questions it counts in one place");
   });
 
+  it("sends an implement run's record to the file its row owns", async () => {
+    // An `E2E` / `API` / `Integration` row's evidence is `atdd-<spec-id>.md`, so
+    // a record always written here leaves that row's reviewer without one.
+    const body = await grilling("qfai-implement");
+    expectPhrase(body, "The record goes in **the evidence file this run's row owns**");
+    expectPhrase(body, "by the rule gate item 10 uses");
+    expectPhrase(body, "writing to both leaves two records going stale independently");
+  });
+
   it.each(STAGES)("%s tells its gate to read every row", async (skill) => {
     // Nothing else reads it. An unread record is a heading.
     const body = await read(`assistant/skills/${skill}/SKILL.md`);
@@ -154,7 +179,10 @@ describe.each(TREES)("%s — the execution stages record their sessions", (tree)
       body,
       "a row for the preflight session and one for every session detection opened",
     );
-    expectPhrase(body, "every `Work resumed` is later than its own `Ended at` and inside this run");
+    expectPhrase(
+      body,
+      "every `Revision` is this run's and every `Work resumed` is later than its own `Ended at`",
+    );
     expectPhrase(body, "each row's `Open` count matches the questions listed under the table");
   });
 
