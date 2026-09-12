@@ -624,16 +624,19 @@ leaves both markers undefined. This row has **six `❌` depth cells** and no `�
   `full-harness` artifact semantics where the code remains, so its positive direction is a reader
   that tolerates the vocabulary. The two slices that read it — `prototypingCertify.ts`'s legacy
   `fullHarness.runId` fallback and `report.ts`'s `prototyping.fullHarness` rendering — have no case
-  in `packages/qfai/tests/**` at all. The one case that touches the vocabulary removes it:
-  `delete body.fullHarness` in the cycle-0 reset, pinned by `TC-0014-0034`. Removing the vocabulary
-  is the opposite direction, so the rule's own has nothing behind it.
+  in `packages/qfai/tests/**` at all. Three cases touch the vocabulary and none tolerates it:
+  `prototypingIterate.test.ts` deletes it (`delete body.fullHarness` in the cycle-0 reset, pinned by
+  `TC-0014-0034`), `prototypingEvidence.test.ts` feeds it and requires each legacy key rejected by
+  name, and `browserQaContract.test.ts` carries a fixture whose `mode` is `"full-harness"`, which
+  passes only because the validator never reads that field. Removal, rejection and an unread field
+  are each the opposite direction, so the rule's own has nothing behind it.
 - **BR-0014-0004 × Conditional branches** — the rule is conditional: the vocabulary may persist
   "if corresponding code remains". Neither branch is constructed. The code-remains branch would be
   shown by a reader that tolerates the vocabulary, and the two readers that do — the certify
   fallback and the report rendering — have no case, as the positive cell above records. The
   complementary branch, vocabulary surviving with no code behind it and so not to be read as a live
-  contract, is never built either. The one case that touches the vocabulary deletes it, which
-  exercises neither side of the condition.
+  contract, is never built either. The three cases that touch the vocabulary delete it, reject it,
+  or leave it in a field nothing reads, and none of those exercises either side of the condition.
 
 ### The four ❌ cells of the business rule Status column
 

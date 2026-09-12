@@ -62,7 +62,7 @@ below are over the selected cases, not over the file.
 | `TDD-0019` falsifiability A | 1 of 5   | 1 failed            |
 | `TDD-0019` falsifiability B | 1 of 5   | 1 failed            |
 | Refactor verify           | all      | 126 passed          |
-| Checkpoint                | all      | 9026 passed         |
+| Checkpoint                | all      | 9063 passed, exit 0 |
 
 ## Test volume estimate
 
@@ -83,13 +83,15 @@ evidence its cell points at.
 | ---------- | -------------- | ----------- | -------------- | ------ |
 | `TDD-0019` | `TC-0014-0019` | integration | falsifiability | done   |
 
-Four files and nineteen cases in those projects declare themselves inactive and
-did not run, each through `describe.skip` carrying the marker
-`(test-first, pending /qfai-implement)`. That accounts for the whole of the
-checkpoint's skip count on a POSIX runner, which is where it was taken. A Windows
-runner skips about eleven more, through the `it.skipIf(process.platform ===
-"win32")` cases in the `cli` and `integration` projects, so the count is read
-against the platform rather than as a constant.
+Eight files declare themselves inactive and did not run, each through
+`describe.skip` carrying the marker `(test-first, pending /qfai-implement)`.
+They hold thirty-five cases. The checkpoint below reports eighty-two skips, so
+those eight account for thirty-five of them and the remaining forty-seven are
+conditional skips — `it.skipIf` and `describe.skipIf` on the platform, on
+`geteuid`, and on optional tooling. The run was taken on Windows, and eleven of
+the forty-seven are the `process.platform === "win32"` cases in the `cli` and
+`integration` projects, so a POSIX runner reaches a different total. The count
+is read against the platform rather than as a constant.
 
 The checkpoint needs `pnpm -C packages/qfai build` first.
 `tests/integration/cliStartupCost.test.ts` reads `packages/qfai/dist/**` and is
@@ -116,15 +118,24 @@ branch and so cannot re-check anything this branch changed.
 
 #### Round 1
 
-- Round 1: Revision: 649d8111147436408c90cbbe1b9f9b07e34da8cb
+- Round 1: Revision: 09f6f3b362ffc1ceac2a8fa6087d4029da4aed61
 - Round 1: Satisfied-by: packages/qfai/src/core/types.ts, IssueCategory — the union the removed compatibility category is absent from.
 - Round 1: Falsifiability command: npx vitest run tests/integration/verifySemanticsSpec0014.test.ts -t 'TC-0014-0019'
-- Round 1: Falsifiability result: Test Files 1 failed (1); Tests 1 failed (1 of the file's 5 selected). The selector holds one case and it dies.
-- Round 1: Falsifiability revision: working-tree+d46540131695fb9d36bba2c09b20878d6ad69136a24ccd1f9672326b7e78e173
+- Round 1: Falsifiability result: Test Files 1 failed (1); Tests 1 failed (1 of the file's 6 selected). The selector holds one case and it dies, on `expected 'import type { ScCoverage, TestFileSca…' not to contain '"compatibility"'`.
+- Round 1: Falsifiability revision: working-tree+ed11467f59bfb62f58c90667eb64771c30f7fd1439478e8d28f9ea98ce26d39b
 - Round 1: GREEN command: npx vitest run tests/integration/verifySemanticsSpec0014.test.ts -t 'TC-0014-0019'
-- Round 1: GREEN result: Test Files 1 passed (1); Tests 1 passed (1 of the file's 5 selected)
-- Round 1: RED test hash: f59276acc52e9397953da7c5d7edccfbdeb45e1ca9822da516c17b75de8c2ce2
+- Round 1: GREEN result: Test Files 1 passed (1); Tests 1 passed (1 of the file's 6 selected)
+- Round 1: RED test hash: 4888866eb28f7cecdefa2a2eaabdfe39cf82c7b11d3f53fdca2ea227c1246d44
 - Round 1: RED test manifest: packages/qfai/tests/integration/verifySemanticsSpec0014.test.ts
+- Round 1: Re-taken. The round was first observed at
+  `649d8111147436408c90cbbe1b9f9b07e34da8cb`, and the manifest file has since
+  gained a case — the merge with main brought a test that observes the canonical
+  group arriving through verify, which is the same file this row's RED hash
+  covers. A recorded hash over a file that has moved is evidence for a tree
+  nobody has, so the mutation, the GREEN run and the hash were all taken again
+  on this revision rather than the hash being re-typed. The selector still holds
+  one case, the file now holds six, and the mutation still kills it on the same
+  assertion.
 - Round 1: Falsifiability revision abbreviation length: 9. The address above is
   reproducible only at that length. The procedure in
   `.qfai/assistant/skills/qfai-implement/references/evidence-revision.md` builds
@@ -177,19 +188,26 @@ first mutation passes it and fails the literal check below it instead.
 - Refactor verify command: npx vitest run tests/integration/verifySemanticsSpec0014.test.ts tests/cli/commands/prototypingIterate.test.ts tests/integration/cli/commands/prototypingCertify.saasPackage.test.ts tests/integration/cli/commands/prototypingCertify.upgradeScope.test.ts
 - Refactor verify result: Test Files 4 passed (4); Tests 126 passed (126)
 - Refactor verify revision: 649d8111147436408c90cbbe1b9f9b07e34da8cb
-- Checkpoint verification command: npx vitest run --project integration --project e2e --project cli --project core --exclude 'tests/core/prFixMonitor.test.ts' --exclude 'tests/core/prMergePlan.test.ts'
-- Checkpoint verification result: Test Files 531 passed, 3 failed, 8 skipped (542); Tests 9026 passed, 12 failed, 82 skipped (9120)
-- Checkpoint verification revision: 3c18138deba564104eeccdb4cd621b5225841937
-- Checkpoint verification note: the twelve failures are this machine's, not this
-  branch's. `tests/integration/dbSchemaDriftEngine.test.ts` refuses without an
-  in-process Postgres engine, and the mdschema and mermaid script suites need
-  binaries this checkout does not install. All seven `test` slices of CI pass on
-  this revision, which is the run that decides the merge.
+- Checkpoint verification command: npx vitest run --project integration --project e2e --project cli --project core --exclude 'tests/core/prFixMonitor.test.ts' --exclude 'tests/core/prMergePlan.test.ts' --exclude 'tests/integration/dbSchemaDriftEngine.test.ts' --exclude 'tests/assets/mdschemaRouting.test.ts' --exclude 'tests/assets/mdschemaSchemas.test.ts'
+- Checkpoint verification result: PASS — exit 0; Test Files 533 passed (541); Tests 9063 passed (9145)
+- Checkpoint verification revision: 09f6f3b362ffc1ceac2a8fa6087d4029da4aed61
+- Checkpoint verification note: three suites are excluded beyond the two the
+  command already excluded, and each is excluded for a dependency this checkout
+  does not install rather than for anything about this branch.
+  `tests/integration/dbSchemaDriftEngine.test.ts` refuses without an in-process
+  Postgres engine, and `tests/assets/mdschemaRouting.test.ts` and
+  `tests/assets/mdschemaSchemas.test.ts` need the `@jackchuka/mdschema`
+  entry point. Run without the exclusions the same command reports twelve
+  failures in those three files and nothing else, and all seven `test` slices of
+  CI — which install the full toolchain — pass on this revision. CI is the run
+  that decides the merge; this one is the local reproduction with the gap named.
+  The eight files and eighty-two cases the run did not execute are the declared
+  inactive suites and the conditional skips described above.
 - Superseded checkpoint: the earlier record was `npx vitest run --project integration --project cli`
   at `649d8111147436408c90cbbe1b9f9b07e34da8cb` — Test Files 187 passed (191);
-  Tests 2258 passed (2277). That revision is this branch's merge base, and the
-  `integration` project has gained cases since, so the run described a suite this
-  commit no longer has.
+  Tests 2258 passed (2277). That revision is an ancestor of this commit rather
+  than its merge base, and the `integration` project has gained cases since, so
+  the run described a suite this commit no longer has.
 
 ## Coverage Depth Matrix
 
