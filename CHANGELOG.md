@@ -27,6 +27,30 @@ series` — the reviewed artifact plus the role — carries the round budget
   across a host that answers round 2 with a fresh sub-agent, which a count per
   agent instance restarted every round.
 
+- **A grilling session's outcome has a named home** (#1604). A settled
+  discussion decision goes to `99_delta.md`; one the session could not settle
+  goes to the open-question register. Answering a question later moves its
+  register row as well as writing the log, because readiness reads the register
+  and an answer recorded only in the log left the pack blocked on a settled
+  question. A settled spec decision needs its `DL-*` entry in the delta as well
+  as `07_Decisions.md`, because `npx qfai report` reads the Decision Log alone.
+
+  Each destination is the artifact that holds that outcome: a rejected visual
+  direction to the delta section the template requires of a UI-bearing pack,
+  every disposition change to the append-only log including the `created` event
+  that opens a question, and rejection and reopening to the dispositions the
+  register already carries.
+
+  A closure the user asked for is not an open question. Where `proceed` or
+  `done` ends the asking, what is still open becomes a labelled assumption and
+  no register row, because readiness requires the open count to reach zero and
+  registering it would block the pack on the closure the user asked for.
+  `--auto` keeps the register row: nobody saw the question there.
+
+  A spec pack's open-question file is a record and not a gate. It carries open
+  questions as a matter of course, so a decision the user must settle goes to
+  the user during the stage rather than being written down and left.
+
 ### Removed
 
 - **`.qfai/report/validate.log` is no longer tracked** (#1582). Every local
