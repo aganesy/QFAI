@@ -1308,7 +1308,13 @@ const SHA256_VALUE = /^(?:sha256:)?[a-f0-9]{64}$/i;
  * bound is the longer object id; a length in between is a valid abbreviation of
  * one format or the other, and the form check does not adjudicate which.
  */
-const EVIDENCE_REVISION_FORM = /^(?:[0-9a-f]{7,64}|working-tree\+[0-9a-f]{64})$/i;
+// Built from the shared source rather than written again, and with no `i` flag:
+// the content address is produced by a procedure that fixes its notation as
+// lowercase, so accepting both cases here would let one tree be recorded as two
+// revisions while the freshness comparison — which is exact — reads a correct
+// row as stale. A git rev stays case-insensitive, which the source's own class
+// carries.
+const EVIDENCE_REVISION_FORM = new RegExp(`^${REVISION_FORM_SOURCE}$`);
 
 const REVISION_FORM_HINT = "a git rev or working-tree+<sha256>";
 

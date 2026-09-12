@@ -614,6 +614,8 @@ describe("the working-tree address has one notation", () => {
       expect(text).toContain("--src-prefix=a/ --dst-prefix=b/");
       expect(text).toContain("--no-renames");
       expect(text).toContain("--diff-algorithm=myers");
+      expect(text).toContain("--unified=3");
+      expect(text).toContain("--no-textconv");
       // A symlink payload read through a command gains or loses a newline.
       expect(text).toContain("No command-output terminator is serialized");
     });

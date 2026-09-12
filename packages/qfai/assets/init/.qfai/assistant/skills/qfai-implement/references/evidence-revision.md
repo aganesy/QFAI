@@ -41,21 +41,23 @@ check. Gate item 10 rejects any other shape wherever a revision is recorded:
      root=$(git rev-parse --show-toplevel)
      git -C "$root" rev-parse HEAD
      git -C "$root" -c core.quotePath=false diff HEAD \
-       --no-color --no-ext-diff --binary --full-index --no-renames \
-       --diff-algorithm=myers --src-prefix=a/ --dst-prefix=b/ --
+       --no-color --no-ext-diff --no-textconv --binary --full-index --no-renames \
+       --diff-algorithm=myers --src-prefix=a/ --dst-prefix=b/ --unified=3 --
      git -C "$root" -c core.quotePath=false ls-files --others --exclude-standard -z
      ```
 
      Each of those is there because leaving it off lets one tree have two
      addresses.
 
-     | Pinned                                      | Without it                                                                                                                                               |
-     | ------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
-     | `-C "$root"`                                | `ls-files --others` enumerates only what is under the current directory, and reports paths relative to it — so where the agent stood changes the address |
-     | `-c core.quotePath=false` and `-z`          | A path holding non-ASCII or a control character comes back in a quoted display spelling, and the config changes that spelling for the same tree          |
-     | `--full-index`                              | The `index` line abbreviates to `core.abbrev`, which differs per environment                                                                             |
-     | `--src-prefix=a/ --dst-prefix=b/`           | `diff.noprefix` and `diff.mnemonicPrefix` rewrite the headers                                                                                            |
-     | `--no-renames` and `--diff-algorithm=myers` | `diff.renames` and `diff.algorithm` change the hunks for identical content                                                                               |
+     | Pinned                                      | Without it                                                                                                                                                      |
+     | ------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+     | `-C "$root"`                                | `ls-files --others` enumerates only what is under the current directory, and reports paths relative to it — so where the agent stood changes the address        |
+     | `-c core.quotePath=false` and `-z`          | A path holding non-ASCII or a control character comes back in a quoted display spelling, and the config changes that spelling for the same tree                 |
+     | `--full-index`                              | The `index` line abbreviates to `core.abbrev`, which differs per environment                                                                                    |
+     | `--src-prefix=a/ --dst-prefix=b/`           | `diff.noprefix` and `diff.mnemonicPrefix` rewrite the headers                                                                                                   |
+     | `--no-renames` and `--diff-algorithm=myers` | `diff.renames` and `diff.algorithm` change the hunks for identical content                                                                                      |
+     | `--unified=3`                               | `diff.context` changes how many lines surround each hunk, and with them the bytes                                                                               |
+     | `--no-textconv`                             | A `.gitattributes` diff driver with `textconv` converts a file before diffing, and can render a real change as an empty diff. `--no-ext-diff` does not cover it |
 
      The exclusions below apply to both the diff and the untracked list.
 
