@@ -187,6 +187,45 @@ describe.each(TREES)("%s — the discussion interview", (tree) => {
     expectPhrase(matrix, "Not at a count");
   });
 
+  it("keeps a hard-required input out of every assumption path", async () => {
+    // An ending cannot authorize authoring over an input the run consumes and
+    // does not have. Registering an open question does not make it defaultable:
+    // the value is what the run needs, and a question about it is not one.
+    const skill = await read(SKILL);
+    expectPhrase(
+      skill,
+      "**No ending authorizes authoring while a `hard-required` input this invocation consumes is missing.**",
+    );
+    expectPhrase(
+      skill,
+      "an interactive closure still asks for them, and a no-question run stops and names them",
+    );
+    expectPhrase(skill, "Registering an open question does not make an input defaultable");
+  });
+
+  it("blocks a non-UI pack on its open count too", async () => {
+    // A run is `--auto` or not independently of whether it has a surface, and
+    // the open count is what a no-question run is blocked by. Listed only under
+    // the UI-bearing shape, a non-UI `--auto` pack completed with its decisions
+    // still open.
+    const matrix = await read(MATRIX);
+    const allPacks = /## All Packs([\s\S]*?)^## /m.exec(matrix)?.[1] ?? "";
+    expect(unwrap(allPacks)).toContain("`Disposition: open` count is zero in `11_OQ-Register.md`");
+    expectPhrase(matrix, "Here rather than under one pack shape");
+    // And it is not left in both places, where the two could drift.
+    expect(matrix.match(/`Disposition: open` count is zero/g) ?? []).toHaveLength(1);
+  });
+
+  it("records when the session ended and when authoring began", async () => {
+    // A row holding only the final state reads the same whether the session ran
+    // first, ran after, or never ran — it is written at the end either way.
+    const skill = await read(SKILL);
+    expectPhrase(skill, "| Ended | Ended at | Authoring began |");
+    expectPhrase(skill, "**Both times, and the first written before the pack is.**");
+    // And the limit is stated rather than implied.
+    expectPhrase(skill, "What it still cannot do is prove a session happened");
+  });
+
   it("leaves a record the reviewer can check the claim against", async () => {
     // A skipped session and a completed one present the same pack, so a
     // reviewer with only the pack must either block every run or accept a

@@ -78,15 +78,15 @@ A **cli-only** pack (`primary_surface: cli`, no visual secondary surface) stays 
    `references/design-dna-intake.md`. Not every UI-bearing target: a cli-only pack is UI-bearing
    and the brand questions do not apply to it, because nothing downstream reads a `visual.*` token
    tree for one. The method is
-   `.agents/rules/grilling.md` and this step does not restate it. "Run the interview" named no
-   method, and an interview with no method is the agent deciding and reporting.
+   `.agents/rules/grilling.md` and this step does not restate it. An interview with no method is
+   the agent deciding and reporting.
    **Read the file, do not work from the name.** A host that loads a skill body lazily gives an
-   agent the reference and not the procedure, and an agent with the reference alone improvises the
-   interview — which is the methodless interview this step exists to replace, wearing its name. If
-   the file is absent, stop and report that `npx qfai init` installs it.
-   The design-direction decisions belong in this session rather than at step 9, because step 9 runs
-   after steps 3 to 8 have authored the pack: a user-owned visual choice asked there is asked after
-   the thing it governs is written.
+   agent the reference and not the procedure, and an agent with the reference alone improvises an
+   interview that looks like the method and answers to nothing. If the file is absent, stop and
+   report that `npx qfai init` installs it.
+   The design-direction decisions belong in this session because step 9 runs after steps 3 to 8
+   have authored the pack, and a user-owned visual choice asked there is asked after the thing it
+   governs is written.
    Step 1's findings are inputs to the session's tree, not a later fill-in: a decision settled
    before the research that bears on it is settled against evidence nobody had, and the method
    reads a fact rather than asking about it.
@@ -141,6 +141,8 @@ A session has four endings, and three of them let authoring start:
 | `user-closed` | Said `proceed`, `done`, or words to that effect                                                                  | Starts. Lookups already running are finished and each decision still open becomes a labelled assumption |
 | `no-question` | Nothing — `--auto` reached nobody                                                                                | Starts. Each remaining decision is registered open, and the open count is then what blocks completion   |
 | `stopped`     | Said `stop`                                                                                                      | **Does not start.** Report every open decision as open and end the run                                  |
+
+**No ending authorizes authoring while a `hard-required` input this invocation consumes is missing.** Those are excluded from both assumption paths: an interactive closure still asks for them, and a no-question run stops and names them. Registering an open question does not make an input defaultable — the value is what the run needs, and a question about it is not one.
 
 `stopped` is the one the vocabulary must keep separate. The rule says a stop ends the session
 immediately and no further work follows it, so a closure that authorizes proceeding and a
@@ -200,10 +202,14 @@ The stage evidence also carries `## Grilling Session`, which is what the Reviewe
 session condition off:
 
 ```text
-| Ended | Frontier | Lookups | Decisions | Escalated |
-| ----- | -------- | ------- | --------- | --------- |
-| confirmed | empty | none in flight | 12 | 0 |
+| Ended | Ended at | Authoring began | Frontier | Lookups | Decisions | Escalated |
+| ----- | -------- | --------------- | -------- | ------- | --------- | --------- |
+| confirmed | 2026-01-01T09:14:00Z | 2026-01-01T09:15:20Z | empty | none in flight | 12 | 0 |
 ```
+
+**Both times, and the first written before the pack is.** A row holding only the final state reads the same whether the session ran first, ran after, or never ran: it is written at the end either way. Writing `Ended at` before the first pack file makes the order a record rather than a claim.
+
+What it still cannot do is prove a session happened — the agent writes its own record. It establishes the order, which is the part a later reader has no other way to recover.
 
 `Ended` is `confirmed`, `user-closed`, `no-question` or `stopped`, and only the first three authorize authoring. Without the record a skipped session and a
 completed one present the same pack — fifteen files, every topic covered, every open question

@@ -63,7 +63,20 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   The stage evidence carries a `## Grilling Session` row, which is what the
   Reviewer Gate reads the condition off. A skipped session and a completed one
   present the same pack, so without the row a reviewer would have to block every
-  run or accept a claim it cannot check.
+  run or accept a claim it cannot check. The row records when the session ended
+  **and** when authoring began, the first written before the pack is — a row
+  holding only the final state reads the same whether the session ran first, ran
+  after, or never ran.
+
+  No ending authorizes authoring while a `hard-required` input the invocation
+  consumes is missing. Registering an open question does not make an input
+  defaultable: the value is what the run needs, and a question about it is not
+  one.
+
+  The zero-open-question condition moved to the conditions every pack is held to.
+  A run is `--auto` or not independently of whether it has a surface, so listed
+  only under the UI-bearing shape it let a non-UI `--auto` pack complete with its
+  decisions still open.
 
   The research protocol runs before the interview rather than after it. A
   decision settled before the research bearing on it is settled against evidence
