@@ -1941,7 +1941,9 @@ async function collectRegisterIssues(register: string): Promise<Issue[]> {
 function collectUnreadableStatuses(register: string, text: string): Issue[] {
   const invalid = parseInvalidOpenQuestionStatuses(text);
   if (invalid.length === 0) return [];
-  const samples = invalid.map((item) => `${item.id}=${item.value}`).slice(0, 8);
+  const samples = invalid
+    .map((item) => `${item.id}=${item.value === "" ? "(none)" : item.value}`)
+    .slice(0, 8);
   return [
     issue(
       "E_OQ_STATUS_UNPARSEABLE",
@@ -2025,7 +2027,11 @@ export function validateOpenQuestionsGate(
     const refs = Array.from(
       new Set([...idsWithoutValidStatus, ...invalidStatuses.map((item) => item.id)]),
     );
-    const invalidSamples = invalidStatuses.map((item) => `${item.id}=${item.value}`).slice(0, 8);
+    // An empty cell on a question row is a missing status, and a sample reading
+    // `OQ-0007=` does not say that.
+    const invalidSamples = invalidStatuses
+      .map((item) => `${item.id}=${item.value === "" ? "(none)" : item.value}`)
+      .slice(0, 8);
     const details: string[] = [];
     if (idsWithoutValidStatus.length > 0) {
       details.push(`status 欠落: ${idsWithoutValidStatus.join(", ")}`);
@@ -2888,9 +2894,11 @@ function readDeclaredStatuses(text: string): DeclaredStatus[] {
 
   for (const [index, line] of lines.entries()) {
     const idMatch = /\b(OQ-[A-Za-z0-9_-]+)\b/i.exec(line);
-    if (idMatch?.[1] && !OPEN_QUESTION_COLUMN_LABEL.test(idMatch[1])) {
-      currentId = idMatch[1];
-    }
+    const rowId =
+      idMatch?.[1] !== undefined && !OPEN_QUESTION_COLUMN_LABEL.test(idMatch[1])
+        ? idMatch[1]
+        : null;
+    if (rowId !== null) currentId = rowId;
 
     // The separator row is part of the table it underlines, so it does not end
     // one: resetting on it threw away the column the header had just resolved.
@@ -2900,12 +2908,21 @@ function readDeclaredStatuses(text: string): DeclaredStatus[] {
       // Out of the table, so the next one resolves its own column.
       statusColumn = null;
     } else if (isSeparatorRow(lines[index + 1])) {
+      // A register's table is the one keyed by question. Without that, a
+      // glossary of the statuses themselves reads as a table of rows declaring
+      // them, and an untouched template reports itself.
+      const keyed = cells.some((cell) => OPEN_QUESTION_COLUMN_LABEL.test(cell));
       const header = cells.findIndex((cell) => cell.toLowerCase() === "status");
-      statusColumn = header === -1 ? null : header;
+      statusColumn = keyed && header !== -1 ? header : null;
     } else if (statusColumn !== null) {
-      const cell = cells[statusColumn];
-      if (cell !== undefined && cell !== "" && cell !== "-") {
+      const cell = cells[statusColumn] ?? "";
+      // An empty cell on a real question row is a missing status, which the
+      // register contract does not allow — but the template's own `0 items`
+      // placeholder carries no question and declares nothing.
+      if (cell !== "" && cell !== "-") {
         declared.push({ id: currentId || "(unlabeled-oq)", raw: cell });
+      } else if (rowId !== null) {
+        declared.push({ id: rowId, raw: "" });
       }
       continue;
     }
@@ -2942,11 +2959,9 @@ function parseInvalidOpenQuestionStatuses(text: string): InvalidOpenQuestionStat
  */
 function tableCells(line: string): string[] {
   const trimmed = line.trim();
-  if (!trimmed.startsWith("|") || !trimmed.endsWith("|")) return [];
-  const cells = trimmed
-    .slice(1, -1)
-    .split("|")
-    .map((cell) => cell.trim());
+  if (!trimmed.startsWith("|")) return [];
+  const body = trimmed.endsWith("|") ? trimmed.slice(1, -1) : trimmed.slice(1);
+  const cells = body.split("|").map((cell) => cell.trim());
   if (cells.every((cell) => /^:?-{3,}:?$/.test(cell))) return [];
   return cells;
 }
@@ -2954,11 +2969,9 @@ function tableCells(line: string): string[] {
 /** Whether `line` is the dashes under a table's header row. */
 function isSeparatorRow(line: string | undefined): boolean {
   const trimmed = (line ?? "").trim();
-  if (!trimmed.startsWith("|") || !trimmed.endsWith("|")) return false;
-  return trimmed
-    .slice(1, -1)
-    .split("|")
-    .every((cell) => /^:?-{3,}:?$/.test(cell.trim()));
+  if (!trimmed.startsWith("|")) return false;
+  const body = trimmed.endsWith("|") ? trimmed.slice(1, -1) : trimmed.slice(1);
+  return body.split("|").every((cell) => /^:?-{3,}:?$/.test(cell.trim()));
 }
 
 function isReleaseCandidate(initiativeText: string): boolean {

@@ -11,7 +11,20 @@
  * new section, because the gate already reads statuses and no existing pack
  * carries the value, so nothing has to be migrated to it.
  */
+import { readFile } from "node:fs/promises";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+
 import { describe, expect, it } from "vitest";
+
+const repoRoot = path.resolve(
+  path.dirname(fileURLToPath(import.meta.url)),
+  "..",
+  "..",
+  "..",
+  "..",
+  "..",
+);
 
 import { validateOpenQuestionsGate } from "../../../src/core/validators/specPack.js";
 import type { SpecEntry } from "../../../src/core/specLayout.js";
@@ -132,5 +145,41 @@ describe("the register it reads, and the notation it reads it in", () => {
       "\n",
     );
     expect(codes(table)).toEqual(["E_OQ_OPEN_RELEASE_BLOCK"]);
+  });
+
+  it("passes the template a fresh spec is created from", async () => {
+    // The template carries a glossary of the four statuses beside the register.
+    // Read as a second register, an untouched spec reports itself.
+    const template = await readFile(
+      path.join(
+        repoRoot,
+        "packages/qfai/assets/init/.qfai/assistant/skills/qfai-sdd/templates/specs/spec/08_Open-questions.md",
+      ),
+      "utf-8",
+    );
+    expect(codes(template)).toEqual([]);
+  });
+
+  it("reads a table written without trailing pipes", () => {
+    // Valid GFM, and the shared Markdown parser accepts it. Seeing no cells,
+    // the gate saw no status and the unanswered decision passed.
+    const table = ["| OQ-ID | Status", "| ----- | ------", "| OQ-0007 | unadjudicated", ""].join(
+      "\n",
+    );
+    expect(codes(table)).toEqual(["QFAI-SPACK-102"]);
+  });
+
+  it("reports a question row with no status at all", () => {
+    const table = [
+      "| OQ-ID   | Question | Status |",
+      "| ------- | -------- | ------ |",
+      "| 0 items | none     | -      |",
+      "| OQ-0007 | which    | -      |",
+      "",
+    ].join("\n");
+    const issues = validateOpenQuestionsGate(ENTRY, table, false);
+    // The placeholder row declares nothing and is not a question.
+    expect(issues.map((issue) => issue.code)).toEqual(["E_OQ_STATUS_UNPARSEABLE"]);
+    expect(issues[0]?.message).toContain("OQ-0007=(none)");
   });
 });
