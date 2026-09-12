@@ -44,6 +44,7 @@
     "tests/assets/atddRequiredScope.test.ts",
     "tests/assets/atddRowSelectorShape.test.ts",
     "tests/assets/atddScaffoldTunableSeed.test.ts",
+    "tests/assets/auditedEvidenceHashSerialization.test.ts",
     "tests/assets/atddVolumeSignalDefinition.test.ts",
     "tests/assets/autoModeApprovalDegrade.test.ts",
     "tests/assets/autopilotHardRequiredScope.test.ts",

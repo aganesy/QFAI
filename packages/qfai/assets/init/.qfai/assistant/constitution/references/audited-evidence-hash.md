@@ -23,7 +23,35 @@ procedure, in four steps:
    recorded output is fenced for this reason: a test asserting on Markdown
    prints `## ...` of its own, and a boundary that took it dropped the GREEN,
    the `Oracle proof` and the round evidence out of the subject. Each takes
-   only its own fields, in the order the contract lists them:
+   only its own fields, named below.
+
+   **What the extraction produces, exactly.** Naming the fields settles which
+   lines are taken and leaves open what they become, and two readers taking the
+   same fields can still compute different digests. The text is:
+
+   - the entry's own lines, **selected and never rewritten** — the leading
+     `- ` list marker stays, the `Round N: ` prefix stays, the name and value
+     keep whatever separator the entry wrote them with;
+   - a fenced block that is a field's value carried with that field, opening
+     fence through closing fence: the recorded command output **is** the
+     observation, and a subject that took the field line alone let the output
+     be rewritten after the verdict with the digest unmoved;
+   - **in the order the entry writes them**, not the order this contract lists
+     them. The contract names _which_ fields a subject holds; a selection
+     cannot also reorder without rewriting, and the two readings gave one
+     entry two digests;
+   - opened by the row's `### <TDD-ID>` heading line, so an entry moved under
+     another id is a different subject rather than the same one.
+
+   Joined with newlines, that text is the artifact step 2 normalizes and step 3
+   records under the evidence file's path. `npx qfai validate`'s gate item 10
+   computes the completion subject this way today, and stating it here is what
+   lets a second party recompute a recorded digest at all: before this
+   paragraph, the same six choices were each open, and a recorded value was
+   reproducible only inside the run that wrote it.
+
+   The fields, per subject:
+
    - **Row identity, in all three**: `TDD-ID`, `Layer`, `Test file` and
      `Selector` — copied from the ledger, which the revision excludes.
      Without them, changing `Selector` after a PASS to another valid test in
@@ -174,6 +202,15 @@ procedure, in four steps:
    them, normalized by step 2 as well; a row whose obligation appears nowhere
    in the matrix contributes nothing.
 4. **Hash.** SHA-256 of that record list; record the hex digest.
+
+**Two fields share the words "audited evidence hash" and are not the same
+value.** This one is a reviewer's, over the subject its role reads. A ledger
+row's `Spec audited evidence hash` and `Code quality audited evidence hash` are
+the verdicts of two named reviewer roles over their own subjects, computed by
+these same four steps — the words differ only by the role they belong to.
+Neither is the working-tree revision, which
+`../../skills/qfai-implement/references/evidence-revision.md` defines and which
+addresses a tree rather than a subject.
 
 **A T1 coherent group is one pass and several rows**
 (`../../skills/qfai-implement/references/volume-policy.md`).
