@@ -62,7 +62,9 @@ export function extractManagedRulesSection(template: string): string | null {
  * - the begin marker is present, so a previous run wrote the section and
  *   whatever the project did to it since is its own business — a second append
  *   would duplicate the heading and re-assert bullets the project may have
- *   deliberately trimmed;
+ *   deliberately trimmed. A release that ships a NEW master is handled by
+ *   {@link missingRuleCitations} instead, which adds the line without touching
+ *   anything already there;
  * - every master the section cites is already named somewhere in the file, so
  *   the project wired the rules in by hand and the agent reads them today.
  *
@@ -78,4 +80,40 @@ export function needsManagedRulesSection(existing: string, section: string): boo
     return false;
   }
   return !masters.every((master) => existing.includes(master));
+}
+
+/**
+ * Masters `section` cites that `existing` names nowhere at all.
+ *
+ * A release that adds a rule leaves every project installed before it holding a
+ * managed section that cannot mention the new master, and `qfai init` copies the
+ * master itself — so the file lands and no entry point points at it, which is a
+ * rule no agent loads.
+ *
+ * The whole file is searched, not the managed block, and that is what keeps a
+ * deliberately trimmed line trimmed: a project that removed a bullet and said
+ * why in its own prose still names the master, so it is not missing. A project
+ * that removed the bullet and left no trace gets the line back once, sees it in
+ * the run's report, and can remove it again — after which the master is named in
+ * neither place and nothing here can tell that from a rule it never had.
+ *
+ * Distinguishing the two properly needs a record of what each release shipped,
+ * which nothing keeps today.
+ */
+export function missingRuleCitations(existing: string, section: string): readonly string[] {
+  return citedRuleMasters(section).filter((master) => !existing.includes(master));
+}
+
+/**
+ * The bullet lines of `section` that cite one of `masters`.
+ *
+ * Lifted from the template rather than composed here, for the reason the
+ * section itself is: the wording belongs to the file an author reviews, and a
+ * second spelling of it drifts.
+ */
+export function ruleCitationLines(section: string, masters: readonly string[]): readonly string[] {
+  const wanted = new Set(masters);
+  return section
+    .split(/\r?\n/)
+    .filter((line) => citedRuleMasters(line).some((master) => wanted.has(master)));
 }

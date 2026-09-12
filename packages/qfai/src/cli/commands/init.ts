@@ -67,7 +67,10 @@ import { CANONICAL_TIMESTAMP_GLOB } from "../../core/packLocator.js";
 import {
   AGENT_ENTRY_POINT_FILES,
   extractManagedRulesSection,
+  missingRuleCitations,
+  QFAI_AGENT_RULES_END,
   needsManagedRulesSection,
+  ruleCitationLines,
 } from "../../core/agentEntryPoints.js";
 import {
   CLAUDE_SETTINGS_RELATIVE_PATH,
@@ -2847,7 +2850,32 @@ async function ensureAgentEntryPointRules(
     }
 
     if (!needsManagedRulesSection(existing, section)) {
-      skipped.push(target);
+      // Already connected. A release that adds a master still has to reach this
+      // file: `qfai init` copies the master itself, so leaving the citation out
+      // ships a rule no entry point points at and no agent loads.
+      const missing = missingRuleCitations(existing, section);
+      if (missing.length === 0) {
+        skipped.push(target);
+        continue;
+      }
+      const additions = ruleCitationLines(section, missing);
+      if (additions.length === 0) {
+        skipped.push(target);
+        continue;
+      }
+      if (dryRun) {
+        info(`  would update: ${target} (cite ${missing.join(", ")})`);
+        copied.push(target);
+        continue;
+      }
+      // Inserted before the end marker, so the project's own prose inside the
+      // section keeps its place and nothing already there is rewritten.
+      const at = existing.lastIndexOf(QFAI_AGENT_RULES_END);
+      const head = existing.slice(0, at).replace(/\s*$/, "");
+      const tail = existing.slice(at);
+      await writeFile(target, `${head}\n${additions.join("\n")}\n\n${tail}`, "utf-8");
+      info(`  updated: ${target} (cited ${missing.join(", ")}; nothing else changed)`);
+      copied.push(target);
       continue;
     }
 
