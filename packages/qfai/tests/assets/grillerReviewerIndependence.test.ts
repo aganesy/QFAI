@@ -88,7 +88,7 @@ describe("a griller's recommendations and reviewer independence", () => {
       expectPhrase(content, "The work order and the response both carry a `Review series` value");
       expectPhrase(
         content,
-        "Review series: <reviewed artifact> + <reviewer role>   # review work orders only",
+        "Review series: <reviewed artifact> + <reviewer role> + <replacement ordinal>   # review work orders only",
       );
     });
 
@@ -109,7 +109,73 @@ describe("a griller's recommendations and reviewer independence", () => {
       const content = await read(tree);
       expectPhrase(content, "**Review rounds are one series, whatever instance serves them.**");
       expectPhrase(content, "`Review series`");
-      expectPhrase(content, "the budget could\nnever be exhausted");
+      expectPhrase(content, "it could never be exhausted");
+    });
+
+    it(`${tree}: separates a reset instance from a replacement reviewer`, async () => {
+      // Both arrive as a new `Agent instance` on the same artifact and role, so
+      // a key of artifact + role alone cannot tell them apart and a replacement
+      // inherits a round its predecessor spent.
+      const content = await read(tree);
+      expectPhrase(content, "a replacement ordinal that starts at 1");
+      expectPhrase(
+        content,
+        "a replacement reviewer is issued the next ordinal and starts at round 1",
+      );
+      expectPhrase(
+        content,
+        "counting a replacement against its predecessor's series would exhaust it a round early",
+      );
+      // A fresh series buys a fresh two rounds, so an unbounded supply of
+      // replacements is an unbounded budget and the escalation never arrives.
+      expectPhrase(content, "**The ordinal is bounded, or the budget is not.**");
+      expectPhrase(content, "At most **two series per artifact per role**");
+    });
+
+    it(`${tree}: asks about the artifact rather than about the reviewer`, async () => {
+      // Scoped to the reviewer's own recommendations the field answers `none`
+      // truthfully whenever a different agent made them, which is the common
+      // case and the one the record exists to catch.
+      const content = await read(tree);
+      expectPhrase(content, "**The field asks about the artifact, not about the reviewer.**");
+      expectPhrase(content, "whichever agent recommended it");
+    });
+
+    it(`${tree}: gives a closed decision a disposition on its row`, async () => {
+      // A live row and a closed one look identical, so a reviewer deriving
+      // `none` from the artifact would have to contradict the record.
+      const content = await read(tree);
+      expectPhrase(content, "**A row gains a disposition when its decision stops being open.**");
+      expectPhrase(content, "(settled by the user)");
+      expectPhrase(content, "Amending is not deleting");
+    });
+
+    it(`${tree}: reopens an unadjudicated recommendation instead of rerouting it`, async () => {
+      // The handoff remedy answers an authorship conflict. Applied to a
+      // recommendation nobody adjudicated, the replacement attests `none`
+      // truthfully and the artifact still carries what no user settled.
+      const content = await read(tree);
+      expectPhrase(
+        content,
+        "A non-`none` `Recommended and unadjudicated` is not a routing problem, and a handoff does not answer it",
+      );
+      expectPhrase(
+        content,
+        "A replacement reviewer would attest `none` truthfully and clear nothing",
+      );
+    });
+
+    it(`${tree}: lets a stage that ran no grilling session answer none`, async () => {
+      // Most stages run no agent-to-agent grilling session and record no row.
+      // Required unconditionally, the ordinary `none` response becomes a
+      // `REVISE` over provenance that never existed.
+      const content = await read(tree);
+      expectPhrase(content, "**The record answers either way, and silence answers nothing.**");
+      expectPhrase(content, "writes one row reading `grilling: none`");
+      // Silence cannot be the answer: an omitted row and no session to record look
+      // identical in the table, so reading absence as `none` clears the decision
+      // the record exists to expose.
+      expectPhrase(content, "Absence of rows cannot be read as evidence for `none`");
     });
 
     it(`${tree}: makes the attestation a required field`, async () => {
@@ -122,9 +188,12 @@ describe("a griller's recommendations and reviewer independence", () => {
       );
       expectPhrase(
         content,
-        "Recommended and unadjudicated: none | <decisions in THIS artifact as it now stands that this reviewer recommended and no user has since settled>",
+        "Recommended and unadjudicated: none | <decisions in THIS artifact as it now stands that any agent recommended and adopted with no user adjudication>",
       );
-      expectPhrase(content, "Review series: <reviewed artifact> + <reviewer role>");
+      expectPhrase(
+        content,
+        "Review series: <reviewed artifact> + <reviewer role> + <replacement ordinal>",
+      );
       // A false value has to weigh what a false authorship value weighs, or the
       // field is one the gate does not act on.
       expectPhrase(

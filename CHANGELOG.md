@@ -128,10 +128,21 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
   Two fields carry it. A reviewer response declares `Recommended and
 unadjudicated`, read off a Work Orders Summary row the session writes rather
-  than off recollection, and scoped to the artifact as it now stands. A `Review
-series` — the reviewed artifact plus the role — carries the round budget
-  across a host that answers round 2 with a fresh sub-agent, which a count per
-  agent instance restarted every round.
+  than off recollection, and scoped to the artifact as it now stands. A stage
+  that ran no such session writes one row reading `grilling: none`, and a summary
+  carrying neither that nor a decision row is incomplete — silence is not the
+  answer, because an omitted row looks exactly like nothing to record. A `Review series` — the reviewed
+  artifact, the role, and an ordinal that rises each time the review is handed
+  to a replacement, capped at two series per artifact per role so a fresh
+  reviewer cannot reset the budget for ever — carries the round budget across a host that answers round
+  2 with a fresh sub-agent, which a count per agent instance restarted every
+  round, and keeps a replacement from inheriting the round its predecessor
+  spent.
+
+  A non-`none` answer is not settled by a handoff. Handing the review to
+  another reviewer answers an authorship conflict; against an unadjudicated
+  recommendation it launders the decision, because the replacement attests
+  `none` truthfully while the artifact still carries what nobody chose.
 
 - **A grilling session's outcome has a named home** (#1604). A settled
   discussion decision goes to `99_delta.md`; one the session could not settle
