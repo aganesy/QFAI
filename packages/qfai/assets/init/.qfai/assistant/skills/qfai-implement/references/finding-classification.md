@@ -31,7 +31,8 @@ item: a record rule worth a round is worth a validator code.
 
 **Not every record complaint is `record:*`.** Evidence copied from a previous
 round or a sibling row, an evidence anchor resolving to a run other than the one
-it names, and a false `Authored/edited under review` attestation claim work that
+it names, and a false `Authored/edited under review` or `Recommended and
+unadjudicated` attestation claim work that
 was not done or independence the reviewer did not have. `agents/qa-gatekeeper.md`
 rejects the first two outright and a response whose attestation is anything but
 `none` cannot return `PASS` at all — so these stay **blocking** as

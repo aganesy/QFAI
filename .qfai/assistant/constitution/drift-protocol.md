@@ -445,7 +445,7 @@ a defect.
   not against the item — a record rule worth a round is worth a validator code.
 - **A record that misrepresents the run is not a record defect.** Evidence copied from a previous
   round or a sibling row, an evidence anchor resolving to a run other than the one it names, and a
-  false `Authored/edited under review` attestation do not merely mis-state the work — they claim
+  false `Authored/edited under review` or `Recommended and unadjudicated` attestation do not merely mis-state the work — they claim
   work that was not done, or independence the reviewer did not have. `agents/qa-gatekeeper.md`
   rejects the first two outright and
   `.qfai/assistant/constitution/shared-skill-delegation-baseline.md#reviewer-response-template`

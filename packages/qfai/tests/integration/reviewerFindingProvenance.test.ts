@@ -425,7 +425,13 @@ describe("reviewer finding provenance", () => {
     for (const doc of [baseline, drift, classification]) {
       // Wrap-tolerant: the sentence is the rule, its wrap column is not.
       expect(doc).toMatch(/copied from a(nother| previous)\s+round or a sibling row/);
-      expect(doc).toMatch(/`Authored\/edited under review` attestation/);
+      // Both attestations, in all three documents. A griller that recommended a
+      // decision and edited nothing answers `none` to the first truthfully, so a
+      // document naming only that one leaves the gate reading the response as
+      // independent.
+      expect(doc).toMatch(
+        /`Authored\/edited under review` or `Recommended and\s+unadjudicated` attestation/,
+      );
       expect(doc).toMatch(/`defect:code-quality`/);
       expect(doc).toContain("qa-gatekeeper.md");
     }
