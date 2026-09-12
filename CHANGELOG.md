@@ -6,6 +6,26 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
+- **A grilling session's decisions have a bucket to fall in** (#1642). A skill's
+  `Default Autopilot Policy` classifies every decision into `auto-decide`,
+  `ask-user` or `hard-required`, and the `ask-user` list was closed to four
+  entries: governance authorizations, destructive operations, version-pin
+  changes, scope expansions. A design, an approach, a scope boundary or a
+  trade-off is none of those, so a skill that runs a grilling session had to
+  either widen the list or leave a decision the user settles in no bucket.
+
+  A fifth entry is added, itself a category each session-running skill
+  instantiates: decisions a grilling session puts to the user. It belongs in
+  `ask-user` and nowhere else — `auto-decide` is a pick among demonstrably
+  equivalent alternatives and `hard-required` is an input with no default, while
+  a frontier decision has a recommended answer the user is free to reject.
+
+  The tailoring contract is now held against every shipped skill, read off the
+  tree rather than a list. The two grilling skills were outside the list, which
+  is why nothing reported the entries they had added.
+
+### Changed
+
 - **A reviewer that recommended a decision the agents adopted cannot clear it**
   (#1600). A grilling session puts a recommended answer beside each question,
   and who settled the decision now decides what follows. Where the user chose

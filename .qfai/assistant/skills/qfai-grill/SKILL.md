@@ -168,6 +168,13 @@ the primitive's, because the decisions are.
   - grilling subject (the design to interrogate; the argument supplies it, and
     an empty argument is asked for rather than guessed)
 
+The two ask-user entries instantiate the prototype's `decisions a grilling session
+puts to the user` category. A skill MAY narrow any of the three buckets (drop an entry the skill cannot reach), and
+MAY instantiate a category entry — `approval-required governance operations`, and
+`decisions a grilling session puts to the user` — with the operations its own run cannot
+authorize for itself. It MUST NOT introduce an entry outside the prototype's categories.
+Widening triggers a Reviewer-Gate finding.
+
 ## Related
 
 - The method this skill runs: `.qfai/assistant/skills/qfai-grilling/SKILL.md`

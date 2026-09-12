@@ -20,7 +20,7 @@
  * governance contract fails here rather than in `qfai validate`.
  */
 
-import { readFile } from "node:fs/promises";
+import { readdir, readFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -32,17 +32,22 @@ import { parseAutopilotPolicy } from "../../src/core/validators/autopilotPolicy.
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "..", "..");
 
 /** Source tree first, then the generated root mirror `sync:ssot` writes. */
-const TREES = ["packages/qfai/assets/init/.qfai", ".qfai"];
+const SOURCE_TREE = "packages/qfai/assets/init/.qfai";
+const TREES = [SOURCE_TREE, ".qfai"];
 
-const QFAI_SKILLS = [
-  "qfai-atdd",
-  "qfai-configure",
-  "qfai-discussion",
-  "qfai-implement",
-  "qfai-prototyping",
-  "qfai-sdd",
-  "qfai-verify",
-];
+/**
+ * Every shipped `qfai-*` skill, read off the tree rather than listed here.
+ *
+ * A list would have to be edited by whoever adds a skill, and a skill left off
+ * it is exactly the one whose policy nobody has checked. The Reviewer-Gate
+ * validator picks its subjects the same way.
+ */
+const QFAI_SKILLS = (
+  await readdir(path.join(repoRoot, SOURCE_TREE, "assistant", "skills"), { withFileTypes: true })
+)
+  .filter((entry) => entry.isDirectory() && entry.name.startsWith("qfai-"))
+  .map((entry) => entry.name)
+  .sort();
 
 function skillPath(tree: string, skillId: string): string {
   return path.join(repoRoot, tree, "assistant", "skills", skillId, "SKILL.md");
@@ -101,6 +106,23 @@ describe.each(TREES)("%s — Default Autopilot Policy tailoring contract", (tree
     expect(result.buckets).toEqual({ autoDecide: true, askUser: true, hardRequired: true });
     expect(result.widenedTokens).toEqual([]);
   });
+
+  it.each(["qfai-grill", "qfai-grilling"])(
+    "%s routes its frontier to the user",
+    async (skillId) => {
+      const block = policyBlock(await readFile(skillPath(tree, skillId), "utf-8"));
+      const askUser = bucketEntries(block, "ask-user").join(" ");
+
+      // A frontier decision fits no other bucket: `auto-decide` is a pick among
+      // demonstrably-equivalent alternatives, and `hard-required` is an input
+      // with no default, while a frontier decision has a recommended answer the
+      // user is free to reject. So it is `ask-user`, and the prototype carries
+      // the category these two instantiate.
+      expect(askUser).toMatch(/frontier/i);
+      expect(askUser).toMatch(/confirmation/i);
+      expect(block).toMatch(/decisions a grilling session puts to the user/);
+    },
+  );
 
   it("qfai-implement lists the decisions its own run gates on a user", async () => {
     const block = policyBlock(await readFile(skillPath(tree, "qfai-implement"), "utf-8"));
