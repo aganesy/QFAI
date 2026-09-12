@@ -283,31 +283,6 @@ first mutation passes it and fails the literal check below it instead.
   workflow as never tagging. The same case passes in CI, where `jq` is present.
   Six slices carry every obligation this record relies on, and none of them is in
   `scripts`.
-
-  **The earlier run this record carried is superseded.** For completeness it ran
-  as the seven parallel jobs of the `test` matrix at
-  https://github.com/aganesy/QFAI/actions/runs/34698239422, and their conclusions
-  were read back from the check runs rather than inferred from a green badge.
-  **The revision above is the tree those jobs checked out**, which is not this
-  branch head: `ci.yml` restricts `push` runs to the default branch, so the run
-  is a `pull_request` one and its unqualified checkout takes the generated merge
-  of this branch with the base tip. The checkout step names it —
-  `Merge db8cd210a3b71ffd82591dda52ed250af76d812d into a07c51782d527c98708d9a326e0c623a12a6e5d8` —
-  and the object is fetchable, so the result is reproducible from what is
-  recorded. Its second parent `db8cd210` is the branch head the observation
-  belongs to, and its first is the base tip at the time; the item-level test
-  revision above is that branch head, because that run was taken here.
-  Run here as one unfiltered `npx vitest run`, the same suite reports Test
-  Files 1 failed, 697 passed, 8 skipped (706) and Tests 1 failed, 11537 passed,
-  92 skipped (11630), exiting 1. The one failure is in
-  `tests/scripts/ownWorkflowTopology.test.ts`,
-  whose case writes the release workflow's own association gate to a temporary
-  script and runs it under `bash`. That gate calls `jq`, which this checkout
-  does not have and the runner image does, so the assertion reads a gate that
-  declined for want of a tool rather than a gate that ran and refused. It is
-  unrelated to this spec, and that a test depends on an undeclared external tool
-  and fails with an assertion message naming something else is recorded as a
-  finding of its own.
 - Revision reachability: every revision this entry names is a commit of the
   branch the observations were taken on. This repository squash-merges, so none
   of them is an ancestor of the commit that lands on the default branch, and a
