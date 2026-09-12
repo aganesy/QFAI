@@ -6,6 +6,30 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Added
 
+- **A rule master for the form every question to the user takes** (#1609).
+  `.agents/rules/user-questions.md` requires the host's structured question tool
+  for every question, with no class light enough to skip it — an exception is
+  where an agent goes when it would rather not ask, and the question it skips is
+  the one it was least sure of.
+
+  Each option carries a label and a description of what choosing it means, so
+  the user is not left inferring the consequence the agent already worked out.
+  Where one option is better on the evidence the rule requires saying so and
+  saying why; where none is, it requires saying that instead of inventing a
+  recommendation.
+
+  More than four questions split across consecutive calls. The split is
+  presentation: it does not reorder them, does not defer any to a later
+  exchange, and does not enlarge the set — where a budget bounded the set it
+  bounded it before the split, so splitting is never a way to ask past a cap. A
+  host without the tool falls back to numbered plain-text choices carrying the
+  same three parts, and says why the tool was unavailable, so a limitation does
+  not read as a preference.
+
+  The rule bounds the form and says nothing about the count. Those are separate
+  subjects, and a question that should not be asked is not improved by being
+  well shaped.
+
 - **A rule master for grilling a design before it is fixed** (#1591).
   `.agents/rules/grilling.md` states the method: the open decisions form a tree,
   the frontier is the ones whose prerequisites are settled, and a round is one

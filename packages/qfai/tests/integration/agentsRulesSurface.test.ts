@@ -299,6 +299,79 @@ describe("cross-AI rules surface (.agents/rules/ master)", () => {
     });
   });
 
+  // The form a question arrives in. Each clause closes one way of asking badly:
+  // skipping the tool for a question that felt light, a label whose consequence
+  // the user has to infer, withholding the recommendation the agent already has,
+  // splitting a set and acting on half of it, and a fallback that reads as a
+  // preference rather than a limitation.
+  //
+  // Both root entry points cite it. A master no entry point names is loaded by
+  // nothing — Codex reads `AGENTS.md`, Claude Code reads `CLAUDE.md`, and
+  // `.claude/rules/` is not a directory either of them walks. The shipped copy
+  // is separate: a shipped master must be cited by the shipped templates, so
+  // copy and citation are one change, asserted where they land.
+  describe("user-questions rule", () => {
+    const MASTER = ".agents/rules/user-questions.md";
+
+    it("states every clause of the form", async () => {
+      const text = await readFile(path.join(ROOT, MASTER), "utf-8");
+      // One token per clause that no other clause in the file carries.
+      for (const clause of [
+        /No exceptions/i,
+        /would rather not ask/,
+        /infer the/,
+        /free-text path/,
+        /agree in one word/,
+        /does not reorder the questions/,
+        /numbered plain-text choices/,
+        /say why the tool was unavailable/i,
+      ]) {
+        expect(text).toMatch(clause);
+      }
+    });
+
+    it("admits no exception, rather than preferring the tool", async () => {
+      // The heading alone does not hold this. "Prefer the tool where the question
+      // warrants it" keeps the heading and puts the exception back, and the
+      // question an agent judges unwarranted is the one it was least sure of.
+      const text = await readFile(path.join(ROOT, MASTER), "utf-8");
+      expect(text).toMatch(/goes through the host's structured question tool/);
+      expect(text).toMatch(/no class of question light enough to skip it/);
+    });
+
+    it("keeps the form separate from the count", async () => {
+      // Read as a budget the rule would cap questions, which is a different
+      // subject with a different owner. Conflating them is how "ask less" gets
+      // justified by a rule that only ever said "ask clearly".
+      const text = await readFile(path.join(ROOT, MASTER), "utf-8");
+      expect(text).toMatch(/bounds the count/);
+      expect(text).toMatch(/not improved\s+by being well shaped/);
+    });
+
+    it("does not let the split ask past a cap", async () => {
+      // "Split them across consecutive calls, until the set is exhausted" reads,
+      // on its own, as licence to keep calling until every question is asked —
+      // so an agent holding six questions under a budget of five could satisfy
+      // the split by exceeding the budget. The set is fixed before the split.
+      const text = await readFile(path.join(ROOT, MASTER), "utf-8");
+      expect(text).toMatch(/already entitled to ask, and this rule does not\s+add to it/);
+      expect(text).toMatch(/never a way to\s*ask past a cap/);
+    });
+
+    it.each(["AGENTS.md", "CLAUDE.md"])("%s cites the rule master", async (rel) => {
+      const text = await readFile(path.join(ROOT, rel), "utf-8");
+      expect(text).toContain("user-questions.md");
+    });
+
+    it("the sibling rule points at it, now that it resolves", async () => {
+      // `grilling.md` decides which questions a round asks; this one decides the
+      // form each arrives in. The pointer waited for this master to exist,
+      // because a rule citing a file the tree does not hold is a dead reference.
+      const text = await readFile(path.join(ROOT, ".agents/rules/grilling.md"), "utf-8");
+      expect(text).toContain("`user-questions.md`");
+    });
+  });
+
   // The writing standard reaches an agent two ways: as a rule master every
   // entry point cites, and as the hook reminder that restates it at the moment
   // it is easiest to skip. Both halves are asserted, in this repository and in

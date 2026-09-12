@@ -24,6 +24,7 @@ directory.
 | `minimal-implementation.md` | The order to try solutions in, once a behaviour is agreed, and how a deliberate shortcut is marked.                                                                                                                                                         |
 | `interface-clarity.md`      | What may appear on a screen or in terminal output, and what a sentence there says about the control under it.                                                                                                                                               |
 | `grilling.md`               | The order a design's open decisions are asked in, who answers each one, and when asking stops.                                                                                                                                                              |
+| `user-questions.md`         | Every question to the user arrives as a structured choice, with a description per option and a recommendation.                                                                                                                                              |
 
 ## Adding a rule
 

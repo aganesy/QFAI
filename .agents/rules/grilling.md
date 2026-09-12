@@ -151,6 +151,7 @@ stage's own decision, under its own preconditions.
 
 ## Related
 
+- The form each question in a round arrives in: `user-questions.md`
 - Writing standard for the questions and the record: `documentation-clarity.md`
 - How much code answers a decision, once it is made:
   `minimal-implementation.md`
