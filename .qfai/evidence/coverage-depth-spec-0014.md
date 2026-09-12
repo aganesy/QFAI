@@ -58,10 +58,10 @@ enforced by a strong suite that no live chain binds to it.
 single well-oracled case with no boundary or error direction, and `US-0014-0018` has one incidental
 gate and no case on the claim that distinguishes it.
 
-Committed, because it is a governance record. Section "Every `❌` cell, named" enumerates all 78 of
-them — 69 scored, 9 in the non-scored `Status` columns — so that "one justification per `❌`" is
-checkable rather than asserted, and section "Every `⚠️` cell, named" does the same for all 71
-partial scores, 59 of which are scored cells the PASS criterion also requires a rationale for.
+Section "Every `❌` cell, named" enumerates all 78 of them — 69 scored, 9 in the non-scored `Status`
+columns — so that "one justification per `❌`" is checkable rather than asserted, and section
+"Every `⚠️` cell, named" does the same for all 71 partial scores, 59 of which are scored cells the
+PASS criterion also requires a rationale for.
 
 ## What was measured, and how
 
