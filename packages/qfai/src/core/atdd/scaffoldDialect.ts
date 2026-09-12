@@ -321,6 +321,16 @@ function findGroupClose(pattern: string, open: number, opener: string, closer: s
   let depth = 0;
   for (let index = open; index < pattern.length; index += 1) {
     const char = pattern[index];
+    // A bracket expression is skipped whole: a `)` or a `}` written inside one
+    // is a member of the class, and read as a closer it ended the group early
+    // and rejected a candidate the project's own scan collects.
+    if (char === "[") {
+      const classClose = findClassClose(pattern, index);
+      if (classClose !== -1) {
+        index = classClose;
+        continue;
+      }
+    }
     if (char === opener) {
       depth += 1;
     } else if (char === closer) {
@@ -340,7 +350,19 @@ function splitGlobAlternatives(inner: string): string[] {
   const parts: string[] = [];
   let depth = 0;
   let current = "";
-  for (const char of inner) {
+  for (let index = 0; index < inner.length; index += 1) {
+    const char = inner[index] ?? "";
+    // A bracket expression is copied whole: a `,` or a `|` inside one is a
+    // member of the class, and split on it the alternatives came apart into
+    // fragments that match nothing.
+    if (char === "[") {
+      const classClose = findClassClose(inner, index);
+      if (classClose !== -1) {
+        current += inner.slice(index, classClose + 1);
+        index = classClose;
+        continue;
+      }
+    }
     if (char === "(" || char === "{") {
       depth += 1;
     } else if (char === ")" || char === "}") {
@@ -446,7 +468,12 @@ export function compileGlob(pattern: string): string {
         // accepted as one it could. Negated, the separator joins what is
         // excluded; positive, a lookahead holds it out of a set that spells it.
         const members = compileClassBody(body.slice(negated ? 1 : 0));
-        source += negated ? `[^/${members}]` : `(?!/)[${members}]`;
+        const compiled = negated ? `[^/${members}]` : `(?!/)[${members}]`;
+        // A class the author wrote wrongly — a descending range, say — matches
+        // nothing, which is what the project's own scan does with it. Left to
+        // build a regular expression it threw instead, out of a command whose
+        // answer for a pattern nothing matches is a refusal.
+        source += isUsableExpression(compiled) ? compiled : NEVER_MATCHES;
         index = close;
         continue;
       }
@@ -465,6 +492,19 @@ export function compileGlob(pattern: string): string {
  * compiles a class over the characters of the word `digit`, which matches none
  * of the names the pattern was written for.
  */
+/** An expression that matches nothing, for a class the author wrote wrongly. */
+const NEVER_MATCHES = "(?!)";
+
+/** Whether a fragment is one a regular expression can be built from. */
+function isUsableExpression(source: string): boolean {
+  try {
+    new RegExp(source);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 export function findClassClose(pattern: string, open: number): number {
   let index = open + 1;
   if (pattern[index] === "!" || pattern[index] === "^") index += 1;

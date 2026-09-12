@@ -96,6 +96,20 @@ function citationOpener(line: string, from: number): string | null {
 const EMPHASIS_CHARACTER = /[*_]/;
 
 /**
+ * Whether the run at `index` is the delimiter that closes the emphasis.
+ *
+ * A delimiter inside a name is not one: `_.qfai/report/preflight_summary.md_`
+ * carries an underscore in the middle, and a break there measured the prefix
+ * before it. What closes emphasis is the run followed by something that is not
+ * path text — the end of the line, a backtick, a space.
+ */
+function closesEmphasis(line: string, index: number, opener: string): boolean {
+  if (!line.startsWith(opener, index)) return false;
+  const after = line[index + opener.length];
+  return after === undefined || !CITATION_CHARACTER.test(after);
+}
+
+/**
  * Every citation a line carries, taken whole.
  *
  * A regular expression cannot balance, and the dialect nests: `@(a|+(b|c))` is
@@ -117,7 +131,9 @@ function citationsIn(line: string): string[] {
     while (index < line.length) {
       // The run that opened the citation closes it: a path written in emphasis
       // ends where the emphasis does, and a trailing `**` is not a wildcard.
-      if (opener !== "" && line.startsWith(opener, index)) break;
+      // The run has to close, though — `preflight_summary.md` carries the
+      // delimiter inside a name, and breaking there measured a prefix.
+      if (opener !== "" && closesEmphasis(line, index, opener)) break;
       const character = line[index] ?? "";
       if (character === "[") {
         // Through the compiler's own scanner: an initial `]` is a member and an
@@ -667,10 +683,71 @@ function alignsWithDotPolicy(parts: readonly string[], segments: readonly string
   }
   const segment = segments[0];
   if (segment === undefined) return false;
-  const pattern = new RegExp(`^${compileGlob(part)}$`);
-  if (!pattern.test(segment)) return false;
-  if (segment.startsWith(".") && pattern.test(segment.slice(1))) return false;
+  if (!segmentAdmits(part, segment)) return false;
   return alignsWithDotPolicy(rest, segments.slice(1));
+}
+
+/**
+ * Whether one pattern segment matches a candidate segment and, where that name
+ * is dot-leading, asks for the dot rather than allowing it.
+ *
+ * Asked of the whole segment, an extglob carrying both an explicit and an
+ * implicit alternative answered wrongly: `@(.gitignore|g*)` matches
+ * `.gitignore` through the first and `gitignore` through the second, so the
+ * explicit spelling read as a wildcard's reach. Each alternative is therefore
+ * asked on its own, and the segment admits the name when one of them spells it.
+ */
+function segmentAdmits(part: string, segment: string): boolean {
+  const matches = (candidate: string, source: string): boolean =>
+    new RegExp(`^${compileGlob(source)}$`).test(candidate);
+  if (!matches(segment, part)) return false;
+  if (!segment.startsWith(".")) return true;
+  return topLevelAlternativesOf(part).some(
+    (alternative) => matches(segment, alternative) && !matches(segment.slice(1), alternative),
+  );
+}
+
+/**
+ * One segment's alternatives, where it is written as a list of them.
+ *
+ * A brace list and an `@(…)` group name a set and nothing else, so each member
+ * is a pattern in its own right. Every other form — a repetition group, a plain
+ * wildcard — is one pattern, and comes back as itself.
+ */
+function topLevelAlternativesOf(part: string): string[] {
+  const body = /^@\((.*)\)$/s.exec(part)?.[1];
+  if (body === undefined) return expandBraces(part);
+  return splitAlternatives(body).flatMap((alternative) => expandBraces(alternative));
+}
+
+/** One group body's alternatives, at the top level of that body. */
+function splitAlternatives(body: string): string[] {
+  const parts: string[] = [];
+  let depth = 0;
+  let current = "";
+  for (let index = 0; index < body.length; index += 1) {
+    const character = body[index] ?? "";
+    // A bracket expression is copied whole: a separator inside one is a member
+    // of the class.
+    if (character === "[") {
+      const close = findClassClose(body, index);
+      if (close !== -1) {
+        current += body.slice(index, close + 1);
+        index = close;
+        continue;
+      }
+    }
+    if (character === "(" || character === "{") depth += 1;
+    else if (character === ")" || character === "}") depth -= 1;
+    else if ((character === "|" || character === ",") && depth === 0) {
+      parts.push(current);
+      current = "";
+      continue;
+    }
+    current += character;
+  }
+  parts.push(current);
+  return parts;
 }
 
 /**
@@ -988,6 +1065,34 @@ describe("a glob is a claim about a set", () => {
     expect(hidesADotName(cited, ".qfai/report/.cache/run-1/summary.json")).toBe(false);
   });
 
+  it("ends an emphasized citation at the delimiter that closes it", () => {
+    // A delimiter inside a name is not a closer: breaking at the underscore
+    // in `preflight_summary.md` measured the prefix before it.
+    const cited = ".qfai/report/preflight_summary.md";
+    expect(citationsIn(`- _${cited}_`)).toEqual([cited]);
+    expect(citationsIn(`- **${cited}**`)).toEqual([cited]);
+  });
+
+  it("reads the alternative that spells a dot-leading name", () => {
+    // Asked of the whole segment, a group carrying an explicit and an implicit
+    // alternative answered wrongly: the explicit spelling read as a wildcard's
+    // reach because a sibling alternative also matches the name without its dot.
+    const cited = ".qfai/report/@(.gitignore|g*)";
+    expect(globToRegExp(cited).test(".qfai/report/.gitignore")).toBe(true);
+    expect(hidesADotName(cited, ".qfai/report/.gitignore")).toBe(false);
+    // A group with no explicit spelling still does not reach a hidden name.
+    expect(hidesADotName(".qfai/report/@(a*|g*)", ".qfai/report/.gitignore")).toBe(true);
+  });
+
+  it("reads a class beside an extended group, and a range written wrongly", () => {
+    // The group scanner split on a separator inside the class, so a pattern the
+    // project's own scan collects for was rejected. And a descending range
+    // matches nothing there rather than throwing out of the command.
+    expect(compiled("@([T,]|x)*.test.ts").test("TC-0000-0000.test.ts")).toBe(true);
+    expect(compiled("@([T,]|x)*.test.ts").test("abc.test.ts")).toBe(false);
+    expect(() => compiled("[z-a]*.test.ts")).not.toThrow();
+    expect(compiled("[z-a]*.test.ts").test("TC-0000-0000.test.ts")).toBe(false);
+  });
   it("keeps a class off the separator, whatever it spells", () => {
     // A range holding `/` — `[.-9]` does — otherwise matched the separator,
     // and a destination the project's own scan cannot reach was accepted.
