@@ -293,299 +293,6 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   report sat on the default branch with `git status` clean. The report is
   untracked and deleted, and the lane catches the next one.
 
-### Fixed
-
-- **The working-tree address is written one way** (#1651). The procedure said
-  "a hash over HEAD and the working tree", and that is not one value: a
-  producer and a reviewer could each pick a defensible separator, record shape
-  or way of reading a file, get different answers for the same tree, and leave
-  an ordinary uncommitted item stale for nobody's mistake.
-
-  Git names the paths and the bytes come off the filesystem, because a diff is
-  a rendering and what renders it — `core.autocrlf`, `core.eol`, a
-  `.gitattributes` driver — is checkout-local. Each record carries the path,
-  the kind, the mode and the SHA-256 of the bytes, and how every part is
-  written is fixed: a mode is four octal digits, a digest is 64 lowercase
-  characters, a symlink's bytes are its own payload, and the sequence is hashed
-  as bytes rather than as a decoded string. Directories are in it too, so
-  removing the execute bit from a source directory moves the address.
-
-  Three states stop the address rather than being recorded as clean: an unborn
-  `HEAD`, a submodule, and an untracked embedded repository. Collection is
-  repeated until two consecutive runs agree, so a tree edited while it is being
-  read cannot produce an address for a state that never existed. The ledger's
-  own directory is read from the project's configuration rather than assumed,
-  so a project that moved its specs is not hashing its own bookkeeping writes.
-
-  The recorded value is checked where it is committed, and in the one case the
-  procedure produces: `working-tree+` followed by 64 lowercase hexadecimal
-  characters. Freshness is compared exactly, so accepting both cases would let
-  one tree be recorded as two revisions and read a correct row as stale.
-
-- **The autopilot tailoring contract now covers every shipped skill** (#1642).
-  It was held against a hardcoded list of seven, so the two grilling skills were
-  outside it and nothing reported that they carried no tailoring rule at all.
-  The list is read off the tree, the way the Reviewer-Gate validator picks its
-  own subjects, and both skills carry the rule.
-
-  The rule also now sanctions what the validator already allowed: `hard-required`
-  takes the undefaultable inputs a skill itself consumes, declared per skill and
-  checked against that declaration. The bucket is what a run cannot proceed
-  without, and no prototype can enumerate that for a skill it does not know — so
-  the sentence forbade `qfai-configure`'s `testFileGlobs` proposal and the
-  grilling subject a session cannot start without.
-
-- **A grilling loop runs before a spec phase freezes its first draft** (#1598).
-  The phase's drafting agent is interviewed by a griller; the orchestrator holds
-  the loop, routes it, and does not answer its questions. It runs before Phase 0,
-  Phase 1, Phase 2 and Phase 3, and each escalated decision reaches the user as a
-  structured question.
-
-  This is not the Reviewer Gate and does not replace it. The gate reads a drafted
-  artifact and answers whether it is right; a contradiction, an unconsidered case
-  and a choice that does not fit the existing code all enter before the draft, so
-  by the time a reviewer reads the artifact they are premises, and an artifact
-  coherently built on a premise nobody chose returns `PASS`.
-
-  The first draft is the freeze point, because once an artifact exists a decision
-  argued against it is a change to something written rather than a choice among
-  options.
-
-  The trigger is this invocation's first write in the phase, not whether the
-  artifact already exists. Most runs are `UPDATE:APPEND` or `UPDATE:MODIFY`
-  against artifacts that do, so a rule keyed on existence would never fire on
-  the ordinary path. Phase 2c is on the list for the same reason: it makes
-  contract choices after Phase 0 has written.
-
-  One session per phase, over every routed drafting role's decisions. Grilling
-  one author leaves the others free to settle their own before their own writes.
-
-  Every decision the session settled that authoritative evidence did not answer
-  goes to the user before any author writes — not only the ones the round budget
-  left open. A decision the author accepted from the griller is not open, so the
-  convergence rules do not escalate it, and an agent-to-agent decision nobody
-  adjudicated makes the artifact one no reviewer can clear. Escalating the
-  residue alone would hand the authors a settled set whose agreed half fails
-  review.
-
-  The phase records a run-or-skip line and, per settled decision, a work-order
-  row naming who adjudicated it. A phase whose subject is settled has nothing to
-  grill, and that skip is indistinguishable from an omitted session unless it is
-  written down; the two adjudications point opposite ways, and one marker for
-  both told the reviewer nothing it could act on.
-
-  A no-question run reaches nobody, so the decision is opened as a question, the
-  phase's row reads `escalated`, and **the phase does not write** — its work
-  order stays `PENDING`, which blocks completion and leaves the stage resumable.
-  That is the gate, because a spec pack's open-question file is not one: it
-  carries open questions as a matter of course, so nothing there stops a run.
-
-  Where the structured question tool is not callable, the escalation takes the
-  rule's fallback rather than being skipped.
-
-  A fact only the user holds goes to the user rather than to an author. No
-  author can answer an unpublished constraint, and the convergence rules
-  escalate decisions rather than facts, so without this it sat on the frontier
-  until the budget ended and took every decision waiting on it along.
-
-  The phase row carries when its session ended and when the phase first wrote,
-  the first recorded before that write — a row holding only the outcome reads the
-  same whether the session ran before the phase, after it, or not at all. `run`
-  means zero escalations, and each phase's settled count equals the number of
-  decision rows carrying that phase, so a count has something behind it.
-
-  The record's chronology is per state: `run` carries both times, `skipped` has
-  no session to have ended, and an `escalated` phase does not write. Requiring
-  both of every state would make two legitimate states unrecordable, and a state
-  nobody can record honestly is one an agent records dishonestly.
-
-  Phase 2c takes one row per expansion — `2c.1` upward — since its scope is
-  recomputed after every contract write, and a single row records the first
-  checkpoint while leaving every later one indistinguishable from one that never
-  happened.
-
-  The session covers every routed drafting role, `solution-architect` included,
-  and the user's answer is put back into the tree: a decision whose prerequisite
-  was open could not enter either agent round, so the rounds repeat until no node
-  is open. The constitution counts as authoritative evidence beside the specs and
-  contracts, since both this skill and the primitive rank it above them.
-
-  A throwaway built to answer a question the frozen inputs cannot is not the
-  phase writing. The freeze names the files it covers — the policy layer, the
-  spec packs and the contracts — so a UI-bearing phase can build the thing its
-  own method asks for.
-
-  Agreement between agents closes a node without settling the decision. Those are
-  one state read for two purposes: _open_ is about the round — is there anything
-  left to ask — and _settled_ is about the decision — has anyone with the standing
-  to take it done so. Conflating them is how an agreed answer reaches a draft as
-  though it were chosen.
-
-  A decision row names its phase, as the title's first field, because the shared
-  work-order schema has no column for it. The disposition rewrites keep those
-  fields: a reopened decision the user later resolves would otherwise drop the
-  key the gate selects on, and the rows a dispute produced are the ones it most
-  needs to find. Without that key a row cannot be
-  assigned to a phase, so an omitted row passes by being counted against another.
-
-  A decision is persisted by the drafting agent that owns its artifact, not by
-  the orchestrator: `07_Decisions.md` and `09_delta.md` are primary artifacts,
-  and on a CREATE run the file may not exist, so writing it is authoring.
-
-  Every distinct position reaches the user with whose it is. Phase 2 routes three
-  authors, so merging two answers before the user sees them hands them a choice
-  the full set was never asked to adjudicate.
-
-  Phase 2c gets a checkpoint per expansion rather than one per phase, because its
-  scope is recomputed after every contract write.
-
-  The gate asks only about the phases the loop covers. Phase 2b and Phase 4
-  produce no design decision, so a row for them would either reject valid
-  evidence or claim a session that was never owed. The canonical evidence
-  template carries the section, so a template-derived run has the heading the
-  gate reads.
-
-  The fixed phase order is unchanged: the loop is a step inside a phase, not one
-  of its own.
-
-### Changed
-
-- **A later `qfai init` cites a rule master it is shipping for the first time**
-  (#1643). Create-only left an existing `AGENTS.md`, `CLAUDE.md` or
-  `.github/copilot-instructions.md` alone, so a rule the same run wrote into
-  `.agents/rules/` was cited by nothing. A nominal re-init may now add a bullet
-  to those three files — one line per master the run's own copy report says it
-  wrote, lifted from the shipped template, and nothing else in the file changes.
-
-  The write refuses what it cannot make safely and says which file and why: a
-  symbolic link at the target or at any directory below the project root, a hard
-  link with more than one name, bytes that are not valid UTF-8, and a file that
-  changed while the run was working. A file that opens the managed section and
-  never closes it is reported rather than skipped in silence. A file with no
-  markers that cites rules anyway keeps the list it has, and gains only the
-  masters it does not name.
-
-- **`/qfai-discussion` runs its interview as a grilling session** (#1597). Step
-  one of its process read "Run the core interview" and named no method, so an
-  agent that asked nothing had followed it. It now runs the session through the
-  `qfai-grilling` skill, over every topic in the coverage checklist.
-
-  The policy moves with it. A design choice is not an equivalent-option pick,
-  and a skill that treats it as one records a design nobody agreed to as
-  decided, so the decisions the interview raises are `ask-user` and the
-  `auto-decide` entry says what equivalent means.
-
-  Authoring waits for the session to end. A pack drafted mid-session records a
-  design that was still being decided, and the draft is what the rest of the run
-  then defends. The completion matrix makes that blocking, because a pack
-  authored mid-session is indistinguishable from one authored after — same
-  fifteen files, same coverage, same register — and the missing thing is that
-  anyone agreed.
-
-  The guard covers the pack — the fifteen files and the UI sidecars — rather
-  than every write. Three writes are not that authoring and happen when the
-  process reaches them: the research summary the session reads, the register
-  entry or labelled assumption the session's own ending produces, and a
-  throwaway artifact built to make a question answerable where talking cannot.
-
-  A session has four endings and three of them let authoring start: `confirmed`
-  (no node open, the user confirming), `user-closed` (`proceed` or `done` —
-  lookups finished, each decision still open becoming a labelled assumption) and
-  `no-question` (`--auto` — each remaining decision registered open, and the open
-  count then blocks). `stopped` does not: the rule says a stop ends the session
-  and no further work follows it, so a pack drafted after one is the run doing
-  what the user told it not to.
-
-  The stage evidence carries a `## Grilling Session` row, which is what the
-  Reviewer Gate reads the condition off. A skipped session and a completed one
-  present the same pack, so without the row a reviewer would have to block every
-  run or accept a claim it cannot check. The row records when the session ended
-  **and** when authoring began, the first written before the pack is — a row
-  holding only the final state reads the same whether the session ran first, ran
-  after, or never ran.
-
-  No ending authorizes authoring while a `hard-required` input the invocation
-  consumes is missing. Registering an open question does not make an input
-  defaultable: the value is what the run needs, and a question about it is not
-  one.
-
-  The zero-open-question condition moved to the conditions every pack is held to.
-  A run is `--auto` or not independently of whether it has a surface, so listed
-  only under the UI-bearing shape it let a non-UI `--auto` pack complete with its
-  decisions still open.
-
-  The research protocol runs before the interview rather than after it. A
-  decision settled before the research bearing on it is settled against evidence
-  nobody had.
-
-  For a UI-bearing target the design direction is settled inside that session
-  too, and the later step records it rather than asking it. Asked where it used
-  to be, the visual choice came after five steps had already authored the pack it
-  governs.
-
-  The step reads the primitive's body rather than naming it: a host that loads
-  skill bodies lazily hands the agent the reference and not the procedure, and an
-  agent with the reference alone improvises the interview — which is the
-  methodless interview this change replaces, wearing its name.
-
-- **A reviewer that recommended a decision the agents adopted cannot clear it**
-  (#1600). A grilling session puts a recommended answer beside each question,
-  and who settled the decision now decides what follows. Where the user chose
-  from the recommendation, the decision is theirs and the griller may review the
-  artifact. Where an agent adopted it with nobody adjudicating, the artifact
-  carries something nobody decided: the reviewer returns `REVISE` and names the
-  decision, which is reopened and put to the user or recorded open where no
-  question can be asked.
-
-  The reason is correlation rather than memory. A reset context cannot defer to
-  what it does not remember, but a fresh instance of the same agent, on the same
-  model, over the same evidence, re-derives the preference that produced the
-  recommendation.
-
-  Two fields carry it. A reviewer response declares `Recommended and
-unadjudicated`, read off a Work Orders Summary row the session writes rather
-  than off recollection, and scoped to the artifact as it now stands. A stage
-  that ran no such session writes one row reading `grilling: none`, and a summary
-  carrying neither that nor a decision row is incomplete — silence is not the
-  answer, because an omitted row looks exactly like nothing to record. A `Review series` — the reviewed
-  artifact, the role, and an ordinal that rises each time the review is handed
-  to a replacement, capped at two series per artifact per role so a fresh
-  reviewer cannot reset the budget for ever — carries the round budget across a host that answers round
-  2 with a fresh sub-agent, which a count per agent instance restarted every
-  round, and keeps a replacement from inheriting the round its predecessor
-  spent.
-
-  A non-`none` answer is not settled by a handoff. Handing the review to
-  another reviewer answers an authorship conflict; against an unadjudicated
-  recommendation it launders the decision, because the replacement attests
-  `none` truthfully while the artifact still carries what nobody chose.
-
-- **A grilling session's outcome has a named home** (#1604). A settled
-  discussion decision goes to `99_delta.md`; one the session could not settle
-  goes to the open-question register. Answering a question later moves its
-  register row as well as writing the log, because readiness reads the register
-  and an answer recorded only in the log left the pack blocked on a settled
-  question. A settled spec decision needs its `DL-*` entry in the delta as well
-  as `07_Decisions.md`, because `npx qfai report` reads the Decision Log alone.
-
-  Each destination is the artifact that holds that outcome: a rejected visual
-  direction to the delta section the template requires of a UI-bearing pack,
-  every disposition change to the append-only log including the `created` event
-  that opens a question, and rejection and reopening to the dispositions the
-  register already carries.
-
-  A closure the user asked for is not an open question. Where `proceed` or
-  `done` ends the asking, what is still open becomes a labelled assumption and
-  no register row, because readiness requires the open count to reach zero and
-  registering it would block the pack on the closure the user asked for.
-  `--auto` keeps the register row: nobody saw the question there.
-
-  A spec pack's open-question file is a record and not a gate. It carries open
-  questions as a matter of course, so a decision the user must settle goes to
-  the user during the stage rather than being written down and left.
-
-### Added
-
 - **Grilling reminders at the three moments a decision gets made quietly**
   (#1606). Before a design artifact is written, before work is delegated, and
   before a plan is fixed, a hook puts `.agents/rules/grilling.md` in front of
@@ -863,6 +570,140 @@ unadjudicated`, read off a Work Orders Summary row the session writes rather
   are replaced by a reference to the master.
 
 ### Changed
+
+- **A later `qfai init` cites a rule master it is shipping for the first time**
+  (#1643). Create-only left an existing `AGENTS.md`, `CLAUDE.md` or
+  `.github/copilot-instructions.md` alone, so a rule the same run wrote into
+  `.agents/rules/` was cited by nothing. A nominal re-init may now add a bullet
+  to those three files — one line per master the run's own copy report says it
+  wrote, lifted from the shipped template, and nothing else in the file changes.
+
+  The write refuses what it cannot make safely and says which file and why: a
+  symbolic link at the target or at any directory below the project root, a hard
+  link with more than one name, bytes that are not valid UTF-8, and a file that
+  changed while the run was working. A file that opens the managed section and
+  never closes it is reported rather than skipped in silence. A file with no
+  markers that cites rules anyway keeps the list it has, and gains only the
+  masters it does not name.
+
+- **`/qfai-discussion` runs its interview as a grilling session** (#1597). Step
+  one of its process read "Run the core interview" and named no method, so an
+  agent that asked nothing had followed it. It now runs the session through the
+  `qfai-grilling` skill, over every topic in the coverage checklist.
+
+  The policy moves with it. A design choice is not an equivalent-option pick,
+  and a skill that treats it as one records a design nobody agreed to as
+  decided, so the decisions the interview raises are `ask-user` and the
+  `auto-decide` entry says what equivalent means.
+
+  Authoring waits for the session to end. A pack drafted mid-session records a
+  design that was still being decided, and the draft is what the rest of the run
+  then defends. The completion matrix makes that blocking, because a pack
+  authored mid-session is indistinguishable from one authored after — same
+  fifteen files, same coverage, same register — and the missing thing is that
+  anyone agreed.
+
+  The guard covers the pack — the fifteen files and the UI sidecars — rather
+  than every write. Three writes are not that authoring and happen when the
+  process reaches them: the research summary the session reads, the register
+  entry or labelled assumption the session's own ending produces, and a
+  throwaway artifact built to make a question answerable where talking cannot.
+
+  A session has four endings and three of them let authoring start: `confirmed`
+  (no node open, the user confirming), `user-closed` (`proceed` or `done` —
+  lookups finished, each decision still open becoming a labelled assumption) and
+  `no-question` (`--auto` — each remaining decision registered open, and the open
+  count then blocks). `stopped` does not: the rule says a stop ends the session
+  and no further work follows it, so a pack drafted after one is the run doing
+  what the user told it not to.
+
+  The stage evidence carries a `## Grilling Session` row, which is what the
+  Reviewer Gate reads the condition off. A skipped session and a completed one
+  present the same pack, so without the row a reviewer would have to block every
+  run or accept a claim it cannot check. The row records when the session ended
+  **and** when authoring began, the first written before the pack is — a row
+  holding only the final state reads the same whether the session ran first, ran
+  after, or never ran.
+
+  No ending authorizes authoring while a `hard-required` input the invocation
+  consumes is missing. Registering an open question does not make an input
+  defaultable: the value is what the run needs, and a question about it is not
+  one.
+
+  The zero-open-question condition moved to the conditions every pack is held to.
+  A run is `--auto` or not independently of whether it has a surface, so listed
+  only under the UI-bearing shape it let a non-UI `--auto` pack complete with its
+  decisions still open.
+
+  The research protocol runs before the interview rather than after it. A
+  decision settled before the research bearing on it is settled against evidence
+  nobody had.
+
+  For a UI-bearing target the design direction is settled inside that session
+  too, and the later step records it rather than asking it. Asked where it used
+  to be, the visual choice came after five steps had already authored the pack it
+  governs.
+
+  The step reads the primitive's body rather than naming it: a host that loads
+  skill bodies lazily hands the agent the reference and not the procedure, and an
+  agent with the reference alone improvises the interview — which is the
+  methodless interview this change replaces, wearing its name.
+
+- **A reviewer that recommended a decision the agents adopted cannot clear it**
+  (#1600). A grilling session puts a recommended answer beside each question,
+  and who settled the decision now decides what follows. Where the user chose
+  from the recommendation, the decision is theirs and the griller may review the
+  artifact. Where an agent adopted it with nobody adjudicating, the artifact
+  carries something nobody decided: the reviewer returns `REVISE` and names the
+  decision, which is reopened and put to the user or recorded open where no
+  question can be asked.
+
+  The reason is correlation rather than memory. A reset context cannot defer to
+  what it does not remember, but a fresh instance of the same agent, on the same
+  model, over the same evidence, re-derives the preference that produced the
+  recommendation.
+
+  Two fields carry it. A reviewer response declares `Recommended and
+unadjudicated`, read off a Work Orders Summary row the session writes rather
+  than off recollection, and scoped to the artifact as it now stands. A stage
+  that ran no such session writes one row reading `grilling: none`, and a summary
+  carrying neither that nor a decision row is incomplete — silence is not the
+  answer, because an omitted row looks exactly like nothing to record. A `Review series` — the reviewed
+  artifact, the role, and an ordinal that rises each time the review is handed
+  to a replacement, capped at two series per artifact per role so a fresh
+  reviewer cannot reset the budget for ever — carries the round budget across a host that answers round
+  2 with a fresh sub-agent, which a count per agent instance restarted every
+  round, and keeps a replacement from inheriting the round its predecessor
+  spent.
+
+  A non-`none` answer is not settled by a handoff. Handing the review to
+  another reviewer answers an authorship conflict; against an unadjudicated
+  recommendation it launders the decision, because the replacement attests
+  `none` truthfully while the artifact still carries what nobody chose.
+
+- **A grilling session's outcome has a named home** (#1604). A settled
+  discussion decision goes to `99_delta.md`; one the session could not settle
+  goes to the open-question register. Answering a question later moves its
+  register row as well as writing the log, because readiness reads the register
+  and an answer recorded only in the log left the pack blocked on a settled
+  question. A settled spec decision needs its `DL-*` entry in the delta as well
+  as `07_Decisions.md`, because `npx qfai report` reads the Decision Log alone.
+
+  Each destination is the artifact that holds that outcome: a rejected visual
+  direction to the delta section the template requires of a UI-bearing pack,
+  every disposition change to the append-only log including the `created` event
+  that opens a question, and rejection and reopening to the dispositions the
+  register already carries.
+
+  A closure the user asked for is not an open question. Where `proceed` or
+  `done` ends the asking, what is still open becomes a labelled assumption and
+  no register row, because readiness requires the open count to reach zero and
+  registering it would block the pack on the closure the user asked for.
+  `--auto` keeps the register row: nobody saw the question there.
+
+  A spec pack's open-question file is a record and not a gate. It carries open
+  questions as a matter of course, so a decision the user must settle goes to
+  the user during the stage rather than being written down and left.
 
 - **A later `qfai init` cites a rule master it is shipping for the first time**
   (#1643). Create-only left an existing `AGENTS.md`, `CLAUDE.md` or
@@ -1375,6 +1216,159 @@ unadjudicated`, read off a Work Orders Summary row the session writes rather
   and still runs.
 
 ### Fixed
+
+- **The working-tree address is written one way** (#1651). The procedure said
+  "a hash over HEAD and the working tree", and that is not one value: a
+  producer and a reviewer could each pick a defensible separator, record shape
+  or way of reading a file, get different answers for the same tree, and leave
+  an ordinary uncommitted item stale for nobody's mistake.
+
+  Git names the paths and the bytes come off the filesystem, because a diff is
+  a rendering and what renders it — `core.autocrlf`, `core.eol`, a
+  `.gitattributes` driver — is checkout-local. Each record carries the path,
+  the kind, the mode and the SHA-256 of the bytes, and how every part is
+  written is fixed: a mode is four octal digits, a digest is 64 lowercase
+  characters, a symlink's bytes are its own payload, and the sequence is hashed
+  as bytes rather than as a decoded string. Directories are in it too, so
+  removing the execute bit from a source directory moves the address.
+
+  Three states stop the address rather than being recorded as clean: an unborn
+  `HEAD`, a submodule, and an untracked embedded repository. Collection is
+  repeated until two consecutive runs agree, so a tree edited while it is being
+  read cannot produce an address for a state that never existed. The ledger's
+  own directory is read from the project's configuration rather than assumed,
+  so a project that moved its specs is not hashing its own bookkeeping writes.
+
+  The recorded value is checked where it is committed, and in the one case the
+  procedure produces: `working-tree+` followed by 64 lowercase hexadecimal
+  characters. Freshness is compared exactly, so accepting both cases would let
+  one tree be recorded as two revisions and read a correct row as stale.
+
+- **The autopilot tailoring contract now covers every shipped skill** (#1642).
+  It was held against a hardcoded list of seven, so the two grilling skills were
+  outside it and nothing reported that they carried no tailoring rule at all.
+  The list is read off the tree, the way the Reviewer-Gate validator picks its
+  own subjects, and both skills carry the rule.
+
+  The rule also now sanctions what the validator already allowed: `hard-required`
+  takes the undefaultable inputs a skill itself consumes, declared per skill and
+  checked against that declaration. The bucket is what a run cannot proceed
+  without, and no prototype can enumerate that for a skill it does not know — so
+  the sentence forbade `qfai-configure`'s `testFileGlobs` proposal and the
+  grilling subject a session cannot start without.
+
+- **A grilling loop runs before a spec phase freezes its first draft** (#1598).
+  The phase's drafting agent is interviewed by a griller; the orchestrator holds
+  the loop, routes it, and does not answer its questions. It runs before Phase 0,
+  Phase 1, Phase 2 and Phase 3, and each escalated decision reaches the user as a
+  structured question.
+
+  This is not the Reviewer Gate and does not replace it. The gate reads a drafted
+  artifact and answers whether it is right; a contradiction, an unconsidered case
+  and a choice that does not fit the existing code all enter before the draft, so
+  by the time a reviewer reads the artifact they are premises, and an artifact
+  coherently built on a premise nobody chose returns `PASS`.
+
+  The first draft is the freeze point, because once an artifact exists a decision
+  argued against it is a change to something written rather than a choice among
+  options.
+
+  The trigger is this invocation's first write in the phase, not whether the
+  artifact already exists. Most runs are `UPDATE:APPEND` or `UPDATE:MODIFY`
+  against artifacts that do, so a rule keyed on existence would never fire on
+  the ordinary path. Phase 2c is on the list for the same reason: it makes
+  contract choices after Phase 0 has written.
+
+  One session per phase, over every routed drafting role's decisions. Grilling
+  one author leaves the others free to settle their own before their own writes.
+
+  Every decision the session settled that authoritative evidence did not answer
+  goes to the user before any author writes — not only the ones the round budget
+  left open. A decision the author accepted from the griller is not open, so the
+  convergence rules do not escalate it, and an agent-to-agent decision nobody
+  adjudicated makes the artifact one no reviewer can clear. Escalating the
+  residue alone would hand the authors a settled set whose agreed half fails
+  review.
+
+  The phase records a run-or-skip line and, per settled decision, a work-order
+  row naming who adjudicated it. A phase whose subject is settled has nothing to
+  grill, and that skip is indistinguishable from an omitted session unless it is
+  written down; the two adjudications point opposite ways, and one marker for
+  both told the reviewer nothing it could act on.
+
+  A no-question run reaches nobody, so the decision is opened as a question, the
+  phase's row reads `escalated`, and **the phase does not write** — its work
+  order stays `PENDING`, which blocks completion and leaves the stage resumable.
+  That is the gate, because a spec pack's open-question file is not one: it
+  carries open questions as a matter of course, so nothing there stops a run.
+
+  Where the structured question tool is not callable, the escalation takes the
+  rule's fallback rather than being skipped.
+
+  A fact only the user holds goes to the user rather than to an author. No
+  author can answer an unpublished constraint, and the convergence rules
+  escalate decisions rather than facts, so without this it sat on the frontier
+  until the budget ended and took every decision waiting on it along.
+
+  The phase row carries when its session ended and when the phase first wrote,
+  the first recorded before that write — a row holding only the outcome reads the
+  same whether the session ran before the phase, after it, or not at all. `run`
+  means zero escalations, and each phase's settled count equals the number of
+  decision rows carrying that phase, so a count has something behind it.
+
+  The record's chronology is per state: `run` carries both times, `skipped` has
+  no session to have ended, and an `escalated` phase does not write. Requiring
+  both of every state would make two legitimate states unrecordable, and a state
+  nobody can record honestly is one an agent records dishonestly.
+
+  Phase 2c takes one row per expansion — `2c.1` upward — since its scope is
+  recomputed after every contract write, and a single row records the first
+  checkpoint while leaving every later one indistinguishable from one that never
+  happened.
+
+  The session covers every routed drafting role, `solution-architect` included,
+  and the user's answer is put back into the tree: a decision whose prerequisite
+  was open could not enter either agent round, so the rounds repeat until no node
+  is open. The constitution counts as authoritative evidence beside the specs and
+  contracts, since both this skill and the primitive rank it above them.
+
+  A throwaway built to answer a question the frozen inputs cannot is not the
+  phase writing. The freeze names the files it covers — the policy layer, the
+  spec packs and the contracts — so a UI-bearing phase can build the thing its
+  own method asks for.
+
+  Agreement between agents closes a node without settling the decision. Those are
+  one state read for two purposes: _open_ is about the round — is there anything
+  left to ask — and _settled_ is about the decision — has anyone with the standing
+  to take it done so. Conflating them is how an agreed answer reaches a draft as
+  though it were chosen.
+
+  A decision row names its phase, as the title's first field, because the shared
+  work-order schema has no column for it. The disposition rewrites keep those
+  fields: a reopened decision the user later resolves would otherwise drop the
+  key the gate selects on, and the rows a dispute produced are the ones it most
+  needs to find. Without that key a row cannot be
+  assigned to a phase, so an omitted row passes by being counted against another.
+
+  A decision is persisted by the drafting agent that owns its artifact, not by
+  the orchestrator: `07_Decisions.md` and `09_delta.md` are primary artifacts,
+  and on a CREATE run the file may not exist, so writing it is authoring.
+
+  Every distinct position reaches the user with whose it is. Phase 2 routes three
+  authors, so merging two answers before the user sees them hands them a choice
+  the full set was never asked to adjudicate.
+
+  Phase 2c gets a checkpoint per expansion rather than one per phase, because its
+  scope is recomputed after every contract write.
+
+  The gate asks only about the phases the loop covers. Phase 2b and Phase 4
+  produce no design decision, so a row for them would either reject valid
+  evidence or claim a session that was never owed. The canonical evidence
+  template carries the section, so a template-derived run has the heading the
+  gate reads.
+
+  The fixed phase order is unchanged: the loop is a step inside a phase, not one
+  of its own.
 
 - **The autopilot tailoring contract now covers every shipped skill** (#1642).
   It was held against a hardcoded list of seven, so the two grilling skills were
