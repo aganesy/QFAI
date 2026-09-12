@@ -2,9 +2,9 @@
 
 ## Objective
 
-Carry the proof for the four `Integration` rows of this spec's ledger whose
-`Evidence` cells predate the pointer grammar. A fifth `Integration` row,
-`TDD-0009`, is not backfilled; the reason is under Gaps.
+Carry the proof for three of the five `Integration` rows of this spec's ledger
+whose `Evidence` cells predate the pointer grammar. `TDD-0009` and `TDD-0036`
+are not backfilled; the reasons are under Gaps.
 
 ## Inputs reviewed (files/paths)
 
@@ -22,21 +22,23 @@ command and no output, so the reviewer verdicts and pack seals a completed entry
 normally carries cannot be recorded and are not invented.
 
 No row can produce an observed RED — every implementation shipped long before
-this record — so all four take the falsifiability path, and the mutation
+this record — so all three take the falsifiability path, and the mutation
 recorded per row is what that path asks for.
 
-Two rows carried a `Selector` written as a summary of the obligation rather than
-a test's title. Both were corrected to the title of the test that carries the
-obligation, chosen by what it asserts. `TDD-0036`'s obligation has two
-directions — refused while a gate is missing, accepted once the gates pass — so
-its `Selector` names both cases in the list form the column admits.
+Every run is narrowed to the row's own `Selector`. A whole-file run can stay red
+through a case belonging to another row, and then it says nothing about whether
+this row's test discriminates.
+
+`TDD-0035` carried a `Selector` written as a summary of the obligation rather
+than a test's title. It was corrected to the title of the block that carries the
+obligation, chosen by what it asserts.
 
 ## Work performed (what changed, where)
 
-- `.qfai/specs/spec-0014/tdd/test-list.md` — the `Selector` of `TDD-0035` and
-  `TDD-0036` rewritten to the titles they name, and the `Evidence` cells of
-  `TDD-0018`, `TDD-0019`, `TDD-0035` and `TDD-0036` rewritten as pointers into
-  this file. `TDD-0033` and `TDD-0034` are `unit`, so their proof is in
+- `.qfai/specs/spec-0014/tdd/test-list.md` — the `Selector` of `TDD-0035`
+  rewritten to the title it names, and the `Evidence` cells of `TDD-0018`,
+  `TDD-0019` and `TDD-0035` rewritten as pointers into this file. `TDD-0033` and
+  `TDD-0034` are `unit`, so their proof is in
   `.qfai/evidence/implement-spec-0014.md`. No `Status` moved.
 - This file created.
 
@@ -47,19 +49,19 @@ revision `649d8111147436408c90cbbe1b9f9b07e34da8cb`. Each mutation was reverted
 from a copy of the pre-mutation bytes, and the tree re-addressed afterwards to
 confirm it had returned to the clean value.
 
-| Run                       | Result                |
-| ------------------------- | --------------------- |
-| `TDD-0018` GREEN          | 5 passed              |
-| `TDD-0018` falsifiability | 2 failed, 3 passed    |
-| `TDD-0019` GREEN          | 5 passed              |
-| `TDD-0019` falsifiability | 1 failed, 4 passed    |
-| `TDD-0035` GREEN          | 2 passed              |
-| `TDD-0035` falsifiability | 1 failed, 1 passed    |
-| `TDD-0036` GREEN            | 1 passed per entry    |
-| `TDD-0036` falsifiability A | entry 1 fails, entry 2 passes |
-| `TDD-0036` falsifiability B | entry 2 fails, entry 1 passes |
-| Refactor verify           | 126 passed            |
-| Checkpoint                | 2258 passed, exit 0   |
+Each row's two runs select that row's `Selector` and nothing else, so the counts
+below are over the selected cases, not over the file.
+
+| Run                       | Selected | Result              |
+| ------------------------- | -------- | ------------------- |
+| `TDD-0018` GREEN          | 2 of 5   | 2 passed            |
+| `TDD-0018` falsifiability | 2 of 5   | 1 failed, 1 passed  |
+| `TDD-0019` GREEN          | 1 of 5   | 1 passed            |
+| `TDD-0019` falsifiability | 1 of 5   | 1 failed            |
+| `TDD-0035` GREEN          | 2 of 2   | 2 passed            |
+| `TDD-0035` falsifiability | 2 of 2   | 1 failed, 1 passed  |
+| Refactor verify           | all      | 126 passed          |
+| Checkpoint                | all      | 2258 passed, exit 0 |
 
 ## Test volume estimate
 
@@ -81,7 +83,6 @@ evidence its cell points at.
 | `TDD-0018` | `TC-0014-0018` | integration | falsifiability | done   |
 | `TDD-0019` | `TC-0014-0019` | integration | falsifiability | done   |
 | `TDD-0035` | `TC-0014-0035` | integration | falsifiability | done   |
-| `TDD-0036` | `TC-0014-0036` | integration | falsifiability | done   |
 
 ### TDD-0018
 
@@ -99,11 +100,11 @@ evidence its cell points at.
 
 - Round 1: Revision: 649d8111147436408c90cbbe1b9f9b07e34da8cb
 - Round 1: Satisfied-by: packages/qfai/src/core/validators/uix/threeLayer.ts, validateForbiddenLegacyFiles — the filter that reports a canonical sidecar matching any forbidden legacy pattern.
-- Round 1: Falsifiability command: npx vitest run tests/integration/verifySemanticsSpec0014.test.ts
-- Round 1: Falsifiability result: Test Files 1 failed (1); Tests 2 failed, 3 passed (5). This row's own case fails on the absent `UIX-VAL-3LAYER-FORBIDDEN-FILE` finding.
+- Round 1: Falsifiability command: npx vitest run tests/integration/verifySemanticsSpec0014.test.ts -t 'TC-0014-0018'
+- Round 1: Falsifiability result: Test Files 1 failed (1); Tests 1 failed, 1 passed (2 of the file's 5 selected), on `expected undefined to be defined` — the absent `UIX-VAL-3LAYER-FORBIDDEN-FILE` finding.
 - Round 1: Falsifiability revision: working-tree+e8f19276e2c174fae97eaa94a78ab60dbdfb4b94ab010c33bddb558629445383
-- Round 1: GREEN command: npx vitest run tests/integration/verifySemanticsSpec0014.test.ts
-- Round 1: GREEN result: Test Files 1 passed (1); Tests 5 passed (5)
+- Round 1: GREEN command: npx vitest run tests/integration/verifySemanticsSpec0014.test.ts -t 'TC-0014-0018'
+- Round 1: GREEN result: Test Files 1 passed (1); Tests 2 passed (2 of the file's 5 selected)
 - Round 1: RED test hash: f59276acc52e9397953da7c5d7edccfbdeb45e1ca9822da516c17b75de8c2ce2
 - Round 1: RED test manifest: packages/qfai/tests/integration/verifySemanticsSpec0014.test.ts
 
@@ -115,9 +116,13 @@ The mutation, in `packages/qfai/src/core/validators/uix/threeLayer.ts` line 166:
 ```
 
 No single filename matches every forbidden pattern, so the filter returns
-nothing. Both failures read `expected undefined to be defined`. The second
-belongs to `TDD-0009`, which reads the same filter — recorded here because it
-says what this mutation reaches, not only what it proves.
+nothing.
+
+The selector holds two cases. The one that dies is the one that runs the
+validators and reads the finding back; the other asserts that `validate.ts`
+imports and invokes them, which the mutation leaves true. Run over the whole
+file the mutation also kills a `TDD-0009` case reading the same filter, which is
+why the command names the selector.
 
 - Refactor verify command: npx vitest run tests/integration/verifySemanticsSpec0014.test.ts tests/cli/commands/prototypingIterate.test.ts tests/integration/cli/commands/prototypingCertify.saasPackage.test.ts tests/integration/cli/commands/prototypingCertify.upgradeScope.test.ts
 - Refactor verify result: Test Files 4 passed (4); Tests 126 passed (126)
@@ -134,8 +139,9 @@ The checkpoint needs `pnpm -C packages/qfai build` first.
 `tests/integration/cliStartupCost.test.ts` reads `packages/qfai/dist/**` and is
 written to fail rather than pass vacuously when no build exists.
 
-Validate gate: `npx qfai validate --profile atdd --fail-on error --spec 0014`
-at the same revision — `counts: info=3 warning=0 error=0`, exit 0.
+Validate gate, over the ledger as this change leaves it:
+`npx qfai validate --profile atdd --fail-on error --spec 0014` —
+`counts: info=4 warning=0 error=0`, exit 0.
 
 ### TDD-0019
 
@@ -153,11 +159,11 @@ at the same revision — `counts: info=3 warning=0 error=0`, exit 0.
 
 - Round 1: Revision: 649d8111147436408c90cbbe1b9f9b07e34da8cb
 - Round 1: Satisfied-by: packages/qfai/src/core/types.ts, IssueCategory — the union the removed compatibility category is absent from.
-- Round 1: Falsifiability command: npx vitest run tests/integration/verifySemanticsSpec0014.test.ts
-- Round 1: Falsifiability result: Test Files 1 failed (1); Tests 1 failed, 4 passed (5). Only this row's own case fails.
+- Round 1: Falsifiability command: npx vitest run tests/integration/verifySemanticsSpec0014.test.ts -t 'TC-0014-0019'
+- Round 1: Falsifiability result: Test Files 1 failed (1); Tests 1 failed (1 of the file's 5 selected). The selector holds one case and it dies.
 - Round 1: Falsifiability revision: working-tree+d46540131695fb9d36bba2c09b20878d6ad69136a24ccd1f9672326b7e78e173
-- Round 1: GREEN command: npx vitest run tests/integration/verifySemanticsSpec0014.test.ts
-- Round 1: GREEN result: Test Files 1 passed (1); Tests 5 passed (5)
+- Round 1: GREEN command: npx vitest run tests/integration/verifySemanticsSpec0014.test.ts -t 'TC-0014-0019'
+- Round 1: GREEN result: Test Files 1 passed (1); Tests 1 passed (1 of the file's 5 selected)
 - Round 1: RED test hash: f59276acc52e9397953da7c5d7edccfbdeb45e1ca9822da516c17b75de8c2ce2
 - Round 1: RED test manifest: packages/qfai/tests/integration/verifySemanticsSpec0014.test.ts
 
@@ -196,11 +202,11 @@ TestFileSca…' not to contain '"compatibility"'`.
 
 - Round 1: Revision: 649d8111147436408c90cbbe1b9f9b07e34da8cb
 - Round 1: Satisfied-by: packages/qfai/src/cli/commands/prototypingCertify.ts — the certificate body's conditional `scope` field.
-- Round 1: Falsifiability command: npx vitest run tests/integration/cli/commands/prototypingCertify.saasPackage.test.ts
-- Round 1: Falsifiability result: Test Files 1 failed (1); Tests 1 failed, 1 passed (2). This row's own case fails on the absent `scope` field.
+- Round 1: Falsifiability command: npx vitest run tests/integration/cli/commands/prototypingCertify.saasPackage.test.ts -t 'certify --scope saas-package seals a scope-limited certificate'
+- Round 1: Falsifiability result: Test Files 1 failed (1); Tests 1 failed, 1 passed (2 of the file's 2 selected), on `expected undefined to be 'saas-package'`.
 - Round 1: Falsifiability revision: working-tree+fedb7acf0fa804aaaf25cab36939479ca8521973762ca046b060d2a4ef5da720
-- Round 1: GREEN command: npx vitest run tests/integration/cli/commands/prototypingCertify.saasPackage.test.ts
-- Round 1: GREEN result: Test Files 1 passed (1); Tests 2 passed (2)
+- Round 1: GREEN command: npx vitest run tests/integration/cli/commands/prototypingCertify.saasPackage.test.ts -t 'certify --scope saas-package seals a scope-limited certificate'
+- Round 1: GREEN result: Test Files 1 passed (1); Tests 2 passed (2 of the file's 2 selected)
 - Round 1: RED test hash: f30c3f411f42ae69e34e5a4c5b2ac752e656e258b40d2f42a3879c5f0a98448a
 - Round 1: RED test manifest: packages/qfai/tests/integration/cli/commands/prototypingCertify.saasPackage.test.ts
 
@@ -211,91 +217,11 @@ The mutation, in `packages/qfai/src/cli/commands/prototypingCertify.ts` line
 -    ...(isSaasPackageScope ? { scope: "saas-package" as const } : {}),
 ```
 
-The case fails on `expected undefined to be 'saas-package'`. The file's other
-case, which asserts a default invocation carries no `scope`, stays green — the
-mutation removes the field in both directions, and only one direction is a
-defect.
-
-- Refactor verify command: npx vitest run tests/integration/verifySemanticsSpec0014.test.ts tests/cli/commands/prototypingIterate.test.ts tests/integration/cli/commands/prototypingCertify.saasPackage.test.ts tests/integration/cli/commands/prototypingCertify.upgradeScope.test.ts
-- Refactor verify result: Test Files 4 passed (4); Tests 126 passed (126)
-- Refactor verify revision: 649d8111147436408c90cbbe1b9f9b07e34da8cb
-- Checkpoint verification command: npx vitest run --project integration --project cli
-- Checkpoint verification result: PASS — exit 0; Test Files 187 passed (191); Tests 2258 passed (2277)
-- Checkpoint verification revision: 649d8111147436408c90cbbe1b9f9b07e34da8cb
-
-### TDD-0036
-
-- TDD-ID: TDD-0036
-- Layer: integration
-- Test file: packages/qfai/tests/integration/cli/commands/prototypingCertify.upgradeScope.test.ts
-- Selector: ["refuses to upgrade while named gates are still missing; stderr names them", "upgrades the certificate to full DONE when the previously-skipped gates now pass"]
-- TC-ref: TC-0014-0036
-- Run output retained: no
-- Backfill note: the row's cell recorded a verdict with no command and no output, so nothing of the original run survives. The test was re-run for the GREEN below, and the mutation below was applied and reverted to establish that the test discriminates. No reviewer verdict is recorded because none can be reconstructed.
-
-- RED failure mode: falsifiability
-
-#### Round 1
-
-- Round 1: Revision: 649d8111147436408c90cbbe1b9f9b07e34da8cb
-- Round 1: Satisfied-by: packages/qfai/src/cli/commands/prototypingCertify.ts — the refusal branch taken when the gates signal still names a missing gate.
-- Round 1: Falsifiability command: npx vitest run tests/integration/cli/commands/prototypingCertify.upgradeScope.test.ts -t 'refuses to upgrade while named gates are still missing; stderr names them'
-- Round 1: Falsifiability result: Test Files 1 failed (1); Tests 1 failed, 15 skipped (16), on `expected +0 not to be +0`. Mutation A. The second selector entry, run separately under the same mutation, passes: Tests 1 passed, 15 skipped (16).
-- Round 1: Falsifiability revision: working-tree+c0b2657afd0bcc8a48b3375d05c60c47ce75d92eb09c057d11b9ce5ac74e41a1
-- Round 1: GREEN command: npx vitest run tests/integration/cli/commands/prototypingCertify.upgradeScope.test.ts -t 'refuses to upgrade while named gates are still missing; stderr names them'
-- Round 1: GREEN result: Test Files 1 passed (1); Tests 1 passed (1 of the file's 16 selected). The second selector entry, run separately: Tests 1 passed.
-- Round 1: RED test hash: cba71be37bffe18df1121e93e5e70680e26306fbbd36f86789c70e1bc93773fd
-- Round 1: RED test manifest: packages/qfai/tests/integration/cli/commands/prototypingCertify.upgradeScope.test.ts
-
-The `Selector` is a JSON array of two entries, so each is run on its own under
-each mutation: an aggregate run shows one entry failing and leaves the other
-unobserved. The four runs partition cleanly.
-
-| Run | `refuses to upgrade …` | `upgrades the certificate …` |
-| --- | --- | --- |
-| Clean tree | 1 passed, 15 skipped | 1 passed, 15 skipped |
-| Mutation A | **1 failed**, 15 skipped | 1 passed, 15 skipped |
-| Mutation B | 1 passed, 15 skipped | **1 failed**, 15 skipped |
-
-The obligation has two directions, so it carries two mutations. Each kills one
-direction and leaves the other green, which is what makes the pair evidence
-rather than one observation stated twice.
-
-**Mutation A — the refusal direction.** In
-`packages/qfai/src/cli/commands/prototypingCertify.ts` line 1603:
-
-```diff
--  if (stillMissing.length > 0) {
-+  if (stillMissing.length > 9999) {
-```
-
-The threshold is beyond any reachable count, so the command upgrades whatever
-the signal says. Run over the whole file it kills six cases, every one that
-expects a refusal.
-
-**Mutation B — the acceptance direction.** In the same file, line 1656:
-
-```diff
--  const upgraded = stripScopeMarkers(cert);
-+  const upgraded = cert;
-```
-
-- Round 1: Second falsifiability command: npx vitest run tests/integration/cli/commands/prototypingCertify.upgradeScope.test.ts -t 'upgrades the certificate to full DONE when the previously-skipped gates now pass'
-- Round 1: Second falsifiability result: Test Files 1 failed (1); Tests 1 failed, 15 skipped (16), on `expected 'saas-package' to be undefined`. Mutation B. The first selector entry, run separately under the same mutation, passes: Tests 1 passed, 15 skipped (16).
-- Round 1: Second falsifiability revision: working-tree+d6d8998685c20b869dc0de4edacbe53a4beb5a2a97f04979c6d4a25d59f38b58
-
-The upgrade branch never writes `scope: "full"` — it removes the field, through
-`stripScopeMarkers()`, which rebuilds the certificate and omits `scope` and
-`notes`. Returning the certificate unchanged therefore leaves it scope-limited
-while reporting success. Run over the whole file it kills seven cases, every
-acceptance-direction one; all eight refusal cases stay green, so the two
-mutations partition the file and no case dies under both.
-
-One acceptance-path case survives mutation B: `prefers the canonical path when
-BOTH canonical and legacy signals exist`. It drives a successful upgrade but
-asserts only the exit code and which signal path won, never reading the sealed
-certificate back, so it would not notice an upgrade that silently left the
-certificate scope-limited.
+The selector is the block holding the file's two cases, which observe the same
+boundary from both sides. The case asserting the scoped invocation writes
+`scope` dies. Its partner, asserting a default invocation writes no `scope`,
+stays green: the mutation removes the field in both directions, and only one
+direction is a defect.
 
 - Refactor verify command: npx vitest run tests/integration/verifySemanticsSpec0014.test.ts tests/cli/commands/prototypingIterate.test.ts tests/integration/cli/commands/prototypingCertify.saasPackage.test.ts tests/integration/cli/commands/prototypingCertify.upgradeScope.test.ts
 - Refactor verify result: Test Files 4 passed (4); Tests 126 passed (126)
@@ -353,7 +279,22 @@ a review pack's `PASS` / `FAIL` / `NA` roster and never a `REVISE` verdict. No
 case in the package reads either clause. So the row needs a test over the
 shipped skill, not a decision about the obligation.
 
+`TDD-0036` is not backfilled either, for a different reason. Its obligation,
+`TC-0014-0036`, holds two boundaries: `--upgrade-scope full` is refused while a
+gate is still missing, and accepted once every gate passes. Two cases in
+`prototypingCertify.upgradeScope.test.ts` carry them, and each falls to its own
+mutation while leaving the other green — so the two are independently
+observable, not one boundary seen from two angles.
+
+`references/selector-granularity.md` puts one independently observable boundary
+on a row, and sends a matrix-shaped obligation to `/qfai-sdd` Phase 2b: the row
+is split there, into two rows carrying the same `TC-Refs`, never in place at
+evidence time. A `Selector` naming both cases would pack both boundaries behind
+one identifier, which is the shape that rule forbids. The row therefore stays as
+it stands and needs a Change Request that decomposes it.
+
 ## Final status
 
-PASS for the four rows recorded here. This is a per-row verdict, not a stage
-verdict: the pack is not clean, and `TDD-0009` is listed rather than claimed.
+PASS for the three rows recorded here. This is a per-row verdict, not a stage
+verdict: the pack is not clean, and `TDD-0009` and `TDD-0036` are listed rather
+than claimed.

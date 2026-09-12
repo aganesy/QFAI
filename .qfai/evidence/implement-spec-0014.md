@@ -29,10 +29,15 @@ revision `649d8111147436408c90cbbe1b9f9b07e34da8cb`. Each mutation was reverted
 from a copy of the pre-mutation bytes, and the tree re-addressed afterwards to
 confirm it had returned to the clean value.
 
-| Run                       | Result               |
-| ------------------------- | -------------------- |
-| `TDD-0034` GREEN          | 103 passed           |
-| `TDD-0034` falsifiability | 1 failed, 102 passed |
+Both runs select the row's `Selector` and nothing else, so the counts are over
+the selected case, not over the file. A whole-file run can stay red through a
+case belonging to another row, and then it says nothing about whether this row's
+test discriminates.
+
+| Run                       | Selected | Result   |
+| ------------------------- | -------- | -------- |
+| `TDD-0034` GREEN          | 1 of 103 | 1 passed |
+| `TDD-0034` falsifiability | 1 of 103 | 1 failed |
 
 ## Items processed
 
@@ -52,11 +57,11 @@ confirm it had returned to the clean value.
 
 - Round 1: Revision: 649d8111147436408c90cbbe1b9f9b07e34da8cb
 - Round 1: Satisfied-by: packages/qfai/src/cli/commands/prototypingIterate.ts — the cycle-0 hard reset's deletion of the legacy `fullHarness` block.
-- Round 1: Falsifiability command: npx vitest run tests/cli/commands/prototypingIterate.test.ts
-- Round 1: Falsifiability result: Test Files 1 failed (1); Tests 1 failed, 102 passed (103). Only this row's own case fails.
+- Round 1: Falsifiability command: npx vitest run tests/cli/commands/prototypingIterate.test.ts -t 're-seeds acceptedIterationIndex / stopReason and deletes reviewerGate / fullHarness / executionPlan on cycle 0'
+- Round 1: Falsifiability result: Test Files 1 failed (1); Tests 1 failed (1 of the file's 103 selected), on `expected true to be false`. The selector holds one case and it dies.
 - Round 1: Falsifiability revision: working-tree+6ff18197d3f57229580697a36ad6136e482aae2782abbec14ff7ddb20ce8831f
-- Round 1: GREEN command: npx vitest run tests/cli/commands/prototypingIterate.test.ts
-- Round 1: GREEN result: Test Files 1 passed (1); Tests 103 passed (103)
+- Round 1: GREEN command: npx vitest run tests/cli/commands/prototypingIterate.test.ts -t 're-seeds acceptedIterationIndex / stopReason and deletes reviewerGate / fullHarness / executionPlan on cycle 0'
+- Round 1: GREEN result: Test Files 1 passed (1); Tests 1 passed (1 of the file's 103 selected)
 
 The mutation, in `packages/qfai/src/cli/commands/prototypingIterate.ts` line
 2260, deletes the line:
@@ -65,8 +70,8 @@ The mutation, in `packages/qfai/src/cli/commands/prototypingIterate.ts` line
 -  delete body.fullHarness;
 ```
 
-One case dies, and it is this row's, on `expected true to be false`: the block
-is per-loop state nothing else in the file asserts on.
+The selector holds one case and it dies: the block is per-loop state nothing
+else in the file asserts on.
 
 - Refactor verify command: npx vitest run tests/integration/verifySemanticsSpec0014.test.ts tests/cli/commands/prototypingIterate.test.ts tests/integration/cli/commands/prototypingCertify.saasPackage.test.ts tests/integration/cli/commands/prototypingCertify.upgradeScope.test.ts
 - Refactor verify result: Test Files 4 passed (4); Tests 126 passed (126)
