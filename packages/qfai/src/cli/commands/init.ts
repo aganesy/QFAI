@@ -2681,6 +2681,45 @@ function demotedProjectNegations(before: string, after: string): string[] {
  * negations it is missing (appended last, because git applies the last matching
  * pattern). A project with no managed block still gets the full canonical one.
  */
+/**
+ * The ignores that already hide the prototyping directory, any one of which
+ * makes the re-inclusion below a widening rather than a fix.
+ *
+ * The evidence tree is the usual shape. A block naming the prototyping
+ * directory itself is the narrower one a project writes when it tracks the rest
+ * of its audit trail and not the captures, and reading only the tree line
+ * treated that project as having no ignore to preserve — so the re-inclusion
+ * cancelled its rule and `git add .` picked up the mutation log, `progress.md`
+ * and every `iter-NN` capture.
+ */
+const PROTOTYPING_COVERING_IGNORES: readonly string[] = [
+  ".qfai/evidence/*",
+  ".qfai/evidence/",
+  ".qfai/evidence/prototyping/",
+];
+
+/**
+ * An ignore line as the list above spells it.
+ *
+ * A leading slash anchors a pattern to the directory its `.gitignore` sits in,
+ * which for the managed block is the project root — the same set the unanchored
+ * spelling matches, written the way a contributor who knows the syntax writes
+ * it. Compared literally, that spelling reads as a project with no rule to
+ * preserve, and the re-inclusion below then cancels the rule it has.
+ *
+ * SIMPLIFIED: equality against a list, after dropping the anchor.
+ * Lift when: a project is found whose ignore covers that directory by some
+ * other pattern, at which point the answer is gitignore matching rather than a
+ * longer list. A wrong answer here adds an ignore line a later run can remove,
+ * so the cost of the narrow read is bounded.
+ */
+function asIgnoreLine(line: string): string {
+  return line.startsWith("/") ? line.slice(1) : line;
+}
+
+/** The line that keeps the re-included prototyping directory's contents ignored. */
+const PROTOTYPING_CONTENTS_IGNORE = ".qfai/evidence/prototyping/*";
+
 function rebuildManagedBlock(existingBlock: string): string {
   if (existingBlock.length === 0) {
     return QFAI_GITIGNORE_BLOCK;
@@ -2717,7 +2756,31 @@ function rebuildManagedBlock(existingBlock: string): string {
     .filter(([retired, successor]) => present.has(retired) && !present.has(successor))
     .map(([, successor]) => successor);
 
-  return [QFAI_GITIGNORE_MARKER, ...kept, ...renamed, ...QFAI_GITIGNORE_GOVERNANCE_NEGATIONS]
+  // One ignore is migrated, against the rule above, and only where the block
+  // already hides that directory. The negations below re-include
+  // `.qfai/evidence/prototyping/`, and re-including a directory exposes every
+  // descendant with no later rule of its own — the mutation log, the `iter-NN`
+  // captures, `progress.md`. So a block that ignored them must also carry the
+  // line that re-ignores that directory's contents, or the upgrade tracks files
+  // the project never chose to track.
+  //
+  // Conditional on an existing ignore, because a project that deleted every one
+  // of them to keep its audit trail tracked would otherwise have it re-hidden —
+  // the regression the rule above exists to stop.
+  const ignores = lines.map((line) => asIgnoreLine(line));
+  const reIgnore =
+    ignores.some((line) => PROTOTYPING_COVERING_IGNORES.includes(line)) &&
+    !ignores.includes(PROTOTYPING_CONTENTS_IGNORE)
+      ? [PROTOTYPING_CONTENTS_IGNORE]
+      : [];
+
+  return [
+    QFAI_GITIGNORE_MARKER,
+    ...kept,
+    ...renamed,
+    ...reIgnore,
+    ...QFAI_GITIGNORE_GOVERNANCE_NEGATIONS,
+  ]
     .filter((line, index, all) => line.length > 0 || all[index - 1]?.length !== 0)
     .join("\n");
 }
