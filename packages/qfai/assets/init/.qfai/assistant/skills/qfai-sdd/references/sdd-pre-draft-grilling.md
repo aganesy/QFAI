@@ -125,8 +125,10 @@ answer its questions.
    evidence: the phase row and the work orders.
 
 **Step 3 covers agreement, not only deadlock.** A decision the author accepted
-from the griller inside two rounds is no longer open, so the convergence rules
-do not escalate it — and the delegation baseline says an agent-to-agent decision
+from the griller inside two rounds has left the frontier — there is nothing to
+put in a further round — and it is not settled: nobody with the standing to take
+it has. The convergence rules escalate what is still open, so they do not reach
+it — and the delegation baseline says an agent-to-agent decision
 with no user adjudication makes the artifact wrong and no reviewer can clear it.
 Escalating only the residue would therefore hand the authors a settled set whose
 agreed half is the half that fails review.

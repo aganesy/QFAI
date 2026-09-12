@@ -293,8 +293,18 @@ decisions belonging to different drafting roles.
   agent-to-agent round is recorded as that author's position, with whose it is:
   the round cannot be recomputed, a disagreement cannot be kept, and an
   escalation cannot carry the positions to the user unless the answers are
-  held. A position is not a settled decision, and only the user's answer or
-  authoritative evidence makes one.
+  held.
+- **Agreement closes a node; it does not settle a decision.** Where the authors
+  and the griller land on one answer, the node leaves the frontier — there is
+  nothing left to put in a further round, and a rule that kept it there would
+  re-ask a question everyone has answered. It is not settled: only the user's
+  answer or authoritative evidence settles one, and an agreed answer nobody
+  adjudicated is what a stage records as `agents` and puts to the user.
+
+  The two are one state read for two purposes. _Open_ is about the round — is
+  there anything to ask. _Settled_ is about the decision — has anyone with the
+  standing to take it done so. Conflating them is how an agreed answer reaches a
+  draft as though it were chosen.
 
 ### Capability Probe (MUST)
 

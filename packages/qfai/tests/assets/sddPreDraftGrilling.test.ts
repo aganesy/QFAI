@@ -106,6 +106,14 @@ describe.each(TREES)("%s — the pre-draft grilling loop", (tree) => {
     const loop = await read(LOOP);
     expectPhrase(loop, "**Step 3 covers agreement, not only deadlock.**");
     expectPhrase(loop, "not only the ones still open after the budget");
+    // Agreement leaves the frontier and does not settle the decision, so the
+    // convergence rules do not reach it and step 3 has to.
+    expectPhrase(loop, "has left the frontier");
+    expectPhrase(loop, "nobody with the standing to take it has");
+    // Agreement leaves the frontier and does not settle the decision, so the
+    // convergence rules do not reach it and step 3 has to.
+    expectPhrase(loop, "has left the frontier");
+    expectPhrase(loop, "nobody with the standing to take it has");
     expectPhrase(loop, "whose agreed half is the half that fails review");
     // With the one exception that is not a decision at all.
     expectPhrase(loop, "Authoritative evidence is the exception because it is not a decision");
@@ -244,7 +252,14 @@ describe.each(TREES)("%s — the pre-draft grilling loop", (tree) => {
       "MUST NOT record an answer **as the user's** that the user did not give",
     );
     expectPhrase(primitive, "recorded as that author's position, with whose it is");
-    expectPhrase(primitive, "A position is not a settled decision");
+    expectPhrase(primitive, "**Agreement closes a node; it does not settle a decision.**");
+    // Open is about the round — is there anything to ask. Settled is about
+    // the decision — has anyone with the standing to take it done so.
+    expectPhrase(primitive, "The two are one state read for two purposes");
+    expectPhrase(
+      primitive,
+      "an agreed answer nobody adjudicated is what a stage records as `agents`",
+    );
   });
 
   it("forwards every distinct position, not two", async () => {

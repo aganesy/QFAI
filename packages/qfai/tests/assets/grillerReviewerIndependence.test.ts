@@ -195,7 +195,10 @@ describe("a griller's recommendations and reviewer independence", () => {
       // `REVISE` over provenance that never existed.
       const content = await read(tree);
       expectPhrase(content, "**The record answers either way, and silence answers nothing.**");
-      expectPhrase(content, "writes one row reading `grilling: none`");
+      expectPhrase(content, "writes one row reading `grilling(-/none): none`");
+      // Parenthesized like every other grilling row: a gate that selects on
+      // those fields skips any row that drops them.
+      expectPhrase(content, "`grilling(-/none): none` row records a fact rather than a step");
       // Silence cannot be the answer: an omitted row and no session to record look
       // identical in the table, so reading absence as `none` clears the decision
       // the record exists to expose.

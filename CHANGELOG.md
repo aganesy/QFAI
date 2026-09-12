@@ -160,8 +160,17 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   spec packs and the contracts — so a UI-bearing phase can build the thing its
   own method asks for.
 
+  Agreement between agents closes a node without settling the decision. Those are
+  one state read for two purposes: _open_ is about the round — is there anything
+  left to ask — and _settled_ is about the decision — has anyone with the standing
+  to take it done so. Conflating them is how an agreed answer reaches a draft as
+  though it were chosen.
+
   A decision row names its phase, as the title's first field, because the shared
-  work-order schema has no column for it. Without that key a row cannot be
+  work-order schema has no column for it. The disposition rewrites keep those
+  fields: a reopened decision the user later resolves would otherwise drop the
+  key the gate selects on, and the rows a dispute produced are the ones it most
+  needs to find. Without that key a row cannot be
   assigned to a phase, so an omitted row passes by being counted against another.
 
   A decision is persisted by the drafting agent that owns its artifact, not by
