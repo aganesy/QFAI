@@ -43,7 +43,7 @@
 
 ## Open questions
 
-- OQ-XXXX: <question> — Disposition: open | resolved | deferred
+- OQ-XXXX: <question> — Disposition: open | resolved | deferred | unadjudicated
 - <or> none
 
 ## Decisions made
@@ -94,8 +94,9 @@ npx qfai validate --profile sdd --fail-on error --format github
 > decisions, because an omitted session and an empty frontier are the same
 > absence otherwise.
 > An `escalated` row needs a `PENDING` work order below: an escalation nobody
-> answered is a design decision nobody took, and `08_Open-questions.md` does not
-> block a spec stage.
+> answered is a design decision nobody took. Record it in
+> `08_Open-questions.md` as well, with `status: unadjudicated` — the work order
+> keeps the stage resumable, and the status is what validation reads.
 > `Ended at` is written before the phase's first write. A row holding only the
 > outcome reads the same whether the session ran before the phase, after it, or
 > not at all.
