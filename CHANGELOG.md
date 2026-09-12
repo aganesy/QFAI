@@ -28,6 +28,29 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   argued against it is a change to something written rather than a choice among
   options.
 
+  The trigger is this invocation's first write in the phase, not whether the
+  artifact already exists. Most runs are `UPDATE:APPEND` or `UPDATE:MODIFY`
+  against artifacts that do, so a rule keyed on existence would never fire on
+  the ordinary path. Phase 2c is on the list for the same reason: it makes
+  contract choices after Phase 0 has written.
+
+  One session per phase, over every routed drafting role's decisions. Grilling
+  one author leaves the others free to settle their own before their own writes.
+
+  Every decision the session settled that authoritative evidence did not answer
+  goes to the user before any author writes — not only the ones the round budget
+  left open. A decision the author accepted from the griller is not open, so the
+  convergence rules do not escalate it, and an agent-to-agent decision nobody
+  adjudicated makes the artifact one no reviewer can clear. Escalating the
+  residue alone would hand the authors a settled set whose agreed half fails
+  review.
+
+  The phase records a run-or-skip line and, per settled decision, a work-order
+  row naming who adjudicated it. A phase whose subject is settled has nothing to
+  grill, and that skip is indistinguishable from an omitted session unless it is
+  written down; the two adjudications point opposite ways, and one marker for
+  both told the reviewer nothing it could act on.
+
   The fixed phase order is unchanged: the loop is a step inside a phase, not one
   of its own.
 

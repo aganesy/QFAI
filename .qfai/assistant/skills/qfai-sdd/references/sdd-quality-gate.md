@@ -85,3 +85,10 @@ Phase 0 is a mandatory output of this skill, so its own artifacts belong on this
 - Evidence file exists.
 - Work Orders Summary exists.
 - Reviewer result exists.
+- `## Pre-draft Grilling` carries a row for every phase this run entered, each `run` or `skipped`,
+  and a `skipped` row names the authoritative artifact that answered the phase's decisions. A
+  missing row is the finding: an omitted session and an empty frontier are the same absence, and
+  only the written skip tells them apart (`references/sdd-pre-draft-grilling.md`).
+- Every `grilling:` row in `## Work Orders Summary` names who adjudicated the decision, `user` or
+  `agents`. A reviewer reads its `Recommended and unadjudicated` answer off these rows and holds no
+  memory of the session.

@@ -73,11 +73,20 @@ describe("a griller's recommendations and reviewer independence", () => {
       // in the schema there is no record to read, and the mandatory field is one
       // a reset instance can only guess at.
       const content = await read(tree);
-      expectPhrase(
-        content,
-        "**A grilling session that settled a decision agent-to-agent adds a row for it**",
-      );
+      expectPhrase(content, "**A grilling session adds a row for every decision it settled**");
       expectPhrase(content, "`Task title` = `grilling: <the decision>`");
+    });
+
+    it(`${tree}: the row says who adjudicated, not only that a session ran`, async () => {
+      // The two outcomes point opposite ways: a user-settled decision leaves
+      // the griller free to review the artifact, an agent-settled one makes the
+      // artifact wrong until somebody decides. One marker for both makes them
+      // indistinguishable in the row the reviewer is told to rely on.
+      const content = await read(tree);
+      expectPhrase(content, "**The row names who adjudicated the decision**, `user` or `agents`");
+      expectPhrase(content, "tells the reviewer nothing it can act on");
+      // A schema without a column for it still has to carry the value.
+      expectPhrase(content, "`grilling(<adjudication>): <the decision>`");
     });
 
     it(`${tree}: the work order carries the series, not only the response`, async () => {

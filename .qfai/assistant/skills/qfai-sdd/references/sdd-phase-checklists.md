@@ -20,7 +20,7 @@ Use these checklists as the detailed operational guide for `/qfai-sdd`.
 
 ## Phase 0: Contracts-first
 
-- Pre-draft grilling run and its escalations settled before the first draft is written (`sdd-pre-draft-grilling.md`).
+- Pre-draft grilling run and its escalations settled before this phase writes (`sdd-pre-draft-grilling.md`).
 - Confirm impacted contract kinds: API, DB, UI.
 - Create or update declared contract files.
 - Ensure each contract has `QFAI-CONTRACT-ID`.
@@ -29,7 +29,7 @@ Use these checklists as the detailed operational guide for `/qfai-sdd`.
 
 ## Phase 1: Outline
 
-- Pre-draft grilling run and its escalations settled before the first draft is written (`sdd-pre-draft-grilling.md`).
+- Pre-draft grilling run and its escalations settled before this phase writes (`sdd-pre-draft-grilling.md`).
 - Refresh `_policies/01..11`.
 - Keep Mermaid inside fenced code blocks only.
 - Mirror every unresolved shared issue into `_policies/09_Open-questions.md`.
@@ -37,7 +37,7 @@ Use these checklists as the detailed operational guide for `/qfai-sdd`.
 
 ## Phase 2: Slice
 
-- Pre-draft grilling run and its escalations settled before the first draft is written (`sdd-pre-draft-grilling.md`).
+- Pre-draft grilling run and its escalations settled before this phase writes (`sdd-pre-draft-grilling.md`).
 - Create or update `<spec-id>/01..08`.
 - Check `US -> AC -> BR -> EX -> TC`.
 - Ensure `01_Spec.md` remains the execution Primary SSOT.
@@ -88,6 +88,7 @@ Use these checklists as the detailed operational guide for `/qfai-sdd`.
 
 ## Phase 2c: Obligation reconciliation
 
+- Pre-draft grilling run and its escalations settled before this phase writes (`sdd-pre-draft-grilling.md`).
 - For every `BR` / `AC` this run produced, name the contract under `.qfai/contracts/**` that realizes it.
 - Resolve every persisted attribute the obligation names to a column, field or enum member in that contract.
 - When the attribute lives in another relation, state the join that reaches it. No join reaching it means the obligation is unrealizable, however valid both contracts are.
@@ -104,7 +105,7 @@ Use these checklists as the detailed operational guide for `/qfai-sdd`.
 
 ## Phase 3: Plan finalize
 
-- Pre-draft grilling run and its escalations settled before the first draft is written (`sdd-pre-draft-grilling.md`).
+- Pre-draft grilling run and its escalations settled before this phase writes (`sdd-pre-draft-grilling.md`).
 - Create or update `<spec-id>/10_Plan.md`.
 - Keep the file How-only.
 - Do not finalize the plan before at least one slice gate passes.

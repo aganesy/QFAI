@@ -231,8 +231,15 @@ sections below add only what is specific to a session; where they and the
 baseline overlap, the baseline governs.
 
 One thing is delegated and one only: reading a fact the environment holds. The
-questions are never delegated — a round is put to the user by the agent the user
-is talking to.
+questions are never delegated — a round is put by the agent that holds the
+session, to whoever is answering it.
+
+Who that is depends on the mode. In a session with a user, it is the user, and
+the agent they are talking to is the one that asks. In a session between agents
+there is no user to reach, so the griller puts the round to the author agent and
+the orchestrator holds both. That is a different answerer, not a delegated
+question: nothing hands the asking to a third agent, and the orchestrator still
+answers nothing itself.
 
 ### Orchestrator Protocol (MUST)
 
@@ -280,7 +287,10 @@ invoking stage's. What it confirms about the session is:
 - no decision was recorded that the user did not answer, and none was assumed
   that the assumption path excludes;
 - a fact taken as settled names where it was read;
-- the session ended on its own condition or on the user's word, not on a count.
+- the session ended on its own condition or on the user's word — or, between
+  agents, on the round budget that is the one place a count ends a session
+  (`.qfai/assistant/constitution/review-convergence.md`). A count anywhere else
+  is the finding.
 
 - Reviewer independence is defined normatively in
   `.qfai/assistant/constitution/shared-skill-delegation-baseline.md#definition-independent-reviewer-normative`.

@@ -1,25 +1,25 @@
 # Pre-draft Grilling
 
-A loop that runs before a phase freezes its first draft. Three parts: the agent
-that will author the artifact, a griller that interviews it, and the
+A loop that runs before a phase writes anything. Three parts: the agents that
+will author the phase's artifacts, a griller that interviews them, and the
 orchestrator that holds the result.
 
 The method is `.agents/rules/grilling.md`, run through the `qfai-grilling`
 skill. What ends a session with no user in it is
 `.qfai/assistant/constitution/review-convergence.md#agent-to-agent-grilling-must`.
 Neither is repeated here. This file says where the loop runs, who plays what,
-and what the orchestrator does with what comes back.
+what the orchestrator does with what comes back, and what the phase records.
 
 ## It is not the Reviewer Gate
 
-|         | Pre-draft grilling                     | Reviewer Gate        |
-| ------- | -------------------------------------- | -------------------- |
-| Runs    | Before an artifact exists              | After one is drafted |
-| Answers | Has this been decided                  | Is this right        |
-| Subject | The decisions the artifact will encode | The artifact         |
+|         | Pre-draft grilling                  | Reviewer Gate               |
+| ------- | ----------------------------------- | --------------------------- |
+| Runs    | Before the phase writes             | After the phase has written |
+| Answers | Has this been decided               | Is this right               |
+| Subject | The decisions the write will encode | The artifact                |
 
 A contradiction, an unconsidered case and a choice that does not fit the
-existing code all enter before the draft. By the time a reviewer reads the
+existing code all enter before the write. By the time a reviewer reads the
 artifact they are premises, and a reviewer reading a coherent artifact built on
 a premise nobody chose returns `PASS`.
 
@@ -27,30 +27,44 @@ Both run. The gate is untouched by this loop.
 
 ## Where it runs
 
-Every phase that produces a design decision, before that phase's first draft:
+Every phase that produces a design decision:
 
-| Phase                    | The decisions                                   |
-| ------------------------ | ----------------------------------------------- |
-| Phase 0: Contracts-first | What the contracts are, and what they commit to |
-| Phase 1: Outline         | What the policy layer says                      |
-| Phase 2: Slice           | What each spec specifies                        |
-| Phase 3: Plan finalize   | What the plan sequences and what it leaves out  |
+| Phase                               | The decisions                                             |
+| ----------------------------------- | --------------------------------------------------------- |
+| Phase 0: Contracts-first            | What the contracts are, and what they commit to           |
+| Phase 1: Outline                    | What the policy layer says                                |
+| Phase 2: Slice                      | What each spec specifies                                  |
+| Phase 2c: Obligation reconciliation | How an obligation the contract cannot express is resolved |
+| Phase 3: Plan finalize              | What the plan sequences and what it leaves out            |
 
-**The first draft is the freeze point.** Once an artifact exists, a decision
-argued against it is a change to something written rather than a choice among
-options, and the cheaper conversation is already over.
+**The freeze point is this invocation's first write or design mutation in the
+phase, not the existence of the artifact.** Most runs are `UPDATE:APPEND` or
+`UPDATE:MODIFY` against artifacts that already exist, and a rule keyed on
+existence would never fire on them — which is most of the work. Phase 2c is on
+the list for the same reason: it makes contract and obligation choices after
+Phase 0 has written, so an existence test would exempt exactly the phase that
+exists to repair what the earlier ones settled wrongly.
 
-A phase whose subject is settled by authoritative evidence runs no session:
-there is nothing on the frontier. Recording that is one line in the phase's
-evidence, not a session.
+Once the phase has written, a decision argued against what it wrote is a change
+to something recorded rather than a choice among options, and the cheaper
+conversation is already over.
 
 ## Who plays what
 
-| Role         | Played by                                                                                                                                  |
-| ------------ | ------------------------------------------------------------------------------------------------------------------------------------------ |
-| Author       | The drafting agent this phase routes — `solution-architect`, `requirements-analyst`, `test-design-analyst`, `product-experience-architect` |
-| Griller      | A reviewing agent this phase routes, or a second instance of a drafting role                                                               |
-| Orchestrator | This skill                                                                                                                                 |
+| Role         | Played by                                                                    |
+| ------------ | ---------------------------------------------------------------------------- |
+| Authors      | **Every** drafting role the phase routes, not one of them                    |
+| Griller      | A reviewing agent this phase routes, or a second instance of a drafting role |
+| Orchestrator | This skill                                                                   |
+
+**One session per phase, over one frontier.** Phase 2 routes
+`requirements-analyst`, `test-design-analyst` and, on a UI-bearing target,
+`product-experience-architect`; grilling one of them leaves the others free to
+settle requirement, test-design or UX decisions after the session and before
+their own writes. The orchestrator collects each routed author's open decisions
+into a single tree before the first round, which is also what the method asks
+for: a frontier is the decisions answerable now across the whole tree, not one
+agent's share of them.
 
 A griller may be a role that also drafts or reviews in the same run. A grilling
 session and a review are separate invocations with separate contexts, so the
@@ -59,31 +73,72 @@ instance that grills does not remember drafting and cannot defer to itself.
 What that does not cover is a recommendation an agent made and another adopted
 with nobody adjudicating: the same model over the same evidence re-derives the
 preference, so correlation survives the reset where memory does not. That case
-is `.qfai/assistant/constitution/shared-skill-delegation-baseline.md#a-grillers-recommendations-and-what-they-disqualify`.
+is
+`.qfai/assistant/constitution/shared-skill-delegation-baseline.md#a-grillers-recommendations-and-what-they-disqualify`.
 
 ## What the orchestrator does
 
 Holding the loop is not authoring. The orchestrator runs it, and does not
 answer its questions.
 
-1. Route the author and the griller, in one work order each.
-2. Let the rounds run to the budget the convergence rules set.
-3. Put every escalated decision to the user, with both positions and a
-   recommendation, through `AskUserQuestion` (`.agents/rules/user-questions.md`).
-4. Record what was settled where `references/spec-traceability-rules.md` says,
-   and hand the author the settled set before it drafts.
+1. Route every drafting agent the phase needs, and a griller, in one work order
+   each.
+2. Collect their open decisions into one tree, and let the rounds run to the
+   budget the convergence rules set.
+3. Put to the user **every decision the session settled that authoritative
+   evidence did not** — not only the ones still open after the budget. Both
+   positions and a recommendation, through `AskUserQuestion`
+   (`.agents/rules/user-questions.md`).
+4. Record each outcome where `references/spec-traceability-rules.md` says, and
+   hand the authors the settled set before any of them writes.
 
-A decision the user settles is an input to the draft, not a note beside it. A
+**Step 3 covers agreement, not only deadlock.** A decision the author accepted
+from the griller inside two rounds is no longer open, so the convergence rules
+do not escalate it — and the delegation baseline says an agent-to-agent decision
+with no user adjudication makes the artifact wrong and no reviewer can clear it.
+Escalating only the residue would therefore hand the authors a settled set whose
+agreed half is the half that fails review.
+
+Authoritative evidence is the exception because it is not a decision at all:
+where `.qfai/specs/**`, `.qfai/contracts/**` or a recorded decision answers the
+question, that is the answer, and putting it to the user asks them to re-decide
+what they already decided.
+
+A decision the user settles is an input to the write, not a note beside it. A
 draft that contradicts one is the Drift Protocol's subject, not this loop's.
 
 Under a no-question mode step 3 has nobody to reach, and the decision is opened
 as a question rather than assumed. `08_Open-questions.md` does not block a spec
-stage, so the escalation is still made where the stage's own gate can see it.
+stage today, so the escalation is visible in the pack and not yet a gate.
 
-## Evidence
+## What the phase records
 
-Each session is a work order like any other and appears in
-`## Work Orders Summary` under the shared schema, with `Task title` as
-`grilling: <the decision>`. That row is what a later reviewer reads to answer
-whether it recommended the decision it is now being asked to clear — it cannot
-attest to that from recollection it does not have.
+Two records, both in the stage evidence, and the quality gate reads both.
+
+**A run-or-skip line per phase**, under `## Pre-draft Grilling`:
+
+```text
+| Phase | Session | Frontier | Evidence |
+| ----- | ------- | -------- | -------- |
+| 0     | run     | 4 settled, 1 escalated | #work-orders-summary |
+| 1     | skipped | empty: every decision answered by <the artifact> | - |
+```
+
+`skipped` names the authoritative artifact that answered the phase's decisions.
+A phase whose subject is settled has nothing to grill, and that is a legitimate
+outcome — but an omitted session and a legitimate skip are the same absence, so
+the skip is written down and the absence of a row is the finding.
+
+**A work-order row per settled decision**, under `## Work Orders Summary`, with
+`Task title` = `grilling: <the decision>` and the shared schema's columns. The
+row carries who adjudicated it:
+
+| Adjudication | Meaning for a later reviewer                                    |
+| ------------ | --------------------------------------------------------------- |
+| `user`       | The decision is the user's. The griller may review the artifact |
+| `agents`     | Nobody adjudicated. The reviewer returns `REVISE` and names it  |
+
+Recording every session's outcome under one marker made those two
+indistinguishable in the row the reviewer is told to read its
+`Recommended and unadjudicated` answer off — and that field is the whole reason
+the row exists, because a reset instance holds no memory of the session.
