@@ -200,7 +200,10 @@ describe("the clarification budget binds a stage", () => {
       // has to permit what Article X permits. Forbidding the labelled value
       // outright here left a `--auto` discussion run choosing between omitting a
       // required field and breaking the protocol.
-      expectPhrase(content, "opens each\n  decision it could not settle as a question");
+      expectPhrase(content, "opens each\n  node it could not settle as a question");
+      // Each node, not each decision: a fact only the user holds cannot be
+      // settled from evidence either.
+      expectPhrase(content, "Each\n  node, not each decision");
       expectPhrase(content, "the assumption with no open question against it");
     });
 
@@ -252,6 +255,11 @@ describe("the clarification budget is countable", () => {
       expectPhrase(content, "**One question item is one question**");
       expectPhrase(content, "bundles N question items spends N, not 1");
       expectPhrase(content, "one numbered choice set is one question");
+      // Both shapes the fallback takes. Counting only the list would leave
+      // every open-value request outside the budget, which is the whole of
+      // Article X's other path.
+      expectPhrase(content, "one plain request for an open value is one question");
+      expectPhrase(content, "A question the tool could not carry is still a question");
     });
 
     it(`${tree}: Article VI says what exhaustion does`, async () => {
@@ -509,6 +517,107 @@ describe("the clarification budget is countable", () => {
       expectPhrase(
         content,
         "a resolved tooling choice with a runnable path (CRITICAL CONSTRAINTS)",
+      );
+    });
+  }
+});
+
+describe("the question form binds every question", () => {
+  for (const tree of QFAI_TREES) {
+    it(`${tree}: Article X admits no exempt question`, async () => {
+      // An exception is where an agent goes when it would rather not ask, and
+      // the question it skips is the one it was least sure of. Stated as the
+      // reason rather than a bare prohibition, because a prohibition invites a
+      // search for the case it does not cover.
+      const content = await read(tree, CONSTITUTION);
+      expectPhrase(content, "**No question is exempt.**");
+      expectPhrase(content, "would rather not ask");
+      expectPhrase(content, "`.agents/rules/user-questions.md`");
+    });
+
+    it(`${tree}: Article X separates the form from the count`, async () => {
+      // Read as one rule, an exhausted budget would look like permission to
+      // drop the structured form too, and the questions that survive exhaustion
+      // are the mandatory ones.
+      const content = await read(tree, CONSTITUTION);
+      expectPhrase(content, "**This is the form, not the count.**");
+      // The form its answer shape calls for, not a choice unconditionally. A
+      // `hard-required` input that survives exhaustion can need an open value —
+      // `qfai-configure`'s replacement glob — and demanding options there would
+      // have an agent invent two to narrow an answer nobody wanted narrowed.
+      expectPhrase(content, "the form its answer shape calls for");
+      // Rule 2 is the other half. An unscoped "prefer structured choices"
+      // orders the narrowing that the open-value path forbids, and the two
+      // rules then contradict each other in one article.
+      expectPhrase(content, "**where the question has choices**");
+      expectPhrase(content, "it does not turn an open answer into a choice");
+      expectPhrase(content, "the tool's free-text path where the answer has no listable set");
+      // The fallback carries the shape too. Routing every unsupported answer
+      // shape to a numbered list would have an agent invent options for exactly
+      // the open value the paragraph above protects.
+      expectPhrase(content, "**in the shape its answer has**");
+      expectPhrase(content, "a plain request for the value where the answer has no listable set");
+    });
+
+    it(`${tree}: communication.md carries the same protocol as the article`, async () => {
+      // It presents itself as a normative copy, so an agent that reads it
+      // instead of the article must reach the same protocol: no exemption,
+      // availability judged per question, and the form owned by the rule
+      // master — including the selection constraint on a question the tool
+      // cannot carry.
+      const content = await read(tree, COMMUNICATION);
+      expectPhrase(content, "**No question is exempt**");
+      expectPhrase(content, "**this question in this\n   invocation**");
+      expectPhrase(content, "`.agents/rules/user-questions.md` owns the form");
+      expectPhrase(content, "that is an answer shape, not an exception");
+      // The MUST itself, scoped. Left unqualified it orders a structured choice
+      // whenever the tool supports one, which is an order to narrow the open
+      // answer the clause above protects.
+      expectPhrase(content, "where the question has choices and the tool supports them");
+      // Rule 3 itself, not only the clauses around it. Pinning those while
+      // leaving the numbered rule loose would let the fallback revert to
+      // numbered-only, or shed the selection constraint, with this suite still
+      // green — which is the drift it exists to catch.
+      expectPhrase(content, "in the shape its answer has");
+      expectPhrase(
+        content,
+        "a plain request for the value where the answer has no listable set of candidates",
+      );
+      expectPhrase(
+        content,
+        "preserve structured choice semantics (enumerated options, selection constraints)",
+      );
+    });
+
+    it(`${tree}: availability is judged per question, not per host`, async () => {
+      // A tool the host carries but this mode withholds, and a tool that cannot
+      // carry the answer's shape, are both the fallback's case. Judged from what
+      // the host supports in general, neither would be.
+      const content = await read(tree, CONSTITUTION);
+      expectPhrase(content, "**this question in this invocation**");
+      expectPhrase(content, "cannot carry the\n   answer's shape");
+      // And the mode that permits no question at all is read first. Judged the
+      // other way round, an `--auto` run makes the tool unavailable, routes the
+      // question to the plain-text fallback, and lands the agent on a rule that
+      // says to ask beside one that says not to.
+      expectPhrase(content, "A no-question mode is read first");
+      expectPhrase(content, "there is nothing whose availability rules 1 to 3 could judge");
+      expectPhrase(content, "a mode that permits no question at all is rule 4's, not this one's");
+    });
+
+    it(`${tree}: the operating baseline carries both, where a skill reads them`, async () => {
+      const content = await read(tree, OPERATING);
+      expectPhrase(content, "**No question is exempt**");
+      expectPhrase(content, "**this question in this invocation**");
+      expectPhrase(content, "`.agents/rules/user-questions.md`");
+      // The baseline is what a delegating skill reads instead of the article,
+      // so its fallback carries the answer shape too. A fallback that routes
+      // every unsupported shape to a numbered list has the skill invent options
+      // for the open value the article protects.
+      expectPhrase(content, "**in the shape its answer has**");
+      expectPhrase(
+        content,
+        "a plain request for the value where the answer has no listable set of",
       );
     });
   }

@@ -180,7 +180,11 @@ Default policy:
 - **One question item is one question**, however many options it offers. An
   AskUserQuestion call that bundles N question items spends N, not 1 — bundling
   is a presentation choice, not a discount. The plain-text fallback uses the
-  same unit: one numbered choice set is one question.
+  same unit, in either shape its answer takes: one numbered choice set is one
+  question, and one plain request for an open value is one question. A question
+  the tool could not carry is still a question, and counting only the shape that
+  happens to be a list would put the whole of Article X's open-value path
+  outside the budget.
 
 ### What does not count (MUST)
 
@@ -371,14 +375,49 @@ happens.
 
 When an agent needs to ask the user a question, it **MUST** use the AskUserQuestion tool if available.
 
+**No question is exempt.** A confirmation, a yes-or-no, a "just checking" — each
+is a question and each takes this path. There is no class light enough to skip
+it, and the reason is what an exception gets used for: an agent looking for one
+is an agent that would rather not ask, and the question it skips is the one it
+was least sure of. `.agents/rules/user-questions.md` owns the form a question
+takes and states the whole of it; this article is where the obligation binds.
+
+**This is the form, not the count.** Article VI bounds how many clarifying
+questions an invocation asks; this article bounds what each of them looks like.
+Exhausting that budget changes the count and nothing here: a question that
+survives exhaustion still arrives in the form its answer shape calls for — a
+structured choice where there are choices, the tool's free-text path where the
+answer has no listable set of candidates. `qfai-configure`'s replacement glob is
+the second kind, and inventing options to narrow it would be the failure the
+rule master names.
+
 Rules:
 
+0. **A no-question mode is read first.** Where rule 4 applies, no question is put
+   at all, so there is nothing whose availability rules 1 to 3 could judge. Read
+   the other way round, a mode that withholds the tool would make it unavailable,
+   route the question to rule 3's plain-text fallback, and hand the agent a rule
+   that says to ask beside one that says not to.
 1. **MUST use AskUserQuestion** when the tool is available in the current environment.
-2. **MUST prefer structured choices** (radio/multi-select) over free-text input when AskUserQuestion supports them.
-3. **Fallback**: If AskUserQuestion is technically unavailable, the agent MUST present the same question
-   as a normal message with explicit numbered choices.
-   The agent SHOULD preserve structured choice semantics (enumerated options, selection constraints).
-   The reason for unavailability MUST be stated.
+   Availability is judged for **this question in this invocation**, not from what the
+   host supports in general: a tool a mode withholds, or one that cannot carry the
+   answer's shape, is unavailable for that question and takes rule 3. "Withholds"
+   means a mode that still permits asking and offers no structured tool; a mode
+   that permits no question at all is rule 4's, not this one's.
+2. **MUST prefer structured choices** (radio/multi-select) over free-text input **where the
+   question has choices** and AskUserQuestion supports them. Where the answer is open — no listable set
+   of candidates to choose from — the free-text path is the one that carries it, and narrowing it
+   into options is the failure rule 3 names. A name, a number or a sentence is usually open and is
+   not open by type: where the value has to be one of a known few, the set is what the user needs to
+   see. The preference ranks two ways of asking one question; it does not
+   turn an open answer into a choice.
+3. **Fallback**: If AskUserQuestion is unavailable for this question, the agent MUST present the same
+   question as a normal message, **in the shape its answer has**: explicit numbered choices where
+   there are choices, and a plain request for the value where the answer has no listable set of
+   candidates. Inventing options to make an open answer fit a numbered list is the failure the form
+   rule above names, and the fallback is not a licence for it.
+   Where there are choices the agent SHOULD preserve structured choice semantics (enumerated
+   options, selection constraints). The reason for unavailability MUST be stated.
 4. **`--auto` mode**: When `--auto` flag is active, no questions are asked.
    The agent MUST NOT use AskUserQuestion or ask via plain text.
    The agent MUST proceed with explicit assumptions and MUST record them in outputs.
@@ -397,12 +436,16 @@ Rules:
    are exempt from the Article VI budget, not from rule 4: a no-question mode
    asks nothing, whatever the question is for. The session still runs — it
    settles what the repository settles and dispatches sub-agents for the facts —
-   and every decision left over is **opened as a question in the register the
-   stage reads**, so the stage cannot complete over it. Where a document
-   requires the field to hold something, write the defaulted value and label it
-   an assumption beside the open question; a labelled value under an open
-   question is not a settled decision. What rule 4 does not license is the
-   assumption **alone**, which reads as settled to whoever finds it next.
+   and every **node** left over is **opened as a question in the register the
+   stage reads**, so the stage cannot complete over it. Every node, not every
+   decision: a fact only the user holds cannot be settled from evidence either,
+   and opening the decisions while dropping the facts loses exactly the nodes no
+   lookup could have reached. Where a document requires the field to hold
+   something, write the defaulted value and label it an assumption beside the
+   open question; a labelled value under an open question is not a settled
+   decision. What rule 4 does not license is the assumption **alone**, which
+   reads as settled to whoever finds it next. A fact declared undefaultable has
+   no value to write down at all: the run stops and names it.
 
 This article survives context compaction because `.qfai/assistant/constitution/constitution.md` is a P1 reload target.
 

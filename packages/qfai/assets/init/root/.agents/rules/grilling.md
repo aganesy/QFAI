@@ -17,7 +17,7 @@ does an ambiguity found while implementing.
 | A session, once entered           | Every round, until it ends                                         |
 | A decision the user owns          | Asked, never assumed                                               |
 | A fact the environment can settle | Never asked; looked up                                             |
-| A fact only the user holds        | Asked as a value, never offered as a choice                        |
+| A fact only the user holds        | Asked as a value, never with a recommended answer                  |
 | A question outside a session      | Not a grilling question — an ordinary clarification, capped as one |
 | Work already specified            | Outside this rule; the spec is the authority                       |
 
@@ -48,9 +48,14 @@ depends on.
 
 **A fact the environment does not hold is still a fact.** An unpublished date, a
 constraint that lives in a contract, a number only the user knows: no lookup
-reaches it. Ask for it as the value it is, not as a choice — nothing is being
-decided, so there are no options to offer. Recorded as a preference it becomes
-revisable, and a fact is not.
+reaches it. Ask for it as the value it is, and **with no recommended answer** —
+nothing is being decided, so there is nothing to recommend. Recorded as a
+preference it becomes revisable, and a fact is not.
+
+Whether it arrives as options is a separate question, and the candidate set
+answers it: a fact with a known few possible values is asked as a choice among
+them, and one with no such set as a plain request. Asking which of four
+supported regions is active as free text loses the four.
 
 The tree is not written once. Each answer changes what the remaining nodes are,
 so it is the current state of what is settled and what is not, never a plan made
@@ -84,10 +89,31 @@ One round is one frontier: asked in full, answered in full.
 Count rounds, not questions. Forty questions across four rounds is an ordinary
 session; the same forty asked one at a time is a worse one.
 
-Ask through the host's structured question tool. Where the host has no such
-tool, or it is unavailable in the current mode, ask the same round as a normal
-message with numbered choices, keep the choice semantics, and say why the tool
-was unavailable. A session is never skipped for want of a tool.
+**A no-question mode is read before any of this.** Where the invocation is told
+not to ask, no round is put at all, so nothing here applies and _Under a
+no-question mode_ below governs. A mode that withholds the tool while still
+permitting questions is a different thing, and is the fallback's case.
+
+Ask through the host's structured question tool. Three things send a round to
+plain text instead: the host has no such tool, the current mode withholds it
+while still permitting questions, or it cannot carry the answer shape of some
+question in the round — a question
+permitting several answers put to a tool whose options are exclusive is the
+common case, and forcing it through loses the constraint.
+
+**The whole round falls back, not the question that triggered it.** Splitting a
+round across two carriers costs the thing a round exists for: the user seeing
+what is being decided together. So the round is asked as a normal message **in
+the shape each answer has** — numbered choices where a listable set of candidates
+exists, a plain request for the value where none does — keeping the choice
+semantics where there are choices, and saying why the tool was not used. The
+classifier is the candidate set, not whether the question asks for a fact: a
+fact with four supported values is a choice, and `user-questions.md` states the
+whole of that.
+Where the reason is the third one, say which question it could not carry: the
+other two are about the tool, and naming a question there would invent a cause.
+`user-questions.md` § 5 owns the rest of that fallback.
+A session is never skipped for want of a tool.
 
 **Where the tool takes fewer questions than the round holds**, deliver the round
 in host-sized batches. The frontier is not recomputed between them, no answer is
@@ -207,13 +233,22 @@ between agents rather than of questions put to a user. The rules are in
 ## Under a no-question mode
 
 A run told not to ask the user does not ask, and a session inside it does not
-either. It settles what the evidence settles, and opens every decision left over
-as a question, where whatever gates the work will see it.
+either. It settles what the evidence settles, and opens **every node left over**
+as a question, where whatever gates the work will see it. Every node, not every
+decision: a fact only the user holds cannot be settled from evidence either, and
+a mode that opens the decisions and drops the facts loses exactly the nodes no
+lookup could have reached.
 
 Where a document requires the field to hold something, write the defaulted value
 and label it an assumption beside the open question. What is forbidden is the
 assumption on its own: unread, it is a decision nobody took, wearing the face of
 one somebody did.
+
+**A fact declared undefaultable stops the run.** There is no value to write
+down: the agent does not hold it, a guessed one is the corruption the tree warns
+about, and an open question beside a defaulted value is not available where the
+field admits no default. The run stops and names the fact, which is the same
+answer `user-questions.md` gives when a closure leaves one of these standing.
 
 ## What talking cannot settle
 
