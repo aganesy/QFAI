@@ -132,39 +132,46 @@ review in this run.
 #### A griller's recommendations, and what they disqualify
 
 A grilling session puts a recommended answer beside each question
-(`.agents/rules/grilling.md`). Who settled the decision decides whether the
-agent that recommended it may review the artifact that carries it.
+(`.agents/rules/grilling.md`). Who settled the decision decides what happens
+next.
 
-| The decision was settled                                             | The griller may review it                   |
-| -------------------------------------------------------------------- | ------------------------------------------- |
-| By the user, from the recommendation among the inputs                | Yes — the decision is the user's            |
-| Agent to agent, the recommendation adopted with no user adjudication | No — the recommendation became the artifact |
+| The decision was settled                              | What follows                                                |
+| ----------------------------------------------------- | ----------------------------------------------------------- |
+| By the user, from the recommendation among the inputs | The decision is theirs. The griller may review the artifact |
+| Agent to agent, with no user adjudication             | The artifact is wrong, and no reviewer can clear it         |
 
-The reason is not memory. A sub-agent that starts with a reset context cannot
-defer to something it does not remember. The risk is **correlation**: a fresh
-instance of the same agent, on the same model, over the same repository
-evidence, is close to the same function over close to the same inputs, and will
-tend to re-derive the preference that produced the recommendation. Resetting
-the context removes the memory, not the disposition — which is why role name
-alone never establishes independence either.
+**The second row is not a routing problem.** A decision is the user's
+(`.agents/rules/grilling.md`), and a run that could not ask records it as an
+open question rather than adopting it. An agent-adopted recommendation is
+therefore an artifact carrying something nobody decided, and handing it to a
+different reviewer would launder it. The reviewer **MUST** return `REVISE` and
+name the decision: it is reopened and put to the user, or recorded open where
+no question can be asked.
 
-This is a case of the rule above, not an exception to it. A griller whose
-recommendation the artifact carries unadjudicated has contributed to it, so the
-same obligation applies: declare the conflict and hand those items to a
-non-participating reviewer.
+The first row needs a reason, because the intuitive one is wrong. A sub-agent
+starting with a reset context cannot defer to something it does not remember,
+so deference is not the risk. **Correlation** is: a fresh instance of the same
+agent, on the same model, over the same evidence, re-derives the preference
+that produced the recommendation and finds it good on the merits. Resetting the
+context removes the memory, not the disposition — which is why role name alone
+never establishes independence either. Where the user chose, that disposition
+is one input among several and the decision is not the griller's to re-derive.
 
-The reviewer response carries its own field for this. `Authored/edited under
-review` asks about editing, and a griller that recommended a decision without
-touching the artifact answers `none` to it truthfully — so the gate would accept
-the response as independent and admit the `PASS` this rule forbids.
-**`Recommended and unadjudicated` is the field that catches it**, and a
-non-`none` value there disqualifies the reviewer for the decisions it names,
-exactly as a non-`none` authorship value does for the artifacts it names.
+**A reviewer cannot attest to what it cannot see.** A reset instance does not
+know what an earlier one recommended, so the record supplies it: a session that
+settled a decision agent-to-agent records, in the stage's Work Orders Summary,
+the decision and the `Agent instance` that recommended it. `Recommended and
+unadjudicated` is read off that record, not off recollection, and a review whose
+stage has no such record has nothing to check the field against — which is
+itself a `REVISE`.
 
-Round 1 and round 2 of a review stay one reviewer with one budget. Treating
-them as separate reviewers because the context reset would restart the
-per-reviewer counter every round, so the two-round budget could never be
-exhausted and the escalation exit that hangs off it would never open.
+**Review rounds are one series, whatever instance serves them.** The budget is
+two rounds per reviewer per artifact, and a host may answer round 2 with a fresh
+sub-agent under a new `Agent instance`. The work order carries a `Review series`
+value — the reviewed artifact plus the role — and the budget is counted per
+series. Counting per instance would restart it every round, so the budget could
+never be exhausted and the escalation exit that opens when it is would never
+open.
 
 - Reviewers must verify Drift Protocol enforcement.
 - Reviewers must verify test-layer policy enforcement when relevant.
@@ -256,6 +263,7 @@ Acceptance bar: <accept when ...> | <rework when ...>   # never `PASS`/`REVISE`:
 Reviewer role: <sub-agent role that produced this response>   # REQUIRED — a `Result:` line with no speaker is a report, not a verdict
 Reviewed artifact: <path/anchor this verdict rules on>        # REQUIRED — bounds the ruling; a PASS here clears nothing else
 Round: 1 | 2 | 2b
+Review series: <reviewed artifact> + <reviewer role>          # the budget is counted per series, not per instance
 Result: PASS | REVISE
 Reviewed revision: <git rev> | working-tree+<content hash>
 Audited evidence hash: <content hash of the evidence read>   # one line per TDD-ID on a T1 group
@@ -321,7 +329,7 @@ post-escalation verification review of a user-named fix.
   allowed to move under them: an honest, independent verdict on a tree that no longer exists is the
   normal failure this field addresses. If the tree changed mid-review, say so and name the revision
   the ruling is pinned to.
-- `Reviewer role`, `Reviewed artifact` and `Authored/edited under review` are REQUIRED. A response omitting any of them is not a valid review verdict and MUST NOT satisfy a completion gate — re-request it rather than reading a bare `Result:` line out of it, which is how a doer's self-assessment gets counted as a reviewer's ruling.
+- `Reviewer role`, `Reviewed artifact`, `Authored/edited under review` and `Recommended and unadjudicated` are REQUIRED. A response omitting any of them is not a valid review verdict and MUST NOT satisfy a completion gate — re-request it rather than reading a bare `Result:` line out of it, which is how a doer's self-assessment gets counted as a reviewer's ruling.
 - Anything other than `none` is a declared independence conflict: the verdict cannot be `PASS`,
   and the review must be handed to a non-participating reviewer (see
   `Definition: independent reviewer`).
