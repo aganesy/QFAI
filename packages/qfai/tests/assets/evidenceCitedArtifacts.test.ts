@@ -70,8 +70,26 @@ const NOT_A_CITATION = "<!-- qfai:not-a-citation -->";
  * audited hash beside the name is what makes the second safe, and for most of
  * these packs that content is not in this repository at all: it has to come from
  * whoever holds the run.
+ *
+ * ## What the first census measured
+ *
+ * The two checks below are exact in both directions, and an entry added beside a
+ * new record satisfies both: the first sees it recorded, and the second sees it
+ * still cited and still unresolved. A ceiling is what makes "may only shrink" a
+ * rule rather than a description. Lower it as entries clear; raising it is the
+ * edit a reviewer is meant to see, because it admits the provenance this guard
+ * exists to refuse.
  */
+const CENSUS_CEILING = 93;
+
+/** The census itself, as measured. */
 const UNRESOLVED_CITATION_BACKLOG: ReadonlyArray<readonly [string, string]> = [
+  [".qfai/evidence/atdd-spec-0017.md", ".qfai/review/review-2026082*/R0*.md"],
+  [".qfai/evidence/implement-spec-0003.md", ".qfai/review/review-*"],
+  [".qfai/evidence/implement-spec-0006.md", ".qfai/review/review-20260818*"],
+  [".qfai/evidence/sdd-spec-0012.md", ".qfai/discussion/discussion-20260414195449523/**"],
+  [".qfai/evidence/sdd-spec-0012.md", ".qfai/discussion/discussion-20260418093755100/**"],
+  [".qfai/evidence/sdd-spec-0012.md", ".qfai/review/review-20260416195500000/**"],
   [".qfai/evidence/atdd-spec-0017.md", ".qfai/report/run-20260822024224027"],
   [".qfai/evidence/atdd-spec-0017.md", ".qfai/report/specs-coverage/spec-0017.md"],
   [".qfai/evidence/atdd-spec-0017.md", ".qfai/report/validate.log"],
@@ -246,8 +264,7 @@ async function measureCitations(): Promise<[string, string][]> {
       if (line.includes(NOT_A_CITATION)) continue;
       for (const match of line.match(CITED_GENERATED_PATH) ?? []) {
         const cited = match.replace(/[.,;:]+$/, "").replace(/\/+$/, "");
-        // A glob names a set, not an artifact, so there is nothing to resolve.
-        if (cited.includes("*") || seen.has(cited)) continue;
+        if (seen.has(cited) || !namesSomethingInside(cited)) continue;
         seen.add(cited);
         measured.push([file, cited]);
       }
@@ -256,10 +273,58 @@ async function measureCitations(): Promise<[string, string][]> {
   return measured;
 }
 
-/** A cited path resolves when git tracks it, or tracks something under it. */
+/**
+ * True when the path names something inside a generated tree rather than the
+ * tree itself.
+ *
+ * `.qfai/review/*` and `.qfai/review/**` are how the ignore rules and the
+ * exclusion lists spell the directory, and a record quoting one is describing
+ * what is ignored — there is no artifact being claimed. A glob whose first
+ * segment carries a literal, `review-2026082*`, names a set of packs and claims
+ * that set exists.
+ */
+function namesSomethingInside(cited: string): boolean {
+  const root = GENERATED_ROOTS.find((candidate) => cited.startsWith(candidate));
+  if (root === undefined) return false;
+  const firstSegment = cited.slice(root.length).split("/")[0] ?? "";
+  return firstSegment.replace(/\*/g, "").length > 0;
+}
+
+const escapeForRegExp = (literal: string): string => literal.replace(/[.+?^${}()|[\]\\]/g, "\\$&");
+
+/**
+ * A glob as a regular expression over a whole path.
+ *
+ * Only the two forms an evidence record uses: `**` for any number of segments,
+ * `*` for part of one. A record naming a set still claims the set exists, so a
+ * glob is resolved like a single path rather than skipped — the tree carried
+ * three matching nothing at all, and skipping them let that provenance through
+ * as green.
+ */
+function globToRegExp(cited: string): RegExp {
+  const source = cited
+    .split(/(\*\*|\*)/)
+    .map((part) => (part === "**" ? ".*" : part === "*" ? "[^/]*" : escapeForRegExp(part)))
+    .join("");
+  return new RegExp(`^${source}$`);
+}
+
+/**
+ * A cited path resolves when git tracks it, or tracks something under it.
+ *
+ * A glob resolves when it matches at least one tracked path, which is the whole
+ * of what a set-naming citation claims.
+ */
 function resolves(cited: string): boolean {
   const root = GENERATED_ROOTS.find((candidate) => cited.startsWith(candidate));
   if (root === undefined || !staysInsideRoot(cited, root)) return false;
+  if (cited.includes("*")) {
+    const pattern = globToRegExp(cited);
+    for (const file of tracked.files) {
+      if (pattern.test(file)) return true;
+    }
+    return false;
+  }
   return tracked.files.has(cited) || tracked.directories.has(cited);
 }
 
@@ -289,6 +354,15 @@ describe("a committed record cites what the repository has", () => {
         "artifact, or record beside the name what a reader needs from it — the reviewer role, " +
         "the verdict, the revision, the audited hash — and stop writing it as a path",
     ).toEqual([]);
+  });
+
+  it("never grows the backlog past the census it started from", () => {
+    expect(
+      UNRESOLVED_CITATION_BACKLOG.length,
+      "the backlog is longer than the census it started from — a record added today may not take " +
+        "an entry. Lower the ceiling as entries clear; raising it admits the provenance this guard " +
+        "exists to refuse",
+    ).toBeLessThanOrEqual(CENSUS_CEILING);
   });
 
   it("keeps the backlog to what is still unresolved", async () => {
@@ -337,5 +411,40 @@ describe("what the scan counts as a citation", () => {
     expect(matches(`\`.qfai/report/validate.log\` is not cited here. ${NOT_A_CITATION}`)).toEqual(
       [],
     );
+  });
+});
+
+describe("a glob is a claim about a set", () => {
+  it("resolves when at least one tracked path matches", () => {
+    // `.qfai/specs/**` is not a generated root, so a glob under one of those is
+    // the case: the tree carries packs, and a glob naming them resolves.
+    // A glob matching no tracked path is the unsupported provenance the guard
+    // exists to refuse, and skipping globs let it through as green.
+    expect(resolves(".qfai/review/review-2026082*/R0*.md")).toBe(false);
+    expect(
+      globToRegExp(".qfai/review/review-2026082*/R0*.md").test(
+        ".qfai/review/review-20260820200000000/R01_x.md",
+      ),
+    ).toBe(true);
+    expect(
+      globToRegExp(".qfai/review/review-2026082*/R0*.md").test(
+        ".qfai/review/review-20260820200000000/sub/R01_x.md",
+      ),
+    ).toBe(false);
+    expect(
+      globToRegExp(".qfai/discussion/discussion-1/**").test(
+        ".qfai/discussion/discussion-1/a/b/c.md",
+      ),
+    ).toBe(true);
+  });
+
+  it("does not measure a path that names the tree itself", () => {
+    // `.qfai/review/*` and `.qfai/review/**` are how the ignore rules and the
+    // exclusion lists spell the directory, so a record quoting one is
+    // describing what is ignored rather than claiming an artifact.
+    expect(namesSomethingInside(".qfai/review/*")).toBe(false);
+    expect(namesSomethingInside(".qfai/review/**")).toBe(false);
+    expect(namesSomethingInside(".qfai/review/review-2026082*")).toBe(true);
+    expect(namesSomethingInside(".qfai/report/validate.json")).toBe(true);
   });
 });
