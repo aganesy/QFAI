@@ -1,3 +1,4 @@
+import { statSync } from "node:fs";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 
@@ -464,6 +465,9 @@ export async function evaluateAtddCodeTraceability(
     config.validation.traceability.testFileGlobs,
   );
   const acceptanceLayer = atddAcceptanceLayerFilter(root, config);
+  // One probe for the whole scan, so a manifest is stat-ed once however many
+  // files sit under the directory that carries it.
+  const scanPackageRoot = packageRootProbe();
   let scanResult: CollectFilesByGlobsResult;
   try {
     scanResult = await collectTestFiles(
@@ -522,6 +526,7 @@ export async function evaluateAtddCodeTraceability(
       e2eRoot,
       apiRoot,
       integrationRoot,
+      isPackageRoot: scanPackageRoot,
     });
     if (!kind) {
       // Dropped, not recorded. A unit or component suite owes ATDD nothing
@@ -2489,6 +2494,7 @@ function resolveTestKind(
     e2eRoot: string;
     apiRoot: string;
     integrationRoot: string;
+    isPackageRoot: (absoluteDir: string) => boolean;
   },
 ): AtddTestKind | null {
   if (isWithinPath(roots.e2eRoot, filePath)) {
@@ -2500,7 +2506,7 @@ function resolveTestKind(
   if (isWithinPath(roots.integrationRoot, filePath)) {
     return "integration";
   }
-  return resolveTestKindFromPath(roots.root, filePath, roots.testsDirName);
+  return resolveTestKindFromPath(roots.root, filePath, roots.testsDirName, roots.isPackageRoot);
 }
 
 /**
@@ -2541,6 +2547,7 @@ function resolveTestKindFromPath(
   root: string,
   filePath: string,
   testsDirName: string,
+  isPackageRoot: (absoluteDir: string) => boolean,
 ): AtddTestKind | null {
   const relative = path.relative(root, filePath);
   if (relative.length === 0 || relative.startsWith("..") || path.isAbsolute(relative)) {
@@ -2549,9 +2556,17 @@ function resolveTestKindFromPath(
   const directories = toPosixPath(relative).split("/").slice(0, -1);
   let testRoot = -1;
   directories.forEach((directory, index) => {
-    if (TEST_ROOT_SEGMENTS.has(directory) || directory === testsDirName) {
-      testRoot = index;
+    if (!TEST_ROOT_SEGMENTS.has(directory) && directory !== testsDirName) {
+      return;
     }
+    // A package may be called `tests`, and `packages/tests/api/client.spec.ts`
+    // is then a source tree whose second segment reads as a layer. What
+    // separates the two is the manifest: a workspace package has one, a suite
+    // directory inside a package does not.
+    if (isPackageRoot(path.join(root, ...directories.slice(0, index + 1)))) {
+      return;
+    }
+    testRoot = index;
   });
   if (testRoot < 0) {
     return null;
@@ -2578,6 +2593,33 @@ function testsDirName(root: string, config: QfaiConfig): string {
 }
 
 /**
+ * Whether a directory carries a package manifest, memoised per scan.
+ *
+ * One `statSync` per candidate directory, and a scan asks about the same few
+ * over and over. Synchronous because the layer question is asked from a
+ * predicate the file stream calls per file, which cannot await.
+ */
+export function packageRootProbe(): (absoluteDir: string) => boolean {
+  const seen = new Map<string, boolean>();
+  return (absoluteDir: string): boolean => {
+    const cached = seen.get(absoluteDir);
+    if (cached !== undefined) {
+      return cached;
+    }
+    let answer: boolean;
+    try {
+      answer = statSync(path.join(absoluteDir, "package.json")).isFile();
+    } catch {
+      // Absent, unreadable, or a path that is not a directory at all. None of
+      // those is a package root, and none is this function's to report.
+      answer = false;
+    }
+    seen.set(absoluteDir, answer);
+    return answer;
+  };
+}
+
+/**
  * Whether a repository-relative path sits in an acceptance layer.
  *
  * The stub gate's filter. It asks the same question the scan asks and gets it
@@ -2596,6 +2638,7 @@ export function atddAcceptanceLayerFilter(
     e2eRoot: path.join(testsRoot, "e2e"),
     apiRoot: path.join(testsRoot, "api"),
     integrationRoot: path.join(testsRoot, "integration"),
+    isPackageRoot: packageRootProbe(),
   };
   // The whole of `resolveTestKind`, not the path half. A layout rooted at the
   // repository (`testsDir: "."`) puts the layer directories at the top level,

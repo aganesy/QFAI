@@ -1164,6 +1164,77 @@ describe("acceptance tests outside paths.testsDir", () => {
     });
   });
 
+  it("a package named like a test root does not become one", async () => {
+    await withProject(async (root) => {
+      await seedSpec(root, "0001", ["US-0001"], ["TC-0001"]);
+      await seedTest(root, "integration", "a.test.ts", "/* QFAI:SPEC-0001:TC-0001 */");
+      // `packages/tests/` is a workspace package whose name happens to match a
+      // test root, and `api/` under it is a source directory. Reading the
+      // segment after it would put every test of that package in the API
+      // layer, which is the ancestor-scanning defect one directory further out.
+      const dir = path.join(root, "packages", "tests", "api");
+      await mkdir(dir, { recursive: true });
+      await writeFile(
+        path.join(root, "packages", "tests", "package.json"),
+        JSON.stringify({ name: "tests", version: "0.0.0" }),
+        "utf-8",
+      );
+      await writeFile(
+        path.join(dir, "client.spec.ts"),
+        [
+          "/* QFAI:SPEC-0001:US-0001 */",
+          "describe('client', () => {",
+          "  it('runs', () => {});",
+          "});",
+          "",
+        ].join("\n"),
+        "utf-8",
+      );
+
+      const result = await evaluateAtddCodeTraceability(
+        root,
+        withProjectGlobs(["packages/*/**/*.spec.ts"]),
+      );
+
+      expect(result.missing.us).toEqual(["SPEC-0001:US-0001"]);
+    });
+  });
+
+  it("and a suite directory inside that package still is one", async () => {
+    await withProject(async (root) => {
+      await seedSpec(root, "0001", ["US-0001"], ["TC-0001"]);
+      await seedTest(root, "integration", "a.test.ts", "/* QFAI:SPEC-0001:TC-0001 */");
+      // The discriminator is the manifest, not the name: `packages/tests/` is a
+      // package and `packages/tests/tests/` is its suite, so the deeper one
+      // anchors and the layer beneath it answers.
+      const dir = path.join(root, "packages", "tests", "tests", "e2e");
+      await mkdir(dir, { recursive: true });
+      await writeFile(
+        path.join(root, "packages", "tests", "package.json"),
+        JSON.stringify({ name: "tests", version: "0.0.0" }),
+        "utf-8",
+      );
+      await writeFile(
+        path.join(dir, "journey.test.ts"),
+        [
+          "/* QFAI:SPEC-0001:US-0001 */",
+          "describe('journey', () => {",
+          "  it('runs', () => {});",
+          "});",
+          "",
+        ].join("\n"),
+        "utf-8",
+      );
+
+      const result = await evaluateAtddCodeTraceability(
+        root,
+        withProjectGlobs(["packages/*/**/*.test.ts"]),
+      );
+
+      expect(result.missing.us).toEqual([]);
+    });
+  });
+
   it("a malformed project glob does not abort the run", async () => {
     await withProject(async (root) => {
       await seedSpec(root, "0001", ["US-0001"], ["TC-0001"]);

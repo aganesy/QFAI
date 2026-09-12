@@ -50,7 +50,9 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   parallel central suite the shipped skill tells them not to build.
 
   A collected file answers a layer only from inside a test root — a directory
-  named `tests`, `test` or `__tests__`, or the one `paths.testsDir` points at.
+  named `tests`, `test` or `__tests__`, or the one `paths.testsDir` points at,
+  and in either case one that carries no `package.json`, since a workspace
+  package named `tests` is a package rather than a suite root.
   The glob `qfai init` derives reaches colocated sources, so reading the file's
   own parent instead would have made every `src/api/client.spec.ts` an API
   acceptance test: its annotation could then discharge an obligation, and an

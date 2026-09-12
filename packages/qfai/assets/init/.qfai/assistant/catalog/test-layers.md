@@ -228,20 +228,27 @@ directory **inside its own test root**: the segment after the deepest `tests`,
 basename. `packages/checkout/tests/integration/pay.test.ts` answers an `L3`
 obligation exactly as `<testsDir>/integration/pay.test.ts` does.
 
+A directory carrying a `package.json` is a package rather than a test root,
+whatever it is called: without that, a workspace package named `tests` would
+make `packages/tests/api/**` an API layer, which is the same defect one
+directory further out.
+
 Anchoring it there rather than scanning ancestors is what keeps a package name
 out of the answer. A package may legitimately be called `api`, and reading any
 ancestor makes every test under it an API test —
 `packages/api/tests/unit/pay.test.ts` included, which owes ATDD nothing.
 
-**A suite under a root of its own name** — `packages/app/spec/acceptance/e2e/**`
-— has no segment to anchor on. There the file's **own directory** answers and
-nothing above it does, so the suite is read rather than reported missing and a
-package called `api` cannot lend its name to the unit tests beneath it.
+**A named test root is required.** `packages/app/spec/acceptance/e2e/**` has no
+segment to anchor on, so its files answer no layer and their obligations are
+reported as uncovered. Name the root `tests`, `test` or `__tests__`, or point
+`paths.testsDir` at it, and the anchored rule reads the suite.
 
-A project that nests below its layer directory gets the anchored rule back by
-naming its root `tests`, `test` or `__tests__`, or by pointing
-`paths.testsDir` at it. Missing such a file is the safe direction; claiming one
-is not.
+Answering from the file's own directory instead was tried and withdrawn. The
+glob `npx qfai init` derives reaches colocated sources, and there the file's own
+directory is a source directory: `src/api/client.spec.ts` is a unit test, and
+reading it as an API acceptance one lets its annotations discharge an obligation
+and its unfilled stubs block a gate that owns no unit test. Reporting a suite as
+uncovered is the safe direction; claiming one is not.
 
 Three things that does not change.
 
