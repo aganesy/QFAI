@@ -2734,6 +2734,11 @@ const LEGACY_EVIDENCE_IGNORE_NEGATIONS: readonly string[] = [
   // fresh clone and CI that the root negation was added for saw neither file.
   "!implement-*.md",
   "!atdd-*.md",
+  // A spec's own evidence, which carries the grilling trace a validator rule
+  // reads. That makes it an input to a check rather than a log of one, and a
+  // rule whose input is hidden reports the same clean result for a run that
+  // skipped every session as for one that grilled every phase.
+  "!sdd-*.md",
   // The import-lite record, for the same reason: on a spec set that arrived
   // without a discussion pack it is the only input source in the repository,
   // and the nested `*` hides it from the fresh clone that CI validates. Both

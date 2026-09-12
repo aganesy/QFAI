@@ -1410,9 +1410,13 @@ export const ALLOWED_INIT_CONTENT: ReadonlyMap<string, string> = new Map([
   //
   //     .qfai/review_archive/*
   //
+  // Re-pinned again for the spec stage's evidence, which `QFAI-GRILL-001` reads:
+  //
+  //     !.qfai/evidence/sdd-*.md
+  //
   // Derived the way its predecessors were — `qfai init` into a temp root, then
   // reading what it wrote.
-  [".gitignore", "bba1090962529e016912dc9a0a80a23e500805c384ea4d6328c6d4c91536a70e"],
+  [".gitignore", "15e02de9c5677debca0985333c91261f9731c52efcbdb8a352458fdae930d32f"],
   // One bullet each, inside the managed cross-AI rules block: the
   // `documentation-clarity.md` master that the same run seeds beside them.
   // Removing that line from both files reproduces the previous digests
