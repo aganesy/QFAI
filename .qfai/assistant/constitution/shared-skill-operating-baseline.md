@@ -144,7 +144,9 @@ There is one base, and it is the project root.
   `.agents/rules/user-questions.md`; this section is where it binds a skill.
 - Availability is judged for **this question in this invocation**. A tool the mode
   withholds, or one that cannot carry the answer's shape, is unavailable for that
-  question and takes the fallback below.
+  question and takes the fallback below. A mode that permits no question at all —
+  `--auto` — is read before this: nothing is asked, so there is no question whose
+  availability to judge, and the fallback is not its route.
 - Where the question has choices and AskUserQuestion supports them, prefer structured choices over free-text input.
   An open answer — a name, a number, a sentence — takes the free-text path instead; the preference
   ranks two ways of asking one question, and never turns an open answer into a choice.

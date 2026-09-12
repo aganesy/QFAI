@@ -48,7 +48,9 @@ When an agent needs to ask the user a question, the following rules apply (see a
 1. **MUST use AskUserQuestion** when the tool is available in the current environment.
    **No question is exempt**, and availability is judged for **this question in this
    invocation**: a tool the mode withholds, and one that cannot carry the answer's
-   shape, are both unavailable for that question and take rule 3.
+   shape, are both unavailable for that question and take rule 3. A mode that
+   permits no question at all is rule 4's and is read before this one — there is
+   no question there whose availability to judge.
    `.agents/rules/user-questions.md` owns the form and states the whole of it.
 2. **MUST prefer structured choices** (radio/multi-select) over free-text input where the question
    has choices and the tool supports them.

@@ -590,6 +590,13 @@ describe("the question form binds every question", () => {
       const content = await read(tree, CONSTITUTION);
       expectPhrase(content, "**this question in this invocation**");
       expectPhrase(content, "cannot carry the\n   answer's shape");
+      // And the mode that permits no question at all is read first. Judged the
+      // other way round, an `--auto` run makes the tool unavailable, routes the
+      // question to the plain-text fallback, and lands the agent on a rule that
+      // says to ask beside one that says not to.
+      expectPhrase(content, "A no-question mode is read first");
+      expectPhrase(content, "there is nothing whose availability rules 1 to 3 could judge");
+      expectPhrase(content, "a mode that permits no question at all is rule 4's, not this one's");
     });
 
     it(`${tree}: the operating baseline carries both, where a skill reads them`, async () => {

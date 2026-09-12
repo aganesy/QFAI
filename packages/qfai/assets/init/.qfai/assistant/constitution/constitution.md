@@ -359,10 +359,17 @@ rule master names.
 
 Rules:
 
+0. **A no-question mode is read first.** Where rule 4 applies, no question is put
+   at all, so there is nothing whose availability rules 1 to 3 could judge. Read
+   the other way round, a mode that withholds the tool would make it unavailable,
+   route the question to rule 3's plain-text fallback, and hand the agent a rule
+   that says to ask beside one that says not to.
 1. **MUST use AskUserQuestion** when the tool is available in the current environment.
    Availability is judged for **this question in this invocation**, not from what the
    host supports in general: a tool a mode withholds, or one that cannot carry the
-   answer's shape, is unavailable for that question and takes rule 3.
+   answer's shape, is unavailable for that question and takes rule 3. "Withholds"
+   means a mode that still permits asking and offers no structured tool; a mode
+   that permits no question at all is rule 4's, not this one's.
 2. **MUST prefer structured choices** (radio/multi-select) over free-text input **where the
    question has choices** and AskUserQuestion supports them. Where the answer is open — a name, a
    number, a sentence — the free-text path is the one that carries it, and narrowing it into options
