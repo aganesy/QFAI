@@ -459,9 +459,23 @@ describe("the ATDD gate's file selection", () => {
   // package-local acceptance suites, and a marked skeleton there was exempt
   // here and unseen by it.
   const scaffolded = (): string =>
-    [`// ${SCAFFOLD_PLACEHOLDER_MARKER}`, "it.skip('TC-0001-0001: pays', () => {});", ""].join(
-      "\n",
-    );
+    [
+      `// ${SCAFFOLD_PLACEHOLDER_MARKER}`,
+      "// TODO: implement assertion for TC-0001-0001",
+      "it.skip('TC-0001-0001: pays', () => {});",
+      "",
+    ].join("\n");
+
+  // The same skeleton with its TODO written out and the sentinel left behind.
+  // `D-SCAFFOLD-PLACEHOLDER` requires both, so it reports nothing here.
+  const progressed = (): string =>
+    [
+      `// ${SCAFFOLD_PLACEHOLDER_MARKER}`,
+      "it.skip('TC-0001-0001: pays', () => {",
+      "  expect(pay()).toBe(true);",
+      "});",
+      "",
+    ].join("\n");
 
   it("leaves a fixture an extension-broad project glob swept in", async () => {
     const root = await newTempDir();
@@ -547,6 +561,25 @@ describe("the ATDD gate's file selection", () => {
     });
 
     expect(issues.filter((issue) => issue.code === "QFAI-TEST-003")).toEqual([]);
+  });
+
+  it("reports a progressed skeleton the placeholder validator passes over", async () => {
+    const root = await newTempDir();
+    const config = atddConfig(["packages/*/tests/**/*.test.ts"]);
+    // Inside the scanned directory, so the path half of the hand-off holds.
+    // What does not hold is the content half: the TODO line is written out,
+    // so the placeholder validator reports nothing and the sentinel is all
+    // that is left. Suppressing on the sentinel alone left the file reported
+    // by neither, with its skipped case discharging an obligation.
+    await writeTestFile(root, "tests/integration/pay.test.ts", progressed());
+
+    const issues = await validateTestTodoStubs(root, config, {
+      globs: atddAcceptanceTestGlobs(root, config, "**/*.ts"),
+      fileFilter: atddAcceptanceLayerFilter(root, config),
+      placeholderScanned: scaffoldPlaceholderScannedFilter(root, config),
+    });
+
+    expect(issues.map((issue) => issue.code)).toContain("QFAI-TEST-003");
   });
 
   it("reports a marked skeleton outside that scan rather than exempting it", async () => {

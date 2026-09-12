@@ -1332,6 +1332,46 @@ describe("acceptance tests outside paths.testsDir", () => {
     });
   });
 
+  it("drops a file under a package nested inside an acceptance fixture", async () => {
+    await withProject(async (root) => {
+      await seedSpec(root, "0001", ["US-0001"], ["TC-0001", "TC-0002"]);
+      await seedTest(root, "integration", "a.test.ts", "/* QFAI:SPEC-0001:TC-0001 */");
+      // A package embedded under the outer suite's fixtures. Its `api`
+      // directory belongs to that package, not to the outer layout. With the
+      // outer `tests` still standing over it the file read as `Integration`,
+      // and the annotation below discharged an obligation the inner package
+      // does not own.
+      const fixtureRoot = path.join(root, "packages", "app", "tests", "integration", "fixtures");
+      const dir = path.join(fixtureRoot, "tests", "api");
+      await mkdir(dir, { recursive: true });
+      await writeFile(
+        path.join(fixtureRoot, "tests", "package.json"),
+        JSON.stringify({ name: "inner-fixture" }),
+        "utf-8",
+      );
+      await writeFile(
+        path.join(dir, "client.test.ts"),
+        [
+          "/* QFAI:SPEC-0001:TC-0002 */",
+          "describe('client', () => {",
+          "  it('runs', () => {});",
+          "});",
+          "",
+        ].join("\n"),
+        "utf-8",
+      );
+
+      const result = await evaluateAtddCodeTraceability(
+        root,
+        withProjectGlobs(["packages/*/tests/**/*.test.ts"]),
+      );
+
+      // The outer suite covers the first obligation; the nested fixture
+      // covers nothing, so the second is still missing.
+      expect(result.missing.tc).toEqual(["SPEC-0001:TC-0002"]);
+    });
+  });
+
   it("finds a deeper root past one an earlier fixture path invalidated", async () => {
     await withProject(async (root) => {
       await seedSpec(root, "0001", ["US-0001"], ["TC-0001"]);

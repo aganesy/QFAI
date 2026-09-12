@@ -653,9 +653,14 @@ describe("QFAI-TEST-003 — the vitest/jest skip form is its own rule", () => {
   // error. Reporting the same block here too would fail `--fail-on error` on
   // the scaffold's own output before a line of it was written, and would
   // overrule that ladder from outside.
+  // What `qfai atdd scaffold` writes: the sentinel AND a per-TC TODO line.
+  // The validator that owns an unfilled skeleton requires both, so a fixture
+  // carrying only the sentinel is a file it passes over — and this gate
+  // standing aside for that would leave the skipped case reported by neither.
   const SCAFFOLDED = [
     'import { describe, it } from "vitest";',
     "",
+    "// TODO: implement assertion for TC-0001-0001",
     `it${SKIP}("pending — scaffold placeholder", () => {`,
     "  // QFAI-SCAFFOLD-PLACEHOLDER — replace this block with a real assertion.",
     "});",
@@ -695,6 +700,7 @@ describe("QFAI-TEST-003 — the vitest/jest skip form is its own rule", () => {
     const mixed = [
       'import { describe, it } from "vitest";',
       "",
+      "// TODO: implement assertion for TC-0001-0001",
       `it${SKIP}("pending — scaffold placeholder", () => {`,
       "  // QFAI-SCAFFOLD-PLACEHOLDER — replace this block with a real assertion.",
       "});",

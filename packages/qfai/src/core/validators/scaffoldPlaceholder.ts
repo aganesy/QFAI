@@ -81,6 +81,30 @@ import { issue } from "./utils.js";
 const TODO_MARKER_RE = /(?:\/\/|#)\s*TODO:\s*implement assertion for\s+(TC-\d{4}-\d{4})\b/g;
 
 /**
+ * Whether `D-SCAFFOLD-PLACEHOLDER` reports this file's body.
+ *
+ * Both halves are required, and the second is the one a caller forgets: a
+ * skeleton whose TODO lines have been written out but whose sentinel survives
+ * is progressed, and this validator says nothing about it. A gate that hands
+ * its own finding over on the sentinel alone therefore suppresses itself over a
+ * file nothing else reports — which is a skipped test discharging an obligation
+ * with no one watching.
+ *
+ * Exported so the hand-off in `testTodoStubs.ts` asks this question rather than
+ * a weaker one. The scan path is the caller's to decide; this is the content.
+ */
+export function scaffoldPlaceholderReportsBody(body: string): boolean {
+  if (!body.includes(SCAFFOLD_PLACEHOLDER_MARKER)) {
+    return false;
+  }
+  // `matchAll` on a `g` regex starts from `lastIndex`, so the shared literal
+  // is consumed rather than queried. `some` on a fresh iterator is the cheap
+  // form of "at least one".
+  TODO_MARKER_RE.lastIndex = 0;
+  return TODO_MARKER_RE.test(body);
+}
+
+/**
  * Declared `Level` values whose home is a directory this writer does not emit
  * into. Kept in step with `atddScaffold.ts`'s own set: the command stopped
  * generating these, and this validator has to stop gating the ones it already
@@ -291,13 +315,11 @@ export async function validateScaffoldPlaceholder(
     // sentinel AND the per-TC TODO marker. Mirrors the
     // `isStillPlaceholder` logic in `core/atdd/scaffold.ts` so the
     // emit-side and validate-side agree on the same definition.
-    if (!body.includes(SCAFFOLD_PLACEHOLDER_MARKER)) {
+    if (!scaffoldPlaceholderReportsBody(body)) {
       continue;
     }
+    TODO_MARKER_RE.lastIndex = 0;
     const matches = Array.from(body.matchAll(TODO_MARKER_RE));
-    if (matches.length === 0) {
-      continue;
-    }
     const allTcIds = Array.from(
       new Set(matches.map((m) => m[1]).filter((id): id is string => typeof id === "string")),
     );

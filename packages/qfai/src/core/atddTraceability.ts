@@ -2564,6 +2564,17 @@ function resolveTestKindFromPath(
     // separates the two is the manifest: a workspace package has one, a suite
     // directory inside a package does not.
     if (isPackageRoot(path.join(root, ...directories.slice(0, index + 1)))) {
+      // The outer candidate goes with it. An embedded package under an
+      // acceptance fixture —
+      // `packages/app/tests/integration/fixtures/tests/api/client.test.ts`,
+      // with a manifest in the inner `tests` — has an `api` that belongs to
+      // that package and not to the outer layout. Leaving the outer `tests`
+      // standing classified the file as `Integration`, where its annotation
+      // discharged an `L3` obligation and its stub blocked a gate the inner
+      // package does not own.
+      //
+      // The scan continues, so a genuine test root deeper still is reached.
+      testRoot = -1;
       return;
     }
     // A deeper root answers or invalidates; it never leaves an outer one

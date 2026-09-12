@@ -44,6 +44,7 @@ import { collectFilesByGlobs, DEFAULT_GLOB_FILE_LIMIT } from "../fs.js";
 import { DEFAULT_TEST_FILE_EXCLUDE_GLOBS, normalizeGlobs } from "../traceability.js";
 import type { Issue, IssueSeverity } from "../types.js";
 import { maskJsNonCode } from "./jsSourceMask.js";
+import { scaffoldPlaceholderReportsBody } from "./scaffoldPlaceholder.js";
 import { issue } from "./utils.js";
 
 /**
@@ -717,12 +718,21 @@ function collectStubIssues(
   // scaffold's own, so it is gone the moment the block is authored — after
   // which a `.skip` left behind is a hand-written one and is reported.
   //
-  // The marker alone is not enough to hand it over: that validator scans four
-  // directories under `paths.testsDir`, and this gate also reads a monorepo's
-  // package-local acceptance suites. A marked skeleton there is outside its
-  // scan, so deferring to it left the file reported by neither and the ATDD
-  // gate green over a suite that does not run.
-  const scaffolded = content.includes(SCAFFOLD_PLACEHOLDER_MARKER) && placeholderScanned(relFile);
+  // The marker alone is not enough to hand it over, for two reasons.
+  //
+  // That validator scans four directories under `paths.testsDir`, and this gate
+  // also reads a monorepo's package-local acceptance suites. A marked skeleton
+  // there is outside its scan, so deferring to it left the file reported by
+  // neither and the ATDD gate green over a suite that does not run.
+  //
+  // And it reports a file only when the sentinel sits beside a per-TC
+  // `TODO: implement assertion for` line. A skeleton whose TODO lines have been
+  // written out but whose sentinel survives is progressed, so that validator
+  // passes over it — and a hand-off keyed to the sentinel alone suppressed this
+  // finding over exactly that file, leaving its `it.skip` to discharge an
+  // obligation with no gate reading it. `scaffoldPlaceholderReportsBody` is the
+  // predicate that validator applies, so the two cannot drift apart.
+  const scaffolded = scaffoldPlaceholderReportsBody(content) && placeholderScanned(relFile);
   // Offsets and line breaks survive both passes, so a match position in the
   // scanned text is still a position in the file the finding names.
   const masked = dialect.mask(content);
