@@ -225,8 +225,13 @@ describe.each(TREES)("%s — the execution stages record their sessions", (tree)
       "each row's `Open` count matches the register lines naming that row's `Session`",
     );
     // The ordering both times exist for is checked, not just recorded.
-    expectPhrase(body, "also carries a `Work resumed` later than its own `Ended at`");
-    expectPhrase(body, "writes `none — <why>` there, which is a disposition rather than a blank");
+    expectPhrase(
+      body,
+      "and after which the stage wrote, carries a `Work resumed` later than its own `Ended at`",
+    );
+    expectPhrase(body, "**A run that did not resume writes `none — <why>` instead**");
+    expectPhrase(body, "which the gate accepts on those three endings and on no other");
+    expectPhrase(body, "A blank is neither, and is a `REVISE`");
   });
 
   it.each(STAGES)("%s gives each ending a verdict at that gate", async (skill) => {
@@ -239,9 +244,12 @@ describe.each(TREES)("%s — the execution stages record their sessions", (tree)
     expectPhrase(body, "`Frontier` empty, `Lookups` none in flight, `Open` 0.");
     expectPhrase(
       body,
-      "Every open node assumable, **and every one of them carrying its labelled assumption in the register**",
+      "`Lookups` none in flight, every open node assumable, **and every one of them carrying its labelled assumption in the register**",
     );
-    expectPhrase(body, "`Open` 0. Article X, rule 6");
+    // The closure covers the tree as it finally stands, so a running lookup
+    // can raise a node after it.
+    expectPhrase(body, "a lookup still running can raise a node after it");
+    expectPhrase(body, "`Lookups` none in flight and `Open` 0. Article X, rule 6");
     expectPhrase(body, "`Work resumed` empty. The user ended the session");
     // A row is a file change, and a stop forbids one.
     expectPhrase(body, "**A stopped session is reported, not written.**");

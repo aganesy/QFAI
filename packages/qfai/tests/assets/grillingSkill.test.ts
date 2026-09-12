@@ -267,7 +267,9 @@ describe("the primitive carries the master's clauses", () => {
       // end condition makes the session uncompletable.
       const text = flat(await readSkill(tree, SKILL));
       expect(text).toMatch(/session between agents cannot reach condition 2/);
-      expect(text).toMatch(/two rounds, then every decision still open goes to the user/);
+      expect(text).toMatch(/two, then every decision still open goes to the user/);
+      // The budget bounds the rounds; the user ends the session.
+      expect(text).toMatch(/The budget ends the rounds, not the session/);
       expect(text).toMatch(/review-convergence\.md/);
     });
   }
