@@ -436,6 +436,36 @@ describe("cross-AI rules surface (.agents/rules/ master)", () => {
       expect(text).toMatch(/"Pick one" and "pick all that apply" are different questions/);
     });
 
+    it("waives only the clarifications when the questions close mid-split", async () => {
+      // "The rest of the set is recorded as assumed" put a mandatory approval
+      // and an undefaultable input on the assumption path, so a `proceed` in an
+      // early batch could authorize what the user declined to answer.
+      const text = flatten(await master());
+      expect(text).toMatch(/\*\*Only the clarifications\.\*\*/);
+      expect(text).toMatch(
+        /closing the questions waives the agent's own uncertainty, never an authorization the user has not given/,
+      );
+      expect(text).toMatch(
+        /where a no-question mode forbids putting them, the run stops and names them/,
+      );
+    });
+
+    it("treats a tool that cannot carry the answer's shape as not callable", async () => {
+      // A question permitting several answers put to a tool whose options are
+      // mutually exclusive comes back meaning something narrower than what was
+      // asked. Requiring the tool whenever it is callable at all leaves that
+      // question no compliant path.
+      const text = flatten(await master());
+      expect(text).toMatch(
+        /A tool that cannot carry the answer's shape is not callable for that question either/,
+      );
+      expect(text).toMatch(
+        /Use the fallback for that question and say which part the tool could not carry/,
+      );
+      // And the decomposition that looks like a fix but spends the budget.
+      expect(text).toMatch(/Do not decompose it into one yes-or-no per option/);
+    });
+
     it.each(["AGENTS.md", "CLAUDE.md"])("%s cites the rule master", async (rel) => {
       const text = await readFile(path.join(ROOT, rel), "utf-8");
       expect(text).toContain("user-questions.md");

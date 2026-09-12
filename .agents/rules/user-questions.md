@@ -20,6 +20,16 @@ was not granted. That is the fallback's case, not a violation. Judge
 availability at the moment the question is asked, never from what the host
 supports in general.
 
+**Callable for this question, not in general.** A tool that cannot carry the
+answer's shape is not callable for that question either. The common case is a
+question that permits several answers put to a tool whose options are mutually
+exclusive: forcing it through loses the constraint, and the answer that comes
+back means something narrower than what was asked. Use the fallback for that
+question and say which part the tool could not carry. Do not decompose it into
+one yes-or-no per option — that spends a question item per option and asks the
+user to hold the set in their head, which is what a single question with a
+stated constraint exists to avoid.
+
 ## 1. No exceptions
 
 Every question to the user goes through the host's structured question tool
@@ -83,8 +93,14 @@ respect.
 2. **Read each batch's answers for a stop before issuing the next.** A `stop`
    ends the asking there, and the questions not yet put are reported as
    unasked. Issuing the next batch after that is the agent overriding the user.
-   A `proceed` or `done` likewise ends the asking, and the rest of the set is
-   recorded as assumed, labelled as such.
+   A `proceed` or `done` ends the asking too, and the clarifications not yet
+   put are recorded as assumed, labelled as such. **Only the clarifications.** A
+   question the set still holds whose subject is a decision some document
+   requires the user to record, or an input declared undefaultable, is asked
+   anyway — closing the questions waives the agent's own uncertainty, never an
+   authorization the user has not given. Where the closure leaves nothing but
+   those, they are still put; where a no-question mode forbids putting them, the
+   run stops and names them.
 3. **No answer is acted on until the set is exhausted or a stop ends it.**
    Ordering is preserved and nothing is deferred to a later exchange. What the
    split cannot do is show a set larger than the host's capacity in one view, so
