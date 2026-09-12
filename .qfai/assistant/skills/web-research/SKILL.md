@@ -73,7 +73,8 @@ steps:
   returning `PASS`.
 - Reviewer responses use the response template in
   `.qfai/assistant/constitution/shared-skill-delegation-baseline.md#reviewer-response-template`, including the
-  REQUIRED `Reviewer role:`, `Reviewed artifact:` and `Authored/edited under review:`
+  REQUIRED `Reviewer role:`, `Reviewed artifact:`, `Review series:`,
+  `Authored/edited under review:` and `Recommended and unadjudicated:`
   lines. A response omitting any of them is not a valid verdict; anything other than
   `none` on the last cannot be a `PASS`.
 - Reviewer checks the Drift Protocol, verifies alignment with `test-layers.md`, and treats ratios as signals, not gates.

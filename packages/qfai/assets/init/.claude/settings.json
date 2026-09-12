@@ -1,5 +1,21 @@
 {
   "hooks": {
+    "UserPromptSubmit": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "statusMessage": "QFAI structured-question reminder",
+            "command": "node",
+            "args": [
+              "-e",
+              "console.log(JSON.stringify({hookSpecificOutput:{hookEventName:'UserPromptSubmit',additionalContext:\"QFAI user questions (.agents/rules/user-questions.md). Every question you put to the user this turn goes through the host's structured question tool where it is callable, and through that rule's fallback where it is not \\u2014 carrying the same parts either way. No question is light enough to skip it: a yes-or-no, a confirmation and a \\\"just checking\\\" are each a question. Read the rule rather than working from this line.\"}}))"
+            ]
+          }
+        ]
+      }
+    ],
     "PreToolUse": [
       {
         "matcher": "mcp__github__(create_pull_request|update_pull_request|issue_write|add_issue_comment|pull_request_review_write|add_comment_to_pending_review|add_reply_to_pull_request_comment)",
@@ -11,6 +27,48 @@
             "args": [
               "-e",
               "console.log(JSON.stringify({hookSpecificOutput:{hookEventName:'PreToolUse',additionalContext:'QFAI documentation clarity (.agents/rules/documentation-clarity.md). Before this title or body ships: no issue or PR numbers, ticket IDs or team-local jargon in source and docs; no account of how the work went, only the current behaviour and why; cut self-evident, repeated and wordy text; ordinary words, one claim per sentence, short lines; bullet lists and tables for parallel items; then re-read every line and rewrite anything that reads as a literal translation.'}}))"
+            ]
+          }
+        ]
+      },
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "statusMessage": "QFAI grilling reminder: design artifact",
+            "command": "node",
+            "args": [
+              "-e",
+              "console.log(JSON.stringify({hookSpecificOutput:{hookEventName:'PreToolUse',additionalContext:\"QFAI grilling (.agents/rules/grilling.md). Before this: is a decision about to be fixed that the repository cannot settle — a design, an approach, a scope boundary, a trade-off? If so, that rule governs how it is put, and an agent that answers it alone has stopped following it. Read the rule rather than working from this line: the method has parts a reminder cannot carry without contradicting them.\"}}))"
+            ]
+          }
+        ]
+      },
+      {
+        "matcher": "Task|Agent",
+        "hooks": [
+          {
+            "type": "command",
+            "statusMessage": "QFAI grilling reminder: delegation",
+            "command": "node",
+            "args": [
+              "-e",
+              "console.log(JSON.stringify({hookSpecificOutput:{hookEventName:'PreToolUse',additionalContext:\"QFAI grilling (.agents/rules/grilling.md). Before this: is a decision about to be fixed that the repository cannot settle — a design, an approach, a scope boundary, a trade-off? If so, that rule governs how it is put, and an agent that answers it alone has stopped following it. Read the rule rather than working from this line: the method has parts a reminder cannot carry without contradicting them.\"}}))"
+            ]
+          }
+        ]
+      },
+      {
+        "matcher": "ExitPlanMode",
+        "hooks": [
+          {
+            "type": "command",
+            "statusMessage": "QFAI grilling reminder: plan",
+            "command": "node",
+            "args": [
+              "-e",
+              "console.log(JSON.stringify({hookSpecificOutput:{hookEventName:'PreToolUse',additionalContext:\"QFAI grilling (.agents/rules/grilling.md). Before this: is a decision about to be fixed that the repository cannot settle — a design, an approach, a scope boundary, a trade-off? If so, that rule governs how it is put, and an agent that answers it alone has stopped following it. Read the rule rather than working from this line: the method has parts a reminder cannot carry without contradicting them.\"}}))"
             ]
           }
         ]
