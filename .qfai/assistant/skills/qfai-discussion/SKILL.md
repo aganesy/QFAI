@@ -64,13 +64,24 @@ Decide whether the target is UI-bearing with `references/ui-bearing-playbook.md`
 
 Every UI-bearing pack must produce, as primary truth: `uiux/00_index.md`, `uiux/40_screen_contracts.md`, `uiux/50_review_input_bundle.md`. That is the whole family, on every UI-bearing surface including `cli`.
 
-Discussion writes no file outside its own pack. The brand SSOT — root `DESIGN.md` — is authored by `/qfai-sdd` Phase 0 from what this pack records: the classification in `01_Context.md`, the reference registries in `04_Sources.md`, and the `uiux/` sidecars. Interview for it here, in the depth `references/design-dna-intake.md` sets out, and record the answers; do not write the file.
+Discussion authors no design artifact outside its own pack. Its run also writes this stage's evidence and the cycle's review pack, which record what the run did rather than specify anything.
+The brand SSOT — root `DESIGN.md` — is authored by `/qfai-sdd` Phase 0 from what this pack records: the classification in `01_Context.md`, the reference registries in `04_Sources.md`, and the `uiux/` sidecars. Interview for it here, in the depth `references/design-dna-intake.md` sets out, and record the answers; do not write the file.
 
 A **cli-only** pack (`primary_surface: cli`, no visual secondary surface) stays `ui_bearing: true` and keeps all three sidecars, but the brand questions do not apply to it: `/qfai-prototyping` rejects `cli`, so no downstream reader consumes a `visual.*` token tree, and `/qfai-sdd` Phase 0 skips the freeze. The test is the whole classified surface set — `primary_surface` **and** every `secondary_surfaces` entry. See `references/ui-bearing-playbook.md#visual-prototyping-surfaces-vs-cli`.
 
 ## Required Process
 
-1. Run `.qfai/assistant/constitution/research-first-protocol.md` before any other artifact is authored, record its `research_summary` output in the `## Research Summary` section of `04_Sources.md`, then register source traceability there. Its `best_practices` / `anti_patterns` are inputs to every step below, not a late fill-in.
+0. Open this run's stage evidence at `.qfai/evidence/discussion-<YYYYMMDDhhmmssSSS>.md`, under the run's own
+   stamp, before anything else is written. Two things below need a home that is not the
+   pack: step 1's research summary, and the `## Grilling Session` row whose `Ended at` is
+   written before the first pack file. A row with nowhere to go until the pack exists can
+   only be written after drafting, which is the order it was added to rule out.
+1. Run `.qfai/assistant/constitution/research-first-protocol.md` before any other artifact is authored, record its `research_summary` output in this run's stage evidence, and carry it into the `## Research Summary` section of `04_Sources.md` when step 3 opens the pack, then register source traceability there. Its `best_practices` / `anti_patterns` are inputs to every step below, not a late fill-in.
+   **Nothing is written under `.qfai/discussion/` until an ending authorizes authoring.**
+   The pack under work is resolved by the greatest timestamp with no completeness check,
+   so a run cancelled during the session would leave a one-file directory that every
+   later validator and the `/qfai-sdd` preflight read in place of the last complete pack.
+   A cancellation would make the project look broken.
 2. Read `.qfai/assistant/skills/qfai-grilling/SKILL.md`, then run the core interview
    for concept, scope, stakeholders, and constraints as a grilling session through
    that skill, covering every topic in `references/discussion-coverage-checklist.md` **and**, where any classified surface is
@@ -127,22 +138,39 @@ run then defends.
 
 Three writes are not that authoring, and happen when the process reaches them:
 
-| Write                                                                       | When                       | Why it is not authoring                                                                                                |
-| --------------------------------------------------------------------------- | -------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
-| The research summary in `04_Sources.md`                                     | Step 1, before the session | The session reads it. Held back, the decisions are settled against evidence nobody had                                 |
-| A register entry or a labelled assumption the session's own ending produces | As the session ends        | It records what the session did. Withheld, a no-question run cannot write the open questions that block its completion |
-| A throwaway artifact built to make a question answerable                    | Mid-session                | The method calls for it where talking cannot settle the question. It is not the pack, and it is not kept               |
+| Write                                                                       | When                       | Why it is not authoring                                                                                                                                                                                     |
+| --------------------------------------------------------------------------- | -------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| The research summary in this run's stage evidence                           | Step 1, before the session | The session reads it. Held back, the decisions are settled against evidence nobody had. It is not in the pack: no pack directory exists yet, and one opened here is what a cancelled run would leave behind |
+| A register entry or a labelled assumption the session's own ending produces | As the session ends        | It records what the session did. Withheld, a no-question run cannot write the open questions that block its completion                                                                                      |
+| A throwaway artifact built to make a question answerable                    | Mid-session                | The method calls for it where talking cannot settle the question. It is not the pack, and it is not kept                                                                                                    |
 
 A session has four endings, and three of them let authoring start:
 
 | Ended         | What the user did                                                                                                | Authoring                                                                                                                                                                  |
 | ------------- | ---------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `confirmed`   | Confirmed on the session's own condition: no node open — the frontier empty **and** no fact lookup still running | Starts                                                                                                                                                                     |
-| `user-closed` | Said `proceed`, `done`, or words to that effect                                                                  | Starts. Lookups already running are finished and each decision still open becomes a labelled assumption                                                                    |
+| `user-closed` | Said `proceed`, `done`, or words to that effect                                                                  | Starts. Lookups already running are finished and each decision still open becomes a labelled assumption, except one a document requires the user to make and record        |
 | `no-question` | Nothing — `--auto` reached nobody                                                                                | Starts. Every node still open is registered — a decision, and a fact only the user holds, which nothing else can supply, and the open count is then what blocks completion |
 | `stopped`     | Said `stop`                                                                                                      | **Does not start.** Report every open decision as open and end the run                                                                                                     |
 
 **No ending authorizes authoring while a `hard-required` input this invocation consumes is missing.** Those are excluded from both assumption paths: an interactive closure still asks for them, and a no-question run stops and names them. Registering an open question does not make an input defaultable — the value is what the run needs, and a question about it is not one.
+
+**An interactive closure does not assume a decision some document requires the user to make
+and record.** `proceed` and `done` end the asking while the user is still there, so a
+decision they own is put again rather than assumed. The `hard-required` bound above does not
+reach it: that one is about an input the run consumes, and this is a decision the run is not
+permitted to take. The visual direction is the case this skill has —
+`references/design-dna-intake.md` says only the user may choose a theme. The rule states the
+same bound from its side: closing the questions waives the agent's own uncertainty, never an
+authorization the user has not given.
+
+**`--auto` is the other case, and its answer is already written.** Nobody is there to put the
+question to, so the documented path holds: take the most conventional candidate, record it
+`chosen_by: assumption`, open it in `11_OQ-Register.md`, and author — the open count is what
+blocks completion. That is the rule's own shape for a no-question mode, the defaulted value
+written down **and** labelled beside the open question. What is forbidden is the assumption
+on its own, and a bar on authoring here would produce neither: no pack, and so nowhere to
+register the question that was supposed to block it.
 
 `stopped` is the one the vocabulary must keep separate. The rule says a stop ends the session
 immediately and no further work follows it, so a closure that authorizes proceeding and a
