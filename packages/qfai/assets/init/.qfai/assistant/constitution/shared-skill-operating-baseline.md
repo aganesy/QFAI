@@ -186,9 +186,11 @@ There is one base, and it is the project root.
   confirmation — rather than to a count. An exhausted budget does not close one,
   because its questions never opened it. The exemption covers the session, not
   the stage around it: an ordinary clarification asked beside one still spends a
-  unit. Under an explicit `--auto` the session asks nothing and records each
-  decision it could not settle as an open question, never as an assumption
-  (Article X, rule 6).
+  unit. Under an explicit `--auto` the session asks nothing and opens each
+  decision it could not settle as a question in the register the stage reads.
+  Where a document requires the field to hold something, write the defaulted
+  value and label it an assumption beside that open question; what is forbidden
+  is the assumption with no open question against it (Article X, rule 6).
 
 ## Canonical qfai Launcher (Mandatory)
 

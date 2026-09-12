@@ -1322,13 +1322,11 @@ export const ALLOWED_INIT_CONTENT: ReadonlyMap<string, string> = new Map([
     // `.agents/rules/minimal-implementation.md`. Derived by running `qfai init` into a temp root
     // and hashing what it wrote; dropping that bullet reproduces `2a264d5e…`.
     //
-    // The digest before this one added the bullet naming `.agents/rules/interface-clarity.md`, the
-    // rule the same run seeds beside the other masters. Derived the same way, and checked the same
-    // way: dropping that one bullet reproduces `3978847f…` byte for byte.
-    //
-    // The current digest adds the bullet naming `.agents/rules/grilling.md`, on the same footing.
-    // Derived and checked the same way: dropping that one bullet reproduces `f3cfb742…` byte for
-    // byte.
+    // Every later bullet on that list moves this digest the same way. To re-pin one: run
+    // `qfai init` into a temp root and hash what it wrote — never copy a value out of a failure
+    // message — then drop the added bullet and confirm the previous digest comes back byte for
+    // byte. That check is what keeps a re-pin a review of one line rather than a re-blessing of
+    // the whole file.
     ".github/copilot-instructions.md",
     "801d31abb7828b95d768b8b1a7b4fce51a6fc43f87ffcc2ac832b5eab3847e3f",
   ],
@@ -1427,13 +1425,10 @@ export const ALLOWED_INIT_CONTENT: ReadonlyMap<string, string> = new Map([
   // way the note above asks: dropping that one bullet reproduces `a832e27c…`
   // and `20040ab0…` byte for byte.
   //
-  // Re-pinned for a third, naming `.agents/rules/interface-clarity.md`, seeded
-  // by the same run. Derived and checked the same way: dropping that one bullet
-  // reproduces `22af72dd…` and `3f9ad00f…` byte for byte.
-  //
-  // Re-pinned for a fourth, naming `.agents/rules/grilling.md`, seeded by the
-  // same run. Derived and checked the same way: dropping that one bullet
-  // reproduces `60340a75…` and `f83493c5…` byte for byte.
+  // Every later master seeded beside them moves both digests the same way. To re-pin: run
+  // `qfai init` into a temp root and hash what it wrote, then drop the added bullet and confirm
+  // both previous digests come back byte for byte. That check is what keeps a re-pin a review of
+  // one line per file.
   ["AGENTS.md", "d954d6a018ccc298e5a29aa6ac43d9361ffd72d4676ccb01025d27eb158ce630"],
   ["CLAUDE.md", "9bf117acd6fea91e0d43f6532a8afd3c4fd7fdb44a3fa6ed9f83ccf069633308"],
   // Inside `.claude/`, and pinned anyway — see the paragraph above the path set.

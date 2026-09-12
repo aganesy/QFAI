@@ -175,7 +175,12 @@ describe("the clarification budget binds a stage", () => {
       expectPhrase(content, "**Grilling questions are exempt too, and unbounded.**");
       expectPhrase(content, "An exhausted budget does not close one");
       expectPhrase(content, "The exemption covers the session, not\n  the stage around it");
-      expectPhrase(content, "never as an assumption");
+      // The baseline is the nearer document for an agent inside a skill, so it
+      // has to permit what Article X permits. Forbidding the labelled value
+      // outright here left a `--auto` discussion run choosing between omitting a
+      // required field and breaking the protocol.
+      expectPhrase(content, "opens each\n  decision it could not settle as a question");
+      expectPhrase(content, "the assumption with no open question against it");
     });
 
     it(`${tree}: the operating baseline restates the budget where questions are asked`, async () => {
