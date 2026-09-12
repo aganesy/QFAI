@@ -298,6 +298,12 @@ describe("the clarification budget is countable", () => {
       const communication = await read(tree, COMMUNICATION);
       expectPhrase(communication, "**A grilling session has no cap**");
       expectPhrase(communication, "exhausting that budget\n   does not end one");
+      // The rule list states the end condition too, so it is a third place the
+      // tree-versus-frontier distinction can go stale.
+      expectPhrase(
+        communication,
+        "It ends when no node is open — no decision whose prerequisites are settled, and no fact\n   lookup still running",
+      );
     });
 
     // Article VI's opening sentence and its counting unit name one set. Two
