@@ -187,14 +187,22 @@ settled a decision agent-to-agent records, in the stage's Work Orders Summary,
 the decision and the `Agent instance` that recommended it. `Recommended and
 unadjudicated` is read off that record, not off recollection.
 
-**The record answers either way, and silence answers nothing.** A stage that ran
-no agent-to-agent grilling session writes one row reading `grilling: none`; a
-stage that ran one writes a row per decision it settled. A summary carrying
-neither is incomplete, and that is the `REVISE` — not an inference in either
-direction. Absence of rows cannot be read as evidence for `none`, because a
-table that omitted a required row looks exactly like a table that had none to
-write, and the reviewer would attest `none` over the very decision the record
-exists to expose.
+**The record answers either way, and silence answers nothing.** The question the
+field asks is whether any decision was settled agent-to-agent, so the record
+answers that and not whether a session ran. A stage that settled none writes one
+row reading `grilling: none` — whether it ran no session at all, or ran one that
+escalated every decision and settled nothing. A stage that settled some writes a
+row per decision. A summary carrying neither is incomplete, and that is the
+`REVISE` — not an inference in either direction. Absence of rows cannot be read
+as evidence for `none`, because a table that omitted a required row looks exactly
+like a table that had none to write, and the reviewer would attest `none` over
+the very decision the record exists to expose.
+
+The `grilling: none` row records a fact rather than a step, so it names no agent:
+`Agent instance` is `n/a`, `Role`, `Input (refs)` and `Output (refs)` are `-`,
+and `Status` is `PASS`. Writing a role or an instance there would invent
+provenance for work nobody did, which is the failure the `Agent instance` column
+exists to make detectable.
 
 The field asks about the artifact **as it now stands**. A recommendation the
 artifact no longer carries, and one the user has since settled, are both outside
@@ -218,8 +226,15 @@ orchestrator that replaced the reviewer after every round 1 would reset the budg
 escalation could never arrive. At most **two series per artifact per role**: ordinal 2 is the last
 one that opens, and a further conflict escalates to the user with the conflict named instead of
 opening a third. This is the cap `.qfai/assistant/constitution/review-convergence.md` puts on the
-post-escalation verification
-review, applied to the other way a gate can be made unbounded.
+post-escalation verification review, applied to the other way a gate can be made unbounded.
+
+**A special round is not a new series.** The one permitted verification review and the one-shot
+corrective review are narrowly scoped and terminal, so a conflict discovered inside either is
+handed to a non-participating reviewer **within the same series**, which finishes the round it was
+opened for. Opening a new series there would do one of two wrong things: reopen a general two-round
+budget the escalation has already spent, or leave the special review unfinished because its
+replacement is serving a round 1 that has no remit. The ordinal rises on a handoff that opens a
+general series, and on nothing else.
 
 - Reviewers must verify Drift Protocol enforcement.
 - Reviewers must verify test-layer policy enforcement when relevant.
