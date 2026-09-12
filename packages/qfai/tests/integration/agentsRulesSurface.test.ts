@@ -28,6 +28,14 @@ async function readMaybeSymlink(linkPath: string): Promise<string> {
   return readFile(linkPath, "utf-8");
 }
 
+/**
+ * Collapse wrapping so a pin reads the sentence rather than its wrap column.
+ *
+ * A requirement is the same requirement whichever column the formatter broke it
+ * at, and a pin that encodes the break fails on a reflow that changed nothing.
+ */
+const flatten = (text: string): string => text.replace(/\s*\n\s*/g, " ");
+
 async function isSymlinkTo(linkPath: string, masterPath: string): Promise<boolean> {
   const stat = await lstat(linkPath);
   if (!stat.isSymbolicLink()) return false;
@@ -253,9 +261,69 @@ describe("cross-AI rules surface (.agents/rules/ master)", () => {
       expect(text).toMatch(/not entered and not continued/);
     });
 
+    it("keeps one round on a host that takes fewer questions than it holds", async () => {
+      // "Every question in the round is put at once" is unsatisfiable where the
+      // host's tool takes three and the frontier holds five. Read as a flat
+      // requirement it makes the rule unfollowable; read as licence to split
+      // freely it lets the agent recompute the frontier mid-round and answer
+      // the second half from the first half's answers.
+      const text = flatten(await readFile(path.join(ROOT, MASTER), "utf-8"));
+      expect(text).toMatch(/the round is delivered in host-sized batches/);
+      expect(text).toMatch(/the frontier is \*\*not\*\* recomputed between them/);
+      expect(text).toMatch(/each batch's answers are read for a stop before the next is put/);
+      expect(text).toMatch(/It never makes two rounds/);
+    });
+
+    it("treats a fact the environment does not hold as a fact", async () => {
+      // An unpublished date or a contractual constraint reaches no lookup. With
+      // the agent as a Fact's only settler, such a prerequisite has to be asked
+      // as a preference — and a preference is revisable, which a fact is not.
+      const text = flatten(await readFile(path.join(ROOT, MASTER), "utf-8"));
+      expect(text).toMatch(/or the user, where nothing in the environment holds it/);
+      expect(text).toMatch(/A fact the environment does not hold is still a fact/);
+      expect(text).toMatch(/Ask for it as the value it is rather than as a choice/);
+      expect(text).toMatch(/What it is never is a preference/);
+    });
+
+    it("covers a decision a running lookup raises after the questions close", async () => {
+      // The tree is recomputed as facts arrive, so a lookup in flight when
+      // `proceed` lands can raise a decision that was not open at closure.
+      // Without this the rule permits neither asking it, assuming it, nor
+      // reporting it.
+      const text = flatten(await readFile(path.join(ROOT, MASTER), "utf-8"));
+      expect(text).toMatch(/A lookup still running when the questions close is finished/);
+      expect(text).toMatch(
+        /the closure covers the tree as it finally stands, not only the nodes that were open/,
+      );
+    });
+
+    it("names the closure path in the scope table, not only the no-question mode", async () => {
+      // The row said a user-owned decision is never assumed except under a
+      // no-question mode, while § 6 turns every open defaultable decision into
+      // a labelled assumption after `proceed`. Two instructions for one normal
+      // path.
+      const text = flatten(await readFile(path.join(ROOT, MASTER), "utf-8"));
+      expect(text).toMatch(
+        /Asked, never assumed — except under a no-question mode, or after the user closes the questions/,
+      );
+    });
+
     it.each(["AGENTS.md", "CLAUDE.md"])("%s cites the rule master", async (rel) => {
       const text = await readFile(path.join(ROOT, rel), "utf-8");
       expect(text).toContain("grilling.md");
+    });
+
+    it("CLAUDE.md does not start a session by meeting an unfixed design", async () => {
+      // "Interrogate an unfixed design in the rounds this rule sets out" is an
+      // imperative whose trigger is the design, which the master refuses: a
+      // session is a mode entered deliberately, and an ambiguity met while
+      // implementing stays an ordinary clarification under its own budget.
+      const text = flatten(await readFile(path.join(ROOT, "CLAUDE.md"), "utf-8"));
+      expect(text).toMatch(/Once a grilling session has been entered deliberately/);
+      expect(text).toMatch(/Meeting an unfixed design is not itself entry/);
+      expect(text).toMatch(
+        /an ambiguity met while implementing is an ordinary clarification under its own budget/,
+      );
     });
 
     // `.github/copilot-instructions.md` is deliberately absent from the pair

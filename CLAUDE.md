@@ -16,10 +16,13 @@ Quality-First AI (QFAI) — specification-driven development の検証フレー�
   `.claude/rules/interface-clarity.md` (master:
   `.agents/rules/interface-clarity.md`). Text explaining how to work a control
   is a defect report against that control.
-- Interrogate an unfixed design in the rounds `.claude/rules/grilling.md`
-  (master: `.agents/rules/grilling.md`) sets out: ask only the decisions whose
-  prerequisites are settled, and read the facts rather than asking for them. A
-  session completes only when no node is open **and** the user confirms the
+- Once a grilling session has been entered deliberately, interrogate the design
+  in the rounds `.claude/rules/grilling.md` (master:
+  `.agents/rules/grilling.md`) sets out: ask only the decisions whose
+  prerequisites are settled, and read the facts rather than asking for them.
+  Meeting an unfixed design is not itself entry, and an ambiguity met while
+  implementing is an ordinary clarification under its own budget. A session
+  completes only when no node is open **and** the user confirms the
   understanding is shared; a user's `stop` ends it at any point.
 - All temporary/scratch files go in `tmp/` — working-tree files only; a test's `mkdtemp` sandbox under `os.tmpdir()` is out of scope (see `.claude/rules/temporary-files.md`, master: `.agents/rules/temporary-files.md`).
 - Do not create new directories or files at the repository root without explicit user approval; editing existing root files is allowed (see `.claude/rules/root-additions-policy.md`, master: `.agents/rules/root-additions-policy.md`).
