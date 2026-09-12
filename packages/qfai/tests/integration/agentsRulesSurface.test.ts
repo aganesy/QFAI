@@ -276,6 +276,10 @@ describe("cross-AI rules surface (.agents/rules/ master)", () => {
       expect(text).toMatch(
         /putting the next batch after one is the agent continuing past the user/,
       );
+      // A host's question limit is not a reason the user authorized anything, so
+      // a mandatory class in a later batch is still put after a closure.
+      expect(text).toMatch(/the two kinds §6 never assumes, which a later batch still carries/);
+      expect(text).toMatch(/a host's question limit is not a reason the user authorized anything/);
       expect(text).toMatch(/It never makes two rounds/);
     });
 
@@ -336,17 +340,19 @@ describe("cross-AI rules surface (.agents/rules/ master)", () => {
       expect(text).toMatch(/leave the answer to them/);
     });
 
-    it("routes a factual question the tool cannot shape to the plain-text path", async () => {
-      // The question form requires the host's structured tool, and a tool that
-      // takes only ranked choices cannot carry a value. Without a path the fact
-      // is unaskable and its dependent decisions stay blocked — or the agent
-      // invents two choices, which is the guess the fact clause refuses.
+    it("leaves how a value is put to the protocol that owns questions", async () => {
+      // A tool that takes only ranked choices cannot carry a value. Deciding
+      // there that the tool is unavailable would be this rule overriding the
+      // question protocol, which owns when a tool is used and what its fallback
+      // is. What this rule keeps is the refusal of the workaround.
       const text = flatten(await readFile(path.join(ROOT, MASTER), "utf-8"));
+      expect(text).toMatch(/That is the question protocol's problem, not this rule's/);
       expect(text).toMatch(
-        /A tool that cannot carry the answer's shape is not available for that question/,
+        /This rule does not redefine when a host's tool is available or route around it/,
       );
-      expect(text).toMatch(/Ask it through the host's plain-text path instead/);
-      expect(text).toMatch(/Inventing two choices to fit the tool is the same guess/);
+      expect(text).toMatch(
+        /inventing two choices so a value-shaped question fits a choice-shaped tool/,
+      );
     });
 
     it("keeps a stop authoritative over the mandatory-question carve-out", async () => {

@@ -87,7 +87,11 @@ One round is one frontier: asked in full, answered in full.
   for any of §6's closing answers — `stop`, `proceed`, `done` — before the next
   is put, and no answer is acted on until the round is exhausted or the user ends
   it. A closure in an early batch ends the asking there, and putting the next
-  batch after one is the agent continuing past the user. Batching is how one round reaches a host that
+  batch after one is the agent continuing past the user — except for the two
+  kinds §6 never assumes, which a later batch still carries: a decision some
+  document requires the user to record, and an undefaultable input. Those are
+  put after a `proceed` or `done` exactly as they would be without a split,
+  because a host's question limit is not a reason the user authorized anything. Batching is how one round reaches a host that
   cannot show it whole. It never makes two rounds.
 - The next round is recomputed from the answers. It is never written ahead of
   them.
@@ -106,11 +110,16 @@ to recommend: the agent does not hold the value, a guessed one is the corruption
 §1 warns about, and offering it invites the user to accept it. Name the fact, say
 what depends on it, and leave the answer to them.
 
-A host's question tool may not carry that shape — some take only a ranked set of
-choices. **A tool that cannot carry the answer's shape is not available for that
-question.** Ask it through the host's plain-text path instead, keeping the name
-of the fact and what depends on it, and say why the tool was not used. Inventing
-two choices to fit the tool is the same guess in the tool's shape.
+Asking for a value is a shape the host's question protocol has to carry, and
+some tools take only a ranked set of choices. **That is the question protocol's
+problem, not this rule's.** This rule does not redefine when a host's tool is
+available or route around it; the protocol that owns questions decides how a
+value is put, and its own fallback applies where its tool cannot carry one.
+
+What this rule does refuse is the workaround: inventing two choices so a
+value-shaped question fits a choice-shaped tool. That is the guess of the
+paragraph above, wearing the tool's shape, and it is a guess whichever path
+carries it.
 
 ## 5. Facts and decisions are not asked the same way
 
