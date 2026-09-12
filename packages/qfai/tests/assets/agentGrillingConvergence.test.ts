@@ -36,6 +36,12 @@ describe("a grilling session between agents has an end", () => {
       // another round instead.
       const content = await read(path.join(tree, CONVERGENCE));
       expectPhrase(content, "**Two rounds**, the same budget a reviewer has.");
+      // Every decision still open, not "the round settled nothing". Partial
+      // progress is the ordinary outcome, so that condition would be false
+      // almost always and leave the rest of the frontier to an unauthorised
+      // third round.
+      expectPhrase(content, "**Every decision still open after the second round escalates**");
+      expectPhrase(content, "whether or not that round settled others");
       expectPhrase(content, "Escalating is not failure");
     });
 
@@ -45,9 +51,15 @@ describe("a grilling session between agents has an end", () => {
       // two agents is the failure that is hardest to see afterwards.
       const content = await read(path.join(tree, CONVERGENCE));
       expectPhrase(content, "**Three subjects escalate at once**, without spending a round");
-      expectPhrase(content, "Product or business intent");
-      expectPhrase(content, "contradicts a spec, a contract or a recorded decision");
-      expectPhrase(content, "no evidence in the specs, the contracts or the discussion pack");
+      // The predicate is authoritative evidence. Escalating product intent a
+      // spec already answers blocks a fully specified run for nothing, and
+      // counting a discussion pack as evidence lets two agents settle on
+      // discovery material the drift protocol calls non-normative.
+      expectPhrase(content, "The test in each is authoritative evidence");
+      expectPhrase(content, "A discussion pack is not among them");
+      expectPhrase(content, "No authoritative artifact answers it");
+      expectPhrase(content, "contradicting a spec, a contract or a recorded decision");
+      expectPhrase(content, "resting on nothing authoritative");
       expectPhrase(content, "converge on the more fluent argument");
     });
 
@@ -62,11 +74,19 @@ describe("a grilling session between agents has an end", () => {
     });
   }
 
-  it("the session rule states the end condition these rules stand in for", async () => {
-    // If the rule stopped requiring the user's confirmation, the convergence
-    // rules above would be answering a problem that no longer exists, and
-    // nothing else would notice.
-    const content = await read(GRILLING);
-    expectPhrase(content, "The user confirms the understanding is shared.");
-  });
+  it.each([GRILLING, "packages/qfai/assets/init/root/.agents/rules/grilling.md"])(
+    "%s states the end condition these rules stand in for, and the exception",
+    async (rel) => {
+      // Two halves. If the rule stopped requiring the user's confirmation, the
+      // convergence rules would answer a problem that no longer exists and
+      // nothing would notice. And a rule saying a session never ends on a count,
+      // beside a rule ending one at two rounds, is two mandatory instructions an
+      // agent has to choose between — so the master carries the exception.
+      const content = await read(rel);
+      expectPhrase(content, "The user confirms the understanding is shared.");
+      expectPhrase(content, "### A session between agents");
+      expectPhrase(content, "the one place a session ends on a count");
+      expectPhrase(content, "review-convergence.md");
+    },
+  );
 });
