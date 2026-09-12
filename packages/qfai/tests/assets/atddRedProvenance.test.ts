@@ -2548,7 +2548,7 @@ describe.each(TREES)("%s (the two sides of each contract agree)", (tree) => {
       await read(tree, "assistant/skills/qfai-implement/references/evidence-revision.md"),
     );
     expect(revision).toContain("**The procedure, exactly.**");
-    expect(revision).toContain("diff HEAD \\ --no-color --no-ext-diff --no-textconv --binary");
+    expect(revision).toContain("diff HEAD \\ --no-color --no-ext-diff --no-textconv");
     expect(revision).toContain("ls-files --others --exclude-standard -z");
     expect(revision).toContain("from **both** the diff and the untracked list");
   });

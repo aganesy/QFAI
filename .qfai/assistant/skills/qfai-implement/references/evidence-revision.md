@@ -1,3 +1,5 @@
+     | `-c diff.submodule=short` and `--ignore-submodules=none` | `diff.submodule` has three formats for one changed submodule, and a configured `ignore` can drop the change entirely |
+
 # Evidence revision (what state the observation describes)
 
 Four of the twelve gate items — 3, 5, 7 and 8 — are sub-agent observations, and
@@ -40,8 +42,8 @@ check. Gate item 10 rejects any other shape wherever a revision is recorded:
      ```sh
      root=$(git rev-parse --show-toplevel)
      git -C "$root" rev-parse HEAD
-     git -C "$root" -c core.quotePath=false -c diff.orderFile= diff HEAD \
-       --no-color --no-ext-diff --no-textconv --binary --full-index --no-renames \
+     git -C "$root" -c core.quotePath=false -c diff.submodule=short diff HEAD \
+       --no-color --no-ext-diff --no-textconv -O/dev/null --ignore-submodules=none --binary --full-index --no-renames \
        --diff-algorithm=myers --src-prefix=a/ --dst-prefix=b/ --unified=3 --
      git -C "$root" -c core.quotePath=false ls-files --others --exclude-standard -z
      ```
@@ -49,16 +51,17 @@ check. Gate item 10 rejects any other shape wherever a revision is recorded:
      Each of those is there because leaving it off lets one tree have two
      addresses.
 
-     | Pinned                                      | Without it                                                                                                                                                      |
-     | ------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-     | `-C "$root"`                                | `ls-files --others` enumerates only what is under the current directory, and reports paths relative to it — so where the agent stood changes the address        |
-     | `-c core.quotePath=false` and `-z`          | A path holding non-ASCII or a control character comes back in a quoted display spelling, and the config changes that spelling for the same tree                 |
-     | `--full-index`                              | The `index` line abbreviates to `core.abbrev`, which differs per environment                                                                                    |
-     | `--src-prefix=a/ --dst-prefix=b/`           | `diff.noprefix` and `diff.mnemonicPrefix` rewrite the headers                                                                                                   |
-     | `--no-renames` and `--diff-algorithm=myers` | `diff.renames` and `diff.algorithm` change the hunks for identical content                                                                                      |
-     | `-c diff.orderFile=`                        | `diff.orderFile` reorders the file patches, so two changed files come out in different orders for one tree                                                      |
-     | `--unified=3`                               | `diff.context` changes how many lines surround each hunk, and with them the bytes                                                                               |
-     | `--no-textconv`                             | A `.gitattributes` diff driver with `textconv` converts a file before diffing, and can render a real change as an empty diff. `--no-ext-diff` does not cover it |
+     | Pinned                                                   | Without it                                                                                                                                                                                                                        |
+     | -------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+     | `-C "$root"`                                             | `ls-files --others` enumerates only what is under the current directory, and reports paths relative to it — so where the agent stood changes the address                                                                          |
+     | `-c core.quotePath=false` and `-z`                       | A path holding non-ASCII or a control character comes back in a quoted display spelling, and the config changes that spelling for the same tree                                                                                   |
+     | `--full-index`                                           | The `index` line abbreviates to `core.abbrev`, which differs per environment                                                                                                                                                      |
+     | `--src-prefix=a/ --dst-prefix=b/`                        | `diff.noprefix` and `diff.mnemonicPrefix` rewrite the headers                                                                                                                                                                     |
+     | `--no-renames` and `--diff-algorithm=myers`              | `diff.renames` and `diff.algorithm` change the hunks for identical content                                                                                                                                                        |
+     | `-O/dev/null`                                            | `diff.orderFile` reorders the file patches, so two changed files come out in different orders for one tree. An empty order file cancels it; `-c diff.orderFile=` does not — git reads the empty value as a path and exits `fatal` |
+     | `-c diff.submodule=short` and `--ignore-submodules=none` | `diff.submodule` has three formats for one changed submodule, and a configured `ignore` can drop the change from the diff entirely                                                                                                |
+     | `--unified=3`                                            | `diff.context` changes how many lines surround each hunk, and with them the bytes                                                                                                                                                 |
+     | `--no-textconv`                                          | A `.gitattributes` diff driver with `textconv` converts a file before diffing, and can render a real change as an empty diff. `--no-ext-diff` does not cover it                                                                   |
 
      The exclusions below apply to both the diff and the untracked list.
 
