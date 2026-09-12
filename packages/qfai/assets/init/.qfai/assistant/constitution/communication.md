@@ -55,9 +55,12 @@ When an agent needs to ask the user a question, the following rules apply (see a
    The agent MUST NOT use AskUserQuestion or ask via plain text.
    The agent MUST proceed with explicit assumptions and MUST record them in outputs.
 5. **Exhaustion is not `--auto`**: spending the Article VI clarification budget enters clarification-exhausted mode,
-   where rule 4 does not apply — mandatory approvals and the `hard-required` inputs that invocation actually
-   consumes MUST still be asked. A user's `proceed` / `done` answer enters that same mode and is likewise
-   not `--auto`; rule 4 is activated by the `--auto` flag alone.
+   where rule 4 does not apply — grilling questions, mandatory approvals and the `hard-required` inputs that
+   invocation actually consumes MUST still be asked. A user's `proceed` / `done` answer enters that same mode
+   and is likewise not `--auto`; rule 4 is activated by the `--auto` flag alone.
+6. **A grilling session has no cap**: its questions spend no clarification budget, and exhausting that budget
+   does not end one. It ends when no open decision has its prerequisites settled and the user confirms the
+   understanding is shared.
 
 All SKILL.md files MUST include a
 `## User Questions (AskUserQuestion Protocol)` section with MUST-level wording.

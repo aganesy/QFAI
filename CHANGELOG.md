@@ -4,6 +4,28 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ## [Unreleased]
 
+### Changed
+
+- **A grilling session is outside the clarification budget** (#1592). Article VI
+  caps clarifying questions at five per invocation, after which the agent
+  proceeds on labelled assumptions. Applied to a grilling session that ends it by
+  arithmetic with decisions still open, and the assumptions it then labels are
+  the decisions the session existed to settle.
+
+  Grilling questions now join approvals and needed `hard-required` inputs as a
+  class that spends no budget and survives exhaustion. A session ends on its own
+  condition: no open decision whose prerequisites are settled, and the user's
+  confirmation that the understanding is shared.
+
+  Nothing else about exhaustion moves. It still means clarification-exhausted
+  mode rather than `--auto`, under both entry conditions.
+
+- **Article VI states one scope** (#1592). It opened with "Non-discussion
+  commands MUST minimize questions" while its counting unit named every
+  `/qfai-*` stage, `/qfai-discussion` among them — so the article both did and
+  did not bind that stage, depending on which sentence a reader stopped at. The
+  opening now names the same set the unit counts.
+
 ### Removed
 
 - **`.qfai/report/validate.log` is no longer tracked** (#1582). Every local

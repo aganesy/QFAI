@@ -253,12 +253,55 @@ describe("the clarification budget is countable", () => {
       expectPhrase(content, "**at most 5 clarifying questions per invocation**");
       expectPhrase(content, "counted\n  per question item rather than per AskUserQuestion call");
       expectPhrase(content, "proceeds with labelled assumptions instead of asking");
-      expectPhrase(content, "Mandatory approval questions and `hard-required` inputs are exempt");
+      expectPhrase(
+        content,
+        "Grilling questions, mandatory approval questions and `hard-required` inputs are\n  exempt",
+      );
       expectPhrase(content, "if it stays missing, stop instead of\n  guessing");
       // The Citation Path Form rule landed on main while this branch was open:
       // a constitution document is cited by its full path from the project root,
       // so the bare name this pinned can no longer be written anywhere.
       expectPhrase(content, "See `.qfai/assistant/constitution/constitution.md` Article VI.");
+    });
+
+    // The third exemption class. A cap on a grilling session ends it by
+    // arithmetic with decisions still open, and the agent then proceeds on
+    // labelled assumptions — assuming exactly what the session existed to
+    // settle. So the exemption has to survive exhaustion, not merely exist:
+    // each of the three documents that states an exhaustion rule states it.
+    it(`${tree}: a grilling session is outside the budget and survives exhaustion`, async () => {
+      const constitution = await read(tree, CONSTITUTION);
+      expectPhrase(constitution, "A **grilling question**");
+      expectPhrase(constitution, "does **not** spend budget");
+      expectPhrase(constitution, "**Grilling questions are exempt.**");
+      expectPhrase(constitution, "A grilling session has no question cap");
+      // Both halves of the end condition, so a session cannot be closed on the
+      // agent's own measure alone.
+      expectPhrase(constitution, "the user's confirmation that the\n  understanding is shared");
+      // Exhaustion names it beside the two classes that already survived.
+      expectPhrase(
+        constitution,
+        "grilling questions, mandatory approvals and needed `hard-required` inputs MUST\nstill be asked",
+      );
+      expectPhrase(constitution, "and so is a **grilling question**");
+
+      const baseline = await read(tree, OPERATING);
+      expectPhrase(baseline, "A grilling session\n  has no question cap");
+
+      const communication = await read(tree, COMMUNICATION);
+      expectPhrase(communication, "**A grilling session has no cap**");
+      expectPhrase(communication, "exhausting that budget\n   does not end one");
+    });
+
+    // Article VI's opening sentence and its counting unit name the same set. The
+    // opening said "Non-discussion commands" while the unit named every `/qfai-*`
+    // stage, `/qfai-discussion` among them, so the article both did and did not
+    // bind that stage depending on which sentence a reader stopped at.
+    it(`${tree}: Article VI's scope sentence matches the unit it counts`, async () => {
+      const content = await read(tree, CONSTITUTION);
+      expectPhrase(content, "Every invocation MUST minimize clarifying questions.");
+      expectPhrase(content, "`/qfai-discussion`\nincluded");
+      expectNoPhrase(content, "Non-discussion commands MUST minimize questions.");
     });
 
     it(`${tree}: qfai-sdd exempts its unbounded per-row approvals`, async () => {

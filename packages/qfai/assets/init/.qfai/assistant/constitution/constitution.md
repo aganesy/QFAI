@@ -139,7 +139,10 @@ Whenever practical, reference:
 
 ## Article VI — Clarification budget (avoid endless Q&A)
 
-Non-discussion commands MUST minimize questions.
+Every invocation MUST minimize clarifying questions. The scope is the counting
+unit below and nothing narrower: every `/qfai-*` stage, `/qfai-discussion`
+included, and every non-stage command. A stage that asks more questions than
+another is spending the same budget, not exempt from it.
 
 Default policy:
 
@@ -156,6 +159,13 @@ Default policy:
 
 - A **clarification** — a question asked to resolve ambiguity in the request,
   the specs, or the repository — spends budget.
+- A **grilling question** — a question asked inside a grilling session, where the
+  subject is a decision the design has left open — does **not** spend budget.
+  Grilling interrogates a design in rounds, asking each time only the decisions
+  whose prerequisites are already settled, and it ends when none are left rather
+  than at a count. A cap would end a session by arithmetic with decisions still
+  open, and an agent that then proceeded on labelled assumptions would be
+  assuming exactly what the session existed to settle.
 - An **approval** — a question asked because a document requires a recorded
   human decision before the work may proceed — does **not** spend budget.
   Approvals are unbounded by construction: SDD triage requires an `Approved By`
@@ -180,6 +190,12 @@ Default policy:
 
 ### What does not count (MUST)
 
+- **Grilling questions are exempt.** A grilling session has no question cap, and
+  exhausting the budget does not end one. Its questions are decisions the user
+  owns, asked a round at a time, and the session ends on its own condition: no
+  open decision whose prerequisites are settled, and the user's confirmation that
+  the understanding is shared. A session cut short by the budget would hand back
+  a design with decisions assumed rather than asked.
 - **Approval questions are exempt.** A question whose subject is a user decision
   the skill declares mandatory — a per-row triage approval in `/qfai-sdd`, a
   destructive-operation confirmation, an escalation under
@@ -230,8 +246,8 @@ Clarification-exhausted mode is **not `--auto`**. `--auto` is a no-question mode
 outright, and only the explicit `--auto` flag turns it on — neither a spent
 budget nor a `proceed` / `done` answer does; clarification-exhausted mode
 silences clarifications only, so the exemptions above survive it unchanged —
-mandatory approvals and needed `hard-required` inputs MUST still be asked, under
-either entry condition. An agent that exhausts the budget mid-invocation, or is
+grilling questions, mandatory approvals and needed `hard-required` inputs MUST
+still be asked, under either entry condition. An agent that exhausts the budget mid-invocation, or is
 told to `proceed` before an approval-required change is discovered, therefore
 never has to choose between skipping a mandatory approval and breaking the
 `--auto` rules: it is not under them.
@@ -244,9 +260,10 @@ what remains.
 Do not ask a sixth clarification. Settle the remaining ambiguity the way `--auto`
 does: proceed with explicit assumptions, label them, and record them in the
 invocation's output — as Open Questions when the assumption is still unresolved.
-Exhaustion silences clarifications only. A **required approval is still asked**:
-it never spent budget, and Article X's `--auto` no-question mode is not in force
-here — only its assumption-recording behaviour is. Silently stopping is not a
+Exhaustion silences clarifications only. A **required approval is still asked**,
+and so is a **grilling question**: neither ever spent budget, and Article X's
+`--auto` no-question mode is not in force here — only its assumption-recording
+behaviour is. Silently stopping is not a
 sanctioned move, and neither is asking a sixth clarification anyway.
 
 ---

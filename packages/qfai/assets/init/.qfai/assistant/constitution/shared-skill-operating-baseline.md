@@ -171,8 +171,12 @@ There is one base, and it is the project root.
   via plain text. Proceed with explicit assumptions and record them in the outputs.
   Proceeding presupposes evidence to assume from — when a step has none, it is a hard
   blocker: stop there and report it as a blocker instead of asking or guessing.
-- Mandatory approval questions and `hard-required` inputs are exempt from the
-  budget, and exhaustion does not waive either: approvals MUST still be asked, and a missing `hard-required` input **that this
+- Grilling questions, mandatory approval questions and `hard-required` inputs are
+  exempt from the budget, and exhaustion waives none of them. A grilling session
+  has no question cap: its questions are decisions the user owns, asked a round
+  at a time, and the session ends when no open decision has its prerequisites
+  settled and the user confirms the understanding is shared — never at a count.
+  Approvals MUST still be asked, and a missing `hard-required` input **that this
   invocation actually consumes** MUST be asked for rather than assumed — if it
   stays missing, stop instead of guessing. A `hard-required` input the requested
   path never reads is neither asked for nor a blocker. Neither exhaustion nor a
