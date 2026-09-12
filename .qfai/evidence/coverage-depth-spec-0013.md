@@ -39,7 +39,7 @@ else.** Ten have no test at all: `US-0013-0001`, `-0002`, `-0004`, `-0005`, `-00
 `-0009`, `-0010`, and `TC-0013-0023`, `-0024`. Five more are discharged by substring
 assertions over the shipped `qfai-sdd/SKILL.md` that carry none of the obligation they are annotated
 to. Two are self-referential coverage placeholders whose annotated `describe` tests the diff
-detector. Those seventeen rows carry 153 of the matrix's 285 `❌` cells between them. Six further
+detector. Those seventeen rows carry 153 of the matrix's 286 `❌` cells between them. Six further
 wording rows carry another 44.
 
 The remaining twenty-six rows are scored on their merits and range widely. `US-0013-0014`,
@@ -55,9 +55,9 @@ spec-0013 annotation anywhere. `US-0013-0011` and `TC-0013-0025` are narrow, and
 records the disagreement. A fifth, `US-0013-0003`, is covered by tests that fix its direction while
 contradicting its own acceptance criterion. See Findings 1, 2, 3 and 8.
 
-Section "Every `❌` cell, named" accounts for all 310 of them in named groups whose coordinates are
+Section "Every `❌` cell, named" accounts for all 312 of them in named groups whose coordinates are
 fully enumerated, so that "one justification per `❌`" is checkable rather than asserted, and section
-"Every `⚠️` cell, named" does the same for all 108 partial scores, which the PASS criterion also
+"Every `⚠️` cell, named" does the same for all 117 partial scores, which the PASS criterion also
 requires a rationale for.
 
 ## What was measured, and how
@@ -231,13 +231,19 @@ authoring + doc + template surface." The last of the eight is the seam itself �
 to both entrypoints and requires the same finding codes back — so the two surfaces are held together
 by a spec-0004 case, not by a spec-0013 one.
 
-Read against those eight cases, **every scored cell of the four rows keeps its mark**. Each mark turns
-on something none of the eight changes: either a fixture shape none of them supplies — a `null` item,
-an empty map, a field present but not a string, a count of 0, one list carrying a legacy string, a
-complete structured item and an incomplete one at once, a second state in one workspace — or a
-discriminator that a sibling row of this pack owns rather than the scored row. None turns on which
-module the fixture is fed to. No cell here is `❌` or `⚠️` for want of a run against
-`auditProfile.ts`, and none is raised because one exists elsewhere.
+Read against those eight cases, **no mark of the four rows is raised**. Each turns on something none
+of the eight changes: either a fixture shape none of them supplies — a `null` item, an empty map, a
+field present but not a string, a count of 0, one list carrying a legacy string, a complete
+structured item and an incomplete one at once, a second state in one workspace — or a discriminator
+that a sibling row of this pack owns rather than the scored row.
+
+**Three marks are lowered for the entrypoint itself.** `US-0013-0014` and `TC-0013-0035` carry `⚠️`
+on both `Normal path` and `Error path`, and `TC-0013-0034` on `Normal path`, because every
+spec-0013-owned case reaches `validateDesignAudit` in `designAudit.ts` while each obligation names
+`auditProfile.ts`. A re-export that stopped re-exporting, or a `runAuditProfile` that stopped
+delegating, moves no cell of this pack. The behaviour is covered and the entrypoint is not, which is
+what `⚠️` says; the fixture-shape dimensions above are unaffected, because those score the input
+rather than the module it is fed to.
 
 ### Annotation coverage
 
@@ -471,7 +477,7 @@ when the reason is stated. No row reaches `✅`.
 
 ## Every ❌ cell, named
 
-The matrix carries **285** `❌` scored cells and the business rule table carries **25** — **310 in
+The matrix carries **286** `❌` scored cells and the business rule table carries **26** — **312 in
 all**. They are accounted for below in seven groups. Every group names every coordinate it covers
 and states its count, and the seven counts sum to 312:
 
