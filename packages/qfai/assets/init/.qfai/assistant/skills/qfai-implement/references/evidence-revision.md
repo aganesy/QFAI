@@ -52,12 +52,18 @@ check. Gate item 10 rejects any other shape wherever a revision is recorded:
        *) exclude+=(":(exclude,glob)$(printf '%s' "$specs" |
             sed 's/[][*?\\]/\\&/g')/*/tdd/test-list.md") ;;
      esac
-     common=(-C "$root" -c core.quotePath=false -c core.ignoreCase=false)
+     # Pathspec magic is read from the environment as well as from the
+     # argument, so the four variables that redefine it are cleared: under
+     # `GIT_LITERAL_PATHSPECS=1` the exclusions above are names to match rather
+     # than patterns, and the ledger and the evidence enter the address.
+     common=(env -u GIT_LITERAL_PATHSPECS -u GIT_GLOB_PATHSPECS
+             -u GIT_NOGLOB_PATHSPECS -u GIT_ICASE_PATHSPECS
+             git -C "$root" -c core.quotePath=false -c core.ignoreCase=false)
      others=(ls-files --others --exclude-per-directory=.gitignore -z)
-     git --no-replace-objects -C "$root" rev-parse HEAD
-     git "${common[@]}" ls-files --deduplicate -z -- . "${exclude[@]}"
-     git "${common[@]}" "${others[@]}" -- . "${exclude[@]}"
-     git "${common[@]}" "${others[@]}" --directory -- . "${exclude[@]}"
+     "${common[@]}" --no-replace-objects rev-parse HEAD
+     "${common[@]}" ls-files --deduplicate -z -- . "${exclude[@]}"
+     "${common[@]}" "${others[@]}" -- . "${exclude[@]}"
+     "${common[@]}" "${others[@]}" --directory -- . "${exclude[@]}"
      ```
 
      **The ledger's directory is read, not assumed.** `paths.specsDir` is a
@@ -141,14 +147,23 @@ check. Gate item 10 rejects any other shape wherever a revision is recorded:
      two cannot, because there is no path to derive it from, and such a
      directory is created, removed and re-moded like any other.
 
-     **That pass collapses, so it is run again one level in.** `--directory`
-     reports the topmost untracked directory and nothing beneath it, so an empty
-     directory inside an untracked one is named by no list at all. For every
-     entry it returns that a listed path lies under, run it again scoped to that
-     entry's own children — `-- '<entry>*'` — and repeat until it returns no
-     directory that is not already a record. Each level is git's own listing, so
-     a subdirectory the project ignores stays ignored rather than being walked
-     into by a reader that does not know the rules.
+     **SIMPLIFIED: an empty directory inside an untracked one is not a record.**
+     `--directory` reports the topmost untracked directory and nothing beneath
+     it, whatever pathspec it is given, so such a directory is named by no
+     listing and derivable from no path. Creating, removing or re-moding it
+     therefore leaves the address where it was.
+     Lift when: a run needs it, by walking the filesystem for directories and
+     asking `git check-ignore` which to drop — a reader must not decide that for
+     itself, because the ignore rules are the project's and live in files it
+     would have to re-implement.
+
+     **SIMPLIFIED: an ignored file is not in the address.** A test may read one —
+     a local fixture, a machine's own configuration — and editing it leaves the
+     address unmoved. Including them instead would put every build output and
+     installed dependency in it, and the address would move on work the
+     observation is not about.
+     Lift when: a project needs an ignored input addressed, which it declares by
+     tracking the file.
 
      **The repository root is not one of them.** It has two spellings, `.` and
      the empty path, and it is the thing being addressed rather than something

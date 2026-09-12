@@ -680,13 +680,13 @@ async function validateSummarySchema(
               "`working-tree+<porcelain digest>` is refused: it does not move when the contents do." +
               (declaresForm
                 ? ""
-                : `（この pack は \`revision_form: "${REVISION_FORM_LEGACY}"\` を宣言しているため warning 扱いです。当時の tree は復元できず、移行先の content hash が存在しません。）`),
+                : ` This pack declares \`revision_form: "${REVISION_FORM_LEGACY}"\`, so it is a warning: the tree it was written against cannot be rebuilt, and there is no content hash to migrate the value to.`),
             declaresForm ? "error" : "warning",
             summaryPath,
             "reviewArtifacts.summaryRevision",
             [revisionText],
             "canonical",
-            "`.qfai/assistant/skills/qfai-implement/references/evidence-revision.md` を参照してください。",
+            "The two forms and the procedure behind the content hash are in `.qfai/assistant/skills/qfai-implement/references/evidence-revision.md`.",
           ),
         ]
       : [];

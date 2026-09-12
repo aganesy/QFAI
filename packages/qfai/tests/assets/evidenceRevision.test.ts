@@ -549,7 +549,7 @@ describe("evidence and verdicts carry a revision", () => {
 describe("the working-tree address has one notation", () => {
   const REVISION = "649d8111147436408c90cbbe1b9f9b07e34da8cb";
   /** Recorded for a clean checkout of that revision. */
-  const RECORDED = "working-tree+9db30736b90c82632997700e828d17c398e99abf5de012e2f41e4fafcfc0d888";
+  const RECORDED = "working-tree+00d19b893564738e3182854d88d7a362b88500457d9424ed4d76a3e422726906";
 
   const sha256 = (input: Buffer): Buffer => createHash("sha256").update(input).digest();
   const sha256Hex = (input: Buffer): string => sha256(input).toString("hex");
@@ -569,6 +569,10 @@ describe("the working-tree address has one notation", () => {
   };
 
   const RECORDS: readonly PathRecord[] = [
+    // The path components of everything below, which step 1 records too: a
+    // fixture without them is one a conforming collector cannot reproduce, and
+    // the pin would then pass an implementation that omits directory modes.
+    { path: Buffer.from("src"), kind: "dir", mode: "0755", bytes: Buffer.alloc(0) },
     {
       path: Buffer.from("src/a.ts"),
       kind: "file",
@@ -583,6 +587,7 @@ describe("the working-tree address has one notation", () => {
       mode: "0755",
       bytes: Buffer.from("#!/bin/sh\n"),
     },
+    { path: Buffer.from("tmp"), kind: "dir", mode: "0755", bytes: Buffer.alloc(0) },
     { path: Buffer.from("tmp/hold"), kind: "dir", mode: "0755", bytes: Buffer.alloc(0) },
   ];
 
@@ -691,9 +696,16 @@ describe("the working-tree address has one notation", () => {
       expect(text).toContain("others=(ls-files --others --exclude-per-directory=.gitignore -z)");
       expect(text).toContain('${others[@]}" --directory');
       expect(text).toContain("every entry of the third pass that no listed path lies under");
-      // That pass reports the topmost untracked directory only, so an empty one
-      // inside another was named by no list at all.
-      expect(text).toContain("That pass collapses, so it is run again one level in");
+      // That pass reports the topmost untracked directory only, whatever
+      // pathspec it is given, so an empty one inside another is named by no
+      // list and derivable from no path. The ceiling is written down, with what
+      // lifts it, rather than left for a reader to discover.
+      expect(text).toContain(
+        "SIMPLIFIED: an empty directory inside an untracked one is not a record",
+      );
+      expect(text).toContain("SIMPLIFIED: an ignored file is not in the address");
+      // Pathspec magic is read from the environment as well as the argument.
+      expect(text).toContain("GIT_LITERAL_PATHSPECS");
       expect(text).toContain("The repository root is not one of them");
       // The configured name reaches a glob pathspec, where a directory really
       // called `[specs]` is otherwise read as a class and excluded nothing.
