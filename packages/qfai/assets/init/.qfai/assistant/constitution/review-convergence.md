@@ -119,3 +119,32 @@ which owns the delegation rules these sit beside.
   That prohibition does not depend on lateness or on who proposes the deferral:
   the escalation exit in the round budget withholds _Accept as Open Question_
   for this same class, so a user choice cannot supersede it either.
+
+### Agent-to-agent grilling (MUST)
+
+A grilling session between agents has no user answering its questions, so the
+end condition the session rule states — an empty frontier and the user's
+confirmation — cannot be reached from inside it. Two agents can also agree on a
+wrong premise with nobody watching. These rules give such a session an end.
+
+**Two rounds**, the same budget a reviewer has. When the second round settles
+nothing, the decision goes to the user with both positions and a
+recommendation. Escalating is not failure: the work stays where it is and the
+user accepts, decides, or drops the item, exactly as at the reviewer gate.
+
+**Three subjects escalate at once**, without spending a round:
+
+| Subject                                                                        | Why no number of rounds settles it                                                         |
+| ------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------ |
+| Product or business intent                                                     | Nothing in the repository holds it, so more rounds produce agreement rather than an answer |
+| A decision that contradicts a spec, a contract or a recorded decision          | Changing settled input is a Change Request, not a design round                             |
+| A decision with no evidence in the specs, the contracts or the discussion pack | Two agents reasoning past the evidence converge on the more fluent argument                |
+
+Each names a decision agents cannot settle by reasoning from what is in the
+repository. Spending rounds on one produces agreement, which is not the same as
+an answer and is harder to tell apart afterwards.
+
+Under a no-question mode the escalation has nobody to reach. The decision is
+opened as a question in the register the stage reads, so the stage cannot
+complete over it (`.qfai/assistant/constitution/constitution.md` Article X,
+rule 6).
