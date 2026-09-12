@@ -36,12 +36,17 @@ describe("a grilling session between agents has an end", () => {
       // another round instead.
       const content = await read(path.join(tree, CONVERGENCE));
       expectPhrase(content, "**Two rounds**, the same budget a reviewer has.");
-      // Every decision still open, not "the round settled nothing". Partial
-      // progress is the ordinary outcome, so that condition would be false
-      // almost always and leave the rest of the frontier to an unauthorised
-      // third round.
-      expectPhrase(content, "**Every decision still open after the second round escalates**");
-      expectPhrase(content, "whether or not that round settled others");
+      // Every decision the user has not settled, not "the round settled
+      // nothing". Partial progress is the ordinary outcome, so that condition
+      // would be false almost always and leave the rest of the frontier to an
+      // unauthorised third round. And not only the open ones: a decision the
+      // agents agreed on is still one nobody took.
+      expectPhrase(
+        content,
+        "**Every decision the user has not settled escalates after the second round**",
+      );
+      expectPhrase(content, "the ones the agents agreed on");
+      expectPhrase(content, "whether or not the agents agreed on others in that round");
       expectPhrase(content, "Escalating is not failure");
     });
 

@@ -71,15 +71,16 @@ describe.each(RULE_MASTERS)("%s/grilling.md — the endings are a closed set", (
   });
 
   it("says a budget between agents is not a fifth ending", async () => {
-    // The budget ends the rounds, not the session: the decisions still open go
-    // to the user, who ends it in one of the four. Read the other way, an
-    // escalating session would end itself and the user would never see them.
+    // The budget ends the rounds, not the session: every decision the user has
+    // not settled goes to them, and they end it in one of the four. Read the
+    // other way, an escalating session would end itself and the user would
+    // never see them. "Not settled" and not "still open": a decision the agents
+    // agreed on is still one nobody took.
     const text = await master();
     expectPhrase(text, "**A session between agents reaches none of these on its own.**");
-    expectPhrase(
-      text,
-      "every decision still open goes to the user, who ends it in one of the four",
-    );
+    expectPhrase(text, "every decision the user has not\nsettled goes to the user");
+    expectPhrase(text, "because agreement between agents settles nothing");
+    expectPhrase(text, "the user ends the\nsession in one of the four");
     expectPhrase(text, "never an ending of its own");
   });
 });
@@ -162,7 +163,6 @@ describe.each(TREES)("%s — the execution stages record their sessions", (tree)
     );
     expectPhrase(body, "a rerun that wrote no block leaves an earlier one internally consistent");
     expectPhrase(body, "the one value that settles it has to arrive from outside the artifact");
-    expectPhrase(body, "The gate reads this stage's own block and leaves every other block alone");
     expectPhrase(body, "The gate reads this stage's own block and leaves every other block alone");
     expectPhrase(
       body,

@@ -97,94 +97,112 @@ restated here.
   and `.qfai/evidence/atdd-<spec-id>.md` for an `E2E` / `API` / `Integration`
   row whose `Pre-split-evidence` marker does not send it back here.
 
-  **Every one, because one invocation may process rows with different owners.**
-  A `Unit` row and an `E2E` row in the same pass are read by two reviewers
-  opening two files, and a record in one of them leaves the other reviewer
-  without the section its gate requires. The blocks are the same block —
-  identical heading, identical rows, written in the same edit when the session
-  ends — so they cannot go stale independently the way a record updated in one
-  place would. Each gate reads the block in the file it audits and leaves the
-  rest alone. A run whose rows all own one file writes one block, which is the
-  ordinary case.
+  **A mutation-only invocation writes no block.** Its rows are terminal, and its
+  branch forbids writing anything to their evidence (`references/mutation-only-request.md`),
+  so the record would violate the read-only rule the branch exists to keep. It
+  reports its sessions in its own output instead, the way a stopped session is
+  reported, and its gate requires no `## Grilling Session` block.
 
-  Each of those files carries a
-  `## Grilling Session` section holding one row per session:
+**Every one, because one invocation may process rows with different owners.**
+A `Unit` row and an `E2E` row in the same pass are read by two reviewers
+opening two files, and a record in one of them leaves the other reviewer
+without the section its gate requires. The blocks are the same block —
+identical heading, identical rows, written in the same edit when the session
+ends — so they cannot go stale independently the way a record updated in one
+place would. Each gate reads the block in the file it audits and leaves the
+rest alone. A run whose rows all own one file writes one block, which is the
+ordinary case.
 
-  ```text
-  ### /qfai-implement — run started 2026-01-01T09:02:00.417Z
+Each of those files carries a
+`## Grilling Session` section holding one row per session the user did not stop:
 
-  Preflight: session opened
+```text
+### /qfai-implement — run started 2026-01-01T09:02:00.417Z
 
-  | Session | Ended | Ended at | Revision | Work resumed | Subject | Frontier | Lookups | Decisions | Open | Escalated |
-  | ------- | ----- | -------- | -------- | ------------ | ------- | -------- | ------- | --------- | ---- | --------- |
-  | S1 | confirmed | 2026-01-01T09:14:00Z | a1b2c3d | 2026-01-01T09:15:20Z | preflight | empty | none in flight | 4 | 0 | 0 |
-  | S2 | user-closed | 2026-01-01T11:02:00Z | a1b2c3d | 2026-01-01T11:04:10Z | the ledger row's obligation contradicts a contract | empty | none in flight | 2 | 1 | 0 |
-  ```
+Preflight: session opened
 
-  The shape `/qfai-discussion` already writes, with `Subject` in place of that
-  stage's lone `Authoring began`: this stage holds more than one session, so a
-  row says which. `Work resumed` is when the stage next wrote — the first production or test file for the preflight
-  session, the first edit made after a detected one.
+| Session | Ended | Ended at | Revision | Work resumed | Subject | Frontier | Lookups | Decisions | Open | Escalated |
+| ------- | ----- | -------- | -------- | ------------ | ------- | -------- | ------- | --------- | ---- | --------- |
+| S1 | confirmed | 2026-01-01T09:14:00Z | a1b2c3d | 2026-01-01T09:15:20Z | preflight | empty | none in flight | 4 | 0 | 0 |
+| S2 | user-closed | 2026-01-01T11:02:00Z | a1b2c3d | 2026-01-01T11:04:10Z | the ledger row's obligation contradicts a contract | empty | none in flight | 2 | 1 | 0 |
 
-  **Both times, and the second later than the first.** A row holding only the
-  ending reads the same whether the session ran before the work or after it,
-  because it is written at the end either way. What the pair records is the
-  order, which is the part a later reader has no other way to recover. It still
-  cannot prove a session happened: the agent writes its own record.
+Confirmed S1: "Yes — that is the understanding."
 
-  **The `### <command> — run started <time>` heading is what bounds the
-  invocation, and it is one block per stage-invocation.** An evidence file is
-  updated in place, so a row left by an earlier run has a valid ending, an
-  `Ended at` before its own `Work resumed`, and a consistent count; and a rerun
-  over an unchanged tree produces the same `Revision`, because that address is a
-  tree address and excludes `.qfai/evidence/**`. Only a value that moves every
-  invocation separates the two.
+Open S2: which of the two conflicting statements the row implements — assumed: <the value the stage used>
+```
 
-  **To the millisecond, because a retry is immediate.** A run that failed and
-  was re-run at once shares a second with the one before it, and two blocks
-  carrying the same heading let the earlier one pass as current — which is the
-  staleness this heading replaced a revision to fix. Where the host mints a run
-  identifier of its own, the heading may carry that instead; what it may not
-  carry is a value two invocations can share.
+The shape `/qfai-discussion` already writes, with `Subject` in place of that
+stage's lone `Authoring began`: this stage holds more than one session, so a
+row says which. `Work resumed` is when the stage next wrote — the first production or test file for the preflight
+session, the first edit made after a detected one.
 
-  **The run's start goes to the reviewer in its work order, not only into the
-  file.** A block carries its own heading, so a gate reading the heading alone
-  checks the record against itself: a rerun that wrote no block leaves an
-  earlier one internally consistent, and its reviewer has nothing to contradict
-  it with. The orchestrator states this invocation's start in every reviewer
-  work order it opens, and the gate requires the block heading to carry that
-  exact value. An artifact cannot prove its own freshness, and the one value
-  that settles it has to arrive from outside the artifact.
+**Both times, and the second later than the first.** A row holding only the
+ending reads the same whether the session ran before the work or after it,
+because it is written at the end either way. What the pair records is the
+order, which is the part a later reader has no other way to recover. It still
+cannot prove a session happened: the agent writes its own record.
 
-  **One block per stage as well as per run**, because two stages share an
-  evidence file: an `E2E` / `API` / `Integration` row's proof lives in
-  `atdd-<spec-id>.md`, which `/qfai-atdd` wrote its own sessions into and
-  `/qfai-implement` later writes to. One table for both would have each stage's
-  gate rejecting the other's rows for a start time they never claimed. The gate
-  reads this stage's own block and leaves every other block alone, so both
-  histories stay in the file and stay valid.
+**The `### <command> — run started <time>` heading is what bounds the
+invocation, and it is one block per stage-invocation.** An evidence file is
+updated in place, so a row left by an earlier run has a valid ending, an
+`Ended at` before its own `Work resumed`, and a consistent count; and a rerun
+over an unchanged tree produces the same `Revision`, because that address is a
+tree address and excludes `.qfai/evidence/**`. Only a value that moves every
+invocation separates the two.
 
-  `Revision` stays beside it, written in the notation
-  `.qfai/assistant/skills/qfai-implement/references/evidence-revision.md`
-  defines — a git rev, or `working-tree+<hash>` for an uncommitted tree. It says
-  which tree the session ended against, which is what a later reader needs to
-  reconstruct what was being decided.
+**To the millisecond, because a retry is immediate.** A run that failed and
+was re-run at once shares a second with the one before it, and two blocks
+carrying the same heading let the earlier one pass as current — which is the
+staleness this heading replaced a revision to fix. Where the host mints a run identifier of its own, the heading carries it **beside** the time, never in place of it: the gate compares every `Ended at` against that time, and an identifier gives it nothing to compare. What neither may be is a value two invocations can share.
 
-  **`Preflight` says whether the confidence check opened a session.** Article IX
-  asks its targeted questions _if confidence is low_, so a run that found none
-  owes no preflight row — and an absent row and a skipped session look alike
-  without a line saying which. It takes `session opened` or `confidence high`,
-  and the second is a disposition the reviewer reads rather than an omission it
-  cannot see.
+**The run's start goes to the reviewer in its work order, not only into the
+file.** A block carries its own heading, so a gate reading the heading alone
+checks the record against itself: a rerun that wrote no block leaves an
+earlier one internally consistent, and its reviewer has nothing to contradict
+it with. The orchestrator states this invocation's start in every reviewer
+work order it opens, and the gate requires the block heading to carry that
+exact value. An artifact cannot prove its own freshness, and the one value
+that settles it has to arrive from outside the artifact.
 
-  `Ended` is `confirmed`, `user-closed`, `no-question` or `stopped` — the four
-  endings `.agents/rules/grilling.md` names — and only the first three let the
-  work go on.
+**One block per stage as well as per run**, because two stages share an
+evidence file: an `E2E` / `API` / `Integration` row's proof lives in
+`atdd-<spec-id>.md`, which `/qfai-atdd` wrote its own sessions into and
+`/qfai-implement` later writes to. One table for both would have each stage's
+gate rejecting the other's rows for a start time they never claimed. The gate
+reads this stage's own block and leaves every other block alone, so both
+histories stay in the file and stay valid.
+
+`Revision` stays beside it, written in the notation
+`.qfai/assistant/skills/qfai-implement/references/evidence-revision.md`
+defines — a git rev, or `working-tree+<hash>` for an uncommitted tree. It says
+which tree the session ended against, which is what a later reader needs to
+reconstruct what was being decided.
+
+**`Preflight` says whether the confidence check opened a session.** Article IX
+asks its targeted questions _if confidence is low_, so a run that found none
+owes no preflight row — and an absent row and a skipped session look alike
+without a line saying which. It takes `session opened` or `confidence high`,
+and the second is a disposition the reviewer reads rather than an omission it
+cannot see.
+
+`Ended` is `confirmed`, `user-closed`, `no-question` or `stopped` — the four
+endings `.agents/rules/grilling.md` names — and only the first three let the
+work go on.
 
 - **The confirming answer goes under that table too**, one line per
   `confirmed` row, quoting what the user replied and naming the `Session` it
   closed. A `confirmed` label is a claim about the user rather than about the
   tree, and nothing else in the record can be checked against them.
+- **The escalated decisions go under that table too.** One line per decision
+  a session between agents sent to the user, naming the `Session` it came from
+  and what the user answered, or that no answer has come yet. A decision the
+  agents agreed on is among them: agreement between agents settles nothing, so
+  it reaches the user like one left open. `Escalated` counts these lines, and
+  the gate reconciles the two the way it reconciles `Open` with the register.
+- **A free-form cell is one line, with `|` written `\|`.** `Subject` and a
+  `none — <why>` disposition are the author's own words, and a pipe or a line
+  break in them adds cells to the row, so `Open` and `Escalated` land under the
+  wrong headings and the gate reads a valid row as malformed.
 - **The open questions go under that table, in the same section.** One line per
   **node** left open — a decision, or a fact only the user holds — naming the
   `Session` it belongs to and carrying the labelled assumption written
@@ -444,12 +462,10 @@ Use the shared schema (per-row `Status (PASS/REVISE/PENDING)` column, reviewer r
 - Delegate final completion gate to an independent Reviewer.
 - The stage evidence's `## Grilling Session` section carries `Run started`,
   `Preflight`, a row for every session detection opened, and — when `Preflight`
-  says `session opened` — one for the preflight session, all of them inside this
-  run's own block. Every `Ended` is one of the four endings the rule master
+  says `session opened` — one for the preflight session, all of them inside this run's own block — **except a session the user stopped**, which is reported in the stage's output rather than written, as the table below sets out, so its absence is not a `REVISE`. Every `Ended` is one of the four endings the rule master
   names, every row's `Ended at` is at or after the run-started time on
   a `### /qfai-implement — run started` block whose time equals the one this
-  run's work order states, and each row's `Open` count matches the register lines naming
-  that row's `Session`. **A row whose ending lets the work go on, and after which the stage wrote,
+  run's work order states, and each row's `Open` count matches the register lines naming that row's `Session`, **and its `Escalated` count matches the escalation lines naming it** — a count checked against nothing lets a row claim `0` over decisions that never reached the user. **A row whose ending lets the work go on, and after which the stage wrote,
   carries a `Work resumed` later than its own `Ended at`** — that ordering is
   the whole reason both times are recorded, and an earlier one is a session
   recorded after the edit it was meant to precede. **A run that did not resume

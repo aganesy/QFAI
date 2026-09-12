@@ -196,9 +196,11 @@ stops that run from being treated as agreed is the open questions it leaves, not
 the absence of an ending.
 
 **A session between agents reaches none of these on its own.** Its budget ends
-the rounds between agents, not the session: every decision still open goes to
-the user, who ends it in one of the four. How many went is a count a record
-carries, never an ending of its own.
+the rounds between agents, not the session: every decision the user has not
+settled goes to the user — the ones still open, and the ones the agents agreed
+on, because agreement between agents settles nothing — and the user ends the
+session in one of the four. How many went is a count a record carries, never an
+ending of its own.
 
 **`stopped` is the one that does not let the work continue.** The other three
 close the asking; this one ends the session, and an agent that carried on

@@ -117,12 +117,10 @@ Use the shared schema.
 - Follow `.qfai/assistant/constitution/shared-skill-delegation-baseline.md#reviewer-gate-baseline`.
 - The stage evidence's `## Grilling Session` section carries `Run started`,
   `Preflight`, a row for every session detection opened, and — when `Preflight`
-  says `session opened` — one for the preflight session, all of them inside this
-  run's own block. Every `Ended` is one of the four endings the rule master
+  says `session opened` — one for the preflight session, all of them inside this run's own block — **except a session the user stopped**, which is reported in the stage's output rather than written, as the table below sets out, so its absence is not a `REVISE`. Every `Ended` is one of the four endings the rule master
   names, every row's `Ended at` is at or after the run-started time on
   a `### /qfai-atdd — run started` block whose time equals the one this
-  run's work order states, and each row's `Open` count matches the register lines naming
-  that row's `Session`. **A row whose ending lets the work go on, and after which the stage wrote,
+  run's work order states, and each row's `Open` count matches the register lines naming that row's `Session`, **and its `Escalated` count matches the escalation lines naming it** — a count checked against nothing lets a row claim `0` over decisions that never reached the user. **A row whose ending lets the work go on, and after which the stage wrote,
   carries a `Work resumed` later than its own `Ended at`** — that ordering is
   the whole reason both times are recorded, and an earlier one is a session
   recorded after the edit it was meant to precede. **A run that did not resume
@@ -216,7 +214,7 @@ restated here.
 - **Record both sessions where the gate reads them.** The method writes no
   artifact of its own, so a run that grilled and a run that skipped it leave the
   same tree. `.qfai/evidence/atdd-<spec-id>.md` carries a `## Grilling Session`
-  section holding one row per session, under two lines the run writes before it
+  section holding one row per session the user did not stop, under two lines the run writes before it
   opens any:
 
   ```text
@@ -228,6 +226,10 @@ restated here.
   | ------- | ----- | -------- | -------- | ------------ | ------- | -------- | ------- | --------- | ---- | --------- |
   | S1 | confirmed | 2026-01-01T09:14:00Z | a1b2c3d | 2026-01-01T09:15:20Z | preflight | empty | none in flight | 4 | 0 | 0 |
   | S2 | user-closed | 2026-01-01T11:02:00Z | a1b2c3d | 2026-01-01T11:04:10Z | an acceptance criterion the spec does not cover | empty | none in flight | 2 | 1 | 0 |
+
+  Confirmed S1: "Yes — that is the understanding."
+
+  Open S2: which case the criterion's oracle must observe — assumed: <the value the stage used>
   ```
 
   The shape `/qfai-discussion` already writes, with `Subject` in place of that
@@ -252,9 +254,7 @@ restated here.
   **To the millisecond, because a retry is immediate.** A run that failed and
   was re-run at once shares a second with the one before it, and two blocks
   carrying the same heading let the earlier one pass as current — which is the
-  staleness this heading replaced a revision to fix. Where the host mints a run
-  identifier of its own, the heading may carry that instead; what it may not
-  carry is a value two invocations can share.
+  staleness this heading replaced a revision to fix. Where the host mints a run identifier of its own, the heading carries it **beside** the time, never in place of it: the gate compares every `Ended at` against that time, and an identifier gives it nothing to compare. What neither may be is a value two invocations can share.
 
   **The run's start goes to the reviewer in its work order, not only into the
   file.** A block carries its own heading, so a gate reading the heading alone
@@ -294,6 +294,16 @@ restated here.
   `confirmed` row, quoting what the user replied and naming the `Session` it
   closed. A `confirmed` label is a claim about the user rather than about the
   tree, and nothing else in the record can be checked against them.
+- **The escalated decisions go under that table too.** One line per decision
+  a session between agents sent to the user, naming the `Session` it came from
+  and what the user answered, or that no answer has come yet. A decision the
+  agents agreed on is among them: agreement between agents settles nothing, so
+  it reaches the user like one left open. `Escalated` counts these lines, and
+  the gate reconciles the two the way it reconciles `Open` with the register.
+- **A free-form cell is one line, with `|` written `\|`.** `Subject` and a
+  `none — <why>` disposition are the author's own words, and a pipe or a line
+  break in them adds cells to the row, so `Open` and `Escalated` land under the
+  wrong headings and the gate reads a valid row as malformed.
 - **The open questions go under that table, in the same section.** One line per
   **node** left open — a decision, or a fact only the user holds — naming the
   `Session` it belongs to and carrying the labelled assumption written

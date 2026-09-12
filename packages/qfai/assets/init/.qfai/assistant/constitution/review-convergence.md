@@ -132,8 +132,7 @@ session may take before what is still open goes to the user.
 four the session rule names, and each of those is the user's. An agent that
 treated the budget as an ending closed a session nobody was asked to close.
 
-**Two rounds**, the same budget a reviewer has. **Every decision still open
-after the second round escalates**, whether or not that round settled others:
+**Two rounds**, the same budget a reviewer has. **Every decision the user has not settled escalates after the second round** — the ones still open and the ones the agents agreed on, since an agent-adopted recommendation is a decision nobody took — whether or not the agents agreed on others in that round:
 partial progress is the ordinary outcome, and a condition reading "the round
 settled nothing" would be false almost always, leaving the rest of the frontier
 to a third round nobody authorised.
