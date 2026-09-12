@@ -118,6 +118,16 @@ sub-option authorises the design-contract gate to exempt a pack which has not
 reached prototyping, and those two packs are where the gate is specified
 (`REQ-0025` / `AC-0004-0008`, and `DR-0012-0020`).
 
+Three of the four packs carry ledger dispositions the Change Request approves
+rather than leaves to the sweep: `spec-0010`'s three rows reset or retire with
+statement A, and `spec-0004/TDD-0008` resets because the obligation under it
+changes. The rest re-verify in place.
+
+**The impact scope is reduced to the approved outcome before `Status: approved`
+is written.** The drift guard reads a path rather than the condition beside it,
+so a document left whole would have one option authorising every other
+option's edits.
+
 All four are owner re-derivations in the rerun plan, not cross-spec
 re-verifications: what disagrees is a requirement, and re-running a test
 confirms the observation rather than the requirement it was taken against.

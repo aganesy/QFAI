@@ -153,7 +153,7 @@ as much as option 2 does.
 on a missing or old-format optional side artifact, which `2B` reverses — that
 pack's own `09_delta.md` records the blocker being removed, so it is a reversal
 rather than a coincidence. Separately `US-0013-0009` → `AC-0013-0015` →
-`BR-0013-0013` → `EX-0013-0012` → `TC-0013-0022` assign the `DESIGN.md.lock.yaml`
+`BR-0013-0012` → `EX-0013-0012` → `TC-0013-0022` assign the `DESIGN.md.lock.yaml`
 write to `/qfai-sdd` Phase 0, which `2a` moves into `/qfai-prototyping`. The
 second chain has a `todo` ledger row, `spec-0013/TDD-0016`, which is parked with
 this Change Request.
@@ -234,10 +234,22 @@ with its own approval; `2B` cannot be approved until it has landed.
   `.qfai/specs/spec-0012/10_Plan.md`,
   `.qfai/specs/spec-0012/tdd/test-list.md`.
 
-  **`spec-0002/10_Plan.md` is the one plan file not here**, and only that one.
-  `QFAI-DRIFT-001` reads every path in this list as authorisation, so naming it
-  would waive its `TC-0002-0026` repair — a change belonging to a Change Request
-  nobody has written. The other packs' plans are in the list because their
+  **And `.qfai/specs/spec-0002/10_Plan.md` under options 2 and 3**, for the two
+  notes below.
+
+  **`spec-0002/10_Plan.md` is here under options 2 and 3 only.** That plan
+  records the behaviour these options change: it says the winner validator was
+  retired in v1.8.9, and that side-artifact requiredness was removed from
+  `discussionPack.ts`. `2A` restores a validator the plan calls absent, `2B`
+  reverses the note about the optional artifact, and option 3 leaves its ranges
+  naming test cases that no longer exist. Under option 1 the plan is already
+  accurate and the file stays out.
+
+  **Its `TC-0002-0026` repair is not authorised either way.** `QFAI-DRIFT-001`
+  reads a path rather than a reason, so where the plan is in scope the approved
+  action names the lines it may edit — the retirement note and the
+  requiredness note — and that repair, which belongs to a Change Request nobody
+  has written, is not among them. The other packs' plans are in the list because their
   re-derivations edit them: `spec-0012/10_Plan.md` assigns the freeze to SDD
   Phase 0, and a plan left saying that contradicts the producer `2a` selects.
 
@@ -264,7 +276,14 @@ with its own approval; `2B` cannot be approved until it has landed.
   `packages/qfai/src/core/validators/uix/canonical.ts`, whose
   `CANONICAL_UIX_VALIDATORS` list is the only way `qfai validate` reaches a UIX
   validator, the export that puts the new module on that surface, the emitted
-  finding-code registry, and the regression tests that pin both; and the three
+  finding-code registry, and the regression tests that pin both —
+  **and `packages/qfai/src/core/prototyping/mode.ts` with
+  `packages/qfai/tests/unit/cli/commands/prototypingIterate.modeDiscriminator.test.ts`**,
+  because an error-severity code on that surface has to be classified as
+  relaxable or hard in exploration mode and that test holds the two lists equal
+  to the reachable set: a new code classified in neither fails it by
+  construction, and leaves exploration behaviour undefined. `spec-0012/TDD-0522`
+  owns that test and takes the in-place re-verification; and the three
   shipped documents carrying the optional-artifact sentence, of which
   `packages/qfai/README.md` is one and is outside both skill-directory
   wildcards — two cases in `assets.test.ts` require that sentence there, so a
@@ -313,6 +332,15 @@ with its own approval; `2B` cannot be approved until it has landed.
   moves, so both take the in-place re-verification rather than a reset. Without it option 2 finishes with another
   spec's rows attesting to behaviour the product no longer has.
 
+**This section is reduced to the approved outcome before `Status: approved` is
+written.** `QFAI-DRIFT-001` reads every path that appears here as
+authorisation, and it neither evaluates the "under `2a`" qualifiers nor compares
+them with `Approved option` — so a document left whole would have option 1
+authorising every edit `2a` and `2B` list. The conditions above are what the
+user chooses from; once they have chosen, the paths belonging to the outcomes
+they did not choose are struck from this section, and the record of what was
+offered stays in `## Options` and in `## Decision needed from user`.
+
 - Contracts: `packages/qfai/assets/init/.qfai/assistant/skills/qfai-prototyping/references/design-md-spec.md`
   and its root mirror, **under `2a` only**. That document has Phase 0 author
   `DESIGN.md` and prototyping read it as read-only context, and `2a` moves the
@@ -330,7 +358,12 @@ with its own approval; `2B` cannot be approved until it has landed.
 - Product paths under `2a`:
   `packages/qfai/assets/init/.qfai/assistant/skills/qfai-prototyping/**` and its
   root mirror, for the direction-selection step and the authoring it performs,
-  with the tests that pin both; **and
+  with the tests that pin both; `packages/qfai/src/cli/commands/prototypingIterate.ts`
+  with its tests, whose hash-mismatch recovery tells the user to "re-run
+  `/qfai-sdd` Phase 0 to refreeze" — a stage that under this sub-option no longer
+  owns the write, so following the diagnostic repeats something that cannot
+  repair the mismatch, and the completed `spec-0012` rows naming that command
+  take the in-place re-verification with it; **and
   `packages/qfai/src/core/validators/designContractReadiness.ts` with
   `packages/qfai/tests/core/validators/designContractReadiness.test.ts`**.
 
@@ -414,6 +447,19 @@ internally contradictory.
    The downstream sweep runs from that pack, its ledger included. Mode
    `re-derive`: the rows change identity, so `confirm-only` — which writes
    nothing but this Change Request's reference — cannot carry it.
+
+   **Its ledger dispositions are approved here rather than left to the sweep**,
+   because the sweep re-verifies and these rows do not survive re-verification:
+
+   | Outcome | `spec-0010` rows                                                                                                                       |
+   | ------- | -------------------------------------------------------------------------------------------------------------------------------------- |
+   | `1A`    | `TDD-0006`, `TDD-0007`, `TDD-0008` reset to `todo` with this `CR-*` in `DR-ID` — `TC-0010-0006` changes under them                     |
+   | `3A`    | The same three retired with `TDD-0010`, their evidence entries closed and their ids reserved in that ledger's `## TDD-ID reservations` |
+   | `2A`    | Reset as under `1A`: the test case moves rather than going away                                                                        |
+
+   `TDD-0011` is not in that table. It is parked in `## Blocked downstream items`
+   and its disposition is whatever the re-derivation leaves it needing.
+
 2. **`spec-0013`, under `2B` only, and not before the duplicate id is
    repaired.** `/qfai-sdd` re-derives `REQ-0015` and the side-artifact
    `AC-0013-0009` — with the story, business rule, example and test case beneath
@@ -437,13 +483,21 @@ internally contradictory.
    `/qfai-sdd` re-derives `spec-0004`'s `REQ-0025` and `AC-0004-0008` with the
    business rule, example and test case beneath them; `spec-0012`'s
    `DR-0012-0020` and the `01_Spec.md` requirement and `10_Plan.md` phase that
-   carry it; and `spec-0013`'s `US-0013-0009` → `AC-0013-0015` → `BR-0013-0013`
+   carry it; and `spec-0013`'s `US-0013-0009` → `AC-0013-0015` → `BR-0013-0012`
    → `EX-0013-0012` → `TC-0013-0022`, which assigns the lock write to Phase 0.
+   **`BR-0013-0012`, not `-0013`**: that neighbour governs the removal of the
+   legacy design contracts and has nothing to do with the freeze.
    All three say afterwards that the design-contract gate exempts a pack which
    has not reached prototyping, and that the write belongs to the producer `2a`
    selects. The downstream sweep then reaches `spec-0004/TDD-0008`, `-0009`,
    `-0010` and `spec-0012/TDD-0355`, the four `done` rows naming
-   `packages/qfai/tests/core/validators/designContractReadiness.test.ts`.
+   `packages/qfai/tests/core/validators/designContractReadiness.test.ts` — **but
+   not on the same terms.** `TDD-0008` carries `TC-0004-0008`, which this
+   re-derivation changes from an unconditional `QFAI-DCON-030` to one a
+   pre-prototyping pack is exempt from, so it is **reset to `todo` with this
+   `CR-*` in `DR-ID`** rather than re-verified: its recorded observation is of a
+   rule that no longer holds. The other three keep their obligations and take the
+   in-place re-verification.
    **`2a` is not approved without this**: the gate is where `QFAI-DCON-030` is
    specified, and changing it while those packs still require the old behaviour
    leaves the product satisfying neither.
