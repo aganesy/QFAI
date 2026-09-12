@@ -4,6 +4,27 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ## [Unreleased]
 
+### Added
+
+- **A grilling loop runs before a spec phase freezes its first draft** (#1598).
+  The phase's drafting agent is interviewed by a griller; the orchestrator holds
+  the loop, routes it, and does not answer its questions. It runs before Phase 0,
+  Phase 1, Phase 2 and Phase 3, and each escalated decision reaches the user as a
+  structured question.
+
+  This is not the Reviewer Gate and does not replace it. The gate reads a drafted
+  artifact and answers whether it is right; a contradiction, an unconsidered case
+  and a choice that does not fit the existing code all enter before the draft, so
+  by the time a reviewer reads the artifact they are premises, and an artifact
+  coherently built on a premise nobody chose returns `PASS`.
+
+  The first draft is the freeze point, because once an artifact exists a decision
+  argued against it is a change to something written rather than a choice among
+  options.
+
+  The fixed phase order is unchanged: the loop is a step inside a phase, not one
+  of its own.
+
 ### Changed
 
 - **A reviewer that recommended a decision the agents adopted cannot clear it**

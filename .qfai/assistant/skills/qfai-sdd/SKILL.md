@@ -212,6 +212,21 @@ is normative and lives in `references/sdd-routing-phase-crosswalk.md`. Honour th
 a routing phase's mandatory agents run inside its span, and its blocking agents MUST return `PASS`
 before the span's last entry is left.
 
+### Pre-draft Grilling (MUST)
+
+- Before each of Phase 0, Phase 1, Phase 2 and Phase 3 freezes its first draft, run a grilling
+  session between the phase's drafting agent and a griller, held by this skill.
+- Method: `.agents/rules/grilling.md` through the `qfai-grilling` skill. Ending a session with no
+  user in it: `.qfai/assistant/constitution/review-convergence.md#agent-to-agent-grilling-must`.
+  Placement, roles and what the orchestrator does with the result:
+  `references/sdd-pre-draft-grilling.md`.
+- This is not the Reviewer Gate below and does not replace it. The gate reads a drafted artifact and
+  answers whether it is right; this loop runs before one exists and answers whether its decisions
+  were taken. Both run.
+- Holding the loop is not authoring: the orchestrator routes it and does not answer its questions.
+- Every escalated decision reaches the user through `AskUserQuestion`. Under a no-question mode it is
+  opened as a question instead, never recorded as an assumption alone.
+
 ### Reviewer Gate (MUST)
 
 - Default: `completion-reviewer`.
