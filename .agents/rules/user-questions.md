@@ -193,6 +193,24 @@ preference.
 - Not a licence to ask for what the environment can settle. A fact the agent can
   read is the agent's to read.
 
+## The reminder
+
+`.claude/settings.json` puts this rule in front of the agent on every turn,
+through a `UserPromptSubmit` hook.
+
+Every turn rather than once, because the moment a question forms is
+unpredictable and a session-start reminder is gone by the time the context is
+compacted — which is when a long session starts reaching for an exception.
+
+It reminds and never blocks. Deciding whether a question should have been asked
+as a structured choice needs intent, and a false positive on a hook that fires
+every turn stops the session outright. It runs `node` directly and prints fixed
+text, with no shell, no file reads and no network, so it cannot fail the session
+it is attached to.
+
+What it carries is where this rule lives and the line an agent reaches past when
+it would rather not ask. The rest is here.
+
 ## Related
 
 - Which questions to ask, and in what order: `grilling.md`
