@@ -82,6 +82,10 @@ describe.each(RULE_MASTERS)("%s/grilling.md — the endings are a closed set", (
     expectPhrase(text, "because agreement between agents settles nothing");
     expectPhrase(text, "the user ends the\nsession in one of the four");
     expectPhrase(text, "never an ending of its own");
+    // Under a no-question mode nothing reaches the user, so without this the
+    // session would have no ending it could reach.
+    expectPhrase(text, "**Under a no-question mode there is nobody to send them to**");
+    expectPhrase(text, "that register write ends the session `no-question`");
   });
 });
 
@@ -178,6 +182,8 @@ describe.each(TREES)("%s — the execution stages record their sessions", (tree)
     }
     expectPhrase(body, "the four endings `.agents/rules/grilling.md` names");
     expectPhrase(body, "only the first three let the work go on");
+    expectPhrase(body, "**The closing answer goes under that table too**");
+    expectPhrase(body, 'Closed S2: "proceed"');
   });
 
   it.each(STAGES)("%s puts the open questions under the same table", async (skill) => {
@@ -234,6 +240,9 @@ describe.each(TREES)("%s — the execution stages record their sessions", (tree)
     expectPhrase(body, "**A run that did not resume writes `none — <why>` instead**");
     expectPhrase(body, "which the gate accepts on those three endings and on no other");
     expectPhrase(body, "A blank is neither, and is a `REVISE` — **except on a `stopped` row**");
+    // The field that says which tree the session ended against is validated,
+    // not only required by the record.
+    expectPhrase(body, "**Every row's `Revision` is a git rev or `working-tree+<hash>`**");
   });
 
   it.each(STAGES)("%s gives each ending a verdict at that gate", async (skill) => {
@@ -259,6 +268,12 @@ describe.each(TREES)("%s — the execution stages record their sessions", (tree)
     // The closure covers the tree as it finally stands, so a running lookup
     // can raise a node after it.
     expectPhrase(body, "a lookup still running can raise a node after it");
+    // `user-closed` is the user's act as much as `confirmed` is, so a register
+    // of assumptions alone does not show it happened.
+    expectPhrase(
+      body,
+      "**and the closing answer quoted under the table beside that row's `Session`**",
+    );
     expectPhrase(body, "`Lookups` none in flight and `Open` 0. Article X, rule 6");
     expectPhrase(body, "`Work resumed` empty. The user ended the session");
     // A row is a file change, and a stop forbids one.

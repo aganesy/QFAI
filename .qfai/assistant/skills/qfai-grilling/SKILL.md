@@ -213,7 +213,8 @@ authoritative (`.qfai/assistant/constitution/review-convergence.md`).
 
 **The budget ends the rounds, not the session.** `.agents/rules/grilling.md`
 names four endings and this is none of them: the decisions go to the user, who
-ends the session in one of the four. Reading the budget as an ending lets an
+ends the session in one of the four — or, under a no-question mode, into the
+register, whose write ends it `no-question`. Reading the budget as an ending lets an
 agent terminate a session before the user has seen what it escalated, which is
 the opposite of what escalation is for. How many went is a count a record
 carries, never an ending.

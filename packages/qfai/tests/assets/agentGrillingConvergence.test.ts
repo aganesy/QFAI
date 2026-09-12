@@ -74,6 +74,8 @@ describe("a grilling session between agents has an end", () => {
       // reads, rather than a decision taken by default.
       const content = await read(path.join(tree, CONVERGENCE));
       expectPhrase(content, "the escalation has nobody to reach");
+      // And the session still ends: the register write is its ending there.
+      expectPhrase(content, "the register write below ends it `no-question`");
       expectPhrase(content, "so the stage cannot\ncomplete over it");
       expectPhrase(content, "Article X,\nrule 6");
     });

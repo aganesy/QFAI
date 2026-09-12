@@ -270,6 +270,8 @@ describe("the primitive carries the master's clauses", () => {
       expect(text).toMatch(/two, then every decision still open goes to the user/);
       // The budget bounds the rounds; the user ends the session.
       expect(text).toMatch(/The budget ends the rounds, not the session/);
+      // Under a no-question mode the register write ends it instead.
+      expect(text).toMatch(/register, whose write ends it `no-question`/);
       expect(text).toMatch(/review-convergence\.md/);
     });
   }

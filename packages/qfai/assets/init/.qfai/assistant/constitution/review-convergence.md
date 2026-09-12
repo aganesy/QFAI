@@ -129,7 +129,9 @@ wrong premise with nobody watching. These rules bound the **rounds** such a
 session may take before what is still open goes to the user.
 
 **They do not end the session.** It ends where every session ends, in one of the
-four the session rule names, and each of those is the user's. An agent that
+four the session rule names: with a user present, the user ends it; under a
+no-question mode, where the escalation has nobody to reach, the register write
+below ends it `no-question`. An agent that
 treated the budget as an ending closed a session nobody was asked to close.
 
 **Two rounds**, the same budget a reviewer has. **Every decision the user has not settled escalates after the second round** — the ones still open and the ones the agents agreed on, since an agent-adopted recommendation is a decision nobody took — whether or not the agents agreed on others in that round:

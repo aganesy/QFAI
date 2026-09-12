@@ -199,8 +199,11 @@ the absence of an ending.
 the rounds between agents, not the session: every decision the user has not
 settled goes to the user — the ones still open, and the ones the agents agreed
 on, because agreement between agents settles nothing — and the user ends the
-session in one of the four. How many went is a count a record carries, never an
-ending of its own.
+session in one of the four. **Under a no-question mode there is nobody to send
+them to**: they are opened as questions where the work's gates read them, and
+that register write ends the session `no-question`, as it ends any session the
+mode holds. How many went is a count a record carries, never an ending of its
+own.
 
 **`stopped` is the one that does not let the work continue.** The other three
 close the asking; this one ends the session, and an agent that carried on
@@ -235,7 +238,9 @@ decision still open goes to the user — and the session is still open when it
 gets there, because the user has not yet ended it in any of the four ways. Three
 subjects skip the rounds and go at once — product or business intent no
 authoritative artifact answers, a decision contradicting a spec, a contract or a
-recorded decision, and a decision resting on nothing authoritative.
+recorded decision, and a decision resting on nothing authoritative. Under a
+no-question mode those decisions reach no user: they are opened as questions,
+and the session ends `no-question` on that write.
 
 So the count bounds the rounds between agents and nothing else. It is not a
 fifth ending, and an agent that closed the session on reaching it has ended one
