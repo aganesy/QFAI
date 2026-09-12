@@ -557,6 +557,16 @@ describe("the question form binds every question", () => {
       expectPhrase(content, "**this question in this\n   invocation**");
       expectPhrase(content, "`.agents/rules/user-questions.md` owns the form");
       expectPhrase(content, "that is an answer shape, not an exception");
+      // Rule 3 itself, not only the clauses around it. Pinning those while
+      // leaving the numbered rule loose would let the fallback revert to
+      // numbered-only, or shed the selection constraint, with this suite still
+      // green — which is the drift it exists to catch.
+      expectPhrase(content, "in the shape its answer has");
+      expectPhrase(content, "a plain request for the value where the answer is open");
+      expectPhrase(
+        content,
+        "preserve structured choice semantics (enumerated options, selection constraints)",
+      );
     });
 
     it(`${tree}: availability is judged per question, not per host`, async () => {

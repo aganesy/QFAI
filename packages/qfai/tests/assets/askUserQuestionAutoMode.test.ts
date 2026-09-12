@@ -51,8 +51,13 @@ const QUESTIONS_HEADING = "User Questions (AskUserQuestion Protocol)";
 const BASELINE_OWNED_RULES = [
   "use AskUserQuestion if the tool is available",
   "prefer structured choices over free-text input",
-  "ask the same question in a normal message with explicit numbered choices",
-  "Preserve structured choice semantics",
+  "ask the same question in a normal message",
+  // The fallback carries the answer's shape, so both halves are named here. A
+  // skill forking only the open-value half would otherwise pass a matcher that
+  // looks for the choices half alone.
+  "**in the shape its answer has**",
+  "a plain request for the value where the answer is a name",
+  "preserve structured choice semantics",
   "State why AskUserQuestion was unavailable",
 ];
 
