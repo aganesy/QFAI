@@ -1985,6 +1985,16 @@ unadjudicated`, read off a Work Orders Summary row the session writes rather
   closes it, because the revision has not moved — and it is not a rubber stamp,
   since what it re-signs is a judgement over a subject that has grown.
 
+- **A ledger row observes the property it owns** (#1700). One prototyping-loop
+  test asserted five properties of the cycle-0 hard reset in a single case,
+  and a ledger row named it as the selector for one of them. A test function
+  fails once, so the four assertions behind the first were unobserved on every
+  run: a regression in any of them stopped the case before the row’s own
+  predicate was reached, and a mutation aimed at that predicate was killed by
+  an assertion the row does not own.
+
+  The case is five, one per property, over the same seeded state.
+
 ## [1.11.1] - 2026-09-10
 
 ### Removed

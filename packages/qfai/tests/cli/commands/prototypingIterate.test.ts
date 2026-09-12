@@ -1032,7 +1032,15 @@ describe("runPrototypingIterate cycle 0 hard reset", () => {
     expect(body.iterations[0].blockingFindings).toEqual(["Awaiting the first review."]);
   });
 
-  it("re-seeds acceptedIterationIndex / stopReason and deletes reviewerGate / fullHarness / executionPlan on cycle 0", async () => {
+  /**
+   * The hard reset's subject: a `prototyping.json` carrying every per-loop
+   * block a prior run could have left behind.
+   *
+   * Seeded once per case rather than shared across them, because each case
+   * below owns one property of the reset and a shared root would make the
+   * second case depend on what the first left.
+   */
+  async function seedProjectWithPriorLoopState(): Promise<string> {
     const root = await newTempDir();
     await seedMinimalProject(root);
     await seedRawPrototypingJson(root, {
@@ -1053,20 +1061,40 @@ describe("runPrototypingIterate cycle 0 hard reset", () => {
         plannedAt: "2025-01-01T00:00:00Z",
       },
     });
-
     expect(
       await runPrototypingIterate({ root, cycle: 0, targetUrl: "http://localhost:5173" }),
     ).toBe(0);
+    return root;
+  }
 
-    const body = await readProtoJson(root);
-    // reviewerGate, fullHarness and executionPlan remain deleted (per-loop state).
-    expect("reviewerGate" in body).toBe(false);
+  // One property per case. The reset clears three blocks and re-seeds two, and
+  // a single case asserting all five observes only the first to fail: a
+  // regression in one property then reports as a failure of whichever
+  // assertion runs first, and a mutation aimed at one of them is killed by an
+  // assertion that is not about it.
+  it("cycle 0 deletes fullHarness", async () => {
+    const body = await readProtoJson(await seedProjectWithPriorLoopState());
     expect("fullHarness" in body).toBe(false);
+  });
+
+  it("cycle 0 deletes reviewerGate", async () => {
+    const body = await readProtoJson(await seedProjectWithPriorLoopState());
+    expect("reviewerGate" in body).toBe(false);
+  });
+
+  it("cycle 0 deletes executionPlan", async () => {
+    const body = await readProtoJson(await seedProjectWithPriorLoopState());
     expect("executionPlan" in body).toBe(false);
-    // Phase 3: acceptedIterationIndex=0 (the seed) and stopReason=null
-    // (loop running) replace the prior stale values rather than being
-    // removed.
+  });
+
+  it("cycle 0 re-seeds acceptedIterationIndex rather than removing it", async () => {
+    const body = await readProtoJson(await seedProjectWithPriorLoopState());
     expect(body.acceptedIterationIndex).toBe(0);
+  });
+
+  it("cycle 0 re-seeds stopReason as null rather than removing it", async () => {
+    // The loop is running, so the field is present and empty rather than gone.
+    const body = await readProtoJson(await seedProjectWithPriorLoopState());
     expect(body.stopReason).toBe(null);
   });
 
