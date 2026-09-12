@@ -119,7 +119,7 @@ branch and so cannot re-check anything this branch changed.
 #### Round 1
 
 - Round 1: Revision: 09f6f3b362ffc1ceac2a8fa6087d4029da4aed61
-- Round 1: Satisfied-by: packages/qfai/src/core/types.ts, IssueCategory — the union the removed compatibility category is absent from.
+- Round 1: Satisfied-by: packages/qfai/src/core/types.ts, IssueCategory — the union the removed compatibility category is absent from; and packages/qfai/src/core/validators/index.ts, its export list — the surface the removed `runLegacyUixCompatibilityValidators` aggregator is absent from. The row obliges the namespace to stay gone, and the two mutations reach it through the two places it could return.
 - Round 1: Falsifiability command: npx vitest run tests/integration/verifySemanticsSpec0014.test.ts -t 'TC-0014-0019'
 - Round 1: Falsifiability result: Test Files 1 failed (1); Tests 1 failed (1 of the file's 6 selected). The selector holds one case and it dies, on `expected 'import type { ScCoverage, TestFileSca…' not to contain '"compatibility"'`.
 - Round 1: Falsifiability revision: working-tree+ed11467f59bfb62f58c90667eb64771c30f7fd1439478e8d28f9ea98ce26d39b
