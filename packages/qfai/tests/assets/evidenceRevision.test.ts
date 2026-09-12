@@ -603,8 +603,19 @@ describe("the working-tree address has one notation", () => {
       expect(text).toContain("record its 64 lowercase hexadecimal characters");
       // `-z` is part of the collect command, or the path bytes are the display
       // spelling and `core.quotePath` moves the address for one tree.
-      expect(text).toContain("git ls-files --others --exclude-standard -z");
-      expect(text).toContain("`-z` is part of the command, not a preference");
+      // Run from the repository root, or `ls-files --others` enumerates only
+      // what is under the current directory and names it relative to there.
+      expect(text).toContain("git rev-parse --show-toplevel");
+      expect(text).toContain("ls-files --others --exclude-standard -z");
+      // Every option that moves the bytes is on the command line, so a config
+      // difference between producer and reviewer cannot change the address.
+      expect(text).toContain("core.quotePath=false");
+      expect(text).toContain("--full-index");
+      expect(text).toContain("--src-prefix=a/ --dst-prefix=b/");
+      expect(text).toContain("--no-renames");
+      expect(text).toContain("--diff-algorithm=myers");
+      // A symlink payload read through a command gains or loses a newline.
+      expect(text).toContain("No command-output terminator is serialized");
     });
   }
 

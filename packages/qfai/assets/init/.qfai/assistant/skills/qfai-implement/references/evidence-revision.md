@@ -34,14 +34,31 @@ check. Gate item 10 rejects any other shape wherever a revision is recorded:
   separator, diff option or record shape and get different answers for the same
   tree, and then an ordinary uncommitted item is stale for nobody's mistake.
   Four steps, the same shape as `Audited evidence hash`:
-  1. **Collect.** `git rev-parse HEAD`; the tracked diff from
-     `git diff HEAD --no-color --no-ext-diff --binary --` followed by the
-     exclusions below; and every untracked file
-     `git ls-files --others --exclude-standard -z` reports, after the same
-     exclusions. **`-z` is part of the command, not a preference.** Without it
-     git writes a path holding non-ASCII or a control character in a quoted
-     display spelling, and `core.quotePath` changes that spelling for the same
-     tree — so two producers hash different bytes for one file.
+  1. **Collect**, from the repository root, with every option that moves the
+     bytes pinned on the command line:
+
+     ```sh
+     root=$(git rev-parse --show-toplevel)
+     git -C "$root" rev-parse HEAD
+     git -C "$root" -c core.quotePath=false diff HEAD \
+       --no-color --no-ext-diff --binary --full-index --no-renames \
+       --diff-algorithm=myers --src-prefix=a/ --dst-prefix=b/ --
+     git -C "$root" -c core.quotePath=false ls-files --others --exclude-standard -z
+     ```
+
+     Each of those is there because leaving it off lets one tree have two
+     addresses.
+
+     | Pinned                                      | Without it                                                                                                                                               |
+     | ------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
+     | `-C "$root"`                                | `ls-files --others` enumerates only what is under the current directory, and reports paths relative to it — so where the agent stood changes the address |
+     | `-c core.quotePath=false` and `-z`          | A path holding non-ASCII or a control character comes back in a quoted display spelling, and the config changes that spelling for the same tree          |
+     | `--full-index`                              | The `index` line abbreviates to `core.abbrev`, which differs per environment                                                                             |
+     | `--src-prefix=a/ --dst-prefix=b/`           | `diff.noprefix` and `diff.mnemonicPrefix` rewrite the headers                                                                                            |
+     | `--no-renames` and `--diff-algorithm=myers` | `diff.renames` and `diff.algorithm` change the hunks for identical content                                                                               |
+
+     The exclusions below apply to both the diff and the untracked list.
+
   2. **Exclude.** `.qfai/specs/*/tdd/test-list.md`, `.qfai/evidence/**` and
      `.qfai/review/**`, from **both** the diff and the untracked list — they are
      the record of the observation, not the thing observed. The review pack is
@@ -57,10 +74,14 @@ check. Gate item 10 rejects any other shape wherever a revision is recorded:
      `path + NUL + kind + NUL + mode + NUL + the SHA-256 of its bytes`, sorted
      by path in byte order. `kind` is `file` / `symlink` / `dir` and `mode` is
      the octal permission bits. **On a `symlink` the bytes are the link's own
-     payload** — what `readlink` returns — never the target's contents: the two
-     are both defensible readings, so producer and reviewer could compute
-     different addresses for one tree, and a dangling link has no second reading
-     at all. On a `dir` the hash is over the empty string; the entries under it
+     payload** — what the link points at, as bytes — never the target's
+     contents: the two are both defensible readings, so producer and reviewer
+     could compute different addresses for one tree, and a dangling link has no
+     second reading at all. Read it through a byte-returning call (`readlink(2)`,
+     or `fs.readlink` with a buffer encoding), never through a command's stdout:
+     `readlink` adds a trailing newline unless given `-n`, and a shell
+     substitution strips trailing newlines — including one that is part of the
+     target. **No command-output terminator is serialized.** On a `dir` the hash is over the empty string; the entries under it
      are records of their own. The point of `mode`: a tracked diff carries a mode change, and
      without these an uncommitted `chmod +x` on a new script left the address
      unmoved — same bytes, different behaviour under test, CI and packaging,
