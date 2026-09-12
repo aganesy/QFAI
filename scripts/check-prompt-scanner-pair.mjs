@@ -10,6 +10,30 @@
  * rejected with R-PROMPT-SCANNER-DRIFT. A PR that touches BOTH halves
  * or NEITHER half passes silently.
  *
+ * ## The other lane, and why both exist
+ *
+ * `core/validators/reviewerGate.ts#detectPromptScannerDrift` reports the
+ * SAME code from the same manifest, and is not a duplicate of this. The
+ * two catch opposite halves of one contract:
+ *
+ *   - that one reads the CURRENT TREE and fails when a clause's tokens
+ *     are present on one side and absent on the other. It runs on every
+ *     validate, so a drift nobody's diff touched is still caught, and it
+ *     names the clause and the missing tokens.
+ *   - this one reads the DIFF and fails when one half was edited and the
+ *     other was not, whatever the tokens did. A clause whose wording
+ *     changes while its tokens survive is invisible to a token check and
+ *     visible here.
+ *
+ * Neither subsumes the other, so removing either leaves a real gap. What
+ * this one cannot do is tell an edit to a clause from an edit elsewhere
+ * in a 430-line file: the pairing is by path. That has not yet demanded
+ * a pairing nobody owed — both times it fired, the edit was inside
+ * `## Hard constraints (enforced by the compliance gate)` and the pairing
+ * was real. If it ever does, narrow it to that section rather than
+ * relaxing it: the heading states its own scope, so the rule stays
+ * readable and needs no second copy of the manifest.
+ *
  * Invocation modes:
  *   - `--base <ref>`     compare HEAD against <ref> via `git diff
  *                        --numstat <ref>...HEAD`, scoped to the files

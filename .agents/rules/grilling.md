@@ -93,7 +93,8 @@ was unavailable. A session is never skipped for want of a tool.
 in host-sized batches. The frontier is not recomputed between them, no answer is
 acted on until the round is exhausted, and each batch is read for a closing
 answer before the next is put. Batching is how one round reaches a host that
-cannot show it whole; it never makes two rounds.
+cannot show it whole; it never makes two rounds, and `user-questions.md` § 4
+carries the rest of its mechanics.
 
 ## The shape of a question
 
@@ -163,6 +164,19 @@ document requires the user to make and record, and an input declared
 undefaultable. Both are still asked, and a run missing the second stops rather
 than inventing it.
 
+### A session between agents
+
+A session with no user answering has neither half of the end condition above
+available to it, so it ends on a budget instead: two rounds, then every decision
+still open goes to the user. Three subjects skip the rounds and go at once —
+product or business intent no authoritative artifact answers, a decision
+contradicting a spec, a contract or a recorded decision, and a decision resting
+on nothing authoritative.
+
+That is the one place a session ends on a count, and it is a count of rounds
+between agents rather than of questions put to a user. The rules are in
+`.qfai/assistant/constitution/review-convergence.md`.
+
 ## Under a no-question mode
 
 A run told not to ask the user does not ask, and a session inside it does not
@@ -200,6 +214,10 @@ uncertainty.
 - Work running in the background did not stall the round — only the questions
   downstream of it waited.
 - The session ended by asking for confirmation, not by starting work.
+
+## Related
+
+- The form each question in a round arrives in: `user-questions.md`
 
 ## Scope of this file
 
