@@ -290,6 +290,26 @@ describe("the register it reads, and the notation it reads it in", () => {
     expect(codes(text)).toEqual([]);
   });
 
+  it("keeps a status with the entry that owns it", () => {
+    // A field naming another question sits between the heading and the status
+    // all the time. Read as the entry it names, the status below it answers for
+    // that question, and the entry that owns it is reported as declaring none.
+    const text = [
+      "# 08 Open Questions",
+      "",
+      "## Open Questions",
+      "",
+      "### OQ-0007: which retention window applies",
+      "",
+      "- Depends on: OQ-0008",
+      "- Status: unadjudicated",
+      "",
+    ].join("\n");
+    const issues = collectOpenQuestionsGateIssues(ENTRY, text, false);
+    expect(issues.map((issue) => issue.code)).toEqual(["QFAI-SPACK-102"]);
+    expect(issues[0]?.refs).toEqual(["OQ-0007"]);
+  });
+
   it("does not read a sentence about a status as one", () => {
     // Prose naming the value is how a register explains itself, and read as a
     // declaration it answers for whichever question was named last.

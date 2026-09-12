@@ -1999,16 +1999,38 @@ async function collectRegisterIssues(register: string): Promise<Issue[]> {
 function extractOpenQuestionEntryIds(text: string): string[] {
   const ids = new Set<string>();
   for (const line of maskNonSpecRegions(text.replace(/\r\n/g, "\n")).split("\n")) {
-    const heading = /^#{1,6}\s+(OQ-[A-Za-z0-9_-]+)\b/i.exec(line.trim())?.[1];
-    if (heading !== undefined && !OPEN_QUESTION_COLUMN_LABEL.test(heading)) {
-      ids.add(heading);
-      continue;
-    }
-    const cells = tableCells(line);
-    const keyed = /^(OQ-[A-Za-z0-9_-]+)$/i.exec(cells[0]?.trim() ?? "")?.[1];
-    if (keyed !== undefined && !OPEN_QUESTION_COLUMN_LABEL.test(keyed)) ids.add(keyed);
+    const id = entryIdOf(line);
+    if (id !== null) ids.add(id);
   }
   return [...ids];
+}
+
+/** The question one line keys an entry for: a subsection heading, or a row. */
+function entryIdOf(line: string): string | null {
+  const heading = /^#{1,6}\s+(OQ-[A-Za-z0-9_-]+)\b/i.exec(line.trim())?.[1];
+  if (heading !== undefined) {
+    return OPEN_QUESTION_COLUMN_LABEL.test(heading) ? null : heading;
+  }
+  const keyed = /^(OQ-[A-Za-z0-9_-]+)$/i.exec(tableCells(line)[0]?.trim() ?? "")?.[1];
+  if (keyed === undefined || OPEN_QUESTION_COLUMN_LABEL.test(keyed)) return null;
+  return keyed;
+}
+
+/**
+ * The question a status line below this one belongs to, or `null`.
+ *
+ * Every entry form above, plus the list item some registers open an entry
+ * with. What it is not is any line that merely names a question: a
+ * `Depends on: OQ-0008` note between a heading and its status would otherwise
+ * hand the status to the question the note points at, and report the entry
+ * that owns it as declaring none.
+ */
+function attributedIdOf(line: string): string | null {
+  const entry = entryIdOf(line);
+  if (entry !== null) return entry;
+  const bullet = /^\s*[-*+]\s+(OQ-[A-Za-z0-9_-]+)\b/i.exec(line)?.[1];
+  if (bullet === undefined || OPEN_QUESTION_COLUMN_LABEL.test(bullet)) return null;
+  return bullet;
 }
 
 /** A register entry whose status is not one of the four, or is not there. */
@@ -2152,23 +2174,18 @@ export function collectOpenQuestionsGateIssues(
 }
 
 /**
- * The column label, which is not a question.
+ * The questions this register opens an entry for.
  *
- * The register's table heads its first column `OQ-ID`, and read as an id it is
- * a question with no status — so the shipped template reported itself as
- * unparseable the moment the table notation was read at all. Every real id
- * carries digits.
+ * Masked, like the status scan: a register documenting its own notation writes
+ * an example row, and an id read out of it is a question nobody asked. Read
+ * line by line rather than as a scan over the whole text, so a field naming
+ * another question — `Depends on: OQ-0008` — stays the reference it is.
  */
-
 function extractOpenQuestionIds(text: string): string[] {
   const ids = new Set<string>();
-  // Masked, like the status scan: a register documenting its own notation
-  // writes an example row, and an id read out of it is a question nobody asked.
-  for (const match of maskNonSpecRegions(text).matchAll(/\b(OQ-[A-Za-z0-9_-]+)\b/gi)) {
-    const id = match[1];
-    if (id && !OPEN_QUESTION_COLUMN_LABEL.test(id)) {
-      ids.add(id);
-    }
+  for (const line of maskNonSpecRegions(text.replace(/\r\n/g, "\n")).split("\n")) {
+    const id = attributedIdOf(line);
+    if (id !== null) ids.add(id);
   }
   return Array.from(ids);
 }
@@ -2990,11 +3007,7 @@ function readDeclaredStatuses(text: string): DeclaredStatus[] {
   let statusColumn: number | null = null;
 
   for (const [index, line] of lines.entries()) {
-    const idMatch = /\b(OQ-[A-Za-z0-9_-]+)\b/i.exec(line);
-    const rowId =
-      idMatch?.[1] !== undefined && !OPEN_QUESTION_COLUMN_LABEL.test(idMatch[1])
-        ? idMatch[1]
-        : null;
+    const rowId = attributedIdOf(line);
     if (rowId !== null) currentId = rowId;
 
     // The separator row is part of the table it underlines, so it does not end
