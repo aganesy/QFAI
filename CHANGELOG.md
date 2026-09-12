@@ -4,6 +4,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ## [Unreleased]
 
+### Added
+
+- **A lint lane refuses a tracked file under the scratch directory.** `tmp/` is
+  the sole staging area for scratch output and nothing there is committed, but
+  an ignore rule does not stop tracking a file already in the index: a scratch
+  report sat on the default branch with `git status` clean. The report is
+  untracked and deleted, and the lane catches the next one.
+
 ### Changed
 
 - **`/qfai-discussion` runs its interview as a grilling session** (#1597). Step
