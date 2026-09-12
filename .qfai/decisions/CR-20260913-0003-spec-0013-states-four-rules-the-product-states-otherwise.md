@@ -3,7 +3,7 @@
 - ID: `CR-20260913-0003`
 - Title: `spec-0013 states four rules the product states otherwise`
 - Raised by: `qfai-implement`
-- Raised at: `2026-09-13T00:00:00Z`
+- Raised at: `2026-09-12T20:41:35Z`
 - Class: `intent`
 - Status: `open`
 - Approved by: `-`
