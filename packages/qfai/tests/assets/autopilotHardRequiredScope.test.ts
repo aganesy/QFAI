@@ -161,11 +161,17 @@ describe("the autopilot buckets classify operations, not interview questions", (
         ),
       );
       expect(text).toContain("say who settles a decision **the skill performs**");
-      expect(text).toContain("A question put inside a grilling session is not one");
+      expect(text).toContain("A **frontier decision** put inside a grilling session is not one");
       expect(text).toContain("`.agents/rules/grilling.md` owns which of those are asked");
+      // A mandatory approval and a hard-required input are classified by their
+      // subject wherever they are asked. Carved out with the rest, an --auto run
+      // would guess a value it is required to stop for.
+      expect(text).toContain("Two things stay classified by their subject wherever they are asked");
+      expect(text).toContain("still stops a run that cannot get it, rather than being guessed");
       // The interview skills are the exception the narrowing needs, or their own
       // frontier questions fall outside every bucket.
       expect(text).toContain("Where the interview is what the skill performs, the asking stays in");
+      expect(text).toContain("the category DR-0269 Amendment 4 opens for it");
     });
   }
 
@@ -177,7 +183,13 @@ describe("the autopilot buckets classify operations, not interview questions", (
       await readFile(path.join(repoRoot, ".qfai/specs/spec-0015/04_Business-Rules.md"), "utf-8"),
     );
     expect(text).toContain(SCOPE);
-    expect(text).toContain("A question put inside a grilling session is not one of those");
+    expect(text).toContain(
+      "A **frontier decision** put inside a grilling session is not one of those",
+    );
     expect(text).toContain("owns which of those are asked and in what order");
+    // The closed list gains the entry the interview skills already ship, or a
+    // conforming review has to reject the policy this scope says to keep.
+    expect(text).toContain("a decision a declared grilling session puts to the user");
+    expect(text).toContain("available only to a skill whose own operation is the interview");
   });
 });
