@@ -64,7 +64,7 @@ describe("the grilling primitive", () => {
       // and leaves each decision it could not settle open where the completion
       // gate reads it — Article X rule 6.
       const text = flat(await read(tree));
-      expect(text).toMatch(/Run without asking; open every decision left over as a question/);
+      expect(text).toMatch(/Run without asking; open every node left over as a question/);
       expect(text).toMatch(/Declaring a session is still not a way to ask/);
       expect(text).toMatch(/the assumption with no open question against it/);
     });

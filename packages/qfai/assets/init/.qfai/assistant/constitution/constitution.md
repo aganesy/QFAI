@@ -402,12 +402,16 @@ Rules:
    are exempt from the Article VI budget, not from rule 4: a no-question mode
    asks nothing, whatever the question is for. The session still runs — it
    settles what the repository settles and dispatches sub-agents for the facts —
-   and every decision left over is **opened as a question in the register the
-   stage reads**, so the stage cannot complete over it. Where a document
-   requires the field to hold something, write the defaulted value and label it
-   an assumption beside the open question; a labelled value under an open
-   question is not a settled decision. What rule 4 does not license is the
-   assumption **alone**, which reads as settled to whoever finds it next.
+   and every **node** left over is **opened as a question in the register the
+   stage reads**, so the stage cannot complete over it. Every node, not every
+   decision: a fact only the user holds cannot be settled from evidence either,
+   and opening the decisions while dropping the facts loses exactly the nodes no
+   lookup could have reached. Where a document requires the field to hold
+   something, write the defaulted value and label it an assumption beside the
+   open question; a labelled value under an open question is not a settled
+   decision. What rule 4 does not license is the assumption **alone**, which
+   reads as settled to whoever finds it next. A fact declared undefaultable has
+   no value to write down at all: the run stops and names it.
 
 This article survives context compaction because `.qfai/assistant/constitution/constitution.md` is a P1 reload target.
 

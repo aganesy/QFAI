@@ -32,19 +32,22 @@ user agrees the understanding is shared.
 
 ## Preconditions
 
-| Condition                           | Effect                                                          |
-| ----------------------------------- | --------------------------------------------------------------- |
-| A design that is not yet fixed      | Proceed                                                         |
-| The work is already specified       | Do not invoke; the spec is the authority                        |
-| A no-question mode is active        | Run without asking; open every decision left over as a question |
-| An ambiguity met while implementing | Not a session; an ordinary clarification under its own budget   |
+| Condition                           | Effect                                                        |
+| ----------------------------------- | ------------------------------------------------------------- |
+| A design that is not yet fixed      | Proceed                                                       |
+| The work is already specified       | Do not invoke; the spec is the authority                      |
+| A no-question mode is active        | Run without asking; open every node left over as a question   |
+| An ambiguity met while implementing | Not a session; an ordinary clarification under its own budget |
 
 **A no-question mode silences the questions, not the session.** An invocation
 told not to ask — `--auto`, or whatever the host spells it as — settles what the
-evidence settles, dispatches the lookups, and opens every decision left over as
+evidence settles, dispatches the lookups, and opens every node left over as
 a question in the register the stage reads, so the stage cannot complete over
-it. Where a document requires the field to hold something, write the defaulted
-value and label it an assumption beside that open question
+it. Every node, not every decision: a fact only the user holds cannot be settled
+from evidence either, and one declared undefaultable stops the run rather than
+taking a value nobody has. Where a document requires the field to hold
+something, write the defaulted value and label it an assumption beside that open
+question
 (`.qfai/assistant/constitution/constitution.md` Article X, rule 6). What is
 forbidden is the assumption with no open question against it. Declaring a
 session is still not a way to ask.
@@ -354,5 +357,5 @@ project_memory:
 
 - A grilling question spends no clarification budget, and the confirmation that closes a session is exempt with it. A session ends on its own condition, never at a count.
 - A decision the user owns is asked, never assumed. A fact the environment holds is read, never asked.
-- A no-question mode silences the questions, not the session: such a run settles what the evidence settles and opens every decision left over as a question, with a labelled value beside it where a document requires one. The assumption alone is forbidden.
+- A no-question mode silences the questions, not the session: such a run settles what the evidence settles and opens every node left over as a question — facts only the user holds among them — with a labelled value beside it where a document requires one. The assumption alone is forbidden, and a fact declared undefaultable stops the run.
 - A user's `stop` ends a session immediately and the open decisions are reported as open. A mandatory approval and a `hard-required` input are never assumed, whatever the user answered.

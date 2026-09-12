@@ -795,3 +795,25 @@ describe("the question shape has one owner", () => {
     },
   );
 });
+
+describe("a no-question run opens every node, on every surface that says so", () => {
+  // The master, the article, the operating rule and the shipped primitive all
+  // carry this. An agent follows whichever it reaches first, so a copy still
+  // saying "every decision" lets a user-held fact disappear while the stage
+  // completes over a tree that is not empty.
+  it.each([
+    ".agents/rules/grilling.md",
+    "packages/qfai/assets/init/root/.agents/rules/grilling.md",
+    ".qfai/assistant/constitution/constitution.md",
+    "packages/qfai/assets/init/.qfai/assistant/constitution/constitution.md",
+    ".qfai/assistant/constitution/communication.md",
+    "packages/qfai/assets/init/.qfai/assistant/constitution/communication.md",
+    ".qfai/assistant/skills/qfai-grilling/SKILL.md",
+    "packages/qfai/assets/init/.qfai/assistant/skills/qfai-grilling/SKILL.md",
+  ])("%s opens nodes rather than decisions", async (rel) => {
+    const text = await readFile(path.join(ROOT, rel), "utf-8");
+    expect(text).toMatch(/(?:every|each)\s+\*{0,2}node\*{0,2}\s+left\s+over/);
+    expect(text).not.toMatch(/(?:every|each)\s+decision\s+left\s+over/);
+    expect(text).toMatch(/undefaultable/);
+  });
+});
