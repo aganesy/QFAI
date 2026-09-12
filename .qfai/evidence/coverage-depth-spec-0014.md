@@ -60,7 +60,7 @@ gate and no case on the claim that distinguishes it.
 
 Section "Every `❌` cell, named" enumerates all 79 of them — 70 scored, 9 in the non-scored `Status`
 columns — so that "one justification per `❌`" is checkable rather than asserted, and section
-"Every `⚠️` cell, named" does the same for all 70 partial scores, 58 of which are scored cells the
+"Every `⚠️` cell, named" does the same for all 71 partial scores, 59 of which are scored cells the
 PASS criterion also requires a rationale for.
 
 ## What was measured, and how
@@ -198,7 +198,7 @@ to the story can hold a cell at `⚠️`; no cell reaches `✅`.
 | TC-0014-0029 | ❌                     | ❌          | ❌         | ❌         | ❌              | ❌             | ❌                | ❌            | ❌              | ❌     |
 | TC-0014-0033 | ⚠️                     | ⚠️          | ⚠️         | ⚠️         | ⚠️              | ⚠️             | ⚠️                | ⚠️            | ⚠️              | ❌     |
 | TC-0014-0034 | ⚠️                     | ✅          | ❌         | ⚠️         | ❌              | ❌             | ✅                | ⚠️            | ✅              | ⚠️     |
-| TC-0014-0035 | ⚠️                     | ✅          | ❌         | ❌         | ❌              | ❌             | ❌                | ❌            | ⚠️              | ⚠️     |
+| TC-0014-0035 | ⚠️                     | ⚠️          | ❌         | ❌         | ❌              | ❌             | ❌                | ❌            | ⚠️              | ⚠️     |
 | TC-0014-0036 | ✅                     | ✅          | ✅         | ✅         | ⚠️              | ⚠️             | ✅                | ✅            | ⚠️              | ⚠️     |
 
 14 rows × the 9 depth columns = **126 scored cells: ✅ 11 / ⚠️ 50 / ❌ 65**.
@@ -246,8 +246,8 @@ The scored population is 147 cells: 126 matrix depth cells plus 21 business rule
 
 | Mark | Matrix depth | Business rule | Scored total |
 | ---- | ------------ | ------------- | ------------ |
-| ✅   | 11           | 5             | 16           |
-| ⚠️   | 50           | 8             | 58           |
+| ✅   | 10           | 5             | 15           |
+| ⚠️   | 51           | 8             | 59           |
 | ❌   | 65           | 5             | 70           |
 | n/a  | 0            | 3             | 3            |
 | Sum  | 126          | 21            | 147          |
@@ -892,6 +892,13 @@ documented rationale for each, so each is named here.
   must write neither. The invalid partition is not represented: no unrecognised `--scope` value is
   supplied to `runPrototypingCertify` in this row, so nothing establishes what the command does with
   one.
+- **TC-0014-0035 × Normal path** — the happy path runs end to end and the seal is read back from
+  disk, but it is entered by calling `runPrototypingCertify` with `scope: "saas-package"` as an
+  argument. The obligation names the command, and the argument parsing and dispatch that turn
+  `--scope saas-package` into that argument are exercised by nothing that runs: the only case
+  invoking `runCli(["prototyping", "certify", "--scope", "saas-package"])` sits in
+  `spec0014SaasPackageCertify.test.ts`, whose block is skipped. A parser that stopped forwarding the
+  flag would leave both credited cases green.
 - **TC-0014-0035 × Oracle strength** — the row is strong in two respects and weak in one. `cert.scope`
   is pinned to the exact literal, and the notes assertion iterates `SAAS_PACKAGE_SKIPPED_GATES`
   imported from `core/saasPackage/skippedGates.ts`, so a gate added to the SSOT and omitted from
@@ -1121,7 +1128,7 @@ them is repaired here; this artifact scores coverage and does not edit tests, le
 `QFAI-ATDD-133` requires the stage evidence to carry a `## Coverage Depth Matrix` section that links
 to this file and restates the counted totals beside it. Those totals are:
 
-**✅ 16 / ⚠️ 58 / ❌ 70**, with `n/a` 3, across all 147 scored cells — 126 matrix depth cells (14
+**✅ 15 / ⚠️ 59 / ❌ 70**, with `n/a` 3, across all 147 scored cells — 126 matrix depth cells (14
 rows × 9 columns) and 21 business rule cells (7 rows × 3 columns). The `Status` columns of both
 tables hold row verdicts rather than marks and are outside that population; for reference the
 matrix's 14 read `⚠️ 9 / ❌ 5` and the business rule table's 7 read `⚠️ 3 / ❌ 4`.

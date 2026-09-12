@@ -59,8 +59,9 @@ below are over the selected cases, not over the file.
 | ------------------------- | -------- | ------------------- |
 | `TDD-0019` GREEN          | 1 of 5   | 1 passed            |
 | `TDD-0019` falsifiability | 1 of 5   | 1 failed            |
-| `TDD-0035` GREEN          | 2 of 2   | 2 passed            |
-| `TDD-0035` falsifiability | 2 of 2   | 1 failed, 1 passed  |
+| `TDD-0035` GREEN            | 2 of 2   | 2 passed            |
+| `TDD-0035` falsifiability A | 2 of 2   | 1 failed, 1 passed  |
+| `TDD-0035` falsifiability B | 2 of 2   | 1 failed, 1 passed  |
 | Refactor verify           | all      | 126 passed          |
 | Checkpoint                | all      | 2258 passed, exit 0 |
 
@@ -176,6 +177,29 @@ boundary from both sides. The case asserting the scoped invocation writes
 stays green: the mutation removes the field in both directions, and only one
 direction is a defect.
 
+The seal has a second half. `notes` must name every gate the scope skips, and
+the mutation above cannot reach it: the case dies on its first assertion, so the
+notes assertions never run. A second mutation drops one gate from the list the
+notes are built from, in the same file at line 1178:
+
+```diff
+-    ? SAAS_PACKAGE_SKIPPED_GATES.map(formatSaasPackageSkipNote)
++    ? SAAS_PACKAGE_SKIPPED_GATES.slice(1).map(formatSaasPackageSkipNote)
+```
+
+`scope` is still sealed correctly, so the first assertion passes and the case
+reaches the loop over the gate list, where the dropped gate fails on `expected
+false to be true`. The two mutations partition the seal's two properties: each
+kills one and leaves the other intact.
+
+- Round 1: Second falsifiability command: npx vitest run tests/integration/cli/commands/prototypingCertify.saasPackage.test.ts -t 'certify --scope saas-package seals a scope-limited certificate'
+- Round 1: Second falsifiability result: Test Files 1 failed (1); Tests 1 failed, 1 passed (2 of the file's 2 selected), on `expected false to be true` at the gate loop. The `scope` assertion above it passes.
+- Round 1: Second falsifiability revision: working-tree+2b06e6064bb878975707183a782a499fca4e27c04577902594ddfb0a388755f2
+
+The seal's third clause is not covered by either mutation, and the coverage
+matrix records it: `expect(cert.scope).not.toBe("full")` sits after the line
+that pins `scope` to `saas-package` and cannot fail while that line passes.
+
 - Refactor verify command: npx vitest run tests/integration/verifySemanticsSpec0014.test.ts tests/cli/commands/prototypingIterate.test.ts tests/integration/cli/commands/prototypingCertify.saasPackage.test.ts tests/integration/cli/commands/prototypingCertify.upgradeScope.test.ts
 - Refactor verify result: Test Files 4 passed (4); Tests 126 passed (126)
 - Refactor verify revision: 649d8111147436408c90cbbe1b9f9b07e34da8cb
@@ -186,7 +210,7 @@ direction is a defect.
 ## Coverage Depth Matrix
 
 See `.qfai/evidence/coverage-depth-spec-0014.md`.
-Totals: ✅ 16 / ⚠️ 58 / ❌ 70, with 3 not applicable, across 147 scored cells —
+Totals: ✅ 15 / ⚠️ 59 / ❌ 70, with 3 not applicable, across 147 scored cells —
 126 matrix depth cells (14 rows × 9 columns) and 21 business rule cells
 (7 rows × 3 columns). `Status` is a row verdict, not a mark, and is outside
 every total.
