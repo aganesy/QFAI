@@ -143,7 +143,14 @@ There is one base, and it is the project root.
 - Preserve structured choice semantics when falling back.
 - State why AskUserQuestion was unavailable.
 - The three buckets of a skill's `## Default Autopilot Policy` say who settles a
-  decision:
+  decision **the skill performs**. A question put inside a grilling session is
+  not one: it settles a design, an approach, a scope boundary or a trade-off
+  before anything is performed, and `.agents/rules/grilling.md` owns which of
+  those are asked and in what order. Read as a classification of every question
+  an invocation can utter, the closed `ask-user` list would contradict that
+  rule. Where the interview is what the skill performs, the asking stays in
+  `ask-user`.
+  The buckets:
   - `auto-decide` — the skill settles it without asking.
   - `ask-user` — the skill asks before acting.
   - `hard-required` — no default is possible, so a run may not proceed on a

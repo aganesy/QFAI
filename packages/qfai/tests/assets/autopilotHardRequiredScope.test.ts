@@ -136,3 +136,48 @@ describe("governing decision", () => {
     }
   });
 });
+
+/**
+ * What the buckets classify, now that a grilling session exists.
+ *
+ * The `ask-user` bucket is a closed list of four categories, and the grilling
+ * rule puts a design, an approach, a scope boundary or a trade-off to the user —
+ * none of them. Read as a classification of every question an invocation can
+ * utter, the policy asked for a question it could not classify and could not
+ * gain a category for without opening the list the spec closed.
+ *
+ * So the subject is narrowed rather than the list opened: the buckets classify
+ * the operations a skill performs, and a session's question is the session's.
+ */
+describe("the autopilot buckets classify operations, not interview questions", () => {
+  const SCOPE = "the **operations the skill performs**";
+
+  for (const tree of QFAI_TREES) {
+    it(`${tree}: the operating baseline scopes the buckets`, async () => {
+      const text = flat(
+        await readFile(
+          path.join(repoRoot, tree, "assistant/constitution/shared-skill-operating-baseline.md"),
+          "utf-8",
+        ),
+      );
+      expect(text).toContain("say who settles a decision **the skill performs**");
+      expect(text).toContain("A question put inside a grilling session is not one");
+      expect(text).toContain("`.agents/rules/grilling.md` owns which of those are asked");
+      // The interview skills are the exception the narrowing needs, or their own
+      // frontier questions fall outside every bucket.
+      expect(text).toContain("Where the interview is what the skill performs, the asking stays in");
+    });
+  }
+
+  it("the business rule carries the scope the baseline states", async () => {
+    // The rule, not the acceptance criterion: the criterion states what the
+    // gate checks — the section is present and populated — and that is
+    // unchanged. What the buckets are about is the rule's.
+    const text = flat(
+      await readFile(path.join(repoRoot, ".qfai/specs/spec-0015/04_Business-Rules.md"), "utf-8"),
+    );
+    expect(text).toContain(SCOPE);
+    expect(text).toContain("A question put inside a grilling session is not one of those");
+    expect(text).toContain("owns which of those are asked and in what order");
+  });
+});
