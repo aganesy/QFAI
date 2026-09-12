@@ -23,7 +23,7 @@ import {
   resolveTestCaseTables,
 } from "./specPackParsers.js";
 import { UNIT_COMPONENT_LAYERS } from "./tddHelpers.js";
-import { DEFAULT_TEST_FILE_EXCLUDE_GLOBS } from "./traceability.js";
+import { DEFAULT_TEST_FILE_EXCLUDE_GLOBS, normalizeGlobs } from "./traceability.js";
 import { maskJsNonCode } from "./validators/jsSourceMask.js";
 
 // The short form carries `(?!-)`; the long form does not.
@@ -473,7 +473,9 @@ export async function evaluateAtddCodeTraceability(
     scanResult = await collectTestFiles(
       root,
       scanGlobs,
-      config.validation.traceability.testFileExcludeGlobs,
+      // Trimmed and emptied the way every other scan of this list is, so a
+      // padded entry excludes here exactly what it excludes there.
+      normalizeGlobs(config.validation.traceability.testFileExcludeGlobs),
       // A project glob may match a whole monorepo. Charging the limit for files
       // no acceptance rule reads would spend it on the first packages and never
       // reach the later ones, and the truncation that reports it is an `info`.
@@ -681,7 +683,7 @@ export async function evaluateAtddCodeTraceability(
       root,
       testsRoot,
       tcLevels,
-      config.validation.traceability.testFileExcludeGlobs,
+      normalizeGlobs(config.validation.traceability.testFileExcludeGlobs),
     )),
   );
 

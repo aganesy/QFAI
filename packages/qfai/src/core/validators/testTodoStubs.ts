@@ -1435,7 +1435,10 @@ export async function validateTestTodoStubs(
   const excludeGlobs = Array.from(
     new Set([
       ...DEFAULT_TEST_FILE_EXCLUDE_GLOBS,
-      ...config.validation.traceability.testFileExcludeGlobs,
+      // The includes are normalised above; the excludes are the same list's
+      // other half, and a padded entry that the traceability scan honours but
+      // this one does not makes the two gates read different files.
+      ...normalizeGlobs(config.validation.traceability.testFileExcludeGlobs),
     ]),
   );
 

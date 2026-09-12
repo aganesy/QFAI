@@ -249,12 +249,12 @@ segment to anchor on, so its files answer no layer and their obligations are
 reported as uncovered. Name the root `tests`, `test` or `__tests__`, or point
 `paths.testsDir` at it, and the anchored rule reads the suite.
 
-Answering from the file's own directory instead was tried and withdrawn. The
-glob `npx qfai init` derives reaches colocated sources, and there the file's own
-directory is a source directory: `src/api/client.spec.ts` is a unit test, and
-reading it as an API acceptance one lets its annotations discharge an obligation
-and its unfilled stubs block a gate that owns no unit test. Reporting a suite as
-uncovered is the safe direction; claiming one is not.
+**A file's own directory never answers its layer.** The glob `npx qfai init`
+derives reaches colocated sources, and there the file's own directory is a source
+directory: `src/api/client.spec.ts` is a unit test, and reading it as an API
+acceptance one would let its annotations discharge an obligation and its unfilled
+stubs block a gate that owns no unit test. Reporting a suite as uncovered is the
+safe direction; claiming one is not.
 
 Three things that does not change.
 

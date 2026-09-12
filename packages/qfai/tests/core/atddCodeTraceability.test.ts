@@ -1040,6 +1040,26 @@ describe("acceptance tests outside paths.testsDir", () => {
     });
   });
 
+  it("an excluded glob written with surrounding whitespace is still honoured", async () => {
+    await withProject(async (root) => {
+      await seedSpec(root, "0001", ["US-0001"], ["TC-0001"]);
+      await seedTest(root, "e2e", "a.test.ts", "/* QFAI:SPEC-0001:US-0001 */");
+      await seedPackageTest(root, "legacy", "integration", "old.test.ts", [
+        "/* QFAI:SPEC-0001:TC-0001 */",
+      ]);
+
+      // The config loader keeps the padding, and every other scan of this list
+      // trims it. A raw pattern here excluded nothing, so the withdrawn suite
+      // was read and its annotation reported the obligation as covered.
+      const result = await evaluateAtddCodeTraceability(
+        root,
+        withProjectGlobs(["packages/*/tests/**/*.test.ts"], ["  packages/legacy/**  "]),
+      );
+
+      expect(result.missing.tc).toEqual(["SPEC-0001:TC-0001"]);
+    });
+  });
+
   it("a package named for a layer does not decide its tests' layer", async () => {
     await withProject(async (root) => {
       await seedSpec(root, "0001", ["US-0001"], ["TC-0001"]);
