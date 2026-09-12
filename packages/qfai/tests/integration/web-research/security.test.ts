@@ -24,7 +24,7 @@ async function readSkill(): Promise<string> {
 describe("web-research security", () => {
   // ── MCP Failure Recovery ────────────────────────────────────────────
 
-  // QFAI:SPEC-0027:TC-0027-0005  TDD-0011
+  // QFAI:SPEC-0016:TC-0016-0005  TDD-0011
   it("MCP crash detection within 10s, fallback activates", async () => {
     const content = await readSkill();
     expect(content).toMatch(/crash\s+(detect|detection|recover)/i);
@@ -32,7 +32,7 @@ describe("web-research security", () => {
     expect(content).toMatch(/fallback/i);
   });
 
-  // QFAI:SPEC-0027:TC-0027-0006  TDD-0012
+  // QFAI:SPEC-0016:TC-0016-0006  TDD-0012
   it("rate limit 429 backoff respects Retry-After", async () => {
     const content = await readSkill();
     expect(content).toMatch(/429|rate[_\s-]?limit/i);
@@ -41,26 +41,26 @@ describe("web-research security", () => {
 
   // ── Content Sanitization ───────────────────────────────────────────
 
-  // QFAI:SPEC-0027:TC-0027-0009  TDD-0013
+  // QFAI:SPEC-0016:TC-0016-0009  TDD-0013
   it("injection defense — display:none content removed", async () => {
     const content = await readSkill();
     expect(content).toMatch(/display\s*:\s*none/i);
     expect(content).toMatch(/remov|strip|sanitiz/i);
   });
 
-  // QFAI:SPEC-0027:TC-0027-0010  TDD-0014
+  // QFAI:SPEC-0016:TC-0016-0010  TDD-0014
   it("aria-hidden content removed", async () => {
     const content = await readSkill();
     expect(content).toMatch(/aria[_\s-]?hidden/i);
   });
 
-  // QFAI:SPEC-0027:TC-0027-0011  TDD-0015
+  // QFAI:SPEC-0016:TC-0016-0011  TDD-0015
   it("legitimate content preserved unchanged", async () => {
     const content = await readSkill();
     expect(content).toMatch(/preserv|legitimate|unchanged/i);
   });
 
-  // QFAI:SPEC-0027:TC-0027-0025  TDD-0016
+  // QFAI:SPEC-0016:TC-0016-0025  TDD-0016
   it("sanitizer idempotency — byte-identical", async () => {
     const content = await readSkill();
     expect(content).toMatch(/idempoten/i);
@@ -68,19 +68,19 @@ describe("web-research security", () => {
 
   // ── Domain / URL Allowlist ─────────────────────────────────────────
 
-  // QFAI:SPEC-0027:TC-0027-0012  TDD-0017
+  // QFAI:SPEC-0016:TC-0016-0012  TDD-0017
   it("allowlist happy path — allowed domain passes", async () => {
     const content = await readSkill();
     expect(content).toMatch(/allow[_\s-]?list/i);
   });
 
-  // QFAI:SPEC-0027:TC-0027-0013  TDD-0018
+  // QFAI:SPEC-0016:TC-0016-0013  TDD-0018
   it("default-deny blocks non-allowlisted domain", async () => {
     const content = await readSkill();
     expect(content).toMatch(/default[_\s-]?deny/i);
   });
 
-  // QFAI:SPEC-0027:TC-0027-0014  TDD-0019
+  // QFAI:SPEC-0016:TC-0016-0014  TDD-0019
   it("redirect to non-allowlisted domain blocked", async () => {
     const content = await readSkill();
     expect(content).toMatch(/redirect/i);
@@ -89,7 +89,7 @@ describe("web-research security", () => {
 
   // ── Sandbox Enforcement ────────────────────────────────────────────
 
-  // QFAI:SPEC-0027:TC-0027-0022  TDD-0020
+  // QFAI:SPEC-0016:TC-0016-0022  TDD-0020
   it("sandbox default-deny enforcement — template files exist", async () => {
     const files = await fg(["**/*"], { cwd: sandboxTemplateDir, absolute: false });
     expect(files.length).toBeGreaterThan(0);

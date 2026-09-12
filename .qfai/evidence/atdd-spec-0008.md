@@ -162,19 +162,37 @@ inactive and did not run.
 ## Coverage Depth Matrix
 
 See `.qfai/evidence/coverage-depth-spec-0008.md`.
-Totals: ✅ 35 / ⚠️ 11 / ❌ 116 across the nine depth columns of eighteen rows,
-and ✅ 8 / ⚠️ 14 / ❌ 7 with 7 not applicable across the twelve business rules.
+Totals: ✅ 45 / ⚠️ 26 / ❌ 192, with 7 not applicable, across 270 scored cells —
+234 matrix depth cells (26 rows × 9 columns) and 36 business rule cells
+(12 rows × 3 columns). `Status` is a row verdict, not a mark, and is outside
+every total.
 
 ## Work Orders Summary
 
-| Role                | Task                                                | Status (PASS/REVISE/PENDING) |
-| ------------------- | --------------------------------------------------- | ---------------------------- |
-| test-design-analyst | Score the eighteen obligations and write the matrix | PASS                         |
-| completion-reviewer | Audit the matrix against the depth checklist        | PASS                         |
+| Role                | Task                                                  | Status (PASS/REVISE/PENDING) |
+| ------------------- | ----------------------------------------------------- | ---------------------------- |
+| test-design-analyst | Score the twenty-six obligations and write the matrix | PASS                         |
+| completion-reviewer | Audit the matrix against the depth checklist          | PENDING                      |
 
 ## Cross-spec obligations
 
 None.
+
+## Reviewer response
+
+- Role: completion-reviewer
+- Status: PENDING
+- Subject: `.qfai/evidence/coverage-depth-spec-0008.md`, audited against
+  `.qfai/assistant/skills/qfai-atdd/references/test-case-depth-checklist.md`
+- Result: outstanding. No verdict on record rules on this artifact. The subject
+  is twenty-six rows and 234 depth cells — the eight user stories as well as the
+  eighteen test cases — and the totals under "Coverage Depth Matrix" above are
+  counted from it. An audit of a matrix that scored the test cases alone ruled on
+  a smaller artifact, and does not carry to this one.
+- Residual risk: the totals above, the reason given for each of the 192 `❌`
+  cells, and the rationale given for each of the 26 `⚠️` cells are unreviewed. A
+  count that disagrees with the table, or a justification that does not hold
+  against the tree, is caught by nothing else in this file.
 
 ## Execution logs
 
@@ -192,4 +210,6 @@ Recorded per row above, and summarized in the table under
 
 ## Final status
 
-PASS. Both rows carry the evidence their pointers name.
+PASS for the two rows recorded here: each carries the evidence its pointer
+names. This is a per-row verdict, not a stage verdict — the coverage matrix
+beside it is unreviewed, and the reviewer row above reads `PENDING`.

@@ -4,10 +4,6 @@
  * Tests real module behavior with real file system operations.
  * Uses vi.mock only for git-dependent child_process calls.
  */
-// QFAI:SPEC-0012:TC-0012-0019
-// QFAI:SPEC-0012:TC-0012-0020
-// QFAI:SPEC-0012:TC-0012-0021
-// QFAI:SPEC-0012:TC-0012-0022
 import { execFileSync } from "node:child_process";
 import { mkdir, mkdtemp, readFile, utimes, writeFile } from "node:fs/promises";
 import os from "node:os";
@@ -762,7 +758,6 @@ describe("TC-0013-0017: old evidence without Diff Context remains parseable", ()
 // spec-0035: Routing determinism (TC-0012-0019..0022)
 // ═══════════════════════════════════════════════════════════════════════════
 
-// QFAI:SPEC-0012:TC-0012-0019
 describe("TC-0012-0019: explicit flag routing determinism", () => {
   let tmpRoot: string;
 
@@ -789,7 +784,6 @@ describe("TC-0012-0019: explicit flag routing determinism", () => {
   });
 });
 
-// QFAI:SPEC-0012:TC-0012-0020
 describe("TC-0012-0020: routing idempotency", () => {
   let tmpRoot: string;
 
@@ -820,7 +814,6 @@ describe("TC-0012-0020: routing idempotency", () => {
   });
 });
 
-// QFAI:SPEC-0012:TC-0012-0021
 describe("TC-0012-0021: precedence chain doc-impl match", () => {
   let tmpRoot: string;
 
@@ -856,7 +849,6 @@ describe("TC-0012-0021: precedence chain doc-impl match", () => {
   });
 });
 
-// QFAI:SPEC-0012:TC-0012-0022
 describe("TC-0012-0022: cross-doc routing consistency", () => {
   it("prototyping SKILL.md references routing precedence chain", async () => {
     const repoRoot = path.resolve(process.cwd(), "..", "..");
