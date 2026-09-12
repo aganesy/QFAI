@@ -1,7 +1,7 @@
 ---
 id: 2026-09-12-spec-0002-two-statements-the-product-replaced
 status: active
-kind: blocker
+kind: consultation-needed
 created: 2026-09-12
 updated: 2026-09-12
 scope: spec-0002
