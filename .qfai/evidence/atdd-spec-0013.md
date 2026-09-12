@@ -293,17 +293,24 @@ None.
 
 - Role: completion-reviewer
 - Status: PASS
-- Reviewed revision: 78d36a9ded7e886dee0b35c3888cfdc41bf89ce6
+- Reviewed revision: 17b974ae598385cb80b8ef1c55268e2624f6a72f
 - Subject: every claim this file makes, checked against the files it names
-- Result: the four recorded rows reproduce their commands and counts; the
-  evidence-entry contract holds, with `QFAI-TDDLIST-008` and `-009` silent and
-  `-007` / `-011` naming exactly the eight unbackfilled rows; all eight gap
-  reasons check out against the files they name, including the mutation that
-  leaves `TDD-0023`'s own case green; the matrix totals agree with the matrix.
-- Residual risk: the four falsifiability rounds cannot be re-executed. Each
-  names a content address that folds `HEAD` into it, and `HEAD` has moved. Each
-  claimed kill count was re-derived from the source instead, and all four are
-  consistent.
+- Result: the four recorded rows reproduce their GREEN commands, their
+  refactor-verify run and the checkpoint exactly as recorded, and every
+  `Selector` resolves to a real case; the evidence-entry contract holds, with
+  `QFAI-TDDLIST-008` and `-009` silent and `-007` / `-011` naming exactly the
+  eight unbackfilled rows and no backfilled one; all eight gap reasons check
+  out against the files they name; the matrix totals — ✅ 76 / ⚠️ 105 /
+  ❌ 312 with `n/a` 8 across 501 cells — agree with the tables, and every
+  `❌` and `⚠️` cell carries exactly one justification, with no coordinate
+  missing and none listed that does not carry the mark.
+- Residual risk: the five falsifiability mutations cannot be re-executed. Each
+  names a content address that folds the tree state into it, and the tree has
+  moved. Each claimed kill count was re-derived from the source line its
+  mutation names instead, and all five are consistent, including which case
+  survives in each. Separately, whether a cell deserves `⚠️` over `✅` is a
+  judgement the arithmetic cannot settle: the totals and both censuses were
+  verified mechanically, the individual scores by sampling.
 
 ## Execution logs
 
