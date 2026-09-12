@@ -67,9 +67,12 @@ Statement B, the requiredness rule, owns `TDD-0012`. So for `1A/3bB`: option 1
 on A resets `TDD-0008` and `TDD-0009` and retires `TDD-0010`, and option 3 on B
 retires `TDD-0012` and deletes the legacy-format case its disposition names.
 
-Option 2 on **B** additionally blocks and resets `TDD-0001`: that option
-restores the preflight check for `prototyping.yaml`, which edits
-`sddPreflight.test.ts`, the file the row's observation covers. Option 2 on A
+Option 2 resets nothing. It is `confirm-only`, so no obligation moves, and the
+approved reset is for a row an approved upstream change invalidated. Its rows
+take the in-place shared-artifact re-verification plus falsifiability evidence
+for each corrected assertion. Option 2 on **B** reaches `TDD-0001` as well:
+restoring the preflight check for `prototyping.yaml` edits
+`sddPreflight.test.ts`, the file that row's observation covers. Option 2 on A
 does not touch that file.
 
 Option 3 is answered as `3a` or `3b`. `3a` writes a new obligation for the
@@ -80,7 +83,8 @@ with no letter authorises neither, so the retirement cannot be applied from it.
 `TDD-0011` is in neither statement's list. It is **re-verified, not reset**,
 under every combination, because the annotation repairs edit the file its
 observation covers while its obligation stands. No test is deleted under any
-combination.
+combination except `3bB`, whose disposition is the deletion of
+`legacy 4-axis format is error`.
 
 ## Constraints to preserve
 

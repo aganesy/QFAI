@@ -504,8 +504,10 @@ it says so and names what carries it now.
    `tests/validators/uix/threeLayer.test.ts` is in the same position, declaring `TC-0002-0011`,
    `TC-0002-0012` and `TC-0002-0026` beside the one obligation it does reach, `TC-0002-0010`.
    The two files need different routes. `threeLayer.test.ts` is the file `TDD-0011`'s recorded
-   observation covers, so editing it reddens `QFAI-TDDLIST-009` and restarts that row's cycle —
-   it belongs to the sweep `CR-20260912-0003` plans, which resets `TDD-0011` for that reason.
+   observation covers, so editing it stales that observation and the row owes a fresh one. The
+   route is the shared-artifact re-verification `CR-20260912-0003` step 3 sets out, which keeps
+   the row at `done` and needs no approval from that Change Request: the row's obligation does
+   not move under any of its outcomes, so nothing authorises a reset and nothing needs one.
    `screenContract.test.ts` is named by no ledger row in any spec, so removing its five stale
    annotations stales nothing and needs no reset. It is ordinary work, available now, and the
    Change Request carries it in scope only so one reader finds both halves in one place.

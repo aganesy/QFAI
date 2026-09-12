@@ -66,11 +66,11 @@ from the options below, and sweep the ledger rows that rest on them.
 
 ## Options (at least 3) and recommendation
 
-| #   | Option                                                                                                                                              | Cost                                                     | Risk                                                                                                      | Recommended |
-| --- | --------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------- | --------------------------------------------------------------------------------------------------------- | ----------- |
-| 1   | Narrow the spec to the product: REQ-0012 and AC-0002-0008 bind the screen explorations only; REQ-0005 and AC-0002-0010 say the artifact is optional | Edit four upstream statements; re-point four ledger rows | Records today's behaviour as intended. If either narrowing was a regression, it becomes the specification | ✅          |
-| 2   | Restore the product to the spec: reinstate a winner check, and make `prototyping.yaml` a readiness blocker for UI-bearing packs                     | New validator work, and a breaking change for adopters   | Reverses a deliberate design move without the record of why it was made                                   |             |
-| 3   | Retire the four obligations: withdraw REQ-0012, AC-0002-0008, REQ-0005's requiredness half and AC-0002-0010, and delete the rows resting on them    | Smallest edit                                            | Loses the record that the question was ever settled, so the next reader re-derives it                     |             |
+| #   | Option                                                                                                                                              | Cost                                                                                                                    | Risk                                                                                                                                                 | Recommended |
+| --- | --------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- | ----------- |
+| 1   | Narrow the spec to the product: REQ-0012 and AC-0002-0008 bind the screen explorations only; REQ-0005 and AC-0002-0010 say the artifact is optional | Edit four upstream statements. Reset `TDD-0008`, `-0009`, `-0012`; **retire `TDD-0010`**; re-verify `TDD-0011` in place | Records today's behaviour as intended. If either narrowing was a regression, it becomes the specification. One row is removed rather than re-pointed | ✅          |
+| 2   | Restore the product to the spec: reinstate a winner check, and make `prototyping.yaml` a readiness blocker for UI-bearing packs                     | New validator work, and a breaking change for adopters                                                                  | Reverses a deliberate design move without the record of why it was made                                                                              |             |
+| 3   | Retire the four obligations: withdraw REQ-0012, AC-0002-0008, REQ-0005's requiredness half and AC-0002-0010, and delete the rows resting on them    | Smallest edit                                                                                                           | Loses the record that the question was ever settled, so the next reader re-derives it                                                                |             |
 
 Option 1 is recommended because the narrowing is documented in the tree and was
 made on purpose: the direction interview asks the user rather than letting an
@@ -86,23 +86,27 @@ spec catching up, not the product going back.
 | `spec-0002/TDD-0009` | `ledger-row` | `TC-0002-0009` asks that a pack asserting a single final winner be refused |
 | `spec-0002/TDD-0010` | `ledger-row` | second row on `TC-0002-0009`                                               |
 | `spec-0002/TDD-0012` | `ledger-row` | `TC-0002-0011` asks that the wording match the active requiredness rule    |
-| `spec-0002/TDD-0011` | `ledger-row` | its recorded observation covers the file both annotation repairs must edit |
 
-`TDD-0011` is here for a different reason from the other four. Its obligation is
-sound and its test discharges it. But the two repairs the matrix asks for —
-giving `non-UI skip` a fixture that makes the guard load-bearing, and removing
-the three annotations `threeLayer.test.ts` declares that this spec's table does
-not hold — both edit the file `TDD-0011`'s recorded observation covers. Either
-reddens `QFAI-TDDLIST-009` and restarts the row's cycle, so the repair needs an
-authorized reset rather than an edit beside it.
+**`spec-0002/TDD-0011` is not in this set.** Its obligation is sound, its test
+discharges it, and no A/B outcome moves either. The two repairs the matrix asks
+for — giving `non-UI skip` a fixture that makes the guard load-bearing, and
+removing the three annotations `threeLayer.test.ts` declares that this spec's
+table does not hold — do edit the file its recorded observation covers, so the
+row owes a fresh observation. That is the shared-artifact re-verification of step
+3, which needs no approval from this Change Request and no reset.
+
+Listing it here would have blocked it: the open-CR preflight suppresses every
+row in this set until the user settles two product decisions the row has nothing
+to do with. A row whose obligation is unchanged waits on nobody.
 
 - Not blocked by this CR under options 1 and 3: `spec-0002/TDD-0001`. Its
   obligation, pack readiness, is untouched by either statement, and its test
-  discharges it. **Under option 2 it is blocked**: making a missing
+  discharges it. **Under `2B` it is reached**: making a missing
   `prototyping.yaml` a readiness blocker edits
   `packages/qfai/tests/core/sddPreflight.test.ts`, which is the file this row's
   recorded observation covers, so its evidence goes stale the moment the change
-  lands and it needs the same reset as the others.
+  lands. It takes the same in-place repair the other rows take under that
+  option, not a reset: its obligation does not move either.
 - Overlapping open CRs: `none`
 
 ## Impact scope
@@ -129,8 +133,12 @@ authorized reset rather than an edit beside it.
   whose Phase 0 reads the recorded direction;
   `packages/qfai/src/core/preflight/sddPreflight.ts`, which must block on a
   missing `prototyping.yaml`; a new validator source for the single-winner
-  violation; and the three shipped documents carrying the optional-artifact
-  sentence. The tests that pin the behaviour being removed move with it:
+  violation **and every path that makes it run** —
+  `packages/qfai/src/core/validators/uix/canonical.ts`, whose
+  `CANONICAL_UIX_VALIDATORS` list is the only way `qfai validate` reaches a UIX
+  validator, the export that puts the new module on that surface, the emitted
+  finding-code registry, and the regression tests that pin both; and the three
+  shipped documents carrying the optional-artifact sentence. The tests that pin the behaviour being removed move with it:
   `packages/qfai/tests/assets/designDirectionInterview.test.ts`,
   `packages/qfai/tests/assets/sddStage0PrototypingOptional.test.ts`,
   `packages/qfai/tests/assets/assets.test.ts` and
@@ -168,11 +176,15 @@ same option for both. The combinations are not listed as separate options,
 because the two statements are independent and a table of every pairing would
 ask the user to read every row to make two choices.
 
-**Option 3 carries its letter, and is incomplete without it.** `3a` and `3b` are
-the two dispositions of the legacy-format test its retirement leaves behind, and
-one of them deletes an assertion. `3B` on its own authorises neither, so the
-retirement cannot be applied from it — which is the state this record exists to
-prevent, one decision further down.
+**Option 3 carries its letter when it settles statement B.** `3a` and `3b` are
+the two dispositions of the legacy-format test, and one of them deletes an
+assertion. That test's obligation is `TC-0002-0011`, which belongs to statement
+B, so `3bB` is complete and `3B` alone authorises neither disposition and cannot
+be applied.
+
+`3A` takes no letter. Statement A's retirement leaves that test owned by whatever
+settles B, so a letter there would authorise an action on the other statement —
+and refusing `3A/1B` for want of one would make a valid split unrecordable.
 
 ## Approved actions (owner skill rerun plan)
 
@@ -229,16 +241,25 @@ prevent, one decision further down.
    artifact is required. This is the option with the largest blast radius, and
    the direction interview it removes was itself added to stop an assistant
    inventing a brand.
-   - Reset to `todo`, recording this CR's ID in `DR-ID`: `spec-0002/TDD-0008`
-     and `spec-0002/TDD-0009` under statement A, `spec-0002/TDD-0012` under
-     statement B.
-   - Reset under statement B alone: `spec-0002/TDD-0001`. It is in neither
-     statement's obligation list — its `TC-Refs` is `TC-0002-0001` — and is here
-     because the restored preflight check edits `sddPreflight.test.ts`, the file
-     its observation covers. That check is the requiredness rule, so `1A/2B`
-     resets the row and `2A/1B` leaves it alone. Attached to the option instead
-     of to the statement, it reset under a combination that never touches the
-     file and stayed at `done` under one that rewrites it.
+   - **No row is reset.** This option is `confirm-only`, so no upstream
+     statement moves, and
+     `.qfai/assistant/skills/qfai-implement/references/checkpoint-verification.md`
+     admits the approved reset only for a row an approved **upstream** change has
+     invalidated. `TDD-0008`, `TDD-0009` and `TDD-0012` keep the obligations they
+     already had; what changes is the product beneath them and the assertions
+     that were written against the old behaviour. That is the in-place repair
+     path: the shared-artifact re-verification, plus falsifiability evidence for
+     each corrected assertion — break the production predicate the new assertion
+     names, run the row's `Selector`, confirm an admissible failure, revert and
+     re-run for the restored GREEN — recorded on the row's own line at the
+     mutated tree's `Falsifiability revision`. Routing them to a reset would
+     demand an authorization this record cannot legitimately give, and would
+     leave each row holding a gate it can never clear.
+   - **`spec-0002/TDD-0001`, under statement B alone, takes the same path.** It
+     is in neither statement's obligation list — its `TC-Refs` is `TC-0002-0001`
+     — and is here because the restored preflight check edits
+     `sddPreflight.test.ts`, the file its observation covers. That check is the
+     requiredness rule, so `1A/2B` reaches the row and `2A/1B` leaves it alone.
    - Retire: `spec-0002/TDD-0010` — `current preflight unit test pass`, as under
      option 1. Restoring a winner validator gives `TC-0002-0009` no second
      boundary: the test case defines one violation, and this row points at a
@@ -252,10 +273,14 @@ prevent, one decision further down.
    `02_User-stories.md` (`US-0002-0005`), `03_Acceptance-Criteria.md`
    (`AC-0002-0008`, `AC-0002-0010`), `04_Business-Rules.md` (`BR-0002-0008`,
    `BR-0002-0010`), `05_Examples.md` (`EX-0002-0008`, `EX-0002-0009`,
-   `EX-0002-0011`) and `06_Test-Cases.md` (`TC-0002-0008`, `TC-0002-0009`,
-   `TC-0002-0011`). A withdrawal that stops at the requirement leaves the story,
-   the rule and the example asserting what was withdrawn, which is the state this
-   Change Request exists to end rather than to reproduce one layer down.
+   `EX-0002-0011`), `06_Test-Cases.md` (`TC-0002-0008`, `TC-0002-0009`,
+   `TC-0002-0011`) and `07_Decisions.md` (`DR-0002-0001`, `DR-0002-0003`). A
+   withdrawal that stops at the requirement leaves the story, the rule and the
+   example asserting what was withdrawn, which is the state this Change Request
+   exists to end rather than to reproduce one layer down. The decision records
+   are the last layer and the easiest to leave behind: naming `07_Decisions.md`
+   in the impact scope authorises the edit and does not ask for one, so a pack
+   can retire the requirement and keep the two decisions that state it.
    - Reset to `todo`: none.
    - Retire, each with its `Evidence` cell verbatim:
      `spec-0002/TDD-0008` — `current template integration test pass`;
