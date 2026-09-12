@@ -622,6 +622,12 @@ describe("the working-tree address has one notation", () => {
       expect(text).toContain("-O/dev/null");
       expect(text).toContain("-c diff.submodule=short");
       expect(text).toContain("--ignore-submodules=none");
+      expect(text).toContain("--inter-hunk-context=0");
+      expect(text).toContain("-c diff.suppressBlankEmpty=false");
+      // The short format cannot tell two dirty submodule states apart, so an
+      // address over one would not move for an arbitrary change inside it.
+      expect(text).toContain("A dirty submodule stops the address");
+      expect(text).toContain("Do not record an address over a dirty submodule");
       // A symlink payload read through a command gains or loses a newline.
       expect(text).toContain("No command-output terminator is serialized");
     });

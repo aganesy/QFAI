@@ -42,26 +42,35 @@ check. Gate item 10 rejects any other shape wherever a revision is recorded:
      ```sh
      root=$(git rev-parse --show-toplevel)
      git -C "$root" rev-parse HEAD
-     git -C "$root" -c core.quotePath=false -c diff.submodule=short diff HEAD \
+     git -C "$root" -c core.quotePath=false -c diff.submodule=short -c diff.suppressBlankEmpty=false diff HEAD \
        --no-color --no-ext-diff --no-textconv -O/dev/null --ignore-submodules=none --binary --full-index --no-renames \
-       --diff-algorithm=myers --src-prefix=a/ --dst-prefix=b/ --unified=3 --
+       --diff-algorithm=myers --src-prefix=a/ --dst-prefix=b/ --unified=3 --inter-hunk-context=0 --
      git -C "$root" -c core.quotePath=false ls-files --others --exclude-standard -z
      ```
 
      Each of those is there because leaving it off lets one tree have two
      addresses.
 
-     | Pinned                                                   | Without it                                                                                                                                                                                                                        |
-     | -------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-     | `-C "$root"`                                             | `ls-files --others` enumerates only what is under the current directory, and reports paths relative to it — so where the agent stood changes the address                                                                          |
-     | `-c core.quotePath=false` and `-z`                       | A path holding non-ASCII or a control character comes back in a quoted display spelling, and the config changes that spelling for the same tree                                                                                   |
-     | `--full-index`                                           | The `index` line abbreviates to `core.abbrev`, which differs per environment                                                                                                                                                      |
-     | `--src-prefix=a/ --dst-prefix=b/`                        | `diff.noprefix` and `diff.mnemonicPrefix` rewrite the headers                                                                                                                                                                     |
-     | `--no-renames` and `--diff-algorithm=myers`              | `diff.renames` and `diff.algorithm` change the hunks for identical content                                                                                                                                                        |
-     | `-O/dev/null`                                            | `diff.orderFile` reorders the file patches, so two changed files come out in different orders for one tree. An empty order file cancels it; `-c diff.orderFile=` does not — git reads the empty value as a path and exits `fatal` |
-     | `-c diff.submodule=short` and `--ignore-submodules=none` | `diff.submodule` has three formats for one changed submodule, and a configured `ignore` can drop the change from the diff entirely                                                                                                |
-     | `--unified=3`                                            | `diff.context` changes how many lines surround each hunk, and with them the bytes                                                                                                                                                 |
-     | `--no-textconv`                                          | A `.gitattributes` diff driver with `textconv` converts a file before diffing, and can render a real change as an empty diff. `--no-ext-diff` does not cover it                                                                   |
+     | Pinned                                                          | Without it                                                                                                                                                                                                                        |
+     | --------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+     | `-C "$root"`                                                    | `ls-files --others` enumerates only what is under the current directory, and reports paths relative to it — so where the agent stood changes the address                                                                          |
+     | `-c core.quotePath=false` and `-z`                              | A path holding non-ASCII or a control character comes back in a quoted display spelling, and the config changes that spelling for the same tree                                                                                   |
+     | `--full-index`                                                  | The `index` line abbreviates to `core.abbrev`, which differs per environment                                                                                                                                                      |
+     | `--src-prefix=a/ --dst-prefix=b/`                               | `diff.noprefix` and `diff.mnemonicPrefix` rewrite the headers                                                                                                                                                                     |
+     | `--no-renames` and `--diff-algorithm=myers`                     | `diff.renames` and `diff.algorithm` change the hunks for identical content                                                                                                                                                        |
+     | `-O/dev/null`                                                   | `diff.orderFile` reorders the file patches, so two changed files come out in different orders for one tree. An empty order file cancels it; `-c diff.orderFile=` does not — git reads the empty value as a path and exits `fatal` |
+     | `-c diff.submodule=short` and `--ignore-submodules=none`        | `diff.submodule` has three formats for one changed submodule, and a configured `ignore` can drop the change from the diff entirely                                                                                                |
+     | `--unified=3`                                                   | `diff.context` changes how many lines surround each hunk, and with them the bytes                                                                                                                                                 |
+     | `--inter-hunk-context=0` and `-c diff.suppressBlankEmpty=false` | `diff.interHunkContext` merges two nearby hunks into one, and `diff.suppressBlankEmpty` changes the prefix on an empty context line                                                                                               |
+     | `--no-textconv`                                                 | A `.gitattributes` diff driver with `textconv` converts a file before diffing, and can render a real change as an empty diff. `--no-ext-diff` does not cover it                                                                   |
+
+     **A dirty submodule stops the address.** The short format writes the same
+     `-dirty` marker whatever changed inside it, and the superproject's
+     `ls-files --others` does not reach those files — so an arbitrary change in
+     a dirty submodule leaves the address exactly where it was, and a verdict
+     taken before it reads as fresh. Commit or stash the submodule's work and
+     take the address again, or record the observation against the submodule's
+     own tree. Do not record an address over a dirty submodule.
 
      The exclusions below apply to both the diff and the untracked list.
 
