@@ -1290,8 +1290,11 @@ function globExtensions(globs: readonly string[]): string[] {
     const braces = /\.\{([^}]+)\}$/.exec(glob);
     if (braces) {
       for (const part of (braces[1] ?? "").split(",")) {
-        const extension = part.trim().toLowerCase();
-        if (extension.length > 0 && /^[a-z0-9_+-]+$/.test(extension)) {
+        // The alternative's own last dotted segment: `{test.zig,spec.zig}`
+        // names `.zig` twice, and rejecting an alternative for carrying a dot
+        // dropped the extension a project had selected outright.
+        const extension = part.trim().toLowerCase().split(".").at(-1) ?? "";
+        if (/^[a-z0-9_+-]+$/.test(extension)) {
           found.push(`.${extension}`);
         }
       }

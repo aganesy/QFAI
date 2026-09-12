@@ -499,6 +499,25 @@ describe("the ATDD gate's file selection", () => {
     expect(issues.map((issue) => issue.code)).toContain("QFAI-TEST-002");
   });
 
+  it("keeps an extension a dotted brace alternative names", async () => {
+    const root = await newTempDir();
+    const config = atddConfig(["packages/*/tests/**/*.{test.zig,spec.zig}"]);
+    // Each alternative carries its own dot. Rejecting them for that dropped
+    // the extension the project had selected outright.
+    await writeTestFile(
+      root,
+      "packages/checkout/tests/integration/pay.test.zig",
+      'test "pays" {}\n',
+    );
+
+    const issues = await validateTestTodoStubs(root, config, {
+      globs: atddAcceptanceTestGlobs(root, config, STUB_SOURCE_FILE_PATTERN),
+      fileFilter: atddAcceptanceLayerFilter(root, config),
+    });
+
+    expect(issues.map((issue) => issue.code)).toContain("QFAI-TEST-002");
+  });
+
   it("stands aside for a marked skeleton the placeholder validator scans", async () => {
     const root = await newTempDir();
     const config = atddConfig(["packages/*/tests/**/*.test.ts"]);

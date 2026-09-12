@@ -1270,6 +1270,36 @@ describe("acceptance tests outside paths.testsDir", () => {
     });
   });
 
+  it("keeps the layer when a suite nests a second conventional root", async () => {
+    await withProject(async (root) => {
+      await seedSpec(root, "0001", ["US-0001"], ["TC-0001"]);
+      await seedTest(root, "integration", "a.test.ts", "/* QFAI:SPEC-0001:TC-0001 */");
+      // The documented `<package>/tests/<layer>/**` layout with one more
+      // directory inside it. Taking the deepest root unconditionally put the
+      // boundary past the layer, where nothing follows.
+      const dir = path.join(root, "packages", "app", "tests", "e2e", "__tests__");
+      await mkdir(dir, { recursive: true });
+      await writeFile(
+        path.join(dir, "journey.test.ts"),
+        [
+          "/* QFAI:SPEC-0001:US-0001 */",
+          "describe('journey', () => {",
+          "  it('runs', () => {});",
+          "});",
+          "",
+        ].join("\n"),
+        "utf-8",
+      );
+
+      const result = await evaluateAtddCodeTraceability(
+        root,
+        withProjectGlobs(["packages/*/tests/**/*.test.ts"]),
+      );
+
+      expect(result.missing.us).toEqual([]);
+    });
+  });
+
   it("a malformed project glob does not abort the run", async () => {
     await withProject(async (root) => {
       await seedSpec(root, "0001", ["US-0001"], ["TC-0001"]);

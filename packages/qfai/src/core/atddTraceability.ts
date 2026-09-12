@@ -2566,6 +2566,14 @@ function resolveTestKindFromPath(
     if (isPackageRoot(path.join(root, ...directories.slice(0, index + 1)))) {
       return;
     }
+    // Deeper wins only when a layer follows it. A suite may nest a second
+    // conventional name — `<package>/tests/integration/__tests__/pay.test.ts`
+    // is the documented layout with one more directory inside it — and taking
+    // the deepest root unconditionally put the boundary past the layer, where
+    // nothing follows and the file answers nothing.
+    if (testRoot >= 0 && !ATDD_LAYER_SEGMENTS.has(directories[index + 1] ?? "")) {
+      return;
+    }
     testRoot = index;
   });
   if (testRoot < 0) {
