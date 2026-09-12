@@ -34,7 +34,7 @@ Required sections (all of them, in this order):
      `## Grilling (MANDATORY)` section; the open questions go under the
      table. -->
 
-### /qfai-verify — run started 2026-01-01T09:02:00Z
+### /qfai-verify — run started 2026-01-01T09:02:00.417Z
 
 Preflight: session opened
 

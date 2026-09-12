@@ -129,7 +129,9 @@ describe.each(TREES)("%s — the execution stages record their sessions", (tree)
     );
     // The confidence check may open no preflight session at all, and an absent
     // row reads the same as a skipped one without a line saying which.
-    expectPhrase(body, "run started 2026-01-01T09:02:00Z");
+    expectPhrase(body, "run started 2026-01-01T09:02:00.417Z");
+    // A retry shares a second with the run before it.
+    expectPhrase(body, "**To the millisecond, because a retry is immediate.**");
     expectPhrase(body, "Preflight: session opened");
     expectPhrase(body, "**`Preflight` says whether the confidence check opened a session.**");
     expectPhrase(body, "The shape `/qfai-discussion` already writes");
@@ -231,7 +233,7 @@ describe.each(TREES)("%s — the execution stages record their sessions", (tree)
     );
     expectPhrase(body, "**A run that did not resume writes `none — <why>` instead**");
     expectPhrase(body, "which the gate accepts on those three endings and on no other");
-    expectPhrase(body, "A blank is neither, and is a `REVISE`");
+    expectPhrase(body, "A blank is neither, and is a `REVISE` — **except on a `stopped` row**");
   });
 
   it.each(STAGES)("%s gives each ending a verdict at that gate", async (skill) => {
@@ -241,7 +243,15 @@ describe.each(TREES)("%s — the execution stages record their sessions", (tree)
     expectPhrase(body, "**Each ending carries its own condition, and the name alone is not one.**");
     // One predicate per ending: an enum check passes a row that claims an
     // ending whose own condition it does not meet.
-    expectPhrase(body, "`Frontier` empty, `Lookups` none in flight, `Open` 0.");
+    expectPhrase(
+      body,
+      "`Frontier` empty, `Lookups` none in flight, `Open` 0, **and the confirming answer quoted under the table beside that row`s `Session`**".replace(
+        "row`s",
+        "row's",
+      ),
+    );
+    // Tree state is the first of two completing conditions.
+    expectPhrase(body, "a session that closed its own tree and never asked satisfies every count");
     expectPhrase(
       body,
       "`Lookups` none in flight, every open node assumable, **and every one of them carrying its labelled assumption in the register**",

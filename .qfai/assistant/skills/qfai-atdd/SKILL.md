@@ -129,7 +129,7 @@ Use the shared schema.
   writes `none — <why>` instead**, which the gate accepts on those three
   endings and on no other: a session that was the run's last activity has no
   later time to carry, and requiring one would have the stage invent it. A
-  blank is neither, and is a `REVISE`. A run that skipped a session leaves the same tree as one
+  blank is neither, and is a `REVISE` — **except on a `stopped` row**, where empty is the value that ending requires and `none — <why>` would claim a decision the stop forecloses. A run that skipped a session leaves the same tree as one
   that ran it, and an evidence file is updated in place, so these are what tell
   a fresh session from an absent one and from last week's.
 - **Each ending carries its own condition, and the name alone is not one.** A
@@ -138,7 +138,7 @@ Use the shared schema.
 
   | `Ended`       | What the row must also show                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
   | ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-  | `confirmed`   | `Frontier` empty, `Lookups` none in flight, `Open` 0. That is the rule master's completing condition, and the label is a claim to have met it                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
+  | `confirmed`   | `Frontier` empty, `Lookups` none in flight, `Open` 0, **and the confirming answer quoted under the table beside that row's `Session`**. Those are the rule master's two completing conditions, and tree state is only the first: a session that closed its own tree and never asked satisfies every count while the user has said nothing                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
   | `user-closed` | `Lookups` none in flight, every open node assumable, **and every one of them carrying its labelled assumption in the register**. The closure covers the tree as it finally stands, so a lookup still running can raise a node after it — and a row accepted while one was in flight is a verdict taken over a register that was not yet complete. A decision some document requires the user to make and record, and an input declared undefaultable, are not assumable — the rule master says the closure does not reach them, so a row carrying one is a `REVISE`. A node listed without the value the stage went on to use is the other half of the same failure: the assumption is then unread, which the rule master calls a decision nobody took wearing the face of one somebody did |
   | `no-question` | `Lookups` none in flight and `Open` 0. Article X, rule 6: the stage cannot complete over a decision nobody took, and nobody was asked                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
   | `stopped`     | `Work resumed` empty. The user ended the session, so the stage reports every open node rather than resuming — a `stopped` row with work after it is a `REVISE` whatever it counts                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
@@ -220,7 +220,7 @@ restated here.
   opens any:
 
   ```text
-  ### /qfai-atdd — run started 2026-01-01T09:02:00Z
+  ### /qfai-atdd — run started 2026-01-01T09:02:00.417Z
 
   Preflight: session opened
 
@@ -248,6 +248,13 @@ restated here.
   over an unchanged tree produces the same `Revision`, because that address is a
   tree address and excludes `.qfai/evidence/**`. Only a value that moves every
   invocation separates the two.
+
+  **To the millisecond, because a retry is immediate.** A run that failed and
+  was re-run at once shares a second with the one before it, and two blocks
+  carrying the same heading let the earlier one pass as current — which is the
+  staleness this heading replaced a revision to fix. Where the host mints a run
+  identifier of its own, the heading may carry that instead; what it may not
+  carry is a value two invocations can share.
 
   **The run's start goes to the reviewer in its work order, not only into the
   file.** A block carries its own heading, so a gate reading the heading alone
@@ -283,6 +290,10 @@ restated here.
   endings `.agents/rules/grilling.md` names — and only the first three let the
   work go on.
 
+- **The confirming answer goes under that table too**, one line per
+  `confirmed` row, quoting what the user replied and naming the `Session` it
+  closed. A `confirmed` label is a claim about the user rather than about the
+  tree, and nothing else in the record can be checked against them.
 - **The open questions go under that table, in the same section.** One line per
   **node** left open — a decision, or a fact only the user holds — naming the
   session's `Subject` it belongs to and carrying the labelled assumption written
@@ -517,7 +528,7 @@ Template:
      `## Grilling (MANDATORY)` section; the open questions go under the
      table. -->
 
-### /qfai-atdd — run started 2026-01-01T09:02:00Z
+### /qfai-atdd — run started 2026-01-01T09:02:00.417Z
 
 Preflight: session opened
 
