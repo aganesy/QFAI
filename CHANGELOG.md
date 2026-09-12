@@ -6,6 +6,27 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
+- **A reviewer that recommended a decision the agents adopted cannot clear it**
+  (#1600). A grilling session puts a recommended answer beside each question,
+  and who settled the decision now decides what follows. Where the user chose
+  from the recommendation, the decision is theirs and the griller may review the
+  artifact. Where an agent adopted it with nobody adjudicating, the artifact
+  carries something nobody decided: the reviewer returns `REVISE` and names the
+  decision, which is reopened and put to the user or recorded open where no
+  question can be asked.
+
+  The reason is correlation rather than memory. A reset context cannot defer to
+  what it does not remember, but a fresh instance of the same agent, on the same
+  model, over the same evidence, re-derives the preference that produced the
+  recommendation.
+
+  Two fields carry it. A reviewer response declares `Recommended and
+unadjudicated`, read off a Work Orders Summary row the session writes rather
+  than off recollection, and scoped to the artifact as it now stands. A `Review
+series` — the reviewed artifact plus the role — carries the round budget
+  across a host that answers round 2 with a fresh sub-agent, which a count per
+  agent instance restarted every round.
+
 - **Every question to the user arrives in the shape its answer has** (#1611). Article X
   said the tool must be used where available and never said whether any question
   was outside that, so a light one could read as outside it — and the light one
