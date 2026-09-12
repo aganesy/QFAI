@@ -431,7 +431,7 @@ function resolves(cited: string): boolean {
   }
   const root = GENERATED_ROOTS.find((candidate) => cited.startsWith(candidate));
   if (root === undefined || !staysInsideRoot(cited, root)) return false;
-  if (cited.includes("*")) {
+  if (/[*?]/.test(cited)) {
     // Directories as well as files: `.qfai/discussion/discussion-*` names a set
     // of packs, and an anchored pattern matches no file below one of them — so
     // reading files alone reports a citation unresolved while the tree holds
@@ -603,6 +603,14 @@ describe("a glob is a claim about a set", () => {
     // holding anything at all would pass it.
     const pack = ".qfai/review/review-20260912000000000";
     expect(resolves(`${pack}/{review_request.md,R01_*.md,summary.json}`)).toBe(false);
+  });
+
+  it("routes a one-character wildcard through the matcher", () => {
+    // A `?` glob that names a tracked artifact still has to reach the matcher:
+    // falling through to the exact-path lookup reports valid provenance as
+    // missing, which is the opposite failure to the one the guard exists for.
+    const pack = ".qfai/discussion/discussion-20260328212829687";
+    expect(resolves(`${pack}/0?_Context.md`)).toBe(resolves(`${pack}/0*_Context.md`));
   });
 
   it("resolves a one-member brace list", () => {
