@@ -128,6 +128,14 @@ export const QFAI_GITIGNORE_GOVERNANCE_NEGATIONS: readonly string[] = [
   // itself before its contents can be re-included.
   "!.qfai/evidence/decisions/",
   "!.qfai/evidence/decisions/**",
+  // The prototyping session record: what the user said the prototype is for,
+  // what counts as better, and what is out of bounds. Every later generator and
+  // reviewer is required to read it, and nothing regenerates it — a re-run
+  // rebuilds the prototype, not the answers. Without this it is ignored with the
+  // rest of `.qfai/evidence/prototyping/`, so a fresh clone, another worktree or
+  // a later checkout grades against none of the user's decisions.
+  "!.qfai/evidence/prototyping/",
+  "!.qfai/evidence/prototyping/grilling.md",
   "!.qfai/evidence/change-request-*.md",
   "!.qfai/evidence/decision-*.md",
   // The per-item RED/GREEN record the completion gate resolves every
@@ -142,6 +150,11 @@ export const QFAI_GITIGNORE_GOVERNANCE_NEGATIONS: readonly string[] = [
   // The negation stays narrow — the remaining stage evidence files really are
   // regenerable logs and stay ignored.
   "!.qfai/evidence/implement-*.md",
+  // The spec stage's evidence, on the same footing as the two above and for the
+  // same reason: `QFAI-GRILL-001` reads its `## Pre-draft Grilling` section, and
+  // a record only the machine that produced it can see is one no review and no
+  // CI checkout ever reads.
+  "!.qfai/evidence/sdd-*.md",
   "!.qfai/evidence/atdd-*.md",
   // The import-lite record. On the route where a spec set arrives without a
   // discussion pack, this file is the only thing standing in for the pack: it
@@ -293,6 +306,18 @@ export const QFAI_GITIGNORE_BLOCK = [
   // whose `.gitignore` predates this line must not start failing validation
   // over it.
   ".qfai/state.json.lock",
+  // Re-ignores the contents of the one evidence directory the negations below
+  // re-include. `.qfai/evidence/*` does not reach inside it — a single `*` does
+  // not cross a `/` — so without this line, un-ignoring the directory exposes
+  // every file in it: `mutation-log.jsonl`, each `iter-NN/` screenshot and HTML
+  // snapshot, `progress.md`. Those are the regenerable stage evidence this
+  // block exists to keep out, and `git add .` would stage them.
+  //
+  // Above the negations on purpose, and it is an ignore rather than one of
+  // them. Git applies the last matching pattern, so the order that works is:
+  // ignore the directory, re-include it so git descends, re-ignore its
+  // contents, re-include the one record.
+  ".qfai/evidence/prototyping/*",
   // Article XI rule 3, the one mandated ignore that is not under `.qfai/`.
   // Anchored: rule 2 names the repository-root staging area, and an unanchored
   // `tmp/` would also swallow a `src/**/tmp/` a project tracks on purpose.

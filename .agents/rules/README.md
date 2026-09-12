@@ -24,7 +24,7 @@ directory.
 | `minimal-implementation.md` | The order to try solutions in, once a behaviour is agreed, and how a deliberate shortcut is marked.                                                                                                                                                         |
 | `interface-clarity.md`      | What may appear on a screen or in terminal output, and what a sentence there says about the control under it.                                                                                                                                               |
 | `grilling.md`               | Interview the decision tree in rounds before a design is fixed. A session ends when the frontier is empty and the user confirms, never at a question count.                                                                                                 |
-| `user-questions.md`         | Every question to the user arrives as a structured choice. Where the host's tool cannot carry one, numbered plain-text choices keep the same parts.                                                                                                         |
+| `user-questions.md`         | Every question to the user arrives in the shape its answer has: a structured choice where a listable set of candidates exists, or a plain request where none does. Where the host's tool cannot carry it, the plain-text fallback keeps the same parts.     |
 
 ## Adding a rule
 
