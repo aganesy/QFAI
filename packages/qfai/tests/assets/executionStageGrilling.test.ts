@@ -103,6 +103,31 @@ describe.each(TREES)("%s — grilling in the execution stages", (tree) => {
     );
   });
 
+  it("lets the primitive run the session the article declares", async () => {
+    // The primitive's preconditions said an ambiguity met while implementing is
+    // not a session. That is still true of meeting one; what starts a session
+    // is a stage declaring it, and without both rows an initialized agent gets
+    // two instructions and picks the cheaper.
+    const primitive = await read("assistant/skills/qfai-grilling/SKILL.md");
+    expectPhrase(primitive, "| An execution stage declaring one");
+    expectPhrase(primitive, "Article IX names two, at the preflight and on detection");
+    expectPhrase(primitive, "The last two rows are the same rule from both sides");
+    expectPhrase(primitive, "What separates them is the declaration");
+  });
+
+  it("ends a no-question session on the register write", async () => {
+    // Under `--auto` there is a user and the mode forbids asking them, so the
+    // confirmation can never arrive. Without another ending, a stage that
+    // resolved its whole frontier by inspection waits forever.
+    const primitive = await read("assistant/skills/qfai-grilling/SKILL.md");
+    expectPhrase(
+      primitive,
+      "**A session under a no-question mode cannot reach condition 2 either**",
+    );
+    expectPhrase(primitive, "The register write is the ending");
+    expectPhrase(primitive, "would wait forever for a confirmation nobody may give");
+  });
+
   it.each(STAGES)("%s cites the article rather than restating it", async (skill) => {
     // Three skills carrying three copies of one rule is three chances to drift,
     // and the drift surfaces as three agents behaving differently at the same

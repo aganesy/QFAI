@@ -25,10 +25,11 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   read as a rule nobody wrote one for.
 
 - **The execution stages grill at two points** (#1601). `/qfai-implement`,
-  `/qfai-atdd` and `/qfai-verify` run one round at the preflight, over what the
+  `/qfai-atdd` and `/qfai-verify` open a session at the preflight, over what the
   confidence check left uncertain, and one on detection — a contradiction in the
   spec, an unconsidered case or a technical obstacle surfacing mid-run stops the
-  work rather than being decided alone. These stages read a spec closely enough
+  work rather than being decided alone. Each runs until its frontier is empty,
+  however many rounds that takes. These stages read a spec closely enough
   for its gaps to show, and the agent that finds one is the least able to judge
   alone what the spec ought to have said.
 
