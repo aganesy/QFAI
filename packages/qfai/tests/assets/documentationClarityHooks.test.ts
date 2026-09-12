@@ -24,8 +24,27 @@ import { beforeAll, describe, expect, it } from "vitest";
 
 import {
   DOCUMENTATION_CLARITY_HOOK_MARKER,
+  GRILLING_DELEGATION_HOOK_MARKER,
+  GRILLING_DESIGN_ARTIFACT_HOOK_MARKER,
+  GRILLING_PLAN_HOOK_MARKER,
   MINIMAL_IMPLEMENTATION_HOOK_MARKER,
 } from "../../src/core/claudeCodeHooks.js";
+
+/**
+ * The rule master each reminder restates, by the marker its entries carry.
+ *
+ * The last two cases below hold a property of every entry in the file rather
+ * than of a named one, so a reminder added later is covered without touching
+ * them. What it costs is a row here, and a marker absent from this table is
+ * itself the failure those cases report.
+ */
+const RESTATES: ReadonlyMap<string, string> = new Map([
+  [DOCUMENTATION_CLARITY_HOOK_MARKER, "documentation-clarity.md"],
+  [MINIMAL_IMPLEMENTATION_HOOK_MARKER, "minimal-implementation.md"],
+  [GRILLING_DESIGN_ARTIFACT_HOOK_MARKER, "grilling.md"],
+  [GRILLING_DELEGATION_HOOK_MARKER, "grilling.md"],
+  [GRILLING_PLAN_HOOK_MARKER, "grilling.md"],
+]);
 
 const run = promisify(execFile);
 
@@ -108,13 +127,16 @@ describe.each(SETTINGS_PATHS)("%s", (rel) => {
   it("wires the reminder to a GitHub post and to a Markdown edit", () => {
     expect([...hooks.keys()].sort()).toEqual(["PostToolUse", "PreToolUse"]);
 
+    // Selected by matcher rather than by position: other reminders share the
+    // event, and asserting this one is the only entry made every later hook a
+    // failure of this test rather than of its own.
     const preToolUse = hooks.get("PreToolUse") ?? [];
-    expect(preToolUse).toHaveLength(1);
-    expect(preToolUse[0].matcher).toContain("mcp__github__");
+    const github = preToolUse.filter((group) => group.matcher.includes("mcp__github__"));
+    expect(github).toHaveLength(1);
     // Tool-name matching only. A `Bash` entry would need a shell-argument
     // condition, which also matches compound commands unrelated to GitHub.
-    expect(preToolUse[0].matcher).not.toContain("Bash");
-    for (const entry of preToolUse[0].hooks) {
+    expect(github[0].matcher).not.toContain("Bash");
+    for (const entry of github[0].hooks) {
       expect(entry.if).toBeUndefined();
     }
 
@@ -150,11 +172,23 @@ describe.each(SETTINGS_PATHS)("%s", (rel) => {
           // so quoting cannot differ between platforms.
           expect(entry.command).toBe("node");
           expect(entry.args[0]).toBe("-e");
-          expect([DOCUMENTATION_CLARITY_HOOK_MARKER, MINIMAL_IMPLEMENTATION_HOOK_MARKER]).toContain(
-            entry.statusMessage,
-          );
+          expect([...RESTATES.keys()]).toContain(entry.statusMessage);
         }
       }
+    }
+  });
+
+  it("gives every group under one event its own set of markers", () => {
+    // How the upgrade merge tells one group from another. Two groups under the
+    // same event with the same markers are one group to it, so a project
+    // holding either is credited with both and never receives the other.
+    for (const [event, groups] of hooks) {
+      const identities = groups.map((group) =>
+        JSON.stringify([...group.hooks.map((entry) => entry.statusMessage)].sort()),
+      );
+      expect(new Set(identities).size, `two ${event} groups share a marker set`).toBe(
+        identities.length,
+      );
     }
   });
 
@@ -177,11 +211,9 @@ describe.each(SETTINGS_PATHS)("%s", (rel) => {
           if (typeof context !== "string") return;
           // The reminder names the rule it restates, and stays short enough to
           // sit in front of the model on every fire.
-          expect(context).toContain(
-            entry.statusMessage === MINIMAL_IMPLEMENTATION_HOOK_MARKER
-              ? "minimal-implementation.md"
-              : "documentation-clarity.md",
-          );
+          const master = RESTATES.get(entry.statusMessage);
+          expect(master, `no rule master recorded for ${entry.statusMessage}`).toBeDefined();
+          expect(context).toContain(master);
           expect(context.length).toBeLessThan(1000);
         }
       }
