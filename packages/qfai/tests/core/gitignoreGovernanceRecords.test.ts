@@ -131,9 +131,8 @@ describe("git honours the managed block against a broad pre-existing rule", () =
   const stillIgnored = [
     ".qfai/evidence/prototyping/mutation-log.jsonl",
     ".qfai/report/validate.json",
-    // The negation is narrow on purpose: the other stage evidence files stay
-    // regenerable logs, and re-including them was never the point.
-    ".qfai/evidence/sdd-spec-0001.md",
+    // The negation is narrow on purpose: the stage evidence no check reads
+    // stays a regenerable log, and re-including it was never the point.
     ".qfai/evidence/verify-spec-0001.md",
     // Hyphenated import-lite names that are not canonical stamps: one that is
     // not digits at all, and one that is digits of the wrong width. The check
@@ -149,6 +148,11 @@ describe("git honours the managed block against a broad pre-existing rule", () =
     // Evidence anchor against.
     ".qfai/evidence/implement-spec-0001.md",
     ".qfai/evidence/atdd-spec-0001.md",
+    // A spec's evidence carries the grilling trace a validator rule reads, so
+    // it is an input to a check rather than a log of one. Left ignored, the
+    // rule finds nothing on a fresh clone and reports the same clean result it
+    // reports for a run that grilled every phase.
+    ".qfai/evidence/sdd-spec-0001.md",
     // The stand-in for a discussion pack on the imported-spec-set route, named
     // with the canonical 17-digit run stamp, and the template-named copy the
     // check also accepts.

@@ -99,6 +99,7 @@ export {
   validateAutopilotPolicy,
 } from "./autopilotPolicy.js";
 export type { AutopilotPolicyParseResult } from "./autopilotPolicy.js";
+export { GRILLING_TRACE_CODE, validateGrillingTrace } from "./grillingTrace.js";
 export { detectHandoffSchemaDrift } from "./handoffSchemaDrift.js";
 export {
   PACKAGE_SELF_GOVERNANCE_FAMILIES,

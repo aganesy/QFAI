@@ -64,7 +64,7 @@ describe("the grilling primitive", () => {
       // and leaves each decision it could not settle open where the completion
       // gate reads it — Article X rule 6.
       const text = flat(await read(tree));
-      expect(text).toMatch(/Run without asking; open every decision left over as a question/);
+      expect(text).toMatch(/Run without asking; open every node left over as a question/);
       expect(text).toMatch(/Declaring a session is still not a way to ask/);
       expect(text).toMatch(/the assumption with no open question against it/);
     });
@@ -230,7 +230,12 @@ describe("the primitive carries the master's clauses", () => {
 
     it(`${tree}: a question for a fact carries no recommended answer`, async () => {
       const text = flat(await readSkill(tree, SKILL));
-      expect(text).toMatch(/no options and no recommended answer/);
+      expect(text).toContain("with **no recommended answer**");
+      // Options are a separate question from the recommendation, and the
+      // candidate set answers it: asked as free text, "which of four supported
+      // regions" loses the four.
+      expect(text).toMatch(/the candidate set answers it/);
+      expect(text).toMatch(/asked as a choice among them/);
     });
 
     it(`${tree}: a frontier larger than the tool is batched, not split into rounds`, async () => {
@@ -241,6 +246,20 @@ describe("the primitive carries the master's clauses", () => {
       expect(text).toMatch(/host-sized batches/);
       expect(text).toMatch(/frontier is not recomputed between them/);
       expect(text).toMatch(/it never makes two rounds/);
+    });
+
+    it(`${tree}: the whole round falls back, and a no-question mode outranks it`, async () => {
+      // Split across two carriers, a round stops being one thing the user sees
+      // together. And routed by availability first, an --auto run would reach a
+      // plain-text fallback the same document forbids it to use.
+      const text = flat(await read(tree));
+      expect(text).toMatch(/A no-question mode is read before any of this/);
+      expect(text).toMatch(/no round is put at all/);
+      expect(text).toMatch(
+        /withholds the tool while still permitting questions is a different thing/,
+      );
+      expect(text).toMatch(/The whole round falls back, not the question that triggered it/);
+      expect(text).toMatch(/say which question it could not carry/);
     });
 
     it(`${tree}: a session between agents has an end`, async () => {

@@ -393,7 +393,10 @@ describe("cross-AI rules surface (.agents/rules/ master)", () => {
         /No exceptions/i,
         /short\s+label/,
         /Recommend/,
-        /numbered\s+plain-text\s+choices/,
+        // The whole clause, not the phrase: "numbered list" also appears in
+        // the counter-example two paragraphs down, so the short token stays
+        // green with the requirement itself deleted.
+        /Where\s+there\s+are\s+choices,\s+that\s+is\s+a\s+numbered\s+list\s+keeping\s+every\s+part/,
         /question\s+budget/i,
       ]) {
         expect(text).toMatch(clause);
@@ -452,6 +455,55 @@ describe("cross-AI rules surface (.agents/rules/ master)", () => {
       expect(text).toMatch(/Say\s+why\s+the\s+tool\s+was\s+not\s+callable/);
     });
 
+    // The fallback carries the answer's shape, not a list unconditionally. A
+    // question whose answer has no listable set of candidates has none to
+    // enumerate, and requiring a list there has an agent invent two options to
+    // fit it — which is the guess the recommendation clause refuses, in another
+    // costume.
+    it.each(MASTERS)("%s does not force an open answer into a list", async (rel) => {
+      const text = await readFile(path.join(ROOT, rel), "utf-8");
+      expect(text).toMatch(/in\s+the\s+shape\s+the\s+answer\s+has/);
+      expect(text).toMatch(/a\s+plain\s+request\s+for\s+the\s+value/);
+      expect(text).toMatch(/not\s+the\s+same\s+as\s+"always\s+a\s+list\s+of\s+choices"/);
+      // The parts differ by shape. An unconditional list of them sends the open
+      // path looking for metadata it has none of — what each choice means, and
+      // how many may be chosen.
+      expect(text).toMatch(/What\s+is\s+being\s+asked,\s+and\s+what\s+depends\s+on\s+the\s+answer/);
+      // And what decides is the candidate set, not the value's type: one count
+      // out of the four a platform supports is a choice however scalar it looks.
+      expect(text).toMatch(/whether\s+a\s+listable\s+set\s+of/);
+      expect(text).toMatch(/no\s+listable\s+set\s+of\s+candidates/);
+    });
+
+    // Finite is not the same as listable. A port between 1 and 65535 has a
+    // bounded set of valid values and is still open, because a list of 65535
+    // options is the question made unreadable.
+    it.each(MASTERS)("%s bounds the candidate set by what a question can show", async (rel) => {
+      const text = await readFile(path.join(ROOT, rel), "utf-8");
+      expect(text).toMatch(/Finite\s+is\s+not\s+the\s+same\s+as\s+listable/);
+      expect(text).toMatch(/put\s+in\s+front\s+of\s+someone/);
+    });
+
+    // A host that demands a recommendation cannot carry a question for a fact:
+    // nothing is being decided, so no candidate is cheaper to reverse and none
+    // may be recommended. Without this the two clauses meet and the agent has
+    // no compliant move.
+    it.each(MASTERS)("%s keeps the host workaround to decisions", async (rel) => {
+      const text = await readFile(path.join(ROOT, rel), "utf-8");
+      expect(text).toMatch(/That\s+workaround\s+is\s+for\s+decisions/);
+      expect(text).toMatch(/no\s+option\s+that\s+is\s+cheaper\s+to\s+reverse/);
+    });
+
+    // A fact with listable candidates reaches the fallback because the host
+    // demanded a recommendation and § 3 forbids one here. Requiring the list to
+    // carry a recommendation anyway would leave that question with no
+    // compliant shape at all.
+    it.each(MASTERS)("%s does not require a recommendation it forbids", async (rel) => {
+      const text = await readFile(path.join(ROOT, rel), "utf-8");
+      expect(text).toMatch(/recommendation\s+\*\*where\s+one\s+is\s+permitted\*\*/);
+      expect(text).toMatch(/inventing\s+one\s+to\s+fill\s+the\s*\n?\s*slot/i);
+    });
+
     // The form and the count are independent. Without this the rule reads as a
     // licence to ask more, and a well-shaped question that should not be asked
     // is still one that should not be asked.
@@ -472,6 +524,13 @@ describe("cross-AI rules surface (.agents/rules/ master)", () => {
     ])("%s cites the rule master", async (rel) => {
       const text = await readFile(path.join(ROOT, rel), "utf-8");
       expect(text).toContain("user-questions.md");
+      // Naming the master is not summarising it. These surfaces are where a
+      // rule is discovered, and one that still promises numbered choices for
+      // every answer sends an agent to invent options for an open value before
+      // it ever opens the master.
+      expect(text).toMatch(/in\s+the\s+shape\s+its\s+answer\s+has/);
+      expect(text).toMatch(/a\s+plain\s+request/);
+      expect(text).not.toMatch(/numbered\s+plain-text\s+choices\s+keep\s+the\s+same\s+parts/);
     });
 
     // The two rules divide one subject: which questions to ask, and what each
@@ -483,6 +542,27 @@ describe("cross-AI rules surface (.agents/rules/ master)", () => {
     ])("%s points at the question form", async (rel) => {
       const text = await readFile(path.join(ROOT, rel), "utf-8");
       expect(text).toContain("user-questions.md");
+      // A round can hold a question the tool cannot carry, so the fallback has
+      // to say what shape each answer takes. The classifier is the candidate
+      // set: a user-held fact with four supported values both asks for a fact
+      // and offers choices, so a fact-based split prescribes both shapes at
+      // once for one question.
+      expect(text).toMatch(/in\s+the\s+shape\s+each\s+answer\s+has/);
+      expect(text).toMatch(/numbered\s+choices\s+where\s+a\s+listable\s+set\s+of\s+candidates/);
+      expect(text).toMatch(/not\s+whether\s+the\s+question\s+asks\s+for\s+a\s+fact/);
+    });
+
+    // A round is put as a unit, so whether the tool can carry it is judged for
+    // the unit. Judged per question, the grilling master's whole-round fallback
+    // and this rule's per-question one prescribe two carriers for one round,
+    // and no path satisfies both.
+    it.each(MASTERS)("%s judges a set presented as one as one", async (rel) => {
+      const text = await readFile(path.join(ROOT, rel), "utf-8");
+      expect(text).toMatch(/A\s+set\s+presented\s+as\s+one/);
+      expect(text).toMatch(/Availability\s+is\s+then\s+judged\s+for\s+the\s+unit/);
+      expect(text).toMatch(/split\s+across\s+two\s+carriers/);
+      // The unit decides the carrier only, never the shape of each answer.
+      expect(text).toMatch(/never\s+flattens\s+two\s+shapes\s+into\s+one/);
     });
   });
 
@@ -588,7 +668,17 @@ describe("cross-AI rules surface (.agents/rules/ master)", () => {
       const text = await readFile(path.join(ROOT, rel), "utf-8");
       expect(text).toMatch(/[Ff]act\s+only\s+the\s+user\s+holds/);
       expect(text).toMatch(/nothing\s+else\s+can\s+put\s+it\s+there/);
-      expect(text).toMatch(/never\s+offered\s+as\s+a\s+choice/);
+      expect(text).toMatch(/never\s+with\s+a\s+recommended\s+answer/);
+    });
+
+    // What a fact never carries is a recommended answer. Whether it arrives as
+    // options is decided by the candidate set, so a master saying both keeps an
+    // agent from reading "not a choice" as licence to ask for one of four
+    // supported regions as free text.
+    it.each(MASTERS)("%s separates the recommendation from the answer's shape", async (rel) => {
+      const text = await readFile(path.join(ROOT, rel), "utf-8");
+      expect(text).toMatch(/Whether\s+it\s+arrives\s+as\s+options\s+is\s+a\s+separate\s+question/);
+      expect(text).toMatch(/a\s+known\s+few\s+possible\s+values/);
     });
 
     // Recommending a value the agent does not hold is a guess, and attaching it
@@ -651,7 +741,13 @@ describe("cross-AI rules surface (.agents/rules/ master)", () => {
     it.each(MASTERS)("%s resolves a no-question run to open questions", async (rel) => {
       const text = await readFile(path.join(ROOT, rel), "utf-8");
       expect(text).toMatch(/[Uu]nder\s+a\s+no-question\s+mode/);
-      expect(text).toMatch(/opens\s+every\s+decision\s+left\s+over\s*\n?\s*as\s+a\s+question/);
+      // Every node, not every decision: a fact only the user holds cannot be
+      // settled from evidence either, and a mode that opens the decisions and
+      // drops the facts loses the nodes no lookup could have reached.
+      expect(text).toMatch(/opens\s+\*\*every\s+node\s+left\s+over\*\*\s*\n?\s*as\s+a\s+question/);
+      expect(text).toMatch(/Every\s+node,\s+not\s+every\s*\n?\s*decision/);
+      // An undefaultable fact has no value to write down, so the run stops.
+      expect(text).toMatch(/fact\s+declared\s+undefaultable\s+stops\s+the\s+run/);
       expect(text).toMatch(
         /write\s+the\s+defaulted\s+value\s*\n?\s*and\s+label\s+it\s+an\s+assumption/,
       );
@@ -672,5 +768,89 @@ describe("cross-AI rules surface (.agents/rules/ master)", () => {
       const text = await readFile(path.join(ROOT, rel), "utf-8");
       expect(text).toContain("grilling.md");
     });
+  });
+});
+
+describe("the question shape has one owner", () => {
+  // AGENTS.md carries the template an agent reads at startup, so its rows
+  // branch on the answer. The .instruction tree states no rule of its own, so
+  // it points instead — a second statement is a copy that drifts, and the drift
+  // is invisible until someone follows the copy.
+  it("AGENTS.md branches rows 3 and 4 on the answer", async () => {
+    const text = await readFile(path.join(ROOT, "AGENTS.md"), "utf-8");
+    expect(text).toMatch(/where\s+the\s+answer\s+has\s+a\s+listable\s+set\s+of\s+candidates/);
+    expect(text).toMatch(/where\s+a\s+choice\s+is\s+being\s+made/);
+    expect(text).toContain("user-questions.md");
+  });
+
+  it(".instruction/00_universal/communication.md points at the master", async () => {
+    const text = await readFile(
+      path.join(ROOT, ".instruction/00_universal/communication.md"),
+      "utf-8",
+    );
+    expect(text).toMatch(/is\s+owned\s+by/);
+    expect(text).toContain("user-questions.md");
+    // No copy of the form beside the pointer.
+    expect(text).not.toMatch(/The\s+recommended\s+one\s+and\s+why/);
+  });
+
+  // Every shipped surface that summarises the rule uses the same criterion, so
+  // an adopter is not told to enumerate a domain nobody can read.
+  it.each(["packages/qfai/assets/init/root/AGENTS.md", "packages/qfai/assets/init/root/CLAUDE.md"])(
+    "%s summarises it by what can be listed",
+    async (rel) => {
+      const text = await readFile(path.join(ROOT, rel), "utf-8");
+      expect(text).toMatch(/candidates\s+can\s+be\s+listed/);
+      expect(text).not.toMatch(/finite\s+candidates/);
+    },
+  );
+});
+
+describe("a no-question run opens every node, on every surface that says so", () => {
+  // The master, the article, the operating rule and the shipped primitive all
+  // carry this. An agent follows whichever it reaches first, so a copy still
+  // saying "every decision" lets a user-held fact disappear while the stage
+  // completes over a tree that is not empty.
+  it.each([
+    ".agents/rules/grilling.md",
+    "packages/qfai/assets/init/root/.agents/rules/grilling.md",
+    ".qfai/assistant/constitution/constitution.md",
+    "packages/qfai/assets/init/.qfai/assistant/constitution/constitution.md",
+    ".qfai/assistant/constitution/communication.md",
+    "packages/qfai/assets/init/.qfai/assistant/constitution/communication.md",
+    ".qfai/assistant/skills/qfai-grilling/SKILL.md",
+    "packages/qfai/assets/init/.qfai/assistant/skills/qfai-grilling/SKILL.md",
+    ".qfai/assistant/constitution/shared-skill-operating-baseline.md",
+    "packages/qfai/assets/init/.qfai/assistant/constitution/shared-skill-operating-baseline.md",
+  ])("%s opens nodes rather than decisions", async (rel) => {
+    const text = await readFile(path.join(ROOT, rel), "utf-8");
+    expect(text).toMatch(
+      /(?:every|each)\s+\*{0,2}node\*{0,2}\s+(?:left\s+over|it\s+could\s+not\s+settle)/,
+    );
+    expect(text).not.toMatch(/(?:every|each)\s+decision\s+left\s+over/);
+    expect(text).toMatch(/undefaultable/);
+  });
+});
+
+describe("an open fact survives the surfaces that report a session", () => {
+  // The wrapper is the only output a `/qfai-grill` run has, and the register is
+  // where a stage's unanswered questions land. A fact only the user holds
+  // disappears at either one unless both carry it.
+  it.each([
+    ".qfai/assistant/skills/qfai-grill/SKILL.md",
+    "packages/qfai/assets/init/.qfai/assistant/skills/qfai-grill/SKILL.md",
+  ])("%s reports every open node, not every open decision", async (rel) => {
+    const text = await readFile(path.join(ROOT, rel), "utf-8");
+    expect(text).toMatch(/every\s+node\s+left\s+open/);
+    expect(text).not.toMatch(/every\s+decision\s+left\s+open/);
+  });
+
+  it.each([
+    ".qfai/assistant/skills/qfai-discussion/templates/11_OQ-Register.md",
+    "packages/qfai/assets/init/.qfai/assistant/skills/qfai-discussion/templates/11_OQ-Register.md",
+  ])("%s has a row shape for a question asking for a fact", async (rel) => {
+    const text = await readFile(path.join(ROOT, rel), "utf-8");
+    expect(text).toMatch(/A\s+question\s+asking\s+for\s+a\s+fact\s+is\s+the\s+exception/);
+    expect(text).toMatch(/where\s+one\s+is\s+permitted/);
   });
 });
