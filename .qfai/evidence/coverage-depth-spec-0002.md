@@ -432,8 +432,9 @@ the cells beneath it needs a reason of its own.
 
 ## Findings
 
-Seven things were found while producing this matrix that the reviewing stage should act on. None is
-repaired here; this artifact scores coverage and does not edit tests, ledgers or specs.
+Seven things were found while producing this matrix that the reviewing stage should act on. This
+artifact scores coverage and edits no test, ledger or spec; where a finding has since been acted on,
+it says so and names what carries it now.
 
 1. **`TC-0002-0009` specifies a finding that nothing emits.** The case requires a planner-first
    violation when an artifact claims a single winner is final. `discussionDesignHardening` was
@@ -453,13 +454,20 @@ repaired here; this artifact scores coverage and does not edit tests, ledgers or
    `tests/validators/uix/threeLayer.test.ts` green, because the fixture has no sidecar files for the
    loop to read. A reader scanning test titles would take it for the safe-skip proof for
    `TC-0002-0010`; it is not evidence of that or of anything else. Either give it a fixture with
-   sidecars present, so the guard is the only thing producing the empty result, or retire it.
-4. **Three ledger rows name a selector that appears in no file.** `TDD-0008`, `TDD-0009` and
-   `TDD-0010` are all at `Status = done` over selectors that a search of `packages/qfai/tests/**`
-   does not find. `TDD-0012` names a selector that does resolve — `legacy 4-axis format is error` —
-   to a case about legacy heading formats in a UI sidecar, which has nothing to do with the
+   sidecars present, so the guard is the only thing producing the empty result, or retire it. Both
+   are edits to the file `TDD-0011`'s recorded observation covers, so either one restarts that
+   row's cycle and belongs with the sweep `CR-20260912-0003` plans rather than beside it.
+4. **Four ledger rows recorded a completion that was never measured.** `TDD-0008`, `TDD-0009` and
+   `TDD-0010` sat at `Status = done` over selectors that a search of `packages/qfai/tests/**` does
+   not find. `TDD-0012` names a selector that does resolve — `legacy 4-axis format is error` — to a
+   case about legacy heading formats in a UI sidecar, which has nothing to do with the
    `prototyping.yaml` requiredness wording its `TC-0002-0011` describes. A `done` over a selector
    that cannot be run, or that runs something else, records a completion that was never measured.
+   All four are named in the blocked set of `CR-20260912-0003`, which asks whether the two upstream
+   statements they rest on survive. The rows are untouched until it resolves. Repointing a selector
+   at a passing test would resolve the cell while discharging nothing, which is the defect rather
+   than its repair; and `done` is not a status a row can be blocked at, so the ledger has no edge
+   that records the wait. The Change Request and its work-log entry carry it instead.
 5. **Every obligation in this pack is reported carrier-only.** All five `TC-0002-*` appear under
    `coveredByCarrierOnly.tc` in `.qfai/report/atdd-traceability/summary.json`, referenced only from
    `tests/integration/qfai-traceability.md`, a file that documents itself as an annotation carrier
