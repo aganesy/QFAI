@@ -1,5 +1,3 @@
-     | `-c diff.submodule=short` and `--ignore-submodules=none` | `diff.submodule` has three formats for one changed submodule, and a configured `ignore` can drop the change entirely |
-
 # Evidence revision (what state the observation describes)
 
 Four of the twelve gate items — 3, 5, 7 and 8 — are sub-agent observations, and
@@ -44,7 +42,7 @@ check. Gate item 10 rejects any other shape wherever a revision is recorded:
      git -C "$root" rev-parse HEAD
      git -C "$root" -c core.quotePath=false -c diff.submodule=short -c diff.suppressBlankEmpty=false diff HEAD \
        --no-color --no-ext-diff --no-textconv -O/dev/null --ignore-submodules=none --binary --full-index --no-renames \
-       --diff-algorithm=myers --src-prefix=a/ --dst-prefix=b/ --unified=3 --inter-hunk-context=0 --
+       --diff-algorithm=myers --indent-heuristic --src-prefix=a/ --dst-prefix=b/ --unified=3 --inter-hunk-context=0 --
      git -C "$root" -c core.quotePath=false ls-files --others --exclude-standard -z
      ```
 
@@ -60,6 +58,7 @@ check. Gate item 10 rejects any other shape wherever a revision is recorded:
      | `--no-renames` and `--diff-algorithm=myers`                     | `diff.renames` and `diff.algorithm` change the hunks for identical content                                                                                                                                                        |
      | `-O/dev/null`                                                   | `diff.orderFile` reorders the file patches, so two changed files come out in different orders for one tree. An empty order file cancels it; `-c diff.orderFile=` does not — git reads the empty value as a path and exits `fatal` |
      | `-c diff.submodule=short` and `--ignore-submodules=none`        | `diff.submodule` has three formats for one changed submodule, and a configured `ignore` can drop the change from the diff entirely                                                                                                |
+     | `--indent-heuristic`                                            | `diff.indentHeuristic` shifts a hunk boundary to a more readable place, so the same change comes out with a different line inside the hunk                                                                                        |
      | `--unified=3`                                                   | `diff.context` changes how many lines surround each hunk, and with them the bytes                                                                                                                                                 |
      | `--inter-hunk-context=0` and `-c diff.suppressBlankEmpty=false` | `diff.interHunkContext` merges two nearby hunks into one, and `diff.suppressBlankEmpty` changes the prefix on an empty context line                                                                                               |
      | `--no-textconv`                                                 | A `.gitattributes` diff driver with `textconv` converts a file before diffing, and can render a real change as an empty diff. `--no-ext-diff` does not cover it                                                                   |

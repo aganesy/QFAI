@@ -623,6 +623,10 @@ describe("the working-tree address has one notation", () => {
       expect(text).toContain("-c diff.submodule=short");
       expect(text).toContain("--ignore-submodules=none");
       expect(text).toContain("--inter-hunk-context=0");
+      // A hunk boundary shifted for readability moves a line between the hunk and
+      // its context, so the same tree comes out as different bytes.
+      expect(text).toContain("--indent-heuristic");
+      expect(text).toContain("diff.indentHeuristic");
       expect(text).toContain("-c diff.suppressBlankEmpty=false");
       // The short format cannot tell two dirty submodule states apart, so an
       // address over one would not move for an arbitrary change inside it.
