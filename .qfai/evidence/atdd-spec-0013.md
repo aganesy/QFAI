@@ -278,7 +278,7 @@ obligation admits.
 ## Coverage Depth Matrix
 
 See `.qfai/evidence/coverage-depth-spec-0013.md`.
-Totals: ✅ 74 / ⚠️ 103 / ❌ 317, with 7 not applicable, across 501 scored cells —
+Totals: ✅ 76 / ⚠️ 108 / ❌ 310, with 7 not applicable, across 501 scored cells —
 441 matrix depth cells (49 rows × 9 columns) and 60 business rule cells
 (20 rows × 3 columns). `Status` is a row verdict, not a mark, and is outside
 every total.
@@ -300,11 +300,9 @@ None.
 - Status: PASS
 - Reviewed revision: c751cb050caa9e78a1ff5e622fc5abd738d126c2
 - Review series: .qfai/evidence/coverage-depth-spec-0013.md + completion-reviewer
-- Rounds: 1 `REVISE`, 2 `REVISE`, 2b `PASS`. The budget is spent, so no further
-  round may run.
-- Scope of the verdict: the revision it names, not the tree as it stands. The
-  matrix has moved since, so whether the current record is accepted is a
-  decision above the reviewer.
+- Rounds: 1 `REVISE`, 2 `REVISE`, 2b `PASS`. The budget is spent.
+- Scope: the revision named above. The tree has moved since, so the verdict does
+  not cover it, and no round remains to take one.
 - Subject: every claim this file makes, checked against the files it names
 - Result: the four recorded rows reproduce their GREEN commands, their
   refactor-verify run and the checkpoint exactly as recorded, and every

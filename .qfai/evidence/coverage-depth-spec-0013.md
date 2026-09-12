@@ -449,7 +449,7 @@ is cited by at least one `TC-0013-*`. The other derivation route, each rule's ow
 | BR-0013-0019 | ⚠️            | ⚠️            | ❌                   | TC-0013-0032, TC-0013-0033                      | ❌     |
 | BR-0013-0020 | ✅            | ✅            | ⚠️                   | TC-0013-0034, TC-0013-0035                      | ⚠️     |
 
-Totals across the three scored columns, 60 cells: **✅ 12 / ⚠️ 13 / n/a 7 / ❌ 28**.
+Totals across the three scored columns, 60 cells: **✅ 13 / ⚠️ 15 / n/a 7 / ❌ 25**.
 
 `Status` here is likewise a row verdict and is not counted. Its distribution across the 20 rows is
 ✅ 0 / ⚠️ 5 / ❌ 15.
