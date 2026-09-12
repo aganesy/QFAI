@@ -6,8 +6,15 @@ This matrix scores fourteen obligations: the five user stories of `02_User-stori
 `US-0014-0013`, `-0014`, `-0018`, `-0019` and `-0020` — and the nine test cases of
 `06_Test-Cases.md` — `TC-0014-0009`, `-0018`, `-0019`, `-0028`, `-0029`, `-0033`, `-0034`, `-0035`
 and `-0036`. Both obligation sets are read from their own file in full, not from the rows of
-`.qfai/specs/spec-0014/tdd/test-list.md`. A `US-*` seeds no ledger row at all, and a `TC-*` whose
-row had been dropped would be invisible to a reading that starts from the ledger.
+`.qfai/specs/spec-0014/tdd/test-list.md`: this ledger holds no row for any story, and a `TC-*`
+whose row had been dropped would be invisible to a reading that starts from it.
+
+**The absent story rows are an upstream gap, not the expected shape.** `/qfai-sdd` Phase 2b seeds
+one `Layer = E2E` row per active `US-*`, with the obligation in `US-Refs`. All five stories are
+active, this ledger has no E2E row and no `US-Refs` column to put one in, so five acceptance
+lifecycles are invisible to the execution ledger. The repair is a `/qfai-sdd` rerun that reseeds
+the ledger and migrates the column — row identity and table shape are Phase 2b's to write, and
+neither this matrix nor `/qfai-implement` may add them.
 
 All five user stories are active. A story deferred out of the slice carries an
 `- x-qfai-status: planned` meta line inside its own `US-*` block; no block in `02_User-stories.md`
@@ -72,7 +79,7 @@ in no row at all. The files below were located by reading the tests and the sour
 
 | File                                                                      | Result        |
 | ------------------------------------------------------------------------- | ------------- |
-| `tests/integration/verifySemanticsSpec0014.test.ts`                       | 5 passed      |
+| `tests/integration/verifySemanticsSpec0014.test.ts`                       | 6 passed      |
 | `tests/integration/cli/commands/prototypingCertify.saasPackage.test.ts`   | 2 passed      |
 | `tests/integration/cli/commands/prototypingCertify.upgradeScope.test.ts`  | 16 passed     |
 | `tests/cli/commands/prototypingIterate.test.ts`                           | 103 passed    |
@@ -246,16 +253,16 @@ The scored population is 147 cells: 126 matrix depth cells plus 21 business rule
 
 | Mark | Matrix depth | Business rule | Scored total |
 | ---- | ------------ | ------------- | ------------ |
-| ✅   | 8            | 5             | 13           |
+| ✅   | 9            | 5             | 14           |
 | ⚠️   | 53           | 7             | 60           |
-| ❌   | 65           | 6             | 71           |
+| ❌   | 64           | 6             | 70           |
 | n/a  | 0            | 3             | 3            |
 | Sum  | 126          | 21            | 147          |
 
 ## Every ❌ cell, named
 
-The matrix carries 65 `❌` depth cells plus 5 in `Status`; the business rule table carries 6 in its
-scored columns plus 4 in its `Status` column — 80 in all, of which 71 are scored. Each is named
+The matrix carries 64 `❌` depth cells plus 5 in `Status`; the business rule table carries 6 in its
+scored columns plus 4 in its `Status` column — 79 in all, of which 70 are scored. Each is named
 below with its own reason. A row's `Status` is `❌` when the obligation is not discharged at the
 depth the row describes; that verdict is stated once per row and is not repeated per cell.
 
@@ -427,9 +434,7 @@ the forbidden legacy sidecar `12_design_system.md`, runs `runCanonicalUixValidat
 to appear in that run's output — which is the repo-root verify flow the row's `Steps` name, reached
 through the entrypoint rather than around it.
 
-An earlier reading of this row counted two cases and concluded that no verify run is driven
-anywhere. Four cells rested on that, and each is corrected below. This row has **four `❌` depth
-cells** and no `❌` in `Status`.
+This row has **four `❌` depth cells** and no `❌` in `Status`.
 
 - **Edge cases** — the second case's own title says the validator "reaches the latest pack from a
   repo root", and the fixture seeds exactly one pack, so any selection rule at all passes it. A repo
@@ -958,7 +963,7 @@ documented rationale for each, so each is named here.
   emission, a verify run reaches it too, and the removed namespaces are asserted over the real tree.
   Two things cap it. The `❌` depth cells named above are unaddressed. And the obligation is
   reported carrier-only, with every discharging file under `packages/qfai/tests/`, outside the
-  scanned root. A third cap recorded here — that no verify run is driven anywhere — was not true.
+  scanned root.
 - **US-0014-0014 × Status** — the story's subject is enforced by a suite whose oracles are specific
   and whose categories are nearly complete, which is more than most rows in this pack can say. It is
   capped at `⚠️` because the live pack binds that suite to the story by nothing — no `AC`, `BR`,

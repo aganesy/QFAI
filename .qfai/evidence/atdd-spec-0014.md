@@ -10,6 +10,8 @@ whose `Evidence` cells predate the pointer grammar. `TDD-0009`, `TDD-0018`,
 
 - `.qfai/specs/spec-0014/06_Test-Cases.md`
 - `.qfai/specs/spec-0014/03_Acceptance-Criteria.md`
+- `.qfai/specs/spec-0014/02_User-stories.md`
+- `.qfai/specs/spec-0014/04_Business-Rules.md`
 - `.qfai/specs/spec-0014/tdd/test-list.md`
 - `packages/qfai/tests/integration/verifySemanticsSpec0014.test.ts`
 - `packages/qfai/tests/integration/cli/commands/prototypingCertify.saasPackage.test.ts`
@@ -241,6 +243,14 @@ first mutation passes it and fails the literal check below it instead.
   unrelated to this spec, and that a test depends on an undeclared external tool
   and fails with an assertion message naming something else is recorded as a
   finding of its own.
+- Revision reachability: every revision this entry names is a commit of the
+  branch the observations were taken on. This repository squash-merges, so none
+  of them is an ancestor of the commit that lands on the default branch, and a
+  fresh clone of that branch alone cannot resolve them. Nothing a run can do
+  changes it: the merge commit does not exist while the observation is being
+  made, and the procedure records `git rev-parse HEAD` at that moment. It is a
+  property of the address form rather than of this record, and it holds for
+  every evidence entry the repository has merged.
 - Superseded checkpoint: two earlier records. The first was
   `npx vitest run --project integration --project cli` at
   `649d8111147436408c90cbbe1b9f9b07e34da8cb`, whose revision is an ancestor of
