@@ -100,7 +100,19 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   guesses past, and an empty session written down is a different statement from a
   missing file. It is tracked rather than ignored with the regenerable stage
   evidence: nothing reproduces these answers, and a fresh clone or another
-  worktree would otherwise grade against none of them.
+  worktree would otherwise grade against none of them. The migration that
+  carries the nested `.qfai/evidence/.gitignore` forward gains the same two
+  lines, because that file's `*` overrides a root negation on every project
+  initialized before the root block grew its own.
+
+  Recording an answer replaces the row for the same scoped decision rather than
+  adding beside it. The delegated prompts read every row matching their lineage,
+  so a superseded pivot would still steer the next cycle.
+
+  The cycle-0 reset is asked for before it runs, naming what it destroys: it
+  keeps `iter-00` and deletes `iter-01` upward, so every later capture, review
+  payload and critique goes. Answering a design question is not consent to a
+  destructive operation.
 
   A `proceed` or `done` finishes the lookups, records what is still open as
   labelled assumptions and hands off — the user ended the asking, not the work.

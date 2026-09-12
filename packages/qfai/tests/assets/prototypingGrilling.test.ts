@@ -137,6 +137,10 @@ describe.each(TREES)("%s — prototyping and grilling", (tree) => {
       "a next-cycle route would refuse the one command that can build what they asked for",
     );
     expectPhrase(skill, "Cycle 0 is the documented escape hatch out of a sealed loop");
+    // The reset keeps `iter-00` and deletes the rest, so it is a destructive
+    // operation — and answering a design question is not consent to one.
+    expectPhrase(skill, "**Ask for the reset before running it**, naming what it destroys");
+    expectPhrase(skill, "answering a design question is not consent to one");
     expectPhrase(
       skill,
       "certifying the unchanged iteration would ship the design they turned down",
@@ -168,8 +172,16 @@ describe.each(TREES)("%s — prototyping and grilling", (tree) => {
     // An answered escalation leaves the open section, or the same decision
     // reads as settled and open at once — and the delegated prompts consume
     // every matching row.
-    expectPhrase(skill, "**and remove its row from `## Escalated`**");
+    expectPhrase(
+      skill,
+      "**replacing any row with the same `Scope` and decision rather than adding beside it",
+    );
+    expectPhrase(skill, "removing its row from `## Escalated`**");
     expectPhrase(skill, "the current state of the tree, not its history");
+    // Two answers to one decision steer the next cycle in two directions: the
+    // delegated prompts consume every row matching their lineage, so a
+    // superseded pivot is still read.
+    expectPhrase(skill, "a superseded pivot still steers the next cycle");
     // Both consumers, named where each lists its inputs.
     const evaluator = /## Evaluator Inputs \(Mandatory\)([\s\S]*?)^## /m.exec(skill)?.[1] ?? "";
     expect(unwrap(evaluator)).toContain(".qfai/evidence/prototyping/grilling.md");
