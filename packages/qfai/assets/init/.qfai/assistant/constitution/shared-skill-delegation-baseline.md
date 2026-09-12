@@ -229,6 +229,19 @@ record to do it, or keep a stale non-`none` value that blocks a `PASS` nothing i
 wrong with. Amending is not deleting: the decision, the agent instance and the
 fact that it was once open all stay.
 
+**A disposition carries its evidence.** The suffix is an assertion, and the next
+reviewer is told to trust it, so the amended row points at what closed the
+decision as well as saying that something did. `Output (refs)` gains the record
+carrying the user's answer for `(settled by the user)`, and the revision that
+removed the recommendation for `(withdrawn from the artifact)`. Either is a
+reference a reader can open and check.
+
+A disposition with nothing behind it cannot be told from a fabricated one, so it
+is read as no disposition: the row is still open, and the reviewer returns
+`REVISE` and names it. Trusting an unverifiable suffix would launder the
+unadjudicated decision the row exists to expose — the table's second row again,
+arriving one step later and wearing a closure.
+
 The field asks about the artifact **as it now stands**. A recommendation the
 artifact no longer carries, and one the user has since settled, are both outside
 it: the first is not under review, and the second is the user's decision by the
