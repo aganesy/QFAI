@@ -25,7 +25,7 @@ import type { QfaiConfig } from "../config.js";
 import { resolvePath } from "../config.js";
 import { parseSkillFrontmatter, skillFrontmatterMapping } from "../agentFrontmatter.js";
 import { collectFiles } from "../fs.js";
-import { hasErrnoCode } from "../fs/errno.js";
+import { hasErrnoCode, isEnoent } from "../fs/errno.js";
 import { parseHeadings } from "../parse/markdown.js";
 import { ASSISTANT_DIR } from "../paths/assistantPaths.js";
 import { escapeRegExp } from "../regex.js";
@@ -317,10 +317,14 @@ export async function validateAssistantAssets(root: string, config: QfaiConfig):
   // SKILL.md: a template or an example copy below a skill is registered by
   // nothing, and a skill in a directory the crawl ignores is registered all the
   // same.
+  const crawled = new Set(skillFiles);
   for (const entryPoint of await collectSkillEntryPoints(skillsDir)) {
-    const crawled = documents.get(entryPoint);
-    if (crawled !== undefined) {
-      issues.push(...collectSkillRegistrationIssues(entryPoint, crawled));
+    if (crawled.has(entryPoint)) {
+      const content = documents.get(entryPoint);
+      // Absent from the map means the crawl could not read it, and has already
+      // said so. Reading it again here reports the same fault twice.
+      if (content !== undefined)
+        issues.push(...collectSkillRegistrationIssues(entryPoint, content));
       continue;
     }
     // Outside the crawl — a directory on the shared ignore list — so nothing has
@@ -1172,7 +1176,14 @@ async function collectSkillEntryPoints(skillsDir: string): Promise<string[]> {
   for (const entry of entries) {
     if (!entry.isDirectory()) continue;
     const file = path.join(skillsDir, entry.name, "SKILL.md");
-    if ((await stat(file).catch(() => null))?.isFile() === true) found.push(file);
+    // Absent is the ordinary answer for a directory that holds no skill. Any
+    // other failure — a directory this process may not traverse, an I/O fault —
+    // is an entry point the host cannot load either, and dropping it here is
+    // the silence the caller's read exists to break.
+    const probe = await stat(file)
+      .then((stats) => (stats.isFile() ? "file" : "other"))
+      .catch((cause: unknown) => (isEnoent(cause) ? "absent" : "error"));
+    if (probe === "file" || probe === "error") found.push(file);
   }
   return found.sort((a, b) => a.localeCompare(b));
 }

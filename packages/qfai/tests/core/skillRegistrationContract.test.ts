@@ -220,4 +220,21 @@ describe("a skill carries what a host needs to register it", () => {
     await chmod(file, 0o600);
     expect(findings.map((finding) => finding.code)).toContain("QFAI-SKILLS-014");
   });
+
+  it("reports an unreadable direct skill once, not twice", async () => {
+    // The crawl reaches an ordinary skill directory and has already said it
+    // could not read the file. Reading it again here reports the same fault a
+    // second time, in text and JSON output both.
+    if (process.platform === "win32" || process.getuid?.() === 0) return;
+    const root = await projectWithSkill(['description: "Does the thing."']);
+    const file = path.join(root, ".qfai", "assistant", "skills", "qfai-example", "SKILL.md");
+    await chmod(file, 0o000);
+
+    const findings = (await validateAssistantAssets(root, defaultConfig)).filter(
+      (finding) => finding.file === file && finding.code === "QFAI-SKILLS-014",
+    );
+
+    await chmod(file, 0o600);
+    expect(findings).toHaveLength(1);
+  });
 });
