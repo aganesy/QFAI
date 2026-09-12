@@ -66,6 +66,19 @@ describe("the stage says when it could not read the globs it was given", () => {
     expect(finding?.suggested_action).toContain("testFileGlobs");
   });
 
+  it("reports an unreadable glob beside a readable one", async () => {
+    // Asked of the whole list, the readable entry's extension answered for both,
+    // and the tests the other entry was written to select were never scanned.
+    const root = await projectWithAcceptanceTest();
+    const unreadable = String.fromCharCode(0);
+    const [finding] = (
+      await validateAtddCodeTraceability(root, configWith(["tests/**/*.ts", unreadable]))
+    ).filter((issue) => issue.code === "QFAI-ATDD-134");
+    expect(finding?.severity).toBe("error");
+    expect(finding?.message).toContain("scanned only for the extensions the others name (ts)");
+    expect(finding?.message).not.toContain("tests/**/*.ts");
+  });
+
   it("says nothing about globs it can read", async () => {
     const root = await projectWithAcceptanceTest();
     for (const globs of [["tests/**/*.py"], ["tests/**/*.{ts,tsx}"], ["tests/**/*.test.ts"]]) {

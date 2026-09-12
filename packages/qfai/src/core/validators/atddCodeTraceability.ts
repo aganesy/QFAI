@@ -407,15 +407,24 @@ function collectUnreadableTestGlobs(root: string, config: QfaiConfig): Issue[] {
   const globs = config.validation.traceability.testFileGlobs.filter(
     (glob) => glob.trim().length > 0,
   );
-  if (globs.length === 0 || deriveTestFileExtensions(globs).size > 0) return [];
+  // Each glob answers for itself. Asked of the list, one readable entry beside
+  // an unreadable one narrowed the scan to the readable entry's extensions, and
+  // the files the other was written to select were never scanned.
+  const unreadable = globs.filter((glob) => deriveTestFileExtensions([glob]).size === 0);
+  if (unreadable.length === 0) return [];
+  const read = [...deriveTestFileExtensions(globs)];
+  const message =
+    read.length === 0
+      ? `No extension could be read out of the configured test globs (${unreadable.join(", ")}), so this stage scanned for the default JavaScript and TypeScript set instead. A project whose acceptance tests are written in another language has none of them scanned, and every obligation is reported as uncovered.`
+      : `No extension could be read out of ${unreadable.length === 1 ? "this configured test glob" : "these configured test globs"} (${unreadable.join(", ")}), so this stage scanned only for the extensions the others name (${read.join(", ")}). The acceptance tests ${unreadable.length === 1 ? "it was" : "they were"} written to select are not scanned, and their obligations are reported as uncovered.`;
   return [
     issue(
       "QFAI-ATDD-134",
-      `No extension could be read out of the configured test globs (${globs.join(", ")}), so this stage scanned for the default JavaScript and TypeScript set instead. A project whose acceptance tests are written in another language has none of them scanned, and every obligation is reported as uncovered.`,
+      message,
       "error",
       path.join(root, "qfai.config.yaml"),
       "atddCodeTraceability.testFileGlobs",
-      globs,
+      unreadable,
       "canonical",
       "Give `validation.traceability.testFileGlobs` patterns that end in the extensions your tests use — `tests/**/*.py`, or `tests/**/*.{ts,tsx}` — and run `/qfai-configure` to set them against the real layout.",
     ),
