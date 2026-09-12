@@ -360,10 +360,13 @@ Rules:
    host supports in general: a tool a mode withholds, or one that cannot carry the
    answer's shape, is unavailable for that question and takes rule 3.
 2. **MUST prefer structured choices** (radio/multi-select) over free-text input when AskUserQuestion supports them.
-3. **Fallback**: If AskUserQuestion is technically unavailable, the agent MUST present the same question
-   as a normal message with explicit numbered choices.
-   The agent SHOULD preserve structured choice semantics (enumerated options, selection constraints).
-   The reason for unavailability MUST be stated.
+3. **Fallback**: If AskUserQuestion is unavailable for this question, the agent MUST present the same
+   question as a normal message, **in the shape its answer has**: explicit numbered choices where
+   there are choices, and a plain request for the value where the answer is a name, a number or a
+   sentence. Inventing options to make an open answer fit a numbered list is the failure the form
+   rule above names, and the fallback is not a licence for it.
+   Where there are choices the agent SHOULD preserve structured choice semantics (enumerated
+   options, selection constraints). The reason for unavailability MUST be stated.
 4. **`--auto` mode**: When `--auto` flag is active, no questions are asked.
    The agent MUST NOT use AskUserQuestion or ask via plain text.
    The agent MUST proceed with explicit assumptions and MUST record them in outputs.

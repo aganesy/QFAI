@@ -539,6 +539,11 @@ describe("the question form binds every question", () => {
       // have an agent invent two to narrow an answer nobody wanted narrowed.
       expectPhrase(content, "the form its answer shape calls for");
       expectPhrase(content, "the tool's free-text path where the\nanswer is a name");
+      // The fallback carries the shape too. Routing every unsupported answer
+      // shape to a numbered list would have an agent invent options for exactly
+      // the open value the paragraph above protects.
+      expectPhrase(content, "**in the shape its answer has**");
+      expectPhrase(content, "a plain request for the value where the answer is a name");
     });
 
     it(`${tree}: communication.md states the same protocol, not an older one`, async () => {

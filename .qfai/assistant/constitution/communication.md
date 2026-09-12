@@ -53,10 +53,12 @@ When an agent needs to ask the user a question, the following rules apply (see a
 2. **MUST prefer structured choices** (radio/multi-select) over free-text input when supported.
    Where the answer is genuinely open — a name, a number, a sentence — the tool's
    free-text path carries it; that is an answer shape, not an exception.
-3. **Fallback**: If AskUserQuestion is technically unavailable (e.g., non-VS Code environment),
-   the agent MUST present the same question as a normal message with explicit numbered choices.
-   The agent SHOULD preserve structured choice semantics (enumerated options, selection constraints).
-   The reason for unavailability MUST be stated.
+3. **Fallback**: If AskUserQuestion is unavailable for this question, the agent MUST present the same
+   question as a normal message, in the shape its answer has: explicit numbered choices where there
+   are choices, and a plain request for the value where the answer is open. Inventing options to fit
+   an open answer into a list is not the fallback.
+   Where there are choices the agent SHOULD preserve structured choice semantics (enumerated
+   options, selection constraints). The reason for unavailability MUST be stated.
 4. **`--auto` consistency**: When `--auto` flag is active, no questions are asked.
    The agent MUST NOT use AskUserQuestion or ask via plain text.
    The agent MUST proceed with explicit assumptions and MUST record them in outputs.
