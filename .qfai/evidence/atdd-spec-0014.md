@@ -466,6 +466,17 @@ it stands and needs a Change Request that decomposes it.
 
 ## Final status
 
+**The ledger is not written by this record.** `TDD-0019`'s `Evidence` cell keeps
+the prose it had. A conforming pointer plus a lowered pin makes the automated
+evidence gate pass the row, and the artifact that pointer names is escalated: two
+`REVISE` verdicts, four mandatory roles with no work order, no review pack, and
+no user decision. A gate passing over that measures the pointer's grammar rather
+than the evidence. The cell also belongs to `/qfai-implement` — this stage
+declares `test-list.md` read-only — so writing it here had no owner either.
+
+What this record carries is the evidence and the escalation. The cell is written
+when the escalation resolves, by the stage that owns it.
+
 - Review pack: none retained
 - Review pack seal: none
 
