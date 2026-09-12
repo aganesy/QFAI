@@ -157,6 +157,35 @@ describe("a skill carries what a host needs to register it", () => {
     expect(finding?.severity).toBe("error");
   });
 
+  it("asks for the front matter to be repaired before the field is written", async () => {
+    // Adding a key to a block that does not parse leaves the syntax error in
+    // place, so nothing the operator writes clears the finding.
+    const root = await projectWithSkillDocument(
+      ["---", "name: qfai-example", "description: [", "---", "", "# qfai-example", ""].join("\n"),
+    );
+    const [finding] = await registrationFindings(root);
+    expect(finding?.message).toContain("front matter a host cannot read");
+    expect(finding?.suggested_action).toContain("Repair the front matter first");
+  });
+
+  it("reads a skill whose directory name the document crawl ignores", async () => {
+    // `dist` is on the shared ignore list and is an ordinary name for a skill.
+    // The loader opens one SKILL.md per direct subdirectory whatever it is
+    // called, so a descriptionless skill there fails to register in silence.
+    const root = await projectWithSkill(['description: "Does the thing."']);
+    const ignored = path.join(root, ".qfai", "assistant", "skills", "dist");
+    await mkdir(ignored, { recursive: true });
+    await writeFile(
+      path.join(ignored, "SKILL.md"),
+      ["---", "name: dist", "---", "", "## dist", ""].join("\n"),
+      "utf-8",
+    );
+
+    const [finding] = await registrationFindings(root);
+    expect(finding?.severity).toBe("error");
+    expect(finding?.file).toContain("dist");
+  });
+
   it("asks nothing of a template that only looks like a skill", async () => {
     // The loader opens one SKILL.md per direct subdirectory. A generator
     // template under `templates/` is never registered by anything.

@@ -1,6 +1,6 @@
 import { constants } from "node:fs";
 import type { FileHandle } from "node:fs/promises";
-import { access, open, readFile, stat } from "node:fs/promises";
+import { access, open, readdir, readFile, stat } from "node:fs/promises";
 import path from "node:path";
 
 import {
@@ -23,7 +23,7 @@ import type {
 } from "../assistantAssetProvenance.js";
 import type { QfaiConfig } from "../config.js";
 import { resolvePath } from "../config.js";
-import { skillFrontmatterMapping } from "../agentFrontmatter.js";
+import { parseSkillFrontmatter, skillFrontmatterMapping } from "../agentFrontmatter.js";
 import { collectFiles } from "../fs.js";
 import { hasErrnoCode } from "../fs/errno.js";
 import { parseHeadings } from "../parse/markdown.js";
@@ -273,13 +273,6 @@ export async function validateAssistantAssets(root: string, config: QfaiConfig):
       continue;
     }
 
-    // The loader opens one SKILL.md per direct subdirectory. A template or an
-    // example copy below it is never registered, so registration metadata is
-    // not its to carry.
-    if (isSkillEntryPoint(skillsDir, skillFile)) {
-      issues.push(...collectSkillRegistrationIssues(skillFile, content));
-    }
-
     if (!content.includes(DRIFT_PROTOCOL_MARKER)) {
       issues.push(
         issue(
@@ -318,6 +311,18 @@ export async function validateAssistantAssets(root: string, config: QfaiConfig):
         ),
       );
     }
+  }
+
+  // Registration is asked of the loader boundary, not of every file named
+  // SKILL.md: a template or an example copy below a skill is registered by
+  // nothing, and a skill in a directory the crawl ignores is registered all the
+  // same.
+  for (const entryPoint of await collectSkillEntryPoints(skillsDir)) {
+    const content =
+      documents.get(entryPoint) ?? (await readFile(entryPoint, "utf-8").catch(() => null));
+    // Unreadable, and reported as its own finding where the crawl reached it.
+    if (content === null) continue;
+    issues.push(...collectSkillRegistrationIssues(entryPoint, content));
   }
 
   issues.push(...collectReferenceGraphIssues(root, skillsDir, documents));
@@ -1130,6 +1135,26 @@ function isUnfilledValue(raw: string): boolean {
   return value.length > 0 && TODO_PLACEHOLDER_RE.test(value);
 }
 
+/**
+ * The `SKILL.md` of every direct subdirectory of `skillsDir`.
+ *
+ * The document crawl skips directories on the shared ignore list — `tmp`,
+ * `dist` and the rest — and those are ordinary names for a skill. The loader
+ * skips nothing: it opens one `SKILL.md` per direct subdirectory whatever the
+ * directory is called, so a skill in one of them is registered, or fails to be,
+ * with the crawl saying nothing about it either way.
+ */
+async function collectSkillEntryPoints(skillsDir: string): Promise<string[]> {
+  const entries = await readdir(skillsDir, { withFileTypes: true }).catch(() => []);
+  const found: string[] = [];
+  for (const entry of entries) {
+    if (!entry.isDirectory()) continue;
+    const file = path.join(skillsDir, entry.name, "SKILL.md");
+    if ((await stat(file).catch(() => null))?.isFile() === true) found.push(file);
+  }
+  return found.sort((a, b) => a.localeCompare(b));
+}
+
 async function collectSkillFiles(dirs: string[]): Promise<string[]> {
   const files = await Promise.all(dirs.map((dir) => collectFiles(dir)));
   return files
@@ -1169,6 +1194,24 @@ function extractReviewerGateSection(content: string): string | null {
  * likely to lose the field to a contributor tidying front matter.
  */
 function collectSkillRegistrationIssues(skillFile: string, content: string): Issue[] {
+  // The block is there and cannot be read. Adding a key to it leaves the syntax
+  // error in place, so nothing the operator writes clears this finding until the
+  // block parses.
+  const unreadable = parseSkillFrontmatter(content)?.parseError;
+  if (unreadable !== undefined) {
+    return [
+      issue(
+        "QFAI-SKILLS-015",
+        `SKILL.md has front matter a host cannot read: ${unreadable}. That block is where the host reads \`description:\` to register the skill.`,
+        "error",
+        skillFile,
+        "skills.description",
+        undefined,
+        "change",
+        "Repair the front matter first, then make sure `description:` carries a sentence saying what the skill does.",
+      ),
+    ];
+  }
   const frontMatter = skillFrontmatterMapping(content);
   const description = frontMatter?.["description"];
   if (typeof description === "string" && description.trim() !== "") {
