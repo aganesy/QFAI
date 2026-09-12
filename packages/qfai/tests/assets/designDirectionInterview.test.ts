@@ -55,10 +55,12 @@ describe("the design direction is the user's decision", () => {
       // One ask path, the shared one. A second would escape the protocol that
       // decides when a question is allowed at all.
       expect(intake).toContain("shared-skill-operating-baseline.md#user-questions");
-      // The cap is not a reason to skip the ask, and the reason is the
+      // The cap is not a reason to skip the ask, and what lifts it is the
       // exemption rather than the stage the ask happens in. Two classes of
-      // question reach it, so both are named here: dropping either leaves the
-      // document explaining the cap away for a case it no longer covers.
+      // question reach this ask, so the document names both. Drop the approval
+      // class and a question whose subject the skill declares mandatory has no
+      // documented exemption; drop the grilling class and a question about a
+      // decision the design has left open has none.
       expect(intake).toContain(
         "is an approval, and a question inside a grilling session whose subject is a" +
           " decision the design has left open is a grilling question",
