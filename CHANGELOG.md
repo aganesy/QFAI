@@ -48,6 +48,16 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   decision settled before the research bearing on it is settled against evidence
   nobody had.
 
+  For a UI-bearing target the design direction is settled inside that session
+  too, and the later step records it rather than asking it. Asked where it used
+  to be, the visual choice came after five steps had already authored the pack it
+  governs.
+
+  The step reads the primitive's body rather than naming it: a host that loads
+  skill bodies lazily hands the agent the reference and not the procedure, and an
+  agent with the reference alone improvises the interview — which is the
+  methodless interview this change replaces, wearing its name.
+
 ### Changed
 
 - **A reviewer that recommended a decision the agents adopted cannot clear it**

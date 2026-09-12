@@ -55,7 +55,13 @@ describe.each(TREES)("%s — the discussion interview", (tree) => {
     // Without one, an agent that asked nothing has followed the step. The
     // topics are the checklist's, so there is one list to keep current.
     const skill = await read(SKILL);
-    expectPhrase(skill, "as a grilling\n   session through the `qfai-grilling` skill");
+    expectPhrase(skill, "as a grilling session through that skill");
+    // The body is read, not the name: a host that loads skill bodies lazily
+    // hands the agent the reference and not the procedure, and an agent with
+    // the reference alone improvises the interview this step replaces.
+    expectPhrase(skill, "Read `.qfai/assistant/skills/qfai-grilling/SKILL.md`");
+    expectPhrase(skill, "**Read the file, do not work from the name.**");
+    expectPhrase(skill, "stop and report that `npx qfai init` installs it");
     expectPhrase(skill, ".agents/rules/grilling.md");
     expectPhrase(skill, "references/discussion-coverage-checklist.md");
   });
@@ -83,11 +89,24 @@ describe.each(TREES)("%s — the discussion interview", (tree) => {
     // about it — so the protocol's output is an input to the session's tree.
     const skill = await read(SKILL);
     const research = unwrap(skill).indexOf("research-first-protocol.md");
-    const session = unwrap(skill).indexOf("session through the `qfai-grilling` skill");
+    const session = unwrap(skill).indexOf("as a grilling session through that skill");
     expect(research).toBeGreaterThan(-1);
     expect(session).toBeGreaterThan(-1);
     expect(research, "research runs after the interview").toBeLessThan(session);
     expectPhrase(skill, "Step 1's findings are inputs to the session's tree");
+  });
+
+  it("asks the design direction inside the session, not after the pack", async () => {
+    // Step 9 runs after steps 3 to 8 have authored the pack, so a user-owned
+    // visual choice asked there is asked after the thing it governs is written
+    // — which the pre-authoring guard exists to stop.
+    const skill = await read(SKILL);
+    expectPhrase(skill, "the design-direction decisions in `references/design-dna-intake.md`");
+    expectPhrase(
+      skill,
+      "a user-owned visual choice asked there is asked after the thing it governs",
+    );
+    expectPhrase(skill, "The choice is made in the session, not here; this step writes it down.");
   });
 
   it("puts the interview's decisions in ask-user, not auto-decide", async () => {

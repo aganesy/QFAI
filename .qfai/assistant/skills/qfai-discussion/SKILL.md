@@ -38,7 +38,7 @@ Skill-specific examples:
 
 When unsure, read inputs in this order:
 
-- P1: `.qfai/assistant/constitution/*`
+- P1: `.qfai/assistant/constitution/*`, and `.qfai/assistant/skills/qfai-grilling/SKILL.md` before the interview in step 2
 - P2: `.qfai/assistant/manifest/agent-routing.yml` + `.qfai/assistant/manifest/review-profiles.yml` + `.qfai/assistant/catalog/*`; from `.qfai/assistant/manifest/agent-catalog.yml` read the acting `orchestrator`'s and each routed role's entry (`owned_artifacts` / `tool_profile` / `permission_profile` / `specialization_tags`), not the whole file — its `developer_instructions` bodies mirror the agent cards (`.qfai/assistant/constitution/constitution.md` Article III)
 - P3: the pack under work — `.qfai/discussion/discussion-YYYYMMDDhhmmssSSS/**`
 - P4: what the project already settled (`.qfai/specs/_policies/**`, active `.qfai/specs/*/01_Spec.md`, `.qfai/contracts/**`, `qfai.config.yaml`)
@@ -71,11 +71,19 @@ A **cli-only** pack (`primary_surface: cli`, no visual secondary surface) stays 
 ## Required Process
 
 1. Run `.qfai/assistant/constitution/research-first-protocol.md` before any other artifact is authored, record its `research_summary` output in the `## Research Summary` section of `04_Sources.md`, then register source traceability there. Its `best_practices` / `anti_patterns` are inputs to every step below, not a late fill-in.
-2. Run the core interview for concept, scope, stakeholders, and constraints as a grilling
-   session through the `qfai-grilling` skill, covering every topic in
-   `references/discussion-coverage-checklist.md`. The method is `.agents/rules/grilling.md` and
-   this step does not restate it. "Run the interview" named no method, and an interview with no
-   method is the agent deciding and reporting.
+2. Read `.qfai/assistant/skills/qfai-grilling/SKILL.md`, then run the core interview
+   for concept, scope, stakeholders, and constraints as a grilling session through
+   that skill, covering every topic in `references/discussion-coverage-checklist.md` **and**, for a UI-bearing target, the
+   design-direction decisions in `references/design-dna-intake.md`. The method is
+   `.agents/rules/grilling.md` and this step does not restate it. "Run the interview" named no
+   method, and an interview with no method is the agent deciding and reporting.
+   **Read the file, do not work from the name.** A host that loads a skill body lazily gives an
+   agent the reference and not the procedure, and an agent with the reference alone improvises the
+   interview — which is the methodless interview this step exists to replace, wearing its name. If
+   the file is absent, stop and report that `npx qfai init` installs it.
+   The design-direction decisions belong in this session rather than at step 9, because step 9 runs
+   after steps 3 to 8 have authored the pack: a user-owned visual choice asked there is asked after
+   the thing it governs is written.
    Step 1's findings are inputs to the session's tree, not a later fill-in: a decision settled
    before the research that bears on it is settled against evidence nobody had, and the method
    reads a fact rather than asking about it.
@@ -85,7 +93,11 @@ A **cli-only** pack (`primary_surface: cli`, no visual secondary surface) stays 
 6. Run Example Mapping per `references/example-mapping-guide.md` and capture `Example Seeds`.
 7. Update `11_OQ-Register.md`, resolve OQs until open count is zero, and move deferred items to `13_Deferred.md`; take the canonical field definitions for both files from `references/oq-and-deferred-rules.md`.
 8. Generate the exploration-first sidecar family for UI-bearing targets.
-9. Interview for the design direction per `references/design-dna-intake.md`, ask the user to choose one of the candidate themes, and record the choice in `01_Context.md#Design Direction`. Required when any classified surface — primary or secondary — is `web`, `mobile`, `desktop` or `mixed`; skip for cli-only and non-ui targets. The answers, not a rendered brand file, are the handoff: `/qfai-sdd` Phase 0 authors root `DESIGN.md` from them.
+9. Record the design direction settled in step 2's session — the chosen theme and the
+   `references/design-dna-intake.md` answers behind it — in `01_Context.md#Design Direction`. The choice is
+   made in the session, not here; this step writes it down. Required when any classified surface — primary or
+   secondary — is `web`, `mobile`, `desktop` or `mixed`; skip for cli-only and non-ui targets. The answers,
+   not a rendered brand file, are the handoff: `/qfai-sdd` Phase 0 authors root `DESIGN.md` from them.
 10. Generate `prototyping.yaml` only when the latest discussion pack targets a prototyping execution surface (`web`, `mobile`, `desktop`, `mixed`) and an explicit prototyping recommendation is useful. A cli-only pack emits none — `/qfai-prototyping` rejects `cli`.
 11. Request review and record the Reviewer result, following `references/review-cycle-playbook.md` for pack layout, cycle rules, and the `summary.json` fields. It owns the write paths under `.qfai/review/review-YYYYMMDDhhmmssSSS/`, which is the only tree `npx qfai validate` reads.
 
