@@ -138,16 +138,19 @@ describe("governing decision", () => {
 });
 
 /**
- * What the buckets classify, now that a grilling session exists.
+ * What the buckets classify, and the one category a session earns.
  *
- * The `ask-user` bucket is a closed list of four categories, and the grilling
- * rule puts a design, an approach, a scope boundary or a trade-off to the user —
- * none of them. Read as a classification of every question an invocation can
- * utter, the policy asked for a question it could not classify and could not
- * gain a category for without opening the list the spec closed.
+ * They classify the **operations a skill performs**, not every question an
+ * invocation can utter: a frontier decision inside a grilling session settles
+ * something before anything is performed, and the grilling rule owns which of
+ * those are asked. Two things are outside that carve-out and stay classified by
+ * their subject wherever they are asked — a mandatory approval, and a
+ * `hard-required` input the invocation consumes.
  *
- * So the subject is narrowed rather than the list opened: the buckets classify
- * the operations a skill performs, and a session's question is the session's.
+ * The `ask-user` list is closed at five categories. The fifth is a decision a
+ * declared grilling session puts to the user, and it is open only to a skill
+ * whose own operation is the interview, which is what makes the two grilling
+ * skills' own entries legal rather than a widening.
  */
 describe("the autopilot buckets classify operations, not interview questions", () => {
   const SCOPE = "the **operations the skill performs**";
@@ -196,5 +199,19 @@ describe("the autopilot buckets classify operations, not interview questions", (
     // conforming review has to reject the policy this scope says to keep.
     expect(text).toContain("a decision a declared grilling session puts to the user");
     expect(text).toContain("available only to a skill whose own operation is the interview");
+  });
+
+  it("the primary consumer view and the glossary carry the same categories", async () => {
+    // A consumer reads the primary spec, not the business rule, and the glossary
+    // is where the term is defined. Left at four, either one rejects the entries
+    // the rule legalises.
+    for (const relative of [
+      ".qfai/specs/spec-0015/01_Spec.md",
+      ".qfai/specs/_policies/06_Glossary.md",
+    ]) {
+      const text = flat(await readFile(path.join(repoRoot, relative), "utf-8"));
+      expect(text, relative).toMatch(/interview/);
+      expect(text, relative).toMatch(/grilling.session/);
+    }
   });
 });
