@@ -1529,7 +1529,7 @@ to this file and restates the counted totals beside it. Those totals are:
 60 business rule scored cells. `Status` is a row verdict, not a mark, and is excluded from all four
 counts.
 
-Six obligations in this pack cannot be moved by testing alone. `US-0013-0009` names artifacts and
+Seven obligations in this pack cannot be moved by testing alone. `US-0013-0009` names artifacts and
 fields the product does not carry and has never had a test. `TC-0013-0022` is half of that case: the
 Phase 0 write it names has no callable function, and the halt-on-missing-file it also names has one,
 which is tested.
@@ -1547,16 +1547,20 @@ shipped template to carry a literal `primary_tasks: []`, and `TC-0013-0026` requ
 value to fail the audit lane. One of the two has to move upstream; a case written for either
 falsifies the other, which is why the row's `❌` cells are not thin testing. See Findings 5.
 
-`TC-0013-0023` is **not** among them, and listing it there was wrong. It asks that
-`_policies/05_Contracts.md` name none of six legacy design contracts after `/qfai-sdd` completes.
-That document exists, the six names are a closed list, and the shipped
-`qfai-sdd/references/ui-design-contract-normalization.md` already declares the legacy per-aspect
-brand contracts removed — so the assertion is writable today against artifacts that are present.
-Its cells are `❌` for missing coverage, which a test can fix, and not for an obligation no test
-could reach.
+`TC-0013-0023` **is** among them, and an earlier reading that excluded it confused writable with
+passable. It asks that `_policies/05_Contracts.md` name none of `exploration-brief.yaml`,
+`evaluation-rubric.yaml`, `evaluator-calibration.yaml`, `selected-direction.yaml`,
+`reference-pool.yaml` or `brand-design.yaml` after `/qfai-sdd` completes, tolerating historical
+mentions only under `09_delta.md`. That document's `### Design Contracts` table declares the
+current-active family and carries **all six filenames today**. Each row's Purpose text says
+`(REMOVED — …)`, and the obligation is about the table naming the file rather than about what the
+prose says of it — so a conforming assertion is writable and fails. Raising this row needs the
+active index cleaned up, or the requirement reconciled with a table that keeps retired rows for the
+record.
 `TC-0013-0032`, `TC-0013-0033` and `TC-0013-0027` declare behaviour the product deliberately changed,
-and their tests already fix the current behaviour correctly. All six need the spec reconciled with
-the code through a Change Request before any test can raise their scores. `US-0013-0003` is an eighth
+and their tests already fix the current behaviour correctly. All seven need the spec reconciled with
+the code — or, for `TC-0013-0023`, the artifact cleaned up — through a Change Request before any
+test can raise their scores. `US-0013-0003` is an eighth
 of the same kind and is counted apart from the seven, because what it needs reconciled is its own
 acceptance criterion rather than the product: until that is settled neither it nor the criterion can
 be scored honestly at all. Until those are

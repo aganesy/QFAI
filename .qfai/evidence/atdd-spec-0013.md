@@ -227,6 +227,23 @@ measured against:
 -const REQUIRED_PRIMARY_TASK_KEYS = ["id", "label", "acceptance"] as const;
 +const REQUIRED_PRIMARY_TASK_KEYS = ["id", "label"] as const;
 ```
+
+Which four die, re-run at this tree:
+
+```text
+ ✓ TC-0013-0034 > string-only items pass (legacy shape, three string entries — within band)
+ × TC-0013-0034 > complete structured {id,label,acceptance} items pass
+ × TC-0013-0035 > rejects a structured item missing 'acceptance'
+ × TC-0013-0035 > rejects a structured item missing 'id'
+ ✓ TC-0013-0035 > surfaces QFAI-AUD-021 shape findings even when every entry is malformed (parsed list empty)
+ × TC-0013-0035 > rejects a structured item carrying an extra key (closed schema)
+```
+
+The set is one closed schema read from both directions, which is why four move
+rather than two: `acceptance` leaving the required list makes it an **extra**
+key, so the complete item is rejected and the extra-key case's message names a
+different key; and `missing 'id'` fails because the reported `missingKeys` set
+changes with the list it is filtered from.
 - Round 1: Falsifiability revision: working-tree+e9c87b9362c368ec472519a028f2a933c792d5228d3460dbcd53ccd142d86c82
 - Round 1: GREEN command: npx vitest run tests/integration/primaryTasksStructured.test.ts
 - Round 1: GREEN result: Test Files 1 passed (1); Tests 6 passed (6)
@@ -344,8 +361,10 @@ None.
   not cover it, and no round remains to take one.
 - Subject: every claim this file makes, checked against the files it names
 - Result: the four recorded rows reproduce their GREEN commands, their
-  refactor-verify run and the checkpoint exactly as recorded, and every
-  `Selector` resolves to a real case; the evidence-entry contract holds, with
+  refactor-verify run and the checkpoint exactly as recorded, and **those four
+  rows'** `Selector` values resolve to a real case — not every selector in the
+  ledger, which the same reviewed artifact contradicts: its finding 6 reports
+  six of the twenty-seven runnable selectors matching zero cases; the evidence-entry contract holds, with
   `QFAI-TDDLIST-008` and `-009` silent and `-007` / `-011` naming exactly the
   eight unbackfilled rows and no backfilled one; all eight gap reasons check
   out against the files they name; the validate gate reproduces at `error=0`,
