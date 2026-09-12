@@ -20,10 +20,11 @@ existing somewhere in the repository is not coverage here. Ownership is read in 
    obligation. A case carrying an annotation for another spec is bound to that spec, not to this
    one, whatever it exercises — and where a plan assigns the surface to that spec, the split is
    deliberate rather than a gap here. That is the case under "The `auditProfile.ts` entrypoint".
-2. **An unannotated case is owned when nothing else produces the outcome.** A case with no
-   annotation at all is not claimed by another spec, so where it is the only place an obligation's
-   outcome is produced, it is scored and named as such. One file is in this position, and the
-   inventory below says which and for which two obligations.
+2. **An unannotated case is owned where the obligation has no annotated one.** A case with no
+   annotation at all is claimed by no other spec. Where an obligation has no annotated case
+   anywhere, every unannotated case that produces its outcome is scored, and the record names all
+   of them rather than the first one found. Three files are in this position, for the same two
+   obligations, and the inventory below lists each with its run.
 
 The two steps do not overlap: the first turns on an annotation pointing elsewhere, the second on
 there being no annotation to point anywhere. Neither admits a case that another spec owns.
@@ -56,8 +57,8 @@ requires a rationale for.
 
 ## What was measured, and how
 
-Every score below rests on a test run, not on a reading of a ledger. The fourteen files that carry
-spec-0013 coverage were located by reading the tests and the source, then executed. All fourteen pass:
+Every score below rests on a test run, not on a reading of a ledger. The sixteen files that carry
+spec-0013 coverage were located by reading the tests and the source, then executed. All sixteen pass:
 
 | File                                                          | Result     |
 | ------------------------------------------------------------- | ---------- |
@@ -75,23 +76,42 @@ spec-0013 coverage were located by reading the tests and the source, then execut
 | `tests/integration/primaryTasksBand.test.ts`                  | 8 passed   |
 | `tests/integration/primaryTasksStructured.test.ts`            | 6 passed   |
 | `tests/integration/spec0013ActivePointerSurfaceType.test.ts`  | 8 passed   |
-|                                                               | **192**    |
+| `tests/cli/commands/sddPreflight.test.ts`                     | 12 passed  |
+| `tests/validators/importLite.test.ts`                         | 94 passed  |
+|                                                               | **298**    |
 
 Two sets are counted here and they are not the same set. Thirteen files carry a `QFAI:SPEC-0013`
-annotation, and every one of them is in the table. `sddPreflight.test.ts` carries none, and is
-scored under step 2 of "What credits a cell": it is claimed by no other spec, and it is the only
-place in the repository where the outcome of `US-0013-0003` or `US-0013-0008` is produced. Its
-scores are the whole of what those two stories have, which the rows for them state.
+annotation, and every one of them is in the table. Three carry none and are scored under step 2 of
+"What credits a cell": `US-0013-0003` and `US-0013-0008` have no annotated case anywhere, and these
+three are where their outcome is produced.
 
-Four of the fourteen carry no ledger row, and are likewise scored from the pack:
+| File                                        | Drives                                      |
+| ------------------------------------------- | ------------------------------------------- |
+| `tests/core/sddPreflight.test.ts`           | `runSddPreflight` over seeded packs         |
+| `tests/cli/commands/sddPreflight.test.ts`   | `runSddPreflightCommand`, the command around it |
+| `tests/validators/importLite.test.ts`       | `runSddPreflight` from the import-lite entrypoint |
+
+Their scores together are the whole of what those two stories have, which the rows for them state.
+The last two files hold coverage for other packs as well; only their preflight cases bear on this
+one.
+
+Counting all three moves no cell. What the two additional files add is a second and third entry
+path — the command around the function, and the import-lite entrypoint — rather than new input
+shapes, and every down-mark on the two rows turns on a shape none of the three supplies: a pack
+that is incomplete and on which generation continues, an empty pack directory, a required name
+present as a directory, a zero-byte required file, an unreadable pack, a sixteenth required file,
+and a required file below the minimum-content threshold.
+
+Six of the sixteen carry no ledger row, and are likewise scored from the pack:
 
 - `sddTriage.test.ts` holds the whole of `TC-0013-0018` and `TC-0013-0019`.
 - `spec0013ActivePointerSurfaceTypeE2E.test.ts` holds the acceptance layer of `US-0013-0012`,
   `US-0013-0013` and `US-0013-0014`, two cases each.
-- `sddPreflight.test.ts` holds all the coverage `US-0013-0003` and `US-0013-0008` have. It carries no
-  spec-0013 annotation of any kind, and the ledger names it nowhere; it drives `runSddPreflight` over
-  seeded discussion packs and is the only place in the repository where either user story's outcome
-  is produced.
+- Three files hold all the coverage `US-0013-0003` and `US-0013-0008` have, and the ledger names
+  none of them. `tests/core/sddPreflight.test.ts` drives `runSddPreflight` over seeded discussion
+  packs, `tests/cli/commands/sddPreflight.test.ts` drives the command around it, and
+  `tests/validators/importLite.test.ts` drives the same function from the import-lite entrypoint.
+  Neither story has an annotated case anywhere, which is what puts all three under step 2.
 - `spec0013ActivePointerSurfaceType.test.ts` carries eight annotations, `TC-0013-0028` … `-0035`, and
   one case for each. It is the integration acceptance layer for all eight, and the ledger names it
   nowhere, so eight obligations draw coverage from a file no ledger row reaches. Its cases are scored
@@ -253,8 +273,8 @@ $ node packages/qfai/dist/cli/index.mjs validate --profile tdd --spec 0013 --fai
 ```
 
 **No spec-0013 obligation depends on a skipped test.** All sixteen belong to spec-0004, spec-0006,
-spec-0008 and spec-0014. None of the fourteen files that carry spec-0013 coverage contains a `.skip`,
-`.only` or `.todo` modifier of any kind, and all 192 of their cases ran. The sixteen findings are
+spec-0008 and spec-0014. None of the sixteen files that carry spec-0013 coverage contains a `.skip`,
+`.only` or `.todo` modifier of any kind, and all 298 of their cases ran. The sixteen findings are
 in this pack's *report* scope because the validator scans the whole test tree; they are not in its
 *coverage* scope, and they contribute to no cell in this matrix.
 
@@ -1024,11 +1044,12 @@ attempted or rejected.
 `-0014`, `-0017`, `-0019`, `-0020`, `-0021`, `-0025`, `-0027`, `-0028`, `-0030`, `-0031`, `-0032`,
 `-0034`.
 
-- `US-0013-0003`, `US-0013-0008` — blockers are asserted by content (`OQ-0009`, `必須ファイル不足`,
+- `US-0013-0003`, `US-0013-0008` — blockers are asserted by content (`OQ-0009`, the missing-file
+  blocker text `sddPreflight.ts` builds,
   `Blocking OQ`) and the summary file is read back and checked, which is a real oracle that a
   one-line change to the emission reddens. Three things cap both. The positive case asserts
   `blockers` is empty, which certifies "nothing blocks" rather than "this check passed". The
-  missing-file assertion uses `item.includes("必須ファイル不足")` without requiring the blocker to
+  missing-file assertion matches that literal without requiring the blocker to
   name the file removed, while the emission joins the missing names into the message. And one case's
   oracle is the shipped Stage 0 playbook's own wording rather than a behaviour.
 - `US-0013-0011` — **the two directions are not equally supported, and this is the clearest instance
