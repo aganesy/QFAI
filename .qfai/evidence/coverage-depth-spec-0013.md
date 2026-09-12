@@ -874,8 +874,7 @@ obligation, and a mark is the second claim.
   direction fires and is pinned; the under-floor direction is exercised with the opposite verdict,
   because the validator's lower bound was removed and counts of one and two are now required to stay
   silent. So one branch is covered, the other is covered backwards, and no case distinguishes the
-  band the rule states. This cell read `n/a` until it was noticed that an unconditional rule and a
-  rule with an unmet branch are not the same thing.
+  band the rule states.
 
 **`Positive case`, 7 cells** — `BR-0013-0004`, `-0005`, `-0006`, `-0007`, `-0008`, `-0013`, `-0014`.
 
@@ -1062,8 +1061,11 @@ grouped by column with a per-coordinate reason.
   legacy contract. Untested on both rows: a contract with no `screens` key, an empty `screens: []`,
   two screens where only one is empty, and `primary_tasks: null` rather than `[]`.
 - `US-0013-0012`, `TC-0013-0029` — the three-candidate fixture is a real non-trivial edge and all three
-  names are required in the message. Untested: zero candidates, exactly one candidate, and a
-  `.qfai/discussion` directory that does not exist at all.
+  names are required in the message. Untested on both rows: zero candidates, and a
+  `.qfai/discussion` directory that does not exist at all. **Exactly one candidate is untested on
+  `TC-0013-0029` only**: `spec0013ActivePointerSurfaceTypeE2E.test.ts` seeds one candidate
+  directory, leaves `currentId` absent and requires the recovery error naming that candidate — but
+  it carries `US-0013-0012`'s annotation, so it reaches the story's cell and not the test case's.
 - `US-0013-0013`, `TC-0013-0030` — the idempotency edge is covered and covered well: a second run must
   return `changed: false`, the file must be byte-identical, and the key must occur exactly once.
   Untested: a spec with no frontmatter fence, a frontmatter already carrying `surface_type: cli-only`,
@@ -1281,7 +1283,7 @@ rested on is over the run-summary artifact, and this column is scored per obliga
   return no findings for every input keeps all three cases green, and the discriminating evidence
   lives in `TC-0013-0035`. The mixed-list case widens the input and inherits the same limit.
 
-**Depth `⚠️` count check.** 13 + 6 + 3 + 13 + 11 + 8 + 2 + 17 + 18 = **91**.
+**Depth `⚠️` count check.** 14 + 6 + 3 + 14 + 11 + 8 + 0 + 18 + 19 = **93**.
 
 ### Business rule table (15)
 
@@ -1486,6 +1488,12 @@ Six obligations in this pack cannot be moved by testing alone. `US-0013-0009` an
 name artifacts and fields the product does not carry and have never had a test. `TC-0013-0022` is
 half of that case: the Phase 0 write it names has no callable function, and the halt-on-missing-file
 it also names has one, which is tested.
+
+`TC-0013-0025` belongs here for a different reason, and it is the one the census had missing: no
+test can satisfy it **and** `TC-0013-0026` at once. It requires every `screens[]` entry of the
+shipped template to carry a literal `primary_tasks: []`, and `TC-0013-0026` requires that exact
+value to fail the audit lane. One of the two has to move upstream; a case written for either
+falsifies the other, which is why the row's `❌` cells are not thin testing. See Findings 5.
 
 `TC-0013-0023` is **not** among them, and listing it there was wrong. It asks that
 `_policies/05_Contracts.md` name none of six legacy design contracts after `/qfai-sdd` completes.
