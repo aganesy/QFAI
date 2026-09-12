@@ -20,11 +20,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   equivalent alternatives and `hard-required` is an input with no default, while
   a frontier decision has a recommended answer the user is free to reject.
 
+  The category covers every decision a session puts to the user, not only the
+  frontier: the confirmation that closes a session, and everything a session
+  between agents escalates — which includes a decision whose prerequisites
+  never resolved, so it never reached a frontier at all.
+
   The tailoring contract is now held against every shipped skill, read off the
   tree rather than a list. The two grilling skills were outside the list, which
   is why nothing reported the entries they had added.
-
-### Changed
 
 - **A reviewer that recommended a decision the agents adopted cannot clear it**
   (#1600). A grilling session puts a recommended answer beside each question,

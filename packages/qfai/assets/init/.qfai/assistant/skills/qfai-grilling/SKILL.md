@@ -306,17 +306,21 @@ Every decision this skill meets falls in one of three named buckets.
 - ask-user:
   - every decision on the frontier — that is what a round is
   - the confirmation that closes the session
+  - every decision a session between agents escalates, including one whose
+    prerequisites never resolved and so never reached a frontier
 - hard-required:
   - grilling subject (the design to interrogate; a session has no default for
     what it is about)
 
-The two ask-user entries instantiate the prototype's `decisions a grilling session
+The ask-user entries instantiate the prototype's `decisions a grilling session
 puts to the user` category. A skill MAY narrow any of the three buckets (drop an entry the skill cannot reach), and
 MAY instantiate a category entry: `approval-required governance operations` with the
 operations its own run cannot authorize for itself, and `decisions a grilling session
-puts to the user` with the decisions on its own frontier and the confirmation that closes
-the session. It MUST NOT introduce an entry outside the prototype's categories.
-Widening triggers a Reviewer-Gate finding.
+puts to the user` with every decision its own session puts there — the frontier, the
+confirmation that closes the session, and everything a session between agents escalates,
+which includes a decision whose prerequisites never resolved and so never reached a
+frontier. It MUST NOT introduce an entry outside the prototype's categories. Widening
+triggers a Reviewer-Gate finding.
 
 The buckets are the method, not a tuning surface. Moving a frontier decision to
 `auto-decide` is the agent answering its own question, which this skill exists

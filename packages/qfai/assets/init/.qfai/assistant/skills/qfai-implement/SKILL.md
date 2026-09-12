@@ -535,7 +535,14 @@ The skill collapses avoidable per-session prompts to 0-1 by classifying every de
 - hard-required:
   - `primarySpecId` (when absent from inputs — Spec Auto-Discovery narrows the candidates but does not settle the value, so a single candidate is announced for the user to confirm, rather than proceeded on automatically)
 
-A skill MAY narrow any of the three buckets (drop an entry the skill cannot reach), and MAY instantiate a category entry: `approval-required governance operations` with the operations its own run cannot authorize for itself, and `decisions a grilling session puts to the user` with the decisions on its own frontier and the confirmation that closes the session. It MUST NOT introduce an entry outside the prototype's categories. Widening triggers a Reviewer-Gate finding.
+A skill MAY narrow any of the three buckets (drop an entry the skill cannot reach), and
+MAY instantiate a category entry: `approval-required governance operations` with the
+operations its own run cannot authorize for itself, and `decisions a grilling session
+puts to the user` with every decision its own session puts there — the frontier, the
+confirmation that closes the session, and everything a session between agents escalates,
+which includes a decision whose prerequisites never resolved and so never reached a
+frontier. It MUST NOT introduce an entry outside the prototype's categories. Widening
+triggers a Reviewer-Gate finding.
 
 project_memory:
 
