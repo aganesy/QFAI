@@ -66,17 +66,19 @@ from the options below, and sweep the ledger rows that rest on them.
 
 ## Options (at least 3) and recommendation
 
-| #   | Option                                                                                                                                              | Cost                                                                                                                                                  | Risk                                                                                                                                                                                                              | Recommended |
-| --- | --------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------- |
-| 1   | Narrow the spec to the product: REQ-0012 and AC-0002-0008 bind the screen explorations only; REQ-0005 and AC-0002-0010 say the artifact is optional | Edit four upstream statements. Reset `TDD-0008`, `-0009`, `-0012`; **retire `TDD-0010`**; re-verify `TDD-0011` in place                               | Records today's behaviour as intended. If either narrowing was a regression, it becomes the specification. One row is removed rather than re-pointed                                                              | ✅          |
-| 2   | Restore the product to the spec: reinstate a winner check, and make `prototyping.yaml` a readiness blocker for UI-bearing packs                     | New validator work, a breaking change for adopters, and — for the requiredness half — a `spec-0013` owner re-derivation it cannot be approved without | Reverses a deliberate design move without the record of why it was made. `2B` reverses `spec-0013` REQ-0015 outright, so approving it alone would leave two active packs prescribing opposite preflight behaviour |             |
-| 3   | Retire the four obligations: withdraw REQ-0012, AC-0002-0008, REQ-0005's requiredness half and AC-0002-0010, and delete the rows resting on them    | Smallest edit                                                                                                                                         | Loses the record that the question was ever settled, so the next reader re-derives it                                                                                                                             |             |
+| #   | Option                                                                                                                                              | Cost                                                                                                                                                                                                                                                          | Risk                                                                                                                                                                                                              | Recommended |
+| --- | --------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------- |
+| 1   | Narrow the spec to the product: REQ-0012 and AC-0002-0008 bind the screen explorations only; REQ-0005 and AC-0002-0010 say the artifact is optional | Edit four upstream statements. Reset `TDD-0008`, `-0009`, `-0012`; **retire `TDD-0010`**; re-verify `TDD-0011` in place. **Plus the `spec-0010` owner re-derivation**, both chains and its ledger, which every statement-A outcome owes                       | Records today's behaviour as intended. If either narrowing was a regression, it becomes the specification. One row is removed rather than re-pointed                                                              | ✅          |
+| 2   | Restore the product to the spec: reinstate a winner check, and make `prototyping.yaml` a readiness blocker for UI-bearing packs                     | New validator work, a breaking change for adopters, and — for the requiredness half — a `spec-0013` owner re-derivation it cannot be approved without                                                                                                         | Reverses a deliberate design move without the record of why it was made. `2B` reverses `spec-0013` REQ-0015 outright, so approving it alone would leave two active packs prescribing opposite preflight behaviour |             |
+| 3   | Retire the four obligations: withdraw REQ-0012, AC-0002-0008, REQ-0005's requiredness half and AC-0002-0010, and delete the rows resting on them    | Smallest edit **to `spec-0002`**, and the `spec-0010` re-derivation beside it like every other statement-A outcome. Retiring the direction rule here leaves `spec-0010`'s own copy of it to be withdrawn or restated, which is an edit rather than an absence | Loses the record that the question was ever settled, so the next reader re-derives it                                                                                                                             |             |
 
 **Every outcome owes `spec-0010` a re-derivation, this one included.** That pack
-requires `/qfai-discussion` to author root `DESIGN.md`, and this Change Request
-records `/qfai-sdd` as the producer; options 1 and 3 settle statement A without
-touching that disagreement, so they leave it standing rather than resolving it.
-It is listed in `## Impact scope` and first in the rerun plan.
+requires `/qfai-discussion` to author root `DESIGN.md` **and** owns the direction
+rule itself; this Change Request records `/qfai-sdd` as the producer, and
+statement A changes or retires the rule. Options 1 and 3 settle statement A
+without touching either disagreement, so they leave both standing rather than
+resolving them. Both chains are listed in `## Impact scope` and first in the
+rerun plan.
 
 Option 1 is recommended because the narrowing is documented in the tree and was
 made on purpose: the direction interview asks the user rather than letting an
@@ -86,17 +88,18 @@ spec catching up, not the product going back.
 
 ## Blocked downstream items
 
-| Item                 | Kind         | Why it depends on the artifact                                                                                 |
-| -------------------- | ------------ | -------------------------------------------------------------------------------------------------------------- |
-| `spec-0002/TDD-0008` | `ledger-row` | `TC-0002-0008` asks that discussion completion not require a direction                                         |
-| `spec-0002/TDD-0009` | `ledger-row` | `TC-0002-0009` asks that a pack asserting a single final winner be refused                                     |
-| `spec-0002/TDD-0010` | `ledger-row` | second row on `TC-0002-0009`                                                                                   |
-| `spec-0002/TDD-0012` | `ledger-row` | `TC-0002-0011` asks that the wording match the active requiredness rule                                        |
-| `spec-0010/TDD-0011` | `ledger-row` | `TC-0010-0007` asks that discussion author root `DESIGN.md`, the producer every statement-A outcome re-derives |
+| Item                 | Kind         | Why it depends on the artifact                                                                                      |
+| -------------------- | ------------ | ------------------------------------------------------------------------------------------------------------------- |
+| `spec-0002/TDD-0008` | `ledger-row` | `TC-0002-0008` asks that discussion completion not require a direction                                              |
+| `spec-0002/TDD-0009` | `ledger-row` | `TC-0002-0009` asks that a pack asserting a single final winner be refused                                          |
+| `spec-0002/TDD-0010` | `ledger-row` | second row on `TC-0002-0009`                                                                                        |
+| `spec-0002/TDD-0012` | `ledger-row` | `TC-0002-0011` asks that the wording match the active requiredness rule                                             |
+| `spec-0010/TDD-0011` | `ledger-row` | `TC-0010-0007` asks that discussion author root `DESIGN.md`, the producer every statement-A outcome re-derives      |
+| `spec-0013/TDD-0016` | `ledger-row` | `TC-0013-0022` asks that `/qfai-sdd` Phase 0 write `DESIGN.md.lock.yaml`, which `2a` moves into `/qfai-prototyping` |
 
-**`spec-0010/TDD-0011` is another pack's row, and it belongs here anyway.** It
-is at `todo`, so nothing has been observed against it yet, and its obligation is
-the one the `spec-0010` re-derivation moves. Left out of this set the open-CR
+**`spec-0010/TDD-0011` and `spec-0013/TDD-0016` are other packs' rows, and they
+belong here anyway.** Both are at `todo`, so nothing has been observed against
+either yet, and each obligation is one a re-derivation above moves. Left out of this set the open-CR
 preflight does not suppress it, and `/qfai-implement` may advance it against a
 requirement already known to change — producing a RED, a GREEN and a reviewer
 verdict on a producer nobody has settled.
@@ -107,7 +110,7 @@ for — giving `non-UI skip` a fixture that makes the guard load-bearing, and
 removing the three annotations `threeLayer.test.ts` declares that this spec's
 table does not hold — do edit the file its recorded observation covers, so the
 row owes a fresh observation. That is the shared-artifact re-verification of step
-7, which needs no approval from this Change Request and no reset.
+6, which needs no approval from this Change Request and no reset.
 
 Listing it here would have blocked it: the open-CR preflight suppresses every
 row in this set until the user settles two product decisions the row has nothing
@@ -125,22 +128,35 @@ to do with. A row whose obligation is unchanged waits on nobody.
 
 ## Impact scope
 
-**Two other packs specify this surface, and neither is reconciled by re-running
-a test.** Both belong in the owner rerun rather than in the cross-spec sweep,
+**Four other packs specify this surface, and none is reconciled by re-running a
+test.** Each belongs in the owner rerun rather than in the cross-spec sweep,
 because what disagrees is a requirement and not an observation.
 
-| Pack        | What it requires                                                                                                                    | Which outcome reaches it                                                                                                        |
-| ----------- | ----------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
-| `spec-0010` | `US-0010-0009`, `AC-0010-0007` and `BR-0010-0007`: `/qfai-discussion` authors root `DESIGN.md` before downstream use                | Every statement-A outcome. Options 1 and 3 keep a product that contradicts it; option 2 moves the producer somewhere else again |
-| `spec-0013` | `REQ-0015` and the side-artifact `AC-0013-0009`: the SDD preflight does not block on a missing or old-format optional side artifact | Statement B option 2 only, which makes an absent or malformed `prototyping.yaml` block                                          |
-| `spec-0004` | `REQ-0025` and `AC-0004-0008`: a missing or unparseable root `DESIGN.md` emits `QFAI-DCON-030` at error                             | Sub-option `2a` only, which exempts a pack that has not reached prototyping                                                     |
-| `spec-0012` | `DR-0012-0020`: SDD Phase 0 freezes the `DESIGN.md` digest into `.qfai/contracts/design/DESIGN.md.lock.yaml`                        | Sub-option `2a` only, which moves that write into `/qfai-prototyping`                                                           |
+| Pack        | What it requires                                                                                                   | Reached by                                 |
+| ----------- | ------------------------------------------------------------------------------------------------------------------ | ------------------------------------------ |
+| `spec-0010` | `/qfai-discussion` authors root `DESIGN.md` before downstream use, **and** winner selection stays in prototyping   | Every statement-A outcome                  |
+| `spec-0013` | The SDD preflight does not block on a missing optional side artifact, **and** Phase 0 writes `DESIGN.md.lock.yaml` | The first half by `2B`, the second by `2a` |
+| `spec-0004` | A missing or unparseable root `DESIGN.md` emits `QFAI-DCON-030` at error                                           | `2a`                                       |
+| `spec-0012` | SDD Phase 0 freezes the `DESIGN.md` digest into `.qfai/contracts/design/DESIGN.md.lock.yaml`                       | `2a`                                       |
 
-`spec-0010` is the one no option escapes. This Change Request records
-`/qfai-sdd` as the current producer, and that is already the disagreement:
-whichever way statement A is settled, one of the two packs is left specifying a
-producer the product does not have. Options 1 and 3 settle nothing there, so
-they owe the re-derivation as much as option 2 does.
+`spec-0010` is the one no option escapes, and it owns **two** chains rather than
+one. `US-0010-0009` → `AC-0010-0007` → `BR-0010-0007` is the producer, and this
+Change Request records `/qfai-sdd` as the producer today — so whichever way
+statement A is settled, one of the two packs specifies a producer the product
+does not have. `US-0010-0008` → `AC-0010-0006` → `BR-0010-0006` → `EX-0010-0006`
+→ `TC-0010-0006` is the direction rule itself, which statement A changes or
+retires outright. Options 1 and 3 settle neither, so they owe the re-derivation
+as much as option 2 does.
+
+`spec-0013` is reached by both sub-branches, for different obligations.
+`REQ-0015` and the side-artifact `AC-0013-0009` say the preflight does not block
+on a missing or old-format optional side artifact, which `2B` reverses — that
+pack's own `09_delta.md` records the blocker being removed, so it is a reversal
+rather than a coincidence. Separately `US-0013-0009` → `AC-0013-0015` →
+`BR-0013-0013` → `EX-0013-0012` → `TC-0013-0022` assign the `DESIGN.md.lock.yaml`
+write to `/qfai-sdd` Phase 0, which `2a` moves into `/qfai-prototyping`. The
+second chain has a `todo` ledger row, `spec-0013/TDD-0016`, which is parked with
+this Change Request.
 
 `spec-0004` and `spec-0012` are reached only by `2a`, and by the same edit: that
 sub-option authorises the design-contract gate to exempt a pack which has not
@@ -148,27 +164,22 @@ reached prototyping, and those two packs are where the gate's current behaviour
 is specified. Four `done` rows name the test file that edit touches —
 `spec-0004/TDD-0008`, `-0009`, `-0010` and `spec-0012/TDD-0355`, all on
 `packages/qfai/tests/core/validators/designContractReadiness.test.ts` — so the
-cross-spec sweep reaches them as well, and under `2a` the sweep is
-seventeen rows plus these four.
+cross-spec sweep reaches them as well.
 
-**The `spec-0013` criterion has to be disambiguated first.**
-`.qfai/specs/spec-0013/03_Acceptance-Criteria.md` declares `AC-0013-0009` twice,
-under "Delta Rejected Guardrails" and under "Optional Side Artifact Does Not
-Block Preflight", and `TC-0013-0009` cites the ambiguous id for the first. A
-rerun keyed to the id would sweep whichever the reader finds. Renumbering it is
-a separate owner edit, recorded as its own item, and `2B` waits on it.
+**Each re-derivation carries its pack's whole chain, not the statements this
+document happens to name.** A pack whose story and acceptance criterion move
+while its business rule, example and test case do not is internally
+contradictory, and the rerun that produced it would have to edit files the
+authorisation below does not name. The `Specs` entry therefore enumerates every
+layer of every reached pack, and its ledger.
 
-`spec-0013` is reached only by `2B`, and that option reverses it outright —
-its own `09_delta.md` records the required-`prototyping.yaml` blocker being
-removed, which is the behaviour `2B` puts back. Two active packs would then
-prescribe opposite preflight behaviour, and a rerun scoped to `spec-0002` would
-not see it.
-
-**Both are owner re-derivations, listed below, and `2B` additionally depends on
-the `spec-0013` one being approved.** Naming them as re-verification would be
-the error this Change Request is otherwise careful about: a test re-run confirms
-an observation, and what is wrong here is the requirement the observation was
-taken against.
+**`2B` waits on a repair that is not this Change Request's.**
+`.qfai/specs/spec-0013/03_Acceptance-Criteria.md` declares `AC-0013-0009` twice —
+"Delta Rejected Guardrails" and "Optional Side Artifact Does Not Block
+Preflight" — and `TC-0013-0009` cites the ambiguous id for the first. A rerun
+keyed to that id sweeps whichever the reader finds. The duplicate predates both
+statements and is independent of them, so renumbering it is a separate record
+with its own approval; `2B` cannot be approved until it has landed.
 
 - Specs: `spec-0002` — `.qfai/specs/spec-0002/01_Spec.md`,
   `.qfai/specs/spec-0002/02_User-stories.md`,
@@ -180,7 +191,7 @@ taken against.
 
   **Under every statement-A outcome, `spec-0010` as well** — the owner
   re-derivation below writes it, and `QFAI-DRIFT-001` reads this list rather
-  than the prose:
+  than the prose. Both of that pack's chains, so every layer:
   `.qfai/specs/spec-0010/01_Spec.md`,
   `.qfai/specs/spec-0010/02_User-stories.md`,
   `.qfai/specs/spec-0010/03_Acceptance-Criteria.md`,
@@ -189,28 +200,46 @@ taken against.
   `.qfai/specs/spec-0010/06_Test-Cases.md`,
   `.qfai/specs/spec-0010/07_Decisions.md`,
   `.qfai/specs/spec-0010/09_delta.md`,
+  `.qfai/specs/spec-0010/10_Plan.md`,
   `.qfai/specs/spec-0010/tdd/test-list.md`.
 
-  **Under `2B`, `spec-0013` too**, for the same reason:
+  **Under `2B`, `spec-0013`'s side-artifact chain**:
   `.qfai/specs/spec-0013/01_Spec.md`,
+  `.qfai/specs/spec-0013/02_User-stories.md`,
   `.qfai/specs/spec-0013/03_Acceptance-Criteria.md`,
   `.qfai/specs/spec-0013/04_Business-Rules.md`,
+  `.qfai/specs/spec-0013/05_Examples.md`,
   `.qfai/specs/spec-0013/06_Test-Cases.md`,
   `.qfai/specs/spec-0013/09_delta.md`,
-  `.qfai/specs/spec-0013/tdd/test-list.md`.
+  `.qfai/specs/spec-0013/10_Plan.md`,
+  `.qfai/specs/spec-0013/tdd/test-list.md`. The story layer is in that list
+  because `02_User-stories.md` still asks the preflight to ignore optional side
+  artifacts, and `05_Examples.md` because the criterion has no example today and
+  the rerun writes one.
 
-  **Under `2a`, `spec-0004` and `spec-0012`**, whose obligations the design-gate
-  change moves:
+  **Under `2a`, the same `spec-0013` paths again** — a different chain in the
+  same pack, `US-0013-0009` through `TC-0013-0022`, which assigns the lock write
+  to Phase 0 — **plus `spec-0004` and `spec-0012`** whose obligations the
+  design-gate change moves:
   `.qfai/specs/spec-0004/01_Spec.md`,
   `.qfai/specs/spec-0004/03_Acceptance-Criteria.md`,
+  `.qfai/specs/spec-0004/04_Business-Rules.md`,
+  `.qfai/specs/spec-0004/05_Examples.md`,
+  `.qfai/specs/spec-0004/06_Test-Cases.md`,
   `.qfai/specs/spec-0004/09_delta.md`,
+  `.qfai/specs/spec-0004/tdd/test-list.md`,
+  `.qfai/specs/spec-0012/01_Spec.md`,
   `.qfai/specs/spec-0012/07_Decisions.md`,
-  `.qfai/specs/spec-0012/09_delta.md`.
+  `.qfai/specs/spec-0012/09_delta.md`,
+  `.qfai/specs/spec-0012/10_Plan.md`,
+  `.qfai/specs/spec-0012/tdd/test-list.md`.
 
-  No `10_Plan.md` is in this list, for any pack. `QFAI-DRIFT-001` reads every
-  path here as authorisation, so naming one would waive any change to it —
-  including `spec-0002`'s `TC-0002-0026` repair, which belongs to a Change
-  Request nobody has written.
+  **`spec-0002/10_Plan.md` is the one plan file not here**, and only that one.
+  `QFAI-DRIFT-001` reads every path in this list as authorisation, so naming it
+  would waive its `TC-0002-0026` repair — a change belonging to a Change Request
+  nobody has written. The other packs' plans are in the list because their
+  re-derivations edit them: `spec-0012/10_Plan.md` assigns the freeze to SDD
+  Phase 0, and a plan left saying that contradicts the producer `2a` selects.
 
 - Tests: `spec-0002/TDD-0008`, `spec-0002/TDD-0009`, `spec-0002/TDD-0010`,
   `spec-0002/TDD-0011`, `spec-0002/TDD-0012`, and `spec-0002/TDD-0001` under
@@ -269,8 +298,19 @@ taken against.
   procedure reaches all nine, and they owe fresh verification in the same
   change. The cross-spec ownership procedure
   (`.qfai/assistant/skills/qfai-implement/references/cross-spec-ownership.md`)
-  runs before either file is written, and those three rows owe fresh
-  verification in the same change. Without it option 2 finishes with another
+  runs before either file is written, and **every row enumerated above** owes
+  fresh verification in the same change.
+
+  **Two more sets, from the product edits rather than the assets.** Under
+  statement A option 2 the winner validator joins `CANONICAL_UIX_VALIDATORS` in
+  `packages/qfai/src/core/validators/uix/canonical.ts`, which
+  `packages/qfai/tests/integration/verifySemanticsSpec0014.test.ts` imports and
+  runs — `spec-0014/TDD-0009`, `TDD-0018` and `TDD-0019` are `done` rows naming
+  that file. Under `2B` the requiredness derivation edits
+  `packages/qfai/src/core/discussionPack.ts`, which
+  `packages/qfai/tests/core/activeDiscussionPack.test.ts` imports —
+  `spec-0013/TDD-0023` and `TDD-0024` name that one. Neither set's obligation
+  moves, so both take the in-place re-verification rather than a reset. Without it option 2 finishes with another
   spec's rows attesting to behaviour the product no longer has.
 
 - Contracts: `packages/qfai/assets/init/.qfai/assistant/skills/qfai-prototyping/references/design-md-spec.md`
@@ -279,6 +319,14 @@ taken against.
   authoring into prototyping — so the contract it would then contradict is the
   one that has to move with it. Under `2b` and under options 1 and 3 this is
   `none`.
+- Product paths under `2b`:
+  `packages/qfai/src/core/validators/designContractReadiness.ts` with
+  `packages/qfai/tests/core/validators/designContractReadiness.test.ts`. That
+  sub-option removes the discussion direction, and `QFAI-DCON-034`'s remediation
+  tells the user `/qfai-sdd` authors `DESIGN.md` "from the design direction the
+  discussion pack recorded" — an input `2b` deletes. A message naming a step the
+  selected workflow no longer has is the defect `interface-clarity.md` calls a
+  report against the control.
 - Product paths under `2a`:
   `packages/qfai/assets/init/.qfai/assistant/skills/qfai-prototyping/**` and its
   root mirror, for the direction-selection step and the authoring it performs,
@@ -353,39 +401,54 @@ and refusing `3A/1B` for want of one would make a valid split unrecordable.
 
 ## Approved actions (owner skill rerun plan)
 
-**Four items come first. Three are owner re-derivations whose scope is the
-requirement rather than the test, and one is the renumbering the third waits
-on.**
+**Three owner re-derivations come first, and their scope is the requirement
+rather than the test. Each carries its pack's whole chain**, because a pack
+whose story moves while its business rule, example and test case do not is
+internally contradictory.
 
-1. **`spec-0010`, under every statement-A outcome.** `/qfai-sdd` re-derives
-   `US-0010-0009`, `AC-0010-0007` and `BR-0010-0007` against whichever producer
-   statement A settles on, and the downstream sweep runs from that pack. Mode
+1. **`spec-0010`, under every statement-A outcome.** `/qfai-sdd` re-derives both
+   chains that pack owns — the producer (`US-0010-0009` → `AC-0010-0007` →
+   `BR-0010-0007`) against whichever producer statement A settles on, and the
+   direction rule (`US-0010-0008` → `AC-0010-0006` → `BR-0010-0006` →
+   `EX-0010-0006` → `TC-0010-0006`) against whatever statement A leaves of it.
+   The downstream sweep runs from that pack, its ledger included. Mode
    `re-derive`: the rows change identity, so `confirm-only` — which writes
    nothing but this Change Request's reference — cannot carry it.
-2. **`spec-0013`, under `2B` only.** `/qfai-sdd` re-derives `REQ-0015` and
-   `AC-0013-0009` to say that a UI-bearing pack owes `prototyping.yaml`, with
-   the same sweep. **`2B` is not approved without it**: approving the option
-   alone would leave two active packs prescribing opposite preflight behaviour,
-   with the product free to satisfy either.
-3. **`spec-0013`'s duplicate acceptance-criterion id, under `2B` only, and
-   before item 2.** `.qfai/specs/spec-0013/03_Acceptance-Criteria.md` declares
-   `AC-0013-0009` twice — "Delta Rejected Guardrails" and "Optional Side
-   Artifact Does Not Block Preflight" — and `TC-0013-0009` cites the ambiguous
-   id for the first. The side-artifact criterion takes the pack's next free id,
-   and every reference to it moves in the same edit. Until that lands, a rerun
-   keyed to `AC-0013-0009` sweeps whichever of the two it finds.
-4. **`spec-0004` and `spec-0012`, under `2a` only.** `/qfai-sdd` re-derives
-   `spec-0004`'s `REQ-0025` and `AC-0004-0008`, and `spec-0012`'s
-   `DR-0012-0020`, to say that the design-contract gate exempts a pack which has
-   not reached prototyping. The downstream sweep then reaches
-   `spec-0004/TDD-0008`, `-0009`, `-0010` and `spec-0012/TDD-0355`, the four
-   `done` rows naming
-   `packages/qfai/tests/core/validators/designContractReadiness.test.ts`. **`2a`
-   is not approved without this**: the gate is where `QFAI-DCON-030` is
+2. **`spec-0013`, under `2B` only, and not before the duplicate id is
+   repaired.** `/qfai-sdd` re-derives `REQ-0015` and the side-artifact
+   `AC-0013-0009` — with the story, business rule, example and test case beneath
+   them — to say that a UI-bearing pack owes `prototyping.yaml`. **`2B` is not
+   approved without it**: approving the option alone would leave two active
+   packs prescribing opposite preflight behaviour, with the product free to
+   satisfy either. And it is not approved before the duplicate id lands either:
+   that repair is a separate record (`## Impact scope`), and a rerun keyed to
+   `AC-0013-0009` before it sweeps whichever criterion the reader finds.
+
+   **The re-derived rule is not "UI-bearing".** A cli-only pack is
+   `ui_bearing: true` and the discussion playbook forbids `prototyping.yaml` for
+   it, because `cli` is not a valid prototyping execution surface and a
+   recommendation naming it cannot be executed. Deriving requiredness from the
+   classification alone makes every cli-only pack fail SDD readiness for an
+   artifact it cannot validly produce. The blocker is the presence of a visual
+   prototyping surface — `web`, `mobile`, `desktop` or `mixed` — and the
+   cli-only exception survives in the re-derived obligations.
+
+3. **`spec-0004`, `spec-0012` and `spec-0013`'s lock chain, under `2a` only.**
+   `/qfai-sdd` re-derives `spec-0004`'s `REQ-0025` and `AC-0004-0008` with the
+   business rule, example and test case beneath them; `spec-0012`'s
+   `DR-0012-0020` and the `01_Spec.md` requirement and `10_Plan.md` phase that
+   carry it; and `spec-0013`'s `US-0013-0009` → `AC-0013-0015` → `BR-0013-0013`
+   → `EX-0013-0012` → `TC-0013-0022`, which assigns the lock write to Phase 0.
+   All three say afterwards that the design-contract gate exempts a pack which
+   has not reached prototyping, and that the write belongs to the producer `2a`
+   selects. The downstream sweep then reaches `spec-0004/TDD-0008`, `-0009`,
+   `-0010` and `spec-0012/TDD-0355`, the four `done` rows naming
+   `packages/qfai/tests/core/validators/designContractReadiness.test.ts`.
+   **`2a` is not approved without this**: the gate is where `QFAI-DCON-030` is
    specified, and changing it while those packs still require the old behaviour
    leaves the product satisfying neither.
 
-5. `/qfai-sdd` rerun scope: the statements the chosen option names, plus the
+4. `/qfai-sdd` rerun scope: the statements the chosen option names, plus the
    `06_Test-Cases.md` rows that read them.
 
    The seven ledger rows the seeding contract requires and this pack does not
@@ -404,7 +467,7 @@ on.**
    two. It is recorded in `.qfai/evidence/coverage-depth-spec-0002.md` and needs
    its own.
 
-6. Downstream ledger sweep. The two statements are settled independently, so the
+5. Downstream ledger sweep. The two statements are settled independently, so the
    plan is read per statement and not per bundle, so every dependent identifier
    is assigned to one of them here rather than left in the combined option
    bodies — a split cannot be applied from a list that names only part of a
@@ -429,7 +492,7 @@ on.**
    Nothing in statement A's list touches statement B's rows or the reverse, so
    `1A/2B` is option 1 applied to A's rows and option 2 applied to B's, with no
    overlap to resolve. `TDD-0011` is re-verified under every combination —
-   not reset — for a reason belonging to neither statement, given at step 7.
+   not reset — for a reason belonging to neither statement, given at step 6.
 
    The three option bodies below each describe **both** statements, because that
    is how they are compared. Applying one to a single statement means taking only
@@ -584,7 +647,7 @@ on.**
      other rows; `packages/qfai/tests/validators/uix/threeLayer.test.ts` stays
      with `spec-0002/TDD-0011`.
 
-7. `spec-0002/TDD-0011` is **re-verified, not reset**, under every option. Its
+6. `spec-0002/TDD-0011` is **re-verified, not reset**, under every option. Its
    obligation `TC-0002-0010` does not move and its case `skips non-UI packs` is
    not edited; what changes is the file around it — the annotations, and the
    sibling case's fixture. A `CR-*` reset is for a row whose obligation an
@@ -598,7 +661,7 @@ on.**
    Recording only the hash would leave the row asserting a verification nobody
    performed, which is the shape of defect this Change Request exists to clear.
 
-8. Reserve every retired `TDD-ID` in the ledger's `## TDD-ID reservations`
+7. Reserve every retired `TDD-ID` in the ledger's `## TDD-ID reservations`
    section before the row is deleted. The ledger allocates the next id as
    `max + 1`, so deleting the highest row hands its number to the next one
    written, and two runs then share an identifier that this Change Request is

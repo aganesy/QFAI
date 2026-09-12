@@ -94,18 +94,24 @@ observation covers while its obligation stands. No test is deleted under any
 combination except `3bB`, whose disposition is the deletion of
 `legacy 4-axis format is error`.
 
-## Two other packs are reached, and a test re-run does not settle either
+## Four other packs are reached, and a test re-run does not settle any
 
-`spec-0010` requires `/qfai-discussion` to author root `DESIGN.md`
-(`US-0010-0009`, `AC-0010-0007`, `BR-0010-0007`), and the Change Request records
-`/qfai-sdd` as the producer. **Every statement-A outcome reaches it**, the two
-that change nothing there included: settling A without re-deriving `spec-0010`
-leaves one of the two packs specifying a producer the product does not have.
+`spec-0010` owns two chains here: the producer (`US-0010-0009`, `AC-0010-0007`,
+`BR-0010-0007`), which the Change Request records as `/qfai-sdd` today, and the
+direction rule itself (`US-0010-0008` through `TC-0010-0006`), which statement A
+changes or retires. **Every statement-A outcome reaches both**, the two that
+change nothing there included.
 
-`spec-0013` requires the SDD preflight not to block on a missing or old-format
-optional side artifact (`REQ-0015`, `AC-0013-0009`). **`2B` reverses it**, and
-that pack's own delta records the blocker being removed. `2B` is not approved
-without the `spec-0013` re-derivation beside it.
+`spec-0013` is reached by both sub-branches. `REQ-0015` and the side-artifact
+`AC-0013-0009` say the preflight does not block on a missing or old-format
+optional side artifact, which **`2B` reverses** — that pack's own delta records
+the blocker being removed. Separately `US-0013-0009` through `TC-0013-0022`
+assign the `DESIGN.md.lock.yaml` write to Phase 0, which **`2a` moves**. Its
+`todo` row `TDD-0016` is parked with the Change Request.
+
+The re-derived requiredness rule is **not** "UI-bearing": a cli-only pack is
+`ui_bearing: true` and may not carry `prototyping.yaml`, so the blocker rests on
+a visual prototyping surface instead.
 
 `spec-0004` and `spec-0012` are reached by `2a`, and by one edit: that
 sub-option authorises the design-contract gate to exempt a pack which has not
