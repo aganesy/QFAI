@@ -192,7 +192,10 @@ restated here.
     the configured `paths.testsDir` basename, because a package may legitimately
     be called `api`. A path carrying no such segment answers no layer, and a
     directory carrying a `package.json` is a package rather than a test root
-    whatever it is called — so in a repository with one suite per
+    whatever it is called. **The configured root itself needs no segment**: with
+    `paths.testsDir` at the repository root, `e2e/**` is answered by containment
+    in the configured layer directory, and it is an _extra_ suite beside it that
+    needs a named root — so in a repository with one suite per
     package, `packages/<name>/tests/integration/**` answers an `L3` obligation
     just as `<testsDir>/integration/**` does. Write new tests where that package's
     suite already lives; do not move a package's tests to satisfy the gate

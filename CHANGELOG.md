@@ -34,6 +34,11 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   `QFAI-ATDD-105` keeps its subject: a file under `paths.testsDir` that no layer
   owns.
 
+  The stub gate collects only the extensions its own pattern names. A project
+  glob is used as written and may be extension-broad, so a fixture beside the
+  suite — `tests/integration/data.json` — reached a scan that had nothing to say
+  about it and was reported as an unscanned language.
+
   A file in no acceptance layer is dropped while the stream runs, before it is
   counted against the collection limit. A project glob may match a whole
   monorepo, and files no acceptance rule reads would otherwise spend the limit

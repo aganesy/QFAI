@@ -17,7 +17,10 @@ import {
 } from "../../src/core/atddTraceability.js";
 import { SCAFFOLD_PLACEHOLDER_MARKER } from "../../src/core/atdd/scaffold.js";
 import { scaffoldPlaceholderScannedFilter } from "../../src/core/validators/scaffoldPlaceholder.js";
-import { validateTestTodoStubs } from "../../src/core/validators/testTodoStubs.js";
+import {
+  STUB_SOURCE_FILE_PATTERN,
+  validateTestTodoStubs,
+} from "../../src/core/validators/testTodoStubs.js";
 
 // Source-level split of the `*.todo(` token so this validator's own test
 // file does not false-positive when scanned by validateTestTodoStubs. The
@@ -458,6 +461,27 @@ describe("the ATDD gate's file selection", () => {
     [`// ${SCAFFOLD_PLACEHOLDER_MARKER}`, "it.skip('TC-0001-0001: pays', () => {});", ""].join(
       "\n",
     );
+
+  it("leaves a fixture an extension-broad project glob swept in", async () => {
+    const root = await newTempDir();
+    const config = atddConfig(["packages/*/tests/**/*"]);
+    await writeTestFile(
+      root,
+      "packages/checkout/tests/integration/pay.test.ts",
+      `it${TODO}("pays");\n`,
+    );
+    // A data file no stub dialect owns. Collected through the project's own
+    // glob, it was reported as a language this validator cannot scan.
+    await writeTestFile(root, "packages/checkout/tests/integration/data.json", "{}\n");
+
+    const issues = await validateTestTodoStubs(root, config, {
+      globs: atddAcceptanceTestGlobs(root, config, STUB_SOURCE_FILE_PATTERN),
+      fileFilter: atddAcceptanceLayerFilter(root, config),
+    });
+
+    expect(issues.map((issue) => issue.code)).toContain("QFAI-TEST-001");
+    expect(issues.filter((issue) => issue.code === "QFAI-TEST-002")).toEqual([]);
+  });
 
   it("stands aside for a marked skeleton the placeholder validator scans", async () => {
     const root = await newTempDir();

@@ -827,14 +827,14 @@ const UNDIALECTED_TEST_SOURCE_EXTENSIONS: readonly string[] = [
  * `QFAI-TEST-001` for the extensions with a dialect, `QFAI-TEST-002` for the
  * ones without.
  */
-export const STUB_SOURCE_FILE_PATTERN = `**/*.{${Array.from(
+const STUB_SOURCE_EXTENSIONS: readonly string[] = Array.from(
   new Set([
     ...STUB_DIALECTS.flatMap((dialect) => dialect.extensions.map((ext) => ext.slice(1))),
     ...UNDIALECTED_TEST_SOURCE_EXTENSIONS,
   ]),
-)
-  .sort()
-  .join(",")}}`;
+).sort();
+
+export const STUB_SOURCE_FILE_PATTERN = `**/*.{${STUB_SOURCE_EXTENSIONS.join(",")}}`;
 
 /**
  * Blanks every comment and string-literal span, keeping offsets and line
@@ -1376,6 +1376,23 @@ export async function validateTestTodoStubs(
     ]),
   );
 
+  // A caller that supplied globs also supplied the pattern it wants, and the
+  // ATDD gate's set is that pattern **plus the project's own `testFileGlobs`,
+  // used as written**. An extension-broad project glob therefore reaches a
+  // fixture — `tests/integration/data.json` — which no dialect owns and which
+  // is then reported as an unscanned language. The intersection belongs here
+  // rather than in the glob, because slicing a project glob is the defect that
+  // list exists to avoid.
+  const sourceExtensions =
+    options.globs === undefined ? null : new Set(STUB_SOURCE_EXTENSIONS.map((ext) => `.${ext}`));
+  const wanted = (absolutePath: string): boolean => {
+    if (sourceExtensions && !sourceExtensions.has(path.extname(absolutePath).toLowerCase())) {
+      return false;
+    }
+    const relative = path.relative(root, absolutePath).replace(/\\/g, "/");
+    return options.fileFilter ? options.fileFilter(relative) : true;
+  };
+
   let collected;
   try {
     collected = await collectFilesByGlobs(root, {
@@ -1386,14 +1403,7 @@ export async function validateTestTodoStubs(
       // monorepo, and files this gate does not own would otherwise spend the
       // limit before its own reach it — reported as an `info`, which
       // `--fail-on error` passes.
-      ...(options.fileFilter
-        ? {
-            filter: (absolutePath: string) =>
-              (options.fileFilter ?? (() => true))(
-                path.relative(root, absolutePath).replace(/\\/g, "/"),
-              ),
-          }
-        : {}),
+      ...(options.fileFilter || sourceExtensions ? { filter: wanted } : {}),
     });
   } catch {
     // A malformed glob is the user's to fix and has its own finding from the

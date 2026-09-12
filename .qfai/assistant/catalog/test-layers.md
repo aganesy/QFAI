@@ -233,6 +233,12 @@ whatever it is called: without that, a workspace package named `tests` would
 make `packages/tests/api/**` an API layer, which is the same defect one
 directory further out.
 
+**The configured root answers by containment and needs no segment of its own.**
+With `paths.testsDir` at the repository root, `e2e/journey.test.ts` carries no
+`tests` / `test` / `__tests__` segment and is still read: the three layer
+directories sit at the top level, and containment in the configured one is the
+answer. What needs a named root is an _extra_ suite beside the configured one.
+
 Anchoring it there rather than scanning ancestors is what keeps a package name
 out of the answer. A package may legitimately be called `api`, and reading any
 ancestor makes every test under it an API test —
@@ -260,10 +266,15 @@ Three things that does not change.
 
 The second row is the one to read twice. A unit suite owes ATDD nothing wherever
 it sits, so telling an author to move every collected file into `integration/`
-would be the all-integration collapse this file lists as an anti-pattern. Only a
-file **under `<testsDir>`** and in none of the three is reported that way
-(`QFAI-ATDD-105`, `info`), because that directory is the one qfai itself writes
-to.
+would be the all-integration collapse this file lists as an anti-pattern.
+
+What `QFAI-ATDD-105` reports is narrower than "under `<testsDir>` and in none of
+the three": the probe reads **`<testsDir>/atdd/**`** and nothing else. That is
+the directory `npx qfai atdd scaffold` used to write to, and the finding exists
+to surface output the toolkit produced and then stopped counting — not to audit
+a project's own layout. An annotated file the project keeps somewhere else under
+`<testsDir>` answers no layer and is reported by nothing, which is the quiet
+side that keeps a layout decision the project made from arriving as a finding.
 
 The project's globs are used as written. A base is never derived by slicing one:
 a glob whose directory part carries a wildcard slices to a base with the wildcard
