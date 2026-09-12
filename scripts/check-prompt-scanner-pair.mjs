@@ -25,14 +25,24 @@
  *     changes while its tokens survive is invisible to a token check and
  *     visible here.
  *
- * Neither subsumes the other, so removing either leaves a real gap. What
- * this one cannot do is tell an edit to a clause from an edit elsewhere
- * in a 430-line file: the pairing is by path. That has not yet demanded
- * a pairing nobody owed — both times it fired, the edit was inside
- * `## Hard constraints (enforced by the compliance gate)` and the pairing
- * was real. If it ever does, narrow it to that section rather than
- * relaxing it: the heading states its own scope, so the rule stays
- * readable and needs no second copy of the manifest.
+ * Neither subsumes the other, so removing either leaves a real gap.
+ *
+ * ## The prompt half is scoped to one heading
+ *
+ * The prompt file is around 430 lines and only one of its sections states
+ * the compliance contract: `## Hard constraints (enforced by the
+ * compliance gate)`. Pairing on the whole path asked for a scanner edit
+ * from any edit to the file — a read-order entry, an output-layout note —
+ * and the only way to satisfy that demand is to touch the scanner without
+ * a reason to, which is how a guard teaches people to route around it.
+ *
+ * So the prompt counts as changed when the text under that heading
+ * changed, and the heading states its own scope. Losing or renaming the
+ * heading counts as changed too: the contract is then somewhere this
+ * guard cannot see, and that is the case it should be loudest about.
+ *
+ * The scanner half stays pinned to its path. That file is the compliance
+ * clauses and nothing else, so every edit to it is in scope already.
  *
  * Invocation modes:
  *   - `--base <ref>`     compare HEAD against <ref> via `git diff
@@ -57,16 +67,19 @@ const SCANNER_REL = "packages/qfai/src/core/prototyping/designMdViolations.ts";
 const PROMPT_REL =
   "packages/qfai/assets/init/.qfai/assistant/skills/qfai-prototyping/references/generator-prompt.md";
 
+/** The one section of the prompt that states the compliance contract. */
+const PROMPT_SCOPE_HEADING = "## Hard constraints (enforced by the compliance gate)";
+
 /**
  * Manifest of the contract clauses that must drift-sync together. Kept
  * in lock-step with `packages/qfai/src/core/validators/promptScannerPairs.ts`
  * (PROMPT_SCANNER_PAIRS). The script does not require the source file
  * at runtime — it just names the clauses for the operator. The pair
  * tracks every compliance clause the scanner applies to a capture
- * (color / font / radius / shadow / contrast); the path-pair semantics
- * of this guard are clause-agnostic (touching either half without the
- * other is drift regardless of which clause the diff actually
- * modifies).
+ * (color / font / radius / shadow / contrast); this guard is
+ * clause-agnostic within its scope — the scanner file and the prompt's
+ * compliance section — so a change inside either, without the other, is
+ * drift regardless of which clause the diff actually modifies.
  */
 const TRACKED_CLAUSES =
   "color-literal-ban|font-family-ban|radius-literal-ban|shadow-rgba-ban|contrast-floor";
@@ -182,10 +195,16 @@ function computeChangedSetFromGit(base) {
       ["diff", "--numstat", "--ignore-cr-at-eol", "--no-renames", `${base}...HEAD`],
       { encoding: "utf-8" },
     );
-    return out
+    const paths = out
       .split("\n")
       .map((line) => numstatPath(line))
       .filter((p) => p.length > 0);
+    // The prompt is in scope only where its compliance section moved. Every
+    // other edit to that file owes the scanner nothing.
+    if (paths.includes(PROMPT_REL) && !promptContractChanged(base)) {
+      return paths.filter((p) => p !== PROMPT_REL);
+    }
+    return paths;
   } catch (err) {
     stderr.write(
       `check-prompt-scanner-pair: failed to compute git diff against ${base}: ` +
@@ -193,6 +212,111 @@ function computeChangedSetFromGit(base) {
     );
     return null;
   }
+}
+
+/**
+ * The text under every `PROMPT_SCOPE_HEADING`, or `null` when there is none.
+ * A section runs to the next heading of the same level; a deeper one belongs
+ * to it.
+ *
+ * Every one, not the first. A second section under the same heading is valid
+ * Markdown and a reader takes both as the contract, so stopping at the first
+ * would let a branch append contradictory rules beside the original and report
+ * no change at all. Two sections are also a different text from one, which is
+ * what makes appending one count as the change it is.
+ */
+/**
+ * Which lines sit inside a fenced code block, fence lines included.
+ *
+ * A prompt is a document about writing, so it quotes what it forbids. An
+ * example carrying this guard's own heading would otherwise read as the live
+ * contract, and renaming the real one would then look like no change at all.
+ *
+ * A fence closes on the same character, at least as long as the one that
+ * opened it, which is what lets a longer fence quote a shorter one.
+ */
+function fencedLines(lines) {
+  const inside = new Array(lines.length).fill(false);
+  let open = null;
+  for (let i = 0; i < lines.length; i += 1) {
+    const fence = /^ {0,3}(`{3,}|~{3,})(.*)$/.exec(lines[i]);
+    if (open === null) {
+      // An opening fence may carry an info string; a backtick fence may not
+      // carry a backtick in it, which is how CommonMark keeps inline code from
+      // opening one.
+      if (fence && !(fence[1].startsWith("`") && fence[2].includes("`"))) {
+        open = fence[1];
+        inside[i] = true;
+      }
+      continue;
+    }
+    inside[i] = true;
+    if (
+      fence &&
+      fence[1][0] === open[0] &&
+      fence[1].length >= open.length &&
+      fence[2].trim().length === 0
+    ) {
+      open = null;
+    }
+  }
+  return inside;
+}
+
+function scopedSections(text) {
+  const lines = text.split("\n");
+  const fenced = fencedLines(lines);
+  const isHeading = (i) => !fenced[i] && /^## (?!#)/.test(lines[i]);
+  const found = [];
+  for (let start = 0; start < lines.length; start += 1) {
+    if (fenced[start] || lines[start].trim() !== PROMPT_SCOPE_HEADING) continue;
+    let end = lines.length;
+    for (let i = start + 1; i < lines.length; i += 1) {
+      if (isHeading(i)) {
+        end = i;
+        break;
+      }
+    }
+    found.push(lines.slice(start, end).join("\n"));
+    start = end - 1;
+  }
+  return found.length === 0 ? null : found.join("\n");
+}
+
+/** A file's content at a ref, or `null` when the ref does not carry it. */
+function blobAt(ref, relativePath) {
+  try {
+    return execFileSync("git", ["show", `${ref}:${relativePath}`], { encoding: "utf-8" });
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Whether this branch changed the prompt's compliance contract.
+ *
+ * Compared as text between the merge base and HEAD rather than by line
+ * number, so a section that moved down the file because something was
+ * inserted above it did not change.
+ *
+ * Unknowable answers resolve to `true`. A missing blob is a file this
+ * branch added or removed, and a missing heading is a contract this guard
+ * can no longer see — both are cases to pair on, not to wave through.
+ */
+function promptContractChanged(base) {
+  let mergeBase;
+  try {
+    mergeBase = execFileSync("git", ["merge-base", base, "HEAD"], { encoding: "utf-8" }).trim();
+  } catch {
+    return true;
+  }
+  const before = blobAt(mergeBase, PROMPT_REL);
+  const after = blobAt("HEAD", PROMPT_REL);
+  if (before === null || after === null) return true;
+  const beforeSection = scopedSections(before);
+  const afterSection = scopedSections(after);
+  if (beforeSection === null || afterSection === null) return true;
+  return beforeSection !== afterSection;
 }
 
 function normalizeCsvSet(csv) {
