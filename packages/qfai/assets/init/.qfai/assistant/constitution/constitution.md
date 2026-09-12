@@ -331,6 +331,29 @@ Before modifying code/tests, perform a **quick preflight**:
 
 If confidence is low, ask targeted questions or run additional repo inspection.
 
+**Those targeted questions are one grilling round.** `.agents/rules/grilling.md`
+decides which questions they are, who answers each, and what shape they arrive
+in; this article decides only that the round happens here, before code or tests
+are modified. Left to the preflight alone, a decision the repository cannot
+settle is settled by whoever is running it, at the moment the code needs an
+answer — which is the failure the method exists to catch, met at the one point
+in the cycle where it is still cheap.
+
+**Its subject is this invocation, not the spec.** The spec and the execution
+ledger are settled input to these stages. Interviewing them at the top of every
+run stops the micro-cycle and re-opens decisions somebody already took, so the
+session is declared over what this invocation is about to do and nothing wider.
+A tree that small usually empties in one round, which is what makes the round
+affordable every time rather than a gate nobody runs.
+
+**A contradiction found later does not widen it.** When the work reveals that
+the settled input is wrong — a requirement that contradicts another, a case the
+spec does not cover, an obstacle that makes the specified approach
+unimplementable — the interview decides _what the change should ask for_, and
+`.qfai/assistant/constitution/drift-protocol.md` carries it from there. Grilling
+is not a second route to changing settled input, and a stage that treats it as
+one produces a spec edit nobody approved.
+
 ---
 
 ## Article X — AskUserQuestion MUST

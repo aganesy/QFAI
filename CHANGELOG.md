@@ -6,6 +6,30 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Added
 
+- **The execution stages open a grilling round before they change anything**
+  (#1601). Article IX already required a preflight confidence check and already
+  said to ask targeted questions when confidence was low. It did not say what
+  those questions were, so a run that asked none had followed it — and these
+  stages read a spec closely enough for its gaps to show.
+
+  `/qfai-implement`, `/qfai-atdd` and `/qfai-verify` each carry a `## Grilling`
+  section that loads `qfai-grilling/SKILL.md` and cites
+  `.agents/rules/grilling.md` rather than restating the method, and each names
+  the decisions its own stage is about to take.
+
+  Two bounds keep it from becoming a second design phase.
+
+  | Bound                                                                                  | Why                                                                                                                                                       |
+  | -------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
+  | The session's subject is the invocation, not the spec                                  | Re-interviewing settled input every run stops the micro-cycle and reopens decisions somebody already took. A tree that small usually empties in one round |
+  | A contradiction found later decides what the change asks for, never whether to make it | The Drift Protocol carries the change. Grilling is not a second route to editing settled input                                                            |
+
+  Under `--auto` the session runs without asking: every decision left over is
+  recorded as an open question where the stage's gate sees it, and a defaulted
+  value is labelled an assumption beside it.
+
+### Added
+
 - **The question-form rule is put in front of the agent on every turn** (#1610).
   A `UserPromptSubmit` hook emits it as context, naming the rule master and the
   one line an agent reaches past when it would rather not ask.

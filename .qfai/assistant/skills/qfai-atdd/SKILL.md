@@ -45,7 +45,7 @@ Follow `.qfai/assistant/constitution/shared-skill-operating-baseline.md#format-s
 
 When unsure, read inputs in this order:
 
-- P1: `.qfai/assistant/constitution/*`
+- P1: `.qfai/assistant/constitution/*`, and `.qfai/assistant/skills/qfai-grilling/SKILL.md` before the preflight round (see Grilling)
 - P2: `.qfai/assistant/manifest/agent-routing.yml` + `.qfai/assistant/manifest/review-profiles.yml` + `.qfai/assistant/catalog/*`; from `.qfai/assistant/manifest/agent-catalog.yml` read the acting `orchestrator`'s and each routed role's entry (`owned_artifacts` / `tool_profile` / `permission_profile` / `specialization_tags`), not the whole file — its `developer_instructions` bodies mirror the agent cards (`.qfai/assistant/constitution/constitution.md` Article III)
 - P3: `.qfai/specs/<spec-id>/01_Spec.md` (Primary SSOT / Consumer View). **Read its lifecycle before anything else and stop on a retired spec.** A spec is retired by a **complete** declaration in that header block: a top-level `Status: superseded` whose `Superseded-by:` names a spec that exists and itself declares `Status: active`, or `Status: deprecated` / `Status: removed` with a `Deprecated-at:` that is a real calendar date — the same resolution `validate` performs. Its `test-list.md` rows below are history, not obligations: `npx qfai validate` and `npx qfai report` have already dropped them, and `/qfai-implement` refuses the handoff for a retired spec, so writing acceptance tests from them produces work nobody owes and a handoff nobody will take. Report the declared `Status:` (and, for `superseded`, its successor) and ask for a row in the inheritor's ledger instead. An **incomplete** declaration is not a retirement and does not stop this run: the ledger still gates, so proceed and report the incomplete declaration
 - P4: specs/contracts obligations
@@ -63,6 +63,39 @@ When unsure, read inputs in this order:
   - coverage ledger files
 
 Do not read discussion-pack UI/UX sidecars. UI-bearing acceptance tests consume only specs and contracts normalized by `/qfai-sdd`.
+
+## Grilling
+
+Article IX's preflight round runs here, and this section says what its subject
+is in this stage and what reopens it.
+
+- **Read the method before the round.** `.qfai/assistant/skills/qfai-grilling/SKILL.md`
+  is the one implementation, and `.agents/rules/grilling.md` is the rule it
+  implements. Neither is restated here. A stage that names the method without
+  loading it gets the reference and improvises the interview, which is the
+  methodless interview this wiring replaces.
+- **Declare the session over this invocation.** Its tree holds the decisions
+  this run is about to take — which layer an obligation is answered from where its
+  `Level` leaves room, what a case's oracle must observe, and what a fixture
+  has to construct for it. It does not hold the spec, the
+  acceptance criteria or the ledger rows: those are settled input, and a run
+  that re-interviews them every pass stops the cycle and reopens what somebody
+  already decided. A tree that small usually empties in one round.
+- **Facts are read, not asked.** The repository settles most of what the
+  preflight is unsure about. A question the tree can answer from the files is
+  the agent's to answer.
+- **Reopen on a contradiction, and hand the answer to the Drift Protocol.**
+  An obligation two layers could answer, a `Level`
+  that routes to a home the obligation cannot be observed from, or an
+  acceptance criterion no test can reach as written. Stop and open a round over **what the change should ask
+  for** — never over whether to make it. The change itself goes through
+  `.qfai/assistant/constitution/drift-protocol.md`: STOP, Change Request, the
+  user's approval, the owner rerun. Deciding alone and editing settled input is
+  the drift that protocol exists to stop, and a round is not a way around it.
+- **Under `--auto`, the session runs without asking.** Every decision left over
+  is recorded as an open question where this stage's gate will see it, and a
+  defaulted value is labelled an assumption beside it. An assumption on its own
+  is a decision nobody took wearing the face of one somebody did.
 
 ## Read Set Contract (Mandatory)
 

@@ -51,10 +51,41 @@ Skill-specific examples:
 
 When unsure, read inputs in this order:
 
-- P1: `.qfai/assistant/constitution/*`
+- P1: `.qfai/assistant/constitution/*`, and `.qfai/assistant/skills/qfai-grilling/SKILL.md` before the preflight round (see Grilling)
 - P2: `.qfai/assistant/manifest/agent-routing.yml` + `.qfai/assistant/manifest/review-profiles.yml` + `.qfai/assistant/catalog/*`; from `.qfai/assistant/manifest/agent-catalog.yml` read the acting `orchestrator`'s and each routed role's entry (`owned_artifacts` / `tool_profile` / `permission_profile` / `specialization_tags`), not the whole file — its `developer_instructions` bodies mirror the agent cards (`.qfai/assistant/constitution/constitution.md` Article III)
 - P3: `.qfai/specs/<spec-id>/07_Decisions.md` + `.qfai/specs/_policies/08_Decisions.md` (Decision Records, `DR-*`; if no spec yet, state "not applicable")
 - P4: other artifacts (01_Spec.md, contracts, evidence, optional legacy `scenario.feature` / coverage ledgers)
+
+## Grilling
+
+Article IX's preflight round runs here, and this section says what its subject
+is in this stage and what reopens it.
+
+- **Read the method before the round.** `.qfai/assistant/skills/qfai-grilling/SKILL.md`
+  is the one implementation, and `.agents/rules/grilling.md` is the rule it
+  implements. Neither is restated here. A stage that names the method without
+  loading it gets the reference and improvises the interview, which is the
+  methodless interview this wiring replaces.
+- **Declare the session over this invocation.** Its tree holds the decisions
+  this run is about to take — which gates this run is answerable for, and what
+  evidence a finding needs before it is reported as one. It does not hold the spec, the
+  acceptance criteria or the ledger rows: those are settled input, and a run
+  that re-interviews them every pass stops the cycle and reopens what somebody
+  already decided. A tree that small usually empties in one round.
+- **Facts are read, not asked.** The repository settles most of what the
+  preflight is unsure about. A question the tree can answer from the files is
+  the agent's to answer.
+- **Reopen on a contradiction, and hand the answer to the Drift Protocol.**
+  A gate whose criterion contradicts the artifact it
+  reads, or a finding the spec gives no way to clear. Stop and open a round over **what the change should ask
+  for** — never over whether to make it. The change itself goes through
+  `.qfai/assistant/constitution/drift-protocol.md`: STOP, Change Request, the
+  user's approval, the owner rerun. Deciding alone and editing settled input is
+  the drift that protocol exists to stop, and a round is not a way around it.
+- **Under `--auto`, the session runs without asking.** Every decision left over
+  is recorded as an open question where this stage's gate will see it, and a
+  defaulted value is labelled an assumption beside it. An assumption on its own
+  is a decision nobody took wearing the face of one somebody did.
 
 ## Verify Scope Rule (Mandatory)
 
