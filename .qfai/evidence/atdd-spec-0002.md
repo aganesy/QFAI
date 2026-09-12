@@ -118,6 +118,9 @@ above declare themselves inactive and did not run.
 ## Coverage Depth Matrix
 
 See `.qfai/evidence/coverage-depth-spec-0002.md`.
+Totals: ✅ 11 / ⚠️ 20 / ❌ 34, with 1 not applicable, across 66 scored cells —
+45 matrix depth cells, 5 matrix status cells, 12 business rule cells and 4
+business rule status cells. No obligation reaches a green status.
 
 ## Work Orders Summary
 
