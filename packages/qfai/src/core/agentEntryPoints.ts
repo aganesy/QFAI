@@ -81,6 +81,22 @@ export function needsManagedRulesSection(existing: string, section: string): boo
 }
 
 /**
+ * Whether `existing` opens a managed section and never closes it.
+ *
+ * The pair is what marks the region as qfai's. With the begin marker alone the
+ * file reads as connected, so nothing appends the section, and there is no
+ * region to insert a citation into either — the file falls between the two
+ * paths and is skipped in silence. A run that says so is what lets the project
+ * restore the marker; a run that does not leaves the rule uncited, and the next
+ * run has no reason to look at the file again.
+ */
+export function hasUnclosedRulesSection(existing: string): boolean {
+  const start = existing.indexOf(QFAI_AGENT_RULES_BEGIN);
+  if (start === -1) return false;
+  return existing.indexOf(QFAI_AGENT_RULES_END, start + QFAI_AGENT_RULES_BEGIN.length) === -1;
+}
+
+/**
  * Masters this run wrote into `.agents/rules/`, from the create-only copy's
  * report.
  *

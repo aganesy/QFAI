@@ -20,7 +20,7 @@ import { mkdir, mkdtemp, readFile, readdir, rm, stat, symlink, writeFile } from 
 import os from "node:os";
 import path from "node:path";
 
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import { runInit } from "../../src/cli/commands/init.js";
 import {
@@ -58,6 +58,21 @@ const PROJECT_TEXT = [
 ].join("\n");
 
 const occurrences = (haystack: string, needle: string): number => haystack.split(needle).length - 1;
+
+/** `runInit` with the diagnostics it wrote to stderr. */
+async function initCapturingStderr(root: string): Promise<string> {
+  const chunks: string[] = [];
+  const spy = vi.spyOn(process.stderr, "write").mockImplementation((chunk: unknown) => {
+    chunks.push(String(chunk));
+    return true;
+  });
+  try {
+    await runInit({ dir: root, force: false, dryRun: false, yes: true });
+  } finally {
+    spy.mockRestore();
+  }
+  return chunks.join("");
+}
 
 describe("qfai init connects a pre-existing agent entry point to the rule masters", () => {
   it("appends the managed section to an AGENTS.md / CLAUDE.md it did not create", async () => {
@@ -485,5 +500,105 @@ describe("an emptied Copilot rule list still gains the citation", () => {
     expect(merged.indexOf(CROSS_AI_RULES_HEADING)).toBeLessThan(
       merged.indexOf(".agents/rules/grilling.md"),
     );
+  });
+});
+
+describe("a managed section that was never closed is reported", () => {
+  it("names the missing marker instead of skipping in silence", async () => {
+    await withProject(async (root) => {
+      const master = ".agents/rules/grilling.md";
+      await writeFile(path.join(root, "AGENTS.md"), PROJECT_TEXT, "utf-8");
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+
+      // The end marker lost to a hand edit. The file still reads as connected,
+      // so nothing appends the section, and there is no region to insert into.
+      const broken = (await readEntryPoint(root, "AGENTS.md"))
+        .split("\n")
+        .filter((line) => line !== QFAI_AGENT_RULES_END)
+        .filter((line) => !(line.startsWith("- ") && line.includes(master)))
+        .join("\n");
+      await writeFile(path.join(root, "AGENTS.md"), broken, "utf-8");
+      await rm(path.join(root, ...master.split("/")), { force: true });
+
+      const stderr = await initCapturingStderr(root);
+
+      expect(await readEntryPoint(root, "AGENTS.md")).toBe(broken);
+      expect(stderr).toContain("never closes it");
+      expect(stderr).toContain(QFAI_AGENT_RULES_END);
+    });
+  });
+});
+
+describe("an entry point wired in by hand keeps the list it has", () => {
+  it("adds the uncited master's bullet without restating the others", async () => {
+    await withProject(async (root) => {
+      const master = ".agents/rules/grilling.md";
+      await writeFile(path.join(root, "AGENTS.md"), PROJECT_TEXT, "utf-8");
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+
+      // A file as a project that never used the markers would keep it: its own
+      // prose, its own list, every master but one cited exactly once.
+      const section = extractManagedRulesSection(await readTemplate("AGENTS.md"));
+      expect(section).not.toBeNull();
+      const others = citedRuleMasters(section ?? "").filter((cited) => cited !== master);
+      const handWired = [
+        PROJECT_TEXT,
+        "## The rules we load",
+        "",
+        ...others.map((cited) => "- `" + cited + "` — read this one."),
+        "",
+      ].join("\n");
+      await writeFile(path.join(root, "AGENTS.md"), handWired, "utf-8");
+
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+
+      const after = await readEntryPoint(root, "AGENTS.md");
+      expect(after, "the uncited master never arrived").toContain(master);
+      // The section is not appended on top of the list the project keeps, so
+      // nothing it already cited is said twice.
+      expect(after).not.toContain(QFAI_AGENT_RULES_BEGIN);
+      for (const cited of others) expect(occurrences(after, cited)).toBe(1);
+      expect(after).toContain("Ask before touching");
+    });
+  });
+});
+
+describe("the append path refuses what the update path refuses", () => {
+  it("does not append through a symbolic link", async () => {
+    await withProject(async (root) => {
+      // A repository sharing one instruction file with another checkout. The
+      // file cites no rule, so the append path is the one that reaches it.
+      const shared = path.join(root, "shared-instructions.md");
+      await writeFile(shared, PROJECT_TEXT, "utf-8");
+      try {
+        await symlink(shared, path.join(root, "AGENTS.md"));
+      } catch {
+        // A host without symlink permission cannot exercise this case.
+        return;
+      }
+
+      const stderr = await initCapturingStderr(root);
+
+      expect(await readFile(shared, "utf-8")).toBe(PROJECT_TEXT);
+      expect(stderr).toContain("symbolic link");
+    });
+  });
+});
+
+describe("staging an interrupted run left behind is reclaimed", () => {
+  it("removes the writer's own name shape and nothing else", async () => {
+    await withProject(async (root) => {
+      // What a kill between the write and the rename leaves: a full copy of the
+      // project's instructions, untracked, in the repository root.
+      const abandoned = path.join(root, ".qfai-entry-6f1d4b4e-0c2a-4f1e-9b0d-2a7c5e8f1a33.tmp");
+      const unrelated = path.join(root, "notes.tmp");
+      await writeFile(abandoned, PROJECT_TEXT, "utf-8");
+      await writeFile(unrelated, PROJECT_TEXT, "utf-8");
+
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+
+      expect(await readdir(root)).not.toContain(path.basename(abandoned));
+      expect(await readFile(unrelated, "utf-8")).toBe(PROJECT_TEXT);
+    });
   });
 });

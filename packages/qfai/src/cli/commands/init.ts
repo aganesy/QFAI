@@ -66,8 +66,11 @@ import {
 import { CANONICAL_TIMESTAMP_GLOB } from "../../core/packLocator.js";
 import {
   AGENT_ENTRY_POINT_FILES,
+  QFAI_AGENT_RULES_END,
   addRuleCitations,
   addRuleCitationsToList,
+  citedRuleMasters,
+  hasUnclosedRulesSection,
   extractManagedRulesSection,
   needsManagedRulesSection,
   newlyWrittenRuleMasters,
@@ -2834,6 +2837,8 @@ async function ensureAgentEntryPointRules(
   const copied: string[] = [];
   const skipped: string[] = [];
 
+  if (!dryRun) await reclaimEntryPointStaging(destRoot);
+
   await citeNewMastersInCopilotInstructions(rootAssets, destRoot, dryRun, newlyWritten, {
     copied,
     skipped,
@@ -2859,6 +2864,21 @@ async function ensureAgentEntryPointRules(
         `  WARNING: ${formatReportPath(name)} already exists and was left unchanged. The shipped template has no ` +
           `managed section, so add a reference to \`.agents/rules/\` by hand (while it is unreferenced, ` +
           `the shared rules never reach the AI's context).`,
+      );
+      skipped.push(target);
+      continue;
+    }
+
+    if (hasUnclosedRulesSection(existing)) {
+      // Begin marker, no end marker. The file reads as connected, so nothing
+      // appends the section, and there is no region to insert a citation into
+      // either. Saying so is what lets the project restore the marker; skipping
+      // in silence leaves the rule uncited and gives the next run no reason to
+      // look at the file again.
+      error(
+        `  WARNING: ${formatReportPath(target)} was left unchanged. It opens the managed rules section ` +
+          `and never closes it, so there is no region to add a citation to. Restore the closing marker ` +
+          `${QFAI_AGENT_RULES_END} at the end of that section.`,
       );
       skipped.push(target);
       continue;
@@ -2892,8 +2912,44 @@ async function ensureAgentEntryPointRules(
       continue;
     }
 
+    // No markers, and rule masters cited anyway: the project wired them in by
+    // hand. Appending the section there would restate every citation the file
+    // already has, so the masters it does not name go into the list it keeps
+    // instead. With no markers nothing records a bullet as removed, so every
+    // uncited master is one the file never named.
+    if (citedRuleMasters(existing).length > 0) {
+      const merged = addRuleCitationsToList(existing, section, citedRuleMasters(section));
+      if (merged !== existing) {
+        const refusal = await refuseUnsafeEntryPointRewrite(target, existing, destRoot);
+        if (refusal !== null) {
+          error(`  WARNING: ${formatReportPath(target)} was left unchanged. ${refusal}`);
+          skipped.push(target);
+          continue;
+        }
+        if (dryRun) {
+          info(`  would update: ${formatReportPath(target)} (cite the uncited rule masters)`);
+        } else {
+          await replaceEntryPointFile(target, merged);
+          info(
+            `  updated: ${formatReportPath(target)} (cited the uncited rule masters; nothing else changed)`,
+          );
+        }
+        copied.push(target);
+        continue;
+      }
+    }
+
+    // The append lands on the same file the edit above would have, so it takes
+    // the same refusals: a link here writes through to whatever it points at.
+    const appendRefusal = await refuseUnsafeEntryPointRewrite(target, existing, destRoot);
+    if (appendRefusal !== null) {
+      error(`  WARNING: ${formatReportPath(target)} was left unchanged. ${appendRefusal}`);
+      skipped.push(target);
+      continue;
+    }
+
     if (dryRun) {
-      info(`  would update: ${target} (append .agents/rules section)`);
+      info(`  would update: ${formatReportPath(target)} (append .agents/rules section)`);
       copied.push(target);
       continue;
     }
@@ -2902,8 +2958,10 @@ async function ensureAgentEntryPointRules(
     // whatever the file happened to end with.
     const body = existing.replace(/\s*$/, "");
     const separator = body.length === 0 ? "" : "\n\n";
-    await writeFile(target, `${body}${separator}${section}\n`, "utf-8");
-    info(`  updated: ${target} (appended .agents/rules section; existing content kept)`);
+    await replaceEntryPointFile(target, `${body}${separator}${section}\n`);
+    info(
+      `  updated: ${formatReportPath(target)} (appended .agents/rules section; existing content kept)`,
+    );
     copied.push(target);
   }
 
@@ -2999,6 +3057,31 @@ async function firstLinkedComponent(target: string, destRoot: string): Promise<s
     if (entry?.isSymbolicLink() === true) return walked;
   }
   return null;
+}
+
+/** The name shape `replaceEntryPointFile` stages under. */
+const ENTRY_POINT_STAGING = /^.qfai-entry-[0-9a-fA-F-]{36}.tmp$/;
+
+/**
+ * Removes staging files an interrupted run left beside an entry point.
+ *
+ * The writer below stages next to its target so the rename is atomic, and
+ * clears the staging file when the write itself fails. A process killed between
+ * the write and the rename never reaches that, and what it leaves behind is a
+ * full copy of the project's instructions sitting untracked in the repository
+ * root. Only the writer's own name shape is removed, and a file that will not
+ * delete is not worth stopping an init over.
+ */
+async function reclaimEntryPointStaging(destRoot: string): Promise<void> {
+  for (const dir of [destRoot, path.join(destRoot, ".github")]) {
+    const entries = await readdir(dir).catch(() => []);
+    for (const entry of entries) {
+      if (!ENTRY_POINT_STAGING.test(entry)) continue;
+      await rm(path.join(dir, entry), { force: true }).catch(() => {
+        // Left for the next run to try again; it is not this run's to report.
+      });
+    }
+  }
 }
 
 /**

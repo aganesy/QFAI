@@ -164,14 +164,29 @@ Prose the project wrote inside the section survives. The heading is never
 duplicated: an existing section is edited in place, and the append path is for a
 file that has no section at all.
 
+**A file with no markers that cites rules anyway** was wired in by hand. The
+masters it does not name go into the list it keeps, one bullet each; the section
+is not appended on top, which would restate every citation the file already has.
+Nothing records a bullet as removed there, so an uncited master is one the file
+never named.
+
 **What it refuses, naming the file and the reason.** A symbolic link at the
 target or at any path component below the destination root, a hard link with
 more than one name, a file whose bytes are not valid UTF-8, and a file that
-changed between the read and the write. An unreadable Copilot file is reported
-and skipped rather than failing the run.
+changed between the read and the write. The append path refuses the same four:
+it writes to the same file, and a link there reaches whatever it points at. An
+unreadable Copilot file is reported and skipped rather than failing the run.
+
+**What it reports and leaves alone.** A file carrying the begin marker without
+the end marker. It reads as connected, so nothing appends the section, and there
+is no closed region to insert a citation into — the run names the missing marker
+instead, because a silent skip leaves the rule uncited and gives the next run no
+reason to look at the file again.
 
 **How it writes.** The merged text is staged beside the target and renamed over
-it, so an interrupted write leaves the adopter's file as it was.
+it, so an interrupted write leaves the adopter's file as it was. A staging file
+an earlier run was killed before renaming is removed at the start of the next
+one, matched on the writer's own name shape.
 
 **What the signal cannot tell.** A project that deleted both the bullet and the
 master gets both back: the same run writes the file again, so the citation
