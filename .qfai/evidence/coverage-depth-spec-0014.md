@@ -58,9 +58,9 @@ enforced by a strong suite that no live chain binds to it.
 single well-oracled case with no boundary or error direction, and `US-0014-0018` has one incidental
 gate and no case on the claim that distinguishes it.
 
-Section "Every `❌` cell, named" enumerates all 79 of them — 70 scored, 9 in the non-scored `Status`
+Section "Every `❌` cell, named" enumerates all 80 of them — 71 scored, 9 in the non-scored `Status`
 columns — so that "one justification per `❌`" is checkable rather than asserted, and section
-"Every `⚠️` cell, named" does the same for all 73 partial scores, 61 of which are scored cells the
+"Every `⚠️` cell, named" does the same for all 72 partial scores, 60 of which are scored cells the
 PASS criterion also requires a rationale for.
 
 ## What was measured, and how
@@ -227,13 +227,13 @@ the test cases cite, not from the rule's number.
 | BR-0014-0001 | ❌            | ❌            | n/a                  | TC-0014-0018                 | ❌     |
 | BR-0014-0002 | ⚠️            | ⚠️            | n/a                  | TC-0014-0009                 | ❌     |
 | BR-0014-0003 | ⚠️            | ❌            | n/a                  | TC-0014-0018, TC-0014-0019   | ❌     |
-| BR-0014-0004 | ❌            | ❌            | ⚠️                   | TC-0014-0028, TC-0014-0029   | ❌     |
+| BR-0014-0004 | ❌            | ❌            | ❌                   | TC-0014-0028, TC-0014-0029   | ❌     |
 | BR-0014-0005 | ✅            | ✅            | ⚠️                   | TC-0014-0033                 | ⚠️     |
 | BR-0014-0006 | ✅            | ⚠️            | ⚠️                   | TC-0014-0034                 | ⚠️     |
 | BR-0014-0025 | ⚠️            | ✅            | ✅                   | TC-0014-0035, TC-0014-0036   | ⚠️     |
 
 7 rows × the 3 scored columns — `Positive case`, `Negative case`, `Conditional branches` — =
-**21 scored cells: ✅ 5 / ⚠️ 8 / ❌ 5, with `n/a` 3**. `Covering TC` holds identifiers and `Status`
+**21 scored cells: ✅ 5 / ⚠️ 7 / ❌ 6, with `n/a` 3**. `Covering TC` holds identifiers and `Status`
 holds the row verdict, so neither is scored; the 7 `Status` cells read **✅ 0 / ⚠️ 3 / ❌ 4**.
 
 `n/a` is used three times, for `BR-0014-0001`, `-0002` and `-0003`, each of which states its rule
@@ -247,15 +247,15 @@ The scored population is 147 cells: 126 matrix depth cells plus 21 business rule
 | Mark | Matrix depth | Business rule | Scored total |
 | ---- | ------------ | ------------- | ------------ |
 | ✅   | 8            | 5             | 13           |
-| ⚠️   | 53           | 8             | 61           |
-| ❌   | 65           | 5             | 70           |
+| ⚠️   | 53           | 7             | 60           |
+| ❌   | 65           | 6             | 71           |
 | n/a  | 0            | 3             | 3            |
 | Sum  | 126          | 21            | 147          |
 
 ## Every ❌ cell, named
 
-The matrix carries 65 `❌` depth cells plus 5 in `Status`; the business rule table carries 5 in its
-scored columns plus 4 in its `Status` column — 79 in all, of which 70 are scored. Each is named
+The matrix carries 65 `❌` depth cells plus 5 in `Status`; the business rule table carries 6 in its
+scored columns plus 4 in its `Status` column — 80 in all, of which 71 are scored. Each is named
 below with its own reason. A row's `Status` is `❌` when the obligation is not discharged at the
 depth the row describes; that verdict is stated once per row and is not repeated per cell.
 
@@ -441,7 +441,8 @@ the forbidden legacy sidecar `12_design_system.md`, runs `runCanonicalUixValidat
 
 ### TC-0014-0019 — removed compatibility namespace does not reappear
 
-`Status = done` under `DR-0014-0001`. One passing case, reading `src/core/validators/index.ts` and
+`Status = done` under `DR-0014-0002`, the record whose text is this row's subject. One
+passing case, reading `src/core/validators/index.ts` and
 `src/core/types.ts` and requiring that neither contains `validators/legacy`,
 `runLegacyUixCompatibilityValidators` or `"compatibility"`, and that `IssueCategory` is the exact
 two-member union. This row has **six `❌` depth cells** and no `❌` in `Status`.
@@ -596,10 +597,10 @@ leaves both markers undefined. This row has **six `❌` depth cells** and no `�
 ### TC-0014-0036 — upgrade-scope gating
 
 `Status = done` under `DR-0014-0004`. Discharged by 16 passing cases in
-`prototypingCertify.upgradeScope.test.ts`. This row has **no `❌` cell** in any column. Its three
+`prototypingCertify.upgradeScope.test.ts`. This row has **no `❌` cell** in any column. Its four
 `⚠️` depth cells and its `⚠️` `Status` are stated below.
 
-### The five ❌ cells of the business rule table
+### The six ❌ cells of the business rule table
 
 - **BR-0014-0001 × Positive case** — the rule states that verify is always full-scan. Nothing
   measures the scope of any run. The covering case reads `validate.ts` for an identifier and drives
@@ -626,6 +627,13 @@ leaves both markers undefined. This row has **six `❌` depth cells** and no `�
   in `packages/qfai/tests/**` at all. The one case that touches the vocabulary removes it:
   `delete body.fullHarness` in the cycle-0 reset, pinned by `TC-0014-0034`. Removing the vocabulary
   is the opposite direction, so the rule's own has nothing behind it.
+- **BR-0014-0004 × Conditional branches** — the rule is conditional: the vocabulary may persist
+  "if corresponding code remains". Neither branch is constructed. The code-remains branch would be
+  shown by a reader that tolerates the vocabulary, and the two readers that do — the certify
+  fallback and the report rendering — have no case, as the positive cell above records. The
+  complementary branch, vocabulary surviving with no code behind it and so not to be read as a live
+  contract, is never built either. The one case that touches the vocabulary deletes it, which
+  exercises neither side of the condition.
 
 ### The four ❌ cells of the business rule Status column
 
@@ -644,8 +652,8 @@ leaves both markers undefined. This row has **six `❌` depth cells** and no `�
 
 ## Every ⚠️ cell, named
 
-53 depth cells and 9 `Status` cells in the matrix, and 8 scored cells and 3 `Status` cells in the
-business rule table, are `⚠️` — 73 in all, of which 61 are scored. The PASS criterion requires a
+53 depth cells and 9 `Status` cells in the matrix, and 7 scored cells and 3 `Status` cells in the
+business rule table, are `⚠️` — 72 in all, of which 60 are scored. The PASS criterion requires a
 documented rationale for each, so each is named here.
 
 ### Matrix depth cells
@@ -1002,11 +1010,6 @@ documented rationale for each, so each is named here.
   _remains the source_ of these findings, rather than a parallel runner — rests on a substring read
   of `validate.ts`, and because the case carrying the determinism assertion carries no spec-0014
   annotation, so nothing binds it to this pack.
-- **BR-0014-0004 × Conditional branches** — the rule is explicitly conditional: the vocabulary may
-  persist "if corresponding code remains". The branch where code remains is established for one
-  slice, by a passing case that depends on that code. The complementary branch — vocabulary
-  surviving in a document or artifact with no code behind it, which must not be read as a live
-  contract — is never constructed, so the condition is never used to discriminate.
 - **BR-0014-0005 × Conditional branches** — the rule has two clauses and both have real cases: the
   iter-NN layout is accepted as the active SSOT (`iter-03`, matching `EX-0014-0026` verbatim, zero
   issues), and the legacy `screenshots/`+`html/` layout is still accepted rather than required, so
@@ -1142,7 +1145,7 @@ them is repaired here; this artifact scores coverage and does not edit tests, le
 `QFAI-ATDD-133` requires the stage evidence to carry a `## Coverage Depth Matrix` section that links
 to this file and restates the counted totals beside it. Those totals are:
 
-**✅ 13 / ⚠️ 61 / ❌ 70**, with `n/a` 3, across all 147 scored cells — 126 matrix depth cells (14
+**✅ 13 / ⚠️ 60 / ❌ 71**, with `n/a` 3, across all 147 scored cells — 126 matrix depth cells (14
 rows × 9 columns) and 21 business rule cells (7 rows × 3 columns). The `Status` columns of both
 tables hold row verdicts rather than marks and are outside that population; for reference the
 matrix's 14 read `⚠️ 9 / ❌ 5` and the business rule table's 7 read `⚠️ 3 / ❌ 4`.
