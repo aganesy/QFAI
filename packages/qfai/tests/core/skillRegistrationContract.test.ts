@@ -423,6 +423,40 @@ describe("what the gate and the host disagreed about", () => {
     expect(await findings(root)).toEqual([]);
   });
 
+  it("reports a crawled document that is not valid UTF-8", async () => {
+    // The crawl read every document leniently, so an invalid byte became a
+    // replacement character and the metadata around it parsed — while the host
+    // refuses the file and loads no skill from it.
+    const root = await projectWithSkill(['description: "Does the thing."']);
+    const skillDir = path.join(root, ".qfai", "assistant", "skills", "qfai-example");
+    await writeFile(
+      path.join(skillDir, "SKILL.md"),
+      Buffer.concat([
+        Buffer.from('---\nname: qfai-example\ndescription: "Does the '),
+        Buffer.from([0xff]),
+        Buffer.from('thing."\n---\n\n# qfai-example\n'),
+      ]),
+    );
+
+    const codes = (await findings(root)).map((finding) => finding.code);
+    expect(codes).toContain("QFAI-SKILLS-014");
+  });
+
+  it("reads nothing under a hidden tree, references included", async () => {
+    // Filtered only out of the registration loop, a draft's own references were
+    // still held to the reachability rule, and its citations could vouch for a
+    // live document.
+    const root = await projectWithSkill(['description: "Does the thing."']);
+    const skills = path.join(root, ".qfai", "assistant", "skills");
+    await mkdir(path.join(skills, ".draft", "references"), { recursive: true });
+    await writeFile(path.join(skills, ".draft", "SKILL.md"), "# draft\n", "utf-8");
+    await writeFile(path.join(skills, ".draft", "references", "orphan.md"), "# orphan\n", "utf-8");
+
+    const reported = (await validateAssistantAssets(root, defaultConfig)).filter((finding) =>
+      (finding.file ?? "").includes(".draft"),
+    );
+    expect(reported).toEqual([]);
+  });
   it("reports an entry point that is not valid UTF-8", async () => {
     // The lenient decoder substitutes a replacement character and hands back
     // metadata that parses, while the host reports the file unreadable.

@@ -1592,8 +1592,31 @@ async function readSkillDocuments(skillsDir: string): Promise<SkillDocuments> {
   const unreadable: Issue[] = [];
   const severity = "error";
   for (const file of files.sort((a, b) => a.localeCompare(b))) {
+    // A hidden tree is one the host does not list, so nothing in it is read:
+    // left in the map, a draft's own references were held to the reachability
+    // rule and its citations vouched for live documents.
+    if (underHiddenSkillDirectory([skillsDir], file)) continue;
     try {
-      documents.set(file, await readFile(file, "utf-8"));
+      // Decoded strictly, like an uncrawled entry point: the lenient read turns
+      // an invalid byte into a replacement character, so the document parses
+      // and its metadata reads as usable while the host refuses the file.
+      const text = decodeUtf8(await readFile(file));
+      if (text === undefined) {
+        unreadable.push(
+          issue(
+            "QFAI-SKILLS-014",
+            "A document under `skills` holds bytes that are not valid UTF-8, so the host reports it unreadable and does not load the skill it belongs to.",
+            severity,
+            file,
+            "skills.documentReadable",
+            undefined,
+            "canonical",
+            "Save the document as UTF-8. A byte that is not part of a valid sequence is usually text pasted from another encoding, or a binary file left at the path.",
+          ),
+        );
+        continue;
+      }
+      documents.set(file, text);
     } catch (error) {
       unreadable.push(
         issue(
