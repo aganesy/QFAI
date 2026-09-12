@@ -2663,6 +2663,12 @@ function demotedProjectNegations(before: string, after: string): string[] {
  * negations it is missing (appended last, because git applies the last matching
  * pattern). A project with no managed block still gets the full canonical one.
  */
+/** The evidence-tree ignore whose presence the migration below is conditional on. */
+const EVIDENCE_TREE_IGNORE = ".qfai/evidence/*";
+
+/** The line that keeps the re-included prototyping directory's contents ignored. */
+const PROTOTYPING_CONTENTS_IGNORE = ".qfai/evidence/prototyping/*";
+
 function rebuildManagedBlock(existingBlock: string): string {
   if (existingBlock.length === 0) {
     return QFAI_GITIGNORE_BLOCK;
@@ -2699,7 +2705,29 @@ function rebuildManagedBlock(existingBlock: string): string {
     .filter(([retired, successor]) => present.has(retired) && !present.has(successor))
     .map(([, successor]) => successor);
 
-  return [QFAI_GITIGNORE_MARKER, ...kept, ...renamed, ...QFAI_GITIGNORE_GOVERNANCE_NEGATIONS]
+  // One ignore is migrated, against the rule above, and only where its parent is
+  // present. The negations below re-include `.qfai/evidence/prototyping/`, and
+  // re-including a directory exposes every descendant with no later rule of its
+  // own — the mutation log, the `iter-NN` captures, `progress.md`. So a block
+  // that ignores the evidence tree must also carry the line that re-ignores
+  // that directory's contents, or the upgrade tracks files the project never
+  // chose to track.
+  //
+  // Conditional on the parent, because a project that deleted
+  // `.qfai/evidence/*` to keep its audit trail tracked would otherwise have it
+  // re-hidden — the regression the rule above exists to stop.
+  const reIgnore =
+    present.has(EVIDENCE_TREE_IGNORE) && !present.has(PROTOTYPING_CONTENTS_IGNORE)
+      ? [PROTOTYPING_CONTENTS_IGNORE]
+      : [];
+
+  return [
+    QFAI_GITIGNORE_MARKER,
+    ...kept,
+    ...renamed,
+    ...reIgnore,
+    ...QFAI_GITIGNORE_GOVERNANCE_NEGATIONS,
+  ]
     .filter((line, index, all) => line.length > 0 || all[index - 1]?.length !== 0)
     .join("\n");
 }

@@ -103,7 +103,10 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   worktree would otherwise grade against none of them. The migration that
   carries the nested `.qfai/evidence/.gitignore` forward gains the same two
   lines, because that file's `*` overrides a root negation on every project
-  initialized before the root block grew its own.
+  initialized before the root block grew its own. An upgrade to an existing
+  managed block migrates the re-ignore too, where that block ignores the
+  evidence tree — without it the appended negation would expose the captures and
+  the mutation log that block was keeping out.
 
   Recording an answer replaces the row for the same scoped decision rather than
   adding beside it. The delegated prompts read every row matching their lineage,
@@ -114,8 +117,11 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   payload and critique goes. Answering a design question is not consent to a
   destructive operation.
 
-  A `proceed` or `done` finishes the lookups, records what is still open as
-  labelled assumptions and hands off — the user ended the asking, not the work.
+  A `proceed` or `done` finishes the lookups and records what is still open as
+  labelled assumptions — the user ended the asking, not the work. The
+  converged-prototype choice is not among them: it is what the loop was run to
+  answer, so it is asked again and its answer takes the accepted or rejected
+  route. A closure cannot assume the one choice the whole run exists to obtain.
   A `stop` ends the run rather than resetting, and the ten-cycle budget is
   counted across rejection resets rather than restarting with each — an unbounded
   chain of ten-cycle loops is the budget removed by the one route that looks like

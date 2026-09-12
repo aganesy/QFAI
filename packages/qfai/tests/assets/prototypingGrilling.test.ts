@@ -157,7 +157,12 @@ describe.each(TREES)("%s — prototyping and grilling", (tree) => {
     // ended the asking, not the work, so a reset is work they did not ask for.
     expectPhrase(skill, "**Closed** — `proceed` or `done` — finishes the running lookups");
     expectPhrase(skill, "the user ended the asking, not the work");
-    expectPhrase(skill, "The two kinds the method never assumes are still asked");
+    // The converged-prototype choice is not assumable by a closure: it is what
+    // the loop was run to answer and this skill's own `ask-user` operation, so
+    // a closure that handed off with it assumed would certify an unpicked
+    // design by the one route the no-question branch already refuses.
+    expectPhrase(skill, "**This question is not among them.**");
+    expectPhrase(skill, "a closure cannot assume the one choice the whole run exists to obtain");
   });
 
   it("carries the session's answers into the loop", async () => {
