@@ -34,12 +34,15 @@ directory.
 
    ```sh
    MSYS=winsymlinks:nativestrict ln -s ../../.agents/rules/<name>.md .claude/rules/<name>.md
+   git add .claude/rules/<name>.md
    git ls-files -s .claude/rules/<name>.md   # 120000 is a link, 100644 is a copy
    ```
 
    The environment variable is inert outside Git Bash on Windows and required
-   inside it — see the section below. The check is what tells the two apart,
-   because both look right in the working tree.
+   inside it — see the section below. The `git add` is what makes the check
+   answerable: `git ls-files` reads the index, so it prints nothing for a path
+   that is still untracked. The mode is what tells a link from a copy, because
+   both look right in the working tree.
 
 4. List it in `AGENTS.md` and in `CLAUDE.md`, the two entry points at the
    repository root.
@@ -69,7 +72,8 @@ one of its valid shapes — so it survives until someone edits the master and th
 copy stays behind.
 
 `git ls-files -s` is what tells them apart: mode `120000` is a link, `100644` a
-copy.
+copy. It reads the index, so stage the path first — an untracked path prints
+nothing, whichever shape it has.
 
 ### Checking one out
 
