@@ -128,6 +128,14 @@ export const QFAI_GITIGNORE_GOVERNANCE_NEGATIONS: readonly string[] = [
   // itself before its contents can be re-included.
   "!.qfai/evidence/decisions/",
   "!.qfai/evidence/decisions/**",
+  // The prototyping session record: what the user said the prototype is for,
+  // what counts as better, and what is out of bounds. Every later generator and
+  // reviewer is required to read it, and nothing regenerates it — a re-run
+  // rebuilds the prototype, not the answers. Without this it is ignored with the
+  // rest of `.qfai/evidence/prototyping/`, so a fresh clone, another worktree or
+  // a later checkout grades against none of the user's decisions.
+  "!.qfai/evidence/prototyping/",
+  "!.qfai/evidence/prototyping/grilling.md",
   "!.qfai/evidence/change-request-*.md",
   "!.qfai/evidence/decision-*.md",
   // The per-item RED/GREEN record the completion gate resolves every

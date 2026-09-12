@@ -136,7 +136,13 @@ describe.each(TREES)("%s — prototyping and grilling", (tree) => {
       "certifying the unchanged iteration would ship the design they turned down",
     );
     // The loop's own bound still applies, so the branch cannot run forever.
-    expectPhrase(skill, "the cycle budget starts again with it");
+    expectPhrase(skill, "the ten-cycle budget is counted across resets here, not per reset");
+    // The CLI restarts the count at cycle 0, so an unbounded chain of ten-cycle
+    // loops is the budget removed by the one route that looks like keeping it.
+    expectPhrase(skill, "stop and escalate rather than resetting again");
+    // And a `stop` is not a rejection: it ends the run rather than resetting.
+    expectPhrase(skill, "**Stopped** — the user said `stop` — ends the run there");
+    expectPhrase(skill, "a stop ends the session immediately and a reset is further work");
   });
 
   it("carries the session's answers into the loop", async () => {
@@ -222,6 +228,31 @@ describe.each(TREES)("%s — prototyping and grilling", (tree) => {
     );
   });
 
+  it("writes the record before the loop reads it", async () => {
+    // On a fresh project nothing ships one and the session produces no artifact
+    // of its own, so a required input the delegated role cannot find is an error
+    // it has to guess past — which is what the record exists to stop.
+    const skill = await read(SKILL);
+    expectPhrase(skill, "**The file is written before C0, empty session or not.**");
+    expectPhrase(skill, "a different statement from a file that is not there");
+  });
+
+  it("keeps the record across a handoff", async () => {
+    // Stage evidence is regenerable and ignored. These answers are not: nothing
+    // reproduces them, and every later generator and reviewer must read them.
+    const skill = await read(SKILL);
+    expectPhrase(skill, "**It is a user decision, not stage evidence.**");
+    expectPhrase(skill, "The managed ignore block negates this path");
+
+    const gitignore = await readFile(
+      path.join(repoRoot, "packages/qfai/src/core/gitignore.ts"),
+      "utf-8",
+    );
+    expect(gitignore).toContain('"!.qfai/evidence/prototyping/grilling.md"');
+    // Git never descends into an ignored directory, so the parent is undone too.
+    expect(gitignore).toContain('"!.qfai/evidence/prototyping/"');
+  });
+
   it("hands the record to the delegated roles, not only to this skill", async () => {
     // The generator and the reviewer run from injected contracts. A record
     // named only in the parent skill is one the roles that build and grade the
@@ -233,6 +264,12 @@ describe.each(TREES)("%s — prototyping and grilling", (tree) => {
     const reviewer = await read(REVIEWER_PROMPT);
     expectPhrase(reviewer, "Session record: `.qfai/evidence/prototyping/grilling.md`");
     expectPhrase(reviewer, "grades every prototype against the same generic bar");
+
+    // Both carry the lineage filter, or another screen's answer constrains this
+    // one — the scoping in the parent skill does not reach an injected prompt.
+    for (const prompt of [generator, reviewer]) {
+      expect(unwrap(prompt)).toContain("plus the `global` ones, and no others");
+    }
   });
 
   it("agrees with the rule master it points at", async () => {

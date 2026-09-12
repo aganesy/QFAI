@@ -58,7 +58,21 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   screen, and a generator or reviewer reads its own rows plus the global ones.
 
   The record is named in the generator's and the reviewer's own prompt contracts,
-  not only in the parent skill, because those are what the delegated roles read.
+  not only in the parent skill, because those are what the delegated roles read,
+  and both carry the lineage filter — an unfiltered read lets one screen's answer
+  constrain another's.
+
+  It is written before the first cycle whether or not the session settled
+  anything, because a required input a delegated role cannot find is an error it
+  guesses past, and an empty session written down is a different statement from a
+  missing file. It is tracked rather than ignored with the regenerable stage
+  evidence: nothing reproduces these answers, and a fresh clone or another
+  worktree would otherwise grade against none of them.
+
+  A `stop` ends the run rather than resetting, and the ten-cycle budget is
+  counted across rejection resets rather than restarting with each — an unbounded
+  chain of ten-cycle loops is the budget removed by the one route that looks like
+  keeping it.
 
   The session's answers go to `.qfai/evidence/prototyping/grilling.md`, and the
   generator and the reviewer both read it. The generator runs from contracts and

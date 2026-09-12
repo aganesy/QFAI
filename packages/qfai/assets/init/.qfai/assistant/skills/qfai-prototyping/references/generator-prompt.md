@@ -14,6 +14,10 @@ identity.
    would count as better, and what is out of bounds. Every cycle, not only the
    first: the contracts say what the screens are, and this says which of the
    shapes satisfying them the user asked for.
+   **Read the rows whose `Scope` is this lineage — `<spec-id>/<screen>` or
+   `<spec-id>` — plus the `global` ones, and no others.** One invocation runs a
+   lineage per spec and screen, so an unfiltered read lets another screen's
+   answer constrain this one.
 5. Cycles 1..9: `iter-(NN-1)/review.json` (critique, scores,
    `layoutAntiPatternsDetected`, `designMdViolations`,
    `pivotDirective`), `iter-(NN-2)/review.json` when present, and
