@@ -55,9 +55,9 @@ confirm it had returned to the clean value.
 | `TDD-0019` falsifiability | 1 failed, 4 passed    |
 | `TDD-0035` GREEN          | 2 passed              |
 | `TDD-0035` falsifiability | 1 failed, 1 passed    |
-| `TDD-0036` GREEN            | 16 passed             |
-| `TDD-0036` falsifiability A | 6 failed, 10 passed   |
-| `TDD-0036` falsifiability B | 7 failed, 9 passed    |
+| `TDD-0036` GREEN            | 1 passed per entry    |
+| `TDD-0036` falsifiability A | entry 1 fails, entry 2 passes |
+| `TDD-0036` falsifiability B | entry 2 fails, entry 1 passes |
 | Refactor verify           | 126 passed            |
 | Checkpoint                | 2258 passed, exit 0   |
 
@@ -92,6 +92,7 @@ evidence its cell points at.
 - TC-ref: TC-0014-0018
 - Run output retained: no
 - Backfill note: the row's cell recorded a verdict with no command and no output, so nothing of the original run survives. The test was re-run for the GREEN below, and the mutation below was applied and reverted to establish that the test discriminates. No reviewer verdict is recorded because none can be reconstructed.
+
 - RED failure mode: falsifiability
 
 #### Round 1
@@ -145,6 +146,7 @@ at the same revision — `counts: info=3 warning=0 error=0`, exit 0.
 - TC-ref: TC-0014-0019
 - Run output retained: no
 - Backfill note: the row's cell recorded a verdict with no command and no output, so nothing of the original run survives. The test was re-run for the GREEN below, and the mutation below was applied and reverted to establish that the test discriminates. No reviewer verdict is recorded because none can be reconstructed.
+
 - RED failure mode: falsifiability
 
 #### Round 1
@@ -187,6 +189,7 @@ TestFileSca…' not to contain '"compatibility"'`.
 - TC-ref: TC-0014-0035
 - Run output retained: no
 - Backfill note: the row's cell recorded a verdict with no command and no output, so nothing of the original run survives. The test was re-run for the GREEN below, and the mutation below was applied and reverted to establish that the test discriminates. No reviewer verdict is recorded because none can be reconstructed.
+
 - RED failure mode: falsifiability
 
 #### Round 1
@@ -229,19 +232,30 @@ defect.
 - TC-ref: TC-0014-0036
 - Run output retained: no
 - Backfill note: the row's cell recorded a verdict with no command and no output, so nothing of the original run survives. The test was re-run for the GREEN below, and the mutation below was applied and reverted to establish that the test discriminates. No reviewer verdict is recorded because none can be reconstructed.
+
 - RED failure mode: falsifiability
 
 #### Round 1
 
 - Round 1: Revision: 649d8111147436408c90cbbe1b9f9b07e34da8cb
 - Round 1: Satisfied-by: packages/qfai/src/cli/commands/prototypingCertify.ts — the refusal branch taken when the gates signal still names a missing gate.
-- Round 1: Falsifiability command: npx vitest run tests/integration/cli/commands/prototypingCertify.upgradeScope.test.ts
-- Round 1: Falsifiability result: Test Files 1 failed (1); Tests 6 failed, 10 passed (16). Every refusal case fails, including this row's own.
+- Round 1: Falsifiability command: npx vitest run tests/integration/cli/commands/prototypingCertify.upgradeScope.test.ts -t 'refuses to upgrade while named gates are still missing; stderr names them'
+- Round 1: Falsifiability result: Test Files 1 failed (1); Tests 1 failed, 15 skipped (16), on `expected +0 not to be +0`. Mutation A. The second selector entry, run separately under the same mutation, passes: Tests 1 passed, 15 skipped (16).
 - Round 1: Falsifiability revision: working-tree+c0b2657afd0bcc8a48b3375d05c60c47ce75d92eb09c057d11b9ce5ac74e41a1
-- Round 1: GREEN command: npx vitest run tests/integration/cli/commands/prototypingCertify.upgradeScope.test.ts
-- Round 1: GREEN result: Test Files 1 passed (1); Tests 16 passed (16)
+- Round 1: GREEN command: npx vitest run tests/integration/cli/commands/prototypingCertify.upgradeScope.test.ts -t 'refuses to upgrade while named gates are still missing; stderr names them'
+- Round 1: GREEN result: Test Files 1 passed (1); Tests 1 passed (1 of the file's 16 selected). The second selector entry, run separately: Tests 1 passed.
 - Round 1: RED test hash: cba71be37bffe18df1121e93e5e70680e26306fbbd36f86789c70e1bc93773fd
 - Round 1: RED test manifest: packages/qfai/tests/integration/cli/commands/prototypingCertify.upgradeScope.test.ts
+
+The `Selector` is a JSON array of two entries, so each is run on its own under
+each mutation: an aggregate run shows one entry failing and leaves the other
+unobserved. The four runs partition cleanly.
+
+| Run | `refuses to upgrade …` | `upgrades the certificate …` |
+| --- | --- | --- |
+| Clean tree | 1 passed, 15 skipped | 1 passed, 15 skipped |
+| Mutation A | **1 failed**, 15 skipped | 1 passed, 15 skipped |
+| Mutation B | 1 passed, 15 skipped | **1 failed**, 15 skipped |
 
 The obligation has two directions, so it carries two mutations. Each kills one
 direction and leaves the other green, which is what makes the pair evidence
@@ -256,8 +270,8 @@ rather than one observation stated twice.
 ```
 
 The threshold is beyond any reachable count, so the command upgrades whatever
-the signal says. Six cases die, every one that expects a refusal, all on
-`expected +0 not to be +0`. The acceptance case stays green.
+the signal says. Run over the whole file it kills six cases, every one that
+expects a refusal.
 
 **Mutation B — the acceptance direction.** In the same file, line 1656:
 
@@ -266,15 +280,16 @@ the signal says. Six cases die, every one that expects a refusal, all on
 +  const upgraded = cert;
 ```
 
-- Round 1: Second falsifiability command: npx vitest run tests/integration/cli/commands/prototypingCertify.upgradeScope.test.ts
-- Round 1: Second falsifiability result: Test Files 1 failed (1); Tests 7 failed, 9 passed (16). Every acceptance-direction case fails, this row's own among them, all on `expected 'saas-package' to be undefined`.
+- Round 1: Second falsifiability command: npx vitest run tests/integration/cli/commands/prototypingCertify.upgradeScope.test.ts -t 'upgrades the certificate to full DONE when the previously-skipped gates now pass'
+- Round 1: Second falsifiability result: Test Files 1 failed (1); Tests 1 failed, 15 skipped (16), on `expected 'saas-package' to be undefined`. Mutation B. The first selector entry, run separately under the same mutation, passes: Tests 1 passed, 15 skipped (16).
 - Round 1: Second falsifiability revision: working-tree+d6d8998685c20b869dc0de4edacbe53a4beb5a2a97f04979c6d4a25d59f38b58
 
 The upgrade branch never writes `scope: "full"` — it removes the field, through
 `stripScopeMarkers()`, which rebuilds the certificate and omits `scope` and
 `notes`. Returning the certificate unchanged therefore leaves it scope-limited
-while reporting success. All eight refusal cases stay green, so the two
-mutations partition the file: no case dies under both.
+while reporting success. Run over the whole file it kills seven cases, every
+acceptance-direction one; all eight refusal cases stay green, so the two
+mutations partition the file and no case dies under both.
 
 One acceptance-path case survives mutation B: `prefers the canonical path when
 BOTH canonical and legacy signals exist`. It drives a successful upgrade but
@@ -292,7 +307,7 @@ certificate scope-limited.
 ## Coverage Depth Matrix
 
 See `.qfai/evidence/coverage-depth-spec-0014.md`.
-Totals: ✅ 26 / ⚠️ 49 / ❌ 69, with 3 not applicable, across 147 scored cells —
+Totals: ✅ 24 / ⚠️ 51 / ❌ 69, with 3 not applicable, across 147 scored cells —
 126 matrix depth cells (14 rows × 9 columns) and 21 business rule cells
 (7 rows × 3 columns). `Status` is a row verdict, not a mark, and is outside
 every total.

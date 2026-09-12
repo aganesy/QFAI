@@ -161,16 +161,16 @@ annotation in a `describe` a reader would take for the covering suite. See Findi
 | US-0014-0019 | ❌                     | ✅          | ⚠️         | ❌         | ❌              | ❌             | ❌                | ❌            | ⚠️              | ⚠️     |
 | US-0014-0020 | ✅                     | ✅          | ✅         | ✅         | ⚠️              | ⚠️             | ✅                | ✅            | ⚠️              | ⚠️     |
 | TC-0014-0009 | ❌                     | ❌          | ❌         | ❌         | ❌              | ❌             | ❌                | ❌            | ❌              | ❌     |
-| TC-0014-0018 | ⚠️                     | ✅          | ⚠️         | ❌         | ❌              | ❌             | ❌                | ❌            | ⚠️              | ⚠️     |
+| TC-0014-0018 | ⚠️                     | ⚠️          | ⚠️         | ❌         | ❌              | ❌             | ❌                | ❌            | ⚠️              | ⚠️     |
 | TC-0014-0019 | ❌                     | ✅          | ⚠️         | ❌         | ❌              | ❌             | ❌                | ❌            | ⚠️              | ⚠️     |
 | TC-0014-0028 | ❌                     | ❌          | ❌         | ❌         | ❌              | ❌             | ❌                | ❌            | ❌              | ❌     |
 | TC-0014-0029 | ❌                     | ❌          | ❌         | ❌         | ❌              | ❌             | ❌                | ❌            | ❌              | ❌     |
 | TC-0014-0033 | ⚠️                     | ⚠️          | ⚠️         | ⚠️         | ⚠️              | ⚠️             | ⚠️                | ⚠️            | ⚠️              | ❌     |
 | TC-0014-0034 | ⚠️                     | ✅          | ❌         | ⚠️         | ❌              | ❌             | ✅                | ⚠️            | ✅              | ⚠️     |
 | TC-0014-0035 | ⚠️                     | ✅          | ❌         | ❌         | ❌              | ❌             | ❌                | ❌            | ⚠️              | ⚠️     |
-| TC-0014-0036 | ✅                     | ✅          | ✅         | ✅         | ⚠️              | ⚠️             | ✅                | ✅            | ✅              | ⚠️     |
+| TC-0014-0036 | ✅                     | ✅          | ✅         | ✅         | ⚠️              | ⚠️             | ✅                | ✅            | ⚠️              | ⚠️     |
 
-14 rows × the 9 depth columns = **126 scored cells: ✅ 21 / ⚠️ 40 / ❌ 65**.
+14 rows × the 9 depth columns = **126 scored cells: ✅ 19 / ⚠️ 42 / ❌ 65**.
 
 `Status` is the row verdict, not a mark, so it is outside the scored population. For reference, its
 14 cells read **✅ 0 / ⚠️ 9 / ❌ 5**.
@@ -211,8 +211,8 @@ The scored population is 147 cells: 126 matrix depth cells plus 21 business rule
 
 | Mark | Matrix depth | Business rule | Scored total |
 | ---- | ------------ | ------------- | ------------ |
-| ✅   | 21           | 5             | 26           |
-| ⚠️   | 40           | 9             | 49           |
+| ✅   | 19           | 5             | 24           |
+| ⚠️   | 42           | 9             | 51           |
 | ❌   | 65           | 4             | 69           |
 | n/a  | 0            | 3             | 3            |
 | Sum  | 126          | 21            | 147          |
@@ -590,8 +590,8 @@ leaves both markers undefined. This row has **six `❌` depth cells** and no `�
 
 ## Every ⚠️ cell, named
 
-40 depth cells and 9 `Status` cells in the matrix, and 9 scored cells and 3 `Status` cells in the
-business rule table, are `⚠️` — 61 in all, of which 49 are scored. The PASS criterion requires a
+42 depth cells and 9 `Status` cells in the matrix, and 9 scored cells and 3 `Status` cells in the
+business rule table, are `⚠️` — 63 in all, of which 51 are scored. The PASS criterion requires a
 documented rationale for each, so each is named here.
 
 ### Matrix depth cells
@@ -683,6 +683,18 @@ documented rationale for each, so each is named here.
   `cert` in the upgrade branch kills every acceptance case. One weakness keeps it off `✅`, the
   story's "never overstates completion" clause: `expect(cert.scope).not.toBe("full")` cannot fail
   while `expect(cert.scope).toBe("saas-package")` passes in the same case.
+- **TC-0014-0018 × Normal path** — the row's `Steps` are "run repo-root verify flow against the
+  canonical validate entrypoint", and no case runs one. The first credited case reads
+  `src/core/validate.ts` as text and asserts it names `runCanonicalUixValidators`; the second calls
+  that function directly against a seeded temp root. Those establish the wiring and one emission,
+  which is why the cell is not `❌`, and neither is the verify flow the row describes.
+- **TC-0014-0036 × Oracle strength** — the two selector entries each have a production mutation that
+  reddens them on their own, run separately, which is what the row's own coverage needs. The cell is
+  held off `✅` by a third case in the same file: `prefers the canonical path when BOTH canonical and
+  legacy signals exist` drives a successful upgrade and survives the acceptance-direction mutation,
+  because it asserts only the exit code and which signal path won and never reads the sealed
+  certificate back. The matrix credits the file's sixteen cases to this row, so a case with no
+  killing mutation caps it.
 - **TC-0014-0018 × Equivalence partitions** — one partition of the discussion-pack input is
   represented with a real input and a required emission: a UI-bearing pack carrying the forbidden
   legacy sidecar `12_design_system.md`. The complementary partition — a pack with a clean canonical
@@ -991,7 +1003,7 @@ them is repaired here; this artifact scores coverage and does not edit tests, le
 `QFAI-ATDD-133` requires the stage evidence to carry a `## Coverage Depth Matrix` section that links
 to this file and restates the counted totals beside it. Those totals are:
 
-**✅ 26 / ⚠️ 49 / ❌ 69**, with `n/a` 3, across all 147 scored cells — 126 matrix depth cells (14
+**✅ 24 / ⚠️ 51 / ❌ 69**, with `n/a` 3, across all 147 scored cells — 126 matrix depth cells (14
 rows × 9 columns) and 21 business rule cells (7 rows × 3 columns). The `Status` columns of both
 tables hold row verdicts rather than marks and are outside that population; for reference the
 matrix's 14 read `⚠️ 9 / ❌ 5` and the business rule table's 7 read `⚠️ 3 / ❌ 4`.

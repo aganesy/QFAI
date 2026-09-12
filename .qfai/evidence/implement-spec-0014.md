@@ -45,6 +45,7 @@ confirm it had returned to the clean value.
 - TC-ref: TC-0014-0034
 - Run output retained: no
 - Backfill note: the row's cell recorded a verdict with no command and no output, so nothing of the original run survives. The test was re-run for the GREEN below, and the mutation below was applied and reverted to establish that the test discriminates. No reviewer verdict is recorded because none can be reconstructed.
+
 - RED failure mode: falsifiability
 
 #### Round 1
