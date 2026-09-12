@@ -226,6 +226,9 @@ mutation only removes refusals.
 ## Coverage Depth Matrix
 
 See `.qfai/evidence/coverage-depth-spec-0014.md`.
+Totals: ✅ 24 / ⚠️ 33 / ❌ 58, with 3 not applicable, across 118 scored cells —
+81 matrix depth cells, 9 matrix status cells, 21 business rule cells and 7
+business rule status cells.
 
 ## Work Orders Summary
 

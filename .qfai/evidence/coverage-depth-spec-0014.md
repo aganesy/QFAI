@@ -661,9 +661,8 @@ them is repaired here; this artifact scores coverage and does not edit tests, le
 
 ## Follow-up this matrix does not discharge
 
-There is no `.qfai/evidence/atdd-spec-0014.md`. `QFAI-ATDD-133` requires the stage evidence to carry
-a `## Coverage Depth Matrix` section that links to this file and restates the counted totals beside
-it. Those totals are:
+`QFAI-ATDD-133` requires the stage evidence to carry a `## Coverage Depth Matrix` section that links
+to this file and restates the counted totals beside it. Those totals are:
 
 **✅ 24 / ⚠️ 33 / ❌ 58**, with `n/a 3`, across all 118 scored cells — 81 matrix depth cells, 9
 matrix `Status` cells, 21 business rule scored cells and 7 business rule `Status` cells.
