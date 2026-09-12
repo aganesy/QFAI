@@ -144,8 +144,8 @@ export function addRuleCitations(
 
   const managed = existing.slice(start, endAt);
   const lines = managed.split("\n");
-  // The last rule bullet, not the last line: the section closes with prose, and
-  // a bullet after it would read as part of that paragraph.
+  // After the last rule bullet, not the last line: the section closes with
+  // prose, and a bullet after it would read as part of that paragraph.
   let insertAfter = -1;
   for (let index = 0; index < lines.length; index += 1) {
     const line = lines[index];
@@ -153,7 +153,15 @@ export function addRuleCitations(
       insertAfter = index;
     }
   }
-  if (insertAfter === -1) return existing;
+  if (insertAfter === -1) {
+    // A section with no rule bullet left — every one deleted, or the citations
+    // rewritten as something else. Discarding the bullets here would leave a
+    // rule the run shipped uncited for good, so they go at the end of the
+    // section as their own block, separated from whatever precedes them.
+    const trailing = lines.at(-1) === "" ? 1 : 0;
+    lines.splice(lines.length - trailing, 0, "", ...bullets, "");
+    return `${existing.slice(0, start)}${lines.join("\n")}${existing.slice(endAt)}`;
+  }
 
   lines.splice(insertAfter + 1, 0, ...bullets);
   return `${existing.slice(0, start)}${lines.join("\n")}${existing.slice(endAt)}`;

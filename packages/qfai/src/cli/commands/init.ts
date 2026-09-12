@@ -384,6 +384,22 @@ export async function runInit(options: InitOptions): Promise<void> {
   if (!options.dryRun && rootResult.copied.includes(configPath)) {
     await aimTestFileGlobsAtRepository(destRoot, configPath);
   }
+  // Runs immediately AFTER the create-only root copy, and before anything else
+  // that can throw. The files it repairs are exactly the ones that copy skipped
+  // because the project already had them, and the signal it reads — which
+  // masters this run wrote — is available only in the run that wrote them. A
+  // step between the two that failed would leave the master on disk and its
+  // citation unwritten, with the next run seeing a master it did not write.
+  //
+  // SIMPLIFIED: the window is one operation wide rather than closed.
+  // Lift when: init records per-master provenance, which the rule-master upgrade
+  // path needs for its own reasons.
+  const entryPointRulesResult = await ensureAgentEntryPointRules(
+    rootAssets,
+    destRoot,
+    options.dryRun,
+    newlyWrittenRuleMasters(rootResult.copied, destRoot),
+  );
   const qfaiResult = await copyTemplateTree(qfaiAssets, destQfai, {
     force: false,
     dryRun: options.dryRun,
@@ -430,17 +446,6 @@ export async function runInit(options: InitOptions): Promise<void> {
   const legacyEvidenceIgnoreResult = await ensureLegacyEvidenceIgnoreNegations(
     destRoot,
     options.dryRun,
-  );
-  // Runs AFTER the create-only root copy: the files it repairs are exactly the
-  // ones that copy skipped because the project already had them.
-  const entryPointRulesResult = await ensureAgentEntryPointRules(
-    rootAssets,
-    destRoot,
-    options.dryRun,
-    // Masters this run wrote. A section cannot have cited one of them before,
-    // so a bullet missing for one is a rule that never shipped here rather than
-    // one the project removed.
-    newlyWrittenRuleMasters(rootResult.copied, destRoot),
   );
   // Its template sits outside `root/`, so no earlier copy has touched the file:
   // this owns both writing it and merging into one the project already had.
@@ -2862,6 +2867,12 @@ async function ensureAgentEntryPointRules(
         skipped.push(target);
         continue;
       }
+      const refusal = await refuseUnsafeEntryPointRewrite(target, existing);
+      if (refusal !== null) {
+        error(`  WARNING: ${target} was left unchanged. ${refusal}`);
+        skipped.push(target);
+        continue;
+      }
       if (dryRun) {
         info(`  would update: ${target} (cite the newly shipped rule masters)`);
         copied.push(target);
@@ -2889,6 +2900,44 @@ async function ensureAgentEntryPointRules(
   }
 
   return { copied, skipped };
+}
+
+/**
+ * Why this file must not be rewritten, or `null` when rewriting it is safe.
+ *
+ * The create-only copy treats a symlink as occupied and never follows it. This
+ * path revisits a file the project owns, so it needs the same protection and two
+ * more: a file whose bytes are not UTF-8 would be written back as its lossy
+ * decoding, and a file saved between the read and the write would lose that
+ * save.
+ *
+ * The last is a check, not a lock: an editor can still save in the window
+ * between this read and the write below. It narrows a silent overwrite to a race
+ * measured in milliseconds, which is what a single-process CLI can honestly
+ * offer.
+ */
+async function refuseUnsafeEntryPointRewrite(
+  target: string,
+  readEarlier: string,
+): Promise<string | null> {
+  const link = await lstat(target).catch(() => null);
+  if (link?.isSymbolicLink() === true) {
+    return `It is a symbolic link, and writing through it would change the file it points at — which may be shared, or outside this project. Add the rule citations to the link's target by hand.`;
+  }
+
+  const bytes = await readFile(target).catch(() => null);
+  if (bytes === null) {
+    return `It could not be read back.`;
+  }
+  // A lossy decode is not detectable from the string, so the bytes are compared
+  // with the re-encoded decoding: they differ exactly when a byte was replaced.
+  if (!bytes.equals(Buffer.from(bytes.toString("utf-8"), "utf-8"))) {
+    return `Its bytes are not valid UTF-8, and rewriting it would replace the invalid ones. Convert it to UTF-8 and run this again.`;
+  }
+  if (bytes.toString("utf-8") !== readEarlier) {
+    return `It changed while this run was working. Run this again once the file has settled.`;
+  }
+  return null;
 }
 
 /**

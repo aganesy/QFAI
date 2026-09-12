@@ -16,7 +16,7 @@
  * that had already wired the masters in by hand.
  */
 
-import { mkdtemp, readFile, readdir, rm, stat, writeFile } from "node:fs/promises";
+import { mkdtemp, readFile, readdir, rm, stat, symlink, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
@@ -25,6 +25,7 @@ import { describe, expect, it } from "vitest";
 import { runInit } from "../../src/cli/commands/init.js";
 import {
   AGENT_ENTRY_POINT_FILES,
+  addRuleCitations,
   QFAI_AGENT_RULES_BEGIN,
   QFAI_AGENT_RULES_END,
   citedRuleMasters,
@@ -271,5 +272,99 @@ describe("a later init cites a rule master it is shipping for the first time", (
       // The bullet goes above the closing prose, not into it.
       expect(after.indexOf(master)).toBeLessThan(after.indexOf(note));
     });
+  });
+});
+
+/**
+ * The update path revisits a file the project owns, so it carries the create-only
+ * copy's protections and two the copy never needed.
+ */
+describe("the update path refuses a rewrite it cannot make safely", () => {
+  it("leaves a symlinked entry point alone and says why", async () => {
+    await withProject(async (root) => {
+      const master = ".agents/rules/grilling.md";
+      await writeFile(path.join(root, "AGENTS.md"), PROJECT_TEXT, "utf-8");
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+
+      // The project's file moves aside and the entry point becomes a link to
+      // it, as a repository sharing one instruction file would have.
+      const shared = path.join(root, "shared-instructions.md");
+      const written = (await readEntryPoint(root, "AGENTS.md"))
+        .split("\n")
+        .filter((line) => !(line.startsWith("- ") && line.includes(master)))
+        .join("\n");
+      await writeFile(shared, written, "utf-8");
+      await rm(path.join(root, "AGENTS.md"));
+      await rm(path.join(root, ...master.split("/")), { force: true });
+      try {
+        await symlink(shared, path.join(root, "AGENTS.md"));
+      } catch {
+        // A host without symlink permission cannot exercise this case.
+        return;
+      }
+
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+
+      // The link's target is untouched, so the shared file did not gain a
+      // citation this project asked for.
+      expect(await readFile(shared, "utf-8")).toBe(written);
+    });
+  });
+
+  it("leaves a file whose bytes are not UTF-8 unchanged", async () => {
+    await withProject(async (root) => {
+      const master = ".agents/rules/grilling.md";
+      await writeFile(path.join(root, "AGENTS.md"), PROJECT_TEXT, "utf-8");
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+
+      const written = (await readEntryPoint(root, "AGENTS.md"))
+        .split("\n")
+        .filter((line) => !(line.startsWith("- ") && line.includes(master)))
+        .join("\n");
+      // A legacy-encoded byte in the project's own prose. Decoded as UTF-8 it
+      // becomes U+FFFD, and writing that back would corrupt the line.
+      const bytes = Buffer.concat([Buffer.from([0xff, 0xfe]), Buffer.from(written, "utf-8")]);
+      await writeFile(path.join(root, "AGENTS.md"), bytes);
+      await rm(path.join(root, ...master.split("/")), { force: true });
+
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+
+      expect(await readFile(path.join(root, "AGENTS.md"))).toEqual(bytes);
+    });
+  });
+});
+
+describe("a section with no rule bullet left still gains the new citation", () => {
+  it("adds the bullets as their own block inside the markers", () => {
+    // Every bullet deleted, markers kept. Without a fallback insertion point the
+    // pending bullets are discarded and the rule stays uncited for good.
+    const section = [
+      QFAI_AGENT_RULES_BEGIN,
+      "",
+      "## Cross-AI rules (master)",
+      "",
+      "We keep our own summary here instead.",
+      "",
+      QFAI_AGENT_RULES_END,
+      "",
+    ].join("\n");
+    const template = [
+      QFAI_AGENT_RULES_BEGIN,
+      "",
+      "- `.agents/rules/grilling.md` — interview the decision tree.",
+      "",
+      QFAI_AGENT_RULES_END,
+    ].join("\n");
+
+    const merged = addRuleCitations(section, template, [".agents/rules/grilling.md"]);
+
+    expect(merged).toContain("- `.agents/rules/grilling.md` — interview the decision tree.");
+    expect(merged).toContain("We keep our own summary here instead.");
+    // Inside the markers, and the section still closes with its end marker.
+    expect(merged.indexOf(".agents/rules/grilling.md")).toBeLessThan(
+      merged.indexOf(QFAI_AGENT_RULES_END),
+    );
+    expect(occurrences(merged, QFAI_AGENT_RULES_BEGIN)).toBe(1);
+    expect(occurrences(merged, QFAI_AGENT_RULES_END)).toBe(1);
   });
 });
