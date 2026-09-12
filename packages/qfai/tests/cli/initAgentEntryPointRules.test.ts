@@ -16,7 +16,18 @@
  * that had already wired the masters in by hand.
  */
 
-import { mkdir, mkdtemp, readFile, readdir, rm, stat, symlink, writeFile } from "node:fs/promises";
+import {
+  chmod,
+  mkdir,
+  mkdtemp,
+  readFile,
+  readdir,
+  rm,
+  stat,
+  symlink,
+  utimes,
+  writeFile,
+} from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
@@ -594,11 +605,95 @@ describe("staging an interrupted run left behind is reclaimed", () => {
       const unrelated = path.join(root, "notes.tmp");
       await writeFile(abandoned, PROJECT_TEXT, "utf-8");
       await writeFile(unrelated, PROJECT_TEXT, "utf-8");
+      // Sat still long enough that no run is using it.
+      const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000);
+      await utimes(abandoned, yesterday, yesterday);
 
       await runInit({ dir: root, force: false, dryRun: false, yes: true });
 
       expect(await readdir(root)).not.toContain(path.basename(abandoned));
       expect(await readFile(unrelated, "utf-8")).toBe(PROJECT_TEXT);
+    });
+  });
+});
+
+describe("a hand-wired file this run cannot extend is named", () => {
+  it("says which masters to add when the citations are not a bullet list", async () => {
+    await withProject(async (root) => {
+      const master = ".agents/rules/grilling.md";
+      await writeFile(path.join(root, "AGENTS.md"), PROJECT_TEXT, "utf-8");
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+
+      // Cited in prose, which is not a list a bullet can be added to. Appending
+      // the whole section instead would restate every citation the file has.
+      const section = extractManagedRulesSection(await readTemplate("AGENTS.md"));
+      const others = citedRuleMasters(section ?? "").filter((cited) => cited !== master);
+      const prose = [PROJECT_TEXT, "We read " + others.join(", ") + " on every change.", ""].join(
+        "\n",
+      );
+      await writeFile(path.join(root, "AGENTS.md"), prose, "utf-8");
+
+      const stderr = await initCapturingStderr(root);
+
+      expect(await readEntryPoint(root, "AGENTS.md")).toBe(prose);
+      expect(stderr).toContain("not as a bullet list this run can add a line to");
+      expect(stderr).toContain(master);
+    });
+  });
+});
+
+describe("the staged write keeps the file's own permissions", () => {
+  it("restores the target's mode rather than the process default", async () => {
+    await withProject(async (root) => {
+      const master = ".agents/rules/grilling.md";
+      await writeFile(path.join(root, "AGENTS.md"), PROJECT_TEXT, "utf-8");
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+
+      const target = path.join(root, "AGENTS.md");
+      const trimmed = (await readEntryPoint(root, "AGENTS.md"))
+        .split("\n")
+        .filter((line) => !(line.startsWith("- ") && line.includes(master)))
+        .join("\n");
+      await writeFile(target, trimmed, "utf-8");
+      await rm(path.join(root, ...master.split("/")), { force: true });
+      await chmod(target, 0o600);
+      const before = (await stat(target)).mode & 0o7777;
+
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+
+      expect(await readEntryPoint(root, "AGENTS.md")).toContain(master);
+      // A file the project had kept to itself is not published by the rewrite.
+      expect((await stat(target)).mode & 0o7777).toBe(before);
+    });
+  });
+});
+
+describe("what the reclaim refuses to remove", () => {
+  it("leaves a name the writer could not have produced, and a fresh one", async () => {
+    await withProject(async (root) => {
+      const hour = 60 * 60 * 1000;
+      // Right shape, sat still for a day: abandoned.
+      const stale = path.join(root, ".qfai-entry-6f1d4b4e-0c2a-4f1e-9b0d-2a7c5e8f1a33.tmp");
+      // Right shape, written a moment ago: another init is using it.
+      const fresh = path.join(root, ".qfai-entry-0b2c9d1e-7a3f-4c5b-8e6d-1f2a3b4c5d6e.tmp");
+      // Wrong shape. The dots are literal and the layout is the one
+      // `randomUUID` writes, so neither of these is the writer's.
+      const notOurs = [
+        path.join(root, "xqfai-entry-6f1d4b4e-0c2a-4f1e-9b0d-2a7c5e8f1a33Ytmp"),
+        path.join(root, ".qfai-entry-6f1d4b4e0c2a4f1e9b0d2a7c5e8f1a33----.tmp"),
+      ];
+      for (const file of [stale, fresh, ...notOurs]) {
+        await writeFile(file, PROJECT_TEXT, "utf-8");
+      }
+      const old = new Date(Date.now() - 24 * hour);
+      await utimes(stale, old, old);
+
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+
+      const left = await readdir(root);
+      expect(left).not.toContain(path.basename(stale));
+      expect(left).toContain(path.basename(fresh));
+      for (const file of notOurs) expect(left).toContain(path.basename(file));
     });
   });
 });

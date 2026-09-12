@@ -168,7 +168,8 @@ file that has no section at all.
 masters it does not name go into the list it keeps, one bullet each; the section
 is not appended on top, which would restate every citation the file already has.
 Nothing records a bullet as removed there, so an uncited master is one the file
-never named.
+never named. Where the citations are not a bullet list a line can be added to —
+prose, a numbered list — the run names the masters to add and writes nothing.
 
 **What it refuses, naming the file and the reason.** A symbolic link at the
 target or at any path component below the destination root, a hard link with
@@ -184,9 +185,21 @@ instead, because a silent skip leaves the rule uncited and gives the next run no
 reason to look at the file again.
 
 **How it writes.** The merged text is staged beside the target and renamed over
-it, so an interrupted write leaves the adopter's file as it was. A staging file
-an earlier run was killed before renaming is removed at the start of the next
-one, matched on the writer's own name shape.
+it, so an interrupted write leaves the adopter's file as it was. The staging
+file is created owner-only and takes the target's own mode, and its ownership,
+before the rename: a file the project kept to itself is not published by being
+rewritten.
+
+A staging file an earlier run was killed before renaming is removed at the start
+of the next one. Two things bound that: the name has to be one the writer could
+have produced — the prefix, the identifier layout, the suffix — and the file has
+to have sat still for an hour, so a second init running now keeps the file it is
+about to rename.
+
+**What a refusal does not do.** Queue the citation for later. A master this run
+copied is one no later run offers again, because the file is on disk and the
+next copy skips it. The refusal names the masters that stayed uncited, and
+repairing the file does not bring them with it.
 
 **What the signal cannot tell.** A project that deleted both the bullet and the
 master gets both back: the same run writes the file again, so the citation

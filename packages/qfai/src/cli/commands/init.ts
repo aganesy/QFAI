@@ -5,6 +5,7 @@ import type { Dirent, Stats } from "node:fs";
 import {
   access,
   chmod,
+  chown,
   copyFile,
   lstat,
   mkdir,
@@ -2895,7 +2896,10 @@ async function ensureAgentEntryPointRules(
       }
       const refusal = await refuseUnsafeEntryPointRewrite(target, existing, destRoot);
       if (refusal !== null) {
-        error(`  WARNING: ${formatReportPath(target)} was left unchanged. ${refusal}`);
+        const pending = newlyWritten.filter((master) => !existing.includes(master));
+        error(
+          `  WARNING: ${formatReportPath(target)} was left unchanged. ${refusal}${pendingNote(pending)}`,
+        );
         skipped.push(target);
         continue;
       }
@@ -2918,25 +2922,38 @@ async function ensureAgentEntryPointRules(
     // instead. With no markers nothing records a bullet as removed, so every
     // uncited master is one the file never named.
     if (citedRuleMasters(existing).length > 0) {
-      const merged = addRuleCitationsToList(existing, section, citedRuleMasters(section));
-      if (merged !== existing) {
-        const refusal = await refuseUnsafeEntryPointRewrite(target, existing, destRoot);
-        if (refusal !== null) {
-          error(`  WARNING: ${formatReportPath(target)} was left unchanged. ${refusal}`);
-          skipped.push(target);
-          continue;
-        }
-        if (dryRun) {
-          info(`  would update: ${formatReportPath(target)} (cite the uncited rule masters)`);
-        } else {
-          await replaceEntryPointFile(target, merged);
-          info(
-            `  updated: ${formatReportPath(target)} (cited the uncited rule masters; nothing else changed)`,
-          );
-        }
-        copied.push(target);
+      const uncited = citedRuleMasters(section).filter((master) => !existing.includes(master));
+      const merged = addRuleCitationsToList(existing, section, uncited);
+      if (merged === existing) {
+        // The file cites rules somewhere this run cannot extend — in prose, a
+        // numbered list, an indented bullet. Appending the whole section would
+        // restate what it already says, which is what this branch exists to
+        // avoid, so the run names the lines instead of writing them.
+        error(
+          `  WARNING: ${formatReportPath(target)} was left unchanged. It cites rule masters, but not as a ` +
+            `bullet list this run can add a line to, so add ${quoteList(uncited)} to it by hand.`,
+        );
+        skipped.push(target);
         continue;
       }
+      const refusal = await refuseUnsafeEntryPointRewrite(target, existing, destRoot);
+      if (refusal !== null) {
+        error(
+          `  WARNING: ${formatReportPath(target)} was left unchanged. ${refusal}${pendingNote(uncited)}`,
+        );
+        skipped.push(target);
+        continue;
+      }
+      if (dryRun) {
+        info(`  would update: ${formatReportPath(target)} (cite the uncited rule masters)`);
+      } else {
+        await replaceEntryPointFile(target, merged);
+        info(
+          `  updated: ${formatReportPath(target)} (cited the uncited rule masters; nothing else changed)`,
+        );
+      }
+      copied.push(target);
+      continue;
     }
 
     // The append lands on the same file the edit above would have, so it takes
@@ -3028,7 +3045,10 @@ async function citeNewMastersInCopilotInstructions(
   }
   const refusal = await refuseUnsafeEntryPointRewrite(target, existing, destRoot);
   if (refusal !== null) {
-    error(`  WARNING: ${formatReportPath(target)} was left unchanged. ${refusal}`);
+    const pending = newlyWritten.filter((master) => !existing.includes(master));
+    error(
+      `  WARNING: ${formatReportPath(target)} was left unchanged. ${refusal}${pendingNote(pending)}`,
+    );
     report.skipped.push(target);
     return;
   }
@@ -3059,8 +3079,35 @@ async function firstLinkedComponent(target: string, destRoot: string): Promise<s
   return null;
 }
 
-/** The name shape `replaceEntryPointFile` stages under. */
-const ENTRY_POINT_STAGING = /^.qfai-entry-[0-9a-fA-F-]{36}.tmp$/;
+/** A list of paths as the messages write them. */
+function quoteList(paths: readonly string[]): string {
+  return paths.map((entry) => "`" + entry + "`").join(", ");
+}
+
+/**
+ * What a refused rewrite leaves undone, appended to the refusal.
+ *
+ * A master this run copied is one no later run will offer again: the file is on
+ * disk, so the next copy skips it and the list of newly written masters comes
+ * back empty. Repairing the file therefore does not bring the citation with it,
+ * and a refusal that does not say so reads as one.
+ */
+function pendingNote(masters: readonly string[]): string {
+  if (masters.length === 0) return "";
+  return ` A later run does not retry this: add ${quoteList(masters)} to the file yourself.`;
+}
+/**
+ * The name shape `replaceEntryPointFile` stages under.
+ *
+ * The prefix, the exact layout `randomUUID` writes, and the suffix. A looser
+ * pattern — an unescaped dot, or any run of hex and hyphens — matches names the
+ * writer could never have produced, and this loop deletes what it matches.
+ */
+const ENTRY_POINT_STAGING =
+  /^\.qfai-entry-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\.tmp$/;
+
+/** How long a staging file must have sat still before a run reclaims it. */
+const ENTRY_POINT_STAGING_STALE_MS = 60 * 60 * 1000;
 
 /**
  * Removes staging files an interrupted run left beside an entry point.
@@ -3069,15 +3116,28 @@ const ENTRY_POINT_STAGING = /^.qfai-entry-[0-9a-fA-F-]{36}.tmp$/;
  * clears the staging file when the write itself fails. A process killed between
  * the write and the rename never reaches that, and what it leaves behind is a
  * full copy of the project's instructions sitting untracked in the repository
- * root. Only the writer's own name shape is removed, and a file that will not
- * delete is not worth stopping an init over.
+ * root.
+ *
+ * Two things bound what it removes. The name has to be one the writer could
+ * have produced, and the file has to have sat still long enough that no run is
+ * using it: a second init started a moment ago stages under the same shape, and
+ * deleting its file makes its rename fail and loses the citation it was
+ * writing. A file that will not delete is not worth stopping an init over.
  */
 async function reclaimEntryPointStaging(destRoot: string): Promise<void> {
   for (const dir of [destRoot, path.join(destRoot, ".github")]) {
+    // The rewrite refuses a linked path component and so does this. A linked
+    // `.github` would have the loop reading and deleting inside whatever it
+    // points at, which is a directory this project does not own.
+    if ((await firstLinkedComponent(dir, destRoot)) !== null) continue;
     const entries = await readdir(dir).catch(() => []);
     for (const entry of entries) {
       if (!ENTRY_POINT_STAGING.test(entry)) continue;
-      await rm(path.join(dir, entry), { force: true }).catch(() => {
+      const staging = path.join(dir, entry);
+      const written = await lstat(staging).catch(() => null);
+      if (written === null || !written.isFile()) continue;
+      if (Date.now() - written.mtimeMs < ENTRY_POINT_STAGING_STALE_MS) continue;
+      await rm(staging, { force: true }).catch(() => {
         // Left for the next run to try again; it is not this run's to report.
       });
     }
@@ -3091,11 +3151,28 @@ async function reclaimEntryPointStaging(destRoot: string): Promise<void> {
  * `ENOSPC`, an `EIO` or a kill mid-write leaves the adopter's file exactly as
  * it was. Writing in place would truncate first, and what is lost is the
  * project's own instructions outside the managed section.
+ *
+ * The staging file carries the whole of those instructions, so it is created
+ * owner-only rather than at whatever the process default is, and the target's
+ * own mode is restored before the rename — a file the project had kept to
+ * itself stays that way, and one the project had made group-writable does not
+ * come back read-only. Ownership goes with it where the platform has it: an
+ * init run under `sudo` would otherwise hand the adopter's file to root.
  */
 async function replaceEntryPointFile(target: string, content: string): Promise<void> {
   const staging = path.join(path.dirname(target), `.qfai-entry-${randomUUID()}.tmp`);
+  const original = await stat(target).catch(() => null);
   try {
-    await writeFile(staging, content, "utf-8");
+    await writeFile(staging, content, { encoding: "utf-8", mode: 0o600 });
+    if (original !== null) {
+      await chmod(staging, original.mode & 0o7777);
+      if (typeof process.getuid === "function") {
+        await chown(staging, original.uid, original.gid).catch(() => {
+          // Not permitted, or a platform without ownership. The mode is
+          // restored either way, and the rename is what the adopter needs.
+        });
+      }
+    }
     await rename(staging, target);
   } catch (error: unknown) {
     await rm(staging, { force: true }).catch(() => {
