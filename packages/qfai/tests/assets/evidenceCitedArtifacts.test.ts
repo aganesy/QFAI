@@ -56,6 +56,26 @@ const CITATION_CHARACTER = /[A-Za-z0-9._/*?+-]/;
 const GROUP_CLOSERS: Readonly<Record<string, string>> = { "(": ")", "{": "}", "[": "]" };
 
 /**
+ * Whether the root found at `from` opens a citation, or ends one.
+ *
+ * The root is searched for anywhere on the line, so a path that merely holds it
+ * — `/tmp/run-42/.qfai/report/validate.json`, a name belonging to a machine or
+ * another tree — yielded the suffix after it, and the suffix resolved against
+ * this repository's own tracked file. The record then read as clone-readable
+ * provenance for a file nobody had.
+ *
+ * A citation opens where the text before it is not path text. The one exception
+ * is the explicit `./` prefix, which writes a repository-relative path rather
+ * than a longer one.
+ */
+function opensACitation(line: string, from: number): boolean {
+  if (from >= 2 && line.slice(from - 2, from) === "./") {
+    return from === 2 || !CITATION_CHARACTER.test(line[from - 3] ?? "");
+  }
+  return from === 0 || !CITATION_CHARACTER.test(line[from - 1] ?? "");
+}
+
+/**
  * Every citation a line carries, taken whole.
  *
  * A regular expression cannot balance, and the dialect nests: `@(a|+(b|c))` is
@@ -69,6 +89,7 @@ function citationsIn(line: string): string[] {
   for (const start of [...line.matchAll(CITED_GENERATED_ROOT)]) {
     const from = start.index;
     if (from === undefined) continue;
+    if (!opensACitation(line, from)) continue;
     let index = from + start[0].length;
     const closers: string[] = [];
     let usable = true;
@@ -561,6 +582,30 @@ function namesASet(cited: string): boolean {
 }
 
 /**
+ * Whether a wildcard is being allowed to match a name that has to be written.
+ *
+ * `*` compiles to any run of characters that is not a separator, which a
+ * leading dot satisfies — while the globs this project actually scans with do
+ * not match one unless it is spelled. The gap shows up where it matters most: a
+ * generated directory keeps a tracked `.gitignore` so the directory survives
+ * with nothing generated in it, and `.qfai/report/**` resolved against exactly
+ * that, passing a record that claims the run's artifacts are there.
+ *
+ * A dot-leading name counts only where the citation spells one that matches it,
+ * so `.qfai/report/.*` still resolves and a plain wildcard does not.
+ */
+function hidesADotName(cited: string, candidate: string): boolean {
+  const spellings = cited.split("/").filter((part) => part.startsWith("."));
+  return candidate
+    .split("/")
+    .some(
+      (segment) =>
+        segment.startsWith(".") &&
+        !spellings.some((part) => new RegExp(`^${compileGlob(part)}$`).test(segment)),
+    );
+}
+
+/**
  * A cited path resolves when git tracks it, or tracks something under it.
  *
  * A glob resolves when it matches at least one tracked path, which is the whole
@@ -585,7 +630,7 @@ function resolves(cited: string): boolean {
     // every pack it names.
     const pattern = globToRegExp(cited);
     for (const candidate of [...tracked.files, ...tracked.directories]) {
-      if (pattern.test(candidate)) return true;
+      if (pattern.test(candidate) && !hidesADotName(cited, candidate)) return true;
     }
     return false;
   }
@@ -689,6 +734,17 @@ describe("what the scan counts as a citation", () => {
 
   it("reads the legacy output tree", () => {
     expect(matches("Fallback: `.qfai/output/verify.json`")).toEqual([".qfai/output/verify.json"]);
+  });
+
+  it("counts nothing where the root is the tail of a longer path", () => {
+    // A path naming another tree — a temporary run directory, a checkout on the
+    // machine that produced the record — holds the root too. Measured from
+    // there, the suffix resolves against this repository's own tracked file,
+    // and a name nobody here can open reads as clone-readable provenance.
+    expect(matches("- `/tmp/run-42/.qfai/report/validate.json` — the runner's copy")).toEqual([]);
+    expect(matches("- `../other-clone/.qfai/report/validate.json`")).toEqual([]);
+    // The explicit repository-relative prefix is still a citation.
+    expect(matches("- `./.qfai/report/validate.json`")).toEqual([".qfai/report/validate.json"]);
   });
 
   it("takes a brace list whole", () => {
@@ -801,6 +857,20 @@ describe("a glob is a claim about a set", () => {
         ".qfai/discussion/discussion-1/a/b/c.md",
       ),
     ).toBe(true);
+  });
+
+  it("does not let a wildcard stand in for a name that has to be written", () => {
+    // The control file that keeps a generated directory in the tree is the one
+    // path there when nothing has been generated, and the globs this project
+    // scans with do not match it. A record claiming the run's artifacts are
+    // under the tree passed on it alone.
+    const control = ".qfai/report/.gitignore";
+    expect(globToRegExp(".qfai/report/**").test(control)).toBe(true);
+    expect(hidesADotName(".qfai/report/**", control)).toBe(true);
+    expect(hidesADotName(".qfai/report/**", ".qfai/report/validate.json")).toBe(false);
+    // Spelled, it is a name like any other.
+    expect(hidesADotName(".qfai/report/.gitignore", control)).toBe(false);
+    expect(hidesADotName(".qfai/report/.*", control)).toBe(false);
   });
 
   it("claims every name in a brace list", () => {
