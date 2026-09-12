@@ -6,7 +6,7 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
-- **Every question to the user arrives as a structured choice** (#1611). Article X
+- **Every question to the user arrives in the shape its answer has** (#1611). Article X
   said the tool must be used where available and never said whether any question
   was outside that, so a light one could read as outside it — and the light one
   is where an agent goes when it would rather not ask. None is exempt now.

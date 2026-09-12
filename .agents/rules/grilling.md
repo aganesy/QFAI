@@ -95,8 +95,10 @@ round across two carriers costs the thing a round exists for: the user seeing
 what is being decided together. So the round is asked as a normal message **in
 the shape each answer has** — numbered choices where the question offers
 choices, a plain request for the value where it asks for a fact — keeping the
-choice semantics where there are choices, and saying which question the tool
-could not carry and why. `user-questions.md` § 5 owns the rest of that fallback.
+choice semantics where there are choices, and saying why the tool was not used.
+Where the reason is the third one, say which question it could not carry: the
+other two are about the tool, and naming a question there would invent a cause.
+`user-questions.md` § 5 owns the rest of that fallback.
 A session is never skipped for want of a tool.
 
 **Where the tool takes fewer questions than the round holds**, deliver the round
