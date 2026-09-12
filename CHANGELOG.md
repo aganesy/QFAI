@@ -4,6 +4,25 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ## [Unreleased]
 
+### Fixed
+
+- **The prototyping evidence layout is recorded where the Drift Protocol looks
+  for it** (#1626). One acceptance criterion says the aggregate `screenshots/`
+  and `html/` directories are no longer accepted as the active source, and the
+  required-path check reads them first, the command documents them, and the
+  iterate command keeps writing them.
+
+  Only that one layer disagrees. The requirement above it says the legacy
+  layout is no longer _the_ active source, the business rule says legacy paths
+  must not be _required_, and the example has an iteration capture accepted with
+  no legacy lookup raised — all three hold of the product as it stands.
+
+  `CR-20260913-0002` records both sides layer by layer, blocks the one ledger
+  row whose obligation turns on the disputed clause, and puts the choice: the
+  criterion is right and the lookup moves, the code is right and the criterion
+  narrows to what its own rule and example already state, or the pack says
+  nothing about the active layout beyond not requiring the legacy one.
+
 ## [1.12.0] - 2026-09-12
 
 ### Added
@@ -1986,23 +2005,6 @@ unadjudicated`, read off a Work Orders Summary row the session writes rather
   stale every verdict in the spec when any cell moved. A record re-attestation
   closes it, because the revision has not moved — and it is not a rubber stamp,
   since what it re-signs is a judgement over a subject that has grown.
-
-- **The prototyping evidence layout is recorded where the Drift Protocol looks
-  for it** (#1626). One acceptance criterion says the aggregate `screenshots/`
-  and `html/` directories are no longer accepted as the active source, and the
-  required-path check reads them first, the command documents them, and the
-  iterate command keeps writing them.
-
-  Only that one layer disagrees. The requirement above it says the legacy
-  layout is no longer _the_ active source, the business rule says legacy paths
-  must not be _required_, and the example has an iteration capture accepted with
-  no legacy lookup raised — all three hold of the product as it stands.
-
-  `CR-20260913-0002` records both sides layer by layer, blocks the one ledger
-  row whose obligation turns on the disputed clause, and puts the choice: the
-  criterion is right and the lookup moves, the code is right and the criterion
-  narrows to what its own rule and example already state, or the pack says
-  nothing about the active layout beyond not requiring the legacy one.
 
 ## [1.11.1] - 2026-09-10
 
