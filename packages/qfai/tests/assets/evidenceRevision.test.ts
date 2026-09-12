@@ -641,6 +641,17 @@ describe("the working-tree address has one notation", () => {
       expect(text).toContain("Do not record an address over one");
       // Decoding a path that is not valid UTF-8 turns distinct names into one.
       expect(text).toContain("Bytes, never a decoded string");
+      // An executable bit that changed on a tracked file produced no diff at all
+      // where the setting is off, and checkouts disagree about it by default.
+      expect(text).toContain("-c core.fileMode=true");
+      // Three states git does not call dirty, each of which leaves the address
+      // where it was while the filesystem the tests read is a different one.
+      expect(text).toContain("A clean filter stops the address");
+      expect(text).toContain("check-attr --stdin -z filter");
+      expect(text).toContain("A path hidden from the index stops the address");
+      expect(text).toContain("An uninitialized submodule stops the address");
+      // A link to a 0640 file reports 0640 followed and 0777 as itself.
+      expect(text).toContain("Read without following the link");
       expect(text).toContain("diff.indentHeuristic");
       expect(text).toContain("-c diff.suppressBlankEmpty=false");
       // The short format cannot tell two dirty submodule states apart, so an

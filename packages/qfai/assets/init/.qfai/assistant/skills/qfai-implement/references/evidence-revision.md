@@ -43,7 +43,8 @@ check. Gate item 10 rejects any other shape wherever a revision is recorded:
               ':(exclude,glob).qfai/evidence/**'
               ':(exclude,glob).qfai/review/**')
      git -C "$root" rev-parse HEAD
-     git -C "$root" -c core.quotePath=false -c diff.submodule=short -c diff.suppressBlankEmpty=false diff HEAD \
+     git -C "$root" -c core.quotePath=false -c core.fileMode=true -c diff.submodule=short \
+       -c diff.suppressBlankEmpty=false diff HEAD \
        --no-color --no-ext-diff --no-textconv -O/dev/null --ignore-submodules=none --text --full-index --no-renames \
        --diff-algorithm=myers --indent-heuristic --src-prefix=a/ --dst-prefix=b/ --unified=3 --inter-hunk-context=0 \
        -- . "${exclude[@]}"
@@ -67,6 +68,7 @@ check. Gate item 10 rejects any other shape wherever a revision is recorded:
      | `--inter-hunk-context=0` and `-c diff.suppressBlankEmpty=false` | `diff.interHunkContext` merges two nearby hunks into one, and `diff.suppressBlankEmpty` changes the prefix on an empty context line                                                                                                                                                |
      | `--no-textconv`                                                 | A `.gitattributes` diff driver with `textconv` converts a file before diffing, and can render a real change as an empty diff. `--no-ext-diff` does not cover it                                                                                                                    |
      | `--text`                                                        | A `.gitattributes` driver marked `binary` in one checkout and not in another gives the same change a binary patch here and a text patch there. Treating everything as text settles it, and a binary file's own change moves the address, which `Binary files ... differ` never did |
+     | `-c core.fileMode=true`                                         | With it off, an executable bit that changed on a tracked file produces no diff at all — the same tree, a different behaviour under test and packaging, and an address that never moved. Checkouts disagree about this setting by default                                           |
      | `-- . "${exclude[@]}"`                                          | The exclusions below are part of the command, not a later filter. Applied afterwards they are a second operation two implementations can disagree about, and skipped altogether a ledger write during the phase moves the address the phase is recording                           |
 
      **A dirty submodule stops the address.** The short format writes the same
@@ -76,6 +78,30 @@ check. Gate item 10 rejects any other shape wherever a revision is recorded:
      taken before it reads as fresh. Commit or stash the submodule's work and
      take the address again, or record the observation against the submodule's
      own tree. Do not record an address over a dirty submodule.
+
+     **A clean filter stops the address.** A `.gitattributes` `filter=` attribute
+     runs a locally configured command over a tracked file before it is compared,
+     and a normalizing one turns a real change into an empty diff — the tests
+     read different bytes and the address does not move. Nothing on the command
+     line neutralizes it, because the driver is named by the tree and configured
+     by the checkout. Check with
+     `git -C "$root" ls-files -z | git -C "$root" check-attr --stdin -z filter`
+     and stop where any path answers with a filter other than `unspecified`.
+     Record the observation against a checkout that configures none.
+
+     **A path hidden from the index stops the address.** `assume-unchanged`
+     makes git skip a changed tracked file, and `skip-worktree` makes it ignore
+     one that is not on disk at all; the untracked walk reaches neither, so two
+     materially different filesystems take one address. `git -C "$root" ls-files
+-v` marks them — a lowercase status letter for the first, `S` for the
+     second. Clear the bits and take the address again.
+
+     **An uninitialized submodule stops the address.** Git does not call it
+     dirty: the diff is empty and the directory is empty, exactly as for an
+     initialized submodule at the recorded commit, while the commands and tests
+     see a filesystem with nothing in it. `git -C "$root" submodule status`
+     writes a leading `-` for that state. Initialize it and take the address
+     again.
 
      **An untracked embedded repository stops the address.** `ls-files --others`
      reports one entry for it — the directory, with a trailing separator — and
@@ -121,14 +147,14 @@ check. Gate item 10 rejects any other shape wherever a revision is recorded:
      lets two honest implementations address the same tree differently — the one
      thing the address exists to prevent.
 
-     | Part                      | Written as                                                                                                                                                                                                                                                                                                                                          |
-     | ------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-     | A SHA-256 inside a record | Its 64 lowercase hexadecimal characters. Never its 32 raw bytes, and never the bytes it is a digest of                                                                                                                                                                                                                                              |
-     | The `HEAD` record's rev   | The object id `git rev-parse HEAD` printed, with its trailing newline removed and no abbreviation. Its length is the repository's object format, so a SHA-256 repository gives 64 characters where a SHA-1 one gives 40. Capturing stdout as bytes keeps the newline; a shell substitution drops it, and the two would address one tree differently |
-     | `mode`                    | Exactly four octal digits, zero-padded, no prefix: `0644`, `0755`, `4755`, `0064`. The permission and special bits — the mode masked with `07777` — so a `setuid` bit moves the address and a mode below `0100` still has a spelling. Not `0o644`, and not git's six-digit tree mode                                                                |
-     | A path                    | The repository-relative bytes `-z` returned, unquoted and unescaped                                                                                                                                                                                                                                                                                 |
-     | The join                  | A single `\n` byte between records, and none after the last                                                                                                                                                                                                                                                                                         |
-     | The sequence as a whole   | Bytes, never a decoded string. A path `-z` returns need not be valid UTF-8, and decoding turns every invalid byte into one replacement character — so two distinct names become one, and two producers address one tree differently. Concatenate the records as bytes and hash those                                                                |
+     | Part                      | Written as                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
+     | ------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+     | A SHA-256 inside a record | Its 64 lowercase hexadecimal characters. Never its 32 raw bytes, and never the bytes it is a digest of                                                                                                                                                                                                                                                                                                                                                              |
+     | The `HEAD` record's rev   | The object id `git rev-parse HEAD` printed, with its trailing newline removed and no abbreviation. Its length is the repository's object format, so a SHA-256 repository gives 64 characters where a SHA-1 one gives 40. Capturing stdout as bytes keeps the newline; a shell substitution drops it, and the two would address one tree differently                                                                                                                 |
+     | `mode`                    | Exactly four octal digits, zero-padded, no prefix: `0644`, `0755`, `4755`, `0064`. The permission and special bits — the mode masked with `07777` — so a `setuid` bit moves the address and a mode below `0100` still has a spelling. Not `0o644`, and not git's six-digit tree mode. Read without following the link, like the bytes beside it: a link to a `0640` file reports `0640` followed and `0777` as itself, and a dangling one cannot be followed at all |
+     | A path                    | The repository-relative bytes `-z` returned, unquoted and unescaped                                                                                                                                                                                                                                                                                                                                                                                                 |
+     | The join                  | A single `\n` byte between records, and none after the last                                                                                                                                                                                                                                                                                                                                                                                                         |
+     | The sequence as a whole   | Bytes, never a decoded string. A path `-z` returns need not be valid UTF-8, and decoding turns every invalid byte into one replacement character — so two distinct names become one, and two producers address one tree differently. Concatenate the records as bytes and hash those                                                                                                                                                                                |
 
   4. **Hash.** SHA-256 of those bytes; record its 64 lowercase hexadecimal
      characters. Lowercase here too: the recorded address is compared as text,
