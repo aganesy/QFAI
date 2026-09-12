@@ -6,6 +6,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Added
 
+- **A lint lane refuses a tracked file under the scratch directory.** `tmp/` is
+  the sole staging area for scratch output and nothing there is committed, but
+  an ignore rule does not stop tracking a file already in the index: a scratch
+  report sat on the default branch with `git status` clean. The report is
+  untracked and deleted, and the lane catches the next one.
+
 - **A grilling loop runs before a spec phase freezes its first draft** (#1598).
   The phase's drafting agent is interviewed by a griller; the orchestrator holds
   the loop, routes it, and does not answer its questions. It runs before Phase 0,
