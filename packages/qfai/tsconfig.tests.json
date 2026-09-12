@@ -112,6 +112,7 @@
     "tests/assets/reviewWalkthroughCriteria.test.ts",
     "tests/assets/projectLayerFacts.test.ts",
     "tests/assets/skillInputsPriority.test.ts",
+    "tests/assets/skillInvocationDeclaration.test.ts",
     "tests/assets/skillReferenceReachability.test.ts",
     "tests/assets/skillUserQuestionsSection.test.ts",
     "tests/assets/stageEvidenceCounts.test.ts",
