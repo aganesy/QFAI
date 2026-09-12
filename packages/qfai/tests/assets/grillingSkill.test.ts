@@ -253,3 +253,73 @@ describe("the primitive carries the master's clauses", () => {
     });
   }
 });
+
+// Four places where the method told an agent one thing and an inherited rule
+// told it another, or where it left the agent holding a decision the user owns.
+describe("the session does not settle what the user settles", () => {
+  for (const tree of QFAI_TREES) {
+    it(`${tree}: reading a fact directly is a sanctioned exception, not an override`, async () => {
+      // The delegation baseline hard-stops on `unavailable` and forbids
+      // continuing with self-execution. A skill that only says "read it
+      // yourself" leaves an agent to pick which instruction wins, and two
+      // agents pick differently.
+      const text = flat(await read(tree));
+      expect(text).toMatch(/under the baseline's sanctioned exception for a read-only fact lookup/);
+      expect(text).toMatch(/This is not an override of the hard stop/);
+      expect(text).toMatch(/it permits reading only/);
+    });
+
+    it(`${tree}: closing the questions still finishes the lookups in flight`, async () => {
+      // A lookup that lands after the record is written can expose a decision,
+      // and that decision is then missing from the assumptions the run proceeds
+      // on — the one node nobody sees.
+      const text = flat(await read(tree));
+      expect(text).toMatch(/ends the asking, not the session's own work/);
+      expect(text).toMatch(/Finish every lookup still running first/);
+      expect(text).toMatch(/not only the nodes open when it arrived/);
+    });
+
+    it(`${tree}: a prototype is shown to the user, not judged by the agent`, async () => {
+      // "The reaction is the answer" does not say whose reaction, so an agent
+      // may read it as its own, and settle a question of taste on the user's
+      // behalf while following the words.
+      const text = flat(await read(tree));
+      expect(text).toMatch(/put it in front of the user and ask the original question again/);
+      expect(text).toMatch(/\*\*Their\*\* reaction is the answer/);
+      expect(text).toMatch(/it does not transfer ownership of it/);
+    });
+
+    it(`${tree}: the entry point has one gate, and it is not a verdict`, async () => {
+      // The gate rules on an artifact and this skill writes none, so a run that
+      // waited for `PASS` would wait forever. Without the exemption the
+      // inherited baseline and the remit row both point at a review target that
+      // does not exist.
+      const text = flat(await readSkill(tree, ENTRY));
+      expect(text).toMatch(/therefore exempt from the baseline's reviewer gate/);
+      expect(text).toMatch(/no `PASS` is requested, none is awaited/);
+      // Bounded to the verdict: a dispatched lookup is still a delegation.
+      expect(text).toMatch(/The exemption covers the verdict and nothing else/);
+      expect(text).toMatch(/disqualified from answering it again as a check on itself/);
+    });
+  }
+});
+
+// The sanctioned exception is only a resolution while the baseline states it.
+// Left to the skill alone it is the override the skill claims it is not.
+describe("the delegation baseline sanctions the read-only lookup", () => {
+  for (const tree of QFAI_TREES) {
+    it(`${tree}: names the exception, and bounds it to reading`, async () => {
+      const text = flat(
+        await readSkill(tree, "assistant/constitution/shared-skill-delegation-baseline.md"),
+      );
+      expect(text).toMatch(/### Sanctioned exception: a read-only fact lookup/);
+      expect(text).toMatch(/\*\*Reading, never authoring\.\*\*/);
+      expect(text).toMatch(
+        /A primary artifact and a blocking review stay under the hard stop whatever their class/,
+      );
+      // Citing it is what separates a skill that read the rule from one that
+      // simply carried on.
+      expect(text).toMatch(/A skill claiming it MUST cite this section/);
+    });
+  }
+});

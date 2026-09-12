@@ -191,8 +191,12 @@ Completion is how a session ends on its own. It is not the only way one ends.
 - **stop** ends the session immediately, frontier empty or not. Ask nothing
   further and do no further work. Report the open decisions as open, not
   assumed.
-- **proceed** / **done** ends the asking. Continue, and record each decision
-  still open as an assumption, labelled as one.
+- **proceed** / **done** ends the asking, not the session's own work. Finish
+  every lookup still running first, and record any decision it then raises the
+  same way. The closure covers the tree as it finally stands, not only the nodes
+  open when it arrived: a lookup that lands afterwards can expose a decision, and
+  a record written before it lands omits exactly that one. Then continue, with
+  each decision still open recorded as an assumption and labelled as one.
 
 **Two kinds of node are never assumed, whatever the user answered.** A decision
 some document requires the user to make and record — an SDD triage `Approved By`
@@ -206,8 +210,14 @@ uncertainty, never an authorization the user has not given.
 A question about how something should look, or how it should feel to use, needs
 something to react to, and no number of rounds produces that.
 
-Stop grilling and build something to react to. The reaction is the answer, and
-the questions it raises are a new frontier.
+Stop grilling and build something to react to. Then put it in front of the user
+and ask the original question again against it. **Their** reaction is the answer,
+and the questions it raises are a new frontier.
+
+The artifact makes the decision answerable; it does not transfer ownership of it.
+An agent that builds a sketch, judges it and carries on has settled a question of
+taste on the user's behalf, which is the thing every round of this method spends
+its effort avoiding.
 
 What that artifact is belongs to the stage the session is running in. This skill
 does not choose it and does not move the work to another stage: a sketch inside
@@ -239,9 +249,13 @@ is talking to.
 
 ### Delegation Failure (Hard Stop)
 
-- `unavailable`: stop dispatching lookups and read what can be read directly.
-  Report every fact that stayed unread, and hold the decisions downstream of it
-  open rather than asking the user for it.
+- `unavailable`: stop dispatching lookups and read what can be read directly,
+  under the baseline's sanctioned exception for a read-only fact lookup
+  (`.qfai/assistant/constitution/shared-skill-delegation-baseline.md`). This is
+  not an override of the hard stop — the exception is what permits it, and it
+  permits reading only. Report the class, report every fact that stayed unread,
+  and hold the decisions downstream of it open rather than asking the user for
+  it.
 - `saturated`: use the baseline's bounded retry branch. The session stays open.
 - Do not simulate roles. An agent that answers a dispatched lookup out of its
   own recollection has recorded a guess as a fact, which the frontier then

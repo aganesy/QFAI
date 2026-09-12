@@ -103,8 +103,9 @@ fact the environment holds, and the questions are never delegated.
 ### Delegation Failure (Hard Stop)
 
 - The primitive unreadable: stop and report it, as above.
-- A lookup `unavailable`: read what can be read directly, report every fact
-  that stayed unread, and hold the decisions downstream of it open.
+- A lookup `unavailable`: read what can be read directly, under the baseline's
+  sanctioned exception for a read-only fact lookup. Report the class, report
+  every fact that stayed unread, and hold the decisions downstream of it open.
 - A lookup `saturated`: use the baseline's bounded retry branch.
 - Do not simulate roles. Do not answer a dispatched lookup from recollection —
   the frontier would then treat a guess as settled.
@@ -127,21 +128,28 @@ There is no invoking stage, so the gate is the user reading the record. That is
 why this skill writes no files: a record nobody reads is not a gate, and a file
 nobody asked for is not a record.
 
+**This entry point is therefore exempt from the baseline's reviewer gate.** That
+gate rules on an artifact and this skill writes none, so no `PASS` is requested,
+none is awaited, and a run never blocks for one. The remit row for `/qfai-grill`
+records the same thing from the reviewer's side: there is no artifact to review.
+
 What the user is shown at the end:
 
 - every decision they answered, and what they answered;
 - every decision left open, labelled as an assumption or as unasked;
 - every fact taken as settled, with where it was read.
 
+The exemption covers the verdict and nothing else. A lookup dispatched during the
+session is a delegation like any other, so:
+
 - Reviewer independence is defined normatively in
-  `.qfai/assistant/constitution/shared-skill-delegation-baseline.md#definition-independent-reviewer-normative`.
-  An agent that answered a lookup in this session is disqualified from reviewing
-  the facts it supplied.
-- Reviewer checks the Drift Protocol, verifies alignment with `test-layers.md`,
-  and treats ratios as signals, not gates.
-- Reviewer returns only `PASS` or `REVISE`, with a concrete fix proposal on
-  `REVISE`. A gate that could not be run at all is recorded as `PENDING`, which
-  never counts as `PASS`.
+  `.qfai/assistant/constitution/shared-skill-delegation-baseline.md#definition-independent-reviewer-normative`,
+  and an agent that answered a lookup in this session is disqualified from
+  answering it again as a check on itself.
+- The Drift Protocol applies to the run, as it does to any run.
+- A lookup that could not be run at all is reported as unread, with the decisions
+  downstream of it held open. That is this skill's `PENDING`, and it never reads
+  as settled.
 
 ## Default Autopilot Policy
 

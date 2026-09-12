@@ -67,6 +67,24 @@ Applies to `unavailable`, and to `saturated` once the retry budget is exhausted.
   - `User action needed: <settings or tooling changes required — or "none; wait for a delegation slot to free" when the class is saturated>`
   - `Retry condition: rerun after the required delegation succeeds`
 
+### Sanctioned exception: a read-only fact lookup
+
+One delegation may continue without a sub-agent: reading a fact the environment
+already holds, where the skill that dispatched it may read that fact itself.
+Reading the file and dispatching a sub-agent to read it are two ways of doing one
+job, so the dispatch is an optimisation, and losing it removes the optimisation
+rather than the job.
+
+The exception is bounded by what it covers.
+
+- **Reading, never authoring.** A primary artifact and a blocking review stay
+  under the hard stop whatever their class.
+- **The class is still reported**, with every fact that stayed unread named, and
+  every decision downstream of one held open.
+- **A skill claiming it MUST cite this section.** A skill that merely carries on
+  has taken the override this section exists to replace, and a reader cannot tell
+  that apart from a skill that never read the rule.
+
 ### Commit Scoping (MUST)
 
 - A delegated agent stages only the paths it declared as deliverables in its
