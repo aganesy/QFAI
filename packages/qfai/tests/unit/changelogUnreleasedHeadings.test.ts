@@ -62,13 +62,51 @@ function headings(section: string[]): string[] {
     .filter((text): text is string => text !== undefined);
 }
 
+/** Lines the section holds above its first group, blanks dropped. */
+function entriesAboveFirstGroup(changelog: string): string[] {
+  const section = unreleasedSection(changelog);
+  const first = section.findIndex((line) => /^### /.test(line));
+  return section
+    .slice(0, first === -1 ? section.length : first)
+    .filter((line) => line.trim() !== "");
+}
+
+/** Group headings the six change types do not name. */
+function unknownGroups(changelog: string): string[] {
+  return headings(unreleasedSection(changelog)).filter((text) => !CHANGE_TYPES.includes(text));
+}
+
+/** Types whose heading count differs from the number recorded for them. */
+function countDrift(changelog: string): string[] {
+  const counted = new Map<string, number>();
+  for (const text of headings(unreleasedSection(changelog))) {
+    counted.set(text, (counted.get(text) ?? 0) + 1);
+  }
+  const recorded = new Map(CHANGE_TYPES.map((type) => [type, HEADING_BACKLOG[type] ?? 1] as const));
+  return [...counted]
+    .filter(([type, count]) => count !== recorded.get(type))
+    .map(([type, count]) => `${type}: ${count} present, ${recorded.get(type) ?? 1} recorded`);
+}
+
 describe("the unreleased section groups its entries by type", () => {
   const changelog = (): Promise<string> => readFile(path.join(repoRoot, "CHANGELOG.md"), "utf-8");
 
   it("finds the section it reads", async () => {
-    // An empty read passes both cases below without asking anything, and a
+    // An empty read passes every case below without asking anything, and a
     // renamed or moved heading looks identical to a green run.
-    expect(headings(unreleasedSection(await changelog())).length).toBeGreaterThan(0);
+    //
+    // What this may not require is content. A release cut moves the work under
+    // its version heading and reopens an empty `## [Unreleased]`, which is the
+    // correct state and the one every release pull request is in — so reading
+    // an empty section as a parse failure fails the release rather than a
+    // defect. The two are told apart by asking separately: the section is
+    // there, and the heading pattern still matches something.
+    const text = await changelog();
+    expect(/^## \[Unreleased\]/m.test(text), "CHANGELOG.md has no `## [Unreleased]`").toBe(true);
+    expect(
+      headings(text.split(/\r?\n/)).length,
+      "no `### ` heading anywhere in the file, so the pattern matches nothing",
+    ).toBeGreaterThan(0);
   });
 
   it("opens with a group rather than with entries", async () => {
@@ -76,11 +114,8 @@ describe("the unreleased section groups its entries by type", () => {
     // renders as a list under the release heading, so nothing about it looks
     // wrong, and the group headings below it are still counted — which is how
     // an insertion that missed the heading passes every count.
-    const section = unreleasedSection(await changelog());
-    const firstHeading = section.findIndex((line) => /^### /.test(line));
-    const before = section.slice(0, firstHeading === -1 ? section.length : firstHeading);
     expect(
-      before.filter((line) => line.trim() !== ""),
+      entriesAboveFirstGroup(await changelog()),
       "an entry under `## [Unreleased]` that no change-type group holds",
     ).toEqual([]);
   });
@@ -89,29 +124,42 @@ describe("the unreleased section groups its entries by type", () => {
     // A qualified heading — `Fixed (third review wave)` — is a group nothing
     // can find by type, and the released sections carry dozens of them. The
     // next release does not.
-    const unknown = headings(unreleasedSection(await changelog())).filter(
-      (text) => !CHANGE_TYPES.includes(text),
-    );
-    expect(unknown, `a group heading outside ${CHANGE_TYPES.join(" / ")}`).toEqual([]);
+    expect(
+      unknownGroups(await changelog()),
+      `a group heading outside ${CHANGE_TYPES.join(" / ")}`,
+    ).toEqual([]);
   });
 
   it("carries the recorded number of each, and no more", async () => {
-    const counted = new Map<string, number>();
-    for (const text of headings(unreleasedSection(await changelog()))) {
-      counted.set(text, (counted.get(text) ?? 0) + 1);
-    }
-    const recorded = new Map(
-      CHANGE_TYPES.map((type) => [type, HEADING_BACKLOG[type] ?? 1] as const),
-    );
     // Exact, in both directions. Over the record is a group that climbed while
     // nobody was looking; under it is a slot left open for the next branch to
     // take, which is how the record stops being a backlog and becomes a budget.
-    const drifted = [...counted]
-      .filter(([type, count]) => count !== recorded.get(type))
-      .map(([type, count]) => `${type}: ${count} present, ${recorded.get(type) ?? 1} recorded`);
     expect(
-      drifted,
+      countDrift(await changelog()),
       "put the entry under the group that is already there, or strike the recorded number down with the merge",
     ).toEqual([]);
+  });
+
+  it("passes on the section a release cut leaves behind", async () => {
+    // The state every release pull request is in: the work moved under its
+    // version heading and `## [Unreleased]` reopened empty. That is correct,
+    // and a rule that read an empty section as a parse failure failed the
+    // release rather than a defect — which is what this suite did on its first.
+    const afterCut = [
+      "# Changelog",
+      "",
+      "## [Unreleased]",
+      "",
+      "## [1.0.0] - 2026-01-01",
+      "",
+      "### Added",
+      "",
+      "- **Something.** It happened.",
+      "",
+    ].join("\n");
+
+    expect(entriesAboveFirstGroup(afterCut)).toEqual([]);
+    expect(unknownGroups(afterCut)).toEqual([]);
+    expect(countDrift(afterCut)).toEqual([]);
   });
 });
