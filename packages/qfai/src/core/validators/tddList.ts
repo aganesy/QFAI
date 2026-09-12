@@ -1369,7 +1369,7 @@ const GATE_COMPLETED_EVIDENCE_FIELD =
   /^\s*(?:\|\s*)?(?:[-*][ \t]+)?(?:\*\*)?(?:Spec review(?:ed revision| pack(?: seal)?)?|Spec audited evidence hash|Code quality review(?:ed revision| pack(?: seal)?)?|Code quality audited evidence hash|Prototype parity|Checkpoint verification (?:command|result|seal))(?:\*\*)?\s*(?::|\|)/i;
 
 const PHASE_AUTHORED_EVIDENCE_FIELD =
-  /^\s*(?:\|\s*)?(?:[-*][ \t]+)?(?:\*\*)?(?:Round[ \t]+\d+:[ \t]*)?(?:TDD-ID|Layer|Test file|Selector|TC-ref|US-ref|CON-API-ref|Revision|RED revision|Replacement proof revision|RED test hash|RED test manifest|RED command|RED result|GREEN command|GREEN result|Satisfied-by|Falsifiability command|Falsifiability result|Falsifiability revision|reviewer verdict|RED failure mode|Refactor verify command|Refactor verify result|Oracle proof|qa-gatekeeper|Shared-artifact re-verify)(?:\*\*)?\s*(?::|\|)/i;
+  /^\s*(?:\|\s*)?(?:[-*][ \t]+)?(?:\*\*)?(?:Round[ \t]+\d+:[ \t]*)?(?:TDD-ID|Layer|Test file|Selector|TC-ref|US-ref|CON-API-ref|Revision|RED revision|Replacement proof revision|RED test hash|RED test manifest|RED command|RED result|GREEN command|GREEN result|Satisfied-by|Falsifiability command|Falsifiability result|Falsifiability revision|reviewer verdict|RED failure mode|Refactor verify command|Refactor verify result|Oracle proof|qa-gatekeeper|Shared-artifact re-verify|Surface artifacts)(?:\*\*)?\s*(?::|\|)/i;
 
 function hasPhaseAuthoredFieldAfterGate(section: string): boolean {
   const visibleLines = maskEvidenceRegions(section.replace(/\r\n/g, "\n")).split("\n");
@@ -2530,25 +2530,28 @@ const BACKFILL_EXEMPT_FIELDS: ReadonlySet<string> = new Set([
 ]);
 
 /**
- * What a `Prototype parity` value records, read by its leading word.
+ * What a `Prototype parity` value records.
  *
  * `references/ui-affecting.md` writes the verdict with the clause that routed
  * the row — `PASS (clause N)`, `REVISE (clause N)` — and a row no clause
- * selects as `n/a (not UI-affecting)`. Compared whole against `PASS`, both
- * forms the contract writes were refused, so neither a UI-affecting row nor one
- * that recorded why it is not could reach `done`.
+ * selects as `n/a (not UI-affecting)`. Each form is matched whole. The clause
+ * number is what lets a later reader re-run the routing decision, and a value
+ * read by its first word alone let `n/a (UI-affecting)` pass as a row with no
+ * surface, skipping the review, the captures and the hash.
  *
- * `absent` is a row completed before the field existed, which the same
- * reference exempts from being blocked retroactively.
+ * Any `REVISE` is the reviewer refusing the row, whatever follows it. `absent`
+ * is a row completed before the field existed, which the same reference exempts
+ * from being blocked retroactively; a value outside the recorded forms, a bare
+ * `PASS` included, is not that row and is reported.
  */
 type ParityVerdict = "absent" | "pass" | "revise" | "not-applicable" | "unrecognized";
 
 function parityVerdict(section: string): ParityVerdict {
   const value = rowEvidenceFieldValue(section, "Prototype parity");
   if (value === null) return "absent";
-  if (/^PASS\b/i.test(value)) return "pass";
+  if (/^PASS\s*\(\s*clause\s+\d+\s*\)$/i.test(value)) return "pass";
   if (/^REVISE\b/i.test(value)) return "revise";
-  if (/^n\/a\b/i.test(value)) return "not-applicable";
+  if (/^n\/a\s*\(\s*not\s+UI-affecting\s*\)$/i.test(value)) return "not-applicable";
   return "unrecognized";
 }
 

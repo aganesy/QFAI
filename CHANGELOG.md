@@ -1096,12 +1096,15 @@ unadjudicated`, read off a Work Orders Summary row the session writes rather
   `.html` files, which are normalized. The parity review pack is checked as the
   product-surface-reviewer's.
 
-  The gate also reads the verdict forms the contract defines. It used to compare
-  the value with `PASS` exactly, so it rejected `PASS (clause N)` and
-  `n/a (not UI-affecting)`. An `n/a` row now needs only the revision the clauses
-  were evaluated at. Captures are ignored stage evidence, so where one is absent
-  from the checkout, as on a fresh clone, the gate skips the recomputation. It
-  does the same for a review pack.
+  The gate also reads the verdict forms the contract defines (#1726). It used to
+  compare the value with `PASS` exactly, so it rejected `PASS (clause N)` and
+  `n/a (not UI-affecting)` and accepted a bare `PASS`. Each form is now matched
+  whole: a verdict naming no clause is reported, and so is `n/a (UI-affecting)`,
+  which a match on the first word would have let skip the review. An `n/a` row
+  needs only the revision the clauses were evaluated at, and the manifest has to
+  come before the verdicts, like the other phase-authored fields. Captures are
+  ignored stage evidence, so where one is absent from the checkout, as on a fresh
+  clone, the gate skips the recomputation. It does the same for a review pack.
 
 - **The autopilot tailoring contract now covers every shipped skill** (#1642).
   It was held against a hardcoded list of seven, so the two grilling skills were

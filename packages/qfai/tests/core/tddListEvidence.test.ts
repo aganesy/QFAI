@@ -1797,10 +1797,41 @@ REVISE — needs new production behaviour
       });
     });
 
-    it("names the forms a parity value takes when it holds neither", async () => {
+    // Read by its first word, `n/a (UI-affecting)` passed as a row with no
+    // surface and skipped the review, the captures and the hash; a verdict with
+    // no clause names no declaration the routing can be re-run against.
+    for (const value of ["looks right", "PASS", "PASS (unknown)", "n/a (UI-affecting)", "N/A"]) {
+      it(`names the forms a parity value takes when it holds ${value}`, async () => {
+        await withProject(async (root) => {
+          const [issue] = await unresolved(root, withParity([`- Prototype parity: ${value}`]));
+          expect(issue?.message).toContain("PASS (clause N) or n/a (not UI-affecting)");
+          expect(issue?.message).not.toContain("Prototype parity reviewed revision");
+        });
+      });
+    }
+
+    it("reads the recorded forms in either case", async () => {
       await withProject(async (root) => {
-        const [issue] = await unresolved(root, withParity(["- Prototype parity: looks right"]));
-        expect(issue?.message).toContain("PASS (clause N) or n/a (not UI-affecting)");
+        const issues = await unresolved(
+          root,
+          withParity([
+            "- Prototype parity: N/A (Not UI-affecting)",
+            `- Prototype parity reviewed revision: ${DEFAULT_REVISION}`,
+          ]),
+        );
+        expect(issues).toEqual([]);
+      });
+    });
+
+    it("holds the manifest to the phase-authored fields ahead of the verdicts", async () => {
+      // Written after the gate fields, the manifest sits outside the entry the
+      // reviewers hashed, so what they read did not say which captures counted.
+      await withProject(async (root) => {
+        const late = withParity([...VERDICT, `- Surface artifacts: ${SCREENSHOT}`]);
+        const [issue] = await unresolved(root, late, { surfaceArtifacts: CAPTURES });
+        expect(issue?.message).toContain(
+          "all phase-authored fields before review and checkpoint fields",
+        );
       });
     });
 
