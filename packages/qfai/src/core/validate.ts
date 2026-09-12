@@ -102,6 +102,7 @@ import {
   validateDesignMdPatchZone,
   detectEvidenceMutationUnlogged,
   validateAutopilotPolicy,
+  validateGrillingTrace,
   runPackageSelfGovernanceValidators,
   validateStaleReferences,
   validateImportLiteEvidencePresence,
@@ -770,6 +771,11 @@ async function runSddValidators(
     // SKILL.md that lacks the `## Default Autopilot Policy` section.
     // SKILL.md governance lives in the sdd profile.
     ...(await validateAutopilotPolicy(root, { config })),
+    // `QFAI-GRILL-001` (warning) on a stage whose mandatory grilling session left
+    // no trace in the evidence it wrote. Warning because it reads a record the
+    // agent wrote about its own run: it establishes that the record exists, not
+    // that a session happened, and an error would claim the second.
+    ...(await validateGrillingTrace(root, { specScope })),
     // Self-governance group: Pair IV (`R-HANDOFF-SCHEMA-DRIFT`, schema ↔
     // writer) and Pair III (`R-SKILL-MANIFEST-DRIFT`, probe-impl ↔
     // manifest-schema). Both are skill-governance surfaces so they live

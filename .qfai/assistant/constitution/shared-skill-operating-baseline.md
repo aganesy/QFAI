@@ -138,12 +138,42 @@ There is one base, and it is the project root.
 ## User Questions (AskUserQuestion Protocol)
 
 - When a question to the user is needed, use AskUserQuestion if the tool is available.
-- When AskUserQuestion supports structured choices, prefer structured choices over free-text input.
-- If AskUserQuestion is unavailable, ask the same question in a normal message with explicit numbered choices.
-- Preserve structured choice semantics when falling back.
+  **No question is exempt** — a confirmation and a yes-or-no take the same path as
+  anything else, because an exception is what an agent reaches for when it would
+  rather not ask. The form a question takes is owned by
+  `.agents/rules/user-questions.md`; this section is where it binds a skill.
+- Availability is judged for **this question in this invocation**. A tool the mode
+  withholds, or one that cannot carry the answer's shape, is unavailable for that
+  question and takes the fallback below. A mode that permits no question at all —
+  `--auto` — is read before this: nothing is asked, so there is no question whose
+  availability to judge, and the fallback is not its route.
+- Where the question has choices and AskUserQuestion supports them, prefer structured choices over free-text input.
+  An open answer — one with no listable set of candidates — takes the free-text path instead; the
+  preference ranks two ways of asking one question, and never turns an open answer into a choice. A
+  name, a number or a sentence is usually open and is not open by type.
+- If AskUserQuestion is unavailable, ask the same question in a normal message
+  **in the shape its answer has**: explicit numbered choices where there are
+  choices, and a plain request for the value where the answer has no listable set
+  of candidates. Inventing options to make an open answer fit a numbered list is
+  the failure the form rule names, and the fallback is not a licence for it.
+- Where there are choices, preserve structured choice semantics when falling back.
 - State why AskUserQuestion was unavailable.
 - The three buckets of a skill's `## Default Autopilot Policy` say who settles a
-  decision:
+  decision **the skill performs**. A **frontier decision** put inside a grilling
+  session is not one: it settles a design, an approach, a scope boundary or a
+  trade-off before anything is performed, and `.agents/rules/grilling.md` owns
+  which of those are asked and in what order. Read as a classification of every
+  question an invocation can utter, the closed `ask-user` list would contradict
+  that rule.
+  **Two things stay classified by their subject wherever they are asked**: a
+  mandatory approval, and a `hard-required` input the invocation consumes. A
+  session does not reclassify either — a `hard-required` input asked inside one
+  still stops a run that cannot get it, rather than being guessed.
+  Where the interview is what the skill performs, the asking stays in
+  `ask-user`: the bucket carries a category for a decision a declared grilling
+  session puts to the user, open to a skill whose own operation is the interview
+  and to no other.
+  The buckets:
   - `auto-decide` — the skill settles it without asking.
   - `ask-user` — the skill asks before acting.
   - `hard-required` — no default is possible, so a run may not proceed on a
@@ -188,10 +218,13 @@ There is one base, and it is the project root.
   session is entered deliberately: an invocation declares one and nothing else
   starts one, so a question asked outside a declared session is an ordinary
   clarification and spends a unit, whatever its subject. Under an explicit `--auto` the session asks nothing and opens each
-  decision it could not settle as a question in the register the stage reads.
-  Where a document requires the field to hold something, write the defaulted
-  value and label it an assumption beside that open question; what is forbidden
-  is the assumption with no open question against it (Article X, rule 6).
+  node it could not settle as a question in the register the stage reads. Each
+  node, not each decision: a fact only the user holds cannot be settled from
+  evidence either, and a fact declared undefaultable stops the run rather than
+  taking a value nobody has. Where a document requires the field to hold
+  something, write the defaulted value and label it an assumption beside that
+  open question; what is forbidden is the assumption with no open question
+  against it (Article X, rule 6).
 
 ## Canonical qfai Launcher (Mandatory)
 

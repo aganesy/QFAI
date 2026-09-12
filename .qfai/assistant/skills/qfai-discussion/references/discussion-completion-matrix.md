@@ -13,6 +13,39 @@ Blocking for every pack, UI-bearing or not:
    `sources` / `best_practices` / `anti_patterns` / `reflection` are non-empty, every `source_id`
    resolves to a `sources[].id`, and at least one `reflection[]` entry records an apply decision.
    `npx qfai validate --profile discussion --fail-on error` reports `QFAI-RESEARCH-*` until it is.
+2. The stage evidence's `## Grilling Session` row shows the session ended before authoring began,
+   with `Ended` reading one of the three endings that authorize it:
+
+   | Ended         | Also required                                                                                                  |
+   | ------------- | -------------------------------------------------------------------------------------------------------------- |
+   | `confirmed`   | No node open — the frontier empty **and** no fact lookup still running                                         |
+   | `user-closed` | Lookups finished, and every decision still open recorded as a labelled assumption                              |
+   | `no-question` | Every node still open registered — a decision, and a fact only the user holds — so item 3 below is what blocks |
+
+   `stopped` never completes: the user ended the run, and a pack authored after that is the run
+   doing what they told it not to.
+
+   Both halves of the `confirmed` condition, because when every remaining decision waits on a
+   lookup the frontier is empty while the tree still holds open nodes, and authoring there begins
+   before the lookup can raise the questions it was dispatched to answer.
+
+   Not at a count, and not on the questions running out.
+
+   This is blocking rather than advisory because the failure it catches leaves no other trace. A
+   pack authored mid-session looks exactly like one authored after: fifteen files, every topic
+   covered, every open question registered. What is missing is that someone agreed to what is in
+   them, and nothing downstream can tell.
+
+   The no-question row is the one to read carefully: `--auto` can reach nobody, so waiting for a
+   confirmation would stop the run before it could write the open questions that are what block it.
+   Item 3 below does that work instead — an open count above zero closes nothing.
+
+3. `Disposition: open` count is zero in `11_OQ-Register.md`.
+
+   Here rather than under one pack shape. It is what a no-question run is blocked by, and a run is
+   `--auto` or not independently of whether it has a surface — listed only under `## UI-bearing
+Packs`, it let a non-UI `--auto` pack complete with its decisions still open.
+   Item 7 below does that work instead — an open count above zero closes nothing.
 
 ## UI-bearing Packs
 
@@ -35,7 +68,6 @@ Completion is blocked until all are true:
    user carries `chosen_by: assumption` and an open entry in `11_OQ-Register.md`.
 6. No forbidden legacy sidecar exists under `uiux/` (see
    `templates/uiux/00_index.md#Forbidden Legacy Files`).
-7. `Disposition: open` count is zero in `11_OQ-Register.md`.
 
 Evaluation axes are global constants (4-step ordinal: weak / acceptable / strong /
 exceptional) and are NOT authored as discussion sidecars, so no scoring, override, strategy,
