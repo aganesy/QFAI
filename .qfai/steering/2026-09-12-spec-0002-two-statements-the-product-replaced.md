@@ -63,10 +63,19 @@ section. It is read **per statement**, because the two may be settled
 differently — do not apply one option's whole bundle to a split approval.
 
 Statement A, the direction rule, owns `TDD-0008`, `TDD-0009` and `TDD-0010`.
-Statement B, the requiredness rule, owns `TDD-0012`. So for `1A/3B`: option 1 on
-A resets `TDD-0008` and `TDD-0009` and retires `TDD-0010`, and option 3 on B
-retires `TDD-0012`. Option 2 on A additionally blocks and resets `TDD-0001`,
-whose test file the preflight change edits; option 2 on B does not.
+Statement B, the requiredness rule, owns `TDD-0012`. So for `1A/3bB`: option 1
+on A resets `TDD-0008` and `TDD-0009` and retires `TDD-0010`, and option 3 on B
+retires `TDD-0012` and deletes the legacy-format case its disposition names.
+
+Option 2 on **B** additionally blocks and resets `TDD-0001`: that option
+restores the preflight check for `prototyping.yaml`, which edits
+`sddPreflight.test.ts`, the file the row's observation covers. Option 2 on A
+does not touch that file.
+
+Option 3 is answered as `3a` or `3b`. `3a` writes a new obligation for the
+legacy-format finding and registers the surviving case against it; `3b` deletes
+the case, and with it the only assertion that the finding is emitted. A `3`
+with no letter authorises neither, so the retirement cannot be applied from it.
 
 `TDD-0011` is in neither statement's list. It is **re-verified, not reset**,
 under every combination, because the annotation repairs edit the file its

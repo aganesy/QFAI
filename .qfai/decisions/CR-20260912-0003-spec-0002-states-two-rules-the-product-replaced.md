@@ -161,12 +161,18 @@ differently: option 1 for the direction rule and option 3 for the requiredness
 rule is a coherent answer, since the second is a sentence the product already
 states in three places and the first is a rule the product still partly keeps.
 
-`Approved option` takes one value, so a split answer is written as one — `1A/3B`
-means option 1 for statement A, the direction rule, and option 3 for statement
-B, the requiredness rule. A single digit means the same option for both. The
-nine combinations are not listed as nine options, because the two statements are
-independent and a table of every pairing would ask the user to read nine rows to
-make two choices.
+`Approved option` takes one value, so a split answer is written as one —
+`1A/3bB` means option 1 for statement A, the direction rule, and option 3 with
+disposition `b` for statement B, the requiredness rule. A single token means the
+same option for both. The combinations are not listed as separate options,
+because the two statements are independent and a table of every pairing would
+ask the user to read every row to make two choices.
+
+**Option 3 carries its letter, and is incomplete without it.** `3a` and `3b` are
+the two dispositions of the legacy-format test its retirement leaves behind, and
+one of them deletes an assertion. `3B` on its own authorises neither, so the
+retirement cannot be applied from it — which is the state this record exists to
+prevent, one decision further down.
 
 ## Approved actions (owner skill rerun plan)
 
@@ -223,10 +229,16 @@ make two choices.
    artifact is required. This is the option with the largest blast radius, and
    the direction interview it removes was itself added to stop an assistant
    inventing a brand.
-   - Reset to `todo`, recording this CR's ID in `DR-ID`:
-     `spec-0002/TDD-0008`, `spec-0002/TDD-0009`, `spec-0002/TDD-0012`, and
-     `spec-0002/TDD-0001` — the last because the preflight change edits the file
-     its observation covers.
+   - Reset to `todo`, recording this CR's ID in `DR-ID`: `spec-0002/TDD-0008`
+     and `spec-0002/TDD-0009` under statement A, `spec-0002/TDD-0012` under
+     statement B.
+   - Reset under statement B alone: `spec-0002/TDD-0001`. It is in neither
+     statement's obligation list — its `TC-Refs` is `TC-0002-0001` — and is here
+     because the restored preflight check edits `sddPreflight.test.ts`, the file
+     its observation covers. That check is the requiredness rule, so `1A/2B`
+     resets the row and `2A/1B` leaves it alone. Attached to the option instead
+     of to the statement, it reset under a combination that never touches the
+     file and stayed at `done` under one that rewrites it.
    - Retire: `spec-0002/TDD-0010` — `current preflight unit test pass`, as under
      option 1. Restoring a winner validator gives `TC-0002-0009` no second
      boundary: the test case defines one violation, and this row points at a
@@ -257,12 +269,21 @@ make two choices.
      real behaviour of a live validator, and withdrawing `TC-0002-0011` takes
      away its obligation rather than its subject. The retirement procedure
      requires each surviving test to be deleted or re-pointed, and "left
-     unowned" is neither, so this retirement carries an open item rather than a
-     disposition: **name the obligation that owns the legacy-format finding, or
-     delete the case.** It may not be re-pointed at `TDD-0011`, whose selector is
-     a different case in the same file. Deleting it drops the only assertion
-     that `validateThreeLayerModel` emits `UIX-VAL-3LAYER-LEGACY-FORMAT`, so the
-     choice is a real one and option 3 cannot complete until it is made.
+     unowned" is neither. That disposition is a decision rather than a step, so
+     option 3 is offered as two and the approval says which:
+
+     | Option | The legacy-format case                                                                                      |
+     | ------ | ----------------------------------------------------------------------------------------------------------- |
+     | `3a`   | Re-pointed. A new obligation is written for the legacy-format finding and the case is registered against it |
+     | `3b`   | Deleted, and with it the only assertion that the finding is emitted                                         |
+
+     Neither is free, which is why it is put rather than settled here. `3a` owes
+     an obligation this Change Request does not draft: the rule is live
+     behaviour of a live validator, and withdrawing `TC-0002-0011` takes away
+     its obligation rather than its subject. `3b` leaves
+     `UIX-VAL-3LAYER-LEGACY-FORMAT` asserted nowhere. Under either, the case may
+     not be re-pointed at `TDD-0011`: that row's selector is a different case in
+     the same file.
      `packages/qfai/tests/integration/discussionSkillTemplateIntegration.test.ts`,
      `packages/qfai/tests/e2e/discussionHardeningE2E.test.ts` and
      `packages/qfai/tests/core/sddPreflight.test.ts` all carry coverage for
