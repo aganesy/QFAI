@@ -155,6 +155,7 @@
     "tests/core/platformOptionProfileScope.test.ts",
     "tests/core/prototyping/specResolution.test.ts",
     "tests/core/reportDeltaScanDisclosure.test.ts",
+    "tests/core/skillRegistrationContract.test.ts",
     "tests/core/sourceEncodingHygiene.test.ts",
     "tests/core/specSections.test.ts",
     "tests/core/specSplitScopeAttribution.test.ts",

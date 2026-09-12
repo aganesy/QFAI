@@ -272,6 +272,8 @@ export async function validateAssistantAssets(root: string, config: QfaiConfig):
       continue;
     }
 
+    issues.push(...collectSkillRegistrationIssues(skillFile, content));
+
     if (!content.includes(DRIFT_PROTOCOL_MARKER)) {
       issues.push(
         issue(
@@ -1144,6 +1146,51 @@ function extractReviewerGateSection(content: string): string | null {
     return remainder;
   }
   return remainder.slice(0, nextHeadingMatch.index);
+}
+
+/**
+ * Whether a skill's front matter lets a host register it at all.
+ *
+ * A host reads `description:` for two jobs at once: whether to register the
+ * skill, and whether to offer it to the model. Leaving it out to stop the second
+ * loses the first on every host that requires the field — the skill is not
+ * loaded, and the user cannot invoke it by name either, which is the opposite of
+ * what the omission was for.
+ *
+ * A skill that should not be offered to the model says so with
+ * `disable-model-invocation: true`, and keeps its description. The rule is
+ * general: no skill is named here, and the one that opts out is the one most
+ * likely to lose the field to a contributor tidying front matter.
+ */
+function collectSkillRegistrationIssues(skillFile: string, content: string): Issue[] {
+  const frontMatter = skillFrontMatter(content);
+  if (frontMatter === null || /^description:/m.test(frontMatter)) {
+    return [];
+  }
+  const optsOut = /^disable-model-invocation:\s*true\s*$/m.test(frontMatter);
+  return [
+    issue(
+      "QFAI-SKILLS-015",
+      optsOut
+        ? "SKILL.md has no `description:`. `disable-model-invocation: true` stops the model from firing the skill; the host reads `description:` to register it at all, so without the field the skill is not loaded and the user cannot invoke it by name either."
+        : "SKILL.md has no `description:`. A host reads that field to register the skill. To stop the model firing it while keeping it reachable, declare `disable-model-invocation: true` and keep the description.",
+      "error",
+      skillFile,
+      "skills.description",
+      undefined,
+      "change",
+      optsOut
+        ? "Put `description:` back in the front matter and keep `disable-model-invocation: true` beside it."
+        : "Add `description:` to the front matter, with `disable-model-invocation: true` beside it when the model should not fire the skill.",
+    ),
+  ];
+}
+
+/** The front-matter block of a skill document, or `null` when it has none. */
+function skillFrontMatter(content: string): string | null {
+  if (!content.startsWith("---")) return null;
+  const end = content.indexOf("\n---", 3);
+  return end === -1 ? null : content.slice(3, end);
 }
 
 function collectMissingReviewerGateTerms(section: string): string[] {
