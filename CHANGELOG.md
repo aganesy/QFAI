@@ -6,6 +6,33 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Added
 
+- **`qfai validate` reports a spec stage whose grilling session left no trace**
+  (#1605). `QFAI-GRILL-001`, at warning, on spec evidence whose
+  `## Pre-draft Grilling` section is missing or carries no phase row — a heading
+  with nothing under it is the state an agent reaches by copying the template
+  and filling none of it in.
+
+  The spec stage's evidence is tracked from now on, beside the implement and
+  atdd evidence that already is. A record only the machine that produced it can
+  see is one no review and no CI checkout ever reads.
+
+  A discussion pack's session is not checked yet: the row it should carry has no
+  writable home (#1695), and looking for a record with no defined path would
+  report every run.
+
+  Warning rather than error, because it reads a record the agent wrote about its
+  own run: it establishes that the record exists, not that a session happened,
+  and an error would claim the second. Raising it is cheap once the
+  false-positive rate is known.
+
+  A trigger round is a response to something detected, so its absence is not
+  observable — only the mandatory sessions are checked, and only through the
+  record the stage was told to write. A `--spec` run reports on its own spec, a
+  project with no evidence tree is not reported on, and evidence another
+  stage wrote is not a spec stage's to answer for.
+
+### Added
+
 - **The question-form rule is put in front of the agent on every turn** (#1610).
   A `UserPromptSubmit` hook emits it as context, naming the rule master and the
   one line an agent reaches past when it would rather not ask.
@@ -425,6 +452,17 @@ unadjudicated`, read off a Work Orders Summary row the session writes rather
   group to it — and a project holding either would be credited with both and
   never receive the other. The run report now names the reminder hooks as a
   set, rather than the one reminder that used to be the only one.
+
+- **Every question to the user arrives in the shape its answer has** (#1611). Article X
+  said the tool must be used where available and never said whether any question
+  was outside that, so a light one could read as outside it — and the light one
+  is where an agent goes when it would rather not ask. None is exempt now.
+
+  Availability is judged for the question in front of the agent, not from what
+  the host supports in general: a tool a mode withholds, and one that cannot
+  carry the answer's shape, both take the fallback. The fallback keeps that
+  shape — numbered choices where a listable set of candidates exists, a plain request
+  for the value where none does.
 
 ### Removed
 

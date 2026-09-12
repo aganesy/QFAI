@@ -150,6 +150,11 @@ export const QFAI_GITIGNORE_GOVERNANCE_NEGATIONS: readonly string[] = [
   // The negation stays narrow — the remaining stage evidence files really are
   // regenerable logs and stay ignored.
   "!.qfai/evidence/implement-*.md",
+  // The spec stage's evidence, on the same footing as the two above and for the
+  // same reason: `QFAI-GRILL-001` reads its `## Pre-draft Grilling` section, and
+  // a record only the machine that produced it can see is one no review and no
+  // CI checkout ever reads.
+  "!.qfai/evidence/sdd-*.md",
   "!.qfai/evidence/atdd-*.md",
   // The import-lite record. On the route where a spec set arrives without a
   // discussion pack, this file is the only thing standing in for the pack: it
