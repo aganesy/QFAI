@@ -59,13 +59,14 @@ confirm it had returned to the clean value.
 Each row's two runs select that row's `Selector` and nothing else, so the counts
 below are over the selected cases, not over the file.
 
-| Run                       | Selected | Result              |
-| ------------------------- | -------- | ------------------- |
-| `TDD-0019` GREEN            | 1 of 5   | 1 passed            |
-| `TDD-0019` falsifiability A | 1 of 5   | 1 failed            |
-| `TDD-0019` falsifiability B | 1 of 5   | 1 failed            |
-| Refactor verify           | all      | 126 passed          |
-| Checkpoint                | all      | 9081 passed, exit 0 |
+| Run                         | Selected | Result                    |
+| --------------------------- | -------- | ------------------------- |
+| `TDD-0019` GREEN            | 1 of 6   | 1 passed                  |
+| `TDD-0019` falsifiability A | 1 of 6   | 1 failed                  |
+| `TDD-0019` falsifiability B | 1 of 6   | 1 failed                  |
+| `TDD-0019` checkpoint item  | all 6    | 6 passed                  |
+| Refactor verify             | all      | 127 passed                |
+| Checkpoint                  | all      | seven of seven CI slices  |
 
 ## Test volume estimate
 
@@ -253,7 +254,7 @@ first mutation passes it and fails the literal check below it instead.
 ## Coverage Depth Matrix
 
 See `.qfai/evidence/coverage-depth-spec-0014.md`.
-Totals: ✅ 13 / ⚠️ 60 / ❌ 71, with 3 not applicable, across 147 scored cells —
+Totals: ✅ 14 / ⚠️ 60 / ❌ 70, with 3 not applicable, across 147 scored cells —
 126 matrix depth cells (14 rows × 9 columns) and 21 business rule cells
 (7 rows × 3 columns). `Status` is a row verdict, not a mark, and is outside
 every total.
@@ -365,10 +366,18 @@ finding`, which calls `validateProject` under the `verify` profile and asserts
 the forbidden-sidecar finding in its output; its own comment names the
 falsifying change as deleting the two `runCanonicalUixValidators` call sites
 while keeping the import — the mutation this withdrawal reports as surviving.
-So the gap is closed and `TDD-0018` is backfillable. This run does not backfill
-it: the case is not the one the row's `Selector` names, and re-pointing a
-selector and taking a fresh observation is the next run's work rather than a
-correction to this record.
+So the gap is closed and `TDD-0018` is backfillable, and the row's existing
+`Selector` already selects the case: the selector is the bare test-case id, the
+case sits inside `describe("TC-0014-0018: canonical UIX in verify path")`, and
+this record states three paragraphs earlier that a bare id resolves against a
+`describe` name. No re-pointing is owed. An earlier reading of this said the
+case was not the one the selector names, and that was wrong.
+
+This run still does not backfill it, for a reason that has nothing to do with
+the selector: a backfill is a RED observation, a GREEN, a refactor verification
+and a checkpoint against **that** row, and this run's subject is `TDD-0019`.
+Recording another row's verdict from a run taken for this one is the shape of
+claim this whole record exists to remove.
 
 `TDD-0035` is not backfilled. Its obligation names the command line and says so
 twice: `TC-0014-0035` reads "run `qfai prototyping certify --scope saas-package`
@@ -401,6 +410,17 @@ it stands and needs a Change Request that decomposes it.
 
 ## Final status
 
-PASS for the one row recorded here. This is a per-row verdict, not a stage
-verdict: the pack is not clean, and `TDD-0009`, `TDD-0018`, `TDD-0035` and
-`TDD-0036` are listed rather than claimed.
+ESCALATED. The row's evidence is complete and the reviewer gate has not passed
+it: `completion-reviewer` returned `REVISE` in both rounds, and the one
+permitted verification round escalated rather than clearing them.
+`review-convergence.md` makes the user's decision the only exit from an
+escalation, and no such decision is recorded, so this stage is not `PASS`
+whatever is true of the row's own fields. Escalation is not failure: the
+artifact stays where it is and the decision is above the reviewer.
+
+A per-row `PASS` was recorded here and was wrong. It read as a qualified stage
+verdict, and a qualifier is not an approval — an unapproved artifact presented
+as passing is the state the gate exists to prevent, whatever the qualifier says.
+
+Nothing about the pack is claimed either. `TDD-0009`, `TDD-0018`, `TDD-0035` and
+`TDD-0036` are listed rather than backfilled, each with the reason it is not.

@@ -192,7 +192,7 @@ to the story can hold a cell at `⚠️`; no cell reaches `✅`.
 | US-0014-0019 | ❌                     | ⚠️          | ⚠️         | ❌         | ❌              | ❌             | ❌                | ❌            | ⚠️              | ⚠️     |
 | US-0014-0020 | ⚠️                     | ⚠️          | ⚠️         | ⚠️         | ⚠️              | ⚠️             | ⚠️                | ⚠️            | ⚠️              | ⚠️     |
 | TC-0014-0009 | ❌                     | ❌          | ❌         | ❌         | ❌              | ❌             | ❌                | ❌            | ❌              | ❌     |
-| TC-0014-0018 | ⚠️                     | ⚠️          | ⚠️         | ❌         | ❌              | ❌             | ❌                | ❌            | ⚠️              | ⚠️     |
+| TC-0014-0018 | ⚠️                     | ✅          | ⚠️         | ❌         | ❌              | ❌             | ❌                | ⚠️            | ⚠️              | ⚠️     |
 | TC-0014-0019 | ❌                     | ⚠️          | ⚠️         | ❌         | ❌              | ❌             | ❌                | ❌            | ⚠️              | ⚠️     |
 | TC-0014-0028 | ❌                     | ❌          | ❌         | ❌         | ❌              | ❌             | ❌                | ❌            | ❌              | ❌     |
 | TC-0014-0029 | ❌                     | ❌          | ❌         | ❌         | ❌              | ❌             | ❌                | ❌            | ❌              | ❌     |
@@ -201,7 +201,7 @@ to the story can hold a cell at `⚠️`; no cell reaches `✅`.
 | TC-0014-0035 | ⚠️                     | ⚠️          | ❌         | ❌         | ❌              | ❌             | ❌                | ❌            | ⚠️              | ⚠️     |
 | TC-0014-0036 | ✅                     | ⚠️          | ✅         | ✅         | ⚠️              | ⚠️             | ✅                | ✅            | ⚠️              | ⚠️     |
 
-14 rows × the 9 depth columns = **126 scored cells: ✅ 8 / ⚠️ 53 / ❌ 65**.
+14 rows × the 9 depth columns = **126 scored cells: ✅ 9 / ⚠️ 53 / ❌ 64**.
 
 `Status` is the row verdict, not a mark, so it is outside the scored population. For reference, its
 14 cells read **✅ 0 / ⚠️ 9 / ❌ 5**.
@@ -416,12 +416,20 @@ checkable:
 
 ### TC-0014-0018 — full-scan verify depends on canonical validate groups
 
-`Status = done` under `DR-0014-0001`. Two passing cases. The first reads `src/core/validate.ts` and
+`Status = done` under `DR-0014-0001`. Three passing cases, all inside
+`describe("TC-0014-0018: canonical UIX in verify path")` and so all selected by the row's bare-id
+`Selector`. The first reads `src/core/validate.ts` and
 asserts it contains `runCanonicalUixValidators` and `from "./validators/index.js"` and matches
 neither legacy aggregator name. The second seeds a temp repo root with one discussion pack carrying
 the forbidden legacy sidecar `12_design_system.md`, runs `runCanonicalUixValidators`, and requires
-`UIX-VAL-3LAYER-FORBIDDEN-FILE` to be present. This row has **five `❌` depth cells** and no `❌` in
-`Status`.
+`UIX-VAL-3LAYER-FORBIDDEN-FILE` to be present. The third seeds the same input and calls
+`validateProject(root, undefined, { profile: "verify" })`, requiring the canonical group's finding
+to appear in that run's output — which is the repo-root verify flow the row's `Steps` name, reached
+through the entrypoint rather than around it.
+
+An earlier reading of this row counted two cases and concluded that no verify run is driven
+anywhere. Four cells rested on that, and each is corrected below. This row has **four `❌` depth
+cells** and no `❌` in `Status`.
 
 - **Edge cases** — the second case's own title says the validator "reaches the latest pack from a
   repo root", and the fixture seeds exactly one pack, so any selection rule at all passes it. A repo
@@ -434,10 +442,6 @@ the forbidden legacy sidecar `12_design_system.md`, runs `runCanonicalUixValidat
   writes a well-formed context file with an explicit surface.
 - **State transitions** — reaching a validator from an entrypoint is a single step; no transition
   exists to cover, and none is established.
-- **Combinatorial** — `EX-0014-0001` crosses two conditions, a UI-bearing repo and a validate error,
-  and requires a third state, verify remaining non-pass. No case constructs the pair, and nothing
-  observes the third state. The two cases in the row are never combined either: the source-text
-  check and the reach-through run share no fixture.
 
 ### TC-0014-0019 — removed compatibility namespace does not reappear
 
@@ -666,16 +670,17 @@ documented rationale for each, so each is named here.
   legacy sidecar `12_design_system.md`. The complementary clean pack is never fed, and the
   package-surface half of the story constructs no input at all, so the story's discriminating power
   is established in one direction on one of its two halves.
-- **US-0014-0013 × Normal path** — the direction is covered by two running cases:
+- **US-0014-0013 × Normal path** — the direction is covered by three running cases:
   `src/core/validate.ts` is read and required to name `runCanonicalUixValidators` and import from
-  `./validators/index.js`, and that entrypoint is then called over a seeded repo root and required
-  to emit a real issue. Both carry the `TC-0014-0018` annotation, and no case that runs is bound to
-  the story, so the cell is held at `⚠️`.
+  `./validators/index.js`, that entrypoint is then called over a seeded repo root and required to
+  emit a real issue, and a verify run over the same input is required to carry the same finding. All
+  three carry the `TC-0014-0018` annotation, and no case that runs is bound to the story, so the
+  cell is held at `⚠️`.
 - **US-0014-0013 × Error path** — a real error-severity issue is produced from the canonical
-  entrypoint, and the negative predicates over the real tree would redden if `validators/legacy` or
-  `runLegacyUixCompatibilityValidators` were re-introduced. What the story's consequence clause
-  needs — verify itself remaining non-pass when validate returns an error — is observed by nothing,
-  because no verify run is driven anywhere in the pack.
+  entrypoint and again from a verify run, and the negative predicates over the real tree would
+  redden if `validators/legacy` or `runLegacyUixCompatibilityValidators` were re-introduced. What
+  the story's consequence clause needs — verify itself remaining non-pass when validate returns an
+  error — is observed by neither run: both read the issue list, and nothing reads the verdict.
 - **US-0014-0013 × Oracle strength** — two of the three cases carry real oracles: removing the
   forbidden-file rule reddens the reach-through case, and re-adding `"compatibility"` to the
   category union reddens the surface case. The third is `expect(validateSrc).toContain("runCanonicalUixValidators")`,
@@ -793,11 +798,12 @@ documented rationale for each, so each is named here.
   `expect(cert.scope).not.toBe("full")`, which cannot fail while
   `expect(cert.scope).toBe("saas-package")` passes in the same case; and every oracle named here
   belongs to a case the pack binds to a test case rather than to this story.
-- **TC-0014-0018 × Normal path** — the row's `Steps` are "run repo-root verify flow against the
-  canonical validate entrypoint", and no case runs one. The first credited case reads
-  `src/core/validate.ts` as text and asserts it names `runCanonicalUixValidators`; the second calls
-  that function directly against a seeded temp root. Those establish the wiring and one emission,
-  which is why the cell is not `❌`, and neither is the verify flow the row describes.
+- **TC-0014-0018 × Combinatorial** — `EX-0014-0001` crosses two conditions, a UI-bearing repo and
+  a validate error, and requires a third state, verify remaining non-pass. The verify-path case
+  constructs the pair: a repo root carrying the forbidden sidecar, run through the verify profile.
+  The third state is not observed — the assertion reads the issue codes in the result, never the
+  run's overall verdict — so the cross is two-thirds built. The source-text check shares no fixture
+  with either running case.
 - **TC-0014-0036 × Oracle strength** — the two selector entries each have a production mutation that
   reddens them on their own, run separately, which is what the row's own coverage needs. The cell is
   held off `✅` by a third case in the same file: `prefers the canonical path when BOTH canonical and
@@ -810,15 +816,18 @@ documented rationale for each, so each is named here.
   legacy sidecar `12_design_system.md`. The complementary partition — a pack with a clean canonical
   family, required to produce no `UIX-VAL-3LAYER-FORBIDDEN-FILE` — is never fed to this entrypoint
   in this row, so the rule's discriminating power is established in one direction only.
-- **TC-0014-0018 × Error path** — the error direction is half covered. The emission half is genuine:
-  a real pack produces a real error-severity issue from the canonical entrypoint. The consequence
-  half that `EX-0014-0001` states, that verify remains non-pass when validate returns an error, is
-  observed by nothing, because no verify run is driven anywhere in the pack.
-- **TC-0014-0018 × Oracle strength** — the two cases sit at opposite ends. The reach-through case is
-  a real oracle: removing the forbidden-file rule reddens it. The entrypoint case is
-  `expect(validateSrc).toContain("runCanonicalUixValidators")`, which the import statement alone
-  satisfies — deleting every call while leaving the import keeps it green. The `not.toMatch`
-  half is stronger, since re-adding either legacy aggregator name reddens it.
+- **TC-0014-0018 × Error path** — the error direction is half covered. The emission half is genuine
+  twice over: a real pack produces a real error-severity issue from the canonical entrypoint, and
+  the same input produces it again through a verify run. The consequence half that `EX-0014-0001`
+  states, that verify remains non-pass when validate returns an error, is observed by neither — both
+  read the issue list, and nothing reads the run's verdict.
+- **TC-0014-0018 × Oracle strength** — two of the three cases carry real oracles. Removing the
+  forbidden-file rule reddens the reach-through case, and deleting the two
+  `runCanonicalUixValidators` call sites in `src/core/validate.ts` while keeping the import reddens
+  the verify-path case — the case's own comment names that mutation, and it is the one the
+  entrypoint case survives. That entrypoint case is what caps the cell:
+  `expect(validateSrc).toContain("runCanonicalUixValidators")` is satisfied by the import alone. Its
+  `not.toMatch` half is stronger, since re-adding either legacy aggregator name reddens it.
 - **TC-0014-0019 × Normal path** — the compliant direction is exercised, but over a proxy for
   the surface the obligation names. The case reads `src/core/validators/index.ts` and
   `src/core/types.ts`; the package surface is what `package.json#exports` publishes, which is
@@ -946,11 +955,10 @@ documented rationale for each, so each is named here.
 ### Matrix Status cells
 
 - **US-0014-0013 × Status** — the canonical entrypoint is reached from a repo root with a real
-  emission, and the removed namespaces are asserted over the real tree. Three things cap it. No
-  verify run is driven anywhere, so the story's own subject is reached only through `validate.ts`
-  read as text. The five `❌` depth cells named above are unaddressed. And the obligation is
+  emission, a verify run reaches it too, and the removed namespaces are asserted over the real tree.
+  Two things cap it. The `❌` depth cells named above are unaddressed. And the obligation is
   reported carrier-only, with every discharging file under `packages/qfai/tests/`, outside the
-  scanned root.
+  scanned root. A third cap recorded here — that no verify run is driven anywhere — was not true.
 - **US-0014-0014 × Status** — the story's subject is enforced by a suite whose oracles are specific
   and whose categories are nearly complete, which is more than most rows in this pack can say. It is
   capped at `⚠️` because the live pack binds that suite to the story by nothing — no `AC`, `BR`,
@@ -1153,7 +1161,7 @@ them is repaired here; this artifact scores coverage and does not edit tests, le
 `QFAI-ATDD-133` requires the stage evidence to carry a `## Coverage Depth Matrix` section that links
 to this file and restates the counted totals beside it. Those totals are:
 
-**✅ 13 / ⚠️ 60 / ❌ 71**, with `n/a` 3, across all 147 scored cells — 126 matrix depth cells (14
+**✅ 14 / ⚠️ 60 / ❌ 70**, with `n/a` 3, across all 147 scored cells — 126 matrix depth cells (14
 rows × 9 columns) and 21 business rule cells (7 rows × 3 columns). The `Status` columns of both
 tables hold row verdicts rather than marks and are outside that population; for reference the
 matrix's 14 read `⚠️ 9 / ❌ 5` and the business rule table's 7 read `⚠️ 3 / ❌ 4`.
