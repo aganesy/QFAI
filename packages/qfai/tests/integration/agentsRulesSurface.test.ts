@@ -688,6 +688,20 @@ describe("cross-AI rules surface (.agents/rules/ master)", () => {
       expect(text).toMatch(/asking\s+for\s+a\s+fact\s+carries\s+no\s+recommended\s+answer/i);
     });
 
+    // Three readings sit at that clause and it refuses only one of them by
+    // name. An agent that will not invent two candidates is still left choosing
+    // between the tool's free-text path and plain text, and the fallback taken
+    // where the tool would have carried the question drops the structure for
+    // nothing.
+    it.each(MASTERS)("%s says where a value with no candidates goes", async (rel) => {
+      const text = await readFile(path.join(ROOT, rel), "utf-8");
+      expect(text).toMatch(/value\s+with\s+no\s+candidates\s+goes\s+through\s+the\s+tool/);
+      expect(text).toMatch(/user-questions\.md`\s+§\s+2/);
+      // The fallback stays what it is: the case where the host has no such
+      // path, not a second way of asking wherever it is easier.
+      expect(text).toMatch(/§\s+5\s+keeps\s+for\s+a\s+host\s+that\s+has\s+none/);
+    });
+
     // The frontier empties while a lookup is in flight, so an end condition
     // reading the frontier alone closes the session before the lookup can raise
     // the questions it was dispatched to answer.
