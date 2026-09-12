@@ -4,6 +4,26 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ## [Unreleased]
 
+### Fixed
+
+- **A skill the gate accepts is one the host accepts** (#1707). Five cases
+  parted company with the host `QFAI-SKILLS-015` is modelled on: a description
+  past 1024 characters, a skill directory whose own name is not a legal one, a
+  dot-prefixed directory the host does not list, and an entry point holding a
+  byte that is not valid UTF-8. Each is now decided the way the host decides
+  it — reported where the host refuses the skill, and passed over where the
+  host never loads it.
+
+  A directory that has to be renamed gets an action that can be followed: no
+  value in `name:` clears both the form and the directory match, so the rename
+  comes first.
+
+  A value read out of a `SKILL.md` reaches an operator-facing message with its
+  control characters escaped. The document is a file the run did not write, and
+  the text formatter prints a message straight to the terminal.
+
+## [1.12.0] - 2026-09-12
+
 ### Added
 
 - **A design is grilled before it is fixed, and every stage does it** (#1591,
@@ -1984,22 +2004,6 @@ unadjudicated`, read off a Work Orders Summary row the session writes rather
   stale every verdict in the spec when any cell moved. A record re-attestation
   closes it, because the revision has not moved — and it is not a rubber stamp,
   since what it re-signs is a judgement over a subject that has grown.
-
-- **A skill the gate accepts is one the host accepts** (#1707). Five cases
-  parted company with the host `QFAI-SKILLS-015` is modelled on: a description
-  past 1024 characters, a skill directory whose own name is not a legal one, a
-  dot-prefixed directory the host does not list, and an entry point holding a
-  byte that is not valid UTF-8. Each is now decided the way the host decides
-  it — reported where the host refuses the skill, and passed over where the
-  host never loads it.
-
-  A directory that has to be renamed gets an action that can be followed: no
-  value in `name:` clears both the form and the directory match, so the rename
-  comes first.
-
-  A value read out of a `SKILL.md` reaches an operator-facing message with its
-  control characters escaped. The document is a file the run did not write, and
-  the text formatter prints a message straight to the terminal.
 
 ## [1.11.1] - 2026-09-10
 
