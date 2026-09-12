@@ -24,7 +24,10 @@ existing somewhere in the repository is not coverage here. Ownership is read in 
    annotation at all is claimed by no other spec. Where an obligation has no annotated case
    anywhere, every unannotated case that produces its outcome is scored, and the record names all
    of them rather than the first one found. Three files are in this position, for the same two
-   obligations, and the inventory below lists each with its run.
+   obligations, and the inventory below lists each with its run. What it selects is a case that
+   RUNS the preflight, not one that describes it: three further unannotated files name the surface
+   — two assert substrings of a shipped playbook or skill document, one parses the `sdd preflight`
+   argv without invoking it — and none produces either obligation's outcome, so none is scored.
 
 The two steps do not overlap: the first turns on an annotation pointing elsewhere, the second on
 there being no annotation to point anywhere. Neither admits a case that another spec owns.
@@ -95,12 +98,16 @@ Their scores together are the whole of what those two stories have, which the ro
 The last two files hold coverage for other packs as well; only their preflight cases bear on this
 one.
 
-Counting all three moves no cell. What the two additional files add is a second and third entry
+Counting all three moves no cell. Every down-marked cell on the two rows was read again against
+the added cases, and none rises. What the two additional files add is a second and third entry
 path — the command around the function, and the import-lite entrypoint — rather than new input
-shapes, and every down-mark on the two rows turns on a shape none of the three supplies: a pack
-that is incomplete and on which generation continues, an empty pack directory, a required name
-present as a directory, a zero-byte required file, an unreadable pack, a sixteenth required file,
-and a required file below the minimum-content threshold.
+shapes. Most of the down-marks turn on a shape none of the three supplies: a pack that is
+incomplete and on which generation continues, an empty pack directory, a required name present as
+a directory, a zero-byte required file, an unreadable `discussion-*` pack — the discussion root
+being unreadable is supplied, the pack directory is not — and a sixteenth required file. The rest
+turn on reasons an entry path cannot reach: the pairs left uncrossed under `Combinatorial`, the
+required-file list the command's own suite declares for itself instead of importing the source
+constant, and the oracle caps named below.
 
 Six of the sixteen carry no ledger row, and are likewise scored from the pack:
 
@@ -820,7 +827,9 @@ grouped by column with a per-coordinate reason.
 `-0017`, `-0018`, `-0019`, `-0020`, `-0021`, `-0025`, `-0028`, `-0029`, `-0032`.
 
 - `US-0013-0003` — four partitions of the pack input have a representative with a distinct outcome:
-  ready, pack absent, blocking OQ present, required markdown missing. The partition
+  ready, pack absent, blocking OQ present, required markdown missing. Counting the import-lite
+  entrypoint adds a fifth, the import-lite source that `AC-0013-0003` names beside the pack, with
+  representatives at distinct outcomes. The partition
   `AC-0013-0003` requires — a pack that is incomplete or contradictory and on which SDD **continues**
   — is unrepresented, and the blocking-OQ partition is fixed with the outcome the AC forbids.
 - `US-0013-0012` — resolvable, absent-pointer and pointer-to-missing-pack each have a representative
@@ -956,10 +965,11 @@ grouped by column with a per-coordinate reason.
 `-0027`, `-0033`, `-0035`.
 
 - `US-0013-0003` — malformed, scalar, null and legacy-only `prototyping.yaml`, plus absent, are each
-  supplied and each required not to block. That is five special shapes of one artifact. It is `⚠️`
-  rather than `✅` for this story because its own subject is the pack's readiness verdict, and no
-  required markdown file is supplied empty or below the minimum-content threshold, which is the
-  special value that produces a distinct blocker.
+  supplied and each required not to block. That is five special shapes of one artifact, and counting
+  the import-lite entrypoint supplies a sixth: a required markdown file present but below the
+  minimum-content threshold, seeded as a five-character `06_REQ.md`. It is `⚠️` rather than `✅`
+  because that case's only oracle is that the pack comes back `blocked`, which the fourteen absent
+  files already produce — so nothing in it shows the minimum-content check fired at all.
 - `US-0013-0014` — count 1, a two-task screen, and an all-malformed list whose parsed result is empty
   are all supplied. No `null` item, no empty map, no non-string field.
 - `TC-0013-0016` — the omitted-key case is a genuine special value: `baseBranch` absent must yield
@@ -1049,9 +1059,10 @@ attempted or rejected.
   `Blocking OQ`) and the summary file is read back and checked, which is a real oracle that a
   one-line change to the emission reddens. Three things cap both. The positive case asserts
   `blockers` is empty, which certifies "nothing blocks" rather than "this check passed". The
-  missing-file assertion matches that literal without requiring the blocker to
-  name the file removed, while the emission joins the missing names into the message. And one case's
-  oracle is the shipped Stage 0 playbook's own wording rather than a behaviour.
+  missing-file assertion matches only that message's fixed prefix and never the file removed, while
+  the emission joins the missing names into it. And two scored cases carry a document's wording as
+  their oracle rather than a behaviour: one the shipped Stage 0 playbook, one in the command's own
+  suite asserting substrings of `qfai-sdd/SKILL.md` without running the command.
 - `US-0013-0011` — **the two directions are not equally supported, and this is the clearest instance
   in the pack.** A mutation that removes the empty-`primary_tasks` check reddens the refusal case in
   three ways at once: the exit code, the `QFAI-AUD-001` match and the `order_create` match. The
