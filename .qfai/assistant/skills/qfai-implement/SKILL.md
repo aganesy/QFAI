@@ -67,6 +67,25 @@ When unsure, read inputs in this order:
 - P4: the obligations that row names (`06_Test-Cases.md` through its `TC-Refs`, then `03_Acceptance-Criteria.md`, `05_Examples.md`, `01_Spec.md`, `.qfai/contracts/**`)
 - P5: `.qfai/specs/<spec-id>/07_Decisions.md` + `.qfai/specs/_policies/08_Decisions.md` (Decision Records, `DR-*`)
 
+## Grilling (MANDATORY)
+
+Article IX of `.qfai/assistant/constitution/constitution.md` owns both sessions
+this stage runs, and `.agents/rules/grilling.md` owns the method. Neither is
+restated here.
+
+- **At the preflight.** A session over what the confidence check left uncertain,
+  and nothing else. The bound is on the subject: the spec and the ledger are
+  settled input, and re-interrogating them each run would stop the cycle and
+  invite the drift this stage avoids.
+- **On detection.** A contradiction in the spec, an unconsidered case or a
+  technical obstacle surfacing mid-run stops the work and opens a session over
+  what was detected, rather than being decided alone.
+- **Neither session changes settled input.** Where one concludes that settled
+  input must change, `.qfai/assistant/constitution/drift-protocol.md` governs:
+  stop the dependent work, raise the Change Request, wait for approval. Where it
+  concludes the obstacle is this run's to solve, the run solves it — nothing
+  upstream changes, so there is nothing to approve.
+
 ## CRITICAL CONSTRAINTS (Read First)
 
 - This skill processes **one test at a time** from `test-list.md`: at most one row is in `red` or `green` at any moment, except under an item-level parallel dispatch authorized by `## Parallelization Policy` below. A T1 row parked in `refactor` waiting for its review group (see Volume Policy) does not violate this.
