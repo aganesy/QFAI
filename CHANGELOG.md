@@ -156,6 +156,119 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   the sentence forbade `qfai-configure`'s `testFileGlobs` proposal and the
   grilling subject a session cannot start without.
 
+- **A grilling loop runs before a spec phase freezes its first draft** (#1598).
+  The phase's drafting agent is interviewed by a griller; the orchestrator holds
+  the loop, routes it, and does not answer its questions. It runs before Phase 0,
+  Phase 1, Phase 2 and Phase 3, and each escalated decision reaches the user as a
+  structured question.
+
+  This is not the Reviewer Gate and does not replace it. The gate reads a drafted
+  artifact and answers whether it is right; a contradiction, an unconsidered case
+  and a choice that does not fit the existing code all enter before the draft, so
+  by the time a reviewer reads the artifact they are premises, and an artifact
+  coherently built on a premise nobody chose returns `PASS`.
+
+  The first draft is the freeze point, because once an artifact exists a decision
+  argued against it is a change to something written rather than a choice among
+  options.
+
+  The trigger is this invocation's first write in the phase, not whether the
+  artifact already exists. Most runs are `UPDATE:APPEND` or `UPDATE:MODIFY`
+  against artifacts that do, so a rule keyed on existence would never fire on
+  the ordinary path. Phase 2c is on the list for the same reason: it makes
+  contract choices after Phase 0 has written.
+
+  One session per phase, over every routed drafting role's decisions. Grilling
+  one author leaves the others free to settle their own before their own writes.
+
+  Every decision the session settled that authoritative evidence did not answer
+  goes to the user before any author writes — not only the ones the round budget
+  left open. A decision the author accepted from the griller is not open, so the
+  convergence rules do not escalate it, and an agent-to-agent decision nobody
+  adjudicated makes the artifact one no reviewer can clear. Escalating the
+  residue alone would hand the authors a settled set whose agreed half fails
+  review.
+
+  The phase records a run-or-skip line and, per settled decision, a work-order
+  row naming who adjudicated it. A phase whose subject is settled has nothing to
+  grill, and that skip is indistinguishable from an omitted session unless it is
+  written down; the two adjudications point opposite ways, and one marker for
+  both told the reviewer nothing it could act on.
+
+  A no-question run reaches nobody, so the decision is opened as a question, the
+  phase's row reads `escalated`, and **the phase does not write** — its work
+  order stays `PENDING`, which blocks completion and leaves the stage resumable.
+  That is the gate, because a spec pack's open-question file is not one: it
+  carries open questions as a matter of course, so nothing there stops a run.
+
+  Where the structured question tool is not callable, the escalation takes the
+  rule's fallback rather than being skipped.
+
+  A fact only the user holds goes to the user rather than to an author. No
+  author can answer an unpublished constraint, and the convergence rules
+  escalate decisions rather than facts, so without this it sat on the frontier
+  until the budget ended and took every decision waiting on it along.
+
+  The phase row carries when its session ended and when the phase first wrote,
+  the first recorded before that write — a row holding only the outcome reads the
+  same whether the session ran before the phase, after it, or not at all. `run`
+  means zero escalations, and each phase's settled count equals the number of
+  decision rows carrying that phase, so a count has something behind it.
+
+  The record's chronology is per state: `run` carries both times, `skipped` has
+  no session to have ended, and an `escalated` phase does not write. Requiring
+  both of every state would make two legitimate states unrecordable, and a state
+  nobody can record honestly is one an agent records dishonestly.
+
+  Phase 2c takes one row per expansion — `2c.1` upward — since its scope is
+  recomputed after every contract write, and a single row records the first
+  checkpoint while leaving every later one indistinguishable from one that never
+  happened.
+
+  The session covers every routed drafting role, `solution-architect` included,
+  and the user's answer is put back into the tree: a decision whose prerequisite
+  was open could not enter either agent round, so the rounds repeat until no node
+  is open. The constitution counts as authoritative evidence beside the specs and
+  contracts, since both this skill and the primitive rank it above them.
+
+  A throwaway built to answer a question the frozen inputs cannot is not the
+  phase writing. The freeze names the files it covers — the policy layer, the
+  spec packs and the contracts — so a UI-bearing phase can build the thing its
+  own method asks for.
+
+  Agreement between agents closes a node without settling the decision. Those are
+  one state read for two purposes: _open_ is about the round — is there anything
+  left to ask — and _settled_ is about the decision — has anyone with the standing
+  to take it done so. Conflating them is how an agreed answer reaches a draft as
+  though it were chosen.
+
+  A decision row names its phase, as the title's first field, because the shared
+  work-order schema has no column for it. The disposition rewrites keep those
+  fields: a reopened decision the user later resolves would otherwise drop the
+  key the gate selects on, and the rows a dispute produced are the ones it most
+  needs to find. Without that key a row cannot be
+  assigned to a phase, so an omitted row passes by being counted against another.
+
+  A decision is persisted by the drafting agent that owns its artifact, not by
+  the orchestrator: `07_Decisions.md` and `09_delta.md` are primary artifacts,
+  and on a CREATE run the file may not exist, so writing it is authoring.
+
+  Every distinct position reaches the user with whose it is. Phase 2 routes three
+  authors, so merging two answers before the user sees them hands them a choice
+  the full set was never asked to adjudicate.
+
+  Phase 2c gets a checkpoint per expansion rather than one per phase, because its
+  scope is recomputed after every contract write.
+
+  The gate asks only about the phases the loop covers. Phase 2b and Phase 4
+  produce no design decision, so a row for them would either reject valid
+  evidence or claim a session that was never owed. The canonical evidence
+  template carries the section, so a template-derived run has the heading the
+  gate reads.
+
+  The fixed phase order is unchanged: the loop is a step inside a phase, not one
+  of its own.
+
 ### Changed
 
 - **`/qfai-discussion` runs its interview as a grilling session** (#1597). Step

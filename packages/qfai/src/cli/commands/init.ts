@@ -2771,7 +2771,7 @@ const LEGACY_EVIDENCE_IGNORE_NEGATIONS: readonly string[] = [
   // would commit a file nothing reads.
   // The prototyping session record, for the same reason again. It is a user
   // decision rather than regenerable stage evidence, so the root block tracks
-  // it — and the nested `*` overrides that root negation on every project
+  // it — and the nested `*` overrides that root negation on any project
   // carrying the legacy file, which is every project initialized before the
   // root block grew its own evidence negations. The directory needs its own
   // line: git never descends into an ignored one, so the leaf alone is inert.
