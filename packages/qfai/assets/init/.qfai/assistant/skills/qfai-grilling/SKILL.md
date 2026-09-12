@@ -101,6 +101,20 @@ Two questions never share a round when one depends on the other; the dependent
 one belongs to a later round. The next round is never written ahead of the
 answers it is computed from.
 
+**A no-question mode is read before any of this.** Where the invocation is told
+not to ask — `--auto`, or whatever the host spells it as — no round is put at
+all, so nothing below applies and the no-question section above governs. A mode
+that withholds the tool while still permitting questions is a different thing,
+and is the fallback's case.
+
+**Three things send a round to plain text**: the host has no structured question
+tool, the current mode withholds it while still permitting questions, or the
+tool cannot carry the answer shape of some question in the round. **The whole
+round falls back, not the question that triggered it** — a round split across
+two carriers loses the thing a round is for, which is the user seeing what is
+being decided together. Say why the tool was not used, and where the reason is
+the third one, say which question it could not carry.
+
 **Where the host's question tool takes fewer questions than the frontier holds**,
 deliver the round in host-sized batches. The frontier is not recomputed between
 them, no answer is acted on until the round is exhausted, and each batch is read

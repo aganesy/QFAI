@@ -56,7 +56,7 @@ const BASELINE_OWNED_RULES = [
   // skill forking only the open-value half would otherwise pass a matcher that
   // looks for the choices half alone.
   "**in the shape its answer has**",
-  "a plain request for the value where the answer is a name",
+  "a plain request for the value where the answer has no finite set",
   "preserve structured choice semantics",
   "State why AskUserQuestion was unavailable",
 ];

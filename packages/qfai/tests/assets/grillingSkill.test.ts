@@ -243,6 +243,20 @@ describe("the primitive carries the master's clauses", () => {
       expect(text).toMatch(/it never makes two rounds/);
     });
 
+    it(`${tree}: the whole round falls back, and a no-question mode outranks it`, async () => {
+      // Split across two carriers, a round stops being one thing the user sees
+      // together. And routed by availability first, an --auto run would reach a
+      // plain-text fallback the same document forbids it to use.
+      const text = flat(await read(tree));
+      expect(text).toMatch(/A no-question mode is read before any of this/);
+      expect(text).toMatch(/no round is put at all/);
+      expect(text).toMatch(
+        /withholds the tool while still permitting questions is a different thing/,
+      );
+      expect(text).toMatch(/The whole round falls back, not the question that triggered it/);
+      expect(text).toMatch(/say which question it could not carry/);
+    });
+
     it(`${tree}: a session between agents has an end`, async () => {
       // No user is present to satisfy the second condition, so an unconditional
       // end condition makes the session uncompletable.

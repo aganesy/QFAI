@@ -84,9 +84,15 @@ One round is one frontier: asked in full, answered in full.
 Count rounds, not questions. Forty questions across four rounds is an ordinary
 session; the same forty asked one at a time is a worse one.
 
+**A no-question mode is read before any of this.** Where the invocation is told
+not to ask, no round is put at all, so nothing here applies and _Under a
+no-question mode_ below governs. A mode that withholds the tool while still
+permitting questions is a different thing, and is the fallback's case.
+
 Ask through the host's structured question tool. Three things send a round to
-plain text instead: the host has no such tool, the current mode withholds it, or
-it cannot carry the answer shape of some question in the round — a question
+plain text instead: the host has no such tool, the current mode withholds it
+while still permitting questions, or it cannot carry the answer shape of some
+question in the round — a question
 permitting several answers put to a tool whose options are exclusive is the
 common case, and forcing it through loses the constraint.
 

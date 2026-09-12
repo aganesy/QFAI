@@ -148,14 +148,14 @@ There is one base, and it is the project root.
   `--auto` — is read before this: nothing is asked, so there is no question whose
   availability to judge, and the fallback is not its route.
 - Where the question has choices and AskUserQuestion supports them, prefer structured choices over free-text input.
-  An open answer — a name, a number, a sentence — takes the free-text path instead; the preference
-  ranks two ways of asking one question, and never turns an open answer into a choice.
+  An open answer — one with no finite set of candidates — takes the free-text path instead; the
+  preference ranks two ways of asking one question, and never turns an open answer into a choice. A
+  name, a number or a sentence is usually open and is not open by type.
 - If AskUserQuestion is unavailable, ask the same question in a normal message
   **in the shape its answer has**: explicit numbered choices where there are
-  choices, and a plain request for the value where the answer is a name, a
-  number or a sentence. Inventing options to make an open answer fit a numbered
-  list is the failure the form rule names, and the fallback is not a licence for
-  it.
+  choices, and a plain request for the value where the answer has no finite set
+  of candidates. Inventing options to make an open answer fit a numbered list is
+  the failure the form rule names, and the fallback is not a licence for it.
 - Where there are choices, preserve structured choice semantics when falling back.
 - State why AskUserQuestion was unavailable.
 - The three buckets of a skill's `## Default Autopilot Policy` say who settles a

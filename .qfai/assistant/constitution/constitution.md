@@ -353,7 +353,7 @@ questions an invocation asks; this article bounds what each of them looks like.
 Exhausting that budget changes the count and nothing here: a question that
 survives exhaustion still arrives in the form its answer shape calls for — a
 structured choice where there are choices, the tool's free-text path where the
-answer is a name, a number or a sentence. `qfai-configure`'s replacement glob is
+answer has no finite set of candidates. `qfai-configure`'s replacement glob is
 the second kind, and inventing options to narrow it would be the failure the
 rule master names.
 
@@ -371,14 +371,16 @@ Rules:
    means a mode that still permits asking and offers no structured tool; a mode
    that permits no question at all is rule 4's, not this one's.
 2. **MUST prefer structured choices** (radio/multi-select) over free-text input **where the
-   question has choices** and AskUserQuestion supports them. Where the answer is open — a name, a
-   number, a sentence — the free-text path is the one that carries it, and narrowing it into options
-   is the failure rule 3 names. The preference ranks two ways of asking one question; it does not
+   question has choices** and AskUserQuestion supports them. Where the answer is open — no finite set
+   of candidates to choose from — the free-text path is the one that carries it, and narrowing it
+   into options is the failure rule 3 names. A name, a number or a sentence is usually open and is
+   not open by type: where the value has to be one of a known few, the set is what the user needs to
+   see. The preference ranks two ways of asking one question; it does not
    turn an open answer into a choice.
 3. **Fallback**: If AskUserQuestion is unavailable for this question, the agent MUST present the same
    question as a normal message, **in the shape its answer has**: explicit numbered choices where
-   there are choices, and a plain request for the value where the answer is a name, a number or a
-   sentence. Inventing options to make an open answer fit a numbered list is the failure the form
+   there are choices, and a plain request for the value where the answer has no finite set of
+   candidates. Inventing options to make an open answer fit a numbered list is the failure the form
    rule above names, and the fallback is not a licence for it.
    Where there are choices the agent SHOULD preserve structured choice semantics (enumerated
    options, selection constraints). The reason for unavailability MUST be stated.

@@ -548,12 +548,12 @@ describe("the question form binds every question", () => {
       // rules then contradict each other in one article.
       expectPhrase(content, "**where the question has choices**");
       expectPhrase(content, "it does not turn an open answer into a choice");
-      expectPhrase(content, "the tool's free-text path where the\nanswer is a name");
+      expectPhrase(content, "the tool's free-text path where the answer has no finite set");
       // The fallback carries the shape too. Routing every unsupported answer
       // shape to a numbered list would have an agent invent options for exactly
       // the open value the paragraph above protects.
       expectPhrase(content, "**in the shape its answer has**");
-      expectPhrase(content, "a plain request for the value where the answer is a name");
+      expectPhrase(content, "a plain request for the value where the answer has no finite set");
     });
 
     it(`${tree}: communication.md carries the same protocol as the article`, async () => {
@@ -576,7 +576,10 @@ describe("the question form binds every question", () => {
       // numbered-only, or shed the selection constraint, with this suite still
       // green — which is the drift it exists to catch.
       expectPhrase(content, "in the shape its answer has");
-      expectPhrase(content, "a plain request for the value where the answer is open");
+      expectPhrase(
+        content,
+        "a plain request for the value where the answer has no finite set of candidates",
+      );
       expectPhrase(
         content,
         "preserve structured choice semantics (enumerated options, selection constraints)",
@@ -609,7 +612,7 @@ describe("the question form binds every question", () => {
       // every unsupported shape to a numbered list has the skill invent options
       // for the open value the article protects.
       expectPhrase(content, "**in the shape its answer has**");
-      expectPhrase(content, "a plain request for the value where the answer is a name, a");
+      expectPhrase(content, "a plain request for the value where the answer has no finite set of");
     });
   }
 });
