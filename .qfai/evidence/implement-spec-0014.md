@@ -6,30 +6,41 @@ Carry the proof for the `unit` rows of this spec's ledger. The stage split puts
 an `E2E` / `API` / `Integration` row's proof in `.qfai/evidence/atdd-spec-0014.md`;
 every other layer anchors here.
 
-Neither of this spec's two `unit` rows can be backfilled. The reasons are under
-Gaps, and no row is recorded.
+The ledger holds four `unit` rows. **Neither of the two completed ones —
+`TDD-0033` and `TDD-0034` — can be backfilled**, and the reasons are under
+Gaps. The other two, `TDD-0028` and `TDD-0029`, are at `exception` with
+`DR-0014-0002` recorded: an `exception` row carries a decision rather than a
+proof, so backfilling is not the question for them and nothing here records one.
+No row is recorded either way.
 
 ## Decisions made (with rationale)
 
-`TDD-0034` carried a `Selector` written as a summary of the obligation rather
-than a test's title. It was corrected to
-`re-seeds acceptedIterationIndex / stopReason and deletes reviewerGate /
-fullHarness / executionPlan on cycle 0`, the title of the case that carries its
-obligation, so the row names a case that can be run. Its `Evidence` cell is
-unchanged.
+`TDD-0034` carries a `Selector` written as a summary of the obligation rather
+than a test's title: `cycle 0 deletes fullHarness`. **The ledger still carries
+it, and this stage did not change it.** A correction was drafted and withdrawn —
+the cell belongs to a `done` row, and rewriting one here would have re-pointed
+a completed row's identity outside the transition that allows it. The repair is
+the ledger owner's, and what is recorded below is the state as found.
 
 ## Commands executed + key outputs
 
-Two runs establish that the corrected `Selector` resolves and that the case
-passes. They are not evidence for the row; see Gaps.
+Two runs establish what the row's `Selector` does and does not select. Neither
+is evidence for the row; see Gaps.
 
 Both ran from `packages/qfai` at revision
 `649d8111147436408c90cbbe1b9f9b07e34da8cb`.
 
-| Run                                                          | Selected | Result   |
-| ------------------------------------------------------------ | -------- | -------- |
-| `npx vitest run tests/cli/commands/prototypingIterate.test.ts` | all      | 103 passed |
-| the same, `-t` the corrected `Selector`                       | 1 of 103 | 1 passed |
+| Command                                                                                   | Selected  | Result      |
+| ------------------------------------------------------------------------------------------- | --------- | ----------- |
+| `npx vitest run tests/cli/commands/prototypingIterate.test.ts`                             | all       | 103 passed  |
+| `npx vitest run tests/cli/commands/prototypingIterate.test.ts -t "cycle 0 deletes fullHarness"` | 0 of 103  | 103 skipped |
+
+The second is the finding: the `Selector` as the ledger carries it matches no
+case, so the row names nothing that can be run. The title that carries its
+obligation is
+`re-seeds acceptedIterationIndex / stopReason and deletes reviewerGate /
+fullHarness / executionPlan on cycle 0`, recorded here for the owner rather than
+written into the cell.
 
 ## Items processed
 

@@ -69,7 +69,7 @@ enforced by a strong suite that no live chain binds to it.
 single well-oracled case with no boundary or error direction, and `US-0014-0018` has one incidental
 gate and no case on the claim that distinguishes it.
 
-Section "Every `❌` cell, named" enumerates all 80 of them — 71 scored, 9 in the non-scored `Status`
+Section "Every `❌` cell, named" enumerates all 79 of them — 70 scored, 9 in the non-scored `Status`
 columns — so that "one justification per `❌`" is checkable rather than asserted, and section
 "Every `⚠️` cell, named" does the same for all 72 partial scores, 60 of which are scored cells the
 PASS criterion also requires a rationale for.
@@ -262,6 +262,21 @@ The scored population is 147 cells: 126 matrix depth cells plus 21 business rule
 | ❌   | 64           | 6             | 70           |
 | n/a  | 0            | 3             | 3            |
 | Sum  | 126          | 21            | 147          |
+
+### The `DR-0274` citation both certify rows carry
+
+`TDD-0035` and `TDD-0036` record `DR-0014-0004 (cites DR-0274)` in the ledger's
+`DR-ID` cell. `DR-0014-0004` says the opposite in its own text: "DR-0274 is a
+sibling REQ-0167 (pack-location lint scope) decision and is intentionally NOT
+cited as governing here."
+
+So the provenance the ledger records for both rows is contradicted by the
+decision it names. This is the third decision-provenance gap in the pack and it
+is reported here rather than repaired: a `DR-ID` cell belongs to the row, both
+rows are `done`, and correcting one is the ledger owner's edit under the
+transition that allows it. Neither row's scores turn on it — what the cells
+score is the case, not the citation — so the matrix totals are unaffected and
+the gap stands open against the rows.
 
 ## Every ❌ cell, named
 

@@ -46,12 +46,15 @@ unchanged; the reason is under Gaps.
 
 ## Work performed (what changed, where)
 
-- `.qfai/specs/spec-0014/tdd/test-list.md` — the `Selector` of `TDD-0035`
-  rewritten to the title it names, and the `Evidence` cell of `TDD-0019`
-  rewritten as a pointer into this file. `TDD-0033` and
-  `TDD-0034` are `unit`, so they belong to
+- `.qfai/specs/spec-0014/tdd/test-list.md` — **unchanged**. Two edits were
+  drafted and both were withdrawn: rewriting `TDD-0035`'s `Selector` to the
+  title it names, and turning `TDD-0019`'s `Evidence` cell into a pointer into
+  this file. Neither is this stage's to make — the cells belong to rows a
+  completed run recorded, and a pointer written here would have carried an
+  automated gate past an artifact that records `ESCALATED`. The reasons are
+  under Gaps. `TDD-0033` and `TDD-0034` are `unit` and belong to
   `.qfai/evidence/implement-spec-0014.md`, which records neither and says why.
-  No `Status` moved.
+  No `Status` moved and no cell was written.
 - This file created.
 
 ## Commands executed + key outputs
@@ -93,9 +96,11 @@ authored, so "no test was authored" does not make it inapplicable.
 many of these obligations have a case that runs is the Coverage Depth Matrix's
 question, and its answer here is that no story does — `US-0014-0020` has an
 annotated file under `tests/e2e/**` whose cases sit inside a `describe.skip`
-marked test-first — and that four of the nine declared test cases carry a row
-naming a file that exists and runs. This run authored no test and moved no
-`Status`.
+marked test-first — and that seven of the nine declared test cases carry a row
+naming a file that exists and runs — every `done` row does. The two that do not
+are `TDD-0028` and `TDD-0029`, both at `exception`, whose
+`packages/qfai/tests/validators/prototypingDesignSystem.test.ts` is not in the
+tree. This run authored no test and moved no `Status`.
 
 ## Coverage obligations checklist
 
@@ -113,13 +118,27 @@ evidence its cell points at.
 
 Eight files declare themselves inactive and did not run, each through
 `describe.skip` carrying the marker `(test-first, pending /qfai-implement)`.
-They hold thirty-five cases. The checkpoint below reports eighty-two skips, so
-those eight account for thirty-five of them and the remaining forty-seven are
-conditional skips — `it.skipIf` and `describe.skipIf` on the platform, on
-`geteuid`, and on optional tooling. The run was taken on Windows, and eleven of
-the forty-seven are the `process.platform === "win32"` cases in the `cli` and
-`integration` projects, so a POSIX runner reaches a different total. The count
-is read against the platform rather than as a constant.
+They hold thirty-five cases, which is the platform-independent part of every
+skip count below.
+
+The rest is conditional — `it.skipIf` and `describe.skipIf` on the platform, on
+`geteuid`, and on optional tooling — so it is read against the runner rather
+than as a constant, and the two runs recorded here disagree because they ran on
+different ones.
+
+| Run                                                      | Skips | Conditional |
+| -------------------------------------------------------- | ----- | ----------- |
+| The checkpoint, seven `ubuntu-latest` jobs               | 82    | 47          |
+| One unfiltered `npx vitest run` here, on Windows         | 92    | 57          |
+
+The ten between them are platform gates the POSIX runner takes and this one does
+not: `cli` and `integration` hold eleven `process.platform === "win32"`
+declarations between them — ten `it.skipIf` and one `describe.skipIf` over a
+single case — and the difference is read off the two totals rather than matched
+to them one by one, because a case may sit behind more than one gate.
+
+Attributing the checkpoint's count to Windows was the error: `ci.yml` runs that
+matrix on `ubuntu-latest`, so 82 is the POSIX figure and 92 is this machine's.
 
 The checkpoint needs `pnpm -C packages/qfai build` first.
 `tests/integration/cliStartupCost.test.ts` reads `packages/qfai/dist/**` and is
@@ -242,18 +261,20 @@ first mutation passes it and fails the literal check below it instead.
 - Checkpoint item test revision: db8cd210a3b71ffd82591dda52ed250af76d812d
 - Checkpoint verification command: pnpm -C packages/qfai test:core && pnpm -C packages/qfai test:validators && pnpm -C packages/qfai test:integration && pnpm -C packages/qfai test:e2e && pnpm -C packages/qfai test:cli && pnpm -C packages/qfai test:unit && pnpm -C packages/qfai test:scripts
 - Checkpoint verification result: PASS — seven of seven green, nothing filtered out; the seven slices together cover every project `vitest.workspace.ts` declares
-- Checkpoint verification revision: db8cd210a3b71ffd82591dda52ed250af76d812d
+- Checkpoint verification revision: 879079199019a43767e893f4366056e493d8a798
 - Checkpoint verification note: the seven commands ran as the seven parallel jobs
   of the `test` matrix at
   https://github.com/aganesy/QFAI/actions/runs/34698239422, and their conclusions
-  were read back from the check runs on this revision rather than inferred from
-  a green badge. **What those jobs checked out is the merge commit**, not this
+  were read back from the check runs rather than inferred from a green badge.
+  **The revision above is the tree those jobs checked out**, which is not this
   branch head: `ci.yml` restricts `push` runs to the default branch, so the run
   is a `pull_request` one and its unqualified checkout takes the generated merge
-  of this branch with the base tip. The revision recorded above is the branch
-  head the observation belongs to; the tree CI executed is that head merged with
-  whatever the base was at the time, and this record cannot name it because the
-  merge commit is not addressable from here.
+  of this branch with the base tip. The checkout step names it —
+  `Merge db8cd210a3b71ffd82591dda52ed250af76d812d into a07c51782d527c98708d9a326e0c623a12a6e5d8` —
+  and the object is fetchable, so the result is reproducible from what is
+  recorded. Its second parent `db8cd210` is the branch head the observation
+  belongs to, and its first is the base tip at the time; the item-level test
+  revision above is that branch head, because that run was taken here.
   That is the environment in which the set can be run whole. Run here as one
   unfiltered `npx vitest run`, the same suite reports Test Files 1 failed, 697
   passed, 8 skipped (706) and Tests 1 failed, 11537 passed, 92 skipped (11630),
