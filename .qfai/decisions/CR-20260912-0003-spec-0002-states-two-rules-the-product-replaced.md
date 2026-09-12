@@ -96,30 +96,48 @@ not hold — both edit the file `TDD-0011`'s recorded observation covers. Either
 reddens `QFAI-TDDLIST-009` and restarts the row's cycle, so the repair needs an
 authorized reset rather than an edit beside it.
 
-- Not blocked by this CR: `spec-0002/TDD-0001`. Its obligation, pack readiness,
-  is untouched by either statement, its test discharges it, and no repair this
-  CR plans edits the file its observation covers.
+- Not blocked by this CR under options 1 and 3: `spec-0002/TDD-0001`. Its
+  obligation, pack readiness, is untouched by either statement, and its test
+  discharges it. **Under option 2 it is blocked**: making a missing
+  `prototyping.yaml` a readiness blocker edits
+  `packages/qfai/tests/core/sddPreflight.test.ts`, which is the file this row's
+  recorded observation covers, so its evidence goes stale the moment the change
+  lands and it needs the same reset as the others.
 - Overlapping open CRs: `none`
 
 ## Impact scope
 
 - Specs: `spec-0002` — `.qfai/specs/spec-0002/01_Spec.md`,
+  `.qfai/specs/spec-0002/02_User-stories.md`,
   `.qfai/specs/spec-0002/03_Acceptance-Criteria.md`,
+  `.qfai/specs/spec-0002/04_Business-Rules.md`,
+  `.qfai/specs/spec-0002/05_Examples.md`,
   `.qfai/specs/spec-0002/06_Test-Cases.md`,
   `.qfai/specs/spec-0002/07_Decisions.md`
 - Plans: `.qfai/specs/spec-0002/10_Plan.md`
 - Tests: `spec-0002/TDD-0008`, `spec-0002/TDD-0009`, `spec-0002/TDD-0010`,
-  `spec-0002/TDD-0011`, `spec-0002/TDD-0012` —
-  `packages/qfai/tests/validators/uix/threeLayer.test.ts`
+  `spec-0002/TDD-0011`, `spec-0002/TDD-0012`, and `spec-0002/TDD-0001` under
+  option 2 only —
+  `packages/qfai/tests/validators/uix/threeLayer.test.ts`,
+  `packages/qfai/tests/validators/uix/screenContract.test.ts`,
+  and under option 2 `packages/qfai/tests/core/sddPreflight.test.ts`
 - Contracts: `none`
 - Schema: `none`
 - Upstream paths edited under this CR:
   `.qfai/specs/spec-0002/01_Spec.md`,
+  `.qfai/specs/spec-0002/02_User-stories.md`,
   `.qfai/specs/spec-0002/03_Acceptance-Criteria.md`,
+  `.qfai/specs/spec-0002/04_Business-Rules.md`,
+  `.qfai/specs/spec-0002/05_Examples.md`,
   `.qfai/specs/spec-0002/06_Test-Cases.md`,
   `.qfai/specs/spec-0002/07_Decisions.md`,
   `.qfai/specs/spec-0002/10_Plan.md`,
   `.qfai/specs/spec-0002/tdd/test-list.md`
+
+  A layered pack states one rule at every layer, so the story, the business rule
+  and the example that carry these two rules move with the requirement and the
+  acceptance criterion. Leaving them behind is how a pack ends up saying
+  prototyping selects the direction on one page and the user does on another.
 
 ## Decision needed from user
 
@@ -146,18 +164,29 @@ states in three places and the first is a rule the product still partly keeps.
    - Retire: `spec-0002/TDD-0010` — `current preflight unit test pass`
 
    **Option 2 — restore the product to the spec.** `/qfai-sdd` is `confirm-only`:
-   no upstream statement changes. The work is implementation — a validator that
-   emits the single-winner violation `TC-0002-0009` names, a preflight that
-   blocks a UI-bearing pack missing `prototyping.yaml`, and the three shipped
-   documents rewritten to say the artifact is required. Every row below then has
-   an obligation a test can reach.
+   no upstream statement changes. The work is implementation, and it is larger
+   than a new validator. `REQ-0012` says discussion performs no selected-direction
+   finalization, so restoring it means withdrawing the direction interview as well
+   as adding the check: the shipped discussion skill asks the user to choose a
+   brand direction, `01_Context.md#Design Direction` records it, and `/qfai-sdd`
+   Phase 0 reads that field and stops without it. All three go, or the product
+   still selects a direction during discussion and the requirement is still
+   contradicted. Beside that: a validator that emits the single-winner violation
+   `TC-0002-0009` names, a preflight that blocks a UI-bearing pack missing
+   `prototyping.yaml`, and the three shipped documents rewritten to say the
+   artifact is required. This is the option with the largest blast radius, and
+   the direction interview it removes was itself added to stop an assistant
+   inventing a brand.
    - Reset to `todo`, recording this CR's ID in `DR-ID`:
-     `spec-0002/TDD-0008`, `spec-0002/TDD-0009`, `spec-0002/TDD-0010`,
-     `spec-0002/TDD-0012`
-   - Retire: none. `TDD-0010` survives here, because a restored winner check
-     gives `TC-0002-0009` a second observable boundary and the sibling pair has
-     something to divide — each row then needs a `Boundary` cell, which is the
-     `QFAI-TDDLIST-017` finding already open against this table.
+     `spec-0002/TDD-0008`, `spec-0002/TDD-0009`, `spec-0002/TDD-0012`, and
+     `spec-0002/TDD-0001` — the last because the preflight change edits the file
+     its observation covers.
+   - Retire: `spec-0002/TDD-0010` — `current preflight unit test pass`, as under
+     option 1. Restoring a winner validator gives `TC-0002-0009` no second
+     boundary: the test case defines one violation, and this row points at a
+     preflight selector about a missing `prototyping.yaml` that the restored
+     check does not touch. Keeping it would preserve the duplicate row this CR
+     exists to clear.
 
    **Option 3 — retire the four obligations.** `/qfai-sdd` re-derives
    `01_Spec.md`, `03_Acceptance-Criteria.md` and `06_Test-Cases.md` to withdraw

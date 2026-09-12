@@ -42,7 +42,8 @@ validator emits the violation `TC-0002-0009` names — the `discussionDesignHard
 validator that did was retired in v1.8.9 with the exploration-sidecar family.
 
 `TC-0002-0011` has a test that discharges it against the product:
-`tests/assets/assets.test.ts`, `ensures qfai-discussion skill and artifact rules
+`packages/qfai/tests/assets/assets.test.ts`, `ensures qfai-discussion skill and
+artifact rules
 use canonical pack wording`, which reads the skill, the artifact rules and the
 package README and requires the same sentence in all three. It cannot be pointed
 at while the criterion says the opposite of what that sentence says.
@@ -53,8 +54,13 @@ at while the criterion says the opposite of what that sentence says.
 needs the user's decision, per statement — they may be settled differently.
 
 Once it resolves, the ledger sweep is enumerated in its approved-actions
-section: reset `TDD-0008`, `TDD-0009` and `TDD-0012` to `todo` with the CR's ID
-in `DR-ID`, and retire `TDD-0010`, whose test stays and is owned by `TDD-0001`.
+section, and it differs per option — do not apply one option's sweep to
+another's approval. Option 1 resets `TDD-0008`, `TDD-0009` and `TDD-0012` and
+retires `TDD-0010`. Option 2 resets those three plus `TDD-0001`, whose test file
+the preflight change edits, and retires `TDD-0010` as well. Option 3 retires all
+four and resets none. `TDD-0011` is reset under every option, because the two
+annotation repairs edit the file its observation covers. No test is deleted
+under any of them.
 
 ## Constraints to preserve
 

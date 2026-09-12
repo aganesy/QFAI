@@ -485,9 +485,12 @@ it says so and names what carries it now.
    The annotations point at obligations that were removed or never registered.
    `tests/validators/uix/threeLayer.test.ts` is in the same position, declaring `TC-0002-0011`,
    `TC-0002-0012` and `TC-0002-0026` beside the one obligation it does reach, `TC-0002-0010`.
-   Correcting either file edits a file `TDD-0011`'s recorded observation covers, which reddens
-   `QFAI-TDDLIST-009` and restarts that row's cycle, so both belong to the sweep
-   `CR-20260912-0003` plans rather than beside it.
+   The two files need different routes. `threeLayer.test.ts` is the file `TDD-0011`'s recorded
+   observation covers, so editing it reddens `QFAI-TDDLIST-009` and restarts that row's cycle —
+   it belongs to the sweep `CR-20260912-0003` plans, which resets `TDD-0011` for that reason.
+   `screenContract.test.ts` is named by no ledger row in any spec, so removing its five stale
+   annotations stales nothing and needs no reset. It is ordinary work, available now, and the
+   Change Request carries it in scope only so one reader finds both halves in one place.
 7. **The ledger is seven rows short of what seeds it.** `qfai-sdd`'s Phase 2b seeds
    `tdd/test-list.md` in four groups, and one of them is "one `Layer = E2E` row per **active**
    `US-*` from `02_User-stories.md` (obligation in `US-Refs`, `TC-Refs` = `-`)"
