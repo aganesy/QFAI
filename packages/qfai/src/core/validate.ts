@@ -43,7 +43,10 @@ import { validateTraceability } from "./validators/traceability.js";
 import { evaluateAtddCodeTraceability } from "./atddTraceability.js";
 import { validateAtddCodeTraceability } from "./validators/atddCodeTraceability.js";
 import { validateAtddCoverageDepth } from "./validators/atddCoverageDepth.js";
-import { validateScaffoldPlaceholder } from "./validators/scaffoldPlaceholder.js";
+import {
+  scaffoldPlaceholderScannedFilter,
+  validateScaffoldPlaceholder,
+} from "./validators/scaffoldPlaceholder.js";
 import {
   detectPlatform,
   validateAgentDefinition,
@@ -925,9 +928,15 @@ async function runAtddValidators(
     // over: it let a `tests/unit/**` stub block this gate, and the shipped
     // `qfai.config.yaml` leaves the list empty, so the validator returned
     // before reading anything.
+    //
+    // The marker exemption is handed the same stage's scan boundary. A marked
+    // skeleton under `paths.testsDir` is `D-SCAFFOLD-PLACEHOLDER`'s to report;
+    // one in a package-local suite is outside that validator, so exempting it
+    // here would leave it reported by neither.
     ...(await validateTestTodoStubs(root, config, {
       globs: atddAcceptanceTestGlobs(root, config, STUB_SOURCE_FILE_PATTERN),
       fileFilter: atddAcceptanceLayerFilter(root, config),
+      placeholderScanned: scaffoldPlaceholderScannedFilter(root, config),
     })),
   ];
 }

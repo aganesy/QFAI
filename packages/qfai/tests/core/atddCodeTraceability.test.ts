@@ -1086,20 +1086,21 @@ describe("acceptance tests outside paths.testsDir", () => {
     });
   });
 
-  it("a suite under a root of its own name is still read", async () => {
+  it("a colocated unit test is not read as its source directory's layer", async () => {
     await withProject(async (root) => {
       await seedSpec(root, "0001", ["US-0001"], ["TC-0001"]);
       await seedTest(root, "integration", "a.test.ts", "/* QFAI:SPEC-0001:TC-0001 */");
-      // `spec/acceptance/` matches no conventional test root. With no segment to
-      // anchor on, the deepest layer directory answers, so the suite is read
-      // rather than reported as missing coverage.
-      const dir = path.join(root, "packages", "app", "spec", "acceptance", "e2e");
+      // The glob `qfai init` derives reaches colocated sources, and `src/api/`
+      // is a source directory rather than an acceptance layer. Answering from
+      // the file's own parent would let a unit test discharge an API
+      // obligation, so a path carrying no test root answers nothing.
+      const dir = path.join(root, "packages", "app", "src", "api");
       await mkdir(dir, { recursive: true });
       await writeFile(
-        path.join(dir, "journey.test.ts"),
+        path.join(dir, "client.spec.ts"),
         [
           "/* QFAI:SPEC-0001:US-0001 */",
-          "describe('suite', () => {",
+          "describe('client', () => {",
           "  it('runs', () => {});",
           "});",
           "",
@@ -1109,10 +1110,57 @@ describe("acceptance tests outside paths.testsDir", () => {
 
       const result = await evaluateAtddCodeTraceability(
         root,
-        withProjectGlobs(["packages/*/spec/**/*.test.ts"]),
+        withProjectGlobs(["packages/*/src/**/*.spec.ts"]),
       );
 
-      expect(result.missing.us).toEqual([]);
+      expect(result.missing.us).toEqual(["SPEC-0001:US-0001"]);
+      // Not misplaced either: a unit test owes ATDD nothing wherever it sits.
+      expect(result.skippedTestFiles).toEqual([]);
+    });
+  });
+
+  it("a suite outside the named roots is read once its root is named", async () => {
+    await withProject(async (root) => {
+      await seedSpec(root, "0001", ["US-0001"], ["TC-0001"]);
+      await seedTest(root, "integration", "a.test.ts", "/* QFAI:SPEC-0001:TC-0001 */");
+      // `spec/acceptance/e2e/` anchors on nothing, so the suite is reported as
+      // uncovered. The escape is the project's own: name the root `tests`,
+      // `test` or `__tests__`, or point `paths.testsDir` at it.
+      const write = async (...segments: string[]): Promise<void> => {
+        const dir = path.join(root, ...segments);
+        await mkdir(dir, { recursive: true });
+        await writeFile(
+          path.join(dir, "journey.test.ts"),
+          [
+            "/* QFAI:SPEC-0001:US-0001 */",
+            "describe('suite', () => {",
+            "  it('runs', () => {});",
+            "});",
+            "",
+          ].join("\n"),
+          "utf-8",
+        );
+      };
+
+      await write("packages", "app", "spec", "acceptance", "e2e");
+      expect(
+        (
+          await evaluateAtddCodeTraceability(
+            root,
+            withProjectGlobs(["packages/*/spec/**/*.test.ts"]),
+          )
+        ).missing.us,
+      ).toEqual(["SPEC-0001:US-0001"]);
+
+      await write("packages", "app", "tests", "e2e");
+      expect(
+        (
+          await evaluateAtddCodeTraceability(
+            root,
+            withProjectGlobs(["packages/*/spec/**/*.test.ts", "packages/*/tests/**/*.test.ts"]),
+          )
+        ).missing.us,
+      ).toEqual([]);
     });
   });
 

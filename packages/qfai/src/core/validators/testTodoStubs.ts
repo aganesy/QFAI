@@ -709,13 +709,20 @@ function collectStubIssues(
   content: string,
   dialect: StubDialect,
   skippedTestSeverity: IssueSeverity,
+  placeholderScanned: (relativePath: string) => boolean,
 ): Issue[] {
   const issues: Issue[] = [];
   // An unfilled scaffold is `D-SCAFFOLD-PLACEHOLDER`'s, and its `it.skip` is
   // what this scan would otherwise read as a parked suite. The marker is the
   // scaffold's own, so it is gone the moment the block is authored — after
   // which a `.skip` left behind is a hand-written one and is reported.
-  const scaffolded = content.includes(SCAFFOLD_PLACEHOLDER_MARKER);
+  //
+  // The marker alone is not enough to hand it over: that validator scans four
+  // directories under `paths.testsDir`, and this gate also reads a monorepo's
+  // package-local acceptance suites. A marked skeleton there is outside its
+  // scan, so deferring to it left the file reported by neither and the ATDD
+  // gate green over a suite that does not run.
+  const scaffolded = content.includes(SCAFFOLD_PLACEHOLDER_MARKER) && placeholderScanned(relFile);
   // Offsets and line breaks survive both passes, so a match position in the
   // scanned text is still a position in the file the finding names.
   const masked = dialect.mask(content);
@@ -1256,6 +1263,18 @@ export type TestTodoStubOptions = {
    * of it. The predicate takes a repository-relative, posix-slashed path.
    */
   fileFilter?: (relativePath: string) => boolean;
+  /**
+   * Whether `D-SCAFFOLD-PLACEHOLDER` scans this file.
+   *
+   * A file carrying the scaffold marker is exempt from `QFAI-TEST-003` because
+   * that validator reports it instead. It scans four directories under
+   * `paths.testsDir` and nothing else, so a marked skeleton anywhere else — a
+   * package-local acceptance suite, which this gate does read — was exempt here
+   * and unseen there. Absent, every marked file is exempt, which is what a
+   * caller scanning only those directories wants. The predicate takes a
+   * repository-relative, posix-slashed path.
+   */
+  placeholderScanned?: (relativePath: string) => boolean;
 };
 
 /**
@@ -1405,7 +1424,15 @@ export async function validateTestTodoStubs(
       continue;
     }
 
-    issues.push(...collectStubIssues(relFile, content, dialect, skippedTestSeverity));
+    issues.push(
+      ...collectStubIssues(
+        relFile,
+        content,
+        dialect,
+        skippedTestSeverity,
+        options.placeholderScanned ?? (() => true),
+      ),
+    );
   }
 
   if (truncated) {

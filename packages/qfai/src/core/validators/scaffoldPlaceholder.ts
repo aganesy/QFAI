@@ -85,6 +85,47 @@ const TODO_MARKER_RE = /(?:\/\/|#)\s*TODO:\s*implement assertion for\s+(TC-\d{4}
  */
 const SCAFFOLD_FOREIGN_LEVELS = new Set(["l4", "api", "l5", "e2e"]);
 
+/**
+ * The directories this validator scans for placeholders, under a resolved
+ * `paths.testsDir`.
+ *
+ * Exported because the stub gate exempts a file carrying the scaffold marker on
+ * the grounds that this validator owns it, and an exemption granted where the
+ * scan does not reach leaves a placeholder reported by neither.
+ */
+export function scaffoldPlaceholderScanDirs(testsDir: string): string[] {
+  return [
+    path.join(testsDir, "integration"),
+    path.join(testsDir, "atdd"),
+    path.join(testsDir, "api"),
+    path.join(testsDir, "e2e"),
+  ];
+}
+
+/**
+ * Whether a repository-relative path is inside the scan above.
+ *
+ * Containment rather than a glob, because the question is which validator owns
+ * the file rather than which files to open, and the two scans spell their
+ * selection differently: this one takes the writer's dialect patterns, the stub
+ * gate takes the ATDD layer globs.
+ */
+export function scaffoldPlaceholderScannedFilter(
+  root: string,
+  config: QfaiConfig,
+): (relativePath: string) => boolean {
+  const scanned = scaffoldPlaceholderScanDirs(resolvePath(root, config, "testsDir")).map((dir) =>
+    path.resolve(dir),
+  );
+  return (relativePath: string): boolean => {
+    const absolute = path.resolve(root, relativePath);
+    return scanned.some((dir) => {
+      const inside = path.relative(dir, absolute);
+      return inside.length > 0 && !inside.startsWith("..") && !path.isAbsolute(inside);
+    });
+  };
+}
+
 /** The scanned root a `Level` routes to. */
 function scaffoldHomeForLevel(level: string | undefined): "api" | "e2e" | "integration" {
   const normalized = (level ?? "").trim().toLowerCase();
@@ -180,12 +221,7 @@ export async function validateScaffoldPlaceholder(
   // literally turned a reported placeholder into a silent one. Only a file
   // carrying the scaffold sentinel is reported, so a hand-written test in those
   // directories is untouched.
-  const scaffoldDirs = [
-    path.join(testsDir, "integration"),
-    path.join(testsDir, "atdd"),
-    path.join(testsDir, "api"),
-    path.join(testsDir, "e2e"),
-  ];
+  const scaffoldDirs = scaffoldPlaceholderScanDirs(testsDir);
   const threshold = resolveEscalateThreshold(config.atdd?.scaffoldEscalateCycles);
   // Number -> the directory `collectSpecEntries` enumerated. The scaffold's
   // own `spec-NNNN` comes from a *test* directory name, so joining it onto the

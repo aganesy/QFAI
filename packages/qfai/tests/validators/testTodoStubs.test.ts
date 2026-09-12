@@ -15,6 +15,8 @@ import {
   atddAcceptanceLayerFilter,
   atddAcceptanceTestGlobs,
 } from "../../src/core/atddTraceability.js";
+import { SCAFFOLD_PLACEHOLDER_MARKER } from "../../src/core/atdd/scaffold.js";
+import { scaffoldPlaceholderScannedFilter } from "../../src/core/validators/scaffoldPlaceholder.js";
 import { validateTestTodoStubs } from "../../src/core/validators/testTodoStubs.js";
 
 // Source-level split of the `*.todo(` token so this validator's own test
@@ -445,5 +447,45 @@ describe("the ATDD gate's file selection", () => {
     // gate on it is the all-integration collapse in another form: the stage
     // owns three directories, and a stub outside them is not its finding.
     expect(issues.filter((issue) => issue.code === "QFAI-TEST-001")).toEqual([]);
+  });
+
+  // `D-SCAFFOLD-PLACEHOLDER` is what reports an unfilled skeleton, so this gate
+  // stands aside for one — but only where that validator looks. It scans four
+  // directories under `paths.testsDir`; this gate also reads a monorepo's
+  // package-local acceptance suites, and a marked skeleton there was exempt
+  // here and unseen by it.
+  const scaffolded = (): string =>
+    [`// ${SCAFFOLD_PLACEHOLDER_MARKER}`, "it.skip('TC-0001-0001: pays', () => {});", ""].join(
+      "\n",
+    );
+
+  it("stands aside for a marked skeleton the placeholder validator scans", async () => {
+    const root = await newTempDir();
+    const config = atddConfig(["packages/*/tests/**/*.test.ts"]);
+    await writeTestFile(root, "tests/integration/pay.test.ts", scaffolded());
+
+    const issues = await validateTestTodoStubs(root, config, {
+      globs: atddAcceptanceTestGlobs(root, config, "**/*.ts"),
+      fileFilter: atddAcceptanceLayerFilter(root, config),
+      placeholderScanned: scaffoldPlaceholderScannedFilter(root, config),
+    });
+
+    expect(issues.filter((issue) => issue.code === "QFAI-TEST-003")).toEqual([]);
+  });
+
+  it("reports a marked skeleton outside that scan rather than exempting it", async () => {
+    const root = await newTempDir();
+    const config = atddConfig(["packages/*/tests/**/*.test.ts"]);
+    await writeTestFile(root, "packages/checkout/tests/integration/pay.test.ts", scaffolded());
+
+    const issues = await validateTestTodoStubs(root, config, {
+      globs: atddAcceptanceTestGlobs(root, config, "**/*.ts"),
+      fileFilter: atddAcceptanceLayerFilter(root, config),
+      placeholderScanned: scaffoldPlaceholderScannedFilter(root, config),
+    });
+
+    // Exempting it here would leave the file reported by neither validator, and
+    // the ATDD gate green over a suite whose tests do not run.
+    expect(issues.map((issue) => issue.code)).toContain("QFAI-TEST-003");
   });
 });

@@ -49,6 +49,21 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   `paths.testsDir`, so an author following the canonical fix does not build a
   parallel central suite the shipped skill tells them not to build.
 
+  A collected file answers a layer only from inside a test root — a directory
+  named `tests`, `test` or `__tests__`, or the one `paths.testsDir` points at.
+  The glob `qfai init` derives reaches colocated sources, so reading the file's
+  own parent instead would have made every `src/api/client.spec.ts` an API
+  acceptance test: its annotation could then discharge an obligation, and an
+  unfilled stub in it could block a gate that owns no unit test. A suite kept
+  outside those roots is reported as uncovered until its root is named, which
+  is the safe direction of the two.
+
+  The scaffold marker still hands an unfilled skeleton to
+  `D-SCAFFOLD-PLACEHOLDER`, but only where that validator looks. It scans four
+  directories under `paths.testsDir`; this gate also reads a package-local
+  acceptance suite, and a marked skeleton there was exempt here and unseen
+  there, leaving the ATDD gate green over a suite that does not run.
+
 ### Added
 
 - **The question-form rule is put in front of the agent on every turn** (#1610).

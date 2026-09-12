@@ -2527,6 +2527,15 @@ const TEST_ROOT_SEGMENTS = new Set(["tests", "test", "__tests__"]);
  * `null` for a path outside the repository root, for one with no test root on
  * it, and for a file sitting directly in a test root with no layer directory
  * between them.
+ *
+ * The second of those is the reason a configured glob does not get its own
+ * rule. A colocated `src/api/client.spec.ts` is a unit test, and answering from
+ * the file's own directory would read it as an API acceptance one — after which
+ * an annotation in it discharges an obligation, and an unfilled stub blocks a
+ * gate that owns none of it. A project whose suites sit outside a directory
+ * named here anchors them by naming their root `tests`, `test` or `__tests__`,
+ * or by pointing `paths.testsDir` at one; missing such a file is the safe
+ * direction, and claiming one is not.
  */
 function resolveTestKindFromPath(
   root: string,
@@ -2544,23 +2553,11 @@ function resolveTestKindFromPath(
       testRoot = index;
     }
   });
-  if (testRoot >= 0) {
-    const layer = directories[testRoot + 1];
-    return layer === undefined ? null : (ATDD_LAYER_SEGMENTS.get(layer) ?? null);
+  if (testRoot < 0) {
+    return null;
   }
-  // No test root to anchor on: a package may keep its suite under `spec/`,
-  // `acceptance/` or a name of its own, and refusing every such path would
-  // report a whole package's coverage missing.
-  //
-  // Only the file's own directory answers here. Walking outwards instead
-  // reaches the package name, so `packages/api/spec/unit/pay.test.ts` — a unit
-  // suite, which owes ATDD nothing — was read as an API acceptance test and
-  // its annotations could discharge `L4` obligations. A project that nests
-  // below its layer directory keeps the anchored rule by naming its root
-  // `tests`, `test` or `__tests__`, or by setting `paths.testsDir`; missing
-  // such a file is the safe direction, and claiming one is not.
-  const parent = directories[directories.length - 1];
-  return parent === undefined ? null : (ATDD_LAYER_SEGMENTS.get(parent) ?? null);
+  const layer = directories[testRoot + 1];
+  return layer === undefined ? null : (ATDD_LAYER_SEGMENTS.get(layer) ?? null);
 }
 
 /**
