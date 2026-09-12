@@ -23,8 +23,18 @@
 import { execFileSync } from "node:child_process";
 import { pathToFileURL } from "node:url";
 
-/** The directory the temporary-files rule reserves, as git spells a path. */
+/** The directory the temporary-files rule reserves, as a message names it. */
 export const SCRATCH_PREFIX = "tmp/";
+
+/**
+ * The same directory as a git pathspec, without the separator.
+ *
+ * `tmp/` matches what is under the directory and not the path itself, so a
+ * tracked regular file or symlink named `tmp` — which stops the directory
+ * existing at all — returns no entries and reads as a clean run. `tmp` matches
+ * both.
+ */
+const SCRATCH_PATHSPEC = "tmp";
 
 /**
  * Tracked paths under `tmp/`, or `null` when git cannot answer.
@@ -37,7 +47,7 @@ export const SCRATCH_PREFIX = "tmp/";
 export function trackedScratchFiles(cwd = process.cwd()) {
   let output;
   try {
-    output = execFileSync("git", ["ls-files", "-z", "--", SCRATCH_PREFIX], {
+    output = execFileSync("git", ["ls-files", "-z", "--", SCRATCH_PATHSPEC], {
       cwd,
       encoding: "buffer",
       maxBuffer: 16 * 1024 * 1024,

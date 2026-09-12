@@ -117,6 +117,16 @@ describe("nothing under the scratch directory is tracked", () => {
     expect(check(root).status).toBe(0);
   });
 
+  it("fails on a tracked file named tmp, which stops the directory existing", async () => {
+    // `tmp/` as a pathspec matches what is under the directory, not the path
+    // itself, so this case returns no entries and reads as clean while the
+    // directory the rule reserves cannot exist at all.
+    const root = await repoWith({ tmp: "not a directory\n" }, { tracked: true });
+    const { status, output } = check(root);
+    expect(status).toBe(1);
+    expect(output).toContain("tmp");
+  });
+
   it("holds this repository", () => {
     // The guard's own subject. A tracked file here is the defect it exists for,
     // and the check above runs against temporary trees only.
