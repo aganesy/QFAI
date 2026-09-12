@@ -4,6 +4,29 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ## [Unreleased]
 
+### Added
+
+- **A rule master for grilling a design before it is fixed** (#1591).
+  `.agents/rules/grilling.md` states the method: the open decisions form a tree,
+  the frontier is the ones whose prerequisites are settled, and a round is one
+  frontier asked and answered in full. A question that depends on an unanswered
+  one waits for a later round rather than being guessed at.
+
+  Two things the rule separates. A fact the environment holds is the agent's to
+  look up, not the user's to supply, and looking it up does not stop the round —
+  only the questions downstream of that lookup wait. A decision about what is
+  wanted is the user's, and the agent waits for it.
+
+  Asking stops when the frontier is empty **and** the user confirms the
+  understanding is shared. There is no question cap, and an agent that answered
+  its own decisions has broken the rule rather than read it liberally. A question
+  about how something should look or feel is answered by building something to
+  react to, not by another round.
+
+  Repository-only for now, as `document-schema.md` and `repository-language.md`
+  are. The shipped copy and the entry-point listings are one unit and land
+  together.
+
 ### Removed
 
 - **`.qfai/report/validate.log` is no longer tracked** (#1582). Every local

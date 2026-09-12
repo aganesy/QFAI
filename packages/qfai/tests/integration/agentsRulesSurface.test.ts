@@ -153,6 +153,44 @@ describe("cross-AI rules surface (.agents/rules/ master)", () => {
     });
   });
 
+  // The method for interrogating a design before it is fixed. Every clause of it
+  // is load-bearing on its own: dropping the frontier leaves rounds that ask
+  // questions nothing can answer yet, dropping the fact/decision split spends the
+  // user's attention on what the repository already states, and dropping the end
+  // condition turns the whole rule into advice.
+  //
+  // Entry-point citation and the shipped copy are asserted where they are added,
+  // so that the owner of `AGENTS.md`, `CLAUDE.md` and the shipped templates is the
+  // change that writes those lines rather than this one.
+  describe("grilling rule", () => {
+    const MASTER = ".agents/rules/grilling.md";
+
+    it("states every clause of the method", async () => {
+      const text = await readFile(path.join(ROOT, MASTER), "utf-8");
+      // One token per clause that no other clause in the file carries, so a
+      // clause cannot be dropped and still leave the master looking complete.
+      for (const clause of [
+        /design tree/i,
+        /prerequisites are all settled/,
+        /belongs to a later round/,
+        /answerable by number/,
+        /dispatch a sub-agent/,
+        /question cap/i,
+        /Stop grilling and build a prototype/,
+      ]) {
+        expect(text).toMatch(clause);
+      }
+    });
+
+    it("requires both halves of the end condition, not either", async () => {
+      // The frontier emptying is the agent's own measure, and an agent that
+      // treats it as sufficient has finished a grilling nobody agreed was over.
+      const text = await readFile(path.join(ROOT, MASTER), "utf-8");
+      expect(text).toMatch(/both required/i);
+      expect(text).toMatch(/confirms the understanding is shared/);
+    });
+  });
+
   // The writing standard reaches an agent two ways: as a rule master every
   // entry point cites, and as the hook reminder that restates it at the moment
   // it is easiest to skip. Both halves are asserted, in this repository and in
