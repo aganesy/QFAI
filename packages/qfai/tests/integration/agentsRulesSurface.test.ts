@@ -378,4 +378,64 @@ describe("cross-AI rules surface (.agents/rules/ master)", () => {
       expect(text).toContain(".agents/rules/interface-clarity.md");
     });
   });
+
+  // Repository-only for now. The copy under
+  // `packages/qfai/assets/init/root/.agents/rules/` and the two shipped entry
+  // points that must cite it are one unit, and land together with the shipped
+  // rule list — so neither is asserted here yet.
+  describe("grilling rule", () => {
+    const MASTER = ".agents/rules/grilling.md";
+
+    it("states every clause", async () => {
+      const text = await readFile(path.join(ROOT, MASTER), "utf-8");
+      // One token per clause that no other clause in the file carries, so a
+      // clause cannot be dropped and still leave the master looking complete.
+      for (const clause of [
+        /[Dd]esign tree/,
+        /[Ff]rontier/,
+        /[Rr]ound/,
+        /recommended answer/i,
+        /sub-agent/i,
+        /prototype|throwaway/i,
+      ]) {
+        expect(text).toMatch(clause);
+      }
+    });
+
+    // The two halves of the end condition are one obligation. An empty frontier
+    // alone is the state an agent reaches by running out of questions, which is
+    // the failure this rule exists to name — so a master that stopped at the
+    // frontier would license the behaviour it forbids.
+    it("requires both halves of the end condition", async () => {
+      const text = await readFile(path.join(ROOT, MASTER), "utf-8");
+      expect(text).toMatch(/frontier is empty/i);
+      expect(text).toMatch(/confirms the understanding is shared/i);
+    });
+
+    // A cap is the one mechanism that would make the rule self-defeating: it
+    // ends a session on a number rather than on the work being done, which is
+    // what the rule replaces. Asserted as an absence because a later editor
+    // reaching for a cap would otherwise find nothing in the way.
+    it("sets no question cap", async () => {
+      const text = await readFile(path.join(ROOT, MASTER), "utf-8");
+      expect(text).toMatch(/no question cap/i);
+    });
+
+    // Facts and decisions are separated so an agent cannot spend the user's
+    // attention on something it could look up, nor settle on their behalf
+    // something only they can settle.
+    it("separates facts from decisions", async () => {
+      const text = await readFile(path.join(ROOT, MASTER), "utf-8");
+      expect(text).toMatch(/[Nn]ever ask the user for something you could look up/);
+      expect(text).toMatch(/answers its own\s+decisions/);
+    });
+
+    it.each(["AGENTS.md", "CLAUDE.md", ".github/copilot-instructions.md"])(
+      "%s cites the rule master",
+      async (rel) => {
+        const text = await readFile(path.join(ROOT, rel), "utf-8");
+        expect(text).toContain("grilling.md");
+      },
+    );
+  });
 });

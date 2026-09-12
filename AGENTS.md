@@ -83,6 +83,9 @@ QFAI パッケージの版番号 (`X.Y.Z`) は AI が選ばない。ユーザが
   behaviour is agreed, and how a deliberate shortcut is marked)
 - `interface-clarity.md` (what may appear on a screen or in terminal output,
   and what a sentence there says about the control under it)
+- `grilling.md` (interview the decision tree in rounds before a design is
+  fixed; a session ends on an empty frontier and the user's confirmation,
+  never at a question count)
 
 `.claude/rules/` はこれらへの symlink。Windows では Git の `core.symlinks=true` と
 Developer Mode が必要で、無い場合は `.claude/rules/*.md` がパス文字列だけの
