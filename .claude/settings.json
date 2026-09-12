@@ -14,6 +14,79 @@
             ]
           }
         ]
+      },
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "statusMessage": "QFAI grilling reminder: design artifact",
+            "command": "node",
+            "args": [
+              "-e",
+              "console.log(JSON.stringify({hookSpecificOutput:{hookEventName:'PreToolUse',additionalContext:\"QFAI grilling (.agents/rules/grilling.md). Before this: is a decision about to be made that the repository cannot settle — a design, an approach, a scope boundary, a trade-off? Then a grilling session is declared and put in rounds: the whole frontier at once, each question numbered with its recommended answer, facts looked up rather than asked. A session ends on an empty frontier and the user's confirmation, never at a count. An agent that answers its own decisions has stopped following the rule.\"}}))"
+            ],
+            "if": "Write(**/.qfai/specs/**)"
+          },
+          {
+            "type": "command",
+            "statusMessage": "QFAI grilling reminder: design artifact",
+            "command": "node",
+            "args": [
+              "-e",
+              "console.log(JSON.stringify({hookSpecificOutput:{hookEventName:'PreToolUse',additionalContext:\"QFAI grilling (.agents/rules/grilling.md). Before this: is a decision about to be made that the repository cannot settle — a design, an approach, a scope boundary, a trade-off? Then a grilling session is declared and put in rounds: the whole frontier at once, each question numbered with its recommended answer, facts looked up rather than asked. A session ends on an empty frontier and the user's confirmation, never at a count. An agent that answers its own decisions has stopped following the rule.\"}}))"
+            ],
+            "if": "Edit(**/.qfai/specs/**)"
+          },
+          {
+            "type": "command",
+            "statusMessage": "QFAI grilling reminder: design artifact",
+            "command": "node",
+            "args": [
+              "-e",
+              "console.log(JSON.stringify({hookSpecificOutput:{hookEventName:'PreToolUse',additionalContext:\"QFAI grilling (.agents/rules/grilling.md). Before this: is a decision about to be made that the repository cannot settle — a design, an approach, a scope boundary, a trade-off? Then a grilling session is declared and put in rounds: the whole frontier at once, each question numbered with its recommended answer, facts looked up rather than asked. A session ends on an empty frontier and the user's confirmation, never at a count. An agent that answers its own decisions has stopped following the rule.\"}}))"
+            ],
+            "if": "Write(**/.qfai/discussion/**)"
+          },
+          {
+            "type": "command",
+            "statusMessage": "QFAI grilling reminder: design artifact",
+            "command": "node",
+            "args": [
+              "-e",
+              "console.log(JSON.stringify({hookSpecificOutput:{hookEventName:'PreToolUse',additionalContext:\"QFAI grilling (.agents/rules/grilling.md). Before this: is a decision about to be made that the repository cannot settle — a design, an approach, a scope boundary, a trade-off? Then a grilling session is declared and put in rounds: the whole frontier at once, each question numbered with its recommended answer, facts looked up rather than asked. A session ends on an empty frontier and the user's confirmation, never at a count. An agent that answers its own decisions has stopped following the rule.\"}}))"
+            ],
+            "if": "Edit(**/.qfai/discussion/**)"
+          }
+        ]
+      },
+      {
+        "matcher": "Task|Agent",
+        "hooks": [
+          {
+            "type": "command",
+            "statusMessage": "QFAI grilling reminder: delegation",
+            "command": "node",
+            "args": [
+              "-e",
+              "console.log(JSON.stringify({hookSpecificOutput:{hookEventName:'PreToolUse',additionalContext:\"QFAI grilling (.agents/rules/grilling.md). Before this: is a decision about to be made that the repository cannot settle — a design, an approach, a scope boundary, a trade-off? Then a grilling session is declared and put in rounds: the whole frontier at once, each question numbered with its recommended answer, facts looked up rather than asked. A session ends on an empty frontier and the user's confirmation, never at a count. An agent that answers its own decisions has stopped following the rule.\"}}))"
+            ]
+          }
+        ]
+      },
+      {
+        "matcher": "ExitPlanMode",
+        "hooks": [
+          {
+            "type": "command",
+            "statusMessage": "QFAI grilling reminder: plan",
+            "command": "node",
+            "args": [
+              "-e",
+              "console.log(JSON.stringify({hookSpecificOutput:{hookEventName:'PreToolUse',additionalContext:\"QFAI grilling (.agents/rules/grilling.md). Before this: is a decision about to be made that the repository cannot settle — a design, an approach, a scope boundary, a trade-off? Then a grilling session is declared and put in rounds: the whole frontier at once, each question numbered with its recommended answer, facts looked up rather than asked. A session ends on an empty frontier and the user's confirmation, never at a count. An agent that answers its own decisions has stopped following the rule.\"}}))"
+            ]
+          }
+        ]
       }
     ],
     "PostToolUse": [

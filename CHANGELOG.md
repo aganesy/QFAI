@@ -4,6 +4,30 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ## [Unreleased]
 
+### Added
+
+- **Grilling reminders at the three moments a decision gets made quietly**
+  (#1606). Before a design artifact is written, before work is delegated, and
+  before a plan is fixed, a hook puts `.agents/rules/grilling.md` in front of
+  the agent. Each is a reminder: it emits context and never blocks, because
+  deciding whether a question should have been asked needs intent and a false
+  positive would stop work outright.
+
+  They follow the pattern the writing-standard reminder set — `node` invoked
+  directly, printing fixed text, with no shell, no file reads and no network —
+  and ship to adopters with the settings file. A project that already has a
+  `.claude/settings.json` receives them on the next `qfai init`, through the
+  same per-group merge that carries the earlier reminders.
+
+### Changed
+
+- **Each reminder group carries a marker of its own** (#1606). The merge that
+  brings hooks into a project's existing settings tells one group from another
+  by the status messages its entries carry, so groups sharing a message are one
+  group to it — and a project holding either would be credited with both and
+  never receive the other. The run report now names the reminder hooks as a
+  set, rather than the one reminder that used to be the only one.
+
 ### Removed
 
 - **`.qfai/report/validate.log` is no longer tracked** (#1582). Every local
