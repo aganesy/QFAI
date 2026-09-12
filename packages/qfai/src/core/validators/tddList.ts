@@ -842,11 +842,20 @@ function evidenceAnchorText(specId: string, layerClass: EvidenceLayerClass, tddI
     : owned;
 }
 
+/**
+ * The `working-tree+` revision as an operator reads it.
+ *
+ * One wording for the grammar line and the field hint, because the form is
+ * checked case-sensitively: an operator who follows a correction that leaves
+ * the case out writes the same rejected value again.
+ */
+const WORKING_TREE_REVISION_TEXT = "working-tree+<64 lowercase hex>";
+
 /** The grammar as an operator reads it, for the finding message. */
 function evidenceGrammarText(redProvenance: string, anchorText: string): string {
   return (
     `RED:<${redProvenance}> GREEN:pass ORACLE:<proved|equivalent-mutant> ` +
-    `[TIER:<T1|T2|T3>] REV:<rev|working-tree+<sha256>> -> ${anchorText}`
+    `[TIER:<T1|T2|T3>] REV:<rev|${WORKING_TREE_REVISION_TEXT}> -> ${anchorText}`
   );
 }
 
@@ -1316,7 +1325,7 @@ const SHA256_VALUE = /^(?:sha256:)?[a-f0-9]{64}$/i;
 // carries.
 const EVIDENCE_REVISION_FORM = new RegExp(`^${REVISION_FORM_SOURCE}$`);
 
-const REVISION_FORM_HINT = "a git rev or working-tree+<64 lowercase hex>";
+const REVISION_FORM_HINT = `a git rev or ${WORKING_TREE_REVISION_TEXT}`;
 
 function sha256(value: string | Buffer): string {
   return createHash("sha256").update(value).digest("hex");

@@ -665,8 +665,24 @@ describe("the working-tree address has one notation", () => {
       // during the phase moves the address the phase is recording.
       expect(text).toContain(":(exclude,glob).qfai/evidence/**");
       expect(text).toContain(":(exclude,glob).qfai/review/**");
-      expect(text).toContain(":(exclude,glob).qfai/specs/*/tdd/test-list.md");
+      // The ledger's directory is a project setting, so the pathspec is built
+      // from the resolved value. Writing the default excludes nothing in a
+      // project that moved its specs, and the phase's own bookkeeping then
+      // moves the address between the observations item 10 requires to agree.
+      expect(text).toContain(":(exclude,glob)${specs}/*/tdd/test-list.md");
+      expect(text).toContain("qfai doctor --format json");
+      expect(text).toContain("paths.specsDir");
       expect(text).toContain('-- . "${exclude[@]}"');
+      // Neither command lists an ordinary directory, so a mode change on one —
+      // the execute bit off `src/` — left every file's bytes and the address
+      // where they were.
+      expect(text).toContain("A directory is a record too, and neither command lists one");
+      expect(text).toContain("every path component of every path in the two lists, each once");
+      expect(text).toContain("The repository root is not one of them");
+      // Collection is many reads, and a tree edited between them addresses a
+      // state that never existed.
+      expect(text).toContain("The tree has to hold still while you read it");
+      expect(text).toContain("take the first value two consecutive runs agree on");
       // States that leave the address where it was while the filesystem the
       // tests read is a different one.
       expect(text).toContain("An unborn HEAD has no address");

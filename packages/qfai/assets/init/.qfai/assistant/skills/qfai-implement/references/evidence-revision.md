@@ -38,7 +38,12 @@ check. Gate item 10 rejects any other shape wherever a revision is recorded:
 
      ```bash
      root=$(git rev-parse --show-toplevel)
-     exclude=(':(exclude,glob).qfai/specs/*/tdd/test-list.md'
+     specs=$(npx qfai doctor --format json | node -e 'let s="";
+       process.stdin.on("data", (d) => (s += d)).on("end", () => {
+         const check = JSON.parse(s).checks.find((c) => c.id === "paths.specsDir");
+         process.stdout.write(check?.details?.path ?? ".qfai/specs");
+       })')
+     exclude=(":(exclude,glob)${specs}/*/tdd/test-list.md"
               ':(exclude,glob).qfai/evidence/**'
               ':(exclude,glob).qfai/review/**')
      git --no-replace-objects -C "$root" rev-parse HEAD
@@ -46,6 +51,16 @@ check. Gate item 10 rejects any other shape wherever a revision is recorded:
      git -C "$root" -c core.quotePath=false ls-files --others \
        --exclude-per-directory=.gitignore -z -- . "${exclude[@]}"
      ```
+
+     **The ledger's directory is read, not assumed.** `paths.specsDir` is a
+     project setting, so a project that moved its specs keeps its ledger
+     somewhere the default pathspec excludes nothing at — and the phase's own
+     `green` and `refactor` writes then move the address between the
+     observations gate item 10 requires to agree, so no uncommitted item in
+     that project can reach `done`. `npx qfai doctor --format json` reports the
+     resolved directory, which is the value the tool itself uses.
+     `.qfai/evidence` and `.qfai/review` are not configurable, and are written
+     as they are.
 
      **Git names the files. It does not read them.** A diff is a rendering
      rather than a state, and what renders it is checkout-local: `core.autocrlf`,
@@ -94,7 +109,23 @@ check. Gate item 10 rejects any other shape wherever a revision is recorded:
      it was. An entry ending in the path separator is that case. Register it as
      a submodule, remove it, or record the observation against its own tree.
 
-  2. **Exclude.** `.qfai/specs/*/tdd/test-list.md`, `.qfai/evidence/**` and
+     **A directory is a record too, and neither command lists one.** Git tracks
+     files, and `ls-files --others` names a directory only for the embedded
+     repository the clause above stops on. So the directories are derived:
+     every path component of every path in the two lists, each once. A
+     directory's mode is in the address for the reason a file's is — removing
+     the execute bit from `src/` changes what the tests can read while every
+     file under it keeps its bytes, and a PASS taken before it would still read
+     as fresh.
+
+     **The repository root is not one of them.** It has two spellings, `.` and
+     the empty path, and it is the thing being addressed rather than something
+     in it. Every other component is recorded by what it is on disk, read
+     without following a link: a component that is a symlink is a `symlink`
+     record carrying its own payload, and one the filesystem does not have —
+     the parent of a tracked path that is `absent` — is `absent` itself.
+
+  2. **Exclude.** `<specsDir>/*/tdd/test-list.md`, `.qfai/evidence/**` and
      `.qfai/review/**`, in the pathspecs above, so **both** lists carry them —
      they are the record of the observation, not the thing observed. The review
      pack is on that list for the same reason the others are: a project may
@@ -158,6 +189,19 @@ check. Gate item 10 rejects any other shape wherever a revision is recorded:
      so one producer's uppercase suffix and another's lowercase are two
      addresses for one tree.
 
+  **The tree has to hold still while you read it.** Collecting is many reads —
+  `HEAD`, the two lists, then one `lstat` and one read per path — and a tree
+  edited between them gives an address for a state that never existed: a file
+  created after the listing is missing from it, and one record can carry the
+  old bytes while the next carries the new. This is the ordinary case during a
+  review, where another worker may be editing the integrated worktree.
+
+  Run steps 1-4 twice and compare. Two equal runs mean nothing moved between
+  them, and that value is the address. Two unequal ones mean something did: run
+  again, and take the first value two consecutive runs agree on. A tree that
+  never gives two equal runs is being written while you address it — stop the
+  writer, or take the address once it has finished.
+
   Every tracked path contributes a record whether or not it differs from `HEAD`,
   so "clean but uncommitted" has a value rather than a special case, and an
   empty untracked list needs no sentinel.
@@ -167,7 +211,7 @@ check. Gate item 10 rejects any other shape wherever a revision is recorded:
   observations, and gate item 10 requires the refactor-verify run and the two
   reviews to name the **same** revision — so a hash over every path moved on the
   phase's own bookkeeping and no uncommitted item could reach `done`. Compute it
-  over the tree **minus `.qfai/specs/*/tdd/test-list.md` and `.qfai/evidence/**`\*\*:
+  over the tree **minus `<specsDir>/*/tdd/test-list.md` and `.qfai/evidence/**`\*\*:
   those are the record of the observation, not the thing observed. Everything the
   observation is about — production code, tests, fixtures — stays in.
 

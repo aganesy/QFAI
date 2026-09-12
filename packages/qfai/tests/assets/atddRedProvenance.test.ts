@@ -1616,7 +1616,10 @@ describe.each(TREES)("%s (a gate cannot fail on its own bookkeeping)", (tree) =>
       await read(tree, "assistant/skills/qfai-implement/references/evidence-revision.md"),
     );
     expect(revision).toContain("**The ledger is excluded from it.**");
-    expect(revision).toContain("minus `.qfai/specs/*/tdd/test-list.md` and `.qfai/evidence/**`");
+    // The ledger's directory is a project setting, so the exclusion names the
+    // resolved one: writing the default excludes nothing where a project moved
+    // its specs, and the phase's own writes move the address again.
+    expect(revision).toContain("minus `<specsDir>/*/tdd/test-list.md` and `.qfai/evidence/**`");
   });
 
   it("names the migration that writes the pre-split marker", async () => {
