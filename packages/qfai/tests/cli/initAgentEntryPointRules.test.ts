@@ -16,7 +16,7 @@
  * that had already wired the masters in by hand.
  */
 
-import { mkdtemp, readFile, readdir, rm, stat, symlink, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, readdir, rm, stat, symlink, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
@@ -420,5 +420,39 @@ describe("a section written with CRLF keeps its line endings", () => {
     // Mixed endings are what a formatter rewrites the whole file over, turning a
     // one-line change into a diff nobody asked for.
     expect(merged.split("\n").filter((line) => !line.endsWith("\r"))).toHaveLength(1);
+  });
+});
+
+describe("the update refuses a write it cannot make safely", () => {
+  it("refuses a linked parent directory, not only a linked file", async () => {
+    await withProject(async (root) => {
+      const master = ".agents/rules/grilling.md";
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+
+      // `.github` becomes a link to a directory outside the project, with an
+      // ordinary file inside it — which `lstat` on the file reports as regular.
+      const outside = path.join(root, "..", `qfai-outside-${path.basename(root)}`);
+      await mkdir(outside, { recursive: true });
+      const copilot = path.join(root, ".github", "copilot-instructions.md");
+      const trimmed = (await readFile(copilot, "utf-8"))
+        .split("\n")
+        .filter((line) => !(line.startsWith("- ") && line.includes(master)))
+        .join("\n");
+      await writeFile(path.join(outside, "copilot-instructions.md"), trimmed, "utf-8");
+      await rm(path.join(root, ".github"), { recursive: true, force: true });
+      try {
+        await symlink(outside, path.join(root, ".github"), "dir");
+      } catch {
+        await rm(outside, { recursive: true, force: true });
+        return;
+      }
+      await rm(path.join(root, ...master.split("/")), { force: true });
+
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+
+      // The file behind the linked parent is untouched.
+      expect(await readFile(path.join(outside, "copilot-instructions.md"), "utf-8")).toBe(trimmed);
+      await rm(outside, { recursive: true, force: true });
+    });
   });
 });

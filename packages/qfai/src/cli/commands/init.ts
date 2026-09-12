@@ -2856,7 +2856,7 @@ async function ensureAgentEntryPointRules(
       // would be worse than saying so: the project keeps a file that cites no
       // rule, and now knows it.
       error(
-        `  WARNING: ${name} already exists and was left unchanged. The shipped template has no ` +
+        `  WARNING: ${formatReportPath(name)} already exists and was left unchanged. The shipped template has no ` +
           `managed section, so add a reference to \`.agents/rules/\` by hand (while it is unreferenced, ` +
           `the shared rules never reach the AI's context).`,
       );
@@ -2873,19 +2873,21 @@ async function ensureAgentEntryPointRules(
         skipped.push(target);
         continue;
       }
-      const refusal = await refuseUnsafeEntryPointRewrite(target, existing);
+      const refusal = await refuseUnsafeEntryPointRewrite(target, existing, destRoot);
       if (refusal !== null) {
-        error(`  WARNING: ${target} was left unchanged. ${refusal}`);
+        error(`  WARNING: ${formatReportPath(target)} was left unchanged. ${refusal}`);
         skipped.push(target);
         continue;
       }
       if (dryRun) {
-        info(`  would update: ${target} (cite the newly shipped rule masters)`);
+        info(`  would update: ${formatReportPath(target)} (cite the newly shipped rule masters)`);
         copied.push(target);
         continue;
       }
-      await writeFile(target, merged, "utf-8");
-      info(`  updated: ${target} (cited the newly shipped rule masters; nothing else changed)`);
+      await replaceEntryPointFile(target, merged);
+      info(
+        `  updated: ${formatReportPath(target)} (cited the newly shipped rule masters; nothing else changed)`,
+      );
       copied.push(target);
       continue;
     }
@@ -2925,7 +2927,20 @@ async function citeNewMastersInCopilotInstructions(
   report: { copied: string[]; skipped: string[] },
 ): Promise<void> {
   const target = path.join(destRoot, ".github", "copilot-instructions.md");
-  const existing = await readTextFileIfPresent(target);
+  let existing: string | null;
+  try {
+    existing = await readTextFileIfPresent(target);
+  } catch (cause: unknown) {
+    // A directory in its place, or a file this process may not read. The wrapper
+    // sync treated an existing path as skipped, and aborting the whole run here
+    // would leave a project half-initialised for a file the run only adds a line
+    // to.
+    error(
+      `  WARNING: ${formatReportPath(target)} was left unchanged. It could not be read: ${describeError(cause)}`,
+    );
+    report.skipped.push(target);
+    return;
+  }
   // Absent: `syncIntegrationWrappers` writes it whole later in this run, from
   // the same source, so it will carry every master already.
   if (existing === null) return;
@@ -2939,20 +2954,58 @@ async function citeNewMastersInCopilotInstructions(
     report.skipped.push(target);
     return;
   }
-  const refusal = await refuseUnsafeEntryPointRewrite(target, existing);
+  const refusal = await refuseUnsafeEntryPointRewrite(target, existing, destRoot);
   if (refusal !== null) {
-    error(`  WARNING: ${target} was left unchanged. ${refusal}`);
+    error(`  WARNING: ${formatReportPath(target)} was left unchanged. ${refusal}`);
     report.skipped.push(target);
     return;
   }
   if (dryRun) {
-    info(`  would update: ${target} (cite the newly shipped rule masters)`);
+    info(`  would update: ${formatReportPath(target)} (cite the newly shipped rule masters)`);
     report.copied.push(target);
     return;
   }
-  await writeFile(target, merged, "utf-8");
-  info(`  updated: ${target} (cited the newly shipped rule masters; nothing else changed)`);
+  await replaceEntryPointFile(target, merged);
+  info(
+    `  updated: ${formatReportPath(target)} (cited the newly shipped rule masters; nothing else changed)`,
+  );
   report.copied.push(target);
+}
+
+/**
+ * The first component of `target` at or below `destRoot` that is a symbolic
+ * link, or `null` when every one of them is an ordinary directory or file.
+ */
+async function firstLinkedComponent(target: string, destRoot: string): Promise<string | null> {
+  const relative = path.relative(destRoot, target);
+  let walked = destRoot;
+  for (const segment of relative.split(path.sep)) {
+    walked = path.join(walked, segment);
+    const entry = await lstat(walked).catch(() => null);
+    if (entry?.isSymbolicLink() === true) return walked;
+  }
+  return null;
+}
+
+/**
+ * Replaces an entry point's content without ever leaving it truncated.
+ *
+ * The merged text is staged beside the target and renamed over it, so an
+ * `ENOSPC`, an `EIO` or a kill mid-write leaves the adopter's file exactly as
+ * it was. Writing in place would truncate first, and what is lost is the
+ * project's own instructions outside the managed section.
+ */
+async function replaceEntryPointFile(target: string, content: string): Promise<void> {
+  const staging = path.join(path.dirname(target), `.qfai-entry-${randomUUID()}.tmp`);
+  try {
+    await writeFile(staging, content, "utf-8");
+    await rename(staging, target);
+  } catch (error: unknown) {
+    await rm(staging, { force: true }).catch(() => {
+      // Best effort: the write fault is the one worth reporting.
+    });
+    throw error;
+  }
 }
 
 /**
@@ -2972,11 +3025,16 @@ async function citeNewMastersInCopilotInstructions(
 async function refuseUnsafeEntryPointRewrite(
   target: string,
   readEarlier: string,
+  destRoot: string,
 ): Promise<string | null> {
-  const link = await lstat(target).catch(() => null);
-  if (link?.isSymbolicLink() === true) {
-    return `It is a symbolic link, and writing through it would change the file it points at — which may be shared, or outside this project. Add the rule citations to the link's target by hand.`;
+  // Every path component, not only the final entry: a linked `.github` with an
+  // ordinary file inside it reports that file as regular, and the write then
+  // lands in whatever the parent points at.
+  const linked = await firstLinkedComponent(target, destRoot);
+  if (linked !== null) {
+    return `${formatReportPath(linked)} is a symbolic link, so writing here would change a file outside this project — which may be shared with another repository. Add the rule citations to the link's target by hand.`;
   }
+  const link = await lstat(target).catch(() => null);
   // A hard link reports as an ordinary file, and a write truncates the inode
   // every name shares — so a file linked into another repository changes there
   // too, with nothing in this run naming it.

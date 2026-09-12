@@ -143,7 +143,40 @@ The obligations that are specific to this command:
   `pruneStaleQfaiWrappers` cover generated wrapper directories QFAI owns
   entirely; `.github/workflows/` is adopter-authored and is not one of them.
 - Running init twice into the same tree writes nothing and changes no
-  provenance entry.
+  provenance entry, **with one exception**: the rule citations below.
+
+### Rule citations in an existing entry point
+
+Create-only leaves an `AGENTS.md`, a `CLAUDE.md` or a
+`.github/copilot-instructions.md` the project already has. A rule master the
+same run writes into `.agents/rules/` would then be cited by nothing, so init
+adds one bullet for it and only for it.
+
+**What it may change.** One bullet line per rule master the run's own copy
+report says it wrote, lifted from the shipped template rather than composed,
+inserted after the last rule bullet — inside the managed markers where the file
+has them, and anywhere in the list where it does not, because the Copilot file
+is generated whole and carries none.
+
+**What it may not.** Anything else in the file. A bullet the project deleted is
+not restored, because that master's file is on disk and the copy skips it.
+Prose the project wrote inside the section survives. The heading is never
+duplicated: an existing section is edited in place, and the append path is for a
+file that has no section at all.
+
+**What it refuses, naming the file and the reason.** A symbolic link at the
+target or at any path component below the destination root, a hard link with
+more than one name, a file whose bytes are not valid UTF-8, and a file that
+changed between the read and the write. An unreadable Copilot file is reported
+and skipped rather than failing the run.
+
+**How it writes.** The merged text is staged beside the target and renamed over
+it, so an interrupted write leaves the adopter's file as it was.
+
+**What the signal cannot tell.** A project that deleted both the bullet and the
+master gets both back: the same run writes the file again, so the citation
+follows it. Separating that from a first-time rule needs a record of what an
+earlier run wrote, which init does not keep.
 
 Reporting drift on an already-installed shipped workflow is **not** this
 command's job — it belongs to `qfai doctor`
