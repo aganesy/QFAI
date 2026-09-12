@@ -394,7 +394,7 @@ describe("cross-AI rules surface (.agents/rules/ master)", () => {
         /No exceptions/i,
         /short\s+label/,
         /Recommend/,
-        /numbered\s+plain-text\s+choices/,
+        /numbered\s+list/,
         /question\s+budget/i,
       ]) {
         expect(text).toMatch(clause);
@@ -451,6 +451,17 @@ describe("cross-AI rules surface (.agents/rules/ master)", () => {
       const text = await readFile(path.join(ROOT, rel), "utf-8");
       expect(text).toMatch(/how\s+many\s+options\s+may\s+be\s+chosen/);
       expect(text).toMatch(/Say\s+why\s+the\s+tool\s+was\s+not\s+callable/);
+    });
+
+    // The fallback carries the answer's shape, not a list unconditionally. A
+    // question whose answer is a name or a number has no choices to enumerate,
+    // and requiring a list there has an agent invent two options to fit it —
+    // which is the guess the recommendation clause refuses, in another costume.
+    it.each(MASTERS)("%s does not force an open answer into a list", async (rel) => {
+      const text = await readFile(path.join(ROOT, rel), "utf-8");
+      expect(text).toMatch(/in\s+the\s+shape\s+the\s+answer\s+has/);
+      expect(text).toMatch(/a\s+plain\s+request\s+for\s+the\s+value/);
+      expect(text).toMatch(/not\s+the\s+same\s+as\s+"always\s+a\s+list\s+of\s+choices"/);
     });
 
     // The form and the count are independent. Without this the rule reads as a
