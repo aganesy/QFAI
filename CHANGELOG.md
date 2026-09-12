@@ -4,6 +4,15 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ## [Unreleased]
 
+### Fixed
+
+- **A missing `jq` is named, not read as a broken release workflow** (#1689). The
+  test that runs the release workflow's tag gate reported, on a machine without
+  `jq`, that the workflow would not tag a release merge, while the negative
+  cases beside it passed for no reason: the gate's `jq` call failed, it printed
+  nothing, and the case read that silence as a verdict. The case now fails
+  naming the tool that is not installed.
+
 ## [1.12.0] - 2026-09-12
 
 ### Added
