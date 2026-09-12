@@ -107,15 +107,13 @@ describe("TDDLIST_STALE_STATUS — the ledger under-reporting", () => {
     );
   });
 
-  // `CR-20260818-0001`, approved 2026-08-23, option A. `selectorResolves` falls back to the
-  // selector's LAST identifier, which is right for its other consumer — there a match is evidence
-  // FOR a test's presence, so leniency costs a warning rather than swallowing one. Here the
-  // direction inverts: a match is evidence the row's `todo` is stale, so `header` matching almost
-  // any test file made the rule fire on rows whose test does not exist.
+  // A match here is evidence the row's `todo` is STALE, so a reader that answered on the
+  // selector's last identifier-shaped word alone would fire on rows whose test does not exist:
+  // `header` appears in almost any test file.
   it("stays silent when only the selector's last token appears, not the selector", async () => {
     await withLedger(
-      // `validates the header` shares its last identifier with `renders the header` in the fixture
-      // and shares nothing else. The lenient reader calls that a resolved selector.
+      // `validates the header` shares its last word with `renders the header` in the fixture and
+      // shares nothing else.
       ["| TDD-0001 | TC-0001 | Unit | tests/a.test.ts | validates the header | todo | - | - |"],
       { "tests/a.test.ts": TEST_FILE },
       (issues) => {
@@ -127,14 +125,14 @@ describe("TDDLIST_STALE_STATUS — the ledger under-reporting", () => {
     );
   });
 
-  it("still fires when the selector appears verbatim, so the carve-out is not a mute", async () => {
+  it("still fires when the selector appears verbatim, so the rule is not a mute", async () => {
     await withLedger(
       ["| TDD-0001 | TC-0001 | Unit | tests/a.test.ts | renders the header | todo | - | - |"],
       { "tests/a.test.ts": TEST_FILE },
       (issues) => {
         expect(
           stale(issues),
-          "the true direction must survive the carve-out, or it removed the rule instead of its false positive",
+          "the true direction must survive the strictness, or it removed the rule instead of its false positive",
         ).toHaveLength(1);
       },
     );
@@ -222,13 +220,28 @@ describe("TDDLIST_SELECTOR_UNRESOLVED — Selector is finally read", () => {
     );
   });
 
+  it("reports a row whose selector only shares its last word with a test", async () => {
+    // The `done` direction of the same leniency the stale-status rule is protected from: matching
+    // on the selector's last identifier-shaped word alone accepts `header` for almost any file, so
+    // a row could name no test in it and still report nothing. `validates the header` shares that
+    // word with `renders the header` in the fixture and shares nothing else.
+    await withLedger(
+      ["| TDD-0001 | TC-0001 | Unit | tests/a.test.ts | validates the header | done | - | ev |"],
+      { "tests/a.test.ts": TEST_FILE },
+      (issues) => {
+        const found = unresolved(issues);
+        expect(found, "the selector names no test in this file").toHaveLength(1);
+        expect(found[0]?.severity).toBe("warning");
+      },
+    );
+  });
+
   /**
    * The JSON array form of `Selector` (`selector-granularity.md#entry-form`), read per element.
    *
-   * Unsplit, an array reached the containment check as one long string: it matched nothing
-   * verbatim, and the last-identifier fallback then answered on the array's **last** element
-   * alone. So `["missing_test","existing_test"]` resolved on `existing_test` and reported nothing
-   * about the missing first one — a row could lose a test and keep a clean validate.
+   * Unsplit, an array reaches the containment check as one long string that no test file contains,
+   * so the row is reported whether or not its tests exist and its real state is unreadable either
+   * way. Split, each element answers for itself.
    */
   describe("a Selector holding a JSON array is read per element", () => {
     it("reports the row when one element of the array names no test", async () => {
@@ -255,16 +268,64 @@ describe("TDDLIST_SELECTOR_UNRESOLVED — Selector is finally read", () => {
       );
     });
 
-    // Over-correction pins. A bare cell is ONE entry whatever punctuation it
-    // holds, so neither of these may start being split.
-    it("does not split a bare cell on its commas", async () => {
-      // Read as one name this resolves by the last-identifier fallback, as it
-      // always has. Split on commas, "renders the header" would be an entry of
-      // its own and this would still pass — so the pin is the shape below,
-      // where a comma-split would invent an entry that resolves to nothing.
+    it("treats a cell that only looks like an array as a single entry", async () => {
+      // Opens with `[` but is not JSON, so § Entry form makes it one entry, and one entry must
+      // appear in full. Stripping the bracket and reading the remainder as the real selector would
+      // find `test_reconcile_head` and report nothing, which is the reading this excludes.
       await withLedger(
         [
-          "| TDD-0001 | TC-0001 | Unit | tests/a.test.ts | absent_one, test_reconcile_head | done | - | ev |",
+          "| TDD-0001 | TC-0001 | Unit | tests/a.test.ts | [case 3] test_reconcile_head | done | - | ev |",
+        ],
+        { "tests/a.test.ts": TEST_FILE },
+        (issues) => {
+          expect(unresolved(issues)).toHaveLength(1);
+        },
+      );
+    });
+
+    it("accepts the same bracketed cell when the file spells it that way", async () => {
+      // The bracket is not what makes the case above report — absence is.
+      await withLedger(
+        [
+          "| TDD-0001 | TC-0001 | Unit | tests/a.test.ts | [case 3] test_reconcile_head | done | - | ev |",
+        ],
+        { "tests/a.test.ts": "it('[case 3] test_reconcile_head', () => {});\n" },
+        (issues) => {
+          expect(unresolved(issues)).toEqual([]);
+        },
+      );
+    });
+
+    it("does not re-read a one-element array as a comma list", async () => {
+      // § Entry form takes each element verbatim "with no further splitting", and a one-element
+      // array is how a single name that would itself parse as a list is written. Split on its
+      // comma, both parts are in the fixture and this would pass; taken whole, the element names
+      // no test and the row is reported.
+      await withLedger(
+        [
+          `| TDD-0001 | TC-0001 | Unit | tests/a.test.ts | ["renders the header, test_reconcile_head"] | done | - | ev |`,
+        ],
+        { "tests/a.test.ts": TEST_FILE },
+        (issues) => {
+          expect(unresolved(issues)).toHaveLength(1);
+        },
+      );
+    });
+  });
+
+  /**
+   * `selector-granularity.md` § Reading a cell written under the old comma rule.
+   *
+   * Before the array form the contract called a multi-entry cell a comma-separated list, so
+   * ledgers already in projects hold `renders the header, renders the footer` meaning two names.
+   * Read as one entry such a row can never resolve again, so a bare comma-bearing cell gets one
+   * bounded second reading — adopted only when the file contains every part.
+   */
+  describe("a bare cell written under the old comma rule", () => {
+    it("accepts the row when every comma-separated part names a test", async () => {
+      await withLedger(
+        [
+          "| TDD-0001 | TC-0001 | Unit | tests/a.test.ts | renders the header, test_reconcile_head | done | - | ev |",
         ],
         { "tests/a.test.ts": TEST_FILE },
         (issues) => {
@@ -273,14 +334,27 @@ describe("TDDLIST_SELECTOR_UNRESOLVED — Selector is finally read", () => {
       );
     });
 
-    it("treats a cell that only looks like an array as a single entry", async () => {
-      // Opens with `[` but is not JSON, so § Entry form makes it one entry —
-      // and as one entry the last identifier still resolves it.
+    it("reports the row when one part names no test", async () => {
+      // The split is evidence, not a free pass: one absent part and the cell is back to naming
+      // nothing, which is the row's real problem.
       await withLedger(
         [
-          "| TDD-0001 | TC-0001 | Unit | tests/a.test.ts | [case 3] test_reconcile_head | done | - | ev |",
+          "| TDD-0001 | TC-0001 | Unit | tests/a.test.ts | absent_one, test_reconcile_head | done | - | ev |",
         ],
         { "tests/a.test.ts": TEST_FILE },
+        (issues) => {
+          expect(unresolved(issues)).toHaveLength(1);
+        },
+      );
+    });
+
+    it("reads a name that legitimately holds a comma whole, without splitting it", async () => {
+      // Step 1 wins when it answers. Split, `and labels it` names no test on its own and the row
+      // would be reported for a selector that is correct.
+      const name = "falls back to the built-in set, and labels it, when the file is absent";
+      await withLedger(
+        [`| TDD-0001 | TC-0001 | Unit | tests/a.test.ts | ${name} | done | - | ev |`],
+        { "tests/a.test.ts": `it('${name}', () => {});\n` },
         (issues) => {
           expect(unresolved(issues)).toEqual([]);
         },

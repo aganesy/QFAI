@@ -4,7 +4,76 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ## [Unreleased]
 
+### Removed
+
+- **`.qfai/report/validate.log` is no longer tracked** (#1582). Every local
+  `qfai validate` rewrites it, so `git add -A` carried it into whatever commit
+  was open — 113 of them, the six most recent about spec prose, CI checkout
+  behaviour and CLI performance.
+
+  The directory already declared it ignored; the file had been force-added past
+  that, and a tracked path bypasses ignore rules, so the disagreement was
+  invisible to `git check-ignore`.
+
+  It is live local state rather than a leftover: `doctor --clean-run-logs`
+  reads its `run_log:` and `run_id:` pointers to keep a referenced run
+  directory from being pruned. That is the argument for untracking rather than
+  deleting — one machine's record of which runs it kept means nothing in
+  another clone. An absent file is already handled as "nothing pinned".
+
+  A pull removes the local copy; the next validate run writes a fresh one.
+
 ### Fixed
+
+- **The FIFO refusal test runs its assertion against a fixture that exists**
+  (#1580). It decided whether the platform could host a FIFO by reading
+  `mkfifo`'s exit status. Git Bash ships `mkfifo`, so on Windows it exits `0`
+  and creates the FIFO inside the MSYS layer, where the running process — using
+  Win32 — cannot see it at all. The row therefore did not skip: `init` found no
+  collision, wrote the template, and the assertion compared a real file against
+  `isFIFO()`.
+
+  It now checks the fixture instead of the tool, so it asserts where a FIFO was
+  planted and skips where none was. The local package suite goes green, which
+  it had not been on this platform.
+
+### Removed
+
+- **The archetype tie-breaker, which nothing called** (#1583).
+  `core/skill/archetypeTieBreaker.ts` resolved two archetypes sharing an
+  aggregate taste-interview score. Its only importer was its own test, it was
+  not on the export surface, and the input it needed — a score from a taste
+  interview — is not produced anywhere since rating was removed.
+
+  The alphabetical tie-break it implemented is stated in the brand catalog's
+  Selection Guide, which is what an agent reads, and a guard already pins that
+  sentence.
+
+### Fixed
+
+- **A ledger `Selector` must now name a test its own `Test file` contains**
+  (#1586). `TDDLIST_SELECTOR_UNRESOLVED` accepted a selector whose last
+  identifier-shaped word appeared anywhere in the file. The last word of
+  `renders the header` is `header`, which is in almost any test file, so a row
+  could claim a completed test the file did not hold and report nothing.
+
+  Resolution is now containment of the selector's own text, which is what
+  `TDDLIST_STALE_STATUS` already required. Across this repository's own ledgers
+  the rule goes from 50 findings to 209 over 12 files, every one a `warning`:
+  the error count is unchanged, so `--fail-on error` and the backlog ratchet are
+  unaffected.
+
+  A selector no runner could match is the shape the strict check is for. Run
+  each of `spec-0002`'s previously accepted selectors through `vitest -t`
+  against its own test file and four of the six select zero tests.
+
+  Strictness makes one reading in `selector-granularity.md` reachable for the
+  first time: a bare cell holding commas was a comma-separated list before the
+  array form existed, and read as a single name such a row can never resolve
+  again. Those cells now get one bounded second reading, adopted only when the
+  file contains every part. A name that legitimately holds a comma is matched
+  whole first, and the array form — a one-element array included — is taken
+  verbatim and never re-split.
 
 - **The remediation for an unreplaced `DESIGN.md` names a step that exists.**
   `QFAI-DCON-034` told an operator to run `/qfai-discussion`, "which emits the
