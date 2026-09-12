@@ -180,7 +180,11 @@ Default policy:
 - **One question item is one question**, however many options it offers. An
   AskUserQuestion call that bundles N question items spends N, not 1 — bundling
   is a presentation choice, not a discount. The plain-text fallback uses the
-  same unit: one numbered choice set is one question.
+  same unit, in either shape its answer takes: one numbered choice set is one
+  question, and one plain request for an open value is one question. A question
+  the tool could not carry is still a question, and counting only the shape that
+  happens to be a list would put the whole of Article X's open-value path
+  outside the budget.
 
 ### What does not count (MUST)
 

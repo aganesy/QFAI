@@ -252,6 +252,11 @@ describe("the clarification budget is countable", () => {
       expectPhrase(content, "**One question item is one question**");
       expectPhrase(content, "bundles N question items spends N, not 1");
       expectPhrase(content, "one numbered choice set is one question");
+      // Both shapes the fallback takes. Counting only the list would leave
+      // every open-value request outside the budget, which is the whole of
+      // Article X's other path.
+      expectPhrase(content, "one plain request for an open value is one question");
+      expectPhrase(content, "A question the tool could not carry is still a question");
     });
 
     it(`${tree}: Article VI says what exhaustion does`, async () => {
