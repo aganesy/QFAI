@@ -14,6 +14,11 @@ Use this file for the full quality gate checklist behind `/qfai-sdd`.
 - Every `01_Spec.md` declares a valid `Status:` (active / superseded / deprecated / removed).
 - `superseded` specs declare `Superseded-by: spec-NNNN` pointing to an existing spec.
 - `deprecated` / `removed` specs declare `Deprecated-at: YYYY-MM-DD`.
+- No `08_Open-questions.md` or `_policies/09_Open-questions.md` entry carries the
+  `unadjudicated` status. A question
+  parked on purpose is `deferred`, with the decision point that takes it up; a
+  decision the user was asked for and never took blocks the stage, because
+  completing there records a design nobody chose.
 
 ## Triage Checks
 
@@ -103,7 +108,9 @@ Phase 0 is a mandatory output of this skill, so its own artifacts belong on this
   every later one indistinguishable from a checkpoint that never happened.
 - A row reads `run` only with zero escalations. One escalation makes it `escalated`, and an
   `escalated` row needs a `PENDING` work order for it — an escalation nobody answered is a design
-  decision nobody took, and `08_Open-questions.md` does not block a spec stage.
+  decision nobody took. Record it in `08_Open-questions.md` as well, with
+  `status: unadjudicated`: the work order keeps the stage resumable, and the status is what
+  validation reads.
 - Each phase's settled count equals the number of `grilling(<phase>/...)` rows in
   `## Work Orders Summary` — the phase is the title's first field, because the shared schema has no
   column for it. Without that key a row cannot be assigned to a phase, so an omitted row passes by

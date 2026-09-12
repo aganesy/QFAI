@@ -1,6 +1,7 @@
-import { readFile } from "node:fs/promises";
+import { lstat, readFile, realpath } from "node:fs/promises";
 import path from "node:path";
 
+import { readBoundedRegularFile } from "../../shared/boundedRead.js";
 import type { QfaiConfig } from "../config.js";
 import { resolvePath } from "../config.js";
 import { buildContractIndex } from "../contractIndex.js";
@@ -47,6 +48,7 @@ import {
   parseIdsFromText,
   parseTestCaseIds,
   resolveTestCaseTable,
+  splitMarkdownRow,
 } from "../specPackParsers.js";
 import {
   isValidDeprecatedAt,
@@ -94,7 +96,7 @@ const DELTA_REQUIRED_H2_HEADINGS = [
 
 type OpenQuestionStatus = {
   id: string;
-  status: "open" | "resolved" | "deferred";
+  status: "open" | "resolved" | "deferred" | "unadjudicated";
 };
 
 type InvalidOpenQuestionStatus = {
@@ -118,8 +120,17 @@ type SpecDefinitions = {
 export async function validateSpecPacks(root: string, config: QfaiConfig): Promise<Issue[]> {
   const specsRoot = resolvePath(root, config, "specsDir");
   const entries = await collectSpecEntries(specsRoot);
+  // Once for the tree: the shared policy register belongs to every layered
+  // spec, and reading it per entry reports one policy decision once per spec.
+  // Before the no-pack return below, because a tree holding the register with
+  // no spec beside it yet is a pack being established policy-first, and
+  // returning there would leave every decision in it unread.
+  const sharedRegisterIssues = await collectRegisterIssues(
+    path.join(specsRoot, "_policies", "09_Open-questions.md"),
+  );
   if (entries.length === 0) {
     return [
+      ...sharedRegisterIssues,
       issue(
         "QFAI-SPACK-000",
         `Spec Pack が見つかりません。配置場所: ${config.paths.specsDir} / 期待: spec-0001/01_Spec.md ... 18_delta.md または Layered spec (01_Spec.md ... *_delta.md)`,
@@ -140,6 +151,8 @@ export async function validateSpecPacks(root: string, config: QfaiConfig): Promi
   const specStatuses = new Map<string, SpecStatus | undefined>(
     entries.map((entry) => [`spec-${entry.specNumber}`, entry.status]),
   );
+
+  issues.push(...sharedRegisterIssues);
 
   for (const entry of entries) {
     if (entry.layout === "layered") {
@@ -1516,9 +1529,14 @@ async function validateSpecPackEntry(
     }
   }
 
-  issues.push(
-    ...validateOpenQuestionsGate(entry, texts["15_Open-questions.md"] ?? "", releaseCandidate),
-  );
+  // Through the bounded reader rather than the required-file collector's text:
+  // that one substitutes an empty string for a register it cannot read, so a
+  // permission error or a pipe at the name passed as a pack with no questions.
+  const register = await readRegisterFile(entry.openQuestionsPath);
+  issues.push(...register.issues);
+  if (register.text !== undefined) {
+    issues.push(...collectOpenQuestionsGateIssues(entry, register.text, releaseCandidate));
+  }
   const deltaText = texts["18_delta.md"];
   if (deltaText !== undefined) {
     issues.push(...validateDeltaGate(entry, deltaText));
@@ -1553,6 +1571,12 @@ async function validateLayeredSpecEntry(
       ),
     );
   }
+
+  // A decision nobody settled blocks the stage, and the layered layouts carry
+  // no other open-question gate — which is the layout `qfai init` generates.
+  // The shared policy register is read once for the whole tree, not here: one
+  // policy decision is one finding however many specs the project has.
+  issues.push(...(await collectRegisterIssues(entry.openQuestionsPath)));
 
   const missingSharedFiles = await collectMissingLayeredSharedRequiredFiles(entry);
   if (missingSharedFiles.length > 0) {
@@ -1895,13 +1919,210 @@ async function fileExists(target: string): Promise<boolean> {
   }
 }
 
-function validateOpenQuestionsGate(
+/**
+ * The ceiling a register is read under.
+ *
+ * Well past any register anyone writes, and small enough that a device or a
+ * runaway file at the name cannot be pulled into memory.
+ */
+const REGISTER_MAX_BYTES = 4 * 1024 * 1024;
+
+/** The spec-pack layout's register, read through the bounded reader and not the bulk load. */
+const LEGACY_REGISTER_FILE = "15_Open-questions.md";
+
+/** The `code` an fs rejection carries, where it carries one. */
+function errorCode(error: unknown): string | undefined {
+  if (typeof error !== "object" || error === null) return undefined;
+  const code: unknown = Reflect.get(error, "code");
+  return typeof code === "string" ? code : undefined;
+}
+
+/**
+ * Whether nothing is at `target`, as against something that cannot be read.
+ *
+ * Two errors say the name resolves to nothing: the last segment is absent, or
+ * a segment before it is not a directory. Every other one says something is
+ * there.
+ */
+async function isAbsent(target: string): Promise<boolean> {
+  try {
+    await lstat(target);
+    return false;
+  } catch (error) {
+    const code = errorCode(error);
+    return code === "ENOENT" || code === "ENOTDIR";
+  }
+}
+
+/**
+ * The status findings one open-question register carries.
+ *
+ * Both halves, because a typo is how the blocking value is missed: a row
+ * reading `unadjudicted` is not the status that blocks and is not one of the
+ * four either, so a register checked for the first alone passes a decision
+ * nobody took.
+ */
+async function collectRegisterIssues(register: string): Promise<Issue[]> {
+  const read = await readRegisterFile(register);
+  if (read.text === undefined) return [...read.issues];
+  return [
+    ...collectUnadjudicatedDecisions(register, read.text),
+    ...collectUnreadableStatuses(register, read.text),
+  ];
+}
+
+/**
+ * One register's text, or the finding that says why there is none.
+ *
+ * Separate from the checks above because both open-question gates need it: the
+ * layered one reads a register per spec, and the spec-pack one used the
+ * required-file collector's text instead — which substitutes an empty string
+ * for a file it cannot read, so an unreadable register there was a register
+ * with no questions in it.
+ */
+async function readRegisterFile(
+  register: string,
+): Promise<{ text?: string; issues: readonly Issue[] }> {
+  // Through the bounded reader, on the path a link resolves to: a FIFO at this
+  // name blocks the command in `open` itself, and a register is a file the
+  // adopter writes, so the gate cannot assume what is at it.
+  const target = await realpath(register).catch(() => register);
+  const bytes = await readBoundedRegularFile(target, REGISTER_MAX_BYTES);
+  if (bytes !== undefined) return { text: bytes.toString("utf-8"), issues: [] };
+  // Absent is the ordinary answer — a tree with no shared register, a spec
+  // whose questions file is not written yet — and reports nothing. Anything
+  // else is a register that is there and was not read, and reading that as
+  // absence is how a decision nobody took passes a gate that never opened the
+  // file.
+  if (await isAbsent(register)) return { issues: [] };
+  return {
+    issues: [
+      issue(
+        "QFAI-SPACK-103",
+        "This open-question register is present and could not be read, so the decisions in it were not checked.",
+        "error",
+        register,
+        "specPack.openQuestionsUnreadable",
+        [],
+        "canonical",
+        "Make the path a regular file this run can read, under 4 MiB — not a directory, a device, a pipe or a link that resolves to one.",
+      ),
+    ],
+  };
+}
+
+/**
+ * The question a line opens an entry for, outside a table.
+ *
+ * A subsection heading, or a list item that starts with the id — the two ways
+ * a register writes an entry that is not a row. What it is not is any line that
+ * merely names a question: a `Depends on: OQ-0008` note between a heading and
+ * its status would otherwise hand the status to the question the note points
+ * at, and report the entry that owns it as declaring none.
+ */
+function openedEntryId(line: string): string | null {
+  const opener = /^(?:#{1,6}|[-*+])\s+(OQ-[A-Za-z0-9_-]+)\b/i.exec(line.trim())?.[1];
+  if (opener === undefined || OPEN_QUESTION_COLUMN_LABEL.test(opener)) return null;
+  return opener;
+}
+
+/** The id a table cell is keyed by, where the cell is one. */
+function keyedCellId(cell: string): string | null {
+  const id = /^(OQ-[A-Za-z0-9_-]+)$/i.exec(cell.trim())?.[1];
+  if (id === undefined || OPEN_QUESTION_COLUMN_LABEL.test(id)) return null;
+  return id;
+}
+
+/**
+ * The questions the register opens more than one entry for.
+ *
+ * One entry per question. With two, a status on either answers for both, so the
+ * entry declaring none is invisible — and which of two conflicting values is
+ * the register's is not decidable from the document.
+ */
+function repeatedEntries(entries: readonly string[]): InvalidOpenQuestionStatus[] {
+  const repeated = entries.filter((id, at) => entries.indexOf(id) !== at);
+  return [...new Set(repeated)].map((id) => ({ id, value: REPEATED_ENTRY }));
+}
+
+/** A register entry whose status is not one of the four, or is not there. */
+function collectUnreadableStatuses(register: string, text: string): Issue[] {
+  const declared = new Set(parseOpenQuestionStatuses(text).map((item) => item.id));
+  // A subsection entry declares its status on a line of its own, and an entry
+  // that simply omits it declares nothing at all — so the ids are compared with
+  // the statuses rather than only the statuses being read. A row form that
+  // leaves the cell empty is already counted as an unreadable value below.
+  const entries = readRegister(text).entries;
+  const undeclared = [...new Set(entries)]
+    .filter((id) => !declared.has(id))
+    .map((id) => ({ id, value: "" }));
+  const invalid = [
+    ...parseInvalidOpenQuestionStatuses(text),
+    ...undeclared,
+    ...repeatedEntries(entries),
+  ];
+  if (invalid.length === 0) return [];
+  const samples = Array.from(
+    new Set(invalid.map((item) => `${item.id}=${item.value === "" ? "(none)" : item.value}`)),
+  ).slice(0, 8);
+  return [
+    issue(
+      "E_OQ_STATUS_UNPARSEABLE",
+      `Statuses this register declares are not among open / resolved / deferred / unadjudicated: ${samples.join(", ")}`,
+      "error",
+      register,
+      "specPack.openQuestionsStatus",
+      Array.from(new Set(invalid.map((item) => item.id))),
+      "canonical",
+      "Spell the status as one of `open`, `resolved`, `deferred` or `unadjudicated`, once per entry — a value outside those four is read as no status at all, and an entry whose own line states the field twice declares neither.",
+    ),
+  ];
+}
+
+/**
+ * A decision the user was asked for and nobody settled, in one register.
+ *
+ * Separate from the rest of the open-question gate because it applies wherever
+ * a register lives — per spec, and under `_policies` — while the `open` count
+ * is a release-candidate rule the layered layouts have never carried. Unlike
+ * `open`, it does not soften outside a release candidate: the pack is claiming
+ * a design nobody chose, and a stage that completes over it has recorded the
+ * agent's preference as the project's decision.
+ */
+export function collectUnadjudicatedDecisions(registerPath: string, text: string): Issue[] {
+  const ids = Array.from(
+    new Set(
+      parseOpenQuestionStatuses(text)
+        .filter((item) => item.status === "unadjudicated")
+        .map((item) => item.id)
+        .filter((id) => id.length > 0),
+    ),
+  );
+  if (ids.length === 0) return [];
+  return [
+    issue(
+      "QFAI-SPACK-102",
+      `A decision was put to the user and nobody settled it: ${ids.join(", ")}`,
+      "error",
+      registerPath,
+      "specPack.openQuestionsUnadjudicated",
+      ids,
+      "canonical",
+      "Put the decision to the user and record the answer, or — where it is the agent's to make and the user has closed the questions — record it as an assumption and set the status to `deferred` with the next decision point.",
+    ),
+  ];
+}
+
+export function collectOpenQuestionsGateIssues(
   entry: SpecEntry,
   text: string,
   releaseCandidate: boolean,
 ): Issue[] {
   const statuses = parseOpenQuestionStatuses(text);
-  const invalidStatuses = parseInvalidOpenQuestionStatuses(text);
+  const invalidStatuses = [
+    ...parseInvalidOpenQuestionStatuses(text),
+    ...repeatedEntries(readRegister(text).entries),
+  ];
   const statusIds = new Set(statuses.map((item) => item.id));
   const openQuestionIds = extractOpenQuestionIds(text);
   const idsWithoutValidStatus = openQuestionIds.filter((id) => !statusIds.has(id));
@@ -1915,6 +2136,8 @@ function validateOpenQuestionsGate(
   );
   const severity = releaseCandidate ? "error" : "warning";
   const issues: Issue[] = [];
+
+  issues.push(...collectUnadjudicatedDecisions(entry.openQuestionsPath, text));
 
   if (openIds.length > 0) {
     const message = releaseCandidate
@@ -1938,7 +2161,11 @@ function validateOpenQuestionsGate(
     const refs = Array.from(
       new Set([...idsWithoutValidStatus, ...invalidStatuses.map((item) => item.id)]),
     );
-    const invalidSamples = invalidStatuses.map((item) => `${item.id}=${item.value}`).slice(0, 8);
+    // An empty cell on a question row is a missing status, and a sample reading
+    // `OQ-0007=` does not say that.
+    const invalidSamples = invalidStatuses
+      .map((item) => `${item.id}=${item.value === "" ? "(none)" : item.value}`)
+      .slice(0, 8);
     const details: string[] = [];
     if (idsWithoutValidStatus.length > 0) {
       details.push(`status 欠落: ${idsWithoutValidStatus.join(", ")}`);
@@ -1958,7 +2185,7 @@ function validateOpenQuestionsGate(
         "specPack.openQuestionsStatus",
         refs,
         "canonical",
-        "15_Open-questions.md の各 OQ-* に `status: open|resolved|deferred` を正しい綴りで記載してください。",
+        "15_Open-questions.md の各 OQ-* に `status: open|resolved|deferred|unadjudicated` を正しい綴りで記載してください。",
       ),
     );
   }
@@ -1966,46 +2193,15 @@ function validateOpenQuestionsGate(
   return issues;
 }
 
+/**
+ * The questions this register opens an entry for.
+ *
+ * The same reading the status scan uses, so the two agree about which entries
+ * exist: a status attributed to a question this does not name is a status
+ * nothing is compared against.
+ */
 function extractOpenQuestionIds(text: string): string[] {
-  const ids = new Set<string>();
-  for (const match of text.matchAll(/\b(OQ-[A-Za-z0-9_-]+)\b/gi)) {
-    const id = match[1];
-    if (id) {
-      ids.add(id);
-    }
-  }
-  return Array.from(ids);
-}
-
-function parseInvalidOpenQuestionStatuses(text: string): InvalidOpenQuestionStatus[] {
-  const lines = text.replace(/\r\n/g, "\n").split("\n");
-  const statuses: InvalidOpenQuestionStatus[] = [];
-  let currentId = "";
-
-  for (const line of lines) {
-    const idMatch = /\b(OQ-[A-Za-z0-9_-]+)\b/i.exec(line);
-    if (idMatch?.[1]) {
-      currentId = idMatch[1];
-    }
-
-    const statusMatch = /(?:^|\s)(?:-\s*)?status\s*:\s*([^\s#]+)\s*$/i.exec(line);
-    const rawStatus = statusMatch?.[1];
-    if (!rawStatus) {
-      continue;
-    }
-
-    const normalized = rawStatus.toLowerCase();
-    if (normalized === "open" || normalized === "resolved" || normalized === "deferred") {
-      continue;
-    }
-
-    statuses.push({
-      id: currentId || "(unlabeled-oq)",
-      value: rawStatus,
-    });
-  }
-
-  return statuses;
+  return [...new Set(readRegister(text).entries)];
 }
 
 function validateDeltaGate(entry: SpecEntry, text: string): Issue[] {
@@ -2790,30 +2986,255 @@ function splitReOpenedByRefs(raw: string): string[] {
   return refs;
 }
 
-function parseOpenQuestionStatuses(text: string): OpenQuestionStatus[] {
-  const lines = text.replace(/\r\n/g, "\n").split("\n");
-  const statuses: OpenQuestionStatus[] = [];
-  let currentId = "";
+/** The statuses a register may declare, in either notation. */
+const OPEN_QUESTION_STATUSES = new Set(["open", "resolved", "deferred", "unadjudicated"]);
 
-  for (const line of lines) {
-    const idMatch = /\b(OQ-[A-Za-z0-9_-]+)\b/i.exec(line);
-    if (idMatch?.[1]) {
-      currentId = idMatch[1];
+/**
+ * The column label, which is not a question.
+ *
+ * The register's table heads its first column `OQ-ID`, and read as an id it is
+ * a question with no status — so the shipped template reported itself as
+ * unparseable the moment the table notation was read at all. Every real id
+ * carries digits.
+ */
+const OPEN_QUESTION_COLUMN_LABEL = /^OQ-ID$/i;
+
+/**
+ * The status field, and the same field anchored to a line of its own.
+ *
+ * The value is the token after the colon, so a note beside it — `deferred
+ * (trigger = ...)`, which parks a question with the point that takes it up —
+ * is the note it is. Whatever the token holds is read as the value, so a
+ * misspelling is reported rather than trimmed into one of the four.
+ */
+const STATUS_FIELD = /(?:status|disposition)\s*:\s*([^\s#]+)/gi;
+const STATUS_FIELD_LINE = /^\s*(?:[-*+]\s*)?(?:status|disposition)\s*:\s*([^\s#]+)/i;
+
+/** The heading the schema puts a register's live entries under. */
+const OPEN_QUESTIONS_HEADING = "Open Questions";
+
+/** What a status is attributed to where no entry has been opened yet. */
+const UNLABELLED_OQ = "(unlabeled-oq)";
+
+/** The header a register's status column carries, in either word. */
+const STATUS_HEADER = /^(?:status|disposition)$/i;
+
+/** What a question declares when the register opens two entries for it. */
+const REPEATED_ENTRY = "(two entries)";
+
+/** What an entry declares when its own line carries the field more than once. */
+const AMBIGUOUS_STATUS = "(two on one line)";
+
+/** One status a register declares, as written. */
+type DeclaredStatus = { id: string; raw: string };
+
+/**
+ * The register's live section, masked and split into lines.
+ *
+ * The schema puts live entries under `## Open Questions` and lets a register
+ * carry others beside it — a resolved list, a carry-forward note, a record of
+ * a wave. Read over the whole document, an id written in one of those is a
+ * question this gate reports, and an `unadjudicated` quoted there blocks a
+ * stage nothing is waiting on.
+ *
+ * Masked before the section is cut, so a heading written inside a fenced
+ * example does not open a section of its own — and a register that documents
+ * its own notation writes exactly that.
+ *
+ * A register with no such heading is read whole. The section is where a
+ * conforming document puts its entries; a document that does not have one is
+ * off-schema, and reading nothing there would take the gate off it entirely.
+ */
+function openQuestionsLines(text: string): string[] {
+  const masked = maskNonSpecRegions(text.replace(/\r\n/g, "\n"));
+  const sections = extractMarkdownSections(masked, OPEN_QUESTIONS_HEADING);
+  if (sections.length === 0) return masked.split("\n");
+  return sections.flatMap((section) => section.split("\n"));
+}
+
+/**
+ * What one register declares: the entries it opens, and the statuses on them.
+ *
+ * `entries` holds every occurrence, not a set of ids: a question the register
+ * opens twice is a question whose status on either entry answers for both, and
+ * a set cannot say that happened.
+ */
+type RegisterReading = { entries: string[]; declared: DeclaredStatus[] };
+
+/**
+ * Every entry the live section opens, and every status it declares.
+ *
+ * One pass, because the two answers are read from the same lines and have to
+ * agree about which entry a line belongs to: a status attributed to a question
+ * the entry scan did not open is a status nothing is compared against.
+ *
+ * Three notations are in use and all three are read: a row in the table the
+ * template writes, a `status:` line under a subsection, and the field inline on
+ * an entry written as one bullet. Both column positions are resolved from the
+ * header rather than assumed, because the schema requires an `OQ-ID` column and
+ * does not require it to come first.
+ */
+function readRegister(text: string): RegisterReading {
+  const lines = openQuestionsLines(text);
+  const entries: string[] = [];
+  const declared: DeclaredStatus[] = [];
+  let currentId = "";
+  let inTable = false;
+  let idColumn: number | null = null;
+  let statusColumn: number | null = null;
+
+  for (const [index, line] of lines.entries()) {
+    // The separator row is part of the table it underlines, so it does not end
+    // one: resetting on it threw away the columns the header had just resolved.
+    if (isSeparatorRow(line)) continue;
+    const separated = hasCellSeparator(line);
+    if (inTable && !separated) {
+      inTable = false;
+      idColumn = null;
+      statusColumn = null;
     }
 
-    const statusMatch = /(?:^|\s)(?:-\s*)?status\s*:\s*(open|resolved|deferred)\s*$/i.exec(line);
-    if (!statusMatch?.[1]) {
+    if (!inTable && separated && isSeparatorRow(lines[index + 1])) {
+      // A register's table is the one keyed by question. Without that, a
+      // glossary of the statuses themselves reads as a table of rows declaring
+      // them, and an untouched template reports itself.
+      const cells = rowCells(line);
+      const key = cells.findIndex((cell) => OPEN_QUESTION_COLUMN_LABEL.test(cell));
+      // Either word: the field is read as `Disposition` in the other two
+      // notations, so a table headed that way declared no status at all and
+      // every valid row in it was reported for the omission.
+      const status = cells.findIndex((cell) => STATUS_HEADER.test(cell));
+      idColumn = key === -1 ? null : key;
+      statusColumn = key === -1 || status === -1 ? null : status;
+      inTable = true;
       continue;
     }
 
-    const status = statusMatch[1].toLowerCase() as OpenQuestionStatus["status"];
-    statuses.push({
-      id: currentId || "(unlabeled-oq)",
-      status,
-    });
+    const cells = inTable ? rowCells(line) : [];
+    const opened = inTable
+      ? idColumn === null
+        ? null
+        : keyedCellId(cells[idColumn] ?? "")
+      : openedEntryId(line);
+    if (opened !== null) {
+      entries.push(opened);
+      currentId = opened;
+    }
+
+    if (inTable) {
+      if (statusColumn === null) continue;
+      const cell = cells[statusColumn] ?? "";
+      // An empty cell on a real question row is a missing status, which the
+      // register contract does not allow — but the template's own `0 items`
+      // placeholder carries no question and declares nothing.
+      if (cell !== "" && cell !== "-") {
+        // The status is the cell's first word. Registers here write
+        // `resolved (2026-05-06)`, and the date beside the value is a note
+        // rather than a second status — while a misspelling is still the first
+        // word, and still reported.
+        declared.push({ id: currentId || UNLABELLED_OQ, raw: statusValue(cell.split(/\s+/)[0]) });
+      } else if (opened !== null) {
+        declared.push({ id: opened, raw: "" });
+      }
+      continue;
+    }
+
+    // The field, in either word: `Disposition` is this one under the name the
+    // discussion pack's register uses, and registers here are written both
+    // ways. It is read in two places and no others — on a line that opens an
+    // entry, where an entry written as one bullet carries the field inline,
+    // and as a metadata line of its own. A sentence elsewhere quoting a status
+    // declares nothing, which is what keeps a register that explains its own
+    // notation from answering for the question it named last.
+    //
+    // One occurrence, or none of them, on either line the field is read from.
+    // An entry may quote a value in the sentence that states its own — `from
+    // Status: deferred to ...` — and a metadata line may hold two outright:
+    // `Status: deferred; Status: unadjudicated`. Neither the first nor the last
+    // is the field in every spelling of that, so a line carrying two declares
+    // nothing and says so. Reading either would be a guess, and a guess here
+    // blocks a stage nobody is waiting on or passes the decision this gate
+    // exists for.
+    if (opened === null && !STATUS_FIELD_LINE.test(line)) continue;
+    const values = [...line.matchAll(STATUS_FIELD)].flatMap((match) =>
+      match[1] === undefined ? [] : [statusValue(match[1])],
+    );
+    if (values.length === 1) {
+      declared.push({ id: currentId || UNLABELLED_OQ, raw: values[0] ?? "" });
+    } else if (values.length > 1) {
+      declared.push({ id: currentId || UNLABELLED_OQ, raw: AMBIGUOUS_STATUS });
+    }
   }
 
-  return statuses;
+  return { entries, declared };
+}
+
+/**
+ * The status a written value states.
+ *
+ * Sentence punctuation after it is not part of it: an entry written as one
+ * bullet ends the field mid-sentence, and `deferred.` is that value. Nothing
+ * else is trimmed, so `open_pending` stays the value it is and is reported.
+ */
+function statusValue(raw: string | undefined): string {
+  return (raw ?? "").replace(/[.,;:]+$/, "");
+}
+
+function readDeclaredStatuses(text: string): DeclaredStatus[] {
+  return readRegister(text).declared;
+}
+
+function parseOpenQuestionStatuses(text: string): OpenQuestionStatus[] {
+  return readDeclaredStatuses(text)
+    .filter((item) => OPEN_QUESTION_STATUSES.has(item.raw.toLowerCase()))
+    .map((item) => ({
+      id: item.id,
+      status: item.raw.toLowerCase() as OpenQuestionStatus["status"],
+    }));
+}
+
+function parseInvalidOpenQuestionStatuses(text: string): InvalidOpenQuestionStatus[] {
+  return readDeclaredStatuses(text)
+    .filter((item) => !OPEN_QUESTION_STATUSES.has(item.raw.toLowerCase()))
+    .map((item) => ({ id: item.id, value: item.raw }));
+}
+
+/**
+ * Whether a line carries a cell boundary.
+ *
+ * The outer pipes of a table row are optional, so the leading one cannot be
+ * what identifies a row: a register written without them had every line
+ * rejected, and the gate saw neither its entries nor its statuses. What makes a
+ * row a row is the separator beneath the header, which is why the reader tracks
+ * the table rather than testing each line on its own.
+ */
+function hasCellSeparator(line: string): boolean {
+  return /(?:^|[^\\])\|/.test(line);
+}
+
+/**
+ * The cells of one row.
+ *
+ * Through the shared splitter, which drops the optional outer pipes and keeps
+ * an escaped pipe inside the cell holding it: a question reading `choose A \| B`
+ * otherwise shifts every column after it, and the status is then read from the
+ * cell beside the one that holds it.
+ */
+function rowCells(line: string): string[] {
+  return splitMarkdownRow(line).map((cell) => cell.trim());
+}
+
+/**
+ * Whether `line` is the dashes under a table's header row.
+ *
+ * Two cells at least, so a thematic break and a front-matter fence — both
+ * written `---` — are not read as the top of a table.
+ */
+function isSeparatorRow(line: string | undefined): boolean {
+  const trimmed = (line ?? "").trim();
+  if (trimmed === "" || !hasCellSeparator(trimmed)) return false;
+  const cells = rowCells(trimmed);
+  return cells.length > 1 && cells.every((cell) => /^:?-{3,}:?$/.test(cell));
 }
 
 function isReleaseCandidate(initiativeText: string): boolean {
@@ -3238,6 +3659,14 @@ function validateUpperToLowerReferenceRules(
   return issues;
 }
 
+/**
+ * The required files' text, minus the register.
+ *
+ * The register is read through the bounded reader instead, where a ceiling and
+ * a kind check apply. Loading it here as well would read an oversized one into
+ * memory before that ceiling is reached, which is the failure the ceiling
+ * exists to prevent.
+ */
 async function loadExistingRequiredTexts(
   entry: SpecEntry,
   missingFiles: RequiredSpecPackFile[],
@@ -3245,7 +3674,7 @@ async function loadExistingRequiredTexts(
   const missing = new Set(missingFiles);
   const texts: Partial<Record<RequiredSpecPackFile, string>> = {};
   for (const fileName of Object.keys(entry.requiredFiles) as RequiredSpecPackFile[]) {
-    if (missing.has(fileName)) {
+    if (missing.has(fileName) || fileName === LEGACY_REGISTER_FILE) {
       continue;
     }
     const fullPath = entry.requiredFiles[fileName];

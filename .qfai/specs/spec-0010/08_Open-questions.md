@@ -4,6 +4,7 @@
 
 ### OQ-0010-0001: evaluator calibration refresh cadence (tdd)
 
+- Status: deferred
 - Context: `34_evaluator_calibration.md` は blandness fail / originality fail / good critique 例を保持するが、どの差分量や artifact 変化があれば例を更新すべきかの閾値は未固定。
 - Carry-forward source: exploration-first rebuild follow-up
 - Resolution phase: tdd
