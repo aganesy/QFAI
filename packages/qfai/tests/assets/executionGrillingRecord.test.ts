@@ -125,7 +125,7 @@ describe.each(TREES)("%s — the execution stages record their sessions", (tree)
     const body = await grilling(skill);
     expectPhrase(
       body,
-      "| Ended | Ended at | Revision | Work resumed | Subject | Frontier | Lookups | Decisions | Open | Escalated |",
+      "| Session | Ended | Ended at | Revision | Work resumed | Subject | Frontier | Lookups | Decisions | Open | Escalated |",
     );
     // The confidence check may open no preflight session at all, and an absent
     // row reads the same as a skipped one without a line saying which.
@@ -178,7 +178,9 @@ describe.each(TREES)("%s — the execution stages record their sessions", (tree)
     expectPhrase(body, "**Nodes, not decisions.**");
     expectPhrase(body, "`Open` counts the lines.");
     // Two rows at `Open = 1` and an unkeyed register: one question satisfies both.
-    expectPhrase(body, "**And each line names its session**");
+    expectPhrase(body, "**And each line names its session by `Session`**");
+    // `Subject` is not unique: a recurring obstacle reopens under one description.
+    expectPhrase(body, "a recurring obstacle reopens a session under the same description");
   });
 
   it("sends an implement run's record to the file its row owns", async () => {
@@ -203,8 +205,11 @@ describe.each(TREES)("%s — the execution stages record their sessions", (tree)
     );
     expectPhrase(
       body,
-      "each row's `Open` count matches the register lines naming that row's `Subject`",
+      "each row's `Open` count matches the register lines naming that row's `Session`",
     );
+    // The ordering both times exist for is checked, not just recorded.
+    expectPhrase(body, "also carries a `Work resumed` later than its own `Ended at`");
+    expectPhrase(body, "writes `none — <why>` there, which is a disposition rather than a blank");
   });
 
   it.each(STAGES)("%s gives each ending a verdict at that gate", async (skill) => {
@@ -215,8 +220,14 @@ describe.each(TREES)("%s — the execution stages record their sessions", (tree)
     // One predicate per ending: an enum check passes a row that claims an
     // ending whose own condition it does not meet.
     expectPhrase(body, "`Frontier` empty, `Lookups` none in flight, `Open` 0.");
-    expectPhrase(body, "Every open node assumable.");
+    expectPhrase(
+      body,
+      "Every open node assumable, **and every one of them carrying its labelled assumption in the register**",
+    );
     expectPhrase(body, "`Open` 0. Article X, rule 6");
     expectPhrase(body, "`Work resumed` empty. The user ended the session");
+    // A row is a file change, and a stop forbids one.
+    expectPhrase(body, "**A stopped session is reported, not written.**");
+    expectPhrase(body, "the alternative is an instruction to edit a file the user just stopped");
   });
 });

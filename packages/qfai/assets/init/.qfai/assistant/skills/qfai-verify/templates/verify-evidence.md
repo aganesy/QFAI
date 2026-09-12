@@ -36,8 +36,8 @@ Required sections (all of them, in this order):
 Run started: 2026-01-01T09:02:00Z
 Preflight: session opened
 
-| Ended | Ended at | Revision | Work resumed | Subject | Frontier | Lookups | Decisions | Open | Escalated |
-| ----- | -------- | -------- | ------------ | ------- | -------- | ------- | --------- | ---- | --------- |
+| Session | Ended | Ended at | Revision | Work resumed | Subject | Frontier | Lookups | Decisions | Open | Escalated |
+| ------- | ----- | -------- | -------- | ------------ | ------- | -------- | ------- | --------- | ---- | --------- |
 
 ## Work performed (what changed, where)
 

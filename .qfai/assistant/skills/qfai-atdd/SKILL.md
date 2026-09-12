@@ -120,19 +120,33 @@ Use the shared schema.
   says `session opened` — one for the preflight session. Every `Ended` is one of
   the four endings the rule master names, every row's `Ended at` is at or after
   `Run started`, and each row's `Open` count matches the register lines naming
-  that row's `Subject`. A run that skipped a session leaves the same tree as one
+  that row's `Session`. **A row whose ending lets the work go on also carries a
+  `Work resumed` later than its own `Ended at`** — that ordering is the whole
+  reason both times are recorded, and a blank or earlier one is a session
+  recorded after the edit it was meant to precede. A run that ends without
+  resuming writes `none — <why>` there, which is a disposition rather than a
+  blank. A run that skipped a session leaves the same tree as one
   that ran it, and an evidence file is updated in place, so these are what tell
   a fresh session from an absent one and from last week's.
 - **Each ending carries its own condition, and the name alone is not one.** A
   malformed row labelled `confirmed` passes an enum check and fails the rule it
   claims to have met.
 
-  | `Ended`       | What the row must also show                                                                                                                                                                                                            |
-  | ------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-  | `confirmed`   | `Frontier` empty, `Lookups` none in flight, `Open` 0. That is the rule master's completing condition, and the label is a claim to have met it                                                                                          |
-  | `user-closed` | Every open node assumable. A decision some document requires the user to make and record, and an input declared undefaultable, are **not** — the rule master says the closure does not reach them, so a row carrying one is a `REVISE` |
-  | `no-question` | `Open` 0. Article X, rule 6: the stage cannot complete over a decision nobody took, and nobody was asked                                                                                                                               |
-  | `stopped`     | `Work resumed` empty. The user ended the session, so the stage reports every open node rather than resuming — a `stopped` row with work after it is a `REVISE` whatever it counts                                                      |
+  | `Ended`       | What the row must also show                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
+  | ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+  | `confirmed`   | `Frontier` empty, `Lookups` none in flight, `Open` 0. That is the rule master's completing condition, and the label is a claim to have met it                                                                                                                                                                                                                                                                                                                                                                                                    |
+  | `user-closed` | Every open node assumable, **and every one of them carrying its labelled assumption in the register**. A decision some document requires the user to make and record, and an input declared undefaultable, are not assumable — the rule master says the closure does not reach them, so a row carrying one is a `REVISE`. A node listed without the value the stage went on to use is the other half of the same failure: the assumption is then unread, which the rule master calls a decision nobody took wearing the face of one somebody did |
+  | `no-question` | `Open` 0. Article X, rule 6: the stage cannot complete over a decision nobody took, and nobody was asked                                                                                                                                                                                                                                                                                                                                                                                                                                         |
+  | `stopped`     | `Work resumed` empty. The user ended the session, so the stage reports every open node rather than resuming — a `stopped` row with work after it is a `REVISE` whatever it counts                                                                                                                                                                                                                                                                                                                                                                |
+
+  **A stopped session is reported, not written.** Article X ends a stopped
+  invocation with no further work or file changes, and a row is a file change —
+  so the gate requires no row for it, and the stage names the stopped session
+  and its open nodes in its own output instead. Where a row for one does exist,
+  because the stop arrived after the section was already written, it is held to
+  the line above. That is the one place the record is weaker than the tree it
+  describes, and it is weaker on purpose: the alternative is an instruction to
+  edit a file the user just stopped.
 
   A `user-closed` row with open nodes otherwise **passes**: the user saw them and
   closed the asking, and the method records each as a labelled assumption.
@@ -205,10 +219,10 @@ restated here.
   Run started: 2026-01-01T09:02:00Z
   Preflight: session opened
 
-  | Ended | Ended at | Revision | Work resumed | Subject | Frontier | Lookups | Decisions | Open | Escalated |
-  | ----- | -------- | -------- | ------------ | ------- | -------- | ------- | --------- | ---- | --------- |
-  | confirmed | 2026-01-01T09:14:00Z | a1b2c3d | 2026-01-01T09:15:20Z | preflight | empty | none in flight | 4 | 0 | 0 |
-  | user-closed | 2026-01-01T11:02:00Z | a1b2c3d | 2026-01-01T11:04:10Z | an acceptance criterion the spec does not cover | empty | none in flight | 2 | 1 | 0 |
+  | Session | Ended | Ended at | Revision | Work resumed | Subject | Frontier | Lookups | Decisions | Open | Escalated |
+  | ------- | ----- | -------- | -------- | ------------ | ------- | -------- | ------- | --------- | ---- | --------- |
+  | S1 | S1 | confirmed | 2026-01-01T09:14:00Z | a1b2c3d | 2026-01-01T09:15:20Z | preflight | empty | none in flight | 4 | 0 | 0 |
+  | S2 | S2 | user-closed | 2026-01-01T11:02:00Z | a1b2c3d | 2026-01-01T11:04:10Z | an acceptance criterion the spec does not cover | empty | none in flight | 2 | 1 | 0 |
   ```
 
   The shape `/qfai-discussion` already writes, with `Subject` in place of that
@@ -259,8 +273,11 @@ restated here.
   alone lets a run with one unanswered fact write `Open = 0` and complete.
   `Open` counts the lines.
 
-  **And each line names its session**, because two rows may each carry
-  `Open = 1` and an unkeyed register satisfies both with one question.
+  **And each line names its session by `Session`**, not by `Subject`. Two rows may
+  each carry `Open = 1`, and an unkeyed register satisfies both with one
+  question; `Subject` does not fix that either, because a recurring obstacle
+  reopens a session under the same description. `Session` is `S1`, `S2`, … in
+  the order the sessions opened, and it is unique by construction.
 
 ## CRITICAL CONSTRAINTS (Read First)
 
@@ -478,8 +495,8 @@ Template:
 Run started: 2026-01-01T09:02:00Z
 Preflight: session opened
 
-| Ended | Ended at | Revision | Work resumed | Subject | Frontier | Lookups | Decisions | Open | Escalated |
-| ----- | -------- | -------- | ------------ | ------- | -------- | ------- | --------- | ---- | --------- |
+| Session | Ended | Ended at | Revision | Work resumed | Subject | Frontier | Lookups | Decisions | Open | Escalated |
+| ------- | ----- | -------- | -------- | ------------ | ------- | -------- | ------- | --------- | ---- | --------- |
 
 ## Work performed (what changed, where)
 
