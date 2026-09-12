@@ -94,6 +94,7 @@ spec catching up, not the product going back.
 | `spec-0002/TDD-0009` | `ledger-row` | `TC-0002-0009` asks that a pack asserting a single final winner be refused                                          |
 | `spec-0002/TDD-0010` | `ledger-row` | second row on `TC-0002-0009`                                                                                        |
 | `spec-0002/TDD-0012` | `ledger-row` | `TC-0002-0011` asks that the wording match the active requiredness rule                                             |
+| `spec-0010/TDD-0010` | `ledger-row` | `TC-0010-0006` is the direction rule itself, which every statement-A outcome re-derives, and the row is `todo`      |
 | `spec-0010/TDD-0011` | `ledger-row` | `TC-0010-0007` asks that discussion author root `DESIGN.md`, the producer every statement-A outcome re-derives      |
 | `spec-0013/TDD-0016` | `ledger-row` | `TC-0013-0022` asks that `/qfai-sdd` Phase 0 write `DESIGN.md.lock.yaml`, which `2a` moves into `/qfai-prototyping` |
 
@@ -250,6 +251,8 @@ with its own approval; `2B` cannot be approved until it has landed.
   `.qfai/specs/spec-0012/10_Plan.md`,
   `.qfai/specs/spec-0012/tdd/test-list.md`,
   `.qfai/specs/_policies/05_Contracts.md`,
+  `.qfai/specs/_policies/06_Glossary.md`,
+  `.qfai/specs/_policies/08_Decisions.md`,
   `.qfai/specs/_policies/10_delta.md`.
 
   **`spec-0012/03_Acceptance-Criteria.md` is here because `AC-0012-0035` tells
@@ -310,7 +313,11 @@ with its own approval; `2B` cannot be approved until it has landed.
   `packages/qfai/assets/init/.qfai/assistant/skills/qfai-sdd/**` and its mirror,
   whose Phase 0 reads the recorded direction; a new validator source for the
   single-winner violation and every path that makes it run, enumerated below;
-  and `packages/qfai/tests/assets/designDirectionInterview.test.ts`.
+  `packages/qfai/tests/assets/designDirectionInterview.test.ts`; and
+  `packages/qfai/tests/assets/discussionGrilling.test.ts`, which requires the
+  design direction to be asked inside the discussion session and asserts the
+  phrases this option removes, so leaving it out ends the option in a red suite
+  or in an edit the drift guard does not authorise.
 
   **Under `2B` — restoring the requiredness of `prototyping.yaml`:**
   `packages/qfai/src/core/preflight/sddPreflight.ts` with
@@ -416,8 +423,12 @@ offered stays in `## Options` and in `## Decision needed from user`.
   report against the control.
 - Product paths under `2a`:
   `packages/qfai/assets/init/.qfai/assistant/skills/qfai-prototyping/**` and its
-  root mirror, for the direction-selection step and the authoring it performs,
-  with the tests that pin both; `packages/qfai/src/cli/commands/prototypingIterate.ts`
+  root mirror, for the direction-selection step and the authoring it performs;
+  **`packages/qfai/tests/assets/brandCatalogStepAnchor.test.ts`**, which
+  requires the brand catalog to route authoring to `/qfai-sdd` and names its
+  Phase 0 as the sole author — "the tests that pin both" named no path, and the
+  drift guard authorises paths, so that phrase authorised nothing;
+  `packages/qfai/src/cli/commands/prototypingIterate.ts`
   with its tests, whose hash-mismatch recovery tells the user to "re-run
   `/qfai-sdd` Phase 0 to refreeze" — a stage that under this sub-option no longer
   owns the write, so following the diagnostic repeats something that cannot
@@ -516,11 +527,11 @@ internally contradictory.
    **Its ledger dispositions are approved here rather than left to the sweep**,
    because the sweep re-verifies and these rows do not survive re-verification:
 
-   | Outcome | `spec-0010` rows                                                                                                                                                 |
-   | ------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-   | `1A`    | `TDD-0006`, `TDD-0007`, `TDD-0008` reset to `todo` with this `CR-*` in `DR-ID` — `TC-0010-0006` changes under them                                               |
-   | `3A`    | The same three retired with `TDD-0010`, their evidence entries closed and their ids reserved in that ledger's `## TDD-ID reservations`                           |
-   | `2A`    | **Not reset.** Re-verified in place: the option restores the behaviour `TC-0010-0006` already requires, so the obligation stays and the product beneath it moves |
+   | Outcome | `spec-0010` rows                                                                                                                                                                                                                                                     |
+   | ------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+   | `1A`    | `TDD-0006`, `TDD-0007`, `TDD-0008` and `TDD-0010` reset to `todo` with this `CR-*` in `DR-ID` — `TC-0010-0006` changes under all four                                                                                                                                |
+   | `3A`    | The same three retired with `TDD-0010`, and all four ids reserved in that ledger's `## TDD-ID reservations`. The three `done` rows copy their `Evidence` cells in; `TDD-0010` never ran, so its entry reads `no evidence — retired at Status = todo, never executed` |
+   | `2A`    | **Not reset.** Re-verified in place: the option restores the behaviour `TC-0010-0006` already requires, so the obligation stays and the product beneath it moves. `TDD-0010` is released as it stands, since a `todo` row owes no re-verification                    |
 
    **Why `2A` is not a reset.** `TC-0010-0006` requires discussion to declare
    no final winner, which is the behaviour option 2 restores, so the obligation
@@ -532,6 +543,13 @@ internally contradictory.
    `spec-0002/TDD-0008` and `TDD-0009` under the same option. The producer chain
    is separate and still re-derives: under `2b` the authoring moves to
    `/qfai-sdd`, which is a statement `US-0010-0009` carries.
+
+   **`TDD-0010` is in the table because it is `todo`.** It carries `TC-0010-0006`
+   like the three `done` rows, so it is blocked while statement A is open: the
+   open-CR preflight suppresses only rows this record lists, and a row missing
+   from it could be selected and completed against an obligation known to be
+   changing. It resets with the others under `1A`, retires with them under `3A`,
+   and is released unchanged under `2A`, where the obligation does not move.
 
    **`TDD-0011` is enumerated here rather than left to the sweep.**
    `TC-0010-0007` changes beneath it under **every statement-A outcome**, so it
@@ -585,6 +603,21 @@ internally contradictory.
    **`2a` is not approved without this**: the gate is where `QFAI-DCON-030` is
    specified, and changing it while those packs still require the old behaviour
    leaves the product satisfying neither.
+
+   **The policy layer states three of these rules globally, and each outcome
+   reaches a different one.** A pack-level rerun leaves the shared record
+   contradicting both the product and the packs it just repaired, so the policy
+   rerun is part of the approval, scoped by outcome:
+
+   | Outcome                   | Policy statement re-derived                                                                                                                     |
+   | ------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
+   | every statement-A outcome | `_policies/05_Contracts.md`'s prose declaring root `DESIGN.md` to be `/qfai-discussion` output — no outcome keeps discussion as the producer    |
+   | `1A`, `3A`                | `_policies/06_Glossary.md`'s `exploration-first` entry, which asserts the broad no-direction-in-discussion rule these two narrow or retire      |
+   | `2B`                      | `_policies/08_Decisions.md`'s `DR-0240`, adopted globally, which says readiness must not require `prototyping.yaml` — the blocker `2B` restores |
+   | `2a`                      | `DCON-031` in `_policies/05_Contracts.md`, below                                                                                                |
+
+   Each carries its `_policies/10_delta.md` record, and every path is in
+   `## Impact scope`.
 
    **And the contract index is re-derived with them.**
    `.qfai/specs/_policies/05_Contracts.md` carries `DCON-031`, which assigns the
