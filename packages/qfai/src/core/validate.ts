@@ -775,7 +775,7 @@ async function runSddValidators(
     // no trace in the evidence it wrote. Warning because it reads a record the
     // agent wrote about its own run: it establishes that the record exists, not
     // that a session happened, and an error would claim the second.
-    ...(await validateGrillingTrace(root, { config })),
+    ...(await validateGrillingTrace(root, { specScope })),
     // Self-governance group: Pair IV (`R-HANDOFF-SCHEMA-DRIFT`, schema ↔
     // writer) and Pair III (`R-SKILL-MANIFEST-DRIFT`, probe-impl ↔
     // manifest-schema). Both are skill-governance surfaces so they live

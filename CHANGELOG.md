@@ -6,20 +6,30 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Added
 
-- **`qfai validate` reports a stage whose grilling session left no trace**
-  (#1605). `QFAI-GRILL-001`, at warning, on spec evidence with no
-  `## Pre-draft Grilling` section and on a discussion pack whose evidence
-  carries no `## Grilling Session` row.
+- **`qfai validate` reports a spec stage whose grilling session left no trace**
+  (#1605). `QFAI-GRILL-001`, at warning, on spec evidence whose
+  `## Pre-draft Grilling` section is missing or carries no phase row — a heading
+  with nothing under it is the state an agent reaches by copying the template
+  and filling none of it in.
+
+  The spec stage's evidence is tracked from now on, beside the implement and
+  atdd evidence that already is. A record only the machine that produced it can
+  see is one no review and no CI checkout ever reads.
+
+  A discussion pack's session is not checked yet: the row it should carry has no
+  writable home (#1695), and looking for a record with no defined path would
+  report every run.
 
   Warning rather than error, because it reads a record the agent wrote about its
   own run: it establishes that the record exists, not that a session happened,
   and an error would claim the second. Raising it is cheap once the
   false-positive rate is known.
 
-  It reads the tracked artifacts and nothing else. A trigger round is a response
-  to something detected, so its absence is not observable — only the mandatory
-  sessions are checked, and only through the record the stage was told to write.
-  A project that has run neither stage is reported on for neither.
+  A trigger round is a response to something detected, so its absence is not
+  observable — only the mandatory sessions are checked, and only through the
+  record the stage was told to write. A `--spec` run reports on its own spec, a
+  project with no evidence tree is not reported on, and evidence another
+  stage wrote is not a spec stage's to answer for.
 
 ### Added
 

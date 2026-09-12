@@ -1,10 +1,14 @@
 /**
- * `QFAI-GRILL-001` — a stage whose mandatory grilling session left no trace.
+ * `QFAI-GRILL-001` — a spec stage whose mandatory grilling session left no trace.
  *
  * The failure it exists for leaves nothing else behind: a stage that ran its
- * session and one that skipped it produce the same spec pack and the same
- * discussion pack. The only difference is the record the stage was told to
- * write, so that record's absence is the finding.
+ * session and one that skipped it produce the same spec pack, the same
+ * coverage, the same work orders. The only difference is the record the stage
+ * was told to write, so that record's absence is the finding.
+ *
+ * The quiet side is pinned as heavily as the loud one. A warning that fires
+ * where nothing is owed is one people learn to scroll past, and then the one
+ * that matters goes with it.
  */
 
 import { mkdir, mkdtemp, writeFile } from "node:fs/promises";
@@ -13,14 +17,23 @@ import path from "node:path";
 
 import { describe, expect, it } from "vitest";
 
-import { defaultConfig } from "../../../../src/core/config.js";
 import {
   GRILLING_TRACE_CODE,
   validateGrillingTrace,
 } from "../../../../src/core/validators/grillingTrace.js";
 import { removeTempTree } from "../../../helpers/tempTree.js";
 
-const config = defaultConfig;
+/** A section with one phase row, which is what a run that grilled writes. */
+const POPULATED = [
+  "# Evidence",
+  "",
+  "## Pre-draft Grilling",
+  "",
+  "| Phase | Session | Ended at | Wrote at | Frontier | Evidence |",
+  "| ----- | ------- | -------- | -------- | -------- | -------- |",
+  "| 0 | run | 2026-01-01T00:00:00Z | 2026-01-01T00:01:00Z | 4 settled, 0 escalated | #work-orders-summary |",
+  "",
+].join("\n");
 
 async function withRoot(body: (root: string) => Promise<void>): Promise<void> {
   const root = await mkdtemp(path.join(os.tmpdir(), "qfai-grilling-trace-"));
@@ -38,60 +51,45 @@ async function evidence(root: string, name: string, body: string): Promise<void>
   await writeFile(path.join(dir, name), body, "utf-8");
 }
 
-/** A discussion pack directory with the file that marks it authored. */
-async function pack(root: string, name: string): Promise<void> {
-  const dir = path.join(root, ".qfai", "discussion", name);
-  await mkdir(dir, { recursive: true });
-  await writeFile(path.join(dir, "01_Context.md"), "# 01 Context\n", "utf-8");
-}
-
 describe("validateGrillingTrace", () => {
   it("reports spec evidence with no session section", async () => {
     await withRoot(async (root) => {
       await evidence(root, "sdd-spec-0007.md", "# Evidence\n\n## Work Orders Summary\n");
 
-      const issues = await validateGrillingTrace(root, { config });
+      const issues = await validateGrillingTrace(root);
 
       expect(issues).toHaveLength(1);
       expect(issues[0]?.code).toBe(GRILLING_TRACE_CODE);
-      // The finding names the stage's own subject, not a generic message: an
-      // operator with three specs needs to know which one.
+      // The finding names the spec, not a generic message: an operator with
+      // three of them needs to know which one.
       expect(issues[0]?.message).toContain("spec-0007");
       expect(issues[0]?.message).toContain("## Pre-draft Grilling");
     });
   });
 
-  it("accepts spec evidence that carries the section", async () => {
+  it("reports a section that carries no row", async () => {
+    // A heading with nothing under it satisfies a presence check and tells a
+    // reader nothing — which is the state an agent reaches by copying the
+    // template and filling none of it in.
     await withRoot(async (root) => {
       await evidence(
         root,
         "sdd-spec-0007.md",
-        "# Evidence\n\n## Pre-draft Grilling\n\n| Phase | Session |\n",
+        "# Evidence\n\n## Pre-draft Grilling\n\n| Phase | Session |\n| ----- | ------- |\n",
       );
 
-      expect(await validateGrillingTrace(root, { config })).toEqual([]);
-    });
-  });
-
-  it("reports a discussion pack whose evidence has no session row", async () => {
-    await withRoot(async (root) => {
-      await pack(root, "discussion-20260101000000000");
-
-      const issues = await validateGrillingTrace(root, { config });
+      const issues = await validateGrillingTrace(root);
 
       expect(issues).toHaveLength(1);
-      expect(issues[0]?.message).toContain("## Grilling Session");
-      // Reported against the pack, which is what an operator opens.
-      expect(issues[0]?.file).toContain("discussion-20260101000000000");
+      expect(issues[0]?.message).toContain("at least one phase row");
     });
   });
 
-  it("accepts a discussion pack whose evidence carries the row", async () => {
+  it("accepts a populated section", async () => {
     await withRoot(async (root) => {
-      await pack(root, "discussion-20260101000000000");
-      await evidence(root, "discussion-20260101000000000.md", "## Grilling Session\n\n| Ended |\n");
+      await evidence(root, "sdd-spec-0007.md", POPULATED);
 
-      expect(await validateGrillingTrace(root, { config })).toEqual([]);
+      expect(await validateGrillingTrace(root)).toEqual([]);
     });
   });
 
@@ -102,48 +100,77 @@ describe("validateGrillingTrace", () => {
     await withRoot(async (root) => {
       await evidence(root, "sdd-spec-0007.md", "# Evidence\n");
 
-      const issues = await validateGrillingTrace(root, { config });
-
-      expect(issues[0]?.severity).toBe("warning");
+      expect((await validateGrillingTrace(root))[0]?.severity).toBe("warning");
     });
   });
 
-  it("says nothing about a project that has run neither stage", async () => {
-    // A project that has never run a grilling session gets a warn only where a
-    // stage wrote evidence without one — not for the absence of the trees.
+  it("respects a scoped run", async () => {
+    // A `--spec` run is gating on its own spec. A finding about a sibling it
+    // was told not to look at is one the operator cannot act on from there.
     await withRoot(async (root) => {
-      expect(await validateGrillingTrace(root, { config })).toEqual([]);
+      await evidence(root, "sdd-spec-0007.md", "# Evidence\n");
+      await evidence(root, "sdd-spec-0008.md", "# Evidence\n");
+
+      const scoped = await validateGrillingTrace(root, { specScope: new Set(["0007"]) });
+
+      expect(scoped).toHaveLength(1);
+      expect(scoped[0]?.message).toContain("spec-0007");
+      // Unscoped, both are reported.
+      expect(await validateGrillingTrace(root)).toHaveLength(2);
     });
   });
 
-  it("ignores an evidence file another stage wrote", async () => {
-    // `implement-*` and `atdd-*` evidence is not a spec stage's, and reporting
-    // a missing section on one would be a finding nobody can act on.
+  it("reports in a stable order", async () => {
+    // `readdir` promises none, and a findings list that reshuffles between two
+    // runs over one tree reads as churn in a diff.
+    await withRoot(async (root) => {
+      for (const id of ["0009", "0007", "0008"]) {
+        await evidence(root, `sdd-spec-${id}.md`, "# Evidence\n");
+      }
+
+      const files = (await validateGrillingTrace(root)).map((finding) => finding.file);
+
+      expect(files).toEqual([
+        ".qfai/evidence/sdd-spec-0007.md",
+        ".qfai/evidence/sdd-spec-0008.md",
+        ".qfai/evidence/sdd-spec-0009.md",
+      ]);
+    });
+  });
+
+  it("says nothing about a project with no evidence tree", async () => {
+    await withRoot(async (root) => {
+      expect(await validateGrillingTrace(root)).toEqual([]);
+    });
+  });
+
+  it("ignores evidence another stage wrote", async () => {
+    // `implement-*` and `atdd-*` are not a spec stage's, and a finding on one
+    // is a finding nobody can act on.
     await withRoot(async (root) => {
       await evidence(root, "implement-spec-0007.md", "# Evidence\n");
       await evidence(root, "atdd-spec-0007.md", "# Evidence\n");
 
-      expect(await validateGrillingTrace(root, { config })).toEqual([]);
+      expect(await validateGrillingTrace(root)).toEqual([]);
     });
   });
 
-  it("ignores a discussion directory that holds no authored pack", async () => {
-    // An empty directory is a run that has not reached authoring, and a
-    // finding there would fire before the obligation exists.
+  it("ignores a name that is not the canonical one", async () => {
+    // The contract is on `sdd-spec-NNNN.md`. A file a project called
+    // `sdd-notes.md` never entered it.
     await withRoot(async (root) => {
-      await mkdir(path.join(root, ".qfai", "discussion", "discussion-20260101000000000"), {
-        recursive: true,
-      });
+      await evidence(root, "sdd-notes.md", "# Notes\n");
+      await evidence(root, "sdd-spec-7.md", "# Evidence\n");
 
-      expect(await validateGrillingTrace(root, { config })).toEqual([]);
+      expect(await validateGrillingTrace(root)).toEqual([]);
     });
   });
 
-  it("reads nothing without a config", async () => {
-    // Guessing the default paths would scan a tree the project may have moved,
-    // and report a missing record for evidence that is somewhere else.
+  it("ignores a directory named like the evidence file", async () => {
+    // `readdir` returns both kinds, and reading a directory throws EISDIR
+    // rather than reporting anything useful.
     await withRoot(async (root) => {
-      await evidence(root, "sdd-spec-0007.md", "# Evidence\n");
+      await mkdir(path.join(root, ".qfai", "evidence", "sdd-spec-0007.md"), { recursive: true });
 
       expect(await validateGrillingTrace(root)).toEqual([]);
     });
