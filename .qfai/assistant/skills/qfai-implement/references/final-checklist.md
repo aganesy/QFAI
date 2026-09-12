@@ -53,8 +53,9 @@ releases completion.
       `R0N_product-surface-reviewer.md` file with a matching `reviewers[]` entry in `summary.json`,
       like the two verdicts above (`review-artifact-layout.md`). `Prototype parity: PASS` in the
       evidence entry records the verdict on either target — the field name does not change — and it
-      is not the verdict; the `--profile tdd` run this list ends on reports no `QFAI-REVIEW-*`
-      finding, so a pack that never held a UI review passes it (gate item 9).
+      is not the verdict. The `--profile tdd` run this list ends on reads that response only where
+      the pack the entry names is present, and reports no `QFAI-REVIEW-*` finding, so on a checkout
+      without the pack a UI review that never reached one passes it (gate item 9).
       Whether a row is UI-affecting is decided by `ui-affecting.md`, not by the implementer,
       and the answer is recorded either way: the verdict together with the number of the
       clause that selected the row, or `n/a (not UI-affecting)` where no clause does.
