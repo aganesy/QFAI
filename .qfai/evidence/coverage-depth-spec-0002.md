@@ -456,7 +456,8 @@ it says so and names what carries it now.
    `TC-0002-0010`; it is not evidence of that or of anything else. Either give it a fixture with
    sidecars present, so the guard is the only thing producing the empty result, or retire it. Both
    are edits to the file `TDD-0011`'s recorded observation covers, so either one restarts that
-   row's cycle and belongs with the sweep `CR-20260912-0003` plans rather than beside it.
+   row's cycle. `CR-20260912-0003` carries `TDD-0011` for that reason — not because its obligation
+   is in doubt, but because the repair to this file moves the observation the row rests on.
 4. **Four ledger rows recorded a completion that was never measured.** `TDD-0008`, `TDD-0009` and
    `TDD-0010` sat at `Status = done` over selectors that a search of `packages/qfai/tests/**` does
    not find. `TDD-0012` names a selector that does resolve — `legacy 4-axis format is error` — to a
@@ -482,8 +483,11 @@ it says so and names what carries it now.
    `tests/validators/uix/screenContract.test.ts` declares `TC-0002-0020` through `TC-0002-0024`.
    None of those five appears in `06_Test-Cases.md`, whose active table holds five rows of its own.
    The annotations point at obligations that were removed or never registered.
-   `tests/validators/uix/threeLayer.test.ts` was in the same position, declaring `TC-0002-0012` and
-   `TC-0002-0026`; it now declares only `TC-0002-0010`, the one obligation of this spec it reaches.
+   `tests/validators/uix/threeLayer.test.ts` is in the same position, declaring `TC-0002-0011`,
+   `TC-0002-0012` and `TC-0002-0026` beside the one obligation it does reach, `TC-0002-0010`.
+   Correcting either file edits a file `TDD-0011`'s recorded observation covers, which reddens
+   `QFAI-TDDLIST-009` and restarts that row's cycle, so both belong to the sweep
+   `CR-20260912-0003` plans rather than beside it.
 7. **The ledger is seven rows short of what seeds it.** `qfai-sdd`'s Phase 2b seeds
    `tdd/test-list.md` in four groups, and one of them is "one `Layer = E2E` row per **active**
    `US-*` from `02_User-stories.md` (obligation in `US-Refs`, `TC-Refs` = `-`)"

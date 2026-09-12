@@ -86,10 +86,19 @@ spec catching up, not the product going back.
 | `spec-0002/TDD-0009` | `ledger-row` | `TC-0002-0009` asks that a pack asserting a single final winner be refused |
 | `spec-0002/TDD-0010` | `ledger-row` | second row on `TC-0002-0009`                                               |
 | `spec-0002/TDD-0012` | `ledger-row` | `TC-0002-0011` asks that the wording match the active requiredness rule    |
+| `spec-0002/TDD-0011` | `ledger-row` | its recorded observation covers the file both annotation repairs must edit |
 
-- Not blocked by this CR: `spec-0002/TDD-0001` and `spec-0002/TDD-0011`. Their
-  obligations — pack readiness, and the non-UI sidecar skip — are untouched by
-  either statement, and both rows name a test that discharges them today.
+`TDD-0011` is here for a different reason from the other four. Its obligation is
+sound and its test discharges it. But the two repairs the matrix asks for —
+giving `non-UI skip` a fixture that makes the guard load-bearing, and removing
+the three annotations `threeLayer.test.ts` declares that this spec's table does
+not hold — both edit the file `TDD-0011`'s recorded observation covers. Either
+reddens `QFAI-TDDLIST-009` and restarts the row's cycle, so the repair needs an
+authorized reset rather than an edit beside it.
+
+- Not blocked by this CR: `spec-0002/TDD-0001`. Its obligation, pack readiness,
+  is untouched by either statement, its test discharges it, and no repair this
+  CR plans edits the file its observation covers.
 - Overlapping open CRs: `none`
 
 ## Impact scope
@@ -99,7 +108,9 @@ spec catching up, not the product going back.
   `.qfai/specs/spec-0002/06_Test-Cases.md`,
   `.qfai/specs/spec-0002/07_Decisions.md`
 - Plans: `.qfai/specs/spec-0002/10_Plan.md`
-- Tests: `spec-0002/TDD-0008`, `spec-0002/TDD-0009`, `spec-0002/TDD-0010`, `spec-0002/TDD-0012`
+- Tests: `spec-0002/TDD-0008`, `spec-0002/TDD-0009`, `spec-0002/TDD-0010`,
+  `spec-0002/TDD-0011`, `spec-0002/TDD-0012` —
+  `packages/qfai/tests/validators/uix/threeLayer.test.ts`
 - Contracts: `none`
 - Schema: `none`
 - Upstream paths edited under this CR:
@@ -122,17 +133,54 @@ states in three places and the first is a rule the product still partly keeps.
 1. `/qfai-sdd` rerun scope: the statements the chosen option names, plus the
    `06_Test-Cases.md` rows that read them, and the `10_Plan.md` row citing
    `TC-0002-0026`, which this spec's table does not declare.
-2. Downstream ledger sweep: reset **or retire** these `tdd/test-list.md` rows.
-   Which list each row takes depends on the option chosen; the split below is
-   the one option 1 produces.
-   - Reset to `todo`, recording this CR's ID in their `DR-ID` column:
+2. Downstream ledger sweep. Each option produces a different split, so all three
+   are enumerated: what is approved is the list for the option chosen, and a
+   mixed answer takes the direction row from each.
+
+   **Option 1 — narrow the spec to the product.** `/qfai-sdd` re-derives
+   `REQ-0012`, `AC-0002-0008`, `DR-0002-0001`, `DR-0002-0003`, `REQ-0005` and
+   `AC-0002-0010` to the narrower statements, and `TC-0002-0008`, `-0009` and
+   `-0011` follow them.
+   - Reset to `todo`, recording this CR's ID in `DR-ID`:
      `spec-0002/TDD-0008`, `spec-0002/TDD-0009`, `spec-0002/TDD-0012`
-   - Retire (delete the row; its TC is no longer a coverage target):
-     `spec-0002/TDD-0010` — `current preflight unit test pass`. Its test is
-     `packages/qfai/tests/core/sddPreflight.test.ts`, which stays and is owned
-     by `spec-0002/TDD-0001`, so nothing is deleted with the row. It is a
-     second row on a test case stating one scenario, and its selector described
-     a preflight behaviour no declared test case of this spec names.
+   - Retire: `spec-0002/TDD-0010` — `current preflight unit test pass`
+
+   **Option 2 — restore the product to the spec.** `/qfai-sdd` is `confirm-only`:
+   no upstream statement changes. The work is implementation — a validator that
+   emits the single-winner violation `TC-0002-0009` names, a preflight that
+   blocks a UI-bearing pack missing `prototyping.yaml`, and the three shipped
+   documents rewritten to say the artifact is required. Every row below then has
+   an obligation a test can reach.
+   - Reset to `todo`, recording this CR's ID in `DR-ID`:
+     `spec-0002/TDD-0008`, `spec-0002/TDD-0009`, `spec-0002/TDD-0010`,
+     `spec-0002/TDD-0012`
+   - Retire: none. `TDD-0010` survives here, because a restored winner check
+     gives `TC-0002-0009` a second observable boundary and the sibling pair has
+     something to divide — each row then needs a `Boundary` cell, which is the
+     `QFAI-TDDLIST-017` finding already open against this table.
+
+   **Option 3 — retire the four obligations.** `/qfai-sdd` re-derives
+   `01_Spec.md`, `03_Acceptance-Criteria.md` and `06_Test-Cases.md` to withdraw
+   `REQ-0012`, `AC-0002-0008`, `REQ-0005`'s requiredness half, `AC-0002-0010`,
+   `TC-0002-0008`, `TC-0002-0009` and `TC-0002-0011`.
+   - Reset to `todo`: none.
+   - Retire, each with its `Evidence` cell verbatim:
+     `spec-0002/TDD-0008` — `current template integration test pass`;
+     `spec-0002/TDD-0009` — `current e2e guidance test pass`;
+     `spec-0002/TDD-0010` — `current preflight unit test pass`;
+     `spec-0002/TDD-0012` — `current three-layer validator pass`.
+     No test is deleted with any of them.
+     `packages/qfai/tests/integration/discussionSkillTemplateIntegration.test.ts`,
+     `packages/qfai/tests/e2e/discussionHardeningE2E.test.ts` and
+     `packages/qfai/tests/core/sddPreflight.test.ts` all carry coverage for
+     other rows; `packages/qfai/tests/validators/uix/threeLayer.test.ts` stays
+     with `spec-0002/TDD-0011`.
+
+3. `spec-0002/TDD-0011` is reset to `todo` under every option, recording this
+   CR's ID in `DR-ID`. Its obligation does not move; the reset is what lets the
+   two annotation repairs edit the file its observation covers. It owes a fresh
+   RED afterwards, and its `Selector` stays `skips non-UI packs` — that case
+   discriminates the guard and the repair is to the file around it.
 
 ## Resolution
 

@@ -7,7 +7,7 @@ updated: 2026-09-12
 scope: spec-0002
 blocking: true
 promote-to: null
-links: ["CR-20260912-0003"]
+links: ["spec-0002"]
 ---
 
 # spec-0002 states two rules the product replaced
@@ -58,10 +58,14 @@ in `DR-ID`, and retire `TDD-0010`, whose test stays and is owned by `TDD-0001`.
 
 ## Constraints to preserve
 
-The rows are `blocked`, not `todo`. A backward transition to `todo` is the
-approved-reset edge and needs the CR resolved first; `blocked` is the edge that
-an unresolved Change Request opens, and `Blocked-By` carries the departure
-status so the reset knows what it is undoing.
+The four rows are still `Status = done`, and the ledger is untouched. Two edges
+were tried and neither exists. `done` is not a status a row may be blocked at —
+`TDDLIST_BLOCKED_MISSING_REF` admits `todo`, `red`, `green`, `refactor` and
+`review-fix` — so there is no `Blocked-By` cell and no departure metadata to
+read; and the backward transition to `todo` is the approved-reset edge, which
+needs `CR-20260912-0003` resolved first. The halt is carried by the open Change
+Request and by this entry, not by the ledger. A session expecting to find the
+rows parked will not find them parked.
 
 ## References to consult first
 
