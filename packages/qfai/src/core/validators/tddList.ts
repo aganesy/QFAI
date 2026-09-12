@@ -2706,7 +2706,29 @@ function missingCompletedEvidenceFields(
   // Reading only the other three verdicts let such a row reach `done` on a
   // matching hash and a full field set, with the one verdict that refused it
   // sitting in plain sight.
+  // One verdict per row. Only the last is read, so a `REVISE` followed by an
+  // `n/a` would pass on the second while the reviewer who refused the row is
+  // still on the page.
+  const verdicts = evidenceFieldOccurrences(section, "Prototype parity").filter(
+    ({ round }) => round === null,
+  );
+  if (verdicts.length > 1) missing.push("exactly one Prototype parity");
   if (parity === "revise") missing.push("Prototype parity: PASS");
+  // An `n/a` row had no reviewer and no rendered surface, so a hash, a pack or a
+  // manifest on it is provenance for a review that did not happen, and nothing
+  // reads it to say whether it is stale.
+  if (parity === "not-applicable") {
+    for (const field of [
+      "Prototype parity audited evidence hash",
+      "Prototype parity review pack",
+      "Prototype parity review pack seal",
+      "Surface artifacts",
+    ]) {
+      if (rowEvidenceFieldValue(section, field) !== null) {
+        missing.push(`no ${field} on an n/a (not UI-affecting) row`);
+      }
+    }
+  }
   if (parity === "unrecognized") {
     missing.push("Prototype parity: PASS (clause N) or n/a (not UI-affecting)");
   }

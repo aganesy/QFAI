@@ -1930,6 +1930,39 @@ REVISE — needs new production behaviour
       });
     });
 
+    it("refuses a second parity verdict", async () => {
+      // Only the last verdict is read, so a refusal followed by `n/a` passed on
+      // the second while the first stayed on the page.
+      await withProject(async (root) => {
+        const [issue] = await unresolved(
+          root,
+          withParity([
+            "- Prototype parity: REVISE (clause 1)",
+            "- Prototype parity: n/a (not UI-affecting)",
+            `- Prototype parity reviewed revision: ${DEFAULT_REVISION}`,
+          ]),
+        );
+        expect(issue?.message).toContain("exactly one Prototype parity");
+      });
+    });
+
+    it("refuses reviewer provenance on a row no clause selects", async () => {
+      // No reviewer ran on an `n/a` row, so a hash or a pack there is provenance
+      // for a review that did not happen, and nothing checks it.
+      await withProject(async (root) => {
+        const [issue] = await unresolved(
+          root,
+          withParity([
+            "- Prototype parity: n/a (not UI-affecting)",
+            `- Prototype parity reviewed revision: ${DEFAULT_REVISION}`,
+            `- Prototype parity audited evidence hash: ${"a".repeat(64)}`,
+            "- Prototype parity review pack: .qfai/review/review-20260811000000003",
+          ]),
+        );
+        expect(issue?.message).toContain("no Prototype parity audited evidence hash on an n/a");
+        expect(issue?.message).toContain("no Prototype parity review pack on an n/a");
+      });
+    });
     it("refuses a second Surface artifacts field", async () => {
       // Only the last manifest is read, so a capture only the first one named
       // could be replaced with nothing the gate recomputes moving.
