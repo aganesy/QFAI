@@ -712,8 +712,11 @@ async function validateSummarySchema(
             // reference below: it names the changed paths and their states, so
             // re-editing the very file under review leaves it identical and a
             // stale verdict passes the freshness check this field exists for.
-            "レビュー対象の状態を `revision` に記録してください（git rev、または未コミット時は `working-tree+<content hash>` — HEAD・tracked diff・ソート済み untracked manifest の内容ハッシュ）。" +
-              "`.qfai/assistant/skills/qfai-implement/references/evidence-revision.md` を参照。",
+            "Record the state under review in `revision`: a git rev, or " +
+              "`working-tree+<content hash>` while it is uncommitted. The procedure for that " +
+              "hash is in `.qfai/assistant/skills/qfai-implement/references/evidence-revision.md` " +
+              "and is not summarised here — a summary would be a second procedure, and two of " +
+              "them give one tree two addresses.",
           ),
         ]
       : [];

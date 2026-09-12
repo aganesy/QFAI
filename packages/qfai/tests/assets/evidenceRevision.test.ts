@@ -547,30 +547,58 @@ describe("evidence and verdicts carry a revision", () => {
 describe("the working-tree address has one notation", () => {
   const REVISION = "649d8111147436408c90cbbe1b9f9b07e34da8cb";
   /** Recorded for a clean checkout of that revision. */
-  const RECORDED = "working-tree+ec692d38e2347eafdf17ade16c61b11a4391417f0733d3f4de42c352e659e8b5";
+  const RECORDED = "working-tree+43cd72eb62cb2a13eca3cb111f6c1e85252abed35c4a08e6e4e5f1617e703a1a";
 
   const sha256 = (input: Buffer): Buffer => createHash("sha256").update(input).digest();
   const sha256Hex = (input: Buffer): string => sha256(input).toString("hex");
 
   /**
-   * Steps 3 and 4 over a clean checkout: the diff is empty, the untracked list
-   * is empty, so the string is the `HEAD` record and the `DIFF` record.
+   * One record per path, as step 3 fixes them.
+   *
+   * A regular file, a symlink and a directory: the three kinds the procedure
+   * names, with the symlink's bytes being its own payload rather than what it
+   * points at, and the directory's the empty string.
    */
+  type PathRecord = {
+    readonly path: string;
+    readonly kind: "file" | "symlink" | "dir";
+    readonly mode: string;
+    readonly bytes: Buffer;
+  };
+
+  const RECORDS: readonly PathRecord[] = [
+    { path: "src/a.ts", kind: "file", mode: "0644", bytes: Buffer.from("export const a = 1;\n") },
+    { path: "src/link", kind: "symlink", mode: "0777", bytes: Buffer.from("a.ts") },
+    { path: "src/run.sh", kind: "file", mode: "0755", bytes: Buffer.from("#!/bin/sh\n") },
+    { path: "tmp/hold", kind: "dir", mode: "0755", bytes: Buffer.alloc(0) },
+  ];
+
+  /** Steps 3 and 4 over those records. */
   function address(options: {
     readonly digestAsHex: boolean;
     readonly trailingNewline: boolean;
     readonly revision: string;
+    readonly records?: readonly PathRecord[];
   }): string {
-    const emptyDiff = Buffer.alloc(0);
-    const diffDigest = options.digestAsHex
-      ? Buffer.from(sha256Hex(emptyDiff), "utf-8")
-      : sha256(emptyDiff);
-    const serialized = Buffer.concat([
-      Buffer.from(`HEAD\u0000${options.revision}\nDIFF\u0000`, "utf-8"),
-      diffDigest,
-      Buffer.from(options.trailingNewline ? "\n" : "", "utf-8"),
-    ]);
-    return `working-tree+${sha256Hex(serialized)}`;
+    const records = options.records ?? RECORDS;
+    const parts: Buffer[] = [Buffer.from(`HEAD\u0000${options.revision}`, "utf-8")];
+    for (const record of records) {
+      parts.push(
+        Buffer.concat([
+          Buffer.from(`${record.path}\u0000${record.kind}\u0000${record.mode}\u0000`, "utf-8"),
+          options.digestAsHex
+            ? Buffer.from(sha256Hex(record.bytes), "utf-8")
+            : sha256(record.bytes),
+        ]),
+      );
+    }
+    const joined: Buffer[] = [];
+    parts.forEach((part, index) => {
+      if (index > 0) joined.push(Buffer.from("\n", "utf-8"));
+      joined.push(part);
+    });
+    if (options.trailingNewline) joined.push(Buffer.from("\n", "utf-8"));
+    return `working-tree+${sha256Hex(Buffer.concat(joined))}`;
   }
 
   const HEX_FULL_NO_TRAILING = {
@@ -651,6 +679,48 @@ describe("the working-tree address has one notation", () => {
     expect(address({ ...HEX_FULL_NO_TRAILING, revision: REVISION.slice(0, 12) })).not.toBe(
       RECORDED,
     );
+    // Order is in the address: contents alone collide on a rename or a swap.
+    expect(address({ ...HEX_FULL_NO_TRAILING, records: [...RECORDS].reverse() })).not.toBe(
+      RECORDED,
+    );
+    // The mode, so an uncommitted `chmod +x` moves it.
+    expect(
+      address({
+        ...HEX_FULL_NO_TRAILING,
+        records: RECORDS.map((record) =>
+          record.path === "src/a.ts" ? { ...record, mode: "0755" } : record,
+        ),
+      }),
+    ).not.toBe(RECORDED);
+    // The kind, so a symlink flattened into a regular file moves it.
+    expect(
+      address({
+        ...HEX_FULL_NO_TRAILING,
+        records: RECORDS.map((record) =>
+          record.kind === "symlink" ? { ...record, kind: "file" as const } : record,
+        ),
+      }),
+    ).not.toBe(RECORDED);
+    // The link's own payload, not the target's contents.
+    expect(
+      address({
+        ...HEX_FULL_NO_TRAILING,
+        records: RECORDS.map((record) =>
+          record.kind === "symlink"
+            ? { ...record, bytes: Buffer.from("export const a = 1;\n") }
+            : record,
+        ),
+      }),
+    ).not.toBe(RECORDED);
+    // The path, so two files swapping names move it.
+    expect(
+      address({
+        ...HEX_FULL_NO_TRAILING,
+        records: RECORDS.map((record) =>
+          record.path === "src/a.ts" ? { ...record, path: "src/b.ts" } : record,
+        ),
+      }),
+    ).not.toBe(RECORDED);
   });
 });
 
