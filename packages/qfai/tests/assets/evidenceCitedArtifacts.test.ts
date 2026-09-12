@@ -45,7 +45,7 @@ const GENERATED_ROOTS = [
  * tracked.
  */
 const CITED_GENERATED_PATH =
-  /\.qfai\/(?:review|review_archive|report|discussion|output)\/[A-Za-z0-9._/*+-]+/g;
+  /\.qfai\/(?:review|review_archive|report|discussion|output)\/(?:[A-Za-z0-9._/*+-]|\{[A-Za-z0-9._/*+,-]+\})+/g;
 
 /**
  * A line that says a path is not provenance.
@@ -240,7 +240,6 @@ const CLEARED: ReadonlyArray<readonly [string, string]> = [
   [".qfai/evidence/atdd-spec-0017.md", ".qfai/report/validate.log"],
   [".qfai/evidence/implement-spec-0003.md", ".qfai/review/review-*"],
   [".qfai/evidence/implement-spec-0003.md", ".qfai/report/validate.log"],
-  [".qfai/evidence/implement-spec-0006.md", ".qfai/report/validate.log"],
 ];
 
 /** Every path git tracks, and every directory one of them lies under. */
@@ -357,12 +356,40 @@ function globToRegExp(cited: string): RegExp {
 }
 
 /**
+ * A citation as the one or more paths it names.
+ *
+ * `README.md` spells a review pack's contents as a brace list, and a record
+ * using that spelling claims every name in it. Read as one path the whole token
+ * resolves nowhere; read as the directory before the brace — which is what
+ * stripping the trailing separator leaves — a tracked pack holding anything at
+ * all passes it, while every artifact the list names may be absent.
+ */
+function expandBraces(cited: string): string[] {
+  const open = cited.indexOf("{");
+  if (open === -1) return [cited];
+  const close = cited.indexOf("}", open);
+  if (close === -1) return [cited];
+  const before = cited.slice(0, open);
+  const after = cited.slice(close + 1);
+  return cited
+    .slice(open + 1, close)
+    .split(",")
+    .map((part) => part.trim())
+    .filter((part) => part !== "")
+    .flatMap((part) => expandBraces(`${before}${part}${after}`));
+}
+
+/**
  * A cited path resolves when git tracks it, or tracks something under it.
  *
  * A glob resolves when it matches at least one tracked path, which is the whole
  * of what a set-naming citation claims.
  */
 function resolves(cited: string): boolean {
+  // Every name, not one of them: a brace list claims all of what it names, and
+  // a check that any member resolves passes a pack missing two of three.
+  const names = expandBraces(cited);
+  if (names.length > 1) return names.every((name) => resolves(name));
   const root = GENERATED_ROOTS.find((candidate) => cited.startsWith(candidate));
   if (root === undefined || !staysInsideRoot(cited, root)) return false;
   if (cited.includes("*")) {
@@ -479,6 +506,16 @@ describe("what the scan counts as a citation", () => {
     expect(matches("Fallback: `.qfai/output/verify.json`")).toEqual([".qfai/output/verify.json"]);
   });
 
+  it("takes a brace list whole", () => {
+    // Cut at the brace, the token left is the pack directory, and a tracked
+    // pack holding anything at all then passes a citation whose every named
+    // artifact may be missing.
+    const pack = ".qfai/review/review-20260912000000000";
+    expect(matches(`- \`${pack}/{review_request.md,summary.json}\``)).toEqual([
+      `${pack}/{review_request.md,summary.json}`,
+    ]);
+  });
+
   it("counts nothing on a line that says the path is not provenance", () => {
     // A record explaining why an artifact is absent writes the path like any
     // other, and would otherwise need a backlog entry for a citation it just
@@ -511,6 +548,14 @@ describe("a glob is a claim about a set", () => {
         ".qfai/discussion/discussion-1/a/b/c.md",
       ),
     ).toBe(true);
+  });
+
+  it("claims every name in a brace list", () => {
+    // The spelling `README.md` uses for a review pack's contents. Read as one
+    // path it resolves nowhere; read as the directory before the brace, a pack
+    // holding anything at all would pass it.
+    const pack = ".qfai/review/review-20260912000000000";
+    expect(resolves(`${pack}/{review_request.md,R01_*.md,summary.json}`)).toBe(false);
   });
 
   it("does not measure a path that names the tree itself", () => {

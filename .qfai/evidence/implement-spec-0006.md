@@ -7039,7 +7039,7 @@ group and every member transitions in the same ledger write.
   0 except `validate`, whose exit 1 is structurally unavoidable against a standing `error=2` baseline.
   Counts `info=4 warning=352 error=2` — **delta 0 / 0 / 0** against the Stage 0 baseline, checked three
   independent ways: the `counts:` line of the as-found run, the `counts:` line of a **freshly rebuilt**
-  run, and the `git diff` of `.qfai/report/validate.log`, in which the `errors:` and `warnings:` lines do <!-- qfai:not-a-citation -->
+  run, and the `git diff` of `.qfai/report/validate.log`, in which the `errors:` and `warnings:` lines do
   not appear as changed at all. `TDDLIST_TEST_FILE_MISSING = 0`, spec-0006 `TDDLIST_SELECTOR_UNRESOLVED
   = 0`, `QFAI-TEST-001 = 0`.
 
