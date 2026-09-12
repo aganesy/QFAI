@@ -1985,6 +1985,19 @@ unadjudicated`, read off a Work Orders Summary row the session writes rather
   closes it, because the revision has not moved — and it is not a rubber stamp,
   since what it re-signs is a judgement over a subject that has grown.
 
+- **A spec-0013 pointer state no directory can be in is recorded where the
+  Drift Protocol looks for it** (#1693). Five layers of the pack say the
+  active-pack helper raises a recovery error when the pointer resolves to a
+  duplicate pack. The helper's candidates come from one `readdir` of one
+  directory and are matched on an exact name, so no two can match, and that has
+  been true since the branch was written: it has never been reachable.
+
+  `CR-20260913-0004`, a defect-class request, narrows the five statements to
+  the absent and missing conditions the helper can actually be in, and lists
+  the unreachable branch, its message builder and its error kind for removal. It
+  blocks the one ledger row carrying that obligation, whose test already proves
+  the two conditions that remain.
+
 ## [1.11.1] - 2026-09-10
 
 ### Removed
