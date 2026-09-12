@@ -349,10 +349,12 @@ Rules:
    are exempt from the Article VI budget, not from rule 4: a no-question mode
    asks nothing, whatever the question is for. The session still runs — it
    settles what the repository settles and dispatches sub-agents for the facts —
-   and every decision left over is recorded as an **open question**, never as an
-   assumption. Rule 4's assumptions are the defaultable ones, and a design
-   decision nobody has taken is not among them; recorded as an assumption it
-   would read as settled to whoever finds it next.
+   and every decision left over is **opened as a question in the register the
+   stage reads**, so the stage cannot complete over it. Where a document
+   requires the field to hold something, write the defaulted value and label it
+   an assumption beside the open question; a labelled value under an open
+   question is not a settled decision. What rule 4 does not license is the
+   assumption **alone**, which reads as settled to whoever finds it next.
 
 This article survives context compaction because `.qfai/assistant/constitution/constitution.md` is a P1 reload target.
 

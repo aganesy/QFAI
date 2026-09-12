@@ -1,4 +1,4 @@
-import { readFile } from "node:fs/promises";
+import { readdir, readFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -125,7 +125,47 @@ describe("the clarification budget binds a stage", () => {
       const content = await read(tree, CONSTITUTION);
       expectPhrase(content, "**A grilling session does not reach the user under `--auto`.**");
       expectPhrase(content, "exempt from the Article VI budget, not from rule 4");
-      expectPhrase(content, "recorded as an **open question**, never as an\n   assumption");
+      expectPhrase(content, "**opened as a question in the register the\n   stage reads**");
+      // The prohibition is the assumption ALONE. A discussion pack under
+      // `--auto` takes the conventional design direction, labels it
+      // `chosen_by: assumption` and opens it in the register — and the pack
+      // cannot complete while that entry is open. Forbidding the labelled value
+      // outright would leave that run with no artifact it is allowed to write.
+      expectPhrase(content, "write the defaulted value and label it\n   an assumption");
+      expectPhrase(content, "the\n   assumption **alone**");
+    });
+
+    it(`${tree}: no document keeps the carve-out the article dropped`, async () => {
+      // The article binds every command now. A skill reference that still says
+      // the cap constrains non-discussion commands is the nearer document for
+      // an agent working in that skill, so it decides the behaviour — and it
+      // decides it the way the article no longer does.
+      const stale = /[Nn]on-discussion/;
+      const roots = [path.join(repoRoot, tree), path.join(repoRoot, ".agents", "rules")];
+      const offenders: string[] = [];
+      const walk = async (dir: string): Promise<void> => {
+        let entries;
+        try {
+          entries = await readdir(dir, { withFileTypes: true });
+        } catch {
+          return;
+        }
+        for (const entry of entries) {
+          const full = path.join(dir, entry.name);
+          if (entry.isDirectory()) {
+            await walk(full);
+            continue;
+          }
+          if (!entry.name.endsWith(".md")) continue;
+          const text = await readFile(full, "utf-8");
+          if (stale.test(text)) offenders.push(path.relative(repoRoot, full));
+        }
+      };
+      for (const root of roots) await walk(root);
+      expect(
+        offenders.sort(),
+        "a document still scoping the budget to non-discussion commands",
+      ).toEqual([]);
     });
 
     it(`${tree}: the operating baseline carries the grilling exemption too`, async () => {

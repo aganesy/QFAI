@@ -81,13 +81,13 @@ usually a subject too large to hold at once. Break it up and grill the pieces.
 ## Under a no-question mode
 
 A run told not to ask the user does not ask, and a session inside it does not
-either. It settles what the evidence settles, and records every decision left
-over as an open question.
+either. It settles what the evidence settles, and opens every decision left over
+as a question, where whatever gates the work will see it.
 
-Never as an assumption. An assumption reads as decided by whoever finds it
-later, so an unsettled design reaches a document looking settled — which is the
-outcome the rest of this rule exists to prevent, arrived at by a different
-route.
+Where a document requires the field to hold something, write the defaulted value
+and label it an assumption beside the open question. What is forbidden is the
+assumption on its own: unread, it is a decision nobody took, wearing the face of
+one somebody did.
 
 ## What talking cannot settle
 

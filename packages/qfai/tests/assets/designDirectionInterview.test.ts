@@ -55,8 +55,14 @@ describe("the design direction is the user's decision", () => {
       // One ask path, the shared one. A second would escape the protocol that
       // decides when a question is allowed at all.
       expect(intake).toContain("shared-skill-operating-baseline.md#user-questions");
-      // An approval is exempt from the budget, so the cap is not a reason to skip it.
-      expect(intake).toContain("is an approval, which is exempt");
+      // An approval is exempt from the budget, so the cap is not a reason to
+      // skip it. The exemption is a property of the question, not of the command
+      // it sits in — the budget binds every command alike, so a reference that
+      // reached for the command would be reaching for something that is no
+      // longer there.
+      expect(intake).toContain("a decision the skill declares mandatory is an approval");
+      expect(intake).toContain("Both are exempt.");
+      expect(intake).toContain("The cap binds every command alike");
     });
 
     it(`${tree}: an unattended run records an assumption instead of blocking`, async () => {

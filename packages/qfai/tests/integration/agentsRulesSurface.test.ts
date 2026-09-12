@@ -454,13 +454,23 @@ describe("cross-AI rules surface (.agents/rules/ master)", () => {
     });
 
     // A no-question run is the one place the rule and a no-question mode could
-    // deadlock. It resolves toward the open question, never the assumption: an
-    // assumption is what makes an unsettled design read as settled.
+    // deadlock. It resolves toward the open question, which is what stops the
+    // work completing over a decision nobody took.
+    //
+    // The labelled value is allowed beside it, and has to be: a discussion pack
+    // under `--auto` takes the conventional design direction, labels it
+    // `chosen_by: assumption` and opens the register entry, and the pack cannot
+    // complete while that entry is open. Forbidding the value outright would
+    // leave that run with no artifact it is permitted to write. What the rule
+    // refuses is the assumption standing alone.
     it.each(MASTERS)("%s resolves a no-question run to open questions", async (rel) => {
       const text = await readFile(path.join(ROOT, rel), "utf-8");
       expect(text).toMatch(/[Uu]nder\s+a\s+no-question\s+mode/);
-      expect(text).toMatch(/records every decision left\s+over as an open question/);
-      expect(text).toMatch(/Never\s+as\s+an\s+assumption/);
+      expect(text).toMatch(/opens\s+every\s+decision\s+left\s+over\s*\n?\s*as\s+a\s+question/);
+      expect(text).toMatch(
+        /write\s+the\s+defaulted\s+value\s*\n?\s*and\s+label\s+it\s+an\s+assumption/,
+      );
+      expect(text).toMatch(/the\s*\n?\s*assumption\s+on\s+its\s+own/);
     });
 
     it.each([
