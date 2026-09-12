@@ -697,3 +697,38 @@ describe("what the reclaim refuses to remove", () => {
     });
   });
 });
+
+describe("a citation inside a fence is an example, not a citation", () => {
+  it("appends the section rather than writing bullets into the code block", async () => {
+    await withProject(async (root) => {
+      const master = ".agents/rules/grilling.md";
+      await writeFile(path.join(root, "AGENTS.md"), PROJECT_TEXT, "utf-8");
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+
+      // A project whose own file shows what a rule bullet looks like. Read as a
+      // rule list, the new bullets are spliced inside the fence, where they
+      // stay examples while the run reports having cited them.
+      const section = extractManagedRulesSection(await readTemplate("AGENTS.md"));
+      const others = citedRuleMasters(section ?? "").filter((cited) => cited !== master);
+      const fenced = [
+        PROJECT_TEXT,
+        "Write the rule list like this:",
+        "",
+        "```markdown",
+        ...others.map((cited) => "- `" + cited + "` — what it covers."),
+        "```",
+        "",
+      ].join("\n");
+      await writeFile(path.join(root, "AGENTS.md"), fenced, "utf-8");
+
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+
+      const after = await readEntryPoint(root, "AGENTS.md");
+      // Nothing was written into the block, and the file gained the section it
+      // never had: the examples cited nothing a reader would follow.
+      expect(after).toContain(QFAI_AGENT_RULES_BEGIN);
+      const fence = after.split("```markdown")[1]?.split("```")[0] ?? "";
+      expect(fence.split("\n").filter((line) => line.startsWith("- "))).toHaveLength(others.length);
+    });
+  });
+});

@@ -186,15 +186,31 @@ reason to look at the file again.
 
 **How it writes.** The merged text is staged beside the target and renamed over
 it, so an interrupted write leaves the adopter's file as it was. The staging
-file is created owner-only and takes the target's own mode, and its ownership,
-before the rename: a file the project kept to itself is not published by being
-rewritten.
+file is created owner-only and takes the target's own mode before the rename: a
+file the project kept to itself is not published by being rewritten. Where the
+run does not already own the file, it restores the owner too, and refuses the
+write when it cannot — a renamed file owned by whoever ran init is one its owner
+may no longer edit.
+
+The walk that refuses a linked path component runs again immediately before the
+rename. A parent replaced in between would have the write land wherever it now
+points; this is a check rather than a lock, and what it buys is a window of two
+statements.
 
 A staging file an earlier run was killed before renaming is removed at the start
 of the next one. Two things bound that: the name has to be one the writer could
-have produced — the prefix, the identifier layout, the suffix — and the file has
+have produced — the prefix, a version 4 identifier, the suffix — and the file has
 to have sat still for an hour, so a second init running now keeps the file it is
 about to rename.
+
+**What it reads.** The Copilot file belongs to the adopter, so it is opened
+once, refused unless it is an ordinary file, and read to a ceiling. A larger one
+is reported and left alone rather than buffered and decoded whole for the sake of
+one line.
+
+**What a fenced block is.** An example. A rule path inside one is not a
+citation: the file is not hand-wired by it, no bullet is written into it, and the
+managed section still has to reach that file.
 
 **What a refusal does not do.** Queue the citation for later. A master this run
 copied is one no later run offers again, because the file is on disk and the

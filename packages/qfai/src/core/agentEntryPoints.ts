@@ -77,7 +77,8 @@ export function needsManagedRulesSection(existing: string, section: string): boo
   if (masters.length === 0) {
     return false;
   }
-  return !masters.every((master) => existing.includes(master));
+  const cited = new Set(citedRuleMastersOutsideCode(existing));
+  return !masters.every((master) => cited.has(master));
 }
 
 /**
@@ -151,9 +152,11 @@ export function addRuleCitationsToList(
   if (bullets.length === 0) return existing;
 
   const lines = existing.split(newline);
+  const open = outsideFences(lines);
   let insertAfter = -1;
   for (let index = 0; index < lines.length; index += 1) {
     const line = lines[index];
+    if (open[index] !== true) continue;
     if (line !== undefined && line.startsWith("- ") && citedRuleMasters(line).length > 0) {
       insertAfter = index;
     }
@@ -161,7 +164,9 @@ export function addRuleCitationsToList(
   if (insertAfter === -1) {
     // Every bullet deleted. The heading is the one place left that a reader
     // reads as the rule list, so the bullets go under it as their own block.
-    const heading = lines.findIndex((line) => line.startsWith(CROSS_AI_RULES_HEADING));
+    const heading = lines.findIndex(
+      (line, index) => open[index] === true && line.startsWith(CROSS_AI_RULES_HEADING),
+    );
     if (heading === -1) return existing;
     lines.splice(heading + 1, 0, "", ...bullets);
     return lines.join(newline);
@@ -171,11 +176,58 @@ export function addRuleCitationsToList(
   return lines.join(newline);
 }
 
+/**
+ * The masters a document cites where a reader would follow the citation.
+ *
+ * A path inside a fenced block is an example of a citation rather than one, and
+ * a file whose only mentions are examples cites nothing — it is a file the
+ * managed section still has to reach.
+ */
+export function citedRuleMastersOutsideCode(text: string): readonly string[] {
+  // A trailing CR is left on the line: neither the fence test nor the citation
+  // pattern is anchored at the end, so splitting on the separator alone is
+  // enough and keeps one spelling of it here.
+  const lines = text.split("\n");
+  const open = outsideFences(lines);
+  const cited = new Set<string>();
+  for (const [index, line] of lines.entries()) {
+    if (open[index] !== true) continue;
+    for (const master of citedRuleMasters(line)) cited.add(master);
+  }
+  return [...cited];
+}
+
+/**
+ * Which lines of a document are outside every fenced block.
+ *
+ * A rule path inside a fence is an example of a citation, not one. Spliced into
+ * the fence, the bullets stay examples while the run reports having cited them;
+ * counted as a rule list, they send a hand-wired file down a path that has
+ * nowhere real to write.
+ */
+function outsideFences(lines: readonly string[]): boolean[] {
+  let open: string | null = null;
+  return lines.map((line) => {
+    const fence = /^\s{0,3}(`{3,}|~{3,})/.exec(line)?.[1];
+    if (fence !== undefined) {
+      if (open === null) {
+        open = fence[0] ?? null;
+        return false;
+      }
+      // A fence closes on its own character, so a ``` inside a ~~~ block is
+      // content rather than the end of it.
+      if (fence.startsWith(open)) open = null;
+      return false;
+    }
+    return open === null;
+  });
+}
 /** The template's bullets for the masters `existing` does not already cite. */
 function pendingBullets(existing: string, section: string, masters: readonly string[]): string[] {
+  const cited = new Set(citedRuleMastersOutsideCode(existing));
   const bullets: string[] = [];
   for (const master of masters) {
-    if (existing.includes(master)) continue;
+    if (cited.has(master)) continue;
     const bullet = bulletFor(section, master);
     if (bullet !== null) bullets.push(bullet);
   }
@@ -222,11 +274,13 @@ export function addRuleCitations(
   const newline = existing.includes("\r\n") ? "\r\n" : "\n";
   const managed = existing.slice(start, endAt);
   const lines = managed.split(newline);
+  const open = outsideFences(lines);
   // After the last rule bullet, not the last line: the section closes with
   // prose, and a bullet after it would read as part of that paragraph.
   let insertAfter = -1;
   for (let index = 0; index < lines.length; index += 1) {
     const line = lines[index];
+    if (open[index] !== true) continue;
     if (line !== undefined && line.startsWith("- ") && citedRuleMasters(line).length > 0) {
       insertAfter = index;
     }
