@@ -21,11 +21,20 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   recommendation.
 
   Two fields carry it. A reviewer response declares `Recommended and
-unadjudicated`, read off a Work Orders Summary row the session writes rather
-  than off recollection, and scoped to the artifact as it now stands. A `Review
-series` — the reviewed artifact plus the role — carries the round budget
-  across a host that answers round 2 with a fresh sub-agent, which a count per
-  agent instance restarted every round.
+  unadjudicated`, read off a Work Orders Summary row the session writes rather
+  than off recollection, and scoped to the artifact as it now stands. A stage
+  that ran no such session records no row, and an otherwise complete summary
+  without one is the evidence for `none`. A `Review series` — the reviewed
+  artifact, the role, and an ordinal that rises each time the review is handed
+  to a replacement — carries the round budget across a host that answers round
+  2 with a fresh sub-agent, which a count per agent instance restarted every
+  round, and keeps a replacement from inheriting the round its predecessor
+  spent.
+
+  A non-`none` answer is not settled by a handoff. Handing the review to
+  another reviewer answers an authorship conflict; against an unadjudicated
+  recommendation it launders the decision, because the replacement attests
+  `none` truthfully while the artifact still carries what nobody chose.
 
 ### Removed
 
