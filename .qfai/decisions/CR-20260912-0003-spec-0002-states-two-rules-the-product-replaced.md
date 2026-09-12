@@ -167,7 +167,16 @@ to do with. A row whose obligation is unchanged waits on nobody.
   runs before either file is written, and those three rows owe fresh
   verification in the same change. Without it option 2 finishes with another
   spec's rows attesting to behaviour the product no longer has.
-- Contracts: `none`
+- Contracts: `packages/qfai/assets/init/.qfai/assistant/skills/qfai-prototyping/references/design-md-spec.md`
+  and its root mirror, **under `2a` only**. That document has Phase 0 author
+  `DESIGN.md` and prototyping read it as read-only context, and `2a` moves the
+  authoring into prototyping — so the contract it would then contradict is the
+  one that has to move with it. Under `2b` and under options 1 and 3 this is
+  `none`.
+- Product paths under `2a`:
+  `packages/qfai/assets/init/.qfai/assistant/skills/qfai-prototyping/**` and its
+  root mirror, for the direction-selection step and the authoring it performs,
+  with the tests that pin both.
 - Schema: `none`
 - Upstream paths edited under this CR:
   `.qfai/specs/spec-0002/01_Spec.md`,
@@ -242,7 +251,7 @@ and refusing `3A/1B` for want of one would make a valid split unrecordable.
    | Layer                       | Statement A — the direction rule   | Statement B — the requiredness rule |
    | --------------------------- | ---------------------------------- | ----------------------------------- |
    | `01_Spec.md`                | `REQ-0012`                         | `REQ-0005` (requiredness half)      |
-   | `02_User-stories.md`        | —                                  | `US-0002-0005`                      |
+   | `02_User-stories.md`        | `US-0002-0005`                     | —                                   |
    | `03_Acceptance-Criteria.md` | `AC-0002-0008`                     | `AC-0002-0010`                      |
    | `04_Business-Rules.md`      | `BR-0002-0008`                     | `BR-0002-0010`                      |
    | `05_Examples.md`            | `EX-0002-0008`, `EX-0002-0009`     | `EX-0002-0011`                      |
@@ -250,8 +259,11 @@ and refusing `3A/1B` for want of one would make a valid split unrecordable.
    | `07_Decisions.md`           | `DR-0002-0001`, `DR-0002-0003`     | —                                   |
    | `tdd/test-list.md`          | `TDD-0008`, `TDD-0009`, `TDD-0010` | `TDD-0012`                          |
 
-   `US-0002-0005` is statement B's because its acceptance criterion is
-   `AC-0002-0010`; the direction rule has no story of its own.
+   `US-0002-0005` is statement A's: it is the planner-first story — discussion
+   defines conditions and anti-goals **without selecting a visual winner**, so
+   prototyping remains where the direction is chosen — which is the direction
+   rule stated as a story. `AC-0002-0008` scenarios it. The requiredness rule has
+   no story of its own, so statement B's cell is empty rather than shared.
    Nothing in statement A's list touches statement B's rows or the reverse, so
    `1A/2B` is option 1 applied to A's rows and option 2 applied to B's, with no
    overlap to resolve. `TDD-0011` is re-verified under every combination —
@@ -274,10 +286,14 @@ and refusing `3A/1B` for want of one would make a valid split unrecordable.
    - Reset to `todo`, recording this CR's ID in `DR-ID`:
      `spec-0002/TDD-0008`, `spec-0002/TDD-0009`, `spec-0002/TDD-0012`
    - Re-scope `spec-0002/TDD-0012` in the same `/qfai-sdd` rerun, before the
-     reset is any use. **Under option 2 the rerun is `confirm-only` and would
-     write the CR reference alone, so that mode is lifted for this one row**:
-     the rerun re-derives the row's identity, or retires it and seeds a new one
-     for the narrowed rule. Without the lift `2B` produces no evidence for
+     reset is any use. **That rerun's mode is `re-derive`, not `confirm-only`**:
+     the drift protocol admits those two and no others, and `confirm-only`
+     writes nothing but the CR reference, so it cannot rewrite a row's identity.
+     Under option 2 the statements come back from a re-derive unchanged — that
+     is what the option means by leaving them alone — and the mode is named for
+     what the rerun is allowed to write, not for what must differ. The rerun
+     re-derives the row's identity, or retires it and seeds a new one for the
+     narrowed rule. Without the lift `2B` produces no evidence for
      `TC-0002-0011` at all — the row keeps a selector that resolves, so
      `/qfai-implement` may not rewrite it, and the only thing it can re-run is
      an assertion about the legacy-format finding. Its `Test file` exists and its `Selector`,
@@ -291,8 +307,10 @@ and refusing `3A/1B` for want of one would make a valid split unrecordable.
      in-place repair path cannot touch identity either.
    - Retire: `spec-0002/TDD-0010` — `current preflight unit test pass`
 
-   **Option 2 — restore the product to the spec.** `/qfai-sdd` is `confirm-only`:
-   no upstream statement changes. The work is implementation, and it is larger
+   **Option 2 — restore the product to the spec.** No upstream statement
+   changes, and `/qfai-sdd`'s mode is nonetheless `re-derive`: the statements
+   come back unchanged, and the rerun is there for the ledger row whose identity
+   `confirm-only` could not touch. The work is implementation, and it is larger
    than a new validator. `REQ-0012` says discussion performs no selected-direction
    finalization, so restoring it means withdrawing the direction interview as well
    as adding the check: the shipped discussion skill asks the user to choose a
