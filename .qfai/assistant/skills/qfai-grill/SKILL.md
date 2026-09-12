@@ -136,7 +136,9 @@ records the same thing from the reviewer's side: there is no artifact to review.
 What the user is shown at the end:
 
 - every decision they answered, and what they answered;
-- every decision left open, labelled as an assumption or as unasked;
+- every node left open, labelled as an assumption or as unasked — decisions and
+  facts only the user holds alike, because a fact no lookup reached is exactly
+  the node that disappears when the report names decisions only;
 - every fact taken as settled, with where it was read.
 
 The exemption covers the verdict and nothing else. A lookup dispatched during the

@@ -36,7 +36,7 @@ user agrees the understanding is shared.
 | ----------------------------------- | ------------------------------------------------------------------------- |
 | A design that is not yet fixed      | Proceed                                                                   |
 | The work is already specified       | Do not invoke; the spec is the authority                                  |
-| A no-question mode is active        | Run without asking; open every decision left over as a question           |
+| A no-question mode is active        | Run without asking; open every node left over as a question               |
 | An ambiguity met while implementing | Not a session on its own — an ordinary clarification under its own budget |
 | An execution stage declaring one    | A session. Article IX names two, at the preflight and on detection        |
 
@@ -48,10 +48,13 @@ the question is asked rather than arguable afterwards
 
 **A no-question mode silences the questions, not the session.** An invocation
 told not to ask — `--auto`, or whatever the host spells it as — settles what the
-evidence settles, dispatches the lookups, and opens every decision left over as
+evidence settles, dispatches the lookups, and opens every node left over as
 a question in the register the stage reads, so the stage cannot complete over
-it. Where a document requires the field to hold something, write the defaulted
-value and label it an assumption beside that open question
+it. Every node, not every decision: a fact only the user holds cannot be settled
+from evidence either, and one declared undefaultable stops the run rather than
+taking a value nobody has. Where a document requires the field to hold
+something, write the defaulted value and label it an assumption beside that open
+question
 (`.qfai/assistant/constitution/constitution.md` Article X, rule 6). What is
 forbidden is the assumption with no open question against it. Declaring a
 session is still not a way to ask.
@@ -69,10 +72,15 @@ off whatever it depends on.
 
 **A fact the environment does not hold is still a fact.** An unpublished date, a
 constraint that lives in a contract, a number only the user knows: no lookup
-reaches it, and it is not a decision either. Ask for it as the value it is, with
-no options and no recommended answer — nothing is being decided, so there is
-nothing to recommend, and a recommended value the agent does not hold is a guess
-the user is invited to accept.
+reaches it, and it is not a decision either. Ask for it as the value it is, and
+with **no recommended answer** — nothing is being decided, so there is nothing
+to recommend, and a recommended value the agent does not hold is a guess the
+user is invited to accept.
+
+Whether it arrives as options is a separate question, and the candidate set
+answers it: a fact with a known few possible values is asked as a choice among
+them, and one with no such set as a plain request. Asking which of four
+supported regions is active as free text loses the four.
 
 All three are prerequisites, so a decision waiting on a fact is on the tree as
 exactly that. The tree is not written once: each answer changes what the
@@ -107,6 +115,20 @@ re-opens it.
 Two questions never share a round when one depends on the other; the dependent
 one belongs to a later round. The next round is never written ahead of the
 answers it is computed from.
+
+**A no-question mode is read before any of this.** Where the invocation is told
+not to ask — `--auto`, or whatever the host spells it as — no round is put at
+all, so nothing below applies and the no-question section above governs. A mode
+that withholds the tool while still permitting questions is a different thing,
+and is the fallback's case.
+
+**Three things send a round to plain text**: the host has no structured question
+tool, the current mode withholds it while still permitting questions, or the
+tool cannot carry the answer shape of some question in the round. **The whole
+round falls back, not the question that triggered it** — a round split across
+two carriers loses the thing a round is for, which is the user seeing what is
+being decided together. Say why the tool was not used, and where the reason is
+the third one, say which question it could not carry.
 
 **Where the host's question tool takes fewer questions than the frontier holds**,
 deliver the round in host-sized batches. The frontier is not recomputed between
@@ -403,5 +425,5 @@ project_memory:
 
 - A grilling question spends no clarification budget, and the confirmation that closes a session is exempt with it. A session ends on its own condition, never at a count.
 - A decision the user owns is asked, never assumed. A fact the environment holds is read, never asked.
-- A no-question mode silences the questions, not the session: such a run settles what the evidence settles and opens every decision left over as a question, with a labelled value beside it where a document requires one. The assumption alone is forbidden.
+- A no-question mode silences the questions, not the session: such a run settles what the evidence settles and opens every node left over as a question — facts only the user holds among them — with a labelled value beside it where a document requires one. The assumption alone is forbidden, and a fact declared undefaultable stops the run.
 - A user's `stop` ends a session immediately and the open decisions are reported as open. A mandatory approval and a `hard-required` input are never assumed, whatever the user answered.
