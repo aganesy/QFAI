@@ -65,6 +65,18 @@ that carry the floor are:
 `_policies/08_Decisions.md` `DR-0267` is the tenth, and it belongs to every
 spec rather than to this one.
 
+**`spec-0004` states the same band, and one of its completed rows is on the
+same test.** `01_Spec.md` line 108 and its Consumer View bind `REQ-0164` to
+"the `3..7` recommended count band (DR-0267)", `04_Business-Rules.md` and
+`06_Test-Cases.md` repeat it, and `spec-0004/TDD-0050` stands `done` on
+`packages/qfai/tests/unit/core/validators/auditProfileBandReject.test.ts`,
+which asserts a ceiling and that one task emits nothing.
+
+It is in this Change Request rather than a second one because the two packs
+share `DR-0267`: settling the decision for one and not the other leaves the
+shared record and one of its readers disagreeing, which is the state this
+document exists to remove.
+
 ## Options (at least 3) and recommendation
 
 | #   | Option                                                                                                                                                                                                                              | Cost                                                                                                                                     | Risk                                                                                                                                                                                         | Recommended |
@@ -83,12 +95,14 @@ against is still written down.
 
 ## Blocked downstream items
 
-| Item                 | Kind         | Why it depends on the artifact                                            |
-| -------------------- | ------------ | ------------------------------------------------------------------------- |
-| `spec-0013/TDD-0027` | `ledger-row` | `TC-0013-0032` names the band the shipped documents are required to state |
-| `spec-0013/TDD-0028` | `ledger-row` | `TC-0013-0033` states the floor the validator does not raise              |
+| Item                 | Kind         | Why it depends on the artifact                                                                  |
+| -------------------- | ------------ | ----------------------------------------------------------------------------------------------- |
+| `spec-0013/TDD-0027` | `ledger-row` | `TC-0013-0032` names the band the shipped documents are required to state                       |
+| `spec-0013/TDD-0028` | `ledger-row` | `TC-0013-0033` states the floor the validator does not raise                                    |
+| `spec-0004/TDD-0050` | `ledger-row` | `TC-0004-0070` is on the test that asserts the ceiling, under a `REQ-0164` that states the band |
 
-- Not blocked by this CR: the other ten `done` rows of `spec-0013`'s ledger.
+- Not blocked by this CR: the other ten `done` rows of `spec-0013`'s ledger,
+  and every `spec-0004` row but `TDD-0050`.
   Their obligations are independent of the band, so the evidence backfill that
   covers them continues. **Those two are the exception**: writing evidence for
   a row whose obligation the product states the opposite of records the
@@ -107,10 +121,16 @@ against is still written down.
   `.qfai/specs/spec-0013/08_Open-questions.md`,
   `.qfai/specs/spec-0013/09_delta.md`,
   `.qfai/specs/spec-0013/tdd/test-list.md`,
-  `.qfai/specs/_policies/08_Decisions.md`
+  `.qfai/specs/spec-0004/01_Spec.md`,
+  `.qfai/specs/spec-0004/04_Business-Rules.md`,
+  `.qfai/specs/spec-0004/06_Test-Cases.md`,
+  `.qfai/specs/spec-0004/09_delta.md`,
+  `.qfai/specs/spec-0004/tdd/test-list.md`,
+  `.qfai/specs/_policies/08_Decisions.md`,
+  `.qfai/specs/_policies/10_delta.md`
 - Plans: `.qfai/specs/spec-0013/10_Plan.md` — the item describing the band, and
   nothing else in that file
-- Tests: `spec-0013/TDD-0027`, `spec-0013/TDD-0028`
+- Tests: `spec-0013/TDD-0027`, `spec-0013/TDD-0028`, `spec-0004/TDD-0050`
 - Contracts: `none`
 - Schema: `none`
 - Upstream paths edited under this CR: the `Specs` and `Plans` paths above.
@@ -128,10 +148,22 @@ and leave the spec as it stands.
 
 ## Approved actions (owner skill rerun plan)
 
-1. `/qfai-sdd` rerun scope, under options 1 and 2: the nine `spec-0013`
-   statements listed under `## Proposed change`, plus `10_Plan.md`'s band item.
-   Mode `re-derive` — the statements change what they say, and `confirm-only`
-   writes nothing but this Change Request's reference.
+1. **Two invocations, under options 1 and 2**, because the edit spans two
+   artifact classes and `.qfai/assistant/constitution/drift-protocol.md` gives
+   each its own:
+
+   | Invocation            | Scope                                                                               | Mode        | CR reference lands in                         |
+   | --------------------- | ----------------------------------------------------------------------------------- | ----------- | --------------------------------------------- |
+   | `/qfai-sdd spec-0013` | The nine statements under `## Proposed change`, plus `10_Plan.md`'s band item       | `re-derive` | `spec-0013/09_delta.md` and `07_Decisions.md` |
+   | `/qfai-sdd spec-0004` | `REQ-0164` and its Consumer View sentence, the matching business rule and test case | `re-derive` | `spec-0004/09_delta.md`                       |
+   | `/qfai-sdd`           | `_policies/08_Decisions.md` — `DR-0267`, superseded or rewritten by the option      | `re-derive` | `_policies/10_delta.md` and `08_Decisions.md` |
+
+   `re-derive` in all three: the statements change what they say, and
+   `confirm-only` writes nothing but this Change Request's reference. A bare
+   `/qfai-sdd` cannot reach a spec-local file and a `<spec-id>` one cannot reach
+   the policy record, so naming one invocation would leave half the edit
+   unauthorised however it was read.
+
 2. The decision records, under options 1 and 2 and differing by option.
    - **Option 1**: a new `DR-*` in `_policies/08_Decisions.md` recording the
      withdrawal, its date and its rationale; `DR-0267` and
@@ -141,13 +173,20 @@ and leave the spec as it stands.
      with their `Rejected` lists re-derived against the new statement.
 3. Downstream ledger sweep, under options 1 and 2. Reset to `todo`, recording
    this CR's ID in their `DR-ID` column: `spec-0013/TDD-0027`,
-   `spec-0013/TDD-0028`. Neither is retired: both obligations survive with a
-   changed statement, so the rows are re-derived rather than deleted.
+   `spec-0013/TDD-0028`, `spec-0004/TDD-0050`. None is retired: every
+   obligation survives with a changed statement, so the rows are re-derived
+   rather than deleted.
    Under option 3 no row moves — the product changes to meet them.
-4. Under option 3 only: `packages/qfai/src/core/validators/designAudit.ts` and
-   `packages/qfai/tests/integration/primaryTasksBand.test.ts`, with the shipped
-   `templates/contracts/ui-spec.yaml` comments and
-   `references/ui-contract-guide.md` that state the band. That option is
+4. Under option 3 only: `packages/qfai/src/core/validators/designAudit.ts`,
+   `packages/qfai/src/core/validators/auditProfile.ts` and their tests —
+   `packages/qfai/tests/integration/primaryTasksBand.test.ts` and
+   `packages/qfai/tests/unit/core/validators/auditProfileBandReject.test.ts` —
+   with the shipped template and guide that state the band:
+   `packages/qfai/assets/init/.qfai/assistant/skills/qfai-sdd/templates/contracts/ui-contract.sample.yaml`,
+   whose comments currently read "at most 7" and "There is no lower bound", and
+   `packages/qfai/assets/init/.qfai/assistant/skills/qfai-sdd/references/ui-contract-guide.md`.
+   The package source, not the generated `.qfai` mirror: `sync:ssot` writes that
+   from these, and an edit made there is overwritten on the next run. That option is
    implementation work and its scope is product paths rather than upstream ones.
 
 ## Resolution

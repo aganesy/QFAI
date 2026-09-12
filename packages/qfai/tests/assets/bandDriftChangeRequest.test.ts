@@ -56,6 +56,17 @@ describe("the primary_tasks band drift has a Change Request", () => {
   it("blocks the two rows whose obligation the product contradicts", async () => {
     await expectPhrase("| `spec-0013/TDD-0027` | `ledger-row` |");
     await expectPhrase("| `spec-0013/TDD-0028` | `ledger-row` |");
+    // The two packs share the decision, so settling it for one leaves the
+    // shared record and one of its readers disagreeing.
+    await expectPhrase("| `spec-0004/TDD-0050` | `ledger-row` |");
+  });
+
+  it("names an invocation per artifact class, with its mode", async () => {
+    // A bare invocation cannot reach a spec-local file and a scoped one cannot
+    // reach the policy record.
+    await expectPhrase("| `/qfai-sdd spec-0013` |");
+    await expectPhrase("| `/qfai-sdd spec-0004` |");
+    await expectPhrase("naming one invocation would leave half the edit unauthorised");
   });
 
   it("says which rows it does not block, and why", async () => {
