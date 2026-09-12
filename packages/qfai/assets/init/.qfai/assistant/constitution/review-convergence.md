@@ -125,7 +125,12 @@ which owns the delegation rules these sit beside.
 A grilling session between agents has no user answering its questions, so the
 end condition the session rule states — an empty frontier and the user's
 confirmation — cannot be reached from inside it. Two agents can also agree on a
-wrong premise with nobody watching. These rules give such a session an end.
+wrong premise with nobody watching. These rules bound the **rounds** such a
+session may take before what is still open goes to the user.
+
+**They do not end the session.** It ends where every session ends, in one of the
+four the session rule names, and each of those is the user's. An agent that
+treated the budget as an ending closed a session nobody was asked to close.
 
 **Two rounds**, the same budget a reviewer has. **Every decision still open
 after the second round escalates**, whether or not that round settled others:

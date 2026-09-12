@@ -228,14 +228,16 @@ than inventing it.
 ### A session between agents
 
 A session with no user answering has neither half of the end condition above
-available to it, so it ends on a budget instead: two rounds, then every decision
-still open goes to the user. Three subjects skip the rounds and go at once —
-product or business intent no authoritative artifact answers, a decision
-contradicting a spec, a contract or a recorded decision, and a decision resting
-on nothing authoritative.
+available to it. **The budget does not supply one.** Two rounds, then every
+decision still open goes to the user — and the session is still open when it
+gets there, because the user has not yet ended it in any of the four ways. Three
+subjects skip the rounds and go at once — product or business intent no
+authoritative artifact answers, a decision contradicting a spec, a contract or a
+recorded decision, and a decision resting on nothing authoritative.
 
-That is the one place a session ends on a count, and it is a count of rounds
-between agents rather than of questions put to a user. The rules are in
+So the count bounds the rounds between agents and nothing else. It is not a
+fifth ending, and an agent that closed the session on reaching it has ended one
+the user was never asked to end. The rules are in
 `.qfai/assistant/constitution/review-convergence.md`.
 
 ## Under a no-question mode

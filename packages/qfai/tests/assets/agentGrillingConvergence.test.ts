@@ -79,13 +79,19 @@ describe("a grilling session between agents has an end", () => {
     async (rel) => {
       // Two halves. If the rule stopped requiring the user's confirmation, the
       // convergence rules would answer a problem that no longer exists and
-      // nothing would notice. And a rule saying a session never ends on a count,
-      // beside a rule ending one at two rounds, is two mandatory instructions an
-      // agent has to choose between — so the master carries the exception.
+      // nothing would notice. And the master has to say what the two-round
+      // budget does to a session, because a rule saying every session ends in
+      // one of four ways, beside a rule ending one at a count, is two mandatory
+      // instructions an agent has to choose between.
+      //
+      // What it says is that the budget bounds the rounds and is not an ending:
+      // an exception would have been the other resolution, and it is the one
+      // that let an agent close a session the user was never asked to close.
       const content = await read(rel);
       expectPhrase(content, "The user confirms the understanding is shared.");
       expectPhrase(content, "### A session between agents");
-      expectPhrase(content, "the one place a session ends on a count");
+      expectPhrase(content, "the count bounds the rounds between agents and nothing else");
+      expectPhrase(content, "It is not a\nfifth ending");
       expectPhrase(content, "review-convergence.md");
     },
   );
