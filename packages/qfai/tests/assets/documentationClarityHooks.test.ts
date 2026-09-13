@@ -165,6 +165,16 @@ describe.each(SETTINGS_PATHS)("%s", (rel) => {
     expect(group.hooks[0].if).toBeUndefined();
   });
 
+  it("points at the floor and the interface rule instead of restating them", () => {
+    const text = (hooks.get("PostToolUse") ?? [])[1]?.hooks[0]?.args[1] ?? "";
+    // A copy of the floor's items leaves out whatever the floor gains later, and
+    // the reminder then vouches for a shorter floor than the rule holds.
+    expect(text).toContain("§ 2 of that rule");
+    expect(text).not.toContain("error handling that prevents data loss");
+    expect(text).toContain("is it already in this codebase");
+    expect(text).toContain(".agents/rules/interface-clarity.md");
+  });
+
   it("runs a program directly, with no shell and no arguments of its own", () => {
     for (const [, groups] of hooks) {
       for (const group of groups) {

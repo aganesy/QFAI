@@ -19,6 +19,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   published library's exported function and a plugin or tenant context, not
   process entry alone. All three changes are made in the shipped copy as well.
 
+- **The minimal-implementation reminder points at the floor instead of listing
+  it** (#1815). The hook that restates the rule after every write listed the
+  floor's items, and left out the ones the floor gained since. It now asks the
+  reuse question first, says the ladder never removes what § 2 of the rule lists,
+  and names `.agents/rules/interface-clarity.md` for a change to a screen or to
+  terminal output. A project that already ran `init` keeps its old reminder text.
+
 - **A legacy ledger outside the obligation-column protection is reported**
   (#1663). A seeded `E2E` or `API` row has `TC-Refs` forbidden to it, so the
   `US-Refs` and `CON-API-Refs` columns are the only place its obligation can
