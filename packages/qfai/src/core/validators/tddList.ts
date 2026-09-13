@@ -1381,7 +1381,7 @@ function normalizeAuditArtifact(value: string): string {
 }
 
 const GATE_COMPLETED_EVIDENCE_FIELD =
-  /^\s*(?:\|\s*)?(?:[-*][ \t]+)?(?:\*\*)?(?:Spec review(?:ed revision| pack(?: seal)?)?|Spec audited evidence hash|Code quality review(?:ed revision| pack(?: seal)?)?|Code quality audited evidence hash|Prototype parity(?: reviewed revision| review pack(?: seal)?| audited evidence hash)?|Checkpoint verification (?:command|result|seal))(?:\*\*)?\s*(?::|\|)/i;
+  /^\s*(?:\|\s*)?(?:[-*][ \t]+)?(?:\*\*)?(?:Spec review(?:ed revision| pack(?: seal)?)?|Spec audited evidence hash|Code quality review(?:ed revision| pack(?: seal)?)?|Code quality audited evidence hash|Prototype parity(?: reviewed revision| review pack(?: seal)?| audited evidence hash)?|Checkpoint verification (?:command|result|revision|seal))(?:\*\*)?\s*(?::|\|)/i;
 
 const PHASE_AUTHORED_EVIDENCE_FIELD =
   /^\s*(?:\|\s*)?(?:[-*][ \t]+)?(?:\*\*)?(?:Round[ \t]+\d+:[ \t]*)?(?:TDD-ID|Layer|Test file|Selector|TC-ref|US-ref|CON-API-ref|Revision|RED revision|Replacement proof revision|RED test hash|RED test manifest|RED command|RED result|GREEN command|GREEN result|Satisfied-by|Falsifiability command|Falsifiability result|Falsifiability revision|reviewer verdict|RED failure mode|Refactor verify command|Refactor verify result|Oracle proof|qa-gatekeeper|Shared-artifact re-verify|Surface artifacts)(?:\*\*)?\s*(?::|\|)/i;
@@ -2975,6 +2975,10 @@ function missingCompletedEvidenceFields(
   if (checkpointSeal !== null && !SHA256_VALUE.test(checkpointSeal)) {
     missing.push("Checkpoint verification seal: sha256");
   }
+  const checkpointRevision = rowEvidenceFieldValue(section, "Checkpoint verification revision");
+  if (checkpointRevision !== null && !EVIDENCE_REVISION_FORM.test(checkpointRevision)) {
+    missing.push(`Checkpoint verification revision naming ${REVISION_FORM_HINT}`);
+  }
   return missing;
 }
 
@@ -3125,16 +3129,26 @@ async function invalidCompletedEvidenceArtifacts(
   const checkpointCommand = rowEvidenceFieldValue(section, "Checkpoint verification command");
   const checkpointResult = rowEvidenceFieldValue(section, "Checkpoint verification result");
   const checkpointSeal = rowEvidenceFieldValue(section, "Checkpoint verification seal");
+  // The seal is taken over the run's own revision. A round's `Revision` names
+  // the tree before the refactor, and the checkpoint runs on the tree after
+  // it, so a row whose refactor changed a byte could match only one of them.
+  // A row that records no checkpoint revision was sealed over the round's.
+  const checkpointRevision = rowEvidenceFieldValue(section, "Checkpoint verification revision");
+  const sealRevision = checkpointRevision ?? revision;
   if (
-    revision !== null &&
+    sealRevision !== null &&
     checkpointCommand !== null &&
     checkpointResult !== null &&
     checkpointSeal !== null &&
     SHA256_VALUE.test(checkpointSeal) &&
     bareSha256(checkpointSeal) !==
-      checkpointEvidenceSeal(revision, checkpointCommand, checkpointResult)
+      checkpointEvidenceSeal(sealRevision, checkpointCommand, checkpointResult)
   ) {
-    invalid.push("Checkpoint verification seal matching command, result, and Revision");
+    invalid.push(
+      checkpointRevision === null
+        ? "Checkpoint verification seal matching command, result, and Revision"
+        : "Checkpoint verification seal matching command, result, and Checkpoint verification revision",
+    );
   }
   return invalid;
 }
@@ -3711,6 +3725,25 @@ export const EVIDENCE_ANCHOR_UNRESOLVED_CODE = "QFAI-TDDLIST-008";
  * the old behaviour.
  */
 export const EVIDENCE_BACKFILLED_CODE = "QFAI-TDDLIST-019";
+
+/**
+ * Finding code for a ledger whose table predates an obligation column, holding
+ * a row whose `Layer` owns that column.
+ *
+ * The shipped reference sanctions the shape: an eight-column ledger written
+ * before `US-Refs` and `CON-API-Refs` existed is a legacy ledger, not a broken
+ * one. What it lacks is the protection those columns give — a seeded `E2E` or
+ * `API` row has `TC-Refs` forbidden to it, so without its own column it can
+ * reach `done` with no auditable target at all.
+ *
+ * Reported at `warning`, on the reasoning `QFAI-TDDLIST-019` gives. Not an
+ * error: the sanction stands, and erroring would revoke it for every adopter
+ * whose ledgers predate the columns, forcing a migration the reference says is
+ * not owed. Not silence: a row outside a protection must not be
+ * indistinguishable, in the output an operator reads, from one inside it. A
+ * project that will carry no such row treats warnings as failures.
+ */
+export const OBLIGATION_COLUMN_ABSENT_CODE = "QFAI-TDDLIST-020";
 
 /**
  * `Revision` names a tree that files the observation covered have moved past.
@@ -4367,6 +4400,9 @@ export const TDD_LIST_SEED_SHAPE_CODES: ReadonlySet<string> = new Set([
   // change the reader is forbidden to make.
   "TDDLIST_INVALID_OBLIGATION_REF",
   "TDDLIST_OBLIGATION_LAYER_MISMATCH",
+  // The columns themselves are Phase 2b's to write, so a ledger that predates
+  // them is that phase's to migrate, and its gate is where the gap is heard.
+  "QFAI-TDDLIST-020",
   // The remaining three read cells the same phase authors, and were missing
   // for no reason the ownership split supports:
   //
@@ -6149,10 +6185,21 @@ function validateObligationColumn(
   spec: ObligationColumnSpec,
 ): Issue[] {
   const issues: Issue[] = [];
+  // Rows whose `Layer` owns this column, in a ledger table that has no such
+  // column. Per table, not per file: an appended table can lack a column the
+  // first one carries, and its rows are just as unprotected. Collected rather than reported per row: the gap is the
+  // ledger's shape, and one finding naming every affected row says that.
+  const unprotected: string[] = [];
   for (const ref of rows) {
-    // An absent column reads as an empty cell, which is the same "this row
-    // carries no such obligation" the optional column already means.
-    if (ref.scan.headers.indexOf(spec.column) < 0) continue;
+    if (ref.scan.headers.indexOf(spec.column) < 0) {
+      if (cell(ref, "Layer").toLowerCase() === spec.layer) {
+        // The TDD-ID is what an operator searches the ledger for; the position
+        // disambiguates the same id across tables.
+        const id = cell(ref, "TDD-ID");
+        unprotected.push(id.length > 0 ? `${id} (${ref.label})` : ref.label);
+      }
+      continue;
+    }
     const value = cell(ref, spec.column);
     if (value.length === 0 || value === "-") {
       if (cell(ref, "Layer").toLowerCase() === spec.layer) {
@@ -6200,6 +6247,20 @@ function validateObligationColumn(
         [spec.column, rawLayer],
         "change",
         `Set Layer to ${spec.layer.toUpperCase()} for this row, or move the obligation to the column its Layer owns (TC-Refs for Unit/Component/Integration, US-Refs for E2E, CON-API-Refs for API).`,
+      ),
+    );
+  }
+  if (unprotected.length > 0) {
+    issues.push(
+      issue(
+        OBLIGATION_COLUMN_ABSENT_CODE,
+        `${String(unprotected.length)} Layer=${spec.layer.toUpperCase()} row(s) in tdd/test-list.md for spec-${spec.specNumber} sit in a ledger table with no ${spec.column} column, so they record no obligation it can check: ${unprotected.join(", ")}`,
+        "warning",
+        spec.relPath,
+        `${spec.rule}ColumnAbsent`,
+        [spec.column, spec.layer.toUpperCase(), ...unprotected],
+        "change",
+        `Add the ${spec.column} column to the ledger and record the ${spec.expected} each of these rows covers. Until then a Layer=${spec.layer.toUpperCase()} row can reach done with no auditable target: TC-Refs is forbidden on it, and there is no other cell for its obligation.`,
       ),
     );
   }
