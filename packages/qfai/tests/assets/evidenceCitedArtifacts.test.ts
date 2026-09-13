@@ -5,7 +5,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { describe, expect, it } from "vitest";
-import { parse as parseYaml } from "yaml";
+import { parseDocument, visit } from "yaml";
 
 import { compileGlob, findClassClose } from "../../src/core/atdd/scaffoldDialect.js";
 
@@ -52,6 +52,12 @@ const CITED_GENERATED_ROOT = /\.qfai\/(?:review|review_archive|report|discussion
 
 /** The characters a citation carries outside a group. */
 const CITATION_CHARACTER = /[A-Za-z0-9._/*?+-]/;
+
+/**
+ * A character a file name holds that ends no citation: not space, quoting,
+ * punctuation, or the `#` that opens a fragment after a path.
+ */
+const NAME_CHARACTER = /[^\s`"'<>|,;:()[\]{}\\!#]/u;
 
 /** What closes each kind of group a citation can open. */
 const GROUP_CLOSERS: Readonly<Record<string, string>> = { "(": ")", "{": "}", "[": "]" };
@@ -179,6 +185,10 @@ function citationsIn(line: string): string[] {
         // whole citation away.
       } else if ((character === "@" || character === "!") && line[index + 1] === "(") {
         // An extglob introducer, which is one only where a group follows it.
+      } else if (NAME_CHARACTER.test(character)) {
+        // A character a file name holds and the dialect gives no meaning, such as
+        // the `@` of `@missing.md` or a letter outside ASCII. Stopping before it
+        // measured the prefix, which resolved against its directory.
       } else {
         break;
       }
@@ -556,8 +566,20 @@ function decodedRecord(file: string, text: string): string {
       }
     }
   };
+  if (!file.endsWith(".json")) {
+    // Every scalar node, keys included, without resolving an alias: a record
+    // holding one is still read, and an alias adds no text of its own.
+    const document = parseDocument(text);
+    if (document.errors.length > 0) return text;
+    visit(document, {
+      Scalar(_key, node) {
+        if (typeof node.value === "string") strings.push(...node.value.split("\n"));
+      },
+    });
+    return strings.join("\n");
+  }
   try {
-    collect(file.endsWith(".json") ? JSON.parse(text) : parseYaml(text, { maxAliasCount: 0 }));
+    collect(JSON.parse(text));
   } catch {
     return text;
   }
@@ -605,7 +627,7 @@ function disclaimedByLine(text: string): Array<"all" | Set<string> | undefined> 
     // Only outside a fence: inside one the marker is part of what the command
     // printed, and read as a disclaimer it hid every citation on the line.
     const outside = (): void => {
-      if (open === null && NOT_A_CITATION.test(line)) disclaimed[index] = "all";
+      if (open === null && NOT_A_CITATION.test(withoutInlineCode(line))) disclaimed[index] = "all";
     };
     // A fence inside a list item or a blockquote is indented past three spaces,
     // or carries the quote marker, and is still a fence.
@@ -636,9 +658,17 @@ function disclaimedByLine(text: string): Array<"all" | Set<string> | undefined> 
   return disclaimed;
 }
 
+/**
+ * A line with its inline code spans removed. A marker inside one renders as
+ * text, like a marker inside a fence, and disclaims nothing.
+ */
+function withoutInlineCode(line: string): string {
+  return line.replace(/(`+)[^`]*?\1/g, "");
+}
+
 /** The paths a marker names, or `null` when the line carries no marker naming any. */
 function disclaimedPaths(line: string): Set<string> | null {
-  const marker = /<!--\s*qfai:not-a-citation([^>]*?)-->/.exec(line);
+  const marker = /<!--\s*qfai:not-a-citation([^>]*?)-->/.exec(withoutInlineCode(line));
   // Normalized the way a measured citation is, so a marker naming a directory
   // with its conventional trailing separator covers the path the scan produces.
   const named = citationsIn(marker?.[1] ?? "").map(normalizeCitation);
@@ -912,9 +942,18 @@ function topLevelAlternativesOf(part: string): string[] {
   const body = part.slice(open + 2, close);
   const after = part.slice(close + 1);
   const repeat = part[open] === "+" || part[open] === "*" ? `*(${body})` : "";
-  return splitAlternatives(body).flatMap((member) =>
+  // `?(…)` and `*(…)` also match nothing, and a group after this one spells
+  // its own alternatives: `?(x)@(.git|g*)` admits `.git` through both.
+  const members = [
+    ...splitAlternatives(body),
+    ...(part[open] === "?" || part[open] === "*" ? [""] : []),
+  ];
+  const rests = topLevelAlternativesOf(after);
+  return members.flatMap((member) =>
     topLevelAlternativesOf(member).flatMap((inner) =>
-      expandBraces(`${before}${inner}${repeat}${after}`),
+      rests.flatMap((rest) =>
+        expandBraces(`${before}${inner}${inner === "" ? "" : repeat}${rest}`),
+      ),
     ),
   );
 }
@@ -1402,6 +1441,36 @@ describe("a glob is a claim about a set", () => {
     expect(citationsOf("x.json", decodedJson(record)).map(([, cited]) => cited)).toEqual([
       ".qfai/report/missing.json",
     ]);
+  });
+
+  it("reads a marker inside inline code as transcript text", () => {
+    const line = `\`wrote .qfai/report/missing.json <!-- qfai:not-a-citation -->\``;
+    expect(citationsOf("x.md", line).map(([, cited]) => cited)).toEqual([
+      ".qfai/report/missing.json",
+    ]);
+  });
+
+  it("reads a YAML record holding an alias", () => {
+    const record = [
+      "base: &base kept",
+      "copy: *base",
+      'path: ".qfai\\u002freport\\u002fmissing.json"',
+      "",
+    ].join("\n");
+    expect(
+      citationsOf("x.yaml", decodedRecord("x.yaml", record)).map(([, cited]) => cited),
+    ).toEqual([".qfai/report/missing.json"]);
+  });
+
+  it("keeps a file name character the dialect gives no meaning", () => {
+    const pack = ".qfai/discussion/discussion-20260328212829687";
+    expect(citationsIn(`see ${pack}/@missing.md here`)).toEqual([`${pack}/@missing.md`]);
+    expect(citationsIn(`see ${pack}/r\u00e9sum\u00e9.md`)).toEqual([`${pack}/r\u00e9sum\u00e9.md`]);
+  });
+
+  it("reads a dot-leading name a later sibling group spells", () => {
+    expect(segmentAdmits("?(x)@(.git|g*)", ".git")).toBe(true);
+    expect(segmentAdmits("?(x)@(g*)", ".git")).toBe(false);
   });
 
   it("counts nothing where a Windows path holds the root", () => {
