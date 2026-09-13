@@ -2960,6 +2960,16 @@ function missingCompletedEvidenceFields(
   if (refactorRevision !== null && !EVIDENCE_REVISION_FORM.test(refactorRevision)) {
     missing.push(`Refactor verify revision naming ${REVISION_FORM_HINT}`);
   }
+  // Row-level, like the pair beside it. A `Round N:` prefix reads as a round's
+  // field, and the row would fall back to the round's `Revision` with the value
+  // in plain sight; a second bare one is read in place of the first.
+  const refactorRevisions = evidenceFieldOccurrences(section, "Refactor verify revision");
+  if (refactorRevisions.some(({ round }) => round !== null)) {
+    missing.push("Refactor verify revision without a Round N: prefix");
+  }
+  if (refactorRevisions.filter(({ round }) => round === null).length > 1) {
+    missing.push("exactly one Refactor verify revision");
+  }
   const finalRevision = refactorRevision ?? latestRevision;
 
   // The parity fields are read on every row: a row with no parity verdict has

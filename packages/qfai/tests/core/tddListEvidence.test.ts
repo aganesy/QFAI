@@ -2937,6 +2937,29 @@ result, so the assertion cannot be tightened without drift.
       });
     });
 
+    it("refuses a refactor revision written as a round's field, or written twice", async () => {
+      await withProject(async (root) => {
+        const prefixed = refactoredEntry({ reviewed: FINAL_TREE, checkpoint: FINAL_TREE }).replace(
+          "- Refactor verify result: 1 passed",
+          `- Refactor verify result: 1 passed\n- Round 1: Refactor verify revision: ${FINAL_TREE}`,
+        );
+        const found = await unresolvedFor(root, prefixed, FINAL_TREE);
+        expect(found?.message).toContain("Refactor verify revision without a Round N: prefix");
+      });
+      await withProject(async (root) => {
+        const twice = refactoredEntry({
+          reviewed: FINAL_TREE,
+          refactor: FINAL_TREE,
+          checkpoint: FINAL_TREE,
+        }).replace(
+          "- Refactor verify result: 1 passed",
+          `- Refactor verify result: 1 passed\n- Refactor verify revision: ${DEFAULT_REVISION}`,
+        );
+        const found = await unresolvedFor(root, twice, FINAL_TREE);
+        expect(found?.message).toContain("exactly one Refactor verify revision");
+      });
+    });
+
     it("refuses a refactor revision that names no revision", async () => {
       await withProject(async (root) => {
         const evidence = refactoredEntry({ reviewed: DEFAULT_REVISION, refactor: "latest" });
