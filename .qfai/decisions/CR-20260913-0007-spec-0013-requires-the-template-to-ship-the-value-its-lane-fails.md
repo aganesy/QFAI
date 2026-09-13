@@ -134,10 +134,23 @@ list?
    `Upstream artifact`, `Mode`, `Approved by`, `Applied at` — not as a
    `## Triage` row.
 
-   `CR-20260913-0008`'s rerun, applied first, seeds at `todo` the thirteen
-   `E2E` rows `spec-0013`'s ledger lacks for its stories. If this rerun still
+   `CR-20260913-0008`'s rerun, applied first, seeds at `todo` the `E2E` rows
+   `spec-0013`'s ledger lacks, one per observable boundary of each story that
+   has none. If this rerun still
    finds any, its Phase 2b seeds them; they are owed whatever this record
    decides, and they are listed so the approval covers them.
+
+   **This rerun's Phase 2b also splits `TDD-0022`.** Its one `Selector` runs
+   three independently observable boundaries of `US-0013-0011`: the
+   template's slot (`AC-0013-0018`), the lane rejecting an empty
+   `primary_tasks`, and the lane passing a populated one (both
+   `AC-0013-0019`). Phase 2b splits a progressed row only under a Change
+   Request naming the row and the order of its split, and this record is that
+   request. In that order: `TDD-0022` keeps the template's slot, the boundary
+   its recorded RED observed failing, with its `Selector` narrowed to that
+   case, and two new `todo` rows carrying `US-0013-0011` take the rejection and
+   then the pass, with this CR's ID in `DR-ID`. Each of the three names its
+   boundary in `Boundary`.
 
 2. Downstream ledger sweep. Reset to `todo`, recording this CR's ID in `DR-ID`:
    `spec-0013/TDD-0019`. Its obligation changes, and its recorded observation is

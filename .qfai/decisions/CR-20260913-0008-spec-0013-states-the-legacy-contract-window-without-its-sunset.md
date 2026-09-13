@@ -115,9 +115,17 @@ requirement and business rule already carry?
    `## Change Requests` table — `CR ID`, `Upstream artifact`, `Mode`,
    `Approved by`, `Applied at` — not as a `## Triage` row.
 
-   The rerun's Phase 2b also seeds, at `todo`, the thirteen `E2E` rows
-   `spec-0013`'s ledger lacks for its stories. Those rows are owed whatever
-   this record decides, and they are listed so the approval covers them.
+   The rerun's Phase 2b also seeds, at `todo`, the `E2E` rows `spec-0013`'s
+   ledger lacks. Thirteen of its fourteen stories have none, and that is a
+   floor on the rows rather than their count: Phase 2b seeds one row per
+   independently observable boundary a story's criteria name, so a story whose
+   criteria name two may take two. The approval covers the rows that
+   derivation seeds, and they are owed whatever this record decides.
+
+   The fourteenth story's row, `TDD-0022`, is `done` and runs three boundaries
+   behind one `Selector`. This rerun leaves it as it is: Phase 2b splits a
+   progressed row only under a Change Request naming the row and the order of
+   its split, and `CR-20260913-0007`, applied next, is that request.
 
 2. Downstream ledger sweep. Reset to `todo`, recording this CR's ID in `DR-ID`:
    `spec-0013/TDD-0021`. Its obligation gains a condition, and its recorded

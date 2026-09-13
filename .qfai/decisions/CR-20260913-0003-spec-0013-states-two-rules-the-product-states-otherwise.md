@@ -213,8 +213,9 @@ ask for.
    `Upstream artifact`, `Mode`, `Approved by`, `Applied at` — not as a
    `## Triage` row.
 
-   `CR-20260913-0008`'s rerun, applied first, seeds at `todo` the thirteen
-   `E2E` rows `spec-0013`'s ledger lacks for its stories. If this rerun still
+   `CR-20260913-0008`'s rerun, applied first, seeds at `todo` the `E2E` rows
+   `spec-0013`'s ledger lacks, one per observable boundary of each story that
+   has none. If this rerun still
    finds any, its Phase 2b seeds them; they are owed whatever this record
    decides, and they are listed so the approval covers them.
 
