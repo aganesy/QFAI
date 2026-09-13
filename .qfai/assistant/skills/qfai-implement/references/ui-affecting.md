@@ -246,7 +246,7 @@ this record the failure mode is silent by construction: a skipped item 9 leaves 
 a row that had a UI surface and declined to say so is indistinguishable afterwards from a row that
 legitimately had none.
 
-### What `qfai validate` re-evaluates
+### What the `tdd` validate profile re-evaluates
 
 On a completed row that records `n/a (not UI-affecting)`, the `tdd` profile evaluates clause 1
 where `Owning module` is declared, then clause 2, then clause 3, and refuses the row naming the
