@@ -97,9 +97,14 @@ function citationOpener(line: string, from: number): string | null {
       : "";
   const before = emphasis === "" ? start : opener;
   // A backslash before the root is Windows path text: `C:\run\.qfai/report/…` names
-  // a machine's file, as a POSIX absolute path does.
+  // a machine's file, as a POSIX absolute path does. So is a letter outside
+  // ASCII: `/tmp/é.qfai/report/…` is one longer name.
   const previous = line[before - 1] ?? "";
-  if (before !== 0 && (CITATION_CHARACTER.test(previous) || previous === "\\")) return null;
+  const pathText =
+    CITATION_CHARACTER.test(previous) ||
+    previous === "\\" ||
+    ((previous.codePointAt(0) ?? 0) > 0x7f && NAME_CHARACTER.test(previous));
+  if (before !== 0 && pathText) return null;
   return emphasis;
 }
 
@@ -195,9 +200,10 @@ function citationsIn(line: string, spans: readonly CodeSpan[] = codeSpanRanges(l
       } else if (
         span !== undefined &&
         index < span[1] &&
-        (character === "," || character === ";")
+        (character === "," || character === ";" || character === "!")
       ) {
-        // Punctuation a code span delimits, part of the name it holds.
+        // Punctuation a code span delimits, part of the name it holds. A `!` that
+        // opens a group was read as an extglob above.
       } else if (NAME_CHARACTER.test(character)) {
         // A character a file name holds and the dialect gives no meaning, such as
         // the `@` of `@missing.md` or a letter outside ASCII. Stopping before it
@@ -1730,6 +1736,15 @@ describe("a glob is a claim about a set", () => {
     expect(citationsOf("x.json", decodedJson(record)).map(([, cited]) => cited)).toEqual([
       ".qfai/report/missing.json",
     ]);
+  });
+
+  it("reads a letter outside ASCII before the root as part of a longer name", () => {
+    expect(citationsIn("wrote /tmp/\u00e9.qfai/report/missing.json")).toEqual([]);
+  });
+
+  it("keeps a literal exclamation mark a code span delimits", () => {
+    const cited = ".qfai/report/preflight_summary.md!missing";
+    expect(citationsIn(`see \`${cited}\` here`)).toEqual([cited]);
   });
 
   it("settles each globstar position once", () => {
