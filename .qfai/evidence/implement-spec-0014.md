@@ -101,13 +101,12 @@ committed on 2026-03-17; the line that drops the legacy block was written on
 with the row rather than before the spec, so the form that would carry it is the
 sibling-row one, and that is the form the pack has no row for.
 
-A second obstacle stands behind that one. The case the `Selector` names asserts
-five outcomes — three deletions and two re-seeds — and a single case fails once,
-so a mutation reddens whichever assertion runs first and leaves the rest
-unobserved. `references/selector-granularity.md` puts one independently
-observable boundary on a row and sends a matrix-shaped obligation to
-`/qfai-sdd` Phase 2b to be split, never to be split at evidence time. So the row
-needs decomposition before any single mutation can prove it.
+The case the `Selector` names asserts five outcomes — three deletions and two
+re-seeds — but `TC-0014-0034` names only the `fullHarness` deletion. A mutation
+of that deletion alone fails at its own assertion, so the case discriminates
+this row's obligation, and the other four outcomes belong to other obligations
+rather than to a split of this row. What stands in the way is the evidence form
+alone, and `CR-20260913-0006` puts that choice to the user.
 
 `TDD-0033` is not backfilled either. Its obligation, `TC-0014-0033`, reads
 "active layout uses `.qfai/evidence/prototyping/iter-NN/` only", and its parent

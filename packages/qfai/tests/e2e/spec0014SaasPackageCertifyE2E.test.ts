@@ -1,58 +1,120 @@
 /**
- * E2E acceptance for spec-0014 CHG-006 user story US-0014-0020
- * (`qfai prototyping certify --scope saas-package`: seal a
- * completion-certificate.json carrying scope: "saas-package" and a
- * notes: field naming every skipped gate; never overstate as full
- * DONE; `--upgrade-scope full` path once missing gates land).
+ * The saas-package certificate journey, run through the built `qfai` binary:
+ * seal a scope-limited certificate, refuse its promotion while the gates it
+ * skipped are missing, and promote it once they pass.
  *
- * Authored test-first (red): every `it` is `.skip`d pending
- * `/qfai-implement`. Bodies shell out to the CLI via a local
- * `execFile` helper; the saas-package scope discriminator is
- * unimplemented so the bodies never execute. Imports nothing from the
- * not-yet-built source surface.
+ * Needs `pnpm -C packages/qfai build` first. Without a build the binary is
+ * absent and the first case fails on it rather than passing without running.
  */
 // QFAI:SPEC-0014:US-0014-0020
 
 import { execFile } from "node:child_process";
+import { access, mkdtemp, readFile, rm } from "node:fs/promises";
+import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { promisify } from "node:util";
 
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
+
+import { SAAS_PACKAGE_SKIPPED_GATES } from "../../src/core/saasPackage/skippedGates.js";
+import {
+  CERTIFICATE_REL,
+  seedSaasPackageCertifyProject,
+  seedSaasPackageGatesPassing,
+} from "../helpers/saasPackageCertifyFixture.js";
 
 const execFileAsync = promisify(execFile);
 
-const TEST_DIR = path.dirname(fileURLToPath(import.meta.url));
-const CLI_PATH = path.resolve(TEST_DIR, "..", "..", "dist", "cli", "index.mjs");
+const CLI_PATH = path.resolve(
+  path.dirname(fileURLToPath(import.meta.url)),
+  "..",
+  "..",
+  "dist",
+  "cli",
+  "index.mjs",
+);
 
-async function runCli(
+const roots: string[] = [];
+
+afterEach(async () => {
+  while (roots.length > 0) {
+    const root = roots.pop();
+    if (root) await rm(root, { recursive: true, force: true });
+  }
+});
+
+/** One run of the built binary in `root`: its exit code and stderr. */
+async function qfai(
+  root: string,
   args: readonly string[],
-  cwd: string,
-): Promise<{ stdout: string; stderr: string; code: number }> {
+): Promise<{ code: number; stderr: string }> {
   try {
-    const { stdout, stderr } = await execFileAsync(process.execPath, [CLI_PATH, ...args], { cwd });
-    return { stdout, stderr, code: 0 };
-  } catch (err) {
-    const e = err as { stdout?: string; stderr?: string; code?: number };
-    return { stdout: e.stdout ?? "", stderr: e.stderr ?? "", code: e.code ?? 1 };
+    const { stderr } = await execFileAsync(process.execPath, [CLI_PATH, ...args], { cwd: root });
+    return { code: 0, stderr };
+  } catch (err: unknown) {
+    if (typeof err === "object" && err !== null && "code" in err && typeof err.code === "number") {
+      const stderr = "stderr" in err && typeof err.stderr === "string" ? err.stderr : "";
+      return { code: err.code, stderr };
+    }
+    throw err;
   }
 }
 
-describe.skip("spec-0014 US-0014-0020 saas-package certify scope CHG-006 (test-first, pending /qfai-implement)", () => {
-  it("QFAI:SPEC-0014:US-0014-0020 — normal: certify --scope saas-package seals a completion-certificate.json carrying scope: 'saas-package' and a non-empty notes: naming each skipped gate; the certificate does not claim full DONE", async () => {
-    const r = await runCli(["prototyping", "certify", "--scope", "saas-package"], process.cwd());
-    expect(r.code).toBe(0);
-    expect(r.stdout).toMatch(/saas-package/);
-    expect(r.stdout).toMatch(/notes/);
-    expect(r.stdout).not.toMatch(/full DONE/i);
+async function certificate(root: string): Promise<Record<string, unknown>> {
+  const parsed: unknown = JSON.parse(await readFile(path.join(root, CERTIFICATE_REL), "utf-8"));
+  if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) {
+    throw new Error(`${CERTIFICATE_REL} is not a JSON object`);
+  }
+  return Object.fromEntries(Object.entries(parsed));
+}
+
+describe("US-0014-0020: a saas-package certificate through the built binary", () => {
+  it("seals a scope-limited certificate that names every gate it skipped", async () => {
+    await access(CLI_PATH);
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-certify-e2e-"));
+    roots.push(root);
+    await seedSaasPackageCertifyProject(root);
+
+    const sealed = await qfai(root, ["prototyping", "certify", "--scope", "saas-package"]);
+
+    expect(sealed.code).toBe(0);
+    const cert = await certificate(root);
+    expect(cert.scope).toBe("saas-package");
+    const notes = Array.isArray(cert.notes) ? cert.notes : [];
+    for (const gate of SAAS_PACKAGE_SKIPPED_GATES) {
+      expect(notes.some((note) => typeof note === "string" && note.includes(gate))).toBe(true);
+    }
   });
 
-  it("QFAI:SPEC-0014:US-0014-0020 — error/boundary: --upgrade-scope full is rejected while a gate named in notes is still missing, then succeeds after the gates PASS (saas-package -> full state transition)", async () => {
-    const rejected = await runCli(
-      ["prototyping", "certify", "--scope", "saas-package", "--upgrade-scope", "full"],
-      process.cwd(),
-    );
-    expect(rejected.code).not.toBe(0);
-    expect(rejected.stderr).toMatch(/gate|missing/i);
+  it("refuses the promotion to full while gates are missing, then promotes once they pass", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-certify-e2e-"));
+    roots.push(root);
+    await seedSaasPackageCertifyProject(root);
+    const upgrade = [
+      "prototyping",
+      "certify",
+      "--scope",
+      "saas-package",
+      "--upgrade-scope",
+      "full",
+    ];
+
+    expect((await qfai(root, ["prototyping", "certify", "--scope", "saas-package"])).code).toBe(0);
+    const refused = await qfai(root, upgrade);
+
+    expect(refused.code).not.toBe(0);
+    for (const gate of SAAS_PACKAGE_SKIPPED_GATES) {
+      expect(refused.stderr).toContain(gate);
+    }
+    expect((await certificate(root)).scope).toBe("saas-package");
+
+    await seedSaasPackageGatesPassing(root);
+    const promoted = await qfai(root, upgrade);
+
+    expect(promoted.code).toBe(0);
+    const cert = await certificate(root);
+    expect(cert.scope).toBeUndefined();
+    expect(cert.notes).toBeUndefined();
   });
 });
