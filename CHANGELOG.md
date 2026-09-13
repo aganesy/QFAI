@@ -158,14 +158,16 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   revision. No completed row in this repository changes result.
 
 - **A ledger row observes the property it owns** (#1700). One prototyping-loop
-  test asserted five properties of the cycle-0 hard reset in a single case,
-  and a ledger row named it as the selector for one of them. A test function
-  fails once, so the four assertions behind the first were unobserved on every
-  run: a regression in any of them stopped the case before the row’s own
-  predicate was reached, and a mutation aimed at that predicate was killed by
-  an assertion the row does not own.
+  test asserted five properties of the cycle-0 hard reset in a single case, and
+  a ledger row owning one of them, the `fullHarness` deletion, named no case at
+  all: its selector, `cycle 0 deletes fullHarness`, matched no title. A case
+  stops at its first failing assertion, and the row's property came second, so
+  a regression in the `reviewerGate` deletion before it failed the case without
+  reaching the row's property, and a failing case did not say which of the five
+  had regressed.
 
-  The case is five, one per property, over the same seeded state.
+  The case is five, one per property, over the same seeded state, and the row's
+  selector now names the case that asserts its property alone.
 
 ## [1.12.0] - 2026-09-12
 

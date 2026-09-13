@@ -16,10 +16,8 @@
 
 `TC-0014-0034` is `Level: unit` and expects that "iterate deletes the fullHarness
 block as part of the hard reset". Its row, `spec-0014/TDD-0034`, is `done` with a
-prose `Evidence` cell and a `Selector`, `cycle 0 deletes fullHarness`, that
-matches no case title. The case that carries the obligation is
-`re-seeds acceptedIterationIndex / stopReason and deletes reviewerGate /
-fullHarness / executionPlan on cycle 0` in
+prose `Evidence` cell and a `Selector`, `cycle 0 deletes fullHarness`, which is
+the title of the case that carries the obligation in
 `packages/qfai/tests/cli/commands/prototypingIterate.test.ts`.
 
 The implementation shipped long before the record, so evidence for the row
@@ -40,11 +38,10 @@ reaching `exception` from `done` takes a reset it has not been given.
 
 The obligation itself is not in dispute: the case deletes `fullHarness`, and a
 mutation that stops deleting it leaves the case failing on
-`expect("fullHarness" in body).toBe(false)`. The case also asserts four
-outcomes the test case does not name — two further deletions and two re-seeds
-— but those are other obligations, and a mutation of the `fullHarness` deletion
-alone fails at its own assertion, so this row needs no split. What is open is
-where the row's evidence can come from.
+`expect("fullHarness" in body).toBe(false)`, the only assertion the case makes.
+The reset's other four outcomes — two further deletions and two re-seeds — are
+cases of their own beside it. What is open is where the row's evidence can come
+from.
 
 ## Proposed change
 
@@ -136,7 +133,7 @@ with the chain above it and its row (option 3)?
      `current iterate cycle-0 reset suite pass` — and its id reserved in that
      ledger's `## TDD-ID reservations` before the row is deleted. Its test
      disposition: delete
-     `packages/qfai/tests/cli/commands/prototypingIterate.test.ts` "re-seeds acceptedIterationIndex / stopReason and deletes reviewerGate / fullHarness / executionPlan on cycle 0".
+     `packages/qfai/tests/cli/commands/prototypingIterate.test.ts` "cycle 0 deletes fullHarness".
 
 ## Resolution
 

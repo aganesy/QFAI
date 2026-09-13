@@ -1033,8 +1033,9 @@ describe("runPrototypingIterate cycle 0 hard reset", () => {
   });
 
   /**
-   * The hard reset's subject: a `prototyping.json` carrying every per-loop
-   * block a prior run could have left behind.
+   * The hard reset's subject: a `prototyping.json` holding a stale value for
+   * each of the five properties the cases below assert, and a value the reset
+   * does not write for each of the two it re-seeds.
    *
    * Seeded once per case rather than shared across them, because each case
    * below owns one property of the reset and a shared root would make the
@@ -1046,7 +1047,8 @@ describe("runPrototypingIterate cycle 0 hard reset", () => {
     await seedRawPrototypingJson(root, {
       iterations: [{ index: 0 }],
       reviewerGate: { result: "PASS", signoff: { reviewerId: "stale" } },
-      acceptedIterationIndex: 0,
+      // Not the 0 the reset writes, so a reset that kept the prior value fails.
+      acceptedIterationIndex: 3,
       stopReason: "converged",
       fullHarness: {
         runId: "legacy-prior-run",
