@@ -100,19 +100,22 @@ describe("testFileGlobs configuration diagnosis (QFAI-TRACE-124)", () => {
   // An invalid pattern is valid YAML, so it reaches the scanner and throws.
   // Treating that as "no finding" let `--fail-on error` pass over a gate that
   // could not run at all; `doctor.ts` already reports the same class as error.
-  it("reports a glob scan that throws instead of passing silently", async () => {
-    await withTempRoot(async (root) => {
-      await seedV1421Spec(root);
+  it.each([["\0"], ["tests/\0/*.test.ts"]])(
+    "reports a glob scan that throws instead of passing silently (%j)",
+    async (glob) => {
+      await withTempRoot(async (root) => {
+        await seedV1421Spec(root);
 
-      const issues = await validateTraceability(root, configWith({ globs: ["\0"] }), {
-        includeCodeReferences: true,
+        const issues = await validateTraceability(root, configWith({ globs: [glob] }), {
+          includeCodeReferences: true,
+        });
+
+        const finding = issues.find((entry) => entry.code === "QFAI-TRACE-124");
+        expect(finding?.severity).toBe("error");
+        expect(finding?.rule).toBe("traceability.layered.testFileGlobsScanFailed");
       });
-
-      const finding = issues.find((entry) => entry.code === "QFAI-TRACE-124");
-      expect(finding?.severity).toBe("error");
-      expect(finding?.rule).toBe("traceability.layered.testFileGlobsScanFailed");
-    });
-  });
+    },
+  );
 
   // `normalizeGlobs` drops blank entries, so a whitespace-only list scans with
   // nothing — the gate is unset, not misconfigured. Deciding emptiness on the

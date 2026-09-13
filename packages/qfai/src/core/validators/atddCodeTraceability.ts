@@ -3,9 +3,9 @@ import path from "node:path";
 
 import type { QfaiConfig } from "../config.js";
 import { resolvePath } from "../config.js";
+import { collectFilesByGlobs } from "../fs.js";
 import {
   atddTestKindDirs,
-  deriveTestFileExtensions,
   evaluateAtddCodeTraceability,
   PLANNED_CONTRACT_KEY,
   TC_VERIFIED_BY_KEY,
@@ -388,51 +388,43 @@ type AtddTraceabilitySummary = {
 };
 
 /**
- * A configured test glob this stage could not read an extension out of.
+ * The configured test globs, when the glob matcher refuses them.
  *
- * The stage scans its own three directories, and the extensions it looks for
- * come from `validation.traceability.testFileGlobs` — with a documented
- * fallback to the JS and TypeScript set when that yields nothing. The fallback
- * is right for a project that configured no globs. For a project that
- * configured some and got nothing out of them, it scans extensions the project
- * does not use, finds no annotation, and reports every obligation as uncovered
- * — a configuration defect wearing the face of missing tests.
+ * `["tests/\0/*.ts"]` is valid YAML, and the scan refuses it. This stage
+ * reads only the extensions out of its globs, so the refusal never reached it
+ * and `--profile atdd` said nothing. `QFAI-TRACE-124` reports the same refusal
+ * under the `tdd` and `full` profiles; this is the stage's own code because
+ * the gate the operator was told to run is the one that has to say it.
  *
- * `QFAI-TRACE-124` reports the same configuration under the `tdd` and
- * `full` profiles. This is the stage's own code because the consequence is
- * the stage's: the gate the operator was told to run is the one that has to
- * say why it found nothing.
+ * A glob the matcher accepts is not reported, whatever it selects: `tests/**`
+ * names no extension, and the stage scans the JavaScript and TypeScript set
+ * for it, which is the documented fallback.
  */
-function collectUnreadableTestGlobs(root: string, config: QfaiConfig): Issue[] {
+async function collectUnreadableTestGlobs(root: string, config: QfaiConfig): Promise<Issue[]> {
   const globs = config.validation.traceability.testFileGlobs.filter(
     (glob) => glob.trim().length > 0,
   );
-  // Each glob answers for itself. Asked of the list, one readable entry beside
-  // an unreadable one narrowed the scan to the readable entry's extensions, and
-  // the files the other was written to select were never scanned.
-  // A leading `!` excludes rather than selects, so it names no extension and
-  // needs none: `!tests/e2e/legacy/**` beside `tests/**/*.ts` is a readable list.
-  const unreadable = globs.filter(
-    (glob) => !glob.trimStart().startsWith("!") && deriveTestFileExtensions([glob]).size === 0,
-  );
-  if (unreadable.length === 0) return [];
-  const read = [...deriveTestFileExtensions(globs)];
-  const message =
-    read.length === 0
-      ? `No extension could be read out of the configured test globs (${unreadable.join(", ")}), so this stage scanned for the default JavaScript and TypeScript set instead. A project whose acceptance tests are written in another language has none of them scanned, and every obligation is reported as uncovered.`
-      : `No extension could be read out of ${unreadable.length === 1 ? "this configured test glob" : "these configured test globs"} (${unreadable.join(", ")}), so this stage scanned only for the extensions the others name (${read.join(", ")}). The acceptance tests ${unreadable.length === 1 ? "it was" : "they were"} written to select are not scanned, and their obligations are reported as uncovered.`;
-  return [
-    issue(
-      "QFAI-ATDD-134",
-      message,
-      "error",
-      path.join(root, "qfai.config.yaml"),
-      "atddCodeTraceability.testFileGlobs",
-      unreadable,
-      "canonical",
-      "Give `validation.traceability.testFileGlobs` patterns that end in the extensions your tests use — `tests/**/*.py`, or `tests/**/*.{ts,tsx}` — and run `/qfai-configure` to set them against the real layout.",
-    ),
-  ];
+  if (globs.length === 0) return [];
+  try {
+    // Stops at the first match. A pattern the matcher refuses is refused before
+    // the walk starts.
+    await collectFilesByGlobs(root, { globs, limit: 1 });
+    return [];
+  } catch (error) {
+    const reason = error instanceof Error ? error.message : String(error);
+    return [
+      issue(
+        "QFAI-ATDD-134",
+        `The configured test globs could not be read: ${reason}`,
+        "error",
+        path.join(root, "qfai.config.yaml"),
+        "atddCodeTraceability.testFileGlobs",
+        globs.map((glob) => JSON.stringify(glob)),
+        "canonical",
+        "Fix `validation.traceability.testFileGlobs` so the glob matcher accepts every pattern, and run `/qfai-configure` to set them against the real layout.",
+      ),
+    ];
+  }
 }
 
 export async function validateAtddCodeTraceability(
@@ -455,7 +447,7 @@ export async function validateAtddCodeTraceability(
   const dirs = atddTestKindDirs(config.paths.testsDir);
   const issues: Issue[] = [];
 
-  issues.push(...collectUnreadableTestGlobs(root, config));
+  issues.push(...(await collectUnreadableTestGlobs(root, config)));
 
   issues.push(
     ...buildUnknownIssues(

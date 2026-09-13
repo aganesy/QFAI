@@ -6,18 +6,23 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
-- **The ATDD stage says when it could not read the globs it was given**
-  (#1703). `QFAI-ATDD-134`. The stage scans its own three directories, and the
-  extensions it looks for come from `validation.traceability.testFileGlobs`,
-  with a fallback to the JavaScript and TypeScript set when that yields none.
+- **A test glob the glob matcher refuses no longer ends the run, and
+  `--profile atdd` reports it** (#1703). `QFAI-ATDD-134`. A pattern holding a
+  NUL byte is valid YAML. Given one ahead of a wildcard, such as
+  `tests/\0/*.ts`, the matcher raised the error inside its directory walk,
+  where nothing could catch it, and `qfai validate` exited under every profile.
+  The scan now refuses the pattern before the walk starts, and `QFAI-TRACE-124`
+  reports it under the `tdd` and `full` profiles.
 
-  The fallback is right for a project that configured nothing. For a project
-  that configured globs and got no extension out of them, the stage scanned
-  extensions the project does not use, found no annotation, and reported every
-  obligation as uncovered — a configuration defect wearing the face of missing
-  tests. `QFAI-TRACE-124` says the same thing under the `tdd` and `full`
-  profiles, and is not in this profile’s gate list, so the gate the skill tells
-  the operator to run said nothing at all.
+  The ATDD stage reads only the extensions out of these globs, so under
+  `--profile atdd` nothing said a glob was unusable. `QFAI-ATDD-134` says it
+  there. A glob the matcher accepts is not reported, whatever it selects:
+  `tests/**` names no extension, and the stage scans the JavaScript and
+  TypeScript set for it, as documented.
+
+  A glob starting with `!` excludes files, and the ATDD stage no longer takes an
+  extension from it. `!tests/e2e/legacy/**/*.ts` beside a Python glob added
+  TypeScript to what the stage scans.
 
 ## [1.12.0] - 2026-09-12
 

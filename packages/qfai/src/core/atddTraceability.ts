@@ -2281,6 +2281,10 @@ function isAnnotationOnlyCarrier(
 export function deriveTestFileExtensions(testFileGlobs: readonly string[]): Set<string> {
   const extensions = new Set<string>();
   for (const glob of testFileGlobs) {
+    // A leading `!` excludes. Its extension names files the scan must not read,
+    // and counted, `!tests/legacy/**/*.ts` beside a Python glob added TypeScript
+    // to what the stage scans.
+    if (glob.trimStart().startsWith("!")) continue;
     for (const match of glob.matchAll(/\.\{([^}]+)\}$/g)) {
       for (const ext of (match[1] ?? "").split(",")) {
         const trimmed = ext.trim();

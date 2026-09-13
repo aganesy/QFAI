@@ -40,6 +40,14 @@ describe("deriveAtddFilePattern", () => {
     ).toBe("**/*.{feature,go,markdown,md}");
   });
 
+  it("takes no extension from an exclusion", () => {
+    // Counted, the excluded TypeScript joined what a Python project scans, and a
+    // legacy file the project excluded could satisfy an obligation.
+    expect(deriveAtddFilePattern(["tests/**/*.py", "!tests/e2e/legacy/**/*.ts"])).toBe(
+      "**/*.{feature,markdown,md,py}",
+    );
+  });
+
   it("falls back when no glob carries a recoverable extension", () => {
     expect(deriveAtddFilePattern(["tests/**"])).toBe(
       "**/*.{ts,tsx,js,jsx,mjs,cjs,mts,cts,feature,md,markdown}",

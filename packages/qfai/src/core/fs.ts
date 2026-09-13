@@ -25,6 +25,8 @@ export type CollectFilesByGlobsResult = {
 
 export const DEFAULT_GLOB_FILE_LIMIT = 20000;
 
+const NUL = String.fromCharCode(0);
+
 export async function collectFiles(
   root: string,
   options: CollectFilesOptions = {},
@@ -48,6 +50,17 @@ export async function collectFilesByGlobs(
   const limit = normalizeLimit(options.limit);
   if (options.globs.length === 0) {
     return { files: [], truncated: false, matchedFileCount: 0, limit };
+  }
+  // Given a NUL byte ahead of a wildcard, fast-glob passes the path to
+  // `readdir` from inside its directory walk. The error is thrown there, not
+  // through the stream, so no caller can catch it and the process exits.
+  // Refused here, it reaches the caller as a rejection like any other scan
+  // failure.
+  const unusable = options.globs.find((glob) => glob.includes(NUL));
+  if (unusable !== undefined) {
+    throw new Error(
+      `The glob ${JSON.stringify(unusable)} holds a NUL byte, which no file path can hold.`,
+    );
   }
 
   const stream = fg.stream(options.globs, {
