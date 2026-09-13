@@ -15,6 +15,7 @@ import path from "node:path";
 import { describe, expect, it } from "vitest";
 
 import { defaultConfig, type QfaiConfig } from "../../src/core/config.js";
+import { validateProject } from "../../src/core/validate.js";
 import { validateTraceability } from "../../src/core/validators/traceability.js";
 
 function configWith(overrides: { globs?: string[]; scMustHaveTest?: boolean }): QfaiConfig {
@@ -100,19 +101,50 @@ describe("testFileGlobs configuration diagnosis (QFAI-TRACE-124)", () => {
   // An invalid pattern is valid YAML, so it reaches the scanner and throws.
   // Treating that as "no finding" let `--fail-on error` pass over a gate that
   // could not run at all; `doctor.ts` already reports the same class as error.
-  it("reports a glob scan that throws instead of passing silently", async () => {
-    await withTempRoot(async (root) => {
-      await seedV1421Spec(root);
+  it.each([["\0"], ["tests/\0/*.test.ts"]])(
+    "reports a glob scan that throws instead of passing silently (%j)",
+    async (glob) => {
+      await withTempRoot(async (root) => {
+        await seedV1421Spec(root);
 
-      const issues = await validateTraceability(root, configWith({ globs: ["\0"] }), {
-        includeCodeReferences: true,
+        const issues = await validateTraceability(root, configWith({ globs: [glob] }), {
+          includeCodeReferences: true,
+        });
+
+        const finding = issues.find((entry) => entry.code === "QFAI-TRACE-124");
+        expect(finding?.severity).toBe("error");
+        expect(finding?.rule).toBe("traceability.layered.testFileGlobsScanFailed");
+        // The pattern reaches the output escaped, never as the raw byte.
+        const nul = String.fromCharCode(0);
+        expect(finding?.message).not.toContain(nul);
+        expect(finding?.refs?.join()).not.toContain(nul);
+        expect(finding?.refs).toEqual([JSON.stringify(glob)]);
       });
+    },
+  );
 
-      const finding = issues.find((entry) => entry.code === "QFAI-TRACE-124");
-      expect(finding?.severity).toBe("error");
-      expect(finding?.rule).toBe("traceability.layered.testFileGlobsScanFailed");
-    });
-  });
+  // Every validator that scans these globs has to turn the refusal into a
+  // finding. One that let it through ended the run with no report at all.
+  it.each(["tdd", "full"] as const)(
+    "finishes a %s run over a glob the matcher refuses, and reports it",
+    async (profile) => {
+      await withTempRoot(async (root) => {
+        await seedV1421Spec(root);
+        const glob = JSON.stringify(`tests/${String.fromCharCode(0)}/*.test.ts`);
+        await writeFile(
+          path.join(root, "qfai.config.yaml"),
+          `validation:\n  traceability:\n    scMustHaveTest: true\n    testFileGlobs: [${glob}]\n`,
+          "utf-8",
+        );
+
+        const result = await validateProject(root, undefined, { profile });
+
+        const codes = result.issues.map((entry) => entry.code);
+        expect(codes).toContain("QFAI-TRACE-124");
+        expect(codes).toContain("QFAI-TEST-002");
+      });
+    },
+  );
 
   // `normalizeGlobs` drops blank entries, so a whitespace-only list scans with
   // nothing — the gate is unset, not misconfigured. Deciding emptiness on the

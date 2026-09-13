@@ -147,7 +147,12 @@ describe.each(QFAI_TREES)("%s", (tree) => {
     // pack path travels with its seal, and the checkpoint seal hashes the
     // revision it ran against.
     expect(policy).toContain(
-      "the GREEN `Revision` and the `Oracle proof` bound to it, each reviewer's `Reviewed revision` and `Audited evidence hash`, the `Round N: Review pack` and its `Round N: Review pack seal`, and all three checkpoint verification fields",
+      "the GREEN `Revision` and the `Oracle proof` bound to it, the three `Refactor verify` fields, each reviewer's `Reviewed revision` and `Audited evidence hash`, the `Round N: Review pack` and its `Round N: Review pack seal`, and all four checkpoint verification fields",
+    );
+    // The reviewers' revisions are compared with item 6's, so the refactor
+    // re-run is refreshed before they are.
+    expect(policy).toContain(
+      "replace `Refactor verify command`, `Refactor verify result` and `Refactor verify revision` together",
     );
     expect(policy).toContain("**Re-take those observations on the integrated tree**");
     expect(policy).toContain("Post-merge integration verify does not cover it");
@@ -192,13 +197,13 @@ describe.each(QFAI_TREES)("%s", (tree) => {
   });
 
   it("re-runs the checkpoint verification, seal included, on the merged tree", async () => {
-    // The seal hashes command + result together with the `Revision` the
-    // checkpoint ran against, so refreshing `Revision` alone breaks it and
+    // The seal hashes command + result together with the revision the
+    // checkpoint ran on, so refreshing that revision alone breaks it and
     // refreshing neither leaves item 12 ruling on the worker's private tree.
     const policy = await read(tree, POLICY);
-    expect(policy).toContain("refreshing `Revision` alone breaks the seal");
+    expect(policy).toContain("refreshing `Checkpoint verification revision` alone breaks the seal");
     expect(policy).toContain(
-      "replace `Checkpoint verification command`, `Checkpoint verification result` and `Checkpoint verification seal`",
+      "replace `Checkpoint verification command`, `Checkpoint verification result`, `Checkpoint verification revision` and `Checkpoint verification seal`",
     );
   });
 
