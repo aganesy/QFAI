@@ -44,14 +44,17 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   for it** (#1626). One acceptance criterion and the test case restating it say
   the aggregate `screenshots/` and `html/` directories are not accepted as an
   evidence source. The required-path check reads them first — and the iterate
-  command contract calls them the SSOT for handoff, while another spec pack
-  requires the mirror that writes them.
+  command contract calls them the SSOT for handoff, the shared policy defines
+  the mandatory evidence by those paths, and another spec pack requires the
+  mirror that writes them. A loop reset also leaves the previous loop's copies
+  there, where the check accepts them.
 
   `CR-20260913-0002` records both sides, blocks the ledger row whose obligation
-  turns on the disputed clause and the contract one option rewords, and puts the
-  choice: narrow the criterion to match the contract, keep the mirror but stop
-  reading it, or withdraw the criterion together with the rule that depends on
-  it. No option stops the mirror.
+  turns on the disputed clause and the contract and policy terms the options
+  reword, and puts the choice: narrow the criterion to match the contract and
+  the policy, with a reset moving the copies into its backup; keep the mirror
+  but stop reading it; or withdraw the criterion together with the rule that
+  depends on it. No option stops the mirror.
 
 ## [1.12.0] - 2026-09-12
 
