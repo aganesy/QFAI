@@ -58,6 +58,36 @@ if ! command -v sha256sum > /dev/null 2>&1; then
   echo "::error::check-toolchain-action: sha256sum is not on this runner, so the pinned local-action bytes cannot be verified."
   exit 1
 fi
+# BEFORE the digests: a file carrying a merge conflict is a different failure with a different
+# repair, and the message below names resealing, which would pin the conflict block as the
+# reviewed bytes. The scan the repository already has for this runs in `ci:lint`, a later step in
+# this job — and a job stops at its first failure, so without this the cause is reported one CI
+# round later, after the operator has done the wrong thing once.
+#
+# `grep` only, like the rest of this script. Seven of a marker character followed by a space or
+# the end of the line: git writes `<<<<<<< ours`, `=======`, `>>>>>>> theirs` and `||||||| base`,
+# and requiring that boundary keeps a row of eight equals signs used as a rule from matching.
+#
+# The workflow-pinned lists are appended to what the list names. `pin-guard-bytes.mjs` rewrites
+# them from the tree rather than editing them, so a conflict inside one is discarded by a reseal
+# with nothing left for any later check to read.
+conflicted=""
+while IFS= read -r pinned_path; do
+  [ -n "${pinned_path}" ] || continue
+  if (cd "${root}" && grep -qE "^(<{7}|={7}|>{7}|\|{7})( |$)" "${pinned_path}" 2> /dev/null); then
+    conflicted="${conflicted} ${pinned_path}"
+  fi
+done <<EOF
+$(grep -E "^[0-9a-f]{64}  " "${digests_file}" | sed "s/^[0-9a-f]\{64\}  //")
+.github/pinned-bytes.txt
+.github/lifecycle-manifests.txt
+.github/command-files.txt
+EOF
+if [ -n "${conflicted}" ]; then
+  echo "::error::A pinned file carries merge conflict markers:${conflicted}. Resolve the merge; do not reseal."
+  exit 1
+fi
+
 if ! (cd "${root}" && sha256sum -c --quiet "${digests_file}"); then
   echo "::error::A pinned file does not match its digest in .github/pinned-bytes.txt. These are the local composite actions and the guard programs — they run before every verification in this job, and one of them decides whether this lane reports anything at all. An edit is refused here rather than executed; if it is intended, reseal with \`node scripts/pin-guard-bytes.mjs\` and land the new digests in the same commit."
   exit 1

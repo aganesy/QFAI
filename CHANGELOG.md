@@ -97,6 +97,25 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   characters. Freshness is compared exactly, so accepting both cases would let
   one tree be recorded as two revisions and read a correct row as stale.
 
+- **An unresolved merge in a pinned file is named as one** (#1722). A conflict
+  block changes a pinned file's bytes like any other edit, so the byte guard
+  that opens the lint job failed it as a digest mismatch and named resealing as
+  the repair. The scan that would have named the real cause runs later in the
+  same job, and a job stops at its first failure, so the cause arrived a CI
+  round late, after the operator had followed the wrong advice once.
+
+  The guard now scans the pinned paths for marker lines before comparing
+  digests, and says that resealing is not the repair. The re-pin program
+  refuses the same tree rather than sealing a conflict block as the reviewed
+  bytes.
+
+  One path had no later reader at all: the pinned-bytes list is rewritten from
+  the tree rather than edited, so a conflict inside it was discarded by the
+  reseal and the only trace was a routine-looking re-pin commit. Both checks
+  read that file too, although the list does not name itself, and the two other
+  lists the workflow step pins. That step now scans its pinned inputs before it
+  checks their digests, so a conflict in one of them is named there as well.
+
 ## [1.12.0] - 2026-09-12
 
 ### Added
