@@ -152,8 +152,8 @@ describe("E2E: multi-tool wrapper generation (US-0003-0005)", () => {
   });
 });
 
-// QFAI:SPEC-0003:US-0003-0006
-describe("E2E: legacy file evacuation (US-0003-0006)", () => {
+// QFAI:SPEC-0003:US-0003-0007
+describe("E2E: legacy file evacuation (US-0003-0007)", () => {
   it("--force removes legacy 10_workflow.md from skills", async () => {
     const tmpDir = await createTempDir();
     try {
@@ -176,8 +176,8 @@ describe("E2E: legacy file evacuation (US-0003-0006)", () => {
   });
 });
 
-// QFAI:SPEC-0003:US-0003-0007
-describe("E2E: commands/prompts deprecation + skill symlink integration (US-0003-0007)", () => {
+// QFAI:SPEC-0003:US-0003-0008
+describe("E2E: commands/prompts deprecation + skill symlink integration (US-0003-0008)", () => {
   it("--force removes the commands/prompts wrappers qfai shipped, and only those", async () => {
     const tmpDir = await createTempDir();
     try {
@@ -247,8 +247,8 @@ describe("E2E: commands/prompts deprecation + skill symlink integration (US-0003
   });
 });
 
-// QFAI:SPEC-0003:US-0003-0008
-describe("E2E: agent wrapper symlink (US-0003-0008)", () => {
+// QFAI:SPEC-0003:US-0003-0006
+describe("E2E: agent wrapper symlink (US-0003-0006)", () => {
   it("creates agent symlinks in .claude/agents/ and .github/agents/", async () => {
     const tmpDir = await createTempDir();
     try {

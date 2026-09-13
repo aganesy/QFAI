@@ -14,8 +14,6 @@ const implementSkillPath = path.join(
   "SKILL.md",
 );
 
-// QFAI:SPEC-0011:TC-0011-0001
-// QFAI:SPEC-0011:TC-0011-0002
 describe("sub-agent roster completeness and handoff contracts", () => {
   let content: string | undefined;
 
@@ -24,7 +22,6 @@ describe("sub-agent roster completeness and handoff contracts", () => {
     expect(content.length).toBeGreaterThan(0);
   });
 
-  // TC-0011-0001: All routed specialists are declared with clear ownership
   it("defines the routed implementation specialists", async () => {
     content ??= await readFile(implementSkillPath, "utf-8");
 
@@ -67,7 +64,6 @@ describe("sub-agent roster completeness and handoff contracts", () => {
     );
   });
 
-  // TC-0011-0002: All handoff contracts present
   it("defines routed handoff transitions across planning, evidence, and review", async () => {
     content ??= await readFile(implementSkillPath, "utf-8");
 
@@ -122,7 +118,7 @@ describe("qa-gatekeeper is sole observation authority", () => {
   });
 });
 
-// QFAI:SPEC-0011:TC-0011-0004
+// QFAI:SPEC-0011:TC-0011-0001
 describe("watch-it-fail enforcement and resubmission", () => {
   let content: string | undefined;
 
