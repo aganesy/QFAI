@@ -2907,6 +2907,21 @@ result, so the assertion cannot be tightened without drift.
       });
     });
 
+    it("refuses a refactor revision written after the review fields", async () => {
+      // Past that boundary the field is outside what the reviewers hashed, and
+      // it decides which tree their revisions have to name.
+      await withProject(async (root) => {
+        const evidence = refactoredEntry({ reviewed: FINAL_TREE, checkpoint: FINAL_TREE }).replace(
+          "- Checkpoint verification command: npm test",
+          `- Refactor verify revision: ${FINAL_TREE}\n- Checkpoint verification command: npm test`,
+        );
+        const found = await unresolvedFor(root, evidence, FINAL_TREE);
+        expect(found?.message).toContain(
+          "all phase-authored fields before review and checkpoint fields",
+        );
+      });
+    });
+
     it("refuses a refactor revision that names no revision", async () => {
       await withProject(async (root) => {
         const evidence = refactoredEntry({ reviewed: DEFAULT_REVISION, refactor: "latest" });

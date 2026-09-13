@@ -1384,7 +1384,7 @@ const GATE_COMPLETED_EVIDENCE_FIELD =
   /^\s*(?:\|\s*)?(?:[-*][ \t]+)?(?:\*\*)?(?:Spec review(?:ed revision| pack(?: seal)?)?|Spec audited evidence hash|Code quality review(?:ed revision| pack(?: seal)?)?|Code quality audited evidence hash|Prototype parity(?: reviewed revision| review pack(?: seal)?| audited evidence hash)?|Checkpoint verification (?:command|result|revision|seal))(?:\*\*)?\s*(?::|\|)/i;
 
 const PHASE_AUTHORED_EVIDENCE_FIELD =
-  /^\s*(?:\|\s*)?(?:[-*][ \t]+)?(?:\*\*)?(?:Round[ \t]+\d+:[ \t]*)?(?:TDD-ID|Layer|Test file|Selector|TC-ref|US-ref|CON-API-ref|Revision|RED revision|Replacement proof revision|RED test hash|RED test manifest|RED command|RED result|GREEN command|GREEN result|Satisfied-by|Falsifiability command|Falsifiability result|Falsifiability revision|reviewer verdict|RED failure mode|Refactor verify command|Refactor verify result|Oracle proof|qa-gatekeeper|Shared-artifact re-verify|Surface artifacts)(?:\*\*)?\s*(?::|\|)/i;
+  /^\s*(?:\|\s*)?(?:[-*][ \t]+)?(?:\*\*)?(?:Round[ \t]+\d+:[ \t]*)?(?:TDD-ID|Layer|Test file|Selector|TC-ref|US-ref|CON-API-ref|Revision|RED revision|Replacement proof revision|RED test hash|RED test manifest|RED command|RED result|GREEN command|GREEN result|Satisfied-by|Falsifiability command|Falsifiability result|Falsifiability revision|reviewer verdict|RED failure mode|Refactor verify command|Refactor verify result|Refactor verify revision|Oracle proof|qa-gatekeeper|Shared-artifact re-verify|Surface artifacts)(?:\*\*)?\s*(?::|\|)/i;
 
 function hasPhaseAuthoredFieldAfterGate(section: string): boolean {
   const visibleLines = maskEvidenceRegions(section.replace(/\r\n/g, "\n")).split("\n");
@@ -4246,8 +4246,14 @@ export async function validateTddList(
  * The last round is the right one: a re-verify round re-takes the observation,
  * so the interval runs from what the newest round names. The bare form is still
  * accepted, because a row may record one.
+ *
+ * Newer still is `Refactor verify revision`, where the row records one: the
+ * re-run on the tree the reviews judge, taken after every round. A refactor
+ * that changed a covered file is part of what it observed, not a change since.
  */
 function observationRevision(section: string): string | null {
+  const refactor = rowEvidenceFieldValue(section, "Refactor verify revision");
+  if (refactor !== null && refactor.length > 0) return refactor;
   const rounds = evidenceRoundNumbers(section);
   for (const round of [...rounds].sort((a, b) => b - a)) {
     const value = roundEvidenceFieldValue(section, round, "Revision");

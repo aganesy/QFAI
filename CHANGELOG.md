@@ -30,7 +30,9 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   round's `Revision`, so a row whose refactor changed a byte was reported when
   its reviewers recorded the tree they judged. The gate now compares them with
   `Refactor verify revision`, checks that it names a revision, and keeps the
-  round's `Revision` for a row that records none. `ui-affecting.md`,
+  round's `Revision` for a row that records none. The staleness check measures
+  from the same revision, and the field counts as phase-authored, so one written
+  after the review fields is refused. `ui-affecting.md`,
   `parallelization-policy.md` and the skill now say items 6, 7 and 8 share the
   revision. No completed row in this repository changes result.
 
