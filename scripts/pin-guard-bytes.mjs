@@ -23,7 +23,7 @@
  * pins that step's BODY, runs after this one.
  */
 import { createHash } from "node:crypto";
-import { readFileSync, readdirSync, writeFileSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { argv, cwd, exit, stdout } from "node:process";
 import { fileURLToPath } from "node:url";
@@ -58,6 +58,27 @@ const WORKFLOW_PINNED = [
   ".github/lifecycle-manifests.txt",
   ".github/command-files.txt",
 ];
+
+/**
+ * The manifests the lifecycle list names, whose projections this program reseals. A line
+ * shaped like a conflict marker is not a path, and a path with no file behind it has nothing
+ * to scan.
+ */
+function lifecycleManifestPaths(root) {
+  let text;
+  try {
+    text = readFileSync(path.join(root, ".github/lifecycle-manifests.txt"), "utf-8");
+  } catch {
+    return [];
+  }
+  return text
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter((line) => line !== "" && !line.startsWith("#"))
+    .filter((line) => !/^(?:<{7}|={7}|>{7}|\|{7})(?: |$)/.test(line))
+    .map((line) => /^[0-9a-f]{64} {2}(.+)$/.exec(line)?.[1] ?? line)
+    .filter((rel) => existsSync(path.join(root, rel)));
+}
 
 /** Every file under `rel`, repo-relative and POSIX-separated, in a stable order. */
 function filesUnder(root, rel) {
@@ -125,7 +146,7 @@ async function main(root) {
 
   const listPath = path.join(root, LIST_REL);
   const conflicted = await pathsWithConflictMarkers(root, [
-    ...new Set([...rels, ...WORKFLOW_PINNED]),
+    ...new Set([...rels, ...WORKFLOW_PINNED, ...lifecycleManifestPaths(root)]),
   ]);
   if (conflicted.length > 0) {
     stdout.write(

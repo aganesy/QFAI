@@ -167,6 +167,23 @@ describe("the re-pin program, on a pinned file carrying conflict markers", () =>
     );
   });
 
+  it("refuses a conflict in a manifest the lifecycle list names, before writing anything", async () => {
+    // Its projection is resealed, so a merge left in it is named rather than read as bad JSON.
+    const listBefore = await readFile(path.join(staged, LIST_REL), "utf-8");
+    await plantConflict("package.json");
+
+    const pinned = await runPin();
+    expect(pinned.status).toBe(1);
+    expect(pinned.output).toContain("nothing was pinned");
+    expect(pinned.output).toContain("package.json");
+    expect(await readFile(path.join(staged, LIST_REL), "utf-8")).toBe(listBefore);
+
+    const guarded = await runGuard();
+    expect(guarded.status).toBe(1);
+    expect(guarded.output).toContain("merge conflict markers");
+    expect(guarded.output).toContain("package.json");
+  });
+
   it("names a conflict in the scanner it would otherwise load", async () => {
     // The scanner is checked before it is loaded: a module carrying a conflict
     // block does not parse, so the run would end before any path is named.

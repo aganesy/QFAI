@@ -67,7 +67,8 @@ fi
 # with a carriage return before the newline ignored, and in a Markdown file nothing inside a
 # fenced block, which holds an example. A file with a binary extension is not read, since a
 # marker-shaped line in its bytes means nothing. The workflow-pinned lists are appended to what
-# the list names, because `pin-guard-bytes.mjs` rewrites them from the tree.
+# the list names, because `pin-guard-bytes.mjs` rewrites them from the tree, and so are the
+# manifests the lifecycle list names, whose projections it reseals.
 has_conflict_markers() {
   # The extension is compared lowercased, and a name that is only an extension has none, as
   # Node's `path.extname` reads it.
@@ -113,6 +114,7 @@ while IFS= read -r pinned_path; do
   fi
 done <<EOF
 $(grep -E "^[0-9a-f]{64}  " "${digests_file}" | sed "s/^[0-9a-f]\{64\}  //")
+$(grep -E "^[0-9a-f]{64}  " "${root}/.github/lifecycle-manifests.txt" 2> /dev/null | sed "s/^[0-9a-f]\{64\}  //")
 .github/pinned-bytes.txt
 .github/lifecycle-manifests.txt
 .github/command-files.txt
