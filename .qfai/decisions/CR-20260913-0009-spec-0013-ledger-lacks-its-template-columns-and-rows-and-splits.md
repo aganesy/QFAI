@@ -126,6 +126,12 @@ floor `TC-0013-0033` states, or the resolver half of `TC-0013-0030` — the row
 for it is split all the same. Its RED then fails against the product, and that
 disagreement goes through the Drift Protocol rather than through this record.
 
+A condition no test can construct is split all the same too, and its row gets
+no case. `TC-0013-0029` names one: a pointer matching several packs, which no
+directory can hold, since both readers match the entries of one listing by
+exact name. `CR-20260913-0004`, open against that condition, removes it from
+the pack and retires the row appended for it.
+
 ## Blocked downstream items
 
 | Item                 | Kind         | Why it depends on the artifact                                   |
@@ -150,9 +156,11 @@ disagreement goes through the Drift Protocol rather than through this record.
   selects it. The other `exception` rows, `TDD-0001`, `TDD-0002` and `TDD-0004`
   to `TDD-0014`, run one case each and are each alone on their obligation, so
   their `Boundary` is `-`.
-- Overlapping open CRs: `none`. A later record that re-derives `spec-0013` is
-  applied after this one, against a ledger that already has its columns, its
-  rows and its splits.
+- Overlapping open CRs: `CR-20260913-0004`, which removes `TC-0013-0029`'s
+  several-packs condition and is applied after this record: it retires the row
+  appended here for that condition and resets the two that remain. Any later
+  record that re-derives `spec-0013` is applied after this one too, against a
+  ledger that already has its columns, its rows and its splits.
 
 ## Impact scope
 
@@ -239,7 +247,9 @@ thirteen kept rows and `TDD-0023` to `todo`?
    `/qfai-implement` does not. It removes `TDD-0021`'s case for an authored but
    empty list, moves the file-time case into `TC-0013-0028`'s `describe`, and
    hands each appended or seeded row the case its boundary names, writing one
-   where none exists. That run then refreshes
+   where none exists — except the row for a pointer matching several packs,
+   which no case can construct and `CR-20260913-0004` retires. That run then
+   refreshes
    `.qfai/evidence/coverage-depth-spec-0013.md`, whose account of the ledger's
    shape the rerun changes, through that stage's reviewer gate.
 
