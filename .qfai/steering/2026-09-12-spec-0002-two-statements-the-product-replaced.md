@@ -117,7 +117,8 @@ change nothing there included.
 optional side artifact, which **`2B` reverses** — that pack's own delta records
 the blocker being removed. Separately `US-0013-0009` through `TC-0013-0022`
 assign the `DESIGN.md.lock.yaml` write to Phase 0, which **`2a` moves**. Its
-`todo` row `TDD-0016` is parked with the Change Request.
+`todo` row `TDD-0016` is listed in the Change Request's blocked set, which is
+what suppresses it; it resets under `2a` and stays where it is otherwise.
 
 The re-derived requiredness rule is **not** "UI-bearing": a cli-only pack is
 `ui_bearing: true` and may not carry `prototyping.yaml`, so the blocker rests on
@@ -129,9 +130,18 @@ reached prototyping, and those two packs are where the gate is specified
 (`REQ-0025` / `AC-0004-0008`, and `DR-0012-0020`).
 
 Three of the four packs carry ledger dispositions the Change Request approves
-rather than leaves to the sweep: `spec-0010`'s three rows reset or retire with
-statement A, and `spec-0004/TDD-0008` resets because the obligation under it
-changes. The rest re-verify in place.
+rather than leaves to the sweep. `spec-0004/TDD-0008` resets under `2a` because
+the obligation under it changes. `spec-0010` has five:
+
+| Row                                | `1A`            | `3A`                                        | `2A`                            |
+| ---------------------------------- | --------------- | ------------------------------------------- | ------------------------------- |
+| `TDD-0006`, `TDD-0007`, `TDD-0008` | reset to `todo` | retired, `Evidence` copied in, ids reserved | re-verified in place, not reset |
+| `TDD-0010`                         | reset to `todo` | retired as never executed, id reserved      | released as it stands           |
+| `TDD-0011`                         | reset to `todo` | reset to `todo`                             | reset to `todo`                 |
+
+`TDD-0011` resets under every statement-A outcome because `TC-0010-0007`, the
+producer obligation, is re-derived under all of them. The rest re-verify in
+place.
 
 **The impact scope is reduced to the approved outcome before `Status: approved`
 is written.** The drift guard reads a path rather than the condition beside it,
@@ -142,13 +152,27 @@ All four are owner re-derivations in the rerun plan, not cross-spec
 re-verifications: what disagrees is a requirement, and re-running a test
 confirms the observation rather than the requirement it was taken against.
 
-`spec-0013` carries one more prerequisite. Its `03_Acceptance-Criteria.md`
-declares `AC-0013-0009` twice, so a rerun keyed to that id sweeps whichever of
-the two it finds. The renumbering is its own item and `2B` waits on it.
+Three prerequisites land before the Change Request is applied, each as its own
+record:
 
-`spec-0010/TDD-0011` is parked with this Change Request. It is at `todo` and
-targets `TC-0010-0007`, the producer obligation every statement-A outcome
-re-derives.
+- `spec-0002`'s ledger repair. Phase 2b of the `re-derive` would otherwise seed
+  its missing rows unauthorised.
+- `spec-0010`'s ledger repair, for the same reason: eight columns and no `E2E`
+  row for any of twelve active stories.
+- `spec-0013`'s duplicate id. Its `03_Acceptance-Criteria.md` declares
+  `AC-0013-0009` twice, so a rerun keyed to that id sweeps whichever of the two
+  it finds, and `2B` waits on it.
+
+After the two ledger repairs, the Change Request is refreshed before approval:
+the seeded `E2E` rows for `US-0002-0005`, `US-0010-0008` and `US-0010-0009`
+join its blocked set by id, with the dispositions its approved actions give
+them.
+
+`spec-0010/TDD-0011` is not parked. It is listed in the Change Request's
+blocked set, and that listing is what suppresses it. It stays at `todo`, and
+its eight-column ledger has no `Blocked-By` column, so no parking transition
+could be written and no departure metadata exists to recover. It targets
+`TC-0010-0007`, the producer obligation every statement-A outcome re-derives.
 
 ## Constraints to preserve
 

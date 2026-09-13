@@ -117,8 +117,10 @@ verdict on a producer nobody has settled.
 **`spec-0002/TDD-0011` is not in this set.** Its obligation is sound, its test
 discharges it, and no A/B outcome moves either. The two repairs the matrix asks
 for — giving `non-UI skip` a fixture that makes the guard load-bearing, and
-removing the three annotations `threeLayer.test.ts` declares that this spec's
-table does not hold — do edit the file its recorded observation covers, so the
+removing the three annotations `threeLayer.test.ts` declares beside the
+obligation it reaches — two that this spec's table does not hold, and a live
+one the file cannot discharge — do edit the file its recorded observation
+covers, so the
 row owes a fresh observation. That is the shared-artifact re-verification of step
 6, which needs no approval from this Change Request and no reset.
 
@@ -134,6 +136,10 @@ to do with. A row whose obligation is unchanged waits on nobody.
   recorded observation covers, so its evidence goes stale the moment the change
   lands. It takes the same in-place repair the other rows take under that
   option, not a reset: its obligation does not move either.
+- Not yet listed: the `E2E` rows the two ledger repairs will seed for
+  `US-0002-0005`, `US-0010-0008` and `US-0010-0009`. They join this set by id
+  when this record is refreshed after those repairs, as approved actions 1 and
+  4 set out, and before it is approved.
 - Overlapping open CRs: `none`
 
 ## Impact scope
@@ -505,14 +511,16 @@ offered stays in `## Options` and in `## Decision needed from user`.
   `.qfai/specs/spec-0002/06_Test-Cases.md`,
   `.qfai/specs/spec-0002/07_Decisions.md`,
   `.qfai/specs/spec-0002/09_delta.md`,
-  `.qfai/specs/spec-0002/tdd/test-list.md`
+  `.qfai/specs/spec-0002/tdd/test-list.md`, and under options 2 and 3
+  `.qfai/specs/spec-0002/10_Plan.md`
 
-  `10_Plan.md` is **not** here. `QFAI-DRIFT-001` reads this list as the
-  authorisation, so naming the file would waive any change to it — including the
-  `TC-0002-0026` repair the approved actions exclude by name and send to a
-  Change Request of its own. No approved action edits the plan, so the path has
-  nothing to authorise and its presence would grant exactly what the exclusion
-  denies.
+  **`spec-0002/10_Plan.md` is kept under options 2 and 3 and struck under
+  option 1**, for the two notes the `Plans` entry above names: the retirement
+  note and the requiredness note. The `TC-0002-0026` repair in the same file is
+  not among the edits this approval covers under any option. It is independent
+  of both statements and goes to a Change Request of its own, and, as the
+  `Plans` entry says, only this record and review hold that line: the guard
+  reads the path and not the lines beside it.
 
   A layered pack states one rule at every layer, so the story, the business rule
   and the example that carry these two rules move with the requirement and the
@@ -590,6 +598,23 @@ internally contradictory.
    from it could be selected and completed against an obligation known to be
    changing. It resets with the others under `1A`, retires with them under `3A`,
    and is released unchanged under `2A`, where the obligation does not move.
+
+   **`spec-0010`'s ledger repair is a prerequisite too, on the same terms as
+   `spec-0002`'s (step 4).** That ledger has eight columns and no `E2E` row for
+   any of its twelve stories, all of them active, so this `re-derive`'s Phase 2b
+   would migrate the table and seed twelve rows this record does not authorise.
+   The repair lands first as its own record. This record is then refreshed
+   before approval, and two of the seeded rows join `## Blocked downstream
+items` by id, with these dispositions:
+
+   | Outcome | The `US-0010-0008` row (direction rule)           | The `US-0010-0009` row (producer)           |
+   | ------- | ------------------------------------------------- | ------------------------------------------- |
+   | `1A`    | reset to `todo` with this `CR-*` in `DR-ID`       | reset to `todo` with this `CR-*` in `DR-ID` |
+   | `3A`    | retired with its chain, its id written out here   | reset to `todo` with this `CR-*` in `DR-ID` |
+   | `2A`    | left as it stands — the rule comes back unchanged | reset to `todo` with this `CR-*` in `DR-ID` |
+
+   The producer row resets under every outcome because the producer chain is
+   re-derived under every outcome, for the reason `TDD-0011` gives below.
 
    **`TDD-0011` is enumerated here rather than left to the sweep.**
    `TC-0010-0007` changes beneath it under **every statement-A outcome**, so it
@@ -686,6 +711,20 @@ internally contradictory.
    finding 7 and needs its own record. **That record lands first**, and this one
    is applied after it, against a ledger Phase 2b has nothing left to seed.
 
+   **One of the rows that repair seeds is statement A's.** Phase 2b gives
+   `US-0002-0005`, the planner-first story, an `E2E` row, and that story is
+   statement A's obligation. So once the repair lands, this record is refreshed
+   before approval: the row joins `## Blocked downstream items` by its id, with
+   this disposition —
+
+   | Outcome    | The `US-0002-0005` row                                                     |
+   | ---------- | -------------------------------------------------------------------------- |
+   | `1A`, `2b` | reset to `todo` with this `CR-*` in `DR-ID` — both narrow the story        |
+   | `2a`       | left as it stands — the story comes back unchanged                         |
+   | `3A`       | retired with the story, its id written out here and reserved in the ledger |
+
+   Until the refresh it cannot be named by id, because it does not exist.
+
    The `10_Plan.md` row citing `TC-0002-0026`, which this spec's table does not
    declare, is **not** in this Change Request. It is independent of both
    statements, the approval record here covers only A and B, and folding an
@@ -774,10 +813,13 @@ internally contradictory.
      every removed row, and "no matching test exists" is one; leaving the field
      out would make the eventual `Resolution` unable to account for the row.
 
-   **Option 2 — restore the product to the spec.** No upstream statement
-   changes, and `/qfai-sdd`'s mode is nonetheless `re-derive`: the statements
-   come back unchanged, and the rerun is there for the ledger row whose identity
-   `confirm-only` could not touch. The work is implementation, and it is larger
+   **Option 2 — restore the product to the spec.** Statement A's upstream
+   statements do not change, and `/qfai-sdd`'s mode is nonetheless `re-derive`:
+   they come back unchanged, and the rerun is there for the ledger row whose
+   identity `confirm-only` could not touch. **Statement B's do change under
+   `2B`**: the requiredness statements are re-derived around the visual-surface
+   predicate and `TDD-0012` is reset, as the last bullet of this option sets
+   out. The work is implementation, and it is larger
    than a new validator. `REQ-0012` says discussion performs no selected-direction
    finalization, so restoring it means withdrawing the direction interview as well
    as adding the check: the shipped discussion skill asks the user to choose a
