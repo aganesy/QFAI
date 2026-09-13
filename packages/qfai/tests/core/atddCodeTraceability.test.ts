@@ -1112,6 +1112,45 @@ describe("acceptance tests outside paths.testsDir", () => {
     });
   });
 
+  it("reads a name glob against the path it selects, not the file name alone", async () => {
+    await withProject(async (root) => {
+      await seedSpec(root, "0001", ["US-0001"], ["TC-0001"]);
+      await seedPackageTest(root, "billing", "e2e", "journey.test.ts", [
+        "/* QFAI:SPEC-0001:US-0001 */",
+      ]);
+      // Only billing's broad glob collects this fixture. The name glob that
+      // `fixture.test.json` would satisfy is checkout's.
+      await seedPackageTest(root, "billing", "integration", "fixture.test.json", [
+        "// QFAI:SPEC-0001:TC-0001",
+      ]);
+
+      const result = await evaluateAtddCodeTraceability(
+        root,
+        withProjectGlobs(["packages/billing/tests/**/*", "packages/checkout/tests/**/*.test.*"]),
+      );
+
+      expect(result.missing.tc).toEqual(["SPEC-0001:TC-0001"]);
+      expect(result.missing.us).toEqual([]);
+    });
+  });
+
+  it("keeps a leading negated extglob out of the legacy probe's withdrawals", async () => {
+    // `!(fixtures)/**/*.ts` selects; read as a withdrawal, it joined the probe's
+    // own patterns and collected every annotated file in the tree.
+    await withProject(async (root) => {
+      await seedSpec(root, "0001", ["US-0001"], ["TC-0001"]);
+      await seedTest(root, "e2e", "a.test.ts", "/* QFAI:SPEC-0001:US-0001 */");
+      await seedTest(root, "integration", "a.test.ts", "/* QFAI:SPEC-0001:TC-0001 */");
+
+      const result = await evaluateAtddCodeTraceability(
+        root,
+        withProjectGlobs(["!(fixtures)/**/*.test.ts"]),
+      );
+
+      expect(result.skippedTestFiles).toEqual([]);
+    });
+  });
+
   it("does not take a fixture directory named like a manifest for a package", async () => {
     await withProject(async (root) => {
       await seedSpec(root, "0001", ["US-0001"], ["TC-0001"]);

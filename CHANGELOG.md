@@ -218,7 +218,10 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   `test_[0-9].*`. A negative entry names no extension, either for the stub gate
   or for the scan's own file pattern; one opening a negated extglob, such as
   `!(fixtures)/**/*.zig`, selects, and names its extension to both. A negated
-  group in the file name, as in `*.!(json)`, keeps every file it selects.
+  group in the file name, as in `*.!(json)`, keeps every file it selects. A glob
+  that names the file, such as `*.test.*`, is read against the whole path it
+  selects, so a file only another package's broad glob collected does not pass
+  on its name.
 
   The coverage scan reads a collected file the same way: a data file an
   extension-broad glob sweeps into an acceptance layer is not a source, so an
@@ -234,7 +237,11 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
   A `validation.traceability.testFileGlobs` entry naming a range no pattern
   engine compiles, such as `test_[z-a].*`, no longer ends the run. It selects
-  nothing, and every other glob is still read.
+  nothing, and every other glob is still read. A directory one of the globs
+  reaches that cannot be read no longer empties the ATDD scan either: the other
+  patterns are read, and `QFAI-ATDD-134` names each pattern it could not read.
+  A stub-scan notice about a project glob names
+  `validation.traceability.testFileGlobs` rather than `paths.testsDir`.
 
   A misplaced test-case reference is fixed in the file that carries it, and the
   remediation now names that file, whichever package's suite it sits in. Every

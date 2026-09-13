@@ -667,6 +667,24 @@ describe("the ATDD gate's file selection", () => {
     expect(issues.map((issue) => issue.code)).toContain("QFAI-TEST-002");
   });
 
+  it("reads a test-name glob against the path, not the file name alone", async () => {
+    const root = await newTempDir();
+    const config = atddConfig([
+      "packages/billing/tests/**/*",
+      "packages/checkout/tests/**/*.test.*",
+    ]);
+    // Only billing's broad glob collects this file, so checkout's name glob does
+    // not make it a source.
+    await writeTestFile(root, "packages/billing/tests/integration/fixture.test.zig", "{}\n");
+
+    const issues = await validateTestTodoStubs(root, config, {
+      globs: atddAcceptanceTestGlobs(root, config, STUB_SOURCE_FILE_PATTERN),
+      fileFilter: atddAcceptanceLayerFilter(root, config),
+    });
+
+    expect(issues.filter((issue) => issue.code === "QFAI-TEST-002")).toEqual([]);
+  });
+
   it("keeps a file a test-name glob selects whatever its extension", async () => {
     const root = await newTempDir();
     const config = atddConfig(["packages/*/tests/**/*.test.*"]);

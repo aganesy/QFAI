@@ -50,6 +50,7 @@ import {
 } from "../fs.js";
 import {
   globExtensions,
+  isGlobExclusion,
   namedTestFileMatcher,
   namesExtensionlessSource,
 } from "../testGlobExtensions.js";
@@ -1291,6 +1292,12 @@ export type TestTodoStubOptions = {
    */
   globs?: readonly string[];
   /**
+   * The entries of `globs` that are the project's own `testFileGlobs`, used as
+   * written. A diagnostic about one of them names that setting, which is the
+   * one that can fix it, rather than the directories the caller generated.
+   */
+  projectGlobs?: readonly string[];
+  /**
    * Narrows the collected set to the files this caller owns.
    *
    * Globs alone cannot express it: the ATDD scan reads the project's own test
@@ -1364,16 +1371,22 @@ function reportEmptyTestFileGlobs(): Issue {
  * how many more would have matched. Saying "matched" claimed a total the scan
  * had not measured.
  */
-function reportTruncatedScan(limit: number, callerGlobs: boolean): Issue {
-  const key = callerGlobs
-    ? "validation.traceability.testFileExcludeGlobs"
-    : "validation.traceability.testFileGlobs";
-  const selection = callerGlobs
-    ? "the acceptance directories this gate scans"
-    : "`validation.traceability.testFileGlobs`";
-  const remedy = callerGlobs
-    ? "Widen `validation.traceability.testFileExcludeGlobs` in qfai.config.yaml so the selection fits under the limit and every acceptance test is actually read."
-    : "Narrow `validation.traceability.testFileGlobs`, or widen `validation.traceability.testFileExcludeGlobs`, so the selection fits under the limit and every acceptance test is actually read.";
+function reportTruncatedScan(
+  limit: number,
+  selected: { callerDirectories: boolean; projectGlobs: boolean },
+): Issue {
+  // Narrowing `testFileGlobs` shrinks only a selection it contributed to.
+  const key = selected.projectGlobs
+    ? "validation.traceability.testFileGlobs"
+    : "validation.traceability.testFileExcludeGlobs";
+  const selection = !selected.callerDirectories
+    ? "`validation.traceability.testFileGlobs`"
+    : selected.projectGlobs
+      ? "the acceptance directories this gate scans and `validation.traceability.testFileGlobs`"
+      : "the acceptance directories this gate scans";
+  const remedy = selected.projectGlobs
+    ? "Narrow `validation.traceability.testFileGlobs`, or widen `validation.traceability.testFileExcludeGlobs`, so the selection fits under the limit and every acceptance test is actually read."
+    : "Widen `validation.traceability.testFileExcludeGlobs` in qfai.config.yaml so the selection fits under the limit and every acceptance test is actually read.";
   return issue(
     "QFAI-TEST-002",
     `The stub scan read the first ${limit} files of ${selection} and stopped at that limit, so the rest were never opened. A clean result is not evidence that they hold no stub.`,
@@ -1448,10 +1461,14 @@ export async function validateTestTodoStubs(
   // scanned: refusing the whole batch dropped the stubs a readable pattern
   // would have reported.
   const callerGlobs = options.globs !== undefined;
+  const projectGlobs = new Set(normalizeGlobs(options.projectGlobs ?? []));
+  // Whether a pattern is one the caller generated, and so answers to
+  // `paths.testsDir`, rather than one the project wrote.
+  const generated = (glob: string): boolean => callerGlobs && !projectGlobs.has(glob);
   const accepted = globs.filter((glob) => unusableGlobReason(glob) === null);
   const issues: Issue[] = globs.flatMap((glob) => {
     const reason = unusableGlobReason(glob);
-    return reason === null ? [] : [reportRefusedScan(reason, callerGlobs, accepted.length > 0)];
+    return reason === null ? [] : [reportRefusedScan(reason, generated(glob), accepted.length > 0)];
   });
   if (accepted.length === 0) return issues;
 
@@ -1485,14 +1502,19 @@ export async function validateTestTodoStubs(
   // extension.
   const namedTestFile = options.globs === undefined ? null : namedTestFileMatcher(accepted);
   const wanted = (absolutePath: string): boolean => {
+    const relative = path.relative(root, absolutePath).replace(/\\/g, "/");
+    // The generated globs are absolute where the tests directory sits outside
+    // the root, so the path is offered both ways.
+    const named =
+      namedTestFile !== null &&
+      (namedTestFile(relative) || namedTestFile(absolutePath.replace(/\\/g, "/")));
     if (
       sourceExtensions &&
       !sourceExtensions.has(path.extname(absolutePath).toLowerCase()) &&
-      !(namedTestFile?.(path.basename(absolutePath)) ?? false)
+      !named
     ) {
       return false;
     }
-    const relative = path.relative(root, absolutePath).replace(/\\/g, "/");
     return options.fileFilter ? options.fileFilter(relative) : true;
   };
   // In the stream, not after it. A caller's globs may match a whole monorepo,
@@ -1514,11 +1536,10 @@ export async function validateTestTodoStubs(
     // reported beside the stubs the rest select.
     // A negative entry excludes from every pattern, so each scan carries all of
     // them; scanned on its own it would select nothing.
-    const isExclusion = (glob: string): boolean => glob.startsWith("!") && !glob.startsWith("!(");
-    const exclusions = accepted.filter(isExclusion);
+    const exclusions = accepted.filter(isGlobExclusion);
     const separate = await Promise.all(
       accepted
-        .filter((glob) => !isExclusion(glob))
+        .filter((glob) => !isGlobExclusion(glob))
         .map(async (glob) => {
           try {
             const alone = await collectFilesByGlobs(root, {
@@ -1529,16 +1550,18 @@ export async function validateTestTodoStubs(
             });
             return { kind: "scanned" as const, scan: alone };
           } catch (failure) {
-            return { kind: "failed" as const, failure };
+            return { kind: "failed" as const, glob, failure };
           }
         }),
     );
     const scanned = separate.flatMap((entry) => (entry.kind === "scanned" ? [entry.scan] : []));
-    const failures = separate.flatMap((entry) => (entry.kind === "failed" ? [entry.failure] : []));
+    const failures = separate.flatMap((entry) => (entry.kind === "failed" ? [entry] : []));
     issues.push(
-      ...(failures.length === 0 ? [error] : failures).map((failure) =>
-        reportRefusedScan(failure, callerGlobs, scanned.length > 0),
-      ),
+      ...(failures.length === 0
+        ? [reportRefusedScan(error, callerGlobs && projectGlobs.size === 0, scanned.length > 0)]
+        : failures.map(({ glob, failure }) =>
+            reportRefusedScan(failure, generated(glob), scanned.length > 0),
+          )),
     );
     if (scanned.length === 0) return issues;
     const union = [...new Set(scanned.flatMap((entry) => entry.files))];
@@ -1584,7 +1607,12 @@ export async function validateTestTodoStubs(
 
   if (truncated) {
     // The third state a clean result can mean.
-    issues.push(reportTruncatedScan(limit, options.globs !== undefined));
+    issues.push(
+      reportTruncatedScan(limit, {
+        callerDirectories: callerGlobs,
+        projectGlobs: !callerGlobs || projectGlobs.size > 0,
+      }),
+    );
   }
 
   if (unscannedExtensions.size > 0) {

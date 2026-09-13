@@ -12,7 +12,7 @@
  * Whether a glob entry withdraws files. A leading `!` does, except where it opens
  * a negated extglob group, which selects: `!(fixtures)/*.py` is a selector.
  */
-function isExclusion(glob: string): boolean {
+export function isGlobExclusion(glob: string): boolean {
   const trimmed = glob.trimStart();
   return trimmed.startsWith("!") && !trimmed.startsWith("!(");
 }
@@ -75,7 +75,7 @@ export function globExtensions(globs: readonly string[]): string[] {
     }
   };
   for (const glob of globs) {
-    if (isExclusion(glob)) continue;
+    if (isGlobExclusion(glob)) continue;
     const braces = /\.\{([^}]+)\}$/.exec(glob);
     if (braces) {
       pushAlternatives((braces[1] ?? "").split(","));
@@ -97,26 +97,28 @@ export function globExtensions(globs: readonly string[]): string[] {
 }
 
 /**
- * A predicate for a file name that a glob selects by name rather than by
- * extension: the last segment of a glob naming something besides wildcards,
- * as `*.test.*`, `*.{test,spec}.*` and `test_[0-9].*` do.
+ * A predicate for a file path that a glob selects by name rather than by
+ * extension: a glob whose last segment names something besides wildcards, as
+ * `*.test.*`, `*.{test,spec}.*` and `test_[0-9].*` do.
  *
  * Such a glob selects a test by its name whatever the extension, so a file it
  * matches is a source even when no glob names that extension. A negated group
- * names what it leaves out, so `*.!(json)` selects `pay.zig` this way. A last
- * segment of wildcards alone names nothing, a negative entry selects nothing,
- * and a segment this reader cannot translate — an unclosed group, brace or
- * bracket, or a range the pattern engine rejects — is left to
- * {@link globExtensions}. Matched case-sensitively, as the glob that collected
- * the file was.
+ * names what it leaves out, so `*.!(json)` selects `pay.zig` this way. Each
+ * glob is read against the whole path it would select, so a name one
+ * package's glob selects does not vouch for a file only another package's
+ * broad glob collected. A last segment of wildcards alone names nothing, a
+ * negative entry selects nothing, and a glob this reader cannot translate —
+ * an unclosed group, brace or bracket, or a range the pattern engine rejects —
+ * is left to {@link globExtensions}. Matched case-sensitively, as the glob
+ * that collected the file was, against a path written with `/`.
  */
-export function namedTestFileMatcher(globs: readonly string[]): (fileName: string) => boolean {
+export function namedTestFileMatcher(globs: readonly string[]): (filePath: string) => boolean {
   const patterns: RegExp[] = [];
   for (const glob of globs) {
-    if (isExclusion(glob)) continue;
+    if (isGlobExclusion(glob)) continue;
     const last = glob.split("/").at(-1) ?? "";
     if (!/[^*?.]/.test(last)) continue;
-    const source = segmentPattern(last);
+    const source = globPathPattern(glob);
     if (source === null) continue;
     try {
       patterns.push(new RegExp(`^${source}$`));
@@ -126,7 +128,28 @@ export function namedTestFileMatcher(globs: readonly string[]): (fileName: strin
       // before the scan could report the glob.
     }
   }
-  return (fileName) => patterns.some((pattern) => pattern.test(fileName));
+  return (filePath) => patterns.some((pattern) => pattern.test(filePath));
+}
+
+/**
+ * A whole glob as a regular-expression source over a `/`-separated path, or
+ * `null` for syntax this reader does not translate. `**` spans any number of
+ * directories, and every other segment is read by {@link segmentPattern}.
+ */
+function globPathPattern(glob: string): string | null {
+  const segments = glob.trim().replace(/^\.\//, "").split("/");
+  let source = "";
+  for (const [index, segment] of segments.entries()) {
+    const last = index === segments.length - 1;
+    if (segment === "**") {
+      source += last ? "(?:[^/]*(?:/[^/]*)*)" : "(?:[^/]+/)*";
+      continue;
+    }
+    const part = segmentPattern(segment);
+    if (part === null) return null;
+    source += last ? part : `${part}/`;
+  }
+  return source;
 }
 
 /**
@@ -151,7 +174,7 @@ function segmentPattern(segment: string, nested = false): string | null {
       if (char === "!") {
         const rest = nested ? null : segmentPattern(segment.slice(close + 1));
         if (rest === null) return null;
-        return `${source}(?:(?!${group}${rest}$)[^/]*?)${rest}`;
+        return `${source}(?:(?!${group}${rest}(?:/|$))[^/]*?)${rest}`;
       }
       source += char === "@" ? group : `${group}${char}`;
       index = close;
@@ -196,7 +219,7 @@ function alternation(alternatives: readonly string[]): string | null {
  */
 export function namesExtensionlessSource(globs: readonly string[]): boolean {
   return globs.some((glob) => {
-    if (isExclusion(glob)) return false;
+    if (isGlobExclusion(glob)) return false;
     const last = glob.split("/").at(-1) ?? "";
     return last.length > 0 && !last.includes(".") && !/^\*+$/.test(last);
   });

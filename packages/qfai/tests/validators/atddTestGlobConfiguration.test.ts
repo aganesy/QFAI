@@ -207,6 +207,44 @@ describe("the stage says when the glob matcher refuses its globs", () => {
     expect(Array.isArray(found)).toBe(true);
   });
 
+  it("names each test glob the ATDD scan could not read, and still counts the rest", async () => {
+    // The stage scans the project's own globs, so a directory one of them
+    // reaches that cannot be read leaves references unfound, and the finding
+    // says which pattern and why rather than leaving the gap unexplained.
+    const root = await projectWithAcceptanceTest();
+    const denied = Object.assign(new Error("EACCES: permission denied, scandir 'locked'"), {
+      code: "EACCES",
+    });
+    scanFailure.error = denied;
+    scanFailure.when = (globs) => globs.some((glob) => glob.startsWith("locked/"));
+    try {
+      const found = await validateAtddCodeTraceability(
+        root,
+        configWith(["tests/**/*.test.ts", "locked/**/*.test.ts"]),
+      );
+      const unreadable = found.find(
+        (finding) =>
+          finding.code === "QFAI-ATDD-134" && finding.message.includes("could not read part of"),
+      );
+      expect(unreadable?.message).toContain("locked/**/*.test.ts: EACCES");
+      expect(unreadable?.suggested_action).toContain("testFileExcludeGlobs");
+    } finally {
+      scanFailure.error = null;
+      scanFailure.when = () => true;
+    }
+  });
+
+  it("sends a refused pattern the project wrote to testFileGlobs, beside generated ones", async () => {
+    const root = await projectWithAcceptanceTest();
+    const project = `tests/${NUL}/*.ts`;
+    const found = await validateTestTodoStubs(root, configWith([project]), {
+      globs: ["tests/e2e/**/*.ts", project],
+      projectGlobs: [project],
+    });
+    const refused = found.find((finding) => finding.code === "QFAI-TEST-002");
+    expect(refused?.refs).toEqual(["validation.traceability.testFileGlobs"]);
+  });
+
   it("says nothing about a broad glob", async () => {
     // `tests/**` names no extension, and the stage scans the JavaScript and
     // TypeScript set for it, which is the documented fallback, not a defect.

@@ -957,6 +957,7 @@ async function runAtddValidators(
         config,
         stubSourceFilePattern(config.validation.traceability.testFileGlobs),
       ),
+      projectGlobs: config.validation.traceability.testFileGlobs,
       fileFilter: atddAcceptanceLayerFilter(root, config),
       placeholderScanned: scaffoldPlaceholderScannedFilter(root, config),
     })),

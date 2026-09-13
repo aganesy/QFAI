@@ -12,6 +12,7 @@ import { collectApiContractFiles, collectDbContractFiles } from "./discovery.js"
 import {
   collectFilesByGlobs,
   DEFAULT_GLOB_FILE_LIMIT,
+  isFileSystemError,
   unusableGlobReason,
   type CollectFilesByGlobsResult,
 } from "./fs.js";
@@ -26,6 +27,7 @@ import {
 import { UNIT_COMPONENT_LAYERS } from "./tddHelpers.js";
 import {
   globExtensions,
+  isGlobExclusion,
   namedTestFileMatcher,
   namesExtensionlessSource,
 } from "./testGlobExtensions.js";
@@ -204,6 +206,12 @@ export type AtddTraceabilityScan = {
   matchedFileCount: number;
   truncated: boolean;
   limit: number;
+  /**
+   * The selecting patterns whose files could not all be read, each with the
+   * reason. The others were still scanned, so a reference missing from the
+   * tests only these select is not evidence those tests hold none.
+   */
+  unreadable: string[];
 };
 
 /**
@@ -472,36 +480,45 @@ export async function evaluateAtddCodeTraceability(
   );
   const acceptanceLayer = atddAcceptanceLayerFilter(root, config);
   const acceptanceSource = acceptanceSourceFilter(
+    root,
     deriveAtddFilePattern(config.validation.traceability.testFileGlobs),
     normalizeGlobs(config.validation.traceability.testFileGlobs),
   );
   // One probe for the whole scan, so a manifest is stat-ed once however many
   // files sit under the directory that carries it.
   const scanPackageRoot = packageRootProbe();
+  // Trimmed and emptied the way every other scan of this list is, so a padded
+  // entry excludes here exactly what it excludes there.
+  const scanExcludes = normalizeGlobs(config.validation.traceability.testFileExcludeGlobs);
+  // A project glob may match a whole monorepo. Charging the limit for files no
+  // acceptance rule reads would spend it on the first packages and never reach
+  // the later ones, and the truncation that reports it is an `info`.
+  const scanKeeps = (file: string): boolean =>
+    acceptanceSource(file) && acceptanceLayer(path.relative(root, file));
   let scanResult: CollectFilesByGlobsResult;
+  let unreadable: string[] = [];
   try {
-    scanResult = await collectTestFiles(
-      root,
-      scanGlobs,
-      // Trimmed and emptied the way every other scan of this list is, so a
-      // padded entry excludes here exactly what it excludes there.
-      normalizeGlobs(config.validation.traceability.testFileExcludeGlobs),
-      // A project glob may match a whole monorepo. Charging the limit for files
-      // no acceptance rule reads would spend it on the first packages and never
-      // reach the later ones, and the truncation that reports it is an `info`.
-      (file) => acceptanceSource(file) && acceptanceLayer(path.relative(root, file)),
-    );
-  } catch {
-    // A malformed `testFileGlobs` entry is the user's to fix and already has a
-    // finding: `QFAI-TRACE-124`, from the validator that reads the same list.
-    // Rejecting here instead would abort the whole batch and replace every
-    // other result with a generic incomplete run.
-    scanResult = {
-      files: [],
-      truncated: false,
-      matchedFileCount: 0,
-      limit: DEFAULT_GLOB_FILE_LIMIT,
-    };
+    scanResult = await collectTestFiles(root, scanGlobs, scanExcludes, scanKeeps);
+  } catch (error) {
+    if (isFileSystemError(error)) {
+      ({ scanResult, unreadable } = await collectReadableTestFiles(
+        root,
+        scanGlobs,
+        scanExcludes,
+        scanKeeps,
+      ));
+    } else {
+      // A malformed `testFileGlobs` entry is the user's to fix and already has a
+      // finding: `QFAI-TRACE-124`, from the validator that reads the same list.
+      // Rejecting here instead would abort the whole batch and replace every
+      // other result with a generic incomplete run.
+      scanResult = {
+        files: [],
+        truncated: false,
+        matchedFileCount: 0,
+        limit: DEFAULT_GLOB_FILE_LIMIT,
+      };
+    }
   }
 
   const usRefs: AtddSpecRefs = new Map<string, Map<string, Set<string>>>();
@@ -695,7 +712,7 @@ export async function evaluateAtddCodeTraceability(
       normalizeGlobs(config.validation.traceability.testFileExcludeGlobs),
       normalizeGlobs(config.validation.traceability.testFileGlobs)
         .map((glob) => toPosixPath(glob))
-        .filter((glob) => glob.startsWith("!")),
+        .filter(isGlobExclusion),
     )),
   );
 
@@ -795,7 +812,48 @@ export async function evaluateAtddCodeTraceability(
       matchedFileCount: scanResult.matchedFileCount,
       truncated: scanResult.truncated,
       limit: scanResult.limit,
+      unreadable,
     },
+  };
+}
+
+/**
+ * The scan, one selecting pattern at a time, after the combined scan met a
+ * directory it could not read. The patterns that still read are unioned, and
+ * each one that does not is named with its reason, so the missing references
+ * that follow have a cause beside them. A negative entry travels with every
+ * pattern, since on its own it selects nothing.
+ */
+async function collectReadableTestFiles(
+  root: string,
+  globs: string[],
+  excludeGlobs: readonly string[],
+  filter: (absolutePath: string) => boolean,
+): Promise<{ scanResult: CollectFilesByGlobsResult; unreadable: string[] }> {
+  const exclusions = globs.filter(isGlobExclusion);
+  const outcomes = await Promise.all(
+    globs
+      .filter((glob) => !isGlobExclusion(glob))
+      .map(async (glob) => {
+        try {
+          const scan = await collectTestFiles(root, [glob, ...exclusions], excludeGlobs, filter);
+          return { kind: "scanned" as const, scan };
+        } catch (failure) {
+          const reason = failure instanceof Error ? failure.message : String(failure);
+          return { kind: "failed" as const, reason: `${glob}: ${reason}` };
+        }
+      }),
+  );
+  const scans = outcomes.flatMap((outcome) => (outcome.kind === "scanned" ? [outcome.scan] : []));
+  const files = [...new Set(scans.flatMap((scan) => scan.files))];
+  return {
+    scanResult: {
+      files: files.slice(0, DEFAULT_GLOB_FILE_LIMIT),
+      truncated: files.length > DEFAULT_GLOB_FILE_LIMIT || scans.some((scan) => scan.truncated),
+      matchedFileCount: Math.min(files.length, DEFAULT_GLOB_FILE_LIMIT),
+      limit: DEFAULT_GLOB_FILE_LIMIT,
+    },
+    unreadable: outcomes.flatMap((outcome) => (outcome.kind === "failed" ? [outcome.reason] : [])),
   };
 }
 
@@ -2368,8 +2426,7 @@ export function deriveTestFileExtensions(testFileGlobs: readonly string[]): Set<
     // and counted, `!tests/legacy/**/*.ts` beside a Python glob added TypeScript
     // to what the stage scans. `!(` opens a negated extglob instead, which
     // selects: `!(fixtures)/**/*.py` is a Python selector, as fast-glob reads it.
-    const trimmed = glob.trimStart();
-    if (trimmed.startsWith("!") && !trimmed.startsWith("!(")) continue;
+    if (isGlobExclusion(glob)) continue;
     for (const match of glob.matchAll(/\.\{([^}]+)\}$/g)) {
       for (const ext of (match[1] ?? "").split(",")) {
         // A member is copied into the generated scan pattern whole, wildcards
@@ -2424,6 +2481,7 @@ export function deriveAtddFilePattern(testFileGlobs: readonly string[]): string 
  * `pay.test.zig`.
  */
 function acceptanceSourceFilter(
+  root: string,
   filePattern: string,
   projectGlobs: readonly string[],
 ): (absolutePath: string) => boolean {
@@ -2436,7 +2494,8 @@ function acceptanceSourceFilter(
   const namedTestFile = namedTestFileMatcher(projectGlobs);
   return (absolutePath) =>
     extensions.has(path.extname(absolutePath).toLowerCase()) ||
-    namedTestFile(path.basename(absolutePath));
+    namedTestFile(toPosixPath(path.relative(root, absolutePath))) ||
+    namedTestFile(toPosixPath(absolutePath));
 }
 
 function buildAtddTestGlobs(root: string, testsRoot: string, filePattern: string): string[] {

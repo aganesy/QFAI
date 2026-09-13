@@ -418,9 +418,9 @@ async function collectUnreadableTestGlobs(root: string, config: QfaiConfig): Pro
     });
     return [];
   } catch (error) {
-    // A directory the globs reach that cannot be read is not this stage's to
-    // report: it scans only its own acceptance directories, rebuilt from the
-    // extensions, and a `tests/unit` it never opens cannot fail the stage.
+    // A directory the globs reach that cannot be read is reported by the scan
+    // itself, which names each pattern it could not read. This probe stops at
+    // the first match, so its failure says nothing about which one.
     if (isFileSystemError(error)) return [];
     const reason = error instanceof Error ? error.message : String(error);
     return [
@@ -459,6 +459,20 @@ export async function validateAtddCodeTraceability(
   const issues: Issue[] = [];
 
   issues.push(...(await collectUnreadableTestGlobs(root, config)));
+  if (result.scan.unreadable.length > 0) {
+    issues.push(
+      issue(
+        "QFAI-ATDD-134",
+        `The ATDD scan could not read part of the test globs: ${result.scan.unreadable.join("; ")}. The other patterns were scanned, and a reference missing from the tests only these select is not evidence that they hold none.`,
+        "error",
+        path.join(root, "qfai.config.yaml"),
+        "atddCodeTraceability.testFileGlobs",
+        result.scan.unreadable,
+        "canonical",
+        "A directory the test globs reach could not be read. Make it readable to the account running `qfai validate`, or exclude it with `validation.traceability.testFileExcludeGlobs` where it holds no test.",
+      ),
+    );
+  }
 
   issues.push(
     ...buildUnknownIssues(
