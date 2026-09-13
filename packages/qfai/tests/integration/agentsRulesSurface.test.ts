@@ -847,6 +847,18 @@ describe("a no-question run opens every node, on every surface that says so", ()
   });
 });
 
+describe("this repository's pull-request description", () => {
+  it("names removals, explains retained items and states an empty list explicitly", async () => {
+    const policy = await readFile(path.join(ROOT, "REVIEW.md"), "utf-8");
+    const removalSection = policy.split(/^## What a change made unnecessary\r?\n/m)[1];
+    expect(removalSection, "the existing review policy has no removal obligation").toBeDefined();
+    const obligation = removalSection?.split(/^## /m)[0]?.replace(/\s+/g, " ").trim();
+    expect(obligation).toBe(
+      'Every pull request lists, in its description, what the change made unnecessary, and says why anything on the list was kept. An empty list is a complete answer: it is written as "nothing", not left out.',
+    );
+  });
+});
+
 describe("an open fact survives the surfaces that report a session", () => {
   // The wrapper is the only output a `/qfai-grill` run has, and the register is
   // where a stage's unanswered questions land. A fact only the user holds

@@ -49,6 +49,12 @@ to cut nor what would stand in its place.
 Applies to findings about excess only. Correctness, security and performance
 keep the shape the rest of this document describes.
 
+## What a change made unnecessary
+
+Every pull request lists, in its description, what the change made unnecessary,
+and says why anything on the list was kept. An empty list is a complete answer:
+it is written as "nothing", not left out.
+
 ## Severity Prefixes
 
 Use the following severity prefixes on every comment:
