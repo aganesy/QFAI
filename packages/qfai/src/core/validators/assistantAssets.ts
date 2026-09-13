@@ -1389,6 +1389,22 @@ const SKILL_NAME_MAX_LENGTH = 64;
  */
 const SKILL_DESCRIPTION_MAX_LENGTH = 1024;
 
+/**
+ * How many characters `text` holds, counted as code points, as a host counts
+ * them. Counted without building a copy: a crawled document has no size
+ * ceiling, and a description the size of the document would be copied whole.
+ */
+function codePointCount(text: string): number {
+  let count = 0;
+  for (let index = 0; index < text.length; index += 1) {
+    const unit = text.charCodeAt(index);
+    const next = text.charCodeAt(index + 1);
+    if (unit >= 0xd800 && unit <= 0xdbff && next >= 0xdc00 && next <= 0xdfff) index += 1;
+    count += 1;
+  }
+  return count;
+}
+
 /** Whether a name is one a host accepts, whoever wrote it. */
 function usableAsSkillName(value: string): boolean {
   return value.length <= SKILL_NAME_MAX_LENGTH && SKILL_NAME_FORM.test(value);
@@ -1460,7 +1476,22 @@ function collectSkillRegistrationIssues(skillFile: string, content: string): Iss
     // Measured as a host reads it: trimmed, and in characters rather than UTF-16
     // units. Counted with its padding, or with an emoji as two, a description
     // within the limit was refused.
-    const length = Array.from(description.trim()).length;
+    const length = codePointCount(description.trim());
+    if (/[<>]/.test(description)) {
+      return [
+        ...missingName,
+        issue(
+          "QFAI-SKILLS-015",
+          "SKILL.md has a `description:` holding `<` or `>`, which a host refuses. The skill is not registered, and the user cannot invoke it by name.",
+          "error",
+          skillFile,
+          "skills.description",
+          undefined,
+          "change",
+          "Write `description:` without angle brackets: name the input in words, such as `a file path`, instead of `<file>`.",
+        ),
+      ];
+    }
     return length > SKILL_DESCRIPTION_MAX_LENGTH
       ? [
           ...missingName,
@@ -1597,7 +1628,9 @@ type SkillDocuments = {
 async function readSkillDocuments(skillsDir: string): Promise<SkillDocuments> {
   // A hidden tree is one the host does not list, so the walk never enters it:
   // collected, a draft's own references were held to the reachability rule and
-  // its citations vouched for live documents.
+  // its citations vouched for live documents. Nothing else is pruned by name:
+  // a skill can name a document under its own `tmp/` or `dist/`, and the host
+  // opens it.
   const files = await collectFiles(skillsDir, {
     extensions: [".md", ".yaml", ".yml"],
     skipDirectory: (directory) => isHiddenSkillDirectory(skillsDir, directory),

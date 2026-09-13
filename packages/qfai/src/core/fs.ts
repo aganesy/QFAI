@@ -16,6 +16,10 @@ export type CollectFilesOptions = {
    * and filtering the result afterwards is too late: the walk has already read
    * inside, so a directory this process may not traverse fails the collection
    * rather than being passed over.
+   *
+   * Given, it replaces the default list of directory names to skip: a caller
+   * deciding by path decides every directory, and a `dist` or `tmp` it wants
+   * read is not pruned by name behind its back.
    */
   skipDirectory?: (directory: string) => boolean;
 };
@@ -44,7 +48,10 @@ export async function collectFiles(
     return entries;
   }
 
-  const ignoreDirs = new Set([...DEFAULT_IGNORE_DIRS, ...(options.ignoreDirs ?? [])]);
+  const ignoreDirs = new Set([
+    ...(options.skipDirectory === undefined ? DEFAULT_IGNORE_DIRS : []),
+    ...(options.ignoreDirs ?? []),
+  ]);
   const extensions = options.extensions?.map((ext) => ext.toLowerCase()) ?? [];
 
   await walk(root, root, ignoreDirs, options.skipDirectory, extensions, entries);

@@ -595,6 +595,29 @@ describe("what the gate and the host disagreed about", () => {
     expect(codes).toContain("QFAI-SKILLS-014");
   });
 
+  it("reads a directory named like a build output inside a registered skill", async () => {
+    // The walk pruned `tmp`, `dist` and `node_modules` by name at every depth,
+    // so a document the skill names under one was never decoded.
+    const root = await projectWithSkill(['description: "Does the thing."']);
+    const tmp = path.join(
+      root,
+      ".qfai",
+      "assistant",
+      "skills",
+      "qfai-example",
+      "references",
+      "tmp",
+    );
+    await mkdir(tmp, { recursive: true });
+    const file = path.join(tmp, "guide.md");
+    await writeFile(file, Buffer.concat([Buffer.from("# guide\n"), Buffer.from([0xff])]));
+
+    const codes = (await validateAssistantAssets(root, defaultConfig))
+      .filter((item) => item.file === file)
+      .map((item) => item.code);
+    expect(codes).toContain("QFAI-SKILLS-014");
+  });
+
   it("calls a nested SKILL.md a reference, not an entry point", async () => {
     // A template named SKILL.md inside a skill registers nothing, so an invalid
     // byte in it stops the step that names it rather than the skill.
@@ -628,6 +651,12 @@ describe("what the gate and the host disagreed about", () => {
     const over = await projectWithSkill([`description: "${emoji.repeat(1025)}"`]);
     const [finding] = await registrationFindings(over);
     expect(finding?.message).toContain("1025 characters");
+  });
+
+  it("refuses a description holding an angle bracket, as a host does", async () => {
+    const root = await projectWithSkill(['description: "Use <file> inputs."']);
+    const [finding] = await registrationFindings(root);
+    expect(finding?.message).toContain("holding `<` or `>`");
   });
 
   it("does not read front matter behind a byte order mark", async () => {
