@@ -700,6 +700,71 @@ describe("validateGrillingTrace", () => {
     });
   });
 
+  it("does not take a subsection's table for the record", async () => {
+    // A subsection's content belongs to the subsection. The record's rows go
+    // directly under the section heading, so reading past a `###` let a table
+    // that belongs to something else stand in for one the stage never wrote.
+    await withRoot(async (root) => {
+      await evidence(
+        root,
+        "sdd-spec-0007.md",
+        [
+          "## Pre-draft Grilling",
+          "",
+          "No table here.",
+          "",
+          "### Notes",
+          "",
+          "| Note | Detail |",
+          "| ---- | ------ |",
+          "| a | b |",
+          "",
+        ].join("\n"),
+      );
+
+      expect(await validateGrillingTrace(root)).toHaveLength(1);
+    });
+  });
+
+  it("does not open the section on a heading inside a fence", async () => {
+    // A fence holds an example of a document rather than part of one. Located
+    // before the fences were dropped, a fenced copy of the heading opened the
+    // section in the middle of a fence and inverted the tracking below it.
+    await withRoot(async (root) => {
+      await evidence(
+        root,
+        "sdd-spec-0007.md",
+        [
+          "```text",
+          "## Pre-draft Grilling",
+          "",
+          "| Phase | Session |",
+          "| ----- | ------- |",
+          "| 0 | run |",
+          "```",
+          "",
+        ].join("\n"),
+      );
+
+      expect(await validateGrillingTrace(root)).toHaveLength(1);
+    });
+  });
+
+  it("does not take a break under a line that happens to hold a pipe", async () => {
+    // GFM reads a delimiter only under a header of the same width, and a `---`
+    // under a paragraph is a setext heading rather than a table. Matched on
+    // shape alone, the break took the role and what followed read as rows.
+    await withRoot(async (root) => {
+      await evidence(
+        root,
+        "sdd-spec-0007.md",
+        ["## Pre-draft Grilling", "", "Phase | Session", "---", "0 | run", ""].join("\n"),
+      );
+
+      expect(await validateGrillingTrace(root)).toHaveLength(1);
+    });
+  });
+
   it("does not take a thematic break for a delimiter", async () => {
     // GFM puts a delimiter under a header and nowhere else. Matched anywhere,
     // a break took the role and whatever followed it read as the table's rows.

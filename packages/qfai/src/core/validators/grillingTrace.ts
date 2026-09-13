@@ -256,21 +256,33 @@ function literal(value: string): string {
 }
 
 /** The heading, and what ends the section it opens. */
-function headingPatterns(section: string): { heading: RegExp; ends: RegExp } {
+function headingRe(section: string): RegExp {
   const parsed = /^(#+)\s+(.*)$/.exec(section);
   const hashes = parsed?.[1] ?? "##";
   const title = parsed?.[2] ?? section;
-  return {
-    // As CommonMark admits an ATX heading: up to three leading spaces, and an
-    // optional closing run of hashes. An exact-line match reported a written
-    // record as missing for both.
-    //
-    // The closing run needs whitespace before it. CommonMark reads
-    // `## Title###` as a heading whose text is `Title###`, so accepting it
-    // matched a heading nobody writes and let a file with no section pass.
-    heading: new RegExp(`^ {0,3}${hashes}\\s+${literal(title)}(?:\\s+#+)?\\s*$`),
-    ends: new RegExp(`^ {0,3}#{1,${String(hashes.length)}}\\s`),
-  };
+  // As CommonMark admits an ATX heading: up to three leading spaces, and an
+  // optional closing run of hashes. An exact-line match reported a written
+  // record as missing for both.
+  //
+  // The closing run needs whitespace before it. CommonMark reads `## Title###`
+  // as a heading whose text is `Title###`, so accepting it matched a heading
+  // nobody writes and let a file with no section pass.
+  return new RegExp(`^ {0,3}${hashes}\\s+${literal(title)}(?:\\s+#+)?\\s*$`);
+}
+
+/**
+ * Any ATX heading, which is where the section's own content stops.
+ *
+ * Any, not one of the section's level or above: a subsection's content belongs
+ * to the subsection. The record's rows go directly under the section heading,
+ * so reading past a `###` let a table that belongs to something else stand in
+ * for a table the stage never wrote.
+ */
+const ANY_HEADING_RE = /^ {0,3}#{1,6}\s/;
+
+/** The cells of a markdown table row, outer pipes off. */
+function cellsOf(line: string): string[] {
+  return line.trim().replace(/^\|/, "").replace(/\|$/, "").split("|");
 }
 
 /** What one section holds: the rows the stage wrote, and the ones it did not. */
@@ -293,33 +305,41 @@ type SectionRows = {
  * a section present with nothing readable under it.
  */
 function ownRowsUnder(text: string, section: string): SectionRows | null {
-  const { heading, ends } = headingPatterns(section);
-  const lines = text.split(/\r?\n/);
-  const start = lines.findIndex((line) => heading.test(line));
-  if (start === -1) return null;
-
-  const body: string[] = [];
+  const heading = headingRe(section);
+  // Fenced blocks are dropped before anything is located in the text. A fence
+  // is an example of a document rather than part of one, so a worked example
+  // inside the section supplied the rows — a section showing what to write and
+  // writing nothing read as a record, and an example above the real table
+  // answered in its place. Dropped after the heading was located, a fenced copy
+  // of the heading itself opened the section in the middle of a fence and
+  // inverted the tracking for everything below it.
+  const lines: string[] = [];
   let fenced = false;
-  for (const line of lines.slice(start + 1)) {
-    // A fenced block is an example of a table rather than one. Read as content,
-    // a worked example inside the section supplied the rows — so a section
-    // showing what to write, and writing nothing, read as a record, and an
-    // example above the real table answered in its place.
+  for (const line of text.split(/\r?\n/)) {
     if (FENCE_RE.test(line)) {
       fenced = !fenced;
       continue;
     }
-    if (fenced) continue;
-    if (ends.test(line)) break;
+    if (!fenced) lines.push(line);
+  }
+
+  const start = lines.findIndex((line) => heading.test(line));
+  if (start === -1) return null;
+
+  const body: string[] = [];
+  for (const line of lines.slice(start + 1)) {
+    if (ANY_HEADING_RE.test(line)) break;
     body.push(line);
   }
 
-  // A delimiter under a header, which is the only place GFM puts one. Matched
-  // anywhere, a thematic break took the role and whatever followed it read as
-  // the table's rows.
-  const delimiter = body.findIndex(
-    (line, at) => at > 0 && DELIMITER_RE.test(line) && (body[at - 1] ?? "").includes("|"),
-  );
+  // A delimiter under a header of the same width, which is the only thing GFM
+  // reads as one. Matched on shape alone, a thematic break under a line that
+  // happened to hold a pipe took the role, and what followed read as rows.
+  const delimiter = body.findIndex((line, at) => {
+    const header = body[at - 1];
+    if (at === 0 || header === undefined || !header.includes("|")) return false;
+    return DELIMITER_RE.test(line) && cellsOf(line).length === cellsOf(header).length;
+  });
   if (delimiter === -1) return { written: [], empty: 0, placeheld: 0 };
 
   const written: string[] = [];
