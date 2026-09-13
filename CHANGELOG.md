@@ -272,12 +272,16 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   `Audited evidence hash` per `TDD-ID` its request lists, and a T1 group
   member's hash is read from the line naming it, in round and row-level packs
   alike. No two review attempts of a row may name one pack, and a
-  `reviewer verdict` or `Round N: Review pack` cell may not share a table row
-  with another field, since the audited subject drops that row whole.
+  `reviewer verdict` or `Round N: Review pack` label may not share a table row
+  with another field's label, since the audited subject drops that row whole.
   A round pack pair needs its attempt's `PASS` or `REVISE` verdict even when
   the pack is absent, and a present pack's `summary.json` must record that
   verdict: `overall_status` `PASS` or `FAIL`, and each responding reviewer's
   status in `reviewers[]`, or `reviewers: []` for a round no reviewer answered.
+  Review pack responses are read only from the pack's own directory, and a
+  round pack must name its revision in a form `evidence-revision.md` defines
+  under `revision_form: "content-hash"` and declare `producer: "implement"` in
+  `summary.json` and `Producer: implement` in its request.
 
 ## [1.12.0] - 2026-09-12
 

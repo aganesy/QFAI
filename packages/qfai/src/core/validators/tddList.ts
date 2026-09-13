@@ -1437,10 +1437,14 @@ function bareSha256(value: string): string {
  * a blocking response passed as long as `summary.json` said PASS and the pack
  * seal was recomputed from the doctored contents. Masking is the same one the
  * evidence entries use, so "what the reader sees" means one thing in both.
+ *
+ * `listItem` also reads the line as a list item (`- Producer: implement`), for
+ * a field the layout writes that way.
  */
-function visibleLineFieldValues(content: string, field: string): string[] {
+function visibleLineFieldValues(content: string, field: string, listItem = false): string[] {
   const escapedField = field.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-  const pattern = new RegExp(`^${escapedField}:[ \\t]*(.*)$`, "i");
+  const marker = listItem ? "(?:[-*+][ \\t]+)?" : "";
+  const pattern = new RegExp(`^${marker}${escapedField}:[ \\t]*(.*)$`, "i");
   return maskEvidenceRegions(content.replace(/\r\n/g, "\n"))
     .split("\n")
     .flatMap((line) => {
@@ -1569,9 +1573,9 @@ function fencedEvidenceValueEnd(lines: readonly string[], start: number): number
 }
 
 /**
- * Whether a table row in the region the audited subject is taken from holds a
- * `reviewer verdict` or `Round N: Review pack` cell beside a cell of another
- * field.
+ * Whether a table row in the region the audited subject is taken from labels a
+ * `reviewer verdict` or `Round N: Review pack` field beside a field of another
+ * kind.
  *
  * The subject drops a line that opens with one of those fields, and a table
  * row is one line, while the field readers take every label and value pair on
@@ -1580,16 +1584,19 @@ function fencedEvidenceValueEnd(lines: readonly string[], start: number): number
  * nothing moving; one before it keeps the reviewer's own cell in the subject.
  * A row holding only those fields' labels, each followed by its value, is
  * dropped whole and hides nothing.
+ *
+ * Labels are the even cells. A value that quotes a reviewer field, as the
+ * output of a test asserting on one does, names no field.
  */
 function hasFieldBesideReviewerAppendedCell(section: string): boolean {
   const visibleLines = maskEvidenceRegions(section.replace(/\r\n/g, "\n")).split("\n");
   const boundary = visibleLines.findIndex((line) => GATE_COMPLETED_EVIDENCE_FIELD.test(line));
   return visibleLines.slice(0, boundary < 0 ? undefined : boundary).some((line) => {
     if (!/^\s*\|/.test(line)) return false;
-    const labels = splitMarkdownRow(line).map((cell) =>
-      REVIEWER_APPENDED_ROUND_FIELD.test(`${cell} |`),
-    );
-    return labels.some(Boolean) && labels.some((reviewer, index) => index % 2 === 0 && !reviewer);
+    const reviewerLabels = splitMarkdownRow(line)
+      .filter((_, index) => index % 2 === 0)
+      .map((label) => REVIEWER_APPENDED_ROUND_FIELD.test(`${label} |`));
+    return reviewerLabels.includes(true) && reviewerLabels.includes(false);
   });
 }
 
@@ -2156,11 +2163,32 @@ function reviewPackArtifact(
  * reviewer, and the seal recomputes over every file whatever they say. The
  * cardinality is the finding, so the caller is handed all of them.
  */
-function reviewPackResponses(files: ReadonlyArray<ReviewPackFile>, role: string): string[] {
-  const named = new RegExp(`^R\\d{2}_${role.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\.md$`);
-  return files
-    .filter(({ relativePath }) => named.test(path.posix.basename(relativePath)))
+function reviewPackResponses(
+  files: ReadonlyArray<ReviewPackFile>,
+  packPath: string,
+  role: string,
+): string[] {
+  return packResponseFiles(files, packPath)
+    .filter((response) => response.role === role)
     .map(({ content }) => content);
+}
+
+/**
+ * Every response file directly under a review pack's root, with the reviewer
+ * its name names, in file order. The layout places reviewer files in the pack
+ * directory itself, so a file of that name in a directory below it is not a
+ * response.
+ */
+function packResponseFiles(
+  files: ReadonlyArray<ReviewPackFile>,
+  packPath: string,
+): Array<{ role: string; content: string }> {
+  return files.flatMap(({ relativePath, content }) => {
+    const role = relativePath.startsWith(`${packPath}/`)
+      ? /^R\d{2}_([^/]+)\.md$/.exec(relativePath.slice(packPath.length + 1))?.[1]
+      : undefined;
+    return role === undefined ? [] : [{ role, content }];
+  });
 }
 
 /**
@@ -2503,7 +2531,7 @@ function stagePackRecordsPass(
 ): boolean {
   const request = reviewPackArtifact(files, packPath, "review_request.md");
   const summary = reviewPackArtifact(files, packPath, "summary.json");
-  const responses = reviewPackResponses(files, STAGE_REVIEWER_ROLE);
+  const responses = reviewPackResponses(files, packPath, STAGE_REVIEWER_ROLE);
   const response = responses[0];
   if (request === null || summary === null || response === undefined) return false;
   if (visibleLineFieldValues(request, "TDD-ID").length > 0) return false;
@@ -3410,7 +3438,7 @@ async function invalidCompletedEvidenceArtifacts(
     // `R\d\d_<role>.md` answering `REVISE` is an open verdict on the same
     // request, and `summary.json` records one line per reviewer whatever the
     // responses say.
-    const responses = reviewPackResponses(packFiles, expectedRole);
+    const responses = reviewPackResponses(packFiles, packPath, expectedRole);
     const response = responses[0];
     const members = packReviewMembers(packFiles, packPath, expected.tddId);
     if (
@@ -3660,7 +3688,12 @@ function invalidPresentRoundPack(
     );
   }
   if (!roundPackRecordsSubject(packFiles, entry.pack, entry)) {
-    invalid.push(`${label} reviewing this row's spec at one revision`);
+    invalid.push(
+      `${label} reviewing this row's spec at one revision naming ${REVISION_FORM_HINT} under revision_form "content-hash"`,
+    );
+  }
+  if (!roundPackDeclaresImplement(packFiles, entry.pack)) {
+    invalid.push(`${label} declaring producer implement in summary.json and review_request.md`);
   }
   if (!roundPackRecordsHashes(packFiles, entry.pack, entry.tddId)) {
     invalid.push(
@@ -3678,11 +3711,32 @@ function invalidPresentRoundPack(
   return invalid;
 }
 
-/** Every response a review pack holds, whichever reviewer wrote it. */
-function allReviewPackResponses(packFiles: ReadonlyArray<ReviewPackFile>): string[] {
-  return packFiles
-    .filter(({ relativePath }) => /^R\d{2}_.+\.md$/.test(path.posix.basename(relativePath)))
-    .map(({ content }) => content);
+/** Every response a review pack holds at its root, whichever reviewer wrote it. */
+function allReviewPackResponses(
+  packFiles: ReadonlyArray<ReviewPackFile>,
+  packPath: string,
+): string[] {
+  return packResponseFiles(packFiles, packPath).map(({ content }) => content);
+}
+
+/**
+ * Whether a round attempt's pack says the implement stage wrote it: `producer`
+ * in `summary.json` and the one visible `Producer` line of its request, which
+ * the layout writes as a list item, both state `implement`
+ * (`review-artifact-layout.md`). A sealed pack another stage wrote over the same
+ * spec, row, revision and verdicts would otherwise pass as this row's round.
+ */
+function roundPackDeclaresImplement(
+  packFiles: ReadonlyArray<ReviewPackFile>,
+  packPath: string,
+): boolean {
+  const request = reviewPackArtifact(packFiles, packPath, "review_request.md");
+  const declared = request === null ? [] : visibleLineFieldValues(request, "Producer", true);
+  return (
+    reviewPackSummary(packFiles, packPath)?.["producer"] === "implement" &&
+    declared.length === 1 &&
+    declared[0] === "implement"
+  );
 }
 
 /**
@@ -3698,7 +3752,7 @@ function roundPackRecordsHashes(
   tddId: string,
 ): boolean {
   const members = packReviewMembers(packFiles, packPath, tddId);
-  return allReviewPackResponses(packFiles).every(
+  return allReviewPackResponses(packFiles, packPath).every(
     (response) => memberAuditedHashes(response, members) !== null,
   );
 }
@@ -3721,7 +3775,7 @@ function roundPackRecordsVerdict(
   if (request === null || !requestNamesReviewUnit(request, entry.tddId, entry.reviewUnit)) {
     return false;
   }
-  const statuses = reviewerStatuses(packFiles);
+  const statuses = reviewerStatuses(packFiles, packPath);
   const outcome = attemptOutcome(entry.verdict);
   if (statuses === null || outcome === null) return false;
   const recorded = [...statuses.values()];
@@ -3737,11 +3791,10 @@ function roundPackRecordsVerdict(
  */
 function reviewerStatuses(
   packFiles: ReadonlyArray<ReviewPackFile>,
+  packPath: string,
 ): Map<string, "PASS" | "FAIL"> | null {
   const statuses = new Map<string, "PASS" | "FAIL">();
-  for (const { relativePath, content } of packFiles) {
-    const role = /^R\d{2}_(.+)\.md$/.exec(path.posix.basename(relativePath))?.[1];
-    if (role === undefined) continue;
+  for (const { role, content } of packResponseFiles(packFiles, packPath)) {
     const passes = exactLineField(content, "Result", "PASS");
     if (!passes && !exactLineField(content, "Result", "REVISE")) return null;
     statuses.set(role, passes && statuses.get(role) !== "FAIL" ? "PASS" : "FAIL");
@@ -3766,7 +3819,7 @@ function roundPackSummaryRecordsVerdict(
 ): boolean {
   const summary = reviewPackSummary(packFiles, packPath);
   const reviewers = summary?.["reviewers"];
-  const statuses = reviewerStatuses(packFiles);
+  const statuses = reviewerStatuses(packFiles, packPath);
   const outcome = attemptOutcome(entry.verdict);
   if (statuses === null || outcome === null || !Array.isArray(reviewers)) return false;
   if (summary?.["overall_status"] !== (outcome === "PASS" ? "PASS" : "FAIL")) return false;
@@ -3810,6 +3863,11 @@ function reviewPackSummary(
  * does, and every response names the revision the summary names. `TDD-ID`s are
  * unique only within a spec, so without the target a sealed pack reviewing
  * another spec's row of the same id would stand in for this one.
+ *
+ * The revision is a form `evidence-revision.md` defines, under the
+ * `revision_form: "content-hash"` a current pack declares
+ * (`review-artifact-layout.md`). Nothing in the entry records the tree an
+ * earlier attempt reviewed, so its form is all that binds that review to one.
  */
 function roundPackRecordsSubject(
   packFiles: ReadonlyArray<ReviewPackFile>,
@@ -3823,11 +3881,13 @@ function roundPackRecordsSubject(
     target === null ||
     target["kind"] !== "spec" ||
     target["path"] !== `${entry.specsRelative}/spec-${entry.specNumber}` ||
-    typeof revision !== "string"
+    typeof revision !== "string" ||
+    !EVIDENCE_REVISION_FORM.test(revision) ||
+    summary?.["revision_form"] !== "content-hash"
   ) {
     return false;
   }
-  return allReviewPackResponses(packFiles).every((response) =>
+  return allReviewPackResponses(packFiles, packPath).every((response) =>
     exactLineField(response, "Reviewed revision", revision),
   );
 }
@@ -3849,7 +3909,7 @@ function roundPackRecordsClosing(
   const revision = reviewPackSummary(packFiles, packPath)?.["revision"];
   const members = packReviewMembers(packFiles, packPath, tddId);
   for (const [role, verdict] of closing) {
-    const answered = reviewPackResponses(packFiles, role);
+    const answered = reviewPackResponses(packFiles, packPath, role);
     if (
       answered.length !== 1 ||
       verdict.revision === null ||
