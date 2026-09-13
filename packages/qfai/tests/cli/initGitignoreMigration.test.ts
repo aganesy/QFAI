@@ -193,6 +193,12 @@ describe("a legacy per-directory evidence ignore is migrated, not ignored", () =
         ".qfai/evidence/decisions/20260101T000000000.json",
         ".qfai/evidence/import-lite-20260101000000000.md",
         ".qfai/evidence/import-lite.md",
+        // The two session records. A stage that ran its grilling session and
+        // one that skipped it leave the same pack, so the record is the only
+        // difference — and a record the nested `*` hides is read on the machine
+        // that wrote it and nowhere else.
+        ".qfai/evidence/sdd-spec-0001.md",
+        ".qfai/evidence/discussion-20260101000000000.md",
       ]) {
         expect(
           isPathIgnoredByLayers(layers, sample),
