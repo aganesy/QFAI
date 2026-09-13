@@ -184,7 +184,35 @@ restated here.
   So a sibling spec's uncovered contract exits 1 on this spec's gate. That is a real limit, not a formality. When it happens: record the finding, its owning spec and why it is not this stage's work as a cross-spec obligation in this stage's evidence, under `## Cross-spec obligations`, and say so in the completion report — do **not** claim the gate passed, weaken the profile, lower `--fail-on`, or waive it. Closing them is the owning spec's next `/qfai-atdd` run. The repo-wide run belongs to `/qfai-verify`, at the end of the stage. **That record is a terminal state, not a deferral of one**: a run whose every residual finding is attributed to a named sibling spec completes as **`PASS with cross-spec obligations`** (`#success-criteria-definition-of-done`), and the repo-wide `/qfai-verify` run settles the residue. Unnamed, that state is unreachable — the owning spec's run hits this same block from the other side, so every spec waits for every other one and the four moves just forbidden are the only exits left. It is not free: a finding you cannot attribute to a named sibling spec is **this** spec's, and it fails.
 
 - Coverage obligations are mandatory : , and **`required` narrows on a different mechanism for each ID kind — `US-*` by surface type, `TC-*` by its declared `Level`, `CON-API-*` by active-vs-deferred. They share a word, not a rule; never carry one kind's over to another**:
-  - `tests/e2e/**` must cover all required `US-*`. A story outside the current slice is deferred in `02_User-stories.md` with a `- x-qfai-status: planned` meta line in its own `US-XXXX` block (a `##`-or-deeper heading, or its catalog list entry) — the same token both contract kinds use — and is named at `info` by `QFAI-ATDD-118`. It is not left uncovered, and it is not covered by a test that asserts nothing. `exception` is not the alternative here: that branch belongs to a ledger row, and a `US-*` owns none (`references/red-provenance.md#a-spec-with-no-atdd-owned-rows`). **Required** here = every declared `US-*` of a **user-facing** spec, "user-facing" being the same surface union `/qfai-prototyping` resolves — frontmatter `surface_type: ui-bearing` in `01_Spec.md`, a matching UI contract in `.qfai/contracts/ui/` (the resolver accepts these names and no others: `<spec-id>.yaml`, `spec-<spec-id>.yaml`, `ui-<spec-id>.yaml`, `ui-<spec-id>-<slug>.yaml`, or any `*.yaml` at any depth under a `spec-<spec-id>/` subdirectory — a basename that merely contains the id, such as `0002-orders.yaml`, is not one, and a `.yml` extension never is), a legacy `# … prototyping …` heading, or the spec pinned by `qfai.config.yaml#prototyping.primarySpecId`; any one signal is enough. **That narrowing is a project-wide, all-or-nothing opt-in**: it turns on the moment any one spec in the repository declares a user-facing surface, and until then it is off repo-wide. So a spec with no user-facing surface owes no E2E reference once the project has opted in, and before that owes one for every declared `US-*` — the obligation on the spec in front of you can change because a **different** spec added a surface declaration, with nothing in this stage's inputs to show it. On a resolution failure `qfai` names the reason on stderr and keeps the obligation project-wide, so read stderr before treating an unexpectedly wide `QFAI-ATDD-111` as a spec error (`catalog/test-layers.md#atdd-annotation-hard-gate`).
+  - `tests/e2e/**` must cover all required `US-*`. A story outside the current
+    slice is deferred in `02_User-stories.md` with a `- x-qfai-status: planned`
+    meta line in its own `US-XXXX` block (a `##`-or-deeper heading, or its catalog
+    list entry) — the same token both contract kinds use — and is named at
+    `info` by `QFAI-ATDD-118`. It is not left uncovered, and it is not covered by
+    a test that asserts nothing. A ledger-row `exception` does not defer a
+    `US-*` annotation obligation. Active stories have their own E2E ledger rows
+    and follow the ATDD-owned lifecycle
+    (`references/red-provenance.md#a-spec-with-no-atdd-owned-rows`). **Required**
+    here = every declared `US-*` of a **user-facing** spec, "user-facing" being
+    the same surface union `/qfai-prototyping` resolves — frontmatter
+    `surface_type: ui-bearing` in `01_Spec.md`, a matching UI contract in
+    `.qfai/contracts/ui/` (the resolver accepts these names and no others:
+    `<spec-id>.yaml`, `spec-<spec-id>.yaml`, `ui-<spec-id>.yaml`,
+    `ui-<spec-id>-<slug>.yaml`, or any `*.yaml` at any depth under a
+    `spec-<spec-id>/` subdirectory — a basename that merely contains the id,
+    such as `0002-orders.yaml`, is not one, and a `.yml` extension never is), a
+    legacy `# … prototyping …` heading, or the spec pinned by
+    `qfai.config.yaml#prototyping.primarySpecId`; any one signal is enough.
+    **That narrowing is a project-wide, all-or-nothing opt-in**: it turns on the
+    moment any one spec in the repository declares a user-facing surface, and
+    until then it is off repo-wide. So a spec with no user-facing surface owes
+    no E2E reference once the project has opted in, and before that owes one for
+    every declared `US-*` — the obligation on the spec in front of you can
+    change because a **different** spec added a surface declaration, with
+    nothing in this stage's inputs to show it. On a resolution failure `qfai`
+    names the reason on stderr and keeps the obligation project-wide, so read
+    stderr before treating an unexpectedly wide `QFAI-ATDD-111` as a spec error
+    (`catalog/test-layers.md#atdd-annotation-hard-gate`).
   - Every `TC-*` must be covered from the directory its declared `Level` routes
     to: `L3`/`Integration` -> `tests/integration/**`, `L4`/`API` ->
     `tests/api/**`, `L5`/`E2E` -> `tests/e2e/**`. Every other `Level` routes to
@@ -334,7 +362,7 @@ Notes:
 - Forbidden references remain.
 - Tests exist but were never executed.
 - Validation evidence is missing, or failing on a finding this spec owns. **A residual `QFAI-ATDD-113` / `-115` attributed to a named sibling spec and recorded under `## Cross-spec obligations` is not this criterion** — it blocks _that_ spec's completion, not this one, and `/qfai-verify` settles the repo-wide residue at the end of the stage. Unrecorded residue is, and so is an entry that names no owning spec, names **this** spec as the owner, or omits the contract ID the finding cites.
-- Coverage Depth Matrix is missing, omits the business rule coverage table on a spec that declares an active `BR-*`, or contains unjustified ❌ cells in either table, or that table drops an active `BR-ID` declared in `04_Business-Rules.md` (normal-path-only coverage is incomplete only where a kept failure is uncovered).
+- Coverage Depth Matrix is missing, omits the business rule coverage table on a spec that declares an active `BR-*`, or contains unjustified ❌ cells in either table, or that table drops an active `BR-ID` declared in `04_Business-Rules.md` (normal-path-only coverage is incomplete where an applicable obligation is uncovered: normal path, declared valid boundaries and kept failures).
 - A ledger row was advanced past `todo` with none of the three forms — no observed RED, no falsifiability evidence, and no `DR-*`.
 - A row was sent to `exception` without a `DR-*` recording why **both** branches were unavailable. "The surface was built earlier in this cycle" is not such a reason.
 

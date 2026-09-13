@@ -253,6 +253,10 @@ describe.each(TREES)("%s", (tree) => {
     expect(analyst).not.toContain("at least one positive and one negative test case");
     const skill = flat(await read(tree, SKILL));
     expect(skill).toContain(
+      "normal-path-only coverage is incomplete where an applicable obligation is uncovered",
+    );
+    expect(skill).toContain("normal path, declared valid boundaries and kept failures");
+    expect(skill).not.toContain(
       "normal-path-only coverage is incomplete only where a kept failure is uncovered",
     );
   });

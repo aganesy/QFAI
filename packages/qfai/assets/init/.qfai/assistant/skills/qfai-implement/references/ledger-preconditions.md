@@ -136,7 +136,7 @@ Do **not** proceed with an absent ledger, and do **not** invent rows that no
 E2E / API row — those two are backed by their `US-*` / `CON-API-*` instead, and
 carry `-` in `TC-Refs` because `catalog/test-layers.md` forbids a `TC-*` there.
 
-## An empty ledger is a fault only when `06_Test-Cases.md` disagrees
+## Check all four obligation sources before an empty-ledger exit
 
 A header-only table has very different causes and they need opposite responses,
 so never treat "no rows" as "nothing to do" on its own.
