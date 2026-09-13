@@ -155,11 +155,14 @@ because what they were rejected against is still written where they are.
 - Contracts: `none`
 - Schema: `none`
 - Upstream paths edited under this CR: the `Specs` and `Plans` paths above.
-  **Under option 3 it reduces to the three delta files** the `confirm-only`
-  reruns write — `.qfai/specs/spec-0013/09_delta.md`,
-  `.qfai/specs/spec-0004/09_delta.md` and `.qfai/specs/_policies/10_delta.md`:
-  that option changes the product and leaves every upstream statement standing,
-  so approving it authorises no other upstream edit. The section is reduced to
+  **Under option 3 it reduces to the files carrying the template path and the
+  three delta files** the `confirm-only` reruns write: `01_Spec.md` through
+  `06_Test-Cases.md`, `07_Decisions.md` and `10_Plan.md` of `spec-0013`, and
+  `.qfai/specs/_policies/08_Decisions.md`, beside
+  `.qfai/specs/spec-0013/09_delta.md`, `.qfai/specs/spec-0004/09_delta.md` and
+  `.qfai/specs/_policies/10_delta.md`. That option restores the floor in the
+  product and leaves every band statement standing, so approving it
+  authorises no other upstream edit. The section is reduced to
   the approved outcome before `Status: approved` is written, because
   `QFAI-DRIFT-001` reads a path here and not the condition beside it.
 
@@ -178,21 +181,24 @@ stands.
    `.qfai/assistant/constitution/drift-protocol.md` gives each its own. **All
    three run in `confirm-only`**; what each confirms depends on the option.
 
-   | Invocation            | Under options 1 and 2, confirms                                                                                                                                                                                                                                                                                                                                                 | Under option 3, confirms    | CR reference lands in                                                |
-   | --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------- | -------------------------------------------------------------------- |
-   | `/qfai-sdd spec-0013` | The nine statements under `## Proposed change`, plus `10_Plan.md`'s band item, as edited by hand under this approval                                                                                                                                                                                                                                                            | that every statement stands | `spec-0013/09_delta.md`, and `07_Decisions.md` under options 1 and 2 |
-   | `/qfai-sdd spec-0004` | Every statement that carries the band, as edited by hand under this approval: `REQ-0164` and its Consumer View sentence, `US-0004-0038` — which requires the finding to name a recommended count band — `AC-0004-0037`, `BR-0004-0031`, the example, `TC-0004-0070`, the `OQ-0158` resolution, the plan item, and `DR-0004-0014` — a third decision adopting `DR-0267` verbatim | that every statement stands | `spec-0004/09_delta.md`, and `07_Decisions.md` under options 1 and 2 |
-   | `/qfai-sdd`           | `_policies/08_Decisions.md` — `DR-0267`, superseded or rewritten by the option                                                                                                                                                                                                                                                                                                  | that `DR-0267` stands       | `_policies/10_delta.md`, and `08_Decisions.md` under options 1 and 2 |
+   | Invocation            | Under options 1 and 2, confirms                                                                                                                                                                                                                                                                                                                                                 | Under option 3, confirms                                              | CR reference lands in                                                |
+   | --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------- | -------------------------------------------------------------------- |
+   | `/qfai-sdd spec-0013` | The nine statements under `## Proposed change`, plus `10_Plan.md`'s band item, as edited by hand under this approval                                                                                                                                                                                                                                                            | that every statement stands, with the template path corrected by hand | `spec-0013/09_delta.md` and `07_Decisions.md`                        |
+   | `/qfai-sdd spec-0004` | Every statement that carries the band, as edited by hand under this approval: `REQ-0164` and its Consumer View sentence, `US-0004-0038` — which requires the finding to name a recommended count band — `AC-0004-0037`, `BR-0004-0031`, the example, `TC-0004-0070`, the `OQ-0158` resolution, the plan item, and `DR-0004-0014` — a third decision adopting `DR-0267` verbatim | that every statement stands                                           | `spec-0004/09_delta.md`, and `07_Decisions.md` under options 1 and 2 |
+   | `/qfai-sdd`           | `_policies/08_Decisions.md` — `DR-0267`, superseded or rewritten by the option                                                                                                                                                                                                                                                                                                  | that `DR-0267` stands, with its template path corrected by hand       | `_policies/10_delta.md` and `08_Decisions.md`                        |
 
-   **The template path is corrected in every statement options 1 and 2 edit.**
-   `REQ-0164`, `US-0013-0014`, `AC-0013-0024`, `BR-0013-0019`, `EX-0013-0019`,
+   **The template path is corrected under every option.** `REQ-0164`,
+   `US-0013-0014`, `AC-0013-0024`, `BR-0013-0019`, `EX-0013-0019`,
    `TC-0013-0032`, `DR-0013-0003`, the `10_Plan.md` item and `DR-0267` name
    `templates/contracts/ui-spec.yaml`, which the package does not ship; the
-   template is `templates/contracts/ui-contract.sample.yaml`. A statement
-   narrowed to the ceiling names the shipped file, so `TC-0013-0032` does not
-   go on requiring documentation in an artifact nobody can check. A superseded
-   record keeps its text, path included. Under option 3 no statement is edited,
-   and the path defect is left to a record of its own.
+   template is `templates/contracts/ui-contract.sample.yaml`. Under options 1
+   and 2 a statement narrowed to the ceiling names the shipped file, and a
+   superseded record keeps its text, path included. Under option 3 the band
+   stands and nothing is superseded, so each of those statements and both
+   decision records has its path corrected by hand and nothing else, with this
+   Change Request in each record's `Related`. Either way `TC-0013-0032` stops
+   requiring documentation in an artifact nobody can check, and the
+   re-verification of `TDD-0027` reads the file its case reads.
 
    Each delta write is one row of that file's `## Change Requests` table —
    `CR ID`, `Upstream artifact`, `Mode`, `Approved by`, `Applied at` — and not a
@@ -282,9 +288,9 @@ stands.
    **Under option 3 no row is reset.** The obligations and their sources stand,
    and the approved reset exists for an upstream change that invalidates a
    row's obligation (`change-request-reset.md`), so recording this request in
-   `DR-ID` would claim a change that did not happen. Action 4 still rewrites
-   the validators and tests the three rows certify, so **those rows are
-   re-verified in place**, by the path
+   `DR-ID` would claim a change that did not happen. Action 4 still rewrites the
+   validators and tests the three rows certify, so, once action 4 has landed,
+   **those rows are re-verified in place** over the restored floor, by the path
    `.qfai/assistant/skills/qfai-implement/references/checkpoint-verification.md`
    sets out for a repair over code a `done` row produced: a
    `## Shared-artifact re-verify` line per row at the new `Revision`, carrying
@@ -309,11 +315,14 @@ stands.
    under every option.** Its `BR-0013-0019` row and its findings score the
    missing floor and the missing template file. Options 1 and 2 rewrite that
    rule, and option 3 restores the behaviour it names, so each outcome changes
-   what those cells and findings describe. The matrix is owned from the ATDD
+   what those cells and findings describe. Under option 3 the refresh runs after
+   action 4, so it scores the restored floor rather than the ceiling it
+   replaces. The matrix is owned from the ATDD
    stage onward (`qfai-atdd/SKILL.md`), so the refresh goes through that
    stage's reviewer gate.
 
-4. Under option 3 only: `packages/qfai/src/core/validators/designAudit.ts`,
+4. Under option 3 only, and ahead of action 3's re-verification and refresh:
+   `packages/qfai/src/core/validators/designAudit.ts`,
    `packages/qfai/src/core/validators/auditProfile.ts` and their tests —
    `packages/qfai/tests/integration/primaryTasksBand.test.ts`,
    `packages/qfai/tests/unit/core/validators/auditProfileBandReject.test.ts`,

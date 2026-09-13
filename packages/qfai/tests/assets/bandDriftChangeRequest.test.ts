@@ -50,7 +50,10 @@ describe("the primary_tasks band drift has a Change Request", () => {
     const field = (name: string): string | undefined =>
       new RegExp(`^- ${name}: \u0060([^\u0060]*)\u0060$`, "m").exec(text)?.[1];
     const timestamp = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$/;
-    const resolution = text.slice(text.indexOf("## Resolution") + "## Resolution".length);
+    const heading = text.indexOf("\n## Resolution\n");
+    // Every status carries the section; a record that lost it would read as all resolution.
+    expect(heading).toBeGreaterThan(-1);
+    const resolution = text.slice(heading + "\n## Resolution\n".length);
     const resolved = resolution.replace(/<!--[\s\S]*?-->/g, "").trim().length > 0;
     const status = field("Status");
     const approvedBy = field("Approved by");
@@ -71,7 +74,7 @@ describe("the primary_tasks band drift has a Change Request", () => {
       expect(resolved).toBe(false);
       return;
     }
-    expect(approvedBy).not.toBe("-");
+    expect(approvedBy ?? "").toMatch(/^(?!-$)\S.*$/);
     expect(approvedAt).toMatch(timestamp);
     if (status === "approved") {
       // This record offers options 1, 2 and 3, and nothing else.
@@ -191,7 +194,9 @@ describe("the primary_tasks band drift has a Change Request", () => {
     // this file on the very resolution the record exists to make possible.
     const text = await changeRequest();
     if (!/^- Status: `open`$/m.test(text)) return;
-    await expectPhrase("**Under option 3 it reduces to the three delta files**");
+    await expectPhrase(
+      "**Under option 3 it reduces to the files carrying the template path and the three delta files**",
+    );
     await expectPhrase("reduced to the approved outcome before `Status: approved` is written");
   });
 });
