@@ -2922,6 +2922,21 @@ result, so the assertion cannot be tightened without drift.
       });
     });
 
+    it("refuses a refactor revision on the table row that opens the review fields", async () => {
+      // That row is left out of the audited phase evidence whole, so a cell on it
+      // is unaudited wherever it sits.
+      await withProject(async (root) => {
+        const evidence = refactoredEntry({ reviewed: FINAL_TREE, checkpoint: FINAL_TREE }).replace(
+          "- Spec review: PASS",
+          `| Spec review | PASS | Refactor verify revision | ${FINAL_TREE} |`,
+        );
+        const found = await unresolvedFor(root, evidence, FINAL_TREE);
+        expect(found?.message).toContain(
+          "all phase-authored fields before review and checkpoint fields",
+        );
+      });
+    });
+
     it("refuses a refactor revision that names no revision", async () => {
       await withProject(async (root) => {
         const evidence = refactoredEntry({ reviewed: DEFAULT_REVISION, refactor: "latest" });

@@ -1390,6 +1390,16 @@ function hasPhaseAuthoredFieldAfterGate(section: string): boolean {
   const visibleLines = maskEvidenceRegions(section.replace(/\r\n/g, "\n")).split("\n");
   const boundary = visibleLines.findIndex((line) => GATE_COMPLETED_EVIDENCE_FIELD.test(line));
   if (boundary < 0) return false;
+  // A table row carries several label cells, and the whole boundary row is left
+  // out of the audited phase evidence. A phase-authored cell anywhere on it is
+  // outside what the reviewers hashed, however far left it sits.
+  const boundaryLine = visibleLines[boundary] ?? "";
+  if (
+    /^\s*\|/.test(boundaryLine) &&
+    splitMarkdownRow(boundaryLine).some((cell) => PHASE_AUTHORED_EVIDENCE_FIELD.test(`${cell} |`))
+  ) {
+    return true;
+  }
   return visibleLines
     .slice(boundary + 1)
     .some(
