@@ -162,6 +162,10 @@ linked parent cannot authorize the preview. It writes neither file.
 Creating missing governed assets requires hard-link support and permission.
 Before any asset copy or migration, init probes the nearest existing directory
 for each eligible absent governed path. It removes only its own probe files.
+The creation handle pins the probe's device and inode. Before each removal,
+init rechecks the no-follow identity. A changed or unverifiable occupant is
+preserved and aborts initialization with inspection guidance, not a deletion
+instruction. Metadata verification and removal are not an atomic transaction.
 If removal fails, init attempts the remaining owned cleanup, reports every
 retained probe path and aborts before copying or migrating package assets.
 Restore access and remove only the reported probe files before retrying.
@@ -176,6 +180,9 @@ If cleanup fails after exclusive publication, init keeps the complete published
 file and its receipt. It reports the staging path and asks the user to restore
 access, remove only that staging file and rerun init. The published file is not
 removed or rewritten to clean up its hard-link alias.
+If exclusive publication loses a creation race and staging cleanup fails,
+init reports that retained staging path before propagating the original write
+error. Accepting a concurrent destination never hides this cleanup warning.
 
 ## Shipped GitHub Actions workflows
 

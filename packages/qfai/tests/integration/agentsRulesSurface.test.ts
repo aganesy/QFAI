@@ -316,11 +316,33 @@ describe("cross-AI rules surface (.agents/rules/ master)", () => {
       expect(shipped.equals(master)).toBe(true);
     });
 
+    it.each(MASTERS)("%s gives repository reuse the second of seven rungs", async (rel) => {
+      const text = await readFile(path.join(ROOT, rel), "utf-8");
+      const rungs = [...text.matchAll(/^(\d+)\. \*\*(.+?)\*\*/gm)].map((match) => [
+        match[1],
+        match[2],
+      ]);
+      expect(rungs).toEqual([
+        ["1", "Does this need to exist at all?"],
+        ["2", "Is it already in this codebase?"],
+        ["3", "Does the standard library do it?"],
+        ["4", "Does a native platform feature cover it?"],
+        ["5", "Does an already-installed dependency solve it?"],
+        ["6", "Can it be one line?"],
+        ["7", "Only then"],
+      ]);
+      expect(text).toMatch(/standard library has one is not a simplification; it is rung 3\./);
+      expect(text).toMatch(
+        /5\. \*\*Does an already-installed dependency solve it\?\*\* Reach for what the\s+project already carries before adding anything\./,
+      );
+    });
+
     it.each(MASTERS)("%s states every clause", async (rel) => {
       const text = await readFile(path.join(ROOT, rel), "utf-8");
       // One token per clause that no other clause in the file carries, so a
       // clause cannot be dropped and still leave the master looking complete.
       for (const clause of [
+        /already in this codebase/i,
         /standard library/i,
         /already-installed dependency/i,
         /trust boundary/i,

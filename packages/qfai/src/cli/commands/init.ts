@@ -1,7 +1,7 @@
 import path from "node:path";
 import { createHash, randomBytes, randomUUID } from "node:crypto";
 import { constants } from "node:fs";
-import type { Dirent, Stats } from "node:fs";
+import type { BigIntStats, Dirent, Stats } from "node:fs";
 import {
   access,
   chmod,
@@ -735,10 +735,25 @@ async function probeExclusiveLink(directory: string): Promise<void> {
   const dest = path.join(directory, `${ASSISTANT_STAGING_PREFIX}${randomUUID()}.tmp`);
   let ownsSource = false;
   let ownsDest = false;
+  let identity: BigIntStats | undefined;
   const probeFailures: unknown[] = [];
   try {
     const handle = await open(source, "wx");
     ownsSource = true;
+    try {
+      identity = await handle.stat({ bigint: true });
+    } catch (statCause: unknown) {
+      try {
+        await handle.close();
+      } catch (closeCause: unknown) {
+        throw new AggregateError(
+          [statCause, closeCause],
+          "Creation probe inspection and close failed.",
+          { cause: closeCause },
+        );
+      }
+      throw statCause;
+    }
     await handle.close();
     await link(source, dest);
     ownsDest = true;
@@ -751,13 +766,40 @@ async function probeExclusiveLink(directory: string): Promise<void> {
     );
   }
   const cleanupFailures: Error[] = [];
+  const protectedEntries: Error[] = [];
   for (const file of [ownsDest ? dest : null, ownsSource ? source : null]) {
     if (file === null) continue;
+    try {
+      const current = await lstat(file, { bigint: true });
+      if (
+        identity === undefined ||
+        !current.isFile() ||
+        current.dev !== identity.dev ||
+        current.ino !== identity.ino
+      ) {
+        protectedEntries.push(new Error(JSON.stringify(file)));
+        continue;
+      }
+    } catch (cause: unknown) {
+      if (isEnoent(cause)) continue;
+      protectedEntries.push(new Error(JSON.stringify(file), { cause }));
+      continue;
+    }
     try {
       await rm(file, { force: true });
     } catch (cause: unknown) {
       cleanupFailures.push(new Error(JSON.stringify(file), { cause }));
     }
+  }
+  if (protectedEntries.length > 0) {
+    const cleanupNote =
+      cleanupFailures.length === 0
+        ? ""
+        : ` Other probe cleanup failed at ${cleanupFailures.map((failure) => failure.message).join(", ")}; remove only verified, unchanged probe files before retrying.`;
+    throw new AggregateError(
+      [...probeFailures, ...protectedEntries, ...cleanupFailures],
+      `qfai init could not verify creation probe ownership at ${protectedEntries.map((entry) => entry.message).join(", ")}. Do not delete these occupied paths. Restore access and inspect ownership before rerunning; no package assets were copied or migrated.${cleanupNote}`,
+    );
   }
   if (cleanupFailures.length > 0) {
     throw new AggregateError(
@@ -1005,6 +1047,7 @@ export async function replaceGovernedAsset(
   const directory = path.dirname(dest);
   await mkdir(directory, { recursive: true });
   const staging = path.join(directory, `${ASSISTANT_STAGING_PREFIX}${randomUUID()}.tmp`);
+  let creationStarted = false;
   try {
     await copyFile(source, staging, constants.COPYFILE_EXCL);
     if (expectedHash !== undefined && (await hashAssistantAssetFile(dest)) !== expectedHash) {
@@ -1014,6 +1057,7 @@ export async function replaceGovernedAsset(
       return "target-changed";
     }
     if (mode === "create-only") {
+      creationStarted = true;
       await link(staging, dest);
       await rm(staging, { force: true }).catch(() => {
         warn(
@@ -1026,7 +1070,11 @@ export async function replaceGovernedAsset(
     return "replaced";
   } catch (error: unknown) {
     await rm(staging, { force: true }).catch(() => {
-      // Best effort: the write fault below is the one worth reporting.
+      if (creationStarted) {
+        warn(
+          `NOTE: qfai init could not remove staging file ${JSON.stringify(staging)} after unsuccessful creation at ${JSON.stringify(dest)}. Restore access, remove only this staging file, then rerun qfai init; keep any existing destination content.`,
+        );
+      }
     });
     throw error;
   }

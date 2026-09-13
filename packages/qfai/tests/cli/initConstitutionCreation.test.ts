@@ -76,6 +76,179 @@ const init = (root: string): Promise<string> =>
   captureStdout(() => runInit({ dir: root, force: false, dryRun: false, yes: true }));
 
 describe("constitution creation preserves a path it cannot claim", () => {
+  it.each([
+    { name: "metadata", closeFails: false },
+    { name: "metadata and close", closeFails: true },
+  ])("preserves the probe and all causes when $name inspection fails", async (scenario) => {
+    await withProject(async (root) => {
+      let probe: string | undefined;
+      let handle: Awaited<ReturnType<FsPromises["open"]>> | undefined;
+      openSpy.mockImplementation(async (actual, ...args) => {
+        const opened = await actual.open(...args);
+        if (args[1] !== "wx") return opened;
+        probe = String(args[0]);
+        handle = opened;
+        vi.spyOn(opened, "stat").mockRejectedValueOnce(
+          Object.assign(new Error("probe metadata unavailable"), { code: "EIO" }),
+        );
+        const close = opened.close.bind(opened);
+        vi.spyOn(opened, "close").mockImplementation(async () => {
+          await close();
+          if (scenario.closeFails) {
+            throw Object.assign(new Error("probe close failed"), { code: "EBUSY" });
+          }
+        });
+        return opened;
+      });
+
+      const failure = await init(root).then(
+        () => null,
+        (cause: unknown) => cause,
+      );
+      expect(failure).toBeInstanceOf(AggregateError);
+      if (!(failure instanceof AggregateError) || probe === undefined || handle === undefined) {
+        throw new Error("An unverified probe must remain protected.");
+      }
+      const primary: unknown = failure.errors[0];
+      if (!(primary instanceof Error)) throw new Error("The probe failure must remain available.");
+      if (scenario.closeFails) {
+        expect(primary.cause).toBeInstanceOf(AggregateError);
+        if (!(primary.cause instanceof AggregateError)) throw new Error("Both causes must remain.");
+        expect(primary.cause.errors).toEqual(
+          expect.arrayContaining([
+            expect.objectContaining({ code: "EIO" }),
+            expect.objectContaining({ code: "EBUSY" }),
+          ]),
+        );
+      } else expect(primary.cause).toMatchObject({ code: "EIO" });
+      expect(failure.message).toContain(JSON.stringify(probe));
+      expect(failure.message).toContain("Do not delete these occupied paths");
+      expect(await readdir(root)).toEqual([path.basename(probe)]);
+      expect((await lstat(probe)).isFile()).toBe(true);
+      expect(linkSpy).not.toHaveBeenCalled();
+      await expect(handle.stat()).rejects.toMatchObject({ code: "EBADF" });
+    });
+  });
+
+  it.each([
+    { name: "source regular", changedIndex: 0, symlink: false },
+    { name: "destination regular", changedIndex: 1, symlink: false },
+    { name: "source symlink", changedIndex: 0, symlink: true },
+    { name: "destination symlink", changedIndex: 1, symlink: true },
+  ] as const)("protects a $name probe replaced after linking", async (scenario) => {
+    await withProject(async (root) => {
+      const instructions = path.join(root, ".qfai", "assistant", "instructions");
+      await mkdir(instructions, { recursive: true });
+      const legacy = path.join(instructions, "quality.md");
+      const backing = path.join(instructions, "adopter-probe.md");
+      await writeFile(legacy, "# Adopter quality rules\n");
+      await writeFile(backing, "# Adopter replacement\n");
+      await writeFile(path.join(root, "AGENTS.md"), "# Adopter instructions\n");
+      const rootBefore = (await readdir(root)).sort();
+      let probes: [string, string] | undefined;
+      linkSpy.mockImplementation(async (actual, ...args) => {
+        await actual.link(...args);
+        if (probes !== undefined) return;
+        probes = [String(args[0]), String(args[1])];
+        const replacement = probes[scenario.changedIndex];
+        expect(path.dirname(replacement)).toBe(path.dirname(instructions));
+        await actual.rm(replacement);
+        if (scenario.symlink) await actual.symlink(backing, replacement, "file");
+        else await actual.writeFile(replacement, "# Adopter replacement\n");
+      });
+
+      const failure = await captureStdout(() =>
+        runInit({
+          dir: root,
+          force: false,
+          dryRun: false,
+          yes: true,
+          upgradeAssistantTree: true,
+        }),
+      ).then(
+        () => null,
+        (cause: unknown) => cause,
+      );
+      if (probes === undefined) throw new Error("The creation probe must link.");
+      const replacement = probes[scenario.changedIndex];
+      const retained = await lstat(replacement).catch((cause: unknown) => {
+        if (cause instanceof Error && "code" in cause && cause.code === "ENOENT") return null;
+        throw cause;
+      });
+      expect(retained).not.toBeNull();
+      expect(failure).toBeInstanceOf(AggregateError);
+      if (!(failure instanceof AggregateError)) throw new Error("A changed probe must stop init.");
+      expect(failure.message).toContain(JSON.stringify(replacement));
+      expect(failure.message).toContain("Do not delete these occupied paths");
+      expect(retained?.isSymbolicLink()).toBe(scenario.symlink);
+      expect(await readFile(replacement, "utf-8")).toBe("# Adopter replacement\n");
+      expect(await readFile(backing, "utf-8")).toBe("# Adopter replacement\n");
+      expect(await readFile(legacy, "utf-8")).toBe("# Adopter quality rules\n");
+      expect(await readFile(path.join(root, "AGENTS.md"), "utf-8")).toBe(
+        "# Adopter instructions\n",
+      );
+      expect((await readdir(root)).sort()).toEqual(rootBefore);
+      expect(
+        (await readdir(path.dirname(instructions))).filter(
+          (name) => name !== path.basename(replacement),
+        ),
+      ).toEqual(["instructions"]);
+      const otherProbe = scenario.changedIndex === 0 ? probes[1] : probes[0];
+      await expect(lstat(otherProbe)).rejects.toMatchObject({ code: "ENOENT" });
+    });
+  });
+
+  it.each([
+    { name: "canonical", code: "EBUSY", canonical: true },
+    { name: "adopter", code: "EACCES", canonical: false },
+  ])("reports retained staging after a lost creation race with $name bytes", async (scenario) => {
+    await withProject(async (root) => {
+      const target = path.join(root, CONSTITUTION);
+      const shipped = await readFile(path.join(ROOT, "packages/qfai/assets/init", CONSTITUTION));
+      const raced = scenario.canonical ? shipped : Buffer.from("# Adopter constitution\n");
+      let staging: string | undefined;
+      copyFileSpy.mockImplementation(async (actual, ...args) => {
+        const [source, destination] = args;
+        if (
+          staging === undefined &&
+          typeof source === "string" &&
+          source.endsWith(path.join("constitution", "constitution.md")) &&
+          typeof destination === "string" &&
+          path.dirname(destination) === path.dirname(target)
+        ) {
+          staging = destination;
+          await actual.writeFile(target, raced, { flag: "wx" });
+        }
+        return actual.copyFile(...args);
+      });
+      rmSpy.mockImplementation((actual, ...args) => {
+        if (String(args[0]) === staging) {
+          return Promise.reject(
+            Object.assign(new Error("creation staging is busy"), { code: scenario.code }),
+          );
+        }
+        return actual.rm(...args);
+      });
+
+      const output = await init(root);
+      if (staging === undefined) throw new Error("The creation writer must stage complete bytes.");
+      expect(output).toContain("could not remove staging file");
+      expect(output).toContain(JSON.stringify(staging));
+      expect(output).toContain("Restore access, remove only this staging file");
+      expect((await readFile(target)).equals(raced)).toBe(true);
+      expect((await readFile(staging)).equals(shipped)).toBe(true);
+      const lock = await readAssistantAssetsLock(path.join(root, ".qfai", "assistant"));
+      if (scenario.canonical) expect(lock?.files["constitution/constitution.md"]).toBeDefined();
+      else expect(lock?.files["constitution/constitution.md"]).toBeUndefined();
+
+      passThrough();
+      await rm(staging);
+      await init(root);
+      expect((await readFile(target)).equals(raced)).toBe(true);
+      await expect(lstat(staging)).rejects.toMatchObject({ code: "ENOENT" });
+    });
+  });
+
   it.each(["EACCES", "EPERM"])(
     "reports permission recovery for a %s probe-creation failure before asset changes",
     async (code) => {
