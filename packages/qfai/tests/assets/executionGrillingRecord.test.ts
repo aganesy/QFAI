@@ -205,7 +205,7 @@ describe.each(TREES)("%s — the execution stages record their sessions", (tree)
     // The summary holds every invocation's rows, so an unkeyed marker answers for any run.
     expectPhrase(
       body,
-      "**A run whose rows count no decision carries `grilling(-@<run started>/none): none`**",
+      "**A run whose rows count no decision carries `grilling(-@<run key>/none): none`**",
     );
   });
 
@@ -324,11 +324,13 @@ describe.each(TREES)("%s — the execution stages record their sessions", (tree)
     // decisions; each one has a Work Orders Summary row naming its recommender.
     expectPhrase(
       body,
-      "**and its `Decisions` count matches the `grilling(<Session>@<run started>/<adjudication>)` rows the Work Orders Summary carries under that `Session` and this run's start**",
+      "**and its `Decisions` count matches the `grilling(<Session>@<run key>/<adjudication>)` rows the Work Orders Summary carries under that `Session` and this run's start**",
     );
     // The keys restart at S1 every invocation and the summary sits outside the
     // run's block, so a row keyed by Session alone is counted by later runs.
-    expectPhrase(body, "**`<where>` is `<Session>@<run started>`**");
+    expectPhrase(body, "**`<where>` is `<Session>@<run key>`**");
+    // Two runs may share a millisecond and still carry different host ids.
+    expectPhrase(body, "followed by the host run identifier where the heading carries one");
     expectPhrase(
       body,
       "so a row keyed by `Session` alone is counted again by every later run that reuses the key",
@@ -355,8 +357,13 @@ describe.each(TREES)("%s — the execution stages record their sessions", (tree)
     // That branch forbids writing to its rows' evidence, so a gate requiring the
     // block would reject every compliant run of it.
     const body = await read("assistant/skills/qfai-implement/SKILL.md");
-    expectPhrase(body, "**A mutation-only invocation writes no block at all**");
-    expectPhrase(body, "a missing block is not a `REVISE` for it");
+    expectPhrase(
+      body,
+      "**A mutation-only invocation writes no block and no Work Orders Summary row at all**",
+    );
+    expectPhrase(body, "neither a missing block nor a missing `none` marker is a `REVISE` for it");
+    // The gate reads the marker in the summary, so the summary is a required section.
+    expectPhrase(body, "- `## Work Orders Summary` — the shared schema's table");
     expectPhrase(
       body,
       "A mutation-only invocation writes no block and reports its sessions in its output instead",

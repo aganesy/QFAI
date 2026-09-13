@@ -45,8 +45,8 @@ Preflight: session opened
 ## Work Orders Summary
 
 <!-- The shared schema. A session adds one
-     `grilling(<Session>@<run started>/<adjudication>): <the decision>` row per
-     decision it settled, and a run that settled none writes one `grilling(-@<run started>/none): none` row. -->
+     `grilling(<Session>@<run key>/<adjudication>): <the decision>` row per
+     decision it settled, and a run that settled none writes one `grilling(-@<run key>/none): none` row. -->
 
 | Step | Role (sub-agent) | Agent instance | Task title | Input (refs) | Output (refs) | Status (PASS/REVISE/PENDING) |
 | ---- | ---------------- | -------------- | ---------- | ------------ | ------------- | ---------------------------- |

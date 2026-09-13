@@ -115,7 +115,7 @@ Use the shared schema.
   whose heading — the time to the millisecond, and a host run identifier beside
   it where there is one — equals what this run's work order states, and which no
   other `/qfai-verify` block in the file carries,
-  and each row's `Open` count matches the register lines naming that row's `Session`, **and its `Escalated` count matches the escalation lines naming it**, **and its `Decisions` count matches the `grilling(<Session>@<run started>/<adjudication>)` rows the Work Orders Summary carries under that `Session` and this run's start** — a count checked against nothing lets a row claim `0` over decisions that never reached the user.
+  and each row's `Open` count matches the register lines naming that row's `Session`, **and its `Escalated` count matches the escalation lines naming it**, **and its `Decisions` count matches the `grilling(<Session>@<run key>/<adjudication>)` rows the Work Orders Summary carries under that `Session` and this run's start** — a count checked against nothing lets a row claim `0` over decisions that never reached the user.
   **An escalation line still waiting on an answer is an open node**: it is also an `Open` line under the same `Session`, so a row that ended over it keeps the decision in the register instead of losing it behind a valid ending. **Every row's `Revision` is a git rev or `working-tree+<hash>`**, as the record requires, and a blank or any other value is a `REVISE`: it is the one field saying which tree the session ended against.
   **Every row's `Subject` is non-blank, and when `Preflight` says `session
   opened` exactly one row's is `preflight`**: it is the one cell saying what a
@@ -127,7 +127,7 @@ Use the shared schema.
   and the decision it states is the one a `grilling(<Session>@<run
   started>/user)` row states: the answer settled it, and only the row records
   who recommended it. **A run whose rows count no decision carries
-  `grilling(-@<run started>/none): none`** in the Work Orders Summary, keyed to
+  `grilling(-@<run key>/none): none`** in the Work Orders Summary, keyed to
   this run's start as the decision rows are, because that summary holds every
   invocation's rows.
   **A row whose ending lets the work go on, and after which the stage wrote,
@@ -319,11 +319,10 @@ restated here.
   row in the stage's Work Orders Summary
   (`.qfai/assistant/constitution/shared-skill-delegation-baseline.md`), so the
   count can be checked against records rather than taken as written.
-  **`<where>` is `<Session>@<run started>`**: the row's `Session`, then the
-  time on this run's heading. The keys restart at `S1` every invocation, and
+  **`<where>` is `<Session>@<run key>`**: the row's `Session`, then this run's key — the time on its heading, followed by the host run identifier where the heading carries one, as the heading writes them. The keys restart at `S1` every invocation, and
   the Work Orders Summary sits outside the run's block, so a row keyed by `Session` alone is counted again by every later run that reuses the key.
   A run that settled no decision writes the shared schema's marker the same way,
-  `grilling(-@<run started>/none): none`, so an earlier run's marker does not
+  `grilling(-@<run key>/none): none`, so an earlier run's marker does not
   answer for it.
 
 - **The confirming answer goes under that table too**, one line per
