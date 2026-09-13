@@ -21,6 +21,16 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   it. It follows the reasoning the backfilled-evidence warning already gives, and
   the SDD profile hears it, since the columns are that stage's to write.
 
+### Changed
+
+- **`QFAI-DENSITY-005` names cutting before splitting** (#1808). The warning for an
+  oversized business-rule cell told the author to split the row into two rules,
+  which adds an abstract item where the cell most often carries examples,
+  rationale or history rather than a second rule. It now asks the author to cut
+  what the cell carries beyond its rule first, and to split only when what remains
+  is two rules that can each be falsified on their own. The warning, its threshold
+  and its severity are unchanged, and its message is now in English.
+
 ### Fixed
 
 - **The working-tree address excludes a nested project's own records, and stops on
