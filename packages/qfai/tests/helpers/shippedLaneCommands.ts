@@ -1476,7 +1476,7 @@ export const ALLOWED_INIT_CONTENT: ReadonlyMap<string, string> = new Map([
   // is silently absent in a project that moved them. The `UserPromptSubmit`
   // group is one more entry of the same shape, on every turn rather than
   // every write.
-  [".claude/settings.json", "a5f0f0e088022672b869c566a2a4d05cecc7aa7904b9fbde699140e88f5f4827"],
+  [".claude/settings.json", "67db0c8de2407f1a94338492a99b1f20bf98deeb7fe1f3fd41d9a09cf4c03f59"],
   // Re-derived for the MERGED file, which carries both sides' edits: the three
   // retired `validation.traceability` knobs are gone (`brMustHaveSc`,
   // `scNoTestSeverity`, `orphanContractsPolicy`), the `forbidTestTodoStubs`
