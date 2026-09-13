@@ -135,6 +135,34 @@ describe("TC-0013-0035: incomplete / open structured primary_tasks rejected", ()
     });
   });
 
+  it("rejects a structured item missing 'label'", async () => {
+    // The obligation names all three keys, and only `id` and `acceptance` had a
+    // case: dropping `label` from the required keys left every case passing.
+    const ui = [
+      "screens:",
+      "  - id: dashboard",
+      "    title: Dashboard",
+      "    route: /dashboard",
+      "    primary_tasks:",
+      "      - id: t1",
+      "        label: Review pending orders",
+      "        acceptance: at-least-one pending row visible",
+      "      - id: t2",
+      "        acceptance: order status flips to shipped",
+      "      - id: t3",
+      "        label: Inspect order details",
+      "        acceptance: detail drawer renders the order",
+      "",
+    ].join("\n");
+    await withWorkspace(ui, async (root) => {
+      const issues = await validateDesignAudit(root, defaultConfig);
+      const shape = issues.find((issue) => issue.code === "QFAI-AUD-021");
+      expect(shape, "expected QFAI-AUD-021 for missing label").toBeDefined();
+      expect(shape?.message ?? "").toMatch(/\blabel\b/);
+      expect(shape?.message ?? "").toMatch(/t2/);
+    });
+  });
+
   it("rejects a structured item missing 'id'", async () => {
     const ui = [
       "screens:",
