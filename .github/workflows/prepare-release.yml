@@ -271,7 +271,32 @@ jobs:
           # failure would be indistinguishable from the one this whole branch exists to survive.
           existing_pr="$(gh pr list --head "${RELEASE_BRANCH}" --base main --state open --json number --jq '.[0].number // ""')"
           if [ -n "${existing_pr}" ]; then
-            echo "prepare-release: pull request #${existing_pr} is already open for ${RELEASE_BRANCH}; nothing to create"
+            existing_body="tmp/existing-release-pr-body.md"
+            trap 'rm -f "${body_file}" "${existing_body}"' EXIT
+            gh pr view "${existing_pr}" --json body --jq .body > "${existing_body}"
+            node - "${existing_body}" "${body_file}" <<'REPAIR_BODY'
+            const { readFileSync, writeFileSync } = require('node:fs');
+            const [existingPath, bodyPath] = process.argv.slice(2);
+            const existing = readFileSync(existingPath, 'utf8');
+            const generated = readFileSync(bodyPath, 'utf8');
+            const section = /^## What (?:this|a) change made unnecessary[ \t]*\r?\n([\s\S]*?)(?=^#{1,2} |(?![\s\S]))/m;
+            const visible = existing.replace(/^[ \t]{0,3}(`{3,}|~{3,})[^\n]*\n[\s\S]*?^[ \t]{0,3}\1[ \t]*$/gm, block => block.replace(/[^\r\n]/g, ' ')).replace(/<!--[\s\S]*?-->/g, block => block.replace(/[^\r\n]/g, ' '));
+            const match = section.exec(visible);
+            const answer = (match?.[1] ?? '').replace(/<!--[\s\S]*?-->/g, '').replace(/^[ \t]*(?:[-*+]|\d+[.)])[ \t]*(?:\[[ xX-]?\][ \t]*)?/gm, '').replace(/[`*_]/g, '').trim();
+            let next = existing;
+            if (!answer || /^(?:TBD|TODO|\[.*\])\.?$/i.test(answer)) {
+              const replacement = section.exec(generated)?.[0];
+              if (!replacement) throw new Error('Generated release body lacks its removal answer');
+              next = match
+                ? existing.slice(0, match.index) + replacement.trimEnd() + '\n\n' + existing.slice(match.index + match[0].length)
+                : existing.trimEnd() + '\n\n' + replacement;
+            }
+            writeFileSync(bodyPath, next, 'utf8');
+            REPAIR_BODY
+            if ! cmp -s "${existing_body}" "${body_file}"; then
+              gh pr edit "${existing_pr}" --body-file "${body_file}"
+            fi
+            echo "prepare-release: reusing pull request #${existing_pr} for ${RELEASE_BRANCH} with its authored body preserved"
           else
             gh pr create \
               --base main \

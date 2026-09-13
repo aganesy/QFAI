@@ -23,6 +23,10 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **Generated Copilot review instructions retain the project's review policy**
+  (#1814). Fresh and forced init output points to `REVIEW.md` when the project
+  has that file. The package does not supply the repository's own review policy.
+
 - **The working-tree address excludes a nested project's own records, and stops on
   a FIFO or socket git does not list** (#1747). The collection reads the lists
   from the worktree root, but rooted the `.qfai/evidence`, `.qfai/review` and
