@@ -506,7 +506,7 @@ merged row can never reach `done`:
    complete the block is: the GREEN `Revision` and the `Oracle proof` bound to
    it, each reviewer's `Reviewed revision` and `Audited evidence hash`, the
    `Round N: Review pack` and its `Round N: Review pack seal`, and all three
-   checkpoint verification fields. Gate item 10 requires items 5, 7 and 8 to
+   checkpoint verification fields. Gate item 10 requires items 6, 7 and 8 to
    agree on one revision, so applying the worker's payload verbatim leaves every
    merged row unable to reach `done`
    (`evidence-revision.md#what-makes-evidence-stale`). **Re-take those

@@ -2941,6 +2941,17 @@ function missingCompletedEvidenceFields(
     missing.push("Checkpoint verification result: PASS");
   }
 
+  // The reviews judge the tree after the refactor, and `Refactor verify
+  // revision` is the observation of that tree taken before them. A round's
+  // `Revision` names the tree before the refactor, so a row whose refactor
+  // changed a byte could match only one of the two. A row that records no
+  // refactor revision is held to the round's.
+  const refactorRevision = rowEvidenceFieldValue(section, "Refactor verify revision");
+  if (refactorRevision !== null && !EVIDENCE_REVISION_FORM.test(refactorRevision)) {
+    missing.push(`Refactor verify revision naming ${REVISION_FORM_HINT}`);
+  }
+  const finalRevision = refactorRevision ?? latestRevision;
+
   // The parity fields are read on every row: a row with no parity verdict has
   // none of them, and an `n/a` row's revision is held to the same freshness as
   // a verdict's.
@@ -2949,12 +2960,12 @@ function missingCompletedEvidenceFields(
     const auditedHash = rowEvidenceFieldValue(section, `${prefix} audited evidence hash`);
     const pack = rowEvidenceFieldValue(section, `${prefix} review pack`);
     const packSeal = rowEvidenceFieldValue(section, `${prefix} review pack seal`);
-    if (
-      reviewedRevision !== null &&
-      latestRevision !== null &&
-      reviewedRevision !== latestRevision
-    ) {
-      missing.push(`${prefix} reviewed revision matching latest Revision`);
+    if (reviewedRevision !== null && finalRevision !== null && reviewedRevision !== finalRevision) {
+      missing.push(
+        refactorRevision === null
+          ? `${prefix} reviewed revision matching latest Revision`
+          : `${prefix} reviewed revision matching Refactor verify revision`,
+      );
     }
     if (reviewedRevision !== null && !EVIDENCE_REVISION_FORM.test(reviewedRevision)) {
       missing.push(`${prefix} reviewed revision naming ${REVISION_FORM_HINT}`);
