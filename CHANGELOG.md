@@ -224,6 +224,15 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   first, and the second is named. The prototyping profile, which certification
   accepts, reports the finding as well.
 
+- **The evidence revision reference says how a revision is read after a squash
+  merge** (#1696). A squash merge lands a commit with no branch revision among
+  its ancestors, so a recorded `<git rev>` did not resolve in a clone of the
+  default branch, and staleness had nothing to start from.
+  `evidence-revision.md` now says the rev resolves by fetching the pull
+  request's ref, and staleness is computed from it as before. It also says a
+  `working-tree+` address does not survive the merge, so a record meant to
+  outlive the branch is taken on a commit.
+
 ## [1.12.0] - 2026-09-12
 
 ### Added
