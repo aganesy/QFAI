@@ -23,6 +23,7 @@ import {
   resolveTestCaseTables,
 } from "./specPackParsers.js";
 import { UNIT_COMPONENT_LAYERS } from "./tddHelpers.js";
+import { globExtensions, namesExtensionlessSource } from "./testGlobExtensions.js";
 import { DEFAULT_TEST_FILE_EXCLUDE_GLOBS, normalizeGlobs } from "./traceability.js";
 import { maskJsNonCode } from "./validators/jsSourceMask.js";
 
@@ -465,6 +466,10 @@ export async function evaluateAtddCodeTraceability(
     config.validation.traceability.testFileGlobs,
   );
   const acceptanceLayer = atddAcceptanceLayerFilter(root, config);
+  const acceptanceSource = acceptanceSourceFilter(
+    deriveAtddFilePattern(config.validation.traceability.testFileGlobs),
+    normalizeGlobs(config.validation.traceability.testFileGlobs),
+  );
   // One probe for the whole scan, so a manifest is stat-ed once however many
   // files sit under the directory that carries it.
   const scanPackageRoot = packageRootProbe();
@@ -479,7 +484,7 @@ export async function evaluateAtddCodeTraceability(
       // A project glob may match a whole monorepo. Charging the limit for files
       // no acceptance rule reads would spend it on the first packages and never
       // reach the later ones, and the truncation that reports it is an `info`.
-      (file) => acceptanceLayer(path.relative(root, file)),
+      (file) => acceptanceSource(file) && acceptanceLayer(path.relative(root, file)),
     );
   } catch {
     // A malformed `testFileGlobs` entry is the user's to fix and already has a
@@ -2394,6 +2399,27 @@ export function deriveAtddFilePattern(testFileGlobs: readonly string[]): string 
   return `**/*.{${sorted.join(",")}}`;
 }
 
+/**
+ * Whether a collected file is a source this scan reads for annotations.
+ *
+ * A project glob used as written may be extension-broad, and one that is
+ * collects a data file inside an acceptance layer as readily as a test. A
+ * fixture value is not an annotation, so a file counts only when its extension
+ * is one the scan's file pattern covers or one a project glob names outright.
+ */
+function acceptanceSourceFilter(
+  filePattern: string,
+  projectGlobs: readonly string[],
+): (absolutePath: string) => boolean {
+  const patternExtensions = /\{([^}]*)\}$/.exec(filePattern)?.[1] ?? "";
+  const extensions = new Set([
+    ...patternExtensions.split(",").map((ext) => `.${ext.trim().toLowerCase()}`),
+    ...globExtensions(projectGlobs).map((ext) => ext.toLowerCase()),
+  ]);
+  if (namesExtensionlessSource(projectGlobs)) extensions.add("");
+  return (absolutePath) => extensions.has(path.extname(absolutePath).toLowerCase());
+}
+
 function buildAtddTestGlobs(root: string, testsRoot: string, filePattern: string): string[] {
   const relativeTestsRoot = path.relative(root, testsRoot);
   const isInsideRoot =
@@ -2599,9 +2625,9 @@ function resolveTestKindFromPath(
     if (!ATDD_LAYER_SEGMENTS.has(below)) {
       // The deeper root declares a layer this stage does not own —
       // `.../fixtures/tests/unit/pay.test.ts` is a unit suite — so the outer
-      // candidate goes. Returning here instead left the outer `integration`
-      // standing over it, where its annotation discharged an `L3` obligation
-      // and its stub blocked a gate that owns no unit test.
+      // candidate goes too. The file belongs to that unit suite, which owes
+      // ATDD nothing, so neither its annotation nor its stub answers the outer
+      // `integration` layer.
       //
       // The scan continues: a still deeper root may be the real one, as in
       // `examples/test/projects/app/tests/integration/**`, where the first

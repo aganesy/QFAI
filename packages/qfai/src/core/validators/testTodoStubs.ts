@@ -41,6 +41,7 @@ import path from "node:path";
 
 import type { QfaiConfig } from "../config.js";
 import { collectFilesByGlobs, DEFAULT_GLOB_FILE_LIMIT } from "../fs.js";
+import { globExtensions, namesExtensionlessSource } from "../testGlobExtensions.js";
 import { DEFAULT_TEST_FILE_EXCLUDE_GLOBS, normalizeGlobs } from "../traceability.js";
 import type { Issue, IssueSeverity } from "../types.js";
 import { maskJsNonCode } from "./jsSourceMask.js";
@@ -1303,68 +1304,6 @@ export type TestTodoStubOptions = {
    */
   placeholderScanned?: (relativePath: string) => boolean;
 };
-
-/**
- * Whether a glob selects files that have no extension: its last segment names
- * something and carries no dot, as `tests/integration/test_pay` does. A last
- * segment of wildcards alone names nothing, so an extension-broad glob whose
- * last segment is `*` does not count, and a negative entry selects nothing.
- */
-function namesExtensionlessSource(globs: readonly string[]): boolean {
-  return globs.some((glob) => {
-    if (glob.startsWith("!")) return false;
-    const last = glob.split("/").at(-1) ?? "";
-    return last.length > 0 && !last.includes(".") && !/^\*+$/.test(last);
-  });
-}
-
-/**
- * Extensions a glob names outright, as `.ext` in lower case.
- *
- * A pattern ending in a literal extension names it, and one ending in a brace
- * set or an extglob group names each member; a pattern ending in a wildcard
- * names none, which is the extension-broad case the caller filters.
- */
-function globExtensions(globs: readonly string[]): string[] {
-  const found: string[] = [];
-  const pushAlternatives = (alternatives: string[]): void => {
-    for (const part of alternatives) {
-      // The alternative's own last dotted segment: `{test.zig,spec.zig}`
-      // names `.zig` twice, and rejecting an alternative for carrying a dot
-      // dropped the extension a project had selected outright.
-      const extension = part.trim().split(".").at(-1) ?? "";
-      if (/^[A-Za-z0-9_+-]+$/.test(extension)) {
-        found.push(`.${extension}`);
-      }
-    }
-  };
-  for (const glob of globs) {
-    const braces = /\.\{([^}]+)\}$/.exec(glob);
-    if (braces) {
-      pushAlternatives((braces[1] ?? "").split(","));
-      continue;
-    }
-    // `*.@(sol|zig)` selects its members as a brace set does. Read as neither,
-    // it named nothing, and the files it collected were filtered out before
-    // their language could be reported as unscanned. `!(…)` selects every
-    // extension except its members, so it names none and stays broad.
-    const group = /\.[@?+*]\(([^)]+)\)$/.exec(glob);
-    if (group) {
-      pushAlternatives((group[1] ?? "").split("|"));
-      continue;
-    }
-    const literal = /\.([a-zA-Z0-9_+-]+)$/.exec(glob);
-    if (literal) {
-      found.push(`.${literal[1] ?? ""}`);
-    }
-  }
-  // **As the project spelled them.** A glob is matched against a path, and on a
-  // case-sensitive filesystem `*.ts` does not reach `pay.TS`. Lowercasing here
-  // built a canonical glob that missed the file the project had selected, and
-  // an `it.todo` carrier in it then cleared coverage with no finding. The
-  // comparison that follows collection lowercases its own copy instead.
-  return found;
-}
 
 /**
  * The empty-glob form of `QFAI-TEST-002`: the gate is enabled, but file

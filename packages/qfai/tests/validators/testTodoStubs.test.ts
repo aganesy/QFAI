@@ -552,6 +552,39 @@ describe("the ATDD gate's file selection", () => {
     expect(issues.map((issue) => issue.code)).toContain("QFAI-TEST-002");
   });
 
+  it("reads no extension off a negative glob entry", async () => {
+    const root = await newTempDir();
+    const config = atddConfig(["packages/*/tests/**/*", "!packages/*/tests/fixtures/**/*.json"]);
+    await writeTestFile(
+      root,
+      "packages/checkout/tests/integration/pay.test.ts",
+      `it${TODO}("pays");\n`,
+    );
+    // Outside the excluded subtree. The negative entry withdraws JSON there; it
+    // does not select JSON anywhere else.
+    await writeTestFile(root, "packages/checkout/tests/integration/data.json", "{}\n");
+
+    const issues = await validateTestTodoStubs(root, config, {
+      globs: atddAcceptanceTestGlobs(root, config, STUB_SOURCE_FILE_PATTERN),
+      fileFilter: atddAcceptanceLayerFilter(root, config),
+    });
+
+    expect(issues.filter((issue) => issue.code === "QFAI-TEST-002")).toEqual([]);
+  });
+
+  it("keeps an extension a character-class glob names", async () => {
+    const root = await newTempDir();
+    const config = atddConfig(["packages/*/tests/**/*.[z]ig"]);
+    await writeTestFile(root, "packages/checkout/tests/integration/pay.zig", 'test "pays" {}\n');
+
+    const issues = await validateTestTodoStubs(root, config, {
+      globs: atddAcceptanceTestGlobs(root, config, STUB_SOURCE_FILE_PATTERN),
+      fileFilter: atddAcceptanceLayerFilter(root, config),
+    });
+
+    expect(issues.map((issue) => issue.code)).toContain("QFAI-TEST-002");
+  });
+
   it("keeps a file with no extension that a project glob names", async () => {
     const root = await newTempDir();
     const config = atddConfig(["packages/*/tests/integration/test_pay"]);

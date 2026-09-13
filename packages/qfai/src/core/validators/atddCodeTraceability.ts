@@ -750,7 +750,7 @@ export async function validateAtddCodeTraceability(
         "atddCodeTraceability.forbidden.tcInApi",
         forbidden.ids,
         "change",
-        `${dirs.api} から TC 参照を削除して契約ID（\`QFAI:CON-API-XXXX\`）を使うか、その TC の \`Level\` を \`L4\`/\`API\` に修正してください。`,
+        `${repoRelative(root, forbidden.file)} から TC 参照を削除して契約ID（\`QFAI:CON-API-XXXX\`）を使うか、その TC の \`Level\` を \`L4\`/\`API\` に修正してください。`,
         // Attributed to the specs the misplaced ids name. `file` stays the
         // test path — that is what the operator edits — but a `tests/**`
         // path has no spec owner, so without this the finding survived every
@@ -778,7 +778,7 @@ export async function validateAtddCodeTraceability(
         "atddCodeTraceability.forbidden.tcInE2e",
         forbidden.ids,
         "change",
-        `${dirs.e2e} から TC 参照を削除して US 参照（\`QFAI:SPEC-XXXX:US-YYYY\`）を使うか、その TC の \`Level\` を \`L5\`/\`E2E\` に修正してください。`,
+        `${repoRelative(root, forbidden.file)} から TC 参照を削除して US 参照（\`QFAI:SPEC-XXXX:US-YYYY\`）を使うか、その TC の \`Level\` を \`L5\`/\`E2E\` に修正してください。`,
         // Attributed to the specs the misplaced ids name. `file` stays the
         // test path — that is what the operator edits — but a `tests/**`
         // path has no spec owner, so without this the finding survived every
@@ -806,7 +806,7 @@ export async function validateAtddCodeTraceability(
         "atddCodeTraceability.forbidden.tcInIntegration",
         forbidden.ids,
         "change",
-        `TC 注釈は宣言 Level が指す1ディレクトリだけに置きます。${dirs.integration} に残存する TC 参照を削除するか、その TC の \`Level\` を \`L3\`/\`Integration\` に戻してください。`,
+        `TC 注釈は宣言 Level が指す1ディレクトリだけに置きます。${repoRelative(root, forbidden.file)} に残存する TC 参照を削除するか、その TC の \`Level\` を \`L3\`/\`Integration\` に戻してください。`,
         // Attributed to the specs the misplaced ids name. `file` stays the
         // test path — that is what the operator edits — but a `tests/**`
         // path has no spec owner, so without this the finding survived every
@@ -945,6 +945,15 @@ function formatMissingTcGroups(
  * central suite — which `catalog/test-layers.md` and the `qfai-atdd` skill both
  * tell them not to do.
  */
+/**
+ * A scanned file's path as the operator would type it. A forbidden-reference
+ * fix names the file that carries the reference, which may sit in any package's
+ * suite, rather than the configured layer directory.
+ */
+function repoRelative(root: string, file: string): string {
+  return path.relative(root, file).split(path.sep).join("/");
+}
+
 const ATDD_PACKAGE_SUITE_HINT =
   "A package with a suite of its own answers from the same layer directory inside that package's own test root, selected by `validation.traceability.testFileGlobs`. The path above is where a project with one suite writes; do not add a second central suite beside a package that already has one.";
 

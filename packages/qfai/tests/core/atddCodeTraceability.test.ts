@@ -1026,6 +1026,74 @@ describe("acceptance tests outside paths.testsDir", () => {
     });
   });
 
+  it("a data file an extension-broad glob sweeps into a layer discharges nothing", async () => {
+    await withProject(async (root) => {
+      await seedSpec(root, "0001", ["US-0001"], ["TC-0001"]);
+      await seedPackageTest(root, "checkout", "e2e", "journey.test.ts", [
+        "/* QFAI:SPEC-0001:US-0001 */",
+      ]);
+      // A fixture value that happens to spell an annotation. The glob collects
+      // it, but it is data, not a test source.
+      const dir = path.join(root, "packages", "checkout", "tests", "integration");
+      await mkdir(dir, { recursive: true });
+      await writeFile(
+        path.join(dir, "data.json"),
+        '{ "note": "QFAI:SPEC-0001:TC-0001" }\n',
+        "utf-8",
+      );
+
+      const result = await evaluateAtddCodeTraceability(
+        root,
+        withProjectGlobs(["packages/*/tests/**/*"]),
+      );
+
+      expect(result.missing.tc).toEqual(["SPEC-0001:TC-0001"]);
+      expect(result.missing.us).toEqual([]);
+    });
+  });
+
+  it("a source whose extension a project glob names outright still counts", async () => {
+    await withProject(async (root) => {
+      await seedSpec(root, "0001", ["US-0001"], ["TC-0001"]);
+      await seedPackageTest(root, "checkout", "e2e", "journey.test.ts", [
+        "/* QFAI:SPEC-0001:US-0001 */",
+      ]);
+      await seedPackageTest(root, "checkout", "integration", "pay.sol", [
+        "// QFAI:SPEC-0001:TC-0001",
+      ]);
+
+      const result = await evaluateAtddCodeTraceability(
+        root,
+        withProjectGlobs(["packages/*/tests/**/*.test.ts", "packages/*/tests/**/*.@(sol|zig)"]),
+      );
+
+      expect(result.missing.tc).toEqual([]);
+    });
+  });
+
+  it("names the package-local file a misplaced test-case reference sits in", async () => {
+    await withProject(async (root) => {
+      await seedSpec(root, "0001", ["US-0001"], ["TC-0001"]);
+      await seedTest(root, "integration", "a.test.ts", "/* QFAI:SPEC-0001:TC-0001 */");
+      await seedPackageTest(root, "checkout", "e2e", "journey.test.ts", [
+        "/* QFAI:SPEC-0001:US-0001 */",
+      ]);
+      await seedPackageTest(root, "checkout", "api", "client.test.ts", [
+        "/* QFAI:SPEC-0001:TC-0001 */",
+      ]);
+
+      const issues = await validateAtddCodeTraceability(
+        root,
+        withProjectGlobs(["packages/*/tests/**/*.test.ts"]),
+      );
+      const misplaced = issues.find((entry) => entry.code === "QFAI-ATDD-121");
+
+      // The fix edits the file that carries the reference, not the configured
+      // central directory.
+      expect(misplaced?.suggested_action).toContain("packages/checkout/tests/api/client.test.ts");
+    });
+  });
+
   it("the layer is the segment inside the test root, not an ancestor", async () => {
     await withProject(async (root) => {
       await seedSpec(root, "0001", ["US-0001"], ["TC-0001"]);

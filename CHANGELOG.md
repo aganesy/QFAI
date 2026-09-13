@@ -78,7 +78,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   that had nothing to say about it and was reported as an unscanned language;
   and a glob naming `.zig` selects a language with no dialect on purpose, which
   is what that report is for. The same holds for a glob naming a file with no
-  extension, such as `tests/integration/test_pay`.
+  extension, such as `tests/integration/test_pay`, or an extension through a
+  short character class, such as `*.[z]ig`. A negative entry names no extension.
+
+  The coverage scan reads a collected file the same way: a data file an
+  extension-broad glob sweeps into an acceptance layer is not a source, so an
+  annotation-shaped fixture value in `tests/integration/data.json` discharges
+  nothing.
 
   A file in no acceptance layer is dropped while the stream runs, before it is
   counted against the collection limit. A project glob may match a whole
@@ -91,7 +97,9 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   the whole validator batch. It degrades to an empty scan, so the finding the
   user can act on still reaches them alongside every other result.
 
-  Every remediation that names a layer directory, the missing-coverage ones and
+  A misplaced test-case reference is fixed in the file that carries it, and the
+  remediation now names that file, whichever package's suite it sits in. Every
+  remediation that names a layer directory, the missing-coverage ones and
   the deferral notices alike, names the package's own suite as well as
   `paths.testsDir`, so an author following the canonical fix does not build a
   parallel central suite the shipped skill tells them not to build.
