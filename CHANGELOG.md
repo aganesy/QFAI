@@ -27,6 +27,11 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- Repository async guidance requires awaited or returned promises and points to
+  the shared implementation rule for consuming callers, kept failures and
+  callback boundaries. Required handling and incomplete error messages remain
+  review findings (#1804).
+
 - The implementation rule handles only failures not excluded by types or schemas
   and named by a specification, contract or observation, subject to the safety
   floor. Other failures propagate; promises must be awaited or returned to a
