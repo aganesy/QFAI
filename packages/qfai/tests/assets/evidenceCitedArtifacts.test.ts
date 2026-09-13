@@ -38,13 +38,14 @@ const GENERATED_ROOTS = [
 /**
  * A citation as the scan records it.
  *
- * Sentence punctuation after a path is not part of it, and a directory is
- * written with or without its trailing separator. One spelling here is what
- * lets a disclaimer naming `.qfai/report/run-123/` cover the `run-123` the scan
- * produces from the line below it.
+ * Sentence punctuation after a path is not part of it, unless a code span
+ * closing right after it delimits the name. A directory is written with or
+ * without its trailing separator. One spelling here is what lets a disclaimer
+ * naming `.qfai/report/run-123/` cover the `run-123` the scan produces from the
+ * line below it.
  */
-function normalizeCitation(cited: string): string {
-  return cited.replace(/[.,;:]+$/, "").replace(/\/+$/, "");
+function normalizeCitation(cited: string, delimited = false): string {
+  return (delimited ? cited : cited.replace(/[.,;:]+$/, "")).replace(/\/+$/, "");
 }
 
 /** Where a citation can start: the root, which is the only fixed part. */
@@ -127,8 +128,11 @@ function closesEmphasis(line: string, index: number, opener: string): boolean {
  * something the tree does not have — which is measured as the root, discarded,
  * and the artifacts it really named go unchecked. So the root is found by
  * pattern and the rest is scanned, counting each opener against its closer.
+ *
+ * `spans` are the line's code spans, which its paragraph can open on an earlier
+ * line. Each citation comes back as {@link normalizeCitation} records it.
  */
-function citationsIn(line: string): string[] {
+function citationsIn(line: string, spans: readonly CodeSpan[] = codeSpanRanges(line)): string[] {
   const found: string[] = [];
   for (const start of [...line.matchAll(CITED_GENERATED_ROOT)]) {
     const from = start.index;
@@ -137,9 +141,7 @@ function citationsIn(line: string): string[] {
     if (opener === null) continue;
     // Inside a code span a comma or a semicolon is part of the name, since the
     // span delimits it; in prose the same characters end the sentence it is in.
-    const span = codeSpanRanges(line).find(
-      ([spanStart, spanEnd]) => from >= spanStart && from < spanEnd,
-    );
+    const span = spans.find(([spanStart, spanEnd]) => from >= spanStart && from < spanEnd);
     let index = from + start[0].length;
     const closers: string[] = [];
     let usable = true;
@@ -206,7 +208,9 @@ function citationsIn(line: string): string[] {
       index += 1;
     }
     if (!usable || closers.length > 0) continue;
-    const cited = line.slice(from, index);
+    // A code span closing right after the name delimits it, punctuation and all.
+    const delimited = span !== undefined && index === span[1] && line[index] === "`";
+    const cited = normalizeCitation(line.slice(from, index), delimited);
     if (cited.length > start[0].length) found.push(cited);
   }
   return found;
@@ -467,8 +471,15 @@ const INITIAL_CENSUS: ReadonlyArray<Citation> = [
  */
 const CLEARED: ReadonlyArray<Citation> = [];
 
-/** Every path git tracks, and every directory one of them lies under. */
-function trackedPaths(): { files: ReadonlySet<string>; directories: ReadonlySet<string> } {
+/**
+ * Every path git tracks, and every directory one of them lies under, read from
+ * `listing` or from the repository's own index.
+ */
+function trackedPaths(listing = gitIndexListing()): {
+  files: ReadonlySet<string>;
+  directories: ReadonlySet<string>;
+  links: readonly string[];
+} {
   // `git ls-files`, not `readdir`: these trees are ignored, so a developer
   // checkout holds artifacts its own QFAI runs generated. Walking the disk would
   // fail on an uncommitted evidence file and pass on a citation that resolves
@@ -478,22 +489,19 @@ function trackedPaths(): { files: ReadonlySet<string>; directories: ReadonlySet<
   // a clone. A force-added symlink is a path git tracks and a file nobody can
   // open when its target is missing or outside the repository, and a gitlink is
   // a commit id rather than content. Only a regular blob carries the artifact a
-  // citation claims.
-  const listed = execFileSync("git", ["ls-files", "-s", "-z"], {
-    cwd: repoRoot,
-    encoding: "buffer",
-    maxBuffer: 64 * 1024 * 1024,
-  })
-    .toString("utf-8")
+  // citation claims. The others are kept apart as `links`, so a record that is
+  // one can be refused rather than skipped.
+  const entries = listing
     .split("\0")
     .filter((entry) => entry !== "")
     .flatMap((entry) => {
       // `<mode> <object> <stage>\t<path>`
       const tab = entry.indexOf("\t");
-      const mode = entry.slice(0, 6);
-      if (tab === -1 || (mode !== "100644" && mode !== "100755")) return [];
-      return [entry.slice(tab + 1)];
+      return tab === -1 ? [] : [{ mode: entry.slice(0, 6), file: entry.slice(tab + 1) }];
     });
+  const regular = (mode: string): boolean => mode === "100644" || mode === "100755";
+  const listed = entries.filter(({ mode }) => regular(mode)).map(({ file }) => file);
+  const links = entries.filter(({ mode }) => !regular(mode)).map(({ file }) => file);
 
   const directories = new Set<string>();
   for (const file of listed) {
@@ -502,7 +510,16 @@ function trackedPaths(): { files: ReadonlySet<string>; directories: ReadonlySet<
       directories.add(parts.slice(0, index).join("/"));
     }
   }
-  return { files: new Set(listed), directories };
+  return { files: new Set(listed), directories, links };
+}
+
+/** What `git ls-files -s -z` prints for the repository. */
+function gitIndexListing(): string {
+  return execFileSync("git", ["ls-files", "-s", "-z"], {
+    cwd: repoRoot,
+    encoding: "buffer",
+    maxBuffer: 64 * 1024 * 1024,
+  }).toString("utf-8");
 }
 
 const tracked = trackedPaths();
@@ -545,7 +562,7 @@ async function measureCitations(): Promise<Citation[]> {
   const measured: Citation[] = [];
   for (const file of evidenceFiles) {
     const text = await readFile(path.join(repoRoot, file), "utf-8");
-    measured.push(...citationsOf(file, file.endsWith(".md") ? text : decodedRecord(file, text)));
+    measured.push(...citationsOf(file, file.endsWith(".md") ? text : decodedRecord(text)));
   }
   return measured;
 }
@@ -557,43 +574,28 @@ async function measureCitations(): Promise<Citation[]> {
  * root to find. A record that does not parse is read as the text it is.
  */
 function decodedJson(text: string): string {
-  return decodedRecord("record.json", text);
+  return decodedRecord(text);
 }
 
 /**
  * A JSON or YAML record's keys and string values, one per line, as the record
  * means them. A record that does not parse is read as the text it is.
+ *
+ * JSON is read as the YAML it also is. Every scalar node counts, keys included,
+ * since a manifest often keys its entries by path. An alias is not resolved: it
+ * adds no text of its own. A repeated key keeps every member, where
+ * `JSON.parse` would keep only the last and leave a citation in an earlier one
+ * unread.
  */
-function decodedRecord(file: string, text: string): string {
+function decodedRecord(text: string): string {
+  const document = parseDocument(text, { uniqueKeys: false });
+  if (document.errors.length > 0) return text;
   const strings: string[] = [];
-  const collect = (value: unknown): void => {
-    if (typeof value === "string") strings.push(...value.split("\n"));
-    else if (Array.isArray(value)) value.forEach(collect);
-    else if (typeof value === "object" && value !== null) {
-      // A key is a string too, and a manifest often keys its entries by path.
-      for (const [name, member] of Object.entries(value)) {
-        strings.push(...name.split("\n"));
-        collect(member);
-      }
-    }
-  };
-  if (!file.endsWith(".json")) {
-    // Every scalar node, keys included, without resolving an alias: a record
-    // holding one is still read, and an alias adds no text of its own.
-    const document = parseDocument(text);
-    if (document.errors.length > 0) return text;
-    visit(document, {
-      Scalar(_key, node) {
-        if (typeof node.value === "string") strings.push(...node.value.split("\n"));
-      },
-    });
-    return strings.join("\n");
-  }
-  try {
-    collect(JSON.parse(text));
-  } catch {
-    return text;
-  }
+  visit(document, {
+    Scalar(_key, node) {
+      if (typeof node.value === "string") strings.push(...node.value.split("\n"));
+    },
+  });
   return strings.join("\n");
 }
 
@@ -601,12 +603,13 @@ function decodedRecord(file: string, text: string): string {
 function citationsOf(file: string, text: string): Citation[] {
   const measured: Citation[] = [];
   const occurrences = new Map<string, number>();
-  const disclaimed = disclaimedByLine(text);
-  text.split("\n").forEach((line, index) => {
+  const lines = text.split("\n");
+  const spans = codeSpansByLine(lines);
+  const disclaimed = disclaimedByLine(text, spans);
+  lines.forEach((line, index) => {
     const covered = disclaimed[index];
     if (covered === "all") return;
-    for (const match of citationsIn(line)) {
-      const cited = normalizeCitation(match);
+    for (const cited of citationsIn(line, spans[index])) {
       // `continue`, not `return`: one line can carry several citations, and
       // leaving the line on the first one that is root-only or disclaimed loses
       // every citation after it.
@@ -629,52 +632,74 @@ function citationsOf(file: string, text: string): Citation[] {
  * what was observed in order to control a scanner — and a block form that
  * covered everything would hide the real citations a transcript also carries.
  */
-function disclaimedByLine(text: string): Array<"all" | Set<string> | undefined> {
+function disclaimedByLine(
+  text: string,
+  spans: ReadonlyArray<readonly CodeSpan[]> = codeSpansByLine(text.split("\n")),
+): Array<"all" | Set<string> | undefined> {
   const lines = text.split("\n");
-  const disclaimed: Array<"all" | Set<string> | undefined> = lines.map(() => undefined);
-  let open: { character: string; length: number } | null = null;
+  const roles = fenceRoles(lines);
   let covers: Set<string> | null = null;
-  lines.forEach((line, index) => {
+  return lines.map((line, index): "all" | Set<string> | undefined => {
+    const role = roles[index];
+    if (role === "open") {
+      covers = disclaimedPaths(lines[index - 1] ?? "", spans[index - 1] ?? []);
+      return undefined;
+    }
+    if (role === "close") {
+      covers = null;
+      return undefined;
+    }
+    if (role === "inside") return covers ?? undefined;
     // Only outside a fence: inside one the marker is part of what the command
     // printed, and read as a disclaimer it hid every citation on the line.
-    const outside = (): void => {
-      if (open === null && NOT_A_CITATION.test(withoutInlineCode(line))) disclaimed[index] = "all";
-    };
-    // A fence inside a list item or a blockquote is indented past three spaces,
-    // or carries the quote marker, and is still a fence.
-    const fence = /^(?:[ \t]*>)*[ \t]*(`{3,}|~{3,})(.*)$/.exec(line);
-    if (fence === null) {
-      if (open !== null && covers !== null) disclaimed[index] = covers;
-      outside();
-      return;
-    }
-    const run = fence[1] ?? "";
-    const rest = fence[2] ?? "";
-    if (open === null) {
-      if (run.startsWith("`") && rest.includes("`")) {
-        outside();
-        return;
-      }
-      open = { character: run[0] ?? "`", length: run.length };
-      covers = disclaimedPaths(lines[index - 1] ?? "");
-      return;
-    }
-    if (run[0] === open.character && run.length >= open.length && rest.trim() === "") {
-      open = null;
-      covers = null;
-    } else if (covers !== null) {
-      disclaimed[index] = covers;
-    }
+    return NOT_A_CITATION.test(withoutCode(line, spans[index] ?? [])) ? "all" : undefined;
   });
-  return disclaimed;
+}
+
+/** A line's part in a fenced block. */
+type FenceRole = "open" | "inside" | "close";
+
+/**
+ * Each line's part in a fenced block, or `undefined` outside one.
+ *
+ * A fence inside a list item or a blockquote is indented past three spaces, or
+ * carries the quote marker, and is still a fence.
+ */
+function fenceRoles(lines: readonly string[]): Array<FenceRole | undefined> {
+  let open: { character: string; length: number } | null = null;
+  return lines.map((line): FenceRole | undefined => {
+    const fence = /^(?:[ \t]*>)*[ \t]*(`{3,}|~{3,})(.*)$/.exec(line);
+    const run = fence?.[1] ?? "";
+    const rest = fence?.[2] ?? "";
+    if (open === null) {
+      // A backtick run with another backtick after it opens a code span.
+      if (fence === null || (run.startsWith("`") && rest.includes("`"))) return undefined;
+      open = { character: run[0] ?? "`", length: run.length };
+      return "open";
+    }
+    if (
+      fence !== null &&
+      run[0] === open.character &&
+      run.length >= open.length &&
+      rest.trim() === ""
+    ) {
+      open = null;
+      return "close";
+    }
+    return "inside";
+  });
 }
 
 /**
- * A line with its inline code spans removed. A marker inside one renders as
- * text, like a marker inside a fence, and disclaims nothing.
+ * A line with the content of its code spans blanked. A marker inside one
+ * renders as text, like a marker inside a fence, and disclaims nothing.
  */
-function withoutInlineCode(line: string): string {
-  return line.replace(INLINE_CODE, "");
+function withoutCode(line: string, spans: readonly CodeSpan[]): string {
+  let text = line;
+  for (const [start, end] of spans) {
+    text = text.slice(0, start) + " ".repeat(end - start) + text.slice(end);
+  }
+  return text;
 }
 
 /**
@@ -683,20 +708,85 @@ function withoutInlineCode(line: string): string {
  */
 const INLINE_CODE = /(?<!`)(`+)(?!`)([\s\S]*?)(?<!`)\1(?!`)/g;
 
-/** The content ranges of the code spans on a line, as [start, end) offsets. */
-function codeSpanRanges(line: string): Array<readonly [number, number]> {
-  return [...line.matchAll(INLINE_CODE)].map((match) => {
+/** A code span's content, as [start, end) offsets. */
+type CodeSpan = readonly [start: number, end: number];
+
+/** The code spans a text holds, read as one paragraph. */
+function codeSpanRanges(text: string): CodeSpan[] {
+  return [...text.matchAll(INLINE_CODE)].map((match) => {
     const start = (match.index ?? 0) + (match[1] ?? "").length;
     return [start, start + (match[2] ?? "").length] as const;
   });
 }
 
+/**
+ * The code spans on each line of a Markdown text.
+ *
+ * A code span can run onto the next line of its paragraph, so spans are found
+ * over each paragraph and cut at the line ends. Found a line at a time, a
+ * marker on the second line of a span would read as a directive, though it
+ * renders as code.
+ *
+ * SIMPLIFIED: a paragraph ends at a blank line, a fence, a heading, a table row
+ * or a list item's first line; other block syntax is read as paragraph text.
+ * Lift when: a record's citation or marker sits in block syntax outside that set.
+ */
+function codeSpansByLine(lines: readonly string[]): CodeSpan[][] {
+  const spans = lines.map((): CodeSpan[] => []);
+  for (const paragraph of paragraphsOf(lines)) {
+    let offset = 0;
+    const starts = paragraph.map((index) => {
+      const start = offset;
+      offset += (lines[index] ?? "").length + 1;
+      return start;
+    });
+    const text = paragraph.map((index) => lines[index] ?? "").join("\n");
+    for (const [start, end] of codeSpanRanges(text)) {
+      paragraph.forEach((index, position) => {
+        const lineStart = starts[position] ?? 0;
+        const from = Math.max(start, lineStart);
+        const to = Math.min(end, lineStart + (lines[index] ?? "").length);
+        if (from < to) spans[index]?.push([from - lineStart, to - lineStart]);
+      });
+    }
+  }
+  return spans;
+}
+
+/** A line that begins a block: a list item. */
+const BEGINS_BLOCK = /^[ \t]*(?:[-*+]|\d{1,9}[.)])(?:[ \t]|$)/;
+
+/** A line that is a block by itself: a heading or a table row. */
+const WHOLE_BLOCK = /^ {0,3}(?:#{1,6}(?:[ \t]|$)|\|)/;
+
+/** Each paragraph of a Markdown text outside its fences, as line indices. */
+function paragraphsOf(lines: readonly string[]): number[][] {
+  const roles = fenceRoles(lines);
+  const paragraphs: number[][] = [];
+  let current: number[] = [];
+  const close = (): void => {
+    if (current.length > 0) paragraphs.push(current);
+    current = [];
+  };
+  lines.forEach((line, index) => {
+    if (roles[index] !== undefined || line.trim() === "") {
+      close();
+      return;
+    }
+    if (BEGINS_BLOCK.test(line) || WHOLE_BLOCK.test(line)) close();
+    current.push(index);
+    if (WHOLE_BLOCK.test(line)) close();
+  });
+  close();
+  return paragraphs;
+}
+
 /** The paths a marker names, or `null` when the line carries no marker naming any. */
-function disclaimedPaths(line: string): Set<string> | null {
-  const marker = /<!--\s*qfai:not-a-citation(?=\s|-->)([^>]*?)-->/.exec(withoutInlineCode(line));
-  // Normalized the way a measured citation is, so a marker naming a directory
-  // with its conventional trailing separator covers the path the scan produces.
-  const named = citationsIn(marker?.[1] ?? "").map(normalizeCitation);
+function disclaimedPaths(line: string, spans: readonly CodeSpan[]): Set<string> | null {
+  const marker = /<!--\s*qfai:not-a-citation(?=\s|-->)([^>]*?)-->/.exec(withoutCode(line, spans));
+  // Read the way a measured citation is, so a marker naming a directory with
+  // its conventional trailing separator covers the path the scan produces.
+  const named = citationsIn(marker?.[1] ?? "");
   return named.length === 0 ? null : new Set(named);
 }
 
@@ -729,9 +819,15 @@ function namesSomethingInside(cited: string): boolean {
  * expanded here rather than left to the compiler, whose braces are an
  * alternation: one member matching is enough for a matcher, and not enough for
  * a claim. An empty member is a member: `{,draft-}validate.json` names the base
- * report as well as the draft.
+ * report as well as the draft. Braces naming more than
+ * {@link BRACE_NAME_LIMIT} paths come back as written.
  */
 function expandBraces(cited: string): string[] {
+  return expandWithin(cited, BRACE_NAME_LIMIT) ?? [cited];
+}
+
+/** The paths `cited` names, or `null` once they number more than `limit`. */
+function expandWithin(cited: string, limit: number): string[] | null {
   for (const open of outsideClasses(cited)) {
     if (cited[open] !== "{") continue;
     const close = matchingBrace(cited, open);
@@ -744,7 +840,16 @@ function expandBraces(cited: string): string[] {
     if (members === null) continue;
     const before = cited.slice(0, open);
     const after = cited.slice(close + 1);
-    return members.flatMap((part) => expandBraces(`${before}${part}${after}`));
+    // Counted as the paths accumulate: ranges each inside the limit multiply,
+    // and `{0..999}-{0..999}-{0..999}` names a billion.
+    const names: string[] = [];
+    for (const part of members) {
+      const expanded = expandWithin(`${before}${part}${after}`, limit - names.length);
+      if (expanded === null) return null;
+      names.push(...expanded);
+      if (names.length > limit) return null;
+    }
+    return names;
   }
   return [cited];
 }
@@ -756,9 +861,9 @@ function expandBraces(cited: string): string[] {
  * The matcher expands a range to every member between its ends, so `{1..3}`
  * names three files, not one called `1..3`.
  *
- * SIMPLIFIED: a range with a negative end, or with more than
- * {@link RANGE_MEMBER_LIMIT} members, is not expanded, and a citation holding
- * one is reported unresolved rather than guessed at. A timestamp-sized range
+ * SIMPLIFIED: a range with a negative end is not expanded, and neither are
+ * braces naming more than {@link BRACE_NAME_LIMIT} paths; a citation holding
+ * either is reported unresolved rather than guessed at. A timestamp-sized range
  * would otherwise step past the precision a number holds and never end.
  * Lift when: a record cites such a range and needs it resolved.
  */
@@ -772,7 +877,7 @@ function braceRange(body: string): string[] | null {
     numeric === null ? [from.charCodeAt(0), to.charCodeAt(0)] : [Number(from), Number(to)];
   const increment = rangeIncrement(match[3]);
   if (!Number.isSafeInteger(start) || !Number.isSafeInteger(end)) return null;
-  if (Math.abs(end - start) / increment + 1 > RANGE_MEMBER_LIMIT) return null;
+  if (Math.abs(end - start) / increment + 1 > BRACE_NAME_LIMIT) return null;
   const width =
     numeric !== null && (/^0\d/.test(from) || /^0\d/.test(to))
       ? Math.max(from.length, to.length)
@@ -787,8 +892,8 @@ function braceRange(body: string): string[] | null {
   return members;
 }
 
-/** The most members a range may name before the guard stops expanding it. */
-const RANGE_MEMBER_LIMIT = 1000;
+/** The most paths a citation's braces may name before the guard stops expanding them. */
+const BRACE_NAME_LIMIT = 1000;
 /** A range's increment, `{1..5..2}`: its size, and 1 where it names none or 0. */
 function rangeIncrement(written: string | undefined): number {
   const size = Math.abs(Number(written ?? 1));
@@ -1094,6 +1199,24 @@ describe("a committed record cites what the repository has", () => {
     // identical to a green run.
     expect(evidenceFiles.length, "git tracks no evidence file").toBeGreaterThan(0);
     expect((await measureCitations()).length, "no citation was measured").toBeGreaterThan(0);
+  });
+
+  it("reads every evidence record the tree carries as a file", () => {
+    // A symlink or a gitlink is not a file the scan reads, so an evidence record
+    // that is one would pass whatever it cites.
+    expect(tracked.links.filter((file) => file.startsWith(".qfai/evidence/"))).toEqual([]);
+  });
+
+  it("keeps a symlink and a gitlink apart from the files it reads", () => {
+    const listing = [
+      "100644 0000000000000000000000000000000000000000 0\t.qfai/evidence/a.md",
+      "120000 0000000000000000000000000000000000000000 0\t.qfai/evidence/b.md",
+      "160000 0000000000000000000000000000000000000000 0\t.qfai/evidence/c",
+      "",
+    ].join("\0");
+    const paths = trackedPaths(listing);
+    expect([...paths.files]).toEqual([".qfai/evidence/a.md"]);
+    expect(paths.links).toEqual([".qfai/evidence/b.md", ".qfai/evidence/c"]);
   });
 
   it("names no artifact the committed tree does not carry", async () => {
@@ -1495,9 +1618,9 @@ describe("a glob is a claim about a set", () => {
       'path: ".qfai\\u002freport\\u002fmissing.json"',
       "",
     ].join("\n");
-    expect(
-      citationsOf("x.yaml", decodedRecord("x.yaml", record)).map(([, cited]) => cited),
-    ).toEqual([".qfai/report/missing.json"]);
+    expect(citationsOf("x.yaml", decodedRecord(record)).map(([, cited]) => cited)).toEqual([
+      ".qfai/report/missing.json",
+    ]);
   });
 
   it("keeps a file name character the dialect gives no meaning", () => {
@@ -1538,6 +1661,39 @@ describe("a glob is a claim about a set", () => {
   it("splits a pattern at separators outside a bracket expression", () => {
     const pack = ".qfai/discussion/discussion-20260328212829687";
     expect(hidesADotName(`${pack}/[0/]1_Context.md`, `${pack}/01_Context.md`)).toBe(false);
+  });
+
+  it("keeps punctuation a code span closes right after", () => {
+    const pack = ".qfai/discussion/discussion-20260328212829687";
+    expect(citationsIn(`see \`${pack}/01_Context.md,\` here`)).toEqual([`${pack}/01_Context.md,`]);
+    expect(resolves(`${pack}/01_Context.md,`)).toBe(false);
+    // In prose the same punctuation ends the sentence.
+    expect(citationsIn(`see ${pack}/01_Context.md. Next`)).toEqual([`${pack}/01_Context.md`]);
+  });
+
+  it("reads a code span that runs onto the next line of its paragraph", () => {
+    const marker = ".qfai/report/missing.json <!-- qfai:not-a-citation -->";
+    const cited = (lines: string[]): string[] =>
+      citationsOf("x.md", lines.join("\n")).map(([, found]) => found);
+    expect(cited(["see `wrote", `${marker}\` here`])).toEqual([".qfai/report/missing.json"]);
+    // A blank line or a new list item ends the paragraph, and the span with it.
+    expect(cited(["see `wrote", "", `${marker} \`x\``])).toEqual([]);
+    expect(cited(["- see `wrote", `- ${marker} \`x\``])).toEqual([]);
+  });
+
+  it("reads every member of a repeated JSON key", () => {
+    const record = '{"path":".qfai/report/missing.json","path":"none"}';
+    expect(citationsOf("x.json", decodedJson(record)).map(([, cited]) => cited)).toEqual([
+      ".qfai/report/missing.json",
+    ]);
+  });
+
+  it("stops expanding braces that name more paths than it counts", () => {
+    // Each range is inside the limit, and side by side they name a billion paths.
+    const cited = ".qfai/report/run-{0..999}-{0..999}-{0..999}.json";
+    expect(expandBraces(cited)).toEqual([cited]);
+    expect(resolves(cited)).toBe(false);
+    expect(expandBraces("run-{0..9}{0..9}{0..9}")).toHaveLength(1000);
   });
 
   it("counts nothing where a Windows path holds the root", () => {
@@ -1738,9 +1894,10 @@ describe("a glob is a claim about a set", () => {
       ".qfai/review/review-1: kept",
       "",
     ].join("\n");
-    expect(
-      citationsOf("x.yaml", decodedRecord("x.yaml", record)).map(([, cited]) => cited),
-    ).toEqual([".qfai/report/missing.json", ".qfai/review/review-1"]);
+    expect(citationsOf("x.yaml", decodedRecord(record)).map(([, cited]) => cited)).toEqual([
+      ".qfai/report/missing.json",
+      ".qfai/review/review-1",
+    ]);
   });
 
   it("keeps a globstar inside its segment unless it is the whole segment", () => {
