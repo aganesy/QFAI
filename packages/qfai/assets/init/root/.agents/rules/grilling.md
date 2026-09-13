@@ -177,6 +177,38 @@ questions and some need fifty, so a fixed ceiling either truncates the hard case
 or looks arbitrary on the easy one. When a session runs long the cause is
 usually a subject too large to hold at once. Break it up and grill the pieces.
 
+### The four endings
+
+A session ends in exactly one of these, and a record of one names which:
+
+| Ending        | Reached when                                                                                                   | The work may proceed                                     |
+| ------------- | -------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------- |
+| `confirmed`   | Both conditions above: no node open, and the user confirms                                                     | Yes                                                      |
+| `user-closed` | The user answered `proceed` or `done`; each decision still open is recorded as an assumption and labelled      | Yes                                                      |
+| `no-question` | A no-question mode was active: the evidence settled what it could and every node left over is an open question | Yes, and whatever gates the work reports those questions |
+| `stopped`     | The user stopped the session                                                                                   | No. Report every open decision as open                   |
+
+**`no-question` is an ending, not an exemption.** The completing condition needs
+the user's confirmation, and an invocation told not to ask cannot obtain one —
+so without a name for how such a run finishes, a session it was required to hold
+could never end, and the rule would forbid the mode it elsewhere describes. What
+stops that run from being treated as agreed is the open questions it leaves, not
+the absence of an ending.
+
+**A session between agents reaches none of these on its own.** Its budget ends
+the rounds between agents, not the session: every decision the user has not
+settled goes to the user — the ones still open, and the ones the agents agreed
+on, because agreement between agents settles nothing — and the user ends the
+session in one of the four. **Under a no-question mode there is nobody to send
+them to**: they are opened as questions where the work's gates read them, and
+that register write ends the session `no-question`, as it ends any session the
+mode holds. How many went is a count a record carries, never an ending of its
+own.
+
+**`stopped` is the one that does not let the work continue.** The other three
+close the asking; this one ends the session, and an agent that carried on
+because the frontier happened to be empty has read the stop as an answer.
+
 ### When the user ends it
 
 Completing is how a session ends on its own. It is not the only way one ends.
@@ -201,14 +233,19 @@ than inventing it.
 ### A session between agents
 
 A session with no user answering has neither half of the end condition above
-available to it, so it ends on a budget instead: two rounds, then every decision
-still open goes to the user. Three subjects skip the rounds and go at once —
-product or business intent no authoritative artifact answers, a decision
-contradicting a spec, a contract or a recorded decision, and a decision resting
-on nothing authoritative.
+available to it. **The budget does not supply one.** Two rounds, then every
+decision the user has not settled goes to the user, agreed ones included — and
+the session is still open when it
+gets there, because the user has not yet ended it in any of the four ways. Three
+subjects skip the rounds and go at once — product or business intent no
+authoritative artifact answers, a decision contradicting a spec, a contract or a
+recorded decision, and a decision resting on nothing authoritative. Under a
+no-question mode those decisions reach no user: they are opened as questions,
+and the session ends `no-question` on that write.
 
-That is the one place a session ends on a count, and it is a count of rounds
-between agents rather than of questions put to a user. The rules are in
+So the count bounds the rounds between agents and nothing else. It is not a
+fifth ending, and an agent that closed the session on reaching it has ended one
+the user was never asked to end. The rules are in
 `.qfai/assistant/constitution/review-convergence.md`.
 
 ## Under a no-question mode
@@ -256,7 +293,11 @@ uncertainty.
 - Facts were looked up rather than asked for.
 - Work running in the background did not stall the round — only the questions
   downstream of it waited.
-- The session ended by asking for confirmation, not by starting work.
+- The session reached one of the four endings on purpose. `confirmed` is the
+  one that asks for confirmation rather than starting work; the other three are
+  reached when the user closes the asking, when a no-question mode forbids it,
+  and when the user stops — and a run that could not have asked is not failing
+  this list by not asking.
 
 ## Related
 

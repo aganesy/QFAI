@@ -267,7 +267,12 @@ describe("the primitive carries the master's clauses", () => {
       // end condition makes the session uncompletable.
       const text = flat(await readSkill(tree, SKILL));
       expect(text).toMatch(/session between agents cannot reach condition 2/);
-      expect(text).toMatch(/two rounds, then every decision still open goes to the user/);
+      // Agreement between agents settles nothing, so the agreed decisions go too.
+      expect(text).toMatch(/two, then every decision the user has not settled goes to the user/);
+      // The budget bounds the rounds; the user ends the session.
+      expect(text).toMatch(/The budget ends the rounds, not the session/);
+      // Under a no-question mode the register write ends it instead.
+      expect(text).toMatch(/register, whose write ends it `no-question`/);
       expect(text).toMatch(/review-convergence\.md/);
     });
   }

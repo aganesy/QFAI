@@ -397,7 +397,7 @@ describe.each(TREES)("%s — the pre-draft grilling loop", (tree) => {
     const primitive = await read(PRIMITIVE);
     expectPhrase(primitive, "the griller puts the round to the authors");
     expectPhrase(primitive, "That is a different answerer, not a delegated question");
-    expectPhrase(primitive, "the one place a count ends a session");
+    expectPhrase(primitive, "A budget bounds its rounds");
     // Exactly one role puts the round, or an author is asked twice and the
     // two answers have no tie-break.
     expectPhrase(

@@ -190,7 +190,7 @@ describe.each(TREES)("%s", (tree) => {
     // stage's template did not define and no reviewer knew to read.
     const atdd = flat(await read(tree, ATDD));
     expect(atdd).toContain("under `## Cross-spec obligations`");
-    expect(atdd).toContain("Four of them carry a contract the heading cannot");
+    expect(atdd).toContain("Five of them carry a contract the heading cannot");
     // The template block itself, not only the prose describing it.
     expect(await read(tree, ATDD)).toContain("\n## Cross-spec obligations\n");
 

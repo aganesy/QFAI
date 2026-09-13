@@ -204,14 +204,21 @@ There is no question cap. A design is not finished being interrogated because a
 number was reached, and a short session is not evidence that the design was
 simple.
 
-**A session between agents cannot reach condition 2**, because no user is there
-to confirm. It ends on a budget instead: two rounds, then every decision still
-open goes to the user, with three subjects escalating at once —
-product or business intent no authoritative artifact answers, a decision
-contradicting a spec, a contract or a recorded decision, and a decision resting
-on nothing authoritative. That is the one place a session ends on a count, and
-it counts rounds between agents rather than questions put to a user
-(`.qfai/assistant/constitution/review-convergence.md`).
+**A session between agents cannot reach condition 2 on its own**, because no
+user is there to confirm. A budget bounds its rounds: two, then every decision
+the user has not settled goes to the user — the ones the agents agreed on as
+well as the ones still open — with three subjects escalating at once — product
+or business intent no authoritative artifact answers, a decision contradicting
+a spec, a contract or a recorded decision, and a decision resting on nothing
+authoritative (`.qfai/assistant/constitution/review-convergence.md`).
+
+**The budget ends the rounds, not the session.** `.agents/rules/grilling.md`
+names four endings and this is none of them: the decisions go to the user, who
+ends the session in one of the four — or, under a no-question mode, into the
+register, whose write ends it `no-question`. Reading the budget as an ending lets an
+agent terminate a session before the user has seen what it escalated, which is
+the opposite of what escalation is for. How many went is a count a record
+carries, never an ending.
 
 **A session under a no-question mode cannot reach condition 2 either**, because
 there is a user and the mode forbids asking them. It ends when nothing on the
@@ -220,6 +227,13 @@ every one it did not is opened as a question where the stage's own gate reads it
 (`.qfai/assistant/constitution/constitution.md` Article X, rule 6). The register
 write is the ending — without one, a stage that resolved its whole frontier by
 inspection would wait forever for a confirmation nobody may give.
+
+**Those endings have names, and there are four of them.**
+`.agents/rules/grilling.md` carries them under **The four endings**:
+`confirmed` when the user confirms an empty tree, `user-closed` when they close
+the asking, `no-question` for the register write above, and `stopped` when they
+stop the session. A stage that records a session names one of them, and this
+skill adds none of its own — the agent never confirms on the user's behalf.
 
 ### The user ends it whenever they say so
 
@@ -367,10 +381,12 @@ invoking stage's. What it confirms about the session is:
 - no decision was recorded that the user did not answer, and none was assumed
   that the assumption path excludes;
 - a fact taken as settled names where it was read;
-- the session ended on its own condition or on the user's word — or, between
-  agents, on the round budget that is the one place a count ends a session
-  (`.qfai/assistant/constitution/review-convergence.md`). A count anywhere else
-  is the finding.
+- the session ended on its own condition or on the user's word, in one of the
+  four endings `.agents/rules/grilling.md` names. Between agents a round budget
+  may have bounded the rounds first
+  (`.qfai/assistant/constitution/review-convergence.md`), and a session recorded
+  as ended **on** that budget is the finding: the decisions it escalated go to
+  the user, who ends it.
 
 - Reviewer independence is defined normatively in
   `.qfai/assistant/constitution/shared-skill-delegation-baseline.md#definition-independent-reviewer-normative`.

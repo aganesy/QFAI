@@ -192,8 +192,9 @@ Default policy:
   session — the interview `.agents/rules/grilling.md` defines, which walks a
   design tree in rounds until nothing is left silently assumed — is not a
   clarification against this budget. Such questions are unbounded and MUST still
-  be asked after the budget is exhausted. A session ends on an empty frontier
-  and the user's confirmation, so a cap would end it on a number instead: some
+  be asked after the budget is exhausted. A session completes on an empty
+  frontier and the user's confirmation, or ends in another of the endings that
+  rule names, and never on a count. A cap would end it on a number instead: some
   plans need three questions and some need fifty, and a ceiling either truncates
   the first kind or looks arbitrary on the second.
 

@@ -9,6 +9,8 @@ Required sections (all of them, in this order):
 - Objective
 - Inputs reviewed (files/paths)
 - Decisions made (with rationale)
+- Grilling Session
+- Work Orders Summary
 - Work performed (what changed, where)
 - Commands executed + key outputs
 - QFAI gates
@@ -25,6 +27,30 @@ Required sections (all of them, in this order):
 ## Inputs reviewed (files/paths)
 
 ## Decisions made (with rationale)
+
+## Grilling Session
+
+<!-- One `### /qfai-verify — run started <time>` block per invocation, one row
+     per session inside it, written when each session ends. See the skill's
+     `## Grilling (MANDATORY)` section; the open questions go under the
+     table. -->
+
+### /qfai-verify — run started 2026-01-01T09:02:00.417Z
+
+Preflight: session opened
+
+| Session | Ended | Ended at | Revision | Work resumed | Subject | Frontier | Lookups | Decisions | Open | Escalated |
+| ------- | ----- | -------- | -------- | ------------ | ------- | -------- | ------- | --------- | ---- | --------- |
+
+## Work Orders Summary
+
+<!-- The shared schema. A session adds one
+     `grilling(<Session>@<run started>/<adjudication>): <the decision>` row per
+     decision it settled, and a run that settled none writes one
+     `grilling(-/none): none` row. -->
+
+| Step | Role (sub-agent) | Agent instance | Task title | Input (refs) | Output (refs) | Status (PASS/REVISE/PENDING) |
+| ---- | ---------------- | -------------- | ---------- | ------------ | ------------- | ---------------------------- |
 
 ## Work performed (what changed, where)
 
