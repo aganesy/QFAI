@@ -12,7 +12,7 @@
  * question.
  */
 
-import { access, mkdir, mkdtemp, readFile, unlink, writeFile } from "node:fs/promises";
+import { access, mkdir, mkdtemp, readFile, symlink, unlink, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
@@ -194,15 +194,16 @@ describe("the constitution and its safety floor upgrade together", () => {
     expect(lock?.files["constitution/constitution.md"]).toBe(hashAssistantAssetText(previous));
   });
 
-  it("propagates a floor read error instead of reporting a content mismatch", async () => {
+  it("keeps the constitution when its rule master is a directory", async () => {
     const previous = await olderConstitution();
     await unlink(minimumPath());
     await mkdir(minimumPath());
 
-    await expect(
-      captureStdout(() => runInit({ dir: root, force: true, dryRun: false, yes: true })),
-    ).rejects.toMatchObject({ code: "EISDIR" });
+    const output = await captureStdout(() =>
+      runInit({ dir: root, force: true, dryRun: false, yes: true }),
+    );
     expect(await readFile(constitutionPath(), "utf-8")).toBe(previous);
+    expect(output).toContain("manual merge");
   });
 
   it("refreshes both when the old master still matches its write receipt", async () => {
@@ -223,16 +224,58 @@ describe("the constitution and its safety floor upgrade together", () => {
     expect(await readFile(constitutionPath(), "utf-8")).toBe(shippedConstitution);
   });
 
-  it("keeps edits outside the compatible floor while refreshing the constitution", async () => {
-    const shippedConstitution = await readFile(constitutionPath(), "utf-8");
+  it("keeps both files when the master has edits outside its floor", async () => {
     const edited = (await readFile(minimumPath(), "utf-8")) + "\nOur own related guidance.\n";
     await writeFile(minimumPath(), edited, "utf-8");
-    await olderConstitution();
+    const previous = await olderConstitution();
 
     await captureStdout(() => runInit({ dir: root, force: true, dryRun: false, yes: true }));
 
     expect(await readFile(minimumPath(), "utf-8")).toBe(edited);
+    expect(await readFile(constitutionPath(), "utf-8")).toBe(previous);
+  });
+
+  it.each(["indented", "fenced", "spaced heading"])(
+    "does not authorize an automatic upgrade from a %s master",
+    async (variant) => {
+      const shipped = await readFile(minimumPath(), "utf-8");
+      const edited =
+        variant === "indented"
+          ? shipped.replace(/^(- .+)$/gm, "    $1")
+          : variant === "fenced"
+            ? "```markdown\n" + shipped + "\n```\n"
+            : shipped.replace("## 2. ", " ## 2. ");
+      await writeFile(minimumPath(), edited, "utf-8");
+      const previous = await olderConstitution();
+
+      await captureStdout(() => runInit({ dir: root, force: true, dryRun: false, yes: true }));
+
+      expect(await readFile(minimumPath(), "utf-8")).toBe(edited);
+      expect(await readFile(constitutionPath(), "utf-8")).toBe(previous);
+    },
+  );
+
+  it("ignores line-ending differences in an otherwise shipped master", async () => {
+    const shippedConstitution = await readFile(constitutionPath(), "utf-8");
+    const crlf = (await readFile(minimumPath(), "utf-8")).replace(/\r?\n/g, "\r\n");
+    await writeFile(minimumPath(), crlf, "utf-8");
+    await olderConstitution();
+
+    await captureStdout(() => runInit({ dir: root, force: true, dryRun: false, yes: true }));
+
     expect(await readFile(constitutionPath(), "utf-8")).toBe(shippedConstitution);
+  });
+
+  it("does not authorize a leaf symlink even when its target has shipped text", async () => {
+    const target = path.join(root, "external-minimum.md");
+    await writeFile(target, await readFile(minimumPath(), "utf-8"), "utf-8");
+    await unlink(minimumPath());
+    await symlink(target, minimumPath(), "file");
+    const previous = await olderConstitution();
+
+    await captureStdout(() => runInit({ dir: root, force: true, dryRun: false, yes: true }));
+
+    expect(await readFile(constitutionPath(), "utf-8")).toBe(previous);
   });
 
   it("previews the paired upgrade without writing either file", async () => {

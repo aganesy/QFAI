@@ -421,7 +421,7 @@ export async function runInit(options: InitOptions): Promise<void> {
     options.dryRun &&
     (rootResult.copied.includes(minimumMaster) || ruleMasterResult.copied.includes(minimumMaster));
   const deferConstitution =
-    !plannedSafetyFloor && !(await hasCompatibleSafetyFloor(rootAssets, destRoot));
+    !plannedSafetyFloor && !(await hasShippedMinimumRule(rootAssets, destRoot));
   const qfaiResult = await copyTemplateTree(qfaiAssets, destQfai, {
     force: false,
     dryRun: options.dryRun,
@@ -719,7 +719,7 @@ async function syncGovernedAssistantAssets(
       const previousHash = previous[relative];
       if (previousHash !== undefined) recorded[relative] = previousHash;
       manualMergeNotes.push(
-        `NOTE: ${dest} was not installed or refreshed: .agents/rules/minimal-implementation.md § 2 does not match the shipped safety floor. A manual merge of that section is needed before running \`qfai init --force\` again.`,
+        `NOTE: ${dest} was not installed or refreshed: .agents/rules/minimal-implementation.md could not be verified as the shipped master. The safety floor and constitution need a manual merge before running \`qfai init --force\` again.`,
       );
       continue;
     }
@@ -2947,20 +2947,13 @@ async function ensureLegacyEvidenceIgnoreNegations(
 const AGENTS_RULES_DIR_REL = path.join(".agents", "rules");
 
 /** The constitution cannot demote obligations an older or edited floor still omits. */
-async function hasCompatibleSafetyFloor(rootAssets: string, destRoot: string): Promise<boolean> {
+async function hasShippedMinimumRule(rootAssets: string, destRoot: string): Promise<boolean> {
   const relative = path.join(AGENTS_RULES_DIR_REL, "minimal-implementation.md");
   const [shipped, installed] = await Promise.all([
-    readTextFileIfPresent(path.join(rootAssets, relative)),
-    readTextFileIfPresent(path.join(destRoot, relative)),
+    hashAssistantAssetFile(path.join(rootAssets, relative), { allowSymlink: true }),
+    hashAssistantAssetFile(path.join(destRoot, relative)),
   ]);
-  const floor = (text: string | null): string | undefined =>
-    text
-      ?.split(/^## 2\. [^\r\n]*\r?$/m)[1]
-      ?.split(/^## /m)[0]
-      ?.replace(/\s+/g, " ")
-      .trim();
-  const shippedFloor = floor(shipped);
-  return shippedFloor !== undefined && shippedFloor.length > 0 && shippedFloor === floor(installed);
+  return shipped !== null && shipped === installed;
 }
 
 /**

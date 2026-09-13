@@ -116,14 +116,16 @@ Then read `git diff` separately for the in-place edits the flow makes outside `.
 
 ## Constitution and safety-floor compatibility
 
-The constitution is installed or refreshed only when § 2 of
-`.agents/rules/minimal-implementation.md` matches the shipped safety floor.
-Whitespace differences do not change compatibility. An edited or unrecorded
-older floor stays untouched; init keeps the previous constitution, preserves
-its receipt, and reports the required manual merge. A first init with such a
-master does not install the constitution or record it as written.
-An unexpected read error propagates to the command boundary; it is not reported
-as a content mismatch.
+The constitution is installed or refreshed only when the complete regular file
+`.agents/rules/minimal-implementation.md` matches the shipped master. Only
+line-ending differences are ignored. Other edits remain protected and require
+a manual merge of the rule and constitution. A matching substring is not
+authorization: Markdown outside § 2 can make the floor non-operative.
+
+A missing, unreadable or non-regular master, including a leaf symlink, cannot
+authorize the upgrade. Init keeps the previous constitution and its receipt,
+and reports that the shipped master could not be verified. A first init in that
+state does not install the constitution or record it as written.
 
 A dry run includes the constitution when the same plan would create or update
 its compatible rule master. It writes neither file.
