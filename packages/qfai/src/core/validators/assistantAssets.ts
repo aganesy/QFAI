@@ -320,21 +320,26 @@ export async function validateAssistantAssets(root: string, config: QfaiConfig):
   // same.
   // By file identity rather than by spelling: on a case-insensitive file system
   // the crawl's `skill.md` and the probe's `SKILL.md` are one file, read and
-  // reported once.
-  const crawled = new Map<string, string>();
-  const crawledFiles = [
-    ...documents.keys(),
-    ...unreadable.flatMap((item) => (item.file === undefined ? [] : [item.file])),
-  ];
-  for (const crawledFile of crawledFiles) crawled.set(await fileIdentity(crawledFile), crawledFile);
-  // A skill whose reference graph cannot be read whole reports no reference as
-  // uncited: an entry point that cannot be read leaves no root to reach its
-  // documents from, and a document that cannot be read may cite the ones the
-  // walk then misses. The `QFAI-SKILLS-014` is the finding to act on.
+  // reported once. A hard link gives one identity several crawled paths, so
+  // every one is kept.
+  const unreadableFiles = unreadable.flatMap((item) =>
+    item.file === undefined ? [] : [item.file],
+  );
+  const crawled = new Map<string, string[]>();
+  for (const crawledFile of [...documents.keys(), ...unreadableFiles]) {
+    const identity = await fileIdentity(crawledFile);
+    crawled.set(identity, [...(crawled.get(identity) ?? []), crawledFile]);
+  }
+  // A skill whose entry point cannot be read reports no reference as uncited:
+  // there is no root to reach its documents from, and the `QFAI-SKILLS-014` is
+  // the finding to act on. The graph below adds a reached document that cannot
+  // be read.
   const indeterminateSkills: string[] = [];
   for (const entryPoint of await collectSkillEntryPoints(skillsDir)) {
-    const crawledAs = crawled.get(await fileIdentity(entryPoint));
-    const content = crawledAs === undefined ? undefined : documents.get(crawledAs);
+    const aliases = crawled.get(await fileIdentity(entryPoint)) ?? [];
+    const content = aliases
+      .map((alias) => documents.get(alias))
+      .find((text): text is string => text !== undefined);
     if (content !== undefined) {
       issues.push(...collectSkillRegistrationIssues(entryPoint, content));
       continue;
@@ -342,11 +347,17 @@ export async function validateAssistantAssets(root: string, config: QfaiConfig):
     // Crawled as this skill's own entry point, the file could not be read, and
     // the crawl has already said so. Reading it again reports the same fault
     // twice.
-    if (
-      crawledAs !== undefined &&
-      path.dirname(crawledAs) === path.dirname(entryPoint) &&
-      (await namesSkillEntryPoint(skillsDir, crawledAs))
-    ) {
+    let reportedAsEntryPoint = false;
+    for (const alias of aliases) {
+      if (
+        path.dirname(alias) === path.dirname(entryPoint) &&
+        (await namesSkillEntryPoint(skillsDir, alias))
+      ) {
+        reportedAsEntryPoint = true;
+        break;
+      }
+    }
+    if (reportedAsEntryPoint) {
       indeterminateSkills.push(path.dirname(entryPoint));
       continue;
     }
@@ -403,14 +414,15 @@ export async function validateAssistantAssets(root: string, config: QfaiConfig):
     issues.push(...collectSkillRegistrationIssues(entryPoint, text));
   }
 
-  for (const item of unreadable) {
-    const skill =
-      item.file === undefined ? undefined : toPosixRelative(skillsDir, item.file).split("/")[0];
-    if (skill !== undefined && skill !== "" && skill !== "..") {
-      indeterminateSkills.push(path.join(skillsDir, skill));
-    }
-  }
-  issues.push(...collectReferenceGraphIssues(root, skillsDir, documents, indeterminateSkills));
+  issues.push(
+    ...collectReferenceGraphIssues(
+      root,
+      skillsDir,
+      documents,
+      indeterminateSkills,
+      unreadableFiles,
+    ),
+  );
 
   return issues;
 }
@@ -1387,19 +1399,26 @@ function collectSkillNameIssue(
   ];
 }
 
+/** The bidirectional controls that reorder the text after them on a terminal. */
+const BIDIRECTIONAL_CONTROLS: ReadonlySet<number> = new Set([
+  0x061c, 0x200e, 0x200f, 0x202a, 0x202b, 0x202c, 0x202d, 0x202e, 0x2066, 0x2067, 0x2068, 0x2069,
+]);
+
 /**
  * A value out of a `SKILL.md`, safe to print.
  *
  * The document is a file the run did not write, and the text formatter writes a
  * message straight to the terminal. A name carrying a newline or an escape
- * sequence forges lines in that output, so every character below ` `, the
- * delete character and the C1 block are written as their escapes instead.
+ * sequence forges lines in that output, and a bidirectional control reorders
+ * the text after it, so every character below ` `, the delete character, the
+ * C1 block and those controls are written as their escapes instead.
  */
 function printable(value: string): string {
   let out = "";
   for (const character of value) {
     const code = character.codePointAt(0) ?? 0;
-    const unprintable = code < 0x20 || (code >= 0x7f && code <= 0x9f);
+    const unprintable =
+      code < 0x20 || (code >= 0x7f && code <= 0x9f) || BIDIRECTIONAL_CONTROLS.has(code);
     out += unprintable ? `\\u${code.toString(16).padStart(4, "0")}` : character;
   }
   return out;
@@ -1652,11 +1671,31 @@ function collectReferenceGraphIssues(
   skillsDir: string,
   documents: Map<string, string>,
   indeterminateSkills: readonly string[] = [],
+  unreadableFiles: readonly string[] = [],
 ): Issue[] {
-  const reachable = collectReachableDocuments(citationContext(root, skillsDir), documents);
+  // A document that cannot be read stands in the graph with no text: a citation
+  // still reaches it, and what it would cite is unknown. Reached, it leaves the
+  // uncited references of its skill undecided; unreached, it makes nothing
+  // reachable and decides nothing.
+  const graph = new Map<string, string>([
+    ...documents,
+    ...unreadableFiles.map((file): [string, string] => [file, ""]),
+  ]);
+  const reachable = collectReachableDocuments(citationContext(root, skillsDir), graph);
+  const undecided = [
+    ...indeterminateSkills,
+    ...unreadableFiles
+      .filter((file) => reachable.has(file))
+      .flatMap((file) => {
+        const skill = toPosixRelative(skillsDir, file).split("/")[0];
+        return skill === undefined || skill === "" || skill === ".."
+          ? []
+          : [path.join(skillsDir, skill)];
+      }),
+  ];
   const severity = "error";
   const inIndeterminateSkill = (file: string): boolean =>
-    indeterminateSkills.some((dir) => {
+    undecided.some((dir) => {
       const relative = path.relative(dir, file);
       return relative !== "" && !relative.startsWith("..") && !path.isAbsolute(relative);
     });

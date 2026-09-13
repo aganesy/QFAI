@@ -15,7 +15,7 @@
  * `disable-model-invocation: true` beside it.
  */
 import { existsSync } from "node:fs";
-import { chmod, mkdir, mkdtemp, readFile, rm, symlink, writeFile } from "node:fs/promises";
+import { chmod, link, mkdir, mkdtemp, readFile, rm, symlink, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
@@ -521,6 +521,17 @@ describe("the gate reads a skill as the host does", () => {
     expect(finding?.message).not.toContain("\u001b");
   });
 
+  it("escapes a bidirectional control in the name it reports", async () => {
+    // A control that reorders the text after it would rearrange the rest of the
+    // finding on the terminal.
+    const root = await projectWithSkillDocument(
+      ["---", 'name: "qfai-\u202eexample"', 'description: "Does the thing."', "---", ""].join("\n"),
+    );
+    const [finding] = await registrationFindings(root);
+    expect(finding?.message).toContain("\\u202e");
+    expect(finding?.message).not.toContain("\u202e");
+  });
+
   it("asks for a rename when the directory is longer than a name may be", async () => {
     // The directory's spelling is legal and its length is not, so the action
     // names the rename rather than a `name:` that fails the same check.
@@ -738,6 +749,45 @@ describe("the gate reads a skill as the host does", () => {
       true,
     );
     expect(findings.map((item) => item.code)).not.toContain("QFAI-SKILLS-013");
+  });
+
+  it("reports an uncited reference beside a document that cannot be read and no step reaches", async () => {
+    // Unreached, the unreadable document can make nothing reachable, so the
+    // uncited reference is still decided.
+    const root = await projectWithSkill(['description: "Does the thing."']);
+    const skillDir = path.join(root, ".qfai", "assistant", "skills", "qfai-example");
+    await mkdir(path.join(skillDir, "templates"), { recursive: true });
+    await writeFile(
+      path.join(skillDir, "templates", "bad.md"),
+      Buffer.concat([Buffer.from("# bad\n"), Buffer.from([0xff])]),
+    );
+    await mkdir(path.join(skillDir, "references"), { recursive: true });
+    const orphan = path.join(skillDir, "references", "orphan.md");
+    await writeFile(orphan, "# orphan\n", "utf-8");
+
+    const findings = await validateAssistantAssets(root, defaultConfig);
+    expect(findings.some((item) => item.code === "QFAI-SKILLS-013" && item.file === orphan)).toBe(
+      true,
+    );
+  });
+
+  it("reports an unreadable entry point once when a hard link gives it a second crawled path", async () => {
+    const root = await projectWithSkill(['description: "Does the thing."']);
+    const skillDir = path.join(root, ".qfai", "assistant", "skills", "qfai-example");
+    const entryPoint = path.join(skillDir, "SKILL.md");
+    await writeFile(entryPoint, Buffer.concat([Buffer.from("# skill\n"), Buffer.from([0xff])]));
+    await mkdir(path.join(skillDir, "templates"), { recursive: true });
+    try {
+      await link(entryPoint, path.join(skillDir, "templates", "bad.md"));
+    } catch {
+      // A file system without hard links cannot exercise this case.
+      return;
+    }
+
+    const findings = (await validateAssistantAssets(root, defaultConfig)).filter(
+      (item) => item.code === "QFAI-SKILLS-014" && item.file === entryPoint,
+    );
+    expect(findings).toHaveLength(1);
   });
 
   it("calls a nested SKILL.md a reference, not an entry point", async () => {
