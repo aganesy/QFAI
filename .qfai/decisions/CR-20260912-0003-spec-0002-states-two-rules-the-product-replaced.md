@@ -688,6 +688,11 @@ items` by id, with these dispositions:
    Each carries its `_policies/10_delta.md` record, and every path is in
    `## Impact scope`.
 
+   **Every rerun in this plan records the Change Request the same way**: one
+   row of the delta's `## Change Requests` table — `CR ID`,
+   `Upstream artifact`, `Mode`, `Approved by`, `Applied at` — in each pack's
+   `09_delta.md` and in `_policies/10_delta.md`, and never a `## Triage` row.
+
    **And the contract index is re-derived with them.**
    `.qfai/specs/_policies/05_Contracts.md` carries `DCON-031`, which assigns the
    lock freeze to `/qfai-sdd` Phase 0, and repeats the ownership in the prose
