@@ -35,8 +35,9 @@ function inputsPriorityLines(content: string): string[] {
   expect(end, `heading not found or out of order: ${NEXT_HEADING}`).toBeGreaterThan(start);
   return content
     .slice(start, end)
-    .split(/\r?\n/)
-    .filter((line) => /^\d+\.\s/.test(line.trim()));
+    .split(/\r?\n(?=\d+\.\s)/)
+    .map((entry) => entry.replace(/\s+/g, " ").trim())
+    .filter((entry) => /^\d+\.\s/.test(entry));
 }
 
 /** Every backtick-quoted span on a line, without the backticks. */
