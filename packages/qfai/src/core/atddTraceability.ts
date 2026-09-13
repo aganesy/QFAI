@@ -11,6 +11,7 @@ import { collectApiContractFiles, collectDbContractFiles } from "./discovery.js"
 import {
   collectFilesByGlobs,
   DEFAULT_GLOB_FILE_LIMIT,
+  unusableGlobReason,
   type CollectFilesByGlobsResult,
 } from "./fs.js";
 import { collectSpecEntries } from "./specLayout.js";
@@ -2269,9 +2270,6 @@ function isAnnotationOnlyCarrier(
   return true;
 }
 
-/** A brace-set member read as an extension: `ts`, `test.ts`, `spec-e2e.js`. */
-const EXTENSION_MEMBER = /^[A-Za-z0-9][A-Za-z0-9._+-]*$/;
-
 /**
  * Lifts the bare extension set out of the project's configured `testFileGlobs`
  * (`tests/**\/*.py` -> `py`). Empty when nothing could be recovered.
@@ -2290,11 +2288,12 @@ export function deriveTestFileExtensions(testFileGlobs: readonly string[]): Set<
     if (glob.trimStart().startsWith("!")) continue;
     for (const match of glob.matchAll(/\.\{([^}]+)\}$/g)) {
       for (const ext of (match[1] ?? "").split(",")) {
-        // A member is appended to the generated scan pattern, so it has to be
-        // an extension: a NUL byte or a wildcard copied out of the brace set
-        // made that scan throw before any finding was reported.
+        // A member is copied into the generated scan pattern whole, wildcards
+        // included, since the matcher reads `test-*.js` there as it does here.
+        // One the matcher cannot use is left out: a NUL byte copied in made the
+        // scan throw before any finding was reported.
         const trimmed = ext.trim();
-        if (EXTENSION_MEMBER.test(trimmed)) extensions.add(trimmed);
+        if (trimmed.length > 0 && unusableGlobReason(trimmed) === null) extensions.add(trimmed);
       }
     }
     const single = /\.([A-Za-z0-9]+)$/.exec(glob);

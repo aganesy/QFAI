@@ -48,12 +48,12 @@ describe("deriveAtddFilePattern", () => {
     );
   });
 
-  it("takes no member of a brace set that is not an extension", () => {
+  it("takes every member of a brace set the matcher can use, and no other", () => {
     // Copied into the scan pattern, a NUL byte made the scan throw before any
-    // finding, and a wildcard widened what the stage reads.
+    // finding. A wildcard member selects files the configured glob selects.
     const nul = String.fromCharCode(0);
-    expect(deriveAtddFilePattern([`tests/**/*.{ts,${nul}}`, "tests/**/*.{py,*}"])).toBe(
-      "**/*.{feature,markdown,md,py,ts}",
+    expect(deriveAtddFilePattern([`tests/**/*.{ts,${nul}}`, "tests/**/*.{py,test-*.js}"])).toBe(
+      "**/*.{feature,markdown,md,py,test-*.js,ts}",
     );
     expect(deriveAtddFilePattern(["tests/**/*.{test.ts,spec-e2e.js}"])).toBe(
       "**/*.{feature,markdown,md,spec-e2e.js,test.ts}",
