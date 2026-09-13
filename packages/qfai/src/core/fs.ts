@@ -59,7 +59,7 @@ export async function collectFilesByGlobs(
   const unusable = options.globs.find((glob) => glob.includes(NUL));
   if (unusable !== undefined) {
     throw new Error(
-      `The glob ${JSON.stringify(unusable)} holds a NUL byte, which no file path can hold.`,
+      `The glob ${JSON.stringify(unusable)} holds a NUL byte, which no file path can hold`,
     );
   }
 

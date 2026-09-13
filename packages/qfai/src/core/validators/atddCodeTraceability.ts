@@ -415,7 +415,7 @@ async function collectUnreadableTestGlobs(root: string, config: QfaiConfig): Pro
     return [
       issue(
         "QFAI-ATDD-134",
-        `The configured test globs could not be read: ${reason}`,
+        `The configured test globs could not be read: ${reason}.`,
         "error",
         path.join(root, "qfai.config.yaml"),
         "atddCodeTraceability.testFileGlobs",

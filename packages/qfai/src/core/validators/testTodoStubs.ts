@@ -25,9 +25,10 @@
  * does not write one.
  *
  * `QFAI-TEST-002` (info) names the states in which the scan produced no
- * evidence: extensions with no dialect, and an empty
+ * evidence: extensions with no dialect, an empty
  * `validation.traceability.testFileGlobs` (the value `qfai init` ships), where
- * no file is selected at all. Neither may be mistaken for "no stubs".
+ * no file is selected at all, and a selection the glob matcher refuses. None
+ * may be mistaken for "no stubs".
  *
  * This validator closes the gap by emitting a finding for each stub found,
  * making qfai validate / CI reject the error-severity ones. Projects that need
@@ -40,7 +41,11 @@ import path from "node:path";
 
 import type { QfaiConfig } from "../config.js";
 import { SCAFFOLD_PLACEHOLDER_MARKER } from "../atdd/scaffold.js";
-import { collectFilesByGlobs, DEFAULT_GLOB_FILE_LIMIT } from "../fs.js";
+import {
+  collectFilesByGlobs,
+  DEFAULT_GLOB_FILE_LIMIT,
+  type CollectFilesByGlobsResult,
+} from "../fs.js";
 import { DEFAULT_TEST_FILE_EXCLUDE_GLOBS, normalizeGlobs } from "../traceability.js";
 import type { Issue, IssueSeverity } from "../types.js";
 import { maskJsNonCode } from "./jsSourceMask.js";
@@ -1322,6 +1327,31 @@ function reportTruncatedScan(limit: number, callerGlobs: boolean): Issue {
   );
 }
 
+/**
+ * The refusal form of `QFAI-TEST-002`: the glob matcher refused the selection,
+ * so no file was opened.
+ *
+ * Rethrown, the refusal would end the whole validate run under `tdd` and
+ * `full` before `QFAI-TRACE-124` reports the same configuration as an error.
+ */
+function reportRefusedScan(error: unknown, callerGlobs: boolean): Issue {
+  const reason = error instanceof Error ? error.message : String(error);
+  const key = callerGlobs ? "paths.testsDir" : "validation.traceability.testFileGlobs";
+  const selection = callerGlobs
+    ? "the acceptance directories this gate scans"
+    : "`validation.traceability.testFileGlobs`";
+  return issue(
+    "QFAI-TEST-002",
+    `The stub scan could not read ${selection}: ${reason}. No file was opened, so a clean result is not evidence that the tests hold no stub.`,
+    "info",
+    "qfai.config.yaml",
+    key,
+    [key],
+    "canonical",
+    `Fix \`${key}\` in qfai.config.yaml so the glob matcher accepts the selection.`,
+  );
+}
+
 export async function validateTestTodoStubs(
   root: string,
   config: QfaiConfig,
@@ -1348,11 +1378,17 @@ export async function validateTestTodoStubs(
     ]),
   );
 
-  const { files, truncated, limit } = await collectFilesByGlobs(root, {
-    globs: Array.from(globs),
-    ignore: excludeGlobs,
-    limit: DEFAULT_GLOB_FILE_LIMIT,
-  });
+  let scan: CollectFilesByGlobsResult;
+  try {
+    scan = await collectFilesByGlobs(root, {
+      globs: Array.from(globs),
+      ignore: excludeGlobs,
+      limit: DEFAULT_GLOB_FILE_LIMIT,
+    });
+  } catch (error) {
+    return [reportRefusedScan(error, options.globs !== undefined)];
+  }
+  const { files, truncated, limit } = scan;
 
   const skippedTestSeverity = "error";
 

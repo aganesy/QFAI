@@ -15,6 +15,7 @@ import path from "node:path";
 import { describe, expect, it } from "vitest";
 
 import { defaultConfig, type QfaiConfig } from "../../src/core/config.js";
+import { validateProject } from "../../src/core/validate.js";
 import { validateTraceability } from "../../src/core/validators/traceability.js";
 
 function configWith(overrides: { globs?: string[]; scMustHaveTest?: boolean }): QfaiConfig {
@@ -113,6 +114,29 @@ describe("testFileGlobs configuration diagnosis (QFAI-TRACE-124)", () => {
         const finding = issues.find((entry) => entry.code === "QFAI-TRACE-124");
         expect(finding?.severity).toBe("error");
         expect(finding?.rule).toBe("traceability.layered.testFileGlobsScanFailed");
+      });
+    },
+  );
+
+  // Every validator that scans these globs has to turn the refusal into a
+  // finding. One that let it through ended the run with no report at all.
+  it.each(["tdd", "full"] as const)(
+    "finishes a %s run over a glob the matcher refuses, and reports it",
+    async (profile) => {
+      await withTempRoot(async (root) => {
+        await seedV1421Spec(root);
+        const glob = JSON.stringify(`tests/${String.fromCharCode(0)}/*.test.ts`);
+        await writeFile(
+          path.join(root, "qfai.config.yaml"),
+          `validation:\n  traceability:\n    scMustHaveTest: true\n    testFileGlobs: [${glob}]\n`,
+          "utf-8",
+        );
+
+        const result = await validateProject(root, undefined, { profile });
+
+        const codes = result.issues.map((entry) => entry.code);
+        expect(codes).toContain("QFAI-TRACE-124");
+        expect(codes).toContain("QFAI-TEST-002");
       });
     },
   );

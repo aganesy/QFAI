@@ -22,8 +22,9 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   NUL byte is valid YAML. Given one ahead of a wildcard, such as
   `tests/\0/*.ts`, the matcher raised the error inside its directory walk,
   where nothing could catch it, and `qfai validate` exited under every profile.
-  The scan now refuses the pattern before the walk starts, and `QFAI-TRACE-124`
-  reports it under the `tdd` and `full` profiles.
+  The scan now refuses the pattern before the walk starts. Under the `tdd` and
+  `full` profiles `QFAI-TRACE-124` reports it, and the stub scan reports
+  `QFAI-TEST-002`, so its clean result is not read as evidence.
 
   The ATDD stage reads only the extensions out of these globs, so under
   `--profile atdd` nothing said a glob was unusable. `QFAI-ATDD-134` says it
