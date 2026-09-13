@@ -174,10 +174,10 @@ export async function runValidate(options: ValidateOptions): Promise<number> {
   // for one. Replacing the run made every stage gate that names a narrow
   // profile unreachable in CI.
   const ciProfileIssue = buildCiProfileIssue(options.profile);
-  // Wrapped, because an unhandled rejection here left the operator with one
-  // stderr line and no verdict — no `counts:`, no `run-log:`, no
+  // Wrapped, because an unhandled rejection here would leave the operator with
+  // one stderr line and no verdict — no `counts:`, no `run-log:`, no
   // `validate.json` — and every shipped skill pipes validate through `| tail`,
-  // so that line was all an agent saw. Enumerating the `stat` sites
+  // so that line would be all an agent sees. Enumerating the `stat` sites
   // that can raise reduces the ways in; this is what answers when the next one
   // appears.
   //
@@ -273,9 +273,9 @@ export async function runValidate(options: ValidateOptions): Promise<number> {
 
   // A `--spec` run is one worker's view of one slice, so it writes its own
   // report rather than the shared one. Resolve it BEFORE the GitHub summary:
-  // pointing that summary at the shared `validate.json` named a file this run
-  // never wrote — either missing, or a stale repo-wide report from another run
-  // — so the findings dropped by the annotation cap were unreachable.
+  // pointed at the shared `validate.json`, that summary would name a file this
+  // run never wrote — either missing, or a stale repo-wide report from another
+  // run — and the findings dropped by the annotation cap would be unreachable.
   const scopedReportRel =
     scopedSpecIds.length > 0 ? scopedReportPath(configuredValidateJsonPath, scopedSpecIds) : null;
 
@@ -886,7 +886,7 @@ function stageOwnerOf(group: GateGroup): ValidationProfile | undefined {
  *
  * Derived by exclusion rather than enumerated, so a group added to
  * `GATE_GROUP_FAMILIES` still reaches `full` without a second edit — which is
- * the property `ALL_GATE_GROUPS` was there for. The exclusions are named in
+ * the property `ALL_GATE_GROUPS` exists for. The exclusions are named in
  * `STAGE_ONLY_GATE_GROUPS`, and what each one mirrors is recorded there.
  */
 const FULL_GATE_GROUPS: readonly GateGroup[] = ALL_GATE_GROUPS.filter(
@@ -1017,8 +1017,8 @@ type UnevaluatedGates = {
    * the same detectors and its inputs are just as absent, so sending the reader
    * there is advice that cannot be followed. It is also why they must survive
    * the `fullCovered.length === 0` case: `full` and `verify` reach it, and
-   * dropping them there let the notice say a full run had evaluated every gate
-   * it covers while two of its detectors had structurally not run.
+   * dropped there, the notice would say a full run had evaluated every gate it
+   * covers while two of its detectors had structurally not run.
    */
   readonly preconditionGated: readonly string[];
 };
@@ -1323,20 +1323,18 @@ function emitTextRunLog(runLogPath: string): void {
 /**
  * The version and the directory it came from — first line of every run.
  *
- * A validate run printed findings, `counts:` and `run-log:` and nothing about
- * its own provenance, while `toolVersion` lived only inside `validate.json` —
- * which the README calls internal and not a stable external contract. So an
- * `npx qfai` that resolved three directories up, against another branch's
- * lockfile, was indistinguishable in the transcript from one that resolved
- * locally.
+ * Otherwise `toolVersion` is only inside `validate.json`, which the README calls
+ * internal and not a stable external contract, and an `npx qfai` that resolved
+ * three directories up, against another branch's lockfile, is indistinguishable
+ * in the transcript from one that resolved locally.
  *
- * **Before the work, and in every format.** Printed beside `run-log:` it was
- * absent from `--format github`, which is the format the shipped SDD loop
+ * **Before the work, and in every format.** Printed beside `run-log:` it would
+ * be absent from `--format github`, which is the format the shipped SDD loop
  * prescribes (`skills/qfai-sdd/SKILL.md`, `templates/evidence/sdd-spec.md`), so
- * the answer was missing from the path the product actually runs. And printed
- * after `validateProject` returned, it was missing from the run that needs it
- * most: an old externally-resolved qfai throwing on a newer project structure
- * left a stack trace and nothing about which binary produced it.
+ * the answer would be missing from the path the product actually runs. Printed
+ * after `validateProject` returns, it would be missing from the run that needs
+ * it most: an old externally-resolved qfai throwing on a newer project
+ * structure leaves a stack trace and nothing about which binary produced it.
  *
  * stdout is safe in both formats — neither puts machine-readable JSON there.
  */
@@ -1415,11 +1413,11 @@ export function capPerLevel(issues: Issue[]): { emitted: Issue[]; levels: LevelT
 }
 
 /**
- * Whether an issue prints its `expected` / `fix` detail. This was hard-wired to
- * `severity === "error"`, which left the rule-description catalogue unreachable
- * for every warning-severity code: under `--strict` / `--fail-on warning` the
- * warning is exactly what fails the run, yet neither formatter printed its
- * expected state or remedy.
+ * Whether an issue prints its `expected` / `fix` detail: every error, and a
+ * warning when warnings fail the run. Tied to `severity === "error"` alone, the
+ * rule-description catalogue would be unreachable for every warning-severity
+ * code, although under `--strict` / `--fail-on warning` the warning is exactly
+ * what fails the run.
  */
 function shouldEmitIssueDetail(issue: Issue, failOn: FailOn): boolean {
   if (issue.severity === "error") {
@@ -1568,16 +1566,16 @@ function resolveJsonPath(root: string, jsonPath: string): string {
 /**
  * GitHub's own cap on annotations, which is per LEVEL and per STEP.
  *
- * This was 100, applied to the whole run, and the summary printed
- * `annotations=${min(total, 100)}/${total}` — so a run with 40 errors said `annotations=40/40`,
- * which reads as "every finding was emitted", while the runner displayed ten and dropped thirty
- * without saying so. The summary is the only thing an operator sees, and it said the opposite of
- * what happened. Measured on the `test (cli)` lane, all three levels sat at exactly ten, so the
- * truncation was the steady state rather than an edge case.
+ * One cap of 100 over the whole run, with a summary printing
+ * `annotations=${min(total, 100)}/${total}`, would report a run with 40 errors as
+ * `annotations=40/40` — "every finding was emitted" — while the runner displays ten and drops
+ * thirty without saying so. The summary is the only thing an operator sees. Measured on the
+ * `test (cli)` lane, all three levels sat at exactly ten, so the truncation is the steady state
+ * rather than an edge case.
  *
- * Emitting past the cap was the alternative and buys nothing: the runner drops the extras, and a
- * local `--format github` run just prints more lines that no reader gets. What is owed is not a
- * smaller number but an honest report, which is why the per-level tally exists beside this.
+ * Emitting past the cap buys nothing: the runner drops the extras, and a local `--format github`
+ * run just prints more lines that no reader gets. What is owed is not a smaller number but an
+ * honest report, which is why the per-level tally exists beside this.
  *
  * The cap is per STEP, and a step may run `validate` more than once — so this bounds what THIS
  * invocation emits, not what the step ultimately displays. The note says the rule rather than
@@ -1845,8 +1843,8 @@ export const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
   // reports is a contract and a screen that disagree.
   "QFAI-CONTRACT-037":
     "Every `data-qfai` marker a UI contract writes literally is mentioned by at least one file under the configured source directory, so an element the contract declares is one something on the screen renders.",
-  // Nothing has ever rejected a value here, so a project carrying a typo has
-  // been passing and was never told.
+  // Without this entry nothing rejects a value here, so a project carrying a
+  // typo passes and is never told.
   "QFAI-CONTRACT-038":
     "Every `prototype.mode` a UI contract declares is one this tooling knows, so the contract's own words say what kind of prototype the review is walking. A contract that declares no mode is asked nothing.",
   "QFAI-CONTRACT-040":
