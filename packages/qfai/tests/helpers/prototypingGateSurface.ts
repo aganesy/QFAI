@@ -2,10 +2,10 @@
  * The gate surface of the prototyping profile: every rule code that can reach
  * the exploration post-filter, and at which severity.
  *
- * `relaxIssuesForMode` has exactly one production call site —
- * `runPrototypingValidators` in `core/validate.ts` — so "reaches the
- * post-filter" is decidable: it is the set of `Issue`s produced by functions
- * transitively referenced from that one function. This module derives that set
+ * `relaxIssuesForMode` has exactly one production call site, and its input is
+ * what `runPrototypingProfileValidators` in `core/validate.ts` collects — so
+ * "reaches the post-filter" is decidable: it is the set of `Issue`s produced by
+ * functions transitively referenced from that one function. This module derives that set
  * from the sources so the allowlists in `core/prototyping/mode.ts` can be
  * checked for COMPLETENESS instead of for plausibility.
  *
@@ -32,8 +32,11 @@ const packageRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "
 const srcRoot = path.join(packageRoot, "src");
 const entryFile = path.join(srcRoot, "core", "validate.ts");
 
-/** The one function whose result is handed to `relaxIssuesForMode`. */
-const ENTRY_FUNCTION = "runPrototypingValidators";
+/**
+ * The one function whose result is handed to `relaxIssuesForMode`. The profile
+ * wrapper, not the shared set inside it: the wrapper adds validators of its own.
+ */
+const ENTRY_FUNCTION = "runPrototypingProfileValidators";
 
 /** Shape of a rule code, used to ignore non-code string literals. */
 const RULE_CODE = /^[A-Z][A-Z0-9_]*(?:-[A-Z0-9]+)+$/;
