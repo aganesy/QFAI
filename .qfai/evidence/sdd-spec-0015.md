@@ -154,6 +154,7 @@
 
 | Pending row | Existing test file                                                     | Existing-case selector                                                                    |
 | ----------- | ---------------------------------------------------------------------- | ----------------------------------------------------------------------------------------- |
+| TDD-0038    | `packages/qfai/tests/integration/spec0015GovernanceAndHandoff.test.ts` | `QFAI:SPEC-0015:TC-0015-0034`                                                             |
 | TDD-0039    | `packages/qfai/tests/integration/agentDelegationSpec0015.test.ts`      | `preserves adopter profiles on both init paths while emitting the canonical target bound` |
 | TDD-0046    | `packages/qfai/tests/e2e/spec0015GovernanceAndHandoffE2E.test.ts`      | `QFAI:SPEC-0015:US-0015-0009`                                                             |
 | TDD-0047    | `packages/qfai/tests/e2e/spec0015GovernanceAndHandoffE2E.test.ts`      | `QFAI:SPEC-0015:US-0015-0010`                                                             |
@@ -163,3 +164,5 @@
 | TDD-0051    | `packages/qfai/tests/e2e/spec0015GovernanceAndHandoffE2E.test.ts`      | `QFAI:SPEC-0015:US-0015-0014`                                                             |
 | TDD-0052    | `packages/qfai/tests/e2e/spec0015GovernanceAndHandoffE2E.test.ts`      | `QFAI:SPEC-0015:US-0015-0015`                                                             |
 | TDD-0053    | `packages/qfai/tests/e2e/spec0015HygieneLaneToReviewerGateE2E.test.ts` | `US-0015-0016`                                                                            |
+
+- TDD-0038 is bound to the existing TC-0015-0034 Integration case and its unique title-prefix selector. It remains `todo` with DR-ID and Evidence at `-`; this identity binding grants no RED/GREEN or reviewer lifecycle credit.
