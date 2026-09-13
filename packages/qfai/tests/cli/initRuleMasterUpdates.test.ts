@@ -12,14 +12,20 @@
  * question.
  */
 
-import { mkdir, mkdtemp, readFile, writeFile } from "node:fs/promises";
+import { access, mkdir, mkdtemp, readFile, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { runInit } from "../../src/cli/commands/init.js";
+import {
+  hashAssistantAssetText,
+  readAssistantAssetsLock,
+  writeAssistantAssetsLock,
+} from "../../src/core/assistantAssetProvenance.js";
 import { RULE_LOCK_BASENAME, readRuleLock } from "../../src/core/ruleMasterUpdates.js";
+import { captureStdout } from "../helpers/stdout.js";
 import { removeTempTree } from "../helpers/tempTree.js";
 
 const RULES_REL = path.join(".agents", "rules");
@@ -32,7 +38,7 @@ const masterPath = (): string => path.join(root, RULES_REL, MASTER);
 const lockPath = (): string => path.join(root, RULES_REL, RULE_LOCK_BASENAME);
 
 async function init(): Promise<void> {
-  await runInit({ dir: root, force: false, dryRun: false, yes: true });
+  await captureStdout(() => runInit({ dir: root, force: false, dryRun: false, yes: true }));
 }
 
 /** The text this release ships, read off the project after a first init. */
@@ -145,6 +151,136 @@ async function hashOf(filePath: string): Promise<string> {
   const { hashAssistantAssetText } = await import("../../src/core/assistantAssetProvenance.js");
   return hashAssistantAssetText(await readFile(filePath, "utf-8"));
 }
+
+describe("the constitution and its safety floor upgrade together", () => {
+  const minimumPath = (): string => path.join(root, RULES_REL, "minimal-implementation.md");
+  const assistantPath = (): string => path.join(root, ".qfai", "assistant");
+  const constitutionPath = (): string =>
+    path.join(assistantPath(), "constitution", "constitution.md");
+
+  async function olderConstitution(): Promise<string> {
+    const text = "# Constitution\n\nThe previous release protects its required gates.\n";
+    await writeFile(constitutionPath(), text, "utf-8");
+    const lock = await readAssistantAssetsLock(assistantPath());
+    if (lock === null) throw new Error("The first init must record its governed assets.");
+    await writeAssistantAssetsLock(assistantPath(), {
+      files: { ...lock.files, "constitution/constitution.md": hashAssistantAssetText(text) },
+    });
+    return text;
+  }
+
+  function olderFloor(text: string): string {
+    expect(text).toContain("- Required traceability annotations.");
+    expect(text).toContain("- Repository quality gates and their verification evidence.");
+    return text
+      .replace("- Required traceability annotations.\n", "")
+      .replace("- Repository quality gates and their verification evidence.\n", "");
+  }
+
+  it("keeps the old constitution when an edited master lacks the shipped floor", async () => {
+    const edited = olderFloor(await readFile(minimumPath(), "utf-8")) + "\nOur own rule wording.\n";
+    await writeFile(minimumPath(), edited, "utf-8");
+    const previous = await olderConstitution();
+
+    const output = await captureStdout(() =>
+      runInit({ dir: root, force: true, dryRun: false, yes: true }),
+    );
+
+    expect(await readFile(constitutionPath(), "utf-8")).toBe(previous);
+    expect(await readFile(minimumPath(), "utf-8")).toBe(edited);
+    expect(output).toContain("safety floor");
+    expect(output).toContain("manual merge");
+    const lock = await readAssistantAssetsLock(assistantPath());
+    expect(lock?.files["constitution/constitution.md"]).toBe(hashAssistantAssetText(previous));
+  });
+
+  it("refreshes both when the old master still matches its write receipt", async () => {
+    const shippedMaster = await readFile(minimumPath(), "utf-8");
+    const shippedConstitution = await readFile(constitutionPath(), "utf-8");
+    await writeFile(minimumPath(), olderFloor(shippedMaster), "utf-8");
+    const rules = await readRuleLock(path.join(root, RULES_REL));
+    await writeFile(
+      lockPath(),
+      JSON.stringify({ ...rules, "minimal-implementation.md": await hashOf(minimumPath()) }),
+      "utf-8",
+    );
+    await olderConstitution();
+
+    await captureStdout(() => runInit({ dir: root, force: true, dryRun: false, yes: true }));
+
+    expect(await readFile(minimumPath(), "utf-8")).toBe(shippedMaster);
+    expect(await readFile(constitutionPath(), "utf-8")).toBe(shippedConstitution);
+  });
+
+  it("keeps edits outside the compatible floor while refreshing the constitution", async () => {
+    const shippedConstitution = await readFile(constitutionPath(), "utf-8");
+    const edited = (await readFile(minimumPath(), "utf-8")) + "\nOur own related guidance.\n";
+    await writeFile(minimumPath(), edited, "utf-8");
+    await olderConstitution();
+
+    await captureStdout(() => runInit({ dir: root, force: true, dryRun: false, yes: true }));
+
+    expect(await readFile(minimumPath(), "utf-8")).toBe(edited);
+    expect(await readFile(constitutionPath(), "utf-8")).toBe(shippedConstitution);
+  });
+
+  it("previews the paired upgrade without writing either file", async () => {
+    const older = olderFloor(await readFile(minimumPath(), "utf-8"));
+    await writeFile(minimumPath(), older, "utf-8");
+    const rules = await readRuleLock(path.join(root, RULES_REL));
+    await writeFile(
+      lockPath(),
+      JSON.stringify({ ...rules, "minimal-implementation.md": await hashOf(minimumPath()) }),
+      "utf-8",
+    );
+    const previous = await olderConstitution();
+
+    const output = await captureStdout(() =>
+      runInit({ dir: root, force: true, dryRun: true, yes: true }),
+    );
+
+    expect(output).toMatch(/^ {4}- \.qfai\/assistant\/constitution\/constitution\.md$/m);
+    expect(await readFile(minimumPath(), "utf-8")).toBe(older);
+    expect(await readFile(constitutionPath(), "utf-8")).toBe(previous);
+  });
+
+  it("previews a fresh constitution alongside its new floor", async () => {
+    const fresh = await mkdtemp(path.join(os.tmpdir(), "qfai-floor-preview-"));
+    try {
+      const output = await captureStdout(() =>
+        runInit({ dir: fresh, force: false, dryRun: true, yes: true }),
+      );
+      expect(output).toMatch(/^ {4}- \.agents\/rules\/minimal-implementation\.md$/m);
+      expect(output).toMatch(/^ {4}- \.qfai\/assistant\/constitution\/constitution\.md$/m);
+      await expect(access(path.join(fresh, ".agents"))).rejects.toMatchObject({ code: "ENOENT" });
+    } finally {
+      await removeTempTree(fresh);
+    }
+  });
+
+  it("does not seed a new constitution over an incompatible pre-existing master", async () => {
+    const fresh = await mkdtemp(path.join(os.tmpdir(), "qfai-floor-pair-"));
+    try {
+      await mkdir(path.join(fresh, RULES_REL), { recursive: true });
+      const edited = olderFloor(await readFile(minimumPath(), "utf-8"));
+      await writeFile(path.join(fresh, RULES_REL, "minimal-implementation.md"), edited, "utf-8");
+
+      await captureStdout(() => runInit({ dir: fresh, force: false, dryRun: false, yes: true }));
+
+      const assistant = path.join(fresh, ".qfai", "assistant");
+      await expect(
+        access(path.join(assistant, "constitution", "constitution.md")),
+      ).rejects.toMatchObject({
+        code: "ENOENT",
+      });
+      const lock = await readAssistantAssetsLock(assistant);
+      expect(lock).not.toBeNull();
+      expect(lock?.files).not.toHaveProperty("constitution/constitution.md");
+    } finally {
+      await removeTempTree(fresh);
+    }
+  });
+});
 
 describe("a project with no rules directory", () => {
   it("is left alone rather than failing the run", async () => {

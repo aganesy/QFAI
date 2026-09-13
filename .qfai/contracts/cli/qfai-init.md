@@ -114,6 +114,18 @@ Roll back in two moves, by status:
 
 Then read `git diff` separately for the in-place edits the flow makes outside `.qfai/assistant/` (the managed `.gitignore` block, the integration wrappers). The `W-USER-EDIT-PRESERVED` notes printed by the run name the destinations that were left alone.
 
+## Constitution and safety-floor compatibility
+
+The constitution is installed or refreshed only when § 2 of
+`.agents/rules/minimal-implementation.md` matches the shipped safety floor.
+Whitespace differences do not change compatibility. An edited or unrecorded
+older floor stays untouched; init keeps the previous constitution, preserves
+its receipt, and reports the required manual merge. A first init with such a
+master does not install the constitution or record it as written.
+
+A dry run includes the constitution when the same plan would create or update
+its compatible rule master. It writes neither file.
+
 ## Shipped GitHub Actions workflows
 
 `qfai init` writes the shipped workflow set into `<root>/.github/workflows/`.

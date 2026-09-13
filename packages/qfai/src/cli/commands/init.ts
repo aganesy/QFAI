@@ -416,11 +416,22 @@ export async function runInit(options: InitOptions): Promise<void> {
   // After the citation repair, which reads this run's own copy report: a master
   // replaced here was already on disk, so it is not one that pass is looking for.
   const ruleMasterResult = await updateUneditedRuleMasters(rootAssets, destRoot, options.dryRun);
+  const minimumMaster = path.join(destRoot, AGENTS_RULES_DIR_REL, "minimal-implementation.md");
+  const plannedSafetyFloor =
+    options.dryRun &&
+    (rootResult.copied.includes(minimumMaster) || ruleMasterResult.copied.includes(minimumMaster));
+  const deferConstitution =
+    !plannedSafetyFloor && !(await hasCompatibleSafetyFloor(rootAssets, destRoot));
   const qfaiResult = await copyTemplateTree(qfaiAssets, destQfai, {
     force: false,
     dryRun: options.dryRun,
     conflictPolicy: "skip",
-    exclude: [...STANDARD_ASSET_PATHS],
+    exclude: [
+      ...STANDARD_ASSET_PATHS,
+      ...(deferConstitution
+        ? [path.relative(destQfai, joinAssistantLayer(destRoot, "constitution", "constitution.md"))]
+        : []),
+    ],
   });
   const skillsResult = await copyTemplatePaths(qfaiAssets, destQfai, [...STANDARD_ASSET_PATHS], {
     force: options.force,
@@ -434,6 +445,7 @@ export async function runInit(options: InitOptions): Promise<void> {
   const governedResult = await syncGovernedAssistantAssets(assistantAssets, destRoot, {
     force: options.force,
     dryRun: options.dryRun,
+    deferConstitution,
   });
 
   // The routing manifest is user configuration, so it is never overwritten —
@@ -667,7 +679,7 @@ type GovernedAssetsResult = {
 async function syncGovernedAssistantAssets(
   assistantAssets: string,
   destRoot: string,
-  options: { force: boolean; dryRun: boolean },
+  options: { force: boolean; dryRun: boolean; deferConstitution: boolean },
 ): Promise<GovernedAssetsResult> {
   // Path SSOT (`.qfai/contracts/cli/qfai-init.md`): the assistant-tree segments
   // come from `assistantPaths.ts` in init and in validate alike, so a future
@@ -702,6 +714,15 @@ async function syncGovernedAssistantAssets(
   for (const [relative, shippedHash] of Object.entries(shipped)) {
     const source = path.join(assistantAssets, ...relative.split("/"));
     const dest = path.join(destAssistant, ...relative.split("/"));
+    if (relative === "constitution/constitution.md" && options.deferConstitution) {
+      skipped.push(dest);
+      const previousHash = previous[relative];
+      if (previousHash !== undefined) recorded[relative] = previousHash;
+      manualMergeNotes.push(
+        `NOTE: ${dest} was not installed or refreshed: .agents/rules/minimal-implementation.md § 2 does not match the shipped safety floor. A manual merge of that section is needed before running \`qfai init --force\` again.`,
+      );
+      continue;
+    }
     if (!(await isContained(relative))) {
       skipped.push(dest);
       manualMergeNotes.push(escapedGovernedPathNote(dest));
@@ -2924,6 +2945,29 @@ async function ensureLegacyEvidenceIgnoreNegations(
  */
 /** The masters' directory, relative to a project root and to the shipped tree alike. */
 const AGENTS_RULES_DIR_REL = path.join(".agents", "rules");
+
+/** The constitution cannot demote obligations an older or edited floor still omits. */
+async function hasCompatibleSafetyFloor(rootAssets: string, destRoot: string): Promise<boolean> {
+  const relative = path.join(AGENTS_RULES_DIR_REL, "minimal-implementation.md");
+  let shipped: string | null;
+  let installed: string | null;
+  try {
+    [shipped, installed] = await Promise.all([
+      readTextFileIfPresent(path.join(rootAssets, relative)),
+      readTextFileIfPresent(path.join(destRoot, relative)),
+    ]);
+  } catch {
+    return false;
+  }
+  const floor = (text: string | null): string | undefined =>
+    text
+      ?.split(/^## 2\. [^\r\n]*\r?$/m)[1]
+      ?.split(/^## /m)[0]
+      ?.replace(/\s+/g, " ")
+      .trim();
+  const shippedFloor = floor(shipped);
+  return shippedFloor !== undefined && shippedFloor.length > 0 && shippedFloor === floor(installed);
+}
 
 /**
  * Brings each shipped rule master the project has not edited up to this
