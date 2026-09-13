@@ -207,6 +207,8 @@ describe.each(TREES)("%s — the execution stages record their sessions", (tree)
       body,
       "**A run whose rows count no decision carries `grilling(-@<run key>/none): none`**",
     );
+    // The marker says the run settled none, so it cannot stand beside a decision row.
+    expectPhrase(body, "**A run whose rows count a decision carries no such marker**");
   });
 
   it.each(STAGES)("%s names the four endings and what they authorize", async (skill) => {

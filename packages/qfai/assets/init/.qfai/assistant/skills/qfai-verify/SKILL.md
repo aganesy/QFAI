@@ -124,12 +124,12 @@ Use the shared schema.
   open node, an escalation — names a `Session` a row of this block carries**: a
   line keyed to no row is an open node no count reconciles. **An escalation line
   recording the user's answer is one of that `Session`'s counted decisions**,
-  and the decision it states is the one a `grilling(<Session>@<run
-  started>/user)` row states: the answer settled it, and only the row records
+  and the decision it states is the one a `grilling(<Session>@<run key>/user)` row states: the answer settled it, and only the row records
   who recommended it. **A run whose rows count no decision carries
-  `grilling(-@<run key>/none): none`** in the Work Orders Summary, keyed to
-  this run's start as the decision rows are, because that summary holds every
-  invocation's rows.
+  `grilling(-@<run key>/none): none`** in the Work Orders Summary, keyed to this run's key as the decision rows are, because that summary holds every invocation's rows.
+  **A run whose rows count a decision carries no such marker**: the marker says
+  the run settled none, so beside a decision row the summary would claim both,
+  and the pair is a `REVISE`.
   **A row whose ending lets the work go on, and after which the stage wrote,
   carries a `Work resumed` later than its own `Ended at`** — that ordering is
   the whole reason both times are recorded, and an earlier one is a session
