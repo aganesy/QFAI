@@ -23,7 +23,65 @@ procedure, in four steps:
    recorded output is fenced for this reason: a test asserting on Markdown
    prints `## ...` of its own, and a boundary that took it dropped the GREEN,
    the `Oracle proof` and the round evidence out of the subject. Each takes
-   only its own fields, in the order the contract lists them:
+   only its own fields, named below.
+
+   **What the extraction produces, exactly.** Naming the fields settles which
+   lines are taken and leaves open what they become, and two readers taking the
+   same fields can still compute different digests. The extraction is a
+   **region of the entry**, not a selection of lines out of it:
+
+   - it runs from the row's heading to the line before the **first field the
+     subject could not have read** — for a completion subject, the first of the
+     stage-completion fields a reviewer writes at the end of the entry
+     (`Spec review`, `Code quality review`, `Prototype parity`,
+     `Checkpoint verification` and their labelled siblings); for the GREEN
+     subject, the first field written after the GREEN; for the RED subject, the
+     first field written after the RED.
+
+     **A `Round N: reviewer verdict` is not that boundary.** It is a reviewer's
+     field and it sits mid-entry, with a later round's phase-authored evidence
+     after it — so stopping there would drop round 2 from every row that took a
+     REVISE. The region runs past it and the line itself is dropped, which is
+     the clause below;
+
+   - every line inside it is kept **verbatim** — the leading `- ` list marker,
+     the `Round N: ` prefix, the `#### Round N` headings, the blank lines and
+     any prose between the fields, and the fenced block that is a field's
+     value, opening fence through closing fence;
+   - a reviewer's own `reviewer verdict` line is dropped wherever it falls
+     inside the region — **including its `(attempt M)` form**, which a round
+     with several review attempts records, and the bold-colon spelling whose
+     emphasis closes after the colon — with the fenced value that follows an
+     empty one, **and the blank lines between that label and its fence**: they
+     separate the label from its value, and they go where the value goes. **A value is empty once the field name's own markup is taken
+     off it**: read literally, `- **Round 1: reviewer verdict (attempt 1):**`
+     ends in two asterisks, and a reader who counts those as an answer keeps the
+     fence below: hashing a reviewer's own answer into what that reviewer
+     hashes is the one line that cannot be in its own subject;
+   - the `Round N: Review pack` and `Round N: Review pack seal` pair a round
+     records beside each review attempt is dropped the same way, **qualified by
+     `(attempt M)` or not**: both name the pack that review wrote, so both are
+     written once the review has run, after the reviewer read the region;
+   - the heading is **synthesized** as `### <TDD-ID>` rather than copied, and
+     **the entry's own heading is exactly that**: its anchor is the one the
+     ledger's `Evidence` cell resolves, and a heading carrying more text
+     resolves to a different anchor, so the entry is never reached at all.
+
+   A region rather than a selection, because that is what the gate computes: a
+   selection would also have to state an order, a separator and a spelling for
+   every field, and each of those is a sixth way for two honest readers to
+   disagree. The field lists below are what decide **where the region ends**,
+   which is the one thing a boundary needs from them.
+
+   Joined as they stand, those lines are the artifact step 2 normalizes and
+   step 3 records under the evidence file's path. `npx qfai validate` computes
+   the completion subject exactly this way, so a digest recorded by a reviewer
+   who followed this paragraph is the digest gate item 10 recomputes — which is
+   what lets a second party check one at all. Without it, six choices are left
+   open, and a recorded value is reproducible only inside the run that wrote it.
+
+   The fields, per subject:
+
    - **Row identity, in all three**: `TDD-ID`, `Layer`, `Test file` and
      `Selector` — copied from the ledger, which the revision excludes.
      Without them, changing `Selector` after a PASS to another valid test in
@@ -174,6 +232,24 @@ procedure, in four steps:
    them, normalized by step 2 as well; a row whose obligation appears nowhere
    in the matrix contributes nothing.
 4. **Hash.** SHA-256 of that record list; record the hex digest.
+
+**Three ledger fields carry an audited evidence hash, and none of them is the
+working-tree revision.** A row records `Spec audited evidence hash`,
+`Code quality audited evidence hash` and — on a UI-affecting row —
+`Prototype parity audited evidence hash`, one per named reviewer role, each
+computed by these same four steps over that role's own subject. The words
+differ only by the role they belong to. The working-tree revision is a fourth
+value with a fourth name:
+`../../skills/qfai-implement/references/evidence-revision.md` defines it, and it
+addresses a tree rather than a subject.
+
+**`npx qfai validate` recomputes all three.** The completion gate recomputes
+each recorded value over its role's subject and refuses a row whose value
+disagrees. The parity subject reaches past the entry to the captures the row's
+`Surface artifacts` manifest names. Those are ignored stage evidence, so where
+one is absent from the checkout, as on a fresh clone, the gate checks the
+recorded fields and skips the recomputation
+(`../../skills/qfai-implement/references/review-artifact-layout.md`).
 
 **A T1 coherent group is one pass and several rows**
 (`../../skills/qfai-implement/references/volume-policy.md`).

@@ -1114,16 +1114,64 @@ function fencedEvidenceValue(lines: readonly string[], startLine: number): strin
 
 interface EvidenceFieldOccurrence {
   round: number | null;
+  /** The `M` of an `(attempt M)` qualifier, on the fields that take it. */
+  attempt: number | null;
   value: string;
 }
 
-function evidenceFieldOccurrences(section: string, field: string): EvidenceFieldOccurrence[] {
+/**
+ * The `(attempt M)` qualifier a round with several review attempts writes
+ * after each field it records once per attempt: `reviewer verdict`, and the
+ * `Review pack` and `Review pack seal` pair (`round-evidence.md`). It is part
+ * of those fields' names, so each is read with or without it.
+ *
+ * No other field takes it. The rest are recorded once per round, so
+ * `Round 1: Revision (attempt 2)` is not a spelling of any of them.
+ */
+const ATTEMPT_QUALIFIER = "(?:[ \\t]*\\(attempt[ \\t]+(?<attempt>\\d+)\\))?";
+const ATTEMPT_QUALIFIER_TAIL = /\s*\(attempt\s+(\d+)\)\s*$/i;
+const ATTEMPT_QUALIFIED_FIELDS = new Set(["reviewer verdict", "review pack", "review pack seal"]);
+
+function takesAttemptQualifier(field: string): boolean {
+  return ATTEMPT_QUALIFIED_FIELDS.has(field.toLowerCase());
+}
+
+/**
+ * A bullet field's inline value with the field name's own markup taken off.
+ *
+ * The bold-colon spelling — `- **Round 1: reviewer verdict:** REVISE` — closes
+ * its emphasis after the colon, so the raw capture begins with `**`, ahead of
+ * the `REVISE` a check reads at the start of the value. Only that closing `**`
+ * is taken off: a value may itself begin with asterisks, as a selector opening
+ * with a globstar does.
+ */
+function inlineFieldValue(captured: string | undefined, closesAfterColon: boolean): string {
+  const raw = captured ?? "";
+  return (closesAfterColon ? raw.replace(/^\*\*/, "") : raw).trim().replace(/^`([^`]*)`$/, "$1");
+}
+
+/**
+ * Every occurrence of `field` in `section`, in document order.
+ *
+ * An occurrence with neither an inline nor a fenced value is left out unless
+ * `includeBlank` is set, in which case it is kept with an empty value. A check
+ * that counts a round's review attempts needs the blank one: dropped, a blank
+ * last attempt leaves the attempt before it looking like the round's close.
+ */
+function evidenceFieldOccurrences(
+  section: string,
+  field: string,
+  includeBlank = false,
+): EvidenceFieldOccurrence[] {
   const normalized = section.replace(/\r\n/g, "\n");
   const originalLines = normalized.split("\n");
   const visibleLines = maskEvidenceRegions(normalized).split("\n");
   const escaped = field.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const qualifier = takesAttemptQualifier(field) ? ATTEMPT_QUALIFIER : "";
+  // `open` is the emphasis opening the label and `close` one closing it before
+  // the colon; an opening with no closing there closes after the colon.
   const bulletPattern = new RegExp(
-    `^\\s*(?:[-*][ \\t]+)?(?:\\*\\*)?(?:Round[ \\t]+(\\d+):[ \\t]*)?${escaped}(?:\\*\\*)?[ \\t]*:[ \\t]*(.*)$`,
+    `^\\s*(?:[-*][ \\t]+)?(?<open>\\*\\*)?(?:Round[ \\t]+(?<round>\\d+):[ \\t]*)?${escaped}${qualifier}(?<close>\\*\\*)?[ \\t]*:[ \\t]*(?<value>.*)$`,
     "i",
   );
   const occurrences: EvidenceFieldOccurrence[] = [];
@@ -1134,27 +1182,41 @@ function evidenceFieldOccurrences(section: string, field: string): EvidenceField
       for (let cellIndex = 0; cellIndex < cells.length - 1; cellIndex += 1) {
         const rawLabel = (cells[cellIndex] ?? "").replace(/^\*\*|\*\*$/g, "").trim();
         const roundMatch = /^Round\s+(\d+):\s*(.*)$/i.exec(rawLabel);
-        const label = (roundMatch?.[2] ?? rawLabel).trim();
+        const roundLabel = roundMatch?.[2] ?? rawLabel;
+        const attemptMatch = takesAttemptQualifier(field)
+          ? ATTEMPT_QUALIFIER_TAIL.exec(roundLabel)
+          : null;
+        const label = (
+          attemptMatch === null ? roundLabel : roundLabel.slice(0, attemptMatch.index)
+        ).trim();
         if (label.toLowerCase() !== field.toLowerCase()) continue;
         const value = (cells[cellIndex + 1] ?? "").trim().replace(/^`([^`]*)`$/, "$1");
         const resolved =
           value.length > 0 ? value : fencedEvidenceValue(originalLines, lineIndex + 1);
-        if (resolved !== null) {
+        if (resolved !== null || includeBlank) {
           occurrences.push({
             round: roundMatch?.[1] ? Number(roundMatch[1]) : null,
-            value: resolved,
+            attempt: attemptMatch?.[1] ? Number(attemptMatch[1]) : null,
+            value: resolved ?? "",
           });
         }
       }
       continue;
     }
 
-    const match = bulletPattern.exec(visibleLine);
-    if (!match) continue;
-    const value = (match[2] ?? "").trim().replace(/^`([^`]*)`$/, "$1");
+    const groups = bulletPattern.exec(visibleLine)?.groups;
+    if (groups === undefined) continue;
+    const value = inlineFieldValue(
+      groups.value,
+      groups.open !== undefined && groups.close === undefined,
+    );
     const resolved = value.length > 0 ? value : fencedEvidenceValue(originalLines, lineIndex + 1);
-    if (resolved !== null) {
-      occurrences.push({ round: match[1] ? Number(match[1]) : null, value: resolved });
+    if (resolved !== null || includeBlank) {
+      occurrences.push({
+        round: groups.round ? Number(groups.round) : null,
+        attempt: groups.attempt ? Number(groups.attempt) : null,
+        value: resolved ?? "",
+      });
     }
   }
   return occurrences;
@@ -1174,6 +1236,35 @@ function roundEvidenceFieldValue(section: string, round: number, field: string):
       .filter((occurrence) => occurrence.round === round)
       .at(-1)?.value ?? null
   );
+}
+
+/**
+ * The verdict a round's review attempts end on, and whether those attempts are
+ * numbered the way `round-evidence.md` records them.
+ *
+ * Attempts are numbered from 1 in review order, and a round holding a single
+ * attempt may leave the qualifier off. A round whose numbers skip, repeat or
+ * start past 1 has lost an attempt from its audit trail, and the last line
+ * written is then not known to be the attempt the round closed on. A blank
+ * attempt counts as an attempt, and its empty value closes nothing. Every
+ * attempt but the last is a `REVISE`: a later attempt exists only to answer
+ * one, so a `PASS` ahead of it had already closed the review.
+ */
+function roundReviewVerdict(
+  section: string,
+  round: number,
+): { value: string | null; numbered: boolean; revisedBeforeLast: boolean } {
+  const attempts = evidenceFieldOccurrences(section, "reviewer verdict", true).filter(
+    (occurrence) => occurrence.round === round,
+  );
+  const numbered =
+    attempts.length === 1
+      ? attempts[0]?.attempt === null || attempts[0]?.attempt === 1
+      : attempts.every((occurrence, index) => occurrence.attempt === index + 1);
+  const revisedBeforeLast = attempts
+    .slice(0, -1)
+    .every((occurrence) => /^REVISE\b/i.test(occurrence.value.trim()));
+  return { value: attempts.at(-1)?.value ?? null, numbered, revisedBeforeLast };
 }
 
 /**
@@ -1381,7 +1472,7 @@ function normalizeAuditArtifact(value: string): string {
 }
 
 const GATE_COMPLETED_EVIDENCE_FIELD =
-  /^\s*(?:\|\s*)?(?:[-*][ \t]+)?(?:\*\*)?(?:Spec review(?:ed revision| pack(?: seal)?)?|Spec audited evidence hash|Code quality review(?:ed revision| pack(?: seal)?)?|Code quality audited evidence hash|Prototype parity(?: reviewed revision| review pack(?: seal)?| audited evidence hash)?|Checkpoint verification (?:command|result|revision|seal))(?:\*\*)?\s*(?::|\|)/i;
+  /^\s*(?:\|\s*)?(?:[-*][ \t]+)?(?:\*\*)?(?:Spec review(?:ed revision| pack(?: seal)?)?|Spec audited evidence hash|Code quality review(?:ed revision| pack(?: seal)?)?|Code quality audited evidence hash|Prototype parity(?: reviewed revision| review pack(?: seal)?| audited evidence hash)?|Checkpoint verification (?:command|result|seal|revision|note))(?:\*\*)?\s*(?::|\|)/i;
 
 const PHASE_AUTHORED_EVIDENCE_FIELD =
   /^\s*(?:\|\s*)?(?:[-*][ \t]+)?(?:\*\*)?(?:Round[ \t]+\d+:[ \t]*)?(?:TDD-ID|Layer|Test file|Selector|TC-ref|US-ref|CON-API-ref|Revision|RED revision|Replacement proof revision|RED test hash|RED test manifest|RED command|RED result|GREEN command|GREEN result|Satisfied-by|Falsifiability command|Falsifiability result|Falsifiability revision|reviewer verdict|RED failure mode|Refactor verify command|Refactor verify result|Oracle proof|qa-gatekeeper|Shared-artifact re-verify|Surface artifacts)(?:\*\*)?\s*(?::|\|)/i;
@@ -1411,8 +1502,34 @@ function hasPhaseAuthoredFieldAfterGate(section: string): boolean {
  * opens N+1), so every legitimate review-fix -> Round 2 row disagreed with the
  * hash recomputed here and reported as unresolved.
  */
+// A round with several review attempts qualifies its verdict with
+// `(attempt M)`, and records a `Round N: Review pack` and `Review pack seal`
+// pair beside each attempt (`round-evidence.md`). All of these are written once
+// the review they belong to has run, so none of them is in the subject that
+// review hashes, qualified or not. The pack pair is held instead by
+// recomputing each seal from its pack at completion.
 const REVIEWER_APPENDED_ROUND_FIELD =
-  /^\s*(?:\|\s*)?(?:[-*][ \t]+)?(?:\*\*)?(?:Round[ \t]+\d+:[ \t]*)?reviewer verdict(?:\*\*)?[ \t]*(?::|\|)[ \t]*(.*)$/i;
+  /^\s*(?:\|\s*)?(?:[-*][ \t]+)?(?:\*\*)?(?:(?:Round[ \t]+\d+:[ \t]*)?reviewer verdict|Round[ \t]+\d+:[ \t]*Review pack(?:[ \t]+seal)?)(?:[ \t]*\(attempt[ \t]+\d+\))?(?:\*\*)?[ \t]*(?::|\|)[ \t]*(.*)$/i;
+
+/**
+ * What the reviewer wrote on the verdict line itself, with the field name's
+ * markup stripped.
+ *
+ * The bold-colon form this repository already uses —
+ * `- **Round 1: reviewer verdict (attempt 1):**` — closes its emphasis AFTER
+ * the colon, so the capture is `**` rather than nothing. Read as a value, that
+ * line looks answered and the fenced verdict below it stays in the subject the
+ * reviewer who wrote it hashes, which is the one line that cannot be there.
+ */
+function inlineVerdictValue(captured: string | undefined): string {
+  // A table row's value cell ends in its closing `|`, which is all an empty
+  // cell leaves in the capture: read as a value, it would keep the fence below
+  // it in the subject.
+  return (captured ?? "")
+    .replace(/\|\s*$/, "")
+    .replace(/\*+/g, "")
+    .trim();
+}
 
 /**
  * The index of the last line of the fenced value that starts at or after
@@ -1454,7 +1571,7 @@ function phaseAuthoredEvidence(section: string, tddId: string): string {
       kept.push(originalLines[index] ?? "");
       continue;
     }
-    if ((verdict[1] ?? "").trim().length === 0) {
+    if (inlineVerdictValue(verdict[1]).length === 0) {
       index = Math.min(fencedEvidenceValueEnd(originalLines, index + 1), end - 1);
     }
   }
@@ -2903,11 +3020,21 @@ function missingCompletedEvidenceFields(
       }
     }
     if (!validFalsifiability) oracleProofOwed = true;
+    const verdict = roundReviewVerdict(section, round);
+    if (!verdict.numbered) {
+      missing.push(`Round ${round}: reviewer verdict attempts numbered from 1 in review order`);
+    }
+    if (!verdict.revisedBeforeLast) {
+      missing.push(`Round ${round}: every reviewer verdict attempt before the last: REVISE`);
+    }
     if (round < (rounds.at(-1) ?? round)) {
-      const verdict = roundEvidenceFieldValue(section, round, "reviewer verdict");
-      if (verdict === null || !/^REVISE\b/i.test(verdict)) {
+      if (verdict.value === null || !/^REVISE\b/i.test(verdict.value)) {
         missing.push(`Round ${round}: reviewer verdict opening the next round`);
       }
+    } else if (verdict.value !== null && verdict.value.trim() !== "PASS") {
+      // A done row's last round closed on a pass. A REVISE left last is a
+      // review nobody answered, whatever the row-level verdicts say.
+      missing.push(`Round ${round}: reviewer verdict: PASS`);
     }
     latestRevision = revision;
     latestGreenCommand = greenCommand;
@@ -3126,6 +3253,10 @@ async function invalidCompletedEvidenceArtifacts(
     }
   }
 
+  for (const round of rounds) {
+    invalid.push(...(await invalidRoundReviewPacks(root, section, round, expected.tddId)));
+  }
+
   const checkpointCommand = rowEvidenceFieldValue(section, "Checkpoint verification command");
   const checkpointResult = rowEvidenceFieldValue(section, "Checkpoint verification result");
   const checkpointSeal = rowEvidenceFieldValue(section, "Checkpoint verification seal");
@@ -3151,6 +3282,122 @@ async function invalidCompletedEvidenceArtifacts(
     );
   }
   return invalid;
+}
+
+/** The only path shape a review pack may have, present or not. */
+const CANONICAL_REVIEW_PACK = /^\.qfai\/review\/review-\d{17}$/;
+
+/**
+ * The review pack pairs a round records, one per review attempt, each
+ * recomputed from the pack it names and read for the verdict it records
+ * (`record-contract.md`).
+ *
+ * The pair is written after its review has run, so it is left out of every
+ * audited subject, and this is the check that sees a pack edited after its
+ * attempt closed or a pack from another review. A round that records any pair
+ * owes one for every verdict attempt: the last attempt's pack is the one the
+ * round closed on. A pack absent from the checkout is skipped once its path has
+ * the canonical shape, as a row-level pack is, because review packs are
+ * local-only.
+ */
+async function invalidRoundReviewPacks(
+  root: string,
+  section: string,
+  round: number,
+  tddId: string,
+): Promise<string[]> {
+  const inRound = (field: string, includeBlank = false): EvidenceFieldOccurrence[] =>
+    evidenceFieldOccurrences(section, field, includeBlank).filter(
+      (occurrence) => occurrence.round === round,
+    );
+  const packs = inRound("Review pack");
+  const seals = inRound("Review pack seal");
+  if (packs.length === 0 && seals.length === 0) return [];
+  const verdicts = inRound("reviewer verdict", true);
+  const attempts = new Set([...verdicts, ...packs, ...seals].map(({ attempt }) => attempt));
+  const invalid: string[] = [];
+  for (const attempt of attempts) {
+    invalid.push(
+      ...(await invalidRoundAttemptPack(root, {
+        round,
+        attempt,
+        tddId,
+        pack: lastAttemptValue(packs, attempt),
+        seal: lastAttemptValue(seals, attempt),
+        verdict: lastAttemptValue(verdicts, attempt),
+      })),
+    );
+  }
+  return invalid;
+}
+
+function lastAttemptValue(
+  occurrences: readonly EvidenceFieldOccurrence[],
+  attempt: number | null,
+): string | null {
+  return occurrences.filter((occurrence) => occurrence.attempt === attempt).at(-1)?.value ?? null;
+}
+
+type RoundAttemptPack = {
+  round: number;
+  attempt: number | null;
+  tddId: string;
+  pack: string | null;
+  seal: string | null;
+  verdict: string | null;
+};
+
+/** What is wrong with one review attempt's pack pair, in the order a repair takes. */
+async function invalidRoundAttemptPack(root: string, entry: RoundAttemptPack): Promise<string[]> {
+  const qualifier = entry.attempt === null ? "" : ` (attempt ${entry.attempt})`;
+  const label = `Round ${entry.round}: Review pack${qualifier}`;
+  if (entry.pack === null) return [`${label} beside that attempt's reviewer verdict`];
+  if (entry.seal === null || !SHA256_VALUE.test(entry.seal)) {
+    return [`Round ${entry.round}: Review pack seal${qualifier}: sha256`];
+  }
+  if (!CANONICAL_REVIEW_PACK.test(entry.pack)) {
+    return [`${label}: canonical .qfai/review/review-<17-digit timestamp> path`];
+  }
+  try {
+    await lstat(path.join(root, ...entry.pack.split("/")));
+  } catch (error) {
+    return isEnoent(error) ? [] : [`${label} path readable when present`];
+  }
+  const packFiles = await collectReviewPackFiles(root, entry.pack);
+  if (packFiles === null) return [`${label} resolving to regular files`];
+  const invalid: string[] = [];
+  if (reviewPackSeal(packFiles) !== bareSha256(entry.seal)) {
+    invalid.push(`Round ${entry.round}: Review pack seal${qualifier} matching pack contents`);
+  }
+  if (!roundPackRecordsVerdict(packFiles, entry.pack, entry)) {
+    invalid.push(`${label} carrying this row's request and responses agreeing with its verdict`);
+  }
+  return invalid;
+}
+
+/**
+ * Whether a round attempt's pack is that attempt's own: its request names the
+ * row, and its responses say what the attempt's verdict says — every one `PASS`
+ * for a `PASS`, and at least one `REVISE` for a `REVISE`. A sealed pack from
+ * another row or another review would otherwise stand in for this one, because
+ * the pair is outside every audited subject.
+ */
+function roundPackRecordsVerdict(
+  packFiles: ReadonlyArray<ReviewPackFile>,
+  packPath: string,
+  entry: RoundAttemptPack,
+): boolean {
+  const request = reviewPackArtifact(packFiles, packPath, "review_request.md");
+  if (request === null || !exactLineField(request, "TDD-ID", entry.tddId)) return false;
+  const responses = packFiles
+    .filter(({ relativePath }) => /^R\d{2}_.+\.md$/.test(path.posix.basename(relativePath)))
+    .map(({ content }) => content);
+  const verdict = (entry.verdict ?? "").trim();
+  if (/^PASS\b/i.test(verdict)) return everyResponsePasses(responses);
+  if (/^REVISE\b/i.test(verdict)) {
+    return responses.some((response) => exactLineField(response, "Result", "REVISE"));
+  }
+  return false;
 }
 
 /**

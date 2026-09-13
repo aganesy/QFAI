@@ -97,6 +97,43 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   characters. Freshness is compared exactly, so accepting both cases would let
   one tree be recorded as two revisions and read a correct row as stale.
 
+- **The audited evidence hash says what its extraction produces, not only which
+  fields it reads** (#1616). Naming the fields settled which lines are taken and
+  left open what they become, so two readers taking the same fields computed
+  different digests: the list marker, the `Round N: ` prefix, a field's fenced
+  value, the heading line, the field order and the separator were each
+  undetermined. A recorded value was reproducible only inside the run that wrote
+  it, which is not a check.
+
+  The extraction is a region of the entry rather than a selection out of it: it
+  runs from the row's heading to the first field the subject could not have
+  read, keeps every line inside verbatim including a field's fenced value, drops
+  a reviewer's own verdict line, and synthesizes the heading. That is what
+  `npx qfai validate` gate item 10 computes today, so a second party recomputing
+  a recorded digest gets the recorded digest. A selection would have had to fix
+  an order, a separator and a spelling as well, each a further way to disagree.
+
+  Four values share these words and are not one: three ledger fields carrying
+  three reviewer roles' verdicts by these same four steps — the third is the
+  parity hash a UI-affecting row owes — and the working-tree revision, which
+  addresses a tree rather than a subject. The reference now names all four.
+
+  A round with several review attempts qualifies its verdict field, and the
+  extraction now drops that form too: the contract said every verdict line goes
+  and the code matched only the unqualified one, so a multi-attempt round gave
+  the reviewer and the gate two digests. The `Round N: Review pack` pair written
+  beside each attempt is dropped the same way, and the gate recomputes each
+  attempt's seal from the pack it names instead, so a pack edited after its
+  attempt closed is still reported. A round that records any pair owes one for
+  every verdict attempt, a pair's path must have the canonical pack shape even
+  when the pack is absent, and a present pack must name the row in its request
+  and carry responses that agree with the attempt's verdict. The completion gate also holds those
+  attempts to the numbering the contract gives them, from 1 in review order,
+  and reads the attempt a round ends on: a round before the last has to end on
+  a `REVISE`, and the last round of a done row on exactly `PASS`. Within a
+  round, every attempt before the last is a `REVISE`. A blank attempt counts as
+  one.
+
 ## [1.12.0] - 2026-09-12
 
 ### Added
