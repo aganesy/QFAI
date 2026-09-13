@@ -1,5 +1,5 @@
 import type * as fsPromises from "node:fs/promises";
-import { mkdtemp, readFile, writeFile } from "node:fs/promises";
+import { lstat, mkdir, mkdtemp, readFile, rmdir, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -58,6 +58,33 @@ const init = (root: string): Promise<string> =>
   captureStdout(() => runInit({ dir: root, force: false, dryRun: false, yes: true }));
 
 describe("constitution creation preserves a path it cannot claim", () => {
+  it("explains how to recover from a non-file constitution occupant without removing it", async () => {
+    await withProject(async (root) => {
+      const target = path.join(root, CONSTITUTION);
+      await mkdir(target, { recursive: true });
+      await mkdir(path.join(root, path.dirname(FLOOR)), { recursive: true });
+      await writeFile(path.join(root, FLOOR), "# Adopter safety rules\n");
+
+      const output = await init(root);
+      expect(output).toContain("remove or relocate the non-file occupant");
+      expect(output).toContain("rerun `qfai init`");
+      expect((await lstat(target)).isDirectory()).toBe(true);
+      const lock = await readAssistantAssetsLock(path.join(root, ".qfai", "assistant"));
+      expect(lock?.files["constitution/constitution.md"]).toBeUndefined();
+
+      await writeFile(
+        path.join(root, FLOOR),
+        await readFile(path.join(ROOT, "packages/qfai/assets/init/root", FLOOR)),
+      );
+      await rmdir(target);
+      await init(root);
+      const shipped = await readFile(path.join(ROOT, "packages/qfai/assets/init", CONSTITUTION));
+      expect((await readFile(target)).equals(shipped)).toBe(true);
+      const recoveredLock = await readAssistantAssetsLock(path.join(root, ".qfai", "assistant"));
+      expect(recoveredLock?.files["constitution/constitution.md"]).toBeDefined();
+    });
+  });
+
   it("installs and records a constitution when its path stays absent", async () => {
     await withProject(async (root) => {
       await init(root);

@@ -724,9 +724,12 @@ async function syncGovernedAssistantAssets(
     ) {
       skipped.push(dest);
       if (previousHash !== undefined) recorded[relative] = previousHash;
-      const recovery = (await pathExists(dest).catch(() => true))
-        ? "A manual merge of the safety master and existing constitution is needed; keep adopter edits protected."
-        : "A manual merge of the safety master is needed; then rerun `qfai init` to install the missing constitution.";
+      const recovery =
+        currentHash !== null
+          ? "A manual merge of the safety master and existing constitution is needed; keep adopter edits protected."
+          : (await pathExists(dest).catch(() => true))
+            ? "The constitution path is occupied or unreadable. Restore access to any existing constitution, or remove or relocate the non-file occupant while protecting adopter content. A manual merge of the safety master and any existing constitution is needed; then rerun `qfai init` to install the missing constitution."
+            : "A manual merge of the safety master is needed; then rerun `qfai init` to install the missing constitution.";
       manualMergeNotes.push(
         `NOTE: ${formatReportPath(dest)} was not installed or refreshed: .agents/rules/minimal-implementation.md could not be verified as the shipped master for the safety floor. ${recovery}`,
       );
