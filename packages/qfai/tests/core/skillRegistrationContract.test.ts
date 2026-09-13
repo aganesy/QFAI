@@ -751,6 +751,37 @@ describe("the gate reads a skill as the host does", () => {
     expect(findings.map((item) => item.code)).not.toContain("QFAI-SKILLS-013");
   });
 
+  it("reports no uncited reference in another skill while a reached document cannot be read", async () => {
+    // A citation can name a document in another skill, so what the unreadable
+    // document cites may be anywhere in the tree.
+    const root = await projectWithSkill(['description: "Does the thing."']);
+    const skills = path.join(root, ".qfai", "assistant", "skills");
+    const entryPoint = path.join(skills, "qfai-example", "SKILL.md");
+    await writeFile(
+      entryPoint,
+      `${await readFile(entryPoint, "utf-8")}\nSee references/bad.md.\n`,
+      "utf-8",
+    );
+    await mkdir(path.join(skills, "qfai-example", "references"), { recursive: true });
+    await writeFile(
+      path.join(skills, "qfai-example", "references", "bad.md"),
+      Buffer.concat([
+        Buffer.from("# bad\nSee ../../qfai-other/references/guide.md.\n"),
+        Buffer.from([0xff]),
+      ]),
+    );
+    await mkdir(path.join(skills, "qfai-other", "references"), { recursive: true });
+    await writeFile(
+      path.join(skills, "qfai-other", "references", "guide.md"),
+      "# guide\n",
+      "utf-8",
+    );
+
+    const codes = (await validateAssistantAssets(root, defaultConfig)).map((item) => item.code);
+    expect(codes).toContain("QFAI-SKILLS-014");
+    expect(codes).not.toContain("QFAI-SKILLS-013");
+  });
+
   it("reports an uncited reference beside a document that cannot be read and no step reaches", async () => {
     // Unreached, the unreadable document can make nothing reachable, so the
     // uncited reference is still decided.

@@ -330,11 +330,10 @@ export async function validateAssistantAssets(root: string, config: QfaiConfig):
     const identity = await fileIdentity(crawledFile);
     crawled.set(identity, [...(crawled.get(identity) ?? []), crawledFile]);
   }
-  // A skill whose entry point cannot be read reports no reference as uncited:
-  // there is no root to reach its documents from, and the `QFAI-SKILLS-014` is
-  // the finding to act on. The graph below adds a reached document that cannot
-  // be read.
-  const indeterminateSkills: string[] = [];
+  // An entry point that cannot be read is a root whose citations are unknown,
+  // so the reference graph below decides nothing while one is listed here: the
+  // `QFAI-SKILLS-014` is the finding to act on.
+  const unreadableEntryPoints: string[] = [];
   for (const entryPoint of await collectSkillEntryPoints(skillsDir)) {
     const aliases = crawled.get(await fileIdentity(entryPoint)) ?? [];
     const content = aliases
@@ -358,7 +357,7 @@ export async function validateAssistantAssets(root: string, config: QfaiConfig):
       }
     }
     if (reportedAsEntryPoint) {
-      indeterminateSkills.push(path.dirname(entryPoint));
+      unreadableEntryPoints.push(entryPoint);
       continue;
     }
     // Not crawled as this entry point: a skill directory reached through a link,
@@ -388,7 +387,7 @@ export async function validateAssistantAssets(root: string, config: QfaiConfig):
           "Make the entry point an ordinary readable file — grant read permission, repair a broken symlink, replace a directory or a device with the document — or delete it if it does not belong under `skills`.",
         ),
       );
-      indeterminateSkills.push(path.dirname(entryPoint));
+      unreadableEntryPoints.push(entryPoint);
       continue;
     }
     // Decoded strictly. A lenient decode turns an invalid byte into a
@@ -408,7 +407,7 @@ export async function validateAssistantAssets(root: string, config: QfaiConfig):
           "Save the entry point as UTF-8. A byte that is not part of a valid sequence is usually text pasted from another encoding, or a binary file left at the path.",
         ),
       );
-      indeterminateSkills.push(path.dirname(entryPoint));
+      unreadableEntryPoints.push(entryPoint);
       continue;
     }
     issues.push(...collectSkillRegistrationIssues(entryPoint, text));
@@ -419,7 +418,7 @@ export async function validateAssistantAssets(root: string, config: QfaiConfig):
       root,
       skillsDir,
       documents,
-      indeterminateSkills,
+      unreadableEntryPoints,
       unreadableFiles,
     ),
   );
@@ -1233,15 +1232,6 @@ function isUnfilledValue(raw: string): boolean {
 }
 
 /**
- * The `SKILL.md` of every direct subdirectory of `skillsDir`.
- *
- * The document crawl skips directories on the shared ignore list — `tmp`,
- * `dist` and the rest — and those are ordinary names for a skill. The loader
- * skips nothing: it opens one `SKILL.md` per direct subdirectory whatever the
- * directory is called, so a skill in one of them is registered, or fails to be,
- * with the crawl saying nothing about it either way.
- */
-/**
  * The ceiling on a skill entry point this pass reads.
  *
  * The bound is there for the kind rather than for the size: the reader that
@@ -1271,6 +1261,15 @@ function decodeUtf8(bytes: Buffer): string | undefined {
   }
 }
 
+/**
+ * The `SKILL.md` of every direct subdirectory of `skillsDir`, the entry points
+ * a host loads.
+ *
+ * Probed on their own rather than read off the document crawl: the loader opens
+ * one `SKILL.md` per direct subdirectory whatever the directory is called, and
+ * follows a skill directory reached through a link, which the crawl does not
+ * enter.
+ */
 async function collectSkillEntryPoints(skillsDir: string): Promise<string[]> {
   const entries = await readdir(skillsDir, { withFileTypes: true }).catch(() => []);
   const found: string[] = [];
@@ -1670,40 +1669,26 @@ function collectReferenceGraphIssues(
   root: string,
   skillsDir: string,
   documents: Map<string, string>,
-  indeterminateSkills: readonly string[] = [],
+  unreadableEntryPoints: readonly string[] = [],
   unreadableFiles: readonly string[] = [],
 ): Issue[] {
   // A document that cannot be read stands in the graph with no text: a citation
-  // still reaches it, and what it would cite is unknown. Reached, it leaves the
-  // uncited references of its skill undecided; unreached, it makes nothing
-  // reachable and decides nothing.
+  // still reaches it, and what it would cite is unknown. Reached, it may cite
+  // any document, in its own skill or through a path into another, so no
+  // reference is reported as uncited until it can be read. Unreached, it makes
+  // nothing reachable and decides nothing. An unreadable entry point is reached
+  // by definition.
   const graph = new Map<string, string>([
     ...documents,
     ...unreadableFiles.map((file): [string, string] => [file, ""]),
   ]);
   const reachable = collectReachableDocuments(citationContext(root, skillsDir), graph);
-  const undecided = [
-    ...indeterminateSkills,
-    ...unreadableFiles
-      .filter((file) => reachable.has(file))
-      .flatMap((file) => {
-        const skill = toPosixRelative(skillsDir, file).split("/")[0];
-        return skill === undefined || skill === "" || skill === ".."
-          ? []
-          : [path.join(skillsDir, skill)];
-      }),
-  ];
+  if (unreadableEntryPoints.length > 0 || unreadableFiles.some((file) => reachable.has(file))) {
+    return [];
+  }
   const severity = "error";
-  const inIndeterminateSkill = (file: string): boolean =>
-    undecided.some((dir) => {
-      const relative = path.relative(dir, file);
-      return relative !== "" && !relative.startsWith("..") && !path.isAbsolute(relative);
-    });
   const unreachable = [...documents.keys()]
-    .filter(
-      (file) =>
-        isReferenceDocument(skillsDir, file) && !reachable.has(file) && !inIndeterminateSkill(file),
-    )
+    .filter((file) => isReferenceDocument(skillsDir, file) && !reachable.has(file))
     .sort((a, b) => a.localeCompare(b))
     .map((file) =>
       issue(
