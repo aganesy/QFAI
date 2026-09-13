@@ -18,8 +18,8 @@ Quality-First AI (QFAI) — specification-driven development の検証フレー�
   is a defect report against that control.
 - Interview the decision tree before a design is fixed, in the rounds
   `.claude/rules/grilling.md` (master: `.agents/rules/grilling.md`) sets out. A
-  session ends on an empty frontier and the user's confirmation, never at a
-  question count.
+  session ends in one of the four endings that rule names, and completes only
+  on an empty frontier and the user's confirmation — never at a question count.
 - Every question to the user arrives in the shape its answer has, in the form
   `.claude/rules/user-questions.md` (master: `.agents/rules/user-questions.md`)
   sets out: a structured choice where a listable set of candidates exists, or a

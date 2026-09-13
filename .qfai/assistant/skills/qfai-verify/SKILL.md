@@ -216,13 +216,13 @@ restated here.
   | Session | Ended | Ended at | Revision | Work resumed | Subject | Frontier | Lookups | Decisions | Open | Escalated |
   | ------- | ----- | -------- | -------- | ------------ | ------- | -------- | ------- | --------- | ---- | --------- |
   | S1 | confirmed | 2026-01-01T09:14:00Z | a1b2c3d | 2026-01-01T09:15:20Z | preflight | empty | none in flight | 2 | 0 | 0 |
-  | S2 | user-closed | 2026-01-01T11:02:00Z | a1b2c3d | 2026-01-01T11:04:10Z | a gate the spec requires and no lane runs | empty | none in flight | 1 | 1 | 0 |
+  | S2 | user-closed | 2026-01-01T11:02:00Z | a1b2c3d | 2026-01-01T11:04:10Z | a CI lane with no single local command | empty | none in flight | 1 | 1 | 0 |
 
   Confirmed S1: "Yes — that is the understanding."
 
   Closed S2: "proceed"
 
-  Open S2: whether the unrun gate blocks this verdict — assumed: <the value the stage used>
+  Open S2: which local command reproduces the lane — assumed: <the value the stage used>
   ```
 
   The three decisions those rows count are three rows in the stage's Work Orders

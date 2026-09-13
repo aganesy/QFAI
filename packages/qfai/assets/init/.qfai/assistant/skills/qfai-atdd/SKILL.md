@@ -225,13 +225,13 @@ restated here.
   | Session | Ended | Ended at | Revision | Work resumed | Subject | Frontier | Lookups | Decisions | Open | Escalated |
   | ------- | ----- | -------- | -------- | ------------ | ------- | -------- | ------- | --------- | ---- | --------- |
   | S1 | confirmed | 2026-01-01T09:14:00Z | a1b2c3d | 2026-01-01T09:15:20Z | preflight | empty | none in flight | 2 | 0 | 0 |
-  | S2 | user-closed | 2026-01-01T11:02:00Z | a1b2c3d | 2026-01-01T11:04:10Z | an acceptance criterion the spec does not cover | empty | none in flight | 1 | 1 | 0 |
+  | S2 | user-closed | 2026-01-01T11:02:00Z | a1b2c3d | 2026-01-01T11:04:10Z | the stored state a criterion's case starts from | empty | none in flight | 1 | 1 | 0 |
 
   Confirmed S1: "Yes — that is the understanding."
 
   Closed S2: "proceed"
 
-  Open S2: which case the criterion's oracle must observe — assumed: <the value the stage used>
+  Open S2: how the fixture builds that state — assumed: <the value the stage used>
   ```
 
   The three decisions those rows count are three rows in the stage's Work Orders
