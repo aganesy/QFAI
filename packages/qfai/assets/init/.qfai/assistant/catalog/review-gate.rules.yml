@@ -66,3 +66,13 @@ optional_review_modes:
   supported:
     - devils-advocate
     - pattern-doubler
+  pattern_doubler:
+    more_scope: [business-flow, US, AC, EX, TC]
+    excluded_more_scope: [BR, nonfunctional-floor, policy, decision, architecture]
+    abstract_only_result: N/A
+    numeric_targets: ignored
+    missing_mandatory_pairing: required
+    preserved_manifest_precedence: >-
+      This catalog bound overrides numeric targets, including default_target,
+      in preserved review-profiles.yml. Independently required gates and product
+      obligations still apply. N/A never excuses a missing mandatory pairing.

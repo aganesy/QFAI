@@ -34,11 +34,13 @@
 
 ## BR-0015-0005: Pattern-Doubler Gate
 
-- AC-Refs: AC-0015-0005
+- AC-Refs: AC-0015-0006, AC-0015-0007
 
-- `can_be_na: true` -- N/A is default when no ID-bearing items exist.
-- Sets 2x target for current ID-bearing items (US/AC/BR/EX/TC).
-- Rationale required for each proposed addition.
+- The mode is optional and advisory across skills.
+- Propose additions only to concrete business flows, US, AC, EX and TC, with a rationale for each. Do not set a numeric target.
+- `can_be_na: true`: empty or abstract-only artifacts return N/A, even when BR, NFR, policy, decision or architectural items carry IDs.
+- The shipped review-gate catalog overrides numeric targets, including `default_target`, in preserved `review-profiles.yml`. Init and upgrade do not overwrite adopter manifests.
+- Independently required product obligations, missing mandatory pairings and blocking gates remain required. N/A waives none of them.
 
 ## BR-0015-0006: Work Orders Schema
 

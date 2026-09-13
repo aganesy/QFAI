@@ -1,13 +1,10 @@
 /**
- * Integration: Agent Delegation Framework Spec-0015 TDD Backfill
+ * Integration: Agent Delegation Framework
  *
  * Validates that the agent delegation framework (spec-0015) requirements
- * are covered by existing implementation: agent catalog, routing, review
- * profiles, and agent definition validator.
- *
- * TDD-0001..0010 are Exception-pattern backfill (DR-0015-0001).
- * TDD-0011..0012 add concrete coverage for delegation hard-stop reporting
- * and the real-delegation capability probe contract.
+ * are covered by the agent catalog, routing, concrete-pattern review bounds,
+ * adopter-profile preservation, agent definition validator, and real-delegation
+ * capability and hard-stop contracts.
  */
 // QFAI:SPEC-0015:TC-0015-0001
 // QFAI:SPEC-0015:TC-0015-0002
@@ -21,12 +18,16 @@
 // QFAI:SPEC-0015:TC-0015-0010
 // QFAI:SPEC-0015:TC-0015-0011
 // QFAI:SPEC-0015:TC-0015-0012
-import { access, readdir, readFile } from "node:fs/promises";
+import { access, mkdtemp, readdir, readFile, writeFile } from "node:fs/promises";
+import os from "node:os";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
-import { parse as parseYaml } from "yaml";
+import { isMap, parseDocument, parse as parseYaml } from "yaml";
 
+import { runInit } from "../../src/cli/commands/init.js";
 import { parseAgentFrontmatter } from "../../src/core/agentFrontmatter.js";
+import { captureStdout } from "../helpers/stdout.js";
+import { removeTempTree } from "../helpers/tempTree.js";
 
 const AGENTS_DIR = path.resolve(
   __dirname,
@@ -123,6 +124,11 @@ const LIVE_QFAI_IMPLEMENT_SKILL = path.resolve(
   "SKILL.md",
 );
 
+const PATTERN_REVIEW_BOUND =
+  "This catalog bound overrides numeric targets, including default_target, " +
+  "in preserved review-profiles.yml. Independently required gates and product " +
+  "obligations still apply. N/A never excuses a missing mandatory pairing.";
+
 async function readAsset(filePath: string) {
   return readFile(filePath, "utf-8");
 }
@@ -133,12 +139,19 @@ type ReviewGateRules = {
 };
 
 async function readReviewGateRules(): Promise<ReviewGateRules> {
-  const raw = await readFile(path.join(CATALOG_DIR, "review-gate.rules.yml"), "utf-8");
-  const parsed: unknown = parseYaml(raw);
-  if (typeof parsed !== "object" || parsed === null) {
-    throw new Error("review-gate.rules.yml did not parse to a mapping");
+  return readYamlMapping(path.join(CATALOG_DIR, "review-gate.rules.yml"));
+}
+
+function yamlMapping(value: unknown, label: string): Record<string, unknown> {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) {
+    throw new Error(`${label} is not a YAML mapping`);
   }
-  return parsed;
+  return Object.fromEntries(Object.entries(value));
+}
+
+async function readYamlMapping(filePath: string): Promise<Record<string, unknown>> {
+  const parsed: unknown = parseYaml(await readAsset(filePath));
+  return yamlMapping(parsed, path.basename(filePath));
 }
 
 function getSection(content: string, heading: string) {
@@ -225,18 +238,82 @@ describe("TC-0015-0005: Devils-Advocate 3-FAIL Demotion", () => {
 
 // TC-0015-0006: Pattern-Doubler Rationale Required
 describe("TC-0015-0006: Pattern-Doubler Rationale Required", () => {
-  it("review-profiles.yml exists", async () => {
+  it("keeps concrete-pattern review advisory with rationale and no numeric target", async () => {
     const profilesPath = path.join(MANIFEST_DIR, "review-profiles.yml");
-    await expect(access(profilesPath)).resolves.toBeUndefined();
+    const profiles = await readYamlMapping(profilesPath);
+    const modes = yamlMapping(profiles.optional_modes, "optional_modes");
+    const patternDoubler = yamlMapping(modes["pattern-doubler"], "pattern-doubler");
+
+    expect(patternDoubler.kind).toBe("advisory");
+    expect(patternDoubler.rationale_required).toBe(true);
+    expect(patternDoubler).not.toHaveProperty("default_target");
+    expect(patternDoubler.description).toBe(
+      "Propose missing concrete business-flow, US, AC, EX or TC coverage with rationale; " +
+        "do not demand more abstract rules or numeric targets.",
+    );
   });
 });
 
 // TC-0015-0007: Pattern-Doubler N/A Default
 describe("TC-0015-0007: Pattern-Doubler N/A Default", () => {
-  it("review-profiles.yml defines pattern-doubler profile", async () => {
-    const profilesPath = path.join(MANIFEST_DIR, "review-profiles.yml");
-    const content = await readFile(profilesPath, "utf-8");
-    expect(content).toMatch(/pattern-doubler/i);
+  it("bounds more requests to concrete artifacts and overrides preserved numeric targets", async () => {
+    const rules = await readYamlMapping(path.join(CATALOG_DIR, "review-gate.rules.yml"));
+    const modes = yamlMapping(rules.optional_review_modes, "optional_review_modes");
+    expect(modes).toHaveProperty("pattern_doubler");
+    const patternDoubler = yamlMapping(modes.pattern_doubler, "pattern_doubler");
+
+    expect(modes.supported).toContain("pattern-doubler");
+    expect(patternDoubler.more_scope).toEqual(["business-flow", "US", "AC", "EX", "TC"]);
+    expect(patternDoubler.excluded_more_scope).toEqual([
+      "BR",
+      "nonfunctional-floor",
+      "policy",
+      "decision",
+      "architecture",
+    ]);
+    expect(patternDoubler.abstract_only_result).toBe("N/A");
+    expect(patternDoubler.numeric_targets).toBe("ignored");
+    expect(patternDoubler.missing_mandatory_pairing).toBe("required");
+    expect(patternDoubler.preserved_manifest_precedence).toBe(PATTERN_REVIEW_BOUND);
+  });
+
+  it("preserves adopter profiles on both init paths while emitting the canonical target bound", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-pattern-review-"));
+    try {
+      await captureStdout(async () => {
+        await runInit({ dir: root, force: false, dryRun: false, yes: true });
+      });
+      const assistantDir = path.join(root, ".qfai", "assistant");
+      const profilesPath = path.join(assistantDir, "manifest", "review-profiles.yml");
+      const profiles = parseDocument(await readAsset(profilesPath));
+      const modes = profiles.get("optional_modes");
+      if (!isMap(modes)) throw new Error("optional_modes is not a YAML mapping");
+      const profile = modes.get("pattern-doubler");
+      if (!isMap(profile)) throw new Error("pattern-doubler is not a YAML mapping");
+      profile.set("default_target", "2x current ID-bearing items");
+      profile.set("description", "Project-specific pattern review guidance.");
+      const adopterProfiles = profiles.toString({ lineWidth: 0 });
+      await writeFile(profilesPath, adopterProfiles, "utf-8");
+
+      for (const force of [false, true]) {
+        await captureStdout(async () => {
+          await runInit({ dir: root, force, dryRun: false, yes: true });
+        });
+        expect(await readAsset(profilesPath), `force=${force}: adopter profiles changed`).toBe(
+          adopterProfiles,
+        );
+      }
+      const rules = await readYamlMapping(
+        path.join(assistantDir, "catalog", "review-gate.rules.yml"),
+      );
+      const reviewModes = yamlMapping(rules.optional_review_modes, "optional_review_modes");
+      expect(reviewModes).toHaveProperty("pattern_doubler");
+      const bound = yamlMapping(reviewModes.pattern_doubler, "pattern_doubler");
+      expect(bound.numeric_targets).toBe("ignored");
+      expect(bound.preserved_manifest_precedence).toBe(PATTERN_REVIEW_BOUND);
+    } finally {
+      await removeTempTree(root);
+    }
   });
 });
 

@@ -22,11 +22,33 @@ Given 3 consecutive devils-advocate FAILs, when checked, then advisory demotion 
 
 ## AC-0015-0006: Pattern-Doubler Rationale
 
-Given a pattern-doubler proposal, when checked, then each proposed pattern includes rationale.
+- US-Refs: US-0015-0005
+
+```gherkin
+# AC-0015-0006
+# Source: discussion-20260913135257933#DAC-004-05
+Scenario: Concrete additions have rationale without a numeric target
+  Given optional advisory pattern review of concrete behavior
+  When the mode proposes additions
+  Then each addition concerns business-flow, US, AC, EX or TC coverage
+  And each addition includes a rationale
+  And no numeric growth target is required
+```
 
 ## AC-0015-0007: Pattern-Doubler N/A Default
 
-Given an artifact with no ID-bearing items, when pattern-doubler evaluates, then it returns N/A.
+- US-Refs: US-0015-0005
+
+```gherkin
+# AC-0015-0007
+# Source: discussion-20260913135257933#DAC-004-05
+Scenario: Abstract-only artifacts do not require more patterns
+  Given an empty artifact or only BR, NFR, policy, decision or architectural items
+  When optional pattern review evaluates the artifact
+  Then the mode returns N/A even if those items carry IDs
+  And no increase in abstract items is required
+  And missing mandatory pairings and independently required obligations and gates remain required
+```
 
 ## AC-0015-0008: All-Reviewer FAIL Obligation
 
@@ -34,7 +56,18 @@ Given any reviewer returning FAIL, when checked, then feedback includes a concre
 
 ## AC-0015-0009: Routing SSOT
 
-Given `agent-routing.yml` and `review-profiles.yml`, when checked, then they are the sole source for reviewer routing and optional review modes.
+```gherkin
+# AC-0015-0009
+# Source: discussion-20260913135257933#DAC-004-05
+Scenario: Catalog bounds govern preserved optional-mode settings
+  Given agent-routing.yml and review-profiles.yml as the routing and optional-mode registries
+  And an adopter review-profiles.yml containing a legacy numeric target
+  When reviewer routing and optional-mode settings are applied
+  Then the registries remain their respective source of truth
+  And review-gate.rules.yml bounds optional-mode settings
+  And numeric targets including default_target in the preserved manifest are ineffective
+  And init and upgrade do not overwrite the adopter manifest
+```
 
 ## AC-0015-0010: Specialist Responsibilities Preserved
 

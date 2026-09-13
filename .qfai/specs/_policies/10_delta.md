@@ -170,6 +170,12 @@
 | 2026-04-04 | adopted     | spec-0012                       | Business Rules/Examples/Test-Cases 4+2+2 件追加（fullHarness schema, calibration fields, mode provenance, surface inference）                                                               | v1.7.13 コミット履歴分析による設計意図補完                                                                                      |
 | 2026-04-04 | adopted     | spec-0014                       | Business Rules 2 件追加（phase1 ratchet, canonical validator set）                                                                                                                          | v1.7.13 コミット履歴分析による設計意図補完                                                                                      |
 
+- Date: 2026-09-14
+- Primary: Behavior
+- Tags: @docs, @test
+- Summary: DR-0012-002 retains optional advisory pattern review across skills, bounded to concrete coverage with no numeric target. The shipped catalog bounds preserved review-profile settings.
+- Rationale: optional review does not require additional abstract rules. Adopter manifests and independently required product obligations, pairings and blocking gates remain protected.
+
 ## Rejected Decisions
 
 | Date       | Rejected Option                                      | Reason                                                                              | Recurrence Prevention                                                                                                                                                                        | Source                                                                                                        | Evidence                                    |
@@ -902,3 +908,17 @@ No `UPDATE:REMOVE` row exists in this change. Verified: the vitest `compatibilit
 | Source       | Subject                                                        | Existing Spec | Operation | Sub-op | Approved By | Rationale                                                                                                                              |
 | ------------ | -------------------------------------------------------------- | ------------- | --------- | ------ | ----------- | -------------------------------------------------------------------------------------------------------------------------------------- |
 | DR-0001-0003 | The decision that mandated the band is superseded by `DR-0277` | \_policies    | UPDATE    | MODIFY | -           | Policy-only: the record's rejected option was argued against on the strength of the floor, so it needs a successor rather than an edit |
+
+## Triage (2026-09-13 concrete-pattern review)
+
+| Source                                | Subject                               | Existing Spec             | Operation | Sub-op | Approved By | Rationale                                                                                                                                                                                                                                                                                   |
+| ------------------------------------- | ------------------------------------- | ------------------------- | --------- | ------ | ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| discussion-20260913135257933#REQ-0013 | Bound the shared optional review mode | _policies/08_Decisions.md | UPDATE    | MODIFY | -           | Retain DR-0012-002 and cross-skill availability. Remove numeric targets and demands for additional abstract items. The shipped review-gate catalog makes old targets ineffective without overwriting an adopter's manifest. Existing mandatory pairings and blocking gates remain required. |
+
+## Change Requests
+
+| CR ID            | Upstream artifact           | Mode      | Approved by                                             | Applied at |
+| ---------------- | --------------------------- | --------- | ------------------------------------------------------- | ---------- |
+| CR-20260913-0007 | `_policies/08_Decisions.md` | re-derive | user (current session's delegated implementation scope) | -          |
+
+- DR-0012-002 cites this CR in Related. Source profile/catalog changes and their operating mirrors are physically applied. Applied at remains unset while required validation and independent reviews are pending; no baseline finding is waived.
