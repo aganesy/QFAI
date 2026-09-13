@@ -1591,7 +1591,7 @@ describe.each(TREES)("%s (each gate reads what the step before it produced)", (t
       await read(tree, "assistant/skills/qfai-implement/references/evidence-revision.md"),
     );
     // The manifest is now spelled out as a four-step procedure.
-    expect(revision).toContain("one record per untracked file");
+    expect(revision).toContain("one record per path");
     expect(revision).toContain("sorted by path in byte order");
   });
 
@@ -1616,7 +1616,10 @@ describe.each(TREES)("%s (a gate cannot fail on its own bookkeeping)", (tree) =>
       await read(tree, "assistant/skills/qfai-implement/references/evidence-revision.md"),
     );
     expect(revision).toContain("**The ledger is excluded from it.**");
-    expect(revision).toContain("minus `.qfai/specs/*/tdd/test-list.md` and `.qfai/evidence/**`");
+    // The ledger's directory is a project setting, so the exclusion names the
+    // resolved one: writing the default excludes nothing where a project moved
+    // its specs, and the phase's own writes move the address again.
+    expect(revision).toContain("minus `<specsDir>/*/tdd/test-list.md` and `.qfai/evidence/**`");
   });
 
   it("names the migration that writes the pre-split marker", async () => {
@@ -2413,7 +2416,9 @@ describe.each(TREES)("%s (the two sides of each contract agree)", (tree) => {
     const revision = flat(
       await read(tree, "assistant/skills/qfai-implement/references/evidence-revision.md"),
     );
-    expect(revision).toContain("`.qfai/review/**`, from **both** the diff and the untracked list");
+    expect(revision).toContain(
+      "`.qfai/review/**`, in the pathspecs above, so **every** list carries",
+    );
     expect(revision).toContain("What protects the pack is a **pack seal**");
   });
 
@@ -2541,16 +2546,20 @@ describe.each(TREES)("%s (the two sides of each contract agree)", (tree) => {
   });
 
   it("gives the working-tree address one serialization", async () => {
-    // "A hash over HEAD, the diff and the untracked files" is not one value:
-    // producer and reviewer can each pick a defensible separator or diff option
-    // and get different answers for the same tree.
+    // "A hash over HEAD and the working tree" is not one value: producer and
+    // reviewer can each pick a defensible separator, record shape or way of
+    // reading a file and get different answers for the same tree.
     const revision = flat(
       await read(tree, "assistant/skills/qfai-implement/references/evidence-revision.md"),
     );
     expect(revision).toContain("**The procedure, exactly.**");
-    expect(revision).toContain("git diff HEAD --no-color --no-ext-diff --binary --");
-    expect(revision).toContain("git ls-files --others --exclude-standard");
-    expect(revision).toContain("from **both** the diff and the untracked list");
+    // Git names the paths; the bytes come off the filesystem. A diff is a
+    // rendering, and every setting that renders it is one a reviewer need not
+    // share.
+    expect(revision).toContain("Git names the files. It does not read them");
+    expect(revision).toContain("The bytes are what the filesystem holds");
+    expect(revision).toContain("--no-replace-objects");
+    expect(revision).toContain("--exclude-per-directory=.gitignore");
   });
 
   it("drops the whole gate-completed group from the audited entry", async () => {
