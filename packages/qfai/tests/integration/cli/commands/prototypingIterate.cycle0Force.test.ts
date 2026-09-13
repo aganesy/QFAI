@@ -25,18 +25,44 @@ import type * as FsPromises from "node:fs/promises";
 
 import { runPrototypingIterate } from "../../../../src/cli/commands/prototypingIterate.js";
 
-/** A directory `readdir` refuses, which no test directory can be made into everywhere. */
-const fault = vi.hoisted((): { unlistable: string | null } => ({ unlistable: null }));
+/**
+ * Paths the file system refuses, in ways no test directory can be made to
+ * refuse on every platform: a directory `readdir` cannot list, a file `stat`
+ * cannot size, and a path `rename` cannot move.
+ */
+const fault = vi.hoisted(
+  (): { unlistable: string | null; unstatable: string | null; unrenamable: string | null } => ({
+    unlistable: null,
+    unstatable: null,
+    unrenamable: null,
+  }),
+);
 
 vi.mock("node:fs/promises", async (importOriginal) => {
   const actual = await importOriginal<typeof FsPromises>();
+  const refused = (target: string | null, candidate: unknown): boolean =>
+    target !== null && path.resolve(String(candidate)) === target;
   return {
     ...actual,
     readdir: async (...args: Parameters<typeof actual.readdir>) => {
-      if (fault.unlistable !== null && path.resolve(String(args[0])) === fault.unlistable) {
+      if (refused(fault.unlistable, args[0])) {
         throw Object.assign(new Error("EACCES: permission denied, scandir"), { code: "EACCES" });
       }
       return actual.readdir(...args);
+    },
+    stat: async (...args: Parameters<typeof actual.stat>) => {
+      if (refused(fault.unstatable, args[0])) {
+        throw Object.assign(new Error("EACCES: permission denied, stat"), { code: "EACCES" });
+      }
+      return actual.stat(...args);
+    },
+    rename: async (...args: Parameters<typeof actual.rename>) => {
+      if (refused(fault.unrenamable, args[0])) {
+        throw Object.assign(new Error("EBUSY: resource busy or locked, rename"), {
+          code: "EBUSY",
+        });
+      }
+      return actual.rename(...args);
     },
   };
 });
@@ -90,6 +116,8 @@ async function newTempDir(): Promise<string> {
 
 afterEach(async () => {
   fault.unlistable = null;
+  fault.unstatable = null;
+  fault.unrenamable = null;
   vi.restoreAllMocks();
   while (tempDirs.length > 0) {
     const dir = tempDirs.pop();
@@ -253,13 +281,8 @@ describe("iterate --cycle 0 destructive-rerun gate", () => {
       await mkdir(path.join(evidenceRoot, dir), { recursive: true });
       await writeFile(path.join(evidenceRoot, dir, file), `prior ${file}`, "utf-8");
     }
-    // A non-empty directory already at the backup's `html` refuses the move.
-    const FIXED_ISO = "2026-01-01T00:00:00.000Z";
-    vi.spyOn(Date.prototype, "toISOString").mockReturnValue(FIXED_ISO);
-    const stamp = FIXED_ISO.replace(/[:.]/g, "-");
-    const collision = path.join(evidenceRoot, `aggregate.backup-${stamp}`, "html");
-    await mkdir(collision, { recursive: true });
-    await writeFile(path.join(collision, "stop-rename.marker"), "x", "utf-8");
+    // `screenshots/` moves first, and `html/` cannot be moved.
+    fault.unrenamable = path.join(evidenceRoot, "html");
     const stderr = captureStderr();
 
     const exit = await runPrototypingIterate({
@@ -280,11 +303,75 @@ describe("iterate --cycle 0 destructive-rerun gate", () => {
       "prior loop seed",
     );
     expect(stderr.join("")).toContain("back in place");
+    const entries = await readdir(evidenceRoot);
+    expect(entries.filter((entry) => entry.includes(".backup-"))).toEqual([]);
     // Nothing claims a move the reset put back.
     const log = await readFile(path.join(evidenceRoot, "mutation-log.jsonl"), "utf-8").catch(
       () => "",
     );
     expect(log).not.toContain("screenshots/home.png");
+  });
+
+  it("refuses a backup directory another reset left at the same name", async () => {
+    // Moved into it, the backup would hold two resets' evidence as one.
+    const root = await newTempDir();
+    await seedProject(root);
+    await seedExistingIter00(root, "prior loop seed");
+    const evidenceRoot = path.join(root, ".qfai/evidence/prototyping");
+    await mkdir(path.join(evidenceRoot, "screenshots"), { recursive: true });
+    await writeFile(path.join(evidenceRoot, "screenshots", "home.png"), "prior capture", "utf-8");
+    const FIXED_ISO = "2026-01-01T00:00:00.000Z";
+    vi.spyOn(Date.prototype, "toISOString").mockReturnValue(FIXED_ISO);
+    const older = path.join(evidenceRoot, `aggregate.backup-${FIXED_ISO.replace(/[:.]/g, "-")}`);
+    await mkdir(older, { recursive: true });
+    await writeFile(path.join(older, "older-reset.marker"), "older", "utf-8");
+    const stderr = captureStderr();
+
+    const exit = await runPrototypingIterate({
+      root,
+      cycle: 0,
+      targetUrl: "http://localhost:5173",
+      force: true,
+    });
+
+    expect(exit).toBe(2);
+    expect(await readFile(path.join(evidenceRoot, "screenshots", "home.png"), "utf-8")).toBe(
+      "prior capture",
+    );
+    expect(await readdir(older)).toEqual(["older-reset.marker"]);
+    expect(await readFile(path.join(evidenceRoot, "iter-00", "prior-loop.marker"), "utf-8")).toBe(
+      "prior loop seed",
+    );
+    expect(stderr.join("")).toContain("aggregate.backup-");
+  });
+
+  it("moves nothing when a file the reset would move cannot be sized for the log", async () => {
+    // Moved anyway, the log would record a size the file never had.
+    const root = await newTempDir();
+    await seedProject(root);
+    await seedExistingIter00(root, "prior loop seed");
+    const evidenceRoot = path.join(root, ".qfai/evidence/prototyping");
+    await mkdir(path.join(evidenceRoot, "screenshots"), { recursive: true });
+    const capture = path.join(evidenceRoot, "screenshots", "home.png");
+    await writeFile(capture, "prior capture", "utf-8");
+    fault.unstatable = capture;
+    const stderr = captureStderr();
+
+    const exit = await runPrototypingIterate({
+      root,
+      cycle: 0,
+      targetUrl: "http://localhost:5173",
+      force: true,
+    });
+
+    expect(exit).toBe(2);
+    expect(await readFile(capture, "utf-8")).toBe("prior capture");
+    expect(await readFile(path.join(evidenceRoot, "iter-00", "prior-loop.marker"), "utf-8")).toBe(
+      "prior loop seed",
+    );
+    const entries = await readdir(evidenceRoot);
+    expect(entries.filter((entry) => entry.includes(".backup-"))).toEqual([]);
+    expect(stderr.join("")).toContain("screenshots");
   });
 
   it("moves nothing when a tree the reset would move cannot be listed for the log", async () => {

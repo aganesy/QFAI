@@ -2480,8 +2480,10 @@ async function moveAggregateDirsAside(
     }
   }
   const backupAbs = path.join(evidenceRootAbs, `aggregate.backup-${stamp}`);
+  // Not recursive: a directory already at this name belongs to another reset,
+  // and moving into it would mix two generations of evidence in one backup.
   try {
-    await mkdir(backupAbs, { recursive: true });
+    await mkdir(backupAbs);
   } catch (cause) {
     return { ok: false, failedDir: backupAbs, cause, stranded: [] };
   }
@@ -2514,7 +2516,7 @@ async function putAggregateDirsBack(
       stranded.push(path.join(backupAbs, name));
     });
   }
-  // Removed only while empty: a backup directory that was already there stays.
+  // Removed only once every move is back, so a stranded one keeps its directory.
   if (stranded.length === 0) await rmdir(backupAbs).catch(() => undefined);
   return stranded;
 }
@@ -2529,7 +2531,7 @@ function aggregateRollbackReport(root: string, stranded: readonly string[]): str
 /**
  * Every file under `dirAbs` with its size, read before the directory is moved
  * so the log can record what the move took. Rejects where the tree cannot be
- * walked, and the caller then moves nothing.
+ * walked or a file in it cannot be sized, and the caller then moves nothing.
  */
 async function filesWithSizes(
   root: string,
@@ -2537,10 +2539,7 @@ async function filesWithSizes(
 ): Promise<{ rel: string; size: number }[]> {
   const files: { rel: string; size: number }[] = [];
   for (const fileAbs of await collectFilesRecursively(dirAbs)) {
-    const size = await stat(fileAbs).then(
-      (stats) => stats.size,
-      () => 0,
-    );
+    const { size } = await stat(fileAbs);
     files.push({ rel: toRootRelative(root, fileAbs), size });
   }
   return files;

@@ -13,15 +13,51 @@ import { mkdir, mkdtemp, readFile, rm, stat, writeFile } from "node:fs/promises"
 import os from "node:os";
 import path from "node:path";
 
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+
+// The module is mocked below, and its TYPE comes from a namespace import:
+// `consistent-type-imports` forbids the inline form.
+import type * as FsPromises from "node:fs/promises";
 
 import {
   MUTATION_LOG_REL,
   appendMutationLogEntry,
   logEvidenceMove,
+  logEvidenceMoves,
   logEvidenceOverwrite,
   logEvidenceDelete,
 } from "../../../src/core/prototyping/mutationLog.js";
+
+/**
+ * Failures no test directory can be made to produce: an append that writes
+ * half its data and then fails the way a full disk does, and a log that cannot
+ * be truncated.
+ */
+const fault = vi.hoisted((): { partialAppend: boolean; untruncatable: boolean } => ({
+  partialAppend: false,
+  untruncatable: false,
+}));
+
+vi.mock("node:fs/promises", async (importOriginal) => {
+  const actual = await importOriginal<typeof FsPromises>();
+  return {
+    ...actual,
+    appendFile: async (...args: Parameters<typeof actual.appendFile>) => {
+      if (!fault.partialAppend) return actual.appendFile(...args);
+      const text = String(args[1]);
+      await actual.appendFile(args[0], text.slice(0, Math.floor(text.length / 2)), "utf-8");
+      throw Object.assign(new Error("ENOSPC: no space left on device, write"), {
+        code: "ENOSPC",
+      });
+    },
+    truncate: async (...args: Parameters<typeof actual.truncate>) => {
+      if (fault.untruncatable) {
+        throw Object.assign(new Error("EBUSY: resource busy or locked, open"), { code: "EBUSY" });
+      }
+      return actual.truncate(...args);
+    },
+  };
+});
 
 let root: string;
 
@@ -30,8 +66,15 @@ beforeEach(async () => {
 });
 
 afterEach(async () => {
+  fault.partialAppend = false;
+  fault.untruncatable = false;
   await rm(root, { recursive: true, force: true });
 });
+
+const TWO_MOVES = [
+  { path: ".qfai/evidence/prototyping/screenshots/home.png", priorSize: 10 },
+  { path: ".qfai/evidence/prototyping/html/home.html", priorSize: 20 },
+];
 
 async function readLogLines(): Promise<unknown[]> {
   const logAbs = path.join(root, MUTATION_LOG_REL);
@@ -130,6 +173,37 @@ describe("TC-0012-0479: mutation-log appends a JSONL entry per destructive iter-
       expect(first.priorSize).toBe(512);
       expect(first.newSize).toBe(0);
     }
+  });
+
+  it("cuts the log back to its prior length when a batch of moves is written part-way", async () => {
+    // The caller puts the moves back, so an entry left behind claims a move
+    // that did not stand.
+    await logEvidenceMove(root, "iterate", ".qfai/evidence/prototyping/iter-00/a.json", 3);
+    const logAbs = path.join(root, MUTATION_LOG_REL);
+    const before = await readFile(logAbs, "utf-8");
+    fault.partialAppend = true;
+
+    await expect(logEvidenceMoves(root, "iterate", TWO_MOVES)).rejects.toThrow("ENOSPC");
+
+    expect(await readFile(logAbs, "utf-8")).toBe(before);
+  });
+
+  it("leaves no log when its first write fails part-way", async () => {
+    fault.partialAppend = true;
+
+    await expect(logEvidenceMoves(root, "iterate", TWO_MOVES)).rejects.toThrow("ENOSPC");
+
+    await expect(stat(path.join(root, MUTATION_LOG_REL))).rejects.toThrow();
+  });
+
+  it("says the log may hold part of the write when it cannot be cut back", async () => {
+    await logEvidenceMove(root, "iterate", ".qfai/evidence/prototyping/iter-00/a.json", 3);
+    fault.partialAppend = true;
+    fault.untruncatable = true;
+
+    await expect(logEvidenceMoves(root, "iterate", TWO_MOVES)).rejects.toThrow(
+      "may hold part of this write",
+    );
   });
 
   it("appending twice yields two JSONL lines (idempotent append, no rewrite)", async () => {

@@ -348,6 +348,10 @@ export async function checkCompletionCertificate(root: string): Promise<CertifyC
   return reasons.length === 0 ? { ok: true } : { ok: false, reasons };
 }
 
+/** The directories a cycle-0 reset moves the previous loop's evidence into. */
+const RESET_BACKUP_DIRECTORY =
+  /^(?:iter-\d{2,}|aggregate)\.backup-\d{4}-\d{2}-\d{2}T\d{2}-\d{2}-\d{2}-\d{3}Z$/;
+
 /**
  * Walk every file under `evidenceRoot` (recursively), computing
  * SHA-256(content) per file. Output is sorted by path for determinism.
@@ -355,10 +359,6 @@ export async function checkCompletionCertificate(root: string): Promise<CertifyC
  * The certificate file itself is excluded so that re-checking after
  * write does not detect itself as a "new file".
  */
-/** The directories a cycle-0 reset moves the previous loop's evidence into. */
-const RESET_BACKUP_DIRECTORY =
-  /^(?:iter-\d{2,}|aggregate)\.backup-\d{4}-\d{2}-\d{2}T\d{2}-\d{2}-\d{2}-\d{3}Z$/;
-
 async function scanEvidenceDigests(
   evidenceRoot: string,
 ): Promise<Array<{ path: string; sha256: string }>> {

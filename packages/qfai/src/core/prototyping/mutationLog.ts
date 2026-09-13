@@ -19,8 +19,10 @@
  * the live file, and AFTER for the new size on overwrites.
  */
 
-import { appendFile, mkdir } from "node:fs/promises";
+import { appendFile, mkdir, rm, stat, truncate } from "node:fs/promises";
 import path from "node:path";
+
+import { isEnoent } from "../fs/errno.js";
 
 export const MUTATION_LOG_REL = ".qfai/evidence/prototyping/mutation-log.jsonl";
 
@@ -74,8 +76,10 @@ export async function logEvidenceMove(
 }
 
 /**
- * Record several `move` mutations in one append, so a write that fails records
- * none of them rather than the first few.
+ * Record several `move` mutations in one append. An append can write part of
+ * its data before it fails, for example when the disk fills, so a failed one
+ * cuts the log back to the length it had: the log then holds none of these
+ * entries, rather than the first few or a line cut short.
  */
 export async function logEvidenceMoves(
   root: string,
@@ -96,7 +100,32 @@ export async function logEvidenceMoves(
       newSize: 0,
     }),
   );
-  await appendFile(logAbs, `${lines.join("\n")}\n`, "utf-8");
+  // `null` where there is no log yet. A path that is not a file takes no
+  // append, so there is nothing to cut back there.
+  const priorLength = await stat(logAbs).then(
+    (stats) => (stats.isFile() ? stats.size : undefined),
+    (cause: unknown) => {
+      if (isEnoent(cause)) return null;
+      throw cause;
+    },
+  );
+  try {
+    await appendFile(logAbs, `${lines.join("\n")}\n`, "utf-8");
+  } catch (cause) {
+    if (priorLength === undefined) throw cause;
+    const restored = await (
+      priorLength === null ? rm(logAbs, { force: true }) : truncate(logAbs, priorLength)
+    ).then(
+      () => true,
+      () => false,
+    );
+    if (restored) throw cause;
+    const reason = cause instanceof Error ? cause.message : String(cause);
+    throw new Error(
+      `${reason}; the log could not be cut back to its prior length and may hold part of this write`,
+      { cause },
+    );
+  }
 }
 
 /**

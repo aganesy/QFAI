@@ -42,6 +42,10 @@ export type EvidenceMutationPair = {
   readonly logTokens: readonly string[];
 };
 
+/** The single mutation-log write a cycle-0 reset makes for every move it keeps. */
+const RESET_LOG_WRITE =
+  "logMovedFiles(options.root, [...aggregateLogEntries, ...iter00LogEntries])";
+
 /**
  * SSOT manifest for paired mutation call-sites. Each entry maps to a
  * concrete source file under `packages/qfai/src/core/prototyping/` (or
@@ -54,10 +58,10 @@ export const EVIDENCE_MUTATION_PAIRS: readonly EvidenceMutationPair[] = [
     clause: "iterate-cycle-0-force-rename",
     sourceRel: "packages/qfai/src/cli/commands/prototypingIterate.ts",
     mutationTokens: ["await rename(iter00Abs"],
-    // The entries this move adds to the one log write, not the helper behind
-    // it: the aggregate move uses the same helper, so its name would pass with
-    // these entries left out.
-    logTokens: ["...iter00LogEntries"],
+    // The one log write, spelled with the entries of both moves. The helper's
+    // name alone would pass with this move's entries left out, and the entries
+    // alone would pass with the write removed.
+    logTokens: [RESET_LOG_WRITE],
   },
   {
     // Mutation-log wiring-depth extension: every
@@ -75,7 +79,7 @@ export const EVIDENCE_MUTATION_PAIRS: readonly EvidenceMutationPair[] = [
     clause: "iterate-cycle-0-aggregate-move",
     sourceRel: "packages/qfai/src/cli/commands/prototypingIterate.ts",
     mutationTokens: ["await rename(sourceAbs"],
-    logTokens: ["...aggregateLogEntries"],
+    logTokens: [RESET_LOG_WRITE],
   },
 ];
 

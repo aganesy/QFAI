@@ -119,7 +119,8 @@ passed. On refusal, the error MUST name:
   `qfai prototyping iterate --cycle 0 --force`.
 
 When `--force` is passed, iterate itself moves the existing `iter-00/`
-to `iter-00.backup-<ISO>/` (`<ISO>` = `YYYY-MM-DDTHHMMSSZ`) BEFORE
+to `iter-00.backup-<ISO>/` (`<ISO>` = the UTC time with `:` and `.`
+written as `-`, for example `2026-01-01T00-00-00-000Z`) BEFORE
 invoking the local `clearEvidenceIterDirs` helper, so evidence is
 recoverable automatically — the operator does NOT need to `cp -r`
 manually. The backup directory is **outside** the `/^iter-\d{2,}$/`
@@ -135,9 +136,11 @@ iteration directories, so a restarted loop holds no evidence until it
 captures again. A project with no UI-bearing spec ends cycle 0 before the
 reset, so nothing is moved there. The move comes before the `iter-00`
 backup, and the log entries are written once both have succeeded: a
-failure in either, a directory the reset cannot list for the log, or a
-log write that fails stops the run before any evidence is cleared and
-puts back what the reset had moved.
+failure in either, a file the reset cannot list or size for the log, an
+`aggregate.backup-<ISO>/` that already exists, or a log write that fails
+stops the run before any evidence is cleared and puts back what the
+reset had moved. A log write that fails part-way is cut back to the
+log's prior length.
 
 ## `--capture` and `--auto-serve` (REQ-0109 / REQ-0110)
 
