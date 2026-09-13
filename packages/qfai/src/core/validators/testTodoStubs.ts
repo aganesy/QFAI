@@ -44,6 +44,7 @@ import { SCAFFOLD_PLACEHOLDER_MARKER } from "../atdd/scaffold.js";
 import {
   collectFilesByGlobs,
   DEFAULT_GLOB_FILE_LIMIT,
+  isFileSystemError,
   unusableGlobReason,
   type CollectFilesByGlobsResult,
 } from "../fs.js";
@@ -1351,7 +1352,9 @@ function reportRefusedScan(error: unknown, callerGlobs: boolean, scannedRest: bo
     key,
     [key],
     "canonical",
-    `Fix \`${key}\` in qfai.config.yaml so the glob matcher accepts the selection.`,
+    isFileSystemError(error)
+      ? "A directory the selection reaches could not be read. Make it readable to the account running `qfai validate`, or exclude it with `validation.traceability.testFileExcludeGlobs` where it holds no test."
+      : `Fix \`${key}\` in qfai.config.yaml so the glob matcher accepts the selection.`,
   );
 }
 

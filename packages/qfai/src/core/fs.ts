@@ -28,6 +28,20 @@ export const DEFAULT_GLOB_FILE_LIMIT = 20000;
 const NUL = String.fromCharCode(0);
 
 /**
+ * Whether a scan failed on the file system rather than on a pattern: an error
+ * carrying an errno code such as `EACCES` or `ENOENT`. The repair differs, since
+ * the pattern was accepted and a directory it reached could not be read.
+ */
+export function isFileSystemError(error: unknown): boolean {
+  return (
+    error instanceof Error &&
+    "code" in error &&
+    typeof error.code === "string" &&
+    /^E[A-Z]+$/.test(error.code)
+  );
+}
+
+/**
  * Why the glob matcher cannot use `glob`, or `null` when nothing known stops it.
  *
  * Given a NUL byte ahead of a wildcard, fast-glob passes the path to `readdir`

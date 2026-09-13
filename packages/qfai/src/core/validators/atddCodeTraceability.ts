@@ -3,7 +3,7 @@ import path from "node:path";
 
 import type { QfaiConfig } from "../config.js";
 import { resolvePath } from "../config.js";
-import { collectFilesByGlobs } from "../fs.js";
+import { collectFilesByGlobs, isFileSystemError } from "../fs.js";
 import {
   atddTestKindDirs,
   evaluateAtddCodeTraceability,
@@ -428,7 +428,9 @@ async function collectUnreadableTestGlobs(root: string, config: QfaiConfig): Pro
         "atddCodeTraceability.testFileGlobs",
         globs.map((glob) => JSON.stringify(glob)),
         "canonical",
-        "Fix `validation.traceability.testFileGlobs` so the glob matcher accepts every pattern, and run `/qfai-configure` to set them against the real layout.",
+        isFileSystemError(error)
+          ? "A directory the configured test globs reach could not be read. Make it readable to the account running `qfai validate`, or exclude it with `validation.traceability.testFileExcludeGlobs` where it holds no test."
+          : "Fix `validation.traceability.testFileGlobs` so the glob matcher accepts every pattern, and run `/qfai-configure` to set them against the real layout.",
       ),
     ];
   }

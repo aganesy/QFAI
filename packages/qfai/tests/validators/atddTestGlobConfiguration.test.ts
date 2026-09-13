@@ -13,21 +13,26 @@ import path from "node:path";
 
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+import { evaluateAtddCodeTraceability } from "../../src/core/atddTraceability.js";
 import { defaultConfig } from "../../src/core/config.js";
 import type * as fsModule from "../../src/core/fs.js";
 import { DEFAULT_TEST_FILE_EXCLUDE_GLOBS } from "../../src/core/traceability.js";
 import { validateProject } from "../../src/core/validate.js";
 import { validateAtddCodeTraceability } from "../../src/core/validators/atddCodeTraceability.js";
+import { validateTestTodoStubs } from "../../src/core/validators/testTodoStubs.js";
 
 // Every glob scan, recorded and passed through, so a case can read what the
 // probe asked the matcher for.
 const scanCalls = vi.hoisted((): Array<{ ignore?: string[]; limit?: number }> => []);
+// A failure every scan throws instead, while a case sets one.
+const scanFailure = vi.hoisted((): { error: Error | null } => ({ error: null }));
 vi.mock("../../src/core/fs.js", async () => {
   const actual = await vi.importActual<typeof fsModule>("../../src/core/fs.js");
   return {
     ...actual,
     collectFilesByGlobs: (...args: Parameters<typeof actual.collectFilesByGlobs>) => {
       scanCalls.push(args[1]);
+      if (scanFailure.error !== null) return Promise.reject(scanFailure.error);
       return actual.collectFilesByGlobs(...args);
     },
   };
@@ -129,6 +134,29 @@ describe("the stage says when the glob matcher refuses its globs", () => {
     await validateAtddCodeTraceability(root, config);
     const probe = scanCalls.find((options) => options.limit === 1);
     expect(probe?.ignore).toEqual([...DEFAULT_TEST_FILE_EXCLUDE_GLOBS, "tests/locked/**"]);
+  });
+
+  it("sends a directory it could not read to a permission fix, not a pattern fix", async () => {
+    // The pattern was accepted; what failed is a directory it reached.
+    const root = await projectWithAcceptanceTest();
+    const denied = Object.assign(new Error("EACCES: permission denied, scandir"), {
+      code: "EACCES",
+    });
+    const config = configWith(["tests/**/*.ts"]);
+    const evaluated = await evaluateAtddCodeTraceability(root, config);
+    scanFailure.error = denied;
+    try {
+      const [atdd] = (await validateAtddCodeTraceability(root, config, { evaluated })).filter(
+        (finding) => finding.code === "QFAI-ATDD-134",
+      );
+      expect(atdd?.suggested_action).toContain("readable");
+      const [stub] = (await validateTestTodoStubs(root, config)).filter(
+        (finding) => finding.code === "QFAI-TEST-002",
+      );
+      expect(stub?.suggested_action).toContain("readable");
+    } finally {
+      scanFailure.error = null;
+    }
   });
 
   it("says nothing about a broad glob", async () => {
