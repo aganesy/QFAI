@@ -206,8 +206,10 @@ layout obligation altogether (option 3)?
    | 2      | `/qfai-sdd spec-0014`, mode `re-derive`: `AC-0014-0005` says the aggregate directories are the handoff copy a required-path check may read and that evidence read through them does not record its iteration; `TC-0014-0033` follows it. `/qfai-sdd --contract .qfai/contracts/cli/qfai-prototyping-iterate.md`, mode `re-derive`: the cycle-0 reset clause says a reset moves the aggregate directories into the same backup as `iter-00/`                                    |
    | 3      | `/qfai-sdd spec-0014`, mode `re-derive`: `AC-0014-0005`, `BR-0014-0005`, `EX-0014-0026` and `TC-0014-0033` are withdrawn together, so no rule is left citing a withdrawn criterion                                                                                                                                                                                                                                                                                             |
 
-   Each rerun writes one delta row for what it did: `spec-0014`'s under every
-   option, `spec-0012`'s for the contract rerun under options 1 and 2, and
+   Each rerun records this Change Request as one row of a delta's
+   `## Change Requests` table — `CR ID`, `Upstream artifact`, `Mode`,
+   `Approved by`, `Applied at` — not as a `## Triage` row: `spec-0014`'s under
+   every option, `spec-0012`'s for the contract rerun under options 1 and 2, and
    `_policies/10_delta.md` for the policy rerun under option 1. Every
    `spec-0014` rerun's Phase 2b also migrates that ledger's columns and seeds
    the five `E2E` rows named under the options table.
