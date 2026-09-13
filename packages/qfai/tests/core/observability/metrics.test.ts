@@ -1,10 +1,3 @@
-// QFAI:SPEC-0012:TC-0012-0001
-// QFAI:SPEC-0012:TC-0012-0002
-// QFAI:SPEC-0012:TC-0012-0003
-// QFAI:SPEC-0012:TC-0012-0004
-// QFAI:SPEC-0012:TC-0012-0007
-// QFAI:SPEC-0012:TC-0012-0017
-// QFAI:SPEC-0012:TC-0012-0018
 import { describe, expect, it } from "vitest";
 
 import { MetricsCollector } from "../../../src/core/observability/metrics.js";
@@ -22,7 +15,7 @@ function makeIteration(index: number, cost = 0.01, duration = 100): PerIteration
 }
 
 describe("MetricsCollector", () => {
-  describe("per-iteration emission (TC-0012-0001)", () => {
+  describe("per-iteration emission", () => {
     it("emits 3 iterations and stores 3 per-iteration records", () => {
       const collector = new MetricsCollector();
       collector.emitIteration(makeIteration(0));
@@ -37,7 +30,7 @@ describe("MetricsCollector", () => {
     });
   });
 
-  describe("aggregate computation (TC-0012-0002)", () => {
+  describe("aggregate computation", () => {
     it("computes totalCost = sum of iterations and iterationCount = 3", () => {
       const collector = new MetricsCollector();
       collector.emitIteration(makeIteration(0, 0.1, 200));
@@ -53,7 +46,7 @@ describe("MetricsCollector", () => {
     });
   });
 
-  describe("single iteration aggregate (TC-0012-0003)", () => {
+  describe("single iteration aggregate", () => {
     it("aggregate values equal the single iteration values", () => {
       const collector = new MetricsCollector();
       collector.emitIteration(makeIteration(0, 0.05, 150));
@@ -65,7 +58,7 @@ describe("MetricsCollector", () => {
     });
   });
 
-  describe("no drops (TC-0012-0004)", () => {
+  describe("no drops", () => {
     it("5 iterations → all 5 records present", () => {
       const collector = new MetricsCollector();
       for (let i = 0; i < 5; i++) {
@@ -78,7 +71,7 @@ describe("MetricsCollector", () => {
     });
   });
 
-  describe("PII exclusion (TC-0012-0007)", () => {
+  describe("PII exclusion", () => {
     it("metrics contain no PII (no emails, names, file contents)", () => {
       const collector = new MetricsCollector();
       const iteration = makeIteration(0);
@@ -107,7 +100,7 @@ describe("MetricsCollector", () => {
     });
   });
 
-  describe("historical entries (TC-0012-0017)", () => {
+  describe("historical entries", () => {
     it("3 runs produce 3 historical entries sorted ascending by timestamp", () => {
       const collector = new MetricsCollector();
 
@@ -132,7 +125,7 @@ describe("MetricsCollector", () => {
     });
   });
 
-  describe("formatJsonLine (TC-0012-0018)", () => {
+  describe("formatJsonLine", () => {
     it("returns valid JSON with required fields for iteration", () => {
       const collector = new MetricsCollector();
       const metric = makeIteration(0, 0.05, 200);

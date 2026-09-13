@@ -1,5 +1,3 @@
-// QFAI:SPEC-0012:TC-0012-0008
-
 import { describe, expect, it } from "vitest";
 
 import { DisplayDetector } from "../../../src/core/detection/display.js";
@@ -7,7 +5,6 @@ import { DisplayDetector } from "../../../src/core/detection/display.js";
 describe("DisplayDetector", () => {
   const detector = new DisplayDetector();
 
-  // TC-0012-0008
   it("detects JSX-only component as display-only with confidence", () => {
     const code = `
 function WelcomeBanner({ title }) {
