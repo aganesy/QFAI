@@ -23,6 +23,16 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **The completion gate recomputes the checkpoint seal over the checkpoint's own
+  revision** (#1738). `checkpoint-verification.md` seals the checkpoint command
+  and result together with `Checkpoint verification revision`, the tree that
+  run was made on. The gate took the latest round's `Revision` instead, which
+  names the tree before the refactor, so a row sealed as the contract says was
+  reported whenever its refactor changed a byte. The gate now reads the
+  checkpoint revision, checks that it names a revision, and keeps the round's
+  `Revision` for a row that records none. The contract also says each value
+  enters the seal without a code span around it.
+
 - **The prototyping preflight refuses a screen with no primary task** (#1698).
   The audit lane reported an empty `primary_tasks` as `QFAI-AUD-001`, but
   `qfai prototyping preflight` never read the field, so the stage started on a
