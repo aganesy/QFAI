@@ -183,6 +183,25 @@ function specScopeOf(pathInUiDir: string): string | null {
   return match?.[1] ?? null;
 }
 
+/** The keys of an entry whose reading the project-wide screen list keeps. */
+const SCREEN_READING_KEYS = ["title", "route", "primary_tasks"] as const;
+
+type ScreenReading = Record<(typeof SCREEN_READING_KEYS)[number], string>;
+
+/** What the project-wide screen list reads from an entry, by the key each part comes from. */
+function readingOf(entry: object): ScreenReading {
+  const [screen] = extractUiScreens({ screens: [entry] });
+  return {
+    title: screen?.name ?? "",
+    route: screen?.route ?? "",
+    primary_tasks: JSON.stringify([
+      screen?.primaryTasks,
+      screen?.primaryTasksKeyPresent,
+      screen?.primaryTaskShapeFindings,
+    ]),
+  };
+}
+
 /** `value` with every path separator written as `/`. */
 function toPosix(value: string): string {
   return value.split(path.sep).join("/");
@@ -195,7 +214,7 @@ export type UnreadScreenEntryReason =
   | "missing-id"
   | "missing-route"
   | "repeated-id"
-  | "route-shadowed";
+  | "definition-shadowed";
 
 export type UnreadScreenEntry = {
   /** The contract file, repository-relative. */
@@ -207,13 +226,15 @@ export type UnreadScreenEntry = {
   screenId?: string;
   /**
    * For a repeated `id`, the entry that is read in its place; for a shadowed
-   * route, the entry whose route the project-wide screen list keeps.
+   * definition, the entry the project-wide screen list keeps.
    */
   readInstead?: { file: string; index: number };
   /** For a missing route, whether another entry of the same contract has this `id`. */
   idShared?: boolean;
   /** For a repeated `id`, whether the entry has no route either. */
   routeMissing?: boolean;
+  /** For a shadowed definition, the keys it states differently from the entry kept. */
+  differingKeys?: string[];
 };
 
 /**
@@ -232,8 +253,8 @@ export async function findUnreadUiScreenEntries(
   const unread: UnreadScreenEntry[] = [];
   const firstById = new Map<string, { file: string; index: number }>();
   // The project-wide screen list keeps one entry per `id` across every
-  // contract, and the prototyping loop captures from it.
-  const firstAnywhere = new Map<string, { file: string; index: number; route: string }>();
+  // contract. The prototyping loop captures from it and the design audit reads it.
+  const firstAnywhere = new Map<string, { file: string; index: number; reading: ScreenReading }>();
   const documents = (await readUiContractDocuments(uiDir, root)).map((document) => ({
     ...document,
     scope: specScopeOf(toPosix(path.relative(uiDir, path.resolve(root, document.relativePath)))),
@@ -287,18 +308,25 @@ export async function findUnreadUiScreenEntries(
       if (first === undefined) {
         firstById.set(key, { file: relativePath, index });
         // Another spec's contract may reuse the `id` for its own screen, which
-        // certification reads. Under a different route, though, the project-wide
-        // list keeps the first route only, and this one is never captured.
+        // certification reads. The project-wide list keeps the first entry's
+        // reading only, so a reuse must state the screen the same way to be read.
+        const reading = readingOf(entry);
         const anywhere = firstAnywhere.get(screenId);
         if (anywhere === undefined) {
-          firstAnywhere.set(screenId, { file: relativePath, index, route });
-        } else if (anywhere.route !== route) {
+          firstAnywhere.set(screenId, { file: relativePath, index, reading });
+          return;
+        }
+        const differingKeys = SCREEN_READING_KEYS.filter(
+          (readingKey) => anywhere.reading[readingKey] !== reading[readingKey],
+        );
+        if (differingKeys.length > 0) {
           unread.push({
             file: relativePath,
             index,
-            reason: "route-shadowed",
+            reason: "definition-shadowed",
             screenId,
             readInstead: { file: anywhere.file, index: anywhere.index },
+            differingKeys,
           });
         }
         return;

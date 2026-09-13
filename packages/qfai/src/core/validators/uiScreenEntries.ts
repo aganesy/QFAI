@@ -57,12 +57,20 @@ function describe(entry: UnreadScreenEntry): string {
       const instead = first === undefined ? "an earlier entry" : locate(first.file, first.index);
       return `${where} repeats the \`id\` \`${entry.screenId ?? ""}\` of ${instead}. Only the first entry for an \`id\` is read, so nothing checks what this one states.`;
     }
-    case "route-shadowed": {
+    case "definition-shadowed": {
       const first = entry.readInstead;
       const other = first === undefined ? "another contract" : locate(first.file, first.index);
-      return `${where} gives the \`id\` \`${entry.screenId ?? ""}\` a different \`route\` from ${other}. Certification reads each spec's contract on its own, but the project-wide screen list the prototyping loop captures from keeps only the first route, so this one is never captured.`;
+      const keys = listOf(entry.differingKeys ?? []);
+      return `${where} states the \`id\` \`${entry.screenId ?? ""}\` with a different ${keys} from ${other}. Certification reads each spec's contract on its own, but the project-wide screen list, which the prototyping loop captures from and the design audit reads, keeps only the first entry for an \`id\`, so neither reads this entry's ${keys}.`;
     }
   }
+}
+
+/** Keys as a sentence lists them: `a`, `b` and `c`. */
+function listOf(keys: readonly string[]): string {
+  const quoted = keys.map((key) => `\`${key}\``);
+  const last = quoted.pop() ?? "";
+  return quoted.length === 0 ? last : `${quoted.join(", ")} and ${last}`;
 }
 
 function remedy(entry: UnreadScreenEntry): string {
@@ -84,7 +92,7 @@ function remedy(entry: UnreadScreenEntry): string {
       return entry.routeMissing === true
         ? "Give this entry a different `id` and a `route`, or remove it."
         : "Give one of the two entries a different `id`, or remove the one that should not be there.";
-    case "route-shadowed":
-      return "Give one of the two screens a different `id`, or the same `route`.";
+    case "definition-shadowed":
+      return `Give one of the two screens a different \`id\`, or give both the same ${listOf(entry.differingKeys ?? [])}.`;
   }
 }

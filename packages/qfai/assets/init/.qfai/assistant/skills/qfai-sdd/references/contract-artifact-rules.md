@@ -40,8 +40,9 @@ Discussion UI/UX files are **non-normative** discovery / reference artifacts —
   entry is a mapping with an `id` and a `route`, and no two entries of one
   contract share an `id`. One spec's own contract (`spec-0001.yaml`,
   `ui-0001-*.yaml`, `spec-0001/`) is read on its own, so another spec may reuse
-  its `id`s for the same `route`; the project-wide screen list the prototyping
-  loop captures from keeps one route per `id`. The tooling reads the first entry
+  its `id`s for a screen with the same `title`, `route` and `primary_tasks`; the
+  project-wide screen list the prototyping loop captures from and the design
+  audit reads keeps one entry per `id`. The tooling reads the first entry
   for an `id`, skips an entry
   missing either key, and reads no screen from a `screens` that is not a list,
   so anything else such an entry states is checked by nothing.

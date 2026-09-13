@@ -153,18 +153,33 @@ describe("a UI contract entry no screen is read from is reported", () => {
     expect(findings[0]?.message).toContain("repeats the `id` `home`");
   });
 
-  it("names an id another spec's contract reuses for a different route", async () => {
+  it("names an id another spec's contract reuses for a different route and title", async () => {
     // The project-wide list the prototyping loop captures from keeps the first
-    // route only, so the second is never captured.
+    // entry only, so the second route is never captured.
     const root = await projectWith({
       "spec-0001.yaml": ["screens:", ...screen("home", "/")],
-      "spec-0002.yaml": ["screens:", ...screen("home", "/two")],
+      "spec-0002.yaml": ["screens:", ...screen("home", "/two"), "    title: Second"],
     });
     const findings = await validateUiScreenEntries(root, defaultConfig);
     expect(findings).toHaveLength(1);
     expect(findings[0]?.file).toBe(".qfai/contracts/ui/spec-0002.yaml");
-    expect(findings[0]?.message).toContain("keeps only the first route");
-    expect(findings[0]?.suggested_action).toContain("the same `route`");
+    expect(findings[0]?.message).toContain(
+      "with a different `title` and `route` from `screens[0]` in .qfai/contracts/ui/spec-0001.yaml",
+    );
+    expect(findings[0]?.suggested_action).toContain("give both the same `title` and `route`");
+  });
+
+  it("names an id another spec's contract reuses for the same route with other primary tasks", async () => {
+    // The design audit reads the project-wide list, so the empty task list on
+    // the second entry would pass it.
+    const root = await projectWith({
+      "spec-0001.yaml": ["screens:", ...screen("home", "/")],
+      "spec-0002.yaml": ["screens:", ...screen("home", "/").slice(0, 2), "    primary_tasks: []"],
+    });
+    const findings = await validateUiScreenEntries(root, defaultConfig);
+    expect(findings).toHaveLength(1);
+    expect(findings[0]?.message).toContain("with a different `primary_tasks` from");
+    expect(findings[0]?.suggested_action).toContain("give both the same `primary_tasks`");
   });
 
   it("asks a repeat with no route for a route as well as a different id", async () => {

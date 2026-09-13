@@ -155,8 +155,9 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   and for a repeated `id` it also names the entry read in its place. A
   `screens` value that is not a list is named the same way. An `id` is repeated
   only within one contract: each spec's own contract is read on its own, so
-  another spec may reuse it for the same route. Under a different route the
-  project-wide screen list the prototyping loop captures from keeps only the
+  another spec may reuse it for a screen with the same `title`, `route` and
+  `primary_tasks`. Where those differ, the project-wide screen list the
+  prototyping loop captures from and the design audit reads keeps only the
   first, and the second is named. The prototyping profile, which certification
   accepts, reports the finding as well.
 
