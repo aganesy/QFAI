@@ -6,6 +6,17 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **The prototyping preflight refuses a screen with no primary task** (#1698).
+  The audit lane reported an empty `primary_tasks` as `QFAI-AUD-001`, but
+  `qfai prototyping preflight` never read the field, so the stage started on a
+  contract the lane refused. The preflight's UI contract check now fails and
+  names each screen that has no primary task.
+
+  The primary-task obligations also gained the cases they named and lacked: the
+  preflight refusing, and a structured task missing `label`. Before these
+  cases, dropping `label` from the required keys, or letting the stage start,
+  left every case passing.
+
 - **An unresolved merge in a pinned file is named as one** (#1722). A conflict
   block changes a pinned file's bytes like any other edit, so the byte guard
   that opens the lint job failed it as a digest mismatch and named resealing as

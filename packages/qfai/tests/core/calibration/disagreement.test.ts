@@ -1,11 +1,9 @@
-// QFAI:SPEC-0012:TC-0012-0007
-// QFAI:SPEC-0012:TC-0012-0008
 import { describe, expect, it } from "vitest";
 
 import { DisagreementHandler } from "../../../src/core/calibration/disagreement.js";
 
 describe("DisagreementHandler", () => {
-  describe("majority rule (TC-0012-0007)", () => {
+  describe("majority rule", () => {
     it("resolves to majority classification with 3 reviewers", () => {
       const handler = new DisagreementHandler({ accept: 0.8, refine: 0.5 });
       const result = handler.resolve([
@@ -19,7 +17,7 @@ describe("DisagreementHandler", () => {
     });
   });
 
-  describe("tie-breaking (TC-0012-0008)", () => {
+  describe("tie-breaking", () => {
     it("breaks tie using highest confidence reviewer", () => {
       const handler = new DisagreementHandler({ accept: 0.8, refine: 0.5 });
       const result = handler.resolve([
