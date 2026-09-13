@@ -163,6 +163,17 @@ function StripAutoImport([string]$Body) {
   return $normalized
 }
 
+function RemovalAnswer([string]$Body) {
+  $text = StripAutoImport $Body
+  $text = [regex]::Replace($text, '(?ms)^[ \t]{0,3}(?<fence>`{3,}|~{3,})[^\n]*\n.*?^[ \t]{0,3}\k<fence>[ \t]*$', '')
+  $text = [regex]::Replace($text, '(?s)<!--.*?-->', '')
+  $match = [regex]::Match($text, '(?ms)^## What (?:this|a) change made unnecessary[ \t]*\n(?<answer>.*?)(?=^#{1,2} |\z)')
+  if (-not $match.Success) { return "" }
+  $answer = $match.Groups['answer'].Value.Trim()
+  if ($answer -match '^(?:TBD|TODO|\[.*\])\.?$') { return "" }
+  return $answer
+}
+
 function Compliance([string]$Body) {
   $normalized = StripAutoImport $Body
   $required = [ordered]@{
@@ -173,6 +184,7 @@ function Compliance([string]$Body) {
     "tests_section" = "(?m)^## 4\..*Tests.*$"
     "review_focus" = "(?m)^## Review Focus \(auto by type\)\s*$"
     "open_questions" = "(?m)^## Open Questions / Follow-ups(?:.*)?$"
+    "removal_list" = "(?m)^## What (?:this|a) change made unnecessary[ \t]*$"
   }
   $missing = @()
   foreach ($entry in $required.GetEnumerator()) {
@@ -182,13 +194,15 @@ function Compliance([string]$Body) {
   $hasCompat = ($normalized -match "(?s)## Compatibility \(compat\).*?- \[x\] ")
   $hasReviewLang = ($normalized -match "Review Language:\s*\S+")
   $hasTests = ($normalized -match "(?s)## 4\..*Tests.*?- .*?:.*?- .*?:")
+  $hasRemovalAnswer = -not [string]::IsNullOrWhiteSpace((RemovalAnswer $Body))
   return [pscustomobject]@{
     Missing     = $missing
     ChangeType  = $hasChangeType
     Compat      = $hasCompat
     ReviewLang  = $hasReviewLang
     Tests       = $hasTests
-    IsCompliant = ($missing.Count -eq 0 -and $hasChangeType -and $hasCompat -and $hasReviewLang -and $hasTests)
+    RemovalList = $hasRemovalAnswer
+    IsCompliant = ($missing.Count -eq 0 -and $hasChangeType -and $hasCompat -and $hasReviewLang -and $hasTests -and $hasRemovalAnswer)
   }
 }
 
@@ -234,6 +248,13 @@ function RepairBody([string]$Template, $Pr, [string[]]$ChangedFiles, $Classifica
   $preview = @($ChangedFiles | Select-Object -First 10)
   if ((CountOf $preview) -eq 0) { $preview = @("(no files detected)") }
   $original = StripAutoImport ([string]$Pr.body)
+  $removals = RemovalAnswer $original
+  if (-not [string]::IsNullOrWhiteSpace($removals)) {
+    $body = [regex]::Replace($body, '(?ms)(^## What (?:this|a) change made unnecessary[ \t]*\n).*?(?=^#{1,2} |\z)', {
+      param($match)
+      return $match.Groups[1].Value + "`n" + $removals + "`n`n"
+    })
+  }
   if ([string]::IsNullOrWhiteSpace($original)) { $original = "(empty)" }
   $append = @("","## Auto-import","","- Title: $($Pr.title)","- Source PR: $($Pr.url)","- Branch: $($Pr.headRefName) -> $($Pr.baseRefName)","- Repo CI command: ``$CiCommand``","- Changed files:")
   $append += @($preview | ForEach-Object { "  - ``$_``" })
@@ -511,6 +532,9 @@ if (-not $check.IsCompliant) {
   Warn ("PR body is not template-compliant. Preview saved to {0}" -f $preview)
   if ((CountOf $check.Missing) -gt 0) {
     Warn ("Missing sections: {0}" -f (($check.Missing -join ", ")))
+  }
+  if ([string]::IsNullOrWhiteSpace((RemovalAnswer $newBody))) {
+    throw "PR body repair needs an authored removal-list answer. Complete the saved preview before rerunning; no empty answer is inferred."
   }
   if (-not $DryRun) {
     [void](Run "gh" @("pr", "edit", "$($pr.number)", "--body-file", $preview) "Failed to update PR body.")

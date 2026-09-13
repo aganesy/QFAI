@@ -18,6 +18,8 @@ Language:
 
 Process:
 
+Read `REVIEW.md` before reviewing a pull request.
+
 1. Read the PR description (use the PR template sections) and extract:
    - Why/background
    - Business/process position

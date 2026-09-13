@@ -856,6 +856,23 @@ describe("this repository's pull-request description", () => {
     expect(obligation).toBe(
       'Every pull request lists, in its description, what the change made unnecessary, and says why anything on the list was kept. An empty list is a complete answer: it is written as "nothing", not left out.',
     );
+    const template = await readFile(path.join(ROOT, ".github/PULL_REQUEST_TEMPLATE.md"), "utf-8");
+    expect(template).toContain("## What this change made unnecessary");
+    expect(template).toContain('write "nothing" for an empty list');
+    for (const relative of [
+      "AGENTS.md",
+      ".github/copilot-instructions.md",
+      ".github/instructions/code-review.instructions.md",
+    ]) {
+      const entry = await readFile(path.join(ROOT, relative), "utf-8");
+      expect(entry, relative).toContain("Read `REVIEW.md` before reviewing a pull request");
+    }
+    const release = await readFile(
+      path.join(ROOT, ".github/workflows/prepare-release.yml"),
+      "utf-8",
+    );
+    expect(release).toContain('echo "## What this change made unnecessary"');
+    expect(release).toContain("Superseded package version and Unreleased heading");
   });
 });
 

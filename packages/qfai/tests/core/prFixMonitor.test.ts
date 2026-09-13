@@ -122,6 +122,57 @@ describe("pr-fix wrapper docs", () => {
 });
 
 describe("run-pr-fix strict monitor", { timeout: 120000 }, () => {
+  it.each([
+    ["absent", ""],
+    ["empty", "## What this change made unnecessary\n\n"],
+    ["comment only", "## What this change made unnecessary\n\n<!-- Answer required. -->\n"],
+    ["unresolved", "## What this change made unnecessary\n\nTBD\n"],
+    ["fenced", "```md\n## What this change made unnecessary\n\nNothing.\n```\n"],
+  ])("blocks a %s removal answer without inventing nothing", async (_name, section) => {
+    const body = compliantPrBody().replace(
+      /## What this change made unnecessary\n\nNothing\.\n\n/,
+      section,
+    );
+    const result = await runPrFix({
+      extraArgs: ["-DryRun"],
+      scenario: makeScenario({
+        changedFiles: ["REVIEW.md"],
+        prViews: [makePrView([successCheck()], { body })],
+        threads: [[]],
+      }),
+    });
+    expect(result.code).not.toBe(0);
+    expect(combinedOutput(result)).toContain("authored removal-list answer");
+    const preview = await readFile(
+      path.join(result.repoDir, "tmp", "pr-fix", "pr-166-body-repaired.md"),
+      "utf-8",
+    );
+    expect(preview.split("## Auto-import")[0]).not.toContain("Nothing.");
+  });
+
+  it("preserves an authored removal answer while repairing other metadata", async () => {
+    const answer =
+      "A duplicate check. The existing validator stays because it covers malformed inputs.";
+    const result = await runPrFix({
+      extraArgs: ["-DryRun"],
+      scenario: makeScenario({
+        changedFiles: ["REVIEW.md"],
+        prViews: [
+          makePrView([successCheck()], {
+            body: `## What this change made unnecessary\n\n${answer}\n`,
+          }),
+        ],
+        threads: [[]],
+      }),
+    });
+    expect(result.code).toBe(0);
+    const preview = await readFile(
+      path.join(result.repoDir, "tmp", "pr-fix", "pr-166-body-repaired.md"),
+      "utf-8",
+    );
+    expect(preview.split("## Auto-import")[0]).toContain(answer);
+  });
+
   it("extracts version markers from non-feature branch prefixes and blocks mismatches", async () => {
     const branch = "topic/v1.8.5";
     const result = await runPrFix({
@@ -370,7 +421,8 @@ describe("run-pr-fix strict monitor", { timeout: 120000 }, () => {
       }),
     });
 
-    expect(result.code).toBe(0);
+    expect(result.code).not.toBe(0);
+    expect(combinedOutput(result)).toContain("authored removal-list answer");
 
     const preview = await readFile(
       path.join(result.repoDir, "tmp", "pr-fix", "pr-166-body-repaired.md"),
@@ -396,7 +448,8 @@ describe("run-pr-fix strict monitor", { timeout: 120000 }, () => {
       }),
     });
 
-    expect(result.code).toBe(0);
+    expect(result.code).not.toBe(0);
+    expect(combinedOutput(result)).toContain("authored removal-list answer");
 
     const preview = await readFile(
       path.join(result.repoDir, "tmp", "pr-fix", "pr-166-body-repaired.md"),
@@ -506,6 +559,10 @@ function compliantPrBody(): string {
     "",
     "- Command: `pnpm ci:gate`",
     "- Result: PASS",
+    "",
+    "## What this change made unnecessary",
+    "",
+    "Nothing.",
     "",
     "## Open Questions / Follow-ups",
     "",
@@ -691,7 +748,7 @@ async function createMinimalRepo(
   await mkdir(path.join(repoDir, "packages", "qfai"), { recursive: true });
   await writeFile(
     path.join(repoDir, ".github", "PULL_REQUEST_TEMPLATE.md"),
-    "# Template\n",
+    compliantPrBody().replace("Nothing.", "<!-- An authored answer is required. -->"),
     "utf-8",
   );
   await writeFile(path.join(repoDir, ".github", "workflows", "ci.yml"), "name: CI\n", "utf-8");
