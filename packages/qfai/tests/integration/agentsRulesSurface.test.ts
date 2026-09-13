@@ -232,7 +232,21 @@ describe("cross-AI rules surface (.agents/rules/ master)", () => {
     const MASTERS = [
       ".agents/rules/minimal-implementation.md",
       "packages/qfai/assets/init/root/.agents/rules/minimal-implementation.md",
-    ];
+    ] as const;
+
+    it.each(MASTERS)("%s protects unit coverage of retained failures in the floor", async (rel) => {
+      const text = await readFile(path.join(ROOT, rel), "utf-8");
+      const floor = text.split("## 2. What the ladder never removes")[1]?.split("## 3.")[0];
+      expect(floor).toContain("- Unit-level coverage of the failures the code retains.");
+    });
+
+    it("keeps the operating and shipped minimal-implementation rules byte-identical", async () => {
+      const [master, shipped] = await Promise.all([
+        readFile(path.join(ROOT, MASTERS[0])),
+        readFile(path.join(ROOT, MASTERS[1])),
+      ]);
+      expect(shipped.equals(master)).toBe(true);
+    });
 
     it.each(MASTERS)("%s states every clause", async (rel) => {
       const text = await readFile(path.join(ROOT, rel), "utf-8");

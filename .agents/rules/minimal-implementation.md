@@ -41,6 +41,7 @@ The ladder trims code, not obligations. These stay whatever rung you stop at.
 - Security.
 - Accessibility.
 - Anything the spec asks for.
+- Unit-level coverage of the failures the code retains.
 
 Tests are in the same position. The ladder shapes how a test is built — reuse a
 helper that exists before adding a harness — and never how many obligations are

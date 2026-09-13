@@ -6,6 +6,10 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Added
 
+- **Retained failures keep unit-level coverage** (#1793). The
+  minimal-implementation safety floor protects coverage of the failure paths
+  production code retains.
+
 - **A legacy ledger outside the obligation-column protection is reported**
   (#1663). A seeded `E2E` or `API` row has `TC-Refs` forbidden to it, so the
   `US-Refs` and `CON-API-Refs` columns are the only place its obligation can
