@@ -735,6 +735,7 @@ async function probeExclusiveLink(directory: string): Promise<void> {
   const dest = path.join(directory, `${ASSISTANT_STAGING_PREFIX}${randomUUID()}.tmp`);
   let ownsSource = false;
   let ownsDest = false;
+  const probeFailures: unknown[] = [];
   try {
     const handle = await open(source, "wx");
     ownsSource = true;
@@ -744,14 +745,29 @@ async function probeExclusiveLink(directory: string): Promise<void> {
       ownsDest = true;
     } catch (cause: unknown) {
       throw new Error(
-        "qfai init cannot create hard links here. Use a filesystem and permissions supporting hard links, then rerun; no assets were changed.",
+        "qfai init cannot create hard links here. Use a filesystem and permissions supporting hard links, then rerun; no package assets were copied or migrated.",
         { cause },
       );
     }
-  } finally {
-    if (ownsDest) await rm(dest, { force: true }).catch(() => {});
-    if (ownsSource) await rm(source, { force: true }).catch(() => {});
+  } catch (cause: unknown) {
+    probeFailures.push(cause);
   }
+  const cleanupFailures: Error[] = [];
+  for (const file of [ownsDest ? dest : null, ownsSource ? source : null]) {
+    if (file === null) continue;
+    try {
+      await rm(file, { force: true });
+    } catch (cause: unknown) {
+      cleanupFailures.push(new Error(JSON.stringify(file), { cause }));
+    }
+  }
+  if (cleanupFailures.length > 0) {
+    throw new AggregateError(
+      [...probeFailures, ...cleanupFailures],
+      `qfai init could not remove creation probes: ${cleanupFailures.map((failure) => failure.message).join(", ")}. Restore access, remove only these probe files, then rerun; no package assets were copied or migrated.`,
+    );
+  }
+  if (probeFailures.length > 0) throw probeFailures[0];
 }
 
 type GovernedAssetsResult = {

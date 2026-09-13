@@ -10,7 +10,7 @@ import { captureStdout } from "../helpers/stdout.js";
 import { removeTempTree } from "../helpers/tempTree.js";
 
 type FsPromises = typeof fsPromises;
-const { copyFileSpy, linkSpy, lstatSpy } = vi.hoisted(() => ({
+const { copyFileSpy, linkSpy, lstatSpy, rmSpy } = vi.hoisted(() => ({
   copyFileSpy:
     vi.fn<(actual: FsPromises, ...args: Parameters<FsPromises["copyFile"]>) => Promise<void>>(),
   linkSpy: vi.fn<(actual: FsPromises, ...args: Parameters<FsPromises["link"]>) => Promise<void>>(),
@@ -21,6 +21,7 @@ const { copyFileSpy, linkSpy, lstatSpy } = vi.hoisted(() => ({
         ...args: Parameters<FsPromises["lstat"]>
       ) => ReturnType<FsPromises["lstat"]>
     >(),
+  rmSpy: vi.fn<(actual: FsPromises, ...args: Parameters<FsPromises["rm"]>) => Promise<void>>(),
 }));
 
 vi.mock("node:fs/promises", async () => {
@@ -30,6 +31,7 @@ vi.mock("node:fs/promises", async () => {
     copyFile: (...args: Parameters<FsPromises["copyFile"]>) => copyFileSpy(actual, ...args),
     link: (...args: Parameters<FsPromises["link"]>) => linkSpy(actual, ...args),
     lstat: (...args: Parameters<FsPromises["lstat"]>) => lstatSpy(actual, ...args),
+    rm: (...args: Parameters<FsPromises["rm"]>) => rmSpy(actual, ...args),
   };
 });
 
@@ -43,6 +45,7 @@ function passThrough(): void {
   copyFileSpy.mockImplementation((actual, ...args) => actual.copyFile(...args));
   linkSpy.mockImplementation((actual, ...args) => actual.link(...args));
   lstatSpy.mockImplementation((actual, ...args) => actual.lstat(...args));
+  rmSpy.mockImplementation((actual, ...args) => actual.rm(...args));
 }
 
 beforeEach(() => {
@@ -64,6 +67,100 @@ const init = (root: string): Promise<string> =>
   captureStdout(() => runInit({ dir: root, force: false, dryRun: false, yes: true }));
 
 describe("constitution creation preserves a path it cannot claim", () => {
+  it.each([
+    { name: "source after a successful link", failedIndex: 0, linkFails: false },
+    { name: "destination after a successful link", failedIndex: 1, linkFails: false },
+    { name: "source after a rejected link", failedIndex: 0, linkFails: true },
+  ] as const)("stops before asset changes when cleanup fails for the $name", async (scenario) => {
+    await withProject(async (root) => {
+      const instructions = path.join(root, ".qfai", "assistant", "instructions");
+      await mkdir(instructions, { recursive: true });
+      const legacy = path.join(instructions, "quality.md");
+      await writeFile(legacy, "# Adopter quality rules\n");
+      await writeFile(path.join(root, "AGENTS.md"), "# Adopter instructions\n");
+      const rootBefore = (await readdir(root)).sort();
+      let probes: [string, string] | undefined;
+      linkSpy.mockImplementation((actual, ...args) => {
+        probes = [String(args[0]), String(args[1])];
+        if (scenario.linkFails) {
+          return Promise.reject(
+            Object.assign(new Error("hard links unavailable"), { code: "ENOTSUP" }),
+          );
+        }
+        return actual.link(...args);
+      });
+      rmSpy.mockImplementation((actual, ...args) => {
+        if (String(args[0]) === probes?.[scenario.failedIndex]) {
+          return Promise.reject(Object.assign(new Error("probe is busy"), { code: "EBUSY" }));
+        }
+        return actual.rm(...args);
+      });
+
+      const failure = await captureStdout(() =>
+        runInit({
+          dir: root,
+          force: false,
+          dryRun: false,
+          yes: true,
+          upgradeAssistantTree: true,
+        }),
+      ).then(
+        () => null,
+        (cause: unknown) => cause,
+      );
+      expect(failure).toBeInstanceOf(AggregateError);
+      if (!(failure instanceof AggregateError))
+        throw new Error("Cleanup must report retained probes.");
+      if (probes === undefined) throw new Error("The creation probe must run.");
+      const retained = probes[scenario.failedIndex];
+      const otherProbe = scenario.failedIndex === 0 ? probes[1] : probes[0];
+      expect(failure.message).toContain(JSON.stringify(retained));
+      expect(failure.errors).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({ cause: expect.objectContaining({ code: "EBUSY" }) }),
+        ]),
+      );
+      if (scenario.linkFails) {
+        expect(failure.errors).toEqual(
+          expect.arrayContaining([
+            expect.objectContaining({ cause: expect.objectContaining({ code: "ENOTSUP" }) }),
+          ]),
+        );
+      }
+      expect((await readdir(root)).sort()).toEqual(rootBefore);
+      expect(path.dirname(retained)).toBe(path.dirname(instructions));
+      expect(
+        (await readdir(path.dirname(instructions))).filter(
+          (name) => name !== path.basename(retained),
+        ),
+      ).toEqual(["instructions"]);
+      expect(await readFile(legacy, "utf-8")).toBe("# Adopter quality rules\n");
+      expect(await readFile(path.join(root, "AGENTS.md"), "utf-8")).toBe(
+        "# Adopter instructions\n",
+      );
+      expect((await lstat(retained)).isFile()).toBe(true);
+      await expect(lstat(otherProbe)).rejects.toMatchObject({
+        code: "ENOENT",
+      });
+    });
+  });
+
+  it("keeps a concurrent probe destination it does not own", async () => {
+    await withProject(async (root) => {
+      let concurrent: string | undefined;
+      linkSpy.mockImplementation(async (actual, ...args) => {
+        concurrent = String(args[1]);
+        await actual.writeFile(args[1], "Adopter-owned probe path\n");
+        throw Object.assign(new Error("destination already exists"), { code: "EEXIST" });
+      });
+
+      await expect(init(root)).rejects.toMatchObject({ cause: { code: "EEXIST" } });
+      if (concurrent === undefined) throw new Error("The concurrent destination must be created.");
+      expect(await readFile(concurrent, "utf-8")).toBe("Adopter-owned probe path\n");
+      expect(await readdir(root)).toEqual([path.basename(concurrent)]);
+    });
+  });
+
   it.each(["EPERM", "ENOTSUP", "EOPNOTSUPP"])(
     "rejects %s hard-link failure before copying or migrating assets",
     async (code) => {

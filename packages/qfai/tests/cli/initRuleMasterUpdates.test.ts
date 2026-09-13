@@ -220,15 +220,19 @@ describe("the constitution and its safety floor upgrade together", () => {
     const edited = olderFloor(await readFile(minimumPath(), "utf-8"));
     const previous = await olderConstitution();
     const build = provenance.buildShippedAssistantHashes;
-    vi.spyOn(provenance, "buildShippedAssistantHashes").mockImplementationOnce(async (assets) => {
-      await writeFile(minimumPath(), edited, "utf-8");
-      return build(assets);
-    });
+    const shippedBuilds = vi
+      .spyOn(provenance, "buildShippedAssistantHashes")
+      .mockImplementationOnce(build)
+      .mockImplementationOnce(async (assets) => {
+        await writeFile(minimumPath(), edited, "utf-8");
+        return build(assets);
+      });
 
     const output = await captureStdout(() =>
       runInit({ dir: root, force: true, dryRun: false, yes: true }),
     );
 
+    expect(shippedBuilds).toHaveBeenCalledTimes(2);
     expect(await readFile(constitutionPath(), "utf-8")).toBe(previous);
     expect(output).toContain("manual merge");
     const lock = await readAssistantAssetsLock(assistantPath());
