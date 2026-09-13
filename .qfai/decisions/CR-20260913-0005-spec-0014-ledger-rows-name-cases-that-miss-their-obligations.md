@@ -87,16 +87,24 @@ cases pass with neither flag forwarded.
 The cases each obligation needs exist in this change, so the rows are pointed at
 them and `TDD-0036` is split at its boundary:
 
-| Row        | `Test file`                                                          | `Selector`                                                                                                                                                       | `Status` |
-| ---------- | -------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------- |
-| `TDD-0009` | `packages/qfai/tests/integration/spec0014VerifyReviewerGate.test.ts` | `["verify's binding gate fails on a render critique the reviewer returned REVISE", "shipped: a REVISE from a routed blocking reviewer blocks DONE and handoff"]` | `done`   |
-| `TDD-0035` | `packages/qfai/tests/integration/spec0014SaasPackageCertify.test.ts` | `seals a certificate scoped to saas-package whose notes name every skipped gate`                                                                                 | `done`   |
-| `TDD-0036` | `packages/qfai/tests/integration/spec0014SaasPackageCertify.test.ts` | `refuses the upgrade while the skipped gates are missing, naming them`                                                                                           | `done`   |
-| `TDD-0037` | `packages/qfai/tests/integration/spec0014SaasPackageCertify.test.ts` | `promotes the certificate to full once the skipped gates pass`                                                                                                   | `todo`   |
+| Row        | `Test file`                                                          | `Selector`                                                                                                                                                       | `Boundary`  | `Status` |
+| ---------- | -------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------- | -------- |
+| `TDD-0009` | `packages/qfai/tests/integration/spec0014VerifyReviewerGate.test.ts` | `["verify's binding gate fails on a render critique the reviewer returned REVISE", "shipped: a REVISE from a routed blocking reviewer blocks DONE and handoff"]` | `-`         | `todo`   |
+| `TDD-0035` | `packages/qfai/tests/integration/spec0014SaasPackageCertify.test.ts` | `seals a certificate scoped to saas-package whose notes name every skipped gate`                                                                                 | `-`         | `todo`   |
+| `TDD-0036` | `packages/qfai/tests/integration/spec0014SaasPackageCertify.test.ts` | `refuses the upgrade while the skipped gates are missing, naming them`                                                                                           | `refusal`   | `todo`   |
+| `TDD-0037` | `packages/qfai/tests/integration/spec0014SaasPackageCertify.test.ts` | `promotes the certificate to full once the skipped gates pass`                                                                                                   | `promotion` | `todo`   |
 
-`TDD-0037` carries `TC-0014-0036` and enters at `todo`: it names a boundary no
-row has recorded evidence for. The three existing rows keep their obligations
-and their status.
+**The three existing rows keep their obligations and are reset to `todo`.**
+Each one's `Selector` changes, so the evidence and the reviewer hashes recorded
+against the old selector no longer describe the row, and `/qfai-implement`
+selects only a row that is not `done`. `TDD-0037` carries `TC-0014-0036` and
+enters at `todo`: it names a boundary no row has recorded evidence for.
+
+**`TDD-0036` and `TDD-0037` carry one obligation, so each names its
+`Boundary`.** Sibling rows on one test case are told apart by that column, and
+`QFAI-TDDLIST-017` reports a sibling that names none. The pack's eight-column
+ledger has no such column yet, and adding it is a table-shape write only Phase
+2b makes.
 
 `TDD-0009`'s two entries observe one boundary from its two sides. Verify's
 binding gate is a command, `npx qfai validate --profile verify --fail-on error`,
@@ -138,23 +146,34 @@ live pack. The chains stay as recorded.
 ## Decision needed from user
 
 Point `TDD-0009`, `TDD-0035` and `TDD-0036` at the cases that reach their
-obligations, split `TDD-0036`'s promotion into `TDD-0037`, and record in
-`09_delta.md` that the `v1.7.16` chain identifiers bind nothing in the live
-pack?
+obligations and reset them to `todo`, split `TDD-0036`'s promotion into
+`TDD-0037` with a `Boundary` on each, and record in `09_delta.md` that the
+`v1.7.16` chain identifiers bind nothing in the live pack?
 
 ## Approved actions (owner skill rerun plan)
 
-1. `/qfai-sdd spec-0014`, mode `confirm-only`. The edits are the ones under
-   `## Proposed change`, applied by hand under this approval: the three row
-   pointers, the new `TDD-0037` row, and the sentence in `09_delta.md`. The
-   rerun confirms that each row names a case that exists and passes, and writes
-   this Change Request's row in `09_delta.md`'s `## Change Requests` table.
-2. Downstream ledger sweep: no reset and no retirement. `TDD-0009`, `TDD-0035`
-   and `TDD-0036` keep `done` and take this Change Request in `DR-ID`; their
-   obligations do not move, only the case each one names. Their evidence is
-   recorded against the new cases under `/qfai-implement`, where the
-   implementation predates the record and the falsifiability path applies.
-   `TDD-0037` is added at `todo` with this Change Request in `DR-ID`.
+1. `/qfai-sdd spec-0014`, mode `re-derive`. No statement moves; the rerun is
+   there for the ledger, because its Phase 2b is the only phase that may write
+   a row's identity or the table's shape. It writes:
+   - the three row pointers and the new `TDD-0037` row under
+     `## Proposed change`, with `refusal` and `promotion` in `Boundary`;
+   - the ledger's columns, migrated to the template's, which is what gives it a
+     `Boundary` column;
+   - one `E2E` row at `todo` for each of the pack's five stories, none of which
+     has one. This repository declares no UI-bearing spec, so every story is
+     active. Those rows are owed whatever this record decides, and they are
+     listed so the approval covers them.
+
+   The rerun also writes the sentence in `09_delta.md`, and this Change
+   Request's row in that file's `## Change Requests` table.
+
+2. Downstream ledger sweep: **reset to `todo`**, recording this Change Request's
+   ID in `DR-ID`: `spec-0014/TDD-0009`, `spec-0014/TDD-0035`,
+   `spec-0014/TDD-0036`. Their obligations do not move, but the case each one
+   names does, and their recorded evidence is of the old selector. Their fresh
+   evidence is recorded under `/qfai-implement`, where the implementation
+   predates the record and the falsifiability path applies. `TDD-0037` is added
+   at `todo` with this Change Request in `DR-ID`. No row is retired.
 
 ## Resolution
 
