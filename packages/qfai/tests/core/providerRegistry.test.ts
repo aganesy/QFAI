@@ -1,13 +1,9 @@
-// QFAI:SPEC-0012:TC-0012-0015
-// QFAI:SPEC-0012:TC-0012-0016
-// QFAI:SPEC-0012:TC-0012-0017
-// QFAI:SPEC-0012:TC-0012-0018
 import { describe, expect, it } from "vitest";
 
 import { ProviderRegistry, type BrowserProvider } from "../../src/core/providers/index.js";
 
 describe("ProviderRegistry", () => {
-  describe("provider registration (TC-0012-0015, TC-0012-0016)", () => {
+  describe("provider registration", () => {
     it("registers a Playwright adapter and retrieves it", () => {
       const registry = new ProviderRegistry();
       const playwrightProvider: BrowserProvider = {
@@ -45,7 +41,7 @@ describe("ProviderRegistry", () => {
     });
   });
 
-  describe("optional backend absent and fail-open (TC-0012-0017, TC-0012-0018)", () => {
+  describe("optional backend absent and fail-open", () => {
     it("returns undefined when no backend is registered", () => {
       const registry = new ProviderRegistry();
       expect(registry.get("playwright")).toBeUndefined();
