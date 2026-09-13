@@ -236,8 +236,10 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   removing the duplicate state from the rule, keeping its absent and missing
   conditions — at the shared decision first, then in both packs — while keeping the command's
   single-candidate read, and lists both unreachable branches for removal. No
-  rule or code changes until it is applied. It blocks the one ledger row whose
-  obligation names the duplicate state.
+  rule or code changes until it is applied, after the record that repairs
+  spec-0013's ledger. It blocks the ledger rows whose obligation names the
+  duplicate state, and proposes correcting a completed row's evidence that claims its run
+  covered that state.
 
 ## [1.12.0] - 2026-09-12
 

@@ -131,15 +131,26 @@ The narrowed wording keeps what each reader does with an absent pointer: the
 helper rejects it, and `qfai discussion list --active` rejects it only when
 there is no candidate or there are several, printing the one pack otherwise.
 
+**Where `spec-0013` says how `/qfai-sdd` finds its pack, it states Stage 0's
+fallback.** `REQ-0155` and the resolution line beneath it, `US-0013-0012`,
+`AC-0013-0020` and the first sentence of `BR-0013-0017` require the helper
+for every resolution today, while `qfai sdd preflight` resolves a set pointer
+through it and takes the newest pack, by the timestamp in its name, when the
+pointer is absent. Each is narrowed to say that. The product does not change
+there: the statements are brought to what Stage 0 already does, so the one
+reading of the absent pointer no statement records is not left behind when
+the duplicate state goes.
+
 Leaving the statements as they are makes `TC-0013-0029` read as a third
 uncovered, when the uncovered third is a state no test can construct.
 
 ## Blocked downstream items
 
-| Item                                                                   | Kind         | Why it depends on the artifact                                                                                     |
-| ---------------------------------------------------------------------- | ------------ | ------------------------------------------------------------------------------------------------------------------ |
-| `spec-0013/TDD-0024`                                                   | `ledger-row` | Carries `TC-0013-0029`, whose obligation names the duplicate state. Its evidence cannot discharge a third it names |
-| The two `spec-0013` rows `CR-20260913-0009` appends for `TC-0013-0029` | `ledger-row` | The same obligation. One of them owns the condition this record removes                                            |
+| Item                                                                               | Kind         | Why it depends on the artifact                                                                                     |
+| ---------------------------------------------------------------------------------- | ------------ | ------------------------------------------------------------------------------------------------------------------ |
+| `spec-0013/TDD-0024`                                                               | `ledger-row` | Carries `TC-0013-0029`, whose obligation names the duplicate state. Its evidence cannot discharge a third it names |
+| The `spec-0013` row `CR-20260913-0009` appends for `TC-0013-0029`'s absent pointer | `ledger-row` | The same obligation, narrowed                                                                                      |
+| The `spec-0013` `E2E` rows whose `US-Refs` names `US-0013-0012`                    | `ledger-row` | The story's absent-pointer outcome becomes Stage 0's newest-pack fallback                                          |
 
 - Not blocked by this CR: every other `spec-0013` row. `TDD-0023` and the row
   appended beside it for the file-time case are `CR-20260913-0009`'s: that
@@ -152,7 +163,7 @@ uncovered, when the uncovered third is a state no test can construct.
   tests an absent pointer with several candidates and names no duplicate state,
   so its obligation does not move when the criterion above it narrows. Its
   `Evidence` cell does name a duplicate pointer its run never covered, and
-  action 2 corrects that record without re-running the row.
+  action 2 files that record defect and repairs it without re-running the row.
 - Overlapping open CRs: `CR-20260913-0009`, which re-derives `spec-0013`'s ledger
   to its template: its columns, its seeded rows, and the split of every
   progressed row that runs several boundaries, `TDD-0024` and `TDD-0023` among
@@ -162,14 +173,18 @@ uncovered, when the uncovered third is a state no test can construct.
 
 - Specs: `spec-0010`, `spec-0013`, and `_policies` for `DR-0266`
 - Plans: `.qfai/specs/spec-0010/10_Plan.md`, `.qfai/specs/spec-0013/10_Plan.md`
-- Tests: `spec-0013/TDD-0024` and the rows `CR-20260913-0009` appends for
-  `TC-0013-0029` — `packages/qfai/tests/core/activeDiscussionPack.test.ts`,
-  whose header and `describe` name the duplicate state;
+- Tests: `spec-0013/TDD-0024`, the row `CR-20260913-0009` appends for
+  `TC-0013-0029`'s absent pointer, and the `E2E` rows for `US-0013-0012` —
+  `packages/qfai/tests/core/activeDiscussionPack.test.ts`, whose header and
+  `describe` name the duplicate state;
+  `packages/qfai/tests/e2e/spec0013ActivePointerSurfaceTypeE2E.test.ts`, whose
+  `US-0013-0012` case asserts the absent pointer is rejected;
   `packages/qfai/tests/integration/cli/commands/discussion.test.ts`, for the
   command's branch; and, through the `/qfai-atdd spec-0013` pass in action 5,
   every other ATDD-owned `spec-0013` row still owed when that pass runs, with
   `.qfai/evidence/atdd-spec-0013.md` and
-  `.qfai/evidence/coverage-depth-spec-0013.md`
+  `.qfai/evidence/coverage-depth-spec-0013.md`; and
+  `.qfai/evidence/atdd-spec-0010.md`, for `spec-0010`'s record-defect queue
 - Contracts: `none`
 - Schema: `none`
 - Upstream paths edited under this CR:
@@ -197,7 +212,8 @@ uncovered, when the uncovered third is a state no test can construct.
 
 Approve removing the duplicate state from the active-pointer rule, keeping its
 absent and missing conditions — in the shared decision `DR-0266`, in
-`spec-0010` and in `spec-0013` — and removing the two unreachable duplicate
+`spec-0010` and in `spec-0013` — stating Stage 0's newest-pack fallback where
+`spec-0013` says how `/qfai-sdd` finds its pack, removing the two unreachable duplicate
 branches, in the helper and in the command, with what exists only to serve
 them — and correcting `spec-0010/TDD-0017`'s evidence, which names the
 duplicate state its run never covered?
@@ -225,7 +241,10 @@ duplicate state its run never covered?
    command. **It keeps Stage 0's fallback too**: wherever a statement describes
    how `/qfai-sdd` finds its pack, it says an absent pointer leaves Stage 0 on
    the newest pack, so no rerun turns that fallback into a rejection. Neither
-   fallback changes, so no code, test or shipped guidance for either is edited.
+   fallback changes, so no code or shipped guidance for either is edited. The
+   one test that states the story's old absent-pointer outcome, the
+   `US-0013-0012` case in `spec0013ActivePointerSurfaceTypeE2E.test.ts`, is
+   rewritten under action 5.
 
 2. `AC-0010-0012`, `BR-0010-0012` and the two `10_Plan.md` lines that restate
    the rejection are edited by hand under this approval, and
@@ -239,9 +258,14 @@ duplicate state its run never covered?
    naming a missing pack, each beside several candidates.
    `/qfai-implement spec-0010`, which writes that cell, repairs it in place under
    this approval to what the run covered — `absent or missing currentId + multi-candidate` —
-   keeping its date, commit and reviewer attestation, and adds this record's ID
-   to `DR-ID`. The row is not re-run and its `Status` does not change, as the
-   drift protocol's record-defect drain repairs a record.
+   keeping its date, commit and reviewer attestation. The row is not re-run, its
+   `Status` does not change, and its `DR-ID` keeps `DR-0010-0006` alone, since
+   no reset happens. The defect is filed as one entry of `spec-0010`'s
+   record-defect queue, `## Record defects` in
+   `.qfai/evidence/atdd-spec-0010.md`, and this repair closes it, as the drift
+   protocol's drain closes an entry. The pack has no
+   `.qfai/evidence/implement-spec-0010.md`, so the queue lives in the ATDD file,
+   which the repair creates.
 
    **`confirm-only`
    because no `spec-0010` row changes identity**: a `re-derive` would run
@@ -249,10 +273,11 @@ duplicate state its run never covered?
    and every story's `E2E` row, and would migrate it, derive every row's tier
    and seed rows this record does not reach.
 
-3. `/qfai-sdd spec-0013`, mode `re-derive`, over the requirement line in
-   `01_Spec.md`, `US-0013-0012`, `AC-0013-0020`, `AC-0013-0021`, `BR-0013-0017`,
-   `TC-0013-0029`, and the restatements in `07_Decisions.md` and `10_Plan.md`:
-   each drops the duplicate state and keeps the missing pack. **Which
+3. The `spec-0013` statements are edited by hand under this approval, and
+   `/qfai-sdd spec-0013`, mode `confirm-only`, confirms them: the requirement
+   line in `01_Spec.md`, `US-0013-0012`, `AC-0013-0020`, `AC-0013-0021`,
+   `BR-0013-0017`, `TC-0013-0029`, and the restatements in `07_Decisions.md`
+   and `10_Plan.md`. Each drops the duplicate state and keeps the missing pack. **Which
    absent-pointer rule each keeps depends on whose reading it states.**
    `AC-0013-0021`, `BR-0013-0017` and `TC-0013-0029` state the helper's, which
    rejects an absent pointer. The two `01_Spec.md` lines that state the rule
@@ -265,46 +290,36 @@ duplicate state its run never covered?
    how `/qfai-sdd` finds its pack and require the helper for every resolution,
    so each says it of a set pointer and gives the same newest-pack fallback when
    the pointer is absent, still without reading file times. The rerun records
-   it as one row in `spec-0013/09_delta.md`'s
+   this Change Request as one row in `spec-0013/09_delta.md`'s
    `## Change Requests` table — `CR ID`, `Upstream artifact`, `Mode`,
    `Approved by`, `Applied at` — not as a `## Triage` row — and adds this
    record's ID to the `Related` field of `DR-0013-0002`, which lacks one, as
    step 1 does for `DR-0266`.
 
-   **This rerun is a `re-derive` because Phase 2b retires a row** (action 4),
-   and only Phase 2b writes a row's identity or deletes one.
+   **`confirm-only`, because no `spec-0013` row changes identity.** The narrowed
+   test case keeps both of the boundaries its rows own, so a `re-derive` would
+   run Phase 2b with nothing to write.
 
    **`CR-20260913-0009` is applied first.** It re-derives `spec-0013`'s ledger
-   to its template: the six columns it lacks, the `Integration` and `E2E` rows
-   Phase 2b owes, and the split of all thirteen progressed rows that run
-   several boundaries behind one `Selector` — `TDD-0019`, `TDD-0021`, `TDD-0022`
-   and `TDD-0024` among them — with the resets those splits owe. This rerun's
-   Phase 2b therefore meets nothing to migrate, seed or split beyond what
-   action 4 changes, and this record authorises no other ledger write. A
-   progressed row of that shape the rerun still meets is raised then as a
-   request of its own and left as it is until that request is approved; nothing
-   else in this plan waits on it.
+   to its template and splits `TDD-0024` into the missing-pack and
+   absent-pointer boundaries, seeding no row for the duplicate state, which no
+   test can construct. It also seeds the `E2E` rows for `US-0013-0012`. This
+   record's resets name the rows it leaves, and this record authorises no
+   other ledger write.
 
-4. Downstream ledger sweep for `TC-0013-0029`. `CR-20260913-0009` has split its
-   row by then: `TDD-0024` keeps the missing-pack boundary, and a row is
-   appended for an absent pointer and another for a pointer matching several
-   packs. With the duplicate state gone the test case states two conditions, so
-   this rerun's Phase 2b:
-   - **retires the row for a pointer matching several packs**, deleting it from
-     the ledger and recording the removal under `## Resolution` as
-     `spec-0013/TDD-NNNN` with
-     `no evidence — retired at Status = <status>, never executed`. No test can
-     construct that condition, so the row never ran, and a row retired at
-     `todo`, `blocked`, `red` or `exception` owes no evidence;
-   - keeps `TDD-0024` and the absent-pointer row on their boundaries. Each is
-     **reset to `todo`** with this CR's ID in `DR-ID` wherever it has left
-     `todo` by then: its obligation's wording changes, and an observation taken
-     against the three-condition wording does not describe it. The
-     absent-pointer row is named by that rule rather than by a `TDD-ID`, which
-     the repair allocates: the `spec-0013` row carrying `TC-0013-0029` whose
-     `Boundary` is the absent pointer.
+4. Downstream ledger sweep for `TC-0013-0029` and `US-0013-0012`. **Reset to
+   `todo`**, with this CR's ID in `DR-ID`, each of these rows wherever it has
+   left `todo` by then:
+   - `spec-0013/TDD-0024`, and the `spec-0013` row carrying `TC-0013-0029` whose
+     `Boundary` is the absent pointer. Their test case's wording changes, and an
+     observation taken against the three-condition wording does not describe
+     it;
+   - every `spec-0013` `E2E` row whose `US-Refs` names `US-0013-0012`. The
+     story's absent-pointer outcome becomes Stage 0's newest-pack fallback.
 
-   No other row is retired: the obligation survives, narrowed.
+   Those rows are named by the rule each line gives rather than by a `TDD-ID`,
+   which `CR-20260913-0009` allocates. No row is retired: every obligation
+   survives, narrowed.
 
 5. **In this order**, once the rerun above has written the ledger:
 
@@ -316,9 +331,12 @@ duplicate state its run never covered?
       absent-pointer row are `Integration` rows, whose tests that stage writes
       and `/qfai-implement` does not (`qfai-implement/SKILL.md`). It corrects the
       header and `describe` of `activeDiscussionPack.test.ts`, which still name
-      the duplicate state, and records the reset rows' handoff. Both suites keep
-      passing unchanged, because neither exercises a duplicate — no test could
-      construct one. **That invocation is not limited to these rows**: it takes
+      the duplicate state, and records the reset rows' handoff. It rewrites the
+      `US-0013-0012` case in `spec0013ActivePointerSurfaceTypeE2E.test.ts` that
+      asserts an absent pointer is rejected: under the narrowed story, Stage 0
+      takes the newest pack there, and only a pointer naming a missing pack is
+      rejected. The helper's own suites keep passing unchanged, because neither
+      exercises a duplicate — no test could construct one. **That invocation is not limited to these rows**: it takes
       up every ATDD-owned `spec-0013` row still owed when it runs — today
       `TDD-0016` to `TDD-0018`, and any row `CR-20260913-0009` seeded that its
       own pass left open — as that stage's ordinary forward work. It writes
