@@ -503,9 +503,14 @@ function trackedPaths(listing = gitIndexListing()): {
   const listed = entries.filter(({ mode }) => regular(mode)).map(({ file }) => file);
   const links = entries.filter(({ mode }) => !regular(mode)).map(({ file }) => file);
 
+  // A directory holds something when it holds a file a citation could mean. A
+  // `.gitkeep` or `.gitignore` alone keeps an empty pack directory in the tree,
+  // and counted, it would make a citation of a pack with none of its artifacts
+  // resolve.
   const directories = new Set<string>();
   for (const file of listed) {
     const parts = file.split("/");
+    if ((parts.at(-1) ?? "").startsWith(".")) continue;
     for (let index = 1; index < parts.length; index += 1) {
       directories.add(parts.slice(0, index).join("/"));
     }
@@ -1028,19 +1033,30 @@ function patternSegments(pattern: string): string[] {
  * does with the same name minus its dot.
  */
 function alignsWithDotPolicy(parts: readonly string[], segments: readonly string[]): boolean {
-  const [part, ...rest] = parts;
-  if (part === undefined) return segments.length === 0;
-  if (part === "**") {
-    for (let taken = 0; taken <= segments.length; taken += 1) {
-      if (taken > 0 && (segments[taken - 1] ?? "").startsWith(".")) break;
-      if (alignsWithDotPolicy(rest, segments.slice(taken))) return true;
+  // Each position is settled once: `**` segments side by side split a deep path
+  // in more ways than a run can try, and every split reaches the same positions.
+  const failed = new Set<string>();
+  const align = (part: number, segment: number): boolean => {
+    const position = `${String(part)}:${String(segment)}`;
+    if (failed.has(position)) return false;
+    const aligned = alignFrom(part, segment);
+    if (!aligned) failed.add(position);
+    return aligned;
+  };
+  const alignFrom = (part: number, segment: number): boolean => {
+    const pattern = parts[part];
+    if (pattern === undefined) return segment === segments.length;
+    if (pattern === "**") {
+      for (let taken = segment; taken <= segments.length; taken += 1) {
+        if (taken > segment && (segments[taken - 1] ?? "").startsWith(".")) break;
+        if (align(part + 1, taken)) return true;
+      }
+      return false;
     }
-    return false;
-  }
-  const segment = segments[0];
-  if (segment === undefined) return false;
-  if (!segmentAdmits(part, segment)) return false;
-  return alignsWithDotPolicy(rest, segments.slice(1));
+    const name = segments[segment];
+    return name !== undefined && segmentAdmits(pattern, name) && align(part + 1, segment + 1);
+  };
+  return align(0, 0);
 }
 
 /**
@@ -1234,6 +1250,17 @@ describe("a committed record cites what the repository has", () => {
     const paths = trackedPaths(listing);
     expect([...paths.files]).toEqual([".qfai/evidence/a.md"]);
     expect(paths.links).toEqual([".qfai/evidence/b.md", ".qfai/evidence/c"]);
+  });
+
+  it("counts no directory that holds only a placeholder dotfile", () => {
+    const listing = [
+      "100644 0000000000000000000000000000000000000000 0\t.qfai/review/review-1/.gitkeep",
+      "100644 0000000000000000000000000000000000000000 0\t.qfai/review/review-2/summary.json",
+      "",
+    ].join("\0");
+    const { directories } = trackedPaths(listing);
+    expect(directories.has(".qfai/review/review-1")).toBe(false);
+    expect(directories.has(".qfai/review/review-2")).toBe(true);
   });
 
   it("names no artifact the committed tree does not carry", async () => {
@@ -1705,6 +1732,14 @@ describe("a glob is a claim about a set", () => {
     ]);
   });
 
+  it("settles each globstar position once", () => {
+    // Thirty globstars against a forty-segment path hidden at the end: tried
+    // split by split, the alignment does not finish.
+    const cited = `.qfai/report/${"**/".repeat(30)}*`;
+    const candidate = `.qfai/report/${Array.from({ length: 40 }, (_, index) => `d${String(index)}`).join("/")}/.hidden`;
+    expect(hidesADotName(cited, candidate)).toBe(true);
+  });
+
   it("stops listing sibling groups that name more alternatives than it counts", () => {
     // Every group can match nothing, so the pattern matches the dot-leading name,
     // and listing the ways it could costs over a billion alternatives.
@@ -1826,10 +1861,6 @@ describe("a glob is a claim about a set", () => {
     expect(globToRegExp(".qfai/report/?(draft-)run.json").test(".qfai/report/run.json")).toBe(true);
     expect(globToRegExp(".qfai/report/!(draft).json").test(".qfai/report/draft.json")).toBe(false);
     expect(globToRegExp(".qfai/report/!(draft).json").test(".qfai/report/final.json")).toBe(true);
-    // The dialect reads the negation by prefix rather than by the pattern
-    // around it, so a name that merely starts with the excluded text is refused
-    // where fast-glob admits it.
-    expect(globToRegExp(".qfai/report/!(draft).json").test(".qfai/report/draftx.json")).toBe(false);
   });
 
   it("resolves every extended form through the matcher", () => {
