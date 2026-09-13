@@ -6,6 +6,17 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **The prototyping preflight refuses a screen with no primary task** (#1698).
+  The audit lane reported an empty `primary_tasks` as `QFAI-AUD-001`, but
+  `qfai prototyping preflight` never read the field, so the stage started on a
+  contract the lane refused. The preflight's UI contract check now fails and
+  names each screen that has no primary task.
+
+  The primary-task obligations also gained the cases they named and lacked: the
+  preflight refusing, and a structured task missing `label`. Before these
+  cases, dropping `label` from the required keys, or letting the stage start,
+  left every case passing.
+
 - **The `primary_tasks` band drift is recorded where the Drift Protocol looks
   for it** (#1621). `QFAI-AUD-020` lost its lower bound as product work, and
   `spec-0013` still specifies the band: its test case says one task warns and
