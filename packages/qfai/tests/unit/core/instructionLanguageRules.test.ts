@@ -57,7 +57,12 @@ describe("generated async guidance preserves propagation and the whole floor", (
       path.join(REPO_ROOT, ".github/instructions", CODE_REVIEW),
       "utf-8",
     );
-    expect(current.replace(/\r\n/g, "\n")).toContain(block);
+    const normalized = current.replace(/\r\n/g, "\n");
+    expect(normalized.match(/^TypeScript specific checks:$/gm)).toHaveLength(1);
+    const start = normalized.indexOf("TypeScript specific checks:\n");
+    const end = normalized.indexOf("\nLibrary/CLI compatibility checks:", start);
+    expect(end).toBeGreaterThan(start);
+    expect(normalized.slice(start, end).trimEnd()).toBe(block.trimEnd());
   });
 });
 
