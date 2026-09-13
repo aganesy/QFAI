@@ -15,6 +15,23 @@ A **kept failure** is either:
 Score every kept failure whether or not handling code exists yet. Declared
 valid behavior always remains scored; failure-side bullets apply only to kept failures.
 
+A type or schema excludes a failure only after the value has passed that type
+or schema's validation. Untrusted input still requires boundary validation and
+rejection under the safety floor. If a specification or contract names a failure
+that conflicts with a type or schema, record DRIFT and route it to the upstream
+owner. Do not erase the declared obligation or mark it n/a while that conflict
+is unresolved.
+
+Map every kept CON-API or CON-DB failure to a covering US/TC row in the existing
+matrix for the spec's owned obligations: name the contract ID and failure clause,
+and cite the appropriate API
+or Integration assertion and evidence in that row or its accompanying notes.
+Happy-path annotations alone do not cover the failure. If no existing US/TC row
+owns it, record DRIFT and route it to the upstream spec or contract owner before
+a clean coverage verdict. No additional table or column is required.
+Sibling obligations follow the existing cross-spec ownership rule; do not invent
+a local US/TC row to discharge them.
+
 ## Where the matrix lives
 
 Re-running `/qfai-atdd` recomputes which cells are `❌`. It does not recompute
@@ -121,7 +138,9 @@ case's assertion can fail. A test that cannot fail satisfies every category.
 ## Coverage Depth Matrix (テンプレート)
 
 Reviewers and test-design-analysts MUST produce this matrix for each spec under review.
-Mark each cell: ✅ covered, ⚠️ partial, ❌ missing.
+Mark applicable cells: ✅ covered, ⚠️ partial, ❌ missing. Use `n/a` only where
+the obligation is absent, including an Error path or Negative case with no kept
+failure; an uncovered obligation remains ❌.
 
 **Every section above is scored.** Sections 1–6 and 8 are matrix columns;
 section 7 is the business rule table that follows the matrix. A section with no
@@ -135,10 +154,10 @@ ledger's evidence payload, not the matrix artifact that the PASS/REVISE criteria
 below read. Write the matrix once, in its own file, and link it from the stage
 evidence.
 
-| US/TC ID | Equivalence partitions | Normal path | Error path | Edge cases | Boundary values | Special values | State transitions | Combinatorial | Oracle strength | Status |
-| -------- | ---------------------- | ----------- | ---------- | ---------- | --------------- | -------------- | ----------------- | ------------- | --------------- | ------ |
-| US-0001  | ✅/⚠️/❌               | ✅/⚠️/❌    | ✅/⚠️/❌   | ✅/⚠️/❌   | ✅/⚠️/❌        | ✅/⚠️/❌       | ✅/⚠️/❌          | ✅/⚠️/❌      | ✅/⚠️/❌        | —      |
-| TC-0001  | ✅/⚠️/❌               | ✅/⚠️/❌    | ✅/⚠️/❌   | ✅/⚠️/❌   | ✅/⚠️/❌        | ✅/⚠️/❌       | ✅/⚠️/❌          | ✅/⚠️/❌      | ✅/⚠️/❌        | —      |
+| US/TC ID | Equivalence partitions | Normal path | Error path   | Edge cases | Boundary values | Special values | State transitions | Combinatorial | Oracle strength | Status |
+| -------- | ---------------------- | ----------- | ------------ | ---------- | --------------- | -------------- | ----------------- | ------------- | --------------- | ------ |
+| US-0001  | ✅/⚠️/❌               | ✅/⚠️/❌    | ✅/⚠️/❌/n/a | ✅/⚠️/❌   | ✅/⚠️/❌        | ✅/⚠️/❌       | ✅/⚠️/❌          | ✅/⚠️/❌      | ✅/⚠️/❌        | —      |
+| TC-0001  | ✅/⚠️/❌               | ✅/⚠️/❌    | ✅/⚠️/❌/n/a | ✅/⚠️/❌   | ✅/⚠️/❌        | ✅/⚠️/❌       | ✅/⚠️/❌          | ✅/⚠️/❌      | ✅/⚠️/❌        | —      |
 
 ### Business rule coverage (§7)
 
@@ -155,7 +174,7 @@ an unjustified ❌ here is the same REVISE.
 
 | BR ID   | Positive case | Negative case | Conditional branches | Covering TC | Status |
 | ------- | ------------- | ------------- | -------------------- | ----------- | ------ |
-| BR-0001 | ✅/⚠️/❌      | ✅/⚠️/❌      | ✅/⚠️/❌/n/a         | TC-0001     | —      |
+| BR-0001 | ✅/⚠️/❌      | ✅/⚠️/❌/n/a  | ✅/⚠️/❌/n/a         | TC-0001     | —      |
 
 ### Evaluation criteria
 

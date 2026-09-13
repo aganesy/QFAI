@@ -1,19 +1,7 @@
 /**
- * The checklist has eight sections and the matrix scored six of them.
- *
- * `test-case-depth-checklist.md` is binding on reviewers, but the completion
- * gate is stated over matrix cells: `/qfai-atdd`'s reviewer gate and its
- * not-done criterion both read "no unjustified ❌ cells". Equivalence
- * partitioning (§1) and business rule coverage (§7) had no column, so neither
- * could ever be ❌, neither could ever need a justification, and a spec with no
- * partition analysis and no `BR-*` positive/negative pairing scored a clean
- * matrix.
- *
- * §7 additionally cannot be a column: it is keyed per `BR-*`, and one rule
- * spans several `TC`s. It gets its own table in the same committed file.
- *
- * These tests pin the scored set against the section set, so a section added
- * later without a cell fails here rather than passing silently forever.
+ * Sections 1–6 and 8 map to scored US/TC columns. Section 7 maps to a
+ * separate BR table in the same committed artifact. Failure coverage applies
+ * to kept failures; an absent failure obligation is represented by n/a.
  */
 
 import { readFile } from "node:fs/promises";
@@ -127,6 +115,14 @@ describe.each(TREES)("%s", (tree) => {
     expect(checklist).toContain("for partial coverage, or `n/a`.");
     expect(checklist).toContain("an unconditional `BR-*` has no branches to cover");
     expect(checklist).toContain("templated value of `Conditional branches`");
+    expect(checklist).toContain("Mark applicable cells: ✅ covered, ⚠️ partial, ❌ missing");
+    for (const row of ["US-0001", "TC-0001"]) {
+      const cells = headerCells(await read(tree, CHECKLIST), row);
+      expect(cells[3]).toBe("✅/⚠️/❌/n/a");
+      expect(cells[2]).toBe("✅/⚠️/❌");
+      expect(cells[4]).toBe("✅/⚠️/❌");
+    }
+    expect(headerCells(await read(tree, CHECKLIST), "BR-0001")[2]).toBe("✅/⚠️/❌/n/a");
   });
 
   it("scopes the business rule table to active declarations", async () => {
@@ -189,7 +185,7 @@ describe.each(TREES)("%s", (tree) => {
     for (const rel of [ANALYST, CATALOG]) {
       const text = flat(await read(tree, rel));
       expect(text).toContain(
-        "verify that test cases exist for: equivalence partitions, normal path, error path, edge cases, boundary values",
+        "verify applicable coverage for: equivalence partitions, normal path, error path, edge cases, boundary values",
       );
       expect(text).toContain(
         "the business rule coverage table under it when the spec declares `BR-*`. Flag any ❌ cells in either as gaps.",
@@ -237,5 +233,57 @@ describe.each(TREES)("%s", (tree) => {
       analyst.includes("Failure-side coverage follows the checklist's kept-failure scope"),
     ).toBe(true);
     expect(analyst).not.toContain("Test cases covering only normal (happy) paths are INCOMPLETE");
+    expect(analyst).toContain("require error/boundary failures only for kept failures");
+    expect(analyst).toContain(
+      "at least one positive test case and negative cases only for kept failures",
+    );
+    expect(analyst).not.toContain("at least one positive and one negative test case");
+    const skill = flat(await read(tree, SKILL));
+    expect(skill).toContain(
+      "normal-path-only coverage is incomplete only where a kept failure is uncovered",
+    );
+  });
+
+  it("maps every kept contract failure to an existing scored row and failure assertion", async () => {
+    const checklist = flat(await read(tree, CHECKLIST));
+    expect(checklist).toContain("Map every kept CON-API or CON-DB failure to a covering US/TC row");
+    expect(checklist).toContain("name the contract ID and failure clause");
+    expect(checklist).toContain("API or Integration assertion and evidence");
+    expect(checklist).toContain("Happy-path annotations alone do not cover the failure");
+    expect(checklist).toContain("If no existing US/TC row owns it, record DRIFT");
+    expect(checklist).toContain("before a clean coverage verdict");
+  });
+
+  it("carries governing specs, referenced contracts and relevant types into production and review", async () => {
+    for (const card of [ANALYST, "assistant/agents/qa-gatekeeper.md"]) {
+      const raw = await read(tree, card);
+      const inputs = flat(raw.split("## Inputs you must read")[1]?.split("\n## ")[0] ?? "");
+      expect(inputs).toContain("types and schemas governing the reviewed values");
+      expect(inputs).toContain("CON-API");
+      expect(inputs).toContain("CON-DB");
+      expect(inputs).toContain("04_Business-Rules.md");
+      expect(inputs).toContain("06_Test-Cases.md");
+      expect(inputs).toContain("QFAI-CONTRACT-REF");
+      expect(inputs).toContain("conditional");
+    }
+    expect(flat(await read(tree, ANALYST))).not.toContain(
+      "in `qfai-implement`'s `plan` phase, and there only",
+    );
+    expect(flat(await read(tree, SKILL))).toContain(
+      "referenced contracts and relevant types/schemas for kept-failure judgments",
+    );
+  });
+
+  it("excludes failures only after validation and routes declared conflicts upstream", async () => {
+    const checklist = flat(await read(tree, CHECKLIST));
+    expect(checklist).toContain("only after the value has passed that type or schema's validation");
+    expect(checklist).toContain("Untrusted input still requires boundary validation and rejection");
+    expect(checklist).toContain(
+      "If a specification or contract names a failure that conflicts with a type or schema",
+    );
+    expect(checklist).toContain("record DRIFT and route it to the upstream owner");
+    expect(checklist).toContain(
+      "Do not erase the declared obligation or mark it n/a while that conflict is unresolved",
+    );
   });
 });

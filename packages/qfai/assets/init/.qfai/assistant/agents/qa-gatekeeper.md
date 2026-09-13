@@ -328,8 +328,9 @@ and written to `.qfai/evidence/coverage-depth-<spec-id>.md` — a committed gove
   the matrix under both Mandatory Outputs and Not-done criteria. A missing matrix is a REVISE there,
   and so is one whose ❌ cells are unjustified.
 - Do NOT evaluate it against an SDD spec pack that has no tests yet. On an SDD review cycle,
-  assess depth directly from `06_Test-Cases.md` (normal path plus error/boundary coverage per
-  AC) and record any gap as a finding, without requiring the matrix format.
+  assess depth directly from `06_Test-Cases.md` (normal path and declared valid
+  boundaries per AC, plus failures only for kept failures) and record any gap as
+  a finding, without requiring the matrix format.
 
 ## Inputs you must read
 
@@ -345,6 +346,16 @@ and written to `.qfai/evidence/coverage-depth-<spec-id>.md` — a committed gove
   `.qfai/assistant/constitution/constitution.md` Article III.)
 - .qfai/assistant/catalog/test-layers.md
 - .qfai/specs/spec-\*/09_delta.md
+- Governing `01_Spec.md`, `02_User-stories.md`, `03_Acceptance-Criteria.md`,
+  `04_Business-Rules.md` and `06_Test-Cases.md` — **conditional**: required for
+  coverage review, not an unrelated item observation or Skeleton gate.
+- Referenced CON-API and CON-DB contracts under configured `paths.contractsDir`
+  — **conditional**: required for coverage review when `Contract-Refs` in
+  `04_Business-Rules.md` or `QFAI-CONTRACT-REF` in `01_Spec.md` names them.
+  Unreferenced contracts are not missing required inputs.
+- Relevant types and schemas governing the reviewed values — **conditional**:
+  required for a kept-failure or n/a judgment that depends on them. Read the
+  actual validation boundary; a type assertion does not prove validation.
 - `.qfai/specs/spec-*/tdd/test-list.md` — the ledger row under review
 - **The per-item RED/GREEN evidence for the row under review — in the file its
   `Layer` owns, and only that one.** `.qfai/evidence/atdd-<spec-id>.md`, under

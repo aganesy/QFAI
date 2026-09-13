@@ -30,7 +30,7 @@ defines the matrix layout nor ships an artifact that holds it, and the tests do 
 
 From the ATDD stage onward:
 
-- For each US/TC, verify that test cases exist for: equivalence partitions, normal path, error path, edge cases, boundary values, special values, state transitions, and combinatorial scenarios.
+- For each US/TC, verify applicable coverage for: equivalence partitions, normal path, error path, edge cases, boundary values, special values, state transitions, and combinatorial scenarios. Declared valid cases remain required; failure-side categories apply only to kept failures.
 - Produce the Coverage Depth Matrix as a required deliverable, plus the business rule coverage table under it when the spec declares `BR-*`. Flag any ❌ cells in either as gaps.
 - Failure-side coverage follows the checklist's kept-failure scope. Return
   REVISE for a normal-only row only when an applicable obligation is uncovered.
@@ -45,13 +45,15 @@ Exception — `qfai-implement`'s `plan` phase:
 
 During SDD:
 
-- Require normal path plus error/boundary coverage per AC, read directly from `06_Test-Cases.md`.
+- Require normal path and declared valid boundaries per AC; require error/boundary
+  failures only for kept failures. Read directly from `06_Test-Cases.md`.
 - Record any further depth gap (special values, state transitions, combinatorial) as a finding.
 - Do NOT produce the matrix, and do NOT return REVISE solely because the matrix is absent or because
   special / state-transition / combinatorial cases are not yet enumerated.
 
-At both stages: when business rules (BR-\*) exist, verify each BR has at least one positive and one
-negative test case. From the ATDD stage onward that verdict is recorded per BR in the business rule
+At both stages: when business rules (BR-\*) exist, verify each BR has at least one
+positive test case and negative cases only for kept failures. From the ATDD stage
+onward that verdict is recorded per BR in the business rule
 coverage table under the Coverage Depth Matrix, which has one row per rule — a `US/TC` row cannot
 carry it.
 
@@ -76,6 +78,9 @@ carry it.
 - .qfai/specs/spec-\*/06_Test-Cases.md
 - .qfai/contracts/api/\*\* (CON-API) — **conditional**, see below: only where the spec under review references `CON-API-*`
 - .qfai/contracts/db/\*\* (under the configured `paths.contractsDir`, not always this default) — **conditional**: only where the spec references `CON-DB-*`; where it does not, absence is not a gap
+- Relevant types and schemas governing the reviewed values — **conditional**:
+  required for coverage judgments that depend on a type or schema. Include the
+  actual validation boundary, not a type assertion alone.
 
 A spec references a contract from either of two places: `Contract-Refs` in
 `04_Business-Rules.md`, and a `QFAI-CONTRACT-REF` line in `01_Spec.md`. Read
@@ -88,11 +93,10 @@ rows an execution ledger happens to hold: a coverage-target `TC-*` whose row was
 the rows. `US-*` seeds no ledger row, so its absence from one is never a missing-row finding — it is read for layer ownership, and
 discharged by the acceptance tests' annotations.
 
-`.qfai/contracts/api/\*\*` joins that obligation set **only where it applies**: in `qfai-implement`'s `plan` phase, and there only
-for a spec whose `CON-API-*` an `API` row's `CON-API-Refs` can cite. It is not a required input of this card in general. A spec
-with no API surface is normal, and a fresh install ships no `.qfai/contracts/api/` at all, so its absence is **not** a missing
-required source artifact and must not trip the Stop condition below — not here, and not in `qfai-sdd`'s `design` phase or
-`qfai-atdd`'s blocking `coverage` phase, where this same card is routed against specs that may have no API contract at all.
+Referenced API contracts join the obligation set in planning, SDD and ATDD
+coverage review, including matrix production. Read them under the configured
+`paths.contractsDir`. A spec with no API surface is normal; absent unreferenced
+contracts are not missing required inputs and must not trip the Stop condition.
 
 ## Deliverables
 
