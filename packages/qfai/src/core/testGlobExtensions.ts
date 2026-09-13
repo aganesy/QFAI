@@ -8,6 +8,15 @@
  * a language the project selected on purpose is not dropped.
  */
 
+/**
+ * Whether a glob entry withdraws files. A leading `!` does, except where it opens
+ * a negated extglob group, which selects: `!(fixtures)/*.py` is a selector.
+ */
+function isExclusion(glob: string): boolean {
+  const trimmed = glob.trimStart();
+  return trimmed.startsWith("!") && !trimmed.startsWith("!(");
+}
+
 /** Characters an extension may carry, and the most variants a class expands to. */
 const EXTENSION_TOKEN = /^[A-Za-z0-9_+-]+$/;
 const MAX_CLASS_VARIANTS = 32;
@@ -66,7 +75,7 @@ export function globExtensions(globs: readonly string[]): string[] {
     }
   };
   for (const glob of globs) {
-    if (glob.startsWith("!")) continue;
+    if (isExclusion(glob)) continue;
     const braces = /\.\{([^}]+)\}$/.exec(glob);
     if (braces) {
       pushAlternatives((braces[1] ?? "").split(","));
@@ -102,7 +111,7 @@ export function globExtensions(globs: readonly string[]): string[] {
 export function namedTestFileMatcher(globs: readonly string[]): (fileName: string) => boolean {
   const patterns: RegExp[] = [];
   for (const glob of globs) {
-    if (glob.startsWith("!")) continue;
+    if (isExclusion(glob)) continue;
     const last = glob.split("/").at(-1) ?? "";
     if (!/[^*?.]/.test(last)) continue;
     const source = segmentPattern(last);
@@ -169,7 +178,7 @@ function alternation(alternatives: readonly string[]): string | null {
  */
 export function namesExtensionlessSource(globs: readonly string[]): boolean {
   return globs.some((glob) => {
-    if (glob.startsWith("!")) return false;
+    if (isExclusion(glob)) return false;
     const last = glob.split("/").at(-1) ?? "";
     return last.length > 0 && !last.includes(".") && !/^\*+$/.test(last);
   });

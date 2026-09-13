@@ -219,6 +219,48 @@ describe("spec-0004 validateTestTodoStubs", () => {
   // nothing for it. A raw-length check read that as configured, so the scan ran
   // over zero files and reported nothing at all — the same silent non-result as
   // the empty array, reached through a value that looks configured.
+  // Let through, the refusal ended the whole validate run under `tdd` and
+  // `full`, and no finding was printed.
+  it("emits QFAI-TEST-002 when the glob matcher refuses testFileGlobs", async () => {
+    const root = await newTempDir();
+    await writeTestFile(
+      root,
+      "tests/a.test.ts",
+      'import { it } from "vitest";\nit' + TODO + '("x");\n',
+    );
+    const glob = `tests/${String.fromCharCode(0)}/*.test.ts`;
+
+    const issues = await validateTestTodoStubs(root, configWith({}, { testFileGlobs: [glob] }));
+
+    expect(issues.map((entry) => entry.code)).toEqual(["QFAI-TEST-002"]);
+    expect(issues[0]?.severity).toBe("info");
+    expect(issues[0]?.file).toBe("qfai.config.yaml");
+    expect(issues[0]?.message).toContain(`The glob ${JSON.stringify(glob)} holds a NUL byte`);
+    expect(issues[0]?.message).toContain("a clean result is not evidence");
+  });
+
+  it("still reports the stubs a readable pattern selects beside a refused one", async () => {
+    const root = await newTempDir();
+    await writeTestFile(
+      root,
+      "tests/a.test.ts",
+      'import { it } from "vitest";\nit' + TODO + '("x");\n',
+    );
+    const refused = `tests/${String.fromCharCode(0)}/*.test.ts`;
+
+    const issues = await validateTestTodoStubs(
+      root,
+      configWith({}, { testFileGlobs: ["tests/**/*.test.ts", refused] }),
+    );
+
+    const codes = issues.map((entry) => entry.code);
+    expect(codes).toContain("QFAI-TEST-001");
+    expect(codes).toContain("QFAI-TEST-002");
+    const refusal = issues.find((entry) => entry.code === "QFAI-TEST-002");
+    expect(refusal?.message).toContain("could not read part of");
+    expect(refusal?.message).toContain(JSON.stringify(refused));
+  });
+
   it("emits QFAI-TEST-002 when testFileGlobs holds only blank entries", async () => {
     const root = await newTempDir();
     await writeTestFile(
@@ -570,6 +612,21 @@ describe("the ATDD gate's file selection", () => {
     });
 
     expect(issues.filter((issue) => issue.code === "QFAI-TEST-002")).toEqual([]);
+  });
+
+  it("reads a leading negated extglob as a selector", async () => {
+    const root = await newTempDir();
+    const config = atddConfig(["!(fixtures)/*/tests/**/*.zig"]);
+    // `!(` opens a group that selects every directory but the one it names, so
+    // the language it names is the project's, and a suite in it is reported.
+    await writeTestFile(root, "packages/checkout/tests/integration/pay.zig", 'test "pays" {}\n');
+
+    const issues = await validateTestTodoStubs(root, config, {
+      globs: atddAcceptanceTestGlobs(root, config, STUB_SOURCE_FILE_PATTERN),
+      fileFilter: atddAcceptanceLayerFilter(root, config),
+    });
+
+    expect(issues.map((issue) => issue.code)).toContain("QFAI-TEST-002");
   });
 
   it("keeps a file a test-name glob selects whatever its extension", async () => {
