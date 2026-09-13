@@ -14,7 +14,10 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   screen already puts the installed design system second. The ladder now has
   seven rungs. The failure paths the code keeps are where untested failures
   concentrate, so their unit coverage is now a floor item the ladder never
-  removes. Both changes are made in the shipped copy as well.
+  removes. The floor also defines a trust boundary (#1803): wherever a value
+  arrives from a caller or a source the code does not control, which includes a
+  published library's exported function and a plugin or tenant context, not
+  process entry alone. All three changes are made in the shipped copy as well.
 
 - **A legacy ledger outside the obligation-column protection is reported**
   (#1663). A seeded `E2E` or `API` row has `TC-Refs` forbidden to it, so the

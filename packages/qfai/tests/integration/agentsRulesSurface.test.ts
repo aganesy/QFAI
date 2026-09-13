@@ -243,6 +243,8 @@ describe("cross-AI rules surface (.agents/rules/ master)", () => {
         /standard library/i,
         /already-installed dependency/i,
         /failures the code retains/i,
+        /published library.s exported function/i,
+        /plugin or tenant context/i,
         /trust boundary/i,
         /accessibility/i,
         /SIMPLIFIED:/,
