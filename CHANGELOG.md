@@ -76,8 +76,8 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   rows' evidence, and reports its sessions in its output.
 
   A session between agents reaches none of the four on its own. Its budget ends
-  the rounds between agents, and the decisions still open go to the user, who
-  ends it — which the primitive said the other way round, so an agent could
+  the rounds between agents, and every decision the user has not settled goes to
+  the user, the ones the agents agreed on included, and the user ends it — which the primitive said the other way round, so an agent could
   terminate a session before the user saw what it escalated.
 
 ### Fixed

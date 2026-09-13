@@ -246,6 +246,11 @@ describe.each(TREES)("%s — the execution stages record their sessions", (tree)
       "**Every one, because one invocation may process rows with different owners.**",
     );
     expectPhrase(body, "identical heading, identical rows, written in the same edit");
+    // Copies written together can still part later, and each would pass alone.
+    expectPhrase(
+      body,
+      "**where this invocation's block went into more than one file, the gate also compares every copy and requires them identical**",
+    );
   });
 
   it.each(STAGES)("%s tells its gate to read every row", async (skill) => {
@@ -347,7 +352,12 @@ describe.each(TREES)("%s — the execution stages record their sessions", (tree)
       body,
       "**and the closing answer quoted under the table beside that row's `Session`**",
     );
-    expectPhrase(body, "`Lookups` none in flight and `Open` 0. Article X, rule 6");
+    // A frontier left open with nothing in the register is a session that
+    // dropped nodes, so a no-question row owes an empty frontier as well.
+    expectPhrase(
+      body,
+      "`Frontier` empty, `Lookups` none in flight and `Open` 0. Article X, rule 6",
+    );
     // The mode reached nobody, so a reply recorded under the row is one nobody
     // gave, and the count checks alone would let it through.
     expectPhrase(
