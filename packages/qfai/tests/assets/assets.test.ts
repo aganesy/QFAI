@@ -467,7 +467,6 @@ describe("assets guardrails", () => {
     );
   });
 
-  // QFAI:SPEC-0014:TC-0014-0003
   it("keeps qfai-verify fix-until-PASS contract", async () => {
     const skillPath = path.join(templateQfaiDir, "assistant", "skills", "qfai-verify", "SKILL.md");
     const content = await readFile(skillPath, "utf-8");
@@ -479,7 +478,6 @@ describe("assets guardrails", () => {
     expect(content).toContain("If failing, produce an actionable fix list");
   });
 
-  // QFAI:SPEC-0014:TC-0014-0007
   it("keeps qfai-verify evidence summary contract", async () => {
     const skillPath = path.join(templateQfaiDir, "assistant", "skills", "qfai-verify", "SKILL.md");
     const content = await readFile(skillPath, "utf-8");
