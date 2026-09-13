@@ -947,6 +947,19 @@ describe("QFAI-TDDLIST-011", () => {
       });
     });
   }
+
+  it("states the case the content address is checked in", async () => {
+    // The form is checked case-sensitively, so a correction printing
+    // `working-tree+<sha256>` sends the author back with the same value.
+    await withProject(async (root) => {
+      const evidence = `RED:fail GREEN:pass ORACLE:proved REV:working-tree+${CONTENT_HASH.toUpperCase()} -> ${ANCHOR}`;
+      await runOn(root, ledger([{ status: "done", evidence }]));
+      const issues = await validateTddList(root, defaultConfig);
+      const found = issues.find((issue) => issue.code === "QFAI-TDDLIST-011");
+      expect(found?.suggested_action).toContain("working-tree+<64 lowercase hex>");
+      expect(found?.suggested_action).not.toContain("working-tree+<sha256>");
+    });
+  });
 });
 
 describe("QFAI-TDDLIST-008", () => {
@@ -3244,7 +3257,9 @@ result, so the assertion cannot be tightened without drift.
       );
       const issues = await validateTddList(root, defaultConfig);
       const found = issues.find((i) => i.code === "QFAI-TDDLIST-008");
-      expect(found?.message).toContain("Revision naming a git rev or working-tree+<sha256>");
+      expect(found?.message).toContain(
+        "Revision naming a git rev or working-tree+<64 lowercase hex>",
+      );
     });
   });
 
