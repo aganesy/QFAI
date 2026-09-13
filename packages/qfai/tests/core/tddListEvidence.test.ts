@@ -1928,6 +1928,70 @@ describe("QFAI-TDDLIST-008", () => {
     });
   });
 
+  it("recomputes each attempt's round review pack seal from the pack it names", async () => {
+    // The pair is left out of every audited subject, so recomputing the seal is
+    // the only thing that sees a pack edited after its attempt closed.
+    await withProject(async (root) => {
+      const first = ".qfai/review/review-20260101T000000000";
+      const second = ".qfai/review/review-20260101T010000000";
+      for (const [pack, verdict] of [
+        [first, "REVISE"],
+        [second, "PASS"],
+      ] as const) {
+        await mkdir(path.join(root, pack), { recursive: true });
+        await writeFile(
+          path.join(root, pack, "R01_completion-reviewer.md"),
+          `Result: ${verdict}\n`,
+        );
+      }
+      const evidence = completeEntry("Unit").replace(
+        "- Refactor verify command: npm test",
+        [
+          "- Round 1: reviewer verdict (attempt 1): REVISE — the assertion names no boundary",
+          `- Round 1: Review pack (attempt 1): ${first}`,
+          `- Round 1: Review pack seal (attempt 1): sha256:${await packSeal(root, first)}`,
+          "- Round 1: reviewer verdict (attempt 2): PASS",
+          `- Round 1: Review pack (attempt 2): ${second}`,
+          `- Round 1: Review pack seal (attempt 2): sha256:${"b".repeat(64)}`,
+          "- Refactor verify command: npm test",
+        ].join("\n"),
+      );
+      const issues = await runIssuesOn(
+        root,
+        ledger([{ status: "done", evidence: IMPLEMENT_POINTER }]),
+        { ".qfai/evidence/implement-spec-0001.md": evidence },
+      );
+      const messages = issues.map((issue) => issue.message).join("\n");
+      expect(messages).toContain("Round 1: Review pack seal (attempt 2) matching pack contents");
+      expect(messages).not.toContain(
+        "Round 1: Review pack seal (attempt 1) matching pack contents",
+      );
+    });
+  });
+
+  it("reports a round review pack recorded without its seal", async () => {
+    // Without the seal nothing says whether the pack still holds what was
+    // reviewed, and the pair is outside every audited subject.
+    await withProject(async (root) => {
+      const evidence = completeEntry("Unit").replace(
+        "- Refactor verify command: npm test",
+        [
+          "- Round 1: reviewer verdict: PASS",
+          "- Round 1: Review pack: .qfai/review/review-20260101T000000000",
+          "- Refactor verify command: npm test",
+        ].join("\n"),
+      );
+      const issues = await runIssuesOn(
+        root,
+        ledger([{ status: "done", evidence: IMPLEMENT_POINTER }]),
+        { ".qfai/evidence/implement-spec-0001.md": evidence },
+      );
+      expect(issues.map((issue) => issue.message).join("\n")).toContain(
+        "Round 1: Review pack seal: sha256",
+      );
+    });
+  });
+
   it("drops a table verdict with an empty cell and its fence from the subject", async () => {
     // An empty value cell leaves only its closing `|` in the capture. Read as a
     // value, it kept the fence below in the hash the gate computes, while the

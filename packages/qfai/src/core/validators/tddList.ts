@@ -1114,35 +1114,36 @@ function fencedEvidenceValue(lines: readonly string[], startLine: number): strin
 
 interface EvidenceFieldOccurrence {
   round: number | null;
-  /** The `M` of an `(attempt M)` qualifier, on the one field that takes it. */
+  /** The `M` of an `(attempt M)` qualifier, on the fields that take it. */
   attempt: number | null;
   value: string;
 }
 
 /**
  * The `(attempt M)` qualifier a round with several review attempts writes
- * after `reviewer verdict` (`round-evidence.md`). It is part of that field's
- * name, so a verdict line is read with or without it.
+ * after each field it records once per attempt: `reviewer verdict`, and the
+ * `Review pack` and `Review pack seal` pair (`round-evidence.md`). It is part
+ * of those fields' names, so each is read with or without it.
  *
- * Only that field takes it. The other round fields are recorded once per
- * round, so `Round 1: Revision (attempt 2)` is not a spelling of any of them.
+ * No other field takes it. The rest are recorded once per round, so
+ * `Round 1: Revision (attempt 2)` is not a spelling of any of them.
  */
 const ATTEMPT_QUALIFIER = "(?:[ \\t]*\\(attempt[ \\t]+(?<attempt>\\d+)\\))?";
 const ATTEMPT_QUALIFIER_TAIL = /\s*\(attempt\s+(\d+)\)\s*$/i;
-const ATTEMPT_QUALIFIED_FIELD = "reviewer verdict";
+const ATTEMPT_QUALIFIED_FIELDS = new Set(["reviewer verdict", "review pack", "review pack seal"]);
 
 function takesAttemptQualifier(field: string): boolean {
-  return field.toLowerCase() === ATTEMPT_QUALIFIED_FIELD;
+  return ATTEMPT_QUALIFIED_FIELDS.has(field.toLowerCase());
 }
 
 /**
  * A bullet field's inline value with the field name's own markup taken off.
  *
  * The bold-colon spelling — `- **Round 1: reviewer verdict:** REVISE` — closes
- * its emphasis after the colon, so the raw capture begins with `**` and a
- * check for `REVISE` at the start of the value never matched it. Only that
- * closing `**` is taken off: a value may itself begin with asterisks, as a
- * selector opening with a globstar does.
+ * its emphasis after the colon, so the raw capture begins with `**`, ahead of
+ * the `REVISE` a check reads at the start of the value. Only that closing `**`
+ * is taken off: a value may itself begin with asterisks, as a selector opening
+ * with a globstar does.
  */
 function inlineFieldValue(captured: string | undefined, closesAfterColon: boolean): string {
   const raw = captured ?? "";
@@ -1500,7 +1501,8 @@ function hasPhaseAuthoredFieldAfterGate(section: string): boolean {
 // `(attempt M)`, and records a `Round N: Review pack` and `Review pack seal`
 // pair beside each attempt (`round-evidence.md`). All of these are written once
 // the review they belong to has run, so none of them is in the subject that
-// review hashes, qualified or not.
+// review hashes, qualified or not. The pack pair is held instead by
+// recomputing each seal from its pack at completion.
 const REVIEWER_APPENDED_ROUND_FIELD =
   /^\s*(?:\|\s*)?(?:[-*][ \t]+)?(?:\*\*)?(?:(?:Round[ \t]+\d+:[ \t]*)?reviewer verdict|Round[ \t]+\d+:[ \t]*Review pack(?:[ \t]+seal)?)(?:[ \t]*\(attempt[ \t]+\d+\))?(?:\*\*)?[ \t]*(?::|\|)[ \t]*(.*)$/i;
 
@@ -1516,7 +1518,8 @@ const REVIEWER_APPENDED_ROUND_FIELD =
  */
 function inlineVerdictValue(captured: string | undefined): string {
   // A table row's value cell ends in its closing `|`, which is all an empty
-  // cell leaves in the capture: read as a value, it kept the fence below it.
+  // cell leaves in the capture: read as a value, it would keep the fence below
+  // it in the subject.
   return (captured ?? "")
     .replace(/\|\s*$/, "")
     .replace(/\*+/g, "")
@@ -3242,6 +3245,10 @@ async function invalidCompletedEvidenceArtifacts(
     }
   }
 
+  for (const round of rounds) {
+    invalid.push(...(await invalidRoundReviewPacks(root, section, round)));
+  }
+
   const checkpointCommand = rowEvidenceFieldValue(section, "Checkpoint verification command");
   const checkpointResult = rowEvidenceFieldValue(section, "Checkpoint verification result");
   const checkpointSeal = rowEvidenceFieldValue(section, "Checkpoint verification seal");
@@ -3265,6 +3272,65 @@ async function invalidCompletedEvidenceArtifacts(
         ? "Checkpoint verification seal matching command, result, and Revision"
         : "Checkpoint verification seal matching command, result, and Checkpoint verification revision",
     );
+  }
+  return invalid;
+}
+
+/**
+ * The review pack pairs a round records, one per review attempt, each
+ * recomputed from the pack it names (`record-contract.md`).
+ *
+ * The pair is written after its review has run, so it is left out of every
+ * audited subject, and this is the check that sees a pack edited after its
+ * attempt closed. A pack absent from the checkout is skipped, as a row-level
+ * pack is, because review packs are local-only. A pair missing half of itself
+ * is reported: nothing then says which pack the attempt closed on, or whether
+ * that pack still holds what was reviewed.
+ */
+async function invalidRoundReviewPacks(
+  root: string,
+  section: string,
+  round: number,
+): Promise<string[]> {
+  const inRound = (field: string): EvidenceFieldOccurrence[] =>
+    evidenceFieldOccurrences(section, field).filter((occurrence) => occurrence.round === round);
+  const lastFor = (occurrences: EvidenceFieldOccurrence[], attempt: number | null): string | null =>
+    occurrences.filter((occurrence) => occurrence.attempt === attempt).at(-1)?.value ?? null;
+  const packs = inRound("Review pack");
+  const seals = inRound("Review pack seal");
+  const attempts = new Set([...packs, ...seals].map(({ attempt }) => attempt));
+  const invalid: string[] = [];
+  for (const attempt of attempts) {
+    const qualifier = attempt === null ? "" : ` (attempt ${attempt})`;
+    const label = `Round ${round}: Review pack${qualifier}`;
+    const pack = lastFor(packs, attempt);
+    const seal = lastFor(seals, attempt);
+    if (pack === null) {
+      invalid.push(`${label} naming the pack its seal covers`);
+      continue;
+    }
+    if (seal === null || !SHA256_VALUE.test(seal)) {
+      invalid.push(`Round ${round}: Review pack seal${qualifier}: sha256`);
+      continue;
+    }
+    const safePackPath = safeRepoRelativePath(pack);
+    if (safePackPath === null) {
+      invalid.push(`${label} naming a repository path`);
+      continue;
+    }
+    try {
+      await lstat(path.join(root, ...safePackPath.split("/")));
+    } catch (error) {
+      if (isEnoent(error)) continue;
+      invalid.push(`${label} path readable when present`);
+      continue;
+    }
+    const packFiles = await collectReviewPackFiles(root, pack);
+    if (packFiles === null) {
+      invalid.push(`${label} resolving to regular files`);
+    } else if (reviewPackSeal(packFiles) !== bareSha256(seal)) {
+      invalid.push(`Round ${round}: Review pack seal${qualifier} matching pack contents`);
+    }
   }
   return invalid;
 }
