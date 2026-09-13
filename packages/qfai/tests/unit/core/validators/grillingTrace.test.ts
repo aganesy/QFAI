@@ -23,7 +23,7 @@ import { CANONICAL_TIMESTAMP_DIGITS } from "../../../../src/core/packLocator.js"
 import {
   DISCUSSION_DIR_REL,
   GRILLING_SECTIONS,
-  GRILLING_TRACE_CODE,
+  GRILLING_TRACE_CODES,
   validateGrillingTrace,
 } from "../../../../src/core/validators/grillingTrace.js";
 import { removeTempTree } from "../../../helpers/tempTree.js";
@@ -144,7 +144,7 @@ describe("validateGrillingTrace", () => {
       const issues = await validateGrillingTrace(root);
 
       expect(issues).toHaveLength(1);
-      expect(issues[0]?.code).toBe(GRILLING_TRACE_CODE);
+      expect(issues[0]?.code).toBe(GRILLING_TRACE_CODES.spec);
       // The finding names the spec, not a generic message: an operator with
       // three of them needs to know which one.
       expect(issues[0]?.message).toContain("spec-0007");
@@ -368,6 +368,9 @@ describe("validateGrillingTrace", () => {
 
         expect(issues).toHaveLength(1);
         expect(issues[0]?.file).toBe(`.qfai/evidence/discussion-${NEWER}.md`);
+        // Its own code: a profile that runs one stage must not be recorded as
+        // having evaluated the other's family.
+        expect(issues[0]?.code).toBe(GRILLING_TRACE_CODES.discussion);
         expect(issues[0]?.message).toContain(GRILLING_SECTIONS.discussion);
         expect(issues[0]?.message).toContain("at least one session row");
       });
@@ -609,6 +612,46 @@ describe("validateGrillingTrace", () => {
       await mkdir(path.join(root, ".qfai", "evidence", "sdd-spec-0007.md"), { recursive: true });
 
       expect(await validateGrillingTrace(root)).toEqual([]);
+    });
+  });
+
+  it("does not take a repeated delimiter for a row", async () => {
+    // A second delimiter is the table's furniture. Its cells are neither empty
+    // nor placeholders, so counting it let a copied table with two delimiters
+    // and no data of its own satisfy the check.
+    await withRoot(async (root) => {
+      await evidence(
+        root,
+        "sdd-spec-0007.md",
+        [
+          "## Pre-draft Grilling",
+          "",
+          "| Phase | Session |",
+          "| ----- | ------- |",
+          "| ----- | ------- |",
+          "",
+        ].join("\n"),
+      );
+
+      expect(await validateGrillingTrace(root)).toHaveLength(1);
+    });
+  });
+
+  it("reports an owed record that is a directory rather than throwing", async () => {
+    // An owed name comes from the stage's run list rather than from the
+    // listing, so it can be anything on disk. Reading it unconditionally threw
+    // `EISDIR` out of the whole command — a crash where the finding is what an
+    // operator needs.
+    await withRoot(async (root) => {
+      await pack(root, `discussion-${NEWER}`);
+      await mkdir(path.join(root, ".qfai", "evidence", `discussion-${NEWER}.md`), {
+        recursive: true,
+      });
+
+      const issues = await validateGrillingTrace(root);
+
+      expect(issues).toHaveLength(1);
+      expect(issues[0]?.message).toContain("does not exist");
     });
   });
 

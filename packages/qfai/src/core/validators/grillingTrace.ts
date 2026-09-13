@@ -1,6 +1,7 @@
 /**
- * `QFAI-GRILL-001` (severity warning): a stage whose mandatory grilling
- * session left no trace in the evidence it wrote.
+ * `QFAI-GRILL-001` and `QFAI-GRILL-002` (severity warning): a stage whose
+ * mandatory grilling session left no trace in the evidence it wrote — the spec
+ * stage under the first code and a discussion run under the second.
  *
  * The failure it exists for leaves nothing else behind. A stage that ran its
  * session and one that skipped it produce the same pack, the same coverage, the
@@ -62,8 +63,22 @@ import {
 import type { Issue } from "../types.js";
 import { exists, issue } from "./utils.js";
 
-/** The finding this validator emits. */
-export const GRILLING_TRACE_CODE = "QFAI-GRILL-001";
+/**
+ * The finding each stage's half emits.
+ *
+ * One code per stage rather than one for the check. Two runners dispatch this
+ * and each names its own stage, so a single family would be claimed whole by
+ * both profiles while each evaluated half of it — and the unevaluated-gates
+ * notice would report partial coverage as complete, which is the mistake the
+ * narrower gate groups beside it were split to correct.
+ */
+const SPEC_TRACE_CODE = "QFAI-GRILL-001";
+const DISCUSSION_TRACE_CODE = "QFAI-GRILL-002";
+
+export const GRILLING_TRACE_CODES = {
+  spec: SPEC_TRACE_CODE,
+  discussion: DISCUSSION_TRACE_CODE,
+} as const satisfies Readonly<Record<GrillingSubject, string>>;
 
 /**
  * The heading each stage writes its rows under.
@@ -92,6 +107,8 @@ export type GrillingSubject = (typeof GRILLING_SUBJECTS)[number];
 type SubjectBase = {
   /** Which stage this is, as a caller names it. */
   readonly stage: GrillingSubject;
+  /** The finding this stage's half emits. */
+  readonly code: string;
   /** The evidence file's name, capturing what the finding calls the run. */
   readonly file: RegExp;
   /** The heading the stage writes its rows under. */
@@ -118,6 +135,7 @@ type Subject =
 const SUBJECTS: readonly Subject[] = [
   {
     stage: "spec",
+    code: SPEC_TRACE_CODE,
     // Anchored on the spec id rather than on anything after `sdd-`, so a file a
     // project named `sdd-notes.md` is not held to a contract it never entered.
     file: /^sdd-(spec-\d{4})\.md$/,
@@ -128,6 +146,7 @@ const SUBJECTS: readonly Subject[] = [
   },
   {
     stage: "discussion",
+    code: DISCUSSION_TRACE_CODE,
     // The discussion run opens its evidence under its own stamp before it
     // writes anything else, and opens its pack under that same stamp, so the
     // two names agree and the greatest is the most recent run. The width comes
@@ -201,12 +220,25 @@ function rowIsUnwritten(line: string): boolean {
   return cells.every((cell) => cell === "") || cells.some((cell) => UNREPLACED_CELL_RE.test(cell));
 }
 
-/** A file's text, or `null` when it is not there. */
+/**
+ * Codes for a path that holds no readable file: absent, a directory, or under
+ * something that is not one.
+ *
+ * An owed candidate is a name the stage's run list implies rather than one the
+ * listing produced, so it can be any of the three. Reading only the first threw
+ * `EISDIR` out of the whole command over a directory sitting where a record
+ * belongs — a crash where the finding is what an operator needs.
+ */
+const NO_FILE_THERE = new Set(["EISDIR", "ENOTDIR"]);
+
+/** A file's text, or `null` when no readable file is there. */
 async function textOf(file: string): Promise<string | null> {
   try {
     return await readFile(file, "utf-8");
   } catch (err: unknown) {
     if (isEnoent(err)) return null;
+    const code = (err as NodeJS.ErrnoException | null)?.code;
+    if (code !== undefined && NO_FILE_THERE.has(code)) return null;
     throw err;
   }
 }
@@ -263,6 +295,10 @@ function ownRowsUnder(text: string, section: string): SectionRows | null {
   const rows: string[] = [];
   for (const line of body.slice(delimiter + 1)) {
     if (!line.includes("|")) break;
+    // A second delimiter is the table's furniture, not a row of it. Its cells
+    // are neither empty nor placeholders, so counting it let a copied table
+    // with two delimiters and no data satisfy the check.
+    if (DELIMITER_RE.test(line)) continue;
     rows.push(line);
   }
   const written = rows.filter((line) => !rowIsUnwritten(line));
@@ -288,7 +324,7 @@ function remediation(relPath: string, id: string, subject: Subject, state: State
       `every row still holds the template's placeholders.`,
   }[state];
   return (
-    `${GRILLING_TRACE_CODE}: ${opening} ` +
+    `${subject.code}: ${opening} ` +
     `Each grilling-covered phase runs one before it writes and records it under ` +
     `"${subject.section}" — a stage that skipped the session and one that ran it leave ` +
     `the same pack otherwise. Justification: file=${relPath}, ` +
@@ -472,7 +508,7 @@ export async function validateGrillingTrace(
     const relPath = `${EVIDENCE_DIR_REL}/${name}`;
     issues.push(
       issue(
-        GRILLING_TRACE_CODE,
+        subject.code,
         remediation(relPath, id, subject, state),
         "warning",
         relPath,
