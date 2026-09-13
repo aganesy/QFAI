@@ -2820,6 +2820,104 @@ result, so the assertion cannot be tightened without drift.
     });
   }
 
+  describe("Checkpoint verification revision", () => {
+    const FINAL_TREE = "fed9870000000000000000000000000000000000";
+    const sealedOver = (sealRevision: string, checkpointRevision = FINAL_TREE): string =>
+      completeEntry("Unit").replace(
+        "- Checkpoint verification seal: {{CHECKPOINT_SEAL}}",
+        [
+          `- Checkpoint verification revision: ${checkpointRevision}`,
+          `- Checkpoint verification seal: ${checkpointSeal(sealRevision, "npm test", "PASS")}`,
+        ].join("\n"),
+      );
+    const unresolvedFor = async (root: string, evidence: string) =>
+      (
+        await runIssuesOn(root, ledger([{ status: "done", evidence: IMPLEMENT_POINTER }]), {
+          ".qfai/evidence/implement-spec-0001.md": evidence,
+        })
+      ).find((issue) => issue.code === "QFAI-TDDLIST-008");
+
+    it("recomputes the seal over the run's own revision, not the round's", async () => {
+      // The round names the tree before the refactor and the checkpoint runs on
+      // the tree after it. Sealed as the contract says, the row is complete.
+      await withProject(async (root) => {
+        expect(await unresolvedFor(root, sealedOver(FINAL_TREE))).toBeUndefined();
+      });
+    });
+
+    it("refuses a seal taken over the round's Revision beside a checkpoint revision", async () => {
+      await withProject(async (root) => {
+        const found = await unresolvedFor(root, sealedOver(DEFAULT_REVISION));
+        expect(found?.message).toContain(
+          "Checkpoint verification seal matching command, result, and Checkpoint verification revision",
+        );
+      });
+    });
+
+    it("refuses a checkpoint revision changed after the seal was taken", async () => {
+      await withProject(async (root) => {
+        const moved = "0123450000000000000000000000000000000000";
+        const found = await unresolvedFor(root, sealedOver(FINAL_TREE, moved));
+        expect(found?.message).toContain("Checkpoint verification seal matching");
+      });
+    });
+
+    it("refuses a checkpoint revision that names no revision", async () => {
+      await withProject(async (root) => {
+        const found = await unresolvedFor(root, sealedOver("latest", "latest"));
+        expect(found?.message).toContain("Checkpoint verification revision naming");
+      });
+    });
+
+    it("takes the seal input the contract spells", async () => {
+      // The contract names the checkpoint revision as the seal's `Revision` line.
+      // Built from that text, a seal the gate computes some other way fails here.
+      const contract = (
+        await readFile(
+          path.join(
+            __dirname,
+            "..",
+            "..",
+            "assets",
+            "init",
+            ".qfai",
+            "assistant",
+            "skills",
+            "qfai-implement",
+            "references",
+            "checkpoint-verification.md",
+          ),
+          "utf-8",
+        )
+      ).replace(/\s+/g, " ");
+      expect(contract).toContain(
+        "The `Revision` line carries `Checkpoint verification revision`, never a round's `Revision`",
+      );
+      const lines = [
+        ...contract.matchAll(
+          /`((?:Revision|Checkpoint verification (?:command|result))): <value>`/g,
+        ),
+      ].map((match) => match[1]);
+      expect(lines).toEqual([
+        "Revision",
+        "Checkpoint verification command",
+        "Checkpoint verification result",
+      ]);
+      const values = [FINAL_TREE, "npm test", "PASS"];
+      const input = lines.map((label, index) => `${label}: ${values[index]}`).join("\n");
+      const evidence = completeEntry("Unit").replace(
+        "- Checkpoint verification seal: {{CHECKPOINT_SEAL}}",
+        [
+          `- Checkpoint verification revision: \`${FINAL_TREE}\``,
+          `- Checkpoint verification seal: ${digest(normalizeArtifact(input))}`,
+        ].join("\n"),
+      );
+      await withProject(async (root) => {
+        expect(await unresolvedFor(root, evidence)).toBeUndefined();
+      });
+    });
+  });
+
   it("rejects a completed row whose selected obligation is a dash placeholder", async () => {
     await withProject(async (root) => {
       const evidence = completeEntry("Unit").replace("TC-ref: TC-0001", "TC-ref: -");
