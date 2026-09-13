@@ -205,8 +205,9 @@ current `DESIGN.md` hash does not match the lock.
 
 The flags below extend `npx qfai prototyping iterate`. `--target-url` is
 required at cycle 0 once at least one UI-bearing spec resolves; every
-other flag is opt-in and defaults OFF, so the prior invocation pattern is
-byte-equivalent when no opt-in flag is passed. This list is the flag
+other flag is opt-in and defaults OFF. A cycle 0 that resets the loop moves
+the aggregate `screenshots/` and `html/` to `aggregate.backup-<ISO>` whether
+or not a flag is passed. This list is the flag
 reference for the sub-command — when it and `npx qfai --help` disagree,
 the help text wins and this section is stale.
 
@@ -236,8 +237,7 @@ the help text wins and this section is stale.
   throughout Step 2-C.
 - `--force` — **required**, not optional, to re-run cycle 0 once an
   `iter-00` exists: the destructive-rerun gate refuses to overwrite it
-  otherwise. Backs `iter-00` up to `iter-00.backup-<ISO>`, moves the
-  mirrored captures to `aggregate.backup-<ISO>` and clears stale
+  otherwise. Backs `iter-00` up to `iter-00.backup-<ISO>` and clears stale
   `iter-NN` directories. Detail: `references/iteration-loop.md#sealed-loop`.
 - `--dry-run` — plan the cycle and write nothing. Reports what a real
   run would create, move or overwrite — including the `iter-00` backup

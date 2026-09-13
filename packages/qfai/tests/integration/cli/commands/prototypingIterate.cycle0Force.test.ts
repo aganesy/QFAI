@@ -331,6 +331,37 @@ describe("iterate --cycle 0 destructive-rerun gate", () => {
     expect(await readFile(path.join(shared, "home.png"), "utf-8")).toBe("shared capture");
   });
 
+  it("moves aside an aggregate link whose target is gone", async () => {
+    // Left in place, the link would expose the previous loop's captures again as
+    // soon as its target came back.
+    const root = await newTempDir();
+    await seedProject(root);
+    const evidenceRoot = path.join(root, ".qfai/evidence/prototyping");
+    await mkdir(evidenceRoot, { recursive: true });
+    const gone = path.join(root, "gone-captures");
+    await mkdir(gone, { recursive: true });
+    try {
+      await symlink(gone, path.join(evidenceRoot, "html"), "junction");
+    } catch {
+      // A host without permission to link cannot exercise this case.
+      return;
+    }
+    await rm(gone, { recursive: true, force: true });
+    captureStderr();
+
+    const exit = await runPrototypingIterate({
+      root,
+      cycle: 0,
+      targetUrl: "http://localhost:5173",
+    });
+
+    expect(exit).toBe(0);
+    const entries = await readdir(evidenceRoot);
+    expect(entries).not.toContain("html");
+    const log = await readFile(path.join(evidenceRoot, "mutation-log.jsonl"), "utf-8");
+    expect(log).toContain('"path":".qfai/evidence/prototyping/html"');
+  });
+
   it("puts back what the reset moved when a later move fails", async () => {
     // A failed reset that left `screenshots/` moved and `html/` in place would
     // hold half a loop's evidence in each place.

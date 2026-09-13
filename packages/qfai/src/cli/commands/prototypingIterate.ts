@@ -2433,11 +2433,20 @@ async function collectFilesRecursively(absDir: string): Promise<string[]> {
 /** The project-wide directories a capture pass mirrors an iteration into. */
 const AGGREGATE_EVIDENCE_DIRS: readonly string[] = ["screenshots", "html"];
 
-/** The aggregate evidence directories present under `evidenceRootAbs`. */
+/**
+ * The aggregate evidence directories present under `evidenceRootAbs`: a
+ * directory, or a link at that name whether or not its target is reachable. A
+ * link is read as itself, so one whose target is gone is still moved aside
+ * rather than left to point at captures that come back with it.
+ */
 async function presentAggregateDirs(evidenceRootAbs: string): Promise<string[]> {
   const present: string[] = [];
   for (const name of AGGREGATE_EVIDENCE_DIRS) {
-    if (await dirExists(path.join(evidenceRootAbs, name))) present.push(name);
+    const entry = await lstat(path.join(evidenceRootAbs, name)).catch((cause: unknown) => {
+      if (isEnoent(cause)) return null;
+      throw cause;
+    });
+    if (entry !== null && (entry.isDirectory() || entry.isSymbolicLink())) present.push(name);
   }
   return present;
 }
