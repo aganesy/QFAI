@@ -1,4 +1,4 @@
-import { mkdtemp, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
@@ -7,6 +7,24 @@ import { describe, expect, it } from "vitest";
 import { collectFilesByGlobs, DEFAULT_GLOB_FILE_LIMIT } from "../../src/core/fs.js";
 
 describe("collectFilesByGlobs", () => {
+  it("rejects a glob holding a NUL byte, wherever the byte sits", async () => {
+    // Ahead of a wildcard the byte reached `readdir` inside the walk, where the
+    // error could not be caught and the process exited.
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-fs-"));
+    const nul = String.fromCharCode(0);
+    try {
+      await mkdir(path.join(root, "tests"), { recursive: true });
+      await writeFile(path.join(root, "tests", "a.ts"), "");
+      for (const glob of [nul, `tests/${nul}/*.ts`, `tests/**/*.ts${nul}`]) {
+        await expect(
+          collectFilesByGlobs(root, { globs: ["tests/**/*.ts", glob], limit: 1 }),
+          JSON.stringify(glob),
+        ).rejects.toThrow(`The glob ${JSON.stringify(glob)} holds a NUL byte`);
+      }
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
   it("truncates results when the limit is reached", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-fs-"));
     try {
