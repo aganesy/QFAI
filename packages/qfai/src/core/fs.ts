@@ -29,6 +29,11 @@ export type CollectFilesOptions = {
    * read is not pruned by name behind its back.
    */
   skipDirectory?: (directory: string) => boolean;
+  /**
+   * Called for a directory the walk cannot list, which is then passed over.
+   * Without it the listing error rejects the whole collection.
+   */
+  onUnreadableDirectory?: (directory: string, error: unknown) => void;
 };
 
 export type CollectFilesByGlobOptions = {
@@ -92,7 +97,7 @@ export async function collectFiles(
   ]);
   const extensions = options.extensions?.map((ext) => ext.toLowerCase()) ?? [];
 
-  await walk(root, root, ignoreDirs, options.skipDirectory, extensions, entries);
+  await walk(root, { ...options, ignoreDirs, extensions, out: entries });
   return entries;
 }
 
@@ -131,14 +136,22 @@ export async function collectFilesByGlobs(
 }
 
 async function walk(
-  base: string,
   current: string,
-  ignoreDirs: Set<string>,
-  skipDirectory: ((directory: string) => boolean) | undefined,
-  extensions: string[],
-  out: string[],
+  options: Pick<CollectFilesOptions, "skipDirectory" | "onUnreadableDirectory"> & {
+    readonly ignoreDirs: ReadonlySet<string>;
+    readonly extensions: readonly string[];
+    readonly out: string[];
+  },
 ): Promise<void> {
-  const items = await readdir(current, { withFileTypes: true });
+  const { ignoreDirs, skipDirectory, onUnreadableDirectory, extensions, out } = options;
+  let items;
+  try {
+    items = await readdir(current, { withFileTypes: true });
+  } catch (error) {
+    if (onUnreadableDirectory === undefined) throw error;
+    onUnreadableDirectory(current, error);
+    return;
+  }
 
   for (const item of items) {
     const fullPath = path.join(current, item.name);
@@ -147,7 +160,7 @@ async function walk(
       if (ignoreDirs.has(item.name) || skipDirectory?.(fullPath) === true) {
         continue;
       }
-      await walk(base, fullPath, ignoreDirs, skipDirectory, extensions, out);
+      await walk(fullPath, options);
       continue;
     }
 

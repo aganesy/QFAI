@@ -293,6 +293,41 @@ describe("a skill carries what a host needs to register it", () => {
     expect(finding?.message).toContain("Codex surface");
   });
 
+  it("still reports an uncited reference beside an entry point that holds no text", async () => {
+    // A directory where `SKILL.md` should be cites nothing, so the reference
+    // graph stays decided.
+    const root = await projectWithSkill(['description: "Does the thing."']);
+    const skills = path.join(root, ".qfai", "assistant", "skills");
+    await mkdir(path.join(skills, "qfai-folder", "SKILL.md"), { recursive: true });
+    await mkdir(path.join(skills, "qfai-example", "references"), { recursive: true });
+    const orphan = path.join(skills, "qfai-example", "references", "orphan.md");
+    await writeFile(orphan, "# orphan\n", "utf-8");
+
+    const found = await validateAssistantAssets(root, defaultConfig);
+    expect(found.some((item) => item.code === "QFAI-SKILLS-013" && item.file === orphan)).toBe(
+      true,
+    );
+  });
+
+  it("reports a document under a hidden directory that a registered skill names", async () => {
+    // The host lists no hidden directory, and a registered skill can still open
+    // a document there by naming it.
+    const root = await projectWithSkill(['description: "Does the thing."']);
+    const skills = path.join(root, ".qfai", "assistant", "skills");
+    const entryPoint = path.join(skills, "qfai-example", "SKILL.md");
+    await writeFile(
+      entryPoint,
+      `${await readFile(entryPoint, "utf-8")}\nSee ../.draft/references/guide.md.\n`,
+      "utf-8",
+    );
+    await mkdir(path.join(skills, ".draft", "references"), { recursive: true });
+    const guide = path.join(skills, ".draft", "references", "guide.md");
+    await writeFile(guide, Buffer.concat([Buffer.from("# guide\n"), Buffer.from([0xff])]));
+
+    const found = await validateAssistantAssets(root, defaultConfig);
+    expect(found.some((item) => item.code === "QFAI-SKILLS-014" && item.file === guide)).toBe(true);
+  });
+
   it("reports an entry point that is not a file", async () => {
     // A `SKILL.md` that is a directory: `stat` succeeds and the host still
     // cannot load it, and the crawl walks through rather than naming it.

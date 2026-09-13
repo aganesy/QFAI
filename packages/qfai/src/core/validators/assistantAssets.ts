@@ -262,8 +262,9 @@ export async function validateAssistantAssets(root: string, config: QfaiConfig):
   // `QFAI-SKILLS-014` could report it: the entry point would be the one file
   // the rule could never speak about. Reading once also means the marker
   // checks and the citation graph can never disagree about a file's bytes.
-  const { documents, unreadable } = await readSkillDocuments(skillsDir);
-  issues.push(...unreadable);
+  // Reported after the reference graph below: a document under a hidden skill
+  // directory counts only where a registered skill reaches it.
+  const { documents, unreadable, unreadableDirectories } = await readSkillDocuments(skillsDir);
 
   const skillFiles = await collectSkillFiles([skillsDir]);
   for (const skillFile of skillFiles) {
@@ -323,7 +324,7 @@ export async function validateAssistantAssets(root: string, config: QfaiConfig):
   // reported once. A hard link gives one identity several crawled paths, so
   // every one is kept.
   const unreadableFiles = unreadable.flatMap((item) =>
-    item.file === undefined ? [] : [item.file],
+    item.file === undefined || unreadableDirectories.includes(item.file) ? [] : [item.file],
   );
   const crawled = new Map<string, string[]>();
   for (const crawledFile of [...documents.keys(), ...unreadableFiles]) {
@@ -387,7 +388,14 @@ export async function validateAssistantAssets(root: string, config: QfaiConfig):
           "Make the entry point an ordinary readable file — grant read permission, repair a broken symlink, replace a directory or a device with the document — or delete it if it does not belong under `skills`.",
         ),
       );
-      unreadableEntryPoints.push(entryPoint);
+      // Only a file this run could not read may cite anything. A directory, a
+      // device or a link to nothing holds no text, so it leaves the reference
+      // graph decided.
+      const target = await stat(resolved).then(
+        (stats) => (stats.isFile() ? "file" : "not-a-file"),
+        (error: unknown) => (isEnoent(error) ? "not-a-file" : "unknown"),
+      );
+      if (target !== "not-a-file") unreadableEntryPoints.push(entryPoint);
       continue;
     }
     // Decoded strictly. A lenient decode turns an invalid byte into a
@@ -414,13 +422,11 @@ export async function validateAssistantAssets(root: string, config: QfaiConfig):
   }
 
   issues.push(
-    ...collectReferenceGraphIssues(
-      root,
-      skillsDir,
-      documents,
-      unreadableEntryPoints,
+    ...collectReferenceGraphIssues(root, skillsDir, documents, {
+      unreadable,
       unreadableFiles,
-    ),
+      undecided: unreadableEntryPoints.length > 0 || unreadableDirectories.length > 0,
+    }),
   );
 
   return issues;
@@ -1320,6 +1326,8 @@ async function collectSkillFiles(dirs: string[]): Promise<string[]> {
       collectFiles(dir, {
         ignoreDirs: [...DEFAULT_IGNORE_DIRS],
         skipDirectory: (directory) => isHiddenSkillDirectory(dir, directory),
+        // The document crawl reports a directory it cannot list.
+        onUnreadableDirectory: () => undefined,
       }),
     ),
   );
@@ -1669,26 +1677,49 @@ function collectReferenceGraphIssues(
   root: string,
   skillsDir: string,
   documents: Map<string, string>,
-  unreadableEntryPoints: readonly string[] = [],
-  unreadableFiles: readonly string[] = [],
+  unread: {
+    /** The crawl's `QFAI-SKILLS-014` findings, files and directories both. */
+    readonly unreadable: readonly Issue[];
+    /** The files among them. */
+    readonly unreadableFiles: readonly string[];
+    /** Whether an entry point or a directory could not be read. */
+    readonly undecided: boolean;
+  } = { unreadable: [], unreadableFiles: [], undecided: false },
 ): Issue[] {
   // A document that cannot be read stands in the graph with no text: a citation
   // still reaches it, and what it would cite is unknown. Reached, it may cite
   // any document, in its own skill or through a path into another, so no
   // reference is reported as uncited until it can be read. Unreached, it makes
-  // nothing reachable and decides nothing. An unreadable entry point is reached
-  // by definition.
+  // nothing reachable and decides nothing.
+  //
+  // SIMPLIFIED: an entry point or a directory that cannot be read leaves every
+  // uncited reference undecided, whether or not a step reaches into it.
+  // Lift when: a project needs orphans reported beside one, which takes telling
+  // whether a reached citation names a path inside it.
   const graph = new Map<string, string>([
     ...documents,
-    ...unreadableFiles.map((file): [string, string] => [file, ""]),
+    ...unread.unreadableFiles.map((file): [string, string] => [file, ""]),
   ]);
   const reachable = collectReachableDocuments(citationContext(root, skillsDir), graph);
-  if (unreadableEntryPoints.length > 0 || unreadableFiles.some((file) => reachable.has(file))) {
-    return [];
+  // The host lists no hidden skill directory, so a document there is opened only
+  // where a registered skill names it, and only then does its failure matter.
+  const reported = unread.unreadable.filter(
+    (item) =>
+      item.file === undefined ||
+      !inHiddenSkillDirectory(skillsDir, item.file) ||
+      reachable.has(item.file),
+  );
+  if (unread.undecided || unread.unreadableFiles.some((file) => reachable.has(file))) {
+    return reported;
   }
   const severity = "error";
   const unreachable = [...documents.keys()]
-    .filter((file) => isReferenceDocument(skillsDir, file) && !reachable.has(file))
+    .filter(
+      (file) =>
+        isReferenceDocument(skillsDir, file) &&
+        !inHiddenSkillDirectory(skillsDir, file) &&
+        !reachable.has(file),
+    )
     .sort((a, b) => a.localeCompare(b))
     .map((file) =>
       issue(
@@ -1702,14 +1733,22 @@ function collectReferenceGraphIssues(
         "このファイルを読ませたいステップの本文からファイルへの相対パスを引用してください（SKILL.md から到達可能な文書のいずれかに書く必要があります）。読ませる必要がなくなった文書であれば削除してください。",
       ),
     );
-  return unreachable;
+  return [...reported, ...unreachable];
+}
+
+/** Whether `target` lies under a skill directory the host does not list. */
+function inHiddenSkillDirectory(skillsDir: string, target: string): boolean {
+  const first = toPosixRelative(skillsDir, target).split("/")[0] ?? "";
+  return first.startsWith(".") && first !== "..";
 }
 
 type SkillDocuments = {
   /** Skill-tree documents that can cite or be cited, keyed by absolute path. */
   documents: Map<string, string>;
-  /** One issue per document whose content could not be read at all. */
+  /** One issue per document or directory whose content could not be read at all. */
   unreadable: Issue[];
+  /** The directories among them, outside hidden skill directories. */
+  unreadableDirectories: string[];
 };
 
 /**
@@ -1719,6 +1758,9 @@ type SkillDocuments = {
 async function fileIdentity(file: string): Promise<string> {
   try {
     const identity = await stat(file, { bigint: true });
+    // Some volumes report no inode number, and every file there reads as `0`.
+    // Taken as an identity it would make every file one file.
+    if (identity.ino === 0n) return file;
     return `${String(identity.dev)}:${String(identity.ino)}`;
   } catch {
     return file;
@@ -1735,17 +1777,37 @@ async function fileIdentity(file: string): Promise<string> {
  * read error becomes its own issue.
  */
 async function readSkillDocuments(skillsDir: string): Promise<SkillDocuments> {
-  // A hidden skill directory is one the host does not list, so the walk never
-  // enters it, and its documents answer no rule a registered skill answers.
-  // Nothing else is pruned by name: a skill can name a document under its own
-  // `tmp/` or `dist/`, and the host opens it.
-  const files = await collectFiles(skillsDir, {
-    extensions: [".md", ".yaml", ".yml"],
-    skipDirectory: (directory) => isHiddenSkillDirectory(skillsDir, directory),
-  });
+  // Nothing is pruned by name: a skill can name a document under its own `tmp/`
+  // or `dist/`, or under a hidden sibling directory the host does not list, and
+  // the host opens it. A hidden directory's documents answer only what a
+  // registered skill reaches, which the reference graph decides.
   const documents = new Map<string, string>();
   const unreadable: Issue[] = [];
+  const unreadableDirectories: string[] = [];
   const severity = "error";
+  const files = await collectFiles(skillsDir, {
+    extensions: [".md", ".yaml", ".yml"],
+    skipDirectory: (directory) => path.basename(directory) === ".git",
+    onUnreadableDirectory: (directory, error) => {
+      // SIMPLIFIED: one under a hidden skill directory is passed over, even
+      // where a registered skill names a document inside it.
+      // Lift when: a project cites into a hidden directory it cannot list.
+      if (inHiddenSkillDirectory(skillsDir, directory)) return;
+      unreadableDirectories.push(directory);
+      unreadable.push(
+        issue(
+          "QFAI-SKILLS-014",
+          `A directory under \`skills\` could not be read (${describeReadError(error)}). A step that names a document inside it fails there, and whether one does cannot be told.`,
+          severity,
+          directory,
+          "skills.documentReadable",
+          undefined,
+          "canonical",
+          "Make the directory readable to the account running `qfai validate`, or remove it if nothing in it belongs under `skills`.",
+        ),
+      );
+    },
+  });
   for (const file of files.sort((a, b) => a.localeCompare(b))) {
     try {
       // Decoded strictly, like an uncrawled entry point: the lenient read turns
@@ -1790,7 +1852,7 @@ async function readSkillDocuments(skillsDir: string): Promise<SkillDocuments> {
       );
     }
   }
-  return { documents, unreadable };
+  return { documents, unreadable, unreadableDirectories };
 }
 
 function describeReadError(error: unknown): string {
@@ -1853,7 +1915,7 @@ async function namesSkillEntryPoint(skillsDir: string, file: string): Promise<bo
   if (
     segments.length !== 2 ||
     segments[0] === "" ||
-    segments[0] === ".." ||
+    segments[0]?.startsWith(".") === true ||
     segments[1]?.toLowerCase() !== "skill.md"
   ) {
     return false;
@@ -1874,11 +1936,12 @@ async function namesSkillEntryPoint(skillsDir: string, file: string): Promise<bo
  */
 function isSkillEntryPoint(skillsDir: string, file: string): boolean {
   const segments = toPosixRelative(skillsDir, file).split("/");
+  // A hidden directory's `SKILL.md` is loaded by no host.
   return (
     segments.length === 2 &&
     segments[1] === "SKILL.md" &&
     segments[0] !== "" &&
-    segments[0] !== ".."
+    segments[0]?.startsWith(".") !== true
   );
 }
 
