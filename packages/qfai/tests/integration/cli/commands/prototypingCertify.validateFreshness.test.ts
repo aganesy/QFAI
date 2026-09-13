@@ -17,7 +17,16 @@
  */
 // QFAI:SPEC-0012:TC-0012-0445
 
-import { mkdir, mkdtemp, readdir, readFile, rm, utimes, writeFile } from "node:fs/promises";
+import {
+  mkdir,
+  mkdtemp,
+  readdir,
+  readFile,
+  rm,
+  symlink,
+  utimes,
+  writeFile,
+} from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
@@ -211,6 +220,38 @@ describe("certify relates validate.json to the evidence it seals", () => {
     await writeFile(copied, "<html></html>", "utf-8");
     const later = new Date(Date.now() + 60_000);
     await utimes(copied, later, later);
+
+    const lines = captureStderr();
+    try {
+      expect(await runPrototypingCertify({ root, check: false })).toBe(0);
+    } finally {
+      vi.restoreAllMocks();
+    }
+    expect(lines.join("")).not.toContain("changed after");
+  });
+
+  it("seals when a reset backup that is a link to a directory changed after the run", async () => {
+    // A reset renames an `iter-00` that is a link, so its backup is a link too,
+    // and the certificate leaves it out like any other backup.
+    const root = await newTempDir();
+    await seedHappyPath(root, PASS_VERIFY);
+    await backdateEvidence(root, 60_000);
+    await stampValidateJson(root, new Date().toISOString());
+    const target = path.join(root, "linked-loop");
+    await mkdir(target, { recursive: true });
+    await writeFile(path.join(target, "index.html"), "<html></html>", "utf-8");
+    const later = new Date(Date.now() + 60_000);
+    await utimes(target, later, later);
+    try {
+      await symlink(
+        target,
+        path.join(root, ".qfai/evidence/prototyping/iter-00.backup-2026-01-01T00-00-00-000Z"),
+        "junction",
+      );
+    } catch {
+      // A host without permission to link cannot exercise this case.
+      return;
+    }
 
     const lines = captureStderr();
     try {

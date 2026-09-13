@@ -13,7 +13,7 @@
 
 // QFAI:SPEC-0012:TC-0012-0449
 
-import { mkdir, mkdtemp, readFile, readdir, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, readdir, rm, symlink, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
@@ -55,6 +55,12 @@ vi.mock("node:fs/promises", async (importOriginal) => {
         throw Object.assign(new Error("EACCES: permission denied, stat"), { code: "EACCES" });
       }
       return actual.stat(...args);
+    },
+    lstat: async (...args: Parameters<typeof actual.lstat>) => {
+      if (refused(fault.unstatable, args[0])) {
+        throw Object.assign(new Error("EACCES: permission denied, lstat"), { code: "EACCES" });
+      }
+      return actual.lstat(...args);
     },
     rename: async (...args: Parameters<typeof actual.rename>) => {
       if (refused(fault.unrenamable, args[0])) {
@@ -265,6 +271,33 @@ describe("iterate --cycle 0 destructive-rerun gate", () => {
       expect(log).toContain(".qfai/evidence/prototyping/screenshots/home.png");
       expect(log).toContain(".qfai/evidence/prototyping/html/home.html");
     }
+  });
+
+  it("logs a link inside an aggregate directory it moves", async () => {
+    // The link moves with its directory, so the log names it as it names a file.
+    const root = await newTempDir();
+    await seedProject(root);
+    const evidenceRoot = path.join(root, ".qfai/evidence/prototyping");
+    await mkdir(path.join(evidenceRoot, "screenshots"), { recursive: true });
+    const outside = path.join(root, "outside.png");
+    await writeFile(outside, "shared capture", "utf-8");
+    try {
+      await symlink(outside, path.join(evidenceRoot, "screenshots", "linked.png"));
+    } catch {
+      // A host without permission to link cannot exercise this case.
+      return;
+    }
+    captureStderr();
+
+    const exit = await runPrototypingIterate({
+      root,
+      cycle: 0,
+      targetUrl: "http://localhost:5173",
+    });
+
+    expect(exit).toBe(0);
+    const log = await readFile(path.join(evidenceRoot, "mutation-log.jsonl"), "utf-8");
+    expect(log).toContain(".qfai/evidence/prototyping/screenshots/linked.png");
   });
 
   it("puts back what the reset moved when a later move fails", async () => {

@@ -33,6 +33,7 @@
 import type { Dirent } from "node:fs";
 import {
   copyFile,
+  lstat,
   mkdir,
   readdir,
   readFile,
@@ -2401,9 +2402,10 @@ async function dirExists(absPath: string): Promise<boolean> {
 }
 
 /**
- * Recursively list every file under `absDir` (post-order). Returns
- * absolute paths. Used by the mutation-log writer to emit one JSONL
- * entry per moved file under `--cycle 0 --force`.
+ * Recursively list every entry under `absDir` that is not a directory it
+ * descends into (post-order): files, and links, which move and are removed as
+ * links. Returns absolute paths. Used by the mutation-log writer to emit one
+ * JSONL entry per moved or removed entry.
  */
 async function collectFilesRecursively(absDir: string): Promise<string[]> {
   const out: string[] = [];
@@ -2419,7 +2421,7 @@ async function collectFilesRecursively(absDir: string): Promise<string[]> {
       const child = path.join(current, entry.name);
       if (entry.isDirectory()) {
         await visit(child);
-      } else if (entry.isFile()) {
+      } else {
         out.push(child);
       }
     }
@@ -2539,7 +2541,8 @@ async function filesWithSizes(
 ): Promise<{ rel: string; size: number }[]> {
   const files: { rel: string; size: number }[] = [];
   for (const fileAbs of await collectFilesRecursively(dirAbs)) {
-    const { size } = await stat(fileAbs);
+    // The entry itself moves, so a link is sized as a link.
+    const { size } = await lstat(fileAbs);
     files.push({ rel: toRootRelative(root, fileAbs), size });
   }
   return files;
@@ -2617,7 +2620,7 @@ async function clearEvidenceIterDirs(
           const rel = path.relative(root, fileAbs).replace(/\\/g, "/");
           let priorSize = 0;
           try {
-            priorSize = (await stat(fileAbs)).size;
+            priorSize = (await lstat(fileAbs)).size;
           } catch {
             // best-effort size capture
           }
