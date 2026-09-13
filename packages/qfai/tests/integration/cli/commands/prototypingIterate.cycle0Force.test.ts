@@ -319,6 +319,38 @@ describe("iterate --cycle 0 destructive-rerun gate", () => {
     expect(stderr.join("")).toContain("screenshots");
   });
 
+  it("puts every move back when the mutation log cannot be written", async () => {
+    // A reset that stood with its moves unlogged would break the log's promise
+    // that each moved file is in it.
+    const root = await newTempDir();
+    await seedProject(root);
+    await seedExistingIter00(root, "prior loop seed");
+    const evidenceRoot = path.join(root, ".qfai/evidence/prototyping");
+    await mkdir(path.join(evidenceRoot, "screenshots"), { recursive: true });
+    await writeFile(path.join(evidenceRoot, "screenshots", "home.png"), "prior capture", "utf-8");
+    // A directory where the log file goes refuses the append.
+    await mkdir(path.join(evidenceRoot, "mutation-log.jsonl"), { recursive: true });
+    const stderr = captureStderr();
+
+    const exit = await runPrototypingIterate({
+      root,
+      cycle: 0,
+      targetUrl: "http://localhost:5173",
+      force: true,
+    });
+
+    expect(exit).toBe(2);
+    expect(await readFile(path.join(evidenceRoot, "screenshots", "home.png"), "utf-8")).toBe(
+      "prior capture",
+    );
+    expect(await readFile(path.join(evidenceRoot, "iter-00", "prior-loop.marker"), "utf-8")).toBe(
+      "prior loop seed",
+    );
+    const entries = await readdir(evidenceRoot);
+    expect(entries.filter((entry) => entry.includes(".backup-"))).toEqual([]);
+    expect(stderr.join("")).toContain("back in place");
+  });
+
   it("puts the aggregate directories back when the iter-00 backup fails", async () => {
     const root = await newTempDir();
     await seedProject(root);

@@ -772,13 +772,37 @@ export async function runPrototypingIterate(
   // previous loop's captures. They are moved, not deleted: the same reset
   // removes the iteration directories they were copied from.
   //
-  // Moved first and logged last. A failed `iter-00` backup below puts them
-  // back, and a move put back leaves no log entry claiming it happened.
+  // Every move is made first and logged last, in one write. A step that fails,
+  // the write included, puts back every move the reset had made, so the log
+  // never claims a move that was undone and never misses one that stands.
+  const evidenceRootAbs = path.join(options.root, PROTOTYPING_EVIDENCE_REL);
   let aggregateMove: AggregateMove | null = null;
+  let iter00Backup: { from: string; to: string; files: MovedFile[] } | null = null;
+  const undoReset = async (what: string, cause: unknown): Promise<number> => {
+    const reason = cause instanceof Error ? cause.message : String(cause);
+    const stranded =
+      aggregateMove === null
+        ? []
+        : await putAggregateDirsBack(evidenceRootAbs, aggregateMove.backupAbs, aggregateMove.names);
+    const backup = iter00Backup;
+    if (backup !== null) {
+      await rename(backup.to, backup.from).catch(() => {
+        stranded.push(backup.to);
+      });
+    }
+    error(
+      `qfai prototyping iterate --cycle 0: ${what} (${reason}). ` +
+        (aggregateMove === null && backup === null
+          ? "Aborting before clearing evidence to avoid destroying the prior loop. "
+          : aggregateRollbackReport(options.root, stranded)) +
+        "Resolve the filesystem error (Windows file lock / EACCES / EBUSY are common causes) and rerun.",
+    );
+    return 2;
+  };
   if (aggregateDirsToMove.length > 0) {
     const moved = await moveAggregateDirsAside(
       options.root,
-      path.join(options.root, PROTOTYPING_EVIDENCE_REL),
+      evidenceRootAbs,
       aggregateDirsToMove,
       resetStamp,
     );
@@ -794,59 +818,42 @@ export async function runPrototypingIterate(
     aggregateMove = moved.move;
   }
   if (cycleZeroReset !== null) {
-    {
-      const { evidenceRootAbs, iter00Abs } = cycleZeroReset;
-      const backupAbs = path.join(evidenceRootAbs, `iter-00.backup-${resetStamp}`);
-      // Fail closed: clearing evidence dirs MUST be skipped when the backup
-      // cannot be made, otherwise the prior loop's evidence is silently
-      // destroyed without an operator-visible backup. The aggregate directories
-      // this reset already moved go back.
-      const abortReset = async (what: string, cause: unknown): Promise<number> => {
-        const reason = cause instanceof Error ? cause.message : String(cause);
-        const stranded =
-          aggregateMove === null
-            ? []
-            : await putAggregateDirsBack(
-                evidenceRootAbs,
-                aggregateMove.backupAbs,
-                aggregateMove.names,
-              );
-        error(
-          `qfai prototyping iterate --cycle 0 --force: ${what} (${reason}). ` +
-            (aggregateMove === null
-              ? "Aborting before clearing evidence to avoid destroying the prior loop. "
-              : aggregateRollbackReport(options.root, stranded)) +
-            "Resolve the filesystem error (Windows file lock / EACCES / EBUSY are common causes) and rerun.",
-        );
-        return 2;
-      };
-      // Every destructive iter-NN mutation MUST funnel through the
-      // mutation-log writer. The iter-00 tree is walked BEFORE the rename,
-      // so each file is recorded with its size, and the entries are written
-      // once the rename has happened: a backup that fails claims no move, and
-      // a tree that cannot be walked is not moved.
-      let movedFiles: { rel: string; size: number }[];
-      try {
-        movedFiles = await filesWithSizes(options.root, iter00Abs);
-      } catch (cause) {
-        return abortReset("could not list iter-00 for the mutation log", cause);
-      }
-      try {
-        await rename(iter00Abs, backupAbs);
-        info(
-          `qfai prototyping iterate --cycle 0 --force: backed up iter-00 to ${path.relative(options.root, backupAbs).replace(/\\/g, "/")}.`,
-        );
-      } catch (cause) {
-        return abortReset("could not back up iter-00", cause);
-      }
-      await logMovedFiles(options.root, movedFiles);
+    // Fail closed: clearing evidence dirs MUST be skipped when the backup
+    // cannot be made, otherwise the prior loop's evidence is silently
+    // destroyed without an operator-visible backup. Every destructive iter-NN
+    // mutation MUST funnel through the mutation-log writer, so the tree is
+    // walked before the rename and one that cannot be walked is not moved.
+    const { iter00Abs } = cycleZeroReset;
+    const backupAbs = path.join(evidenceRootAbs, `iter-00.backup-${resetStamp}`);
+    let files: MovedFile[];
+    try {
+      files = await filesWithSizes(options.root, iter00Abs);
+    } catch (cause) {
+      return undoReset("could not list iter-00 for the mutation log", cause);
     }
-  }
-  if (aggregateMove !== null) {
-    await logMovedFiles(options.root, aggregateMove.files);
+    try {
+      await rename(iter00Abs, backupAbs);
+    } catch (cause) {
+      return undoReset("could not back up iter-00", cause);
+    }
+    iter00Backup = { from: iter00Abs, to: backupAbs, files };
     info(
-      `qfai prototyping iterate --cycle 0: moved ${aggregateMove.names.join(" and ")} aside to ${toRootRelative(options.root, aggregateMove.backupAbs)}.`,
+      `qfai prototyping iterate --cycle 0 --force: backed up iter-00 to ${toRootRelative(options.root, backupAbs)}.`,
     );
+  }
+  if (aggregateMove !== null || iter00Backup !== null) {
+    const aggregateLogEntries = aggregateMove?.files ?? [];
+    const iter00LogEntries = iter00Backup?.files ?? [];
+    try {
+      await logMovedFiles(options.root, [...aggregateLogEntries, ...iter00LogEntries]);
+    } catch (cause) {
+      return undoReset("could not record the moves in the mutation log", cause);
+    }
+    if (aggregateMove !== null) {
+      info(
+        `qfai prototyping iterate --cycle 0: moved ${aggregateMove.names.join(" and ")} aside to ${toRootRelative(options.root, aggregateMove.backupAbs)}.`,
+      );
+    }
   }
 
   // 4) Persist seed metadata to prototyping.json on cycle 0:
@@ -2539,23 +2546,20 @@ async function filesWithSizes(
   return files;
 }
 
+/** A file a reset moves, with its size before the move. */
+type MovedFile = { rel: string; size: number };
+
 /**
- * Record each moved file in the mutation log. A write that fails is advisory:
- * the move has happened, and the reviewer-gate finding
- * R-EVIDENCE-MUTATION-UNLOGGED is the structural backstop.
+ * Record every moved file in the mutation log, in one write. Rejects when the
+ * write fails, and the caller then puts the moves back.
  */
-async function logMovedFiles(
-  root: string,
-  files: readonly { rel: string; size: number }[],
-): Promise<void> {
-  try {
-    const { logEvidenceMove } = await import("../../core/prototyping/mutationLog.js");
-    for (const file of files) {
-      await logEvidenceMove(root, "iterate", file.rel, file.size);
-    }
-  } catch (logCause) {
-    warn(`qfai prototyping iterate --cycle 0: mutation-log write failed (${String(logCause)}).`);
-  }
+async function logMovedFiles(root: string, files: readonly MovedFile[]): Promise<void> {
+  const { logEvidenceMoves } = await import("../../core/prototyping/mutationLog.js");
+  await logEvidenceMoves(
+    root,
+    "iterate",
+    files.map((file) => ({ path: file.rel, priorSize: file.size })),
+  );
 }
 
 async function clearEvidenceIterDirs(

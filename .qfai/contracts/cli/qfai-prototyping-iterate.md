@@ -135,9 +135,9 @@ iteration directories, so a restarted loop holds no evidence until it
 captures again. A project with no UI-bearing spec ends cycle 0 before the
 reset, so nothing is moved there. The move comes before the `iter-00`
 backup, and the log entries are written once both have succeeded: a
-failure in either, or a directory the reset cannot list for the log,
-stops the run before any evidence is cleared and puts back what the reset
-had moved.
+failure in either, a directory the reset cannot list for the log, or a
+log write that fails stops the run before any evidence is cleared and
+puts back what the reset had moved.
 
 ## `--capture` and `--auto-serve` (REQ-0109 / REQ-0110)
 

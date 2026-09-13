@@ -74,6 +74,32 @@ export async function logEvidenceMove(
 }
 
 /**
+ * Record several `move` mutations in one append, so a write that fails records
+ * none of them rather than the first few.
+ */
+export async function logEvidenceMoves(
+  root: string,
+  caller: string,
+  moves: readonly { readonly path: string; readonly priorSize: number }[],
+): Promise<void> {
+  if (moves.length === 0) return;
+  const logAbs = path.join(root, MUTATION_LOG_REL);
+  await mkdir(path.dirname(logAbs), { recursive: true });
+  const ts = new Date().toISOString();
+  const lines = moves.map((move) =>
+    JSON.stringify({
+      ts,
+      caller,
+      path: move.path,
+      action: "move",
+      priorSize: move.priorSize,
+      newSize: 0,
+    }),
+  );
+  await appendFile(logAbs, `${lines.join("\n")}\n`, "utf-8");
+}
+
+/**
  * Record an `overwrite` mutation. Both sizes must be supplied by the
  * caller (read before / after the write so the log is honest about
  * the byte delta).
