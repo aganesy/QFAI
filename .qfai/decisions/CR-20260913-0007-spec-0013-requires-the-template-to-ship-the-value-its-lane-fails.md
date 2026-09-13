@@ -154,11 +154,20 @@ list?
 
 2. Downstream ledger sweep. Reset to `todo`, recording this CR's ID in `DR-ID`:
    `spec-0013/TDD-0019`. Its obligation changes, and its recorded observation is
-   of the literal slot being replaced. The same rerun re-points it: its
-   `Selector` resolves to no case today, so a reset alone returns it to `todo`
-   still selecting nothing. `spec-0013/TDD-0022` is reset to `todo` with this
-   CR's ID in `DR-ID` as well: the story it carries is restated. No row is
-   retired.
+   of the literal slot being replaced. `spec-0013/TDD-0022` is reset to `todo`
+   with this CR's ID in `DR-ID` as well: the story it carries is restated. No
+   row is retired.
+
+   **This rerun's Phase 2b splits `TDD-0019` as well.** Its `Selector` names the
+   `describe` in `sddUiTemplate.test.ts` that runs two independently observable
+   cases: the template's slot on every screen, and the requirements-analyst
+   guide's instruction to author at least one task. In the order
+   `TC-0013-0025` states them, `TDD-0019` keeps the template's slot, with its
+   `Selector` narrowed to that case, and a new `todo` row carrying
+   `TC-0013-0025` takes the guide's instruction, with this CR's ID in `DR-ID`.
+   Both name their boundary in `Boundary`. The recorded RED failed both cases
+   at once, so the order is the test case's rather than the observation's.
+
 3. Under `/qfai-implement`, the row's case in `sddUiTemplate.test.ts` asserts
    that each entry holds at least one task. It asserts only that the key holds
    a list today, with a comment allowing the empty placeholder this fix

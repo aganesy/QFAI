@@ -131,10 +131,11 @@ window it names has closed regardless, so both readings arrive at `error`.
 
 ## Blocked downstream items
 
-| Item                 | Kind         | Why it depends on the artifact                                                                         |
-| -------------------- | ------------ | ------------------------------------------------------------------------------------------------------ |
-| `spec-0013/TDD-0025` | `ledger-row` | Carries `TC-0013-0030`, whose resolver half every option restates and whose helper half item 1 settles |
-| `spec-0013/TDD-0026` | `ledger-row` | Carries `TC-0013-0031`, the severity obligation item 2 settles                                         |
+| Item                                                        | Kind         | Why it depends on the artifact                                                                             |
+| ----------------------------------------------------------- | ------------ | ---------------------------------------------------------------------------------------------------------- |
+| `spec-0013/TDD-0025`                                        | `ledger-row` | Carries `TC-0013-0030`, whose resolver half every option restates and whose helper half item 1 settles     |
+| `spec-0013/TDD-0026`                                        | `ledger-row` | Carries `TC-0013-0031`, the severity obligation item 2 settles                                             |
+| `spec-0013` `E2E` rows whose `US-Refs` names `US-0013-0013` | `ledger-row` | Seeded by `CR-20260913-0008`'s rerun before this record applies, over a story every item-1 option restates |
 
 Each row stands `done` and cannot carry pointer-grammar evidence while this
 holds: a mutation recorded against the narrower assertion would fix the
@@ -176,12 +177,14 @@ the rows open today.
   **Product paths, under the options that change the product** — `1a` reaches
   `packages/qfai/src/core/detection/surfaceType.ts` and the `/qfai-sdd` skill
   under `packages/qfai/assets/init/` with its root mirror; `2b` reaches
-  `packages/qfai/src/core/validators/surfaceTypeDrift.ts`. **This list is
+  `packages/qfai/src/core/validators/surfaceTypeDrift.ts` for its severity, and
+  **every outcome reaches that file for its remediation**, which approved action
+  3 corrects. **This list is
   reduced to the approved outcomes before `Status: approved` is written**, so
   what an approval covers is read off the paths rather than off the conditions
-  beside them. Under the recommended set, `1c/2a`, the only product edits are
-  the test-side corrections named below, and every path in this paragraph is
-  struck.
+  beside them. Under the recommended set, `1c/2a`, the product edits are that
+  remediation and the test-side corrections named below, and every other path
+  in this paragraph is struck.
 
   The test files above are in scope under every outcome, because each item's
   settlement changes what its covering cases assert or what their text claims.
@@ -225,6 +228,10 @@ ask for.
      `spec-0013/TDD-0026` under `2a` and `2b`, because both re-derive
      `TC-0013-0031` — `2b` with the release the user names. Each recorded
      observation is of a rule being replaced.
+   - Reset to `todo` as well, under every option: every `E2E` row whose
+     `US-Refs` names `US-0013-0013`. `CR-20260913-0008`'s rerun seeds those rows
+     before this record applies, and the story they carry is re-derived here, so
+     the rows are selected by that cell rather than by ids nobody can name yet.
    - `TDD-0025` is **re-pointed in the same rerun**. It carries an unresolved
      `Selector` today, so a reset alone returns it to `todo` still selecting
      nothing. Row identity is Phase 2b's to write.
@@ -237,8 +244,9 @@ ask for.
 
 3. Correct the test-side text under `/qfai-implement`, with the row repairs, so
    each title, message and comment the item 2 table names states what its case
-   asserts. This is not optional under any outcome: text stating the opposite of
-   the case beneath it is what let both of these sit unreported.
+   asserts. It is owed under every outcome, save the one title `2c` leaves below:
+   text stating the opposite of the case beneath it is what let both of these sit
+   unreported.
 
    **One of those titles is a row's `Selector`.** `TDD-0026` selects on
    `D-SURFACE-TYPE-MISSING warns on companion-without-frontmatter`, the
@@ -249,6 +257,15 @@ ask for.
    title the case then carries. Under `2c` no rerun
    runs to re-point the row, so that title stays and only the comments and the
    assertion message are corrected.
+
+   **Under every outcome, `D-SURFACE-TYPE-MISSING`'s remediation is corrected
+   too.** `packages/qfai/src/core/validators/surfaceTypeDrift.ts` tells the
+   user a spec without the marker is excluded from the UI-bearing set, so its
+   screens are skipped. The resolver item 1 settles takes such a spec in
+   through its UI contract, which is the companion this finding fires on, so
+   the remediation says the marker records on the spec what the contract
+   already implies. `packages/qfai/tests/core/surfaceTypePopulate.test.ts`
+   asserts the corrected text.
 
 ## Resolution
 

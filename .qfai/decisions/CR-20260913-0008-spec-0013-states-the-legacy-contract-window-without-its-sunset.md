@@ -130,6 +130,20 @@ requirement and business rule already carry?
 2. Downstream ledger sweep. Reset to `todo`, recording this CR's ID in `DR-ID`:
    `spec-0013/TDD-0021`. Its obligation gains a condition, and its recorded
    observation was taken against the unconditional wording. No row is retired.
+
+   **The same rerun's Phase 2b splits `TDD-0021`.** Its `Selector` names the
+   `describe` in `sddPrimaryTasksLane.test.ts` that runs three independently
+   observable cases: a contract whose every screen holds a task passes, a
+   legacy contract with no slot is an error past the sunset, and an authored
+   but empty list stays an error. Phase 2b splits a progressed row only under a
+   Change Request naming the row and the order of its split, and this record is
+   that request. In that order: `TDD-0021` keeps the passing contract, the case
+   `TC-0013-0027` states first, with its `Selector` narrowed to that case, and
+   two new `todo` rows carrying `TC-0013-0027` take the legacy contract and then
+   the authored empty list, with this CR's ID in `DR-ID`. Each of the three
+   names its boundary in `Boundary`. The recorded RED is file-level and
+   observed no one of them first, so the order is this record's.
+
 3. Under `/qfai-implement`, with the row's repair, correct the header comment of
    `sddPrimaryTasksLane.test.ts` quoted above, which describes the pre-sunset
    behaviour over a case that asserts the post-sunset one.
