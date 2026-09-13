@@ -644,6 +644,8 @@ describe("the working-tree address has one notation", () => {
     it(`${tree}: step 3 fixes the notation of every part`, async () => {
       const text = flat(await read(tree, REFERENCE));
       expect(text).toContain("How each part is written is fixed");
+      // Staging moves no record, so the document says the index is outside it.
+      expect(text).toContain("The index is not read.");
       expect(text).toContain("Its 64 lowercase hexadecimal characters");
       expect(text).toContain("Never its 32 raw bytes, and never the bytes it is a digest of");
       // The whole of what git printed, not a fixed width: a repository created

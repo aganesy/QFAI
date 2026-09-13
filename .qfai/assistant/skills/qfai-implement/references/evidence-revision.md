@@ -242,6 +242,12 @@ check. Gate item 10 rejects any other shape wherever a revision is recorded:
      merge conflict would otherwise emit for one path, and a directory reached
      from two children is one record.
 
+     **The index is not read.** A record says where a path is and what it holds,
+     not which list named it or what is staged for it: `git add` on an untracked
+     file, or the stages of an unresolved merge, leave every record and so the
+     address unchanged. An observation that reads the index itself, such as a
+     test of a commit hook, is not pinned by this address.
+
      `kind` is `file` / `symlink` / `dir` / `absent`, and `mode` is the octal
      permission bits. **`absent` is a tracked path with nothing on disk** — a
      deletion not yet committed, a rename, a sparse checkout. Its `mode` is
