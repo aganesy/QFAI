@@ -830,7 +830,10 @@ agents:
 
       From the ATDD stage onward:
 
-      - For each US/TC, verify applicable coverage for: equivalence partitions, normal path, error path, edge cases, boundary values, special values, state transitions, and combinatorial scenarios. Declared valid cases remain required; failure-side categories apply only to kept failures.
+      - For each US/TC, verify applicable coverage for: equivalence partitions, normal
+        path, error path, edge cases, boundary values, special values, state transitions,
+        and combinatorial scenarios. Declared valid cases remain required;
+        failure-side categories apply only to kept failures.
       - Produce the Coverage Depth Matrix as a required deliverable, plus the business rule coverage table under it when the spec declares `BR-*`. Flag any ❌ cells in either as gaps.
       - Failure-side coverage follows the checklist's kept-failure scope. Return
         REVISE for a normal-only row only when an applicable obligation is uncovered.
@@ -893,10 +896,13 @@ agents:
       the rows. `US-*` seeds no ledger row, so its absence from one is never a missing-row finding — it is read for layer ownership, and
       discharged by the acceptance tests' annotations.
 
-      Referenced API contracts join the obligation set in planning, SDD and ATDD
-      coverage review, including matrix production. Read them under the configured
-      `paths.contractsDir`. A spec with no API surface is normal; absent unreferenced
-      contracts are not missing required inputs and must not trip the Stop condition.
+      `.qfai/contracts/api/**` joins that obligation set **only where it applies**:
+      in `qfai-implement`'s `plan` phase, SDD and `qfai-atdd`'s blocking `coverage` phase
+      when the spec references `CON-API-*`, including matrix production and review.
+      Read referenced contracts under configured `paths.contractsDir`. A spec with no
+      API surface is normal; its absence is **not** a missing required source artifact
+      when there is no referenced API obligation. Such an absent input must not trip
+      the Stop condition.
 
       ## Deliverables
 
