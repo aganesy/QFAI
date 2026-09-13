@@ -109,7 +109,9 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   and a glob naming `.zig` selects a language with no dialect on purpose, which
   is what that report is for. The same holds for a glob naming a file with no
   extension, such as `tests/integration/test_pay`, or an extension through a
-  short character class, such as `*.[z]ig`. A negative entry names no extension.
+  short character class, such as `*.[z]ig`, or a glob that names the file itself
+  and leaves the extension open, such as `*.test.*`. A negative entry names no
+  extension.
 
   The coverage scan reads a collected file the same way: a data file an
   extension-broad glob sweeps into an acceptance layer is not a source, so an

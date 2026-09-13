@@ -264,7 +264,7 @@ acceptance one would let its annotations discharge an obligation and its unfille
 stubs block a gate that owns no unit test. Reporting a suite as uncovered is the
 safe direction; claiming one is not.
 
-Three things that does not change.
+Three things do not change.
 
 | Unchanged                                    | Why it matters                                        |
 | -------------------------------------------- | ----------------------------------------------------- |
@@ -278,9 +278,8 @@ would be the all-integration collapse this file lists as an anti-pattern.
 
 What `QFAI-ATDD-105` reports is narrower than "under `<testsDir>` and in none of
 the three": the probe reads **`<testsDir>/atdd/**`** and nothing else. That is
-the directory `npx qfai atdd scaffold` used to write to, and the finding exists
-to surface output the toolkit produced and then stopped counting — not to audit
-a project's own layout. An annotated file the project keeps somewhere else under
+the legacy location of `npx qfai atdd scaffold` output, and the finding reports
+generated files no acceptance layer owns — not a project's own layout. An annotated file the project keeps somewhere else under
 `<testsDir>` answers no layer and is reported by nothing, which is the quiet
 side that keeps a layout decision the project made from arriving as a finding.
 

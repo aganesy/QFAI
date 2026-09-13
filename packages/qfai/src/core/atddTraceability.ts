@@ -23,7 +23,11 @@ import {
   resolveTestCaseTables,
 } from "./specPackParsers.js";
 import { UNIT_COMPONENT_LAYERS } from "./tddHelpers.js";
-import { globExtensions, namesExtensionlessSource } from "./testGlobExtensions.js";
+import {
+  globExtensions,
+  namedTestFileMatcher,
+  namesExtensionlessSource,
+} from "./testGlobExtensions.js";
 import { DEFAULT_TEST_FILE_EXCLUDE_GLOBS, normalizeGlobs } from "./traceability.js";
 import { maskJsNonCode } from "./validators/jsSourceMask.js";
 
@@ -543,10 +547,9 @@ export async function evaluateAtddCodeTraceability(
       // all-integration collapse `catalog/test-layers.md` lists as an
       // anti-pattern.
       //
-      // The diagnostic this branch used to carry has an owner that can scope
-      // it: `collectUncountedTestFiles` reads the directories qfai itself
-      // writes to, which is where output the toolkit produced and then ignored
-      // actually lands.
+      // A generated file outside every acceptance layer is reported by
+      // `collectUncountedTestFiles` alone: it reads the directories qfai itself
+      // writes to, which is where such a file lands.
       continue;
     }
 
@@ -2405,7 +2408,9 @@ export function deriveAtddFilePattern(testFileGlobs: readonly string[]): string 
  * A project glob used as written may be extension-broad, and one that is
  * collects a data file inside an acceptance layer as readily as a test. A
  * fixture value is not an annotation, so a file counts only when its extension
- * is one the scan's file pattern covers or one a project glob names outright.
+ * is one the scan's file pattern covers or one a project glob names outright,
+ * or when a project glob names the file itself, as `*.test.*` names
+ * `pay.test.zig`.
  */
 function acceptanceSourceFilter(
   filePattern: string,
@@ -2417,7 +2422,10 @@ function acceptanceSourceFilter(
     ...globExtensions(projectGlobs).map((ext) => ext.toLowerCase()),
   ]);
   if (namesExtensionlessSource(projectGlobs)) extensions.add("");
-  return (absolutePath) => extensions.has(path.extname(absolutePath).toLowerCase());
+  const namedTestFile = namedTestFileMatcher(projectGlobs);
+  return (absolutePath) =>
+    extensions.has(path.extname(absolutePath).toLowerCase()) ||
+    namedTestFile(path.basename(absolutePath));
 }
 
 function buildAtddTestGlobs(root: string, testsRoot: string, filePattern: string): string[] {

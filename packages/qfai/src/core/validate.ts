@@ -940,12 +940,11 @@ async function runAtddValidators(
     // here would leave it reported by neither.
     ...(await validateTestTodoStubs(root, config, {
       // The pattern carries the project's own extensions as well. The layer
-      // globs this builds under `paths.testsDir` are generated from it, so an
+      // globs this builds under `paths.testsDir` are generated from it, and an
       // extension named only by a package glob — `packages/**/*.sol` beside a
-      // `tests/integration/pay.sol` — was collected by neither: the package
-      // glob does not reach that path, and the canonical globs did not carry
-      // the extension. A runnable carrier then cleared coverage with no
-      // `QFAI-TEST-002` beside it.
+      // `tests/integration/pay.sol` — reaches that path through them alone,
+      // because the package glob does not. A source the gate never collects
+      // cannot be reported as unscanned either.
       globs: atddAcceptanceTestGlobs(
         root,
         config,

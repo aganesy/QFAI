@@ -1071,6 +1071,25 @@ describe("acceptance tests outside paths.testsDir", () => {
     });
   });
 
+  it("a source a test-name glob selects counts whatever its extension", async () => {
+    await withProject(async (root) => {
+      await seedSpec(root, "0001", ["US-0001"], ["TC-0001"]);
+      await seedPackageTest(root, "checkout", "e2e", "journey.test.ts", [
+        "/* QFAI:SPEC-0001:US-0001 */",
+      ]);
+      await seedPackageTest(root, "checkout", "integration", "pay.test.zig", [
+        "// QFAI:SPEC-0001:TC-0001",
+      ]);
+
+      const result = await evaluateAtddCodeTraceability(
+        root,
+        withProjectGlobs(["packages/*/tests/**/*.test.*"]),
+      );
+
+      expect(result.missing.tc).toEqual([]);
+    });
+  });
+
   it("names the package-local file a misplaced test-case reference sits in", async () => {
     await withProject(async (root) => {
       await seedSpec(root, "0001", ["US-0001"], ["TC-0001"]);

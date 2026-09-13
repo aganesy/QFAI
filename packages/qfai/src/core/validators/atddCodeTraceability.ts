@@ -938,14 +938,6 @@ function formatMissingTcGroups(
 }
 
 /**
- * Added to every remediation that names a layer directory.
- *
- * The scan reads each package's own test root as well as `paths.testsDir`, so a
- * fix naming only the configured one sends an author to build a parallel
- * central suite — which `catalog/test-layers.md` and the `qfai-atdd` skill both
- * tell them not to do.
- */
-/**
  * A scanned file's path as the operator would type it. A forbidden-reference
  * fix names the file that carries the reference, which may sit in any package's
  * suite, rather than the configured layer directory.
@@ -954,6 +946,14 @@ function repoRelative(root: string, file: string): string {
   return path.relative(root, file).split(path.sep).join("/");
 }
 
+/**
+ * Added to every remediation that names a layer directory.
+ *
+ * The scan reads each package's own test root as well as `paths.testsDir`, so a
+ * fix naming only the configured one sends an author to build a parallel
+ * central suite — which `catalog/test-layers.md` and the `qfai-atdd` skill both
+ * tell them not to do.
+ */
 const ATDD_PACKAGE_SUITE_HINT =
   "A package with a suite of its own answers from the same layer directory inside that package's own test root, selected by `validation.traceability.testFileGlobs`. The path above is where a project with one suite writes; do not add a second central suite beside a package that already has one.";
 

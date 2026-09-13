@@ -88,6 +88,33 @@ export function globExtensions(globs: readonly string[]): string[] {
 }
 
 /**
+ * A predicate for a file name that a glob selects by name rather than by
+ * extension: the last segment of a glob naming something besides wildcards,
+ * as `*.test.*` does.
+ *
+ * Such a glob selects a test by its name whatever the extension, so a file it
+ * matches is a source even when no glob names that extension. A last segment
+ * of wildcards alone names nothing, a negative entry selects nothing, and a
+ * segment using braces, brackets or an extglob group is left to
+ * {@link globExtensions}. Matched case-sensitively, as the glob that collected
+ * the file was.
+ */
+export function namedTestFileMatcher(globs: readonly string[]): (fileName: string) => boolean {
+  const patterns: RegExp[] = [];
+  for (const glob of globs) {
+    if (glob.startsWith("!")) continue;
+    const last = glob.split("/").at(-1) ?? "";
+    if (!/^[^{}[\]()!@+]*$/.test(last) || !/[^*?.]/.test(last)) continue;
+    const source = last
+      .replace(/[.^$|\\]/g, "\\$&")
+      .replaceAll("*", "[^/]*")
+      .replaceAll("?", "[^/]");
+    patterns.push(new RegExp(`^${source}$`));
+  }
+  return (fileName) => patterns.some((pattern) => pattern.test(fileName));
+}
+
+/**
  * Whether a glob selects files that have no extension: its last segment names
  * something and carries no dot, as `tests/integration/test_pay` does. A last
  * segment of wildcards alone names nothing, so an extension-broad glob whose

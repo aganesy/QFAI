@@ -41,7 +41,11 @@ import path from "node:path";
 
 import type { QfaiConfig } from "../config.js";
 import { collectFilesByGlobs, DEFAULT_GLOB_FILE_LIMIT } from "../fs.js";
-import { globExtensions, namesExtensionlessSource } from "../testGlobExtensions.js";
+import {
+  globExtensions,
+  namedTestFileMatcher,
+  namesExtensionlessSource,
+} from "../testGlobExtensions.js";
 import { DEFAULT_TEST_FILE_EXCLUDE_GLOBS, normalizeGlobs } from "../traceability.js";
 import type { Issue, IssueSeverity } from "../types.js";
 import { maskJsNonCode } from "./jsSourceMask.js";
@@ -851,10 +855,9 @@ export const STUB_SOURCE_FILE_PATTERN = `**/*.{${STUB_SOURCE_EXTENSIONS.join(","
  * The same pattern widened by the extensions a project's own globs name.
  *
  * A caller builds its canonical `<testsDir>` globs from this, and an extension
- * named only by a package glob reaches neither otherwise: that glob does not
- * match a path under the configured root, and the generated globs did not carry
- * the extension. The post-collection filter cannot recover a file nothing
- * collected.
+ * named only by a package glob reaches a path under the configured root through
+ * those globs alone, because the package glob does not match there. The
+ * post-collection filter cannot recover a file nothing collected.
  */
 export function stubSourceFilePattern(projectGlobs: readonly string[]): string {
   const extensions = new Set([
@@ -1285,20 +1288,20 @@ export type TestTodoStubOptions = {
   /**
    * Narrows the collected set to the files this caller owns.
    *
-   * Globs alone could not express it once the ATDD scan started reading the
-   * project's own test globs: those match a package's unit suite as well as its
-   * acceptance one, and a unit test's stub must not block a gate that owns none
-   * of it. The predicate takes a repository-relative, posix-slashed path.
+   * Globs alone cannot express it: the ATDD scan reads the project's own test
+   * globs, which match a package's unit suite as well as its acceptance one,
+   * and a unit test's stub must not block a gate that owns none of it. The
+   * predicate takes a repository-relative, posix-slashed path.
    */
   fileFilter?: (relativePath: string) => boolean;
   /**
    * Whether `D-SCAFFOLD-PLACEHOLDER` scans this file.
    *
-   * A file carrying the scaffold marker is exempt from `QFAI-TEST-003` because
-   * that validator reports it instead. It scans four directories under
+   * A file carrying the scaffold marker is exempt from `QFAI-TEST-003` only
+   * where that validator reports it instead. It scans four directories under
    * `paths.testsDir` and nothing else, so a marked skeleton anywhere else — a
-   * package-local acceptance suite, which this gate does read — was exempt here
-   * and unseen there. Absent, every marked file is exempt, which is what a
+   * package-local acceptance suite, which this gate does read — stays this
+   * gate's to report. Absent, every marked file is exempt, which is what a
    * caller scanning only those directories wants. The predicate takes a
    * repository-relative, posix-slashed path.
    */
@@ -1432,8 +1435,16 @@ export async function validateTestTodoStubs(
           // file never reaches `QFAI-TEST-002` either.
           ...(namesExtensionlessSource(globs) ? [""] : []),
         ]);
+  // A glob naming its files, as `*.test.*` does, selects a test whatever its
+  // extension, so a file it matches is kept even when no glob names that
+  // extension.
+  const namedTestFile = options.globs === undefined ? null : namedTestFileMatcher(globs);
   const wanted = (absolutePath: string): boolean => {
-    if (sourceExtensions && !sourceExtensions.has(path.extname(absolutePath).toLowerCase())) {
+    if (
+      sourceExtensions &&
+      !sourceExtensions.has(path.extname(absolutePath).toLowerCase()) &&
+      !(namedTestFile?.(path.basename(absolutePath)) ?? false)
+    ) {
       return false;
     }
     const relative = path.relative(root, absolutePath).replace(/\\/g, "/");

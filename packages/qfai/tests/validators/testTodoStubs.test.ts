@@ -572,6 +572,44 @@ describe("the ATDD gate's file selection", () => {
     expect(issues.filter((issue) => issue.code === "QFAI-TEST-002")).toEqual([]);
   });
 
+  it("keeps a file a test-name glob selects whatever its extension", async () => {
+    const root = await newTempDir();
+    const config = atddConfig(["packages/*/tests/**/*.test.*"]);
+    // The glob names the test by its name, so a language nothing names by
+    // extension is still a source, and a suite nothing can scan is reported.
+    await writeTestFile(
+      root,
+      "packages/checkout/tests/integration/pay.test.zig",
+      'test "pays" {}\n',
+    );
+
+    const issues = await validateTestTodoStubs(root, config, {
+      globs: atddAcceptanceTestGlobs(root, config, STUB_SOURCE_FILE_PATTERN),
+      fileFilter: atddAcceptanceLayerFilter(root, config),
+    });
+
+    expect(issues.map((issue) => issue.code)).toContain("QFAI-TEST-002");
+  });
+
+  it("keeps a wildcard-only glob from admitting a data file", async () => {
+    const root = await newTempDir();
+    const config = atddConfig(["packages/*/tests/**/*.*"]);
+    await writeTestFile(
+      root,
+      "packages/checkout/tests/integration/pay.test.ts",
+      `it${TODO}("pays");\n`,
+    );
+    // A last segment of wildcards names nothing, so it selects no file by name.
+    await writeTestFile(root, "packages/checkout/tests/integration/data.json", "{}\n");
+
+    const issues = await validateTestTodoStubs(root, config, {
+      globs: atddAcceptanceTestGlobs(root, config, STUB_SOURCE_FILE_PATTERN),
+      fileFilter: atddAcceptanceLayerFilter(root, config),
+    });
+
+    expect(issues.filter((issue) => issue.code === "QFAI-TEST-002")).toEqual([]);
+  });
+
   it("keeps an extension a character-class glob names", async () => {
     const root = await newTempDir();
     const config = atddConfig(["packages/*/tests/**/*.[z]ig"]);
