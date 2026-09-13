@@ -19,18 +19,17 @@ import { validateProject } from "../../src/core/validate.js";
 
 // A directory every glob scan fails on until the scan is told to pass over it,
 // which is what a directory the account cannot read does to the walk.
-const denied = vi.hoisted((): { directory: string | null; root: string } => ({
-  directory: null,
-  root: "",
-}));
+const denied = vi.hoisted((): { target: string | null } => ({ target: null }));
 vi.mock("../../src/core/fs.js", async () => {
   const actual = await vi.importActual<typeof fsModule>("../../src/core/fs.js");
   return {
     ...actual,
     collectFilesByGlobs: (...args: Parameters<typeof actual.collectFilesByGlobs>) => {
-      const directory = denied.directory;
-      if (directory !== null && !(args[1].ignore ?? []).includes(`${directory}/**`)) {
-        const target = path.join(denied.root, directory);
+      const target = denied.target;
+      const passedOver = (args[1].ignore ?? []).some((pattern) =>
+        pattern.endsWith(`${path.basename(target ?? "")}/**`),
+      );
+      if (target !== null && !passedOver) {
         return Promise.reject(
           Object.assign(new Error(`EACCES: permission denied, scandir '${target}'`), {
             code: "EACCES",
@@ -46,7 +45,7 @@ vi.mock("../../src/core/fs.js", async () => {
 const tempDirs: string[] = [];
 
 afterEach(async () => {
-  denied.directory = null;
+  denied.target = null;
   while (tempDirs.length > 0) {
     const dir = tempDirs.pop();
     if (dir) {
@@ -77,8 +76,7 @@ async function projectWithLockedDirectory(): Promise<string> {
 describe("an unreadable directory under the acceptance test roots", () => {
   it("is read past and named, with the tests beside it still counted", async () => {
     const root = await projectWithLockedDirectory();
-    denied.root = root;
-    denied.directory = "tests/e2e/locked";
+    denied.target = path.join(root, "tests", "e2e", "locked");
 
     const result = await evaluateAtddCodeTraceability(root, defaultConfig);
     expect(result.scan.unreadable).toEqual(["tests/e2e/locked"]);
@@ -89,8 +87,7 @@ describe("an unreadable directory under the acceptance test roots", () => {
 
   it("is reported by --profile atdd, which finishes with its other results", async () => {
     const root = await projectWithLockedDirectory();
-    denied.root = root;
-    denied.directory = "tests/e2e/locked";
+    denied.target = path.join(root, "tests", "e2e", "locked");
 
     const result = await validateProject(root, undefined, { profile: "atdd" });
     const finding = result.issues.find((issue) => issue.code === "QFAI-ATDD-135");
@@ -98,6 +95,17 @@ describe("an unreadable directory under the acceptance test roots", () => {
     expect(finding?.refs).toEqual(["tests/e2e/locked"]);
     expect(finding?.suggested_action).toContain("readable");
     expect(result.issues.some((issue) => issue.code !== "QFAI-ATDD-135")).toBe(true);
+  });
+
+  it("names a directory under a tests directory outside the repository by its full path", async () => {
+    const workspace = await projectWithLockedDirectory();
+    const root = path.join(workspace, "repo");
+    await mkdir(root, { recursive: true });
+    denied.target = path.join(workspace, "tests", "e2e", "locked");
+    const config = { ...defaultConfig, paths: { ...defaultConfig.paths, testsDir: "../tests" } };
+
+    const result = await evaluateAtddCodeTraceability(root, config);
+    expect(result.scan.unreadable).toEqual([denied.target.split(path.sep).join("/")]);
   });
 
   it("names nothing on a tree it can read", async () => {

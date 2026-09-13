@@ -1,6 +1,7 @@
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 
+import fg from "fast-glob";
 import { parse as parseYaml } from "yaml";
 
 import type { QfaiConfig } from "./config.js";
@@ -8,8 +9,6 @@ import { parseTestFlowRefs, scanBusinessFlows, storiesByFlow } from "./businessF
 import { resolvePath } from "./config.js";
 import { extractDeclaredContractIds } from "./contractsDecl.js";
 import { collectApiContractFiles, collectDbContractFiles } from "./discovery.js";
-import fg from "fast-glob";
-
 import {
   collectFilesByGlobs,
   DEFAULT_GLOB_FILE_LIMIT,
@@ -195,8 +194,9 @@ export type AtddTraceabilityScan = {
   truncated: boolean;
   limit: number;
   /**
-   * Directories under the scanned roots the scan could not read, relative to
-   * the repository and in POSIX form. No test inside one is counted.
+   * Directories under the scanned roots the scan could not read, in POSIX form:
+   * relative to the repository, or absolute where `paths.testsDir` lies outside
+   * it. No test inside one is counted.
    */
   unreadable: string[];
 };
@@ -2407,21 +2407,27 @@ async function collectReadableTestFiles(
       return { scan, unreadable: [...unreadable].sort() };
     } catch (error) {
       const directory = unreadableDirectoryOf(root, error);
-      // A failure that names no directory under the root, or one the walk
-      // already passes over, is not one reading past can clear.
+      // A failure that names no directory, or one the walk already passes over,
+      // is not one reading past can clear.
       if (directory === null || unreadable.includes(directory)) throw error;
       unreadable.push(directory);
     }
   }
 }
 
-/** The directory under `root` a file-system error names, relative and in POSIX form. */
+/**
+ * The directory a file-system error names, in POSIX form: relative to `root`
+ * where it lies inside, and absolute where it does not, since a configured
+ * `paths.testsDir` may point outside the repository.
+ */
 function unreadableDirectoryOf(root: string, error: unknown): string | null {
   if (!isFileSystemError(error) || !(error instanceof Error)) return null;
   if (!("path" in error) || typeof error.path !== "string") return null;
-  const relative = path.relative(root, path.resolve(root, error.path));
-  if (relative === "" || relative.startsWith("..") || path.isAbsolute(relative)) return null;
-  return toPosixPath(relative);
+  const absolute = path.resolve(root, error.path);
+  const relative = path.relative(root, absolute);
+  if (relative === "") return null;
+  const outside = relative.startsWith("..") || path.isAbsolute(relative);
+  return toPosixPath(outside ? absolute : relative);
 }
 
 function resolveTestKind(

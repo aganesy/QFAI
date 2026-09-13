@@ -452,9 +452,9 @@ function unreadableTestDirectoryIssues(root: string, directories: readonly strin
   return directories.map((directory) =>
     issue(
       "QFAI-ATDD-135",
-      `The acceptance test scan could not read ${directory}, so no test inside it is counted. A coverage finding in this run may name an obligation a test there carries.`,
+      `The acceptance test scan could not read ${JSON.stringify(directory)}, so no test inside it is counted. A coverage finding in this run may name an obligation a test there carries.`,
       "error",
-      path.join(root, directory),
+      path.resolve(root, directory),
       "atddCodeTraceability.scan.readable",
       [directory],
       "canonical",
