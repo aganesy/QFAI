@@ -71,6 +71,33 @@ describe("constitution creation preserves a path it cannot claim", () => {
     });
   });
 
+  it("records the canonical constitution created by a concurrent initializer", async () => {
+    await withProject(async (root) => {
+      const target = path.join(root, CONSTITUTION);
+      let inserted = false;
+      copyFileSpy.mockImplementation(async (actual, ...args) => {
+        const [source, destination] = args;
+        if (
+          !inserted &&
+          typeof source === "string" &&
+          source.endsWith(path.join("constitution", "constitution.md")) &&
+          typeof destination === "string" &&
+          path.dirname(destination) === path.dirname(target)
+        ) {
+          inserted = true;
+          await writeFile(target, await readFile(source));
+        }
+        return actual.copyFile(...args);
+      });
+      await init(root);
+      expect(inserted).toBe(true);
+      const lock = await readAssistantAssetsLock(path.join(root, ".qfai", "assistant"));
+      expect(lock?.files["constitution/constitution.md"]).toBeDefined();
+      const shipped = await readFile(path.join(ROOT, "packages/qfai/assets/init", CONSTITUTION));
+      expect((await readFile(target)).equals(shipped)).toBe(true);
+    });
+  });
+
   it("keeps a constitution created between the absence probe and the copy", async () => {
     await withProject(async (root) => {
       const target = path.join(root, CONSTITUTION);

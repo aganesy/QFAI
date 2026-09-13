@@ -739,13 +739,21 @@ async function syncGovernedAssistantAssets(
     }
 
     if (currentHash === null) {
-      await restoreUnreadableGovernedAsset(source, dest, shippedHash, previousHash, options, {
-        copied,
-        skipped,
-        recorded,
-        manualMergeNotes,
-        relative,
-      });
+      await restoreUnreadableGovernedAsset(
+        destRoot,
+        source,
+        dest,
+        shippedHash,
+        previousHash,
+        options,
+        {
+          copied,
+          skipped,
+          recorded,
+          manualMergeNotes,
+          relative,
+        },
+      );
       continue;
     }
 
@@ -1043,6 +1051,7 @@ const PRESERVED_BODY_HEADING = "## The README that was here before qfai init";
  * put there is not a decision `qfai init` gets to make silently.
  */
 async function restoreUnreadableGovernedAsset(
+  destRoot: string,
   source: string,
   dest: string,
   shippedHash: string,
@@ -1070,6 +1079,14 @@ async function restoreUnreadableGovernedAsset(
           throw error;
         }
         out.skipped.push(dest);
+        const contained = await hasRealGovernedAssistantParents(
+          destRoot,
+          `${ASSISTANT_DIR}/${out.relative}`,
+        );
+        if (contained && (await hashAssistantAssetFile(dest)) === shippedHash) {
+          out.recorded[out.relative] = shippedHash;
+          return;
+        }
         if (previousHash !== undefined) out.recorded[out.relative] = previousHash;
         out.manualMergeNotes.push(
           `NOTE: ${formatReportPath(dest)} was created during initialization and left unchanged; keep adopter edits protected.`,
