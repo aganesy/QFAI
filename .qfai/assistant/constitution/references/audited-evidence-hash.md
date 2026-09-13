@@ -258,8 +258,9 @@ change after the PASS, and a private concatenation of their sections has no
 defined member order or record shape for gate item 10 to reproduce. Record
 **one `Audited evidence hash` per `TDD-ID` in the group**, each by these four
 steps over that row's own subject, listed in the verdict beside the id it
-belongs to. Nothing about a group is special then; it is the single-row rule
-applied as many times as the group has members.
+belongs to, one line each: `Audited evidence hash: TDD-0001 <hash>`. Nothing
+about a group is special then; it is the single-row rule applied as many times
+as the group has members.
 
 Gate item 10 runs the same four steps. A row with no coverage-depth file, or
 none whose matrix names its obligation, has one record rather than a
