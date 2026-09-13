@@ -684,6 +684,9 @@ export async function evaluateAtddCodeTraceability(
       testsRoot,
       tcLevels,
       normalizeGlobs(config.validation.traceability.testFileExcludeGlobs),
+      normalizeGlobs(config.validation.traceability.testFileGlobs)
+        .map((glob) => toPosixPath(glob))
+        .filter((glob) => glob.startsWith("!")),
     )),
   );
 
@@ -839,6 +842,7 @@ async function collectUncountedTestFiles(
   testsRoot: string,
   tcLevels: Map<string, Map<string, string>>,
   excludeGlobs: readonly string[] = [],
+  withdrawnGlobs: readonly string[] = [],
 ): Promise<string[]> {
   // Repository-relative, like every other glob here. An absolute pattern
   // produces absolute entries, and a project's own `testFileExcludeGlobs` are
@@ -857,10 +861,12 @@ async function collectUncountedTestFiles(
   let files: string[];
   try {
     const collected = await collectFilesByGlobs(root, {
-      // The project's own exclusions apply here as well. A path it withdrew is
+      // The project's own exclusions apply here as well, both kinds: its
+      // `testFileExcludeGlobs` and the negative entries of its `testFileGlobs`,
+      // which the acceptance scan honours as patterns. A path it withdrew is
       // withdrawn from every lane, and reporting an excluded scaffold as a file
       // to move would ask the operator to act on something they took out.
-      globs: patterns,
+      globs: [...patterns, ...withdrawnGlobs],
       ignore: [...DEFAULT_TEST_FILE_EXCLUDE_GLOBS, ...excludeGlobs],
       limit: DEFAULT_GLOB_FILE_LIMIT,
     });
@@ -2570,14 +2576,12 @@ function resolveTestKindFromPath(
     // separates the two is the manifest: a workspace package has one, a suite
     // directory inside a package does not.
     if (isPackageRoot(path.join(root, ...directories.slice(0, index + 1)))) {
-      // The outer candidate goes with it. An embedded package under an
-      // acceptance fixture —
+      // A package root clears every outer candidate, because the directories
+      // below it belong to that package rather than to the outer layout. In
       // `packages/app/tests/integration/fixtures/tests/api/client.test.ts`,
-      // with a manifest in the inner `tests` — has an `api` that belongs to
-      // that package and not to the outer layout. Leaving the outer `tests`
-      // standing classified the file as `Integration`, where its annotation
-      // discharged an `L3` obligation and its stub blocked a gate the inner
-      // package does not own.
+      // with a manifest in the inner `tests`, the file answers no layer of the
+      // outer suite: its annotation discharges nothing there, and its stub
+      // gates nothing that package owns.
       //
       // The scan continues, so a genuine test root deeper still is reached.
       testRoot = -1;

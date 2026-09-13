@@ -455,7 +455,7 @@ export async function validateAtddCodeTraceability(
         "atddCodeTraceability.coverage.usDeferred",
         deferred,
         "canonical",
-        `スライス実装時に \`- ${PLANNED_CONTRACT_KEY}: planned\` を外し、${dirs.e2e} で \`QFAI:SPEC-XXXX:US-YYYY\` 注釈を追加してください。`,
+        `スライス実装時に \`- ${PLANNED_CONTRACT_KEY}: planned\` を外し、${dirs.e2e} で \`QFAI:SPEC-XXXX:US-YYYY\` 注釈を追加してください。${ATDD_PACKAGE_SUITE_HINT}`,
         { relatedFiles: deferredHome.relatedFiles },
       ),
     );
@@ -665,7 +665,7 @@ export async function validateAtddCodeTraceability(
         "atddCodeTraceability.coverage.conApiDeferred",
         deferred,
         "canonical",
-        "スライス実装時に `x-qfai-status` を planned 以外へ戻し、tests/api/** で参照してください。",
+        `スライス実装時に \`x-qfai-status\` を planned 以外へ戻し、tests/api/** で参照してください。${ATDD_PACKAGE_SUITE_HINT}`,
       ),
     );
   }
@@ -720,7 +720,7 @@ export async function validateAtddCodeTraceability(
         "atddCodeTraceability.coverage.conDbDeferred",
         deferred,
         "canonical",
-        `スライス実装時に \`-- x-qfai-status: planned\` を外し、${dirs.integration} で参照してください。`,
+        `スライス実装時に \`-- x-qfai-status: planned\` を外し、${dirs.integration} で参照してください。${ATDD_PACKAGE_SUITE_HINT}`,
       ),
     );
   }

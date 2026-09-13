@@ -116,6 +116,7 @@ describe("QFAI-ATDD-115 — CON-DB coverage from integration tests", () => {
         // the same failure mode on the DB side as on the API side.
         expect(deferred?.severity).toBe("info");
         expect(deferred?.refs).toEqual(["CON-DB-0001"]);
+        expect(deferred?.suggested_action).toContain("A package with a suite of its own");
       },
     );
   });

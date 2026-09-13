@@ -552,6 +552,40 @@ describe("the ATDD gate's file selection", () => {
     expect(issues.map((issue) => issue.code)).toContain("QFAI-TEST-002");
   });
 
+  it("keeps a file with no extension that a project glob names", async () => {
+    const root = await newTempDir();
+    const config = atddConfig(["packages/*/tests/integration/test_pay"]);
+    // `path.extname` reads it as "", which no extension set holds, so the file
+    // was dropped before its missing dialect could be reported.
+    await writeTestFile(root, "packages/checkout/tests/integration/test_pay", "check pays\n");
+
+    const issues = await validateTestTodoStubs(root, config, {
+      globs: atddAcceptanceTestGlobs(root, config, STUB_SOURCE_FILE_PATTERN),
+      fileFilter: atddAcceptanceLayerFilter(root, config),
+    });
+
+    const unscanned = issues.find((issue) => issue.code === "QFAI-TEST-002");
+    expect(unscanned?.message).toContain("(no extension)");
+  });
+
+  it("leaves a file with no extension an extension-broad glob swept in", async () => {
+    const root = await newTempDir();
+    const config = atddConfig(["packages/*/tests/**/*"]);
+    await writeTestFile(
+      root,
+      "packages/checkout/tests/integration/pay.test.ts",
+      `it${TODO}("pays");\n`,
+    );
+    await writeTestFile(root, "packages/checkout/tests/integration/LICENSE", "MIT\n");
+
+    const issues = await validateTestTodoStubs(root, config, {
+      globs: atddAcceptanceTestGlobs(root, config, STUB_SOURCE_FILE_PATTERN),
+      fileFilter: atddAcceptanceLayerFilter(root, config),
+    });
+
+    expect(issues.filter((issue) => issue.code === "QFAI-TEST-002")).toEqual([]);
+  });
+
   it("keeps the spelling a project glob gave its extension", async () => {
     const root = await newTempDir();
     const config = atddConfig(["packages/**/*.TS"]);

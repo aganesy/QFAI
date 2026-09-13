@@ -1305,6 +1305,20 @@ export type TestTodoStubOptions = {
 };
 
 /**
+ * Whether a glob selects files that have no extension: its last segment names
+ * something and carries no dot, as `tests/integration/test_pay` does. A last
+ * segment of wildcards alone names nothing, so an extension-broad glob whose
+ * last segment is `*` does not count, and a negative entry selects nothing.
+ */
+function namesExtensionlessSource(globs: readonly string[]): boolean {
+  return globs.some((glob) => {
+    if (glob.startsWith("!")) return false;
+    const last = glob.split("/").at(-1) ?? "";
+    return last.length > 0 && !last.includes(".") && !/^\*+$/.test(last);
+  });
+}
+
+/**
  * Extensions a glob names outright, as `.ext` in lower case.
  *
  * A pattern ending in a literal extension names it, and one ending in a brace
@@ -1474,6 +1488,10 @@ export async function validateTestTodoStubs(
           // in, which names nothing. Lowercased for the comparison only — the
           // glob that collected the file keeps the project's own spelling.
           ...globExtensions(globs).map((ext) => ext.toLowerCase()),
+          // The same holds for a glob that selects files with no extension at
+          // all. `path.extname` reads those as "", so without this entry the
+          // file never reaches `QFAI-TEST-002` either.
+          ...(namesExtensionlessSource(globs) ? [""] : []),
         ]);
   const wanted = (absolutePath: string): boolean => {
     if (sourceExtensions && !sourceExtensions.has(path.extname(absolutePath).toLowerCase())) {

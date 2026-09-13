@@ -519,6 +519,9 @@ describe("QFAI-ATDD-113 deferral via x-qfai-status: planned", () => {
       const deferral = issues.find((entry) => entry.code === "QFAI-ATDD-114");
       expect(deferral?.severity).toBe("info");
       expect(deferral?.refs).toEqual(["CON-API-0002"]);
+      // The fix names a layer directory, so it carries the package-suite hint
+      // every such remediation does.
+      expect(deferral?.suggested_action).toContain("A package with a suite of its own");
     });
   });
 
@@ -1130,7 +1133,34 @@ describe("acceptance tests outside paths.testsDir", () => {
     });
   });
 
-  it("an excluded scaffold is not reported as a file to move", async () => {
+  it.each([
+    ["testFileExcludeGlobs", ["packages/*/tests/**/*.test.ts"], ["tests/atdd/**"]],
+    ["a negative testFileGlobs entry", ["packages/*/tests/**/*.test.ts", "!tests/atdd/**"], []],
+  ])(
+    "a scaffold excluded through %s is not reported as a file to move",
+    async (_, globs, excludes) => {
+      await withProject(async (root) => {
+        await seedSpec(root, "0001", ["US-0001"], ["TC-0001"]);
+        await seedTest(root, "e2e", "a.test.ts", "/* QFAI:SPEC-0001:US-0001 */");
+        await seedTest(root, "integration", "a.test.ts", "/* QFAI:SPEC-0001:TC-0001 */");
+        const scaffoldDir = path.join(root, "tests", "atdd");
+        await mkdir(scaffoldDir, { recursive: true });
+        await writeFile(
+          path.join(scaffoldDir, "old.test.ts"),
+          "/* QFAI:SPEC-0001:TC-0001 */\ndescribe('x', () => { it('y', () => {}); });\n",
+          "utf-8",
+        );
+
+        const result = await evaluateAtddCodeTraceability(root, withProjectGlobs(globs, excludes));
+
+        // The project withdrew the path. Asking an operator to move a file they
+        // took out of scope is advice about a file no lane reads.
+        expect(result.skippedTestFiles).toEqual([]);
+      });
+    },
+  );
+
+  it("still reports a scaffold the configuration leaves in scope", async () => {
     await withProject(async (root) => {
       await seedSpec(root, "0001", ["US-0001"], ["TC-0001"]);
       await seedTest(root, "e2e", "a.test.ts", "/* QFAI:SPEC-0001:US-0001 */");
@@ -1145,12 +1175,10 @@ describe("acceptance tests outside paths.testsDir", () => {
 
       const result = await evaluateAtddCodeTraceability(
         root,
-        withProjectGlobs(["packages/*/tests/**/*.test.ts"], ["tests/atdd/**"]),
+        withProjectGlobs(["packages/*/tests/**/*.test.ts", "!tests/other/**"]),
       );
 
-      // The project withdrew the path. Asking an operator to move a file they
-      // took out of scope is advice about a file no lane reads.
-      expect(result.skippedTestFiles).toEqual([]);
+      expect(result.skippedTestFiles).toEqual(["tests/atdd/old.test.ts"]);
     });
   });
 
