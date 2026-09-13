@@ -183,6 +183,8 @@ describe("qfai init writes no slot into a project", () => {
       expect(review).toContain("TypeScript specific checks:");
       expect(review).toContain("Flag a Promise that is neither awaited nor returned");
       expect(review).toContain("Subject to the safety floor");
+      expect(review).toContain("At a callback boundary that ignores return values");
+      expect(review).toContain("adopts asynchronous work and handles rejections");
       expect(review).not.toContain(LANGUAGE_RULES_MARKER);
       expect(await slotIn(root, PRINCIPLES)).not.toContain(LANGUAGE_RULES_MARKER);
     });

@@ -79,6 +79,8 @@ const RULES: ReadonlyMap<
           "  Returning propagates only when its caller awaits or adopts the Promise.",
           "  Subject to the safety floor in `.agents/rules/minimal-implementation.md` § 2, do not ask for a catch",
           "  around a failure that no specification, contract or observation names.",
+          "  At a callback boundary that ignores return values, require an adapter that",
+          "  adopts asynchronous work and handles rejections under the same floor.",
           "- Keep generic type parameters to a minimum; overly complex generics hurt readability more than they help type safety.",
         ],
       ],
