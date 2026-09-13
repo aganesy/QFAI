@@ -469,6 +469,7 @@ project_memory:
 - A blocked row selected before RED and a falsifiability row at red or beyond have no first failing assert at all, so the kept boundary is the one the driving CR-\* names first, in the order that row's obligation source lists them when the CR gives an unordered set.
 - On a falsifiability row, keep the boundary the predicate its Satisfied-by names covers, falling back to that same order.
 - Phase 2b seeds four groups, all at Status = todo: coverage-target TC, integration-level TC, `Layer = E2E` row per active `US-*`, and `Layer = API` row per active `CON-API-*` the spec owns. TC groups carry TC-Refs; E2E carries US-Refs and API carries CON-API-Refs, never TC-Refs.
+- Each TC group seeds at least one row per TC from `06_Test-Cases.md`, for the TCs routed to that group; independent TCs never share a row. Split matrix TCs one row per independently observable boundary.
 - The integration-level TC group includes L3/integration, blank or unrecognized Level, and system / acceptance. The two TC groups are exclusive; each matrix-shaped obligation splits by independently observable boundary.
 - Seed Tier from Layer, what the row touches (infrastructure, public API, CON-* contract or persisted schema = T2; UI or rendered output = T3) and criticality. Write this value to the Tier column, never to Evidence.
 - Active uses the catalog/test-layers.md exemption: skip a planned CON-API and skip a US in a spec with no user-facing surface only after project-wide surface opt-in. When surface typing is unused, every non-planned US-* remains required.
