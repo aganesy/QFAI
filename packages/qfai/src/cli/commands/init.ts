@@ -261,16 +261,15 @@ export async function runInit(options: InitOptions): Promise<void> {
   }
   // The workflows are copied and recorded BEFORE the rest of the root, as one unit.
   //
-  // They used to ride along in the root copy, and the record followed it.
-  // A permission, I/O or disk error anywhere else in that copy — `DESIGN.md`, `qfai.config.yaml`,
-  // any of it — throws out of `copyTemplateTree` before the record runs, and the workflows are
-  // already on disk. An unrecorded shipped workflow reads as `adopter-owned` on every later run:
-  // never recorded again, invisible to doctor's drift detection, and outside the retired prune.
-  // The comment below the record already said nothing unrelated may run in between; the copy
-  // itself was the unrelated thing.
+  // Copied with the rest of the root and recorded after it, the workflows would already be on disk
+  // when a permission, I/O or disk error anywhere else in that copy — `DESIGN.md`,
+  // `qfai.config.yaml`, any of it — throws out of `copyTemplateTree` before the record runs. An
+  // unrecorded shipped workflow reads as `adopter-owned` on every later run: never recorded again,
+  // invisible to doctor's drift detection, and outside the retired prune. The comment below the
+  // record says nothing unrelated may run in between, and the rest of that copy is unrelated.
   //
-  // Rolling back on failure was the alternative and is the wrong one here for the reason the swap
-  // branch gives: this command does not delete what it cannot verify it owns.
+  // Rolling back on failure is the wrong alternative here, for the reason the swap branch gives:
+  // this command does not delete what it cannot verify it owns.
   const workflowCopyPaths = [...SHIPPED_WORKFLOW_NAMES]
     .filter((name) => workflowsDirIsOwn && workflowCopySet.has(name))
     .map((name) => path.join(".github", "workflows", name));
@@ -836,12 +835,11 @@ function escapedGovernedPathNote(dest: string): string {
  * The copy lands on a temporary beside the target first and is then `rename`d
  * over it, so a failure — a full disk, a read fault, a process killed between
  * the two steps — leaves the previous rule in place instead of a hole where a
- * normative file used to be. Deleting first and copying second had exactly
- * that window, and the file it removed was one qfai had already vouched for.
+ * normative file was. Deleting first and copying second would open exactly that
+ * window, on a file qfai had already vouched for.
  *
- * `rename` also keeps the property the delete-first version was written for:
- * it replaces the directory entry itself, so a governed path left as a symlink
- * is replaced, never followed to overwrite whatever it points at.
+ * `rename` also replaces the directory entry itself, so a governed path left as
+ * a symlink is replaced, never followed to overwrite whatever it points at.
  *
  * `expectedHash`, where the caller has one, is re-read immediately before the
  * `rename`. The refresh decides what to do from a hash taken earlier, and the
@@ -1115,12 +1113,11 @@ async function readExistingReadme(filePath: string): Promise<PinnedFileRead | nu
  * Removes the governed files a new release withdrew, under `--force`, when the
  * project still holds exactly what qfai wrote there.
  *
- * A file that is deleted or renamed upstream used to survive every upgrade: the
- * refresh loop walks the *current* shipped set, so the old path was never
- * visited and only its lock entry disappeared. From the next `validate` on, an
- * untouched retired rule read as `QFAI-ASSETS-006` — a file the project added —
- * and no number of `qfai init --force` runs could clear it, while a rule qfai
- * had repealed went on sitting in the tree being cited.
+ * The refresh loop walks the *current* shipped set, so it never visits the old
+ * path of a file deleted or renamed upstream, and only its lock entry goes.
+ * Left there, an untouched retired rule reads as `QFAI-ASSETS-006` — a file the
+ * project added — from the next `validate` on, no `qfai init --force` run clears
+ * it, and a rule qfai repealed stays in the tree being cited.
  *
  * A retired file whose content was edited is *not* removed: it stops being
  * qfai's the moment the project changed it, and deleting it would throw away
@@ -3654,33 +3651,31 @@ async function readTextFileIfPresent(target: string): Promise<string | null> {
 /**
  * One past the last line of the managed block that starts at `startIdx`.
  *
- * ## What this replaces, and the bug it closes
+ * ## Why the walk does not stop at the first unknown line
  *
- * Both callers used to walk forward while the line was KNOWN and stop at the first that was
- * not. A line sitting inside the block that the current writer no longer emits and that was
- * never registered as legacy therefore truncated the block at itself — and this repository had
- * one, `.qfai/output/*`, written by an older release. The consequences compound:
+ * A line inside the block that the current writer no longer emits, and that is not registered
+ * as legacy — `.qfai/output/*`, which an older release wrote, is one — would end a walk that
+ * stops at the first line it does not know. The consequences compound:
  *
- *   - `extractManagedBlock` returned the marker plus one line, so the freshness check found the
- *     governance negations "missing" and the early return never fired;
- *   - `removeManagedBlock` stripped that same two-line prefix and left the rest in place;
- *   - the rebuilt block — marker, the one line it saw, and every negation — went back in at the
- *     old position, ABOVE the twenty lines that had never been removed.
+ *   - `extractManagedBlock` returns the marker plus one line, so the freshness check finds the
+ *     governance negations "missing" and the early return never fires;
+ *   - `removeManagedBlock` strips that same two-line prefix and leaves the rest in place;
+ *   - the rebuilt block — marker, the one line it saw, and every negation — goes back in at the
+ *     old position, ABOVE the lines that were never removed.
  *
- * So every `qfai init` appended a second copy of the negations, and appended it above the
- * ignore lines that cancel them, where git's last-match rule makes it inert. Noise that grows
- * by a block per run, and noise is what makes a real change to `.gitignore` unreadable in
- * review.
+ * Every `qfai init` would then append a second copy of the negations, above the ignore lines
+ * that cancel them, where git's last-match rule makes it inert. Noise that grows by a block per
+ * run is what makes a real change to `.gitignore` unreadable in review.
  *
- * ## The rule, and why it still protects a project's own lines
+ * ## The rule, and why it protects a project's own lines
  *
  * The block is terminated by a blank line, by a comment that is not the marker, or by the end
  * of the file — that is how it is written, and how a project's own section is separated from
  * it. Inside that region the block ends at its LAST known line.
  *
  * Both halves matter. Tolerating unknown lines between known ones is what stops a retired line
- * truncating the block. Ending at the last KNOWN line is what keeps the old protection: lines a
- * project appended directly under the block, with no blank between, are still outside it, so
+ * truncating the block. Ending at the last KNOWN line keeps a project's own lines out of it:
+ * lines a project appended directly under the block, with no blank between, stay outside it, so
  * they keep their position relative to the negations and git's last-match verdict for them does
  * not change.
  *
@@ -4090,7 +4085,7 @@ function gitChildEnv(): NodeJS.ProcessEnv {
  * it during the template copy, which runs before this step, so the probes see
  * the enclosing repository and the write lands there. A `--dry-run` creates
  * nothing, and spawning a child in a missing `cwd` fails with ENOENT, so the
- * preview used to stay silent about a write the real run performs. Walking up
+ * preview would stay silent about a write the real run performs. Walking up
  * finds the same repository, because creating a plain directory never starts
  * a new one.
  */
@@ -4305,8 +4300,8 @@ async function syncIntegrationWrappers(
     // handled below by replacing the entry — but an **ancestor** symlink
     // (`.github` or `.github/instructions` pointing at a shared directory)
     // makes `dest` resolve to somebody else's file that lstat reports as an
-    // ordinary one. Before this loop honoured `--force` that file was skipped
-    // as pre-existing; refusing here keeps it that way. Creation is not
+    // ordinary one. Without `--force` that file is skipped as pre-existing, and
+    // refusing here keeps it so under `--force`. Creation is not
     // gated: writing a file where none existed destroys nothing, and gating
     // it would stop init from provisioning a deliberately shared directory.
     const escapesProject =
@@ -4317,10 +4312,10 @@ async function syncIntegrationWrappers(
     // symlink are that. Everything else `lstat` can report is user data this
     // command was never asked to destroy: a real directory holds actual files
     // (a symlink to one reports as a link, not a directory), and a FIFO, a
-    // socket or a device node is replaced outright by the `rename` below —
-    // each of them was preserved as pre-existing before this loop honoured
-    // `--force`, and a refusal list would have had to name every one of them
-    // to keep it that way. Declining leaves the operator to resolve it.
+    // socket or a device node is replaced outright by the `rename` below.
+    // Without `--force` each of them is kept as pre-existing, and a refusal
+    // list would have to name every one of them to keep it so. Declining
+    // leaves the operator to resolve it.
     // `undefined` covers both "not looked at" (no `--force`, or nothing there)
     // and an `lstat` that failed after `pathExists` saw the entry — a vanished
     // entry makes this a creation, which destroys nothing.

@@ -237,7 +237,7 @@ export async function runValidate(options: ValidateOptions): Promise<number> {
   warnIfTruncated(normalized.traceability.testFiles, "validate");
   // The echo above is for a human reading stdout. The finding is what the exit
   // gate, the annotation stream and the run-log can actually see, so a
-  // truncated scan can no longer pass `--fail-on warning` as a clean run.
+  // truncated scan cannot pass `--fail-on warning` as a clean run.
   const truncatedScanIssue = buildTruncatedScanIssue(normalized.traceability.testFiles, "validate");
   if (truncatedScanIssue) {
     normalized.issues.push(truncatedScanIssue);
@@ -251,11 +251,10 @@ export async function runValidate(options: ValidateOptions): Promise<number> {
   // for explicitly, and there the finding is still in the output and in
   // `validate.json`.
   //
-  // An earlier revision added `runIncomplete || …` here as a second guard. It
-  // was unreachable: removing it changed no row, because the severity is what
-  // decides. The invariant it was protecting — that this finding stays an
-  // `error` — is pinned in `validateRunIncomplete.test.ts` instead, which is
-  // where it can actually fail.
+  // A second guard such as `runIncomplete || …` here would be unreachable,
+  // because the severity is what decides. The invariant it would protect — that
+  // this finding stays an `error` — is pinned in `validateRunIncomplete.test.ts`,
+  // which is where it can fail.
   if (strictSupersededBy(options)) {
     emitStrictSupersededNotice(failOn);
   }
@@ -530,34 +529,24 @@ export const GATE_GROUP_FAMILIES = {
   // inside `discussion`: a prototyping run would list as unevaluated a family it
   // had just emitted.
   "research-summary": ["QFAI-RESEARCH-*"],
-  // Enumerated. This entry WAS `["UIX-VAL-*"]`, and that glob is a PREFIX of
-  // every `UIX-VAL-SKILL-*` code, which `prototyping-skill` owns — so all
-  // twelve belonged to two groups at once until this list replaced it.
+  // Enumerated, because `UIX-VAL-*` is a prefix of every `UIX-VAL-SKILL-*` code,
+  // which `prototyping-skill` owns, and a glob here would put each of those
+  // codes in two groups at once.
   //
-  // **No profile misreports them today**, and that was worth establishing
-  // before changing anything. `unevaluatedGates` walks the groups a profile
-  // does NOT run and reports their family PATTERNS, so a code in two groups is
-  // still reported exactly once, by whichever group is missing. An output error
-  // needs a profile that runs the narrow group WITHOUT the wildcard one, and
-  // `prototyping-skill` is reachable only from `runFullValidators`, which runs
-  // `canonical-uix` too.
+  // A code in two groups misreports nothing on its own. `unevaluatedGates` walks
+  // the groups a profile does NOT run and reports their family patterns, so the
+  // code is still reported once, by whichever group is missing. A misreport
+  // needs a profile that runs the narrow group without the wildcard one. None
+  // does — `prototyping-skill` is reachable only from `runFullValidators`, which
+  // runs `canonical-uix` too — but one change to the profile map would make one.
+  // `contracts` and `traceability-layered` are enumerated for the same reason.
+  // One group per code is the invariant, and `gateGroupCoverage.test.ts` states
+  // it, so a change that breaks it fails a lane instead of the notice.
   //
-  // So this is a trap rather than a live bug — and the table's own comments are
-  // a record of that trap firing. `contracts` is enumerated because
-  // `QFAI-CONTRACT-*` "would swallow the sdd-only reference codes, letting a
-  // `tdd` run claim a hard gate it never reached"; `traceability-layered`
-  // because `QFAI-TRACE-*` "would count every trace code in two groups at
-  // once". Each was a divergence in the profile map away from the misreport
-  // this is shaped like, and each was repaired the same way. One group per
-  // code is the invariant all three preserve, and `gateGroupCoverage.test.ts`
-  // now states it, so the next divergence fails a lane instead of the notice.
-  //
-  // The family grammar has no negation, so the disjoint set is spelled out.
-  // Safe to maintain by hand only because the coverage case in that same file
-  // fails on a `UIX-VAL-` code no pattern here covers — the drift this list
-  // could otherwise accumulate is what that guard is for. No count is given
-  // here on purpose: the guard is what keeps the list complete, and a number
-  // in a comment would go stale without anything noticing.
+  // The family grammar has no negation, so the disjoint set is spelled out. It is
+  // safe to maintain by hand because the coverage case in that same file fails on
+  // a `UIX-VAL-` code no pattern here covers. No count is given: the guard keeps
+  // the list complete, and a number in a comment would go stale unnoticed.
   "canonical-uix": [
     "UIX-VAL-3LAYER-*",
     "UIX-VAL-CLASSIFICATION-*",
@@ -589,8 +578,7 @@ export const GATE_GROUP_FAMILIES = {
     "QFAI-DECISION-*",
     // Spec-pack structural gates: table arity, density hints, capability
     // split, status leakage, triage approval, status enums, AC / EX / TC
-    // verification and the Traceability Ledger. Absent from the table
-    // entirely before, so NO profile ever reported them as unevaluated.
+    // verification and the Traceability Ledger.
     "QFAI-TABLE-*",
     "QFAI-DENSITY-*",
     "QFAI-SPLIT-*",
@@ -602,8 +590,8 @@ export const GATE_GROUP_FAMILIES = {
     "QFAI-TC-*",
     "QFAI-LEDGER-*",
     // The autopilot-policy validator's newer codes take the canonical grammar
-    // (`docs/finding-codes.md`), so they no longer fall under the `R-*` glob
-    // its two legacy siblings still use. Both spellings must be listed or the
+    // (`docs/finding-codes.md`), so they do not fall under the `R-*` glob its
+    // two legacy siblings use. Both spellings must be listed or the
     // partial-profile notice under-states what skipping `sdd` left unchecked.
     "QFAI-AUTOPILOT-*",
     "E_*",
@@ -620,16 +608,15 @@ export const GATE_GROUP_FAMILIES = {
     // `validateLayeredTraceability`, dispatched from `runSddValidators` and
     // nowhere else. Its other codes are filed under `traceability-layered`,
     // which is a different module (`validators/traceability.ts`) despite the
-    // shared subject — so the underscore pair had no group and no profile
-    // reported them. `runLog.ts` counts them into `downstream_violations`,
-    // which is what made them look like run-log bookkeeping rather than a
-    // gate.
+    // shared subject, so the underscore pair is listed here. `runLog.ts` counts
+    // them into `downstream_violations`, which makes them look like run-log
+    // bookkeeping rather than a gate.
     "TRACE_DOWNSTREAM_REF",
     "TRACE_SHARED_SCOPE_VIOLATION",
   ],
-  // Reviewer-gate detectors wired into `runSddValidators`. The `R-*` wildcard
-  // this replaces made `--profile sdd` claim coverage of `detectMockHrefDrift`
-  // and `validateDesignMdPatchZone`, which run only in prototyping.
+  // Reviewer-gate detectors wired into `runSddValidators`. An `R-*` wildcard
+  // would make `--profile sdd` claim coverage of `detectMockHrefDrift` and
+  // `validateDesignMdPatchZone`, which run only in prototyping.
   "reviewer-gate-sdd": [
     "R-CERTIFY-VERIFY-CIRCULAR",
     "R-PROMPT-SCANNER-DRIFT",
@@ -642,8 +629,8 @@ export const GATE_GROUP_FAMILIES = {
   // `validateReviewerJustification` re-emits from `runSddValidators`: an empty
   // `justification:` on a `.qfai/review/**/*.json` finding is reported under
   // the original code (`validators/reviewerJustification.ts`). Both stages can
-  // therefore emit them, so both list this group — filing it as
-  // prototyping-only made an sdd run name a code it had just emitted.
+  // therefore emit them, so both list this group. Filed as prototyping-only, it
+  // would make an sdd run name a code it had just emitted.
   "reviewer-gate-shared": [
     "R-MOCK-HREF-DRIFT",
     "R-DESIGN-MD-PATCH-OUT-OF-ZONE",
@@ -661,7 +648,7 @@ export const GATE_GROUP_FAMILIES = {
   // this group's too. Listed by code, not as `QFAI-CONTRACT-*`: the wildcard
   // would swallow the sdd-only reference codes below, letting a `tdd` run claim
   // a hard gate it never reached. Enumerated from the emitters rather than from
-  // the range, which is how `-015` went missing on the first pass.
+  // the range: a code a range leaves out is still a code a gate emits.
   contracts: [
     "QFAI-CONTRACT-000",
     "QFAI-CONTRACT-010",
@@ -681,10 +668,9 @@ export const GATE_GROUP_FAMILIES = {
     "QFAI-CONTRACT-037",
     "QFAI-CONTRACT-038",
     "QFAI-CONTRACT-040",
-    // `-041` shipped after this list did, and the explicit enumeration that
-    // keeps the wildcard from over-claiming is also what stops a new code
-    // joining on its own. It comes from the same `validateContractConsistency`
-    // as `-040`, so it has the same two profiles.
+    // The explicit enumeration that keeps the wildcard from over-claiming also
+    // means a new code joins only when it is listed. `-041` comes from the same
+    // `validateContractConsistency` as `-040`, so it has the same two profiles.
     "QFAI-CONTRACT-041",
     "QFAI-DB-*",
   ],
@@ -705,8 +691,7 @@ export const GATE_GROUP_FAMILIES = {
   // `validateContractSsotModules` — `runSddValidators`, and `runTddValidators`
   // behind its `includeContracts` flag: the implementation stage is the one
   // that moves and renames the modules a contract asserts, so its own gate has
-  // to see a `- SSOT modules:` entry it just made dead. Absent from the table
-  // entirely before, so no profile could report it as unevaluated.
+  // to see a `- SSOT modules:` entry it just made dead.
   "contract-ssot-modules": ["QFAI-CONTRACT-050"],
   // Root DESIGN.md sample / identity / lock gates, run by both
   // design-contract-readiness emitters before they branch on stage.
@@ -714,7 +699,7 @@ export const GATE_GROUP_FAMILIES = {
   // `validateRootDesignMdParse` — the parse half of the readiness gate, split
   // out so the stage that AUTHORS the file can see whether it parses. A third
   // composition emits `QFAI-DCON-033` because of it: `runDiscussionValidators`
-  // calls it directly, so filing the code with the readiness gates told a
+  // calls it directly, so filed with the readiness gates, the code would tell a
   // discussion run it had not evaluated a family it had just emitted.
   "root-design-md-parse": ["QFAI-DCON-033"],
   // `validateSddDesignContractReadiness` only — the premature-prototyping-
@@ -780,19 +765,18 @@ export const GATE_GROUP_FAMILIES = {
   // drift protocol names, i.e. the downstream stage the rule binds, and it is
   // where the guard runs.
   //
-  // Absent from this map entirely, the family could not even be REPORTED as
-  // unevaluated, so a `full` PASS looked drift-checked to an operator following
-  // `QFAI-PROFILE-001`'s own advice. Stage-only: see
-  // `STAGE_ONLY_GATE_GROUPS`.
+  // Absent from this map, the family could not be reported as unevaluated, and
+  // a `full` PASS would look drift-checked to an operator following
+  // `QFAI-PROFILE-001`'s own advice. Stage-only: see `STAGE_ONLY_GATE_GROUPS`.
   drift: ["QFAI-DRIFT-*"],
   // The remaining ledger codes report execution state that only exists after
   // `/qfai-implement` has driven rows, so only its profile evaluates them.
   //
   // Both spellings are enumerated, not globbed: `tdd-ledger-seed` holds part
-  // of each prefix, and a glob here claimed that part too — so an `sdd` run,
-  // which DOES evaluate the seed half, was told those codes went unevaluated
-  // while it was emitting exactly them. Derived by subtraction so the two
-  // halves cannot overlap or leave a gap.
+  // of each prefix, and a glob here would claim that part too, telling an `sdd`
+  // run, which DOES evaluate the seed half, that those codes went unevaluated
+  // while it emits exactly them. Derived by subtraction so the two halves cannot
+  // overlap or leave a gap.
   //
   // `QFAI-TRACE-*` is deliberately NOT here for the same reason: the four
   // `traceability-*` groups below split that prefix, and leaving the glob would
@@ -847,9 +831,9 @@ export const GATE_GROUP_FAMILIES = {
   // The two `validateTraceability` gates behind its `includeCodeReferences`
   // option: `QFAI-TRACE-124` (test globs unset) and `QFAI-TRACE-117` (SC with
   // no code reference). `runSddValidators` defaults the option to `false`, so
-  // `--profile sdd` calls the same validator and still evaluates neither —
-  // filing them with the shared codes hid a gate that a `tdd` or `full` run
-  // fails on. `runTddValidators` and `runFullValidators` both pass `true`.
+  // `--profile sdd` calls the same validator and still evaluates neither.
+  // Filed with the shared codes, they would hide a gate that a `tdd` or `full`
+  // run fails on. `runTddValidators` and `runFullValidators` both pass `true`.
   "traceability-code-references": ["QFAI-TRACE-117", "QFAI-TRACE-124"],
   // `runSaasPackageProfile` — reached only from the `saas-package` profile
   // (`core/validate.ts#runSaasPackage`), which `runFullValidators` does not
@@ -875,11 +859,11 @@ const ALL_GATE_GROUPS = Object.keys(GATE_GROUP_FAMILIES) as GateGroup[];
  * upstream guard — because a repo-wide audit also covers the stage that
  * legitimately owns the files each gate polices, so firing them there would
  * flag every lawful edit. The third is not disabled but unreachable: `full`
- * never composes `runSaasPackageProfile` at all. Listing any of them under
- * `full` made the notice tell a partial profile to run a scan that never
- * evaluates them, while `full` itself, showing no notice, read as complete
- * coverage. Both halves are fixed by excluding them from `full` and
- * naming their owning profile in the notice.
+ * never composes `runSaasPackageProfile` at all. Listed under `full`, any of
+ * them would make the notice tell a partial profile to run a scan that never
+ * evaluates them, while `full` itself, showing no notice, would read as
+ * complete coverage. So they are left out of `full`, and the notice names the
+ * profile that owns each.
  */
 const STAGE_ONLY_GATE_GROUPS: Partial<Record<GateGroup, ValidationProfile>> = {
   "design-contract-readiness-sdd": "sdd",
