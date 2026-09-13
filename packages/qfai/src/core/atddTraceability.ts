@@ -24,7 +24,7 @@ import {
 } from "./specPackParsers.js";
 import { UNIT_COMPONENT_LAYERS } from "./tddHelpers.js";
 import { DEFAULT_TEST_FILE_EXCLUDE_GLOBS } from "./traceability.js";
-import { maskJsNonCode } from "./validators/jsSourceMask.js";
+import { maskJsNonCode, type JsMaskOptions } from "./validators/jsSourceMask.js";
 
 // The short form carries `(?!-)`; the long form does not.
 //
@@ -51,23 +51,115 @@ import { maskJsNonCode } from "./validators/jsSourceMask.js";
 // annotation (`TC-0001-0002-foo`) still matches and is still reported as an
 // unknown reference. Trading a false report for a silent miss is the worse
 // direction in a validator.
+/** A literal in double quotes, on one line. */
+const DOUBLE_QUOTED = String.raw`"(?:[^"\\\n]|\\.)*"`;
+/** A literal in double or single quotes, on one line. */
+const QUOTED = String.raw`${DOUBLE_QUOTED}|'(?:[^'\\\n]|\\.)*'`;
+
 /**
- * Extensions whose literals {@link maskTestSource} can blank.
+ * Where a language's tests carry a name written as a literal.
  *
- * The scan walks whatever a project puts under its test roots. A JS lexer over
- * a `.py` or `.rb` file would blank spans by JS's rules, and over-blanking here
- * hides a real annotation — the one failure this must not introduce.
+ * Each pattern has two named groups: `name`, the literal, and `anchor`, the
+ * code beside it that makes it a declaration. The anchor must survive masking
+ * for the name to count, so a declaration quoted inside a fixture stays data.
  */
-const JS_TEST_EXTENSIONS: ReadonlySet<string> = new Set([
-  ".ts",
-  ".tsx",
-  ".mts",
-  ".cts",
-  ".js",
-  ".jsx",
-  ".mjs",
-  ".cjs",
-]);
+function namePattern(source: string): RegExp {
+  return new RegExp(source, "dg");
+}
+
+/** A runner call taking the name as its first argument, as JavaScript writes it. */
+const JS_TEST_NAME = namePattern(
+  String.raw`\b(?<anchor>it|test|describe|suite|bench|scenario)(?:\s*\.\s*[A-Za-z_$][\w$]*(?:\s*\([^()]*\))?)*\s*\(\s*(?<name>${QUOTED}|` +
+    "`(?:[^`\\\\]|\\\\.)*`)",
+);
+
+/**
+ * How the scan reads one language's test source: the lexer settings that find
+ * its literals and comments, and where its tests carry a literal name.
+ */
+type TestSourceDialect = {
+  readonly mask: JsMaskOptions;
+  readonly names: readonly RegExp[];
+};
+
+/**
+ * The dialects the scan can mask, by extension.
+ *
+ * A language is listed only where its literals and its comments can both be
+ * told apart, and every form its tests write a literal name in is named: a name
+ * the table misses is blanked with the data around it, and the annotation in it
+ * stops counting.
+ *
+ * SIMPLIFIED: Visual Basic, whose comments open with the quote a string does,
+ * and every extension not listed are read unmasked, so an id a test in one of
+ * them holds as data still counts as a reference.
+ * Lift when: a project's suite in one of them reports such an id.
+ */
+const TEST_SOURCE_DIALECTS: ReadonlyMap<string, TestSourceDialect> = new Map(
+  (
+    [
+      [["ts", "tsx", "mts", "cts", "js", "jsx", "mjs", "cjs"], { comments: false }, [JS_TEST_NAME]],
+      // A test's name is its identifier, and a docstring is a literal: the
+      // stage counts an annotation in a comment or a test's name, not in one.
+      [["py"], { comments: false, hashComments: true, tripleQuoted: true }, []],
+      [
+        ["rb"],
+        { comments: false, hashComments: true },
+        [
+          namePattern(
+            String.raw`\b(?<anchor>it|test|describe|context|specify|example|scenario|feature)\s*\(?\s*(?<name>${QUOTED})`,
+          ),
+        ],
+      ],
+      [
+        ["go"],
+        { comments: false },
+        [
+          namePattern(
+            String.raw`\.\s*(?<anchor>Run)\s*\(\s*(?<name>${DOUBLE_QUOTED}|` + "`[^`]*`)",
+          ),
+        ],
+      ],
+      [
+        ["java", "kt", "kts", "groovy", "scala"],
+        { comments: false, tripleQuoted: true },
+        [
+          namePattern(String.raw`(?<anchor>@DisplayName)\s*\(\s*(?<name>${DOUBLE_QUOTED})`),
+          namePattern(
+            String.raw`(?<anchor>@ParameterizedTest)\s*\(\s*name\s*=\s*(?<name>${DOUBLE_QUOTED})`,
+          ),
+          namePattern(
+            String.raw`\b(?<anchor>it|test|describe|context|should|feature|scenario)\s*\(\s*(?<name>${QUOTED})`,
+          ),
+          // Kotlin names a function in backticks, and Spock a method in quotes.
+          namePattern(String.raw`\b(?<anchor>fun)\s+(?<name>` + "`[^`\\n]+`)"),
+          namePattern(String.raw`\b(?<anchor>def)\s+(?<name>${QUOTED})\s*\(`),
+          // Kotest's string specs and ScalaTest's word specs put the name first.
+          namePattern(
+            String.raw`(?<name>${DOUBLE_QUOTED})\s*(?<anchor>\{|\b(?:in|should|must|can|when)\b)`,
+          ),
+        ],
+      ],
+      [
+        ["cs", "fs"],
+        { comments: false },
+        [
+          namePattern(
+            String.raw`\b(?<anchor>DisplayName|TestName)\s*=\s*(?<name>${DOUBLE_QUOTED})`,
+          ),
+        ],
+      ],
+      [["rs"], { comments: false }, []],
+      [
+        ["php"],
+        { comments: false, hashComments: true },
+        [namePattern(String.raw`\b(?<anchor>it|test|describe)\s*\(\s*(?<name>${QUOTED})`)],
+      ],
+    ] satisfies [string[], JsMaskOptions, RegExp[]][]
+  ).flatMap(([extensions, mask, names]) =>
+    extensions.map((extension): [string, TestSourceDialect] => [extension, { mask, names }]),
+  ),
+);
 
 /**
  * A test file's text with its string, template and regex literals blanked.
@@ -82,22 +174,12 @@ const JS_TEST_EXTENSIONS: ReadonlySet<string> = new Set([
  * line a finding names are unchanged.
  */
 function maskTestSource(file: string, text: string): string {
-  if (!JS_TEST_EXTENSIONS.has(path.extname(file).toLowerCase())) {
+  const dialect = TEST_SOURCE_DIALECTS.get(path.extname(file).slice(1).toLowerCase());
+  if (dialect === undefined) {
     return text;
   }
-  return restoreTestNames(maskJsNonCode(text, { comments: false }), text);
+  return restoreTestNames(maskJsNonCode(text, dialect.mask), text, dialect.names);
 }
-
-/**
- * A test's own name, in three parts: the runner, the call up to the name, and
- * the name itself.
- *
- * The runner may carry modifiers before the call that takes the name
- * (`it.each(rows)`, `describe.skipIf(x)`), and the name may be written in any
- * of the three quote forms.
- */
-const TEST_NAME_RE =
-  /\b(it|test|describe|suite|bench|scenario)((?:\s*\.\s*[A-Za-z_$][\w$]*(?:\s*\([^()]*\))?)*\s*\(\s*)("(?:[^"\\\n]|\\.)*"|'(?:[^'\\\n]|\\.)*'|`(?:[^`\\]|\\.)*`)/g;
 
 /**
  * Puts each test's name back into the masked text.
@@ -123,15 +205,19 @@ const TEST_NAME_RE =
  * The mask replaces one character for one, so a restored name goes back at the
  * offset it came from and every later offset is unmoved.
  */
-function restoreTestNames(masked: string, original: string): string {
+function restoreTestNames(masked: string, original: string, patterns: readonly RegExp[]): string {
   let restored = masked;
-  for (const match of original.matchAll(TEST_NAME_RE)) {
-    const [, runner = "", call = "", name = ""] = match;
-    if (!restored.startsWith(runner, match.index)) {
-      continue;
+  for (const pattern of patterns) {
+    for (const match of original.matchAll(pattern)) {
+      const anchor = match.indices?.groups?.anchor;
+      const name = match.indices?.groups?.name;
+      if (anchor === undefined || name === undefined) continue;
+      if (restored.slice(anchor[0], anchor[1]) !== original.slice(anchor[0], anchor[1])) {
+        continue;
+      }
+      restored =
+        restored.slice(0, name[0]) + original.slice(name[0], name[1]) + restored.slice(name[1]);
     }
-    const start = match.index + runner.length + call.length;
-    restored = restored.slice(0, start) + name + restored.slice(start + name.length);
   }
   return restored;
 }

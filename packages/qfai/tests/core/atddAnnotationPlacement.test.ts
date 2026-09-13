@@ -17,7 +17,7 @@ const TC_TABLE = [
 ].join("\n");
 
 /** Runs the coverage gate over one integration test file with this body. */
-async function codesFor(body: string): Promise<string[]> {
+async function codesFor(body: string, fileName = "a.test.ts"): Promise<string[]> {
   const root = await mkdtemp(path.join(os.tmpdir(), "qfai-annotation-placement-"));
   try {
     const specDir = path.join(root, ".qfai", "specs", "spec-0001");
@@ -28,9 +28,20 @@ async function codesFor(body: string): Promise<string[]> {
 
     const testDir = path.join(root, "tests", "integration");
     await mkdir(testDir, { recursive: true });
-    await writeFile(path.join(testDir, "a.test.ts"), body, "utf-8");
+    await writeFile(path.join(testDir, fileName), body, "utf-8");
 
-    const issues = await validateAtddCodeTraceability(root, defaultConfig);
+    // The scan reads the extensions the configured test globs name.
+    const config = {
+      ...defaultConfig,
+      validation: {
+        ...defaultConfig.validation,
+        traceability: {
+          ...defaultConfig.validation.traceability,
+          testFileGlobs: [`tests/**/*${path.extname(fileName)}`],
+        },
+      },
+    };
+    const issues = await validateAtddCodeTraceability(root, config);
     return issues.map((entry) => entry.code);
   } finally {
     await rm(root, { recursive: true, force: true });
@@ -64,6 +75,57 @@ describe("where an annotation may sit", () => {
     ].join("\n");
 
     expect(await codesFor(body)).toContain("QFAI-ATDD-112");
+  });
+
+  // The id is assembled so this file carries no annotation of its own.
+  const ID = ["QFAI", "SPEC-0001", "TC-0001"].join(":");
+
+  it.each([
+    ["Python", "test_pay.py", `CASES = ["${ID}"]\n\ndef test_pay():\n    assert pay()\n`],
+    ["a Python docstring", "test_pay.py", `def test_pay():\n    """${ID}"""\n    assert pay()\n`],
+    ["Ruby", "pay_spec.rb", `CASES = ["${ID}"]\nit "pays" do\nend\n`],
+    ["Go", "pay_test.go", `var cases = []string{"${ID}"}\n\nfunc TestPay(t *testing.T) {}\n`],
+    [
+      "Java",
+      "PayTest.java",
+      `class PayTest {\n  String id = "${ID}";\n  @Test void pays() {}\n}\n`,
+    ],
+    [
+      "C#",
+      "PayTests.cs",
+      `class PayTests {\n  string id = "${ID}";\n  [Fact] public void Pays() {}\n}\n`,
+    ],
+    ["Rust", "pay.rs", `const CASES: &[&str] = &["${ID}"];\n#[test]\nfn pays() {}\n`],
+  ])("does not count an id a %s test holds as data", async (_language, fileName, body) => {
+    expect(await codesFor(body, fileName)).toContain("QFAI-ATDD-112");
+  });
+
+  it.each([
+    ["a Python comment", "test_pay.py", `# ${ID}\ndef test_pay():\n    assert pay()\n`],
+    ["an RSpec name", "pay_spec.rb", `it "${ID} pays" do\nend\n`],
+    [
+      "a Go subtest name",
+      "pay_test.go",
+      `func TestPay(t *testing.T) {\n  t.Run("${ID} pays", func(t *testing.T) {})\n}\n`,
+    ],
+    [
+      "a JUnit display name",
+      "PayTest.java",
+      `class PayTest {\n  @Test\n  @DisplayName("${ID} pays")\n  void pays() {}\n}\n`,
+    ],
+    [
+      "a Kotlin function name",
+      "PayTest.kt",
+      `class PayTest {\n  @Test fun \`${ID} pays\`() {}\n}\n`,
+    ],
+    [
+      "an xUnit display name",
+      "PayTests.cs",
+      `class PayTests {\n  [Fact(DisplayName = "${ID} pays")]\n  public void Pays() {}\n}\n`,
+    ],
+    ["a Rust comment", "pay.rs", `// ${ID}\n#[test]\nfn pays() {}\n`],
+  ])("counts an annotation written as %s", async (_placement, fileName, body) => {
+    expect(await codesFor(body, fileName)).not.toContain("QFAI-ATDD-112");
   });
 
   it("does not count a test declaration quoted inside a fixture", async () => {
