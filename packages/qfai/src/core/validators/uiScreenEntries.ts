@@ -49,7 +49,9 @@ function describe(entry: UnreadScreenEntry): string {
     case "missing-id":
       return `${where} has no \`id\`. ${unchecked}`;
     case "missing-route":
-      return `${where} (\`${entry.screenId ?? ""}\`) has no \`route\`. ${unchecked}`;
+      return entry.idShared === true
+        ? `${where} (\`${entry.screenId ?? ""}\`) has no \`route\`, and another entry of this contract has its \`id\`. ${unchecked}`
+        : `${where} (\`${entry.screenId ?? ""}\`) has no \`route\`. ${unchecked}`;
     case "repeated-id": {
       const first = entry.readInstead;
       const instead = first === undefined ? "an earlier entry" : locate(first.file, first.index);
@@ -67,7 +69,11 @@ function remedy(entry: UnreadScreenEntry): string {
     case "missing-id":
       return "Give the entry an `id`, or remove it.";
     case "missing-route":
-      return "Give the entry a `route`, or remove it.";
+      // Given only a route, the entry would take the `id` from the entry read
+      // today, or be the repeat itself.
+      return entry.idShared === true
+        ? "Give the entry a `route` and an `id` no other entry of this contract uses, or remove it."
+        : "Give the entry a `route`, or remove it.";
     case "repeated-id":
       return "Give one of the two entries a different `id`, or remove the one that should not be there.";
   }

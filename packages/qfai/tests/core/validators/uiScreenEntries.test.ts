@@ -185,6 +185,18 @@ describe("a UI contract entry no screen is read from is reported", () => {
     expect(findings[0]?.message).toContain("repeats the `id` `home`");
   });
 
+  it("asks a routeless entry sharing an id for a different id as well", async () => {
+    // Given only a route, the earlier entry would take the id from the one read
+    // today, and the next run would report the repeat.
+    const root = await projectWith({
+      "a.yaml": ["screens:", "  - id: home", ...screen("home", "/")],
+    });
+    const findings = await validateUiScreenEntries(root, defaultConfig);
+    expect(findings).toHaveLength(1);
+    expect(findings[0]?.message).toContain("another entry of this contract has its `id`");
+    expect(findings[0]?.suggested_action).toContain("an `id` no other entry of this contract uses");
+  });
+
   it("names a repeated id inside one file", async () => {
     const root = await projectWith({
       "a.yaml": ["screens:", ...screen("home", "/"), ...screen("home", "/again")],

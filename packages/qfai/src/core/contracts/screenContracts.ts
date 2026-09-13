@@ -157,6 +157,18 @@ async function readUiContractDocuments(
   return documents;
 }
 
+/** The `id` of every `screens[]` entry a parsed contract holds that has one. */
+function screenIdsOf(parsed: unknown): string[] {
+  if (!parsed || typeof parsed !== "object" || !("screens" in parsed)) return [];
+  const screens = parsed.screens;
+  if (!Array.isArray(screens)) return [];
+  return screens.flatMap((entry: unknown) =>
+    entry && typeof entry === "object" && "id" in entry && typeof entry.id === "string"
+      ? [entry.id.trim()].filter((id) => id.length > 0)
+      : [],
+  );
+}
+
 /**
  * The spec a UI contract file belongs to by its name, or `null` for a file
  * read project-wide: the names `qfai prototyping certify` resolves one spec's
@@ -190,6 +202,8 @@ export type UnreadScreenEntry = {
   screenId?: string;
   /** For a repeated `id`, the entry that is read in its place. */
   readInstead?: { file: string; index: number };
+  /** For a missing route, whether another entry of the same contract has this `id`. */
+  idShared?: boolean;
 };
 
 /**
@@ -207,8 +221,20 @@ export async function findUnreadUiScreenEntries(
   const uiDir = path.resolve(root, contractsDirRelative, "ui");
   const unread: UnreadScreenEntry[] = [];
   const firstById = new Map<string, { file: string; index: number }>();
-  for (const { relativePath, parsed } of await readUiContractDocuments(uiDir, root)) {
-    const scope = specScopeOf(toPosix(path.relative(uiDir, path.resolve(root, relativePath))));
+  const documents = (await readUiContractDocuments(uiDir, root)).map((document) => ({
+    ...document,
+    scope: specScopeOf(toPosix(path.relative(uiDir, path.resolve(root, document.relativePath)))),
+  }));
+  // Every `id` each contract uses, readable entry or not: an entry missing its
+  // route whose `id` another entry also has collides as soon as it gets one.
+  const idUses = new Map<string, number>();
+  for (const { parsed, scope } of documents) {
+    for (const screenId of screenIdsOf(parsed)) {
+      const key = JSON.stringify([scope, screenId]);
+      idUses.set(key, (idUses.get(key) ?? 0) + 1);
+    }
+  }
+  for (const { relativePath, parsed, scope } of documents) {
     if (!parsed || typeof parsed !== "object" || !("screens" in parsed)) continue;
     const screens = parsed.screens;
     // An empty `screens:` states nothing. A mapping or a scalar in its place
@@ -236,7 +262,13 @@ export async function findUnreadUiScreenEntries(
       // A repeat is named before a missing route: given a route, the entry is
       // still the second for its `id` and still not read.
       if (!route && first === undefined) {
-        unread.push({ file: relativePath, index, reason: "missing-route", screenId });
+        unread.push({
+          file: relativePath,
+          index,
+          reason: "missing-route",
+          screenId,
+          idShared: (idUses.get(key) ?? 0) > 1,
+        });
         return;
       }
       if (first === undefined) {
