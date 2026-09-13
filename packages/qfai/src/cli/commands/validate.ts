@@ -1813,7 +1813,7 @@ export const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
   "QFAI-DCON-009": "design-system.yaml must parse as an object-shaped YAML document.",
   "QFAI-DCON-012": "prototype-handoff.yaml must parse as an object-shaped YAML document.",
   "QFAI-DCON-013":
-    "prototype-handoff.yaml must carry `finalIterIndex` and the scalar paths `finalArtifact`, `designMdPath`, `designMdSha256`, `designSystemMirror` and `implementationNotes`. Where it carries `procurement`, that key is a mapping of a `procured` and an `authored` list and nothing else, each row naming what realises one screen region — `screen`, `region`, `item` for a procured one and `screen`, `region`, `why` for an authored one — with one row per region across both lists.",
+    "prototype-handoff.yaml must carry `finalIterIndex` as a non-negative integer, and `finalArtifact`, `designMdPath`, `designMdSha256`, `designSystemMirror` and `implementationNotes` each as a non-empty string — the first two and the fourth a path, the third the frozen DESIGN.md sha256, the last the prose the loop hands on. Where it carries `procurement`, that key is a mapping of a `procured` and an `authored` list and nothing else, each row naming what realises one screen region — `screen`, `region`, `item` for a procured one and `screen`, `region`, `why` for an authored one — with one row per region across both lists.",
   "QFAI-DCON-019":
     "design-system.yaml and prototype-handoff.yaml are produced by /qfai-prototyping, not /qfai-sdd.",
   "QFAI-DCON-030":
