@@ -351,6 +351,39 @@ describe("the scaffold writes a name the project's own runner collects", () => {
     );
   });
 
+  it.each([
+    ["an increment written with a leading zero", "tests/**/TC-{0..10..0005}-0000.test.ts"],
+    ["an increment past the range limit", "tests/**/TC-{0000..9999..5}-0000.test.ts"],
+  ])("reads a range with %s as fast-glob expands it", (_shape, glob) => {
+    // fast-glob pads to the widest part, the increment included, and applies
+    // its range limit only where no increment is written.
+    expect(requireDialect([glob]).id).toBe("js-ts");
+  });
+
+  it("reads a list's own members as text, not as ranges", () => {
+    // `{0000..0002,9999}` names the text `0000..0002`; only a nested group expands.
+    expect(resolveScaffoldDialect(["tests/**/TC-{0000..0002,9999}-0000.test.ts"]).outcome).toBe(
+      "naming-mismatch",
+    );
+  });
+
+  it("refuses a pattern holding a refused range even when another alternative admits the name", () => {
+    // fast-glob refuses the whole pattern, so the other alternative collects nothing.
+    expect(resolveScaffoldDialect(["tests/**/TC-{{0000..9999},0000}-0000.test.ts"]).outcome).toBe(
+      "naming-mismatch",
+    );
+  });
+
+  it("admits a naming only when every test case the run writes is inside the range", () => {
+    const globs = ["tests/**/TC-0001-{0001..0009}.test.ts"];
+    expect(resolveScaffoldDialect(globs, { tcIds: ["TC-0001-0001", "TC-0001-0009"] }).outcome).toBe(
+      "resolved",
+    );
+    expect(resolveScaffoldDialect(globs, { tcIds: ["TC-0001-0001", "TC-0001-0010"] }).outcome).toBe(
+      "naming-mismatch",
+    );
+  });
+
   it("refuses a range fast-glob does not expand, and reads a body that is no range as text", () => {
     // fast-glob refuses a range of a thousand steps or more, so that glob
     // selects no file; `{TC-0000-0000}` is text, braces included.
@@ -387,6 +420,31 @@ describe("the scaffold writes a name the project's own runner collects", () => {
         await expect(
           readFile(
             path.join(root, "tests", "integration", "spec-0001", "test_tc_0001_0001.py"),
+            "utf-8",
+          ),
+        ).rejects.toThrow();
+      },
+      COMPOSITE_TC_TABLE,
+    );
+  });
+
+  it("refuses when a test case it would write is outside a range the glob names", async () => {
+    // The representative id `TC-0000-0000` is inside the range and the run's
+    // `TC-0001-0001` is not, so only a check of the ids the run writes refuses.
+    await withProject(
+      { "qfai.config.yaml": CONFIG_WITH_GLOBS(["tests/**/TC-{0000..0000}-0000.test.ts"]) },
+      async (root) => {
+        const errors: string[] = [];
+        const code = await runAtddScaffold({
+          root,
+          specId: "spec-0001",
+          write: () => {},
+          writeErr: (message) => errors.push(message),
+        });
+        expect(code).toBe(1);
+        await expect(
+          readFile(
+            path.join(root, "tests", "integration", "spec-0001", "TC-0001-0001.test.ts"),
             "utf-8",
           ),
         ).rejects.toThrow();

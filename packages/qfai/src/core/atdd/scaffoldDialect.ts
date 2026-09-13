@@ -288,8 +288,9 @@ export type ScaffoldDialectResolution =
 
 /**
  * Representative TC id used to probe a candidate basename against the
- * configured globs. Every naming above is a pure function of the id's shape,
- * not its digits, so one probe decides for all of them.
+ * configured globs when the caller names no ids. Every naming above is a pure
+ * function of the id's shape, so the probe decides for every id a glob without
+ * a brace range admits.
  */
 const PROBE_TC_ID = "TC-0000-0000";
 
@@ -298,21 +299,30 @@ function escapeRegExp(value: string): string {
 }
 
 /**
- * The most members fast-glob expands a numeric brace range to. It refuses a
- * pattern whose range reaches this many steps, so such a glob selects nothing.
+ * The number of steps from which fast-glob refuses a numeric brace range written
+ * without an increment. It refuses the whole pattern then, not only the range.
  */
 const BRACE_RANGE_LIMIT = 1000;
+
+/**
+ * The most members a range is enumerated to, so a compiled glob stays bounded.
+ */
+const BRACE_RANGE_MEMBER_CAP = 10_000;
+
+/** A range fast-glob refuses, which leaves the pattern holding it selecting nothing. */
+class BraceRangeRefused extends Error {}
 
 /**
  * The members a brace body expands to when it is a range, as fast-glob expands
  * it, or `null` when the body is not one.
  *
- * Two integers give a numeric range, `1..5` or `5..1`, zero-padded to the wider
- * endpoint when either is written with a leading zero, as `01..10` is. Two
- * single characters give a range over their code points, as `a..e` does. A
- * third part is the increment, whose sign is ignored and which is `1` when it
- * is `0` or empty. An empty array is a range fast-glob refuses, which selects
- * no file.
+ * Two integers give a numeric range, `1..5` or `5..1`. It is zero-padded to its
+ * widest part when any of the endpoints or the increment is written with a
+ * leading zero, as `01..10` and `0..10..05` are. Two single characters give a
+ * range over their code points, as `a..e` does. A third part is the increment,
+ * whose sign is ignored and which is `1` when it is `0` or empty.
+ *
+ * @throws {BraceRangeRefused} for a numeric range fast-glob refuses to expand.
  */
 function braceRangeMembers(body: string): readonly string[] | null {
   const parts = body.split("..");
@@ -321,20 +331,36 @@ function braceRangeMembers(body: string): readonly string[] | null {
   if (!/^[+-]?\d*$/.test(increment)) return null;
   const step = Math.max(1, Math.abs(Number(increment)));
   const integer = /^[+-]?\d+$/;
-  if (integer.test(from) && integer.test(to)) return numericRangeMembers(from, to, step);
-  if ([...from].length === 1 && [...to].length === 1) return characterRangeMembers(from, to, step);
+  if (integer.test(from) && integer.test(to)) {
+    return numericRangeMembers(from, to, increment, step);
+  }
+  if ([...from].length === 1 && [...to].length === 1) {
+    return characterRangeMembers(from, to, step);
+  }
   return null;
 }
 
-function numericRangeMembers(from: string, to: string, step: number): readonly string[] {
+function numericRangeMembers(
+  from: string,
+  to: string,
+  increment: string,
+  step: number,
+): readonly string[] {
   const start = Number(from);
   const end = Number(to);
-  // fast-glob's own test: it measures an ascending range only.
-  if ((end - start) / step >= BRACE_RANGE_LIMIT) return [];
-  const padded = /^[+-]?0\d/.test(from) || /^[+-]?0\d/.test(to);
-  const width = padded ? Math.max(from.length, to.length) : 0;
-  const direction = start <= end ? 1 : -1;
+  // fast-glob's own test, which it applies to an ascending range written without
+  // an increment and to no other.
+  if (increment === "" && (end - start) / step >= BRACE_RANGE_LIMIT) {
+    throw new BraceRangeRefused();
+  }
   const count = Math.floor(Math.abs(end - start) / step) + 1;
+  // SIMPLIFIED: a range past the member cap matches nothing here, though
+  // fast-glob expands one written with an increment whatever its length.
+  // Lift when: a project's glob names a range of more than ten thousand values.
+  if (count > BRACE_RANGE_MEMBER_CAP) return [];
+  const padded = [from, to, increment].some((part) => /^[+-]?0\d/.test(part));
+  const width = padded ? Math.max(from.length, to.length, increment.length) : 0;
+  const direction = start <= end ? 1 : -1;
   return Array.from({ length: count }, (_, index) => {
     const value = start + direction * index * step;
     const sign = value < 0 ? "-" : "";
@@ -346,10 +372,10 @@ function characterRangeMembers(from: string, to: string, step: number): readonly
   const start = from.codePointAt(0) ?? 0;
   const end = to.codePointAt(0) ?? 0;
   const count = Math.floor(Math.abs(end - start) / step) + 1;
-  // SIMPLIFIED: a character range past the numeric limit selects nothing here,
+  // SIMPLIFIED: a character range past the member cap matches nothing here,
   // though fast-glob expands it whole.
-  // Lift when: a project's glob names a range of more than a thousand characters.
-  if (count > BRACE_RANGE_LIMIT) return [];
+  // Lift when: a project's glob names a range of more than ten thousand characters.
+  if (count > BRACE_RANGE_MEMBER_CAP) return [];
   const direction = start <= end ? 1 : -1;
   return Array.from({ length: count }, (_, index) =>
     String.fromCodePoint(start + direction * index * step),
@@ -497,7 +523,11 @@ function compileGlob(pattern: string): string {
 /**
  * One brace group, given its interior. A list expands to its members and a
  * range to the values it spans. A body that is neither stays text, braces
- * included, as fast-glob leaves `{a}` and `{1..}`.
+ * included, as fast-glob leaves `{a}` and `{1..}`. A list's own members are
+ * not read as ranges, so `{0..2,9}` names the text `0..2`; only a brace group
+ * nested in the list, as `{{0..2},9}` has, expands.
+ *
+ * @throws {BraceRangeRefused} for a numeric range fast-glob refuses to expand.
  */
 function compileBraces(body: string): string {
   const alternatives = splitGlobAlternatives(body);
@@ -506,7 +536,6 @@ function compileBraces(body: string): string {
   }
   const members = braceRangeMembers(body);
   if (members === null) return `\\{${compileGlob(body)}\\}`;
-  // A range fast-glob refuses selects no file, so nothing matches it.
   return members.length === 0 ? "(?!)" : `(?:${members.map(escapeRegExp).join("|")})`;
 }
 
@@ -548,7 +577,14 @@ function compileGlobMatchers(patterns: readonly string[], matchWholePath: boolea
     const normalized = normalizeGlobPath(pattern.trim());
     if (normalized === "") continue;
     const source = matchWholePath ? normalized : globBasename(normalized);
-    matchers.push(new RegExp(`^${compileGlob(source)}$`));
+    try {
+      matchers.push(new RegExp(`^${compileGlob(source)}$`));
+    } catch (error) {
+      // fast-glob refuses the whole pattern when one range in it is refused, so
+      // the pattern selects nothing, whatever its other alternatives name.
+      if (!(error instanceof BraceRangeRefused)) throw error;
+      matchers.push(/(?!)/);
+    }
   }
   return matchers;
 }
@@ -575,6 +611,13 @@ export type ScaffoldDialectOptions = {
    * exclude glob describes a location, and there is none to test without one.
    */
   readonly excludeGlobs?: readonly string[];
+  /**
+   * The test case ids the run writes a skeleton for. Given, a naming is chosen
+   * only when the globs admit the file it would write for every one of them,
+   * since a brace range can make a glob depend on an id's digits. Omitted, a
+   * representative id stands in for all of them.
+   */
+  readonly tcIds?: readonly string[];
 };
 
 /** One (dialect, naming) pair the project's configured extensions admit. */
@@ -655,8 +698,10 @@ export function resolveScaffoldDialect(
   const admits = (candidate: string): boolean =>
     includes.some((matcher) => matcher.test(candidate)) &&
     !excludes.some((matcher) => matcher.test(candidate));
+  const tcIds =
+    options.tcIds !== undefined && options.tcIds.length > 0 ? options.tcIds : [PROBE_TC_ID];
   const chosen = candidates.find(({ naming }) =>
-    admits(candidatePath(naming.fileName(PROBE_TC_ID))),
+    tcIds.every((tcId) => admits(candidatePath(naming.fileName(tcId)))),
   );
   if (chosen === undefined) {
     // The shapes name the whole destination when one is known, so the refusal

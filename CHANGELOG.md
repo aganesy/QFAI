@@ -29,9 +29,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   between the braces. It refused, as a naming mismatch, a name the glob selects.
   A numeric range, zero-padded or not, with or without an increment, ascending
   or descending, and a single-character range now match the members fast-glob
-  expands them to. A range fast-glob refuses to expand, one of a thousand steps
-  or more, selects nothing, so the scaffold still refuses it. A brace body that
-  is neither a list nor a range is text, braces included.
+  expands them to, padded to the widest part, the increment included. A range
+  fast-glob refuses, one of a thousand steps or more written without an
+  increment, leaves the whole pattern selecting nothing. A list member is text,
+  not a range, and so is a brace body that is neither. Because a range can make
+  a glob depend on a test case id's digits, the scaffold checks the file it
+  would write for every test case in scope, not a representative one.
 
 - **The working-tree address excludes a nested project's own records, and stops on
   a FIFO or socket git does not list** (#1747). The collection reads the lists
