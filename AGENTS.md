@@ -153,6 +153,12 @@ Planテンプレート:
 - Try solutions in the order `.agents/rules/minimal-implementation.md` sets
   out, and mark a deliberate shortcut with its ceiling and the condition
   that lifts it.
+- TypeScript: await or return every promise. Returning propagates only when its
+  caller awaits or adopts the promise. Subject to the safety floor in
+  `.agents/rules/minimal-implementation.md` § 2, do not add a catch for a failure
+  that no specification, contract or observation names. At a callback boundary
+  that ignores return values, require an adapter that adopts asynchronous work
+  and handles rejections under the same floor.
 - 型安全を徹底し `any`・型無効化（`@ts-ignore`等）を原則禁止する。
 - 入力は型とバリデーションで検証し、失敗パスを先に書く。
 - 早期 return でネストを浅くし、読みやすさと責務を守る。

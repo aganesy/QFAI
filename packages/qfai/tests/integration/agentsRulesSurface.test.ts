@@ -9,7 +9,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, "../../../..");
 
 describe("repository async guidance agrees with the retained-failure test", () => {
-  it.each(["CLAUDE.md", "REVIEW.md"])(
+  it.each(["CLAUDE.md", "REVIEW.md", "AGENTS.md"])(
     "%s preserves propagation and the whole floor",
     async (file) => {
       const text = await readFile(path.join(ROOT, file), "utf-8");
@@ -27,11 +27,11 @@ describe("repository async guidance agrees with the retained-failure test", () =
       expect(flat).toContain(
         "at a callback boundary that ignores return values, require an adapter that adopts asynchronous work and handles rejections under the same floor",
       );
-      expect(text).not.toContain("every async path must have explicit error handling");
+      expect(flat).not.toContain("every async path must have explicit error handling");
       if (file === "REVIEW.md") {
-        expect(text).not.toContain("Missing error handling or incomplete error messages");
-        expect(text).toContain("Incomplete error messages");
-        expect(text).toContain("neither awaited nor returned");
+        expect(flat).not.toContain("missing error handling or incomplete error messages");
+        expect(flat).toContain("incomplete error messages");
+        expect(flat).toContain("neither awaited nor returned");
       }
     },
   );
