@@ -124,15 +124,13 @@ Use the shared schema.
   it where there is one — equals what this run's work order states, and which no
   other `/qfai-atdd` block in the file carries,
   and each row's `Open` count matches the register lines naming that row's `Session`, **and its `Escalated` count matches the escalation lines naming it**, **and its `Decisions` count matches the `grilling(<Session>@<run key>/<adjudication>)` rows the Work Orders Summary carries under that `Session` and this run's start** — a count checked against nothing lets a row claim `0` over decisions that never reached the user. **An escalation line still waiting on an answer is an open node**: it is also an `Open` line under the same `Session`, so a row that ended over it keeps the decision in the register instead of losing it behind a valid ending. **Every row's `Revision` is a git rev or `working-tree+<hash>`**, as the record requires, and a blank or any other value is a `REVISE`: it is the one field saying which tree the session ended against.
-  **Every row's `Subject` is non-blank, and when `Preflight` says `session
-  opened` exactly one row's is `preflight`**: it is the one cell saying what a
+  **Every row's `Subject` is non-blank, and when `Preflight` says `session opened` exactly one row's is `preflight`, and when it says `confidence high` none is**: it is the one cell saying what a
   session was about, and a session that settled everything leaves no register
   line to say it. **Every line under the table — a confirmation, a closure, an
   open node, an escalation — names a `Session` a row of this block carries**: a
   line keyed to no row is an open node no count reconciles. **An escalation line
   recording the user's answer is one of that `Session`'s counted decisions**,
-  and the decision it states is the one a `grilling(<Session>@<run key>/user)` row states: the answer settled it, and only the row records
-  who recommended it. **A run whose rows count no decision carries
+  and the decision it states is the one a `grilling(<Session>@<run key>/user)` row states, or a `grilling(<Session>@<run key>/withdrawn)` row where the answer dropped the item: the answer settled it either way, and only the row records who recommended it or that it left the artifact. **A run whose rows count no decision carries
   `grilling(-@<run key>/none): none`** in the Work Orders Summary, keyed to this run's key as the decision rows are, because that summary holds every invocation's rows.
   **A run whose rows count a decision carries no such marker**: the marker says
   the run settled none, so beside a decision row the summary would claim both,

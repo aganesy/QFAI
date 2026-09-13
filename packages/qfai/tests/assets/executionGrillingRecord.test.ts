@@ -191,9 +191,10 @@ describe.each(TREES)("%s — the execution stages record their sessions", (tree)
   it.each(STAGES)("%s reconciles every line and marker with this block", async (skill) => {
     const body = await read(`assistant/skills/${skill}/SKILL.md`);
     // A settled session leaves no register line saying what it was about.
+    // A `confidence high` block that still records a preflight session claims both.
     expectPhrase(
       body,
-      "**Every row's `Subject` is non-blank, and when `Preflight` says `session opened` exactly one row's is `preflight`**",
+      "**Every row's `Subject` is non-blank, and when `Preflight` says `session opened` exactly one row's is `preflight`, and when it says `confidence high` none is**",
     );
     // A line keyed to no row is an open node no count sees.
     expectPhrase(body, "names a `Session` a row of this block carries**");
@@ -201,6 +202,11 @@ describe.each(TREES)("%s — the execution stages record their sessions", (tree)
     expectPhrase(
       body,
       "**An escalation line recording the user's answer is one of that `Session`'s counted decisions**",
+    );
+    // A user who drops the item settles it too, and the row says it left the artifact.
+    expectPhrase(
+      body,
+      "or a `grilling(<Session>@<run key>/withdrawn)` row where the answer dropped the item",
     );
     // The summary holds every invocation's rows, so an unkeyed marker answers for any run.
     expectPhrase(
