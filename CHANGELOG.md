@@ -53,6 +53,10 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   `no-question` row with an open decision is a REVISE, because nobody was asked;
   the same count under `user-closed` passes, because the user saw them and
   closed the asking.
+  The gate also refuses a `Preflight` that is neither `session opened` nor
+  `confidence high`, and two rows sharing one `Session` key. A mutation-only
+  `/qfai-implement` run writes no block, since that branch writes nothing to its
+  rows' evidence, and reports its sessions in its output.
 
   A session between agents reaches none of the four on its own. Its budget ends
   the rounds between agents, and the decisions still open go to the user, who

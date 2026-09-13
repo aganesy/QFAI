@@ -250,6 +250,30 @@ describe.each(TREES)("%s — the execution stages record their sessions", (tree)
     // The field that says which tree the session ended against is validated,
     // not only required by the record.
     expectPhrase(body, "**Every row's `Revision` is a git rev or `working-tree+<hash>`**");
+    // A value that is neither disposition says nothing about whether a
+    // preflight row is owed.
+    expectPhrase(
+      body,
+      "**`Preflight` is `session opened` or `confidence high`**, and any other value is a `REVISE`",
+    );
+    // The lines under the table are reconciled by `Session`, so a key on two
+    // rows lets one recorded answer stand for both.
+    expectPhrase(
+      body,
+      "**No two rows share a `Session`**, and the keys run `S1`, `S2`, … with none skipped",
+    );
+  });
+
+  it("exempts a mutation-only implement run from the block at its gate", async () => {
+    // That branch forbids writing to its rows' evidence, so a gate requiring the
+    // block would reject every compliant run of it.
+    const body = await read("assistant/skills/qfai-implement/SKILL.md");
+    expectPhrase(body, "**A mutation-only invocation writes no block at all**");
+    expectPhrase(body, "a missing block is not a `REVISE` for it");
+    expectPhrase(
+      body,
+      "A mutation-only invocation writes no block and reports its sessions in its output instead",
+    );
   });
 
   it.each(STAGES)("%s gives each ending a verdict at that gate", async (skill) => {

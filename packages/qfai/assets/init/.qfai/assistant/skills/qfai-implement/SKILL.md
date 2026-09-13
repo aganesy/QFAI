@@ -471,7 +471,7 @@ Use the shared schema (per-row `Status (PASS/REVISE/PENDING)` column, reviewer r
 - Delegate final completion gate to an independent Reviewer.
 - The stage evidence's `## Grilling Session` section carries `Run started`,
   `Preflight`, a row for every session detection opened, and — when `Preflight`
-  says `session opened` — one for the preflight session, all of them inside this run's own block — **except a session the user stopped**, which is reported in the stage's output rather than written, as the table below sets out, so its absence is not a `REVISE`. Every `Ended` is one of the four endings the rule master
+  says `session opened` — one for the preflight session, all of them inside this run's own block — **except a session the user stopped**, which is reported in the stage's output rather than written, as the table below sets out, so its absence is not a `REVISE`. **A mutation-only invocation writes no block at all** (`references/mutation-only-request.md`): it reports its sessions in its output, and a missing block is not a `REVISE` for it. **`Preflight` is `session opened` or `confidence high`**, and any other value is a `REVISE`: those two say whether a preflight row is owed, and a third value says neither. **No two rows share a `Session`**, and the keys run `S1`, `S2`, … with none skipped: the lines under the table are reconciled by that key, so one key on two rows lets a single quoted answer, open line or escalation stand for both. Every `Ended` is one of the four endings the rule master
   names, every row's `Ended at` is at or after the run-started time on
   a `### /qfai-implement — run started` block whose time equals the one this
   run's work order states, and each row's `Open` count matches the register lines naming that row's `Session`, **and its `Escalated` count matches the escalation lines naming it** — a count checked against nothing lets a row claim `0` over decisions that never reached the user. **An escalation line still waiting on an answer is an open node**: it is also an `Open` line under the same `Session`, so a row that ended over it keeps the decision in the register instead of losing it behind a valid ending. **Every row's `Revision` is a git rev or `working-tree+<hash>`**, as the record requires, and a blank or any other value is a `REVISE`: it is the one field saying which tree the session ended against. **A row whose ending lets the work go on, and after which the stage wrote,
@@ -636,7 +636,8 @@ Required sections:
   which tree each session ended against (`## Grilling (MANDATORY)`). A run
   whose rows own `atdd-<spec-id>.md` writes the same block into that file's
   section too, beside the blocks `/qfai-atdd` wrote, by the same rule gate
-  item 10 uses
+  item 10 uses. A mutation-only invocation writes no block and reports its
+  sessions in its output instead
 - **Per item, one `### TDD-NNNN` section** carrying the contract below — the single home for that item's RED/GREEN commands and output, in whichever of the two files the row's `Layer` names. The ledger's `Evidence` cell anchors here and holds only the one-word outcomes, because a GFM cell cannot hold a newline or a bare `|` (`references/execution-ledger.md#evidence-cell-contract`)
 - Test results summary
 - Exception items (if any) with DR-IDs
