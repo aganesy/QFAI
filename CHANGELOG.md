@@ -6,6 +6,15 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Added
 
+- **Preflight uses repository-first reuse order** (#1796). Article IX checks
+  existing code, including duplicates or overlap, before the standard library,
+  platform and installed dependencies. One bullet covers detection and reuse.
+
+- **Repository reuse is the second of seven minimal-implementation rungs**
+  (#1795). Check the codebase before the standard library, platform and installed
+  dependencies. Existing repository code can answer the accepted behavior
+  without a duplicate implementation. The shipped copy has the same order.
+
 - **A legacy ledger outside the obligation-column protection is reported**
   (#1663). A seeded `E2E` or `API` row has `TC-Refs` forbidden to it, so the
   `US-Refs` and `CON-API-Refs` columns are the only place its obligation can
