@@ -232,14 +232,18 @@ them?
    reaches, and the approval covers the rows it seeds. They are owed whatever
    this record decides.
 
-   **`spec-0013/TDD-0022` is the fourteenth story's row, and this record does
-   not re-scope it.** It is `done`, with one `Selector` over `AC-0013-0018`
-   and `AC-0013-0019`. Phase 2b touches a progressed row that conflates
-   boundaries only under a Change Request naming the row and the order of its
-   split (`.qfai/assistant/skills/qfai-sdd/references/sdd-phase-checklists.md`),
-   and this record names neither. So the `spec-0013` rerun raises that record
-   and leaves the row as it is until it is approved. Nothing else in this plan
-   waits on it.
+   **This record re-scopes no progressed row but `TDD-0024`.** Phase 2b touches
+   a `done` row that runs several independently observable cases behind one
+   `Selector` only under a Change Request naming the row and the order of its
+   split (`.qfai/assistant/skills/qfai-sdd/references/sdd-phase-checklists.md`).
+   In `spec-0013` three rows are of that shape: `TDD-0019` runs the template
+   slot and the agent guide, `TDD-0021` three validate-lane outcomes, and
+   `TDD-0022`, the fourteenth story's row, the template slot and both
+   directions of the lane. The requests that restate those rows' obligations
+   name their splits, so the `spec-0013` rerun runs after they have been
+   applied. A progressed row of that shape either rerun still meets, in either
+   pack, is raised then as a request of its own and left as it is until that
+   request is approved; nothing else in this plan waits on it.
 
 4. Downstream ledger sweep for `spec-0013/TDD-0024`. `TC-0013-0029` keeps two
    independently observable rejections once the duplicate state goes — an
