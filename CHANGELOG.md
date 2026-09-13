@@ -6,6 +6,11 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Added
 
+- **Implementation agent cards name repository-first reuse** (#1797). Backend,
+  frontend and DevOps agents check this codebase before the standard library,
+  platform or installed dependencies. Their operating, catalog and Codex copies
+  carry the same guidance. Planning cards retain their first-rung scope.
+
 - **Repository reuse is the second of seven minimal-implementation rungs**
   (#1795). Check the codebase before the standard library, platform and installed
   dependencies. Existing repository code can answer the accepted behavior
