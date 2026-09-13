@@ -1173,9 +1173,11 @@ agents:
       - Return only PASS or REVISE, with actionable rework instructions on REVISE.
       - Enforce validate evidence, required coverage obligations, and no self-approval.
       - Verify rejected options are not reintroduced without RE-OPEN.
-      - Apply `.agents/rules/minimal-implementation.md`: tag excess in code, controls, settings and explanatory copy
+      - Apply `.agents/rules/minimal-implementation.md` to code; tag excess in code, controls, settings and explanatory copy
         `delete`, `stdlib`, `native`, `yagni` or `shrink`, and name what to cut and what replaces it.
         `delete` also covers replacement by code already present.
+        For controls, settings and copy, use `.agents/rules/interface-clarity.md`.
+        Every cut preserves the safety floor in `.agents/rules/minimal-implementation.md` § 2.
 
       ## Inputs you must read
 
@@ -1285,9 +1287,11 @@ agents:
       - Audit option sets for missing alternatives and weak recommendation rationale.
       - Review OQ candidates for completeness, neutrality, and safe deferral.
       - Ensure unresolved requirement ambiguity is explicit and actionable.
-      - Apply `.agents/rules/minimal-implementation.md`: tag excess in code, controls, settings and explanatory copy
+      - Apply `.agents/rules/minimal-implementation.md` to code; tag excess in code, controls, settings and explanatory copy
         `delete`, `stdlib`, `native`, `yagni` or `shrink`, and name what to cut and what replaces it.
         `delete` also covers replacement by code already present.
+        For controls, settings and copy, use `.agents/rules/interface-clarity.md`.
+        Every cut preserves the safety floor in `.agents/rules/minimal-implementation.md` § 2.
 
       ## Inputs you must read
 
@@ -1353,9 +1357,11 @@ agents:
 
       ## Domain Responsibilities
 
-      - Apply `.agents/rules/minimal-implementation.md`: tag excess in code, controls, settings and explanatory copy
+      - Apply `.agents/rules/minimal-implementation.md` to code; tag excess in code, controls, settings and explanatory copy
         `delete`, `stdlib`, `native`, `yagni` or `shrink`, and name what to cut and what replaces it.
         `delete` also covers replacement by code already present.
+        For controls, settings and copy, use `.agents/rules/interface-clarity.md`.
+        Every cut preserves the safety floor in `.agents/rules/minimal-implementation.md` § 2.
       - Audit architecture boundaries, trade-offs, and technical consistency.
       - Audit contract decisions across UI, API, and DB surfaces.
       - Block reintroduction of rejected architecture options without RE-OPEN.
@@ -1441,9 +1447,11 @@ agents:
       - Flag violations of SOLID with concrete reasoning and a smaller alternative when applicable.
       - Check separation of concerns, fail-fast validation, least astonishment, and avoidance of premature optimization in changed code.
       - Enforce TypeScript review expectations: avoid unjustified assertions, over-complex generics, unchecked `unknown`, and unhandled async paths.
-      - Apply `.agents/rules/minimal-implementation.md`: tag excess in code, controls, settings and explanatory copy
+      - Apply `.agents/rules/minimal-implementation.md` to code; tag excess in code, controls, settings and explanatory copy
         `delete`, `stdlib`, `native`, `yagni` or `shrink`, and name what to cut and what replaces it.
         `delete` also covers replacement by code already present.
+        For controls, settings and copy, use `.agents/rules/interface-clarity.md`.
+        Every cut preserves the safety floor in `.agents/rules/minimal-implementation.md` § 2.
       - Apply `.qfai/assistant/catalog/ui-procurement.md`: report a component written where one could be installed, a standard passed over, and an authored region with no recorded reason.
 
       ## Inputs you must read
@@ -1563,9 +1571,11 @@ agents:
       - Review UI changes at the surface layer: avoid needless states, controls, flows, animations, and configuration that are not justified by the product goal.
       - Check naming, structure, and responsibility split of UI components for clarity, cohesion, and minimal surprise.
       - Validate docs/UX consistency so usage text, labels, error states, and user flows match the intended product behavior.
-      - Apply `.agents/rules/minimal-implementation.md`: tag excess in code, controls, settings and explanatory copy
+      - Apply `.agents/rules/minimal-implementation.md` to code; tag excess in code, controls, settings and explanatory copy
         `delete`, `stdlib`, `native`, `yagni` or `shrink`, and name what to cut and what replaces it.
         `delete` also covers replacement by code already present.
+        For controls, settings and copy, use `.agents/rules/interface-clarity.md`.
+        Every cut preserves the safety floor in `.agents/rules/minimal-implementation.md` § 2.
       - Apply `.qfai/assistant/catalog/ui-procurement.md`: report a region that was drawn where a catalogue had it, and name the item that would have served.
       - Apply `.agents/rules/interface-clarity.md`: report copy that explains the interface as a finding against the control under it, and name the control to fix.
 
@@ -1655,9 +1665,11 @@ agents:
       - Treat density or volume smells as review signals, not standalone hard gates.
       - Verify test-case quality depth using the Coverage Depth Matrix (see below).
       - Own RED/GREEN **observation** evidence in a TDD micro-cycle: did the test fail (or pass) for the expected reason.
-      - Apply `.agents/rules/minimal-implementation.md`: tag excess in code, controls, settings and explanatory copy
+      - Apply `.agents/rules/minimal-implementation.md` to code; tag excess in code, controls, settings and explanatory copy
         `delete`, `stdlib`, `native`, `yagni` or `shrink`, and name what to cut and what replaces it.
         `delete` also covers replacement by code already present.
+        For controls, settings and copy, use `.agents/rules/interface-clarity.md`.
+        Every cut preserves the safety floor in `.agents/rules/minimal-implementation.md` § 2.
 
       ## Ownership boundaries
 

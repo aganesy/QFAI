@@ -38,8 +38,9 @@ replaces it**. The tags cover code, controls, settings and explanatory copy.
 | `yagni`  | A speculative abstraction, control or setting without a current requirement           | Remove it, or inline the kept behavior      |
 | `shrink` | The same behavior or meaning with less code or clearer, shorter copy                  | Show the smaller implementation or sentence |
 
-The ladder these tags read against is
-`.agents/rules/minimal-implementation.md`. It is not restated here.
+Code tags read against `.agents/rules/minimal-implementation.md`. For controls,
+settings and copy, use `.agents/rules/interface-clarity.md`. Every cut preserves
+the safety floor in the implementation rule § 2. Neither rule is restated here.
 
 A finding that names no replacement is not actionable: the author cannot act on
 it and the reviewer cannot be held to it. "This might be more complex than

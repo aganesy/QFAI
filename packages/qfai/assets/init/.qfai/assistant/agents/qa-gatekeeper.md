@@ -18,9 +18,11 @@ tools: [Read, Glob, Grep, Bash]
 - Treat density or volume smells as review signals, not standalone hard gates.
 - Verify test-case quality depth using the Coverage Depth Matrix (see below).
 - Own RED/GREEN **observation** evidence in a TDD micro-cycle: did the test fail (or pass) for the expected reason.
-- Apply `.agents/rules/minimal-implementation.md`: tag excess in code, controls, settings and explanatory copy
+- Apply `.agents/rules/minimal-implementation.md` to code; tag excess in code, controls, settings and explanatory copy
   `delete`, `stdlib`, `native`, `yagni` or `shrink`, and name what to cut and what replaces it.
   `delete` also covers replacement by code already present.
+  For controls, settings and copy, use `.agents/rules/interface-clarity.md`.
+  Every cut preserves the safety floor in `.agents/rules/minimal-implementation.md` § 2.
 
 ## Ownership boundaries
 

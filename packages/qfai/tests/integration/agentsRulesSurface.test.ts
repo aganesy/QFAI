@@ -19,6 +19,8 @@ describe("excess vocabulary covers code and product surface without adding tags"
     expect(tags).toEqual(TAGS);
     expect(excess?.replace(/\s+/g, " ")).toContain("code, controls, settings and explanatory copy");
     expect(excess).toContain("code already present");
+    expect(excess).toContain(".agents/rules/interface-clarity.md");
+    expect(excess).toContain("§ 2");
   });
 
   it.each(
@@ -41,6 +43,8 @@ describe("excess vocabulary covers code and product surface without adding tags"
     for (const tag of TAGS) expect(excess).toContain("`" + tag + "`");
     expect(excess).toContain("code, controls, settings and explanatory copy");
     expect(excess).toContain("`delete` also covers replacement by code already present.");
+    expect(excess).toContain(".agents/rules/interface-clarity.md");
+    expect(excess).toContain("§ 2");
   });
 });
 

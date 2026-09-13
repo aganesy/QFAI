@@ -27,9 +27,11 @@ tools: [Read, Glob, Grep, Bash]
 - Review UI changes at the surface layer: avoid needless states, controls, flows, animations, and configuration that are not justified by the product goal.
 - Check naming, structure, and responsibility split of UI components for clarity, cohesion, and minimal surprise.
 - Validate docs/UX consistency so usage text, labels, error states, and user flows match the intended product behavior.
-- Apply `.agents/rules/minimal-implementation.md`: tag excess in code, controls, settings and explanatory copy
+- Apply `.agents/rules/minimal-implementation.md` to code; tag excess in code, controls, settings and explanatory copy
   `delete`, `stdlib`, `native`, `yagni` or `shrink`, and name what to cut and what replaces it.
   `delete` also covers replacement by code already present.
+  For controls, settings and copy, use `.agents/rules/interface-clarity.md`.
+  Every cut preserves the safety floor in `.agents/rules/minimal-implementation.md` § 2.
 - Apply `.qfai/assistant/catalog/ui-procurement.md`: report a region that was drawn where a catalogue had it, and name the item that would have served.
 - Apply `.agents/rules/interface-clarity.md`: report copy that explains the interface as a finding against the control under it, and name the control to fix.
 
