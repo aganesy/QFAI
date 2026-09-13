@@ -8,6 +8,35 @@ import { describe, expect, it } from "vitest";
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, "../../../..");
 
+describe("the retained-failure test stays under the safety floor", () => {
+  it.each([
+    ".agents/rules/minimal-implementation.md",
+    "packages/qfai/assets/init/root/.agents/rules/minimal-implementation.md",
+  ])("%s names the criterion, propagation and process boundary", async (relative) => {
+    const text = await readFile(path.join(ROOT, relative), "utf-8");
+    const failure = text.split("### Which failures are handled here")[1]?.split(/^## /m)[0];
+    expect(failure).toBeDefined();
+    const flat = failure?.replace(/\s+/g, " ");
+    expect(flat).toContain("Subject to the safety floor in this section");
+    expect(flat).toContain("no type or schema excludes it");
+    expect(flat).toContain("the specification, a contract or an actual observation names it");
+    expect(flat).toContain("Every promise is awaited or returned, never dropped");
+    expect(flat).toContain("process entry point is a trust boundary");
+    expect(flat).toContain("A dropped rejection remains a correctness defect");
+    expect(flat).toContain("06_Test-Cases.md");
+  });
+
+  it("keeps the operating rule byte-identical to its shipped master", async () => {
+    const [master, shipped] = await Promise.all([
+      readFile(path.join(ROOT, ".agents/rules/minimal-implementation.md")),
+      readFile(
+        path.join(ROOT, "packages/qfai/assets/init/root/.agents/rules/minimal-implementation.md"),
+      ),
+    ]);
+    expect(master.equals(shipped)).toBe(true);
+  });
+});
+
 /**
  * Every rule master, read off the directory.
  *

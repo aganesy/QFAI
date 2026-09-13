@@ -46,6 +46,19 @@ Tests are in the same position. The ladder shapes how a test is built — reuse 
 helper that exists before adding a harness — and never how many obligations are
 verified.
 
+### Which failures are handled here
+
+Subject to the safety floor in this section, handle a failure where it occurs
+only when both hold: no type or schema excludes it, and the specification, a
+contract or an actual observation names it. Other failures propagate to the
+caller. Every promise is awaited or returned, never dropped.
+
+An observation has a test-case row in
+`.qfai/assistant/skills/qfai-sdd/templates/specs/spec/06_Test-Cases.md`.
+The process entry point is a trust boundary and handles failures that propagate
+that far. A dropped rejection remains a correctness defect under
+`.qfai/assistant/constitution/drift-protocol.md`.
+
 ## 3. Marking a deliberate simplification
 
 A shortcut taken on purpose is written down where it is taken, with two things:
