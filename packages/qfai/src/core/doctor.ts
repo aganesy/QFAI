@@ -1783,6 +1783,25 @@ async function buildPrototypingUiContractsCheck(
     };
   }
 
+  // A prototype is built around each screen's primary tasks, so the stage does
+  // not start while a screen has none. The audit lane refuses the same contract
+  // under `QFAI-AUD-001`; without this, the stage's own preflight passed it.
+  const withoutTasks = screens.filter((screen) => screen.primaryTasks.length === 0);
+  if (withoutTasks.length > 0) {
+    return {
+      id: "prototyping.uiContracts",
+      severity: "error",
+      title: "UI contracts",
+      message: `UI contract screen(s) with no primary_tasks: ${withoutTasks
+        .map((screen) => screen.sourceRef || screen.screenId)
+        .join(", ")}; add at least one primary_task to each screen before prototyping`,
+      details: {
+        contractsDir: config.paths.contractsDir,
+        screenIds: withoutTasks.map((screen) => screen.screenId),
+      },
+    };
+  }
+
   return {
     id: "prototyping.uiContracts",
     severity: "ok",
