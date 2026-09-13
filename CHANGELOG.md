@@ -23,6 +23,17 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **The working-tree address excludes a nested project's own records, and stops on
+  a FIFO or socket git does not list** (#1747). The collection reads the lists
+  from the worktree root, but rooted the `.qfai/evidence`, `.qfai/review` and
+  ledger exclusions there too. In a project nested in a larger worktree, such as
+  `packages/app-a/` of a monorepo, they excluded nothing, so the phase's own
+  writes moved the address between observations that must agree. Each exclusion
+  now starts with the project's prefix from `git rev-parse --show-prefix`. Git
+  also lists no untracked FIFO, socket or device, so adding or removing one left
+  the address unchanged; the step now asks the filesystem for them and stops on
+  any it finds. A test runs the step's own commands in a temporary repository.
+
 - **The completion gate recomputes the checkpoint seal over the checkpoint's own
   revision** (#1738). `checkpoint-verification.md` seals the checkpoint command
   and result together with `Checkpoint verification revision`, the tree that
@@ -116,6 +127,35 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   extension from it. One starting with `!(` is a negated extglob, which selects,
   and still gives its extension. `!tests/e2e/legacy/**/*.ts` beside a Python glob added
   TypeScript to what the stage scans.
+
+- **The saas-package certify cases run through the command line, and the verify
+  reviewer gate has a test** (#1636, #1637, #1638). Every case credited to the
+  two certify obligations called the command function with the flag already
+  parsed, so dropping `--scope` or `--upgrade-scope` from the command line left
+  them all passing. The two suites that did run the command line were skipped.
+  They now run: the integration suite through the CLI entry point, and the
+  end-to-end suite through the built binary. New cases feed verify's binding
+  gate a render critique the reviewer returned `REVISE`, and read
+  `/qfai-verify`'s reviewer-gate clauses in the shipped and installed skill.
+
+  `CR-20260913-0005`, awaiting approval, proposes pointing three `spec-0014`
+  ledger rows at those cases, splitting the upgrade-scope row at its boundary,
+  and recording that four delta chains name reassigned identifiers. The ledger
+  is unchanged until it is applied. `CR-20260913-0006` puts the one row whose
+  evidence has no form it can take to the user.
+
+- **The completion gate holds reviewers to the tree after the refactor** (#1732).
+  `evidence-revision.md` says the reviews judge the final tree, which
+  `Refactor verify revision` names, while a round's `Revision` names the tree
+  before the refactor. The gate compared every `reviewed revision` with the
+  round's `Revision`, so a row whose refactor changed a byte was reported when
+  its reviewers recorded the tree they judged. The gate now compares them with
+  `Refactor verify revision`, checks that it names a revision, and keeps the
+  round's `Revision` for a row that records none. The staleness check measures
+  from the same revision, and the field counts as phase-authored, so one written
+  after the review fields is refused. `ui-affecting.md`,
+  `parallelization-policy.md` and the skill now say items 6, 7 and 8 share the
+  revision. No completed row in this repository changes result.
 
 - **The `primary_tasks` band drift is recorded where the Drift Protocol looks
   for it** (#1621). `QFAI-AUD-020` lost its lower bound as product work, and
