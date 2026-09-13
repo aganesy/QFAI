@@ -1110,6 +1110,16 @@ function procurementIssues(handoff: Record<string, unknown>, filePathRel: string
   }
 
   const issues: Issue[] = [];
+  /**
+   * Where each screen region was realised, and the pairs realised twice.
+   *
+   * One realisation per region: the contract says each region names what
+   * realises it, singular. Two rows for one region tell the implementer to
+   * install and to author the same part, and reading rows independently let
+   * them both pass — across the two lists as well as within one.
+   */
+  const realised = new Map<string, string>();
+  const duplicates: { key: string; first: string; second: string }[] = [];
   // A closed key set, as `prototyping/handoff.ts` keeps for the schema beside
   // this one: "closed schema; protects against schema drift and typos". A
   // misspelled list left both known names absent, so no row was read and the
@@ -1146,6 +1156,14 @@ function procurementIssues(handoff: Record<string, unknown>, filePathRel: string
     rows.forEach((row: unknown, index) => {
       const where = `procurement.${list}[${index}]`;
       const missing = isRecord(row) ? cells.filter((cell) => !cellIsWritten(row[cell])) : cells;
+      if (missing.length === 0 && isRecord(row)) {
+        const screen = String(row.screen).trim();
+        const region = String(row.region).trim();
+        const key = `${screen} / ${region}`;
+        const seen = realised.get(key);
+        if (seen === undefined) realised.set(key, where);
+        else duplicates.push({ key, first: seen, second: where });
+      }
       if (missing.length > 0) {
         issues.push(
           report(
@@ -1155,6 +1173,15 @@ function procurementIssues(handoff: Record<string, unknown>, filePathRel: string
         );
       }
     });
+  }
+  for (const { key, first, second } of duplicates) {
+    issues.push(
+      report(
+        `names '${key}' at both '${first}' and '${second}'. Each screen region names one ` +
+          `thing that realises it, so two rows for it leave an implementer without an answer ` +
+          `to what to install.`,
+      ),
+    );
   }
   return issues;
 }

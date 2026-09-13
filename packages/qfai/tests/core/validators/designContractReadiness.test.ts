@@ -448,6 +448,56 @@ describe("validateSddDesignContractReadiness (TC-3.8.x)", () => {
       ).toEqual([]);
     });
 
+    describe("one realisation per screen region", () => {
+      const row = (screen: string, region: string, cell: string, value: string): string[] => [
+        `    - screen: "${screen}"`,
+        `      region: "${region}"`,
+        `      ${cell}: "${value}"`,
+      ];
+
+      it("reports a region realised twice in one list", async () => {
+        // The contract says each region names what realises it, singular. Two
+        // rows for one region leave an implementer without an answer to what to
+        // install, and reading rows independently let both pass.
+        const messages = await seeded([
+          "procurement:",
+          "  procured:",
+          ...row("dashboard", "summary cards", "item", "catalogue stat block"),
+          ...row("dashboard", "summary cards", "item", "the project's own card"),
+        ]);
+        expect(messages).toHaveLength(1);
+        expect(messages[0]).toContain("dashboard / summary cards");
+        expect(messages[0]).toContain("procurement.procured[0]");
+        expect(messages[0]).toContain("procurement.procured[1]");
+      });
+
+      it("reports a region that is both procured and authored", async () => {
+        // The contradiction across the two lists is the sharper one: install
+        // this, and it was written because nothing served.
+        const messages = await seeded([
+          "procurement:",
+          "  procured:",
+          ...row("dashboard", "trend sparkline", "item", "catalogue chart"),
+          "  authored:",
+          ...row("dashboard", "trend sparkline", "why", "no catalogue entry plots a series"),
+        ]);
+        expect(messages).toHaveLength(1);
+        expect(messages[0]).toContain("procurement.procured[0]");
+        expect(messages[0]).toContain("procurement.authored[0]");
+      });
+
+      it("says nothing about two regions of one screen", async () => {
+        expect(
+          await seeded([
+            "procurement:",
+            "  procured:",
+            ...row("dashboard", "summary cards", "item", "catalogue stat block"),
+            ...row("dashboard", "trend sparkline", "item", "catalogue chart"),
+          ]),
+        ).toEqual([]);
+      });
+    });
+
     it("says nothing when the key is absent", async () => {
       // The handoff contract lets a screen drawn entirely from what the
       // project already had omit both lists, so absence is legal here.
