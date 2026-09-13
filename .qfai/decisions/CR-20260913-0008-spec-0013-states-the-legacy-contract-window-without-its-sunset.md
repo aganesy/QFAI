@@ -31,8 +31,9 @@ asserts that no `info` finding is produced. The requirement, the rule and the
 product agree. The test case is the one statement that does not, because it
 lost the condition.
 
-The test file's header comment repeats that loss. It describes the pre-sunset
-behaviour, informational and non-blocking, above a case asserting the opposite.
+The test file repeats that loss twice. Its header comment and the comment
+directly above the legacy case both describe the pre-sunset behaviour,
+informational and non-blocking, over a case asserting the opposite.
 
 ## Reproduction
 
@@ -63,6 +64,10 @@ From `packages/qfai/tests/integration/sddPrimaryTasksLane.test.ts`:
 9:  *   - slot-absent (legacy) UI contracts -> QFAI-AUD-001 at severity=info
 10:  *     under a one-minor-release deprecation window (sunset: qfai 1.10.0);
 11:  *     non-blocking so legacy contracts can migrate without a hard break.
+215:   // 2-stage emission: legacy UI contracts that pre-date the primary_tasks
+216:   // slot (key-absent) emit QFAI-AUD-001 at severity=info under a one-minor
+217:   // release deprecation window (sunset: qfai 1.10.0). Key-empty (slot
+218:   // authored but `primary_tasks: []`) remains severity=error.
 219:   it("legacy slot-less contracts emit QFAI-AUD-001 at severity=error (past sunset)", async () => {
 226:       expect(audit001.filter((issue) => issue.severity === "info")).toEqual([]);
 ```
@@ -71,31 +76,47 @@ From `packages/qfai/tests/integration/sddPrimaryTasksLane.test.ts`:
 
 Re-derive `TC-0013-0027` so its legacy sub-case carries the condition
 `REQ-0117` and `BR-0013-0016` already state: informational until the window's
-sunset, and blocking once it has passed. Correct the header comment of
-`sddPrimaryTasksLane.test.ts` to describe the same rule.
+sunset, and blocking once it has passed. Correct the two comments of
+`sddPrimaryTasksLane.test.ts` quoted above to describe the same rule.
+
+**The condition adds no boundary to observe.** The lane has no window logic:
+`validateDesignAudit` reports a slot-less contract at `error` with no version
+check. No run can observe the informational side, so the restated sub-case
+stays one boundary, a contract from before the slot blocking the lane.
 
 `REQ-0117` and `BR-0013-0016` are not edited, and neither is the product.
 
 ## Blocked downstream items
 
-| Item                 | Kind         | Why it depends on the artifact                                  |
-| -------------------- | ------------ | --------------------------------------------------------------- |
-| `spec-0013/TDD-0021` | `ledger-row` | Carries `TC-0013-0027`, whose legacy sub-case this fix restates |
+| Item                                                                   | Kind         | Why it depends on the artifact                                              |
+| ---------------------------------------------------------------------- | ------------ | --------------------------------------------------------------------------- |
+| `spec-0013/TDD-0021`                                                   | `ledger-row` | Carries `TC-0013-0027`, whose legacy sub-case this fix restates             |
+| The two `spec-0013` rows `CR-20260913-0009` appends for `TC-0013-0027` | `ledger-row` | The same obligation. One of them owns the legacy sub-case this fix restates |
 
-- Not blocked by this CR: every other `spec-0013` row. `TDD-0020` shares the
-  test file, and its obligation, the lane failing on an empty list, does not
-  read the legacy window.
-- Overlapping open CRs: `CR-20260913-0003` and `CR-20260913-0007` name files
+- Not blocked by this CR: every other `spec-0013` row. `TDD-0020` and the row
+  `CR-20260913-0009` appends beside it carry `TC-0013-0026`. They share the
+  test file, and their obligation, the lane and the preflight refusing an empty
+  list, does not read the legacy window.
+- Overlapping open CRs: `CR-20260913-0009` re-derives `spec-0013`'s ledger to
+  its template, splitting every progressed row that runs several boundaries
+  behind one `Selector`, `TDD-0021` among them. **It is applied first, and this
+  record assumes it has landed**; if it is rejected, this record is restated
+  before it is applied. `CR-20260913-0003` and `CR-20260913-0007` name files
   this record names too — `06_Test-Cases.md`, `09_delta.md` and
-  `tdd/test-list.md`. **This record is applied first**; `CR-20260913-0007` and
-  then `CR-20260913-0003` assume it has landed. The three blocked sets do not
-  intersect.
+  `tdd/test-list.md`. This record is applied before both, and
+  `CR-20260913-0007` and then `CR-20260913-0003` assume it has landed. The
+  three blocked sets do not intersect.
 
 ## Impact scope
 
 - Specs: `spec-0013`
 - Plans: `none`
-- Tests: `spec-0013/TDD-0021` — `packages/qfai/tests/integration/sddPrimaryTasksLane.test.ts`
+- Tests: the rows carrying `TC-0013-0027` —
+  `packages/qfai/tests/integration/sddPrimaryTasksLane.test.ts`; and, through
+  the `/qfai-atdd spec-0013` pass in action 3, every other ATDD-owned
+  `spec-0013` row still owed that no open Change Request blocks when that pass
+  runs, with `.qfai/evidence/atdd-spec-0013.md` and
+  `.qfai/evidence/coverage-depth-spec-0013.md`
 - Contracts: `none`
 - Schema: `none`
 - Upstream paths edited under this CR:
@@ -115,38 +136,56 @@ requirement and business rule already carry?
    `## Change Requests` table — `CR ID`, `Upstream artifact`, `Mode`,
    `Approved by`, `Applied at` — not as a `## Triage` row.
 
-   The rerun's Phase 2b also seeds, at `todo`, the `E2E` rows `spec-0013`'s
-   ledger lacks. Thirteen of its fourteen stories have none, and that is a
-   floor on the rows rather than their count: Phase 2b seeds one row per
-   independently observable boundary a story's criteria name, so a story whose
-   criteria name two may take two. The approval covers the rows that
-   derivation seeds, and they are owed whatever this record decides.
+   **`CR-20260913-0009` is applied first.** It re-derives `spec-0013`'s ledger
+   to its template: the six columns it lacks, the `Integration` and `E2E` rows
+   Phase 2b owes, and the split of all thirteen progressed rows that run
+   several boundaries behind one `Selector` — `TDD-0021`, `TDD-0029` and
+   `TDD-0030` among them — with the resets those splits owe. It also removes
+   `TDD-0021`'s case for an authored but empty list, which repeats the boundary
+   of `TC-0013-0026` that `TDD-0020` keeps. This rerun's Phase 2b therefore
+   meets nothing to migrate, seed or split, and this record authorises no
+   ledger write beyond action 2. A progressed row of that shape the rerun still
+   meets is raised then as a request of its own and left as it is until that
+   request is approved; nothing else in this plan waits on it.
 
-   The fourteenth story's row, `TDD-0022`, is `done` and runs three boundaries
-   behind one `Selector`. This rerun leaves it as it is: Phase 2b splits a
-   progressed row only under a Change Request naming the row and the order of
-   its split, and `CR-20260913-0007`, applied next, is that request.
+2. Downstream ledger sweep, per boundary. `CR-20260913-0009` has split
+   `TDD-0021` by then: `TDD-0021` keeps the passing contract, and a row is
+   appended for the preflight proceeding on it and another for a contract from
+   before the slot. This fix restates the last of those boundaries and no
+   other, so Phase 2b pairs each boundary with the row whose `Boundary` names
+   it, appends none and retires none.
+   - **The row for a contract from before the slot is reset to `todo`**,
+     recording this CR's ID in `DR-ID`, wherever it has left `todo` by then.
+     Its obligation gains the sunset condition, and an observation taken
+     against the unconditional wording does not describe it. It is named by
+     that rule rather than by a `TDD-ID`, which `CR-20260913-0009` allocates:
+     the `spec-0013` row carrying `TC-0013-0027` whose `Boundary` is the
+     legacy contract. `CR-20260913-0009` appends it at `todo` and this
+     record's blocked set keeps it unselected, so the reset is owed only if a
+     run has moved it since.
+   - `TDD-0021` and the row for the preflight keep their obligations and are
+     not reset, so this record writes no `DR-ID` on either.
 
-2. Downstream ledger sweep. Reset to `todo`, recording this CR's ID in `DR-ID`:
-   `spec-0013/TDD-0021`. Its obligation gains a condition, and its recorded
-   observation was taken against the unconditional wording. No row is retired.
-
-   **The same rerun's Phase 2b splits `TDD-0021`.** Its `Selector` names the
-   `describe` in `sddPrimaryTasksLane.test.ts` that runs three independently
-   observable cases: a contract whose every screen holds a task passes, a
-   legacy contract with no slot is an error past the sunset, and an authored
-   but empty list stays an error. Phase 2b splits a progressed row only under a
-   Change Request naming the row and the order of its split, and this record is
-   that request. In that order: `TDD-0021` keeps the passing contract, the case
-   `TC-0013-0027` states first, with its `Selector` narrowed to that case, and
-   two new `todo` rows carrying `TC-0013-0027` take the legacy contract and then
-   the authored empty list, with this CR's ID in `DR-ID`. Each of the three
-   names its boundary in `Boundary`. The recorded RED is file-level and
-   observed no one of them first, so the order is this record's.
-
-3. Under `/qfai-implement`, with the row's repair, correct the header comment of
-   `sddPrimaryTasksLane.test.ts` quoted above, which describes the pre-sunset
-   behaviour over a case that asserts the post-sunset one.
+3. **In this order**, once the rerun above has written the ledger:
+   1. `/qfai-implement spec-0013` runs its Change Request preflight, which
+      writes action 2's reset before the ledger is read for anything else. It
+      advances none of the rows carrying `TC-0013-0027`: their handover for
+      this cycle is the next step's to record. It makes no product edit.
+   2. `/qfai-atdd spec-0013` makes the test edit. The rows carrying
+      `TC-0013-0027` are `Integration` rows, whose tests that stage writes and
+      `/qfai-implement` does not (`qfai-implement/SKILL.md`). It corrects the
+      header comment of `sddPrimaryTasksLane.test.ts` and the comment above the
+      legacy case, both quoted above, which describe the pre-sunset behaviour
+      over a case that asserts the post-sunset one. No assertion changes. It
+      records the handover of those rows. **That invocation is not limited to
+      these rows**: it takes up every ATDD-owned `spec-0013` row still owed
+      when it runs that no open Change Request blocks, as that stage's ordinary
+      forward work. It writes their tests under `packages/qfai/tests/**`, their
+      entries in `.qfai/evidence/atdd-spec-0013.md`, and a refreshed
+      `.qfai/evidence/coverage-depth-spec-0013.md` through its reviewer gate.
+      None of that edits an upstream path.
+   3. `/qfai-implement spec-0013` resumes from that handover. This record makes
+      no product edit.
 
 ## Resolution
 
