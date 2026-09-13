@@ -43,21 +43,44 @@ defect in what the pack declares rather than a disagreement with the product:
 the declaration names a condition with no instance, and there is one correct
 repair.
 
+**The absent pointer is not one condition across the two readers.** The helper
+rejects an absent pointer whatever candidates exist. `qfai discussion list
+--active` rejects it only when there is no candidate or there are several: with
+exactly one, it prints that pack and says on stderr that it assumed it
+(`packages/qfai/src/cli/commands/discussion.ts:259-272`), and
+`packages/qfai/tests/integration/cli/commands/discussion.test.ts:169-215` pins
+that outcome. The statements above word the absent case as one rejection, so a
+rerun that only drops the duplicate state would leave them contradicting the
+command's single-candidate read.
+
 ## Reproduction
 
-`resolveActiveDiscussionPack` in `packages/qfai/src/core/discussionPack.ts`
-builds its candidates from one call, and filters them on an exact name:
+Both readers take their candidates from `findPacks` and match them on an exact
+name. On this branch:
 
-```ts
-const candidates = await findPacks(resolvedRoot, "discussion");
-// …
-const matches = candidates.filter((pack) => pack.name === currentId);
+```text
+$ grep -n "readdir(rootDir\|for (const entry of entries)\|name: entry.name" packages/qfai/src/core/packLocator.ts
+136:  const entries = await readdir(rootDir, { withFileTypes: true }).catch((cause: unknown) => {
+145:  for (const entry of entries) {
+157:      name: entry.name,
+$ grep -n "const candidates = await findPacks\|const matches = candidates.filter\|if (matches.length > 1)" packages/qfai/src/core/discussionPack.ts
+272:  const candidates = await findPacks(resolvedRoot, "discussion");
+293:  const matches = candidates.filter((pack) => pack.name === currentId);
+300:  if (matches.length > 1) {
+$ grep -n 'findPacks(discussionRoot\|const matches = candidates.filter\|resolves to duplicate' packages/qfai/src/cli/commands/discussion.ts
+125:  const packs = await findPacks(discussionRoot, "discussion");
+142:    const packs = await findPacks(discussionRoot, "discussion", { onReadFailure: "throw" });
+287:  const matches = candidates.filter((name) => name === currentId);
+295:      : `active session pointer "${currentId}" resolves to duplicate discussion-* dirs.`;
 ```
 
-`findPacks` in `packages/qfai/src/core/packLocator.ts` performs a single
-`readdir` of a single directory and pushes one entry per directory name. Two
-entries of one directory cannot share a name, and the comparison is exact, so
-`matches.length` is 0 or 1 and the `matches.length > 1` branch is not reachable.
+`findPacks` reads one directory with one `readdir` (`packLocator.ts:136`) and
+pushes one candidate per entry, named by that entry (`packLocator.ts:145-157`).
+Two entries of one directory cannot share a name. Both filters compare names
+exactly (`discussionPack.ts:293`, `discussion.ts:287`), so each keeps at most one
+candidate, and neither the branch at `discussionPack.ts:300` nor the duplicate
+wording at `discussion.ts:295` can be reached. `qfai discussion list --active`
+reads its candidates through `listPacks`, whose `findPacks` call is line 142.
 
 **It never was.** The branch was introduced on 2026-05-29 with the helper
 itself, and `findPacks` at that commit already read one root with one `readdir`.
@@ -85,6 +108,10 @@ and a pointer naming a pack that does not exist — at the shared decision first
 and then in both packs that follow it, and remove both dead branches with what
 serves only them.
 
+The narrowed wording keeps what each reader does with an absent pointer: the
+helper rejects it, and `qfai discussion list --active` rejects it only when
+there is no candidate or there are several, printing the one pack otherwise.
+
 Leaving the statements as they are makes `TC-0013-0029` read as a third
 uncovered, when the uncovered third is a state no test can construct.
 
@@ -105,7 +132,7 @@ uncovered, when the uncovered third is a state no test can construct.
 ## Impact scope
 
 - Specs: `spec-0010`, `spec-0013`, and `_policies` for `DR-0266`
-- Plans: `none`
+- Plans: `.qfai/specs/spec-0010/10_Plan.md`, `.qfai/specs/spec-0013/10_Plan.md`
 - Tests: `spec-0013/TDD-0024` — `packages/qfai/tests/core/activeDiscussionPack.test.ts`,
   whose header and `describe` name the duplicate state; and
   `packages/qfai/tests/integration/cli/commands/discussion.test.ts`, for the
@@ -145,7 +172,12 @@ command, with what exists only to serve them?
    `re-derive`, narrows `DR-0266`'s rejection clause to the absent and missing
    pointer, and records it in `_policies/10_delta.md`. Both packs follow that
    decision, so narrowing either one first would leave it disagreeing with the
-   record it cites.
+   record it cites. **The clause keeps the command's single-candidate read**:
+   it states the helper's rejection of an absent pointer as unconditional, and
+   the command's as the no-candidate and several-candidate cases, so the rerun
+   does not turn the fallback `discussion.test.ts:169-215` pins into an
+   obligation to reject. Steps 2 and 3 carry the same distinction wherever
+   their statements name the command.
 
 2. `/qfai-sdd spec-0010`, mode `re-derive`, over `AC-0010-0012`,
    `BR-0010-0012` and the two `10_Plan.md` lines that restate the rejection,
@@ -167,15 +199,24 @@ command, with what exists only to serve them?
    `packages/qfai/src/core/discussionPack.ts` the `matches.length > 1` branch,
    `buildDuplicateMessage`, and the `"duplicate"` member of
    `ResolveActiveDiscussionPackErrorReason`, and correct the helper's doc
-   comment, which lists the duplicate case among the errors it throws. Correct
-   the comment in `packages/qfai/src/core/validators/designContractReadiness.ts`
-   that names a `"duplicate"` pointer among the ones that do not fall back.
-   Remove the `matches.length > 1` wording from `qfai discussion list --active`
-   in `packages/qfai/src/cli/commands/discussion.ts` the same way, leaving the
-   missing-pointer message. Correct the header and `describe` of
-   `activeDiscussionPack.test.ts`, which still name the duplicate state. Both
-   suites keep passing unchanged, because neither exercises a duplicate — no
-   test could construct one.
+   comment, which lists the duplicate case among the errors it throws. Remove
+   the `matches.length > 1` wording from `qfai discussion list --active` in
+   `packages/qfai/src/cli/commands/discussion.ts` the same way, leaving the
+   missing-pointer message. Correct every comment that still names the
+   duplicate state, each of which is false once the branches go:
+
+   | File                                                           | Lines    | What it says                                                           |
+   | -------------------------------------------------------------- | -------- | ---------------------------------------------------------------------- |
+   | `packages/qfai/src/core/discussionPack.ts`                     | 195-216  | the reason type's doc and the error's doc name the duplicate state     |
+   | `packages/qfai/src/core/discussionPack.ts`                     | 243-245  | the helper's doc lists a duplicate match among the errors it throws    |
+   | `packages/qfai/src/cli/commands/discussion.ts`                 | 181-182  | `discussion use` says the missing/duplicate condition surfaces at read |
+   | `packages/qfai/src/cli/commands/discussion.ts`                 | 240      | `list --active` says a missing/duplicate dir fails with several packs  |
+   | `packages/qfai/src/core/validators/designContractReadiness.ts` | 271, 326 | a duplicate pointer does not fall back, and makes the answer unknown   |
+   | `packages/qfai/src/core/validators/researchSummary.ts`         | 672      | a `currentId` naming no pack "(or two)"                                |
+
+   Correct the header and `describe` of `activeDiscussionPack.test.ts`, which
+   still name the duplicate state. Both suites keep passing unchanged, because
+   neither exercises a duplicate — no test could construct one.
 
 ## Resolution
 
