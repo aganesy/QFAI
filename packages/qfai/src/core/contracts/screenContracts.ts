@@ -162,13 +162,13 @@ function toPosix(value: string): string {
 
 /** Why a `screens[]` entry is not among the screens the reader returns. */
 export type UnreadScreenEntryReason =
-  "not-a-mapping" | "missing-id" | "missing-route" | "repeated-id";
+  "not-a-list" | "not-a-mapping" | "missing-id" | "missing-route" | "repeated-id";
 
 export type UnreadScreenEntry = {
   /** The contract file, repository-relative. */
   file: string;
-  /** The entry's index in that file's `screens` list, from 0. */
-  index: number;
+  /** The entry's index in that file's `screens` list, from 0, or none where `screens` is not a list. */
+  index?: number;
   reason: UnreadScreenEntryReason;
   /** The entry's `id`, where it has one. */
   screenId?: string;
@@ -194,7 +194,13 @@ export async function findUnreadUiScreenEntries(
   for (const { relativePath, parsed } of await readUiContractDocuments(uiDir, root)) {
     if (!parsed || typeof parsed !== "object" || !("screens" in parsed)) continue;
     const screens = parsed.screens;
-    if (!Array.isArray(screens)) continue;
+    // An empty `screens:` states nothing. A mapping or a scalar in its place
+    // holds screens nothing reads.
+    if (screens === null || screens === undefined) continue;
+    if (!Array.isArray(screens)) {
+      unread.push({ file: relativePath, reason: "not-a-list" });
+      continue;
+    }
     screens.forEach((entry: unknown, index) => {
       if (!entry || typeof entry !== "object" || Array.isArray(entry)) {
         unread.push({ file: relativePath, index, reason: "not-a-mapping" });

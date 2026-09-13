@@ -83,6 +83,9 @@ describe("a UI contract entry no screen is read from is reported", () => {
     const [finding] = await validateUiScreenEntries(root, defaultConfig);
     expect(finding?.code).toBe("QFAI-CONTRACT-042");
     expect(finding?.severity).toBe("error");
+    // A contract violation, named by the repository-relative path every finding carries.
+    expect(finding?.category).toBe("canonical");
+    expect(finding?.file).toBe(".qfai/contracts/ui/a.yaml");
     expect(finding?.message).toContain(
       "`screens[1]` in .qfai/contracts/ui/a.yaml is not a mapping",
     );
@@ -106,10 +109,24 @@ describe("a UI contract entry no screen is read from is reported", () => {
     // The reported entry is the one the reader did not keep.
     const keptFile = read?.sourceRef.split("#")[0];
     expect(keptFile).toBeDefined();
-    expect(path.relative(root, reportedFile).split(path.sep).join("/")).not.toBe(keptFile);
+    expect(reportedFile).not.toBe(keptFile);
     expect(findings[0]?.message).toContain(
       "repeats the `id` `home` of `screens[0]` in .qfai/contracts/ui/",
     );
+  });
+
+  it("names a screens value that is not a list, and not an empty one", async () => {
+    // Every screen under a mapping or a scalar is dropped by the reader.
+    const root = await projectWith({
+      "a.yaml": ["screens:", "  home:", "    id: home", "    route: /"],
+      "b.yaml": ["screens: home"],
+      "c.yaml": ["screens:"],
+    });
+    const findings = await validateUiScreenEntries(root, defaultConfig);
+    expect(findings.map((finding) => finding.message)).toEqual([
+      expect.stringContaining("`screens` in .qfai/contracts/ui/a.yaml is not a list"),
+      expect.stringContaining("`screens` in .qfai/contracts/ui/b.yaml is not a list"),
+    ]);
   });
 
   it("names a repeated id inside one file", async () => {

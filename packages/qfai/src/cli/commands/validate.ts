@@ -1853,7 +1853,7 @@ export const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
   "QFAI-CONTRACT-041":
     "Every `-- Derived (not stored): <column> = <values> from <inputs>` declaration in a DB contract parses, and every value it names is one the paired API contract requires and the DB domain cannot store. A declaration that does not parse was not read, and one that covers a stored or unrequested value is a claim about the schema that is not true of it.",
   "QFAI-CONTRACT-042":
-    "Every entry under `screens` in a UI contract is a mapping with an `id` and a `route`, and no two entries share an `id`, so each entry is a screen every consumer reads.",
+    "`screens` in a UI contract is a list, every entry in it is a mapping with an `id` and a `route`, and no two entries share an `id`, so each entry is a screen every consumer reads.",
   // Same rule as `QFAI-BPAP-001` below: `paths.contractsDir` is configurable, so
   // the expected state names the contracts root by role. Pinning the default
   // path sent a project that moved its contracts to repair a directory it does

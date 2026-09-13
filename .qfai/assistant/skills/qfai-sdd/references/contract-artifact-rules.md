@@ -36,9 +36,10 @@ Discussion UI/UX files are **non-normative** discovery / reference artifacts —
   is asked for nothing. A marker counts as rendered wherever its text appears,
   not only where the attribute is written out — a framework that builds the
   attribute from a variable still writes the marker somewhere.
-- **Every entry under `screens` is a screen, once.** Each entry is a mapping
-  with an `id` and a `route`, and no two entries share an `id`. The tooling
-  reads the first entry for an `id` and skips an entry missing either key, so
+- **Every entry under `screens` is a screen, once.** `screens` is a list, each
+  entry is a mapping with an `id` and a `route`, and no two entries share an
+  `id`. The tooling reads the first entry for an `id`, skips an entry missing
+  either key, and reads no screen from a `screens` that is not a list, so
   anything else such an entry states is checked by nothing. `QFAI-CONTRACT-042`
   names each one.
 - `api/`, `db/`, and `ui/` contracts must declare `QFAI-CONTRACT-ID` at the top.

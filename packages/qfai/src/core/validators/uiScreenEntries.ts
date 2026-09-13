@@ -9,8 +9,6 @@
  * certified as the entry it repeats. This names each such entry.
  */
 
-import path from "node:path";
-
 import type { QfaiConfig } from "../config.js";
 import { findUnreadUiScreenEntries, type UnreadScreenEntry } from "../contracts/screenContracts.js";
 import type { Issue } from "../types.js";
@@ -23,18 +21,20 @@ export async function validateUiScreenEntries(root: string, config: QfaiConfig):
       "QFAI-CONTRACT-042",
       describe(entry),
       "error",
-      path.join(root, entry.file),
+      entry.file,
       "contracts.ui.screens",
       entry.screenId === undefined ? undefined : [entry.screenId],
-      "change",
+      "canonical",
       remedy(entry),
     ),
   );
 }
 
 /** Where the entry is, as a reader of the file finds it. */
-function locate(file: string, index: number): string {
-  return `\`screens[${String(index)}]\` in ${file}`;
+function locate(file: string, index: number | undefined): string {
+  return index === undefined
+    ? `\`screens\` in ${file}`
+    : `\`screens[${String(index)}]\` in ${file}`;
 }
 
 function describe(entry: UnreadScreenEntry): string {
@@ -42,6 +42,8 @@ function describe(entry: UnreadScreenEntry): string {
   const unchecked =
     "No screen is read from it, so the audit lane, the prototyping preflight and certification check nothing it states.";
   switch (entry.reason) {
+    case "not-a-list":
+      return `${where} is not a list. ${unchecked}`;
     case "not-a-mapping":
       return `${where} is not a mapping. ${unchecked}`;
     case "missing-id":
@@ -58,6 +60,8 @@ function describe(entry: UnreadScreenEntry): string {
 
 function remedy(entry: UnreadScreenEntry): string {
   switch (entry.reason) {
+    case "not-a-list":
+      return "Write `screens` as a list with one entry per screen, each a mapping with at least an `id` and a `route`.";
     case "not-a-mapping":
       return "Write the entry as a mapping with at least an `id` and a `route`, or remove it.";
     case "missing-id":
