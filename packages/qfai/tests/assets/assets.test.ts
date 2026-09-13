@@ -9,10 +9,12 @@ import { describe, expect, it } from "vitest";
 import { runInit, SHIPPED_WORKFLOW_NAMES } from "../../src/cli/commands/init.js";
 import { runReport } from "../../src/cli/commands/report.js";
 import { runValidate } from "../../src/cli/commands/validate.js";
+import { defaultConfig } from "../../src/core/config.js";
 import { MAX_ITERATION_INDEX, MAX_ITERATIONS } from "../../src/core/prototyping/iteration.js";
 import { PROTOTYPING_SUPPORTED_SURFACES } from "../../src/core/review/prototyping.js";
 import { parseAllMarkdownTables } from "../../src/core/specPackParsers.js";
 import { findTableArityMismatches } from "../../src/core/validators/markdownTableArity.js";
+import { validateSkillDocReferences } from "../../src/core/validators/skillDocReferences.js";
 import {
   findRepositoryAttribution,
   formatAttributionOffender,
@@ -2571,6 +2573,8 @@ describe("assets guardrails", () => {
         ASSISTANT_ASSET_MAX_LINE_CHARS,
       );
     }
+    const issues = await validateSkillDocReferences(templateRoot, defaultConfig);
+    expect(issues.filter((entry) => entry.rule === "skillDocReferences.projectMemory")).toEqual([]);
   });
 
   it("pins every width backlog entry to the file's real width", async () => {
