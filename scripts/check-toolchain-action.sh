@@ -68,9 +68,9 @@ fi
 # the end of the line: git writes `<<<<<<< ours`, `=======`, `>>>>>>> theirs` and `||||||| base`,
 # and requiring that boundary keeps a row of eight equals signs used as a rule from matching.
 #
-# The list's own path is appended to what it names. `pin-guard-bytes.mjs` rewrites that file from
-# the tree rather than editing it, so a conflict inside it is discarded by a reseal with nothing
-# left for any later check to read.
+# The workflow-pinned lists are appended to what the list names. `pin-guard-bytes.mjs` rewrites
+# them from the tree rather than editing them, so a conflict inside one is discarded by a reseal
+# with nothing left for any later check to read.
 conflicted=""
 while IFS= read -r pinned_path; do
   [ -n "${pinned_path}" ] || continue
@@ -80,9 +80,11 @@ while IFS= read -r pinned_path; do
 done <<EOF
 $(grep -E "^[0-9a-f]{64}  " "${digests_file}" | sed "s/^[0-9a-f]\{64\}  //")
 .github/pinned-bytes.txt
+.github/lifecycle-manifests.txt
+.github/command-files.txt
 EOF
 if [ -n "${conflicted}" ]; then
-  echo "::error::A pinned file carries merge conflict markers:${conflicted}. That is an unresolved merge rather than an intended edit — resolve it. Do NOT reseal: the pin-guard-bytes program computes a digest over whatever bytes are present, so it would record the conflict block as the reviewed bytes, and it rewrites .github/pinned-bytes.txt from the tree, so a conflict in that file would be discarded rather than reported."
+  echo "::error::A pinned file carries merge conflict markers:${conflicted}. Resolve the merge; do not reseal."
   exit 1
 fi
 

@@ -41,13 +41,18 @@ const PINNED_DATA_REL = "scripts/dogfood-backlog.json";
 
 let staged: string;
 
-/** Everything both programs read. */
+/** Everything both programs read. A copy that fails part-way is removed before the error surfaces. */
 async function stageTree(): Promise<string> {
   const dir = await mkdtemp(path.join(os.tmpdir(), "qfai-pinned-conflict-"));
-  await cp(path.join(repoRoot, ".github"), path.join(dir, ".github"), { recursive: true });
-  for (const input of [...DIGESTED_LANE_INPUTS_REL, ".prettierrc.json"]) {
-    await mkdir(path.dirname(path.join(dir, input)), { recursive: true });
-    await cp(path.join(repoRoot, input), path.join(dir, input), { recursive: true });
+  try {
+    await cp(path.join(repoRoot, ".github"), path.join(dir, ".github"), { recursive: true });
+    for (const input of [...DIGESTED_LANE_INPUTS_REL, ".prettierrc.json"]) {
+      await mkdir(path.dirname(path.join(dir, input)), { recursive: true });
+      await cp(path.join(repoRoot, input), path.join(dir, input), { recursive: true });
+    }
+  } catch (cause) {
+    await removeTempTree(dir);
+    throw cause;
   }
   return dir;
 }
@@ -87,11 +92,12 @@ async function plantConflict(relative: string): Promise<void> {
 }
 
 beforeEach(async () => {
+  staged = "";
   staged = await stageTree();
 });
 
 afterEach(async () => {
-  await removeTempTree(staged);
+  if (staged !== "") await removeTempTree(staged);
 });
 
 describe("the byte guard, on a pinned file carrying conflict markers", () => {
@@ -114,7 +120,7 @@ describe("the byte guard, on a pinned file carrying conflict markers", () => {
 
     const result = await runGuard();
 
-    expect(result.output).toContain("Do NOT reseal");
+    expect(result.output).toContain("do not reseal");
   });
 
   it("reads the list's own path, which the list does not name", async () => {
@@ -137,6 +143,7 @@ describe("the byte guard, on a pinned file carrying conflict markers", () => {
     // misleading failure with another.
     const result = await runGuard();
 
+    expect(result.status).toBe(0);
     expect(result.output).not.toContain("merge conflict markers");
   });
 });
@@ -167,11 +174,52 @@ describe("the re-pin program, on a pinned file carrying conflict markers", () =>
     expect(await readFile(path.join(staged, LIST_REL), "utf-8")).toContain("<<<<<<< HEAD");
   });
 
+  it("refuses a conflict in a list only the workflow pins", async () => {
+    // `command-files.txt` is sealed into the workflow step, not into the list,
+    // so a scan of the list's roots alone would pin its conflict block.
+    await plantConflict(".github/command-files.txt");
+    const workflowBefore = await readFile(path.join(staged, ".github/workflows/ci.yml"), "utf-8");
+
+    const result = await runPin();
+
+    expect(result.status).toBe(1);
+    expect(result.output).toContain(".github/command-files.txt");
+    expect(await readFile(path.join(staged, ".github/workflows/ci.yml"), "utf-8")).toBe(
+      workflowBefore,
+    );
+  });
+
   it("pins as before when nothing is conflicted", async () => {
     const result = await runPin();
 
     expect(result.status).toBe(0);
     expect(result.output).toContain("pinned");
     expect(result.output).not.toContain("nothing was pinned");
+  });
+});
+
+describe("the lint job's pre-flight step", () => {
+  it("scans the workflow-pinned inputs before it checks their digests", async () => {
+    // The step stops at its first failing command, so a digest check ahead of the
+    // scan reports a conflict in these inputs as a mismatch and the scan never runs.
+    const workflow = await readFile(path.join(repoRoot, ".github/workflows/ci.yml"), "utf-8");
+    const lines = workflow.split("\n");
+    const scan = lines.findIndex(
+      (line) => line.includes("grep -lE") && line.includes(".github/command-files.txt"),
+    );
+    const digests = lines.findIndex((line) =>
+      line.includes("sha256sum -c --quiet <<'PINNED_INPUTS'"),
+    );
+
+    expect(scan).toBeGreaterThan(-1);
+    expect(scan).toBeLessThan(digests);
+    for (const input of [
+      "scripts/check-toolchain-action.sh",
+      ".github/pinned-bytes.txt",
+      ".github/lifecycle-manifests.txt",
+      ".github/command-files.txt",
+    ]) {
+      expect(lines[scan]).toContain(input);
+    }
   });
 });

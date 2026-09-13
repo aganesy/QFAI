@@ -87,9 +87,9 @@ const MARKER_RE = /^(?:<{7}|={7}|>{7}|\|{7})(?: |$)/m;
  * The pinned paths that still carry a merge conflict.
  *
  * Resealing computes a digest over whatever bytes are there, so a conflict block
- * would be pinned rather than reported — and this file is rewritten from the
- * tree rather than edited, so a conflict in the list itself would be discarded
- * with nothing left to read. Both are refused here, where the operator is
+ * would be pinned rather than reported — and the lists this program rewrites
+ * from the tree rather than edits would lose a conflict inside them with nothing
+ * left to read. Every file it seals is scanned, the workflow-pinned lists included. Both are refused here, where the operator is
  * already looking, because the byte guard that sent them here reports an
  * unresolved merge as a digest mismatch and names resealing as the repair.
  */
@@ -107,11 +107,11 @@ async function main(root) {
   }
 
   const listPath = path.join(root, LIST_REL);
-  const conflicted = pathsWithConflictMarkers(root, [...rels, LIST_REL]);
+  const conflicted = pathsWithConflictMarkers(root, [...new Set([...rels, ...WORKFLOW_PINNED])]);
   if (conflicted.length > 0) {
     stdout.write(
       `pin-guard-bytes: nothing was pinned. These files carry merge conflict markers: ${conflicted.join(", ")}\n` +
-        "Resolve the merge first. A digest is computed over whatever bytes are there, so sealing now would record the conflict block as the reviewed bytes — and this list is rewritten from the tree rather than edited, so a conflict inside it would be discarded with nothing left to report it.\n",
+        "Resolve the merge, then run this again.\n",
     );
     return 1;
   }

@@ -85,7 +85,9 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   One path had no later reader at all: the pinned-bytes list is rewritten from
   the tree rather than edited, so a conflict inside it was discarded by the
   reseal and the only trace was a routine-looking re-pin commit. Both checks
-  read that file too, although the list does not name itself.
+  read that file too, although the list does not name itself, and the two other
+  lists the workflow step pins. That step now scans its pinned inputs before it
+  checks their digests, so a conflict in one of them is named there as well.
 
 ## [1.12.0] - 2026-09-12
 

@@ -363,9 +363,15 @@ jobs:
           #
           # So the root of trust for everything that runs before the hygiene lane is this step's
           # body, which `verificationBodies` pins and a reviewer reads in the diff.
+          # A conflict block in one of these inputs is an unresolved merge, not an edit, and the
+          # digest check below would stop this step before the script's own marker scan could say so.
+          if grep -lE '^(<{7}|={7}|>{7}|\|{7})( |$)' scripts/check-toolchain-action.sh .github/pinned-bytes.txt .github/lifecycle-manifests.txt .github/command-files.txt; then
+            echo "::error::The files named above carry merge conflict markers. Resolve the merge; do not reseal."
+            exit 1
+          fi
           sha256sum -c --quiet <<'PINNED_INPUTS'
-          fb91bc1f7aed90ce5431259370571fb13a0d0681e615a4ec85c5eb62cb4b5036  scripts/check-toolchain-action.sh
-          57cd14b6be74123f9ec8f7aaf8e80803cc176481d9dc4634027965a1df4709b3  .github/pinned-bytes.txt
+          2b7f61033cdd40055a1bfd2daf850eba68ac2411ece9935b02486c00d72df221  scripts/check-toolchain-action.sh
+          cb455d6ab6ab6455b9774988b5d28a1ed19547affc8f4e2212651052af4eca7e  .github/pinned-bytes.txt
           bb649cb2684f9db02bdbe3872f029571a8e52c4c6e2ab95e8c8fcf804370af41  .github/lifecycle-manifests.txt
           43d2586975550f5062b4af23112223068cc5676f0906c04fce2bc231df471a9e  .github/command-files.txt
           PINNED_INPUTS
