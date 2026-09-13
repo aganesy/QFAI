@@ -8318,7 +8318,7 @@ of 27 existing packs exactly zero are tracked. A reviewer refuted it by measurin
 | `.qfai/discussion/*` | 60 | **137** |
 | `.qfai/evidence/*` | 59 | **15** |
 | `.qfai/report/*` | 57 | **5** |
-| `.qfai/review/*` | 61 | 1 (`README.md`) |
+| `.qfai/review/*` | 61 | 1 (`README.md`) <!-- qfai:not-a-citation --> |
 
 The convention is the **opposite**: ignore-by-default governance directories here are force-added,
 including `.qfai/evidence/*`, which holds this very file. `.gitignore:61` proves no more about

@@ -1775,7 +1775,7 @@ refute it:
 
 | fact                                                                   | source             |
 | ---------------------------------------------------------------------- | ------------------ |
-| `.qfai/evidence/**` and `.qfai/review/**` are excluded from Prettier   | `.prettierignore`  |
+| `.qfai/evidence/**` and `.qfai/review/**` are excluded from Prettier   | `.prettierignore` <!-- qfai:not-a-citation --> |
 | markdown is formatted with `proseWrap: "preserve"`, so nothing reflows | `.prettierrc.json` |
 
 No formatter touches these files, and none would rewrap them if it did. **The line breaks are
@@ -3065,7 +3065,7 @@ substantially; `agent-routing.yml` has it **conditional** rather than blocking, 
 Its 25 findings are applied all the same.
 
 **All three of round 9's reports were untracked when the round closed**, exactly as round 8's two were.
-`.gitignore:61` ignores `.qfai/review/*`, so a pack reaches the repository only by `git add -f` — and
+`.gitignore:61` ignores `.qfai/review/*`, so a pack reaches the repository only by `git add -f` — and <!-- qfai:not-a-citation -->
 the countermeasure round 8 recorded, `git status --porcelain --ignored` on the pack directory before
 sealing, is what caught it this time.
 
@@ -3179,7 +3179,7 @@ reviewer to re-decide something already decided; what round 8 reviews is the sta
 passed.
 
 **Round 8's two reviewer reports were not in version control at all** until this commit, and that is
-worth recording plainly because nothing was watching for it. `.gitignore:61` ignores `.qfai/review/*`,
+worth recording plainly because nothing was watching for it. `.gitignore:61` ignores `.qfai/review/*`, <!-- qfai:not-a-citation -->
 so every pack's contents reach the repository only by `git add -f`; rounds 1 through 7 were force-added
 and round 8's were not, so for the length of the round the evidence cited findings from two files that
 existed in one working tree and nowhere else. The seal cannot catch this — it hashes what is on disk, and

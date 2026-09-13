@@ -197,7 +197,18 @@ function citationsIn(line: string, spans: readonly CodeSpan[] = codeSpanRanges(l
         // against a group this token opened is a different thing: the token is
         // not a path, and recording the text before the group would record a
         // prefix nothing has.
-        if (closers.length === 0) break;
+        if (closers.length === 0) {
+          // Inside a code span a closer the name runs on past is part of a name
+          // the scan cannot read, as a quote there is.
+          if (
+            span !== undefined &&
+            index + 1 < span[1] &&
+            NAME_CHARACTER.test(line[index + 1] ?? "")
+          ) {
+            usable = false;
+          }
+          break;
+        }
         if (closers.at(-1) !== character) {
           usable = false;
           break;
@@ -843,21 +854,13 @@ function disclaimedPaths(line: string, spans: readonly CodeSpan[]): Set<string> 
  * True when the path names something inside a generated tree rather than the
  * tree itself.
  *
- * `.qfai/review/*` and `.qfai/review/**` are how the ignore rules and the
- * exclusion lists spell the directory, and a record quoting one is describing
- * what is ignored — there is no artifact being claimed. A glob whose first
- * segment carries a literal, `review-2026082*`, names a set of packs and claims
- * that set exists.
+ * A glob over the whole tree, `.qfai/review/*`, names what is in it and is
+ * measured like any other: a record quoting an ignore rule says so with the
+ * `qfai:not-a-citation` marker.
  */
 function namesSomethingInside(cited: string): boolean {
   const root = GENERATED_ROOTS.find((candidate) => cited.startsWith(candidate));
-  if (root === undefined) return false;
-  // Those two spellings and no others. Removing every wildcard and separator
-  // before deciding exempts `review/*/*` and `review/**/*` as well, and those
-  // name descendants: when the tree tracks none, the citation is dropped before
-  // it can be reported unresolved.
-  const inside = cited.slice(root.length);
-  return inside !== "" && inside !== "*" && inside !== "**";
+  return root !== undefined && cited.length > root.length;
 }
 
 /**
@@ -2167,6 +2170,12 @@ describe("a glob is a claim about a set", () => {
     expect(citationsIn("see `.qfai/report/preflight_summary.md'missing` here")).toEqual([]);
     // A pipe outside a group is the same: the name runs on past it.
     expect(citationsIn("see `.qfai/report/preflight_summary.md|missing` here")).toEqual([]);
+    // So is a closer that opened nothing inside the name.
+    expect(citationsIn("see `.qfai/report/preflight_summary.md)missing` here")).toEqual([]);
+    // Outside a code span such a closer ends the citation, as a Markdown link's does.
+    expect(citationsIn("see [it](.qfai/report/preflight_summary.md) here")).toEqual([
+      ".qfai/report/preflight_summary.md",
+    ]);
     // A quote closing the path is punctuation around it, as a quoted glob is.
     expect(citationsIn('see `".qfai/report/*"` here')).toEqual([".qfai/report/*"]);
     // Inside a group a pipe separates alternatives.
@@ -2238,11 +2247,11 @@ describe("a glob is a claim about a set", () => {
   });
 
   it("does not measure a path that names the tree itself", () => {
-    // `.qfai/review/*` and `.qfai/review/**` are how the ignore rules and the
-    // exclusion lists spell the directory, so a record quoting one is
-    // describing what is ignored rather than claiming an artifact.
-    expect(namesSomethingInside(".qfai/review/*")).toBe(false);
-    expect(namesSomethingInside(".qfai/review/**")).toBe(false);
+    expect(namesSomethingInside(".qfai/review/")).toBe(false);
+    // A glob over the whole tree names what is in it, so it is measured; a
+    // record quoting an ignore rule says so with the marker.
+    expect(namesSomethingInside(".qfai/review/*")).toBe(true);
+    expect(namesSomethingInside(".qfai/review/**")).toBe(true);
     // A deeper all-wildcard glob names descendants rather than the tree, so it
     // is measured and has to resolve like any other set-naming citation.
     expect(namesSomethingInside(".qfai/review/*/*")).toBe(true);
