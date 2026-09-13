@@ -56,8 +56,9 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   before it is not path text, so a runner's temporary directory or another
   clone's path is not read as this repository's file, whether written with `/` or
   `\`, and a wildcard does not stand in for a dot-leading name that has to be
-  written. A brace range names every member between its ends, and a JSON record
-  is read as its decoded strings.
+  written. A brace range names every member between its ends, braces with no list
+  or range in them are literal text, and a JSON or YAML record is read as its
+  decoded keys and strings.
 
   A record that explains why an artifact is absent says so with
   `<!-- qfai:not-a-citation -->` on the line, or on the line before a fenced

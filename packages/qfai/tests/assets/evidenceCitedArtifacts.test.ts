@@ -5,6 +5,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { describe, expect, it } from "vitest";
+import { parse as parseYaml } from "yaml";
 
 import { compileGlob, findClassClose } from "../../src/core/atdd/scaffoldDialect.js";
 
@@ -493,10 +494,7 @@ const tracked = trackedPaths();
  * claim about an artifact exactly as a path in a Markdown record is.
  */
 const evidenceFiles = [...tracked.files]
-  .filter(
-    (file) =>
-      file.startsWith(".qfai/evidence/") && (file.endsWith(".md") || file.endsWith(".json")),
-  )
+  .filter((file) => file.startsWith(".qfai/evidence/") && /\.(?:md|json|ya?ml)$/.test(file))
   .sort();
 
 /**
@@ -526,7 +524,7 @@ async function measureCitations(): Promise<Citation[]> {
   const measured: Citation[] = [];
   for (const file of evidenceFiles) {
     const text = await readFile(path.join(repoRoot, file), "utf-8");
-    measured.push(...citationsOf(file, file.endsWith(".json") ? decodedJson(text) : text));
+    measured.push(...citationsOf(file, file.endsWith(".md") ? text : decodedRecord(file, text)));
   }
   return measured;
 }
@@ -538,6 +536,14 @@ async function measureCitations(): Promise<Citation[]> {
  * root to find. A record that does not parse is read as the text it is.
  */
 function decodedJson(text: string): string {
+  return decodedRecord("record.json", text);
+}
+
+/**
+ * A JSON or YAML record's keys and string values, one per line, as the record
+ * means them. A record that does not parse is read as the text it is.
+ */
+function decodedRecord(file: string, text: string): string {
   const strings: string[] = [];
   const collect = (value: unknown): void => {
     if (typeof value === "string") strings.push(...value.split("\n"));
@@ -551,7 +557,7 @@ function decodedJson(text: string): string {
     }
   };
   try {
-    collect(JSON.parse(text));
+    collect(file.endsWith(".json") ? JSON.parse(text) : parseYaml(text, { maxAliasCount: 0 }));
   } catch {
     return text;
   }
@@ -601,7 +607,9 @@ function disclaimedByLine(text: string): Array<"all" | Set<string> | undefined> 
     const outside = (): void => {
       if (open === null && NOT_A_CITATION.test(line)) disclaimed[index] = "all";
     };
-    const fence = /^ {0,3}(`{3,}|~{3,})(.*)$/.exec(line);
+    // A fence inside a list item or a blockquote is indented past three spaces,
+    // or carries the quote marker, and is still a fence.
+    const fence = /^(?:[ \t]*>)*[ \t]*(`{3,}|~{3,})(.*)$/.exec(line);
     if (fence === null) {
       if (open !== null && covers !== null) disclaimed[index] = covers;
       outside();
@@ -669,49 +677,63 @@ function namesSomethingInside(cited: string): boolean {
  * report as well as the draft.
  */
 function expandBraces(cited: string): string[] {
-  const open = outsideClasses(cited).find((index) => cited[index] === "{");
-  if (open === undefined) return [cited];
-  const close = matchingBrace(cited, open);
-  if (close === -1) return [cited];
-  const before = cited.slice(0, open);
-  const after = cited.slice(close + 1);
-  const body = cited.slice(open + 1, close);
-  return (braceRange(body) ?? topLevelAlternatives(body)).flatMap((part) =>
-    expandBraces(`${before}${part}${after}`),
-  );
+  for (const open of outsideClasses(cited)) {
+    if (cited[open] !== "{") continue;
+    const close = matchingBrace(cited, open);
+    if (close === -1) continue;
+    const body = cited.slice(open + 1, close);
+    const list = topLevelAlternatives(body);
+    // A body with no top-level comma and no range is literal text to the
+    // matcher: `{discussion-1}` names a directory spelled with its braces.
+    const members = braceRange(body) ?? (list.length > 1 ? list : null);
+    if (members === null) continue;
+    const before = cited.slice(0, open);
+    const after = cited.slice(close + 1);
+    return members.flatMap((part) => expandBraces(`${before}${part}${after}`));
+  }
+  return [cited];
 }
 
 /**
- * The members of a brace range, `1..3`, `01..03` or `a..c`, or `null` when
- * the body is not one.
+ * The members of a brace range, `1..3`, `01..03` or `a..c`, with an optional
+ * increment, or `null` when the body is not one the guard expands.
  *
  * The matcher expands a range to every member between its ends, so `{1..3}`
  * names three files, not one called `1..3`.
+ *
+ * SIMPLIFIED: a range with a negative end, or with more than
+ * {@link RANGE_MEMBER_LIMIT} members, is not expanded, and a citation holding
+ * one is reported unresolved rather than guessed at. A timestamp-sized range
+ * would otherwise step past the precision a number holds and never end.
+ * Lift when: a record cites such a range and needs it resolved.
  */
 function braceRange(body: string): string[] | null {
-  const numeric = /^(-?\d+)\.\.(-?\d+)(?:\.\.(-?\d+))?$/.exec(body);
-  if (numeric !== null) {
-    const [from, to] = [numeric[1] ?? "", numeric[2] ?? ""];
-    const width = /^-?0\d/.test(from) || /^-?0\d/.test(to) ? Math.max(from.length, to.length) : 0;
-    const [start, end] = [Number(from), Number(to)];
-    const step = (start <= end ? 1 : -1) * rangeIncrement(numeric[3]);
-    const members: string[] = [];
-    for (let value = start; step > 0 ? value <= end : value >= end; value += step) {
-      members.push(String(value).padStart(width, "0"));
-    }
-    return members;
-  }
+  const numeric = /^(\d+)\.\.(\d+)(?:\.\.(-?\d+))?$/.exec(body);
   const alphabetic = /^([A-Za-z])\.\.([A-Za-z])(?:\.\.(-?\d+))?$/.exec(body);
-  if (alphabetic === null) return null;
-  const [start, end] = [(alphabetic[1] ?? "").charCodeAt(0), (alphabetic[2] ?? "").charCodeAt(0)];
-  const step = (start <= end ? 1 : -1) * rangeIncrement(alphabetic[3]);
+  const match = numeric ?? alphabetic;
+  if (match === null) return null;
+  const [from, to] = [match[1] ?? "", match[2] ?? ""];
+  const [start, end] =
+    numeric === null ? [from.charCodeAt(0), to.charCodeAt(0)] : [Number(from), Number(to)];
+  const increment = rangeIncrement(match[3]);
+  if (!Number.isSafeInteger(start) || !Number.isSafeInteger(end)) return null;
+  if (Math.abs(end - start) / increment + 1 > RANGE_MEMBER_LIMIT) return null;
+  const width =
+    numeric !== null && (/^0\d/.test(from) || /^0\d/.test(to))
+      ? Math.max(from.length, to.length)
+      : 0;
+  const step = start <= end ? increment : -increment;
   const members: string[] = [];
-  for (let code = start; step > 0 ? code <= end : code >= end; code += step) {
-    members.push(String.fromCharCode(code));
+  for (let value = start; step > 0 ? value <= end : value >= end; value += step) {
+    members.push(
+      numeric === null ? String.fromCharCode(value) : String(value).padStart(width, "0"),
+    );
   }
   return members;
 }
 
+/** The most members a range may name before the guard stops expanding it. */
+const RANGE_MEMBER_LIMIT = 1000;
 /** A range's increment, `{1..5..2}`: its size, and 1 where it names none or 0. */
 function rangeIncrement(written: string | undefined): number {
   const size = Math.abs(Number(written ?? 1));
@@ -961,6 +983,12 @@ function resolves(cited: string): boolean {
   }
   const root = GENERATED_ROOTS.find((candidate) => cited.startsWith(candidate));
   if (root === undefined || !staysInsideRoot(cited, root)) return false;
+  // Braces that did not expand are literal text, which the compiler would read
+  // as a list. Nothing the tree tracks is spelled with them, so the citation
+  // is unresolved rather than matched against the name inside them.
+  if (outsideClasses(cited).some((index) => cited[index] === "{")) {
+    return tracked.files.has(cited) || tracked.directories.has(cited);
+  }
   if (namesASet(cited)) {
     // Directories as well as files: `.qfai/discussion/discussion-*` names a set
     // of packs, and an anchored pattern matches no file below one of them — so
@@ -1535,12 +1563,48 @@ describe("a glob is a claim about a set", () => {
     expect(globToRegExp(".qfai/report/[!0-9]*.json").test(".qfai/report/x1.json")).toBe(true);
   });
 
-  it("resolves a one-member brace list", () => {
-    // A list of one is still a list. Resolving the brace token itself reports a
-    // tracked artifact as missing.
-    expect(resolves(".qfai/discussion/{discussion-20260330153902875}")).toBe(
-      resolves(".qfai/discussion/discussion-20260330153902875"),
-    );
+  it("reads braces with no list or range in them as literal text", () => {
+    // The matcher reads `{discussion-1}` as a name spelled with its braces, so the
+    // tracked directory without them is not what the citation names.
+    const pack = "discussion-20260330153902875";
+    expect(expandBraces(`.qfai/discussion/{${pack}}`)).toEqual([`.qfai/discussion/{${pack}}`]);
+    expect(resolves(`.qfai/discussion/{${pack}}`)).toBe(false);
+    expect(expandBraces("a/{literal}/{b,c}")).toEqual(["a/{literal}/b", "a/{literal}/c"]);
+  });
+
+  it("does not expand a range past what it can count", () => {
+    // A 17-digit timestamp is past a number's precision; stepped there, the
+    // loop never ends.
+    expect(expandBraces("run-{20260913000000000..20260913000000001}")).toEqual([
+      "run-{20260913000000000..20260913000000001}",
+    ]);
+    expect(expandBraces("run-{0..5000}")).toEqual(["run-{0..5000}"]);
+    expect(expandBraces("run-{-2..2}")).toEqual(["run-{-2..2}"]);
+  });
+
+  it("reads a fence inside a list item as a fence", () => {
+    const FENCE = "`".repeat(3);
+    const lines = [
+      "- a step:",
+      `    ${FENCE}text`,
+      "    wrote .qfai/report/missing.json <!-- qfai:not-a-citation -->",
+      `    ${FENCE}`,
+    ].join("\n");
+    expect(citationsOf("x.md", lines).map(([, cited]) => cited)).toEqual([
+      ".qfai/report/missing.json",
+    ]);
+  });
+
+  it("reads a YAML record's keys and values", () => {
+    const record = [
+      "notes:",
+      "  - seen at .qfai/report/missing.json",
+      ".qfai/review/review-1: kept",
+      "",
+    ].join("\n");
+    expect(
+      citationsOf("x.yaml", decodedRecord("x.yaml", record)).map(([, cited]) => cited),
+    ).toEqual([".qfai/report/missing.json", ".qfai/review/review-1"]);
   });
 
   it("keeps a globstar inside its segment unless it is the whole segment", () => {

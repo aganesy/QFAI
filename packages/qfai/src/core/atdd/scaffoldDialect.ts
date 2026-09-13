@@ -600,7 +600,19 @@ function compileClassBody(body: string): string | null {
 
 /** `./tests/**\/*.py` -> `tests/**\/*.py`; backslashes folded to POSIX. */
 function normalizeGlobPath(value: string): string {
-  return value.replace(/\\/g, "/").replace(/^\.\//, "");
+  // A backslash inside a bracket expression escapes a member, as `[\]T]` does;
+  // outside one it is a Windows separator.
+  let folded = "";
+  for (let index = 0; index < value.length; index += 1) {
+    const close = value[index] === "[" ? findClassClose(value, index) : -1;
+    if (close !== -1) {
+      folded += value.slice(index, close + 1);
+      index = close;
+      continue;
+    }
+    folded += value[index] === "\\" ? "/" : (value[index] ?? "");
+  }
+  return folded.replace(/^\.\//, "");
 }
 
 /**
