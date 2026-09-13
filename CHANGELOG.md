@@ -6,18 +6,10 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Added
 
-- **The minimal-implementation ladder asks whether the codebase already has it,
-  second** (#1795), **and its floor keeps unit-level coverage of the failures
-  the code retains** (#1793). The ladder sent an agent to the standard library
-  before its own repository, although reusing what a mature codebase already
-  holds is the rung that answers most often, and the procurement ladder for a
-  screen already puts the installed design system second. The ladder now has
-  seven rungs. The failure paths the code keeps are where untested failures
-  concentrate, so their unit coverage is now a floor item the ladder never
-  removes. The floor also defines a trust boundary (#1803): wherever a value
-  arrives from a caller or a source the code does not control, which includes a
-  published library's exported function and a plugin or tenant context, not
-  process entry alone. All three changes are made in the shipped copy as well.
+- **Repository reuse is the second of seven minimal-implementation rungs**
+  (#1795). Check the codebase before the standard library, platform and installed
+  dependencies. Existing repository code can answer the accepted behavior
+  without a duplicate implementation. The shipped copy has the same order.
 
 - **A legacy ledger outside the obligation-column protection is reported**
   (#1663). A seeded `E2E` or `API` row has `TC-Refs` forbidden to it, so the
