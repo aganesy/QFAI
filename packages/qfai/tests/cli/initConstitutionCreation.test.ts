@@ -10,7 +10,7 @@ import { captureStdout } from "../helpers/stdout.js";
 import { removeTempTree } from "../helpers/tempTree.js";
 
 type FsPromises = typeof fsPromises;
-const { copyFileSpy, linkSpy, lstatSpy, rmSpy } = vi.hoisted(() => ({
+const { copyFileSpy, linkSpy, lstatSpy, openSpy, rmSpy } = vi.hoisted(() => ({
   copyFileSpy:
     vi.fn<(actual: FsPromises, ...args: Parameters<FsPromises["copyFile"]>) => Promise<void>>(),
   linkSpy: vi.fn<(actual: FsPromises, ...args: Parameters<FsPromises["link"]>) => Promise<void>>(),
@@ -20,6 +20,13 @@ const { copyFileSpy, linkSpy, lstatSpy, rmSpy } = vi.hoisted(() => ({
         actual: FsPromises,
         ...args: Parameters<FsPromises["lstat"]>
       ) => ReturnType<FsPromises["lstat"]>
+    >(),
+  openSpy:
+    vi.fn<
+      (
+        actual: FsPromises,
+        ...args: Parameters<FsPromises["open"]>
+      ) => ReturnType<FsPromises["open"]>
     >(),
   rmSpy: vi.fn<(actual: FsPromises, ...args: Parameters<FsPromises["rm"]>) => Promise<void>>(),
 }));
@@ -31,6 +38,7 @@ vi.mock("node:fs/promises", async () => {
     copyFile: (...args: Parameters<FsPromises["copyFile"]>) => copyFileSpy(actual, ...args),
     link: (...args: Parameters<FsPromises["link"]>) => linkSpy(actual, ...args),
     lstat: (...args: Parameters<FsPromises["lstat"]>) => lstatSpy(actual, ...args),
+    open: (...args: Parameters<FsPromises["open"]>) => openSpy(actual, ...args),
     rm: (...args: Parameters<FsPromises["rm"]>) => rmSpy(actual, ...args),
   };
 });
@@ -45,6 +53,7 @@ function passThrough(): void {
   copyFileSpy.mockImplementation((actual, ...args) => actual.copyFile(...args));
   linkSpy.mockImplementation((actual, ...args) => actual.link(...args));
   lstatSpy.mockImplementation((actual, ...args) => actual.lstat(...args));
+  openSpy.mockImplementation((actual, ...args) => actual.open(...args));
   rmSpy.mockImplementation((actual, ...args) => actual.rm(...args));
 }
 
@@ -67,6 +76,105 @@ const init = (root: string): Promise<string> =>
   captureStdout(() => runInit({ dir: root, force: false, dryRun: false, yes: true }));
 
 describe("constitution creation preserves a path it cannot claim", () => {
+  it.each(["EACCES", "EPERM"])(
+    "reports permission recovery for a %s probe-creation failure before asset changes",
+    async (code) => {
+      await withProject(async (root) => {
+        const instructions = path.join(root, ".qfai", "assistant", "instructions");
+        await mkdir(instructions, { recursive: true });
+        const legacy = path.join(instructions, "quality.md");
+        await writeFile(legacy, "# Adopter quality rules\n");
+        await writeFile(path.join(root, "AGENTS.md"), "# Adopter instructions\n");
+        const rootBefore = (await readdir(root)).sort();
+        const assistantBefore = (await readdir(path.dirname(instructions))).sort();
+        let attempted: string | undefined;
+        openSpy.mockImplementation((actual, ...args) => {
+          if (args[1] !== "wx" || !path.basename(String(args[0])).startsWith(".qfai-staging-")) {
+            return actual.open(...args);
+          }
+          attempted = String(args[0]);
+          return Promise.reject(Object.assign(new Error("probe creation denied"), { code }));
+        });
+
+        const failure = await captureStdout(() =>
+          runInit({
+            dir: root,
+            force: false,
+            dryRun: false,
+            yes: true,
+            upgradeAssistantTree: true,
+          }),
+        ).then(
+          () => null,
+          (cause: unknown) => cause,
+        );
+        if (!(failure instanceof Error) || attempted === undefined) {
+          throw new Error("The failed creation probe must report recovery.");
+        }
+        expect(linkSpy).not.toHaveBeenCalled();
+        expect((await readdir(root)).sort()).toEqual(rootBefore);
+        expect((await readdir(path.dirname(instructions))).sort()).toEqual(assistantBefore);
+        expect(await readFile(legacy, "utf-8")).toBe("# Adopter quality rules\n");
+        expect(await readFile(path.join(root, "AGENTS.md"), "utf-8")).toBe(
+          "# Adopter instructions\n",
+        );
+        await expect(lstat(path.join(root, CONSTITUTION))).rejects.toMatchObject({
+          code: "ENOENT",
+        });
+        await expect(
+          lstat(path.join(root, ".qfai", "assistant", ".assets.lock.json")),
+        ).rejects.toMatchObject({ code: "ENOENT" });
+        expect(failure).toMatchObject({
+          message: expect.stringContaining("hard links"),
+          cause: { code },
+        });
+        expect(failure.message).toContain(JSON.stringify(path.dirname(attempted)));
+        expect(failure.message).toContain("Restore write access");
+      });
+    },
+  );
+
+  it.each(["EBUSY", "EACCES"])(
+    "reports %s staging cleanup failure without losing a published constitution",
+    async (code) => {
+      await withProject(async (root) => {
+        const target = path.join(root, CONSTITUTION);
+        let staging: string | undefined;
+        linkSpy.mockImplementation(async (actual, ...args) => {
+          await actual.link(...args);
+          if (String(args[1]) === target) staging = String(args[0]);
+        });
+        rmSpy.mockImplementation((actual, ...args) => {
+          if (String(args[0]) === staging) {
+            return Promise.reject(Object.assign(new Error("staging cleanup denied"), { code }));
+          }
+          return actual.rm(...args);
+        });
+
+        const output = await init(root);
+        if (staging === undefined) throw new Error("The constitution must be published.");
+        expect(output).toContain("could not remove staging file");
+        expect(output).toContain(JSON.stringify(staging));
+        expect(output).toContain(JSON.stringify(target));
+        expect(output).toContain("Restore access, remove only this staging file");
+        const shipped = await readFile(path.join(ROOT, "packages/qfai/assets/init", CONSTITUTION));
+        expect((await readFile(target)).equals(shipped)).toBe(true);
+        expect((await readFile(staging)).equals(shipped)).toBe(true);
+        expect((await lstat(staging)).ino).toBe((await lstat(target)).ino);
+        const lock = await readAssistantAssetsLock(path.join(root, ".qfai", "assistant"));
+        expect(lock?.files["constitution/constitution.md"]).toBeDefined();
+
+        passThrough();
+        await rm(staging);
+        await init(root);
+        expect((await readFile(target)).equals(shipped)).toBe(true);
+        await expect(lstat(staging)).rejects.toMatchObject({ code: "ENOENT" });
+        const recovered = await readAssistantAssetsLock(path.join(root, ".qfai", "assistant"));
+        expect(recovered?.files["constitution/constitution.md"]).toBeDefined();
+      });
+    },
+  );
+
   it.each([
     { name: "source after a successful link", failedIndex: 0, linkFails: false },
     { name: "destination after a successful link", failedIndex: 1, linkFails: false },

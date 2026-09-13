@@ -165,11 +165,17 @@ for each eligible absent governed path. It removes only its own probe files.
 If removal fails, init attempts the remaining owned cleanup, reports every
 retained probe path and aborts before copying or migrating package assets.
 Restore access and remove only the reported probe files before retrying.
-A failed link check aborts with recovery guidance and preserves existing assets;
+A failed probe creation or link check aborts with the affected directory,
+write-access and hard-link recovery guidance, and preserves existing assets;
 it never falls back to a partial final-path copy or an overwriting rename.
 Existing governed paths and a constitution deferred by an edited safety master
 need no creation probe. Dry runs perform no probe or writes. The check cannot
 prevent a filesystem or permission change later in the run.
+
+If cleanup fails after exclusive publication, init keeps the complete published
+file and its receipt. It reports the staging path and asks the user to restore
+access, remove only that staging file and rerun init. The published file is not
+removed or rewritten to clean up its hard-link alias.
 
 ## Shipped GitHub Actions workflows
 

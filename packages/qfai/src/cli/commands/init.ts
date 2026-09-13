@@ -740,17 +740,15 @@ async function probeExclusiveLink(directory: string): Promise<void> {
     const handle = await open(source, "wx");
     ownsSource = true;
     await handle.close();
-    try {
-      await link(source, dest);
-      ownsDest = true;
-    } catch (cause: unknown) {
-      throw new Error(
-        "qfai init cannot create hard links here. Use a filesystem and permissions supporting hard links, then rerun; no package assets were copied or migrated.",
-        { cause },
-      );
-    }
+    await link(source, dest);
+    ownsDest = true;
   } catch (cause: unknown) {
-    probeFailures.push(cause);
+    probeFailures.push(
+      new Error(
+        `qfai init cannot prepare creation probes in ${JSON.stringify(directory)}. Restore write access and ensure the filesystem supports hard links, then rerun; no package assets were copied or migrated.`,
+        { cause },
+      ),
+    );
   }
   const cleanupFailures: Error[] = [];
   for (const file of [ownsDest ? dest : null, ownsSource ? source : null]) {
@@ -1018,7 +1016,9 @@ export async function replaceGovernedAsset(
     if (mode === "create-only") {
       await link(staging, dest);
       await rm(staging, { force: true }).catch(() => {
-        // Best effort: the complete file is already published.
+        warn(
+          `NOTE: qfai init created ${JSON.stringify(dest)}, but could not remove staging file ${JSON.stringify(staging)}. Restore access, remove only this staging file, then rerun qfai init; keep the published file.`,
+        );
       });
     } else {
       await rename(staging, dest);
