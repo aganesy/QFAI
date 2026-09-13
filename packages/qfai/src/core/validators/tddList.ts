@@ -3253,8 +3253,27 @@ async function invalidCompletedEvidenceArtifacts(
     }
   }
 
+  // The attempt the last round closed on is the review the row-level verdicts
+  // record, so each reviewer's response there carries that verdict's hash.
+  const closingHashes = new Map<string, string>();
+  for (const [role, prefix] of [
+    ["completion-reviewer", "Spec"],
+    ["implementation-reviewer", "Code quality"],
+    ["product-surface-reviewer", "Prototype parity"],
+  ] as const) {
+    const recorded = rowEvidenceFieldValue(section, `${prefix} audited evidence hash`);
+    if (recorded !== null) closingHashes.set(role, recorded);
+  }
   for (const round of rounds) {
-    invalid.push(...(await invalidRoundReviewPacks(root, section, round, expected.tddId)));
+    invalid.push(
+      ...(await invalidRoundReviewPacks(
+        root,
+        section,
+        round,
+        expected.tddId,
+        round === rounds.at(-1) ? closingHashes : null,
+      )),
+    );
   }
 
   const checkpointCommand = rowEvidenceFieldValue(section, "Checkpoint verification command");
@@ -3289,22 +3308,28 @@ const CANONICAL_REVIEW_PACK = /^\.qfai\/review\/review-\d{17}$/;
 
 /**
  * The review pack pairs a round records, one per review attempt, each
- * recomputed from the pack it names and read for the verdict it records
+ * recomputed from the pack it names and read for the review it records
  * (`record-contract.md`).
  *
  * The pair is written after its review has run, so it is left out of every
  * audited subject, and this is the check that sees a pack edited after its
  * attempt closed or a pack from another review. A round that records any pair
- * owes one for every verdict attempt: the last attempt's pack is the one the
- * round closed on. A pack absent from the checkout is skipped once its path has
+ * owes exactly one for every verdict attempt: the last attempt's pack is the
+ * one the round closed on, and a second pair for one attempt would leave the
+ * first unchecked. A pack absent from the checkout is skipped once its path has
  * the canonical shape, as a row-level pack is, because review packs are
  * local-only.
+ *
+ * `closingHashes` is present for the last round only: the attempt it closed on
+ * is the review the row-level verdicts record, so its responses carry the
+ * audited hashes those verdicts carry, one per reviewer role.
  */
 async function invalidRoundReviewPacks(
   root: string,
   section: string,
   round: number,
   tddId: string,
+  closingHashes: ReadonlyMap<string, string> | null,
 ): Promise<string[]> {
   const inRound = (field: string, includeBlank = false): EvidenceFieldOccurrence[] =>
     evidenceFieldOccurrences(section, field, includeBlank).filter(
@@ -3314,17 +3339,28 @@ async function invalidRoundReviewPacks(
   const seals = inRound("Review pack seal");
   if (packs.length === 0 && seals.length === 0) return [];
   const verdicts = inRound("reviewer verdict", true);
+  const closingAttempt = verdicts.at(-1)?.attempt ?? null;
+  const revision = roundEvidenceFieldValue(section, round, "Revision");
   const attempts = new Set([...verdicts, ...packs, ...seals].map(({ attempt }) => attempt));
   const invalid: string[] = [];
   for (const attempt of attempts) {
+    const count = (occurrences: readonly EvidenceFieldOccurrence[]): number =>
+      occurrences.filter((occurrence) => occurrence.attempt === attempt).length;
+    if (count(packs) > 1 || count(seals) > 1) {
+      const qualifier = attempt === null ? "" : ` (attempt ${attempt})`;
+      invalid.push(`Round ${round}: Review pack${qualifier} and its seal recorded once`);
+      continue;
+    }
     invalid.push(
       ...(await invalidRoundAttemptPack(root, {
         round,
         attempt,
         tddId,
+        revision,
         pack: lastAttemptValue(packs, attempt),
         seal: lastAttemptValue(seals, attempt),
         verdict: lastAttemptValue(verdicts, attempt),
+        closingHashes: attempt === closingAttempt ? closingHashes : null,
       })),
     );
   }
@@ -3342,9 +3378,11 @@ type RoundAttemptPack = {
   round: number;
   attempt: number | null;
   tddId: string;
+  revision: string | null;
   pack: string | null;
   seal: string | null;
   verdict: string | null;
+  closingHashes: ReadonlyMap<string, string> | null;
 };
 
 /** What is wrong with one review attempt's pack pair, in the order a repair takes. */
@@ -3372,7 +3410,17 @@ async function invalidRoundAttemptPack(root: string, entry: RoundAttemptPack): P
   if (!roundPackRecordsVerdict(packFiles, entry.pack, entry)) {
     invalid.push(`${label} carrying this row's request and responses agreeing with its verdict`);
   }
+  if (!roundPackRecordsRound(packFiles, entry.pack, entry)) {
+    invalid.push(`${label} reviewing this round's revision and evidence`);
+  }
   return invalid;
+}
+
+/** Every response a review pack holds, whichever reviewer wrote it. */
+function allReviewPackResponses(packFiles: ReadonlyArray<ReviewPackFile>): string[] {
+  return packFiles
+    .filter(({ relativePath }) => /^R\d{2}_.+\.md$/.test(path.posix.basename(relativePath)))
+    .map(({ content }) => content);
 }
 
 /**
@@ -3389,15 +3437,49 @@ function roundPackRecordsVerdict(
 ): boolean {
   const request = reviewPackArtifact(packFiles, packPath, "review_request.md");
   if (request === null || !exactLineField(request, "TDD-ID", entry.tddId)) return false;
-  const responses = packFiles
-    .filter(({ relativePath }) => /^R\d{2}_.+\.md$/.test(path.posix.basename(relativePath)))
-    .map(({ content }) => content);
+  const responses = allReviewPackResponses(packFiles);
   const verdict = (entry.verdict ?? "").trim();
   if (/^PASS\b/i.test(verdict)) return everyResponsePasses(responses);
   if (/^REVISE\b/i.test(verdict)) {
     return responses.some((response) => exactLineField(response, "Result", "REVISE"));
   }
   return false;
+}
+
+/**
+ * Whether a round attempt's pack reviewed this round: `summary.json` and every
+ * response name the round's `Revision`, and on the attempt the last round
+ * closed on, each reviewer's response carries the audited hash its row-level
+ * verdict records. An earlier review of the same row with the same outcome
+ * would otherwise pass for this one.
+ */
+function roundPackRecordsRound(
+  packFiles: ReadonlyArray<ReviewPackFile>,
+  packPath: string,
+  entry: RoundAttemptPack,
+): boolean {
+  if (entry.revision === null) return false;
+  const summary = reviewPackArtifact(packFiles, packPath, "summary.json");
+  if (summary === null) return false;
+  let summaryRevision: unknown;
+  try {
+    summaryRevision = jsonRecord(JSON.parse(summary))?.["revision"];
+  } catch {
+    return false;
+  }
+  if (summaryRevision !== entry.revision) return false;
+  const revision = entry.revision;
+  const responses = allReviewPackResponses(packFiles);
+  if (!responses.every((response) => exactLineField(response, "Reviewed revision", revision))) {
+    return false;
+  }
+  for (const [role, hash] of entry.closingHashes ?? []) {
+    const answered = reviewPackResponses(packFiles, role);
+    if (!answered.every((response) => exactLineField(response, "Audited evidence hash", hash))) {
+      return false;
+    }
+  }
+  return true;
 }
 
 /**

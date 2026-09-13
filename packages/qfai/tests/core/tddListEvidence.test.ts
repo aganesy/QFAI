@@ -1942,7 +1942,11 @@ describe("QFAI-TDDLIST-008", () => {
         await writeFile(path.join(root, pack, "review_request.md"), "TDD-ID: TDD-0001\n");
         await writeFile(
           path.join(root, pack, "R01_completion-reviewer.md"),
-          `Result: ${verdict}\n`,
+          `Result: ${verdict}\nReviewed revision: abc1230000000000000000000000000000000000\n`,
+        );
+        await writeFile(
+          path.join(root, pack, "summary.json"),
+          `${JSON.stringify({ revision: "abc1230000000000000000000000000000000000" })}\n`,
         );
       }
       const evidence = completeEntry("Unit").replace(
@@ -1967,6 +1971,9 @@ describe("QFAI-TDDLIST-008", () => {
       expect(messages).not.toContain(
         "Round 1: Review pack seal (attempt 1) matching pack contents",
       );
+      // The earlier attempt's pack is its own: this row, its verdict, this round.
+      expect(messages).not.toContain("Round 1: Review pack (attempt 1) carrying");
+      expect(messages).not.toContain("Round 1: Review pack (attempt 1) reviewing");
     });
   });
 
@@ -2069,6 +2076,112 @@ describe("QFAI-TDDLIST-008", () => {
       );
       expect(issues.map((issue) => issue.message).join("\n")).toContain(
         "Round 1: every reviewer verdict attempt before the last: REVISE",
+      );
+    });
+  });
+
+  it("binds a round pack to the revision its round records", async () => {
+    // A sealed pack from an earlier review of the same row, with the same
+    // outcome, would otherwise stand in for this round's review.
+    await withProject(async (root) => {
+      const first = ".qfai/review/review-20260101000000000";
+      await mkdir(path.join(root, first), { recursive: true });
+      await writeFile(path.join(root, first, "review_request.md"), "TDD-ID: TDD-0001\n");
+      await writeFile(
+        path.join(root, first, "R01_completion-reviewer.md"),
+        `Result: REVISE\nReviewed revision: ${"d".repeat(40)}\n`,
+      );
+      await writeFile(
+        path.join(root, first, "summary.json"),
+        `${JSON.stringify({ revision: "d".repeat(40) })}\n`,
+      );
+      const evidence = completeEntry("Unit").replace(
+        "- Refactor verify command: npm test",
+        [
+          "- Round 1: reviewer verdict (attempt 1): REVISE — the assertion names no boundary",
+          `- Round 1: Review pack (attempt 1): ${first}`,
+          `- Round 1: Review pack seal (attempt 1): sha256:${await packSeal(root, first)}`,
+          "- Round 1: reviewer verdict (attempt 2): PASS",
+          "- Round 1: Review pack (attempt 2): .qfai/review/review-20260101010000000",
+          `- Round 1: Review pack seal (attempt 2): sha256:${"b".repeat(64)}`,
+          "- Refactor verify command: npm test",
+        ].join("\n"),
+      );
+      const issues = await runIssuesOn(
+        root,
+        ledger([{ status: "done", evidence: IMPLEMENT_POINTER }]),
+        { ".qfai/evidence/implement-spec-0001.md": evidence },
+      );
+      expect(issues.map((issue) => issue.message).join("\n")).toContain(
+        "Round 1: Review pack (attempt 1) reviewing this round's revision and evidence",
+      );
+    });
+  });
+
+  it("reports a review attempt that records its pack pair twice", async () => {
+    // Only one pair per attempt is read, so a second would leave the first
+    // outside every check while both are dropped from the audited subject.
+    await withProject(async (root) => {
+      const evidence = completeEntry("Unit").replace(
+        "- Refactor verify command: npm test",
+        [
+          "- Round 1: reviewer verdict: PASS",
+          "- Round 1: Review pack: .qfai/review/review-20260101000000000",
+          `- Round 1: Review pack seal: sha256:${"a".repeat(64)}`,
+          "- Round 1: Review pack: .qfai/review/review-20260101010000000",
+          `- Round 1: Review pack seal: sha256:${"b".repeat(64)}`,
+          "- Refactor verify command: npm test",
+        ].join("\n"),
+      );
+      const issues = await runIssuesOn(
+        root,
+        ledger([{ status: "done", evidence: IMPLEMENT_POINTER }]),
+        { ".qfai/evidence/implement-spec-0001.md": evidence },
+      );
+      expect(issues.map((issue) => issue.message).join("\n")).toContain(
+        "Round 1: Review pack and its seal recorded once",
+      );
+    });
+  });
+
+  it("holds the closing attempt's responses to the row's audited hashes", async () => {
+    // The attempt the last round closed on is the review the row-level
+    // verdicts record, so its reviewer answered over the same subject.
+    await withProject(async (root) => {
+      const closing = ".qfai/review/review-20260101010000000";
+      await mkdir(path.join(root, closing), { recursive: true });
+      await writeFile(path.join(root, closing, "review_request.md"), "TDD-ID: TDD-0001\n");
+      await writeFile(
+        path.join(root, closing, "R01_completion-reviewer.md"),
+        `Result: PASS\nReviewed revision: abc1230000000000000000000000000000000000\nAudited evidence hash: sha256:${"c".repeat(64)}\n`,
+      );
+      await writeFile(
+        path.join(root, closing, "summary.json"),
+        `${JSON.stringify({ revision: "abc1230000000000000000000000000000000000" })}\n`,
+      );
+      const evidence = completeEntry("Unit").replace(
+        "- Refactor verify command: npm test",
+        [
+          "- Round 1: reviewer verdict (attempt 1): REVISE — the assertion names no boundary",
+          "- Round 1: Review pack (attempt 1): .qfai/review/review-20260101000000000",
+          `- Round 1: Review pack seal (attempt 1): sha256:${"a".repeat(64)}`,
+          "- Round 1: reviewer verdict (attempt 2): PASS",
+          `- Round 1: Review pack (attempt 2): ${closing}`,
+          `- Round 1: Review pack seal (attempt 2): sha256:${await packSeal(root, closing)}`,
+          "- Refactor verify command: npm test",
+        ].join("\n"),
+      );
+      const issues = await runIssuesOn(
+        root,
+        ledger([{ status: "done", evidence: IMPLEMENT_POINTER }]),
+        { ".qfai/evidence/implement-spec-0001.md": evidence },
+      );
+      const messages = issues.map((issue) => issue.message).join("\n");
+      expect(messages).toContain(
+        "Round 1: Review pack (attempt 2) reviewing this round's revision and evidence",
+      );
+      expect(messages).not.toContain(
+        "Round 1: Review pack (attempt 2) carrying this row's request and responses agreeing with its verdict",
       );
     });
   });
