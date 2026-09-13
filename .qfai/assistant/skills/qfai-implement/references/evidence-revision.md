@@ -34,7 +34,7 @@ check. Gate item 10 rejects any other shape wherever a revision is recorded:
   or way of reading a file and get different answers for the same tree, and then
   an ordinary uncommitted item is stale for nobody's mistake. Four steps, the
   same shape as `Audited evidence hash`:
-  1. **Collect**, from the repository root, the paths and nothing else:
+  1. **Collect**, from the project root, the paths and nothing else:
 
      ```bash
      # Cleared before anything reads the repository. `GIT_DIR` and
@@ -51,23 +51,28 @@ check. Gate item 10 rejects any other shape wherever a revision is recorded:
             -u GIT_NOGLOB_PATHSPECS -u GIT_ICASE_PATHSPECS)
      for name in $(git rev-parse --local-env-vars); do unset+=(-u "$name"); done
      root=$(env "${unset[@]}" git rev-parse --show-toplevel)
+     # Where the project sits in the worktree, with its trailing separator:
+     # empty at the root, `packages/app-a/` for a project nested in a larger
+     # worktree. Every exclusion is the project's, so each one starts here.
+     prefix=$(env "${unset[@]}" git rev-parse --show-prefix)
      specs=$(npx qfai doctor --format json | node -e 'let s="";
        process.stdin.on("data", (d) => (s += d)).on("end", () => {
          const check = JSON.parse(s).checks.find((c) => c.id === "paths.specsDir");
          process.stdout.write(check?.details?.path ?? ".qfai/specs");
        })')
-     exclude=(':(exclude,glob).qfai/evidence/**'
-              ':(exclude,glob).qfai/review/**')
+     # Every glob character escaped, so that a directory
+     # really called `[specs]` is matched rather than read as a class.
+     escape() { printf '%s' "$1" | sed 's/[][*?\\]/\\&/g'; }
+     exclude=(":(exclude,glob)$(escape "$prefix").qfai/evidence/**"
+              ":(exclude,glob)$(escape "$prefix").qfai/review/**")
      # Git is asked whether the directory is inside the worktree, rather than
-     # its spelling read: `..` and an absolute path are outside, `D:/specs` is
-     # outside on Windows and an ordinary directory name on POSIX, and git
-     # refuses a pathspec naming a place outside. Nothing outside is in the
-     # address, so there is nothing to exclude there.
-     if env "${unset[@]}" git -C "$root" ls-files -z -- ":(literal)$specs" >/dev/null 2>&1; then
-       # Every glob character in the configured name escaped, so a directory
-       # really called `[specs]` is matched rather than read as a class.
-       exclude+=(":(exclude,glob)$(printf '%s' "$specs" |
-         sed 's/[][*?\\]/\\&/g')/*/tdd/test-list.md")
+     # its spelling read: a path climbing out of the worktree and an absolute
+     # one are outside, `D:/specs` is outside on Windows and an ordinary
+     # directory name on POSIX, and git refuses a pathspec naming a place
+     # outside. Nothing outside is in the address, so there is nothing to
+     # exclude there.
+     if env "${unset[@]}" git -C "$root" ls-files -z -- ":(literal)$prefix$specs" >/dev/null 2>&1; then
+       exclude+=(":(exclude,glob)$(escape "$prefix$specs")/*/tdd/test-list.md")
      fi
      common=(env "${unset[@]}"
              git -C "$root" -c core.quotePath=false -c core.ignoreCase=false)
@@ -79,6 +84,8 @@ check. Gate item 10 rejects any other shape wherever a revision is recorded:
      # Read for its modes only: the tracked list above names a submodule as it
      # names a file.
      "${common[@]}" ls-files --stage -z -- . "${exclude[@]}"
+     # Git lists no FIFO, socket or device, so the filesystem is asked for them.
+     (cd "$root" && find . -name .git -prune -o \( -type p -o -type s -o -type b -o -type c \) -print)
      ```
 
      **The ledger's directory is read, not assumed.** `paths.specsDir` is a
@@ -90,6 +97,16 @@ check. Gate item 10 rejects any other shape wherever a revision is recorded:
      resolved directory, which is the value the tool itself uses.
      `.qfai/evidence` and `.qfai/review` are not configurable, and are written
      as they are.
+
+     **The exclusions are rooted at the project.** A QFAI project can sit inside
+     a larger worktree, such as `packages/app-a/` of a monorepo, while every
+     list is read from the worktree's root. `.qfai/evidence`, `.qfai/review` and
+     the ledger are the project's directories, and the doctor reports
+     `paths.specsDir` relative to the project, so each exclusion starts with the
+     prefix `git rev-parse --show-prefix` prints. Rooted at the worktree
+     instead, they would reach nothing under `packages/app-a/.qfai/`, and the
+     phase's own ledger, evidence and review writes would move the address
+     between the observations gate item 10 requires to agree.
 
      **A ledger outside the worktree is not excluded, because it was never in.**
      The setting takes an absolute path, and a directory outside the tree names
@@ -145,6 +162,14 @@ check. Gate item 10 rejects any other shape wherever a revision is recorded:
      regular file replaced by a FIFO, a socket or a device has no record shape
      here, and reading a FIFO blocks until somebody writes to it. Restore the
      path and take the address again.
+
+     **An untracked FIFO, socket or device stops the address too.** Git lists
+     none of them, so creating, removing or replacing one leaves every list as
+     it was, and evidence taken before the change still reads as current. The
+     last command asks the filesystem instead, and any path it prints stops the
+     address, ignored or not: `git check-ignore` would also read
+     `.git/info/exclude` and `core.excludesFile`, which the lists do not. Remove
+     it, or move it out of the worktree, and take the address again.
 
      **An untracked embedded repository stops the address.** `ls-files --others`
      reports one entry for it — the directory, with a trailing separator — and
@@ -225,7 +250,8 @@ check. Gate item 10 rejects any other shape wherever a revision is recorded:
      again.
 
   2. **Exclude.** `<specsDir>/*/tdd/test-list.md`, `.qfai/evidence/**` and
-     `.qfai/review/**`, in the pathspecs above, so **every** list carries them —
+     `.qfai/review/**`, in the pathspecs above, so **every** list carries them,
+     each rooted at the project —
      they are the record of the observation, not the thing observed. The review
      pack is on that list for the same reason the others are: a project may
      legitimately track `.qfai/review/**`, and then every reviewer answer
