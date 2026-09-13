@@ -120,7 +120,7 @@ Use the shared schema.
   says `session opened` — one for the preflight session, all of them inside this run's own block — **except a session the user stopped**, which is reported in the stage's output rather than written, as the table below sets out, so its absence is not a `REVISE`. **`Preflight` is `session opened` or `confidence high`**, and any other value is a `REVISE`: those two say whether a preflight row is owed, and a third value says neither. **No two rows share a `Session`**, and the keys run `S1`, `S2`, … with none skipped: the lines under the table are reconciled by that key, so one key on two rows lets a single quoted answer, open line or escalation stand for both. Every `Ended` is one of the four endings the rule master
   names, every row's `Ended at` is at or after the run-started time on
   a `### /qfai-atdd — run started` block whose time equals the one this
-  run's work order states, and each row's `Open` count matches the register lines naming that row's `Session`, **and its `Escalated` count matches the escalation lines naming it**, **and its `Decisions` count matches the `grilling(<Session>/<adjudication>)` rows the Work Orders Summary carries under that `Session`** — a count checked against nothing lets a row claim `0` over decisions that never reached the user. **An escalation line still waiting on an answer is an open node**: it is also an `Open` line under the same `Session`, so a row that ended over it keeps the decision in the register instead of losing it behind a valid ending. **Every row's `Revision` is a git rev or `working-tree+<hash>`**, as the record requires, and a blank or any other value is a `REVISE`: it is the one field saying which tree the session ended against. **A row whose ending lets the work go on, and after which the stage wrote,
+  run's work order states, and each row's `Open` count matches the register lines naming that row's `Session`, **and its `Escalated` count matches the escalation lines naming it**, **and its `Decisions` count matches the `grilling(<Session>@<run started>/<adjudication>)` rows the Work Orders Summary carries under that `Session` and this run's start** — a count checked against nothing lets a row claim `0` over decisions that never reached the user. **An escalation line still waiting on an answer is an open node**: it is also an `Open` line under the same `Session`, so a row that ended over it keeps the decision in the register instead of losing it behind a valid ending. **Every row's `Revision` is a git rev or `working-tree+<hash>`**, as the record requires, and a blank or any other value is a `REVISE`: it is the one field saying which tree the session ended against. **A row whose ending lets the work go on, and after which the stage wrote,
   carries a `Work resumed` later than its own `Ended at`** — that ordering is
   the whole reason both times are recorded, and an earlier one is a session
   recorded after the edit it was meant to precede. **A run that did not resume
@@ -138,7 +138,7 @@ Use the shared schema.
   | ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
   | `confirmed`   | `Frontier` empty, `Lookups` none in flight, `Open` 0, **and the confirming answer quoted under the table beside that row's `Session`**. Those are the rule master's two completing conditions, and tree state is only the first: a session that closed its own tree and never asked satisfies every count while the user has said nothing                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
   | `user-closed` | `Lookups` none in flight, every open node assumable, **and every one of them carrying its labelled assumption in the register**, **and the closing answer quoted under the table beside that row's `Session`** — the ending is an act of the user's, and a register alone cannot show it happened. The closure covers the tree as it finally stands, so a lookup still running can raise a node after it — and a row accepted while one was in flight is a verdict taken over a register that was not yet complete. A decision some document requires the user to make and record, and an input declared undefaultable, are not assumable — the rule master says the closure does not reach them, so a row carrying one is a `REVISE`. A node listed without the value the stage went on to use is the other half of the same failure: the assumption is then unread, which the rule master calls a decision nobody took wearing the face of one somebody did |
-  | `no-question` | `Lookups` none in flight and `Open` 0. Article X, rule 6: the stage cannot complete over a decision nobody took, and nobody was asked                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
+  | `no-question` | `Lookups` none in flight and `Open` 0. Article X, rule 6: the stage cannot complete over a decision nobody took, and nobody was asked. **Nor does any line under the table record a reply from the user under that row's `Session`**: no confirming or closing answer, and no escalation marked answered. The mode reached nobody, so a reply recorded under it is one nobody gave, and an escalation it raised is still waiting, which makes it an open line that `Open` 0 already refuses                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
   | `stopped`     | `Work resumed` empty. The user ended the session, so the stage reports every open node rather than resuming — a `stopped` row with work after it is a `REVISE` whatever it counts                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
 
   **A stopped session is reported, not written.** Article X ends a stopped
@@ -224,14 +224,25 @@ restated here.
 
   | Session | Ended | Ended at | Revision | Work resumed | Subject | Frontier | Lookups | Decisions | Open | Escalated |
   | ------- | ----- | -------- | -------- | ------------ | ------- | -------- | ------- | --------- | ---- | --------- |
-  | S1 | confirmed | 2026-01-01T09:14:00Z | a1b2c3d | 2026-01-01T09:15:20Z | preflight | empty | none in flight | 4 | 0 | 0 |
-  | S2 | user-closed | 2026-01-01T11:02:00Z | a1b2c3d | 2026-01-01T11:04:10Z | an acceptance criterion the spec does not cover | empty | none in flight | 2 | 1 | 0 |
+  | S1 | confirmed | 2026-01-01T09:14:00Z | a1b2c3d | 2026-01-01T09:15:20Z | preflight | empty | none in flight | 2 | 0 | 0 |
+  | S2 | user-closed | 2026-01-01T11:02:00Z | a1b2c3d | 2026-01-01T11:04:10Z | an acceptance criterion the spec does not cover | empty | none in flight | 1 | 1 | 0 |
 
   Confirmed S1: "Yes — that is the understanding."
 
   Closed S2: "proceed"
 
   Open S2: which case the criterion's oracle must observe — assumed: <the value the stage used>
+  ```
+
+  The three decisions those rows count are three rows in the stage's Work Orders
+  Summary, each keyed to its session and this run:
+
+  ```text
+  | Step | Role (sub-agent) | Agent instance | Task title | Input (refs) | Output (refs) | Status (PASS/REVISE/PENDING) |
+  | ---- | ---------------- | -------------- | ---------- | ------------ | ------------- | ---------------------------- |
+  | 2 | <role> | <instance> | grilling(S1@2026-01-01T09:02:00.417Z/user): <a decision S1 settled> | <refs> | <refs> | PASS |
+  | 3 | <role> | <instance> | grilling(S1@2026-01-01T09:02:00.417Z/user): <another decision S1 settled> | <refs> | <refs> | PASS |
+  | 6 | <role> | <instance> | grilling(S2@2026-01-01T09:02:00.417Z/user): <the decision S2 settled> | <refs> | <refs> | PASS |
   ```
 
   The shape `/qfai-discussion` already writes, with `Subject` in place of that
@@ -296,9 +307,13 @@ restated here.
   names who recommended it.** A decision the user answered counts, and so does
   one the agents settled; an open node and an unanswered escalation do not.
   Each counted decision is a `grilling(<where>/<adjudication>): <the decision>`
-  row in the stage's Work Orders Summary, with the row's `Session` as `<where>`
+  row in the stage's Work Orders Summary
   (`.qfai/assistant/constitution/shared-skill-delegation-baseline.md`), so the
   count can be checked against records rather than taken as written.
+  **`<where>` is `<Session>@<run started>`**: the row's `Session`, then the
+  time on this run's heading. The keys restart at `S1` every invocation, and
+  the Work Orders Summary sits outside the run's block, so a row keyed by
+  `Session` alone is counted again by every later run that reuses the key.
 
 - **The confirming answer goes under that table too**, one line per
   `confirmed` row, quoting what the user replied and naming the `Session` it

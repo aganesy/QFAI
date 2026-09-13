@@ -54,8 +54,10 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   the same count under `user-closed` passes, because the user saw them and
   closed the asking.
   The gate also refuses a `Preflight` that is neither `session opened` nor
-  `confidence high`, and two rows sharing one `Session` key. A mutation-only
-  `/qfai-implement` run writes no block, since that branch writes nothing to its
+  `confidence high`, and two rows sharing one `Session` key. It checks each
+  row's `Decisions` against the Work Orders Summary rows keyed to that session
+  and this run, and refuses a reply from the user recorded under a `no-question`
+  row. A mutation-only `/qfai-implement` run writes no block, since that branch writes nothing to its
   rows' evidence, and reports its sessions in its output.
 
   A session between agents reaches none of the four on its own. Its budget ends

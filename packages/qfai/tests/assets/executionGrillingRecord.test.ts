@@ -208,6 +208,31 @@ describe.each(TREES)("%s — the execution stages record their sessions", (tree)
     expectPhrase(body, "a recurring obstacle reopens a session under the same description");
   });
 
+  it.each(STAGES)("%s gives its example as many decision rows as it counts", async (skill) => {
+    // The gate reconciles each row's Decisions with the summary rows keyed to
+    // it, so an example that counts more than it shows is one the gate rejects.
+    const body = await grilling(skill);
+    const counted = new Map<string, number>();
+    for (const line of body.split("\n")) {
+      const cells = line
+        .trim()
+        .split("|")
+        .map((cell) => cell.trim());
+      if (cells[1]?.startsWith("S") && cells[1].length <= 3 && cells.length === 13) {
+        counted.set(cells[1], Number(cells[9]));
+      }
+    }
+    expect([...counted.keys()]).toEqual(["S1", "S2"]);
+    const rows = new Map<string, number>();
+    for (const title of body.split("grilling(").slice(1)) {
+      const where = title.slice(0, title.indexOf("/"));
+      if (!where.endsWith("@2026-01-01T09:02:00.417Z")) continue;
+      const session = where.slice(0, where.indexOf("@"));
+      rows.set(session, (rows.get(session) ?? 0) + 1);
+    }
+    expect(rows).toEqual(counted);
+  });
+
   it("sends an implement run's record to every file its rows own", async () => {
     // An `E2E` / `API` / `Integration` row's evidence is `atdd-<spec-id>.md`, so
     // a record always written here leaves that row's reviewer without one.
@@ -254,7 +279,14 @@ describe.each(TREES)("%s — the execution stages record their sessions", (tree)
     // decisions; each one has a Work Orders Summary row naming its recommender.
     expectPhrase(
       body,
-      "**and its `Decisions` count matches the `grilling(<Session>/<adjudication>)` rows the Work Orders Summary carries under that `Session`**",
+      "**and its `Decisions` count matches the `grilling(<Session>@<run started>/<adjudication>)` rows the Work Orders Summary carries under that `Session` and this run's start**",
+    );
+    // The keys restart at S1 every invocation and the summary sits outside the
+    // run's block, so a row keyed by Session alone is counted by later runs.
+    expectPhrase(body, "**`<where>` is `<Session>@<run started>`**");
+    expectPhrase(
+      body,
+      "so a row keyed by `Session` alone is counted again by every later run that reuses the key",
     );
     expectPhrase(
       body,
@@ -316,6 +348,13 @@ describe.each(TREES)("%s — the execution stages record their sessions", (tree)
       "**and the closing answer quoted under the table beside that row's `Session`**",
     );
     expectPhrase(body, "`Lookups` none in flight and `Open` 0. Article X, rule 6");
+    // The mode reached nobody, so a reply recorded under the row is one nobody
+    // gave, and the count checks alone would let it through.
+    expectPhrase(
+      body,
+      "**Nor does any line under the table record a reply from the user under that row's `Session`**",
+    );
+    expectPhrase(body, "an escalation it raised is still waiting, which makes it an open line");
     expectPhrase(body, "`Work resumed` empty. The user ended the session");
     // A row is a file change, and a stop forbids one.
     expectPhrase(body, "**A stopped session is reported, not written.**");
