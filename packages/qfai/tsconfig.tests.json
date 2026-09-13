@@ -189,6 +189,7 @@
     "tests/helpers/fixedOutputLanguage.ts",
     "tests/helpers/gitConfigEnv.ts",
     "tests/helpers/measurementClaim.ts",
+    "tests/helpers/prototypingPreflightFixture.ts",
     "tests/setup/disableGitAutoMaintenance.ts",
     "tests/helpers/prototypingGateSurface.ts",
     "tests/helpers/recordProse.ts",
