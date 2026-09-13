@@ -297,6 +297,7 @@
     "tests/unit/sourceReduction.test.ts",
     "tests/unit/suppressWorkflowCommands.test.ts",
     "tests/validators/assistantAssets.test.ts",
+    "tests/validators/atddTestGlobConfiguration.test.ts",
     "tests/validators/configReferenceIntegrity.test.ts",
     "tests/validators/dbContractApplyOrder.test.ts",
     "tests/validators/importLite.test.ts",

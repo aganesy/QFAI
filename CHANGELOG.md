@@ -23,6 +23,17 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **The working-tree address excludes a nested project's own records, and stops on
+  a FIFO or socket git does not list** (#1747). The collection reads the lists
+  from the worktree root, but rooted the `.qfai/evidence`, `.qfai/review` and
+  ledger exclusions there too. In a project nested in a larger worktree, such as
+  `packages/app-a/` of a monorepo, they excluded nothing, so the phase's own
+  writes moved the address between observations that must agree. Each exclusion
+  now starts with the project's prefix from `git rev-parse --show-prefix`. Git
+  also lists no untracked FIFO, socket or device, so adding or removing one left
+  the address unchanged; the step now asks the filesystem for them and stops on
+  any it finds. A test runs the step's own commands in a temporary repository.
+
 - **The completion gate recomputes the checkpoint seal over the checkpoint's own
   revision** (#1738). `checkpoint-verification.md` seals the checkpoint command
   and result together with `Checkpoint verification revision`, the tree that
@@ -96,6 +107,26 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   procedure produces: `working-tree+` followed by 64 lowercase hexadecimal
   characters. Freshness is compared exactly, so accepting both cases would let
   one tree be recorded as two revisions and read a correct row as stale.
+
+- **A test glob the glob matcher refuses no longer ends the run, and
+  `--profile atdd` reports it** (#1703). `QFAI-ATDD-134`. A pattern holding a
+  NUL byte is valid YAML. Given one ahead of a wildcard, such as
+  `tests/\0/*.ts`, the matcher raised the error inside its directory walk,
+  where nothing could catch it, and `qfai validate` exited under every profile.
+  The scan now refuses the pattern before the walk starts. Under the `tdd` and
+  `full` profiles `QFAI-TRACE-124` reports it, and the stub scan reports
+  `QFAI-TEST-002` for it and still reads the other patterns.
+
+  The ATDD stage reads only the extensions out of these globs, so under
+  `--profile atdd` nothing said a glob was unusable. `QFAI-ATDD-134` says it
+  there. A glob the matcher accepts is not reported, whatever it selects:
+  `tests/**` names no extension, and the stage scans the JavaScript and
+  TypeScript set for it, as documented.
+
+  A glob starting with `!` excludes files, and the ATDD stage no longer takes an
+  extension from it. One starting with `!(` is a negated extglob, which selects,
+  and still gives its extension. `!tests/e2e/legacy/**/*.ts` beside a Python glob added
+  TypeScript to what the stage scans.
 
 - **The audited evidence hash says what its extraction produces, not only which
   fields it reads** (#1616). Naming the fields settled which lines are taken and
