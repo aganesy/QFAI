@@ -6,6 +6,10 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Added
 
+- **Reviewer cards file excess as a blocking code-quality defect** (#1798).
+  All six reviewer roles trace excess to Article VII, require a concrete cut
+  and replacement, and refuse cuts touching the referenced safety floor.
+
 - **A legacy ledger outside the obligation-column protection is reported**
   (#1663). A seeded `E2E` or `API` row has `TC-Refs` forbidden to it, so the
   `US-Refs` and `CON-API-Refs` columns are the only place its obligation can
