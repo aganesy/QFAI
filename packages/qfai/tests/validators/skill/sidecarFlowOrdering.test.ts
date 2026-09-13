@@ -1,9 +1,3 @@
-/**
- * Sidecar flow ordering validator — spec-0010 TDD-0045
- *
- * QFAI:SPEC-0010:TC-0010-0045
- */
-
 import { describe, expect, it } from "vitest";
 
 import { validateSidecarFlowOrdering } from "../../../src/core/validators/skill/sidecarFlowOrdering.js";
@@ -32,13 +26,11 @@ const PARALLEL_FRAGMENT = `
 `;
 
 describe("validateSidecarFlowOrdering", () => {
-  // QFAI:SPEC-0010:TC-0010-0045
   it("returns no issues for valid Step 1c → Step 1d sequential ordering", () => {
     const issues = validateSidecarFlowOrdering(VALID_FRAGMENT);
     expect(issues).toHaveLength(0);
   });
 
-  // QFAI:SPEC-0010:TC-0010-0045
   it("returns a SKILL-SIDECAR-FLOW issue when Step 1d precedes Step 1c", () => {
     const issues = validateSidecarFlowOrdering(SWAPPED_FRAGMENT);
     expect(issues).toHaveLength(1);
@@ -46,7 +38,6 @@ describe("validateSidecarFlowOrdering", () => {
     expect(issues[0].message).toMatch(/Step 1d.*before.*Step 1c|Step 1c.*MUST precede/i);
   });
 
-  // QFAI:SPEC-0010:TC-0010-0045
   it("returns a SKILL-SIDECAR-FLOW issue when Step 1c and 1d are marked parallel", () => {
     const issues = validateSidecarFlowOrdering(PARALLEL_FRAGMENT);
     expect(issues).toHaveLength(1);
