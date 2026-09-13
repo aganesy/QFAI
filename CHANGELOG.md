@@ -9,13 +9,19 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 - **The grilling-trace check refuses the untouched template and reads the
   discussion stage's record** (#1739, #1740). `QFAI-GRILL-001` counted the spec
   evidence template's worked rows as a record, so a copy with every placeholder
-  left in place produced no finding. A row that still carries a template
-  placeholder no longer counts.
+  left in place produced no finding. A row that still carries one of the
+  template's placeholders no longer counts; other angle-bracket Markdown in a
+  filled row, such as `<br>` or an autolink, does not make it a copy. The section
+  is read from its heading line alone, so a `###` heading, a mention in prose or
+  a fenced example is not taken for it, and a table header left without its
+  separator holds no row.
 
   The check now also reads the discussion stage: `--profile discussion` warns
   when the latest run's evidence has no `## Grilling Session` row. `qfai init`
   stops ignoring `.qfai/evidence/discussion-*.md`, so that record reaches a
-  review and a CI checkout. The prototyping session file is still not read: it
+  review and a CI checkout, including in a project whose older
+  `.qfai/evidence/.gitignore` still ignores everything by default: init adds
+  the same negation there. The prototyping session file is still not read: it
   is one loop input per project, and its absence cannot be told apart from a
   project that has not reached a prototyping loop.
 

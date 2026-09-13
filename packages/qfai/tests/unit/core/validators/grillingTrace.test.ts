@@ -20,6 +20,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   GRILLING_TRACE_CODE,
+  TEMPLATE_PLACEHOLDERS,
   validateDiscussionGrillingTrace,
   validateGrillingTrace,
 } from "../../../../src/core/validators/grillingTrace.js";
@@ -41,6 +42,13 @@ const DISCUSSION_POPULATED = [
   "| ----- | -------- | --------------- | -------- | ------- | --------- | --------- |",
   "| confirmed | 2026-01-01T09:14:00Z | 2026-01-01T09:15:20Z | empty | none in flight | 12 | 0 |",
   "",
+].join("\n");
+
+/** The table `POPULATED` carries, without the heading above it. */
+const PHASE_TABLE = [
+  "| Phase | Session | Ended at | Wrote at | Frontier | Evidence |",
+  "| ----- | ------- | -------- | -------- | -------- | -------- |",
+  "| 0 | run | 2026-01-01T00:00:00Z | 2026-01-01T00:01:00Z | 4 settled, 0 escalated | #work-orders-summary |",
 ].join("\n");
 
 /** A section with one phase row, which is what a run that grilled writes. */
@@ -131,6 +139,66 @@ describe("validateGrillingTrace", () => {
 
       expect(await validateGrillingTrace(root)).toEqual([]);
     });
+  });
+
+  it.each([
+    ["a level-three heading", `# Evidence\n\n### Pre-draft Grilling\n\n${PHASE_TABLE}\n`],
+    [
+      "a mention in prose",
+      `# Evidence\n\nRecorded under \`## Pre-draft Grilling\` below.\n\n${PHASE_TABLE}\n`,
+    ],
+    [
+      "a fenced example",
+      `# Evidence\n\n\`\`\`markdown\n## Pre-draft Grilling\n\n${PHASE_TABLE}\n\`\`\`\n`,
+    ],
+  ])("does not take %s for the section", async (_form, body) => {
+    await withRoot(async (root) => {
+      await evidence(root, "sdd-spec-0007.md", body);
+
+      expect(await validateGrillingTrace(root)).toHaveLength(1);
+    });
+  });
+
+  it("reads no row from a table header left without its separator", async () => {
+    // Without the separator the lines are not a table, so the header is not a
+    // phase row somebody wrote.
+    await withRoot(async (root) => {
+      const header = PHASE_TABLE.split("\n")[0] ?? "";
+      await evidence(
+        root,
+        "sdd-spec-0007.md",
+        `# Evidence\n\n## Pre-draft Grilling\n\n${header}\n`,
+      );
+
+      expect(await validateGrillingTrace(root)).toHaveLength(1);
+    });
+  });
+
+  it("counts a filled row carrying angle-bracket Markdown", async () => {
+    await withRoot(async (root) => {
+      const row =
+        "| 0 | run | 2026-01-01T00:00:00Z | 2026-01-01T00:01:00Z | 4 settled,<br>0 escalated | <https://example.com/review> |";
+      const table = PHASE_TABLE.split("\n").slice(0, 2).concat(row).join("\n");
+      await evidence(root, "sdd-spec-0007.md", `# Evidence\n\n## Pre-draft Grilling\n\n${table}\n`);
+
+      expect(await validateGrillingTrace(root)).toEqual([]);
+    });
+  });
+
+  it("knows every placeholder the shipped template leaves in its rows", async () => {
+    // A placeholder the list does not name would let a copied row pass as one
+    // somebody wrote.
+    const template = await readFile(SPEC_EVIDENCE_TEMPLATE, "utf-8");
+    const after = template.split("\n## Pre-draft Grilling\n")[1] ?? "";
+    const rows = (after.split("\n## ")[0] ?? "")
+      .split("\n")
+      .filter((line) => /^\| [^-]/.test(line));
+    const tokens = rows.flatMap((line) => line.match(/<[^<>|]+>/g) ?? []);
+
+    expect(tokens.length, "the template's rows carry no placeholder").toBeGreaterThan(0);
+    for (const token of tokens) {
+      expect(TEMPLATE_PLACEHOLDERS).toContain(token);
+    }
   });
 
   it("accepts a populated section", async () => {
@@ -278,6 +346,18 @@ describe("validateDiscussionGrillingTrace", () => {
       expect(issues.map((finding) => finding.file)).toEqual([
         ".qfai/evidence/discussion-20270101000000000.md",
       ]);
+    });
+  });
+
+  it("does not take a level-three heading for the section", async () => {
+    await withRoot(async (root) => {
+      await evidence(
+        root,
+        "discussion-20260101000000000.md",
+        DISCUSSION_POPULATED.replace("## Grilling Session", "### Grilling Session"),
+      );
+
+      expect(await validateDiscussionGrillingTrace(root)).toHaveLength(1);
     });
   });
 

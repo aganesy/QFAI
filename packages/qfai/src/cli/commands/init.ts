@@ -2831,6 +2831,9 @@ const LEGACY_EVIDENCE_IGNORE_NEGATIONS: readonly string[] = [
   // rule whose input is hidden reports the same clean result for a run that
   // skipped every session as for one that grilled every phase.
   "!sdd-*.md",
+  // The discussion stage's evidence, which the same rule reads for the latest
+  // run's session row.
+  "!discussion-*.md",
   // The import-lite record, for the same reason: on a spec set that arrived
   // without a discussion pack it is the only input source in the repository,
   // and the nested `*` hides it from the fresh clone that CI validates. Both

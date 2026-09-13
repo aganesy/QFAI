@@ -36,6 +36,8 @@ import { readdir, readFile } from "node:fs/promises";
 import path from "node:path";
 
 import { isEnoent } from "../fs/errno.js";
+import { maskFencedCodeBlocks } from "../ids.js";
+import { parseHeadings } from "../parse/markdown.js";
 import type { Issue } from "../types.js";
 import { exists, issue } from "./utils.js";
 
@@ -73,10 +75,19 @@ const SPEC_EVIDENCE_RE = /^sdd-(spec-\d{4})\.md$/;
 const DISCUSSION_EVIDENCE_RE = /^discussion-\d{17}\.md$/;
 
 /**
- * A value the shipped template leaves for its author to replace — `<ISO8601>`,
- * `<n>`, `<ref>`. A row still holding one was copied, not written.
+ * The values the shipped template leaves for its author to replace. A row still
+ * holding one was copied, not written.
+ *
+ * Named one by one rather than matched as any `<...>`, because a filled row may
+ * carry Markdown of that shape: `<br>`, or an autolink.
  */
-const TEMPLATE_PLACEHOLDER_RE = /<[^<>|]+>/;
+export const TEMPLATE_PLACEHOLDERS: readonly string[] = ["<ISO8601>", "<n>", "<ref>"];
+
+/** A table's header separator: every cell a run of dashes, optionally aligned. */
+const SEPARATOR_RE = /^\s*\|(?:\s*:?-+:?\s*\|)+\s*$/;
+
+/** A table row holding nothing but blanks and dashes. */
+const BLANK_ROW_RE = /^\s*\|[\s|:-]*\|\s*$/;
 
 /** A file's text, or `null` when it is not there. */
 async function textOf(file: string): Promise<string | null> {
@@ -89,27 +100,46 @@ async function textOf(file: string): Promise<string | null> {
 }
 
 /**
- * Whether the section exists and holds a row somebody wrote.
+ * Whether a level-two section headed `heading` holds a row somebody wrote.
  *
- * A heading with nothing under it satisfies a presence check and tells a reader
- * nothing, which is the state an agent reaches by copying the template and
- * filling none of it in. The template's worked rows reach it too: they are
- * table rows, but every one still carries a placeholder, so a copy nobody
- * filled in counts as no row at all.
+ * Only a heading line opens the section: a `###` heading, a mention in prose and
+ * a fenced example of the section are not it. A heading with nothing under it
+ * satisfies a presence check and tells a reader nothing, which is the state an
+ * agent reaches by copying the template and filling none of it in. The
+ * template's worked rows reach it too: they are table rows, but every one still
+ * carries a placeholder, so a copy nobody filled in counts as no row at all.
  */
 function carriesPopulatedSection(text: string, heading: string): boolean {
-  const at = text.indexOf(heading);
-  if (at === -1) return false;
-  const rest = text.slice(at + heading.length);
-  const next = /^## /m.exec(rest);
-  const body = next === null ? rest : rest.slice(0, next.index);
-  const tableLines = body.split(/\r?\n/).filter((line) => line.trim().startsWith("|"));
-  // The first table line is the header whenever a separator follows it; the
-  // separator itself is never a row.
-  const separator = (line: string | undefined): boolean =>
-    line !== undefined && /^\s*\|[\s|:-]*\|\s*$/.test(line);
-  const rows = separator(tableLines[1]) ? tableLines.slice(2) : tableLines;
-  return rows.some((line) => !separator(line) && !TEMPLATE_PLACEHOLDER_RE.test(line));
+  const masked = maskFencedCodeBlocks(text);
+  const lines = masked.split("\n");
+  const sections = parseHeadings(masked).filter((candidate) => candidate.level === 2);
+  return sections.some((section, index) => {
+    if (`## ${section.title}` !== heading) return false;
+    const end = (sections[index + 1]?.line ?? lines.length + 1) - 1;
+    return tableRows(lines.slice(section.line, end)).some(
+      (row) =>
+        !BLANK_ROW_RE.test(row) && !TEMPLATE_PLACEHOLDERS.some((token) => row.includes(token)),
+    );
+  });
+}
+
+/**
+ * The data rows of the tables in `lines`. A run of `|` lines is a table only
+ * when its second line is the header separator, so a header left without one
+ * holds no row.
+ */
+function tableRows(lines: readonly string[]): string[] {
+  const rows: string[] = [];
+  let run: string[] = [];
+  for (const line of [...lines, ""]) {
+    if (line.trim().startsWith("|")) {
+      run.push(line);
+      continue;
+    }
+    if (SEPARATOR_RE.test(run[1] ?? "")) rows.push(...run.slice(2));
+    run = [];
+  }
+  return rows;
 }
 
 /** The sorted directory entries of the evidence tree, or `null` when it is absent. */
