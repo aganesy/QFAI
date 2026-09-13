@@ -145,6 +145,19 @@ is not the answer either.
 - `boundary` — Boundary value (min, max, just-outside-range).
 - `edge` — Edge case (null, empty, concurrent, timing, max payload, etc.).
 
+### A failure observed in use
+
+A failure someone saw happen — in production, in a report, in a log — gets a
+`TC-*` row of its own:
+
+- `Type` is `error`.
+- `AC-Refs` or `EX-Ref` names the behavior that failed.
+- `Notes` says where it was seen, so the next reader can find the observation.
+
+That row is where the observation is recorded. The coverage depth checklist
+scores test-case rows, so a failure kept only in a decision or a note is one it
+never sees.
+
 ## Quality depth guideline
 
 Each AC should have at minimum:
