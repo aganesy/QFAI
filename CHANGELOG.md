@@ -82,7 +82,7 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   `CR-20260913-0002` records both sides, blocks the ledger row whose obligation
   turns on the disputed clause and the contract and policy terms the options
   reword, and puts the choice: narrow the criterion to match the contract and
-  the policy, with a reset moving the copies into its backup; keep the mirror
+  the policy, with cycle 0 moving the copies into a backup of their own; keep the mirror
   but stop reading it; or withdraw the criterion together with the rule that
   depends on it. No option stops the mirror.
 

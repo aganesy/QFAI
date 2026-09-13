@@ -21,12 +21,12 @@ longer accepted as the active SSOT", and `TC-0014-0033` compresses that to
 The product accepts it, reads it first, documents it as the required path, and
 keeps writing it.
 
-| File                                                       | What it does                                                                                                       |
-| ---------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
-| `packages/qfai/src/core/validators/uiEvidenceArtifacts.ts` | `hasEvidenceFile` tests `<prototyping root>/screenshots/<screen-id>.png` before it scans for an `iter-NN` file     |
-| `packages/qfai/src/core/validators/uiEvidenceArtifacts.ts` | The issue's location and its suggested action both name the legacy path first                                      |
-| `packages/qfai/src/cli/commands/validate.ts`               | Documents `.qfai/evidence/prototyping/screenshots/<screen-id>.png` as where a declared screen's screenshot lives   |
-| `packages/qfai/src/cli/commands/prototypingIterate.ts`     | `mirrorAcceptedIterToAggregateDirs` copies each accepted iteration into `screenshots/` and `html/` after every run |
+| File                                                       | What it does                                                                                                                                               |
+| ---------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `packages/qfai/src/core/validators/uiEvidenceArtifacts.ts` | `hasEvidenceFile` tests `<prototyping root>/screenshots/<screen-id>.png` before it scans for an `iter-NN` file                                             |
+| `packages/qfai/src/core/validators/uiEvidenceArtifacts.ts` | The issue's location and its suggested action both name the legacy path first                                                                              |
+| `packages/qfai/src/cli/commands/validate.ts`               | Documents `.qfai/evidence/prototyping/screenshots/<screen-id>.png` as where a declared screen's screenshot lives                                           |
+| `packages/qfai/src/cli/commands/prototypingIterate.ts`     | `mirrorAcceptedIterToAggregateDirs` copies the iteration a capture pass has just written into `screenshots/` and `html/`, at the end of every capture pass |
 
 Two cases in `packages/qfai/tests/validators/uiEvidenceArtifacts.test.ts`
 require a project carrying only the legacy layout to report no issue.
@@ -48,13 +48,14 @@ contract names what it writes as the SSOT, the shared policy defines the
 mandatory evidence by those paths, and `spec-0012` requires the write and says
 nothing about what a required-path check reads:
 
-| Artifact                                            | Statement                                                                                                                                      | Takes a position on reading the aggregate directories |
-| --------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------- |
-| `.qfai/contracts/cli/qfai-prototyping-iterate.md`   | on convergence, iterate "mirrors the accepted-iter content into the **aggregate-dir SSOT**", and the screenshot copy is "Required for handoff" | **yes — it names them the SSOT**                      |
-| `_policies/06_Glossary.md`, "mandatory UI evidence" | the term is defined as `screenshots/<screen-id>.png` and `html/<screen-id>.html`, both required for every declared screen                      | **yes — it defines the evidence by those paths**      |
-| `_policies/07_Constraints.md` `TC-07`               | a declared screen's screenshot and HTML snapshot are both mandatory, as the blocking condition of `QFAI-UIE-001/002`                           | **yes, through the glossary term it gates on**        |
-| `spec-0012` `REQ-0012-0066`                         | on convergence, `iterate` **MUST** mirror accepted-iter content into `screenshots/<screen-id>.png` and `html/<screen-id>.html`                 | no — it requires the write, not a read                |
-| `spec-0012` `AC-0012-0064` → `TC-0012-0448`         | the chain below that requirement, resolving `OQ-0110` as its Option A; `TC-0012-0448`'s row `TDD-0484` is `done`                               | no, for the same reason                               |
+| Artifact                                            | Statement                                                                                                                                                  | Takes a position on reading the aggregate directories                                |
+| --------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------ |
+| `.qfai/contracts/cli/qfai-prototyping-iterate.md`   | on convergence, iterate "mirrors the accepted-iter content into the **aggregate-dir SSOT**", and the screenshot copy is "Required for handoff"             | **yes — it names them the SSOT**                                                     |
+| `_policies/06_Glossary.md`, "mandatory UI evidence" | the term is defined as `screenshots/<screen-id>.png` and `html/<screen-id>.html`, both required for every declared screen                                  | **yes — it defines the evidence by those paths**                                     |
+| `_policies/07_Constraints.md` `TC-07`               | a declared screen's screenshot and HTML snapshot are both mandatory, as the blocking condition of `QFAI-UIE-001/002`                                       | **yes, through the glossary term it gates on**                                       |
+| `_policies/05_Contracts.md` `EVID-PROT2`            | an iteration directory holds each spec's `review.json` only, with no `.png` or `.html`, superseding the flat `iter-NN/` layout that carried the image pair | no — it names neither source, and it rules the `iter-NN/` image pair out as evidence |
+| `spec-0012` `REQ-0012-0066`                         | on convergence, `iterate` **MUST** mirror accepted-iter content into `screenshots/<screen-id>.png` and `html/<screen-id>.html`                             | no — it requires the write, not a read                                               |
+| `spec-0012` `AC-0012-0064` → `TC-0012-0448`         | the chain below that requirement, resolving `OQ-0110` as its Option A; `TC-0012-0448`'s row `TDD-0484` is `done`                                           | no, for the same reason                                                              |
 
 So the criterion does not contradict a leftover the product forgot to remove.
 The directories are a handoff output `spec-0012` requires, the iterate contract
@@ -71,6 +72,22 @@ therefore keeps the previous loop's accepted files there, and `hasEvidenceFile`
 before it looks at any `iter-NN/` directory. A required-path check that reads
 the aggregate directories can pass a new loop on the old loop's evidence.
 
+**The mirror runs on every capture, not on convergence.** The iterate contract
+and `REQ-0012-0066` both place it on convergence, but `runCapturePath` calls it
+at the end of every capture pass (`prototypingIterate.ts:1497-1505`), before
+that cycle is reviewed or any later invocation decides the loop has converged.
+Until the loop converges, the aggregate directories hold its latest capture,
+which the loop may still reject; once it converges, that capture is the
+accepted one. `iter-NN/` carries the same capture, so a required-path check
+reads it through either source.
+
+**`EVID-PROT2` rules out the image pair in an iteration directory.** It
+supersedes the flat `iter-NN/` layout that carried each screen's `.png` and
+`.html`, and names `review.json` as an iteration's only artifact. The capture
+pass writes that pair into `iter-NN/` all the same, and `hasEvidenceFile` reads
+it there. The contradiction stands under every option, and option 1 is the one
+that makes the pair the mandatory evidence, so it is the one that settles it.
+
 ## Proposed change
 
 Settle whether the aggregate directories are an evidence source a required-path
@@ -79,17 +96,19 @@ same answer.
 
 ## Options (at least 3) and recommendation
 
-| #   | Option                                                                                                                                                                                                                                                                                                                                                | Cost                                                                                                                                                                                                                                                                                                                                                                                  | Risk                                                                                                                                                                                                                                                                                    | Recommended |
-| --- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------- |
-| 1   | The criterion is right. The required-path check reads `iter-NN/` only. **The mirror keeps writing** the aggregate directories, as `spec-0012` requires, for handoff; verify stops treating them as an evidence source                                                                                                                                 | A product change to the lookup and its documented path, with the two aggregate-only cases inverted; the iterate contract's "aggregate-dir SSOT" re-scoped to a handoff copy; the glossary's "mandatory UI evidence" and `TC-07` re-scoped to the `iter-NN/` paths through a policy rerun; `TDD-0033` reset and re-pointed through a `spec-0014` rerun. No `spec-0014` statement moves | A project whose screenshots exist only in the aggregate directories — placed there by hand rather than produced by `iterate` — fails the gate after upgrade, with the files still on disk. The shared evidence definition changes for every spec, not only this one                     |             |
-| 2   | The code is right. Narrow `AC-0014-0005` and `TC-0014-0033` to what the iterate contract and the policy already say: the aggregate directories are the handoff copy a required-path check may read, and evidence read through them does not record its iteration. **A cycle-0 reset moves the aggregate directories into its backup** with `iter-00/` | Two statements and the delta row that records them; the reset path in `prototypingIterate.ts` and a case pinning that a restarted loop carries no aggregate file while the backup keeps it; the contract's cycle-0 reset clause, which names what a reset removes, through a contract rerun. The two aggregate-only cases already discriminate the narrowed criterion                 | The pack stops asserting that the aggregate directories are rejected, and evidence satisfying the gate through them does not say which iteration produced it. A loop restarted without `--capture` fails the gate until it captures, where today it passes on the previous loop's files | ✅          |
-| 3   | Withdraw the layout criterion and its chain. Retire `AC-0014-0005` and `TC-0014-0033` — and `BR-0014-0005` and `EX-0014-0026` with them, because `AC-0014-0005` is that rule's only parent and a rule cannot stand without one                                                                                                                        | Four statements, the ledger row and its reservation                                                                                                                                                                                                                                                                                                                                   | No rule a case can discharge then says where prototyping evidence lives: `01_Spec.md`'s Scope.In still names `iter-NN/` as the active layout, in prose no case reads. A restarted loop keeps passing on the previous loop's aggregate files, and no rule says it must not               |             |
+| #   | Option                                                                                                                                                                                                                                                                                                                                                                                                                                                                      | Cost                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             | Risk                                                                                                                                                                                                                                                                                                                                                                                          | Recommended |
+| --- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------- |
+| 1   | The criterion is right. The required-path check reads `iter-NN/` only. **The mirror keeps writing** the aggregate directories, as `spec-0012` requires, for handoff; verify stops treating them as an evidence source                                                                                                                                                                                                                                                       | A product change to the lookup and its documented path, with the two aggregate-only cases inverted; the iterate contract's "aggregate-dir SSOT" re-scoped to a handoff copy; the glossary's "mandatory UI evidence" and `TC-07` re-scoped to the `iter-NN/` paths, and `05_Contracts.md`'s `EVID-PROT2` amended to admit the image pair it supersedes today, through one policy rerun; `TDD-0033` reset and re-pointed through a `spec-0014` rerun. No `spec-0014` statement moves                                                               | A project whose screenshots exist only in the aggregate directories — placed there by hand rather than produced by `iterate` — fails the gate after upgrade, with the files still on disk. The shared evidence definition changes for every spec, not only this one                                                                                                                           |             |
+| 2   | The code is right. Narrow `AC-0014-0005` and `TC-0014-0033` to what the iterate contract and the policy already say: the aggregate directories are the copy of the loop's latest capture a required-path check may read, the accepted handoff once the loop converges, and evidence read through them does not record its iteration. **A cycle-0 start moves the aggregate directories aside into a backup of their own**, whether or not there is an `iter-00/` to back up | Two statements and the delta row that records them; the cycle-0 path in `prototypingIterate.ts`, with cases pinning that a restarted loop carries no aggregate file while their backup keeps it, with and without an `iter-00/`; the contract's cycle-0 reset clause and its mirror clause, through a contract rerun. `iter-00.backup-<ISO>/` still holds exactly what `iter-00/` held, so `REQ-0012-0067`'s byte-equivalence and the rows certifying it are untouched. The two aggregate-only cases already discriminate the narrowed criterion | The pack stops asserting that the aggregate directories are rejected, and evidence satisfying the gate through them does not say which iteration produced it. A loop restarted without `--capture` fails the gate until it captures, where today it passes on the previous loop's files. Before convergence the gate reads a capture the loop may still reject, as it does through `iter-NN/` | ✅          |
+| 3   | Withdraw the layout criterion and its chain. Retire `AC-0014-0005` and `TC-0014-0033` — and `BR-0014-0005` and `EX-0014-0026` with them, because `AC-0014-0005` is that rule's only parent and a rule cannot stand without one                                                                                                                                                                                                                                              | Four statements, the ledger row and its reservation                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              | No rule a case can discharge then says where prototyping evidence lives: `01_Spec.md`'s Scope.In still names `iter-NN/` as the active layout, in prose no case reads. A restarted loop keeps passing on the previous loop's aggregate files, and no rule says it must not                                                                                                                     |             |
 
 Under every option the `spec-0014` rerun runs Phase 2b, which also migrates
-the pack's eight-column ledger to the template's columns and seeds one `E2E`
-row at `todo` for each of its five stories, none of which has one: this
-repository declares no UI-bearing spec, so every story is active. Those rows
-are owed whatever is chosen, and they are listed so the approval covers them.
+the pack's eight-column ledger to the template's columns and seeds `E2E` rows
+at `todo` for its five stories, none of which has one: this repository
+declares no UI-bearing spec, so every story is active. Five is a floor on the
+rows rather than their count, because Phase 2b seeds one row per
+independently observable boundary a story's criteria name. The approval
+covers the rows that derivation seeds, and they are owed whatever is chosen.
 
 **Stopping the mirror is not offered.** Nothing in the criterion requires it:
 the criterion is about what verify accepts as a source, not about what
@@ -106,13 +125,22 @@ and a project whose evidence exists only in those directories starts failing
 the gate. `spec-0012` takes no side: it requires the mirror to be written under
 every option.
 
-Option 2 also moves the aggregate directories aside on a cycle-0 reset,
+Option 2 also moves the aggregate directories aside when cycle 0 starts,
 because without that it would keep a gate that passes a restarted loop on the
-previous loop's files. Moving them into the reset's backup rather than deleting
-them keeps what may be the only copy of the previous loop's accepted handoff:
-the backup holds `iter-00/` alone, and the later `iter-NN/` directories are
-removed. It is what makes "the handoff copy of the current loop" true of what
-the check reads.
+previous loop's files. Moving them into a backup rather than deleting them
+keeps what may be the only copy of the previous loop's accepted handoff: the
+`iter-00` backup holds `iter-00/` alone, and the later `iter-NN/` directories
+are removed.
+
+- **The backup is their own**, `aggregate.backup-<ISO>/`, beside
+  `iter-00.backup-<ISO>/` and carrying the same `<ISO>` when both are written.
+  `REQ-0012-0067` requires the `iter-00` backup to be byte-equivalent to
+  `iter-00/`, and adding the directories to it would break that.
+- **The move does not wait for an `iter-00/`.** A project whose `iter-00/` was
+  removed by hand, or that holds only aggregate files, starts cycle 0 without
+  `--force`, and would otherwise pass the new loop on the old files.
+
+Together they make "the current loop's capture" true of what the check reads.
 
 What option 2 costs is worth naming rather than discounting. The aggregate
 directories hold one file per screen, so a screen captured in two iterations
@@ -124,12 +152,14 @@ rather than discovering it.
 
 ## Blocked downstream items
 
-| Item                                                                                       | Kind         | Why it depends on the artifact                                                                                                                                                                                                                                     |
-| ------------------------------------------------------------------------------------------ | ------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `spec-0014/TDD-0033`                                                                       | `ledger-row` | Its `TC-Refs` is `TC-0014-0033`, whose `Expected` is the clause in dispute. The two aggregate-only cases in `uiEvidenceArtifacts.test.ts` discriminate it, and they pass under option 2 and fail under option 1, so the row can record nothing until one is chosen |
-| `spec-0014/TC-0014-0033`                                                                   | `spec`       | The test case restates the criterion, so it moves with whatever the criterion becomes                                                                                                                                                                              |
-| `.qfai/contracts/cli/qfai-prototyping-iterate.md`                                          | `contract`   | Option 1 re-scopes its "aggregate-dir SSOT" wording and option 2 its cycle-0 reset clause, so no other contract rerun may advance either while the choice is open                                                                                                  |
-| `_policies/06_Glossary.md`, "mandatory UI evidence"; `_policies/07_Constraints.md` `TC-07` | `spec`       | Option 1 re-scopes the evidence they define, so no other policy rerun may reword them while the choice is open                                                                                                                                                     |
+| Item                                                                                                                                 | Kind         | Why it depends on the artifact                                                                                                                                                                                                                                     |
+| ------------------------------------------------------------------------------------------------------------------------------------ | ------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `spec-0014/TDD-0033`                                                                                                                 | `ledger-row` | Its `TC-Refs` is `TC-0014-0033`, whose `Expected` is the clause in dispute. The two aggregate-only cases in `uiEvidenceArtifacts.test.ts` discriminate it, and they pass under option 2 and fail under option 1, so the row can record nothing until one is chosen |
+| `spec-0014/TC-0014-0033`                                                                                                             | `spec`       | The test case restates the criterion, so it moves with whatever the criterion becomes                                                                                                                                                                              |
+| `spec-0014/AC-0014-0005`                                                                                                             | `spec`       | The criterion in dispute: option 2 narrows it and option 3 withdraws it, so no other `spec-0014` rerun may advance it while the choice is open                                                                                                                     |
+| `spec-0014/BR-0014-0005`; `spec-0014/EX-0014-0026`                                                                                   | `spec`       | Option 3 withdraws both with the criterion, their only parent, so neither may be advanced while that outcome is open                                                                                                                                               |
+| `.qfai/contracts/cli/qfai-prototyping-iterate.md`                                                                                    | `contract`   | Option 1 re-scopes its "aggregate-dir SSOT" wording and option 2 its cycle-0 reset and mirror clauses, so no other contract rerun may advance either while the choice is open                                                                                      |
+| `_policies/06_Glossary.md`, "mandatory UI evidence"; `_policies/07_Constraints.md` `TC-07`; `_policies/05_Contracts.md` `EVID-PROT2` | `spec`       | Option 1 re-scopes the evidence they define, so no other policy rerun may reword them while the choice is open                                                                                                                                                     |
 
 - Not blocked by this CR: every other `spec-0014` row. `TDD-0034` is held by a
   separate obstacle recorded with it — its selector names one case asserting
@@ -162,6 +192,7 @@ rather than discovering it.
   | `.qfai/specs/spec-0012/09_delta.md`               | options 1 and 2 |
   | `.qfai/specs/_policies/06_Glossary.md`            | option 1        |
   | `.qfai/specs/_policies/07_Constraints.md`         | option 1        |
+  | `.qfai/specs/_policies/05_Contracts.md`           | option 1        |
   | `.qfai/specs/_policies/10_delta.md`               | option 1        |
 
   **This section is reduced to the approved outcome before `Status: approved` is
@@ -177,7 +208,7 @@ rather than discovering it.
   `packages/qfai/src/cli/commands/validate.ts`, and
   `packages/qfai/tests/validators/uiEvidenceArtifacts.test.ts`. Under option 2:
   `packages/qfai/src/cli/commands/prototypingIterate.ts`, for what a cycle-0
-  reset moves aside, and `packages/qfai/tests/cli/commands/prototypingIterate.test.ts`.
+  start moves aside, and `packages/qfai/tests/cli/commands/prototypingIterate.test.ts`.
   No option changes what the mirror writes. Neither
   `packages/qfai/src/core/validators/skill/prototypingSkill.ts` nor the shipped
   `qfai-prototyping` skill is among them: the skill-text check already accepts
@@ -200,11 +231,11 @@ layout obligation altogether (option 3)?
 
 1. Owner reruns, by outcome:
 
-   | Option | Reruns                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
-   | ------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-   | 1      | `/qfai-sdd --contract .qfai/contracts/cli/qfai-prototyping-iterate.md`, mode `re-derive`: "aggregate-dir SSOT" is re-scoped to the handoff copy it is; the contract declares no ID, so the path form names it. `/qfai-sdd`, mode `re-derive`: the glossary's "mandatory UI evidence" and `TC-07` name the `iter-NN/` paths. `/qfai-sdd spec-0014`, mode `re-derive`: no statement moves, and Phase 2b re-points `TDD-0033`. The product change follows under `/qfai-implement` |
-   | 2      | `/qfai-sdd spec-0014`, mode `re-derive`: `AC-0014-0005` says the aggregate directories are the handoff copy a required-path check may read and that evidence read through them does not record its iteration; `TC-0014-0033` follows it. `/qfai-sdd --contract .qfai/contracts/cli/qfai-prototyping-iterate.md`, mode `re-derive`: the cycle-0 reset clause says a reset moves the aggregate directories into the same backup as `iter-00/`                                    |
-   | 3      | `/qfai-sdd spec-0014`, mode `re-derive`: `AC-0014-0005`, `BR-0014-0005`, `EX-0014-0026` and `TC-0014-0033` are withdrawn together, so no rule is left citing a withdrawn criterion                                                                                                                                                                                                                                                                                             |
+   | Option | Reruns                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
+   | ------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+   | 1      | `/qfai-sdd --contract .qfai/contracts/cli/qfai-prototyping-iterate.md`, mode `re-derive`: "aggregate-dir SSOT" is re-scoped to the handoff copy it is; the contract declares no ID, so the path form names it. `/qfai-sdd`, mode `re-derive`: the glossary's "mandatory UI evidence" and `TC-07` name the `iter-NN/` paths, and `05_Contracts.md`'s `EVID-PROT2` admits the image pair an iteration directory then carries. `/qfai-sdd spec-0014`, mode `re-derive`: no statement moves, and Phase 2b re-points `TDD-0033`. The product change follows under `/qfai-implement`                                          |
+   | 2      | `/qfai-sdd spec-0014`, mode `re-derive`: `AC-0014-0005` says the aggregate directories are the copy of the loop's latest capture a required-path check may read, the accepted handoff once the loop converges, and that evidence read through them does not record its iteration; `TC-0014-0033` follows it. `/qfai-sdd --contract .qfai/contracts/cli/qfai-prototyping-iterate.md`, mode `re-derive`: the cycle-0 reset clause says cycle 0 moves the aggregate directories into `aggregate.backup-<ISO>/`, with or without an `iter-00/`, and the mirror clause says the mirror runs at the end of every capture pass |
+   | 3      | `/qfai-sdd spec-0014`, mode `re-derive`: `AC-0014-0005`, `BR-0014-0005`, `EX-0014-0026` and `TC-0014-0033` are withdrawn together, so no rule is left citing a withdrawn criterion                                                                                                                                                                                                                                                                                                                                                                                                                                      |
 
    Each rerun records this Change Request as one row of a delta's
    `## Change Requests` table — `CR ID`, `Upstream artifact`, `Mode`,
@@ -212,7 +243,17 @@ layout obligation altogether (option 3)?
    every option, `spec-0012`'s for the contract rerun under options 1 and 2, and
    `_policies/10_delta.md` for the policy rerun under option 1. Every
    `spec-0014` rerun's Phase 2b also migrates that ledger's columns and seeds
-   the five `E2E` rows named under the options table.
+   the `E2E` rows named under the options table.
+
+   **`/qfai-atdd spec-0014` then refreshes
+   `.qfai/evidence/coverage-depth-spec-0014.md`, under every option.** Its
+   Coverage Depth Matrix scores `TC-0014-0033` and records the contradiction in
+   its cells and totals: under options 1 and 2 the case changes, and under
+   option 3 it is withdrawn. The matrix is owned from the ATDD stage onward, and
+   `/qfai-implement` may not re-derive it
+   (`.qfai/assistant/skills/qfai-implement/references/plan-phase.md`), so the
+   refresh goes through that stage's reviewer gate, which re-issues its verdict
+   and audited hash with it.
 
 2. Downstream ledger sweep for `spec-0014/TDD-0033`.
    - **Option 1: reset to `todo`** with this CR's ID in `DR-ID`. No statement
@@ -235,11 +276,20 @@ layout obligation altogether (option 3)?
 3. Product and test work under `/qfai-implement`, by outcome. Under option 1,
    invert the two aggregate-only cases in `uiEvidenceArtifacts.test.ts`: each
    creates only aggregate files and requires no issue, which option 1 makes a
-   failure. Under option 2, make a cycle-0 reset move the aggregate
-   `screenshots/` and `html/` directories into its backup, and add a case that
-   restarts a captured loop without `--capture` and requires the required-path
-   check to fail while the backup still holds the moved files. Under option 2 the lookup's cases need no change: the two
-   aggregate-only cases already discriminate the narrowed criterion.
+   failure. Under option 2, make cycle 0 move the aggregate
+   `screenshots/` and `html/` directories into `aggregate.backup-<ISO>/`,
+   leaving `iter-00.backup-<ISO>/` as it is, and add two cases:
+   - a captured loop restarted with `--force` and without `--capture`, which
+     requires the required-path check to fail while the aggregate backup still
+     holds the moved files and the `iter-00` backup holds exactly `iter-00/`'s;
+   - the same restart in a project with aggregate files and no `iter-00/`,
+     where cycle 0 needs no `--force`, which requires the same move.
+
+   A loop that has not converged needs no new case:
+   `prototypingIterate.aggregateMirror.test.ts` captures cycle 0, which cannot
+   have converged, and requires the directories to hold that capture. Under
+   option 2 the lookup's cases need no change either: the two aggregate-only
+   cases already discriminate the narrowed criterion.
 
 ## Resolution
 
