@@ -232,7 +232,7 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   test for it pins that reading. While a loop runs, and after one stops at its
   iteration limit, the directories hold a capture nobody accepted.
 
-  `CR-20260913-0009` records both sides, blocks the ledger row and the
+  `CR-20260913-0030` records both sides, blocks the ledger row and the
   statements the options reword, and puts the choice: reword the documents to
   match the command, move the mirror to the converged stop as the documents
   already say, or keep the per-capture mirror and move the directories aside

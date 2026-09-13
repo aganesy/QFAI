@@ -1,6 +1,6 @@
 # Change Request
 
-- ID: `CR-20260913-0009`
+- ID: `CR-20260913-0030`
 - Title: `The aggregate mirror is specified on convergence and runs after every capture pass`
 - Raised by: `Claude Code`
 - Raised at: `2026-09-13T08:03:53Z`
