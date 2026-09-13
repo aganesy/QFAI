@@ -132,7 +132,7 @@ written, and logs each moved file to `mutation-log.jsonl`. The
 required-path check reads the aggregate directories before the
 iteration directories, so a restarted loop holds no evidence until it
 captures again. A move that fails stops the run before any evidence is
-cleared.
+cleared, with whatever the reset had already moved put back.
 
 ## `--capture` and `--auto-serve` (REQ-0109 / REQ-0110)
 

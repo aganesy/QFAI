@@ -218,6 +218,49 @@ describe("iterate --cycle 0 destructive-rerun gate", () => {
     }
   });
 
+  it("puts back what the reset moved when a later move fails", async () => {
+    // A failed reset that left `screenshots/` moved and `html/` in place would
+    // hold half a loop's evidence in each place.
+    const root = await newTempDir();
+    await seedProject(root);
+    await seedExistingIter00(root, "prior loop seed");
+    const evidenceRoot = path.join(root, ".qfai/evidence/prototyping");
+    for (const { dir, file } of [
+      { dir: "screenshots", file: "home.png" },
+      { dir: "html", file: "home.html" },
+    ]) {
+      await mkdir(path.join(evidenceRoot, dir), { recursive: true });
+      await writeFile(path.join(evidenceRoot, dir, file), `prior ${file}`, "utf-8");
+    }
+    // A non-empty directory already at the backup's `html` refuses the move.
+    const FIXED_ISO = "2026-01-01T00:00:00.000Z";
+    vi.spyOn(Date.prototype, "toISOString").mockReturnValue(FIXED_ISO);
+    const stamp = FIXED_ISO.replace(/[:.]/g, "-");
+    const collision = path.join(evidenceRoot, `aggregate.backup-${stamp}`, "html");
+    await mkdir(collision, { recursive: true });
+    await writeFile(path.join(collision, "stop-rename.marker"), "x", "utf-8");
+    const stderr = captureStderr();
+
+    const exit = await runPrototypingIterate({
+      root,
+      cycle: 0,
+      targetUrl: "http://localhost:5173",
+      force: true,
+    });
+
+    expect(exit).toBe(2);
+    expect(await readFile(path.join(evidenceRoot, "screenshots", "home.png"), "utf-8")).toBe(
+      "prior home.png",
+    );
+    expect(await readFile(path.join(evidenceRoot, "html", "home.html"), "utf-8")).toBe(
+      "prior home.html",
+    );
+    expect(await readFile(path.join(evidenceRoot, "iter-00", "prior-loop.marker"), "utf-8")).toBe(
+      "prior loop seed",
+    );
+    expect(stderr.join("")).toContain("back in place");
+  });
+
   it("previews the aggregate move under --dry-run and moves nothing", async () => {
     const root = await newTempDir();
     await seedProject(root);

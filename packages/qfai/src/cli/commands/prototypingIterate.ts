@@ -38,6 +38,7 @@ import {
   readFile,
   rename,
   rm,
+  rmdir,
   stat,
   unlink,
   writeFile,
@@ -766,10 +767,14 @@ export async function runPrototypingIterate(
 
   // One stamp for every backup this reset writes, so they read as one reset.
   const resetStamp = new Date().toISOString().replace(/[:.]/g, "-");
-  if (cycleZeroReset !== null) {
+  const iter00BackupAbs =
+    cycleZeroReset === null
+      ? null
+      : path.join(cycleZeroReset.evidenceRootAbs, `iter-00.backup-${resetStamp}`);
+  if (cycleZeroReset !== null && iter00BackupAbs !== null) {
     {
-      const { evidenceRootAbs, iter00Abs } = cycleZeroReset;
-      const backupAbs = path.join(evidenceRootAbs, `iter-00.backup-${resetStamp}`);
+      const { iter00Abs } = cycleZeroReset;
+      const backupAbs = iter00BackupAbs;
       // Every destructive iter-NN mutation MUST funnel through the
       // mutation-log writer. Walk the iter-00 tree once BEFORE the
       // rename so each moved file gets one JSONL line.
@@ -827,9 +832,19 @@ export async function runPrototypingIterate(
     );
     if (!moved.ok) {
       const reason = moved.cause instanceof Error ? moved.cause.message : String(moved.cause);
+      // The `iter-00` backup this reset made goes back as well, so a reset that
+      // fails leaves the prior loop as it found it.
+      const left = [...moved.stranded];
+      if (cycleZeroReset !== null && iter00BackupAbs !== null) {
+        await rename(iter00BackupAbs, cycleZeroReset.iter00Abs).catch(() => {
+          left.push(iter00BackupAbs);
+        });
+      }
       error(
         `qfai prototyping iterate --cycle 0: could not move ${toRootRelative(options.root, moved.failedDir)} aside (${reason}). ` +
-          "Aborting before clearing evidence. " +
+          (left.length === 0
+            ? "No evidence was cleared, and what this reset had moved is back in place. "
+            : `No evidence was cleared, but ${left.map((abs) => toRootRelative(options.root, abs)).join(" and ")} could not be moved back. `) +
           "Resolve the filesystem error (Windows file lock / EACCES / EBUSY are common causes) and rerun.",
       );
       return 2;
@@ -2430,21 +2445,27 @@ function toRootRelative(root: string, absPath: string): string {
 
 /**
  * Move each named aggregate directory into `aggregate.backup-<stamp>/`, after
- * logging every file in it as moved. Stops at the first directory that cannot be
- * moved, naming it.
+ * logging every file in it as moved.
+ *
+ * All or none: at the first directory that cannot be moved, the ones already
+ * moved are put back, and any that cannot be are named in `stranded`.
  */
 async function moveAggregateDirsAside(
   root: string,
   evidenceRootAbs: string,
   names: readonly string[],
   stamp: string,
-): Promise<{ ok: true; backupAbs: string } | { ok: false; failedDir: string; cause: unknown }> {
+): Promise<
+  | { ok: true; backupAbs: string }
+  | { ok: false; failedDir: string; cause: unknown; stranded: string[] }
+> {
   const backupAbs = path.join(evidenceRootAbs, `aggregate.backup-${stamp}`);
   try {
     await mkdir(backupAbs, { recursive: true });
   } catch (cause) {
-    return { ok: false, failedDir: backupAbs, cause };
+    return { ok: false, failedDir: backupAbs, cause, stranded: [] };
   }
+  const moved: string[] = [];
   for (const name of names) {
     const sourceAbs = path.join(evidenceRootAbs, name);
     try {
@@ -2464,8 +2485,17 @@ async function moveAggregateDirsAside(
     }
     try {
       await rename(sourceAbs, path.join(backupAbs, name));
+      moved.push(name);
     } catch (cause) {
-      return { ok: false, failedDir: sourceAbs, cause };
+      const stranded: string[] = [];
+      for (const done of moved.reverse()) {
+        await rename(path.join(backupAbs, done), path.join(evidenceRootAbs, done)).catch(() => {
+          stranded.push(path.join(backupAbs, done));
+        });
+      }
+      // Removed only while empty: a backup directory that was already there stays.
+      if (stranded.length === 0) await rmdir(backupAbs).catch(() => undefined);
+      return { ok: false, failedDir: sourceAbs, cause, stranded };
     }
   }
   return { ok: true, backupAbs };
