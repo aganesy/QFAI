@@ -543,12 +543,20 @@ describe("evidence and verdicts carry a revision", () => {
  * A second implementation is what holds a notation that a prose rule cannot.
  * The block below builds the string the document describes, from records
  * covering every kind it names, and asserts two things of it: the fixed reading
- * reproduces a recorded address, and each reading the document rules out gives
- * a different one.
+ * reproduces the address recorded for those records, and each reading the
+ * document rules out gives a different one. The records are a vector written by
+ * hand, not a checkout, so step 1 is not what this holds.
  */
 describe("the working-tree address has one notation", () => {
+  /** A full object id. The vector holds how a revision is written, not which tree it names. */
   const REVISION = "649d8111147436408c90cbbe1b9f9b07e34da8cb";
-  /** Recorded for a clean checkout of that revision. */
+  /**
+   * The address of `RECORDS` under `REVISION`, taken once by the procedure.
+   *
+   * A synthetic vector for steps 3 and 4: the records are written by hand rather
+   * than collected from a checkout, so it holds the notation and says nothing
+   * about which paths step 1 lists.
+   */
   const RECORDED = "working-tree+fd5686a9d446725fba950775308babffc54a647a54386ede74db2f7b0e98f793";
 
   const sha256 = (input: Buffer): Buffer => createHash("sha256").update(input).digest();
@@ -761,7 +769,7 @@ describe("the working-tree address has one notation", () => {
     });
   }
 
-  it("reproduces a recorded address under the reading the document fixes", () => {
+  it("reproduces the vector address under the reading the document fixes", () => {
     expect(address(HEX_FULL_NO_TRAILING)).toBe(RECORDED);
   });
 
