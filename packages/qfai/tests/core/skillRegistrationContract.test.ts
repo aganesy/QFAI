@@ -509,9 +509,11 @@ describe("the gate reads a skill as the host does", () => {
     expect(codes).toContain("QFAI-SKILLS-014");
   });
 
-  it("reads nothing under a hidden tree, references included", async () => {
-    // Nothing under a hidden skill directory is read: its references answer no
-    // rule, and its citations vouch for no document.
+  it("reports nothing under a hidden tree no registered skill reaches", async () => {
+    // A hidden skill directory is not registered and is no root of the reference
+    // graph, so its entry point answers no rule and an unreached reference is no
+    // orphan. A document there that a registered skill names is still read, and
+    // reported when it cannot be.
     const root = await projectWithSkill(['description: "Does the thing."']);
     const skills = path.join(root, ".qfai", "assistant", "skills");
     await mkdir(path.join(skills, ".draft", "references"), { recursive: true });
@@ -604,9 +606,9 @@ describe("the gate reads a skill as the host does", () => {
   });
 
   it("passes over a hidden directory it cannot enumerate", async () => {
-    // The walk does not enter a hidden skill directory, so one this process
-    // cannot read fails nothing. Permission is the portable way to produce one,
-    // and neither Windows nor root honours it.
+    // The registration walks skip a hidden skill directory, and the document
+    // crawl passes over one it cannot list, so it fails nothing. Permission is
+    // the portable way to produce one, and neither Windows nor root honours it.
     if (process.platform === "win32" || process.getuid?.() === 0) return;
     const root = await projectWithSkill(['description: "Does the thing."']);
     const hidden = path.join(root, ".qfai", "assistant", "skills", ".draft");
