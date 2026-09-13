@@ -865,26 +865,11 @@ function escapedGovernedPathNote(dest: string): string {
 }
 
 /**
- * Writes `source` onto the governed path `dest` atomically.
- *
- * The copy lands on a temporary beside the target first and is then `rename`d
- * over it, so a failure — a full disk, a read fault, a process killed between
- * the two steps — leaves the previous rule in place instead of a hole where a
- * normative file used to be. Deleting first and copying second had exactly
- * that window, and the file it removed was one qfai had already vouched for.
- *
- * `rename` also keeps the property the delete-first version was written for:
- * it replaces the directory entry itself, so a governed path left as a symlink
- * is replaced, never followed to overwrite whatever it points at.
- *
- * `expectedHash`, where the caller has one, is re-read immediately before the
- * `rename`. The refresh decides what to do from a hash taken earlier, and the
- * atomic staging only protects the *old* content from a failed copy — it does
- * nothing about an editor, or a concurrent `init`, that rewrote the target in
- * between, whose work the unconditional `rename` then discarded. Re-reading
- * does not make the swap atomic — POSIX has no conditional `rename` — but it
- * closes the window down to the two syscalls, and a target that moved is
- * reported instead of overwritten.
+ * Copies to a sibling staging file before publishing complete bytes.
+ * Replacement renames the directory entry, never following a target symlink.
+ * An expected hash is rechecked immediately before publication; this narrows,
+ * but cannot eliminate, the race with an editor. Create-only publication uses
+ * an exclusive hard link and never overwrites a path created concurrently.
  */
 export type GovernedWriteOutcome = "replaced" | "target-changed";
 
@@ -898,6 +883,7 @@ export async function replaceGovernedAsset(
   source: string,
   dest: string,
   expectedHash?: string,
+  mode: "replace" | "create-only" = "replace",
 ): Promise<GovernedWriteOutcome> {
   const directory = path.dirname(dest);
   await mkdir(directory, { recursive: true });
@@ -910,7 +896,14 @@ export async function replaceGovernedAsset(
       });
       return "target-changed";
     }
-    await rename(staging, dest);
+    if (mode === "create-only") {
+      await link(staging, dest);
+      await rm(staging, { force: true }).catch(() => {
+        // Best effort: the complete file is already published.
+      });
+    } else {
+      await rename(staging, dest);
+    }
     return "replaced";
   } catch (error: unknown) {
     await rm(staging, { force: true }).catch(() => {
@@ -1074,9 +1067,8 @@ async function restoreUnreadableGovernedAsset(
   const occupied = await pathExists(dest).catch(() => true);
   if (!occupied) {
     if (!options.dryRun) {
-      await mkdir(path.dirname(dest), { recursive: true });
       try {
-        await copyFile(source, dest, constants.COPYFILE_EXCL);
+        await replaceGovernedAsset(source, dest, undefined, "create-only");
       } catch (error: unknown) {
         if (!(error instanceof Error) || !("code" in error) || error.code !== "EEXIST") {
           throw error;

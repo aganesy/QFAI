@@ -98,6 +98,41 @@ describe("constitution creation preserves a path it cannot claim", () => {
     });
   });
 
+  it("leaves no partial constitution after a failed copy and succeeds on retry", async () => {
+    await withProject(async (root) => {
+      const target = path.join(root, CONSTITUTION);
+      let failed = false;
+      copyFileSpy.mockImplementation(async (actual, ...args) => {
+        const [source, destination] = args;
+        if (
+          !failed &&
+          typeof source === "string" &&
+          source.endsWith(path.join("constitution", "constitution.md")) &&
+          typeof destination === "string" &&
+          path.dirname(destination) === path.dirname(target)
+        ) {
+          failed = true;
+          await actual.writeFile(destination, "# Partial constitution\n");
+          throw Object.assign(new Error("copy failed after partial output"), { code: "EIO" });
+        }
+        return actual.copyFile(...args);
+      });
+
+      await expect(init(root)).rejects.toMatchObject({ code: "EIO" });
+      expect(failed).toBe(true);
+      await expect(lstat(target)).rejects.toMatchObject({ code: "ENOENT" });
+      const failedLock = await readAssistantAssetsLock(path.join(root, ".qfai", "assistant"));
+      expect(failedLock?.files["constitution/constitution.md"]).toBeUndefined();
+
+      passThrough();
+      await init(root);
+      const shipped = await readFile(path.join(ROOT, "packages/qfai/assets/init", CONSTITUTION));
+      expect((await readFile(target)).equals(shipped)).toBe(true);
+      const recovered = await readAssistantAssetsLock(path.join(root, ".qfai", "assistant"));
+      expect(recovered?.files["constitution/constitution.md"]).toBeDefined();
+    });
+  });
+
   it("records the canonical constitution created by a concurrent initializer", async () => {
     await withProject(async (root) => {
       const target = path.join(root, CONSTITUTION);

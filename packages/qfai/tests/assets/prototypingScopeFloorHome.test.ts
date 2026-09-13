@@ -74,6 +74,9 @@ describe("Article VII governs cutting above other articles and below the safety 
       );
       const floor = rule.split("## 2. What the ladder never removes")[1]?.split("## 3.")[0] ?? "";
       expect(floor).toContain("- Required traceability annotations.");
+      expect(flat(floor)).toContain(
+        "The execution ledger and full Article V chain also stay: Require → Spec → US → AC → BR → EX → TC → Tests → Code → Verification evidence.",
+      );
       expect(floor).toContain("- Anything the spec asks for.");
       expect(floor).toContain("- Repository quality gates and their verification evidence.");
       const items = [...floor.matchAll(/^- (.+)$/gm)].map((match) => match[1] ?? "");
