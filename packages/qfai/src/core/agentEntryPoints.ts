@@ -161,9 +161,7 @@ export function addRuleCitationsToList(
   if (insertAfter === -1) {
     // Every bullet deleted. The heading is the one place left that a reader
     // reads as the rule list, so the bullets go under it as their own block.
-    const heading = lines.findIndex(
-      (line, index) => open[index] === true && plainLine(line).startsWith(CROSS_AI_RULES_HEADING),
-    );
+    const heading = ruleListHeading(lines, open);
     if (heading === -1) return existing;
     const end = terminatorOf(lines[heading]);
     lines.splice(heading + 1, 0, end, ...bullets.map((bullet) => `${bullet}${end}`));
@@ -462,16 +460,71 @@ export function refreshSupersededRuleBullets(
 }
 
 /**
- * The same refresh for a file the run generates whole rather than delimits, read
- * in full as `addRuleCitationsToList` reads it.
+ * The same refresh for a file the run generates whole rather than delimits,
+ * bounded to the rule list under `CROSS_AI_RULES_HEADING`.
+ *
+ * With no markers, that heading is what marks the list as qfai's. Anywhere else
+ * in the file — a note the project wrote, a quote of an older rule — a line
+ * matching a shipped bullet is the project's text, so a file without the heading
+ * is returned unchanged.
  */
 export function refreshSupersededRuleBulletsInList(
   existing: string,
   section: string,
 ): RefreshedRuleBullets {
   const lines = existing.split("\n");
-  const range = { from: 0, to: lines.length };
-  return replaceSupersededBullets(existing, lines, outsideFences(lines), range, section);
+  const open = outsideFences(lines);
+  const range = ruleListRange(lines, open);
+  if (range === null) return { text: existing, refreshed: [] };
+  return replaceSupersededBullets(existing, lines, open, range, section);
+}
+
+/** Where `CROSS_AI_RULES_HEADING` stands outside every fenced block, or -1. */
+function ruleListHeading(lines: readonly string[], open: readonly boolean[]): number {
+  return lines.findIndex(
+    (line, index) => open[index] === true && plainLine(line).startsWith(CROSS_AI_RULES_HEADING),
+  );
+}
+
+/**
+ * The lines under `CROSS_AI_RULES_HEADING`, up to the next heading of the same
+ * or a higher level, or `null` when the file has no such heading.
+ *
+ * A deeper heading stays inside the list's section. A setext underline counts as
+ * a heading wherever a line of text sits directly above it: under a list item it
+ * is a thematic break instead, and ending the range there only stops it after
+ * that item.
+ */
+function ruleListRange(
+  lines: readonly string[],
+  open: readonly boolean[],
+): { from: number; to: number } | null {
+  const heading = ruleListHeading(lines, open);
+  const level = heading === -1 ? null : atxLevel(plainLine(lines[heading]));
+  if (level === null) return null;
+  for (let index = heading + 1; index < lines.length; index += 1) {
+    if (open[index] !== true) continue;
+    const found = atxLevel(plainLine(lines[index])) ?? setextLevel(lines, open, index);
+    if (found !== null && found <= level) return { from: heading + 1, to: index };
+  }
+  return { from: heading + 1, to: lines.length };
+}
+
+/** The level of `text` as an ATX heading, or `null` when it is not one. */
+function atxLevel(text: string): number | null {
+  return /^ {0,3}(#{1,6})(?:[ \t]|$)/.exec(text)?.[1]?.length ?? null;
+}
+
+/** The level of the setext heading underlined by the line at `index`, or `null`. */
+function setextLevel(
+  lines: readonly string[],
+  open: readonly boolean[],
+  index: number,
+): number | null {
+  const underline = /^ {0,3}(=+|-+)[ \t]*$/.exec(plainLine(lines[index]));
+  if (underline === null || open[index - 1] !== true) return null;
+  if (plainLine(lines[index - 1]).trim() === "") return null;
+  return underline[1]?.startsWith("=") === true ? 1 : 2;
 }
 
 /**

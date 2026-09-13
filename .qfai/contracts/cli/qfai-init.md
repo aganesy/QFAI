@@ -161,11 +161,13 @@ is generated whole and carries none.
 It may also replace a rule summary a release wrote that a later template
 rewords. The line qualifies only when its own text, less a trailing CR, is
 exactly a spelling that shipped; it takes the template's bullet for the same
-master and keeps its terminator. The same bounds apply: inside the markers, and
-anywhere in the Copilot file's list. The master a summary describes is refreshed
-wherever the project has not edited it, and a summary left at the older wording
-would contradict it. A line with any other text — reworded, indented, quoted —
-is the project's. Both edits land in one write, and the report names each.
+master and keeps its terminator. It applies inside the markers, and in the
+Copilot file only under its `## Cross-AI rules (master)` heading, up to the next
+heading of the same or a higher level; elsewhere in that file a matching line is
+the project's. The master a summary describes is refreshed wherever the project
+has not edited it, and a summary left at the older wording would contradict it.
+A line with any other text — reworded, indented, quoted — is the project's. Both
+edits land in one write, and the report names each.
 
 **What it may not.** Anything else in the file. A bullet the project deleted is
 not restored, because that master's file is on disk and the copy skips it.

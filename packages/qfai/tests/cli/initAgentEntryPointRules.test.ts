@@ -1210,6 +1210,37 @@ describe("a later init refreshes a rule summary the project never edited", () =>
     });
   });
 
+  it("leaves the same line in another section of the Copilot file as it is", async () => {
+    await withProject(async (root) => {
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+      const copilot = path.join(root, ".github", "copilot-instructions.md");
+      const generated = await readFile(copilot, "utf-8");
+      const bullet = generated
+        .split("\n")
+        .find((line) => line.startsWith("- ") && line.includes(master));
+      expect(bullet).toBeDefined();
+      // The old line quoted in the project's own notes, one section above the
+      // rule list and one below it. Only the rule-list entry is qfai's.
+      const note = ["The rule used to read:", "", superseded, ""].join("\n");
+      const edited = generated
+        .replace(bullet ?? "", superseded)
+        .replace(
+          CROSS_AI_RULES_HEADING,
+          `## Before we adopted it\n\n${note}\n${CROSS_AI_RULES_HEADING}`,
+        )
+        .concat(`\n## Migration notes\n\n${note}`);
+      expect(occurrences(edited, superseded)).toBe(3);
+      await writeFile(copilot, edited, "utf-8");
+
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+
+      const headingAt = edited.indexOf(CROSS_AI_RULES_HEADING);
+      const listEntryAt = edited.indexOf(superseded, headingAt);
+      const expected = `${edited.slice(0, listEntryAt)}${bullet ?? ""}${edited.slice(listEntryAt + superseded.length)}`;
+      expect(await readFile(copilot, "utf-8")).toBe(expected);
+    });
+  });
+
   describe("which lines the refresh reads", () => {
     const template = [
       QFAI_AGENT_RULES_BEGIN,
@@ -1264,6 +1295,49 @@ describe("a later init refreshes a rule summary the project never edited", () =>
       expected[2] = current;
       expect(result.refreshed).toEqual([master]);
       expect(result.text).toBe(expected.join("\n"));
+    });
+
+    it("ends the Copilot rule list at the next heading of its level or higher", () => {
+      const existing = [
+        "# QFAI repository instructions (Copilot)",
+        "",
+        CROSS_AI_RULES_HEADING,
+        "",
+        superseded,
+        "",
+        "### Still part of the rule list",
+        "",
+        superseded,
+        "",
+        "Our own notes",
+        "-------------",
+        "",
+        superseded,
+        "",
+        "# Appendix",
+        "",
+        superseded,
+        "",
+      ].join("\n");
+
+      const result = refreshSupersededRuleBulletsInList(existing, template);
+
+      // A deeper heading stays inside the list; a setext or ATX heading at the
+      // list's level or above ends it.
+      const expected = existing.split("\n");
+      expected[4] = current;
+      expected[8] = current;
+      expect(result.refreshed).toEqual([master]);
+      expect(result.text).toBe(expected.join("\n"));
+    });
+
+    it("refreshes nothing in a Copilot file with no rule-list heading", () => {
+      const existing = ["# House instructions", "", superseded, ""].join("\n");
+
+      expect(refreshSupersededRuleBulletsInList(existing, template)).toEqual({
+        text: existing,
+        refreshed: [],
+      });
     });
   });
 });
