@@ -315,7 +315,6 @@ with its own approval; `2B` cannot be approved until it has landed.
   `spec-0002/TDD-0011`, `spec-0002/TDD-0012`, and `spec-0002/TDD-0001` under
   `2B` only —
   `packages/qfai/tests/validators/uix/threeLayer.test.ts`,
-  `packages/qfai/tests/validators/uix/screenContract.test.ts`,
   and under `2B` `packages/qfai/tests/core/sddPreflight.test.ts`
 - Product files, option 2 only — the option is implementation work, and the
   scope has to authorise what it edits. **The paths are split by statement**,

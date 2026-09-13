@@ -13,14 +13,21 @@
 // QFAI:SPEC-0013:TC-0013-0026
 // QFAI:SPEC-0013:TC-0013-0027
 
-import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
 import { describe, expect, it } from "vitest";
 
+import { run } from "../../src/cli/main.js";
 import { defaultConfig } from "../../src/core/config.js";
 import { validateDesignAudit } from "../../src/core/validators/designAudit.js";
+import {
+  PASSING_UI_CONTRACT,
+  seedPrototypingPreflightFixture,
+  startTargetServer,
+  stopTargetServer,
+} from "../helpers/prototypingPreflightFixture.js";
 
 type WorkspaceSeed = {
   uiContract: string;
@@ -57,6 +64,61 @@ async function withWorkspace(
     await writeFile(path.join(uiDir, "sample.yaml"), seed.uiContract, "utf-8");
     await task(root);
   } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+}
+
+type PreflightCheck = { id: string; severity: string; message: string };
+
+/**
+ * What `qfai prototyping preflight` answers over a workspace where every other
+ * check passes: its exit code, and the checks it reports as errors.
+ */
+async function prototypingPreflight(
+  uiContract: string,
+): Promise<{ exitCode: number | string | undefined; errors: PreflightCheck[] }> {
+  const root = await mkdtemp(path.join(os.tmpdir(), "qfai-aud001-preflight-"));
+  const target = await startTargetServer();
+  const previousExitCode = process.exitCode;
+  try {
+    await seedPrototypingPreflightFixture(root, target.url, uiContract);
+    const outPath = path.join(root, ".qfai", "report", "preflight.json");
+    process.exitCode = undefined;
+    await run(
+      [
+        "prototyping",
+        "preflight",
+        "--root",
+        root,
+        "--target-url",
+        target.url,
+        "--format",
+        "json",
+        "--out",
+        outPath,
+      ],
+      root,
+    );
+    const exitCode = process.exitCode;
+    const report: unknown = JSON.parse(await readFile(outPath, "utf-8"));
+    const checks: unknown[] =
+      typeof report === "object" &&
+      report !== null &&
+      "checks" in report &&
+      Array.isArray(report.checks)
+        ? report.checks
+        : [];
+    const errors = checks.filter(
+      (check): check is PreflightCheck =>
+        typeof check === "object" &&
+        check !== null &&
+        "severity" in check &&
+        check.severity === "error",
+    );
+    return { exitCode, errors };
+  } finally {
+    process.exitCode = previousExitCode;
+    await stopTargetServer(target.server);
     await rm(root, { recursive: true, force: true });
   }
 }
@@ -117,6 +179,25 @@ describe("TC-0013-0026: QFAI-AUD-001 aligned lane fails when primary_tasks is em
       // 3. Rule token: QFAI-AUD-001 appears in the message.
       expect(message).toMatch(/QFAI-AUD-001/);
     });
+  });
+
+  it("stops the /qfai-prototyping preflight on the screen with no primary task", async () => {
+    // The obligation names the stage refusing to start as well as the lane
+    // failing. Run where every other check passes, the command exits 0 on a
+    // populated contract, so the non-zero exit on the empty one is this check.
+    const populated = await prototypingPreflight(PASSING_UI_CONTRACT);
+    expect(populated.errors).toEqual([]);
+    expect(populated.exitCode ?? 0).toBe(0);
+
+    const empty = await prototypingPreflight(
+      PASSING_UI_CONTRACT.replace(
+        ["    primary_tasks:", "      - Browse the surface"].join(String.fromCharCode(10)),
+        "    primary_tasks: []",
+      ),
+    );
+    expect(empty.exitCode).toBe(1);
+    expect(empty.errors.map((check) => check.id)).toEqual(["prototyping.uiContracts"]);
+    expect(empty.errors[0]?.message).toContain(".qfai/contracts/ui/ui-0001.yaml#home");
   });
 });
 

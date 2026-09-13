@@ -4,6 +4,42 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ## [Unreleased]
 
+### Fixed
+
+- **The prototyping preflight refuses a screen with no primary task** (#1698).
+  The audit lane reported an empty `primary_tasks` as `QFAI-AUD-001`, but
+  `qfai prototyping preflight` never read the field, so the stage started on a
+  contract the lane refused. The preflight's UI contract check now fails and
+  names each screen that has no primary task.
+
+  The primary-task obligations also gained the cases they named and lacked: the
+  preflight refusing, and a structured task missing `label`. Before these
+  cases, dropping `label` from the required keys, or letting the stage start,
+  left every case passing.
+
+- **The completion gate recomputes the product-surface review's hash** (#1713).
+  A UI-affecting row carries three reviewer hashes, and the gate recomputed only
+  the spec and code-quality ones. A row could reach `done` with a parity verdict
+  and no hash, and a screenshot replaced after the verdict changed nothing the
+  gate read, because `Reviewed revision` excludes `.qfai/evidence/`.
+
+  A `PASS (clause N)` verdict now requires its four labelled fields and a
+  `Surface artifacts` manifest that names its captures, every one under
+  `.qfai/evidence/`. The hash is recomputed over the entry, the Coverage Depth
+  Matrix slice, and each capture. Captures are hashed raw, except `.md` and
+  `.html` files, which are normalized. The parity review pack is checked as the
+  product-surface-reviewer's.
+
+  The gate also reads the verdict forms the contract defines (#1726). It used to
+  compare the value with `PASS` exactly, so it rejected `PASS (clause N)` and
+  `n/a (not UI-affecting)` and accepted a bare `PASS`. Each form is now matched
+  whole: a verdict naming no clause is reported, and so is `n/a (UI-affecting)`,
+  which a match on the first word would have let skip the review. An `n/a` row
+  needs only the revision the clauses were evaluated at, and the manifest has to
+  come before the verdicts, like the other phase-authored fields. Captures are
+  ignored stage evidence, so where one is absent from the checkout, as on a fresh
+  clone, the gate skips the recomputation. It does the same for a review pack.
+
 ## [1.12.0] - 2026-09-12
 
 ### Added

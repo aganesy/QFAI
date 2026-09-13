@@ -498,29 +498,23 @@ it says so and names what carries it now.
    `tests/integration/qfai-traceability.md`, a file that documents itself as an annotation carrier
    and not a test. The cause is structural: the configured `testsDir` is the repository-root
    `tests/`, whose scan matched two files, both of them carriers. The package's real suite lives at
-   `packages/qfai/tests/**` and is not scanned at all. The two annotated files that do carry
-   `SPEC-0002` markers, `tests/validators/uix/threeLayer.test.ts` and
-   `tests/validators/uix/screenContract.test.ts`, are outside the scanned root, so their annotations
-   discharge nothing. Until that is resolved, no amount of testing can move an `L3` obligation in
-   this repository out of carrier-only.
+   `packages/qfai/tests/**` and is not scanned at all. The one annotated file that does carry
+   `SPEC-0002` markers, `tests/validators/uix/threeLayer.test.ts`, is outside the scanned root, so
+   its annotations discharge nothing. Until that is resolved, no amount of testing can move an `L3`
+   obligation in this repository out of carrier-only.
 6. **An annotated file carries test-case IDs that no longer exist.**
-   `tests/validators/uix/screenContract.test.ts` declares `TC-0002-0020` through `TC-0002-0024`.
-   None of those five appears in `06_Test-Cases.md`, whose active table holds five rows of its own.
-   The annotations point at obligations that were removed or never registered.
-   `tests/validators/uix/threeLayer.test.ts` is in a different position, and only partly the same
-   one: of the three ids it declares beside the obligation it reaches, `TC-0002-0012` and
-   `TC-0002-0026` appear in no table, while **`TC-0002-0011` is live** — an active row of
+   `tests/validators/uix/threeLayer.test.ts` declares `TC-0002-0012` and `TC-0002-0026`. Neither
+   appears in `06_Test-Cases.md`, whose active table holds five rows. The annotations point at
+   obligations that were removed or never registered. The third id the file declares beside the
+   obligation it reaches is in a different position: **`TC-0002-0011` is live**, an active row of
    `06_Test-Cases.md` that `TDD-0012` still names. That annotation is misplaced rather than
    dangling: the file reads no README and no `SKILL.md`, so it cannot discharge a wording
    obligation, and removing it is a different act from removing an id nothing declares.
-   The two files need different routes. `threeLayer.test.ts` is the file `TDD-0011`'s recorded
-   observation covers, so editing it stales that observation and the row owes a fresh one. The
-   route is the shared-artifact re-verification `CR-20260912-0003` step 6 sets out, which keeps
-   the row at `done` and needs no approval from that Change Request: the row's obligation does
-   not move under any of its outcomes, so nothing authorises a reset and nothing needs one.
-   `screenContract.test.ts` is named by no ledger row in any spec, so removing its five stale
-   annotations stales nothing and needs no reset. It is ordinary work, available now, and the
-   Change Request carries it in scope only so one reader finds both halves in one place.
+   `threeLayer.test.ts` is the file `TDD-0011`'s recorded observation covers, so editing it stales
+   that observation and the row owes a fresh one. The route is the shared-artifact
+   re-verification `CR-20260912-0003` step 6 sets out, which keeps the row at `done` and needs no
+   approval from that Change Request: the row's obligation does not move under any of its
+   outcomes, so nothing authorises a reset and nothing needs one.
 7. **The ledger is seven rows short of what seeds it.** `qfai-sdd`'s Phase 2b seeds
    `tdd/test-list.md` in four groups, and one of them is "one `Layer = E2E` row per **active**
    `US-*` from `02_User-stories.md` (obligation in `US-Refs`, `TC-Refs` = `-`)"
