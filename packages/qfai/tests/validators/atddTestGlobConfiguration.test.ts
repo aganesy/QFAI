@@ -199,6 +199,14 @@ describe("the stage says when the glob matcher refuses its globs", () => {
     }
   });
 
+  it("finishes the stage beside a glob holding a range no pattern engine compiles", async () => {
+    // Read for the file names it selects, the reversed range threw before
+    // either scan ran, and took every other finding of the run with it.
+    const root = await projectWithAcceptanceTest();
+    const found = await codes(root, ["tests/**/test_[z-a].*", "tests/**/*.ts"]);
+    expect(Array.isArray(found)).toBe(true);
+  });
+
   it("says nothing about a broad glob", async () => {
     // `tests/**` names no extension, and the stage scans the JavaScript and
     // TypeScript set for it, which is the documented fallback, not a defect.

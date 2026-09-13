@@ -669,9 +669,19 @@ describe("QFAI-TEST-003 — the vitest/jest skip form is its own rule", () => {
 
   it("leaves an unfilled scaffold to the rule that owns it", async () => {
     await withTests({ "tests/a.test.ts": SCAFFOLDED }, async (root) => {
-      const issues = await validateTestTodoStubs(root, CONFIG);
+      const issues = await validateTestTodoStubs(root, CONFIG, { placeholderScanned: () => true });
 
       expect(issues.filter((i) => i.code === "QFAI-TEST-003")).toEqual([]);
+    });
+  });
+
+  // Only a run that has that rule can leave the skeleton to it. A caller that
+  // does not say the rule reads the file, as `--profile tdd` cannot, keeps it.
+  it("reports an unfilled scaffold when no rule in the run owns it", async () => {
+    await withTests({ "tests/a.test.ts": SCAFFOLDED }, async (root) => {
+      const issues = await validateTestTodoStubs(root, CONFIG);
+
+      expect(issues.filter((i) => i.code === "QFAI-TEST-003")).toHaveLength(1);
     });
   });
 
@@ -709,7 +719,7 @@ describe("QFAI-TEST-003 — the vitest/jest skip form is its own rule", () => {
     ].join("\n");
 
     await withTests({ "tests/a.test.ts": mixed }, async (root) => {
-      const issues = await validateTestTodoStubs(root, CONFIG);
+      const issues = await validateTestTodoStubs(root, CONFIG, { placeholderScanned: () => true });
 
       expect(issues.filter((i) => i.code === "QFAI-TEST-003")).toEqual([]);
       expect(issues.filter((i) => i.code === "QFAI-TEST-001")).toHaveLength(1);

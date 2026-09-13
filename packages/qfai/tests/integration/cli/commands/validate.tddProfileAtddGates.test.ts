@@ -21,6 +21,7 @@ import {
   HANDOFF_WRITER_PAIRS,
 } from "../../../../src/core/validators/handoffSchemaPairs.js";
 import { SKILL_MANIFEST_PAIRS } from "../../../../src/core/validators/skillManifestPairs.js";
+import { SCAFFOLD_PLACEHOLDER_MARKER } from "../../../../src/core/atdd/scaffold.js";
 
 const CANONICAL_REL = ".qfai/report/validate.json";
 
@@ -30,6 +31,7 @@ const CANONICAL_REL = ".qfai/report/validate.json";
  * trip the very gate it exercises when qfai validates its own repository.
  */
 const TODO = ".todo";
+const SKIP = ".skip";
 
 type Finding = { code: string; severity: string; message: string };
 
@@ -94,6 +96,22 @@ async function seedStub(root: string, relDir: string): Promise<void> {
   await writeFile(
     path.join(testDir, "us-0001.test.ts"),
     [`it${TODO}("QFAI:SPEC-0001:US-0001 covers the login flow");`, ""].join("\n"),
+    "utf-8",
+  );
+}
+
+/** An unfilled `qfai atdd scaffold` skeleton at `relDir`, as the writer leaves it. */
+async function seedScaffold(root: string, relDir: string): Promise<void> {
+  const testDir = path.join(root, ...relDir.split("/"));
+  await mkdir(testDir, { recursive: true });
+  await writeFile(
+    path.join(testDir, "tc-0001.test.ts"),
+    [
+      `// ${SCAFFOLD_PLACEHOLDER_MARKER}`,
+      "// TODO: implement assertion for TC-0001-0001",
+      `it${SKIP}("QFAI:SPEC-0001:TC-0001-0001 pending", () => {});`,
+      "",
+    ].join("\n"),
     "utf-8",
   );
 }
@@ -406,6 +424,25 @@ describe("--profile tdd can observe the ATDD routing gates", () => {
       await runValidate({ root, strict: false });
       const stubs = (await findings(root)).filter((entry) => entry.code === "QFAI-TEST-001");
       expect(stubs).toHaveLength(1);
+    });
+  });
+
+  it("reports an unfilled scaffold under --profile tdd, which runs no placeholder rule", async () => {
+    // `D-SCAFFOLD-PLACEHOLDER` owns a marked skeleton only in a run that has
+    // it. `--profile tdd` does not, so standing aside there passed the stage's
+    // completion gate over a test that never runs. `full` has it, and the
+    // skeleton stays that rule's.
+    await withCiEnv(false, async () => {
+      await withProject(async (root) => {
+        await seedRepoWideTestGlobs(root);
+        await seedScaffold(root, "tests/integration/spec-0001");
+        await runValidate({ root, strict: false, profile: "tdd" });
+        expect((await findings(root)).map((entry) => entry.code)).toContain("QFAI-TEST-003");
+        await runValidate({ root, strict: false });
+        const full = (await findings(root)).map((entry) => entry.code);
+        expect(full).not.toContain("QFAI-TEST-003");
+        expect(full).toContain("D-SCAFFOLD-PLACEHOLDER");
+      });
     });
   });
 

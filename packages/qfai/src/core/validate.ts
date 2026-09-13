@@ -986,7 +986,17 @@ async function runTddValidators(
     // profile `qfai-implement` gates on can see the corruption at all.
     ...(includeTableArity ? await validateMarkdownTableArity(root, config) : []),
     ...(await validateTddList(root, config)),
-    ...(await validateTestTodoStubs(root, config)),
+    // A marked skeleton is left to `D-SCAFFOLD-PLACEHOLDER` only in a run that
+    // has that validator. `full` runs the ATDD profile beside this one, which is
+    // what the opt-out above says; `--profile tdd` runs no such validator, so
+    // there a skeleton whose tests never run is this gate's to report.
+    ...(await validateTestTodoStubs(
+      root,
+      config,
+      includeAtddCodeTraceability
+        ? {}
+        : { placeholderScanned: scaffoldPlaceholderScannedFilter(root, config) },
+    )),
     // `qfai-implement` names `--profile tdd` as its only completion gate, and
     // it is the stage that creates test-routing obligations. Without this the
     // profile was structurally incapable of observing QFAI-ATDD-111/112/113/

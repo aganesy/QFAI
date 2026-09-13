@@ -160,7 +160,8 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   and leaves the extension open, such as `*.test.*`, `*.{test,spec}.*` or
   `test_[0-9].*`. A negative entry names no extension, either for the stub gate
   or for the scan's own file pattern; one opening a negated extglob, such as
-  `!(fixtures)/**/*.zig`, selects, and names its extension to both.
+  `!(fixtures)/**/*.zig`, selects, and names its extension to both. A negated
+  group in the file name, as in `*.!(json)`, keeps every file it selects.
 
   The coverage scan reads a collected file the same way: a data file an
   extension-broad glob sweeps into an acceptance layer is not a source, so an
@@ -174,9 +175,9 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   `info`, which `--fail-on error` passes. `scan.matchedFileCount` therefore
   counts acceptance files rather than glob matches.
 
-  A malformed `validation.traceability.testFileGlobs` entry no longer rejects
-  the whole validator batch. It degrades to an empty scan, so the finding the
-  user can act on still reaches them alongside every other result.
+  A `validation.traceability.testFileGlobs` entry naming a range no pattern
+  engine compiles, such as `test_[z-a].*`, no longer ends the run. It selects
+  nothing, and every other glob is still read.
 
   A misplaced test-case reference is fixed in the file that carries it, and the
   remediation now names that file, whichever package's suite it sits in. Every
@@ -208,7 +209,8 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   its scan, the four directories under `paths.testsDir` and the writer's own
   basename patterns. A marked skeleton outside either was exempt from this gate
   and uncollected by that one, leaving the ATDD gate green over a suite that
-  does not run.
+  does not run. `--profile tdd` runs no such validator, so there the stub gate
+  reports every marked skeleton it reads.
 
 ## [1.12.0] - 2026-09-12
 

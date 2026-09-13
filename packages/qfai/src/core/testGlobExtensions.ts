@@ -1,11 +1,11 @@
 /**
  * The file extensions a project's test globs select outright.
  *
- * A glob may be extension-broad, and one that is sweeps data files into a test
- * directory beside the suites it was written for. A scan that reads sources
- * keeps a collected file only when its extension is one the scan reads or one
- * these helpers find named in a glob, so a fixture is not read as a source and
- * a language the project selected on purpose is not dropped.
+ * An extension-broad glob sweeps data files into a test directory beside the
+ * suites it was written for. A scan that reads sources keeps a collected file
+ * only when its extension is one the scan reads or one these helpers find named
+ * in a glob, so a fixture is not read as a source and a language the project
+ * selected on purpose is not dropped.
  */
 
 /**
@@ -102,11 +102,13 @@ export function globExtensions(globs: readonly string[]): string[] {
  * as `*.test.*`, `*.{test,spec}.*` and `test_[0-9].*` do.
  *
  * Such a glob selects a test by its name whatever the extension, so a file it
- * matches is a source even when no glob names that extension. A last segment
- * of wildcards alone names nothing, a negative entry selects nothing, and a
- * segment this reader cannot translate — a negated extglob group, an unclosed
- * brace or bracket — is left to {@link globExtensions}. Matched
- * case-sensitively, as the glob that collected the file was.
+ * matches is a source even when no glob names that extension. A negated group
+ * names what it leaves out, so `*.!(json)` selects `pay.zig` this way. A last
+ * segment of wildcards alone names nothing, a negative entry selects nothing,
+ * and a segment this reader cannot translate — an unclosed group, brace or
+ * bracket, or a range the pattern engine rejects — is left to
+ * {@link globExtensions}. Matched case-sensitively, as the glob that collected
+ * the file was.
  */
 export function namedTestFileMatcher(globs: readonly string[]): (fileName: string) => boolean {
   const patterns: RegExp[] = [];
@@ -115,7 +117,14 @@ export function namedTestFileMatcher(globs: readonly string[]): (fileName: strin
     const last = glob.split("/").at(-1) ?? "";
     if (!/[^*?.]/.test(last)) continue;
     const source = segmentPattern(last);
-    if (source !== null) patterns.push(new RegExp(`^${source}$`));
+    if (source === null) continue;
+    try {
+      patterns.push(new RegExp(`^${source}$`));
+    } catch {
+      // A class the engine rejects, such as the reversed range `[z-a]`. No file
+      // is selected through it, so it names none. Thrown, it ended the run
+      // before the scan could report the glob.
+    }
   }
   return (fileName) => patterns.some((pattern) => pattern.test(fileName));
 }
@@ -125,16 +134,25 @@ export function namedTestFileMatcher(globs: readonly string[]): (fileName: strin
  * this reader does not translate. Braces and extglob groups become
  * alternations, a bracket expression stays a character class, and `*` and `?`
  * stay inside the segment.
+ *
+ * A negated group matches wherever none of its alternatives, followed by the
+ * rest of the segment, would, which is how the glob matcher reads it. Inside
+ * another group it is not translated.
  */
-function segmentPattern(segment: string): string | null {
+function segmentPattern(segment: string, nested = false): string | null {
   let source = "";
   for (let index = 0; index < segment.length; index += 1) {
     const char = segment[index] ?? "";
     if ("@?+*!".includes(char) && segment[index + 1] === "(") {
       const close = segment.indexOf(")", index + 2);
-      if (char === "!" || close < 0) return null;
+      if (close < 0) return null;
       const group = alternation(segment.slice(index + 2, close).split("|"));
       if (group === null) return null;
+      if (char === "!") {
+        const rest = nested ? null : segmentPattern(segment.slice(close + 1));
+        if (rest === null) return null;
+        return `${source}(?:(?!${group}${rest}$)[^/]*?)${rest}`;
+      }
       source += char === "@" ? group : `${group}${char}`;
       index = close;
     } else if (char === "{") {
@@ -163,7 +181,7 @@ function segmentPattern(segment: string): string | null {
 function alternation(alternatives: readonly string[]): string | null {
   const sources: string[] = [];
   for (const alternative of alternatives) {
-    const source = segmentPattern(alternative);
+    const source = segmentPattern(alternative, true);
     if (source === null) return null;
     sources.push(source);
   }

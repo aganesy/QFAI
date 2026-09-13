@@ -1306,9 +1306,9 @@ export type TestTodoStubOptions = {
    * where that validator reports it instead. It scans four directories under
    * `paths.testsDir` and nothing else, so a marked skeleton anywhere else — a
    * package-local acceptance suite, which this gate does read — stays this
-   * gate's to report. Absent, every marked file is exempt, which is what a
-   * caller scanning only those directories wants. The predicate takes a
-   * repository-relative, posix-slashed path.
+   * gate's to report. Absent, no file is exempt: a run without that validator,
+   * as `--profile tdd` is, has nothing else to report a skeleton whose tests
+   * never run. The predicate takes a repository-relative, posix-slashed path.
    */
   placeholderScanned?: (relativePath: string) => boolean;
 };
@@ -1577,7 +1577,7 @@ export async function validateTestTodoStubs(
         content,
         dialect,
         skippedTestSeverity,
-        options.placeholderScanned ?? (() => true),
+        options.placeholderScanned ?? (() => false),
       ),
     );
   }

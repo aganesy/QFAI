@@ -614,6 +614,44 @@ describe("the ATDD gate's file selection", () => {
     expect(issues.filter((issue) => issue.code === "QFAI-TEST-002")).toEqual([]);
   });
 
+  it("keeps a file a negated extension group selects", async () => {
+    const root = await newTempDir();
+    const config = atddConfig(["packages/*/tests/**/*.!(json)"]);
+    // The group names what it leaves out, so every other extension is the
+    // project's. Filtered as a broad glob, the suite was dropped before its
+    // language could be reported, and the fixture it leaves out stays out.
+    await writeTestFile(root, "packages/checkout/tests/integration/pay.zig", 'test "pays" {}\n');
+    await writeTestFile(root, "packages/checkout/tests/integration/data.json", "{}\n");
+
+    const issues = await validateTestTodoStubs(root, config, {
+      globs: atddAcceptanceTestGlobs(root, config, STUB_SOURCE_FILE_PATTERN),
+      fileFilter: atddAcceptanceLayerFilter(root, config),
+    });
+
+    const unscanned = issues.filter((issue) => issue.code === "QFAI-TEST-002");
+    expect(unscanned.map((issue) => issue.refs)).toEqual([[".zig"]]);
+  });
+
+  it("reads the other globs when one holds a range the pattern engine rejects", async () => {
+    const root = await newTempDir();
+    const config = atddConfig([
+      "packages/*/tests/**/test_[z-a].*",
+      "packages/*/tests/**/*.test.ts",
+    ]);
+    await writeTestFile(
+      root,
+      "packages/checkout/tests/integration/pay.test.ts",
+      `it${TODO}("pays");\n`,
+    );
+
+    const issues = await validateTestTodoStubs(root, config, {
+      globs: atddAcceptanceTestGlobs(root, config, STUB_SOURCE_FILE_PATTERN),
+      fileFilter: atddAcceptanceLayerFilter(root, config),
+    });
+
+    expect(issues.map((issue) => issue.code)).toContain("QFAI-TEST-001");
+  });
+
   it("reads a leading negated extglob as a selector", async () => {
     const root = await newTempDir();
     const config = atddConfig(["!(fixtures)/*/tests/**/*.zig"]);
