@@ -28,9 +28,10 @@ import path from "node:path";
 import { argv, cwd, exit, stdout } from "node:process";
 import { fileURLToPath } from "node:url";
 
-import { markersIn, readsFences } from "./check-conflict-markers.mjs";
-import { LIFECYCLE_MANIFESTS_REL, lifecycleProjection } from "./check-lifecycle-manifests.mjs";
-import { writeFormattedJson } from "./lib/write-declaration.mjs";
+// The repository's own modules are loaded after the conflict scan rather than imported here: a
+// module carrying a conflict block does not parse, and a static import would end the run before
+// the scan could name it.
+const CONFLICT_SCANNER_REL = "scripts/check-conflict-markers.mjs";
 
 /** The roots whose every file is pinned, repo-relative and POSIX-separated. */
 const PINNED_ROOTS = [".github/actions", "scripts"];
@@ -90,11 +91,23 @@ function digestOf(root, rel) {
  * the tree would drop a conflict inside it with nothing left to read. Every file
  * it seals is scanned, the workflow-pinned lists included.
  */
-function pathsWithConflictMarkers(root, rels) {
+async function pathsWithConflictMarkers(root, rels) {
+  let scanner;
+  try {
+    scanner = await import("./check-conflict-markers.mjs");
+  } catch (cause) {
+    // The scanner cannot vouch for itself when it does not load. Git's marker
+    // lines are what a merge leaves in a file that no longer parses, so they
+    // name the conflict; any other load failure is not this program's to explain.
+    const own = readFileSync(path.join(root, CONFLICT_SCANNER_REL), "utf-8");
+    if (/^(?:<{7}|={7}|>{7}|\|{7})(?: |$)/m.test(own)) return [CONFLICT_SCANNER_REL];
+    throw cause;
+  }
   return rels.filter(
     (rel) =>
-      markersIn(readFileSync(path.join(root, rel), "utf-8"), { fenced: readsFences(rel) }).length >
-      0,
+      scanner.markersIn(readFileSync(path.join(root, rel), "utf-8"), {
+        fenced: scanner.readsFences(rel),
+      }).length > 0,
   );
 }
 
@@ -108,7 +121,9 @@ async function main(root) {
   }
 
   const listPath = path.join(root, LIST_REL);
-  const conflicted = pathsWithConflictMarkers(root, [...new Set([...rels, ...WORKFLOW_PINNED])]);
+  const conflicted = await pathsWithConflictMarkers(root, [
+    ...new Set([...rels, ...WORKFLOW_PINNED]),
+  ]);
   if (conflicted.length > 0) {
     stdout.write(
       `pin-guard-bytes: nothing was pinned. These files carry merge conflict markers: ${conflicted.join(", ")}\n` +
@@ -116,6 +131,9 @@ async function main(root) {
     );
     return 1;
   }
+  const { LIFECYCLE_MANIFESTS_REL, lifecycleProjection } =
+    await import("./check-lifecycle-manifests.mjs");
+  const { writeFormattedJson } = await import("./lib/write-declaration.mjs");
 
   const entries = rels.map((rel) => [digestOf(root, rel), rel]);
   const existing = readFileSync(listPath, "utf-8");

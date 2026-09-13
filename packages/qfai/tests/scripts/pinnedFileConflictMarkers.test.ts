@@ -167,6 +167,19 @@ describe("the re-pin program, on a pinned file carrying conflict markers", () =>
     );
   });
 
+  it("names a conflict in the scanner it would otherwise load", async () => {
+    // A module carrying a conflict block does not parse, so loading it first
+    // ended the run before any path was named.
+    await plantConflict("scripts/check-conflict-markers.mjs");
+
+    // The staged copy runs, so the scanner it loads is the one carrying the block.
+    const result = await run(process.execPath, [path.join(staged, PIN), "--root", staged]);
+
+    expect(result.status).toBe(1);
+    expect(result.output).toContain("nothing was pinned");
+    expect(result.output).toContain("scripts/check-conflict-markers.mjs");
+  });
+
   it("pins as before when nothing is conflicted", async () => {
     const result = await runPin();
 
