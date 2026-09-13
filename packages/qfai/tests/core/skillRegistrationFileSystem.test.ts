@@ -19,16 +19,25 @@ import type * as FsPromises from "node:fs/promises";
 import { defaultConfig } from "../../src/core/config.js";
 import { validateAssistantAssets } from "../../src/core/validators/assistantAssets.js";
 
-const fault = vi.hoisted((): { zeroInode: boolean; deniedDirectory: string | null } => ({
-  zeroInode: false,
-  deniedDirectory: null,
-}));
+const fault = vi.hoisted(
+  (): { zeroInode: boolean; deniedDirectory: string | null; untraversable: string | null } => ({
+    zeroInode: false,
+    deniedDirectory: null,
+    untraversable: null,
+  }),
+);
 
 vi.mock("node:fs/promises", async (importOriginal) => {
   const actual = await importOriginal<typeof FsPromises>();
   return {
     ...actual,
     stat: async (...args: Parameters<typeof actual.stat>) => {
+      if (
+        fault.untraversable !== null &&
+        path.resolve(String(args[0])).startsWith(`${fault.untraversable}${path.sep}`)
+      ) {
+        throw Object.assign(new Error("EACCES: permission denied, stat"), { code: "EACCES" });
+      }
       const stats = await actual.stat(...args);
       return fault.zeroInode && typeof stats.ino === "bigint"
         ? Object.assign(stats, { ino: 0n })
@@ -51,6 +60,7 @@ const tempDirs: string[] = [];
 afterEach(async () => {
   fault.zeroInode = false;
   fault.deniedDirectory = null;
+  fault.untraversable = null;
   while (tempDirs.length > 0) {
     const dir = tempDirs.pop();
     if (dir) await rm(dir, { recursive: true, force: true });
@@ -107,11 +117,39 @@ describe("the skill gate on file systems that answer differently", () => {
     expect(unreadable).toHaveLength(1);
   });
 
-  it("reports a directory it cannot list inside a skill, and finishes", async () => {
-    // A `tmp` inside a skill is read like any other directory, so one this
-    // process may not list is a finding rather than the end of the run.
+  it("reports a document a step names under a hidden directory it cannot reach", async () => {
+    // The host lists no hidden skill directory and still opens a document there
+    // that a step names, so that step fails where the directory cannot be entered.
     const root = await projectWithSkills({ "qfai-a": ['description: "Does the thing."'] });
-    const locked = path.join(root, ".qfai", "assistant", "skills", "qfai-a", "tmp");
+    const skills = path.join(root, ".qfai", "assistant", "skills");
+    await writeFile(
+      path.join(skills, "qfai-a", "SKILL.md"),
+      [
+        "---",
+        "name: qfai-a",
+        'description: "Does the thing."',
+        "---",
+        "",
+        "See ../.draft/references/guide.md.",
+        "",
+      ].join("\n"),
+      "utf-8",
+    );
+    const hidden = path.join(skills, ".draft");
+    await mkdir(path.join(hidden, "references"), { recursive: true });
+    const guide = path.join(hidden, "references", "guide.md");
+    await writeFile(guide, "# guide\n", "utf-8");
+    fault.untraversable = hidden;
+
+    const found = await validateAssistantAssets(root, defaultConfig);
+    expect(found.some((item) => item.code === "QFAI-SKILLS-014" && item.file === guide)).toBe(true);
+  });
+
+  it("reports a directory it cannot list inside a skill, and finishes", async () => {
+    // A directory inside a skill is read like any other, so one this process may
+    // not list is a finding rather than the end of the run.
+    const root = await projectWithSkills({ "qfai-a": ['description: "Does the thing."'] });
+    const locked = path.join(root, ".qfai", "assistant", "skills", "qfai-a", "notes");
     await mkdir(locked, { recursive: true });
     // An uncited reference beside it stays undecided: the directory may hold the
     // document that cites it.

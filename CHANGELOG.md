@@ -175,6 +175,10 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   document is a file the run did not write, and the text formatter prints a
   message straight to the terminal.
 
+  The check still does not walk a hidden skill directory or a dependency or
+  build tree. A document in one that a step names is now read, because the host
+  opens it, so a step naming one that cannot be read is reported.
+
 ## [1.12.0] - 2026-09-12
 
 ### Added

@@ -669,19 +669,18 @@ describe("the gate reads a skill as the host does", () => {
     expect(codes).toContain("QFAI-SKILLS-014");
   });
 
-  it("reads a directory named like a build output inside a registered skill", async () => {
-    // Inside a registered skill, a directory named like build output is read:
-    // the skill can name a document under it.
+  it("reads a document a step names inside a directory named like build output", async () => {
+    // The crawl passes over `tmp`, and a skill can still name a document under
+    // it, which the host then opens.
     const root = await projectWithSkill(['description: "Does the thing."']);
-    const tmp = path.join(
-      root,
-      ".qfai",
-      "assistant",
-      "skills",
-      "qfai-example",
-      "references",
-      "tmp",
+    const skillDir = path.join(root, ".qfai", "assistant", "skills", "qfai-example");
+    const entryPoint = path.join(skillDir, "SKILL.md");
+    await writeFile(
+      entryPoint,
+      `${await readFile(entryPoint, "utf-8")}\nSee references/tmp/guide.md.\n`,
+      "utf-8",
     );
+    const tmp = path.join(skillDir, "references", "tmp");
     await mkdir(tmp, { recursive: true });
     const file = path.join(tmp, "guide.md");
     await writeFile(file, Buffer.concat([Buffer.from("# guide\n"), Buffer.from([0xff])]));
@@ -690,6 +689,69 @@ describe("the gate reads a skill as the host does", () => {
       .filter((item) => item.file === file)
       .map((item) => item.code);
     expect(codes).toContain("QFAI-SKILLS-014");
+  });
+
+  it("passes over a dependency tree no step names", async () => {
+    // An installed package can hold more documents than every skill together,
+    // and the host opens none of them unless a step names one.
+    const root = await projectWithSkill(['description: "Does the thing."']);
+    const vendored = path.join(
+      root,
+      ".qfai",
+      "assistant",
+      "skills",
+      "qfai-example",
+      "node_modules",
+      "pkg",
+    );
+    await mkdir(vendored, { recursive: true });
+    await writeFile(
+      path.join(vendored, "README.md"),
+      Buffer.concat([Buffer.from("# pkg\n"), Buffer.from([0xff])]),
+    );
+
+    const reported = (await validateAssistantAssets(root, defaultConfig)).filter((item) =>
+      (item.file ?? "").includes("node_modules"),
+    );
+    expect(reported).toEqual([]);
+  });
+
+  it("follows the references an entry point the crawl passes over names", async () => {
+    // `dist` is an ordinary skill name. Its entry point is read by the probe, and
+    // a reference only it cites is not uncited.
+    const root = await projectWithSkill(['description: "Does the thing."']);
+    const skills = path.join(root, ".qfai", "assistant", "skills");
+    await mkdir(path.join(skills, "qfai-example", "references"), { recursive: true });
+    const shared = path.join(skills, "qfai-example", "references", "shared.md");
+    await writeFile(shared, "# shared\n", "utf-8");
+    await mkdir(path.join(skills, "dist"), { recursive: true });
+    await writeFile(
+      path.join(skills, "dist", "SKILL.md"),
+      [
+        "---",
+        "name: dist",
+        'description: "Builds the thing."',
+        "---",
+        "",
+        "See ../qfai-example/references/shared.md.",
+        "",
+      ].join("\n"),
+      "utf-8",
+    );
+
+    const found = await validateAssistantAssets(root, defaultConfig);
+    expect(found.filter((item) => item.code === "QFAI-SKILLS-013")).toEqual([]);
+  });
+
+  it("reports both of a description's problems in one finding", async () => {
+    // Told of one, the operator clears it and meets the other on the next run.
+    const root = await projectWithSkill([`description: "<file> ${"a".repeat(1025)}"`]);
+    const findings = await registrationFindings(root);
+    expect(findings).toHaveLength(1);
+    expect(findings[0]?.message).toContain("holding `<` or `>`");
+    expect(findings[0]?.message).toContain("1032 characters");
+    expect(findings[0]?.suggested_action).toContain("without angle brackets");
+    expect(findings[0]?.suggested_action).toContain("cut it to 1024 characters");
   });
 
   it("reports an unreadable entry point once, whatever case it is spelled in", async () => {
