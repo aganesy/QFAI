@@ -94,6 +94,17 @@ describe.each(TREES)("%s — the execution stages record their sessions", (tree)
   const grilling = async (skill: string): Promise<string> =>
     section(await read(`assistant/skills/${skill}/SKILL.md`), "## Grilling (MANDATORY)");
 
+  it("has the primitive's own summaries name the four endings", async () => {
+    // A restored summary saying a session ends only on agreement would have an
+    // agent reject the endings the body requires.
+    const body = await read("assistant/skills/qfai-grilling/SKILL.md");
+    expectPhrase(body, "stops at one of four named endings");
+    expectPhrase(
+      body,
+      "A session ends at one of four endings — `confirmed`, `user-closed`, `no-question` or `stopped` — never at a count.",
+    );
+  });
+
   it("has the primitive point at the four rather than add its own", async () => {
     // Three skills defining endings is three vocabularies, and a gate reading
     // one of them passes a record written against another.
@@ -173,6 +184,29 @@ describe.each(TREES)("%s — the execution stages record their sessions", (tree)
       "a rerun over an unchanged tree produces the same `Revision`, because that address is a tree address and excludes `.qfai/evidence/**`",
     );
     expectPhrase(body, "`Revision` stays beside it");
+    // A host identifier the work order never states is compared against nothing.
+    expectPhrase(body, "with the host run identifier where the heading carries one");
+  });
+
+  it.each(STAGES)("%s reconciles every line and marker with this block", async (skill) => {
+    const body = await read(`assistant/skills/${skill}/SKILL.md`);
+    // A settled session leaves no register line saying what it was about.
+    expectPhrase(
+      body,
+      "**Every row's `Subject` is non-blank, and when `Preflight` says `session opened` exactly one row's is `preflight`**",
+    );
+    // A line keyed to no row is an open node no count sees.
+    expectPhrase(body, "names a `Session` a row of this block carries**");
+    // An answer settles a decision, and only the summary row names its recommender.
+    expectPhrase(
+      body,
+      "**An escalation line recording the user's answer is one of that `Session`'s counted decisions**",
+    );
+    // The summary holds every invocation's rows, so an unkeyed marker answers for any run.
+    expectPhrase(
+      body,
+      "**A run whose rows count no decision carries `grilling(-@<run started>/none): none`**",
+    );
   });
 
   it.each(STAGES)("%s names the four endings and what they authorize", async (skill) => {
@@ -257,7 +291,13 @@ describe.each(TREES)("%s — the execution stages record their sessions", (tree)
     // Nothing else reads it. An unread record is a heading.
     const body = await read(`assistant/skills/${skill}/SKILL.md`);
     expectPhrase(body, "`Preflight`, a row for every session detection opened");
-    expectPhrase(body, "block whose time equals the one this run's work order states");
+    // The whole key, and no second block carrying it: two blocks sharing a key
+    // let the earlier one pass as current.
+    expectPhrase(
+      body,
+      "whose heading — the time to the millisecond, and a host run identifier beside it where there is one — equals what this run's work order states, and which no other",
+    );
+    expectPhrase(body, "block in the file carries");
     expectPhrase(
       body,
       "every row`s `Ended at` is at or after the run-started time".replace("row`s", "row's"),

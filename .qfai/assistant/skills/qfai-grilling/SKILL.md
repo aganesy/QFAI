@@ -18,8 +18,10 @@ method to review when it changes and one behaviour an operator learns.
 
 A design has open decisions. Left open, they are decided anyway — by the agent,
 silently, at the moment the code needs an answer. This method surfaces them
-first, in an order where each can be answered honestly, and stops only when the
-user agrees the understanding is shared.
+first, in an order where each can be answered honestly,
+and stops at one of four named endings: the user confirms the understanding is
+shared, closes the asking, or stops the session, or a run that may not ask
+writes every node left where its stage's gate reads it.
 
 ## Non-goals
 
@@ -439,7 +441,7 @@ to stop.
 
 project_memory:
 
-- A grilling question spends no clarification budget, and the confirmation that closes a session is exempt with it. A session ends on its own condition, never at a count.
+- A grilling question spends no clarification budget, and the confirmation that closes a session is exempt with it. A session ends at one of four endings — `confirmed`, `user-closed`, `no-question` or `stopped` — never at a count.
 - A decision the user owns is asked, never assumed. A fact the environment holds is read, never asked.
 - A no-question mode silences the questions, not the session: such a run settles what the evidence settles and opens every node left over as a question — facts only the user holds among them — with a labelled value beside it where a document requires one. The assumption alone is forbidden, and a fact declared undefaultable stops the run.
 - A user's `stop` ends a session immediately and the open decisions are reported as open. A mandatory approval and a `hard-required` input are never assumed, whatever the user answered.

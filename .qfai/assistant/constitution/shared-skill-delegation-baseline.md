@@ -202,8 +202,10 @@ unadjudicated` is read off that record, not off recollection.
 **The record answers either way, and silence answers nothing.** The question the
 field asks is whether any decision was settled agent-to-agent, so the record
 answers that and not whether a session ran. A stage that settled none writes one
-row reading `grilling(-/none): none` — whether it ran no session at all, or ran one that
-escalated every decision and settled nothing. A stage that settled some writes a
+row reading `grilling(-/none): none` — whether it ran no session at all, or ran one that escalated every decision and settled nothing.
+An evidence file holding several invocations keys it to the run it answers for,
+`grilling(-@<run started>/none): none`, as it keys that run's decision rows.
+A stage that settled some writes a
 row per decision. A summary carrying neither is incomplete, and that is the
 `REVISE` — not an inference in either direction. Absence of rows cannot be read
 as evidence for `none`, because a table that omitted a required row looks exactly

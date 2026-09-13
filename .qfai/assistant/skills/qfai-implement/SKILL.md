@@ -147,8 +147,7 @@ Summary, each keyed to its session and this run:
 ```
 
 The shape `/qfai-discussion` already writes, with `Subject` in place of that
-stage's lone `Authoring began`: this stage holds more than one session, so a
-row says which. `Work resumed` is when the stage next wrote — the first production or test file for the preflight
+stage's lone `Authoring began`: this stage holds more than one session, so a row says which, and the preflight session's says `preflight`. `Work resumed` is when the stage next wrote — the first production or test file for the preflight
 session, the first edit made after a detected one.
 
 **Both times, and the second later than the first.** A row holding only the
@@ -174,9 +173,7 @@ staleness this heading replaced a revision to fix. Where the host mints a run id
 file.** A block carries its own heading, so a gate reading the heading alone
 checks the record against itself: a rerun that wrote no block leaves an
 earlier one internally consistent, and its reviewer has nothing to contradict
-it with. The orchestrator states this invocation's start in every reviewer
-work order it opens, and the gate requires the block heading to carry that
-exact value. An artifact cannot prove its own freshness, and the one value
+it with. The orchestrator states this invocation's start, with the host run identifier where the heading carries one, in every reviewer work order it opens, and the gate requires the block heading to carry exactly those values. An artifact cannot prove its own freshness, and the one value
 that settles it has to arrive from outside the artifact.
 
 **One block per stage as well as per run**, because two stages share an
@@ -213,8 +210,7 @@ row in the stage's Work Orders Summary
 count can be checked against records rather than taken as written.
 **`<where>` is `<Session>@<run started>`**: the row's `Session`, then the
 time on this run's heading. The keys restart at `S1` every invocation, and
-the Work Orders Summary sits outside the run's block, so a row keyed by
-`Session` alone is counted again by every later run that reuses the key.
+the Work Orders Summary sits outside the run's block, so a row keyed by `Session` alone is counted again by every later run that reuses the key. A run that settled no decision writes the shared schema's marker the same way, `grilling(-@<run started>/none): none`, so an earlier run's marker does not answer for it.
 
 - **The confirming answer goes under that table too**, one line per
   `confirmed` row, quoting what the user replied and naming the `Session` it
@@ -498,8 +494,7 @@ Use the shared schema (per-row `Status (PASS/REVISE/PENDING)` column, reviewer r
   `Preflight`, a row for every session detection opened, and — when `Preflight`
   says `session opened` — one for the preflight session, all of them inside this run's own block, identical in every evidence file this invocation wrote it into — **except a session the user stopped**, which is reported in the stage's output rather than written, as the table below sets out, so its absence is not a `REVISE`. **A mutation-only invocation writes no block at all** (`references/mutation-only-request.md`): it reports its sessions in its output, and a missing block is not a `REVISE` for it. **`Preflight` is `session opened` or `confidence high`**, and any other value is a `REVISE`: those two say whether a preflight row is owed, and a third value says neither. **No two rows share a `Session`**, and the keys run `S1`, `S2`, … with none skipped: the lines under the table are reconciled by that key, so one key on two rows lets a single quoted answer, open line or escalation stand for both. Every `Ended` is one of the four endings the rule master
   names, every row's `Ended at` is at or after the run-started time on
-  a `### /qfai-implement — run started` block whose time equals the one this
-  run's work order states, and each row's `Open` count matches the register lines naming that row's `Session`, **and its `Escalated` count matches the escalation lines naming it**, **and its `Decisions` count matches the `grilling(<Session>@<run started>/<adjudication>)` rows the Work Orders Summary carries under that `Session` and this run's start** — a count checked against nothing lets a row claim `0` over decisions that never reached the user. **An escalation line still waiting on an answer is an open node**: it is also an `Open` line under the same `Session`, so a row that ended over it keeps the decision in the register instead of losing it behind a valid ending. **Every row's `Revision` is a git rev or `working-tree+<hash>`**, as the record requires, and a blank or any other value is a `REVISE`: it is the one field saying which tree the session ended against. **A row whose ending lets the work go on, and after which the stage wrote,
+  a `### /qfai-implement — run started` block whose heading — the time to the millisecond, and a host run identifier beside it where there is one — equals what this run's work order states, and which no other `/qfai-implement` block in the file carries, and each row's `Open` count matches the register lines naming that row's `Session`, **and its `Escalated` count matches the escalation lines naming it**, **and its `Decisions` count matches the `grilling(<Session>@<run started>/<adjudication>)` rows the Work Orders Summary carries under that `Session` and this run's start** — a count checked against nothing lets a row claim `0` over decisions that never reached the user. **An escalation line still waiting on an answer is an open node**: it is also an `Open` line under the same `Session`, so a row that ended over it keeps the decision in the register instead of losing it behind a valid ending. **Every row's `Revision` is a git rev or `working-tree+<hash>`**, as the record requires, and a blank or any other value is a `REVISE`: it is the one field saying which tree the session ended against. **Every row's `Subject` is non-blank, and when `Preflight` says `session opened` exactly one row's is `preflight`**: it is the one cell saying what a session was about, and a session that settled everything leaves no register line to say it. **Every line under the table — a confirmation, a closure, an open node, an escalation — names a `Session` a row of this block carries**: a line keyed to no row is an open node no count reconciles. **An escalation line recording the user's answer is one of that `Session`'s counted decisions**, and the decision it states is the one a `grilling(<Session>@<run started>/user)` row states: the answer settled it, and only the row records who recommended it. **A run whose rows count no decision carries `grilling(-@<run started>/none): none`** in the Work Orders Summary, keyed to this run's start as the decision rows are, because that summary holds every invocation's rows. **A row whose ending lets the work go on, and after which the stage wrote,
   carries a `Work resumed` later than its own `Ended at`** — that ordering is
   the whole reason both times are recorded, and an earlier one is a session
   recorded after the edit it was meant to precede. **A run that did not resume
