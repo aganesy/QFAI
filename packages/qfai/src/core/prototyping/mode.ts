@@ -187,6 +187,8 @@ export const EXPLORATION_HARD_ERROR_CODES: readonly string[] = [
   "QFAI-AGENT-018",
   // validators/uiScreenEntries.ts — a UI contract entry no screen is read from
   "QFAI-CONTRACT-042",
+  // validators/contracts.ts — a UI contract that does not parse
+  "QFAI-CONTRACT-021",
   // validators/bpApDb.ts
   "QFAI-BPAP-001",
   "QFAI-BPAP-002",

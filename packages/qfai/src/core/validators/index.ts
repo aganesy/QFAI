@@ -39,6 +39,7 @@ export { validateBpApDb } from "./bpApDb.js";
 export { detectPlatform } from "./platformDetection.js";
 export { validateUiDefinitionConsistency } from "./uiDefinitionConsistency.js";
 export { validateUiScreenEntries } from "./uiScreenEntries.js";
+export { validateUiContractParse } from "./contracts.js";
 export { validateUiMarkerPresence } from "./uiMarkerPresence.js";
 export { validateUiPrototypeMode } from "./uiPrototypeMode.js";
 export { validateResearchSummary } from "./researchSummary.js";
