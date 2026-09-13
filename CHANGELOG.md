@@ -6,6 +6,35 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **The grilling-trace check accepts the template it was written to reject**
+  (#1739). `QFAI-GRILL-001` counted any table row under `## Pre-draft Grilling`
+  as a record, and the shipped evidence template carries three worked rows. So
+  the section copied with nothing replaced produced no finding, which is the
+  one state the check names as the reason it exists. A row still holding a
+  template placeholder no longer counts, and the finding says which of the two
+  states the file is in.
+
+- **The grilling-trace check reads the discussion stage's record too** (#1740).
+  It was written when no stage but the spec stage named a file to write a
+  session record to. Two changes the same day gave the discussion run and the
+  prototyping loop theirs, and the reason the check gave for covering neither
+  stayed in place after it stopped being true.
+
+  Only the most recent discussion run is read. Every run opens its evidence
+  under its own stamp and never returns to an earlier one, so a finding on a run
+  that is over could not be cleared by any later run — it would stand for the
+  life of the project, and a list nobody can empty is the list people stop
+  reading.
+
+  Prototyping stays out, with the reason now stated: its `grilling.md` is one
+  file per project holding the current state of the decision tree, so a project
+  that has not reached a loop and one whose loop wrote nothing are the same
+  absence there.
+
+  `qfai init` keeps `.qfai/evidence/discussion-*.md` out of the ignore block as
+  it already does for the spec stage's evidence. A record no checkout can see is
+  one the check could only ever report nothing about.
+
 - **The prototyping preflight refuses a screen with no primary task** (#1698).
   The audit lane reported an empty `primary_tasks` as `QFAI-AUD-001`, but
   `qfai prototyping preflight` never read the field, so the stage started on a

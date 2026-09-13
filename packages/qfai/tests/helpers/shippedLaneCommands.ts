@@ -1424,7 +1424,16 @@ export const ALLOWED_INIT_CONTENT: ReadonlyMap<string, string> = new Map([
   //
   // Derived the way its predecessors were — `qfai init` into a temp root, then
   // reading what it wrote.
-  [".gitignore", "cd2c521c777ae0cee4c0ff38f44d70d53d5ea82af5b9eccb60bd8ae54df5118e"],
+  //
+  // Re-pinned again for the discussion stage's evidence, which the same rule
+  // reads for its `## Grilling Session` section:
+  //
+  //     !.qfai/evidence/discussion-*.md
+  //
+  // Derived the same way, and checked the way the note below asks: removing
+  // that one line from what the run wrote reproduces `cd2c521c…` byte for byte,
+  // which is what makes this a review of one line.
+  [".gitignore", "4b12347203927042767bb2b7df83abe4f1e6aee191066590bb1947a5aa2ad8ba"],
   // One bullet each, inside the managed cross-AI rules block: the
   // `documentation-clarity.md` master that the same run seeds beside them.
   // Removing that line from both files reproduces the previous digests

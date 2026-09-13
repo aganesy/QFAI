@@ -1,19 +1,20 @@
 /**
- * `QFAI-GRILL-001` — a spec stage whose mandatory grilling session left no trace.
+ * `QFAI-GRILL-001` — a stage whose mandatory grilling session left no trace.
  *
  * The failure it exists for leaves nothing else behind: a stage that ran its
- * session and one that skipped it produce the same spec pack, the same
- * coverage, the same work orders. The only difference is the record the stage
- * was told to write, so that record's absence is the finding.
+ * session and one that skipped it produce the same pack, the same coverage, the
+ * same work orders. The only difference is the record the stage was told to
+ * write, so that record's absence is the finding.
  *
  * The quiet side is pinned as heavily as the loud one. A warning that fires
  * where nothing is owed is one people learn to scroll past, and then the one
  * that matters goes with it.
  */
 
-import { mkdir, mkdtemp, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 
 import { describe, expect, it } from "vitest";
 
@@ -22,6 +23,21 @@ import {
   validateGrillingTrace,
 } from "../../../../src/core/validators/grillingTrace.js";
 import { removeTempTree } from "../../../helpers/tempTree.js";
+
+// tests/unit/core/validators/<this file> -> ... -> packages/qfai
+const packageRoot = path.resolve(
+  path.dirname(fileURLToPath(import.meta.url)),
+  "..",
+  "..",
+  "..",
+  "..",
+);
+
+/** The evidence template `qfai init` ships, which a spec stage copies. */
+const SPEC_EVIDENCE_TEMPLATE = path.join(
+  packageRoot,
+  "assets/init/.qfai/assistant/skills/qfai-sdd/templates/evidence/sdd-spec.md",
+);
 
 /** A section with one phase row, which is what a run that grilled writes. */
 const POPULATED = [
@@ -32,6 +48,18 @@ const POPULATED = [
   "| Phase | Session | Ended at | Wrote at | Frontier | Evidence |",
   "| ----- | ------- | -------- | -------- | -------- | -------- |",
   "| 0 | run | 2026-01-01T00:00:00Z | 2026-01-01T00:01:00Z | 4 settled, 0 escalated | #work-orders-summary |",
+  "",
+].join("\n");
+
+/** The discussion stage's record, as its skill states the row. */
+const POPULATED_DISCUSSION = [
+  "# Evidence",
+  "",
+  "## Grilling Session",
+  "",
+  "| Ended | Ended at | Authoring began | Frontier | Lookups | Decisions | Escalated |",
+  "| ----- | -------- | --------------- | -------- | ------- | --------- | --------- |",
+  "| confirmed | 2026-01-01T09:14:00Z | 2026-01-01T09:15:20Z | empty | none in flight | 12 | 0 |",
   "",
 ].join("\n");
 
@@ -85,11 +113,103 @@ describe("validateGrillingTrace", () => {
     });
   });
 
+  it("reports the shipped template, copied and filled in with nothing", async () => {
+    // The template carries worked rows, so the state this check is for — the
+    // section copied and nothing replaced — has three table rows under it. A
+    // row test that counted any row would take the template for the record it
+    // is a template for, which is the cheapest route to the second without the
+    // first.
+    await withRoot(async (root) => {
+      await evidence(root, "sdd-spec-0007.md", await readFile(SPEC_EVIDENCE_TEMPLATE, "utf-8"));
+
+      const issues = await validateGrillingTrace(root);
+
+      expect(issues).toHaveLength(1);
+      // The operator is told which of the two states they are in: a section
+      // that is missing and one that is present and says nothing need
+      // different edits.
+      expect(issues[0]?.message).toContain("still holds the template's placeholders");
+    });
+  });
+
   it("accepts a populated section", async () => {
     await withRoot(async (root) => {
       await evidence(root, "sdd-spec-0007.md", POPULATED);
 
       expect(await validateGrillingTrace(root)).toEqual([]);
+    });
+  });
+
+  it("reads the discussion stage's record too", async () => {
+    // The discussion run opens its evidence under its own stamp before it
+    // writes anything else, and writes the row at every ending it admits. So
+    // an evidence file with no section is a stage that wrote no record.
+    await withRoot(async (root) => {
+      await evidence(root, "discussion-20260418170937652.md", POPULATED_DISCUSSION);
+      await evidence(root, "discussion-20260418170937653.md", "# Evidence\n");
+
+      const issues = await validateGrillingTrace(root);
+
+      expect(issues).toHaveLength(1);
+      expect(issues[0]?.file).toBe(".qfai/evidence/discussion-20260418170937653.md");
+      expect(issues[0]?.message).toContain("## Grilling Session");
+      expect(issues[0]?.message).toContain("at least one session row");
+    });
+  });
+
+  it("reads only the most recent discussion run", async () => {
+    // Every run opens its evidence under its own stamp and never returns to an
+    // earlier one. A finding on a run that is over could not be cleared by any
+    // later run, so it would stand for the life of the project — and a list
+    // nobody can empty is the list people stop reading.
+    await withRoot(async (root) => {
+      for (const stamp of ["20260330153902875", "20260415161758193", "20260416023323603"]) {
+        await evidence(root, `discussion-${stamp}.md`, "# Evidence\n");
+      }
+
+      const issues = await validateGrillingTrace(root);
+
+      expect(issues).toHaveLength(1);
+      expect(issues[0]?.file).toBe(".qfai/evidence/discussion-20260416023323603.md");
+    });
+  });
+
+  it("says nothing when the most recent discussion run carries its record", async () => {
+    await withRoot(async (root) => {
+      await evidence(root, "discussion-20260330153902875.md", "# Evidence\n");
+      await evidence(root, "discussion-20260416023323603.md", POPULATED_DISCUSSION);
+
+      expect(await validateGrillingTrace(root)).toEqual([]);
+    });
+  });
+
+  it("leaves a discussion run alone under a scoped run", async () => {
+    // A discussion pack names no spec, so a `--spec` run cannot place it. The
+    // spec rows already skip a sibling the run was told not to look at, and
+    // this is the same operator in the same position.
+    await withRoot(async (root) => {
+      await evidence(root, "discussion-20260418170937652.md", "# Evidence\n");
+      await evidence(root, "sdd-spec-0007.md", "# Evidence\n");
+
+      const scoped = await validateGrillingTrace(root, { specScope: new Set(["0007"]) });
+
+      expect(scoped).toHaveLength(1);
+      expect(scoped[0]?.file).toBe(".qfai/evidence/sdd-spec-0007.md");
+    });
+  });
+
+  it("does not take a deeper heading for the section", async () => {
+    // `## Pre-draft Grilling` is a section of the evidence. A subsection of
+    // something else that happens to end in those words is not it, and reading
+    // the heading as a substring accepts one.
+    await withRoot(async (root) => {
+      await evidence(
+        root,
+        "sdd-spec-0007.md",
+        POPULATED.replace("## Pre-draft Grilling", "### Pre-draft Grilling"),
+      );
+
+      expect(await validateGrillingTrace(root)).toHaveLength(1);
     });
   });
 

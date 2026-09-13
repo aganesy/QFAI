@@ -2831,6 +2831,11 @@ const LEGACY_EVIDENCE_IGNORE_NEGATIONS: readonly string[] = [
   // rule whose input is hidden reports the same clean result for a run that
   // skipped every session as for one that grilled every phase.
   "!sdd-*.md",
+  // A discussion run's own evidence, which the same rule reads for the same
+  // reason. Its stamp is not spelled out here: the nested file is a migration
+  // for projects that already hold one, and a narrower glob would leave a
+  // record the rule reads hidden on exactly those projects.
+  "!discussion-*.md",
   // The import-lite record, for the same reason: on a spec set that arrived
   // without a discussion pack it is the only input source in the repository,
   // and the nested `*` hides it from the fresh clone that CI validates. Both
