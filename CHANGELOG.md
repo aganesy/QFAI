@@ -230,7 +230,7 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   directories a capture pass mirrors into. The required-path check reads those
   first, so after `iterate --cycle 0 --force` without `--capture`, and after a
   cycle 0 in a project holding only aggregate files, `qfai validate` passed on
-  the previous loop's captures. Every cycle-0 run now moves the two directories
+  the previous loop's captures. Every cycle-0 reset now moves the two directories
   into `aggregate.backup-<ISO>/`, beside the `iter-00` backup, and logs each
   moved file to `mutation-log.jsonl`. They are moved rather than deleted
   because the same reset removes the iteration directories they were copied

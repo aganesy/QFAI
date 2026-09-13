@@ -200,9 +200,14 @@ describe("checkCompletionCertificate", () => {
       "iter-00/home.review.json": "{}\n",
       "iter-00.backup-2026-01-01T00-00-00-000Z/old.review.json": "{}\n",
       "aggregate.backup-2026-01-01T00-00-00-000Z/screenshots/home.png": "old",
+      // Named like a backup, but a file a reset never writes: still evidence.
+      "aggregate.backup-summary.json": "{}\n",
     });
     const cert = await buildCompletionCertificate(baseInputs(evidenceRoot));
-    expect(cert.evidenceDigests.map((entry) => entry.path)).toEqual(["iter-00/home.review.json"]);
+    expect(cert.evidenceDigests.map((entry) => entry.path)).toEqual([
+      "aggregate.backup-summary.json",
+      "iter-00/home.review.json",
+    ]);
     await writeCompletionCertificate(root, cert);
 
     await rm(path.join(evidenceRoot, "aggregate.backup-2026-01-01T00-00-00-000Z"), {

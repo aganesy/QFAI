@@ -356,7 +356,8 @@ export async function checkCompletionCertificate(root: string): Promise<CertifyC
  * write does not detect itself as a "new file".
  */
 /** The directories a cycle-0 reset moves the previous loop's evidence into. */
-const RESET_BACKUP_DIRECTORY = /^(?:iter-\d{2,}|aggregate)\.backup-/;
+const RESET_BACKUP_DIRECTORY =
+  /^(?:iter-\d{2,}|aggregate)\.backup-\d{4}-\d{2}-\d{2}T\d{2}-\d{2}-\d{2}-\d{3}Z$/;
 
 async function scanEvidenceDigests(
   evidenceRoot: string,
@@ -384,10 +385,6 @@ async function walk(
     // in a sub-directory is still digested (defense against accidental
     // shadowing of the digest tree).
     if (dir === rootDir && name === "completion-certificate.json") continue;
-    // A cycle-0 reset's backups hold the previous loop's evidence. Sealed into
-    // this loop's certificate, removing a backup once it is no longer needed
-    // failed `certify --check` although nothing of this loop changed.
-    if (dir === rootDir && RESET_BACKUP_DIRECTORY.test(name)) continue;
     const full = path.join(dir, name);
     let s: Awaited<ReturnType<typeof stat>>;
     try {
@@ -395,6 +392,11 @@ async function walk(
     } catch {
       continue;
     }
+    // A cycle-0 reset's backups hold the previous loop's evidence. Sealed into
+    // this loop's certificate, removing a backup once it is no longer needed
+    // failed `certify --check` although nothing of this loop changed. Only the
+    // directories a reset writes are skipped, by the exact name it gives them.
+    if (dir === rootDir && s.isDirectory() && RESET_BACKUP_DIRECTORY.test(name)) continue;
     if (s.isDirectory()) {
       await walk(rootDir, full, out);
     } else if (s.isFile()) {

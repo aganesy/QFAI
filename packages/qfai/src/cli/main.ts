@@ -470,8 +470,8 @@ Options:
   --force         handoff upgrade: overwrite an existing .qfai/handoff.yaml (the previous file is saved to .backup-<ISO> first)
   --force         prototyping iterate --cycle 0: required to re-seed an existing iter-00. Moves iter-00
                   to iter-00.backup-<ISO>, then clears the stale iter-NN (without it the run is
-                  refused with exit 2). Every cycle 0, with or without it, moves the aggregate
-                  screenshots/ and html/ to aggregate.backup-<ISO>
+                  refused with exit 2). A cycle 0 that resets the loop, with or without it,
+                  also moves the aggregate screenshots/ and html/ to aggregate.backup-<ISO>
   --yes           init: reserved flag (no behavioural difference today because init is non-interactive; auto-Yes once prompts are introduced)
   --yes           doctor --autoremediate: skip the interactive confirmation (no effect elsewhere)
   --upgrade-assistant-tree   init: migrate an existing project to the 4-layer assistant tree

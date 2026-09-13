@@ -125,16 +125,19 @@ recoverable automatically — the operator does NOT need to `cp -r`
 manually. The backup directory is **outside** the `/^iter-\d{2,}$/`
 cleanup regex, so subsequent runs do not delete it.
 
-Every cycle-0 run, with or without `--force`, also moves the aggregate
+Every cycle-0 run that resets the loop, with or without `--force`, also
+moves the aggregate
 `screenshots/` and `html/` directories into `aggregate.backup-<ISO>/`,
 beside `iter-00.backup-<ISO>/` and with the same `<ISO>` when both are
 written, and logs each moved file to `mutation-log.jsonl`. The
 required-path check reads the aggregate directories before the
 iteration directories, so a restarted loop holds no evidence until it
-captures again. The move comes before the `iter-00` backup, and the log
-entries are written once both have succeeded: a failure in either stops
-the run before any evidence is cleared and puts back what the reset had
-moved.
+captures again. A project with no UI-bearing spec ends cycle 0 before the
+reset, so nothing is moved there. The move comes before the `iter-00`
+backup, and the log entries are written once both have succeeded: a
+failure in either, or a directory the reset cannot list for the log,
+stops the run before any evidence is cleared and puts back what the reset
+had moved.
 
 ## `--capture` and `--auto-serve` (REQ-0109 / REQ-0110)
 

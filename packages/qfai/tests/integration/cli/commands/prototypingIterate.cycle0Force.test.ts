@@ -19,7 +19,27 @@ import path from "node:path";
 
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+// The module is mocked below, and its TYPE comes from a namespace import:
+// `consistent-type-imports` forbids the inline form.
+import type * as FsPromises from "node:fs/promises";
+
 import { runPrototypingIterate } from "../../../../src/cli/commands/prototypingIterate.js";
+
+/** A directory `readdir` refuses, which no test directory can be made into everywhere. */
+const fault = vi.hoisted((): { unlistable: string | null } => ({ unlistable: null }));
+
+vi.mock("node:fs/promises", async (importOriginal) => {
+  const actual = await importOriginal<typeof FsPromises>();
+  return {
+    ...actual,
+    readdir: async (...args: Parameters<typeof actual.readdir>) => {
+      if (fault.unlistable !== null && path.resolve(String(args[0])) === fault.unlistable) {
+        throw Object.assign(new Error("EACCES: permission denied, scandir"), { code: "EACCES" });
+      }
+      return actual.readdir(...args);
+    },
+  };
+});
 
 const CERT_DESIGN_MD = [
   "---",
@@ -69,6 +89,7 @@ async function newTempDir(): Promise<string> {
 }
 
 afterEach(async () => {
+  fault.unlistable = null;
   vi.restoreAllMocks();
   while (tempDirs.length > 0) {
     const dir = tempDirs.pop();
@@ -264,6 +285,38 @@ describe("iterate --cycle 0 destructive-rerun gate", () => {
       () => "",
     );
     expect(log).not.toContain("screenshots/home.png");
+  });
+
+  it("moves nothing when a tree the reset would move cannot be listed for the log", async () => {
+    // Moved anyway, its files would be missing from the mutation log the reset
+    // promises to write them to.
+    const root = await newTempDir();
+    await seedProject(root);
+    await seedExistingIter00(root, "prior loop seed");
+    const evidenceRoot = path.join(root, ".qfai/evidence/prototyping");
+    const nested = path.join(evidenceRoot, "screenshots", "nested");
+    await mkdir(nested, { recursive: true });
+    await writeFile(path.join(evidenceRoot, "screenshots", "home.png"), "prior capture", "utf-8");
+    fault.unlistable = nested;
+    const stderr = captureStderr();
+
+    const exit = await runPrototypingIterate({
+      root,
+      cycle: 0,
+      targetUrl: "http://localhost:5173",
+      force: true,
+    });
+
+    expect(exit).toBe(2);
+    expect(await readFile(path.join(evidenceRoot, "screenshots", "home.png"), "utf-8")).toBe(
+      "prior capture",
+    );
+    expect(await readFile(path.join(evidenceRoot, "iter-00", "prior-loop.marker"), "utf-8")).toBe(
+      "prior loop seed",
+    );
+    const entries = await readdir(evidenceRoot);
+    expect(entries.filter((entry) => entry.includes(".backup-"))).toEqual([]);
+    expect(stderr.join("")).toContain("screenshots");
   });
 
   it("puts the aggregate directories back when the iter-00 backup fails", async () => {

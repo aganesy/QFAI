@@ -797,21 +797,11 @@ export async function runPrototypingIterate(
     {
       const { evidenceRootAbs, iter00Abs } = cycleZeroReset;
       const backupAbs = path.join(evidenceRootAbs, `iter-00.backup-${resetStamp}`);
-      // Every destructive iter-NN mutation MUST funnel through the
-      // mutation-log writer. The iter-00 tree is walked BEFORE the rename,
-      // so each file is recorded with its size, and the entries are written
-      // once the rename has happened: a backup that fails claims no move.
-      const movedFiles = await filesWithSizes(options.root, iter00Abs);
-      try {
-        await rename(iter00Abs, backupAbs);
-        info(
-          `qfai prototyping iterate --cycle 0 --force: backed up iter-00 to ${path.relative(options.root, backupAbs).replace(/\\/g, "/")}.`,
-        );
-        await logMovedFiles(options.root, movedFiles);
-      } catch (cause) {
-        // Fail closed: clearing evidence dirs MUST be skipped when the
-        // backup rename fails, otherwise the prior loop's evidence is
-        // silently destroyed without an operator-visible backup.
+      // Fail closed: clearing evidence dirs MUST be skipped when the backup
+      // cannot be made, otherwise the prior loop's evidence is silently
+      // destroyed without an operator-visible backup. The aggregate directories
+      // this reset already moved go back.
+      const abortReset = async (what: string, cause: unknown): Promise<number> => {
         const reason = cause instanceof Error ? cause.message : String(cause);
         const stranded =
           aggregateMove === null
@@ -822,14 +812,34 @@ export async function runPrototypingIterate(
                 aggregateMove.names,
               );
         error(
-          `qfai prototyping iterate --cycle 0 --force: could not back up iter-00 (${reason}). ` +
+          `qfai prototyping iterate --cycle 0 --force: ${what} (${reason}). ` +
             (aggregateMove === null
               ? "Aborting before clearing evidence to avoid destroying the prior loop. "
               : aggregateRollbackReport(options.root, stranded)) +
             "Resolve the filesystem error (Windows file lock / EACCES / EBUSY are common causes) and rerun.",
         );
         return 2;
+      };
+      // Every destructive iter-NN mutation MUST funnel through the
+      // mutation-log writer. The iter-00 tree is walked BEFORE the rename,
+      // so each file is recorded with its size, and the entries are written
+      // once the rename has happened: a backup that fails claims no move, and
+      // a tree that cannot be walked is not moved.
+      let movedFiles: { rel: string; size: number }[];
+      try {
+        movedFiles = await filesWithSizes(options.root, iter00Abs);
+      } catch (cause) {
+        return abortReset("could not list iter-00 for the mutation log", cause);
       }
+      try {
+        await rename(iter00Abs, backupAbs);
+        info(
+          `qfai prototyping iterate --cycle 0 --force: backed up iter-00 to ${path.relative(options.root, backupAbs).replace(/\\/g, "/")}.`,
+        );
+      } catch (cause) {
+        return abortReset("could not back up iter-00", cause);
+      }
+      await logMovedFiles(options.root, movedFiles);
     }
   }
   if (aggregateMove !== null) {
@@ -2452,15 +2462,21 @@ async function moveAggregateDirsAside(
   | { ok: true; move: AggregateMove }
   | { ok: false; failedDir: string; cause: unknown; stranded: string[] }
 > {
+  // Nothing is moved that the mutation log could not name.
+  const files: { rel: string; size: number }[] = [];
+  for (const name of names) {
+    const dirAbs = path.join(evidenceRootAbs, name);
+    try {
+      files.push(...(await filesWithSizes(root, dirAbs)));
+    } catch (cause) {
+      return { ok: false, failedDir: dirAbs, cause, stranded: [] };
+    }
+  }
   const backupAbs = path.join(evidenceRootAbs, `aggregate.backup-${stamp}`);
   try {
     await mkdir(backupAbs, { recursive: true });
   } catch (cause) {
     return { ok: false, failedDir: backupAbs, cause, stranded: [] };
-  }
-  const files: { rel: string; size: number }[] = [];
-  for (const name of names) {
-    files.push(...(await filesWithSizes(root, path.join(evidenceRootAbs, name))));
   }
   const moved: string[] = [];
   for (const name of names) {
@@ -2505,29 +2521,22 @@ function aggregateRollbackReport(root: string, stranded: readonly string[]): str
 
 /**
  * Every file under `dirAbs` with its size, read before the directory is moved
- * so the log can record what the move took. Empty, with a warning, where the
- * tree cannot be walked: the move itself still happens.
+ * so the log can record what the move took. Rejects where the tree cannot be
+ * walked, and the caller then moves nothing.
  */
 async function filesWithSizes(
   root: string,
   dirAbs: string,
 ): Promise<{ rel: string; size: number }[]> {
-  try {
-    const files: { rel: string; size: number }[] = [];
-    for (const fileAbs of await collectFilesRecursively(dirAbs)) {
-      const size = await stat(fileAbs).then(
-        (stats) => stats.size,
-        () => 0,
-      );
-      files.push({ rel: toRootRelative(root, fileAbs), size });
-    }
-    return files;
-  } catch (walkCause) {
-    warn(
-      `qfai prototyping iterate --cycle 0: could not list ${toRootRelative(root, dirAbs)} for the mutation log (${String(walkCause)}); proceeding with the move.`,
+  const files: { rel: string; size: number }[] = [];
+  for (const fileAbs of await collectFilesRecursively(dirAbs)) {
+    const size = await stat(fileAbs).then(
+      (stats) => stats.size,
+      () => 0,
     );
-    return [];
+    files.push({ rel: toRootRelative(root, fileAbs), size });
   }
+  return files;
 }
 
 /**
