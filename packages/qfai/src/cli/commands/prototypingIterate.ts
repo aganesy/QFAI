@@ -2534,11 +2534,20 @@ function aggregateRollbackReport(root: string, stranded: readonly string[]): str
  * Every file under `dirAbs` with its size, read before the directory is moved
  * so the log can record what the move took. Rejects where the tree cannot be
  * walked or a file in it cannot be sized, and the caller then moves nothing.
+ *
+ * A `dirAbs` that is itself a link is the one entry the move takes: `rename`
+ * moves the link and leaves what it points at, so the log names the link.
  */
 async function filesWithSizes(
   root: string,
   dirAbs: string,
 ): Promise<{ rel: string; size: number }[]> {
+  const entry = await lstat(dirAbs).catch((cause: unknown) => {
+    if (isEnoent(cause)) return null;
+    throw cause;
+  });
+  if (entry === null) return [];
+  if (entry.isSymbolicLink()) return [{ rel: toRootRelative(root, dirAbs), size: entry.size }];
   const files: { rel: string; size: number }[] = [];
   for (const fileAbs of await collectFilesRecursively(dirAbs)) {
     // The entry itself moves, so a link is sized as a link.

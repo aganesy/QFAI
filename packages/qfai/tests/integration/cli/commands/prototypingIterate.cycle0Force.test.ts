@@ -300,6 +300,37 @@ describe("iterate --cycle 0 destructive-rerun gate", () => {
     expect(log).toContain(".qfai/evidence/prototyping/screenshots/linked.png");
   });
 
+  it("logs an aggregate directory that is a link as the one entry it moves", async () => {
+    // The move takes the link and leaves what it points at, so the log names the
+    // link rather than files that stay where they are.
+    const root = await newTempDir();
+    await seedProject(root);
+    const evidenceRoot = path.join(root, ".qfai/evidence/prototyping");
+    const shared = path.join(root, "shared-captures");
+    await mkdir(shared, { recursive: true });
+    await writeFile(path.join(shared, "home.png"), "shared capture", "utf-8");
+    await mkdir(evidenceRoot, { recursive: true });
+    try {
+      await symlink(shared, path.join(evidenceRoot, "screenshots"), "junction");
+    } catch {
+      // A host without permission to link cannot exercise this case.
+      return;
+    }
+    captureStderr();
+
+    const exit = await runPrototypingIterate({
+      root,
+      cycle: 0,
+      targetUrl: "http://localhost:5173",
+    });
+
+    expect(exit).toBe(0);
+    const log = await readFile(path.join(evidenceRoot, "mutation-log.jsonl"), "utf-8");
+    expect(log).toContain('"path":".qfai/evidence/prototyping/screenshots"');
+    expect(log).not.toContain("screenshots/home.png");
+    expect(await readFile(path.join(shared, "home.png"), "utf-8")).toBe("shared capture");
+  });
+
   it("puts back what the reset moved when a later move fails", async () => {
     // A failed reset that left `screenshots/` moved and `html/` in place would
     // hold half a loop's evidence in each place.
