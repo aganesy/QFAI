@@ -65,12 +65,19 @@ fi
 # Read as `scripts/check-conflict-markers.mjs` reads a tracked file, without the toolchain this
 # step runs ahead of: seven of a marker character followed by a space or the end of the line,
 # with a carriage return before the newline ignored, and in a Markdown file nothing inside a
-# fenced block, which holds an example. The workflow-pinned lists are appended to what the list
-# names, because `pin-guard-bytes.mjs` rewrites them from the tree.
+# fenced block, which holds an example. A file with a binary extension is not read, since a
+# marker-shaped line in its bytes means nothing. The workflow-pinned lists are appended to what
+# the list names, because `pin-guard-bytes.mjs` rewrites them from the tree.
 has_conflict_markers() {
   # The extension is compared lowercased, and a name that is only an extension has none, as
   # Node's `path.extname` reads it.
   name=$(printf '%s' "${1##*/}" | tr '[:upper:]' '[:lower:]')
+  case "${name}" in
+    ?*.png | ?*.jpg | ?*.jpeg | ?*.gif | ?*.ico | ?*.webp | ?*.pdf | ?*.woff | ?*.woff2 | ?*.ttf | \
+      ?*.otf | ?*.zip | ?*.gz | ?*.tgz | ?*.mp4 | ?*.webm | ?*.wasm)
+      return 1
+      ;;
+  esac
   case "${name}" in
     .md | .markdown) fenced=0 ;;
     *.md | *.markdown) fenced=1 ;;

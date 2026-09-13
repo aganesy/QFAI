@@ -103,8 +103,11 @@ async function pathsWithConflictMarkers(root, rels) {
     if (/^(?:<{7}|={7}|>{7}|\|{7})(?: |$)/m.test(own)) return [CONFLICT_SCANNER_REL];
     throw cause;
   }
+  // A binary file's bytes can hold a marker-shaped line that means nothing, so
+  // it is skipped as the tracked-file scan skips it.
   return rels.filter(
     (rel) =>
+      scanner.readsText(rel) &&
       scanner.markersIn(readFileSync(path.join(root, rel), "utf-8"), {
         fenced: scanner.readsFences(rel),
       }).length > 0,

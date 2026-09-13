@@ -233,6 +233,40 @@ describe("a fenced example in a pinned Markdown file", () => {
   });
 });
 
+describe("a pinned binary file", () => {
+  it("is not a conflict to either program, whatever its bytes hold", async () => {
+    // A marker-shaped line inside a binary stream means nothing.
+    await appendFile(
+      path.join(staged, "scripts/conflict-example.pdf"),
+      "%PDF-1.7\n=======\n",
+      "utf-8",
+    );
+
+    const pinned = await runPin();
+    expect(pinned.status).toBe(0);
+
+    const guarded = await runGuard();
+    expect(guarded.status).toBe(0);
+    expect(guarded.output).not.toContain("merge conflict markers");
+  });
+
+  it("is the same set of extensions to both programs", async () => {
+    const scanner = await readFile(
+      path.join(repoRoot, "scripts/check-conflict-markers.mjs"),
+      "utf-8",
+    );
+    const guard = await readFile(path.join(repoRoot, GUARD), "utf-8");
+    const inScanner = [
+      ...(/const binaryExtensions = new Set\(\[([^\]]*)\]\)/.exec(scanner)?.[1] ?? "").matchAll(
+        /"(\.[a-z0-9]+)"/g,
+      ),
+    ].map((match) => match[1]);
+    const inGuard = [...guard.matchAll(/\?\*(\.[a-z0-9]+)/g)].map((match) => match[1]);
+    expect(inScanner.length).toBeGreaterThan(0);
+    expect([...new Set(inGuard)].sort()).toEqual([...inScanner].sort());
+  });
+});
+
 describe("the lint job's pre-flight step", () => {
   it("scans the workflow-pinned inputs before it checks their digests", async () => {
     // The step stops at its first failing command, so a digest check ahead of the

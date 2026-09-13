@@ -73,6 +73,14 @@ const binaryExtensions = new Set([
   ".wasm",
 ]);
 
+/**
+ * Whether a path's bytes are read as text: every extension but the binary
+ * ones above, compared lowercased.
+ */
+export function readsText(relative) {
+  return !binaryExtensions.has(path.extname(relative).toLowerCase());
+}
+
 /** Extensions whose fenced blocks hold examples rather than content. */
 const fencedExtensions = new Set([".md", ".markdown"]);
 
@@ -151,7 +159,7 @@ function isScannableEntry(absolute) {
   } catch {
     return false;
   }
-  return info.isFile() && !binaryExtensions.has(path.extname(absolute).toLowerCase());
+  return info.isFile() && readsText(absolute);
 }
 
 /** Runs the scan over `cwd` and returns the process exit code. */
