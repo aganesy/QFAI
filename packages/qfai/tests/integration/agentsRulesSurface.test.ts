@@ -20,7 +20,12 @@ describe("the retained-failure test stays under the safety floor", () => {
     expect(flat).toContain("Subject to the safety floor in this section");
     expect(flat).toContain("no type or schema excludes it");
     expect(flat).toContain("the specification, a contract or an actual observation names it");
-    expect(flat).toContain("Every promise is awaited or returned, never dropped");
+    expect(flat).toContain(
+      "Every promise is awaited or returned to a caller that awaits or adopts it, never dropped",
+    );
+    expect(flat).toContain("callback runtime ignores returned promises");
+    expect(flat).toContain("Subject to the same floor");
+    expect(flat).toContain(".qfai/specs/spec-*/06_Test-Cases.md");
     expect(flat).toContain("process entry point is a trust boundary");
     expect(flat).toContain("A dropped rejection remains a correctness defect");
     expect(flat).toContain("06_Test-Cases.md");
