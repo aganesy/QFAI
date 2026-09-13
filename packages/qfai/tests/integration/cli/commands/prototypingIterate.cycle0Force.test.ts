@@ -172,6 +172,39 @@ describe("iterate --cycle 0 destructive-rerun gate", () => {
     expect(entries).toContain("iter-00");
   });
 
+  it("removes the captures a prior loop mirrored, with or without an iter-00 to back up", async () => {
+    // The required-path check reads the aggregate directories first, so a
+    // restarted loop left them passing it on the previous loop's captures.
+    for (const force of [true, false]) {
+      const root = await newTempDir();
+      await seedProject(root);
+      if (force) await seedExistingIter00(root, "prior loop seed");
+      const evidenceRoot = path.join(root, ".qfai/evidence/prototyping");
+      for (const { dir, file } of [
+        { dir: "screenshots", file: "home.png" },
+        { dir: "html", file: "home.html" },
+      ]) {
+        await mkdir(path.join(evidenceRoot, dir), { recursive: true });
+        await writeFile(path.join(evidenceRoot, dir, file), "prior loop capture", "utf-8");
+      }
+
+      const exit = await runPrototypingIterate({
+        root,
+        cycle: 0,
+        targetUrl: "http://localhost:5173",
+        force,
+      });
+
+      expect(exit).toBe(0);
+      const entries = await readdir(evidenceRoot);
+      expect(entries).not.toContain("screenshots");
+      expect(entries).not.toContain("html");
+      const log = await readFile(path.join(evidenceRoot, "mutation-log.jsonl"), "utf-8");
+      expect(log).toContain(".qfai/evidence/prototyping/screenshots/home.png");
+      expect(log).toContain(".qfai/evidence/prototyping/html/home.html");
+    }
+  });
+
   it("does NOT refuse when iter-00 does not exist (fresh project default path)", async () => {
     const root = await newTempDir();
     await seedProject(root);

@@ -856,7 +856,9 @@ export async function runPrototypingIterate(
     // current reviewer gate has not approved. Certify already anchors
     // its scan to prototyping.json#iterations[] (which we just reset),
     // but deleting the on-disk dirs guarantees no resolver can stumble
-    // into them.
+    // into them. The aggregate `screenshots/` and `html/` copies of the
+    // prior loop's captures go with them, whether or not an `iter-00`
+    // was there to back up.
     //
     // Fail closed when rm fails: surface the failed dir + cause instead
     // of swallowing the error and continuing, so the operator can clear
@@ -2195,11 +2197,13 @@ function reportIterateDryRun(input: {
     const iterRel = path.relative(input.root, input.reset.iter00Abs).replace(/\\/g, "/");
     lines.push(
       `  would MOVE ${iterRel} to ${iterRel}.backup-<ISO> and log every file in it to ` +
-        `${PROTOTYPING_EVIDENCE_REL}/mutation-log.jsonl, then clear the evidence iteration dirs.`,
+        `${PROTOTYPING_EVIDENCE_REL}/mutation-log.jsonl, then clear the evidence iteration dirs ` +
+        "and the aggregate screenshots/ and html/ dirs.",
     );
   } else if (input.cycle === 0) {
     lines.push(
-      `  no existing ${PROTOTYPING_EVIDENCE_REL}/iter-00 to back up; the cycle-0 reset would create it fresh.`,
+      `  no existing ${PROTOTYPING_EVIDENCE_REL}/iter-00 to back up; the cycle-0 reset would create it fresh ` +
+        "and clear any other evidence iteration dirs and the aggregate screenshots/ and html/ dirs.",
     );
   }
   lines.push(
@@ -2374,6 +2378,16 @@ async function collectFilesRecursively(absDir: string): Promise<string[]> {
   return out;
 }
 
+/**
+ * The project-wide directories a capture pass mirrors an iteration into.
+ *
+ * They hold copies of one loop's captures, and the required-path check reads
+ * them before the iteration directories. So the cycle-0 reset clears them with
+ * the iteration directories: left in place, a restarted loop passed that check
+ * on the previous loop's captures before capturing anything.
+ */
+const AGGREGATE_EVIDENCE_DIRS: readonly string[] = ["screenshots", "html"];
+
 async function clearEvidenceIterDirs(
   evidenceRootAbs: string,
   root?: string,
@@ -2403,7 +2417,7 @@ async function clearEvidenceIterDirs(
     }
   }
   for (const name of entries) {
-    if (!/^iter-\d{2,}$/.test(name)) continue;
+    if (!/^iter-\d{2,}$/.test(name) && !AGGREGATE_EVIDENCE_DIRS.includes(name)) continue;
     const abs = path.join(evidenceRootAbs, name);
     // Restrict the cleanup to actual directories: a stray `iter-NN`
     // file (e.g. an operator artifact saved without an extension)

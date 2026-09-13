@@ -157,6 +157,16 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   `parallelization-policy.md` and the skill now say items 6, 7 and 8 share the
   revision. No completed row in this repository changes result.
 
+- **A loop restarted at cycle 0 holds no evidence until it captures again**
+  (#1765). The cycle-0 reset backed up `iter-00` and removed the other
+  iteration directories, but left the aggregate `screenshots/` and `html/`
+  directories a capture pass mirrors into. The required-path check reads those
+  first, so after `iterate --cycle 0 --force` without `--capture`, and after a
+  cycle 0 in a project holding only aggregate files, `qfai validate` passed on
+  the previous loop's captures. Every cycle-0 run now removes the two
+  directories with the iteration directories and logs each removed file to
+  `mutation-log.jsonl`.
+
 ## [1.12.0] - 2026-09-12
 
 ### Added

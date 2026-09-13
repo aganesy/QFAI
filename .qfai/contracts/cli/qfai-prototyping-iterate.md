@@ -125,6 +125,13 @@ recoverable automatically — the operator does NOT need to `cp -r`
 manually. The backup directory is **outside** the `/^iter-\d{2,}$/`
 cleanup regex, so subsequent runs do not delete it.
 
+Every cycle-0 run, with or without `--force`, then removes the stale
+`iter-NN/` directories and the aggregate `screenshots/` and `html/`
+directories, logging each removed file to `mutation-log.jsonl`. The
+aggregate directories hold copies of a prior loop's captures, and the
+required-path check reads them before the iteration directories, so a
+restarted loop holds no evidence until it captures again.
+
 ## `--capture` and `--auto-serve` (REQ-0109 / REQ-0110)
 
 See `qfai-prototyping.md` § "Capture & Serve Flags (v1.9.1+)" for the
