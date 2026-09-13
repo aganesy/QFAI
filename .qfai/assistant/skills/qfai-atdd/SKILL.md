@@ -191,8 +191,11 @@ restated here.
     test root — the segment after the deepest `tests` / `test` / `__tests__` or
     the configured `paths.testsDir` basename, because a package may legitimately
     be called `api`. A path carrying no such segment answers no layer, and a
-    directory carrying a `package.json` is a package rather than a test root
-    whatever it is called. **The configured root itself needs no segment**: with
+    directory carrying a package manifest is a package rather than a test root
+    whatever it is called. The manifests are those the catalog table lists for
+    each ecosystem, and a runner settings file among them (`package.json`,
+    `deno.json`, `deno.jsonc`, `pyproject.toml`, `setup.cfg`) counts only when it
+    names a package. **The configured root itself needs no segment**: with
     `paths.testsDir` at the repository root, `e2e/**` is answered by containment
     in the configured layer directory, and it is an _extra_ suite beside it that
     needs a named root — so in a repository with one suite per

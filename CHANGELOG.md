@@ -75,7 +75,11 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   and in either case one that carries no package manifest, since a workspace
   package named `tests` is a package rather than a suite root. The manifest is
   read for every ecosystem this toolkit has a stub dialect for, not Node's
-  alone: a Python or Go workspace can name a package that way too.
+  alone: a Python or Go workspace can name a package that way too. A file a
+  suite also keeps for its runner — `package.json`, `deno.json`, `deno.jsonc`,
+  `pyproject.toml`, `setup.cfg` — counts only when it names a package, and
+  `deno.jsonc` is parsed with its comments and trailing commas, so a `name`
+  nested in another object or left in a comment names nothing.
   The glob `qfai init` derives reaches colocated sources, so reading the file's
   own parent instead would have made every `src/api/client.spec.ts` an API
   acceptance test: its annotation could then discharge an obligation, and an

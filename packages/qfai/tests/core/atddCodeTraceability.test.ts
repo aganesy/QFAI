@@ -1303,6 +1303,47 @@ describe("acceptance tests outside paths.testsDir", () => {
     });
   });
 
+  it("reads a deno.jsonc package name through its comments", async () => {
+    await withProject(async (root) => {
+      await seedSpec(root, "0001", ["US-0001"], ["TC-0001"]);
+      await seedTest(root, "integration", "a.test.ts", "/* QFAI:SPEC-0001:TC-0001 */");
+      // Comments and a trailing comma are legal JSONC. The top-level name makes
+      // `packages/tests/` a package, so its `api/` is a source directory.
+      const dir = path.join(root, "packages", "tests", "api");
+      await mkdir(dir, { recursive: true });
+      await writeFile(
+        path.join(root, "packages", "tests", "deno.jsonc"),
+        [
+          "{",
+          "  /* the workspace member */",
+          '  "name": "tests",',
+          '  "version": "0.0.0",',
+          "}",
+          "",
+        ].join("\n"),
+        "utf-8",
+      );
+      await writeFile(
+        path.join(dir, "client.spec.ts"),
+        [
+          "/* QFAI:SPEC-0001:US-0001 */",
+          "describe('client', () => {",
+          "  it('runs', () => {});",
+          "});",
+          "",
+        ].join("\n"),
+        "utf-8",
+      );
+
+      const result = await evaluateAtddCodeTraceability(
+        root,
+        withProjectGlobs(["packages/*/**/*.spec.ts"]),
+      );
+
+      expect(result.missing.us).toEqual(["SPEC-0001:US-0001"]);
+    });
+  });
+
   it("and a suite directory inside that package still is one", async () => {
     await withProject(async (root) => {
       await seedSpec(root, "0001", ["US-0001"], ["TC-0001"]);
@@ -1342,6 +1383,11 @@ describe("acceptance tests outside paths.testsDir", () => {
     ["setup.cfg", ["[tool:pytest]", "addopts = -q", ""].join("\n")],
     ["pyproject.toml", ["[tool.pytest.ini_options]", 'addopts = "-q"', ""].join("\n")],
     ["package.json", JSON.stringify({ type: "module" })],
+    // A name inside a comment or a nested object names no package.
+    [
+      "deno.jsonc",
+      ["{", '  // "name": "tests",', '  "tasks": { "name": "check" },', "}", ""].join("\n"),
+    ],
   ])("a suite keeping %s for its runner is still a test root", async (manifest, content) => {
     await withProject(async (root) => {
       await seedSpec(root, "0001", ["US-0001"], ["TC-0001"]);
