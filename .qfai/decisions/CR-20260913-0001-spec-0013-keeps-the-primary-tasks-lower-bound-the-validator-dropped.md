@@ -84,11 +84,11 @@ document exists to remove.
 
 ## Options (at least 3) and recommendation
 
-| #   | Option                                                                                                                                                                                                                                                              | Cost                                                                                                                                                                                                                                                                        | Risk                                                                                                                                                                                                                                                                                                                                                                                                              | Recommended |
-| --- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------- |
-| 1   | Narrow the spec to the product, and **supersede** the three decisions with a new one: the band's floor is withdrawn, `QFAI-AUD-020` is a ceiling, and the records that chose 3..7 keep their `Decision` text and are marked superseded as the actions below set out | Nine `spec-0013` statements and every `spec-0004` statement carrying the band rewritten, plus one `_policies` record; one new `DR-*` in `_policies`; reset `spec-0013/TDD-0027`, `TDD-0028` and `spec-0004/TDD-0050`; the band assertions of two skipped `spec-0004` suites | Records today's behaviour as intended. A decision nobody reviewed at the time becomes the recorded one — but it is already the shipped one, and the record says by whom and when                                                                                                                                                                                                                                  | ✅          |
-| 2   | Narrow the spec to the product, and **rewrite** the three decisions in place to say `ceiling 7`                                                                                                                                                                     | The same statements, resets and suites; no new record                                                                                                                                                                                                                       | The **authoritative** lineage goes: the Decision Records stop saying a floor was chosen, and the rejected options `DR-0267` lists ("1..3 minimal band") lose the thing they were rejected against. The history survives outside them — this Change Request, the changelog entry for the removal, and the delta rows that recorded the adoption — so a reader who knows to look elsewhere can still reconstruct it |             |
-| 3   | Restore the floor in the product: `QFAI-AUD-020` warns below the minimum again, and the spec stands                                                                                                                                                                 | A validator change, its tests, the shipped template comments, the guide and a changelog entry; no spec edit                                                                                                                                                                 | Reverses a deliberate removal on a rationale nobody has contradicted — one task is a screen's focus, and a floor warns against it. A CR of its own would be the place to argue that                                                                                                                                                                                                                               |             |
+| #   | Option                                                                                                                                                                                                                                                              | Cost                                                                                                                                                                                                                                                                                                                 | Risk                                                                                                                                                                                                                                                                                                                                                                                                              | Recommended |
+| --- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------- |
+| 1   | Narrow the spec to the product, and **supersede** the three decisions with a new one: the band's floor is withdrawn, `QFAI-AUD-020` is a ceiling, and the records that chose 3..7 keep their `Decision` text and are marked superseded as the actions below set out | Nine `spec-0013` statements and every `spec-0004` statement carrying the band rewritten, plus one `_policies` record; one new `DR-*` in `_policies`; reset `spec-0013/TDD-0027`, `TDD-0028` and `spec-0004/TDD-0050`; the band assertions of two skipped `spec-0004` suites; the ATDD stage's coverage-depth refresh | Records today's behaviour as intended. A decision nobody reviewed at the time becomes the recorded one — but it is already the shipped one, and the record says by whom and when                                                                                                                                                                                                                                  | ✅          |
+| 2   | Narrow the spec to the product, and **rewrite** the three decisions in place to say `ceiling 7`                                                                                                                                                                     | The same statements, resets, suites and refresh; no new record                                                                                                                                                                                                                                                       | The **authoritative** lineage goes: the Decision Records stop saying a floor was chosen, and the rejected options `DR-0267` lists ("1..3 minimal band") lose the thing they were rejected against. The history survives outside them — this Change Request, the changelog entry for the removal, and the delta rows that recorded the adoption — so a reader who knows to look elsewhere can still reconstruct it |             |
+| 3   | Restore the floor in the product: `QFAI-AUD-020` warns below the minimum again, and the spec stands                                                                                                                                                                 | A validator change, its tests, the shipped template comments, the guide and a changelog entry; no spec edit. The same three `confirm-only` invocations and delta rows as the other options, the three `done` rows re-verified in place, and the ATDD stage's coverage-depth refresh                                  | Reverses a deliberate removal on a rationale nobody has contradicted — one task is a screen's focus, and a floor warns against it. A CR of its own would be the place to argue that                                                                                                                                                                                                                               |             |
 
 Option 1 is recommended because the three records are the artifact this Change
 Request is actually about. A decision record's value is that it says what was
@@ -179,6 +179,16 @@ stands.
    | `/qfai-sdd spec-0004` | Every statement that carries the band, as edited by hand under this approval: `REQ-0164` and its Consumer View sentence, `US-0004-0038` — which requires the finding to name a recommended count band — `AC-0004-0037`, `BR-0004-0031`, the example, `TC-0004-0070`, the `OQ-0158` resolution, the plan item, and `DR-0004-0014` — a third decision adopting `DR-0267` verbatim | that every statement stands | `spec-0004/09_delta.md`, and `07_Decisions.md` under options 1 and 2 |
    | `/qfai-sdd`           | `_policies/08_Decisions.md` — `DR-0267`, superseded or rewritten by the option                                                                                                                                                                                                                                                                                                  | that `DR-0267` stands       | `_policies/10_delta.md`, and `08_Decisions.md` under options 1 and 2 |
 
+   **The template path is corrected in every statement options 1 and 2 edit.**
+   `REQ-0164`, `US-0013-0014`, `AC-0013-0024`, `BR-0013-0019`, `EX-0013-0019`,
+   `TC-0013-0032`, `DR-0013-0003`, the `10_Plan.md` item and `DR-0267` name
+   `templates/contracts/ui-spec.yaml`, which the package does not ship; the
+   template is `templates/contracts/ui-contract.sample.yaml`. A statement
+   narrowed to the ceiling names the shipped file, so `TC-0013-0032` does not
+   go on requiring documentation in an artifact nobody can check. A superseded
+   record keeps its text, path included. Under option 3 no statement is edited,
+   and the path defect is left to a record of its own.
+
    Each delta write is one row of that file's `## Change Requests` table —
    `CR ID`, `Upstream artifact`, `Mode`, `Approved by`, `Applied at` — and not a
    `## Triage` row.
@@ -246,25 +256,45 @@ stands.
      entrenches one that exists today outside it. What a rewritten record owes
      is the reason the alternatives were not taken, and `Consequences` is where
      that belongs.
-3. Downstream ledger sweep, **under every option**. Reset to `todo`, recording
+3. Downstream ledger sweep, under options 1 and 2. Reset to `todo`, recording
    this CR's ID in their `DR-ID` column: `spec-0013/TDD-0027`,
    `spec-0013/TDD-0028`, `spec-0004/TDD-0050`. None is retired: every
-   obligation survives, so the rows are re-derived rather than deleted.
+   obligation survives with a changed statement, so the rows are re-derived
+   rather than deleted.
 
-   Under options 1 and 2 their obligations change. Under option 3 the
-   obligations stand and the product changes to meet them, which rewrites the
-   validators and tests these rows certify: their evidence then describes code
-   that no longer exists, and `/qfai-implement` selects a `done` row only once
-   an approved Change Request resets it. **So the reset is owed under option 3
-   as well**, and it is what lets action 4's work be re-run and re-reviewed on
-   those rows.
+   **Under option 3 no row is reset.** The obligations and their sources stand,
+   and the approved reset exists for an upstream change that invalidates a
+   row's obligation (`change-request-reset.md`), so recording this request in
+   `DR-ID` would claim a change that did not happen. Action 4 still rewrites
+   the validators and tests the three rows certify, so **those rows are
+   re-verified in place**, by the path
+   `.qfai/assistant/skills/qfai-implement/references/checkpoint-verification.md`
+   sets out for a repair over code a `done` row produced: a
+   `## Shared-artifact re-verify` line per row at the new `Revision`, carrying
+   its selector re-run, its `Oracle proof` re-taken and fresh verdicts from its
+   required reviewers. The restored floor moves what those tests assert, so
+   each line also carries falsifiability evidence for the corrected assertion,
+   with `qa-gatekeeper` routed on the mutation run. `spec-0004/TDD-0050`
+   belongs to another spec, so the run records it under
+   `## Cross-spec obligations` as well
+   (`.qfai/assistant/skills/qfai-implement/references/cross-spec-ownership.md`).
 
-   Under options 1 and 2, `/qfai-implement` also updates the two skipped cases
+   Under options 1 and 2, `/qfai-atdd spec-0004` updates the two skipped cases
    the `Tests` line names — `spec0004SaasPackageAndPackLocation.test.ts` lines
    68-74 and `spec0004SaasPackageAndPackLocationE2E.test.ts` lines 77-85 — which
-   require the finding to name `3..7`. A skipped test still counts as declared
+   require the finding to name `3..7`. Both are acceptance tests, an
+   `Integration` case and an `E2E` one, and `/qfai-implement` writes neither
+   (`qfai-implement/SKILL.md`). A skipped test still counts as declared
    coverage (`.qfai/assistant/catalog/test-layers.md`), so left as they are they
    would keep crediting the withdrawn band, and enabling either would fail.
+
+   **`/qfai-atdd spec-0013` refreshes `.qfai/evidence/coverage-depth-spec-0013.md`
+   under every option.** Its `BR-0013-0019` row and its findings score the
+   missing floor and the missing template file. Options 1 and 2 rewrite that
+   rule, and option 3 restores the behaviour it names, so each outcome changes
+   what those cells and findings describe. The matrix is owned from the ATDD
+   stage onward (`qfai-atdd/SKILL.md`), so the refresh goes through that
+   stage's reviewer gate.
 
 4. Under option 3 only: `packages/qfai/src/core/validators/designAudit.ts`,
    `packages/qfai/src/core/validators/auditProfile.ts` and their tests —
@@ -284,6 +314,10 @@ stands.
    minimum is back, because it reverses a behaviour users were told of. The
    released entry that recorded the removal stays as it is. That option is
    implementation work and its scope is product paths rather than upstream ones.
+   The cases under `tests/integration/**` and `tests/e2e/**` among those tests
+   are acceptance tests, which `/qfai-atdd spec-0013` updates; the validator
+   change, the unit case, the template, the guide and the changelog entry are
+   `/qfai-implement`'s.
 
 ## Resolution
 

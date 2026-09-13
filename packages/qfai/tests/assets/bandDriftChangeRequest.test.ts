@@ -64,11 +64,18 @@ describe("the primary_tasks band drift has a Change Request", () => {
     await expectPhrase("| `spec-0004/TDD-0050` | `ledger-row` |");
   });
 
-  it("resets those rows whichever option is approved", async () => {
-    // Restoring the floor rewrites the validators and tests the rows certify,
-    // and a done row is selected again only once a Change Request resets it.
-    await expectPhrase("3. Downstream ledger sweep, **under every option**.");
-    await expectPhrase("**So the reset is owed under option 3 as well**");
+  it("re-verifies those rows in place when the product changes to meet them", async () => {
+    // An approved reset claims an upstream change. Under option 3 nothing
+    // upstream moves, so the rows keep their status and are re-verified.
+    await expectPhrase("3. Downstream ledger sweep, under options 1 and 2.");
+    await expectPhrase("**Under option 3 no row is reset.**");
+    await expectPhrase("**those rows are re-verified in place**");
+  });
+
+  it("routes the acceptance tests through the stage that writes them", async () => {
+    // `/qfai-implement` writes no E2E, API or ATDD-owned Integration test.
+    await expectPhrase("`/qfai-atdd spec-0004` updates the two skipped cases");
+    await expectPhrase("are acceptance tests, which `/qfai-atdd spec-0013` updates");
   });
 
   it("names an invocation per artifact class, with its mode", async () => {
