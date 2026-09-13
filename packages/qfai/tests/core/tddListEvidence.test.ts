@@ -2045,6 +2045,28 @@ describe("QFAI-TDDLIST-008", () => {
     });
   });
 
+  it("reads a round pack pair written with no values as a pair missing its values", async () => {
+    await withProject(async (root) => {
+      const evidence = completeEntry("Unit").replace(
+        "- Refactor verify command: npm test",
+        [
+          "- Round 1: reviewer verdict: PASS",
+          "- Round 1: Review pack:",
+          "- Round 1: Review pack seal:",
+          "- Refactor verify command: npm test",
+        ].join("\n"),
+      );
+      const issues = await runIssuesOn(
+        root,
+        ledger([{ status: "done", evidence: IMPLEMENT_POINTER }]),
+        { ".qfai/evidence/implement-spec-0001.md": evidence },
+      );
+      expect(issues.map((issue) => issue.message).join("\n")).toContain(
+        "Round 1: Review pack seal: sha256",
+      );
+    });
+  });
+
   it("refuses a round pack path of the wrong shape even when nothing is there", async () => {
     // Packs are skipped when absent, so a path that could never name one would
     // otherwise pass on every fresh clone.

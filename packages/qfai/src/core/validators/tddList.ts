@@ -3540,8 +3540,10 @@ async function invalidRoundReviewPacks(
     evidenceFieldOccurrences(section, field, includeBlank).filter(
       (occurrence) => occurrence.round === round,
     );
-  const packs = inRound("Review pack");
-  const seals = inRound("Review pack seal");
+  // Blank labels are kept, so a pair written with no values is a pair missing
+  // its values rather than no pair, which would let the row complete unreviewed.
+  const packs = inRound("Review pack", true);
+  const seals = inRound("Review pack seal", true);
   if (packs.length === 0 && seals.length === 0) return [];
   const verdicts = inRound("reviewer verdict", true);
   const closingAttempt = verdicts.at(-1)?.attempt ?? null;
@@ -3556,11 +3558,11 @@ async function invalidRoundReviewPacks(
       continue;
     }
     const pack = lastAttemptValue(packs, attempt);
-    if (pack !== null && namedPacks.has(pack)) {
+    if (pack !== null && pack !== "" && namedPacks.has(pack)) {
       invalid.push(`${label} naming a new pack, not an earlier attempt's`);
       continue;
     }
-    if (pack !== null) namedPacks.add(pack);
+    if (pack !== null && pack !== "") namedPacks.add(pack);
     invalid.push(
       ...(await invalidRoundAttemptPack(root, {
         ...row,
