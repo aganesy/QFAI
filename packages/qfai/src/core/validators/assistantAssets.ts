@@ -1457,9 +1457,10 @@ function collectSkillRegistrationIssues(skillFile: string, content: string): Iss
   const missingName = collectSkillNameIssue(skillFile, frontMatter);
   const description = frontMatter?.["description"];
   if (typeof description === "string" && description.trim() !== "") {
-    // Measured as a host reads it, trimmed. Padding around the text is not part
-    // of the value, and counted, a description within the limit was refused.
-    const length = description.trim().length;
+    // Measured as a host reads it: trimmed, and in characters rather than UTF-16
+    // units. Counted with its padding, or with an emoji as two, a description
+    // within the limit was refused.
+    const length = Array.from(description.trim()).length;
     return length > SKILL_DESCRIPTION_MAX_LENGTH
       ? [
           ...missingName,

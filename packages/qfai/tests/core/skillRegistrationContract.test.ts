@@ -619,6 +619,17 @@ describe("what the gate and the host disagreed about", () => {
     expect(finding?.message).toContain("1025 characters");
   });
 
+  it("counts a description in characters, not UTF-16 units", async () => {
+    // An emoji outside the Basic Multilingual Plane is one character to a host
+    // and two units to a JavaScript string.
+    const emoji = String.fromCodePoint(0x1f600);
+    const within = await projectWithSkill([`description: "${emoji.repeat(1024)}"`]);
+    expect(await registrationFindings(within)).toEqual([]);
+    const over = await projectWithSkill([`description: "${emoji.repeat(1025)}"`]);
+    const [finding] = await registrationFindings(over);
+    expect(finding?.message).toContain("1025 characters");
+  });
+
   it("does not read front matter behind a byte order mark", async () => {
     // A strict decoder drops the mark by default, so the document parsed while
     // a host that keeps it finds no opening delimiter and registers nothing.
