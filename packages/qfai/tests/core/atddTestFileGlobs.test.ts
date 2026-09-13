@@ -60,6 +60,10 @@ describe("deriveAtddFilePattern", () => {
     );
   });
 
+  it("reads a leading negated extglob as a selector, not an exclusion", () => {
+    expect(deriveAtddFilePattern(["!(fixtures)/**/*.py"])).toBe("**/*.{feature,markdown,md,py}");
+  });
+
   it("falls back when no glob carries a recoverable extension", () => {
     expect(deriveAtddFilePattern(["tests/**"])).toBe(
       "**/*.{ts,tsx,js,jsx,mjs,cjs,mts,cts,feature,md,markdown}",

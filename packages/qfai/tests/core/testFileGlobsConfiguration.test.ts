@@ -114,6 +114,11 @@ describe("testFileGlobs configuration diagnosis (QFAI-TRACE-124)", () => {
         const finding = issues.find((entry) => entry.code === "QFAI-TRACE-124");
         expect(finding?.severity).toBe("error");
         expect(finding?.rule).toBe("traceability.layered.testFileGlobsScanFailed");
+        // The pattern reaches the output escaped, never as the raw byte.
+        const nul = String.fromCharCode(0);
+        expect(finding?.message).not.toContain(nul);
+        expect(finding?.refs?.join()).not.toContain(nul);
+        expect(finding?.refs).toEqual([JSON.stringify(glob)]);
       });
     },
   );

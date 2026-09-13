@@ -2284,8 +2284,10 @@ export function deriveTestFileExtensions(testFileGlobs: readonly string[]): Set<
   for (const glob of testFileGlobs) {
     // A leading `!` excludes. Its extension names files the scan must not read,
     // and counted, `!tests/legacy/**/*.ts` beside a Python glob added TypeScript
-    // to what the stage scans.
-    if (glob.trimStart().startsWith("!")) continue;
+    // to what the stage scans. `!(` opens a negated extglob instead, which
+    // selects: `!(fixtures)/**/*.py` is a Python selector, as fast-glob reads it.
+    const trimmed = glob.trimStart();
+    if (trimmed.startsWith("!") && !trimmed.startsWith("!(")) continue;
     for (const match of glob.matchAll(/\.\{([^}]+)\}$/g)) {
       for (const ext of (match[1] ?? "").split(",")) {
         // A member is copied into the generated scan pattern whole, wildcards
