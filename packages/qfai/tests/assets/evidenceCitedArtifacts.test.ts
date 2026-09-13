@@ -999,6 +999,46 @@ function globToRegExp(cited: string): RegExp {
   return new RegExp(`^${compileGlob(cited)}$`);
 }
 
+/** The most variable-width parts one segment of a matched citation may hold. */
+const MATCH_PART_LIMIT = 4;
+
+/**
+ * Whether the guard can match a citation without the expression it compiles to
+ * backtracking for longer than a test can wait.
+ *
+ * Each variable-width part of a segment — a `*`, an extended group, a wildcard
+ * inside one — is a place a failing match retries with the name split another
+ * way, so the attempts grow as the name's length to the power of their count. A
+ * repeated group around one, `*(*)b`, retries every split at every repetition:
+ * against a 29-character name a single attempt runs for seconds.
+ *
+ * SIMPLIFIED: a repeated group (`*(…)`, `+(…)`) is matched only around literal
+ * text, and a segment holds at most {@link MATCH_PART_LIMIT} variable-width
+ * parts; a citation past either is reported unresolved.
+ * Lift when: a record cites such a pattern and needs it resolved.
+ */
+function withinMatchBudget(cited: string): boolean {
+  return patternSegments(cited).every((segment) => {
+    if (segment === "**") return true;
+    let parts = 0;
+    let lastStar = -2;
+    for (const index of outsideClasses(segment)) {
+      const character = segment[index] ?? "";
+      if ("@?*+!".includes(character) && segment[index + 1] === "(") {
+        const close = groupClose(segment, index + 1);
+        const body = close === -1 ? "" : segment.slice(index + 2, close);
+        if ((character === "*" || character === "+") && /[^\w.-]/.test(body)) return false;
+        parts += 1;
+      } else if (character === "*" && lastStar !== index - 1) {
+        // A run of stars compiles to one wildcard.
+        parts += 1;
+      }
+      if (character === "*") lastStar = index;
+    }
+    return parts <= MATCH_PART_LIMIT;
+  });
+}
+
 /**
  * Whether a citation names a set rather than one path.
  *
@@ -1239,6 +1279,7 @@ function resolves(cited: string, paths: ReturnType<typeof trackedPaths> = tracke
     return paths.files.has(cited) || paths.directories.has(cited);
   }
   if (namesASet(cited)) {
+    if (!withinMatchBudget(cited)) return false;
     // Directories as well as files: `.qfai/discussion/discussion-*` names a set
     // of packs, and an anchored pattern matches no file below one of them — so
     // reading files alone reports a citation unresolved while the tree holds
@@ -2015,6 +2056,18 @@ describe("a glob is a claim about a set", () => {
     const cited = ".qfai/report/[ x]missing.json";
     expect(citationsIn(`see \`${cited}\` here`)).toEqual([cited]);
     expect(citationsIn(`see ${cited} here`)).toEqual([]);
+  });
+
+  it("leaves a citation unresolved where matching it would backtrack past any bound", () => {
+    // `*(*)b` retries every split of a name at every repetition. Against a tracked
+    // pack's 29-character name one attempt ran for seconds.
+    expect(withinMatchBudget(".qfai/discussion/*(*)b")).toBe(false);
+    expect(resolves(".qfai/discussion/*(*)b")).toBe(false);
+    expect(withinMatchBudget(".qfai/report/*a*a*a*a*a.json")).toBe(false);
+    expect(withinMatchBudget(".qfai/report/+(a|b).json")).toBe(false);
+    expect(withinMatchBudget(".qfai/report/+(run-).json")).toBe(true);
+    expect(withinMatchBudget(".qfai/report/[*][*][*][*][*].json")).toBe(true);
+    expect(withinMatchBudget(".qfai/discussion/discussion-*/**/0?_*.md")).toBe(true);
   });
 
   it("keeps a colon a code span delimits", () => {
