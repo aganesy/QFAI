@@ -120,8 +120,15 @@ list?
 ## Approved actions (owner skill rerun plan)
 
 1. `/qfai-sdd spec-0013`, mode `re-derive`, over the statements the table under
-   `## Proposed change` names, with one `09_delta.md` Triage row for this
-   Change Request.
+   `## Proposed change` names. It records this Change Request as one row in
+   `spec-0013/09_delta.md`'s `## Change Requests` table — `CR ID`,
+   `Upstream artifact`, `Mode`, `Approved by`, `Applied at` — not as a
+   `## Triage` row.
+
+   The rerun's Phase 2b also seeds, at `todo`, the thirteen `E2E` rows
+   `spec-0013`'s ledger lacks for its stories. Those rows are owed whatever
+   this record decides, and they are listed so the approval covers them.
+
 2. Downstream ledger sweep. Reset to `todo`, recording this CR's ID in `DR-ID`:
    `spec-0013/TDD-0019`. Its obligation changes, and its recorded observation is
    of the literal slot being replaced. The same rerun re-points it: its

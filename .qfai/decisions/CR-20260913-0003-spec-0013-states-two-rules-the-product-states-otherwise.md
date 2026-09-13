@@ -197,12 +197,18 @@ ask for.
 
 1. `/qfai-sdd spec-0013` rerun, mode `re-derive`, scope by item:
 
-   | Item | Statements re-derived                                                                                                                                                                                                                                                                                                                    |
-   | ---- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-   | 1    | Under every option, the resolver half of `REQ-0163`, the consumer view, `US-0013-0013`, `AC-0013-0022`, `TC-0013-0030` and the `10_Plan.md` step, to the frontmatter or a matching UI contract. The helper half per the option — under `1c` a new requirement chain for the wiring, story through test case, with its own `09_delta` row |
-   | 2    | `REQ-0163`, the consumer view, `US-0013-0013`, `AC-0013-0023`, `BR-0013-0018`, `EX-0013-0018`, `TC-0013-0031` and the `10_Plan.md` step — under `2b` with the release the user named                                                                                                                                                     |
+   | Item | Statements re-derived                                                                                                                                                                                                                                                                                                                                    |
+   | ---- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+   | 1    | Under every option, the resolver half of `REQ-0163`, the consumer view, `US-0013-0013`, `AC-0013-0022`, `TC-0013-0030` and the `10_Plan.md` step, to the frontmatter or a matching UI contract. The helper half per the option — under `1c` a new requirement chain for the wiring, story through test case, with its own `09_delta` Change Requests row |
+   | 2    | `REQ-0163`, the consumer view, `US-0013-0013`, `AC-0013-0023`, `BR-0013-0018`, `EX-0013-0018`, `TC-0013-0031` and the `10_Plan.md` step — under `2b` with the release the user named                                                                                                                                                                     |
 
-   Each item carries its own `09_delta.md` Triage row. One rerun performs both.
+   Each item carries its own row in `spec-0013/09_delta.md`'s
+   `## Change Requests` table — `CR ID`, `Upstream artifact`, `Mode`,
+   `Approved by`, `Applied at` — not a `## Triage` row. One rerun performs both.
+
+   The rerun's Phase 2b also seeds, at `todo`, the thirteen `E2E` rows
+   `spec-0013`'s ledger lacks for its stories. Those rows are owed whatever
+   this record decides, and they are listed so the approval covers them.
 
 2. Downstream ledger sweep.
    - Reset to `todo`, recording this CR's ID in `DR-ID`: `spec-0013/TDD-0025`
