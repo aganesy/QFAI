@@ -141,39 +141,11 @@ function ReviewLanguage([string]$Body) {
   return "en"
 }
 
-function NormalizeBody([string]$Body) {
-  if ($null -eq $Body) { return "" }
-  $text = $Body -replace "^\uFEFF", ""
-  $text = $text -replace "`r`n", "`n"
-  return $text.Trim()
-}
+. (Join-Path $PSScriptRoot "pr-body-policy.ps1")
 
 function CountOf($Value) {
   if ($null -eq $Value) { return 0 }
   return @($Value).Count
-}
-
-function StripAutoImport([string]$Body) {
-  $normalized = NormalizeBody $Body
-  if ([string]::IsNullOrWhiteSpace($normalized)) { return "" }
-  $parts = [regex]::Split($normalized, "(?m)^## Auto-import\s*$", 2)
-  if ((CountOf $parts) -ge 2 -and -not [string]::IsNullOrWhiteSpace($parts[0])) {
-    return $parts[0].Trim()
-  }
-  return $normalized
-}
-
-function DescriptionAnswer([string]$Body, [string]$HeadingPattern = 'What (?:this|a) change made unnecessary') {
-  $text = StripAutoImport $Body
-  $text = [regex]::Replace($text, '(?ms)^[ \t]{0,3}(?<fence>`{3,}|~{3,})[^\n]*\n.*?^[ \t]{0,3}\k<fence>[ \t]*$', '')
-  $text = [regex]::Replace($text, '(?s)<!--.*?-->', '')
-  $match = [regex]::Match($text, '(?ms)^## ' + $HeadingPattern + '[ \t]*\n(?<answer>.*?)(?=^#{1,2} |\z)')
-  if (-not $match.Success) { return "" }
-  $answer = $match.Groups['answer'].Value.Trim()
-  $meaningful = [regex]::Replace($answer, '(?m)^[ \t]*(?:[-*+]|\d+[.)])[ \t]*(?:\[[ xX-]?\][ \t]*)?', '')
-  $meaningful = [regex]::Replace($meaningful, '[`*_]', '').Trim()
-  if ([string]::IsNullOrWhiteSpace($meaningful) -or $meaningful -match '^(?:TBD|TODO|\[.*\])\.?$') { return "" }
-  return $answer
 }
 
 function Compliance([string]$Body) {
@@ -556,13 +528,15 @@ while ($streak -lt $effectiveRequiredZeroStreak) {
   $firstPoll = $false
 
   $snapshot = RunJson "gh" @("pr", "view", "$targetPrNumber", "--json", "number,title,body,baseRefName,headRefName,statusCheckRollup,url") "Failed to refresh PR details."
-  $bodyCheck = Compliance ([string]$snapshot.body)
-  if (-not $bodyCheck.IsCompliant) {
-    $streak = 0
-    $bodyArtifact = "pr-{0}-body-compliance.json" -f $targetPrNumber
-    [void](SaveJson -Root $root -Name $bodyArtifact -Value $bodyCheck)
-    [void](SaveMonitorStatus -Root $root -Number $targetPrNumber -Mode $mode -EffectiveSleep $effectiveSleepSeconds -EffectiveStreak $effectiveRequiredZeroStreak -CurrentStreak $streak -State "action_required_body" -BlockingArtifact $bodyArtifact -NextAction "Restore the required authored PR sections, update the PR body, then rerun the live monitor.")
-    throw "PR body is no longer template-compliant. Update the PR body, then rerun the live monitor."
+  if (-not $DryRun) {
+    $bodyCheck = Compliance ([string]$snapshot.body)
+    if (-not $bodyCheck.IsCompliant) {
+      $streak = 0
+      $bodyArtifact = "pr-{0}-body-compliance.json" -f $targetPrNumber
+      [void](SaveJson -Root $root -Name $bodyArtifact -Value $bodyCheck)
+      [void](SaveMonitorStatus -Root $root -Number $targetPrNumber -Mode $mode -EffectiveSleep $effectiveSleepSeconds -EffectiveStreak $effectiveRequiredZeroStreak -CurrentStreak $streak -State "action_required_body" -BlockingArtifact $bodyArtifact -NextAction "Restore the required authored PR sections, update the PR body, then rerun the live monitor.")
+      throw "PR body is no longer template-compliant. Update the PR body, then rerun the live monitor."
+    }
   }
   $threads = @(Threads -Owner ([string]$repo.owner.login) -Repo ([string]$repo.name) -Number $targetPrNumber)
   $checkState = EvaluateChecks $snapshot
