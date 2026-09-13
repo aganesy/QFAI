@@ -7,7 +7,9 @@ Quality-First AI (QFAI) — specification-driven development の検証フレー�
 - Follow existing code conventions and patterns in the repository.
 - All source changes must have corresponding test coverage.
 - TypeScript: avoid bare `as` type assertions; prefer type narrowing.
-- TypeScript: every async path must have explicit error handling.
+- TypeScript: await or return every promise. Subject to the safety floor in
+  `.agents/rules/minimal-implementation.md` § 2, do not add a catch for a failure
+  that no specification, contract or observation names.
 - Keep functions focused; extract when a function exceeds ~50 lines.
 - Try solutions in the order `.claude/rules/minimal-implementation.md`
   (master: `.agents/rules/minimal-implementation.md`) sets out, and mark a

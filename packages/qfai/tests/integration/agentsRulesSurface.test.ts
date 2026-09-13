@@ -8,6 +8,29 @@ import { describe, expect, it } from "vitest";
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, "../../../..");
 
+describe("repository async guidance agrees with the retained-failure test", () => {
+  it.each(["CLAUDE.md", "REVIEW.md"])(
+    "%s preserves propagation and the whole floor",
+    async (file) => {
+      const text = await readFile(path.join(ROOT, file), "utf-8");
+      const flat = text.replace(/\s+/g, " ").toLowerCase();
+      expect(flat).toContain("await or return every promise");
+      expect(flat).toContain("subject to the safety floor");
+      expect(flat).toContain(".agents/rules/minimal-implementation.md");
+      expect(flat).toContain("§ 2");
+      expect(flat).toContain(
+        "do not add a catch for a failure that no specification, contract or observation names",
+      );
+      expect(text).not.toContain("every async path must have explicit error handling");
+      if (file === "REVIEW.md") {
+        expect(text).not.toContain("Missing error handling or incomplete error messages");
+        expect(text).toContain("Incomplete error messages");
+        expect(text).toContain("neither awaited nor returned");
+      }
+    },
+  );
+});
+
 /**
  * Every rule master, read off the directory.
  *
