@@ -33,9 +33,10 @@ RED:fail GREEN:pass ORACLE:proved REV:a1b2c3d -> `.qfai/evidence/implement-spec-
   adopted a tier vocabulary.
 - `REV:` — the revision the run was taken at, in the two spellings
   `evidence-revision.md` defines and no others: a git rev (7-64 hex), or
-  `working-tree+<sha256>` for an observation taken against an uncommitted
-  tree. The reviewer-response gate reads the same two, so one value serves
-  both.
+  `working-tree+<64 lowercase hex>` for an observation taken against an
+  uncommitted tree. The content address is lowercase because freshness is
+  compared exactly, and one tree written in two cases reads as two revisions.
+  The reviewer-response gate reads the same two, so one value serves both.
 - `-> <anchor>` — `.qfai/evidence/<implement|atdd>-<spec-id>.md#<tdd-nnnn>`:
   the evidence file this row's `Layer` owns, and **this row's own**
   `### TDD-NNNN` section in it. All three halves are checked **against the
