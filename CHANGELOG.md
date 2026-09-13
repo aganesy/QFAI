@@ -23,6 +23,19 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **A UI contract template name the package does not ship is recorded where the
+  Drift Protocol looks for it** (#1758). Nine statements, eight in `spec-0013`
+  and the shared decision `DR-0267`, name `templates/contracts/ui-spec.yaml` as
+  the file that documents the `primary_tasks` count guidance. No file of that
+  name ships. The UI contract template is `ui-contract.sample.yaml`, which the
+  same pack names elsewhere, and a completed ledger row certifies a test case
+  naming the missing file while its test reads the shipped one.
+
+  `CR-20260913-0010` proposes correcting the file name in each statement, with
+  nothing else in them changing, and resetting that row for the acceptance-test
+  stage to re-execute. It is applied ahead of the record that settles the band
+  itself.
+
 - **The working-tree address excludes a nested project's own records, and stops on
   a FIFO or socket git does not list** (#1747). The collection reads the lists
   from the worktree root, but rooted the `.qfai/evidence`, `.qfai/review` and
