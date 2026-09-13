@@ -26,6 +26,7 @@ import type {
 import { locateToolAgainstProject, resolveToolVersion } from "./version.js";
 import { applyWaivers } from "./waivers.js";
 import { validateContracts } from "./validators/contracts.js";
+import { validateUiScreenEntries } from "./validators/uiScreenEntries.js";
 import { validateDiscussionMermaid } from "./validators/discussMermaid.js";
 import { validateAssistantAssets } from "./validators/assistantAssets.js";
 import { validateSkillsIntegrity } from "./validators/skillsIntegrity.js";
@@ -615,6 +616,15 @@ async function runDiscussionValidators(
     ...(await validateDiscussionVisuals(root)),
     ...(await validateResearchSummary(root, config)),
     ...(await runCanonicalUixValidators(root, config)),
+    // `QFAI-GRILL-001` (warning) on this run's own session record. The stage
+    // names `--profile discussion` as its completion gate, so a run that wrote
+    // no record could otherwise finish its own gate without the finding. The
+    // stage is named because `runSddValidators` dispatches this too and a full
+    // run calls both.
+    ...(await validateGrillingTrace(root, {
+      subjects: ["discussion"],
+      discussionDir: config.paths.discussionDir,
+    })),
     // The RCP footer names `--profile discussion` as the review-cycle gate and
     // mandates `review_request.md` / `Rxx_*.md` / `summary.json` in the same
     // breath. Without this the command it prescribes could not see the
@@ -775,7 +785,7 @@ async function runSddValidators(
     // no trace in the evidence it wrote. Warning because it reads a record the
     // agent wrote about its own run: it establishes that the record exists, not
     // that a session happened, and an error would claim the second.
-    ...(await validateGrillingTrace(root, { specScope })),
+    ...(await validateGrillingTrace(root, { specScope, subjects: ["spec"] })),
     // Self-governance group: Pair IV (`R-HANDOFF-SCHEMA-DRIFT`, schema ↔
     // writer) and Pair III (`R-SKILL-MANIFEST-DRIFT`, probe-impl ↔
     // manifest-schema). Both are skill-governance surfaces so they live
@@ -864,7 +874,13 @@ async function runPrototypingProfileValidators(
   timings: TimingsSink,
   platformOption?: string,
 ): Promise<Issue[]> {
-  const raw = await runPrototypingValidators(root, config, timings, platformOption);
+  const raw = [
+    ...(await runPrototypingValidators(root, config, timings, platformOption)),
+    // The profile certification accepts, so an entry no screen is read from is
+    // reported here too. Kept out of `runPrototypingValidators`: `full` also
+    // runs `validateContracts`, which composes it already.
+    ...(await validateUiScreenEntries(root, config)),
+  ];
   return await relaxPrototypingIssuesIfExploration(root, raw);
 }
 

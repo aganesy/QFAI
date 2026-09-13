@@ -1381,15 +1381,25 @@ function normalizeAuditArtifact(value: string): string {
 }
 
 const GATE_COMPLETED_EVIDENCE_FIELD =
-  /^\s*(?:\|\s*)?(?:[-*][ \t]+)?(?:\*\*)?(?:Spec review(?:ed revision| pack(?: seal)?)?|Spec audited evidence hash|Code quality review(?:ed revision| pack(?: seal)?)?|Code quality audited evidence hash|Prototype parity(?: reviewed revision| review pack(?: seal)?| audited evidence hash)?|Checkpoint verification (?:command|result|seal))(?:\*\*)?\s*(?::|\|)/i;
+  /^\s*(?:\|\s*)?(?:[-*][ \t]+)?(?:\*\*)?(?:Spec review(?:ed revision| pack(?: seal)?)?|Spec audited evidence hash|Code quality review(?:ed revision| pack(?: seal)?)?|Code quality audited evidence hash|Prototype parity(?: reviewed revision| review pack(?: seal)?| audited evidence hash)?|Checkpoint verification (?:command|result|revision|seal))(?:\*\*)?\s*(?::|\|)/i;
 
 const PHASE_AUTHORED_EVIDENCE_FIELD =
-  /^\s*(?:\|\s*)?(?:[-*][ \t]+)?(?:\*\*)?(?:Round[ \t]+\d+:[ \t]*)?(?:TDD-ID|Layer|Test file|Selector|TC-ref|US-ref|CON-API-ref|Revision|RED revision|Replacement proof revision|RED test hash|RED test manifest|RED command|RED result|GREEN command|GREEN result|Satisfied-by|Falsifiability command|Falsifiability result|Falsifiability revision|reviewer verdict|RED failure mode|Refactor verify command|Refactor verify result|Oracle proof|qa-gatekeeper|Shared-artifact re-verify|Surface artifacts)(?:\*\*)?\s*(?::|\|)/i;
+  /^\s*(?:\|\s*)?(?:[-*][ \t]+)?(?:\*\*)?(?:Round[ \t]+\d+:[ \t]*)?(?:TDD-ID|Layer|Test file|Selector|TC-ref|US-ref|CON-API-ref|Revision|RED revision|Replacement proof revision|RED test hash|RED test manifest|RED command|RED result|GREEN command|GREEN result|Satisfied-by|Falsifiability command|Falsifiability result|Falsifiability revision|reviewer verdict|RED failure mode|Refactor verify command|Refactor verify result|Refactor verify revision|Oracle proof|qa-gatekeeper|Shared-artifact re-verify|Surface artifacts)(?:\*\*)?\s*(?::|\|)/i;
 
 function hasPhaseAuthoredFieldAfterGate(section: string): boolean {
   const visibleLines = maskEvidenceRegions(section.replace(/\r\n/g, "\n")).split("\n");
   const boundary = visibleLines.findIndex((line) => GATE_COMPLETED_EVIDENCE_FIELD.test(line));
   if (boundary < 0) return false;
+  // A table row carries several label cells, and the whole boundary row is left
+  // out of the audited phase evidence. A phase-authored cell anywhere on it is
+  // outside what the reviewers hashed, however far left it sits.
+  const boundaryLine = visibleLines[boundary] ?? "";
+  if (
+    /^\s*\|/.test(boundaryLine) &&
+    splitMarkdownRow(boundaryLine).some((cell) => PHASE_AUTHORED_EVIDENCE_FIELD.test(`${cell} |`))
+  ) {
+    return true;
+  }
   return visibleLines
     .slice(boundary + 1)
     .some(
@@ -2941,6 +2951,27 @@ function missingCompletedEvidenceFields(
     missing.push("Checkpoint verification result: PASS");
   }
 
+  // The reviews judge the tree after the refactor, and `Refactor verify
+  // revision` is the observation of that tree taken before them. A round's
+  // `Revision` names the tree before the refactor, so a row whose refactor
+  // changed a byte could match only one of the two. A row that records no
+  // refactor revision is held to the round's.
+  const refactorRevision = rowEvidenceFieldValue(section, "Refactor verify revision");
+  if (refactorRevision !== null && !EVIDENCE_REVISION_FORM.test(refactorRevision)) {
+    missing.push(`Refactor verify revision naming ${REVISION_FORM_HINT}`);
+  }
+  // Row-level, like the pair beside it. A `Round N:` prefix reads as a round's
+  // field, and the row would fall back to the round's `Revision` with the value
+  // in plain sight; a second bare one is read in place of the first.
+  const refactorRevisions = evidenceFieldOccurrences(section, "Refactor verify revision");
+  if (refactorRevisions.some(({ round }) => round !== null)) {
+    missing.push("Refactor verify revision without a Round N: prefix");
+  }
+  if (refactorRevisions.filter(({ round }) => round === null).length > 1) {
+    missing.push("exactly one Refactor verify revision");
+  }
+  const finalRevision = refactorRevision ?? latestRevision;
+
   // The parity fields are read on every row: a row with no parity verdict has
   // none of them, and an `n/a` row's revision is held to the same freshness as
   // a verdict's.
@@ -2949,12 +2980,12 @@ function missingCompletedEvidenceFields(
     const auditedHash = rowEvidenceFieldValue(section, `${prefix} audited evidence hash`);
     const pack = rowEvidenceFieldValue(section, `${prefix} review pack`);
     const packSeal = rowEvidenceFieldValue(section, `${prefix} review pack seal`);
-    if (
-      reviewedRevision !== null &&
-      latestRevision !== null &&
-      reviewedRevision !== latestRevision
-    ) {
-      missing.push(`${prefix} reviewed revision matching latest Revision`);
+    if (reviewedRevision !== null && finalRevision !== null && reviewedRevision !== finalRevision) {
+      missing.push(
+        refactorRevision === null
+          ? `${prefix} reviewed revision matching latest Revision`
+          : `${prefix} reviewed revision matching Refactor verify revision`,
+      );
     }
     if (reviewedRevision !== null && !EVIDENCE_REVISION_FORM.test(reviewedRevision)) {
       missing.push(`${prefix} reviewed revision naming ${REVISION_FORM_HINT}`);
@@ -2974,6 +3005,10 @@ function missingCompletedEvidenceFields(
   const checkpointSeal = rowEvidenceFieldValue(section, "Checkpoint verification seal");
   if (checkpointSeal !== null && !SHA256_VALUE.test(checkpointSeal)) {
     missing.push("Checkpoint verification seal: sha256");
+  }
+  const checkpointRevision = rowEvidenceFieldValue(section, "Checkpoint verification revision");
+  if (checkpointRevision !== null && !EVIDENCE_REVISION_FORM.test(checkpointRevision)) {
+    missing.push(`Checkpoint verification revision naming ${REVISION_FORM_HINT}`);
   }
   return missing;
 }
@@ -3125,16 +3160,26 @@ async function invalidCompletedEvidenceArtifacts(
   const checkpointCommand = rowEvidenceFieldValue(section, "Checkpoint verification command");
   const checkpointResult = rowEvidenceFieldValue(section, "Checkpoint verification result");
   const checkpointSeal = rowEvidenceFieldValue(section, "Checkpoint verification seal");
+  // The seal is taken over the run's own revision. A round's `Revision` names
+  // the tree before the refactor, and the checkpoint runs on the tree after
+  // it, so a row whose refactor changed a byte could match only one of them.
+  // A row that records no checkpoint revision was sealed over the round's.
+  const checkpointRevision = rowEvidenceFieldValue(section, "Checkpoint verification revision");
+  const sealRevision = checkpointRevision ?? revision;
   if (
-    revision !== null &&
+    sealRevision !== null &&
     checkpointCommand !== null &&
     checkpointResult !== null &&
     checkpointSeal !== null &&
     SHA256_VALUE.test(checkpointSeal) &&
     bareSha256(checkpointSeal) !==
-      checkpointEvidenceSeal(revision, checkpointCommand, checkpointResult)
+      checkpointEvidenceSeal(sealRevision, checkpointCommand, checkpointResult)
   ) {
-    invalid.push("Checkpoint verification seal matching command, result, and Revision");
+    invalid.push(
+      checkpointRevision === null
+        ? "Checkpoint verification seal matching command, result, and Revision"
+        : "Checkpoint verification seal matching command, result, and Checkpoint verification revision",
+    );
   }
   return invalid;
 }
@@ -3713,6 +3758,25 @@ export const EVIDENCE_ANCHOR_UNRESOLVED_CODE = "QFAI-TDDLIST-008";
 export const EVIDENCE_BACKFILLED_CODE = "QFAI-TDDLIST-019";
 
 /**
+ * Finding code for a ledger whose table predates an obligation column, holding
+ * a row whose `Layer` owns that column.
+ *
+ * The shipped reference sanctions the shape: an eight-column ledger written
+ * before `US-Refs` and `CON-API-Refs` existed is a legacy ledger, not a broken
+ * one. What it lacks is the protection those columns give — a seeded `E2E` or
+ * `API` row has `TC-Refs` forbidden to it, so without its own column it can
+ * reach `done` with no auditable target at all.
+ *
+ * Reported at `warning`, on the reasoning `QFAI-TDDLIST-019` gives. Not an
+ * error: the sanction stands, and erroring would revoke it for every adopter
+ * whose ledgers predate the columns, forcing a migration the reference says is
+ * not owed. Not silence: a row outside a protection must not be
+ * indistinguishable, in the output an operator reads, from one inside it. A
+ * project that will carry no such row treats warnings as failures.
+ */
+export const OBLIGATION_COLUMN_ABSENT_CODE = "QFAI-TDDLIST-020";
+
+/**
  * `Revision` names a tree that files the observation covered have moved past.
  *
  * `evidence-revision.md#what-makes-evidence-stale` defines staleness
@@ -4202,8 +4266,14 @@ export async function validateTddList(
  * The last round is the right one: a re-verify round re-takes the observation,
  * so the interval runs from what the newest round names. The bare form is still
  * accepted, because a row may record one.
+ *
+ * Newer still is `Refactor verify revision`, where the row records one: the
+ * re-run on the tree the reviews judge, taken after every round. A refactor
+ * that changed a covered file is part of what it observed, not a change since.
  */
 function observationRevision(section: string): string | null {
+  const refactor = rowEvidenceFieldValue(section, "Refactor verify revision");
+  if (refactor !== null && refactor.length > 0) return refactor;
   const rounds = evidenceRoundNumbers(section);
   for (const round of [...rounds].sort((a, b) => b - a)) {
     const value = roundEvidenceFieldValue(section, round, "Revision");
@@ -4367,6 +4437,9 @@ export const TDD_LIST_SEED_SHAPE_CODES: ReadonlySet<string> = new Set([
   // change the reader is forbidden to make.
   "TDDLIST_INVALID_OBLIGATION_REF",
   "TDDLIST_OBLIGATION_LAYER_MISMATCH",
+  // The columns themselves are Phase 2b's to write, so a ledger that predates
+  // them is that phase's to migrate, and its gate is where the gap is heard.
+  "QFAI-TDDLIST-020",
   // The remaining three read cells the same phase authors, and were missing
   // for no reason the ownership split supports:
   //
@@ -6149,10 +6222,21 @@ function validateObligationColumn(
   spec: ObligationColumnSpec,
 ): Issue[] {
   const issues: Issue[] = [];
+  // Rows whose `Layer` owns this column, in a ledger table that has no such
+  // column. Per table, not per file: an appended table can lack a column the
+  // first one carries, and its rows are just as unprotected. Collected rather than reported per row: the gap is the
+  // ledger's shape, and one finding naming every affected row says that.
+  const unprotected: string[] = [];
   for (const ref of rows) {
-    // An absent column reads as an empty cell, which is the same "this row
-    // carries no such obligation" the optional column already means.
-    if (ref.scan.headers.indexOf(spec.column) < 0) continue;
+    if (ref.scan.headers.indexOf(spec.column) < 0) {
+      if (cell(ref, "Layer").toLowerCase() === spec.layer) {
+        // The TDD-ID is what an operator searches the ledger for; the position
+        // disambiguates the same id across tables.
+        const id = cell(ref, "TDD-ID");
+        unprotected.push(id.length > 0 ? `${id} (${ref.label})` : ref.label);
+      }
+      continue;
+    }
     const value = cell(ref, spec.column);
     if (value.length === 0 || value === "-") {
       if (cell(ref, "Layer").toLowerCase() === spec.layer) {
@@ -6200,6 +6284,20 @@ function validateObligationColumn(
         [spec.column, rawLayer],
         "change",
         `Set Layer to ${spec.layer.toUpperCase()} for this row, or move the obligation to the column its Layer owns (TC-Refs for Unit/Component/Integration, US-Refs for E2E, CON-API-Refs for API).`,
+      ),
+    );
+  }
+  if (unprotected.length > 0) {
+    issues.push(
+      issue(
+        OBLIGATION_COLUMN_ABSENT_CODE,
+        `${String(unprotected.length)} Layer=${spec.layer.toUpperCase()} row(s) in tdd/test-list.md for spec-${spec.specNumber} sit in a ledger table with no ${spec.column} column, so they record no obligation it can check: ${unprotected.join(", ")}`,
+        "warning",
+        spec.relPath,
+        `${spec.rule}ColumnAbsent`,
+        [spec.column, spec.layer.toUpperCase(), ...unprotected],
+        "change",
+        `Add the ${spec.column} column to the ledger and record the ${spec.expected} each of these rows covers. Until then a Layer=${spec.layer.toUpperCase()} row can reach done with no auditable target: TC-Refs is forbidden on it, and there is no other cell for its obligation.`,
       ),
     );
   }

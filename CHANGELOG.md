@@ -4,7 +4,95 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ## [Unreleased]
 
+### Added
+
+- **A legacy ledger outside the obligation-column protection is reported**
+  (#1663). A seeded `E2E` or `API` row has `TC-Refs` forbidden to it, so the
+  `US-Refs` and `CON-API-Refs` columns are the only place its obligation can
+  live, and an empty cell there is an error. On a ledger written before those
+  columns existed the check is waived — the shape is sanctioned — and the waiver
+  also meant nothing said that those rows could reach `done` with no auditable
+  target.
+
+  `QFAI-TDDLIST-020` now says it, at `warning`, once per absent column, naming
+  each row by its `TDD-ID`. Not an error, because that would revoke the
+  sanction and force a migration the shipped reference says is not owed; not
+  silence, because a row outside the protection should not read like one inside
+  it. It follows the reasoning the backfilled-evidence warning already gives, and
+  the SDD profile hears it, since the columns are that stage's to write.
+
 ### Fixed
+
+- **The working-tree address excludes a nested project's own records, and stops on
+  a FIFO or socket git does not list** (#1747). The collection reads the lists
+  from the worktree root, but rooted the `.qfai/evidence`, `.qfai/review` and
+  ledger exclusions there too. In a project nested in a larger worktree, such as
+  `packages/app-a/` of a monorepo, they excluded nothing, so the phase's own
+  writes moved the address between observations that must agree. Each exclusion
+  now starts with the project's prefix from `git rev-parse --show-prefix`. Git
+  also lists no untracked FIFO, socket or device, so adding or removing one left
+  the address unchanged; the step now asks the filesystem for them and stops on
+  any it finds. A test runs the step's own commands in a temporary repository.
+
+- **The completion gate recomputes the checkpoint seal over the checkpoint's own
+  revision** (#1738). `checkpoint-verification.md` seals the checkpoint command
+  and result together with `Checkpoint verification revision`, the tree that
+  run was made on. The gate took the latest round's `Revision` instead, which
+  names the tree before the refactor, so a row sealed as the contract says was
+  reported whenever its refactor changed a byte. The gate now reads the
+  checkpoint revision, checks that it names a revision, and keeps the round's
+  `Revision` for a row that records none. The contract also says each value
+  enters the seal without a code span around it.
+
+- **The grilling-trace check accepts the template it was written to reject**
+  (#1739). `QFAI-GRILL-001` counted any table row under `## Pre-draft Grilling`
+  as a record, and the shipped evidence template carries three worked rows. So
+  the section copied with nothing replaced produced no finding, which is the
+  one state the check names as the reason it exists. A row still holding a
+  template placeholder no longer counts, and the finding says which of the two
+  states the file is in.
+
+- **The grilling-trace check reads the discussion stage's record too** (#1740).
+  It was written when no stage but the spec stage named a file to write a
+  session record to. Two changes the same day gave the discussion run and the
+  prototyping loop theirs, and the reason the check gave for covering neither
+  stayed in place after it stopped being true.
+
+  Only the most recent discussion run is read. Every run opens its evidence
+  under its own stamp and never returns to an earlier one, so a finding on a run
+  that is over could not be cleared by any later run — it would stand for the
+  life of the project, and a list nobody can empty is the list people stop
+  reading.
+
+  Prototyping stays out, and not because its absence is undecidable — the skill
+  writes that file before cycle 0 whether or not the session settled anything.
+  What rules it out is the shape of the record: an empty session is written as
+  prose, which this check's row test would report; the file is one per project
+  and rewritten in place, so there is no run to key a finding on; and escalated
+  rows are a state no row count can read.
+
+  `--profile discussion` runs the check as well as `--profile sdd`, each naming
+  its own stage. The discussion stage names that profile as its completion gate,
+  so a run that wrote no record could otherwise finish its own gate without the
+  finding, and a full run calls both runners.
+
+  Which discussion run to ask about comes from the pack tree rather than from
+  the evidence listing. A run that wrote no record is invisible among the
+  records, and the run before it would otherwise answer in its place with a
+  record that is not about it.
+
+  Two more ways a record could exist and say nothing are closed with it. The
+  session table the discussion skill shows now carries placeholders in its
+  run-specific cells, as the spec template does, so copying it and replacing
+  nothing is caught; and a row whose cells are all empty no longer counts as a
+  row. A cell is read as a placeholder only when it is nothing else, so a row
+  carrying a link or an inline tag inside a sentence is left alone.
+
+  `qfai init` keeps `.qfai/evidence/discussion-<ts>.md` out of the ignore block
+  as it already does for the spec stage's evidence, and the shipped instructions
+  classify both as committed rather than as regenerable stage logs. A record no
+  checkout can see is one the check could only ever report nothing about, and a
+  negation alone does not stage a file.
 
 - **The prototyping preflight refuses a screen with no primary task** (#1698).
   The audit lane reported an empty `primary_tasks` as `QFAI-AUD-001`, but
@@ -69,6 +157,72 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   procedure produces: `working-tree+` followed by 64 lowercase hexadecimal
   characters. Freshness is compared exactly, so accepting both cases would let
   one tree be recorded as two revisions and read a correct row as stale.
+
+- **A test glob the glob matcher refuses no longer ends the run, and
+  `--profile atdd` reports it** (#1703). `QFAI-ATDD-134`. A pattern holding a
+  NUL byte is valid YAML. Given one ahead of a wildcard, such as
+  `tests/\0/*.ts`, the matcher raised the error inside its directory walk,
+  where nothing could catch it, and `qfai validate` exited under every profile.
+  The scan now refuses the pattern before the walk starts. Under the `tdd` and
+  `full` profiles `QFAI-TRACE-124` reports it, and the stub scan reports
+  `QFAI-TEST-002` for it and still reads the other patterns.
+
+  The ATDD stage reads only the extensions out of these globs, so under
+  `--profile atdd` nothing said a glob was unusable. `QFAI-ATDD-134` says it
+  there. A glob the matcher accepts is not reported, whatever it selects:
+  `tests/**` names no extension, and the stage scans the JavaScript and
+  TypeScript set for it, as documented.
+
+  A glob starting with `!` excludes files, and the ATDD stage no longer takes an
+  extension from it. One starting with `!(` is a negated extglob, which selects,
+  and still gives its extension. `!tests/e2e/legacy/**/*.ts` beside a Python glob added
+  TypeScript to what the stage scans.
+
+- **The saas-package certify cases run through the command line, and the verify
+  reviewer gate has a test** (#1636, #1637, #1638). Every case credited to the
+  two certify obligations called the command function with the flag already
+  parsed, so dropping `--scope` or `--upgrade-scope` from the command line left
+  them all passing. The two suites that did run the command line were skipped.
+  They now run: the integration suite through the CLI entry point, and the
+  end-to-end suite through the built binary. New cases feed verify's binding
+  gate a render critique the reviewer returned `REVISE`, and read
+  `/qfai-verify`'s reviewer-gate clauses in the shipped and installed skill.
+
+  `CR-20260913-0005`, awaiting approval, proposes pointing three `spec-0014`
+  ledger rows at those cases, splitting the upgrade-scope row at its boundary,
+  and recording that four delta chains name reassigned identifiers. The ledger
+  is unchanged until it is applied. `CR-20260913-0006` puts the one row whose
+  evidence has no form it can take to the user.
+
+- **The completion gate holds reviewers to the tree after the refactor** (#1732).
+  `evidence-revision.md` says the reviews judge the final tree, which
+  `Refactor verify revision` names, while a round's `Revision` names the tree
+  before the refactor. The gate compared every `reviewed revision` with the
+  round's `Revision`, so a row whose refactor changed a byte was reported when
+  its reviewers recorded the tree they judged. The gate now compares them with
+  `Refactor verify revision`, checks that it names a revision, and keeps the
+  round's `Revision` for a row that records none. The staleness check measures
+  from the same revision, and the field counts as phase-authored, so one written
+  after the review fields is refused. `ui-affecting.md`,
+  `parallelization-policy.md` and the skill now say items 6, 7 and 8 share the
+  revision. No completed row in this repository changes result.
+
+- **A UI contract entry no screen is read from is reported** (#1734). Every
+  consumer of UI contracts reads screens the same way: it keeps the first entry
+  for each `id`, skips an entry with no `id` or no `route`, and reads no screen
+  from a `screens` value that is not a list. That reading stays.
+  What such an entry stated was checked by nothing, and nothing said so. An
+  empty `primary_tasks` on it passed the audit lane and the prototyping
+  preflight, and a different route was prototyped as the entry it repeated.
+  `QFAI-CONTRACT-042` now names each such entry with its file and position,
+  and for a repeated `id` it also names the entry read in its place. A
+  `screens` value that is not a list is named the same way. An `id` is repeated
+  only within one contract: each spec's own contract is read on its own, so
+  another spec may reuse it for a screen with the same `title`, `route` and
+  `primary_tasks`. Where those differ, the project-wide screen list the
+  prototyping loop captures from and the design audit reads keeps only the
+  first, and the second is named. The prototyping profile, which certification
+  accepts, reports the finding as well.
 
 - **An active-pointer state no directory can be in is recorded where the Drift
   Protocol looks for it** (#1693). A shared decision and both packs that follow
