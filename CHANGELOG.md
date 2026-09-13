@@ -56,7 +56,8 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   TypeScript set for it, as documented.
 
   A glob starting with `!` excludes files, and the ATDD stage no longer takes an
-  extension from it. `!tests/e2e/legacy/**/*.ts` beside a Python glob added
+  extension from it. One starting with `!(` is a negated extglob, which selects,
+  and still gives its extension. `!tests/e2e/legacy/**/*.ts` beside a Python glob added
   TypeScript to what the stage scans.
 
 ## [1.12.0] - 2026-09-12

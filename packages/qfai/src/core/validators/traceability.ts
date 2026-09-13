@@ -788,9 +788,9 @@ async function validateTestFileGlobsConfiguration(
     return [
       issue(
         "QFAI-TRACE-124",
-        `validation.traceability.testFileGlobs の走査に失敗しました ` +
-          `(globs: ${quoted.join(", ")}): ${formatScanError(error)}。` +
-          `パターンが不正か、ファイルシステムエラーです。SC のコード参照検査は実行されていません。`,
+        `validation.traceability.testFileGlobs could not be scanned ` +
+          `(globs: ${quoted.join(", ")}): ${formatScanError(error)}. ` +
+          `A pattern is invalid or the file system returned an error, so the SC code-reference check did not run.`,
         "error",
         configPath,
         "traceability.layered.testFileGlobsScanFailed",
