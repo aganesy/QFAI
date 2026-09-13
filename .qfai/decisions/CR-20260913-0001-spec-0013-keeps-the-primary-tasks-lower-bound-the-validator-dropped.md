@@ -179,6 +179,10 @@ stands.
    | `/qfai-sdd spec-0004` | Every statement that carries the band, as edited by hand under this approval: `REQ-0164` and its Consumer View sentence, `US-0004-0038` — which requires the finding to name a recommended count band — `AC-0004-0037`, `BR-0004-0031`, the example, `TC-0004-0070`, the `OQ-0158` resolution, the plan item, and `DR-0004-0014` — a third decision adopting `DR-0267` verbatim | that every statement stands | `spec-0004/09_delta.md`, and `07_Decisions.md` under options 1 and 2 |
    | `/qfai-sdd`           | `_policies/08_Decisions.md` — `DR-0267`, superseded or rewritten by the option                                                                                                                                                                                                                                                                                                  | that `DR-0267` stands       | `_policies/10_delta.md`, and `08_Decisions.md` under options 1 and 2 |
 
+   Each delta write is one row of that file's `## Change Requests` table —
+   `CR ID`, `Upstream artifact`, `Mode`, `Approved by`, `Applied at` — and not a
+   `## Triage` row.
+
    **`confirm-only`, with the edits made by hand, rather than `re-derive`.** A
    `re-derive` rerun runs Phase 2b over each target ledger, and Phase 2b seeds
    an `E2E` row for every active `US-*` that has none. This repository declares
