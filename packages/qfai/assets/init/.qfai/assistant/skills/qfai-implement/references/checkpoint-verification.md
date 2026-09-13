@@ -544,15 +544,19 @@ anywhere would move.
 
 The seal input is canonical and machine-recomputable: the exact three lines
 `Revision: <value>`, `Checkpoint verification command: <value>`, and
-`Checkpoint verification result: <value>`, in that order. Normalize them to LF, strip trailing
+`Checkpoint verification result: <value>`, in that order. The `Revision` line carries
+`Checkpoint verification revision`, never a round's `Revision`, and each value is the field's
+value less one code span around the whole of it. Normalize them to LF, strip trailing
 whitespace from each line, remove leading/trailing blank lines, add one final newline, then record the
 lowercase SHA-256 of those bytes. Do not wrap this field-only seal in a file-path manifest record.
+A row recorded before its entry carried `Checkpoint verification revision` is recomputed over the
+latest round's `Revision`, the input it was sealed over.
 **A row between boundaries records the same three fields.** They are unconditional — gate item 12
 recomputes the seal on every row — so a row off a boundary cannot leave them empty and cannot
 invent a full-suite command it never ran. Nothing is re-run there, so
 `Checkpoint verification command` takes the narrow relevant-suite command set of Phase: Refactor
 step 2 verbatim, `Checkpoint verification result` takes that run's outcome, and the seal is taken
-over the two together with the `Revision` exactly as at a boundary. Item 12 accepts that pair: it
+over the two together with `Checkpoint verification revision` exactly as at a boundary. Item 12 accepts that pair: it
 requires the **full** suite only for a row that sits on a boundary. What lets a reviewer tell a
 narrow off-boundary record from a truncated boundary one is the resolution step (1-3), and it
 already has a home: `relevant-test-suite.md` requires it in the item's evidence. Record it there,

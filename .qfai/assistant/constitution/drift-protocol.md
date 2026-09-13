@@ -566,6 +566,15 @@ defect is gone with it. The drain is what pays for dropping the round.
   and `.qfai/evidence/atdd-<spec-id>.md`. Ledger `Evidence` cells point to
   anchors in these files, and validation resolves those anchors on a fresh
   clone, so the managed `.gitignore` block re-includes and commits them.
+- **Session record** — `.qfai/evidence/sdd-<spec-id>.md` and
+  `.qfai/evidence/discussion-<ts>.md`. A stage that ran its grilling session
+  and one that skipped it leave the same pack, so the record is the only
+  difference, and validation reads it on a fresh clone. Rerunning the stage
+  does not reproduce it: the session is over. The managed `.gitignore` block
+  re-includes both, and the stage that wrote one commits it with the artifacts
+  it authored — a negation stops git hiding a file and stages nothing, so a
+  record left untracked is read on the machine that produced it and nowhere
+  else.
 - **Regenerable** — other stage logs, run logs, and reports. Reproducible by
   rerunning the owner skill; not committed.
 - **Governance record** — Change Requests (`.qfai/decisions/CR-*.md`) and
