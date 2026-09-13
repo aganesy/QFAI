@@ -34,7 +34,7 @@
 
 ## BR-0015-0005: Pattern-Doubler Gate
 
-- AC-Refs: AC-0015-0006, AC-0015-0007
+- AC-Refs: AC-0015-0006, AC-0015-0007, AC-0015-0009
 
 - The mode is optional and advisory across skills.
 - Propose additions only to concrete business flows, US, AC, EX and TC, with a rationale for each. Do not set a numeric target.
