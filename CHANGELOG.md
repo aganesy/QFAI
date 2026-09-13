@@ -174,6 +174,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   first, and the second is named. The prototyping profile, which certification
   accepts, reports the finding as well.
 
+- **The prototyping profile reports a UI contract that does not parse**
+  (#1767). Every reader of UI contracts skips a file it cannot parse, so its
+  screens are absent from every screen check. `sdd`, `tdd` and `full` report
+  the file as `QFAI-CONTRACT-021`, but `--profile prototyping`, the one
+  certification accepts, ran none of the contract checks and reported nothing.
+  It now runs the parse check over the UI contracts, and keeps the finding an
+  error in exploration mode; `full` still reports the file once.
+
 ## [1.12.0] - 2026-09-12
 
 ### Added

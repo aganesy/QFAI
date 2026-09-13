@@ -25,7 +25,7 @@ import type {
 } from "./types.js";
 import { locateToolAgainstProject, resolveToolVersion } from "./version.js";
 import { applyWaivers } from "./waivers.js";
-import { validateContracts } from "./validators/contracts.js";
+import { validateContracts, validateUiContractParse } from "./validators/contracts.js";
 import { validateUiScreenEntries } from "./validators/uiScreenEntries.js";
 import { validateDiscussionMermaid } from "./validators/discussMermaid.js";
 import { validateAssistantAssets } from "./validators/assistantAssets.js";
@@ -868,9 +868,11 @@ async function runPrototypingProfileValidators(
   const raw = [
     ...(await runPrototypingValidators(root, config, timings, platformOption)),
     // The profile certification accepts, so an entry no screen is read from is
-    // reported here too. Kept out of `runPrototypingValidators`: `full` also
-    // runs `validateContracts`, which composes it already.
+    // reported here too, and so is a UI contract that does not parse. Kept out
+    // of `runPrototypingValidators`: `full` also runs `validateContracts`, which
+    // reports both already.
     ...(await validateUiScreenEntries(root, config)),
+    ...(await validateUiContractParse(root, config)),
   ];
   return await relaxPrototypingIssuesIfExploration(root, raw);
 }
