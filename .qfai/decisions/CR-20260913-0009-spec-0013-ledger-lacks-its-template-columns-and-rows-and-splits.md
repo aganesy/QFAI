@@ -137,41 +137,57 @@ entries of one listing by exact name, so that condition is not observable and
 no row is seeded for it: Phase 2b owes a row per independently observable
 boundary, and no stage could advance one for a state no test can construct.
 
-**Five kept rows name a test file outside the layer their test case routes
-to.** `TDD-0015` names `packages/qfai/tests/core/traceabilityIntegrity.test.ts`,
-`TDD-0023` and `TDD-0024` name `packages/qfai/tests/core/activeDiscussionPack.test.ts`,
-and `TDD-0025` and `TDD-0026` name `packages/qfai/tests/core/surfaceTypePopulate.test.ts`,
-while `TC-0013-0020` declares no `Level` and `TC-0013-0028` to `TC-0013-0031`
-declare `integration`, both of which route to `tests/integration/**`. A
-narrowed `Selector` would still resolve there, so no later stage could repair
-the cells. The rerun writes those rows' `Test file` and `Selector` back to
-`-`, the one value a later stage fills, and the rows appended beside them start
-at `-` as well.
+**Six rows name a test file outside the layer their test case routes to.**
+`TDD-0014` and `TDD-0015` name
+`packages/qfai/tests/core/traceabilityIntegrity.test.ts`, `TDD-0023` and
+`TDD-0024` name `packages/qfai/tests/core/activeDiscussionPack.test.ts`, and
+`TDD-0025` and `TDD-0026` name
+`packages/qfai/tests/core/surfaceTypePopulate.test.ts`. `TC-0013-0020` and
+`TC-0013-0021` declare no `Level`, and `TC-0013-0028` to `TC-0013-0031` declare
+`integration`, both of which route to `tests/integration/**`. Their selectors
+resolve where they are, so no later stage could repair the cells. The rerun
+writes those rows' `Test file` and `Selector` back to `-`, the one value a later
+stage fills, and the rows appended beside them start at `-` as well.
+`TDD-0014` runs one boundary and is not split.
+
+**Three `exception` rows name no case at all.** The selectors of `TDD-0011`,
+`TDD-0012` and `TDD-0013` quote their test cases' titles, `Coverage Placeholder
+for EX-0013-0006`, `Coverage Placeholder for EX-0013-0007` and `Test Case Type
+Column Presence`, and `specAutoDiscovery.test.ts` titles its describes under
+those ids after a spec and implementation pass, a missing-ledger warning and
+`--full` routing. Each selector matches no test, and none of those cases
+exercises the obligation its row carries. The rerun writes their `Test file`
+and `Selector` back to `-` too.
 
 ## Blocked downstream items
 
-| Item                 | Kind         | Why it depends on the artifact                                           |
-| -------------------- | ------------ | ------------------------------------------------------------------------ |
-| `spec-0013/TDD-0003` | `ledger-row` | Its `Selector` is narrowed to the case where the stage continues         |
-| `spec-0013/TDD-0015` | `ledger-row` | Its `Test file` and `Selector` go back to `-` for the export case        |
-| `spec-0013/TDD-0019` | `ledger-row` | Its `Selector` is narrowed to the template slot's case                   |
-| `spec-0013/TDD-0020` | `ledger-row` | Its `Selector` is narrowed to the lane's failing case                    |
-| `spec-0013/TDD-0021` | `ledger-row` | Its `Selector` is narrowed to the passing contract's case                |
-| `spec-0013/TDD-0022` | `ledger-row` | Its `Selector` is narrowed to the template slot's case                   |
-| `spec-0013/TDD-0023` | `ledger-row` | It takes a `Boundary`, and its `Test file` and `Selector` go back to `-` |
-| `spec-0013/TDD-0024` | `ledger-row` | Its `Test file` and `Selector` go back to `-` for the missing pack       |
-| `spec-0013/TDD-0025` | `ledger-row` | Its `Test file` and `Selector` go back to `-` for the population cases   |
-| `spec-0013/TDD-0026` | `ledger-row` | Its `Test file` and `Selector` go back to `-` for a companion's cases    |
-| `spec-0013/TDD-0027` | `ledger-row` | Its `Selector` is narrowed to the template comment's case                |
-| `spec-0013/TDD-0028` | `ledger-row` | Its `Selector` is narrowed to the below-the-band case                    |
-| `spec-0013/TDD-0029` | `ledger-row` | Its `Selector` is narrowed to the structured items' case                 |
-| `spec-0013/TDD-0030` | `ledger-row` | Its `Selector` is narrowed to the cases for an item without `id`         |
+| Item                 | Kind         | Why it depends on the artifact                                              |
+| -------------------- | ------------ | --------------------------------------------------------------------------- |
+| `spec-0013/TDD-0003` | `ledger-row` | Its `Selector` is narrowed to the case where the stage continues            |
+| `spec-0013/TDD-0011` | `ledger-row` | Its `Test file` and `Selector` go back to `-`: its selector matches no test |
+| `spec-0013/TDD-0012` | `ledger-row` | Its `Test file` and `Selector` go back to `-`: its selector matches no test |
+| `spec-0013/TDD-0013` | `ledger-row` | Its `Test file` and `Selector` go back to `-`: its selector matches no test |
+| `spec-0013/TDD-0014` | `ledger-row` | Its `Test file` and `Selector` go back to `-` for its integration test      |
+| `spec-0013/TDD-0015` | `ledger-row` | Its `Test file` and `Selector` go back to `-` for the export case           |
+| `spec-0013/TDD-0019` | `ledger-row` | Its `Selector` is narrowed to the template slot's case                      |
+| `spec-0013/TDD-0020` | `ledger-row` | Its `Selector` is narrowed to the lane's failing case                       |
+| `spec-0013/TDD-0021` | `ledger-row` | Its `Selector` is narrowed to the passing contract's case                   |
+| `spec-0013/TDD-0022` | `ledger-row` | Its `Selector` is narrowed to the template slot's case                      |
+| `spec-0013/TDD-0023` | `ledger-row` | It takes a `Boundary`, and its `Test file` and `Selector` go back to `-`    |
+| `spec-0013/TDD-0024` | `ledger-row` | Its `Test file` and `Selector` go back to `-` for the missing pack          |
+| `spec-0013/TDD-0025` | `ledger-row` | Its `Test file` and `Selector` go back to `-` for the population cases      |
+| `spec-0013/TDD-0026` | `ledger-row` | Its `Test file` and `Selector` go back to `-` for a companion's cases       |
+| `spec-0013/TDD-0027` | `ledger-row` | Its `Selector` is narrowed to the template comment's case                   |
+| `spec-0013/TDD-0028` | `ledger-row` | Its `Selector` is narrowed to the below-the-band case                       |
+| `spec-0013/TDD-0029` | `ledger-row` | Its `Selector` is narrowed to the structured items' case                    |
+| `spec-0013/TDD-0030` | `ledger-row` | Its `Selector` is narrowed to the cases for an item without `id`            |
 
 - Not blocked by this CR: every other `spec-0013` row. `TDD-0016` to
   `TDD-0018` sit at `todo`, and Phase Red judges a `todo` row's selector when it
   selects it. The other `exception` rows, `TDD-0001`, `TDD-0002` and `TDD-0004`
-  to `TDD-0014`, run one case each and are each alone on their obligation, so
-  their `Boundary` is `-`.
+  to `TDD-0010`, each run one case titled after their own test case in
+  `packages/qfai/tests/integration/sddSkillSpec0013.test.ts`, and each is alone
+  on its obligation, so their `Boundary` is `-`.
 - Overlapping open CRs: `none`. A later record that re-derives `spec-0013` is
   applied after this one, against a ledger that already has its columns, its
   rows and its splits.
@@ -210,7 +226,7 @@ at `-` as well.
 
 Re-derive `spec-0013`'s ledger to its template — the six columns it lacks, the
 rows Phase 2b owes, and the thirteen splits in the table — and reset the
-thirteen kept rows and `TDD-0023` to `todo`?
+thirteen kept rows, `TDD-0011` to `TDD-0014` and `TDD-0023` to `todo`?
 
 ## Approved actions (owner skill rerun plan)
 
@@ -246,8 +262,8 @@ thirteen kept rows and `TDD-0023` to `todo`?
    - the thirteen splits under `## Proposed change`, each appended row at `todo`
      with its `Boundary` and no `DR-ID`, since no reset reaches a row that did
      not exist;
-   - `-` in the `Test file` and `Selector` of `TDD-0015` and `TDD-0023` to
-     `TDD-0026`, and of every row appended beside them.
+   - `-` in the `Test file` and `Selector` of `TDD-0011` to `TDD-0015` and
+     `TDD-0023` to `TDD-0026`, and of every row appended beside them.
 
    No row is retired. The rerun records this Change Request as one row of
    `09_delta.md`'s `## Change Requests` table — `CR ID`, `Upstream artifact`,
@@ -257,14 +273,15 @@ thirteen kept rows and `TDD-0023` to `todo`?
    ID in `DR-ID`, the thirteen kept rows — `spec-0013/TDD-0003`, `TDD-0015`,
    `TDD-0019`, `TDD-0020`, `TDD-0021`, `TDD-0022`, `TDD-0024`, `TDD-0025`,
    `TDD-0026`, `TDD-0027`, `TDD-0028`, `TDD-0029` and `TDD-0030` — and
-   `spec-0013/TDD-0023`. A narrowed `Selector` changes the row's identity, so
+   `spec-0013/TDD-0011`, `TDD-0012`, `TDD-0013`, `TDD-0014` and `TDD-0023`. A
+   narrowed `Selector`, or one written back to `-`, changes the row's identity, so
    the evidence and the reviewer hashes recorded against the old one no longer
    describe it, and a split row is re-executed whether or not its recorded
    observation would still hold. `TDD-0023` keeps its `Selector`, but the row
    appended beside it gives it a `Boundary`, and once its test case holds two
-   rows that cell is part of the row's identity. `TDD-0003` and `TDD-0015` keep
-   the Decision Records their `DR-ID` already holds, beside this Change
-   Request's ID. `/qfai-implement`'s Change Request preflight writes the reset.
+   rows that cell is part of the row's identity. The `exception` rows among
+   them, `TDD-0003` and `TDD-0011` to `TDD-0015`, keep the Decision Records their
+   `DR-ID` already holds, beside this Change Request's ID. `/qfai-implement`'s Change Request preflight writes the reset.
 
 3. **The tests move under `/qfai-atdd spec-0013`.** Every row this record
    touches is an `Integration` or `E2E` row, whose tests that stage writes and
@@ -273,8 +290,10 @@ thirteen kept rows and `TDD-0023` to `todo`?
    - fills each `Test file` and `Selector` written back to `-` with a
      `tests/integration/**` case for its boundary: the cases in
      `spec0013ActivePointerSurfaceType.test.ts`, split one per boundary, for
-     `TC-0013-0028` to `TC-0013-0031`, the file-time case among them, and a
-     new case for each of `TC-0013-0020`'s two boundaries;
+     `TC-0013-0028` to `TC-0013-0031`, the file-time case among them, a new
+     case for each of `TC-0013-0020`'s two boundaries, and a new case each for
+     `TC-0013-0011` to `TC-0013-0013` and `TC-0013-0021` that exercises the
+     obligation its test case states;
    - writes `TDD-0023`'s case so it tells packs apart: it creates more than one
      pack, points `currentId` at one that is not the newest, and asserts that
      exact pack, since with one pack a resolver ignoring the pointer and
