@@ -4,7 +4,98 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ## [Unreleased]
 
+### Added
+
+- **A legacy ledger outside the obligation-column protection is reported**
+  (#1663). A seeded `E2E` or `API` row has `TC-Refs` forbidden to it, so the
+  `US-Refs` and `CON-API-Refs` columns are the only place its obligation can
+  live, and an empty cell there is an error. On a ledger written before those
+  columns existed the check is waived — the shape is sanctioned — and the waiver
+  also meant nothing said that those rows could reach `done` with no auditable
+  target.
+
+  `QFAI-TDDLIST-020` now says it, at `warning`, once per absent column, naming
+  each row by its `TDD-ID`. Not an error, because that would revoke the
+  sanction and force a migration the shipped reference says is not owed; not
+  silence, because a row outside the protection should not read like one inside
+  it. It follows the reasoning the backfilled-evidence warning already gives, and
+  the SDD profile hears it, since the columns are that stage's to write.
+
 ### Fixed
+
+- **The completion gate recomputes the checkpoint seal over the checkpoint's own
+  revision** (#1738). `checkpoint-verification.md` seals the checkpoint command
+  and result together with `Checkpoint verification revision`, the tree that
+  run was made on. The gate took the latest round's `Revision` instead, which
+  names the tree before the refactor, so a row sealed as the contract says was
+  reported whenever its refactor changed a byte. The gate now reads the
+  checkpoint revision, checks that it names a revision, and keeps the round's
+  `Revision` for a row that records none. The contract also says each value
+  enters the seal without a code span around it.
+
+- **The prototyping preflight refuses a screen with no primary task** (#1698).
+  The audit lane reported an empty `primary_tasks` as `QFAI-AUD-001`, but
+  `qfai prototyping preflight` never read the field, so the stage started on a
+  contract the lane refused. The preflight's UI contract check now fails and
+  names each screen that has no primary task.
+
+  The primary-task obligations also gained the cases they named and lacked: the
+  preflight refusing, and a structured task missing `label`. Before these
+  cases, dropping `label` from the required keys, or letting the stage start,
+  left every case passing.
+
+- **The completion gate recomputes the product-surface review's hash** (#1713).
+  A UI-affecting row carries three reviewer hashes, and the gate recomputed only
+  the spec and code-quality ones. A row could reach `done` with a parity verdict
+  and no hash, and a screenshot replaced after the verdict changed nothing the
+  gate read, because `Reviewed revision` excludes `.qfai/evidence/`.
+
+  A `PASS (clause N)` verdict now requires its four labelled fields and a
+  `Surface artifacts` manifest that names its captures, every one under
+  `.qfai/evidence/`. The hash is recomputed over the entry, the Coverage Depth
+  Matrix slice, and each capture. Captures are hashed raw, except `.md` and
+  `.html` files, which are normalized. The parity review pack is checked as the
+  product-surface-reviewer's.
+
+  The gate also reads the verdict forms the contract defines (#1726). It used to
+  compare the value with `PASS` exactly, so it rejected `PASS (clause N)` and
+  `n/a (not UI-affecting)` and accepted a bare `PASS`. Each form is now matched
+  whole: a verdict naming no clause is reported, and so is `n/a (UI-affecting)`,
+  which a match on the first word would have let skip the review. An `n/a` row
+  needs only the revision the clauses were evaluated at, and the manifest has to
+  come before the verdicts, like the other phase-authored fields. Captures are
+  ignored stage evidence, so where one is absent from the checkout, as on a fresh
+  clone, the gate skips the recomputation. It does the same for a review pack.
+
+- **The working-tree address is written one way** (#1651). The procedure said
+  "a hash over HEAD and the working tree", and that is not one value: a
+  producer and a reviewer could each pick a defensible separator, record shape
+  or way of reading a file, get different answers for the same tree, and leave
+  an ordinary uncommitted item stale for nobody's mistake.
+
+  Git names the paths and the bytes come off the filesystem, because a diff is
+  a rendering and what renders it — `core.autocrlf`, `core.eol`, a
+  `.gitattributes` driver — is checkout-local. Each record carries the path,
+  the kind, the mode and the SHA-256 of the bytes, and how every part is
+  written is fixed: a mode is four octal digits, a digest is 64 lowercase
+  characters, a symlink's bytes are its own payload, and the sequence is hashed
+  as bytes rather than as a decoded string. Directories are in it too, so
+  removing the execute bit from a source directory moves the address.
+
+  A state the records cannot describe stops the address rather than being
+  recorded as clean: an unborn `HEAD`, a submodule, an untracked embedded
+  repository, a link used as a directory, a file with several links, and a path
+  the process cannot read. The tree has to hold still while it is read, so the
+  writers are stopped first. Collecting twice is a check on that, not a proof of
+  it, because a writer repeating one change can hand both runs the same mixture
+  of old and new files. The ledger's
+  own directory is read from the project's configuration rather than assumed,
+  so a project that moved its specs is not hashing its own bookkeeping writes.
+
+  The recorded value is checked where it is committed, and in the one case the
+  procedure produces: `working-tree+` followed by 64 lowercase hexadecimal
+  characters. Freshness is compared exactly, so accepting both cases would let
+  one tree be recorded as two revisions and read a correct row as stale.
 
 - **The grilling-trace check refuses the untouched template and reads the
   discussion stage's record** (#1739, #1740). `QFAI-GRILL-001` counted the spec
@@ -24,17 +115,6 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   the same negation there. The prototyping session file is still not read: it
   is one loop input per project, and its absence cannot be told apart from a
   project that has not reached a prototyping loop.
-
-- **The prototyping preflight refuses a screen with no primary task** (#1698).
-  The audit lane reported an empty `primary_tasks` as `QFAI-AUD-001`, but
-  `qfai prototyping preflight` never read the field, so the stage started on a
-  contract the lane refused. The preflight's UI contract check now fails and
-  names each screen that has no primary task.
-
-  The primary-task obligations also gained the cases they named and lacked: the
-  preflight refusing, and a structured task missing `label`. Before these
-  cases, dropping `label` from the required keys, or letting the stage start,
-  left every case passing.
 
 ## [1.12.0] - 2026-09-12
 

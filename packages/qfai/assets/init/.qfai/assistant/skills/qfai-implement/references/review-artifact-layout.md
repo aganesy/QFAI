@@ -97,6 +97,12 @@ QFAI package enforces under `npx qfai validate`, and `npx qfai doctor` archives:
   verdict, revision, audited-evidence hash, canonical pack path, recorded seal and checkpoint
   instead. A pack path that exists but is malformed is always an error — deleting or renaming
   files inside a present pack is not the fresh-clone case.
+- The captures a `Prototype parity` verdict was taken on are stage evidence, which the evidence
+  tree's ignore rules also keep out of a fresh clone. Gate item 10 recomputes that verdict's
+  audited-evidence hash over them whenever every capture its `Surface artifacts` manifest names
+  under `.qfai/evidence/` is present; when one is absent, it validates the committed manifest,
+  verdict, revision, hash and pack fields instead. A named capture that exists and is not a regular
+  file is always an error.
 - `QFAI-REVIEW-*` is reported by `--profile sdd` and `--profile discussion` — the profiles whose
   RCP footer mandates the pack — and by the full-scan profiles. `--profile tdd` does not report it,
   so a malformed or missing `summary.json` still passes the implementation gate on its own. Run

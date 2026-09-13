@@ -842,11 +842,20 @@ function evidenceAnchorText(specId: string, layerClass: EvidenceLayerClass, tddI
     : owned;
 }
 
+/**
+ * The `working-tree+` revision as an operator reads it.
+ *
+ * One wording for the grammar line and the field hint, because the form is
+ * checked case-sensitively: an operator who follows a correction that leaves
+ * the case out writes the same rejected value again.
+ */
+const WORKING_TREE_REVISION_TEXT = "working-tree+<64 lowercase hex>";
+
 /** The grammar as an operator reads it, for the finding message. */
 function evidenceGrammarText(redProvenance: string, anchorText: string): string {
   return (
     `RED:<${redProvenance}> GREEN:pass ORACLE:<proved|equivalent-mutant> ` +
-    `[TIER:<T1|T2|T3>] REV:<rev|working-tree+<sha256>> -> ${anchorText}`
+    `[TIER:<T1|T2|T3>] REV:<rev|${WORKING_TREE_REVISION_TEXT}> -> ${anchorText}`
   );
 }
 
@@ -1308,9 +1317,15 @@ const SHA256_VALUE = /^(?:sha256:)?[a-f0-9]{64}$/i;
  * bound is the longer object id; a length in between is a valid abbreviation of
  * one format or the other, and the form check does not adjudicate which.
  */
-const EVIDENCE_REVISION_FORM = /^(?:[0-9a-f]{7,64}|working-tree\+[0-9a-f]{64})$/i;
+// Built from the shared source rather than written again, and with no `i` flag:
+// the content address is produced by a procedure that fixes its notation as
+// lowercase, so accepting both cases here would let one tree be recorded as two
+// revisions while the freshness comparison — which is exact — reads a correct
+// row as stale. A git rev stays case-insensitive, which the source's own class
+// carries.
+const EVIDENCE_REVISION_FORM = new RegExp(`^${REVISION_FORM_SOURCE}$`);
 
-const REVISION_FORM_HINT = "a git rev or working-tree+<sha256>";
+const REVISION_FORM_HINT = `a git rev or ${WORKING_TREE_REVISION_TEXT}`;
 
 function sha256(value: string | Buffer): string {
   return createHash("sha256").update(value).digest("hex");
@@ -1366,10 +1381,10 @@ function normalizeAuditArtifact(value: string): string {
 }
 
 const GATE_COMPLETED_EVIDENCE_FIELD =
-  /^\s*(?:\|\s*)?(?:[-*][ \t]+)?(?:\*\*)?(?:Spec review(?:ed revision| pack(?: seal)?)?|Spec audited evidence hash|Code quality review(?:ed revision| pack(?: seal)?)?|Code quality audited evidence hash|Prototype parity|Checkpoint verification (?:command|result|seal))(?:\*\*)?\s*(?::|\|)/i;
+  /^\s*(?:\|\s*)?(?:[-*][ \t]+)?(?:\*\*)?(?:Spec review(?:ed revision| pack(?: seal)?)?|Spec audited evidence hash|Code quality review(?:ed revision| pack(?: seal)?)?|Code quality audited evidence hash|Prototype parity(?: reviewed revision| review pack(?: seal)?| audited evidence hash)?|Checkpoint verification (?:command|result|revision|seal))(?:\*\*)?\s*(?::|\|)/i;
 
 const PHASE_AUTHORED_EVIDENCE_FIELD =
-  /^\s*(?:\|\s*)?(?:[-*][ \t]+)?(?:\*\*)?(?:Round[ \t]+\d+:[ \t]*)?(?:TDD-ID|Layer|Test file|Selector|TC-ref|US-ref|CON-API-ref|Revision|RED revision|Replacement proof revision|RED test hash|RED test manifest|RED command|RED result|GREEN command|GREEN result|Satisfied-by|Falsifiability command|Falsifiability result|Falsifiability revision|reviewer verdict|RED failure mode|Refactor verify command|Refactor verify result|Oracle proof|qa-gatekeeper|Shared-artifact re-verify)(?:\*\*)?\s*(?::|\|)/i;
+  /^\s*(?:\|\s*)?(?:[-*][ \t]+)?(?:\*\*)?(?:Round[ \t]+\d+:[ \t]*)?(?:TDD-ID|Layer|Test file|Selector|TC-ref|US-ref|CON-API-ref|Revision|RED revision|Replacement proof revision|RED test hash|RED test manifest|RED command|RED result|GREEN command|GREEN result|Satisfied-by|Falsifiability command|Falsifiability result|Falsifiability revision|reviewer verdict|RED failure mode|Refactor verify command|Refactor verify result|Oracle proof|qa-gatekeeper|Shared-artifact re-verify|Surface artifacts)(?:\*\*)?\s*(?::|\|)/i;
 
 function hasPhaseAuthoredFieldAfterGate(section: string): boolean {
   const visibleLines = maskEvidenceRegions(section.replace(/\r\n/g, "\n")).split("\n");
@@ -1540,11 +1555,85 @@ function completedEvidenceAuditHash(
   section: string,
   tddId: string,
   matrixRecord: string | null,
+  surfaceRecords: readonly string[] = [],
 ): string {
   const records = [`${evidenceFile}\0${sha256(phaseAuthoredEvidence(section, tddId))}`];
   if (matrixRecord !== null) records.push(matrixRecord);
-  records.sort();
+  records.push(...surfaceRecords);
+  // By bytes: a capture name outside ASCII sorts differently by UTF-16 code unit,
+  // and a reviewer ordering records by path bytes computed another hash.
+  records.sort((left, right) => Buffer.from(left).compare(Buffer.from(right)));
   return sha256(records.join("\n"));
+}
+
+/** What a product-surface-reviewer's captures contribute to its subject. */
+type SurfaceArtifactRecords =
+  { kind: "records"; records: string[] } | { kind: "absent" } | { kind: "unusable"; path: string };
+
+/**
+ * One record per capture the entry's `Surface artifacts` manifest names under
+ * `.qfai/evidence/`, hashed as `audited-evidence-hash.md` step 2 leaves it: a
+ * `.md` or `.html` record normalized, and every other extension raw. A
+ * screenshot is a byte string with no lines, and normalizing one gave two
+ * readers' decoders two digests for one unchanged image.
+ *
+ * A capture is stage evidence, and the evidence tree's ignore rules keep it out
+ * of the repository, so an ordinary fresh clone has none. A capture that is
+ * present and is not a regular file inside the tree is always a defect.
+ *
+ * SIMPLIFIED: where a named capture is absent, the hash is not recomputed, as a
+ * review pack's seal is not. Only a checkout holding the captures can tell a
+ * replaced one from the one the verdict was taken on.
+ * Lift when: captures are committed beside the evidence that names them.
+ */
+async function surfaceArtifactRecords(
+  root: string,
+  section: string,
+): Promise<SurfaceArtifactRecords> {
+  const manifest = rowEvidenceFieldValue(section, "Surface artifacts") ?? "";
+  const records: string[] = [];
+  let absent = false;
+  for (const relativePath of surfaceArtifactPaths(manifest)) {
+    const bytes = await readSurfaceArtifact(root, relativePath);
+    if (bytes === "unusable") return { kind: "unusable", path: relativePath };
+    if (bytes === "absent") {
+      absent = true;
+      continue;
+    }
+    const hashed = /\.(?:md|html)$/.test(relativePath)
+      ? normalizeAuditArtifact(bytes.toString("utf8"))
+      : bytes;
+    records.push(`${relativePath}\0${sha256(hashed)}`);
+  }
+  return absent ? { kind: "absent" } : { kind: "records", records };
+}
+
+/**
+ * A capture's bytes, or why there are none.
+ *
+ * Every component is read without following a link: a directory on the way
+ * that is a symlink sends the path out of the tree, and a capture that is one
+ * hashes whatever it currently points at.
+ */
+async function readSurfaceArtifact(
+  root: string,
+  relativePath: string,
+): Promise<Buffer | "absent" | "unusable"> {
+  const parts = relativePath.split("/");
+  for (let depth = 1; depth <= parts.length; depth += 1) {
+    try {
+      const metadata = await lstat(path.join(root, ...parts.slice(0, depth)));
+      const expected = depth === parts.length ? metadata.isFile() : metadata.isDirectory();
+      if (!expected) return "unusable";
+    } catch (error) {
+      return isEnoent(error) ? "absent" : "unusable";
+    }
+  }
+  try {
+    return await readFile(path.join(root, ...parts));
+  } catch (error) {
+    return isEnoent(error) ? "absent" : "unusable";
+  }
 }
 
 /**
@@ -1607,6 +1696,7 @@ async function expectedAuditHash(
   evidenceFile: string,
   section: string,
   expected: CompletedEvidenceExpectation,
+  surfaceRecords: readonly string[] = [],
 ): Promise<string> {
   const matrix = await coverageDepthMatrix(context, expected.specNumber);
   return completedEvidenceAuditHash(
@@ -1614,6 +1704,7 @@ async function expectedAuditHash(
     section,
     expected.tddId,
     coverageDepthAuditRecord(expected.specNumber, expected.obligationValue, matrix),
+    surfaceRecords,
   );
 }
 
@@ -2448,8 +2539,117 @@ const BACKFILL_EXEMPT_FIELDS: ReadonlySet<string> = new Set([
   "Code quality audited evidence hash",
   "Code quality review pack",
   "Code quality review pack seal",
+  "Prototype parity reviewed revision",
+  "Prototype parity audited evidence hash",
+  "Prototype parity review pack",
+  "Prototype parity review pack seal",
   "Checkpoint verification seal",
 ]);
+
+/**
+ * What a `Prototype parity` value records.
+ *
+ * `references/ui-affecting.md` writes the verdict with the clause that routed
+ * the row — `PASS (clause N)`, `REVISE (clause N)` — and a row no clause
+ * selects as `n/a (not UI-affecting)`. Each form is matched whole. The clause
+ * number is what lets a later reader re-run the routing decision, and a value
+ * read by its first word alone let `n/a (UI-affecting)` pass as a row with no
+ * surface, skipping the review, the captures and the hash.
+ *
+ * Any `REVISE` is the reviewer refusing the row, whatever follows it. `absent`
+ * is a row completed before the field existed, which the same reference exempts
+ * from being blocked retroactively; a value outside the recorded forms, a bare
+ * `PASS` included, is not that row and is reported.
+ */
+type ParityVerdict = "absent" | "pass" | "revise" | "not-applicable" | "unrecognized";
+
+/**
+ * How many clauses `references/ui-affecting.md` defines. A verdict naming any
+ * other number names no routing decision a reader could re-run.
+ */
+const UI_AFFECTING_CLAUSES = 3;
+
+/** `PASS (clause N)`, for a clause the reference defines. */
+const PARITY_PASS_FORM = new RegExp(
+  `^PASS\\s*\\(\\s*clause\\s+[1-${UI_AFFECTING_CLAUSES}]\\s*\\)$`,
+  "i",
+);
+
+function parityVerdict(section: string): ParityVerdict {
+  const value = rowEvidenceFieldValue(section, "Prototype parity");
+  if (value === null) return "absent";
+  if (PARITY_PASS_FORM.test(value)) return "pass";
+  if (/^REVISE\b/i.test(value)) return "revise";
+  if (/^n\/a\s*\(\s*not\s+UI-affecting\s*\)$/i.test(value)) return "not-applicable";
+  return "unrecognized";
+}
+
+/**
+ * The parity fields a completed row owes, by what its verdict records.
+ *
+ * A verdict is taken by a reviewer, so it carries the four labelled fields the
+ * other two reviews carry, and the manifest naming the captures it was taken
+ * on. An `n/a` row has no reviewer and no rendered evidence: it records only the
+ * revision the clauses were evaluated at.
+ */
+function parityRequiredFields(verdict: ParityVerdict): string[] {
+  if (verdict === "pass") {
+    return [
+      "Prototype parity reviewed revision",
+      "Prototype parity audited evidence hash",
+      "Prototype parity review pack",
+      "Prototype parity review pack seal",
+      "Surface artifacts",
+    ];
+  }
+  return verdict === "not-applicable" ? ["Prototype parity reviewed revision"] : [];
+}
+
+/**
+ * A reviewer whose verdict the completion gate recomputes: the field prefix it
+ * records under, the role its pack response is written as, what its hash is
+ * taken over, and the value that hash has now — `null` where this checkout
+ * cannot reproduce it.
+ */
+interface CompletionReview {
+  prefix: "Spec" | "Code quality" | "Prototype parity";
+  role: string;
+  subject: string;
+  auditHash: string | null;
+}
+
+const FIELD_SUBJECT = "phase-authored evidence and Coverage Depth Matrix";
+
+/** The evidence tree a capture has to sit under to be a record of its own. */
+const SURFACE_ARTIFACT_ROOT = ".qfai/evidence/";
+
+/**
+ * The paths a `Surface artifacts` manifest names under `.qfai/evidence/`, each
+ * once.
+ *
+ * The gate refuses a manifest naming anything else, so an entry left out here
+ * is one already reported. Listed twice, one capture is still one record.
+ */
+function surfaceArtifactPaths(manifest: string): string[] {
+  const paths = manifestLines(manifest)
+    .map((line) => safeRepoRelativePath(line))
+    .filter((entry): entry is string => entry?.startsWith(SURFACE_ARTIFACT_ROOT) === true);
+  return [...new Set(paths)];
+}
+
+/** A manifest's entries: one per nonblank line, bullet and code span removed. */
+function manifestLines(manifest: string): string[] {
+  return manifest
+    .replace(/\r\n/g, "\n")
+    .split("\n")
+    .map((line) =>
+      line
+        .trim()
+        .replace(/^[-*]\s+/, "")
+        .replace(/^`([^`]*)`$/, "$1"),
+    )
+    .filter((line) => line.length > 0);
+}
 
 /** Minimum phase and review evidence required once a row reaches `done`. */
 function missingCompletedEvidenceFields(
@@ -2459,6 +2659,7 @@ function missingCompletedEvidenceFields(
   const section = entryOwnFields(entrySection);
   const normalizedLayer = expected.layer.toLowerCase();
   const backfilled = declaresRunOutputLost(section);
+  const parity = parityVerdict(section);
   const requiredRowFields = [
     "TDD-ID",
     "Layer",
@@ -2482,6 +2683,7 @@ function missingCompletedEvidenceFields(
     "Checkpoint verification command",
     "Checkpoint verification result",
     "Checkpoint verification seal",
+    ...parityRequiredFields(parity),
     // Only a backfilled entry owes this, and it owes it precisely because the
     // exemption above is otherwise invisible at the pointer: the note is what
     // a reader following the anchor finds in place of the verdicts.
@@ -2508,20 +2710,66 @@ function missingCompletedEvidenceFields(
   if (EVIDENCE_PLACEHOLDER.test(expected.obligationValue)) {
     missing.push(`${expected.obligationField} naming a real ledger obligation`);
   }
-  // `Prototype parity` is written only on a UI-affecting row (gate item 9), so
-  // its absence is not a defect — but a row that states it and states `REVISE`
-  // is one the product-surface-reviewer blocked. Reading only the other three
-  // verdicts let such a row reach `done` on a matching hash and a full field
-  // set, with the one verdict that refused it sitting in plain sight.
-  for (const field of [
-    "qa-gatekeeper",
-    "Spec review",
-    "Code quality review",
-    "Prototype parity",
-  ] as const) {
+  for (const field of ["qa-gatekeeper", "Spec review", "Code quality review"] as const) {
     const verdict = rowEvidenceFieldValue(section, field);
     if (verdict !== null && verdict.toUpperCase() !== "PASS") {
       missing.push(`${field}: PASS`);
+    }
+  }
+  // A row that states `REVISE` is one the product-surface-reviewer blocked.
+  // Reading only the other three verdicts let such a row reach `done` on a
+  // matching hash and a full field set, with the one verdict that refused it
+  // sitting in plain sight.
+  // One verdict per row. Only the last is read, so a `REVISE` followed by an
+  // `n/a` would pass on the second while the reviewer who refused the row is
+  // still on the page.
+  const verdicts = evidenceFieldOccurrences(section, "Prototype parity").filter(
+    ({ round }) => round === null,
+  );
+  if (verdicts.length > 1) missing.push("exactly one Prototype parity");
+  if (parity === "revise") missing.push("Prototype parity: PASS");
+  // An `n/a` row had no reviewer and no rendered surface, so a hash, a pack or a
+  // manifest on it is provenance for a review that did not happen, and nothing
+  // reads it to say whether it is stale.
+  if (parity === "not-applicable") {
+    for (const field of [
+      "Prototype parity audited evidence hash",
+      "Prototype parity review pack",
+      "Prototype parity review pack seal",
+      "Surface artifacts",
+    ]) {
+      if (rowEvidenceFieldValue(section, field) !== null) {
+        missing.push(`no ${field} on an n/a (not UI-affecting) row`);
+      }
+    }
+  }
+  if (parity === "unrecognized") {
+    missing.push("Prototype parity: PASS (clause N) or n/a (not UI-affecting)");
+  }
+  // The manifest is what puts the captures in the verdict's subject. One that
+  // names none under the evidence tree leaves a hash over fields alone, and a
+  // screenshot replaced after the PASS moves nothing the gate reads.
+  const manifest = rowEvidenceFieldValue(section, "Surface artifacts");
+  // Two manifests are two sets of captures, and only the last is read: a
+  // capture only the first one named could be replaced with nothing moving.
+  const manifests = evidenceFieldOccurrences(section, "Surface artifacts").filter(
+    ({ round }) => round === null,
+  );
+  if (manifests.length > 1) missing.push("exactly one Surface artifacts");
+  if (parity === "pass" && manifest !== null) {
+    // Each entry has to be a capture under the evidence tree. One that is
+    // absolute, leaves the repository or sits elsewhere in it adds no record,
+    // and dropped beside a valid one it left part of the manifest out of the
+    // hash: replacing that file moved nothing.
+    const unaddressable = manifestLines(manifest).filter(
+      (line) => safeRepoRelativePath(line)?.startsWith(SURFACE_ARTIFACT_ROOT) !== true,
+    );
+    if (unaddressable.length > 0) {
+      missing.push(
+        `Surface artifacts naming repository-relative paths under ${SURFACE_ARTIFACT_ROOT}, not ${unaddressable.join(", ")}`,
+      );
+    } else if (surfaceArtifactPaths(manifest).length === 0) {
+      missing.push(`Surface artifacts naming a capture under ${SURFACE_ARTIFACT_ROOT}`);
     }
   }
   const rounds = evidenceRoundNumbers(section);
@@ -2693,7 +2941,10 @@ function missingCompletedEvidenceFields(
     missing.push("Checkpoint verification result: PASS");
   }
 
-  for (const prefix of ["Spec", "Code quality"] as const) {
+  // The parity fields are read on every row: a row with no parity verdict has
+  // none of them, and an `n/a` row's revision is held to the same freshness as
+  // a verdict's.
+  for (const prefix of ["Spec", "Code quality", "Prototype parity"] as const) {
     const reviewedRevision = rowEvidenceFieldValue(section, `${prefix} reviewed revision`);
     const auditedHash = rowEvidenceFieldValue(section, `${prefix} audited evidence hash`);
     const pack = rowEvidenceFieldValue(section, `${prefix} review pack`);
@@ -2723,6 +2974,10 @@ function missingCompletedEvidenceFields(
   const checkpointSeal = rowEvidenceFieldValue(section, "Checkpoint verification seal");
   if (checkpointSeal !== null && !SHA256_VALUE.test(checkpointSeal)) {
     missing.push("Checkpoint verification seal: sha256");
+  }
+  const checkpointRevision = rowEvidenceFieldValue(section, "Checkpoint verification revision");
+  if (checkpointRevision !== null && !EVIDENCE_REVISION_FORM.test(checkpointRevision)) {
+    missing.push(`Checkpoint verification revision naming ${REVISION_FORM_HINT}`);
   }
   return missing;
 }
@@ -2776,17 +3031,41 @@ async function invalidCompletedEvidenceArtifacts(
   const latestRound = rounds.at(-1);
   const revision =
     latestRound === undefined ? null : roundEvidenceFieldValue(section, latestRound, "Revision");
-  for (const prefix of ["Spec", "Code quality"] as const) {
-    const expectedRole = prefix === "Spec" ? "completion-reviewer" : "implementation-reviewer";
+  const reviews: CompletionReview[] = [
+    { prefix: "Spec", role: "completion-reviewer", subject: FIELD_SUBJECT, auditHash },
+    {
+      prefix: "Code quality",
+      role: "implementation-reviewer",
+      subject: FIELD_SUBJECT,
+      auditHash,
+    },
+  ];
+  if (parityVerdict(section) === "pass") {
+    const surface = await surfaceArtifactRecords(root, section);
+    if (surface.kind === "unusable") {
+      invalid.push(`Surface artifacts naming a regular file at ${surface.path}`);
+    }
+    reviews.push({
+      prefix: "Prototype parity",
+      role: "product-surface-reviewer",
+      subject: "phase-authored evidence, Coverage Depth Matrix and surface artifacts",
+      auditHash:
+        surface.kind === "records"
+          ? await expectedAuditHash(context, evidenceFile, entrySection, expected, surface.records)
+          : null,
+    });
+  }
+  for (const { prefix, role: expectedRole, subject, auditHash: recomputed } of reviews) {
     const auditedHash = rowEvidenceFieldValue(section, `${prefix} audited evidence hash`);
     const packPath = rowEvidenceFieldValue(section, `${prefix} review pack`);
     const packSeal = rowEvidenceFieldValue(section, `${prefix} review pack seal`);
-    if (auditedHash !== null && SHA256_VALUE.test(auditedHash)) {
-      if (bareSha256(auditedHash) !== auditHash) {
-        invalid.push(
-          `${prefix} audited evidence hash matching phase-authored evidence and Coverage Depth Matrix`,
-        );
-      }
+    if (
+      recomputed !== null &&
+      auditedHash !== null &&
+      SHA256_VALUE.test(auditedHash) &&
+      bareSha256(auditedHash) !== recomputed
+    ) {
+      invalid.push(`${prefix} audited evidence hash matching ${subject}`);
     }
     if (packPath === null || packSeal === null || !SHA256_VALUE.test(packSeal)) continue;
     const safePackPath = safeRepoRelativePath(packPath);
@@ -2850,16 +3129,26 @@ async function invalidCompletedEvidenceArtifacts(
   const checkpointCommand = rowEvidenceFieldValue(section, "Checkpoint verification command");
   const checkpointResult = rowEvidenceFieldValue(section, "Checkpoint verification result");
   const checkpointSeal = rowEvidenceFieldValue(section, "Checkpoint verification seal");
+  // The seal is taken over the run's own revision. A round's `Revision` names
+  // the tree before the refactor, and the checkpoint runs on the tree after
+  // it, so a row whose refactor changed a byte could match only one of them.
+  // A row that records no checkpoint revision was sealed over the round's.
+  const checkpointRevision = rowEvidenceFieldValue(section, "Checkpoint verification revision");
+  const sealRevision = checkpointRevision ?? revision;
   if (
-    revision !== null &&
+    sealRevision !== null &&
     checkpointCommand !== null &&
     checkpointResult !== null &&
     checkpointSeal !== null &&
     SHA256_VALUE.test(checkpointSeal) &&
     bareSha256(checkpointSeal) !==
-      checkpointEvidenceSeal(revision, checkpointCommand, checkpointResult)
+      checkpointEvidenceSeal(sealRevision, checkpointCommand, checkpointResult)
   ) {
-    invalid.push("Checkpoint verification seal matching command, result, and Revision");
+    invalid.push(
+      checkpointRevision === null
+        ? "Checkpoint verification seal matching command, result, and Revision"
+        : "Checkpoint verification seal matching command, result, and Checkpoint verification revision",
+    );
   }
   return invalid;
 }
@@ -3436,6 +3725,25 @@ export const EVIDENCE_ANCHOR_UNRESOLVED_CODE = "QFAI-TDDLIST-008";
  * the old behaviour.
  */
 export const EVIDENCE_BACKFILLED_CODE = "QFAI-TDDLIST-019";
+
+/**
+ * Finding code for a ledger whose table predates an obligation column, holding
+ * a row whose `Layer` owns that column.
+ *
+ * The shipped reference sanctions the shape: an eight-column ledger written
+ * before `US-Refs` and `CON-API-Refs` existed is a legacy ledger, not a broken
+ * one. What it lacks is the protection those columns give — a seeded `E2E` or
+ * `API` row has `TC-Refs` forbidden to it, so without its own column it can
+ * reach `done` with no auditable target at all.
+ *
+ * Reported at `warning`, on the reasoning `QFAI-TDDLIST-019` gives. Not an
+ * error: the sanction stands, and erroring would revoke it for every adopter
+ * whose ledgers predate the columns, forcing a migration the reference says is
+ * not owed. Not silence: a row outside a protection must not be
+ * indistinguishable, in the output an operator reads, from one inside it. A
+ * project that will carry no such row treats warnings as failures.
+ */
+export const OBLIGATION_COLUMN_ABSENT_CODE = "QFAI-TDDLIST-020";
 
 /**
  * `Revision` names a tree that files the observation covered have moved past.
@@ -4092,6 +4400,9 @@ export const TDD_LIST_SEED_SHAPE_CODES: ReadonlySet<string> = new Set([
   // change the reader is forbidden to make.
   "TDDLIST_INVALID_OBLIGATION_REF",
   "TDDLIST_OBLIGATION_LAYER_MISMATCH",
+  // The columns themselves are Phase 2b's to write, so a ledger that predates
+  // them is that phase's to migrate, and its gate is where the gap is heard.
+  "QFAI-TDDLIST-020",
   // The remaining three read cells the same phase authors, and were missing
   // for no reason the ownership split supports:
   //
@@ -5874,10 +6185,21 @@ function validateObligationColumn(
   spec: ObligationColumnSpec,
 ): Issue[] {
   const issues: Issue[] = [];
+  // Rows whose `Layer` owns this column, in a ledger table that has no such
+  // column. Per table, not per file: an appended table can lack a column the
+  // first one carries, and its rows are just as unprotected. Collected rather than reported per row: the gap is the
+  // ledger's shape, and one finding naming every affected row says that.
+  const unprotected: string[] = [];
   for (const ref of rows) {
-    // An absent column reads as an empty cell, which is the same "this row
-    // carries no such obligation" the optional column already means.
-    if (ref.scan.headers.indexOf(spec.column) < 0) continue;
+    if (ref.scan.headers.indexOf(spec.column) < 0) {
+      if (cell(ref, "Layer").toLowerCase() === spec.layer) {
+        // The TDD-ID is what an operator searches the ledger for; the position
+        // disambiguates the same id across tables.
+        const id = cell(ref, "TDD-ID");
+        unprotected.push(id.length > 0 ? `${id} (${ref.label})` : ref.label);
+      }
+      continue;
+    }
     const value = cell(ref, spec.column);
     if (value.length === 0 || value === "-") {
       if (cell(ref, "Layer").toLowerCase() === spec.layer) {
@@ -5925,6 +6247,20 @@ function validateObligationColumn(
         [spec.column, rawLayer],
         "change",
         `Set Layer to ${spec.layer.toUpperCase()} for this row, or move the obligation to the column its Layer owns (TC-Refs for Unit/Component/Integration, US-Refs for E2E, CON-API-Refs for API).`,
+      ),
+    );
+  }
+  if (unprotected.length > 0) {
+    issues.push(
+      issue(
+        OBLIGATION_COLUMN_ABSENT_CODE,
+        `${String(unprotected.length)} Layer=${spec.layer.toUpperCase()} row(s) in tdd/test-list.md for spec-${spec.specNumber} sit in a ledger table with no ${spec.column} column, so they record no obligation it can check: ${unprotected.join(", ")}`,
+        "warning",
+        spec.relPath,
+        `${spec.rule}ColumnAbsent`,
+        [spec.column, spec.layer.toUpperCase(), ...unprotected],
+        "change",
+        `Add the ${spec.column} column to the ledger and record the ${spec.expected} each of these rows covers. Until then a Layer=${spec.layer.toUpperCase()} row can reach done with no auditable target: TC-Refs is forbidden on it, and there is no other cell for its obligation.`,
       ),
     );
   }
