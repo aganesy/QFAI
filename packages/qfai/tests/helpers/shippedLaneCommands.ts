@@ -1328,7 +1328,7 @@ export const ALLOWED_INIT_CONTENT: ReadonlyMap<string, string> = new Map([
     // byte. That check is what keeps a re-pin a review of one line rather than a re-blessing of
     // the whole file.
     ".github/copilot-instructions.md",
-    "a246e728b78099a29460764aaa7e09f3b11cdb420f0ffe061a1812e9fa8c38c2",
+    "cb2821e61925058ee8fce1b2a96e77bf418aa597fec6bb611f762382b663ed93",
   ],
   // `qfai init` copies this file verbatim, so it is pinned like every other
   // adopter-facing file here — and for one reason none of the others has: it
