@@ -87,16 +87,23 @@ cases pass with neither flag forwarded.
 The cases each obligation needs exist in this change, so the rows are pointed at
 them and `TDD-0036` is split at its boundary:
 
-| Row        | `Test file`                                                          | `Selector`                                                                                                                       | `Status` |
-| ---------- | -------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- | -------- |
-| `TDD-0009` | `packages/qfai/tests/integration/spec0014VerifyReviewerGate.test.ts` | `[shipped: the reviewer answers only PASS or REVISE, shipped: a REVISE from a routed blocking reviewer blocks DONE and handoff]` | `done`   |
-| `TDD-0035` | `packages/qfai/tests/integration/spec0014SaasPackageCertify.test.ts` | `seals a certificate scoped to saas-package whose notes name every skipped gate`                                                 | `done`   |
-| `TDD-0036` | `packages/qfai/tests/integration/spec0014SaasPackageCertify.test.ts` | `refuses the upgrade while the skipped gates are missing, naming them`                                                           | `done`   |
-| `TDD-0037` | `packages/qfai/tests/integration/spec0014SaasPackageCertify.test.ts` | `promotes the certificate to full once the skipped gates pass`                                                                   | `todo`   |
+| Row        | `Test file`                                                          | `Selector`                                                                                                                                                       | `Status` |
+| ---------- | -------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------- |
+| `TDD-0009` | `packages/qfai/tests/integration/spec0014VerifyReviewerGate.test.ts` | `["verify's binding gate fails on a render critique the reviewer returned REVISE", "shipped: a REVISE from a routed blocking reviewer blocks DONE and handoff"]` | `done`   |
+| `TDD-0035` | `packages/qfai/tests/integration/spec0014SaasPackageCertify.test.ts` | `seals a certificate scoped to saas-package whose notes name every skipped gate`                                                                                 | `done`   |
+| `TDD-0036` | `packages/qfai/tests/integration/spec0014SaasPackageCertify.test.ts` | `refuses the upgrade while the skipped gates are missing, naming them`                                                                                           | `done`   |
+| `TDD-0037` | `packages/qfai/tests/integration/spec0014SaasPackageCertify.test.ts` | `promotes the certificate to full once the skipped gates pass`                                                                                                   | `todo`   |
 
 `TDD-0037` carries `TC-0014-0036` and enters at `todo`: it names a boundary no
 row has recorded evidence for. The three existing rows keep their obligations
 and their status.
+
+`TDD-0009`'s two entries observe one boundary from its two sides. Verify's
+binding gate is a command, `npx qfai validate --profile verify --fail-on error`,
+and the first entry feeds it a render critique the reviewer returned `REVISE`
+and requires the error that fails it. The routed reviewers' gate is a clause an
+agent executes, with no code path to drive, so the second entry holds that
+clause in the shipped skill.
 
 In `09_delta.md`, one sentence directly above the `v1.7.16` traceability block
 states that those chain identifiers were reassigned and bind nothing in the

@@ -46,13 +46,15 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   parsed, so dropping `--scope` or `--upgrade-scope` from the command line left
   them all passing. The two suites that did run the command line were skipped.
   They now run: the integration suite through the CLI entry point, and the
-  end-to-end suite through the built binary. A new case reads `/qfai-verify`'s
-  reviewer-gate clauses in the shipped and installed skill.
+  end-to-end suite through the built binary. New cases feed verify's binding
+  gate a render critique the reviewer returned `REVISE`, and read
+  `/qfai-verify`'s reviewer-gate clauses in the shipped and installed skill.
 
-  `CR-20260913-0005` points three `spec-0014` ledger rows at those cases, splits
-  the upgrade-scope row at its boundary, and records that four delta chains name
-  reassigned identifiers. `CR-20260913-0006` puts the one row whose evidence has
-  no form it can take to the user.
+  `CR-20260913-0005`, awaiting approval, proposes pointing three `spec-0014`
+  ledger rows at those cases, splitting the upgrade-scope row at its boundary,
+  and recording that four delta chains name reassigned identifiers. The ledger
+  is unchanged until it is applied. `CR-20260913-0006` puts the one row whose
+  evidence has no form it can take to the user.
 
 ## [1.12.0] - 2026-09-12
 
