@@ -18,7 +18,7 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   left every case passing.
 
 - **The ATDD traceability scan reads every package's acceptance tests, not only
-  the one under `paths.testsDir`** (#1588). That setting holds a single path, so
+  the one under `paths.testsDir`** (#1588, #1745). That setting holds a single path, so
   a repository whose suites live one per package could name at most one of them.
   The three globs the scan built from it matched whatever was under the
   configured root, and in this repository that was two prose annotation carriers
@@ -26,7 +26,8 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   `QFAI-ATDD-111` and `-112` could not report a coverage gap.
 
   The scan now also collects from the project's own
-  `validation.traceability.testFileGlobs`, minus its `testFileExcludeGlobs`, and
+  `validation.traceability.testFileGlobs`, minus its `testFileExcludeGlobs` and
+  any negative entry in the list itself, which the scan used to read anyway, and
   a file collected that way is answered by the segment **inside its test
   root** — `<package>/tests/<layer>/**`. Read from any ancestor instead, every
   test of a package called `api` lands in the API layer, including its unit

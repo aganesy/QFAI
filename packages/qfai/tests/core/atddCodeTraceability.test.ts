@@ -970,6 +970,38 @@ describe("acceptance tests outside paths.testsDir", () => {
     },
   });
 
+  it.each([
+    ["testFileExcludeGlobs", ["tests/**/*.test.ts"], ["tests/e2e/legacy/**"]],
+    ["a negative testFileGlobs entry", ["tests/**/*.test.ts", "!tests/e2e/legacy/**"], []],
+  ])(
+    "a test the configuration excludes through %s discharges nothing",
+    async (_, globs, excludes) => {
+      await withProject(async (root) => {
+        await seedSpec(root, "0001", ["US-0001"], ["TC-0001"]);
+        await seedTest(root, "integration", "a.test.ts", "/* QFAI:SPEC-0001:TC-0001 */");
+        // The project withdrew this directory from its test selection. Read anyway,
+        // its annotation satisfied the story while every other scan skipped it.
+        const dir = path.join(root, "tests", "e2e", "legacy");
+        await mkdir(dir, { recursive: true });
+        await writeFile(
+          path.join(dir, "journey.test.ts"),
+          [
+            "/* QFAI:SPEC-0001:US-0001 */",
+            "describe('journey', () => {",
+            "  it('runs', () => {});",
+            "});",
+            "",
+          ].join("\n"),
+          "utf-8",
+        );
+
+        const result = await evaluateAtddCodeTraceability(root, withProjectGlobs(globs, excludes));
+
+        expect(result.missing.us).toEqual(["SPEC-0001:US-0001"]);
+      });
+    },
+  );
+
   it("a suite outside testsDir answers from its own layer directory", async () => {
     await withProject(async (root) => {
       await seedSpec(root, "0001", ["US-0001"], ["TC-0001"]);
