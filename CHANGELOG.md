@@ -6,6 +6,16 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Added
 
+- **The minimal-implementation ladder asks whether the codebase already has it,
+  second** (#1795), **and its floor keeps unit-level coverage of the failures
+  the code retains** (#1793). The ladder sent an agent to the standard library
+  before its own repository, although reusing what a mature codebase already
+  holds is the rung that answers most often, and the procurement ladder for a
+  screen already puts the installed design system second. The ladder now has
+  seven rungs. The failure paths the code keeps are where untested failures
+  concentrate, so their unit coverage is now a floor item the ladder never
+  removes. Both changes are made in the shipped copy as well.
+
 - **A legacy ledger outside the obligation-column protection is reported**
   (#1663). A seeded `E2E` or `API` row has `TC-Refs` forbidden to it, so the
   `US-Refs` and `CON-API-Refs` columns are the only place its obligation can
