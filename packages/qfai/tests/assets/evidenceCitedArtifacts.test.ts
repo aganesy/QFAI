@@ -1710,6 +1710,22 @@ describe("a glob is a claim about a set", () => {
     expect(compiled("[T\\-A]C-*.test.ts").test("BC-0000-0000.test.ts")).toBe(false);
   });
 
+  it("reads globstars written side by side as one, in time", () => {
+    // Ten adjacent groups against a deep path that does not match took seconds,
+    // enough to stall the job that runs the census.
+    const deep = `.qfai/${Array.from({ length: 40 }, (_, n) => `s${String(n)}`).join("/")}/x.md`;
+    const started = performance.now();
+    expect(compiled(`.qfai/${"**/".repeat(10)}y.json`).test(deep)).toBe(false);
+    expect(compiled(`.qfai/${"**/".repeat(9)}**`).test(deep)).toBe(true);
+    expect(performance.now() - started).toBeLessThan(1000);
+    // And they still mean what one globstar means.
+    for (const candidate of ["a/b", "a/x/b", "a/x/y/b"]) {
+      expect(compiled("a/**/**/b").test(candidate), candidate).toBe(true);
+    }
+    expect(compiled("a/**/**").test("a/x/y")).toBe(true);
+    expect(compiled("a/**/**/b").test("a/x/c")).toBe(false);
+  });
+
   it("keeps a brace inside a class a member of the class", () => {
     // Read as a brace list, `[{}]` lost both members and the tracked `{.json`
     // it names read as missing. A comma inside a class is a member too.

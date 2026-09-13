@@ -428,15 +428,19 @@ export function compileGlob(pattern: string): string {
       // `a**b` to a single `*`, and so does this.
       const precededByBoundary = index === 0 || pattern[index - 1] === "/";
       const afterIndex = index + 2;
+      // A globstar written next to another matches no more than one does, and
+      // two quantified groups side by side try every split of the segments
+      // between them: ten in a row took seconds against one deep path.
+      const followsGlobstar = source.endsWith(SEGMENTS_GLOBSTAR);
       if (precededByBoundary && afterIndex >= pattern.length) {
-        source += "[^/]*(?:/[^/]*)*";
+        source = `${followsGlobstar ? source.slice(0, -SEGMENTS_GLOBSTAR.length) : source}[^/]*(?:/[^/]*)*`;
         index = afterIndex - 1;
         continue;
       }
       if (precededByBoundary && pattern[afterIndex] === "/") {
         // `**/` matches zero or more whole segments, so `tests/**\/*.py` still
         // matches `tests/a.py`.
-        source += "(?:[^/]*/)*";
+        if (!followsGlobstar) source += SEGMENTS_GLOBSTAR;
         index = afterIndex;
         continue;
       }
@@ -492,6 +496,9 @@ export function compileGlob(pattern: string): string {
   }
   return source;
 }
+
+/** What `**\/` compiles to: zero or more whole segments. */
+const SEGMENTS_GLOBSTAR = "(?:[^/]*/)*";
 
 /** An expression that matches nothing, for a class the author wrote wrongly. */
 const NEVER_MATCHES = "(?!)";
