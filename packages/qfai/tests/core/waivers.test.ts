@@ -238,7 +238,6 @@ describe("applyWaivers", () => {
     }
   });
 
-  // QFAI:SPEC-0014:TC-0014-0006
   it("rejects waiver targeting an error finding", async () => {
     const root = await createRoot();
     try {
