@@ -1911,12 +1911,12 @@ REVISE — needs new production behaviour
     });
 
     it("refuses a manifest that names no capture under the evidence tree", async () => {
-      // A path outside the tree is inside the revision already and adds no
-      // record, so the verdict would be hashed over fields alone.
+      // A path outside the tree adds no record, so the verdict would be hashed
+      // over fields alone.
       await withProject(async (root) => {
         const [issue] = await unresolved(root, verdictEntry(["docs/screen.png"]));
         expect(issue?.message).toContain(
-          "Surface artifacts naming a capture under .qfai/evidence/",
+          "Surface artifacts naming repository-relative paths under .qfai/evidence/, not docs/screen.png",
         );
       });
     });
@@ -1991,16 +1991,16 @@ REVISE — needs new production behaviour
         expect(issues).toEqual([]);
       });
     });
-    it("refuses a manifest entry that is not a repository-relative path", async () => {
+    it("refuses a manifest entry that is not a path under the evidence tree", async () => {
       // Dropped beside a valid capture, the entry left part of the manifest out
-      // of the hash, so replacing that capture moved nothing.
-      for (const entry of ["/tmp/screen.png", "../outside/screen.png"]) {
+      // of the hash, so replacing that file moved nothing.
+      for (const entry of ["/tmp/screen.png", "../outside/screen.png", "docs/screen.png"]) {
         await withProject(async (root) => {
           const [issue] = await unresolved(root, verdictEntry([SCREENSHOT, entry]), {
             surfaceArtifacts: { [SCREENSHOT]: CAPTURES[SCREENSHOT] },
           });
           expect(issue?.message, entry).toContain(
-            "Surface artifacts naming repository-relative paths",
+            `Surface artifacts naming repository-relative paths under .qfai/evidence/, not ${entry}`,
           );
         });
       }

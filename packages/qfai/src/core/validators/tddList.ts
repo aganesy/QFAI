@@ -2612,9 +2612,8 @@ const SURFACE_ARTIFACT_ROOT = ".qfai/evidence/";
  * The paths a `Surface artifacts` manifest names under `.qfai/evidence/`, each
  * once.
  *
- * A path elsewhere is inside `Reviewed revision` already and adds no record,
- * and one that leaves the repository addresses nothing a reader can open.
- * Listed twice, one capture is still one record.
+ * The gate refuses a manifest naming anything else, so an entry left out here
+ * is one already reported. Listed twice, one capture is still one record.
  */
 function surfaceArtifactPaths(manifest: string): string[] {
   const paths = manifestLines(manifest)
@@ -2743,15 +2742,16 @@ function missingCompletedEvidenceFields(
   );
   if (manifests.length > 1) missing.push("exactly one Surface artifacts");
   if (parity === "pass" && manifest !== null) {
-    // An entry that is absolute or leaves the tree addresses no record, and
-    // dropped beside a valid one it left part of the manifest out of the hash:
-    // replacing that capture moved nothing.
+    // Each entry has to be a capture under the evidence tree. One that is
+    // absolute, leaves the repository or sits elsewhere in it adds no record,
+    // and dropped beside a valid one it left part of the manifest out of the
+    // hash: replacing that file moved nothing.
     const unaddressable = manifestLines(manifest).filter(
-      (line) => safeRepoRelativePath(line) === null,
+      (line) => safeRepoRelativePath(line)?.startsWith(SURFACE_ARTIFACT_ROOT) !== true,
     );
     if (unaddressable.length > 0) {
       missing.push(
-        `Surface artifacts naming repository-relative paths, not ${unaddressable.join(", ")}`,
+        `Surface artifacts naming repository-relative paths under ${SURFACE_ARTIFACT_ROOT}, not ${unaddressable.join(", ")}`,
       );
     } else if (surfaceArtifactPaths(manifest).length === 0) {
       missing.push(`Surface artifacts naming a capture under ${SURFACE_ARTIFACT_ROOT}`);

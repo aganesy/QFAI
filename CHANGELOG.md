@@ -24,7 +24,7 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   gate read, because `Reviewed revision` excludes `.qfai/evidence/`.
 
   A `PASS (clause N)` verdict now requires its four labelled fields and a
-  `Surface artifacts` manifest that names at least one capture under
+  `Surface artifacts` manifest that names its captures, every one under
   `.qfai/evidence/`. The hash is recomputed over the entry, the Coverage Depth
   Matrix slice, and each capture. Captures are hashed raw, except `.md` and
   `.html` files, which are normalized. The parity review pack is checked as the
