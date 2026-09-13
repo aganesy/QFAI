@@ -108,7 +108,9 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   separator holds no row.
 
   The check now also reads the discussion stage: `--profile discussion` warns
-  when the latest run's evidence has no `## Grilling Session` row. `qfai init`
+  when the latest discussion pack's evidence, the file carrying that pack's stamp,
+  is missing or has no `## Grilling Session` row. A later `#` heading ends that
+  section, so a table under it is not a session row. `qfai init`
   stops ignoring `.qfai/evidence/discussion-*.md`, so that record reaches a
   review and a CI checkout, including in a project whose older
   `.qfai/evidence/.gitignore` still ignores everything by default: init adds

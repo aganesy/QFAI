@@ -79,6 +79,17 @@ async function evidence(root: string, name: string, body: string): Promise<void>
   await writeFile(path.join(dir, name), body, "utf-8");
 }
 
+/**
+ * A discussion run stamped `stamp`: its pack directory, and its evidence file
+ * with `body` unless the run wrote none.
+ */
+async function discussionRun(root: string, stamp: string, body?: string): Promise<void> {
+  await mkdir(path.join(root, ".qfai", "discussion", `discussion-${stamp}`), {
+    recursive: true,
+  });
+  if (body !== undefined) await evidence(root, `discussion-${stamp}.md`, body);
+}
+
 describe("validateGrillingTrace", () => {
   it("reports spec evidence with no session section", async () => {
     await withRoot(async (root) => {
@@ -307,11 +318,7 @@ describe("validateDiscussionGrillingTrace", () => {
     // session at every ending it admits, so no section is a run that wrote no
     // record.
     await withRoot(async (root) => {
-      await evidence(
-        root,
-        "discussion-20260101000000000.md",
-        "# Evidence\n\n## Research Summary\n",
-      );
+      await discussionRun(root, "20260101000000000", "# Evidence\n\n## Research Summary\n");
 
       const issues = await validateDiscussionGrillingTrace(root);
 
@@ -325,7 +332,7 @@ describe("validateDiscussionGrillingTrace", () => {
 
   it("accepts a populated session row", async () => {
     await withRoot(async (root) => {
-      await evidence(root, "discussion-20260101000000000.md", DISCUSSION_POPULATED);
+      await discussionRun(root, "20260101000000000", DISCUSSION_POPULATED);
 
       expect(await validateDiscussionGrillingTrace(root)).toEqual([]);
     });
@@ -335,12 +342,12 @@ describe("validateDiscussionGrillingTrace", () => {
     // An earlier run is history, and a record written for it now would be a
     // claim rather than a record.
     await withRoot(async (root) => {
-      await evidence(root, "discussion-20250101000000000.md", "# Evidence\n");
-      await evidence(root, "discussion-20260101000000000.md", DISCUSSION_POPULATED);
+      await discussionRun(root, "20250101000000000", "# Evidence\n");
+      await discussionRun(root, "20260101000000000", DISCUSSION_POPULATED);
 
       expect(await validateDiscussionGrillingTrace(root)).toEqual([]);
 
-      await evidence(root, "discussion-20270101000000000.md", "# Evidence\n");
+      await discussionRun(root, "20270101000000000", "# Evidence\n");
 
       const issues = await validateDiscussionGrillingTrace(root);
       expect(issues.map((finding) => finding.file)).toEqual([
@@ -351,9 +358,9 @@ describe("validateDiscussionGrillingTrace", () => {
 
   it("does not take a level-three heading for the section", async () => {
     await withRoot(async (root) => {
-      await evidence(
+      await discussionRun(
         root,
-        "discussion-20260101000000000.md",
+        "20260101000000000",
         DISCUSSION_POPULATED.replace("## Grilling Session", "### Grilling Session"),
       );
 
@@ -365,7 +372,7 @@ describe("validateDiscussionGrillingTrace", () => {
     // Discussion evidence belongs to no spec, so a `--spec` run could not act on
     // the finding.
     await withRoot(async (root) => {
-      await evidence(root, "discussion-20260101000000000.md", "# Evidence\n");
+      await discussionRun(root, "20260101000000000", "# Evidence\n");
 
       expect(await validateDiscussionGrillingTrace(root, { specScope: new Set(["0007"]) })).toEqual(
         [],
@@ -373,12 +380,67 @@ describe("validateDiscussionGrillingTrace", () => {
     });
   });
 
-  it("says nothing without discussion evidence", async () => {
+  it("says nothing without a discussion pack", async () => {
+    // Evidence files alone are no run: the run is the pack they belong to.
     await withRoot(async (root) => {
       await evidence(root, "sdd-spec-0007.md", "# Evidence\n");
       await evidence(root, "discussion-notes.md", "# Notes\n");
+      await evidence(root, "discussion-20260101000000000.md", "# Evidence\n");
 
       expect(await validateDiscussionGrillingTrace(root)).toEqual([]);
+    });
+  });
+
+  it("reports the latest pack's missing evidence while an older run's record is populated", async () => {
+    // The record belongs to the run whose stamp it carries, so an older
+    // populated file does not stand for a newer pack that wrote none.
+    await withRoot(async (root) => {
+      await discussionRun(root, "20260101000000000", DISCUSSION_POPULATED);
+      await discussionRun(root, "20270101000000000");
+
+      const issues = await validateDiscussionGrillingTrace(root);
+
+      expect(issues.map((finding) => finding.file)).toEqual([
+        ".qfai/evidence/discussion-20270101000000000.md",
+      ]);
+      expect(issues[0]?.message).toContain("has no evidence file");
+    });
+  });
+
+  it("reads packs from the configured discussion directory", async () => {
+    await withRoot(async (root) => {
+      await mkdir(path.join(root, "packs", "discussion-20260101000000000"), { recursive: true });
+      await evidence(root, "discussion-20260101000000000.md", "# Evidence\n");
+
+      const issues = await validateDiscussionGrillingTrace(root, {
+        discussionDir: path.join(root, "packs"),
+      });
+
+      expect(issues).toHaveLength(1);
+    });
+  });
+
+  it("ends the section at a level-one heading", async () => {
+    // A table under a later `# Appendix` is not a session row.
+    await withRoot(async (root) => {
+      await discussionRun(
+        root,
+        "20260101000000000",
+        [
+          "# Evidence",
+          "",
+          "## Grilling Session",
+          "",
+          "# Appendix",
+          "",
+          "| Term | Meaning |",
+          "| ---- | ------- |",
+          "| pack | a discussion run's directory |",
+          "",
+        ].join("\n"),
+      );
+
+      expect(await validateDiscussionGrillingTrace(root)).toHaveLength(1);
     });
   });
 });

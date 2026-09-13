@@ -619,7 +619,10 @@ async function runDiscussionValidators(
     // `QFAI-GRILL-001` (warning) on the latest discussion run whose evidence
     // records no grilling session. This profile is that stage's gate, as `sdd`
     // is the spec stage's.
-    ...(await validateDiscussionGrillingTrace(root, { specScope })),
+    ...(await validateDiscussionGrillingTrace(root, {
+      specScope,
+      discussionDir: resolvePath(root, config, "discussionDir"),
+    })),
     // The RCP footer names `--profile discussion` as the review-cycle gate and
     // mandates `review_request.md` / `Rxx_*.md` / `summary.json` in the same
     // breath. Without this the command it prescribes could not see the

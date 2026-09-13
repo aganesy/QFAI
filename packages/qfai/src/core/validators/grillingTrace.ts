@@ -37,6 +37,7 @@ import path from "node:path";
 
 import { isEnoent } from "../fs/errno.js";
 import { maskFencedCodeBlocks } from "../ids.js";
+import { findLatestPack } from "../packLocator.js";
 import { parseHeadings } from "../parse/markdown.js";
 import type { Issue } from "../types.js";
 import { exists, issue } from "./utils.js";
@@ -68,11 +69,8 @@ const EVIDENCE_DIR_REL = ".qfai/evidence";
  */
 const SPEC_EVIDENCE_RE = /^sdd-(spec-\d{4})\.md$/;
 
-/**
- * The evidence file a discussion run writes: its seventeen-digit stamp, the
- * same one its pack directory carries. Equal-width stamps sort in time order.
- */
-const DISCUSSION_EVIDENCE_RE = /^discussion-\d{17}\.md$/;
+/** Where discussion packs sit when the caller names no configured directory. */
+const DEFAULT_DISCUSSION_DIR_REL = ".qfai/discussion";
 
 /**
  * The values the shipped template leaves for its author to replace. A row still
@@ -112,10 +110,13 @@ async function textOf(file: string): Promise<string | null> {
 function carriesPopulatedSection(text: string, heading: string): boolean {
   const masked = maskFencedCodeBlocks(text);
   const lines = masked.split("\n");
-  const sections = parseHeadings(masked).filter((candidate) => candidate.level === 2);
-  return sections.some((section, index) => {
-    if (`## ${section.title}` !== heading) return false;
-    const end = (sections[index + 1]?.line ?? lines.length + 1) - 1;
+  const headings = parseHeadings(masked);
+  return headings.some((section, index) => {
+    if (section.level !== 2 || `## ${section.title}` !== heading) return false;
+    // The next heading at level two or above ends it: a `# Appendix` is not part
+    // of the session section, and a table under it is not a session row.
+    const next = headings.slice(index + 1).find((candidate) => candidate.level <= 2);
+    const end = (next?.line ?? lines.length + 1) - 1;
     return tableRows(lines.slice(section.line, end)).some(
       (row) =>
         !BLANK_ROW_RE.test(row) && !TEMPLATE_PLACEHOLDERS.some((token) => row.includes(token)),
@@ -207,36 +208,44 @@ export async function validateGrillingTrace(
 }
 
 /**
- * The latest discussion run's evidence with no populated `## Grilling Session`
- * section.
+ * The latest discussion run, when its evidence records no populated
+ * `## Grilling Session` section.
+ *
+ * The run is the latest canonical discussion pack, and its evidence is the file
+ * carrying that pack's stamp, which is the name the discussion stage writes. An
+ * older run's populated record therefore does not stand for a newer pack, and a
+ * pack with no evidence file at all is reported as having no record.
  *
  * A `--spec` run reads nothing here: discussion evidence belongs to no spec, so
  * a scoped run could not act on the finding.
  */
 export async function validateDiscussionGrillingTrace(
   root: string,
-  options: { specScope?: ReadonlySet<string> | undefined } = {},
+  options: { specScope?: ReadonlySet<string> | undefined; discussionDir?: string } = {},
 ): Promise<Issue[]> {
   if (options.specScope !== undefined) return [];
-  const tree = await evidenceEntries(root);
-  if (tree === null) return [];
+  const pack = await findLatestPack(
+    options.discussionDir ?? path.join(root, DEFAULT_DISCUSSION_DIR_REL),
+    "discussion",
+  );
+  if (pack?.timestamp == null) return [];
 
-  const latest = tree.entries
-    .filter((entry) => entry.isFile() && DISCUSSION_EVIDENCE_RE.test(entry.name))
-    .at(-1);
-  if (latest === undefined) return [];
+  const name = `discussion-${pack.timestamp}.md`;
+  const relPath = `${EVIDENCE_DIR_REL}/${name}`;
+  const text = await textOf(path.join(root, EVIDENCE_DIR_REL, name));
+  if (text !== null && carriesPopulatedSection(text, DISCUSSION_SECTION)) return [];
 
-  const text = await textOf(path.join(tree.evidenceDir, latest.name));
-  if (text === null || carriesPopulatedSection(text, DISCUSSION_SECTION)) return [];
-
-  const relPath = `${EVIDENCE_DIR_REL}/${latest.name}`;
+  const what =
+    text === null
+      ? `the latest discussion run, ${pack.name}, has no evidence file at ${relPath}`
+      : `${relPath} records no grilling session for the latest discussion run`;
   return [
     issue(
       GRILLING_TRACE_CODE,
-      `${GRILLING_TRACE_CODE}: ${relPath} records no grilling session for the latest discussion ` +
-        `run. The run records its session under "${DISCUSSION_SECTION}" before it authors the ` +
-        `pack — a run that skipped the session and one that ran it leave the same pack ` +
-        `otherwise. Justification: file=${relPath}, missing=${DISCUSSION_SECTION} with a session row.`,
+      `${GRILLING_TRACE_CODE}: ${what}. The run records its session under ` +
+        `"${DISCUSSION_SECTION}" in that file before it authors the pack — a run that ` +
+        `skipped the session and one that ran it leave the same pack otherwise. ` +
+        `Justification: file=${relPath}, missing=${DISCUSSION_SECTION} with a session row.`,
       "warning",
       relPath,
       "grilling.traceMissing",
