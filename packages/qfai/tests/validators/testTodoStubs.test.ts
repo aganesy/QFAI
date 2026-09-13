@@ -16,7 +16,7 @@ import {
   atddAcceptanceTestGlobs,
 } from "../../src/core/atddTraceability.js";
 import { SCAFFOLD_PLACEHOLDER_MARKER } from "../../src/core/atdd/scaffold.js";
-import { scaffoldPlaceholderScannedFilter } from "../../src/core/validators/scaffoldPlaceholder.js";
+import { scaffoldPlaceholderReportedFilter } from "../../src/core/validators/scaffoldPlaceholder.js";
 import {
   STUB_SOURCE_FILE_PATTERN,
   stubSourceFilePattern,
@@ -843,7 +843,7 @@ describe("the ATDD gate's file selection", () => {
     const issues = await validateTestTodoStubs(root, config, {
       globs: atddAcceptanceTestGlobs(root, config, "**/*.ts"),
       fileFilter: atddAcceptanceLayerFilter(root, config),
-      placeholderScanned: scaffoldPlaceholderScannedFilter(root, config),
+      placeholderReported: scaffoldPlaceholderReportedFilter(root, config),
     });
 
     expect(issues.filter((issue) => issue.code === "QFAI-TEST-003")).toEqual([]);
@@ -862,7 +862,7 @@ describe("the ATDD gate's file selection", () => {
     const issues = await validateTestTodoStubs(root, config, {
       globs: atddAcceptanceTestGlobs(root, config, "**/*.ts"),
       fileFilter: atddAcceptanceLayerFilter(root, config),
-      placeholderScanned: scaffoldPlaceholderScannedFilter(root, config),
+      placeholderReported: scaffoldPlaceholderReportedFilter(root, config),
     });
 
     expect(issues.map((issue) => issue.code)).toContain("QFAI-TEST-003");
@@ -876,7 +876,7 @@ describe("the ATDD gate's file selection", () => {
     const issues = await validateTestTodoStubs(root, config, {
       globs: atddAcceptanceTestGlobs(root, config, "**/*.ts"),
       fileFilter: atddAcceptanceLayerFilter(root, config),
-      placeholderScanned: scaffoldPlaceholderScannedFilter(root, config),
+      placeholderReported: scaffoldPlaceholderReportedFilter(root, config),
     });
 
     // Exempting it here would leave the file reported by neither validator, and
@@ -896,7 +896,7 @@ describe("the ATDD gate's file selection", () => {
 
     const issues = await validateTestTodoStubs(root, config, {
       globs: ["tests/integration/.generated/**/*.test.ts"],
-      placeholderScanned: scaffoldPlaceholderScannedFilter(root, config),
+      placeholderReported: scaffoldPlaceholderReportedFilter(root, config),
     });
 
     expect(issues.map((issue) => issue.code)).toContain("QFAI-TEST-003");
@@ -912,7 +912,7 @@ describe("the ATDD gate's file selection", () => {
 
     const issues = await validateTestTodoStubs(root, config, {
       globs: ["tests/integration/**/*.ts"],
-      placeholderScanned: scaffoldPlaceholderScannedFilter(root, config),
+      placeholderReported: scaffoldPlaceholderReportedFilter(root, config),
     });
 
     expect(issues.map((issue) => issue.code)).toContain("QFAI-TEST-003");

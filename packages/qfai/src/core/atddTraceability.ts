@@ -2428,7 +2428,9 @@ function isAnnotationOnlyCarrier(
  */
 export function deriveTestFileExtensions(testFileGlobs: readonly string[]): Set<string> {
   const extensions = new Set<string>();
-  for (const glob of testFileGlobs) {
+  for (const entry of testFileGlobs) {
+    // Trimmed as the scan trims it, or a trailing space hides the extension.
+    const glob = entry.trim();
     // A leading `!` excludes. Its extension names files the scan must not read,
     // and counted, `!tests/legacy/**/*.ts` beside a Python glob added TypeScript
     // to what the stage scans. `!(` opens a negated extglob instead, which
@@ -2480,7 +2482,7 @@ export function deriveAtddFilePattern(testFileGlobs: readonly string[]): string 
 /**
  * Whether a collected file is a source this scan reads for annotations.
  *
- * A project glob used as written may be extension-broad, and one that is
+ * A project glob used as written may be extension-broad, and such a glob
  * collects a data file inside an acceptance layer as readily as a test. A
  * fixture value is not an annotation, so a file counts only when its extension
  * is one the scan reads where no glob names one, or when a scan glob naming its

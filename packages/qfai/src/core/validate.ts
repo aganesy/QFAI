@@ -45,7 +45,7 @@ import { evaluateAtddCodeTraceability } from "./atddTraceability.js";
 import { validateAtddCodeTraceability } from "./validators/atddCodeTraceability.js";
 import { validateAtddCoverageDepth } from "./validators/atddCoverageDepth.js";
 import {
-  scaffoldPlaceholderScannedFilter,
+  scaffoldPlaceholderReportedFilter,
   validateScaffoldPlaceholder,
 } from "./validators/scaffoldPlaceholder.js";
 import {
@@ -957,7 +957,7 @@ async function runAtddValidators(
     // here would leave it reported by neither.
     ...(await validateTestTodoStubs(root, config, {
       ...acceptanceStubScan(root, config),
-      placeholderScanned: scaffoldPlaceholderScannedFilter(root, config),
+      placeholderReported: scaffoldPlaceholderReportedFilter(root, config),
     })),
   ];
 }
@@ -1031,7 +1031,7 @@ async function runTddValidators(
           ...(await validateTestTodoStubs(root, config, acceptanceStubScan(root, config))),
         ])
       : await validateTestTodoStubs(root, config, {
-          placeholderScanned: scaffoldPlaceholderScannedFilter(root, config),
+          placeholderReported: scaffoldPlaceholderReportedFilter(root, config),
         })),
     // `qfai-implement` names `--profile tdd` as its only completion gate, and
     // it is the stage that creates test-routing obligations. Without this the

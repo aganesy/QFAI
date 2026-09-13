@@ -45,6 +45,7 @@
  */
 import fg from "fast-glob";
 import path from "node:path";
+import { readFileSync } from "node:fs";
 import { readFile } from "node:fs/promises";
 
 import { resolvePath, type QfaiConfig } from "../config.js";
@@ -130,11 +131,12 @@ export function scaffoldPlaceholderScanDirs(testsDir: string): string[] {
 }
 
 /**
- * Whether this validator's scan reaches a repository-relative path.
+ * Whether this validator reports a file, given its repository-relative path and
+ * its body.
  *
- * Every part of that scan, because any one alone is wrong. The directories are
- * the four above; the basenames are the writer's own dialect patterns, which is
- * what the scan globs with. A marked file in one of those directories whose
+ * Every part of that decision, because any one alone is wrong. The directories
+ * are the four above; the basenames are the writer's own dialect patterns, which
+ * is what the scan globs with. A marked file in one of those directories whose
  * name the writer would never emit — `pay.ts` beside `pay.test.ts` — is not
  * collected there, so a caller standing aside for it leaves it reported by
  * nobody.
@@ -144,21 +146,45 @@ export function scaffoldPlaceholderScanDirs(testsDir: string): string[] {
  * `tests/integration/.generated/pay.test.ts` is collected by nothing here even
  * though its directory and basename both match — while a project glob that
  * names the dot directory explicitly still reads it elsewhere.
+ *
+ * The body has to be one {@link scaffoldPlaceholderReportsBody} accepts, and at
+ * least one TC it names has to owe an ATDD annotation. The scan passes over a
+ * TC whose declared `Level` owes none, so a skeleton naming only such TCs is
+ * reported by nothing here. The levels come from the catalogue of the spec the
+ * path names, read as the scan reads it.
  */
-export function scaffoldPlaceholderScannedFilter(
+export function scaffoldPlaceholderReportedFilter(
   root: string,
   config: QfaiConfig,
-): (relativePath: string) => boolean {
+): (relativePath: string, body: string) => boolean {
   const scanned = scaffoldPlaceholderScanDirs(resolvePath(root, config, "testsDir")).map((dir) =>
     path.resolve(dir),
   );
   const basenames = scaffoldPlaceholderBasenameMatchers();
-  return (relativePath: string): boolean => {
+  const specsRoot = resolvePath(root, config, "specsDir");
+  const levelCache = new Map<string, Map<string, string>>();
+  const levelsFor = (specId: string): Map<string, string> => {
+    const cached = levelCache.get(specId);
+    if (cached) return cached;
+    let text = "";
+    try {
+      text = readFileSync(path.join(specsRoot, specId, "06_Test-Cases.md"), "utf-8");
+    } catch {
+      // No catalogue declares no level, which is how the scan reads it too.
+    }
+    const levels = collectTcLevels(text);
+    levelCache.set(specId, levels);
+    return levels;
+  };
+  return (relativePath: string, body: string): boolean => {
+    if (!scaffoldPlaceholderReportsBody(body)) {
+      return false;
+    }
     if (!basenames.some((matcher) => matcher.test(path.basename(relativePath)))) {
       return false;
     }
     const absolute = path.resolve(root, relativePath);
-    return scanned.some((dir) => {
+    const owningDir = scanned.find((dir) => {
       const inside = path.relative(dir, absolute);
       if (inside.length === 0 || inside.startsWith("..") || path.isAbsolute(inside)) {
         return false;
@@ -168,7 +194,27 @@ export function scaffoldPlaceholderScannedFilter(
       // does not apply to it.
       return !inside.split(path.sep).some((segment) => segment.startsWith("."));
     });
+    if (owningDir === undefined) {
+      return false;
+    }
+    const specId = extractSpecIdFromScaffoldPath(owningDir, absolute);
+    const levels = specId === null ? new Map<string, string>() : levelsFor(specId);
+    return placeholderTcIds(body).some(
+      (tcId) => !isOutsideAtddObligation(levels.get(tcId.toUpperCase())),
+    );
   };
+}
+
+/** The TCs a placeholder body names on its TODO lines, each once. */
+function placeholderTcIds(body: string): string[] {
+  TODO_MARKER_RE.lastIndex = 0;
+  return Array.from(
+    new Set(
+      Array.from(body.matchAll(TODO_MARKER_RE), (match) => match[1]).filter(
+        (id): id is string => typeof id === "string",
+      ),
+    ),
+  );
 }
 
 /** The scanned root a `Level` routes to. */
@@ -330,11 +376,7 @@ export async function validateScaffoldPlaceholder(
     if (!scaffoldPlaceholderReportsBody(body)) {
       continue;
     }
-    TODO_MARKER_RE.lastIndex = 0;
-    const matches = Array.from(body.matchAll(TODO_MARKER_RE));
-    const allTcIds = Array.from(
-      new Set(matches.map((m) => m[1]).filter((id): id is string => typeof id === "string")),
-    );
+    const allTcIds = placeholderTcIds(body);
     const relPath = path.relative(root, file).replace(/\\/g, "/");
     // Resolved against whichever scaffold root actually contains the file.
     const owningDir = scaffoldDirs.find((dir) => path.resolve(file).startsWith(path.resolve(dir)));

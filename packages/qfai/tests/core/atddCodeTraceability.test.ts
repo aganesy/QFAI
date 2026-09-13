@@ -1534,6 +1534,29 @@ describe("acceptance tests outside paths.testsDir", () => {
     });
   });
 
+  it("does not let a wildcard reach into a dot directory to vouch for a fixture there", async () => {
+    await withProject(async (root) => {
+      await seedSpec(root, "0001", ["US-0001"], ["TC-0001"]);
+      await seedPackageTest(root, "checkout", "e2e", "journey.test.ts", [
+        "/* QFAI:SPEC-0001:US-0001 */",
+      ]);
+      // The first glob writes the dot and collects the fixture. The scan globs
+      // with `dot: false`, so the second glob's `**` never enters `.generated`
+      // and names nothing there.
+      await seedPackageTest(root, "checkout", "integration/.generated", "data.test.json", [
+        "// QFAI:SPEC-0001:TC-0001",
+      ]);
+
+      const globs = [
+        "packages/*/tests/integration/.generated/**/*",
+        "packages/*/tests/**/*.test.*",
+      ];
+      const result = await evaluateAtddCodeTraceability(root, withProjectGlobs(globs));
+
+      expect(result.missing.tc).toEqual(["SPEC-0001:TC-0001"]);
+    });
+  });
+
   it("recognizes a CMake project as a package, and a CMake test directory as a test root", async () => {
     await withProject(async (root) => {
       await seedSpec(root, "0001", ["US-0001"], ["TC-0001"]);

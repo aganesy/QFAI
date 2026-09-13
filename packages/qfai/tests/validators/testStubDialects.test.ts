@@ -669,7 +669,7 @@ describe("QFAI-TEST-003 — the vitest/jest skip form is its own rule", () => {
 
   it("leaves an unfilled scaffold to the rule that owns it", async () => {
     await withTests({ "tests/a.test.ts": SCAFFOLDED }, async (root) => {
-      const issues = await validateTestTodoStubs(root, CONFIG, { placeholderScanned: () => true });
+      const issues = await validateTestTodoStubs(root, CONFIG, { placeholderReported: () => true });
 
       expect(issues.filter((i) => i.code === "QFAI-TEST-003")).toEqual([]);
     });
@@ -719,7 +719,7 @@ describe("QFAI-TEST-003 — the vitest/jest skip form is its own rule", () => {
     ].join("\n");
 
     await withTests({ "tests/a.test.ts": mixed }, async (root) => {
-      const issues = await validateTestTodoStubs(root, CONFIG, { placeholderScanned: () => true });
+      const issues = await validateTestTodoStubs(root, CONFIG, { placeholderReported: () => true });
 
       expect(issues.filter((i) => i.code === "QFAI-TEST-003")).toEqual([]);
       expect(issues.filter((i) => i.code === "QFAI-TEST-001")).toHaveLength(1);

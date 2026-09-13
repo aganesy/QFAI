@@ -273,6 +273,9 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   against the whole path it selects, so a file only another package's broad
   glob collected passes on neither. A numeric or character brace range in such
   a glob, as in `test_{1..3}.*`, selects the names fast-glob expands it to.
+  Its wildcards skip a name that starts with a dot, as the scan's do, so
+  `packages/*/tests/**/*.test.*` names nothing under `.generated/`. Each glob is
+  trimmed before its extension is read.
 
   The coverage scan reads a collected file the same way: a data file an
   extension-broad glob sweeps into an acceptance layer is not a source, so an
@@ -329,7 +332,9 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   its scan, the four directories under `paths.testsDir` and the writer's own
   basename patterns. A marked skeleton outside either was exempt from this gate
   and uncollected by that one, leaving the ATDD gate green over a suite that
-  does not run. `--profile tdd` runs no such validator, so there the stub gate
+  does not run. A skeleton naming only test cases at `L1` or `L2` stays this
+  gate's too, since that validator reports nothing for them.
+  `--profile tdd` runs no such validator, so there the stub gate
   reports every marked skeleton it reads, and it reads the acceptance
   directories as well as `testFileGlobs`, as the coverage check it runs does.
 

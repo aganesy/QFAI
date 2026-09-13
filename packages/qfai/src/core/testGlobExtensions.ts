@@ -76,7 +76,9 @@ export function globExtensions(globs: readonly string[]): string[] {
       }
     }
   };
-  for (const glob of globs) {
+  for (const entry of globs) {
+    // Trimmed as the scans trim it, or a trailing space hides the extension.
+    const glob = entry.trim();
     if (isGlobExclusion(glob)) continue;
     const braces = /\.\{([^}]+)\}$/.exec(glob);
     if (braces) {
@@ -115,7 +117,9 @@ export function globExtensions(globs: readonly string[]): string[] {
  */
 export function namedTestFileMatcher(globs: readonly string[]): (filePath: string) => boolean {
   const patterns: RegExp[] = [];
-  for (const glob of globs) {
+  for (const entry of globs) {
+    // Trimmed first, or a trailing space reads `**/* ` as naming something.
+    const glob = entry.trim();
     if (isGlobExclusion(glob)) continue;
     const last = glob.split("/").at(-1) ?? "";
     if (!/[^*?.]/.test(last)) continue;
@@ -146,6 +150,11 @@ export function namedTestFileMatcher(globs: readonly string[]): (filePath: strin
  * A whole glob as a regular-expression source over a `/`-separated path, or
  * `null` for syntax this reader does not translate. `**` spans any number of
  * directories, and every other segment is read by {@link segmentPattern}.
+ *
+ * The scan globs with `dot: false`, so a wildcard does not match a name that
+ * starts with a dot. `**` passes over `.generated`, and a segment opening with
+ * `*` or `?` does not match it; a segment that writes the dot, or opens with a
+ * bracket expression or an extglob group, still does, as it does for the scan.
  */
 function globPathPattern(glob: string): string | null {
   const segments = glob.trim().replace(/^\.\//, "").split("/");
@@ -153,7 +162,7 @@ function globPathPattern(glob: string): string | null {
   for (const [index, segment] of segments.entries()) {
     const last = index === segments.length - 1;
     if (segment === "**") {
-      source += last ? "(?:[^/]*(?:/[^/]*)*)" : "(?:[^/]+/)*";
+      source += last ? "(?:(?!\\.)[^/]*(?:/(?!\\.)[^/]*)*)" : "(?:(?!\\.)[^/]+/)*";
       continue;
     }
     const part = segmentPattern(segment);
@@ -172,8 +181,13 @@ function globPathPattern(glob: string): string | null {
  * A negated group matches wherever none of its alternatives, followed by the
  * rest of the segment, would, which is how the glob matcher reads it. Inside
  * another group it is not translated.
+ *
+ * `start` says the text opens a path segment, where a leading `*` or `?` does
+ * not match a dot. A brace group there is read as the scan expands it, each
+ * member joined to the rest of the segment, so `{,.}*` matches `.generated`
+ * through its second member only.
  */
-function segmentPattern(segment: string, nested = false): string | null {
+function segmentPattern(segment: string, nested = false, start = true): string | null {
   let source = "";
   for (let index = 0; index < segment.length; index += 1) {
     const char = segment[index] ?? "";
@@ -183,7 +197,7 @@ function segmentPattern(segment: string, nested = false): string | null {
       const group = alternation(segment.slice(index + 2, close).split("|"));
       if (group === null) return null;
       if (char === "!") {
-        const rest = nested ? null : segmentPattern(segment.slice(close + 1));
+        const rest = nested ? null : segmentPattern(segment.slice(close + 1), false, false);
         if (rest === null) return null;
         return `${source}(?:(?!${group}${rest}(?:/|$))[^/]*?)${rest}`;
       }
@@ -193,6 +207,14 @@ function segmentPattern(segment: string, nested = false): string | null {
       const close = segment.indexOf("}", index + 1);
       if (close < 0) return null;
       const body = segment.slice(index + 1, close);
+      if (start && index === 0 && body.includes(",")) {
+        const rest = segment.slice(close + 1);
+        return alternation(
+          body.split(",").map((member) => member + rest),
+          nested,
+          true,
+        );
+      }
       const group = body.includes(",") ? alternation(body.split(",")) : braceBody(body);
       if (group === null) return null;
       source += group;
@@ -204,9 +226,9 @@ function segmentPattern(segment: string, nested = false): string | null {
       source += `[${members.replace(/^[!^]/, "^")}]`;
       index = close;
     } else if (char === "*") {
-      source += "[^/]*";
+      source += start && index === 0 ? "(?!\\.)[^/]*" : "[^/]*";
     } else if (char === "?") {
-      source += "[^/]";
+      source += start && index === 0 ? "(?!\\.)[^/]" : "[^/]";
     } else {
       source += char.replace(/[.^$|\\+(){}[\]]/g, "\\$&");
     }
@@ -228,14 +250,14 @@ function braceBody(body: string): string | null {
     if (members.length === 0) return "(?!)";
     return `(?:${members.map((member) => member.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("|")})`;
   }
-  const inner = segmentPattern(body, true);
+  const inner = segmentPattern(body, true, false);
   return inner === null ? null : `\\{${inner}\\}`;
 }
 
-function alternation(alternatives: readonly string[]): string | null {
+function alternation(alternatives: readonly string[], nested = true, start = false): string | null {
   const sources: string[] = [];
   for (const alternative of alternatives) {
-    const source = segmentPattern(alternative, true);
+    const source = segmentPattern(alternative, nested, start);
     if (source === null) return null;
     sources.push(source);
   }

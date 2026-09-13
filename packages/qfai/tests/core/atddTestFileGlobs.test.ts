@@ -30,6 +30,10 @@ describe("deriveAtddFilePattern", () => {
     expect(deriveAtddFilePattern(["tests/**/*.py", "!tests/fixtures/**/*.json"])).toBe(
       "**/*.{feature,markdown,md,py}",
     );
+    // The scan trims each glob, so surrounding whitespace hides no extension.
+    expect(deriveAtddFilePattern([" tests/**/*.{py,pyi} ", " tests/**/*.go "])).toBe(
+      "**/*.{feature,go,markdown,md,py,pyi}",
+    );
   });
 
   it("lifts and merges a brace set", () => {

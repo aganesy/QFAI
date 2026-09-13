@@ -243,6 +243,7 @@ settings, so those count only when they name a package:
 | `package.json`, `deno.json`, `deno.jsonc`                                                                                                                                                                    | When it declares a top-level `name`         |
 | `pyproject.toml`                                                                                                                                                                                             | With a `[project]` or `[tool.poetry]` table |
 | `setup.cfg`                                                                                                                                                                                                  | With a `[metadata]` section                 |
+| `CMakeLists.txt`                                                                                                                                                                                             | With a `project()` command                  |
 
 **The configured root answers by containment and needs no segment of its own.**
 With `paths.testsDir` at the repository root, `e2e/journey.test.ts` carries no

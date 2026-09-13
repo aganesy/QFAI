@@ -446,6 +446,38 @@ describe("--profile tdd can observe the ATDD routing gates", () => {
     });
   });
 
+  it("reports a skeleton for an L1 TC under --profile atdd and full, where the placeholder rule passes it over", async () => {
+    // `D-SCAFFOLD-PLACEHOLDER` says nothing about a TC whose `Level` owes no
+    // ATDD annotation. Standing aside for its skeleton left the skipped case
+    // reported by neither rule.
+    await withCiEnv(false, async () => {
+      await withProject(async (root) => {
+        await writeFile(
+          path.join(root, ".qfai", "specs", "spec-0001", "06_Test-Cases.md"),
+          [
+            "# 06 Test Cases",
+            "",
+            "## Test Case Table",
+            "",
+            "| TC-ID | Level | AC-Refs | EX-Ref | Steps | Expected |",
+            "| ----- | ----- | ------- | ------ | ----- | -------- |",
+            "| TC-0001-0001 | L1 | AC-0001 | - | s | e |",
+            "",
+          ].join("\n"),
+          "utf-8",
+        );
+        await seedRepoWideTestGlobs(root);
+        await seedScaffold(root, "tests/integration/spec-0001");
+        for (const profile of ["atdd", undefined] as const) {
+          await runValidate({ root, strict: false, ...(profile ? { profile } : {}) });
+          const codes = (await findings(root)).map((entry) => entry.code);
+          expect(codes.filter((code) => code === "QFAI-TEST-003")).toHaveLength(1);
+          expect(codes).not.toContain("D-SCAFFOLD-PLACEHOLDER");
+        }
+      });
+    });
+  });
+
   it("reads the acceptance directories for skeletons under --profile tdd whatever testFileGlobs holds", async () => {
     // The coverage check `--profile tdd` runs reads those directories on the
     // config `qfai init` ships, so a skeleton's annotation clears its missing

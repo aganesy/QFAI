@@ -16,7 +16,8 @@
  *
  * A file `D-SCAFFOLD-PLACEHOLDER` will report — an unfilled skeleton, carrying
  * the scaffold sentinel beside a per-test-case TODO line, in a directory that
- * validator scans — is exempt from `QFAI-TEST-003`. `qfai atdd scaffold` writes its skeletons as `it.skip`, and
+ * validator scans, for a test case that owes an ATDD annotation — is exempt
+ * from `QFAI-TEST-003`. `qfai atdd scaffold` writes its skeletons as `it.skip`, and
  * `D-SCAFFOLD-PLACEHOLDER` already owns an unfilled scaffold — with a
  * deliberate ladder that stays a warning for `atdd.scaffoldEscalateCycles`
  * validate runs before it becomes an error. Reporting the same block here as
@@ -52,7 +53,6 @@ import { globExtensions, isGlobExclusion, namedTestFileMatcher } from "../testGl
 import { DEFAULT_TEST_FILE_EXCLUDE_GLOBS, normalizeGlobs } from "../traceability.js";
 import type { Issue, IssueSeverity } from "../types.js";
 import { maskJsNonCode } from "./jsSourceMask.js";
-import { scaffoldPlaceholderReportsBody } from "./scaffoldPlaceholder.js";
 import { issue } from "./utils.js";
 
 /**
@@ -718,7 +718,7 @@ function collectStubIssues(
   content: string,
   dialect: StubDialect,
   skippedTestSeverity: IssueSeverity,
-  placeholderScanned: (relativePath: string) => boolean,
+  placeholderReported: (relativePath: string, content: string) => boolean,
 ): Issue[] {
   const issues: Issue[] = [];
   // An unfilled scaffold is `D-SCAFFOLD-PLACEHOLDER`'s, and its `it.skip` is
@@ -726,19 +726,12 @@ function collectStubIssues(
   // scaffold's own, so it is gone the moment the block is authored — after
   // which a `.skip` left behind is a hand-written one and is reported.
   //
-  // The marker alone is not enough to hand it over, for two reasons.
-  //
-  // That validator scans four directories under `paths.testsDir`, and this gate
-  // also reads a monorepo's package-local acceptance suites. A marked skeleton
-  // there is outside its scan, so it stays this gate's to report.
-  //
-  // And it reports a file only when the sentinel sits beside a per-TC
-  // `TODO: implement assertion for` line. A skeleton whose TODO lines have been
-  // written out but whose sentinel survives is progressed and passes that
-  // validator, so the hand-off needs both the sentinel and a TODO line.
-  // `scaffoldPlaceholderReportsBody` is the predicate that validator applies,
-  // so the two cannot drift apart.
-  const scaffolded = scaffoldPlaceholderReportsBody(content) && placeholderScanned(relFile);
+  // The marker alone is not enough to hand it over. That validator scans four
+  // directories under `paths.testsDir`, reports a sentinel only beside a per-TC
+  // `TODO: implement assertion for` line, and passes over a TC whose `Level`
+  // owes no ATDD annotation. A file failing any of those is reported by nothing
+  // there, so it stays this gate's. The caller's predicate asks all of it.
+  const scaffolded = placeholderReported(relFile, content);
   // Offsets and line breaks survive both passes, so a match position in the
   // scanned text is still a position in the file the finding names.
   const masked = dialect.mask(content);
@@ -1302,7 +1295,7 @@ export type TestTodoStubOptions = {
    */
   fileFilter?: (relativePath: string) => boolean;
   /**
-   * Whether `D-SCAFFOLD-PLACEHOLDER` scans this file.
+   * Whether `D-SCAFFOLD-PLACEHOLDER` reports this file.
    *
    * A file carrying the scaffold marker is exempt from `QFAI-TEST-003` only
    * where that validator reports it instead. It scans four directories under
@@ -1310,9 +1303,10 @@ export type TestTodoStubOptions = {
    * package-local acceptance suite, which this gate does read — stays this
    * gate's to report. Absent, no file is exempt: a run without that validator,
    * as `--profile tdd` is, has nothing else to report a skeleton whose tests
-   * never run. The predicate takes a repository-relative, posix-slashed path.
+   * never run. The predicate takes a repository-relative, posix-slashed path
+   * and the file's content.
    */
-  placeholderScanned?: (relativePath: string) => boolean;
+  placeholderReported?: (relativePath: string, content: string) => boolean;
 };
 
 /**
@@ -1583,7 +1577,7 @@ export async function validateTestTodoStubs(
         content,
         dialect,
         skippedTestSeverity,
-        options.placeholderScanned ?? (() => false),
+        options.placeholderReported ?? (() => false),
       ),
     );
   }
