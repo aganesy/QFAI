@@ -384,7 +384,12 @@ if (!existsSync(path.join(githubAgentsDir, "delivery-planner.agent.md"))) {
 // Empty scaffold init omits generated discussion-pack files.
 // Seed a minimal discussion-pack so pack-time validate has realistic inputs.
 const discussionDir = path.join(outputDir, ".qfai", "discussion");
-const seededDiscussionPackDir = path.join(discussionDir, "discussion-20260216000000000");
+// One stamp for the run this fixture stands for. The pack and the stage
+// evidence a real run writes carry the same one, and the grilling check pairs
+// them by it — spelled twice, a rename of either half silently stops the
+// fixture exercising the path it was seeded for.
+const seededDiscussionPack = "discussion-20260216000000000";
+const seededDiscussionPackDir = path.join(discussionDir, seededDiscussionPack);
 mkdirSync(seededDiscussionPackDir, { recursive: true });
 
 const seededDiscussionPackFiles = {
@@ -584,6 +589,28 @@ for (const [fileName, lines] of Object.entries(seededDiscussionPackFiles)) {
   writeFileSync(path.join(seededDiscussionPackDir, fileName), lines.join("\n"));
 }
 
+// The stage evidence the run that wrote this pack would have written. A real
+// run opens it under its own stamp before anything else and records there when
+// its grilling session ended and when authoring began, so a pack standing on
+// its own is a run that wrote no record — which `QFAI-GRILL-001` reports, and
+// correctly. Seeding the pack without it made the fixture less realistic than
+// the comment above says it is.
+const seededDiscussionEvidenceDir = path.join(outputDir, ".qfai", "evidence");
+mkdirSync(seededDiscussionEvidenceDir, { recursive: true });
+writeFileSync(
+  path.join(seededDiscussionEvidenceDir, `${seededDiscussionPack}.md`),
+  [
+    `# Evidence: /qfai-discussion (${seededDiscussionPack})`,
+    "",
+    "## Grilling Session",
+    "",
+    "| Ended | Ended at | Authoring began | Frontier | Lookups | Decisions | Escalated |",
+    "| ----- | -------- | --------------- | -------- | ------- | --------- | --------- |",
+    "| confirmed | 2026-02-16T00:00:00Z | 2026-02-16T00:01:00Z | empty | none in flight | 3 | 0 |",
+    "",
+  ].join("\n"),
+);
+
 const seededReviewPackName = "review-20260216000000000";
 const seededReviewPackDir = path.join(outputDir, ".qfai", "review", seededReviewPackName);
 mkdirSync(seededReviewPackDir, { recursive: true });
@@ -620,7 +647,7 @@ writeFileSync(
   [
     "# Review Request",
     "",
-    "Target: .qfai/discussion/discussion-20260216000000000",
+    `Target: .qfai/discussion/${seededDiscussionPack}`,
     "Purpose: verify-pack smoke validation.",
     "",
   ].join("\n"),
@@ -649,7 +676,7 @@ writeFileSync(
       created_at: "2026-02-16T00:00:00.000Z",
       target: {
         kind: "discussion",
-        path: ".qfai/discussion/discussion-20260216000000000",
+        path: `.qfai/discussion/${seededDiscussionPack}`,
       },
       routing_profile: "completion",
       reviewers: [{ reviewer: "completion-reviewer", status: "PASS", feedback_count: 0 }],

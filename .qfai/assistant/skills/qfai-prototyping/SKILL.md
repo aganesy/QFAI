@@ -136,8 +136,9 @@ stops on the choice it cannot put. The right column is not this gate's subject â
 those are what the loop exists to make answerable, and they are open by design
 until the user has something to react to.
 
-**It is a user decision, not stage evidence.** Stage evidence is regenerable
-and ignored; these answers are not reproducible by re-running anything, and
+**It is a user decision, not a regenerable log.** A run log is reproducible by
+rerunning its stage and is ignored; these answers are not reproducible by
+re-running anything, and
 every later generator and reviewer is required to read them. The managed
 ignore block negates this path so it survives a fresh clone, another worktree
 and a later checkout.

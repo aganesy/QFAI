@@ -78,6 +78,9 @@ A **cli-only** pack (`primary_surface: cli`, no visual secondary surface) stays 
    only be written after drafting, which is the order it was added to rule out.
 1. Run `.qfai/assistant/constitution/research-first-protocol.md` before any other artifact is authored, record its `research_summary` output in this run's stage evidence, and carry it into the `## Research Summary` section of `04_Sources.md` when step 3 opens the pack, then register source traceability there. Its `best_practices` / `anti_patterns` are inputs to every step below, not a late fill-in.
    **Nothing is written under `.qfai/discussion/` until an ending authorizes authoring.**
+   **The pack opens under step 0's stamp**, so this run's pack and this run's evidence carry
+   one name. A second stamp makes the two unpairable: a reader holding the pack cannot say
+   which record belongs to it, and a check for a run that recorded nothing reports one that did.
    The pack under work is resolved by the greatest timestamp with no completeness check,
    so a run cancelled during the session would leave a one-file directory that every
    later validator and the `/qfai-sdd` preflight read in place of the last complete pack.
@@ -232,7 +235,7 @@ session condition off:
 ```text
 | Ended | Ended at | Authoring began | Frontier | Lookups | Decisions | Escalated |
 | ----- | -------- | --------------- | -------- | ------- | --------- | --------- |
-| confirmed | 2026-01-01T09:14:00Z | 2026-01-01T09:15:20Z | empty | none in flight | 12 | 0 |
+| confirmed | <ISO8601> | <ISO8601> | empty | none in flight | <n> | <n> |
 ```
 
 **Both times, and the first written before the pack is.** A row holding only the final state reads the same whether the session ran first, ran after, or never ran: it is written at the end either way. Writing `Ended at` before the first pack file makes the order a record rather than a claim.
