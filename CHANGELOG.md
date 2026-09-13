@@ -46,7 +46,8 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   dot-prefixed directory the host does not list, and an entry point holding a
   byte that is not valid UTF-8. Each is now decided the way the host decides
   it — reported where the host refuses the skill, and passed over where the
-  host never loads it.
+  host never loads it. A description is measured trimmed and in characters, and
+  one holding `<` or `>` is refused, as the host's validator refuses it.
 
   A directory that has to be renamed gets an action that can be followed: no
   value in `name:` clears both the form and the directory match, so the rename
