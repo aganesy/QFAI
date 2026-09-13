@@ -2949,16 +2949,10 @@ const AGENTS_RULES_DIR_REL = path.join(".agents", "rules");
 /** The constitution cannot demote obligations an older or edited floor still omits. */
 async function hasCompatibleSafetyFloor(rootAssets: string, destRoot: string): Promise<boolean> {
   const relative = path.join(AGENTS_RULES_DIR_REL, "minimal-implementation.md");
-  let shipped: string | null;
-  let installed: string | null;
-  try {
-    [shipped, installed] = await Promise.all([
-      readTextFileIfPresent(path.join(rootAssets, relative)),
-      readTextFileIfPresent(path.join(destRoot, relative)),
-    ]);
-  } catch {
-    return false;
-  }
+  const [shipped, installed] = await Promise.all([
+    readTextFileIfPresent(path.join(rootAssets, relative)),
+    readTextFileIfPresent(path.join(destRoot, relative)),
+  ]);
   const floor = (text: string | null): string | undefined =>
     text
       ?.split(/^## 2\. [^\r\n]*\r?$/m)[1]

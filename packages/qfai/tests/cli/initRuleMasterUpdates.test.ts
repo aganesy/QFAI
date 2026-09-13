@@ -12,7 +12,7 @@
  * question.
  */
 
-import { access, mkdir, mkdtemp, readFile, writeFile } from "node:fs/promises";
+import { access, mkdir, mkdtemp, readFile, unlink, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
@@ -192,6 +192,17 @@ describe("the constitution and its safety floor upgrade together", () => {
     expect(output).toContain("manual merge");
     const lock = await readAssistantAssetsLock(assistantPath());
     expect(lock?.files["constitution/constitution.md"]).toBe(hashAssistantAssetText(previous));
+  });
+
+  it("propagates a floor read error instead of reporting a content mismatch", async () => {
+    const previous = await olderConstitution();
+    await unlink(minimumPath());
+    await mkdir(minimumPath());
+
+    await expect(
+      captureStdout(() => runInit({ dir: root, force: true, dryRun: false, yes: true })),
+    ).rejects.toMatchObject({ code: "EISDIR" });
+    expect(await readFile(constitutionPath(), "utf-8")).toBe(previous);
   });
 
   it("refreshes both when the old master still matches its write receipt", async () => {

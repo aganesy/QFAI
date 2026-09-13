@@ -122,6 +122,8 @@ Whitespace differences do not change compatibility. An edited or unrecorded
 older floor stays untouched; init keeps the previous constitution, preserves
 its receipt, and reports the required manual merge. A first init with such a
 master does not install the constitution or record it as written.
+An unexpected read error propagates to the command boundary; it is not reported
+as a content mismatch.
 
 A dry run includes the constitution when the same plan would create or update
 its compatible rule master. It writes neither file.
