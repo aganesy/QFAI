@@ -724,7 +724,7 @@ async function syncGovernedAssistantAssets(
     ) {
       skipped.push(dest);
       if (previousHash !== undefined) recorded[relative] = previousHash;
-      const recovery = (await pathExists(dest))
+      const recovery = (await pathExists(dest).catch(() => true))
         ? "A manual merge of the safety master and existing constitution is needed; keep adopter edits protected."
         : "A manual merge of the safety master is needed; then rerun `qfai init` to install the missing constitution.";
       manualMergeNotes.push(
@@ -1062,7 +1062,20 @@ async function restoreUnreadableGovernedAsset(
   const occupied = await pathExists(dest).catch(() => true);
   if (!occupied) {
     if (!options.dryRun) {
-      await replaceGovernedAsset(source, dest);
+      await mkdir(path.dirname(dest), { recursive: true });
+      try {
+        await copyFile(source, dest, constants.COPYFILE_EXCL);
+      } catch (error: unknown) {
+        if (!(error instanceof Error) || !("code" in error) || error.code !== "EEXIST") {
+          throw error;
+        }
+        out.skipped.push(dest);
+        if (previousHash !== undefined) out.recorded[out.relative] = previousHash;
+        out.manualMergeNotes.push(
+          `NOTE: ${formatReportPath(dest)} was created during initialization and left unchanged; keep adopter edits protected.`,
+        );
+        return;
+      }
     }
     out.copied.push(dest);
     out.recorded[out.relative] = shippedHash;
