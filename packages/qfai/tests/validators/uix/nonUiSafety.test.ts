@@ -1,8 +1,3 @@
-/**
- * Non-UI safety validator test — spec-0035 TDD-0013
- *
- * QFAI:SPEC-0012:TC-0012-0013
- */
 import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
