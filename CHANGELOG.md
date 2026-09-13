@@ -23,6 +23,17 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **The working-tree address excludes a nested project's own records, and stops on
+  a FIFO or socket git does not list** (#1747). The collection reads the lists
+  from the worktree root, but rooted the `.qfai/evidence`, `.qfai/review` and
+  ledger exclusions there too. In a project nested in a larger worktree, such as
+  `packages/app-a/` of a monorepo, they excluded nothing, so the phase's own
+  writes moved the address between observations that must agree. Each exclusion
+  now starts with the project's prefix from `git rev-parse --show-prefix`. Git
+  also lists no untracked FIFO, socket or device, so adding or removing one left
+  the address unchanged; the step now asks the filesystem for them and stops on
+  any it finds. A test runs the step's own commands in a temporary repository.
+
 - **The completion gate recomputes the checkpoint seal over the checkpoint's own
   revision** (#1738). `checkpoint-verification.md` seals the checkpoint command
   and result together with `Checkpoint verification revision`, the tree that
