@@ -81,6 +81,18 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   checkout can see is one the check could only ever report nothing about, and a
   negation alone does not stage a file.
 
+- **A procurement row a reader cannot act on is reported** (#1744).
+  `prototype-handoff.yaml#procurement` is what `/qfai-implement` installs from
+  rather than rebuilding, and what a reviewer reads instead of judging a
+  resemblance. Nothing checked it, so a `procured` row naming no item and an
+  `authored` row recording no reason both passed — the second satisfying the
+  reviewer's last-resort criterion on its face while recording none of what that
+  criterion asks for.
+
+  Each row now carries its cells or is reported, one finding per row. The key
+  itself stays optional: the handoff contract lets a screen drawn entirely from
+  what the project already had omit both lists.
+
 - **The prototyping preflight refuses a screen with no primary task** (#1698).
   The audit lane reported an empty `primary_tasks` as `QFAI-AUD-001`, but
   `qfai prototyping preflight` never read the field, so the stage started on a

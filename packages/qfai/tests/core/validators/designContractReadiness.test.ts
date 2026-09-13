@@ -382,6 +382,107 @@ describe("validateSddDesignContractReadiness (TC-3.8.x)", () => {
     );
   });
 
+  // `procurement` is what `/qfai-implement` installs from rather than
+  // rebuilding, and what the reviewer reads instead of judging a resemblance.
+  // A row a reader cannot act on leaves both doing the thing the manifest
+  // exists to stop.
+  describe("the procurement manifest", () => {
+    /** The seeded handoff with `procurement` set to `body`. */
+    const withProcurement = async (root: string, body: readonly string[]): Promise<void> => {
+      await writeFile(
+        path.join(root, ".qfai/contracts/design/prototype-handoff.yaml"),
+        [
+          "finalIterIndex: 1",
+          'finalArtifact: ".qfai/prototypes/final/index.html"',
+          'designMdPath: "DESIGN.md"',
+          `designMdSha256: "${hashDesignMd(VALID_DESIGN_MD)}"`,
+          'designSystemMirror: ".qfai/contracts/design/design-system.yaml"',
+          'implementationNotes: "test"',
+          ...body,
+          "",
+        ].join("\n"),
+        "utf-8",
+      );
+    };
+
+    const seeded = async (body: readonly string[]): Promise<string[]> => {
+      const root = await newTempDir();
+      await seedUiBearingProject(root);
+      await seedDesignMdAndLock(root);
+      await seedPrototypingDesignYamls(root);
+      await withProcurement(root, body);
+      const issues = await validatePrototypingDesignContractReadiness(root, defaultConfig);
+      return issues.filter((i) => i.code === "QFAI-DCON-013").map((i) => i.message);
+    };
+
+    it("says nothing when the key is absent", async () => {
+      // The handoff contract lets a screen drawn entirely from what the
+      // project already had omit both lists, so absence is legal here.
+      expect(await seeded([])).toEqual([]);
+    });
+
+    it("says nothing about well-formed rows", async () => {
+      expect(
+        await seeded([
+          "procurement:",
+          "  procured:",
+          '    - screen: "dashboard"',
+          '      region: "summary cards"',
+          '      item: "catalogue stat block"',
+          "  authored:",
+          '    - screen: "dashboard"',
+          '      region: "trend sparkline"',
+          '      why: "no catalogue entry plots a series under 80px"',
+        ]),
+      ).toEqual([]);
+    });
+
+    it("reports an authored region that records no reason", async () => {
+      // Rung 5 is the only rung that has to explain itself. A row with no
+      // reason is what an unexplained rung looks like by the time it reaches
+      // the handoff, and the reviewer's last-resort criterion passes it.
+      const messages = await seeded([
+        "procurement:",
+        "  authored:",
+        '    - screen: "dashboard"',
+        '      region: "trend sparkline"',
+      ]);
+      expect(messages).toHaveLength(1);
+      expect(messages[0]).toContain("procurement.authored[0]");
+      expect(messages[0]).toContain("names no why");
+    });
+
+    it("reports a procured region that names nothing to install", async () => {
+      const messages = await seeded([
+        "procurement:",
+        "  procured:",
+        '    - screen: "dashboard"',
+        '      region: "summary cards"',
+        '      item: "TBD"',
+      ]);
+      expect(messages).toHaveLength(1);
+      expect(messages[0]).toContain("procurement.procured[0]");
+      expect(messages[0]).toContain("names no item");
+    });
+
+    it("reports a list that is not a list, and a key that is not a mapping", async () => {
+      expect((await seeded(["procurement:", '  procured: "a card"']))[0]).toContain(
+        "'procurement.procured' must be a list",
+      );
+      expect((await seeded(['procurement: "none"']))[0]).toContain(
+        "field 'procurement' must be a mapping",
+      );
+    });
+
+    it("names every missing cell of a row at once", async () => {
+      // One finding per row rather than one per cell: the fix is to write the
+      // row, and three findings for one row is the same edit read three times.
+      const messages = await seeded(["procurement:", "  procured:", "    - {}"]);
+      expect(messages).toHaveLength(1);
+      expect(messages[0]).toContain("names no screen, region, item");
+    });
+  });
+
   it("non-string handoff field (finalArtifact as object) is rejected with DCON-013", async () => {
     const root = await newTempDir();
     await seedUiBearingProject(root);
