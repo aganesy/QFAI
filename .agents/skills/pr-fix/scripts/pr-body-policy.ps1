@@ -59,7 +59,8 @@ function RemovalAnswer([string]$Body) {
   $meaningful = [regex]::Replace($meaningful, '(?m)^[ \t]*>+[ \t]*', '')
   $meaningful = [regex]::Replace($meaningful, '\[([^\]]*)\]\([^\)\r\n]*\)', '$1')
   $meaningful = [regex]::Replace($meaningful, '</?[A-Za-z][A-Za-z0-9:-]*(?:[ \t][^>]*|[ \t]*/?)>', '')
+  $meaningful = [regex]::Replace($meaningful, '&(?:#(?:[xX][0-9A-Fa-f]+|\d+)|[A-Za-z][A-Za-z0-9]*);', ' ')
   $meaningful = [regex]::Replace($meaningful, '[`*_]', '').Trim()
-  if ($meaningful -notmatch '[\p{L}\p{N}]' -or $meaningful -match '^(?:TBD|TODO|None|N/?A|Not applicable|\[.*\])\.?$') { return "" }
+  if ($meaningful -notmatch '[\p{L}\p{N}]' -or $meaningful -match '^(?:TBD|TODO)(?:[^\p{L}\p{N}]|$)' -or $meaningful -match '^(?:TBD|TODO|None|N/?A|Not applicable|\[.*\])\.?$') { return "" }
   return $raw.Substring($answer.Index, $answer.Length).Trim()
 }

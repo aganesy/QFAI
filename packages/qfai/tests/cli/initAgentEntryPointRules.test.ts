@@ -94,6 +94,8 @@ describe("qfai init connects a pre-existing agent entry point to the rule master
       const pointer =
         "Read `REVIEW.md` before reviewing a pull request when that file exists in this repository.";
       const files = [
+        "AGENTS.md",
+        "CLAUDE.md",
         ".github/copilot-instructions.md",
         ".github/instructions/code-review.instructions.md",
       ];
@@ -101,11 +103,18 @@ describe("qfai init connects a pre-existing agent entry point to the rule master
       for (const name of files) {
         expect(await readEntryPoint(root, name)).toContain(pointer);
         const text = await readEntryPoint(root, name);
-        await writeFile(path.join(root, name), text.replace(pointer, ""), "utf-8");
+        const next = AGENT_ENTRY_POINT_FILES.some((entry) => entry === name)
+          ? text + PROJECT_TEXT
+          : text.replace(pointer, "");
+        await writeFile(path.join(root, name), next, "utf-8");
       }
       await runInit({ dir: root, force: true, dryRun: false, yes: true });
       for (const name of files) {
-        expect(await readEntryPoint(root, name)).toContain(pointer);
+        const text = await readEntryPoint(root, name);
+        expect(text).toContain(pointer);
+        if (AGENT_ENTRY_POINT_FILES.some((entry) => entry === name)) {
+          expect(text.endsWith(PROJECT_TEXT)).toBe(true);
+        }
       }
       await expect(stat(path.join(root, "REVIEW.md"))).rejects.toMatchObject({ code: "ENOENT" });
     });

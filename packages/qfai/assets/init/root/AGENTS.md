@@ -5,6 +5,8 @@ Codex loads this file automatically. Claude Code loads `CLAUDE.md` and GitHub
 Copilot loads `.github/copilot-instructions.md`; all three defer to the same
 masters below, so a rule only has to be written once.
 
+Read `REVIEW.md` before reviewing a pull request when that file exists in this repository. Read it before writing the PR description as well.
+
 <!-- qfai:cross-ai-rules:start -->
 
 ## Cross-AI rules (master)

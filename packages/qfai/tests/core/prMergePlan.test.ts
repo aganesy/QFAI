@@ -135,6 +135,10 @@ describe("run-pr-merge plan", () => {
     ["Markdown-only", "## What this change made unnecessary\n\n---\n"],
     ["None marker", "## What this change made unnecessary\n\nNone.\n"],
     ["N/A marker", "## What this change made unnecessary\n\nN/A\n"],
+    ["named space entity", "## What this change made unnecessary\n\n&nbsp;\n"],
+    ["numeric space entity", "## What this change made unnecessary\n\n&#160;\n"],
+    ["TODO prefix", "## What this change made unnecessary\n\nTODO: fill this in\n"],
+    ["TBD prefix", "## What this change made unnecessary\n\nTBD: list the removals\n"],
     ["fenced", "```md\n## What this change made unnecessary\n\nNothing.\n````\n"],
   ])("blocks a %s removal answer without a handoff or merge", async (_name, body) => {
     const baseline = makeScenario({});
