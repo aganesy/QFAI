@@ -1381,7 +1381,7 @@ function normalizeAuditArtifact(value: string): string {
 }
 
 const GATE_COMPLETED_EVIDENCE_FIELD =
-  /^\s*(?:\|\s*)?(?:[-*][ \t]+)?(?:\*\*)?(?:Spec review(?:ed revision| pack(?: seal)?)?|Spec audited evidence hash|Code quality review(?:ed revision| pack(?: seal)?)?|Code quality audited evidence hash|Prototype parity(?: reviewed revision| review pack(?: seal)?| audited evidence hash)?|Checkpoint verification (?:command|result|seal))(?:\*\*)?\s*(?::|\|)/i;
+  /^\s*(?:\|\s*)?(?:[-*][ \t]+)?(?:\*\*)?(?:Spec review(?:ed revision| pack(?: seal)?)?|Spec audited evidence hash|Code quality review(?:ed revision| pack(?: seal)?)?|Code quality audited evidence hash|Prototype parity(?: reviewed revision| review pack(?: seal)?| audited evidence hash)?|Checkpoint verification (?:command|result|revision|seal))(?:\*\*)?\s*(?::|\|)/i;
 
 const PHASE_AUTHORED_EVIDENCE_FIELD =
   /^\s*(?:\|\s*)?(?:[-*][ \t]+)?(?:\*\*)?(?:Round[ \t]+\d+:[ \t]*)?(?:TDD-ID|Layer|Test file|Selector|TC-ref|US-ref|CON-API-ref|Revision|RED revision|Replacement proof revision|RED test hash|RED test manifest|RED command|RED result|GREEN command|GREEN result|Satisfied-by|Falsifiability command|Falsifiability result|Falsifiability revision|reviewer verdict|RED failure mode|Refactor verify command|Refactor verify result|Oracle proof|qa-gatekeeper|Shared-artifact re-verify|Surface artifacts)(?:\*\*)?\s*(?::|\|)/i;
@@ -2975,6 +2975,10 @@ function missingCompletedEvidenceFields(
   if (checkpointSeal !== null && !SHA256_VALUE.test(checkpointSeal)) {
     missing.push("Checkpoint verification seal: sha256");
   }
+  const checkpointRevision = rowEvidenceFieldValue(section, "Checkpoint verification revision");
+  if (checkpointRevision !== null && !EVIDENCE_REVISION_FORM.test(checkpointRevision)) {
+    missing.push(`Checkpoint verification revision naming ${REVISION_FORM_HINT}`);
+  }
   return missing;
 }
 
@@ -3125,16 +3129,26 @@ async function invalidCompletedEvidenceArtifacts(
   const checkpointCommand = rowEvidenceFieldValue(section, "Checkpoint verification command");
   const checkpointResult = rowEvidenceFieldValue(section, "Checkpoint verification result");
   const checkpointSeal = rowEvidenceFieldValue(section, "Checkpoint verification seal");
+  // The seal is taken over the run's own revision. A round's `Revision` names
+  // the tree before the refactor, and the checkpoint runs on the tree after
+  // it, so a row whose refactor changed a byte could match only one of them.
+  // A row that records no checkpoint revision was sealed over the round's.
+  const checkpointRevision = rowEvidenceFieldValue(section, "Checkpoint verification revision");
+  const sealRevision = checkpointRevision ?? revision;
   if (
-    revision !== null &&
+    sealRevision !== null &&
     checkpointCommand !== null &&
     checkpointResult !== null &&
     checkpointSeal !== null &&
     SHA256_VALUE.test(checkpointSeal) &&
     bareSha256(checkpointSeal) !==
-      checkpointEvidenceSeal(revision, checkpointCommand, checkpointResult)
+      checkpointEvidenceSeal(sealRevision, checkpointCommand, checkpointResult)
   ) {
-    invalid.push("Checkpoint verification seal matching command, result, and Revision");
+    invalid.push(
+      checkpointRevision === null
+        ? "Checkpoint verification seal matching command, result, and Revision"
+        : "Checkpoint verification seal matching command, result, and Checkpoint verification revision",
+    );
   }
   return invalid;
 }
