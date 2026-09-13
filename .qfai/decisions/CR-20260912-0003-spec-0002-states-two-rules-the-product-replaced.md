@@ -88,15 +88,24 @@ spec catching up, not the product going back.
 
 ## Blocked downstream items
 
-| Item                 | Kind         | Why it depends on the artifact                                                                                      |
-| -------------------- | ------------ | ------------------------------------------------------------------------------------------------------------------- |
-| `spec-0002/TDD-0008` | `ledger-row` | `TC-0002-0008` asks that discussion completion not require a direction                                              |
-| `spec-0002/TDD-0009` | `ledger-row` | `TC-0002-0009` asks that a pack asserting a single final winner be refused                                          |
-| `spec-0002/TDD-0010` | `ledger-row` | second row on `TC-0002-0009`                                                                                        |
-| `spec-0002/TDD-0012` | `ledger-row` | `TC-0002-0011` asks that the wording match the active requiredness rule                                             |
-| `spec-0010/TDD-0010` | `ledger-row` | `TC-0010-0006` is the direction rule itself, which every statement-A outcome re-derives, and the row is `todo`      |
-| `spec-0010/TDD-0011` | `ledger-row` | `TC-0010-0007` asks that discussion author root `DESIGN.md`, the producer every statement-A outcome re-derives      |
-| `spec-0013/TDD-0016` | `ledger-row` | `TC-0013-0022` asks that `/qfai-sdd` Phase 0 write `DESIGN.md.lock.yaml`, which `2a` moves into `/qfai-prototyping` |
+| Item                 | Kind         | Why it depends on the artifact                                                                                                          |
+| -------------------- | ------------ | --------------------------------------------------------------------------------------------------------------------------------------- |
+| `spec-0002/TDD-0008` | `ledger-row` | `TC-0002-0008` asks that discussion completion not require a direction                                                                  |
+| `spec-0002/TDD-0009` | `ledger-row` | `TC-0002-0009` asks that a pack asserting a single final winner be refused                                                              |
+| `spec-0002/TDD-0010` | `ledger-row` | second row on `TC-0002-0009`                                                                                                            |
+| `spec-0002/TDD-0012` | `ledger-row` | `TC-0002-0011` asks that the wording match the active requiredness rule                                                                 |
+| `spec-0010/TDD-0006` | `ledger-row` | `TC-0010-0006`, the direction rule every statement-A outcome re-derives; the row is `done`                                              |
+| `spec-0010/TDD-0007` | `ledger-row` | `TC-0010-0006` again; the row is `done`                                                                                                 |
+| `spec-0010/TDD-0008` | `ledger-row` | `TC-0010-0006` again; the row is `done`                                                                                                 |
+| `spec-0010/TDD-0010` | `ledger-row` | `TC-0010-0006` is the direction rule itself, which every statement-A outcome re-derives, and the row is `todo`                          |
+| `spec-0010/TDD-0011` | `ledger-row` | `TC-0010-0007` asks that discussion author root `DESIGN.md`, the producer every statement-A outcome re-derives                          |
+| `spec-0013/TDD-0016` | `ledger-row` | `TC-0013-0022` asks that `/qfai-sdd` Phase 0 write `DESIGN.md.lock.yaml`, which `2a` moves into `/qfai-prototyping`                     |
+| `spec-0004/TDD-0008` | `ledger-row` | Under `2a` only: `TC-0004-0008` becomes a `QFAI-DCON-030` a pack that has not reached prototyping is exempt from, and the row is `done` |
+
+**Every row an outcome resets or retires is here, whichever pack owns it.** The
+three completed `spec-0010` rows and `spec-0004/TDD-0008` carry recorded
+evidence against an obligation an outcome changes, so a completion left
+unsuppressed would re-assert the old requirement while the choice is open.
 
 **`spec-0010/TDD-0011` and `spec-0013/TDD-0016` are other packs' rows, and they
 belong here anyway.** Both are at `todo`, so nothing has been observed against
@@ -370,10 +379,17 @@ with its own approval; `2B` cannot be approved until it has landed.
     and
     `packages/qfai/assets/init/.qfai/assistant/skills/qfai-discussion/references/discussion-artifact-rules.md`,
     the last two with their root mirrors.
+  - `packages/qfai/assets/init/.qfai/assistant/skills/qfai-sdd/references/sdd-execution-playbook.md`,
+    which says an absent or malformed `prototyping.yaml` must not stop Stage 0,
+    and
+    `packages/qfai/assets/init/.qfai/assistant/skills/qfai-discussion/references/discussion-completion-matrix.md`,
+    which leaves the file out of a visual-surface pack's completion conditions,
+    both with their root mirrors.
   - `packages/qfai/tests/assets/assets.test.ts`, two of whose cases require that
     sentence in the README, and
-    `packages/qfai/tests/assets/sddStage0PrototypingOptional.test.ts`. Both pin
-    the optionality this statement removes.
+    `packages/qfai/tests/assets/sddStage0PrototypingOptional.test.ts`, which
+    reads the playbook and the completion matrix as well. Both pin the
+    optionality this statement removes.
 
   The requiredness derivation also reaches `spec-0013`.
   `packages/qfai/tests/core/activeDiscussionPack.test.ts` imports
@@ -438,6 +454,11 @@ offered stays in `## Options` and in `## Decision needed from user`.
 - Product paths under `2a`:
   `packages/qfai/assets/init/.qfai/assistant/skills/qfai-prototyping/**` and its
   root mirror, for the direction-selection step and the authoring it performs;
+  **`packages/qfai/assets/init/.qfai/assistant/catalog/ui-definition-protocol.md`**
+  and its root mirror, whose missing-definition table sends a missing
+  pre-prototyping design contract back to `/qfai-sdd` — a stage that under this
+  sub-option no longer writes `DESIGN.md` or its lock, so the recovery would
+  loop; it routes to `/qfai-prototyping` instead;
   **`packages/qfai/assets/init/.qfai/assistant/skills/qfai-implement/SKILL.md`**
   and its root mirror, whose UI-affecting read order says `/qfai-sdd` Phase 0
   authors root `DESIGN.md` and performs the freeze — downstream implementation
