@@ -1,9 +1,3 @@
-// QFAI:SPEC-0012:TC-0012-0009
-// QFAI:SPEC-0012:TC-0012-0010
-// QFAI:SPEC-0012:TC-0012-0011
-// QFAI:SPEC-0012:TC-0012-0012
-// QFAI:SPEC-0012:TC-0012-0015
-
 import { describe, expect, it } from "vitest";
 
 import { StubDetector } from "../../../src/core/detection/stub.js";
@@ -11,7 +5,6 @@ import { StubDetector } from "../../../src/core/detection/stub.js";
 describe("StubDetector", () => {
   const detector = new StubDetector();
 
-  // TC-0012-0009
   it("detects class with all methods throwing 'not implemented' as stub-only", () => {
     const code = `
 class PaymentService {
@@ -42,7 +35,6 @@ class PaymentService {
     expect(names).toContain("getBalance");
   });
 
-  // TC-0012-0010
   it("detects module with all empty function bodies as stub-only", () => {
     const code = `
 class DataAccess {
@@ -64,7 +56,6 @@ class DataAccess {
     expect(findings[0].locations.length).toBeGreaterThanOrEqual(3);
   });
 
-  // TC-0012-0011
   it("detects partial-stub when 9 real methods and 1 TODO stub", () => {
     const realMethods = Array.from(
       { length: 9 },
@@ -92,7 +83,6 @@ ${realMethods}
     expect(findings[0].locations[0].functionName).toBe("incompleteMethod");
   });
 
-  // TC-0012-0012
   it("produces identical results on repeated detection (idempotent)", () => {
     const code = `
 class Service {
@@ -112,7 +102,6 @@ class Service {
     expect(first).toEqual(second);
   });
 
-  // TC-0012-0015
   it("includes stub locations with function names and patterns in findings", () => {
     const code = `
 class Processor {
