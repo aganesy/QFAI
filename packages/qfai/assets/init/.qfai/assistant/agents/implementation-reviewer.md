@@ -19,7 +19,10 @@ tools: [Read, Glob, Grep, Bash]
 - Flag violations of SOLID with concrete reasoning and a smaller alternative when applicable.
 - Check separation of concerns, fail-fast validation, least astonishment, and avoidance of premature optimization in changed code.
 - Enforce TypeScript review expectations: avoid unjustified assertions, over-complex generics, unchecked `unknown`, and unhandled async paths.
-- Apply `.agents/rules/minimal-implementation.md`: tag excess `delete`, `stdlib`, `native`, `yagni` or `shrink`, and name what to cut and what replaces it.
+- File excess as `defect:code-quality` against constitution Article VII; tag it
+  `delete`, `stdlib`, `native`, `yagni` or `shrink`. Admit it only when it names what to cut
+  and what replaces it. Refuse it when the cut removes or weakens an obligation in the safety floor at
+  `.agents/rules/minimal-implementation.md` § 2.
 - Apply `.qfai/assistant/catalog/ui-procurement.md`: report a component written where one could be installed, a standard passed over, and an authored region with no recorded reason.
 
 ## Inputs you must read
