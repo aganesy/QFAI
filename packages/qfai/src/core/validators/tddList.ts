@@ -1105,6 +1105,8 @@ function fencedEvidenceValue(lines: readonly string[], startLine: number): strin
 
 interface EvidenceFieldOccurrence {
   round: number | null;
+  /** The `M` of an `(attempt M)` qualifier, on the one field that takes it. */
+  attempt: number | null;
   value: string;
 }
 
@@ -1117,8 +1119,8 @@ interface EvidenceFieldOccurrence {
  * Read on that field only. Accepted on every field, `Round 1: Revision
  * (attempt 2)` satisfied a field the round contract records once per round.
  */
-const ATTEMPT_QUALIFIER = "(?:[ \\t]*\\(attempt[ \\t]+\\d+\\))?";
-const ATTEMPT_QUALIFIER_TAIL = /\s*\(attempt\s+\d+\)\s*$/i;
+const ATTEMPT_QUALIFIER = "(?:[ \\t]*\\(attempt[ \\t]+(?<attempt>\\d+)\\))?";
+const ATTEMPT_QUALIFIER_TAIL = /\s*\(attempt\s+(\d+)\)\s*$/i;
 const ATTEMPT_QUALIFIED_FIELD = "reviewer verdict";
 
 function takesAttemptQualifier(field: string): boolean {
@@ -1145,10 +1147,10 @@ function evidenceFieldOccurrences(section: string, field: string): EvidenceField
   const visibleLines = maskEvidenceRegions(normalized).split("\n");
   const escaped = field.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   const qualifier = takesAttemptQualifier(field) ? ATTEMPT_QUALIFIER : "";
-  // Group 1 is the emphasis opening the label and group 3 one closing it before
+  // `open` is the emphasis opening the label and `close` one closing it before
   // the colon; an opening with no closing there closes after the colon.
   const bulletPattern = new RegExp(
-    `^\\s*(?:[-*][ \\t]+)?(\\*\\*)?(?:Round[ \\t]+(\\d+):[ \\t]*)?${escaped}${qualifier}(\\*\\*)?[ \\t]*:[ \\t]*(.*)$`,
+    `^\\s*(?:[-*][ \\t]+)?(?<open>\\*\\*)?(?:Round[ \\t]+(?<round>\\d+):[ \\t]*)?${escaped}${qualifier}(?<close>\\*\\*)?[ \\t]*:[ \\t]*(?<value>.*)$`,
     "i",
   );
   const occurrences: EvidenceFieldOccurrence[] = [];
@@ -1160,8 +1162,11 @@ function evidenceFieldOccurrences(section: string, field: string): EvidenceField
         const rawLabel = (cells[cellIndex] ?? "").replace(/^\*\*|\*\*$/g, "").trim();
         const roundMatch = /^Round\s+(\d+):\s*(.*)$/i.exec(rawLabel);
         const roundLabel = roundMatch?.[2] ?? rawLabel;
+        const attemptMatch = takesAttemptQualifier(field)
+          ? ATTEMPT_QUALIFIER_TAIL.exec(roundLabel)
+          : null;
         const label = (
-          takesAttemptQualifier(field) ? roundLabel.replace(ATTEMPT_QUALIFIER_TAIL, "") : roundLabel
+          attemptMatch === null ? roundLabel : roundLabel.slice(0, attemptMatch.index)
         ).trim();
         if (label.toLowerCase() !== field.toLowerCase()) continue;
         const value = (cells[cellIndex + 1] ?? "").trim().replace(/^`([^`]*)`$/, "$1");
@@ -1170,6 +1175,7 @@ function evidenceFieldOccurrences(section: string, field: string): EvidenceField
         if (resolved !== null) {
           occurrences.push({
             round: roundMatch?.[1] ? Number(roundMatch[1]) : null,
+            attempt: attemptMatch?.[1] ? Number(attemptMatch[1]) : null,
             value: resolved,
           });
         }
@@ -1177,12 +1183,19 @@ function evidenceFieldOccurrences(section: string, field: string): EvidenceField
       continue;
     }
 
-    const match = bulletPattern.exec(visibleLine);
-    if (!match) continue;
-    const value = inlineFieldValue(match[4], match[1] !== undefined && match[3] === undefined);
+    const groups = bulletPattern.exec(visibleLine)?.groups;
+    if (groups === undefined) continue;
+    const value = inlineFieldValue(
+      groups.value,
+      groups.open !== undefined && groups.close === undefined,
+    );
     const resolved = value.length > 0 ? value : fencedEvidenceValue(originalLines, lineIndex + 1);
     if (resolved !== null) {
-      occurrences.push({ round: match[2] ? Number(match[2]) : null, value: resolved });
+      occurrences.push({
+        round: groups.round ? Number(groups.round) : null,
+        attempt: groups.attempt ? Number(groups.attempt) : null,
+        value: resolved,
+      });
     }
   }
   return occurrences;
@@ -1202,6 +1215,29 @@ function roundEvidenceFieldValue(section: string, round: number, field: string):
       .filter((occurrence) => occurrence.round === round)
       .at(-1)?.value ?? null
   );
+}
+
+/**
+ * The verdict a round's review attempts end on, and whether those attempts are
+ * numbered the way `round-evidence.md` records them.
+ *
+ * Attempts are numbered from 1 in review order, and a round holding a single
+ * attempt may leave the qualifier off. A round whose numbers skip, repeat or
+ * start past 1 has lost an attempt from its audit trail, and the last line
+ * written is then not known to be the attempt the round closed on.
+ */
+function roundReviewVerdict(
+  section: string,
+  round: number,
+): { value: string | null; numbered: boolean } {
+  const attempts = evidenceFieldOccurrences(section, "reviewer verdict").filter(
+    (occurrence) => occurrence.round === round,
+  );
+  const numbered =
+    attempts.length === 1
+      ? attempts[0]?.attempt === null || attempts[0]?.attempt === 1
+      : attempts.every((occurrence, index) => occurrence.attempt === index + 1);
+  return { value: attempts.at(-1)?.value ?? null, numbered };
 }
 
 /**
@@ -2949,11 +2985,18 @@ function missingCompletedEvidenceFields(
       }
     }
     if (!validFalsifiability) oracleProofOwed = true;
+    const verdict = roundReviewVerdict(section, round);
+    if (!verdict.numbered) {
+      missing.push(`Round ${round}: reviewer verdict attempts numbered from 1 in review order`);
+    }
     if (round < (rounds.at(-1) ?? round)) {
-      const verdict = roundEvidenceFieldValue(section, round, "reviewer verdict");
-      if (verdict === null || !/^REVISE\b/i.test(verdict)) {
+      if (verdict.value === null || !/^REVISE\b/i.test(verdict.value)) {
         missing.push(`Round ${round}: reviewer verdict opening the next round`);
       }
+    } else if (verdict.value !== null && !/^PASS\b/i.test(verdict.value)) {
+      // A done row's last round closed on a pass. A REVISE left last is a
+      // review nobody answered, whatever the row-level verdicts say.
+      missing.push(`Round ${round}: reviewer verdict: PASS`);
     }
     latestRevision = revision;
     latestGreenCommand = greenCommand;

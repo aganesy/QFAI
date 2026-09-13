@@ -96,19 +96,11 @@ describe.each(TREES)("%s — the audit hash's extraction is one text", (tree) =>
     await expectPhrase("The working-tree revision is a fourth value with a fourth name");
   });
 
-  it("says which of the three the gate recomputes today", async () => {
-    // Documenting an unenforced field as enforced is the defect one level on
-    // from the one this file fixes.
-    await expectPhrase(
-      "**Two of the three are recomputed by `npx qfai validate` today, and the parity",
-    );
-    await expectPhrase(
-      "It neither requires nor recomputes `Prototype parity audited evidence hash`",
-    );
-    await expectPhrase("a screenshot replaced after that verdict moves nothing");
-    await expectPhrase("That is a gap in the gate, not in this contract");
-    await expectPhrase(
-      "It is stated here so a reader does not take the parity field for a checked one.",
-    );
+  it("says the gate recomputes all three, and when it skips the parity one", async () => {
+    // The parity subject reaches captures a fresh clone does not have, so the
+    // reference has to say what the gate does without them.
+    await expectPhrase("**`npx qfai validate` recomputes all three.**");
+    await expectPhrase("reaches past the entry to the captures the row's");
+    await expectPhrase("the gate checks the recorded fields and skips the recomputation");
   });
 });

@@ -238,19 +238,13 @@ value with a fourth name:
 `../../skills/qfai-implement/references/evidence-revision.md` defines it, and it
 addresses a tree rather than a subject.
 
-**Two of the three are recomputed by `npx qfai validate` today, and the parity
-one is not.** The completion gate reads `Spec` and `Code quality`, recomputes
-each against the entry, and refuses a row whose recorded value disagrees. It
-neither requires nor recomputes `Prototype parity audited evidence hash`, and
-the subject that field names — the entry plus each surface artifact the row's
-`Surface artifacts` manifest lists — is not built by any code. A UI row can
-therefore reach `done` with the parity verdict recorded and its hash absent,
-and a screenshot replaced after that verdict moves nothing.
-
-That is a gap in the gate, not in this contract: the subject above is what the
-`product-surface-reviewer` computes and what a recomputation would have to
-reproduce. It is stated here so a reader does not take the parity field for a
-checked one.
+**`npx qfai validate` recomputes all three.** The completion gate recomputes
+each recorded value over its role's subject and refuses a row whose value
+disagrees. The parity subject reaches past the entry to the captures the row's
+`Surface artifacts` manifest names. Those are ignored stage evidence, so where
+one is absent from the checkout, as on a fresh clone, the gate checks the
+recorded fields and skips the recomputation
+(`../../skills/qfai-implement/references/review-artifact-layout.md`).
 
 **A T1 coherent group is one pass and several rows**
 (`../../skills/qfai-implement/references/volume-policy.md`).

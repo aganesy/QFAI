@@ -1564,6 +1564,10 @@ describe("QFAI-TDDLIST-008", () => {
           "```text",
           "REVISE — the assertion names no boundary",
           "```",
+          "- **Round 1: reviewer verdict (attempt 2):**",
+          "```text",
+          "PASS",
+          "```",
           "- Refactor verify command: npm test",
         ].join("\n"),
       );
@@ -1708,6 +1712,7 @@ describe("QFAI-TDDLIST-008", () => {
         .replace(
           "- Refactor verify command: npm test",
           [
+            "- Round 1: reviewer verdict (attempt 1): REVISE — re-reviewed in this round",
             "- Round 1: reviewer verdict (attempt 2): REVISE — needs new production behaviour",
             "- Round 2: Revision: " + secondRoundRevision,
             "- Round 2: RED revision: def7890000000000000000000000000000000000",
@@ -1762,6 +1767,96 @@ describe("QFAI-TDDLIST-008", () => {
         { revision: secondRoundRevision },
       );
       expect(codes).not.toContain("QFAI-TDDLIST-008");
+    });
+  });
+
+  it.each([
+    ["an attempt 2 with no attempt 1", ["(attempt 2): REVISE — needs new production behaviour"]],
+    ["an attempt 0", ["(attempt 0): REVISE — needs new production behaviour"]],
+    [
+      "a repeated number",
+      [
+        "(attempt 1): REVISE — re-reviewed in this round",
+        "(attempt 1): REVISE — needs new production behaviour",
+      ],
+    ],
+    [
+      "numbers out of review order",
+      [
+        "(attempt 2): REVISE — re-reviewed in this round",
+        "(attempt 1): REVISE — needs new production behaviour",
+      ],
+    ],
+    [
+      "an unqualified attempt beside a qualified one",
+      [
+        ": REVISE — re-reviewed in this round",
+        "(attempt 2): REVISE — needs new production behaviour",
+      ],
+    ],
+  ])("rejects a round whose review attempts show %s", async (_shape, attempts) => {
+    // Attempts count from 1 in review order. A gap, a repeat or a reordering is
+    // an attempt missing from the audit trail, and the line written last is then
+    // not known to be the one the round closed on.
+    await withProject(async (root) => {
+      const secondRoundRevision = "bcd1230000000000000000000000000000000000";
+      const evidence = completeEntry("Unit")
+        .replace(
+          "- Refactor verify command: npm test",
+          [
+            ...attempts.map((attempt) =>
+              attempt.startsWith(":")
+                ? `- Round 1: reviewer verdict${attempt}`
+                : `- Round 1: reviewer verdict ${attempt}`,
+            ),
+            "- Round 2: Revision: " + secondRoundRevision,
+            "- Round 2: RED revision: def7890000000000000000000000000000000000",
+            "- Round 2: RED command: npm test",
+            "- Round 2: RED result: 1 failed",
+            "- Round 2: GREEN command: npm test",
+            "- Round 2: GREEN result: 1 passed",
+            "- Refactor verify command: npm test",
+          ].join("\n"),
+        )
+        .replaceAll(
+          "reviewed revision: abc1230000000000000000000000000000000000",
+          `reviewed revision: ${secondRoundRevision}`,
+        );
+      const issues = await runIssuesOn(
+        root,
+        ledger([{ status: "done", evidence: IMPLEMENT_POINTER }]),
+        { ".qfai/evidence/implement-spec-0001.md": evidence },
+        { revision: secondRoundRevision },
+      );
+      const finding = issues.find((issue) => issue.code === "QFAI-TDDLIST-008");
+      expect(finding?.message).toContain(
+        "Round 1: reviewer verdict attempts numbered from 1 in review order",
+      );
+    });
+  });
+
+  it("rejects a done row whose last round ends on a REVISE", async () => {
+    // A REVISE closes a round only by opening another or by a later attempt in
+    // the same round. Left last, it is a review nobody answered, whatever the
+    // row-level verdicts say.
+    await withProject(async (root) => {
+      const evidence = completeEntry("Unit").replace(
+        "- Refactor verify command: npm test",
+        [
+          "- **Round 1: reviewer verdict (attempt 1):**",
+          "```text",
+          "REVISE — the assertion names no boundary",
+          "```",
+          "- Refactor verify command: npm test",
+        ].join("\n"),
+      );
+      const issues = await runIssuesOn(
+        root,
+        ledger([{ status: "done", evidence: IMPLEMENT_POINTER }]),
+        { ".qfai/evidence/implement-spec-0001.md": evidence },
+      );
+      const finding = issues.find((issue) => issue.code === "QFAI-TDDLIST-008");
+      expect(finding?.message).toContain("Round 1: reviewer verdict: PASS");
     });
   });
 

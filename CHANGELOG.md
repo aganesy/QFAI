@@ -59,15 +59,15 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   Four values share these words and are not one: three ledger fields carrying
   three reviewer roles' verdicts by these same four steps — the third is the
   parity hash a UI-affecting row owes — and the working-tree revision, which
-  addresses a tree rather than a subject. The reference says which two the
-  completion gate recomputes today and which one it does not, so nobody takes
-  the third for a checked field — as do the implement skill's gate item and the
-  record contract, which promised a recomputation no code performs.
+  addresses a tree rather than a subject. The reference now names all four.
 
   A round with several review attempts qualifies its verdict field, and the
   extraction now drops that form too: the contract said every verdict line goes
   and the code matched only the unqualified one, so a multi-attempt round gave
-  the reviewer and the gate two digests.
+  the reviewer and the gate two digests. The completion gate also holds those
+  attempts to the numbering the contract gives them, from 1 in review order,
+  and reads the attempt a round ends on: a round before the last has to end on
+  a `REVISE`, and the last round of a done row on a `PASS`.
 
 ## [1.12.0] - 2026-09-12
 
