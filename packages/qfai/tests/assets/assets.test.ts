@@ -2580,6 +2580,11 @@ describe("assets guardrails", () => {
       "utf-8",
     );
     const atddMemory = atdd.split(/^project_memory:\s*$/m)[1] ?? "";
+    for (const match of atddMemory.matchAll(/tests\/(?:e2e|api|integration)\/\*\*/g)) {
+      expect(atddMemory.slice(match.index - 1, match.index + match[0].length + 1)).toBe(
+        `\`${match[0]}\``,
+      );
+    }
     for (const clause of [
       /tests\/e2e\/\*\* must cover all required US.*tests\/api\/\*\* all active CON-API.*tests\/integration\/\*\* all active CON-DB/,
       /L1\/Unit and L2\/Component owe no ATDD annotation/,
@@ -2592,7 +2597,7 @@ describe("assets guardrails", () => {
       /sibling.*cross-spec obligation.*never.*planned/,
       /surface.*project-wide.*opt-in/,
     ]) {
-      expect(atddMemory).toMatch(clause);
+      expect(atddMemory.replace(/`([^`\n]+)`/g, "$1")).toMatch(clause);
     }
     const sdd = await readFile(
       path.join(templateQfaiDir, "assistant/skills/qfai-sdd/SKILL.md"),

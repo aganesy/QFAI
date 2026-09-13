@@ -517,19 +517,19 @@ cannot proceed without, and no prototype can enumerate that for a skill it does 
 
 project_memory:
 
-- tests/e2e/** must cover all required US; tests/api/** all active CON-API; tests/integration/** all active CON-DB. Surface narrowing never defers a contract ID.
-- L1/Unit and L2/Component owe no ATDD annotation; tdd/test-list.md covers them. Existing Integration annotations for them are neither counted nor flagged, so do not require adding or removing one.
-- A TC declared L3/Integration is covered from tests/integration/**.
-- A TC declared L4/API is covered from tests/api/**; one declared L5/E2E is covered from tests/e2e/**.
-- Every other non-Unit/Component TC Level — blank, unreadable, and system / acceptance — routes to tests/integration/**.
+- `tests/e2e/**` must cover all required US; `tests/api/**` all active CON-API; `tests/integration/**` all active CON-DB. Surface narrowing never defers a contract ID.
+- L1/Unit and L2/Component owe no ATDD annotation; `tdd/test-list.md` covers them. Existing Integration annotations for them are neither counted nor flagged, so do not require adding or removing one.
+- A TC declared L3/Integration is covered from `tests/integration/**`.
+- A TC declared L4/API is covered from `tests/api/**`; one declared L5/E2E is covered from `tests/e2e/**`.
+- Every other non-Unit/Component TC Level — blank, unreadable, and system / acceptance — routes to `tests/integration/**`.
 - CON-API coverage is counted per declared QFAI-CONTRACT-ID, one per file, never per OpenAPI operation.
-- API x-qfai-status: planned defers the whole contract file, never an operation. Read its top-level key or, when absent or unreadable, an unindented column-0 comment. An operation-level marker is ignored.
-- A CON-DB planned marker is a standalone SQL comment, -- x-qfai-status: planned; leading whitespace is allowed, trailing SQL is not. It defers the whole file.
+- API `x-qfai-status: planned` defers the whole contract file, never an operation. Read its top-level key or, when absent or unreadable, an unindented column-0 comment. An operation-level marker is ignored.
+- A CON-DB planned marker is a standalone SQL comment, `-- x-qfai-status: planned`; leading whitespace is allowed, trailing SQL is not. It defers the whole file.
 - A sibling's uncovered contract is recorded as a cross-spec obligation, never marked planned by this spec's run.
 - US surface narrowing is a project-wide, all-or-nothing opt-in. With no declared user-facing surface it is off and every non-planned US remains required; after opt-in, a spec without one owes no E2E reference.
-- A US with - x-qfai-status: planned in its own story block is deferred, not covered by an annotation-only test. Read US status independently of the surface opt-in.
-- Resolve surface scope before the Volume Estimate: read qfai.config.yaml paths.specsDir / paths.contractsDir and prototyping.primarySpecId, every UI contract's relative path, and every sibling 01_Spec.md frontmatter or legacy prototyping heading.
-- UI contract matches are <spec-id>.yaml, spec-<spec-id>.yaml, ui-<spec-id>.yaml, ui-<spec-id>-<slug>.yaml, or any *.yaml below a spec-<spec-id>/ directory at any depth. A basename merely containing the id and every .yml file are not matches.
-- A matching UI contract, surface_type: ui-bearing, a legacy prototyping heading or the pinned primary spec is sufficient. On resolution failure, read stderr and keep US coverage project-wide.
-- Forbidden references guard the test-layer policy: a TC annotation outside its declared home is rejected — tests/api/** must not carry QFAI:SPEC-XXXX:TC-YYYY unless that TC declares L4/API, and tests/e2e/** likewise unless it declares L5/E2E.
+- A US with `- x-qfai-status: planned` in its own story block is deferred, not covered by an annotation-only test. Read US status independently of the surface opt-in.
+- Resolve surface scope before the Volume Estimate: read `qfai.config.yaml` paths.specsDir / paths.contractsDir and prototyping.primarySpecId, every UI contract's relative path, and every sibling `01_Spec.md` frontmatter or legacy prototyping heading.
+- UI contract matches are `<spec-id>.yaml`, `spec-<spec-id>.yaml`, `ui-<spec-id>.yaml`, `ui-<spec-id>-<slug>.yaml`, or any `*.yaml` below a `spec-<spec-id>/` directory at any depth. A basename merely containing the id and every `.yml` file are not matches.
+- A matching UI contract, `surface_type: ui-bearing`, a legacy prototyping heading or the pinned primary spec is sufficient. On resolution failure, read stderr and keep US coverage project-wide.
+- Forbidden references guard the test-layer policy: a TC annotation outside its declared home is rejected — `tests/api/**` must not carry QFAI:SPEC-XXXX:TC-YYYY unless that TC declares L4/API, and `tests/e2e/**` likewise unless it declares L5/E2E.
 - Floor / ratio signals are planning hints, never gates; legacy scenario.feature / coverage ledger files remain optional inputs.
