@@ -104,7 +104,7 @@ observation covers while its obligation stands. No test is deleted under any
 combination except `3bB`, whose disposition is the deletion of
 `legacy 4-axis format is error`.
 
-## Four other packs are reached, and a test re-run does not settle any
+## Four other packs are re-derived, and a fifth is re-verified
 
 `spec-0010` owns two chains here: the producer (`US-0010-0009`, `AC-0010-0007`,
 `BR-0010-0007`), which the Change Request records as `/qfai-sdd` today, and the
@@ -152,6 +152,14 @@ All four are owner re-derivations in the rerun plan, not cross-spec
 re-verifications: what disagrees is a requirement, and re-running a test
 confirms the observation rather than the requirement it was taken against.
 
+**`spec-0014` is the fifth, and it is the other kind.** No statement there
+moves, so no owner rerun reaches it. The product changes beneath five of its
+`done` rows, which take the cross-spec in-place re-verification. Under `2A`
+the winner validator joins the list `verifySemanticsSpec0014.test.ts` runs,
+which reaches `TDD-0009`, `TDD-0018` and `TDD-0019`. Under `2a` the iterate
+command's lock recovery changes, which reaches `TDD-0033` and `TDD-0034`
+through `prototypingIterate.test.ts`.
+
 These prerequisites land before the Change Request is applied, each as its own
 record:
 
@@ -167,10 +175,13 @@ record:
   `AC-0013-0009` twice, so a rerun keyed to that id sweeps whichever of the two
   it finds, and `2B` waits on it.
 
-After the two ledger repairs, the Change Request is refreshed before approval:
-the seeded `E2E` rows for `US-0002-0005`, `US-0010-0008` and `US-0010-0009`
-join its blocked set by id, with the dispositions its approved actions give
-them.
+After each ledger repair an approved outcome reaches, the Change Request is
+refreshed before approval: every seeded `E2E` row whose story that outcome
+changes joins its blocked set by id, with the disposition its approved
+actions give it. The first two repairs seed the rows for `US-0002-0005`,
+`US-0010-0008` and `US-0010-0009`. `spec-0013`'s seeds the row for
+`US-0013-0009`, the lock story, which resets under `2a`, and the row for
+`US-0013-0008`, the side-artifact story, which resets under `2B`.
 
 `spec-0010/TDD-0011` is not parked. It is listed in the Change Request's
 blocked set, and that listing is what suppresses it. It stays at `todo`, and
