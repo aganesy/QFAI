@@ -15,7 +15,17 @@
  * `disable-model-invocation: true` beside it.
  */
 import { existsSync } from "node:fs";
-import { chmod, link, mkdir, mkdtemp, readFile, rm, symlink, writeFile } from "node:fs/promises";
+import {
+  chmod,
+  link,
+  mkdir,
+  mkdtemp,
+  readFile,
+  rm,
+  symlink,
+  truncate,
+  writeFile,
+} from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
@@ -713,6 +723,29 @@ describe("the gate reads a skill as the host does", () => {
       .filter((item) => item.file === file)
       .map((item) => item.code);
     expect(codes).toEqual([]);
+  });
+
+  it("reports nothing against a named document too large to hold, and decides no orphan past it", async () => {
+    // Held in memory, a multi-gigabyte file would end the run. It is not read, so
+    // what it cites is unknown, and an uncited reference is not reported as one.
+    const root = await projectWithSkill(['description: "Does the thing."']);
+    const skillDir = path.join(root, ".qfai", "assistant", "skills", "qfai-example");
+    const entryPoint = path.join(skillDir, "SKILL.md");
+    await writeFile(
+      entryPoint,
+      `${await readFile(entryPoint, "utf-8")}\nSee references/tmp/huge.md.\n`,
+      "utf-8",
+    );
+    await mkdir(path.join(skillDir, "references", "tmp"), { recursive: true });
+    const huge = path.join(skillDir, "references", "tmp", "huge.md");
+    await writeFile(huge, "# huge\n", "utf-8");
+    await truncate(huge, 65 * 1024 * 1024);
+    await writeFile(path.join(skillDir, "references", "uncited.md"), "# uncited\n", "utf-8");
+
+    const findings = (await validateAssistantAssets(root, defaultConfig)).filter(
+      (item) => item.code === "QFAI-SKILLS-014" || item.code === "QFAI-SKILLS-013",
+    );
+    expect(findings).toEqual([]);
   });
 
   it("roots a skill whose entry point links to a document crawled under another name", async () => {

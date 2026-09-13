@@ -1774,10 +1774,8 @@ async function collectReferenceGraphIssues(
         if (read.kind === "missing") continue;
         graph.set(candidate, read.kind === "text" ? read.text : "");
         identities?.set(await fileIdentity(candidate), candidate);
-        if (read.kind === "unreadable") {
-          reported.push(read.finding);
-          unreadableFiles.push(candidate);
-        }
+        if (read.kind === "unreadable") reported.push(read.finding);
+        if (read.kind === "unreadable" || read.kind === "unread") unreadableFiles.push(candidate);
         added = true;
         break;
       }
@@ -1853,7 +1851,20 @@ function isLinkLoop(error: unknown): boolean {
 }
 
 type CitedDocument =
-  { kind: "missing" } | { kind: "text"; text: string } | { kind: "unreadable"; finding: Issue };
+  | { kind: "missing" }
+  | { kind: "unread" }
+  | { kind: "text"; text: string }
+  | { kind: "unreadable"; finding: Issue };
+
+/**
+ * The most of a cited document this run holds in memory.
+ *
+ * SIMPLIFIED: a cited document past this size is not read. Nothing is reported
+ * against it, since the host has no such limit; its citations are not followed,
+ * so uncited references are left undecided rather than reported.
+ * Lift when: a skill names a document this large and what it cites needs checking.
+ */
+const CITED_DOCUMENT_READ_CEILING = 64 * 1024 * 1024;
 
 /**
  * A document a reachable step names and the crawl did not read, opened as the
@@ -1875,7 +1886,8 @@ async function readCitedDocument(file: string): Promise<CitedDocument> {
     ),
   });
   const found = await stat(file).then(
-    (stats): "file" | "not-a-file" => (stats.isFile() ? "file" : "not-a-file"),
+    (stats): { size: number } | "not-a-file" =>
+      stats.isFile() ? { size: stats.size } : "not-a-file",
     async (error: unknown): Promise<"missing" | "not-a-file" | { error: unknown }> => {
       if (hasErrnoCode(error) && error.code === "ENOTDIR") return "missing";
       if (isLinkLoop(error)) return "not-a-file";
@@ -1896,17 +1908,16 @@ async function readCitedDocument(file: string): Promise<CitedDocument> {
       "Put the document the step expects at that path, or stop naming it.",
     );
   }
-  if (found !== "file") {
+  if ("error" in found) {
     return unreadable(
       `A document under \`skills\` that a step names could not be reached (${describeReadError(found.error)}). The host opens it only where a step names it, and a step that does fails there.`,
       "Make the document, and each directory above it, readable to the account running `qfai validate`, or stop naming it.",
     );
   }
-  // Read with no size ceiling, as the crawl reads the documents it reaches: the
-  // host opens a document of any size, so only the kind of file is checked.
+  if (found.size > CITED_DOCUMENT_READ_CEILING) return { kind: "unread" };
   const bytes = await readBoundedRegularFile(
     await realpath(file).catch(() => file),
-    Number.MAX_SAFE_INTEGER,
+    CITED_DOCUMENT_READ_CEILING,
   );
   if (bytes === undefined) {
     return unreadable(
