@@ -103,10 +103,15 @@ dirs". It is unreachable for the same reason.
 
 ## Proposed change
 
-Narrow the rule to the two conditions a resolver can be in — an absent pointer
-and a pointer naming a pack that does not exist — at the shared decision first
-and then in both packs that follow it, and remove both dead branches with what
-serves only them.
+Remove the duplicate state from the rule, keeping the two conditions of its
+three-condition clause that can occur — an absent pointer and a pointer naming
+a pack that does not exist — at the shared decision first and then in both
+packs that follow it, and remove both dead branches with what serves only them.
+
+**These two are not every error the helper raises.** A state file that cannot
+be read as a pointer is rejected under its own `corrupt` reason, and this record
+leaves that rejection, its branch and its reason member alone. The narrowed
+clause names the two conditions it keeps, not an exhaustive list.
 
 The narrowed wording keeps what each reader does with an absent pointer: the
 helper rejects it, and `qfai discussion list --active` rejects it only when
@@ -146,6 +151,7 @@ uncovered, when the uncovered third is a state no test can construct.
   `.qfai/specs/spec-0010/04_Business-Rules.md`,
   `.qfai/specs/spec-0010/09_delta.md`,
   `.qfai/specs/spec-0010/10_Plan.md`,
+  `.qfai/specs/spec-0010/tdd/test-list.md`,
   `.qfai/specs/spec-0013/01_Spec.md`,
   `.qfai/specs/spec-0013/02_User-stories.md`,
   `.qfai/specs/spec-0013/03_Acceptance-Criteria.md`,
@@ -161,16 +167,18 @@ uncovered, when the uncovered third is a state no test can construct.
 
 ## Decision needed from user
 
-Approve narrowing the active-pointer rule to the absent and missing conditions —
-in the shared decision `DR-0266`, in `spec-0010` and in `spec-0013` — and
-removing the two unreachable duplicate branches, in the helper and in the
-command, with what exists only to serve them?
+Approve removing the duplicate state from the active-pointer rule, keeping its
+absent and missing conditions — in the shared decision `DR-0266`, in
+`spec-0010` and in `spec-0013` — and removing the two unreachable duplicate
+branches, in the helper and in the command, with what exists only to serve
+them?
 
 ## Approved actions (owner skill rerun plan)
 
 1. **The shared decision first.** A policy-level `/qfai-sdd` rerun, mode
-   `re-derive`, narrows `DR-0266`'s rejection clause to the absent and missing
-   pointer, and records it in `_policies/10_delta.md`. Both packs follow that
+   `re-derive`, removes the duplicate state from `DR-0266`'s rejection clause,
+   keeping the absent and missing pointer, and adds this Change Request's row to
+   the `## Change Requests` table of `_policies/10_delta.md`. Both packs follow that
    decision, so narrowing either one first would leave it disagreeing with the
    record it cites. **The clause keeps the command's single-candidate read**:
    it states the helper's rejection of an absent pointer as unconditional, and
@@ -181,19 +189,35 @@ command, with what exists only to serve them?
 
 2. `/qfai-sdd spec-0010`, mode `re-derive`, over `AC-0010-0012`,
    `BR-0010-0012` and the two `10_Plan.md` lines that restate the rejection,
-   with its own `09_delta.md` row. `TC-0010-0013` is not edited: it names no
-   duplicate state.
+   with its own row in that pack's `09_delta.md` `## Change Requests` table.
+   `TC-0010-0013` is not edited: it names no duplicate state.
 
 3. `/qfai-sdd spec-0013`, mode `re-derive`, over the requirement line in
    `01_Spec.md`, `US-0013-0012`, `AC-0013-0021`, `BR-0013-0017`,
    `TC-0013-0029`, and the restatements in `07_Decisions.md` and `10_Plan.md`:
-   each drops the duplicate state and keeps the absent and missing ones. One
-   `09_delta.md` Triage row records it.
+   each drops the duplicate state and keeps the absent and missing ones. The
+   rerun records it as one row in `spec-0013/09_delta.md`'s
+   `## Change Requests` table — `CR ID`, `Upstream artifact`, `Mode`,
+   `Approved by`, `Applied at` — not as a `## Triage` row.
 
-4. Downstream ledger sweep. Reset to `todo`, recording this CR's ID in `DR-ID`:
-   `spec-0013/TDD-0024`. Its obligation changes — a third of it is withdrawn —
-   and its recorded observation was taken against the three-condition wording.
-   No row is retired: the obligation survives, narrowed.
+   Both pack reruns run Phase 2b, which also seeds the `E2E` rows those ledgers
+   lack, at `todo`: twelve in `spec-0010`, whose eight-column table it migrates
+   as well, and thirteen in `spec-0013`. Those rows are owed whatever this
+   record decides, and they are listed so the approval covers them.
+
+4. Downstream ledger sweep for `spec-0013/TDD-0024`. `TC-0013-0029` keeps two
+   independently observable rejections once the duplicate state goes — an
+   absent pointer and a pointer naming a missing pack — and its row's
+   `Selector` runs both cases. So the `spec-0013` rerun's Phase 2b splits it:
+   - `TDD-0024` keeps the missing-pack boundary, which its recorded
+     falsifiability mutation observed failing, with its `Selector` narrowed to
+     that case. It is **reset to `todo`** with this CR's ID in `DR-ID`: its
+     obligation changes, and its observation was taken against the
+     three-condition wording.
+   - A new `todo` row carrying `TC-0013-0029` owns the absent-pointer boundary,
+     with this CR's ID in `DR-ID`.
+
+   No row is retired: the obligation survives, narrowed and split.
 
 5. Under `/qfai-implement`, remove from
    `packages/qfai/src/core/discussionPack.ts` the `matches.length > 1` branch,

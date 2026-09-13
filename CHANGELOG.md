@@ -49,8 +49,8 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   been reachable.
 
   `CR-20260913-0004`, a defect-class request awaiting approval, proposes
-  narrowing the rule to the absent and missing conditions — at the shared
-  decision first, then in both packs — while keeping the command's
+  removing the duplicate state from the rule, keeping its absent and missing
+  conditions — at the shared decision first, then in both packs — while keeping the command's
   single-candidate read, and lists both unreachable branches for removal. No
   rule or code changes until it is applied. It blocks the one ledger row whose
   obligation names the duplicate state.
