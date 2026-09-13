@@ -271,10 +271,16 @@ describe.each(TREES)("%s — prototyping and grilling", (tree) => {
   });
 
   it("keeps the record across a handoff", async () => {
-    // Stage evidence is regenerable and ignored. These answers are not: nothing
+    // A run log is regenerable and ignored. These answers are not: nothing
     // reproduces them, and every later generator and reviewer must read them.
+    //
+    // The distinction is against a log, not against stage evidence: a grilling
+    // session's record is stage evidence, is not reproducible either, and is
+    // committed for that reason. Drawing the line at "stage evidence" made this
+    // paragraph's own argument rest on a premise the constitution contradicts.
     const skill = await read(SKILL);
-    expectPhrase(skill, "**It is a user decision, not stage evidence.**");
+    expectPhrase(skill, "**It is a user decision, not a regenerable log.**");
+    expectPhrase(skill, "A run log is reproducible by rerunning its stage and is ignored");
     expectPhrase(skill, "The managed ignore block negates this path");
 
     // Asserted against the block the writer emits, not against the source that
