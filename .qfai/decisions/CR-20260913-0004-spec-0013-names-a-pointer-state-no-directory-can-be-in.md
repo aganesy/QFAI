@@ -62,7 +62,10 @@ would block Stage 0 for every default project. The pointer cases in
 `packages/qfai/tests/cli/commands/sddPreflight.test.ts` and the Stage 0 step
 of the shipped `qfai-sdd/SKILL.md` rest on that. A statement saying `/qfai-sdd`
 rejects an absent pointer contradicts Stage 0 as much as it contradicts the
-command's single-candidate read.
+command's single-candidate read. So does one requiring the helper for every
+resolution: `AC-0013-0020` and the first sentence of `BR-0013-0017` say
+downstream `/qfai-sdd` skills resolve the pack through it, with no exception
+for an absent pointer.
 
 ## Reproduction
 
@@ -133,29 +136,40 @@ uncovered, when the uncovered third is a state no test can construct.
 
 ## Blocked downstream items
 
-| Item                 | Kind         | Why it depends on the artifact                                                                                     |
-| -------------------- | ------------ | ------------------------------------------------------------------------------------------------------------------ |
-| `spec-0013/TDD-0024` | `ledger-row` | Carries `TC-0013-0029`, whose obligation names the duplicate state. Its evidence cannot discharge a third it names |
+| Item                                                                   | Kind         | Why it depends on the artifact                                                                                     |
+| ---------------------------------------------------------------------- | ------------ | ------------------------------------------------------------------------------------------------------------------ |
+| `spec-0013/TDD-0024`                                                   | `ledger-row` | Carries `TC-0013-0029`, whose obligation names the duplicate state. Its evidence cannot discharge a third it names |
+| The two `spec-0013` rows `CR-20260913-0009` appends for `TC-0013-0029` | `ledger-row` | The same obligation. One of them owns the condition this record removes                                            |
 
-- Not blocked by this CR: every other `spec-0013` row. `TDD-0023` is reset by
-  action 4 although its obligation does not change, because a case it owns moves
-  under its `Selector`. The row's test,
+- Not blocked by this CR: every other `spec-0013` row. `TDD-0023` and the row
+  appended beside it for the file-time case are `CR-20260913-0009`'s: that
+  record moves the case under `TC-0013-0028` and resets `TDD-0023`, and this one
+  leaves both alone. `TC-0013-0028` is not edited: it tests the set-pointer path
+  the narrowed `AC-0013-0020` keeps. The test for `TC-0013-0029`,
   `packages/qfai/tests/core/activeDiscussionPack.test.ts`, already proves the two
   reachable conditions, and nothing else in the pack reads the duplicate state.
 - Not blocked either: `spec-0010/TDD-0017`. It carries `TC-0010-0013`, which
   tests an absent pointer with several candidates and names no duplicate state,
-  so its obligation does not move when the criterion above it narrows.
-- Overlapping open CRs: `none`.
+  so its obligation does not move when the criterion above it narrows. Its
+  `Evidence` cell does name a duplicate pointer its run never covered, and
+  action 2 corrects that record without re-running the row.
+- Overlapping open CRs: `CR-20260913-0009`, which re-derives `spec-0013`'s ledger
+  to its template: its columns, its seeded rows, and the split of every
+  progressed row that runs several boundaries, `TDD-0024` and `TDD-0023` among
+  them. It is applied first (action 3).
 
 ## Impact scope
 
 - Specs: `spec-0010`, `spec-0013`, and `_policies` for `DR-0266`
 - Plans: `.qfai/specs/spec-0010/10_Plan.md`, `.qfai/specs/spec-0013/10_Plan.md`
-- Tests: `spec-0013/TDD-0023` and `spec-0013/TDD-0024` — `packages/qfai/tests/core/activeDiscussionPack.test.ts`,
-  whose header and `describe` name the duplicate state and whose file-time
-  guard moves between its two `describe` blocks; and
+- Tests: `spec-0013/TDD-0024` and the rows `CR-20260913-0009` appends for
+  `TC-0013-0029` — `packages/qfai/tests/core/activeDiscussionPack.test.ts`,
+  whose header and `describe` name the duplicate state;
   `packages/qfai/tests/integration/cli/commands/discussion.test.ts`, for the
-  command's branch
+  command's branch; and, through the `/qfai-atdd spec-0013` pass in action 5,
+  every other ATDD-owned `spec-0013` row still owed when that pass runs, with
+  `.qfai/evidence/atdd-spec-0013.md` and
+  `.qfai/evidence/coverage-depth-spec-0013.md`
 - Contracts: `none`
 - Schema: `none`
 - Upstream paths edited under this CR:
@@ -165,6 +179,7 @@ uncovered, when the uncovered third is a state no test can construct.
   `.qfai/specs/spec-0010/04_Business-Rules.md`,
   `.qfai/specs/spec-0010/09_delta.md`,
   `.qfai/specs/spec-0010/10_Plan.md`,
+  `.qfai/specs/spec-0010/tdd/test-list.md`,
   `.qfai/specs/spec-0013/01_Spec.md`,
   `.qfai/specs/spec-0013/02_User-stories.md`,
   `.qfai/specs/spec-0013/03_Acceptance-Criteria.md`,
@@ -184,7 +199,8 @@ Approve removing the duplicate state from the active-pointer rule, keeping its
 absent and missing conditions — in the shared decision `DR-0266`, in
 `spec-0010` and in `spec-0013` — and removing the two unreachable duplicate
 branches, in the helper and in the command, with what exists only to serve
-them?
+them — and correcting `spec-0010/TDD-0017`'s evidence, which names the
+duplicate state its run never covered?
 
 ## Approved actions (owner skill rerun plan)
 
@@ -215,14 +231,26 @@ them?
    the rejection are edited by hand under this approval, and
    `/qfai-sdd spec-0010`, mode `confirm-only`, confirms them and records its own
    row in that pack's `09_delta.md` `## Change Requests` table.
-   `TC-0010-0013` is not edited: it names no duplicate state. **`confirm-only`
+   `TC-0010-0013` is not edited: it names no duplicate state.
+
+   **`spec-0010/TDD-0017`'s `Evidence` cell is corrected, not its row.** It says
+   the run covered `absent/duplicate currentId + multi-candidate`, and its test,
+   `discussion.test.ts:111-155`, exercises an absent pointer and a pointer
+   naming a missing pack, each beside several candidates.
+   `/qfai-implement spec-0010`, which writes that cell, repairs it in place under
+   this approval to what the run covered — `absent or missing currentId + multi-candidate` —
+   keeping its date, commit and reviewer attestation, and adds this record's ID
+   to `DR-ID`. The row is not re-run and its `Status` does not change, as the
+   drift protocol's record-defect drain repairs a record.
+
+   **`confirm-only`
    because no `spec-0010` row changes identity**: a `re-derive` would run
    Phase 2b over a ledger that lacks the template's columns, `Tier` among them,
    and every story's `E2E` row, and would migrate it, derive every row's tier
    and seed rows this record does not reach.
 
 3. `/qfai-sdd spec-0013`, mode `re-derive`, over the requirement line in
-   `01_Spec.md`, `US-0013-0012`, `AC-0013-0021`, `BR-0013-0017`,
+   `01_Spec.md`, `US-0013-0012`, `AC-0013-0020`, `AC-0013-0021`, `BR-0013-0017`,
    `TC-0013-0029`, and the restatements in `07_Decisions.md` and `10_Plan.md`:
    each drops the duplicate state and keeps the missing pack. **Which
    absent-pointer rule each keeps depends on whose reading it states.**
@@ -232,84 +260,93 @@ them?
    how `/qfai-sdd` finds its pack, so they say Stage 0 resolves a set pointer
    through the helper and takes the newest pack when the pointer is absent. The
    restatements in `07_Decisions.md` and `10_Plan.md` follow the statement each
-   restates. The
-   rerun records it as one row in `spec-0013/09_delta.md`'s
+   restates. **`AC-0013-0020` and the first sentence of `BR-0013-0017` are in
+   the rerun as well**, though neither names the duplicate state: they describe
+   how `/qfai-sdd` finds its pack and require the helper for every resolution,
+   so each says it of a set pointer and gives the same newest-pack fallback when
+   the pointer is absent, still without reading file times. The rerun records
+   it as one row in `spec-0013/09_delta.md`'s
    `## Change Requests` table — `CR ID`, `Upstream artifact`, `Mode`,
    `Approved by`, `Applied at` — not as a `## Triage` row — and adds this
    record's ID to the `Related` field of `DR-0013-0002`, which lacks one, as
    step 1 does for `DR-0266`.
 
-   **This rerun is a `re-derive` because Phase 2b splits `TDD-0024`** (action
-   4), and only Phase 2b writes row identity. **`spec-0013`'s ledger repair
-   lands first, as its own record**: that repair migrates the ledger to the
-   template's columns, derives every row's `Tier` with the resets a raised tier
-   owes, and seeds the `E2E` rows the stories lack. This record is applied
-   after it, so its Phase 2b meets nothing to migrate, seed or re-tier beyond
-   the rows action 4 re-scopes, and it authorises no other ledger write.
+   **This rerun is a `re-derive` because Phase 2b retires a row** (action 4),
+   and only Phase 2b writes a row's identity or deletes one.
 
-   **This record re-scopes no progressed row but `TDD-0024`.** Phase 2b touches
-   a `done` row that runs several independently observable cases behind one
-   `Selector` only under a Change Request naming the row and the order of its
-   split (`.qfai/assistant/skills/qfai-sdd/references/sdd-phase-checklists.md`).
-   In `spec-0013` three rows are of that shape: `TDD-0019` runs the template
-   slot and the agent guide, `TDD-0021` three validate-lane outcomes, and
-   `TDD-0022`, the fourteenth story's row, the template slot and both
-   directions of the lane. The requests that restate those rows' obligations
-   name their splits, so the `spec-0013` rerun runs after they have been
-   applied. A progressed row of that shape the rerun still meets is raised then
-   as a request of its own and left as it is until that request is approved;
-   nothing else in this plan waits on it.
+   **`CR-20260913-0009` is applied first.** It re-derives `spec-0013`'s ledger
+   to its template: the six columns it lacks, the `Integration` and `E2E` rows
+   Phase 2b owes, and the split of all thirteen progressed rows that run
+   several boundaries behind one `Selector` — `TDD-0019`, `TDD-0021`, `TDD-0022`
+   and `TDD-0024` among them — with the resets those splits owe. This rerun's
+   Phase 2b therefore meets nothing to migrate, seed or split beyond what
+   action 4 changes, and this record authorises no other ledger write. A
+   progressed row of that shape the rerun still meets is raised then as a
+   request of its own and left as it is until that request is approved; nothing
+   else in this plan waits on it.
 
-4. Downstream ledger sweep for `spec-0013/TDD-0024`. `TC-0013-0029` keeps two
-   independently observable rejections once the duplicate state goes — an
-   absent pointer and a pointer naming a missing pack — and its row's
-   `Selector` runs both cases. So the `spec-0013` rerun's Phase 2b splits it:
-   - `TDD-0024` keeps the missing-pack boundary, which its recorded
-     falsifiability mutation observed failing, with its `Selector` narrowed to
-     that case. It is **reset to `todo`** with this CR's ID in `DR-ID`: its
-     obligation changes, and its observation was taken against the
-     three-condition wording.
-   - A new `todo` row carrying `TC-0013-0029` owns the absent-pointer boundary,
-     with this CR's ID in `DR-ID`.
+4. Downstream ledger sweep for `TC-0013-0029`. `CR-20260913-0009` has split its
+   row by then: `TDD-0024` keeps the missing-pack boundary, and a row is
+   appended for an absent pointer and another for a pointer matching several
+   packs. With the duplicate state gone the test case states two conditions, so
+   this rerun's Phase 2b:
+   - **retires the row for a pointer matching several packs**, deleting it from
+     the ledger and recording the removal under `## Resolution` as
+     `spec-0013/TDD-NNNN` with
+     `no evidence — retired at Status = <status>, never executed`. No test can
+     construct that condition, so the row never ran, and a row retired at
+     `todo`, `blocked`, `red` or `exception` owes no evidence;
+   - keeps `TDD-0024` and the absent-pointer row on their boundaries. Each is
+     **reset to `todo`** with this CR's ID in `DR-ID` wherever it has left
+     `todo` by then: its obligation's wording changes, and an observation taken
+     against the three-condition wording does not describe it. The
+     absent-pointer row is named by that rule rather than by a `TDD-ID`, which
+     the repair allocates: the `spec-0013` row carrying `TC-0013-0029` whose
+     `Boundary` is the absent pointer.
 
-   No row is retired: the obligation survives, narrowed and split.
+   No other row is retired: the obligation survives, narrowed.
 
-   **`TDD-0023` is reset to `todo` as well**, with this CR's ID in `DR-ID`. The
-   case asserting that the helper infers nothing from file times belongs to
-   `TC-0013-0028`, which `TDD-0023` carries, but it sits in `TC-0013-0029`'s
-   `describe` and runs only under `TDD-0024`'s whole-`describe` `Selector`.
-   Narrowing that selector would leave the case under no row, so action 5 moves
-   it into the `describe` that `TDD-0023`'s `Selector` runs. That selector then
-   runs a case its recorded evidence does not cover.
+5. **In this order**, once the rerun above has written the ledger:
 
-5. Under `/qfai-implement`, remove from
-   `packages/qfai/src/core/discussionPack.ts` the `matches.length > 1` branch,
-   `buildDuplicateMessage`, and the `"duplicate"` member of
-   `ResolveActiveDiscussionPackErrorReason`, and correct the helper's doc
-   comment, which lists the duplicate case among the errors it throws. Remove
-   the `matches.length > 1` wording from `qfai discussion list --active` in
-   `packages/qfai/src/cli/commands/discussion.ts` the same way, leaving the
-   missing-pointer message. Correct every comment that still names the
-   duplicate state, each of which is false once the branches go:
+   1. `/qfai-implement spec-0013` runs its Change Request preflight, which
+      writes action 4's resets before the ledger is read for anything else. The
+      rows it resets are `Integration` rows with no handoff yet, so the run
+      leaves them at `todo` and makes no product edit.
+   2. `/qfai-atdd spec-0013` makes the test edits. `TDD-0024` and the
+      absent-pointer row are `Integration` rows, whose tests that stage writes
+      and `/qfai-implement` does not (`qfai-implement/SKILL.md`). It corrects the
+      header and `describe` of `activeDiscussionPack.test.ts`, which still name
+      the duplicate state, and records the reset rows' handoff. Both suites keep
+      passing unchanged, because neither exercises a duplicate — no test could
+      construct one. **That invocation is not limited to these rows**: it takes
+      up every ATDD-owned `spec-0013` row still owed when it runs — today
+      `TDD-0016` to `TDD-0018`, and any row `CR-20260913-0009` seeded that its
+      own pass left open — as that stage's ordinary forward work. It writes
+      their tests under `packages/qfai/tests/integration/**` and
+      `packages/qfai/tests/e2e/**`, their entries in
+      `.qfai/evidence/atdd-spec-0013.md`, and a refreshed
+      `.qfai/evidence/coverage-depth-spec-0013.md` through its reviewer gate.
+      None of that edits an upstream path.
+   3. `/qfai-implement spec-0013` resumes from that handoff. It removes from
+      `packages/qfai/src/core/discussionPack.ts` the `matches.length > 1`
+      branch, `buildDuplicateMessage`, and the `"duplicate"` member of
+      `ResolveActiveDiscussionPackErrorReason`, and corrects the helper's doc
+      comment, which lists the duplicate case among the errors it throws. It
+      removes the `matches.length > 1` wording from
+      `qfai discussion list --active` in
+      `packages/qfai/src/cli/commands/discussion.ts` the same way, leaving the
+      missing-pointer message, and corrects every comment that still
+      names the duplicate state, each of which is false once the branches go:
 
-   | File                                                           | Lines    | What it says                                                                 |
-   | -------------------------------------------------------------- | -------- | ---------------------------------------------------------------------------- |
-   | `packages/qfai/src/core/discussionPack.ts`                     | 195-216  | the reason type's doc and the error's doc name the duplicate state           |
-   | `packages/qfai/src/core/discussionPack.ts`                     | 243-245  | the helper's doc lists a duplicate match among the errors it throws          |
-   | `packages/qfai/src/cli/commands/discussion.ts`                 | 181-182  | `discussion use` says the missing/duplicate condition surfaces at read       |
-   | `packages/qfai/src/cli/commands/discussion.ts`                 | 240      | `list --active` says a missing/duplicate dir fails with several packs        |
-   | `packages/qfai/src/core/validators/designContractReadiness.ts` | 271, 326 | a duplicate pointer does not fall back, and makes the answer unknown         |
-   | `packages/qfai/src/core/validators/researchSummary.ts`         | 536-539  | `brokenPointer`'s doc says a set pointer may resolve "to more than one" pack |
-   | `packages/qfai/src/core/validators/researchSummary.ts`         | 672      | a `currentId` naming no pack "(or two)"                                      |
-
-   **The test edits go through `/qfai-atdd spec-0013`, ahead of that work.**
-   `TDD-0023`, `TDD-0024` and the new absent-pointer row are `Integration`
-   rows, whose tests `/qfai-atdd` writes and `/qfai-implement` does not
-   (`qfai-implement/SKILL.md`). That run corrects the header and `describe` of
-   `activeDiscussionPack.test.ts`, which still name the duplicate state, and
-   moves its file-time guard case from `TC-0013-0029`'s `describe` into
-   `TC-0013-0028`'s, as action 4 sets out. Both suites keep passing unchanged,
-   because neither exercises a duplicate — no test could construct one.
+      | File                                                           | Lines    | What it says                                                                 |
+      | -------------------------------------------------------------- | -------- | ---------------------------------------------------------------------------- |
+      | `packages/qfai/src/core/discussionPack.ts`                     | 195-216  | the reason type's doc and the error's doc name the duplicate state           |
+      | `packages/qfai/src/core/discussionPack.ts`                     | 243-245  | the helper's doc lists a duplicate match among the errors it throws          |
+      | `packages/qfai/src/cli/commands/discussion.ts`                 | 181-182  | `discussion use` says the missing/duplicate condition surfaces at read       |
+      | `packages/qfai/src/cli/commands/discussion.ts`                 | 240      | `list --active` says a missing/duplicate dir fails with several packs        |
+      | `packages/qfai/src/core/validators/designContractReadiness.ts` | 271, 326 | a duplicate pointer does not fall back, and makes the answer unknown         |
+      | `packages/qfai/src/core/validators/researchSummary.ts`         | 536-539  | `brokenPointer`'s doc says a set pointer may resolve "to more than one" pack |
+      | `packages/qfai/src/core/validators/researchSummary.ts`         | 672      | a `currentId` naming no pack "(or two)"                                      |
 
    **These edits are cross-spec.** Before making them, the run takes the
    detection step `.qfai/assistant/skills/qfai-implement/references/cross-spec-ownership.md`
