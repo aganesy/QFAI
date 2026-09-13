@@ -1435,30 +1435,13 @@ export const ALLOWED_INIT_CONTENT: ReadonlyMap<string, string> = new Map([
   // that one line from what the run wrote reproduces `cd2c521c…` byte for byte,
   // which is what makes this a review of one line.
   [".gitignore", "c208ecdc03ad18a379512fd21bd13e32035bb1df008144cde7ea32b4fc9b798c"],
-  // One bullet each, inside the managed cross-AI rules block: the
-  // `documentation-clarity.md` master that the same run seeds beside them.
-  // Removing that line from both files reproduces the previous digests
-  // (`04061092…` and `040faf04…`), so this is a review of one line per file.
-  //
-  // Re-pinned for a second bullet in the same block, naming
-  // `.agents/rules/minimal-implementation.md` — the rule the run now seeds
-  // beside the other masters. Derived by running `qfai init` into a temp root
-  // and hashing what it wrote, not read off a failure message, and checked the
-  // way the note above asks: dropping that one bullet reproduces `a832e27c…`
-  // and `20040ab0…` byte for byte.
-  //
-  // Every later master seeded beside them moves both digests the same way. To re-pin: run
-  // `qfai init` into a temp root and hash what it wrote, then drop the added bullet and confirm
-  // both previous digests come back byte for byte. That check is what keeps a re-pin a review of
-  // one line per file.
-  // Re-pinned for the sentence that describes what a later run does. It said the
-  // run leaves the section exactly as edited; it now adds a bullet for a rule
-  // being shipped into the project for the first time, and says that a bullet
-  // the project deleted stays deleted. Restoring the old sentence in both files
-  // reproduces `fff9e210…` and `7203ba75…` byte for byte, which is what makes
-  // this a review of one sentence per file.
-  ["AGENTS.md", "d3d39ba436dfbb657845fd0f339e18a174cba0ad38ca8137c116415ca8efa64a"],
-  ["CLAUDE.md", "5b6487bad9c1b9f46901650be64f04cb3aaf000d9d3c51327ec7c62653f64001"],
+  // Root entry points are executable instructions, so their bytes are pinned.
+  // Init preserves project edits and adds only newly shipped master bullets.
+  // Their conditional REVIEW.md pointer reads optional policy without shipping it.
+  // Derive a new pin from fresh init and reproduce the prior raw digest by
+  // removing only the changed text.
+  ["AGENTS.md", "a6b3562d1783b91046b85e6a5d0d73d755d2da1af8ca47deb09d870926ccab41"],
+  ["CLAUDE.md", "17e0aaf3cf744f5f4152134643a90849fb6a6a9abf6bb9264c9b0304cb001bbc"],
   // Inside `.claude/`, and pinned anyway — see the paragraph above the path set.
   // These are the hooks that restate a rule at the moment it applies: the writing
   // rule when a pull request, issue or review is posted through the GitHub tools
