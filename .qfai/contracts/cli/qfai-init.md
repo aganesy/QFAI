@@ -127,6 +127,10 @@ authorize the upgrade. Init keeps the previous constitution and its receipt,
 and reports that the shipped master could not be verified. A first init in that
 state does not install the constitution or record it as written.
 
+The governed writer rechecks the master after the other template copies and
+the destination hash. The create-only template copier never writes this
+constitution. The check is not an atomic filesystem transaction with the write.
+
 A dry run includes the constitution when the same plan would create or update
 its compatible rule master. It writes neither file.
 

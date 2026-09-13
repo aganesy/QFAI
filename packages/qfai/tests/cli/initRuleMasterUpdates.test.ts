@@ -16,9 +16,10 @@ import { access, mkdir, mkdtemp, readFile, symlink, unlink, writeFile } from "no
 import os from "node:os";
 import path from "node:path";
 
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { runInit } from "../../src/cli/commands/init.js";
+import * as provenance from "../../src/core/assistantAssetProvenance.js";
 import {
   hashAssistantAssetText,
   readAssistantAssetsLock,
@@ -52,6 +53,7 @@ beforeEach(async () => {
 });
 
 afterEach(async () => {
+  vi.restoreAllMocks();
   await removeTempTree(root);
 });
 
@@ -148,7 +150,6 @@ describe("a re-init and a rule master the project has", () => {
 
 /** The same hash the pass compares with, so a case can plant a record. */
 async function hashOf(filePath: string): Promise<string> {
-  const { hashAssistantAssetText } = await import("../../src/core/assistantAssetProvenance.js");
   return hashAssistantAssetText(await readFile(filePath, "utf-8"));
 }
 
@@ -204,6 +205,25 @@ describe("the constitution and its safety floor upgrade together", () => {
     );
     expect(await readFile(constitutionPath(), "utf-8")).toBe(previous);
     expect(output).toContain("manual merge");
+  });
+
+  it("rechecks the master after copying and staging the rest of the assets", async () => {
+    const edited = olderFloor(await readFile(minimumPath(), "utf-8"));
+    const previous = await olderConstitution();
+    const build = provenance.buildShippedAssistantHashes;
+    vi.spyOn(provenance, "buildShippedAssistantHashes").mockImplementationOnce(async (assets) => {
+      await writeFile(minimumPath(), edited, "utf-8");
+      return build(assets);
+    });
+
+    const output = await captureStdout(() =>
+      runInit({ dir: root, force: true, dryRun: false, yes: true }),
+    );
+
+    expect(await readFile(constitutionPath(), "utf-8")).toBe(previous);
+    expect(output).toContain("manual merge");
+    const lock = await readAssistantAssetsLock(assistantPath());
+    expect(lock?.files["constitution/constitution.md"]).toBe(hashAssistantAssetText(previous));
   });
 
   it("refreshes both when the old master still matches its write receipt", async () => {
@@ -334,6 +354,26 @@ describe("the constitution and its safety floor upgrade together", () => {
       await removeTempTree(fresh);
     }
   });
+
+  it.skipIf(process.platform === "win32")(
+    "escapes a control character in the deferred-constitution note",
+    async () => {
+      const fresh = path.join(root, "line\nfeed");
+      await mkdir(path.join(fresh, RULES_REL), { recursive: true });
+      await writeFile(
+        path.join(fresh, RULES_REL, "minimal-implementation.md"),
+        olderFloor(await readFile(minimumPath(), "utf-8")),
+        "utf-8",
+      );
+
+      const output = await captureStdout(() =>
+        runInit({ dir: fresh, force: false, dryRun: false, yes: true }),
+      );
+      const note = output.slice(output.indexOf("NOTE: "));
+      expect(note).not.toContain("line\nfeed");
+      expect(note).toContain("line\\x0afeed");
+    },
+  );
 });
 
 describe("a project with no rules directory", () => {

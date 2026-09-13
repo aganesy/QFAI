@@ -420,17 +420,13 @@ export async function runInit(options: InitOptions): Promise<void> {
   const plannedSafetyFloor =
     options.dryRun &&
     (rootResult.copied.includes(minimumMaster) || ruleMasterResult.copied.includes(minimumMaster));
-  const deferConstitution =
-    !plannedSafetyFloor && !(await hasShippedMinimumRule(rootAssets, destRoot));
   const qfaiResult = await copyTemplateTree(qfaiAssets, destQfai, {
     force: false,
     dryRun: options.dryRun,
     conflictPolicy: "skip",
     exclude: [
       ...STANDARD_ASSET_PATHS,
-      ...(deferConstitution
-        ? [path.relative(destQfai, joinAssistantLayer(destRoot, "constitution", "constitution.md"))]
-        : []),
+      path.relative(destQfai, joinAssistantLayer(destRoot, "constitution", "constitution.md")),
     ],
   });
   const skillsResult = await copyTemplatePaths(qfaiAssets, destQfai, [...STANDARD_ASSET_PATHS], {
@@ -445,7 +441,8 @@ export async function runInit(options: InitOptions): Promise<void> {
   const governedResult = await syncGovernedAssistantAssets(assistantAssets, destRoot, {
     force: options.force,
     dryRun: options.dryRun,
-    deferConstitution,
+    rootAssets,
+    plannedSafetyFloor,
   });
 
   // The routing manifest is user configuration, so it is never overwritten —
@@ -679,7 +676,7 @@ type GovernedAssetsResult = {
 async function syncGovernedAssistantAssets(
   assistantAssets: string,
   destRoot: string,
-  options: { force: boolean; dryRun: boolean; deferConstitution: boolean },
+  options: { force: boolean; dryRun: boolean; rootAssets: string; plannedSafetyFloor: boolean },
 ): Promise<GovernedAssetsResult> {
   // Path SSOT (`.qfai/contracts/cli/qfai-init.md`): the assistant-tree segments
   // come from `assistantPaths.ts` in init and in validate alike, so a future
@@ -714,15 +711,6 @@ async function syncGovernedAssistantAssets(
   for (const [relative, shippedHash] of Object.entries(shipped)) {
     const source = path.join(assistantAssets, ...relative.split("/"));
     const dest = path.join(destAssistant, ...relative.split("/"));
-    if (relative === "constitution/constitution.md" && options.deferConstitution) {
-      skipped.push(dest);
-      const previousHash = previous[relative];
-      if (previousHash !== undefined) recorded[relative] = previousHash;
-      manualMergeNotes.push(
-        `NOTE: ${dest} was not installed or refreshed: .agents/rules/minimal-implementation.md could not be verified as the shipped master. The safety floor and constitution need a manual merge before running \`qfai init --force\` again.`,
-      );
-      continue;
-    }
     if (!(await isContained(relative))) {
       skipped.push(dest);
       manualMergeNotes.push(escapedGovernedPathNote(dest));
@@ -730,6 +718,18 @@ async function syncGovernedAssistantAssets(
     }
     const currentHash = await hashAssistantAssetFile(dest);
     const previousHash = previous[relative];
+    if (
+      relative === "constitution/constitution.md" &&
+      !options.plannedSafetyFloor &&
+      !(await hasShippedMinimumRule(options.rootAssets, destRoot))
+    ) {
+      skipped.push(dest);
+      if (previousHash !== undefined) recorded[relative] = previousHash;
+      manualMergeNotes.push(
+        `NOTE: ${formatReportPath(dest)} was not installed or refreshed: .agents/rules/minimal-implementation.md could not be verified as the shipped master. The safety floor and constitution need a manual merge before running \`qfai init --force\` again.`,
+      );
+      continue;
+    }
 
     if (currentHash === shippedHash) {
       recorded[relative] = shippedHash;
