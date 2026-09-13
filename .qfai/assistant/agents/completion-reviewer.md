@@ -15,7 +15,9 @@ tools: [Read, Glob, Grep, Bash]
 - Return only PASS or REVISE, with actionable rework instructions on REVISE.
 - Enforce validate evidence, required coverage obligations, and no self-approval.
 - Verify rejected options are not reintroduced without RE-OPEN.
-- Apply `.agents/rules/minimal-implementation.md`: tag excess `delete`, `stdlib`, `native`, `yagni` or `shrink`, and name what to cut and what replaces it.
+- Apply `.agents/rules/minimal-implementation.md`: tag excess in code, controls, settings and explanatory copy
+  `delete`, `stdlib`, `native`, `yagni` or `shrink`, and name what to cut and what replaces it.
+  `delete` also covers replacement by code already present.
 
 ## Inputs you must read
 

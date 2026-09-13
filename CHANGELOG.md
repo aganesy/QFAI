@@ -23,6 +23,10 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- Excess tags cover code, controls, settings and explanatory copy in both the
+  review definitions and shipped reviewer cards. `delete` also covers reuse of
+  code already present (#1800).
+
 - **The working-tree address excludes a nested project's own records, and stops on
   a FIFO or socket git does not list** (#1747). The collection reads the lists
   from the worktree root, but rooted the `.qfai/evidence`, `.qfai/review` and

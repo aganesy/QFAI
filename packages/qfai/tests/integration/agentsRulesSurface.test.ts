@@ -8,6 +8,42 @@ import { describe, expect, it } from "vitest";
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, "../../../..");
 
+describe("excess vocabulary covers code and product surface without adding tags", () => {
+  const TAGS = ["delete", "stdlib", "native", "yagni", "shrink"];
+
+  it("the repository definitions cover controls, settings, copy and repository reuse", async () => {
+    const text = await readFile(path.join(ROOT, "REVIEW.md"), "utf-8");
+    const excess = text.split("## Findings about excess")[1]?.split(/^## /m)[0];
+    expect(excess).toBeDefined();
+    const tags = Array.from(excess?.matchAll(/^\|\s*`([^`]+)`\s*\|/gm) ?? [], (match) => match[1]);
+    expect(tags).toEqual(TAGS);
+    expect(excess?.replace(/\s+/g, " ")).toContain("code, controls, settings and explanatory copy");
+    expect(excess).toContain("code already present");
+  });
+
+  it.each(
+    ["packages/qfai/assets/init/.qfai", ".qfai"].flatMap((tree) =>
+      [
+        "architecture-reviewer",
+        "completion-reviewer",
+        "implementation-reviewer",
+        "product-surface-reviewer",
+        "qa-gatekeeper",
+        "requirements-reviewer",
+      ].map((role) => ({ tree, role })),
+    ),
+  )("$tree/$role ships the same vocabulary and product scope", async ({ tree, role }) => {
+    const text = await readFile(path.join(ROOT, tree, "assistant/agents", `${role}.md`), "utf-8");
+    const excess = text
+      .match(/^- Apply .*tag excess.*(?:\r?\n {2}.+)*/m)?.[0]
+      ?.replace(/\s+/g, " ");
+    expect(excess).toBeDefined();
+    for (const tag of TAGS) expect(excess).toContain("`" + tag + "`");
+    expect(excess).toContain("code, controls, settings and explanatory copy");
+    expect(excess).toContain("`delete` also covers replacement by code already present.");
+  });
+});
+
 /**
  * Every rule master, read off the directory.
  *

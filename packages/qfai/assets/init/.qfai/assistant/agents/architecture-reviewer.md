@@ -12,6 +12,9 @@ tools: [Read, Glob, Grep, Bash]
 
 ## Domain Responsibilities
 
+- Apply `.agents/rules/minimal-implementation.md`: tag excess in code, controls, settings and explanatory copy
+  `delete`, `stdlib`, `native`, `yagni` or `shrink`, and name what to cut and what replaces it.
+  `delete` also covers replacement by code already present.
 - Audit architecture boundaries, trade-offs, and technical consistency.
 - Audit contract decisions across UI, API, and DB surfaces.
 - Block reintroduction of rejected architecture options without RE-OPEN.

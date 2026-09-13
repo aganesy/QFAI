@@ -27,16 +27,16 @@ Do not suppress any actionable finding.
 
 ## Findings about excess
 
-A finding about code that should not exist is one line: **where it is, what to
-cut, and what replaces it**. Tag it with the reason.
+A finding about excess is one line: **where it is, what to cut, and what
+replaces it**. The tags cover code, controls, settings and explanatory copy.
 
-| Tag      | Means                                                                               | What replaces it      |
-| -------- | ----------------------------------------------------------------------------------- | --------------------- |
-| `delete` | Dead code, unused flexibility, a speculative feature                                | Nothing               |
-| `stdlib` | A hand-rolled thing the standard library ships                                      | Name the function     |
-| `native` | Code or a dependency doing what the platform already does                           | Name the feature      |
-| `yagni`  | An abstraction with one implementation, config nobody sets, a layer with one caller | Inline it             |
-| `shrink` | The same logic, fewer lines                                                         | Show the shorter form |
+| Tag      | Means                                                                                 | What replaces it                            |
+| -------- | ------------------------------------------------------------------------------------- | ------------------------------------------- |
+| `delete` | Unneeded code, controls, settings or explanatory sentences; duplicated implementation | Nothing, or code already present            |
+| `stdlib` | A hand-rolled implementation of a standard-library function                           | Name the function                           |
+| `native` | Custom code or controls duplicating a platform feature                                | Name the built-in feature                   |
+| `yagni`  | A speculative abstraction, control or setting without a current requirement           | Remove it, or inline the kept behavior      |
+| `shrink` | The same behavior or meaning with less code or clearer, shorter copy                  | Show the smaller implementation or sentence |
 
 The ladder these tags read against is
 `.agents/rules/minimal-implementation.md`. It is not restated here.
