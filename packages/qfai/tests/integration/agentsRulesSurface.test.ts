@@ -15,6 +15,9 @@ describe("repository async guidance agrees with the retained-failure test", () =
       const text = await readFile(path.join(ROOT, file), "utf-8");
       const flat = text.replace(/\s+/g, " ").toLowerCase();
       expect(flat).toContain("await or return every promise");
+      expect(flat).toContain(
+        "returning propagates only when its caller awaits or adopts the promise",
+      );
       expect(flat).toContain("subject to the safety floor");
       expect(flat).toContain(".agents/rules/minimal-implementation.md");
       expect(flat).toContain("§ 2");

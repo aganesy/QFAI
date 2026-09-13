@@ -7,7 +7,8 @@ Quality-First AI (QFAI) — specification-driven development の検証フレー�
 - Follow existing code conventions and patterns in the repository.
 - All source changes must have corresponding test coverage.
 - TypeScript: avoid bare `as` type assertions; prefer type narrowing.
-- TypeScript: await or return every promise. Subject to the safety floor in
+- TypeScript: await or return every promise. Returning propagates only when its
+  caller awaits or adopts the promise. Subject to the safety floor in
   `.agents/rules/minimal-implementation.md` § 2, do not add a catch for a failure
   that no specification, contract or observation names.
 - Keep functions focused; extract when a function exceeds ~50 lines.

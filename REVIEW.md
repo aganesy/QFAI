@@ -6,7 +6,8 @@ The following categories must ALWAYS be reported as inline PR comments,
 regardless of confidence level or severity.
 Do not suppress any actionable finding.
 
-Await or return every promise. Subject to the safety floor in
+Await or return every promise. Returning propagates only when its caller awaits
+or adopts the promise. Subject to the safety floor in
 `.agents/rules/minimal-implementation.md` § 2, do not add a catch for a failure
 that no specification, contract or observation names.
 
