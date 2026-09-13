@@ -416,3 +416,101 @@ export function addRuleCitations(
   lines.splice(at, 0, ...bullets.map((bullet) => `${bullet}${terminator}`));
   return lines.join("\n");
 }
+
+/**
+ * Every spelling of a rule bullet a release wrote and a later template rewords,
+ * keyed by the master the bullet cites.
+ *
+ * The section is written once and left to the project, while the master it
+ * summarises is refreshed wherever the project has not edited it. A reworded
+ * summary would therefore reach fresh projects only, and an agent in any other
+ * project would read a summary the refreshed rule contradicts. A line that is
+ * exactly one of these is text a release wrote and nobody changed, so it takes
+ * the template's wording; any other text in its place is the project's.
+ *
+ * A project can skip releases, so every spelling that shipped stays listed.
+ */
+const SUPERSEDED_RULE_BULLETS: ReadonlyMap<string, readonly string[]> = new Map([
+  [
+    ".agents/rules/grilling.md",
+    [
+      "- `.agents/rules/grilling.md` — interview the decision tree in rounds before a design is fixed; a session ends on an empty frontier and the user's confirmation, never at a question count.",
+    ],
+  ],
+]);
+
+/** A document after its superseded bullets are refreshed, and the masters they cite. */
+export type RefreshedRuleBullets = {
+  readonly text: string;
+  readonly refreshed: readonly string[];
+};
+
+/**
+ * `existing` with every superseded bullet inside its managed section replaced by
+ * the template's bullet for the same master.
+ *
+ * Returns `existing` unchanged when the file has no complete marker pair: outside
+ * the markers, a line matching a shipped bullet is still the project's.
+ */
+export function refreshSupersededRuleBullets(
+  existing: string,
+  section: string,
+): RefreshedRuleBullets {
+  const { lines, open, begin, end } = managedSection(existing);
+  if (begin === -1 || end === -1) return { text: existing, refreshed: [] };
+  return replaceSupersededBullets(existing, lines, open, { from: begin + 1, to: end }, section);
+}
+
+/**
+ * The same refresh for a file the run generates whole rather than delimits, read
+ * in full as `addRuleCitationsToList` reads it.
+ */
+export function refreshSupersededRuleBulletsInList(
+  existing: string,
+  section: string,
+): RefreshedRuleBullets {
+  const lines = existing.split("\n");
+  const range = { from: 0, to: lines.length };
+  return replaceSupersededBullets(existing, lines, outsideFences(lines), range, section);
+}
+
+/**
+ * Replaces, within `range`, each line whose own text is exactly a superseded
+ * bullet.
+ *
+ * The comparison ignores a trailing CR and nothing else, and the line keeps its
+ * terminator. A bullet the project reworded, indented or quoted therefore stays,
+ * and so does a line in a fenced block: that is an example of a bullet, not one.
+ */
+function replaceSupersededBullets(
+  existing: string,
+  lines: string[],
+  open: readonly boolean[],
+  range: { from: number; to: number },
+  section: string,
+): RefreshedRuleBullets {
+  const refreshed = new Set<string>();
+  for (let index = range.from; index < range.to; index += 1) {
+    if (open[index] !== true) continue;
+    const line = lines[index] ?? "";
+    const own = line.replace(/\r$/, "");
+    const master = supersededMasterOf(own);
+    if (master === null) continue;
+    // Without a CR of its own, since the line keeps the terminator it has. A
+    // template that no longer summarises the master has nothing to put here.
+    const current = bulletFor(section, master)?.replace(/\r$/, "");
+    if (current === undefined || current === own) continue;
+    lines[index] = `${current}${terminatorOf(line)}`;
+    refreshed.add(master);
+  }
+  if (refreshed.size === 0) return { text: existing, refreshed: [] };
+  return { text: lines.join("\n"), refreshed: [...refreshed].sort() };
+}
+
+/** The master `line` is a superseded bullet for, or `null` when it is not one. */
+function supersededMasterOf(line: string): string | null {
+  for (const [master, spellings] of SUPERSEDED_RULE_BULLETS) {
+    if (spellings.includes(line)) return master;
+  }
+  return null;
+}

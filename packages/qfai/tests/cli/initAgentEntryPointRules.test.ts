@@ -18,6 +18,7 @@
 
 import {
   chmod,
+  link,
   mkdir,
   mkdtemp,
   readFile,
@@ -46,6 +47,8 @@ import {
   extractManagedRulesSection,
   hasUnclosedRulesSection,
   needsManagedRulesSection,
+  refreshSupersededRuleBullets,
+  refreshSupersededRuleBulletsInList,
 } from "../../src/core/agentEntryPoints.js";
 import { getInitAssetsDir } from "../../src/shared/assets.js";
 
@@ -72,6 +75,30 @@ const PROJECT_TEXT = [
 ].join("\n");
 
 const occurrences = (haystack: string, needle: string): number => haystack.split(needle).length - 1;
+
+/** `runInit` with what it wrote to stdout and to stderr. */
+async function initCapturing(
+  root: string,
+  options: { force: boolean; dryRun: boolean },
+): Promise<{ stdout: string; stderr: string }> {
+  const out: string[] = [];
+  const err: string[] = [];
+  const stdout = vi.spyOn(process.stdout, "write").mockImplementation((chunk: unknown) => {
+    out.push(String(chunk));
+    return true;
+  });
+  const stderr = vi.spyOn(process.stderr, "write").mockImplementation((chunk: unknown) => {
+    err.push(String(chunk));
+    return true;
+  });
+  try {
+    await runInit({ dir: root, ...options, yes: true });
+  } finally {
+    stdout.mockRestore();
+    stderr.mockRestore();
+  }
+  return { stdout: out.join(""), stderr: err.join("") };
+}
 
 /** `runInit` with the diagnostics it wrote to stderr. */
 async function initCapturingStderr(root: string): Promise<string> {
@@ -976,5 +1003,267 @@ describe("what the citation scan reads a line as", () => {
     // The project's own CRLF lines are still CRLF, and the section is still LF.
     expect(merged.startsWith("# Our house rules\r\n")).toBe(true);
     expect(merged).toContain("- `.agents/rules/grilling.md` — interview the decision tree.\n");
+  });
+});
+
+/**
+ * A rule summary an earlier release wrote, which the template has since reworded.
+ *
+ * The section is written once and left to the project, while the master it
+ * summarises is refreshed wherever the project has not edited it. Unless the
+ * bullet is refreshed too, the agent loading the entry point reads a summary its
+ * own rule contradicts.
+ */
+describe("a later init refreshes a rule summary the project never edited", () => {
+  const master = ".agents/rules/grilling.md";
+  /** The grilling bullet as an earlier release wrote it into every rule list. */
+  const superseded =
+    "- `.agents/rules/grilling.md` — interview the decision tree in rounds before a design is fixed; a session ends on an empty frontier and the user's confirmation, never at a question count.";
+
+  /** The template's own bullet for the master. */
+  async function currentBullet(name: string): Promise<string> {
+    const bullet = (extractManagedRulesSection(await readTemplate(name)) ?? "")
+      .split("\n")
+      .find((line) => line.startsWith("- ") && line.includes(master));
+    expect(bullet, `${name} has no bullet for ${master}`).toBeDefined();
+    expect(bullet).not.toBe(superseded);
+    return bullet ?? "";
+  }
+
+  /** Both entry points as that release left them, written with `eol`. */
+  async function seedSuperseded(root: string, eol = "\n"): Promise<Map<string, string>> {
+    for (const name of AGENT_ENTRY_POINT_FILES) {
+      await writeFile(path.join(root, name), PROJECT_TEXT, "utf-8");
+    }
+    await runInit({ dir: root, force: false, dryRun: false, yes: true });
+    const seeded = new Map<string, string>();
+    for (const name of AGENT_ENTRY_POINT_FILES) {
+      const written = await readEntryPoint(root, name);
+      expect(written).toContain(await currentBullet(name));
+      const old = written
+        .replace(await currentBullet(name), superseded)
+        .split("\n")
+        .join(eol);
+      await writeFile(path.join(root, name), old, "utf-8");
+      seeded.set(name, old);
+    }
+    return seeded;
+  }
+
+  /** The report lines `runInit` printed for `name` under `verb`. */
+  const reportLines = (stdout: string, verb: string, name: string): string[] =>
+    stdout.split("\n").filter((line) => line.includes(`${verb}: `) && line.includes(`${name} (`));
+
+  it.each([
+    { mode: "a plain run", force: false },
+    { mode: "--force", force: true },
+  ])("replaces the unedited bullet on $mode and changes nothing else", async ({ force }) => {
+    await withProject(async (root) => {
+      const seeded = await seedSuperseded(root);
+
+      const { stdout } = await initCapturing(root, { force, dryRun: false });
+
+      for (const name of AGENT_ENTRY_POINT_FILES) {
+        const expected = (seeded.get(name) ?? "").replace(superseded, await currentBullet(name));
+        expect(await readEntryPoint(root, name)).toBe(expected);
+        // The report names the refresh, so its "nothing else changed" is true.
+        expect(reportLines(stdout, "updated", name)).toEqual([
+          expect.stringContaining(
+            `(refreshed the unedited summary of \`${master}\`; nothing else changed)`,
+          ),
+        ]);
+      }
+    });
+  });
+
+  it("leaves a bullet the project edited, and refreshes one it did not", async () => {
+    await withProject(async (root) => {
+      const seeded = await seedSuperseded(root);
+      const edited = superseded.replace("never at a question count", "and we stop after three");
+      const agents = (seeded.get("AGENTS.md") ?? "").replace(superseded, edited);
+      await writeFile(path.join(root, "AGENTS.md"), agents, "utf-8");
+
+      await runInit({ dir: root, force: true, dryRun: false, yes: true });
+
+      // The edited line is the project's, however close to a shipped one.
+      expect(await readEntryPoint(root, "AGENTS.md")).toBe(agents);
+      expect(await readEntryPoint(root, "CLAUDE.md")).toBe(
+        (seeded.get("CLAUDE.md") ?? "").replace(superseded, await currentBullet("CLAUDE.md")),
+      );
+    });
+  });
+
+  it("leaves the same line inside a fenced example as it is", async () => {
+    await withProject(async (root) => {
+      const seeded = await seedSuperseded(root);
+      // An example inside the section, below the real bullet. It shows a line;
+      // it cites nothing, so it is not a summary to refresh.
+      const withExample = (seeded.get("AGENTS.md") ?? "").replace(
+        QFAI_AGENT_RULES_END,
+        ["```markdown", superseded, "```", "", QFAI_AGENT_RULES_END].join("\n"),
+      );
+      await writeFile(path.join(root, "AGENTS.md"), withExample, "utf-8");
+
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+
+      const after = await readEntryPoint(root, "AGENTS.md");
+      // The first occurrence is the bullet; the second, in the fence, stays.
+      expect(after).toBe(withExample.replace(superseded, await currentBullet("AGENTS.md")));
+      expect(occurrences(after, superseded)).toBe(1);
+    });
+  });
+
+  it("keeps a CRLF file's line endings", async () => {
+    await withProject(async (root) => {
+      const seeded = await seedSuperseded(root, "\r\n");
+
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+
+      for (const name of AGENT_ENTRY_POINT_FILES) {
+        const after = await readEntryPoint(root, name);
+        expect(after).toBe((seeded.get(name) ?? "").replace(superseded, await currentBullet(name)));
+        // Only the empty remainder after the final CRLF lacks a CR.
+        expect(after.split("\n").filter((line) => !line.endsWith("\r"))).toEqual([""]);
+      }
+    });
+  });
+
+  it("reports the refresh on --dry-run and writes nothing", async () => {
+    await withProject(async (root) => {
+      const seeded = await seedSuperseded(root);
+
+      const { stdout } = await initCapturing(root, { force: false, dryRun: true });
+
+      for (const name of AGENT_ENTRY_POINT_FILES) {
+        expect(await readEntryPoint(root, name)).toBe(seeded.get(name));
+        expect(reportLines(stdout, "would update", name)).toEqual([
+          expect.stringContaining(`(refresh the unedited summary of \`${master}\`)`),
+        ]);
+      }
+    });
+  });
+
+  it("refreshes the bullet and cites a newly shipped master in one write", async () => {
+    await withProject(async (root) => {
+      const seeded = await seedSuperseded(root);
+      // A master this run ships for the first time: no bullet, no file.
+      const shipped = ".agents/rules/user-questions.md";
+      const withoutBullet = (seeded.get("AGENTS.md") ?? "")
+        .split("\n")
+        .filter((line) => !(line.startsWith("- ") && line.includes(shipped)))
+        .join("\n");
+      await writeFile(path.join(root, "AGENTS.md"), withoutBullet, "utf-8");
+      await rm(path.join(root, ...shipped.split("/")), { force: true });
+
+      const { stdout } = await initCapturing(root, { force: false, dryRun: false });
+
+      const after = await readEntryPoint(root, "AGENTS.md");
+      expect(after).toContain(await currentBullet("AGENTS.md"));
+      expect(after).not.toContain(superseded);
+      expect(after).toContain(shipped);
+      expect(reportLines(stdout, "updated", "AGENTS.md")).toEqual([
+        expect.stringContaining(
+          `(cited the newly shipped rule masters; refreshed the unedited summary of \`${master}\`; nothing else changed)`,
+        ),
+      ]);
+    });
+  });
+
+  it("says which summary to refresh by hand when the file cannot be rewritten", async () => {
+    await withProject(async (root) => {
+      const seeded = await seedSuperseded(root);
+      // A second name for the same file. Rewriting through one changes both.
+      try {
+        await link(path.join(root, "AGENTS.md"), path.join(root, "shared-agents.md"));
+      } catch {
+        // A file system without hard links cannot exercise this case.
+        return;
+      }
+
+      const { stderr } = await initCapturing(root, { force: false, dryRun: false });
+
+      expect(await readEntryPoint(root, "AGENTS.md")).toBe(seeded.get("AGENTS.md"));
+      expect(stderr).toContain("hard link");
+      expect(stderr).toContain(`Refresh the summary of \`${master}\` by hand`);
+      expect(stderr).not.toContain("Add the rule citations");
+    });
+  });
+
+  it("refreshes it in the Copilot instruction file on a plain run", async () => {
+    await withProject(async (root) => {
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+      const copilot = path.join(root, ".github", "copilot-instructions.md");
+      const generated = await readFile(copilot, "utf-8");
+      const bullet = generated
+        .split("\n")
+        .find((line) => line.startsWith("- ") && line.includes(master));
+      expect(bullet).toBeDefined();
+      await writeFile(copilot, generated.replace(bullet ?? "", superseded), "utf-8");
+
+      const { stdout } = await initCapturing(root, { force: false, dryRun: false });
+
+      // Back to what this release generates, byte for byte.
+      expect(await readFile(copilot, "utf-8")).toBe(generated);
+      expect(reportLines(stdout, "updated", "copilot-instructions.md")).toEqual([
+        expect.stringContaining(`(refreshed the unedited summary of \`${master}\`;`),
+      ]);
+    });
+  });
+
+  describe("which lines the refresh reads", () => {
+    const template = [
+      QFAI_AGENT_RULES_BEGIN,
+      "",
+      "- `.agents/rules/grilling.md` — interview the decision tree in rounds.",
+      "",
+      QFAI_AGENT_RULES_END,
+    ].join("\n");
+    const current = "- `.agents/rules/grilling.md` — interview the decision tree in rounds.";
+
+    it("reads only inside the markers of an entry point", () => {
+      // The project's own list above the section holds the same line. Outside
+      // the markers nothing says a release wrote it.
+      const existing = [
+        "# Our house rules",
+        "",
+        superseded,
+        "",
+        QFAI_AGENT_RULES_BEGIN,
+        "",
+        superseded,
+        "",
+        QFAI_AGENT_RULES_END,
+        "",
+      ].join("\n");
+
+      const result = refreshSupersededRuleBullets(existing, template);
+
+      const expected = existing.split("\n");
+      expected[6] = current;
+      expect(result.refreshed).toEqual([master]);
+      expect(result.text).toBe(expected.join("\n"));
+    });
+
+    it("skips a fenced or quoted line in a list the run generates whole", () => {
+      const existing = [
+        CROSS_AI_RULES_HEADING,
+        "",
+        superseded,
+        "",
+        "```markdown",
+        superseded,
+        "```",
+        "",
+        `> ${superseded}`,
+        "",
+      ].join("\n");
+
+      const result = refreshSupersededRuleBulletsInList(existing, template);
+
+      const expected = existing.split("\n");
+      expected[2] = current;
+      expect(result.refreshed).toEqual([master]);
+      expect(result.text).toBe(expected.join("\n"));
+    });
   });
 });

@@ -80,6 +80,11 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   the user, the ones the agents agreed on included, and the user ends it — which the primitive said the other way round, so an agent could
   terminate a session before the user saw what it escalated.
 
+  `qfai init` also brings the one-line summary of this rule up to date in an
+  existing `AGENTS.md`, `CLAUDE.md` and `.github/copilot-instructions.md`. It
+  replaces the line only while it is exactly what 1.12.0 wrote, and leaves a line
+  the project edited as it is.
+
 ### Fixed
 
 - **The working-tree address excludes a nested project's own records, and stops on
