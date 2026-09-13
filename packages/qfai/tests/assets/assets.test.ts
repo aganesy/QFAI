@@ -2575,6 +2575,40 @@ describe("assets guardrails", () => {
     }
     const issues = await validateSkillDocReferences(templateRoot, defaultConfig);
     expect(issues.filter((entry) => entry.rule === "skillDocReferences.projectMemory")).toEqual([]);
+    const atdd = await readFile(
+      path.join(templateQfaiDir, "assistant/skills/qfai-atdd/SKILL.md"),
+      "utf-8",
+    );
+    const atddMemory = atdd.split(/^project_memory:\s*$/m)[1] ?? "";
+    for (const clause of [
+      /tests\/e2e\/\*\* must cover all required US.*tests\/api\/\*\* all active CON-API.*tests\/integration\/\*\* all active CON-DB/,
+      /L1\/Unit and L2\/Component owe no ATDD annotation/,
+      /L3\/Integration.*tests\/integration/,
+      /L4\/API.*tests\/api.*L5\/E2E.*tests\/e2e/,
+      /blank.*unreadable.*system \/ acceptance.*tests\/integration/,
+      /planned.*whole.*file.*never.*operation/,
+      /top-level key.*column-0 comment/,
+      /standalone.*SQL.*leading whitespace.*trailing SQL/,
+      /sibling.*cross-spec obligation.*never.*planned/,
+      /surface.*project-wide.*opt-in/,
+    ]) {
+      expect(atddMemory).toMatch(clause);
+    }
+    const sdd = await readFile(
+      path.join(templateQfaiDir, "assistant/skills/qfai-sdd/SKILL.md"),
+      "utf-8",
+    );
+    const sddMemory = sdd.split(/^project_memory:\s*$/m)[1] ?? "";
+    for (const clause of [
+      /existing rows keep their TDD-ID, Status, Test file, Selector, DR-ID and Evidence/,
+      /E2E\/API rows split.*boundar.*US-Refs \/ CON-API-Refs.*not.*TC-Refs/,
+      /eight-column ledger.*US-Refs \/ CON-API-Refs.*moving.*TC-Refs.*Layer owns/,
+      /integration-level TC group.*blank.*unrecognized.*system \/ acceptance/,
+      /surface typing is unused.*every.*US-\*/,
+      /Tier.*Layer.*infrastructure.*public API.*persisted schema.*criticality/,
+    ]) {
+      expect(sddMemory).toMatch(clause);
+    }
   });
 
   it("pins every width backlog entry to the file's real width", async () => {
