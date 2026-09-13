@@ -226,13 +226,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 - **spec-0013's ledger repair is recorded where the Drift Protocol looks for it**
   (#1750). The ledger has nine of the template's fifteen columns, no row for six
-  integration-level test cases, one for fourteen stories, and eleven `done` rows
-  whose selector runs several boundaries, which Phase 2b splits only under an
-  approved Change Request. Every rerun that re-derives the pack runs that phase,
-  so any of them would make those writes unrecorded and stop at the eleven rows.
+  integration-level test cases, one for fourteen stories, and thirteen rows past
+  `todo` whose selector runs several boundaries, which Phase 2b splits only under
+  an approved Change Request. Every rerun that re-derives the pack runs that
+  phase, so any of them would make those writes unrecorded and stop at those
+  rows.
 
   `CR-20260913-0009` proposes re-deriving the ledger with no statement of the
-  pack moving: the columns filled, the owed rows seeded at `todo`, the eleven
+  pack moving: the columns filled, the owed rows seeded at `todo`, the thirteen
   rows split with each keeping the boundary its evidence observed, and the kept
   rows reset. The ledger is unchanged until it is applied.
 

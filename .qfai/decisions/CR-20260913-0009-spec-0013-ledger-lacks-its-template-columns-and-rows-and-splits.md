@@ -1,7 +1,7 @@
 # Change Request
 
 - ID: `CR-20260913-0009`
-- Title: `spec-0013's ledger lacks the columns and rows Phase 2b owes, and eleven done rows run several boundaries behind one selector`
+- Title: `spec-0013's ledger lacks the columns and rows Phase 2b owes, and thirteen rows past todo run several boundaries behind one selector`
 - Raised by: `qfai-sdd`
 - Raised at: `2026-09-13T09:30:00Z`
 - Class: `defect`
@@ -36,16 +36,18 @@ story and one `API` row per owned `CON-API-*`. Against the pack:
 | Boundaries               | one row per independently observable boundary a test case states; `TC-0013-0028` states two, the pack returned and no file times read | one, `TDD-0023`, whose case covers the first |
 | `API`                    | none: no pack file names a `CON-API-*`                                                                                                | none                                         |
 
-**Rows that run several boundaries.** Eleven `done` rows name a `Selector`
-that runs more than one independently observable boundary of the obligation
-the row carries. Phase 2b re-scopes such a row only under a Change Request
-naming the row, its boundaries and their order, and splits it keeping the
-boundary its recorded evidence observed. The table under `## Proposed change`
-names each of them.
+**Rows that run several boundaries.** Thirteen rows past `todo` — eleven at
+`done` and two at `exception` — name a `Selector` that runs more than one
+independently observable boundary of the obligation the row carries. Phase
+2b re-scopes a row past `todo` whatever its status, since Phase Red never
+selects it again, and only under a Change Request naming the row, its
+boundaries and their order. It splits the row keeping the boundary its
+recorded evidence observed. The table under `## Proposed change` names each
+of them.
 
 Every `re-derive` rerun of `spec-0013` runs Phase 2b, so a rerun raised for any
 other reason would perform the column and row writes above without a record
-authorising them, and would stop at the eleven rows. This record makes those
+authorising them, and would stop at the thirteen rows. This record makes those
 writes on their own, with nothing else in the pack moving.
 
 ## Reproduction
@@ -63,9 +65,11 @@ The template header,
 | TDD-ID | TC-Refs | Layer | Tier | Test file | Selector | Status | DR-ID | Evidence | US-Refs | CON-API-Refs | Owning module | Blocked-By | BR-Ref | Boundary |
 ```
 
-The cases each of the eleven selectors runs, from their test files:
+The cases each of the thirteen selectors runs, from their test files:
 
 ```text
+sddSkillSpec0013.test.ts             TC-0013-0003 describe: 2 cases
+traceabilityIntegrity.test.ts        TDD-0015 describe: 2 cases
 sddUiTemplate.test.ts                TC-0013-0025 describe: 2 cases
 sddPrimaryTasksLane.test.ts          TC-0013-0026 describe: 2 cases; TC-0013-0027 describe: 3 cases
 spec0013UiContractPrimaryTasksE2E    US-0013-0011 describe: 3 cases
@@ -78,17 +82,20 @@ primaryTasksStructured.test.ts       TC-0013-0034 describe: 2 cases; TC-0013-003
 ## Proposed change
 
 Re-derive the ledger to its template, with no statement of the pack moving.
-The eleven rows are split in the order below. Each keeps its `TDD-ID` on the
+The thirteen rows are split in the order below. Each keeps its `TDD-ID` on the
 first boundary listed, with its `Selector` narrowed to that boundary's cases,
 and one row is appended at `todo` for each boundary after it.
 
 The kept boundary follows the rule for the row's evidence. A row whose
 falsifiability proof covers one boundary keeps that one. A row whose RED was
-taken over the whole file, or whose proof covers several boundaries, keeps the
-first its test case or story lists among them.
+taken over the whole file, whose proof covers several boundaries, or which
+records no RED at all, keeps the first its test case or story lists among
+them.
 
 | Row        | Obligation     | Boundaries, kept first                                                                                                                                           | Why the first is kept                                                                                       |
 | ---------- | -------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------- |
+| `TDD-0003` | `TC-0013-0003` | `/qfai-sdd` continues on an incomplete or contradictory pack; it stops only when no usable source exists                                                         | it records a one-shot GREEN and no RED, so the test case's order decides                                    |
+| `TDD-0015` | `TC-0013-0020` | `validateTraceabilityIntegrity` is exported from the validators index; `validate.ts` imports it and calls it in the pipeline                                     | it records no RED, so the test case's order decides                                                         |
 | `TDD-0019` | `TC-0013-0025` | the template's screens carry a `primary_tasks` slot; the requirements-analyst guide asks for at least one task per screen                                        | its RED failed both at once, so the test case's order decides                                               |
 | `TDD-0020` | `TC-0013-0026` | the lane fails an empty list at `error`, naming the file, the screen and the rule; the `/qfai-prototyping` preflight refuses it                                  | its proof names both the lane and the preflight check, so the test case's order decides                     |
 | `TDD-0021` | `TC-0013-0027` | the lane passes a contract whose screens each hold a task; the preflight proceeds on it; a contract from before the slot is treated under the deprecation window | its RED was taken over the whole file                                                                       |
@@ -123,10 +130,13 @@ disagreement goes through the Drift Protocol rather than through this record.
 
 | Item                 | Kind         | Why it depends on the artifact                                   |
 | -------------------- | ------------ | ---------------------------------------------------------------- |
+| `spec-0013/TDD-0003` | `ledger-row` | Its `Selector` is narrowed to the case where the stage continues |
+| `spec-0013/TDD-0015` | `ledger-row` | Its `Selector` is narrowed to the export case                    |
 | `spec-0013/TDD-0019` | `ledger-row` | Its `Selector` is narrowed to the template slot's case           |
 | `spec-0013/TDD-0020` | `ledger-row` | Its `Selector` is narrowed to the lane's failing case            |
 | `spec-0013/TDD-0021` | `ledger-row` | Its `Selector` is narrowed to the passing contract's case        |
 | `spec-0013/TDD-0022` | `ledger-row` | Its `Selector` is narrowed to the template slot's case           |
+| `spec-0013/TDD-0023` | `ledger-row` | It takes a `Boundary` once a row is appended beside it           |
 | `spec-0013/TDD-0024` | `ledger-row` | Its `Selector` is narrowed to the missing pack's case            |
 | `spec-0013/TDD-0025` | `ledger-row` | Its `Selector` is narrowed to the population cases               |
 | `spec-0013/TDD-0026` | `ledger-row` | Its `Selector` is narrowed to the cases for a companion          |
@@ -137,12 +147,9 @@ disagreement goes through the Drift Protocol rather than through this record.
 
 - Not blocked by this CR: every other `spec-0013` row. `TDD-0016` to
   `TDD-0018` sit at `todo`, and Phase Red judges a `todo` row's selector when it
-  selects it. `TDD-0001` to `TDD-0015` sit at `exception`. `TDD-0003` and
-  `TDD-0015` run two cases each, and neither is split here: an `exception` row
-  returns to `todo` when its anomaly is resolved, and Phase Red then judges its
-  selector and raises its split, which is the path a `done` row does not have.
-  `TDD-0023` runs one case, the first of `TC-0013-0028`'s two boundaries, and
-  keeps it.
+  selects it. The other `exception` rows, `TDD-0001`, `TDD-0002` and `TDD-0004`
+  to `TDD-0014`, run one case each and are each alone on their obligation, so
+  their `Boundary` is `-`.
 - Overlapping open CRs: `none`. A later record that re-derives `spec-0013` is
   applied after this one, against a ledger that already has its columns, its
   rows and its splits.
@@ -151,7 +158,12 @@ disagreement goes through the Drift Protocol rather than through this record.
 
 - Specs: `spec-0013`
 - Plans: `none`
-- Tests: the eleven rows above, and the rows appended for them —
+- Tests: the rows above, the rows appended for them, and the rows seeded for
+  `TC-0013-0014` to `TC-0013-0019` —
+  `packages/qfai/tests/integration/sddSkillSpec0013.test.ts`,
+  `packages/qfai/tests/core/traceabilityIntegrity.test.ts`,
+  `packages/qfai/tests/integration/specAutoDiscovery.test.ts`,
+  `packages/qfai/tests/core/sddTriage.test.ts`,
   `packages/qfai/tests/integration/sddUiTemplate.test.ts`,
   `packages/qfai/tests/integration/sddPrimaryTasksLane.test.ts`,
   `packages/qfai/tests/e2e/spec0013UiContractPrimaryTasksE2E.test.ts`,
@@ -167,8 +179,8 @@ disagreement goes through the Drift Protocol rather than through this record.
 ## Decision needed from user
 
 Re-derive `spec-0013`'s ledger to its template — the six columns it lacks, the
-rows Phase 2b owes, and the eleven splits in the table — and reset the eleven
-kept rows to `todo`?
+rows Phase 2b owes, and the thirteen splits in the table — and reset the
+thirteen kept rows and `TDD-0023` to `todo`?
 
 ## Approved actions (owner skill rerun plan)
 
@@ -180,12 +192,28 @@ kept rows to `todo`?
      split row and `-` on a row alone on its obligation, `CON-API-Refs` as `-`
      and `Blocked-By` empty. No row has a recorded tier, so writing one raises
      none, and no row is reset for its tier;
-   - at `todo`, an `Integration` row for each of `TC-0013-0014` to
-     `TC-0013-0019`, and a row for `TC-0013-0028`'s second boundary;
+   - at `todo`, the `Integration` rows `TC-0013-0014` to `TC-0013-0019` are
+     owed: one per boundary each test case states, in the order it states them,
+     with a `Boundary` slug wherever a test case holds more than one. Thirteen
+     rows:
+     - `TC-0013-0014`: one row, the result carrying `entries`, `allSpecs` and
+       `fullScan`;
+     - `TC-0013-0015`: `true` when a `_policies/` file is modified; `false`
+       when none is;
+     - `TC-0013-0016`: a configured `baseBranch` is read; an absent one returns
+       the default;
+     - `TC-0013-0017`: one row, old evidence without a Diff Context section
+       parsing;
+     - `TC-0013-0018`: a backslash round-trips without doubling; a pipe
+       round-trips through its `\|` escape; the combination `a\|b`
+       round-trips; then one row for each line-break class, `\r\n`, `\r` and
+       `\n`, collapsing to a single space;
+     - `TC-0013-0019`: one row, a plain ASCII cell round-tripping unchanged;
+   - at `todo`, a row for `TC-0013-0028`'s second boundary;
    - at `todo`, the `E2E` rows the thirteen stories without one are owed. That
      count is a floor rather than the number of rows: the phase seeds one row
      per independently observable boundary a story's criteria name;
-   - the eleven splits under `## Proposed change`, each appended row at `todo`
+   - the thirteen splits under `## Proposed change`, each appended row at `todo`
      with its `Boundary` and no `DR-ID`, since no reset reaches a row that did
      not exist.
 
@@ -194,22 +222,26 @@ kept rows to `todo`?
    `Mode`, `Approved by`, `Applied at` — not as a `## Triage` row.
 
 2. Downstream ledger sweep: **reset to `todo`**, recording this Change Request's
-   ID in `DR-ID`, the eleven kept rows: `spec-0013/TDD-0019`, `TDD-0020`,
-   `TDD-0021`, `TDD-0022`, `TDD-0024`, `TDD-0025`, `TDD-0026`, `TDD-0027`,
-   `TDD-0028`, `TDD-0029` and `TDD-0030`. A narrowed `Selector` changes the
-   row's identity, so the evidence and the reviewer hashes recorded against the
-   old one no longer describe it, and a split row is re-executed whether or not
-   its recorded observation would still hold. `/qfai-implement`'s Change
-   Request preflight writes the reset.
+   ID in `DR-ID`, the thirteen kept rows — `spec-0013/TDD-0003`, `TDD-0015`,
+   `TDD-0019`, `TDD-0020`, `TDD-0021`, `TDD-0022`, `TDD-0024`, `TDD-0025`,
+   `TDD-0026`, `TDD-0027`, `TDD-0028`, `TDD-0029` and `TDD-0030` — and
+   `spec-0013/TDD-0023`. A narrowed `Selector` changes the row's identity, so
+   the evidence and the reviewer hashes recorded against the old one no longer
+   describe it, and a split row is re-executed whether or not its recorded
+   observation would still hold. `TDD-0023` keeps its `Selector`, but the row
+   appended beside it gives it a `Boundary`, and once its test case holds two
+   rows that cell is part of the row's identity. `TDD-0003` and `TDD-0015` keep
+   the Decision Records their `DR-ID` already holds, beside this Change
+   Request's ID. `/qfai-implement`'s Change Request preflight writes the reset.
 
 3. **The tests move under `/qfai-atdd spec-0013`.** Every row this record
    touches is an `Integration` or `E2E` row, whose tests that stage writes and
    `/qfai-implement` does not. It removes `TDD-0021`'s case for an authored but
    empty list, moves the file-time case into `TC-0013-0028`'s `describe`, and
-   hands each appended row the case its boundary names, writing one where none
-   exists. That run then refreshes `.qfai/evidence/coverage-depth-spec-0013.md`,
-   whose account of the ledger's shape the rerun changes, through that stage's
-   reviewer gate.
+   hands each appended or seeded row the case its boundary names, writing one
+   where none exists. That run then refreshes
+   `.qfai/evidence/coverage-depth-spec-0013.md`, whose account of the ledger's
+   shape the rerun changes, through that stage's reviewer gate.
 
 ## Resolution
 
