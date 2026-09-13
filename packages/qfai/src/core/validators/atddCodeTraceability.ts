@@ -3,6 +3,7 @@ import path from "node:path";
 
 import type { QfaiConfig } from "../config.js";
 import { resolvePath } from "../config.js";
+import { collectFilesByGlobs, isFileSystemError } from "../fs.js";
 import {
   atddTestKindDirs,
   evaluateAtddCodeTraceability,
@@ -13,6 +14,7 @@ import {
   type AtddUnknownRef,
 } from "../atddTraceability.js";
 import type { SpecScope } from "../specScope.js";
+import { DEFAULT_TEST_FILE_EXCLUDE_GLOBS, normalizeGlobs } from "../traceability.js";
 import type { Issue } from "../types.js";
 import { issue } from "./utils.js";
 
@@ -386,6 +388,56 @@ type AtddTraceabilitySummary = {
   };
 };
 
+/**
+ * The configured test globs, when the glob matcher refuses them.
+ *
+ * `["tests/\0/*.ts"]` is valid YAML, and the scan refuses it. This stage
+ * reads only the extensions out of its globs, so the refusal never reached it
+ * and `--profile atdd` said nothing. `QFAI-TRACE-124` reports the same refusal
+ * under the `tdd` and `full` profiles; this is the stage's own code because
+ * the gate the operator was told to run is the one that has to say it.
+ *
+ * A glob the matcher accepts is not reported, whatever it selects: `tests/**`
+ * names no extension, and the stage scans the JavaScript and TypeScript set
+ * for it, which is the documented fallback.
+ */
+async function collectUnreadableTestGlobs(root: string, config: QfaiConfig): Promise<Issue[]> {
+  const globs = normalizeGlobs(config.validation.traceability.testFileGlobs);
+  if (globs.length === 0) return [];
+  try {
+    // Stops at the first match. A pattern the matcher refuses is refused before
+    // the walk starts. The exclusions are the scan's own, so a directory the
+    // scan never enters cannot fail the probe.
+    await collectFilesByGlobs(root, {
+      globs,
+      ignore: [
+        ...DEFAULT_TEST_FILE_EXCLUDE_GLOBS,
+        ...normalizeGlobs(config.validation.traceability.testFileExcludeGlobs),
+      ],
+      limit: 1,
+    });
+    return [];
+  } catch (error) {
+    // A directory the globs reach that cannot be read is not this stage's to
+    // report: it scans only its own acceptance directories, rebuilt from the
+    // extensions, and a `tests/unit` it never opens cannot fail the stage.
+    if (isFileSystemError(error)) return [];
+    const reason = error instanceof Error ? error.message : String(error);
+    return [
+      issue(
+        "QFAI-ATDD-134",
+        `The configured test globs could not be read: ${reason}.`,
+        "error",
+        path.join(root, "qfai.config.yaml"),
+        "atddCodeTraceability.testFileGlobs",
+        globs.map((glob) => JSON.stringify(glob)),
+        "canonical",
+        "Fix `validation.traceability.testFileGlobs` so the glob matcher accepts every pattern, and run `/qfai-configure` to set them against the real layout.",
+      ),
+    ];
+  }
+}
+
 export async function validateAtddCodeTraceability(
   root: string,
   config: QfaiConfig,
@@ -405,6 +457,8 @@ export async function validateAtddCodeTraceability(
   // Display paths must follow the configured testsDir; the scan already does.
   const dirs = atddTestKindDirs(config.paths.testsDir);
   const issues: Issue[] = [];
+
+  issues.push(...(await collectUnreadableTestGlobs(root, config)));
 
   issues.push(
     ...buildUnknownIssues(

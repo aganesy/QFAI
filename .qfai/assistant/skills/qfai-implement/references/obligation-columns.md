@@ -86,6 +86,16 @@ cell leaves the row with no auditable target at all. It fires only where the
 column exists, so an eight-column ledger written before these columns shipped is
 a legacy shape, not an error.
 
+**A legacy shape is still outside that protection, and validate says so.** A
+ledger with no `US-Refs` column that holds an `E2E` row — or no `CON-API-Refs`
+column and an `API` row — raises `QFAI-TDDLIST-020` at
+`warning`, once per absent column, naming every row that column would protect.
+It is not an error, because the shape is sanctioned and an error would force a
+migration this reference says is not owed. It is not silent either, because a
+row that can reach `done` with no auditable target should not read, in the
+output an operator reads, like one that cannot. A project that will carry no
+such row treats warnings as failures.
+
 **A legacy ledger needs a reader rule, not only that waiver.** Its `E2E` / `API`
 rows recorded their `US-*` / `CON-API-*` in `TC-Refs`, the only cell they had;
 waiving the validator alone leaves such a row selectable but with nothing in the

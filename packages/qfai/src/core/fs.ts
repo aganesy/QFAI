@@ -46,6 +46,37 @@ export type CollectFilesByGlobsResult = {
 
 export const DEFAULT_GLOB_FILE_LIMIT = 20000;
 
+const NUL = String.fromCharCode(0);
+
+/**
+ * Whether a scan failed on the file system rather than on a pattern: an error
+ * carrying an errno code such as `EACCES` or `ENOENT`. The repair differs, since
+ * the pattern was accepted and a directory it reached could not be read.
+ */
+export function isFileSystemError(error: unknown): boolean {
+  return (
+    error instanceof Error &&
+    "code" in error &&
+    typeof error.code === "string" &&
+    /^E[A-Z]+$/.test(error.code)
+  );
+}
+
+/**
+ * Why the glob matcher cannot use `glob`, or `null` when nothing known stops it.
+ *
+ * Given a NUL byte ahead of a wildcard, fast-glob passes the path to `readdir`
+ * from inside its directory walk. The error is thrown there, not through the
+ * stream, so no caller can catch it and the process exits. Refused before the
+ * walk, it reaches the caller as a rejection like any other scan failure, and
+ * a caller holding several globs can set this one aside and scan the rest.
+ */
+export function unusableGlobReason(glob: string): string | null {
+  return glob.includes(NUL)
+    ? `The glob ${JSON.stringify(glob)} holds a NUL byte, which no file path can hold`
+    : null;
+}
+
 export async function collectFiles(
   root: string,
   options: CollectFilesOptions = {},
@@ -72,6 +103,10 @@ export async function collectFilesByGlobs(
   const limit = normalizeLimit(options.limit);
   if (options.globs.length === 0) {
     return { files: [], truncated: false, matchedFileCount: 0, limit };
+  }
+  for (const glob of options.globs) {
+    const reason = unusableGlobReason(glob);
+    if (reason !== null) throw new Error(reason);
   }
 
   const stream = fg.stream(options.globs, {
