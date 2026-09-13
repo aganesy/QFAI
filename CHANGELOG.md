@@ -23,6 +23,10 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- The implementation reviewer flags promises neither awaited nor returned rather
+  than requiring catches on propagated async failures. A dropped rejection keeps
+  its correctness class (#1805).
+
 - **The working-tree address excludes a nested project's own records, and stops on
   a FIFO or socket git does not list** (#1747). The collection reads the lists
   from the worktree root, but rooted the `.qfai/evidence`, `.qfai/review` and
