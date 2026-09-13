@@ -280,6 +280,10 @@ describe.each(TREES)("%s", (tree) => {
 
     expect(memory).toContain("one row per independently observable boundary");
     expect(memory).toContain("always have the kept row re-executed");
+    expect(memory).toContain(
+      "Before re-execution or the downstream reset, narrow the kept matrix row's `Selector` to the chosen boundary",
+    );
+    expect(memory).toContain("appended rows cover only the remaining boundaries");
     expect(memory).toContain("columns are migrated to the template's");
   });
 

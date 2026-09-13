@@ -2594,6 +2594,7 @@ describe("assets guardrails", () => {
       /planned.*whole.*file.*never.*operation/,
       /top-level key.*column-0 comment/,
       /standalone.*SQL.*leading whitespace.*trailing SQL/,
+      /Only an out-of-slice CON-DB owned by the current spec may receive that marker; in-slice coverage remains required/,
       /sibling.*cross-spec obligation.*never.*planned/,
       /surface.*project-wide.*opt-in/,
     ]) {

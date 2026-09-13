@@ -525,6 +525,7 @@ project_memory:
 - CON-API coverage is counted per declared QFAI-CONTRACT-ID, one per file, never per OpenAPI operation.
 - API `x-qfai-status: planned` defers the whole contract file, never an operation. Read its top-level key or, when absent or unreadable, an unindented column-0 comment. An operation-level marker is ignored.
 - A CON-DB planned marker is a standalone SQL comment, `-- x-qfai-status: planned`; leading whitespace is allowed, trailing SQL is not. It defers the whole file.
+- Only an out-of-slice CON-DB owned by the current spec may receive that marker; in-slice coverage remains required.
 - A sibling's uncovered contract is recorded as a cross-spec obligation, never marked planned by this spec's run.
 - US surface narrowing is a project-wide, all-or-nothing opt-in. With no declared user-facing surface it is off and every non-planned US remains required; after opt-in, a spec without one owes no E2E reference.
 - A US with `- x-qfai-status: planned` in its own story block is deferred, not covered by an annotation-only test. Read US status independently of the surface opt-in.
