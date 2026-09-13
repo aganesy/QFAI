@@ -198,15 +198,17 @@ async function packSeal(root: string, packPath: string): Promise<string> {
       const entryPath = path.join(directory, entry.name);
       const relativePath = `${relativeDirectory}/${entry.name}`;
       if (entry.isDirectory()) await walk(entryPath, relativePath);
-      else
-        records.push(
-          `${relativePath}\0${digest(normalizeArtifact(await readFile(entryPath, "utf8")))}`,
-        );
+      else records.push(surfaceRecord(relativePath, await readFile(entryPath)));
     }
   }
   await walk(absolute, packPath);
   records.sort();
   return digest(records.join("\n"));
+}
+
+/** A round pack's `summary.json`, reviewing `specPath` at `revision`. */
+function roundSummary(revision: string, specPath = ".qfai/specs/spec-0001"): string {
+  return `${JSON.stringify({ revision, target: { kind: "spec", path: specPath } })}\n`;
 }
 
 /** A full-length git rev: the form `evidence-revision.md` asks for. */
@@ -1946,7 +1948,7 @@ describe("QFAI-TDDLIST-008", () => {
         );
         await writeFile(
           path.join(root, pack, "summary.json"),
-          `${JSON.stringify({ revision: "abc1230000000000000000000000000000000000" })}\n`,
+          roundSummary("abc1230000000000000000000000000000000000"),
         );
       }
       const evidence = completeEntry("Unit").replace(
@@ -2080,27 +2082,119 @@ describe("QFAI-TDDLIST-008", () => {
     });
   });
 
-  it("binds a round pack to the revision its round records", async () => {
-    // A sealed pack from an earlier review of the same row, with the same
-    // outcome, would otherwise stand in for this round's review.
+  it("binds a round pack to this row's spec, not to the round's GREEN revision", async () => {
+    // Ids are unique only within a spec, so a sealed pack reviewing another spec's
+    // row of the same id would otherwise stand in for this one. The round's
+    // `Revision` is its GREEN, taken before the refactor a review reads, so an
+    // earlier pack naming a later tree is not refused for it.
     await withProject(async (root) => {
-      const first = ".qfai/review/review-20260101000000000";
-      await mkdir(path.join(root, first), { recursive: true });
-      await writeFile(path.join(root, first, "review_request.md"), "TDD-ID: TDD-0001\n");
+      const foreign = ".qfai/review/review-20260101000000000";
+      const later = ".qfai/review/review-20260101010000000";
+      for (const [pack, specPath] of [
+        [foreign, ".qfai/specs/spec-0002"],
+        [later, ".qfai/specs/spec-0001"],
+      ] as const) {
+        await mkdir(path.join(root, pack), { recursive: true });
+        await writeFile(path.join(root, pack, "review_request.md"), "TDD-ID: TDD-0001\n");
+        await writeFile(
+          path.join(root, pack, "R01_completion-reviewer.md"),
+          `Result: REVISE\nReviewed revision: ${"d".repeat(40)}\n`,
+        );
+        await writeFile(
+          path.join(root, pack, "summary.json"),
+          roundSummary("d".repeat(40), specPath),
+        );
+      }
+      const evidence = completeEntry("Unit").replace(
+        "- Refactor verify command: npm test",
+        [
+          "- Round 1: reviewer verdict (attempt 1): REVISE — the assertion names no boundary",
+          `- Round 1: Review pack (attempt 1): ${foreign}`,
+          `- Round 1: Review pack seal (attempt 1): sha256:${await packSeal(root, foreign)}`,
+          "- Round 1: reviewer verdict (attempt 2): REVISE — the boundary is still unnamed",
+          `- Round 1: Review pack (attempt 2): ${later}`,
+          `- Round 1: Review pack seal (attempt 2): sha256:${await packSeal(root, later)}`,
+          "- Round 1: reviewer verdict (attempt 3): PASS",
+          "- Round 1: Review pack (attempt 3): .qfai/review/review-20260101020000000",
+          `- Round 1: Review pack seal (attempt 3): sha256:${"b".repeat(64)}`,
+          "- Refactor verify command: npm test",
+        ].join("\n"),
+      );
+      const issues = await runIssuesOn(
+        root,
+        ledger([{ status: "done", evidence: IMPLEMENT_POINTER }]),
+        { ".qfai/evidence/implement-spec-0001.md": evidence },
+      );
+      const messages = issues.map((issue) => issue.message).join("\n");
+      expect(messages).toContain(
+        "Round 1: Review pack (attempt 1) reviewing this row's spec at one revision",
+      );
+      expect(messages).not.toContain("Round 1: Review pack (attempt 2) reviewing");
+    });
+  });
+
+  it("reads a round pack's request as the list of ids its review covered", async () => {
+    // A T1 group is reviewed in one round, and its request lists every member.
+    // An id listed twice is not a list of members.
+    for (const [request, accepted] of [
+      ["TDD-ID: TDD-0001, TDD-0002\n", true],
+      ["TDD-ID: TDD-0001, TDD-0001\n", false],
+    ] as const) {
+      await withProject(async (root) => {
+        const pack = ".qfai/review/review-20260101000000000";
+        await mkdir(path.join(root, pack), { recursive: true });
+        await writeFile(path.join(root, pack, "review_request.md"), request);
+        await writeFile(
+          path.join(root, pack, "R01_completion-reviewer.md"),
+          `Result: REVISE\nReviewed revision: ${DEFAULT_REVISION}\n`,
+        );
+        await writeFile(path.join(root, pack, "summary.json"), roundSummary(DEFAULT_REVISION));
+        const evidence = completeEntry("Unit").replace(
+          "- Refactor verify command: npm test",
+          [
+            "- Round 1: reviewer verdict (attempt 1): REVISE — the assertion names no boundary",
+            `- Round 1: Review pack (attempt 1): ${pack}`,
+            `- Round 1: Review pack seal (attempt 1): sha256:${await packSeal(root, pack)}`,
+            "- Round 1: reviewer verdict (attempt 2): PASS",
+            "- Round 1: Review pack (attempt 2): .qfai/review/review-20260101010000000",
+            `- Round 1: Review pack seal (attempt 2): sha256:${"b".repeat(64)}`,
+            "- Refactor verify command: npm test",
+          ].join("\n"),
+        );
+        const issues = await runIssuesOn(
+          root,
+          ledger([{ status: "done", evidence: IMPLEMENT_POINTER }]),
+          { ".qfai/evidence/implement-spec-0001.md": evidence },
+        );
+        const carrying = issues.some((issue) =>
+          issue.message.includes("Round 1: Review pack (attempt 1) carrying this row's request"),
+        );
+        expect(carrying, request).toBe(!accepted);
+      });
+    }
+  });
+
+  it("seals a round pack's JSON as the bytes on disk", async () => {
+    // The pack is sealed by the audit-hash procedure, which normalizes Markdown
+    // and HTML only. A summary carrying a carriage return is sealed as it is.
+    await withProject(async (root) => {
+      const pack = ".qfai/review/review-20260101000000000";
+      await mkdir(path.join(root, pack), { recursive: true });
+      await writeFile(path.join(root, pack, "review_request.md"), "TDD-ID: TDD-0001\n");
       await writeFile(
-        path.join(root, first, "R01_completion-reviewer.md"),
-        `Result: REVISE\nReviewed revision: ${"d".repeat(40)}\n`,
+        path.join(root, pack, "R01_completion-reviewer.md"),
+        `Result: REVISE\nReviewed revision: ${DEFAULT_REVISION}\n`,
       );
       await writeFile(
-        path.join(root, first, "summary.json"),
-        `${JSON.stringify({ revision: "d".repeat(40) })}\n`,
+        path.join(root, pack, "summary.json"),
+        roundSummary(DEFAULT_REVISION).replace("\n", "\r\n  \r\n"),
       );
       const evidence = completeEntry("Unit").replace(
         "- Refactor verify command: npm test",
         [
           "- Round 1: reviewer verdict (attempt 1): REVISE — the assertion names no boundary",
-          `- Round 1: Review pack (attempt 1): ${first}`,
-          `- Round 1: Review pack seal (attempt 1): sha256:${await packSeal(root, first)}`,
+          `- Round 1: Review pack (attempt 1): ${pack}`,
+          `- Round 1: Review pack seal (attempt 1): sha256:${await packSeal(root, pack)}`,
           "- Round 1: reviewer verdict (attempt 2): PASS",
           "- Round 1: Review pack (attempt 2): .qfai/review/review-20260101010000000",
           `- Round 1: Review pack seal (attempt 2): sha256:${"b".repeat(64)}`,
@@ -2112,12 +2206,11 @@ describe("QFAI-TDDLIST-008", () => {
         ledger([{ status: "done", evidence: IMPLEMENT_POINTER }]),
         { ".qfai/evidence/implement-spec-0001.md": evidence },
       );
-      expect(issues.map((issue) => issue.message).join("\n")).toContain(
-        "Round 1: Review pack (attempt 1) reviewing this round's revision and evidence",
+      expect(issues.map((issue) => issue.message).join("\n")).not.toContain(
+        "Round 1: Review pack seal (attempt 1) matching pack contents",
       );
     });
   });
-
   it("reports a review attempt that records its pack pair twice", async () => {
     // Only one pair per attempt is read, so a second would leave the first
     // outside every check while both are dropped from the audited subject.
@@ -2144,21 +2237,20 @@ describe("QFAI-TDDLIST-008", () => {
     });
   });
 
-  it("holds the closing attempt's responses to the row's audited hashes", async () => {
-    // The attempt the last round closed on is the review the row-level
-    // verdicts record, so its reviewer answered over the same subject.
+  it("requires the closing attempt to answer for every reviewer the row records", async () => {
+    // The attempt the last round closed on is the review the row-level verdicts
+    // record. A pack answering for one reviewer would satisfy the other's hash
+    // vacuously, so each routed reviewer answers there once, at its verdict's
+    // tree and hash.
     await withProject(async (root) => {
       const closing = ".qfai/review/review-20260101010000000";
       await mkdir(path.join(root, closing), { recursive: true });
       await writeFile(path.join(root, closing, "review_request.md"), "TDD-ID: TDD-0001\n");
       await writeFile(
         path.join(root, closing, "R01_completion-reviewer.md"),
-        `Result: PASS\nReviewed revision: abc1230000000000000000000000000000000000\nAudited evidence hash: sha256:${"c".repeat(64)}\n`,
+        `Result: PASS\nReviewed revision: ${DEFAULT_REVISION}\nAudited evidence hash: sha256:${"c".repeat(64)}\n`,
       );
-      await writeFile(
-        path.join(root, closing, "summary.json"),
-        `${JSON.stringify({ revision: "abc1230000000000000000000000000000000000" })}\n`,
-      );
+      await writeFile(path.join(root, closing, "summary.json"), roundSummary(DEFAULT_REVISION));
       const evidence = completeEntry("Unit").replace(
         "- Refactor verify command: npm test",
         [
@@ -2178,14 +2270,12 @@ describe("QFAI-TDDLIST-008", () => {
       );
       const messages = issues.map((issue) => issue.message).join("\n");
       expect(messages).toContain(
-        "Round 1: Review pack (attempt 2) reviewing this round's revision and evidence",
+        "Round 1: Review pack (attempt 2) holding one response per closing reviewer, at the revision and hash its verdict records",
       );
-      expect(messages).not.toContain(
-        "Round 1: Review pack (attempt 2) carrying this row's request and responses agreeing with its verdict",
-      );
+      expect(messages).not.toContain("Round 1: Review pack (attempt 2) reviewing");
+      expect(messages).not.toContain("Round 1: Review pack (attempt 2) carrying");
     });
   });
-
   it("reports a round review pack recorded without its seal", async () => {
     // Without the seal nothing says whether the pack still holds what was
     // reviewed, and the pair is outside every audited subject.

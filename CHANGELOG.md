@@ -158,7 +158,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   attempt closed is still reported. A round that records any pair owes one for
   every verdict attempt, a pair's path must have the canonical pack shape even
   when the pack is absent, and a present pack must name the row in its request
-  and carry responses that agree with the attempt's verdict. The completion gate also holds those
+  and carry responses that agree with the attempt's verdict. It must also review
+  this row's spec at one revision, and the attempt the last round closed on must
+  hold one response per reviewer the row records, at the tree and audited hash
+  that reviewer's verdict records. A request may list a T1 group's members. Every
+  review pack's seal now hashes Markdown and HTML normalized and every other file
+  as its bytes, as the audit-hash procedure does, so a producer's seal over a
+  `summary.json` with a carriage return recomputes. The completion gate also holds those
   attempts to the numbering the contract gives them, from 1 in review order,
   and reads the attempt a round ends on: a round before the last has to end on
   a `REVISE`, and the last round of a done row on exactly `PASS`. Within a
