@@ -373,7 +373,7 @@ describe("a skill carries what a host needs to register it", () => {
   });
 });
 
-describe("what the gate and the host disagreed about", () => {
+describe("the gate reads a skill as the host does", () => {
   const findings = async (
     root: string,
   ): Promise<Awaited<ReturnType<typeof validateAssistantAssets>>> =>
@@ -623,6 +623,23 @@ describe("what the gate and the host disagreed about", () => {
       (item) => item.code === "QFAI-SKILLS-014" && item.file?.toLowerCase() === file.toLowerCase(),
     );
     expect(unreadable).toHaveLength(1);
+  });
+
+  it("reports no uncited reference in a skill whose entry point cannot be read", async () => {
+    // With no readable entry point there is no root to reach a reference from,
+    // so the decoding failure is the finding, not every reference beside it.
+    const root = await projectWithSkill(['description: "Does the thing."']);
+    const skillDir = path.join(root, ".qfai", "assistant", "skills", "qfai-example");
+    await writeFile(
+      path.join(skillDir, "SKILL.md"),
+      Buffer.concat([Buffer.from("# skill\nSee references/guide.md.\n"), Buffer.from([0xff])]),
+    );
+    await mkdir(path.join(skillDir, "references"), { recursive: true });
+    await writeFile(path.join(skillDir, "references", "guide.md"), "# guide\n", "utf-8");
+
+    const codes = (await validateAssistantAssets(root, defaultConfig)).map((item) => item.code);
+    expect(codes).toContain("QFAI-SKILLS-014");
+    expect(codes).not.toContain("QFAI-SKILLS-013");
   });
 
   it("calls a nested SKILL.md a reference, not an entry point", async () => {

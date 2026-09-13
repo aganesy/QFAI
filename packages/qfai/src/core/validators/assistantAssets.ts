@@ -319,8 +319,8 @@ export async function validateAssistantAssets(root: string, config: QfaiConfig):
   // nothing, and a skill in a directory the crawl ignores is registered all the
   // same.
   // By file identity rather than by spelling: on a case-insensitive file system
-  // the crawl's `skill.md` and the probe's `SKILL.md` are one file, and compared
-  // as strings it was read and reported twice.
+  // the crawl's `skill.md` and the probe's `SKILL.md` are one file, read and
+  // reported once.
   const crawled = new Map<string, string>();
   const crawledFiles = [
     ...documents.keys(),
@@ -387,7 +387,15 @@ export async function validateAssistantAssets(root: string, config: QfaiConfig):
     issues.push(...collectSkillRegistrationIssues(entryPoint, text));
   }
 
-  issues.push(...collectReferenceGraphIssues(root, skillsDir, documents));
+  // A skill whose entry point cannot be read has no root to reach its documents
+  // from, so its references are not reported as uncited: the entry point's
+  // `QFAI-SKILLS-014` is the finding to act on.
+  const unrootedSkills = unreadable.flatMap((item) =>
+    item.file !== undefined && isSkillEntryPoint(skillsDir, item.file)
+      ? [path.dirname(item.file)]
+      : [],
+  );
+  issues.push(...collectReferenceGraphIssues(root, skillsDir, documents, unrootedSkills));
 
   return issues;
 }
@@ -1618,11 +1626,20 @@ function collectReferenceGraphIssues(
   root: string,
   skillsDir: string,
   documents: Map<string, string>,
+  unrootedSkills: readonly string[] = [],
 ): Issue[] {
   const reachable = collectReachableDocuments(citationContext(root, skillsDir), documents);
   const severity = "error";
+  const inUnrootedSkill = (file: string): boolean =>
+    unrootedSkills.some((dir) => {
+      const relative = path.relative(dir, file);
+      return relative !== "" && !relative.startsWith("..") && !path.isAbsolute(relative);
+    });
   const unreachable = [...documents.keys()]
-    .filter((file) => isReferenceDocument(skillsDir, file) && !reachable.has(file))
+    .filter(
+      (file) =>
+        isReferenceDocument(skillsDir, file) && !reachable.has(file) && !inUnrootedSkill(file),
+    )
     .sort((a, b) => a.localeCompare(b))
     .map((file) =>
       issue(
