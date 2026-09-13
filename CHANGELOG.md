@@ -13,11 +13,11 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   command contract calls them the SSOT for handoff, while another spec pack
   requires the mirror that writes them.
 
-  `CR-20260913-0002` records both sides, blocks the one ledger row whose
-  obligation turns on the disputed clause, and puts the choice: narrow the
-  criterion to match the contract and that pack, keep the mirror but stop
-  reading it, or withdraw the layout obligation together with the rule that
-  depends on it. No option stops the mirror.
+  `CR-20260913-0002` records both sides, blocks the ledger row whose obligation
+  turns on the disputed clause and the contract one option rewords, and puts the
+  choice: narrow the criterion to match the contract, keep the mirror but stop
+  reading it, or withdraw the criterion together with the rule that depends on
+  it. No option stops the mirror.
 
 ## [1.12.0] - 2026-09-12
 
