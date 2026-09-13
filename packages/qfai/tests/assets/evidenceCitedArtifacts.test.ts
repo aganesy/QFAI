@@ -135,6 +135,11 @@ function citationsIn(line: string): string[] {
     if (from === undefined) continue;
     const opener = citationOpener(line, from);
     if (opener === null) continue;
+    // Inside a code span a comma or a semicolon is part of the name, since the
+    // span delimits it; in prose the same characters end the sentence it is in.
+    const span = codeSpanRanges(line).find(
+      ([spanStart, spanEnd]) => from >= spanStart && from < spanEnd,
+    );
     let index = from + start[0].length;
     const closers: string[] = [];
     let usable = true;
@@ -185,6 +190,12 @@ function citationsIn(line: string): string[] {
         // whole citation away.
       } else if ((character === "@" || character === "!") && line[index + 1] === "(") {
         // An extglob introducer, which is one only where a group follows it.
+      } else if (
+        span !== undefined &&
+        index < span[1] &&
+        (character === "," || character === ";")
+      ) {
+        // Punctuation a code span delimits, part of the name it holds.
       } else if (NAME_CHARACTER.test(character)) {
         // A character a file name holds and the dialect gives no meaning, such as
         // the `@` of `@missing.md` or a letter outside ASCII. Stopping before it
@@ -216,7 +227,7 @@ function citationsIn(line: string): string[] {
  * printed it, and it cannot cover the whole block either, because a transcript
  * carries real citations beside the disclaimed mention.
  */
-const NOT_A_CITATION = /<!--\s*qfai:not-a-citation[^>]*-->/;
+const NOT_A_CITATION = /<!--\s*qfai:not-a-citation(?=\s|-->)[^>]*-->/;
 
 /**
  * Citations that do not resolve in the committed tree, as measured.
@@ -663,12 +674,26 @@ function disclaimedByLine(text: string): Array<"all" | Set<string> | undefined> 
  * text, like a marker inside a fence, and disclaims nothing.
  */
 function withoutInlineCode(line: string): string {
-  return line.replace(/(`+)[^`]*?\1/g, "");
+  return line.replace(INLINE_CODE, "");
+}
+
+/**
+ * A Markdown code span: a run of backticks, the content, and a run of the same
+ * length. A shorter run inside the content is part of it.
+ */
+const INLINE_CODE = /(?<!`)(`+)(?!`)([\s\S]*?)(?<!`)\1(?!`)/g;
+
+/** The content ranges of the code spans on a line, as [start, end) offsets. */
+function codeSpanRanges(line: string): Array<readonly [number, number]> {
+  return [...line.matchAll(INLINE_CODE)].map((match) => {
+    const start = (match.index ?? 0) + (match[1] ?? "").length;
+    return [start, start + (match[2] ?? "").length] as const;
+  });
 }
 
 /** The paths a marker names, or `null` when the line carries no marker naming any. */
 function disclaimedPaths(line: string): Set<string> | null {
-  const marker = /<!--\s*qfai:not-a-citation([^>]*?)-->/.exec(withoutInlineCode(line));
+  const marker = /<!--\s*qfai:not-a-citation(?=\s|-->)([^>]*?)-->/.exec(withoutInlineCode(line));
   // Normalized the way a measured citation is, so a marker naming a directory
   // with its conventional trailing separator covers the path the scan produces.
   const named = citationsIn(marker?.[1] ?? "").map(normalizeCitation);
@@ -870,7 +895,20 @@ function namesASet(cited: string): boolean {
  * so `.qfai/report/.*` still resolves and a plain wildcard does not.
  */
 function hidesADotName(cited: string, candidate: string): boolean {
-  return !alignsWithDotPolicy(cited.split("/"), candidate.split("/"));
+  return !alignsWithDotPolicy(patternSegments(cited), candidate.split("/"));
+}
+
+/** A pattern's segments, split at each `/` outside a bracket expression. */
+function patternSegments(pattern: string): string[] {
+  const segments: string[] = [];
+  let from = 0;
+  for (const index of outsideClasses(pattern)) {
+    if (pattern[index] !== "/") continue;
+    segments.push(pattern.slice(from, index));
+    from = index + 1;
+  }
+  segments.push(pattern.slice(from));
+  return segments;
 }
 
 /**
@@ -1471,6 +1509,35 @@ describe("a glob is a claim about a set", () => {
   it("reads a dot-leading name a later sibling group spells", () => {
     expect(segmentAdmits("?(x)@(.git|g*)", ".git")).toBe(true);
     expect(segmentAdmits("?(x)@(g*)", ".git")).toBe(false);
+  });
+
+  it("disclaims nothing with a directive that only begins with the marker", () => {
+    for (const marker of ["qfai:not-a-citations", "qfai:not-a-citation-disabled"]) {
+      const line = `see .qfai/report/missing.json <!-- ${marker} -->`;
+      expect(
+        citationsOf("x.md", line).map(([, cited]) => cited),
+        marker,
+      ).toEqual([".qfai/report/missing.json"]);
+    }
+  });
+
+  it("reads a code span holding a shorter backtick run", () => {
+    const line = `\`\`wrote .qfai/report/missing.json <!-- qfai:not-a-citation --> \` output\`\``;
+    expect(citationsOf("x.md", line).map(([, cited]) => cited)).toEqual([
+      ".qfai/report/missing.json",
+    ]);
+  });
+
+  it("takes a name that fills a code span whole, punctuation included", () => {
+    const pack = ".qfai/discussion/discussion-20260328212829687";
+    expect(citationsIn(`see \`${pack}/01_Context.md,missing\` here`)).toEqual([
+      `${pack}/01_Context.md,missing`,
+    ]);
+  });
+
+  it("splits a pattern at separators outside a bracket expression", () => {
+    const pack = ".qfai/discussion/discussion-20260328212829687";
+    expect(hidesADotName(`${pack}/[0/]1_Context.md`, `${pack}/01_Context.md`)).toBe(false);
   });
 
   it("counts nothing where a Windows path holds the root", () => {

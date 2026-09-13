@@ -299,9 +299,18 @@ function escapeRegExp(value: string): string {
 
 /** Last path segment of a glob — the basename convention it prescribes. */
 function globBasename(glob: string): string {
-  const normalized = glob.replace(/\\/g, "/");
-  const lastSlash = normalized.lastIndexOf("/");
-  return lastSlash === -1 ? normalized : normalized.slice(lastSlash + 1);
+  // Separators are already folded; a `/` or a backslash inside a bracket
+  // expression is a member, not a boundary.
+  let lastSlash = -1;
+  for (let index = 0; index < glob.length; index += 1) {
+    const close = glob[index] === "[" ? findClassClose(glob, index) : -1;
+    if (close !== -1) {
+      index = close;
+      continue;
+    }
+    if (glob[index] === "/") lastSlash = index;
+  }
+  return lastSlash === -1 ? glob : glob.slice(lastSlash + 1);
 }
 
 /**
