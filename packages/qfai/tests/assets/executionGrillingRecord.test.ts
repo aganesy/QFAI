@@ -250,6 +250,16 @@ describe.each(TREES)("%s — the execution stages record their sessions", (tree)
     // The field that says which tree the session ended against is validated,
     // not only required by the record.
     expectPhrase(body, "**Every row's `Revision` is a git rev or `working-tree+<hash>`**");
+    // A count checked against nothing lets a row claim any number of settled
+    // decisions; each one has a Work Orders Summary row naming its recommender.
+    expectPhrase(
+      body,
+      "**and its `Decisions` count matches the `grilling(<Session>/<adjudication>)` rows the Work Orders Summary carries under that `Session`**",
+    );
+    expectPhrase(
+      body,
+      "**`Decisions` counts what the session settled, and each has a row that names who recommended it.**",
+    );
     // A value that is neither disposition says nothing about whether a
     // preflight row is owed.
     expectPhrase(

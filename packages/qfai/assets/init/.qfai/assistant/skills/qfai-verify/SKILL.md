@@ -112,7 +112,7 @@ Use the shared schema.
   says `session opened` — one for the preflight session, all of them inside this run's own block — **except a session the user stopped**, which is reported in the stage's output rather than written, as the table below sets out, so its absence is not a `REVISE`. **`Preflight` is `session opened` or `confidence high`**, and any other value is a `REVISE`: those two say whether a preflight row is owed, and a third value says neither. **No two rows share a `Session`**, and the keys run `S1`, `S2`, … with none skipped: the lines under the table are reconciled by that key, so one key on two rows lets a single quoted answer, open line or escalation stand for both. Every `Ended` is one of the four endings the rule master
   names, every row's `Ended at` is at or after the run-started time on
   a `### /qfai-verify — run started` block whose time equals the one this
-  run's work order states, and each row's `Open` count matches the register lines naming that row's `Session`, **and its `Escalated` count matches the escalation lines naming it** — a count checked against nothing lets a row claim `0` over decisions that never reached the user. **An escalation line still waiting on an answer is an open node**: it is also an `Open` line under the same `Session`, so a row that ended over it keeps the decision in the register instead of losing it behind a valid ending. **Every row's `Revision` is a git rev or `working-tree+<hash>`**, as the record requires, and a blank or any other value is a `REVISE`: it is the one field saying which tree the session ended against. **A row whose ending lets the work go on, and after which the stage wrote,
+  run's work order states, and each row's `Open` count matches the register lines naming that row's `Session`, **and its `Escalated` count matches the escalation lines naming it**, **and its `Decisions` count matches the `grilling(<Session>/<adjudication>)` rows the Work Orders Summary carries under that `Session`** — a count checked against nothing lets a row claim `0` over decisions that never reached the user. **An escalation line still waiting on an answer is an open node**: it is also an `Open` line under the same `Session`, so a row that ended over it keeps the decision in the register instead of losing it behind a valid ending. **Every row's `Revision` is a git rev or `working-tree+<hash>`**, as the record requires, and a blank or any other value is a `REVISE`: it is the one field saying which tree the session ended against. **A row whose ending lets the work go on, and after which the stage wrote,
   carries a `Work resumed` later than its own `Ended at`** — that ordering is
   the whole reason both times are recorded, and an earlier one is a session
   recorded after the edit it was meant to precede. **A run that did not resume
@@ -281,6 +281,14 @@ restated here.
   `Ended` is `confirmed`, `user-closed`, `no-question` or `stopped` — the four
   endings `.agents/rules/grilling.md` names — and only the first three let the
   work go on.
+
+  **`Decisions` counts what the session settled, and each has a row that
+  names who recommended it.** A decision the user answered counts, and so does
+  one the agents settled; an open node and an unanswered escalation do not.
+  Each counted decision is a `grilling(<where>/<adjudication>): <the decision>`
+  row in the stage's Work Orders Summary, with the row's `Session` as `<where>`
+  (`.qfai/assistant/constitution/shared-skill-delegation-baseline.md`), so the
+  count can be checked against records rather than taken as written.
 
 - **The confirming answer goes under that table too**, one line per
   `confirmed` row, quoting what the user replied and naming the `Session` it
