@@ -127,6 +127,10 @@ describe("run-pr-fix strict monitor", { timeout: 120000 }, () => {
     ["empty", "## What this change made unnecessary\n\n"],
     ["comment only", "## What this change made unnecessary\n\n<!-- Answer required. -->\n"],
     ["unresolved", "## What this change made unnecessary\n\nTBD\n"],
+    ["empty bullet", "## What this change made unnecessary\n\n-\n"],
+    ["empty task", "## What this change made unnecessary\n\n- [ ]\n"],
+    ["empty lists", "## What this change made unnecessary\n\n- [ ]\n*\n1.\n"],
+    ["listed unresolved", "## What this change made unnecessary\n\n- TBD\n"],
     ["fenced", "```md\n## What this change made unnecessary\n\nNothing.\n```\n"],
   ])("blocks a %s removal answer without inventing nothing", async (_name, section) => {
     const body = compliantPrBody().replace(
@@ -143,6 +147,8 @@ describe("run-pr-fix strict monitor", { timeout: 120000 }, () => {
     });
     expect(result.code).not.toBe(0);
     expect(combinedOutput(result)).toContain("authored removal-list answer");
+    const previewPath = path.join(result.repoDir, "tmp", "pr-fix", "pr-166-body-repaired.md");
+    expect(combinedOutput(result)).toContain(`gh pr edit 166 --body-file "${previewPath}"`);
     const preview = await readFile(
       path.join(result.repoDir, "tmp", "pr-fix", "pr-166-body-repaired.md"),
       "utf-8",
@@ -161,6 +167,7 @@ describe("run-pr-fix strict monitor", { timeout: 120000 }, () => {
           makePrView([successCheck()], {
             body: `## What this change made unnecessary\n\n${answer}\n`,
           }),
+          makePrView([successCheck()], { body: compliantPrBody().replace("Nothing.", answer) }),
         ],
         threads: [[]],
       }),
@@ -183,6 +190,9 @@ describe("run-pr-fix strict monitor", { timeout: 120000 }, () => {
         prViews: [
           makePrView([successCheck()], {
             body: `## Adoption bar\n\n${adoption}\n\n## What this change made unnecessary\n\nNothing.\n`,
+          }),
+          makePrView([successCheck()], {
+            body: `${compliantPrBody()}\n\n## Adoption bar\n\n${adoption}\n`,
           }),
         ],
         threads: [[]],
@@ -413,6 +423,43 @@ describe("run-pr-fix strict monitor", { timeout: 120000 }, () => {
     expect(monitorStatus.EffectiveSleepSeconds).toBe(60);
     expect(monitorStatus.EffectiveRequiredZeroStreak).toBe(30);
   });
+
+  it.each(["poll", "final boundary"])(
+    "blocks an answer removed at the %s without emitting a handoff",
+    async (boundary) => {
+      const clean = makePrView([successCheck()]);
+      const missing = makePrView([successCheck()], {
+        body: compliantPrBody().replace(
+          /## What this change made unnecessary\n\nNothing\.\n\n/,
+          "",
+        ),
+      });
+      const result = await runPrFix({
+        mockSleep: true,
+        scenario: makeScenario({
+          prViews:
+            boundary === "poll"
+              ? [clean, missing]
+              : [...Array.from({ length: 31 }, () => clean), missing],
+          threads: [[]],
+        }),
+      });
+      expect(result.code).not.toBe(0);
+      expect(combinedOutput(result)).toContain("PR body is no longer template-compliant");
+      expect(existsSync(path.join(result.repoDir, "tmp", "pr-fix", "pr-166-handoff.json"))).toBe(
+        false,
+      );
+      const status = await readJson(
+        path.join(result.repoDir, "tmp", "pr-fix", "pr-166-monitor-status.json"),
+      );
+      expect(status.State).toBe("action_required_body");
+      expect(status.CurrentStreak).toBe(0);
+      const compliance = await readJson(
+        path.join(result.repoDir, "tmp", "pr-fix", "pr-166-body-compliance.json"),
+      );
+      expect(compliance.RemovalList).toBe(false);
+    },
+  );
 
   it("retries transient gh graphql failures during live monitoring", async () => {
     const result = await runPrFix({
@@ -873,7 +920,8 @@ function ghStubScript(): string {
     "",
     'if (args[0] === "pr" && args[1] === "view") {',
     "  const prView = next(scenario.prViews, 'prViewCount', null);",
-    "  process.stdout.write(JSON.stringify(prView));",
+    "  const fields = args[args.indexOf('--json') + 1].split(',');",
+    "  process.stdout.write(JSON.stringify(Object.fromEntries(fields.map(field => [field, prView[field]]))));",
     "  process.exit(0);",
     "}",
     "",

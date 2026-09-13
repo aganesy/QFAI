@@ -170,7 +170,9 @@ function DescriptionAnswer([string]$Body, [string]$HeadingPattern = 'What (?:thi
   $match = [regex]::Match($text, '(?ms)^## ' + $HeadingPattern + '[ \t]*\n(?<answer>.*?)(?=^#{1,2} |\z)')
   if (-not $match.Success) { return "" }
   $answer = $match.Groups['answer'].Value.Trim()
-  if ($answer -match '^(?:TBD|TODO|\[.*\])\.?$') { return "" }
+  $meaningful = [regex]::Replace($answer, '(?m)^[ \t]*(?:[-*+]|\d+[.)])[ \t]*(?:\[[ xX-]?\][ \t]*)?', '')
+  $meaningful = [regex]::Replace($meaningful, '[`*_]', '').Trim()
+  if ([string]::IsNullOrWhiteSpace($meaningful) -or $meaningful -match '^(?:TBD|TODO|\[.*\])\.?$') { return "" }
   return $answer
 }
 
@@ -535,7 +537,8 @@ if (-not $check.IsCompliant) {
     Warn ("Missing sections: {0}" -f (($check.Missing -join ", ")))
   }
   if ([string]::IsNullOrWhiteSpace((DescriptionAnswer $newBody))) {
-    throw "PR body repair needs an authored removal-list answer. Complete the saved preview before rerunning; no empty answer is inferred."
+    Warn ('Complete the preview, then upload it: gh pr edit {0} --body-file "{1}"' -f $pr.number, $preview)
+    throw "PR body repair needs an authored removal-list answer. Upload the completed preview before rerunning; no empty answer is inferred."
   }
   if (-not $DryRun) {
     [void](Run "gh" @("pr", "edit", "$($pr.number)", "--body-file", $preview) "Failed to update PR body.")
@@ -553,6 +556,14 @@ while ($streak -lt $effectiveRequiredZeroStreak) {
   $firstPoll = $false
 
   $snapshot = RunJson "gh" @("pr", "view", "$targetPrNumber", "--json", "number,title,body,baseRefName,headRefName,statusCheckRollup,url") "Failed to refresh PR details."
+  $bodyCheck = Compliance ([string]$snapshot.body)
+  if (-not $bodyCheck.IsCompliant) {
+    $streak = 0
+    $bodyArtifact = "pr-{0}-body-compliance.json" -f $targetPrNumber
+    [void](SaveJson -Root $root -Name $bodyArtifact -Value $bodyCheck)
+    [void](SaveMonitorStatus -Root $root -Number $targetPrNumber -Mode $mode -EffectiveSleep $effectiveSleepSeconds -EffectiveStreak $effectiveRequiredZeroStreak -CurrentStreak $streak -State "action_required_body" -BlockingArtifact $bodyArtifact -NextAction "Restore the required authored PR sections, update the PR body, then rerun the live monitor.")
+    throw "PR body is no longer template-compliant. Update the PR body, then rerun the live monitor."
+  }
   $threads = @(Threads -Owner ([string]$repo.owner.login) -Repo ([string]$repo.name) -Number $targetPrNumber)
   $checkState = EvaluateChecks $snapshot
 
@@ -599,7 +610,15 @@ if ($DryRun) {
 }
 
 if ((CountOf (GitStatus)) -gt 0) { throw "Working tree is dirty before final verification. Commit or stash changes first." }
-$finalPr = RunJson "gh" @("pr", "view", "$targetPrNumber", "--json", "number,title,headRefName,baseRefName,statusCheckRollup,url") "Failed to refresh PR for final verification."
+$finalPr = RunJson "gh" @("pr", "view", "$targetPrNumber", "--json", "number,title,body,headRefName,baseRefName,statusCheckRollup,url") "Failed to refresh PR for final verification."
+$finalBodyCheck = Compliance ([string]$finalPr.body)
+if (-not $finalBodyCheck.IsCompliant) {
+  $streak = 0
+  $bodyArtifact = "pr-{0}-body-compliance.json" -f $targetPrNumber
+  [void](SaveJson -Root $root -Name $bodyArtifact -Value $finalBodyCheck)
+  [void](SaveMonitorStatus -Root $root -Number $targetPrNumber -Mode $mode -EffectiveSleep $effectiveSleepSeconds -EffectiveStreak $effectiveRequiredZeroStreak -CurrentStreak $streak -State "action_required_body" -BlockingArtifact $bodyArtifact -NextAction "Restore the required authored PR sections, update the PR body, then rerun the live monitor.")
+  throw "PR body is no longer template-compliant at the handoff boundary. Update the PR body, then rerun the live monitor."
+}
 if ((EvaluateChecks $finalPr).State -ne "clean") { throw "CI/CD is no longer green at the handoff boundary." }
 $finalThreads = @(Threads -Owner ([string]$repo.owner.login) -Repo ([string]$repo.name) -Number $targetPrNumber)
 if ((CountOf $finalThreads) -gt 0) { throw "Unresolved review threads reappeared at the handoff boundary." }

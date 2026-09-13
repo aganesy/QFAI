@@ -107,9 +107,12 @@ $pr = gh pr view --json number,headRefName,baseRefName,url
 
 Read `REVIEW.md` before writing or repairing a PR description. Body repair keeps
 an authored removal-list answer and any authored adoption bar. A missing required
-removal answer blocks repair; neither a
-template placeholder nor an imported fenced copy supplies one. Complete the
-saved preview from the actual diff before rerunning.
+removal answer blocks repair. Template placeholders and imported fenced copies
+do not supply an answer. Complete the
+saved preview from the actual diff, upload it with the displayed
+`gh pr edit <number> --body-file "<preview>"` command, then rerun. Each live
+poll and the final handoff boundary recheck required body fields; invalid
+body changes stop monitoring without a handoff.
 
 1. `git status --short`、`git branch --show-current`、`gh pr view <PR番号> --json number,title,body,baseRefName,headRefName,statusCheckRollup,url` を確認する。
 2. dry-run が PR 本文不備を検出したら、preview を確認し、必要なら `-DryRun` を外して本文を補正する。

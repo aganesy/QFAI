@@ -89,6 +89,28 @@ async function initCapturingStderr(root: string): Promise<string> {
 }
 
 describe("qfai init connects a pre-existing agent entry point to the rule masters", () => {
+  it("keeps optional repository review policy in fresh and forced reviewer output", async () => {
+    await withProject(async (root) => {
+      const pointer =
+        "Read `REVIEW.md` before reviewing a pull request when that file exists in this repository.";
+      const files = [
+        ".github/copilot-instructions.md",
+        ".github/instructions/code-review.instructions.md",
+      ];
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+      for (const name of files) {
+        expect(await readEntryPoint(root, name)).toContain(pointer);
+        const text = await readEntryPoint(root, name);
+        await writeFile(path.join(root, name), text.replace(pointer, ""), "utf-8");
+      }
+      await runInit({ dir: root, force: true, dryRun: false, yes: true });
+      for (const name of files) {
+        expect(await readEntryPoint(root, name)).toContain(pointer);
+      }
+      await expect(stat(path.join(root, "REVIEW.md"))).rejects.toMatchObject({ code: "ENOENT" });
+    });
+  });
+
   it("appends the managed section to an AGENTS.md / CLAUDE.md it did not create", async () => {
     await withProject(async (root) => {
       for (const name of AGENT_ENTRY_POINT_FILES) {
