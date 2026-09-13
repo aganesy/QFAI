@@ -376,12 +376,17 @@ async function withOwedRuns(
     // used as it stands rather than hung off the project root —
     // `cli/commands/discussion.ts` resolves the same key the same way.
     const packsDir = path.resolve(root, discussionDir ?? DISCUSSION_DIR_REL);
-    // `throw` rather than the default, which reports every read failure as an
-    // empty listing. A misconfigured or unreadable tree would otherwise leave
-    // this whole branch inert and the run reporting clean, which is the answer
-    // a project that grilled every run gets.
-    const packs = await findPacks(packsDir, subject.packs, { onReadFailure: "throw" });
-    const pack = latestPack(packs);
+    // A tree this cannot enumerate leaves the branch inert and the run
+    // reporting clean, which is the answer a project that grilled every run
+    // gets — and that is still the right behaviour here.
+    //
+    // A `paths.discussionDir` that is not a directory is a settled case rather
+    // than an open one: `doctor` reports it under `paths.discussionDir`, and
+    // two suites hold the readers that meet it to carrying on instead of
+    // stopping (`validators/importLite.test.ts`,
+    // `integration/cli/commands/discussion.test.ts`). Raising here would make a
+    // warning-severity check the one thing that ends the run over it.
+    const pack = latestPack(await findPacks(packsDir, subject.packs));
     if (pack === null) continue;
 
     const at = out.findIndex((candidate) => candidate.subject === subject);

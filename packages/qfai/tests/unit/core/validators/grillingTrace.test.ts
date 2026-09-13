@@ -612,15 +612,21 @@ describe("validateGrillingTrace", () => {
     });
   });
 
-  it("refuses a run list it cannot read rather than reporting clean", async () => {
-    // The default collapses every read failure into an empty listing, which
-    // leaves the owed-run branch inert and the run reporting the answer a
-    // project that grilled every run gets.
+  it("carries on when the run list is not a directory", async () => {
+    // `doctor` is where a `paths.discussionDir` that is not a directory is
+    // reported, and the readers that meet it carry on rather than stopping. A
+    // warning-severity check must not be the one thing that ends the run over
+    // it — so the records that are there are still read, and only the owed-run
+    // branch goes quiet.
     await withRoot(async (root) => {
       const notADir = path.join(root, "packs");
       await writeFile(notADir, "not a directory", "utf-8");
+      await evidence(root, `discussion-${NEWER}.md`, "# Evidence\n");
 
-      await expect(validateGrillingTrace(root, { discussionDir: notADir })).rejects.toThrow();
+      const issues = await validateGrillingTrace(root, { discussionDir: notADir });
+
+      expect(issues).toHaveLength(1);
+      expect(issues[0]?.message).toContain("records no grilling session");
     });
   });
 });
