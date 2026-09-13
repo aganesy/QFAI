@@ -40,15 +40,19 @@ satisfies the second set. Only the first set has to move.
 The two test cases, from `.qfai/specs/spec-0013/06_Test-Cases.md`:
 
 ```text
-174: - Verify that the shipped `packages/qfai/assets/init/.qfai/assistant/skills/qfai-sdd/templates/contracts/ui-contract.sample.yaml` template parses with every `screens[]` entry carrying a `primary_tasks: []` slot, …
+174: - Verify that the shipped `…/templates/contracts/ui-contract.sample.yaml` template parses with every
+     `screens[]` entry carrying a `primary_tasks: []` slot, …
 182: - Verify that the new QFAI-AUD-001 aligned validate lane FAILS at severity error when any `.qfai/contracts/ui/*.yaml` has `screens[].primary_tasks: []` on any entry, …
 ```
 
 The same pair one layer down, from `.qfai/specs/spec-0013/04_Business-Rules.md`:
 
 ```text
-111: - The shipped UI contract template `packages/qfai/assets/init/.qfai/assistant/skills/qfai-sdd/templates/contracts/ui-contract.sample.yaml` MUST carry a `primary_tasks: []` slot on every entry in `screens[]`. The slot ships as an empty array (placeholder for authoring); …
-119: - Empty (`[]`) `primary_tasks` on any entry MUST FAIL the lane at severity error naming (a) the offending file path, (b) the offending screen `id`, (c) the rule `QFAI-AUD-001` (or canonical-aligned token).
+111: - The shipped UI contract template `…/templates/contracts/ui-contract.sample.yaml` MUST carry a
+     `primary_tasks: []` slot on every entry in `screens[]`. The slot ships as an empty array
+     (placeholder for authoring); …
+119: - Empty (`[]`) `primary_tasks` on any entry MUST FAIL the lane at severity error naming (a) the offending
+     file path, (b) the offending screen `id`, (c) the rule `QFAI-AUD-001` (or canonical-aligned token).
 ```
 
 What the template ships, from
@@ -82,22 +86,27 @@ The second set, `AC-0013-0019`, `BR-0013-0016`, `EX-0013-0016` and
 
 ## Blocked downstream items
 
-| Item                 | Kind         | Why it depends on the artifact                            |
-| -------------------- | ------------ | --------------------------------------------------------- |
-| `spec-0013/TDD-0019` | `ledger-row` | Carries `TC-0013-0025`, whose obligation this fix changes |
+| Item                 | Kind         | Why it depends on the artifact                                                                                             |
+| -------------------- | ------------ | -------------------------------------------------------------------------------------------------------------------------- |
+| `spec-0013/TDD-0019` | `ledger-row` | Carries `TC-0013-0025`, whose obligation this fix changes                                                                  |
+| `spec-0013/TDD-0022` | `ledger-row` | Carries `US-0013-0011`, the story this fix restates; its `E2E` case still describes the empty slot and asserts only a list |
 
 - Not blocked by this CR: `spec-0013/TDD-0020`. It carries `TC-0013-0026`,
   which is the half the product satisfies and which this fix leaves as it is.
   No other `spec-0013` row reads the template's slot value.
-- Overlapping open CRs: `CR-20260913-0003` and `CR-20260913-0008` edit other
-  statements of the same pack, and `CR-20260913-0003` edits the same
-  `10_Plan.md`. The three blocked sets do not intersect.
+- Overlapping open CRs: `CR-20260913-0003` and `CR-20260913-0008` name files
+  this record names too, `06_Test-Cases.md`, `09_delta.md` and
+  `tdd/test-list.md` among them. **They are applied in order**:
+  `CR-20260913-0008`, then this record, which assumes it has landed, then
+  `CR-20260913-0003`. If `CR-20260913-0008` is rejected, this record is restated
+  before it is applied. The three blocked sets do not intersect.
 
 ## Impact scope
 
 - Specs: `spec-0013`
 - Plans: `.qfai/specs/spec-0013/10_Plan.md`
-- Tests: `spec-0013/TDD-0019` — `packages/qfai/tests/integration/sddUiTemplate.test.ts`
+- Tests: `spec-0013/TDD-0019` — `packages/qfai/tests/integration/sddUiTemplate.test.ts`;
+  `spec-0013/TDD-0022` — `packages/qfai/tests/e2e/spec0013UiContractPrimaryTasksE2E.test.ts`
 - Contracts: `none`
 - Schema: `none`
 - Upstream paths edited under this CR:
@@ -125,19 +134,23 @@ list?
    `Upstream artifact`, `Mode`, `Approved by`, `Applied at` — not as a
    `## Triage` row.
 
-   The rerun's Phase 2b also seeds, at `todo`, the thirteen `E2E` rows
-   `spec-0013`'s ledger lacks for its stories. Those rows are owed whatever
-   this record decides, and they are listed so the approval covers them.
+   `CR-20260913-0008`'s rerun, applied first, seeds at `todo` the thirteen
+   `E2E` rows `spec-0013`'s ledger lacks for its stories. If this rerun still
+   finds any, its Phase 2b seeds them; they are owed whatever this record
+   decides, and they are listed so the approval covers them.
 
 2. Downstream ledger sweep. Reset to `todo`, recording this CR's ID in `DR-ID`:
    `spec-0013/TDD-0019`. Its obligation changes, and its recorded observation is
    of the literal slot being replaced. The same rerun re-points it: its
    `Selector` resolves to no case today, so a reset alone returns it to `todo`
-   still selecting nothing. No row is retired.
+   still selecting nothing. `spec-0013/TDD-0022` is reset to `todo` with this
+   CR's ID in `DR-ID` as well: the story it carries is restated. No row is
+   retired.
 3. Under `/qfai-implement`, the row's case in `sddUiTemplate.test.ts` asserts
    that each entry holds at least one task. It asserts only that the key holds
    a list today, with a comment allowing the empty placeholder this fix
-   removes.
+   removes. `TDD-0022`'s case in `spec0013UiContractPrimaryTasksE2E.test.ts`
+   gets the same assertion, and its header stops describing an empty slot.
 
 ## Resolution
 

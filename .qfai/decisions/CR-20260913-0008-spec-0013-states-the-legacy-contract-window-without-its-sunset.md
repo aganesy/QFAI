@@ -39,13 +39,16 @@ behaviour, informational and non-blocking, above a case asserting the opposite.
 From `.qfai/specs/spec-0013/01_Spec.md`:
 
 ```text
-89: - REQ-0117: QFAI-AUD-001 deprecation-window downgrade for slot-less contracts — … key-absent → severity=info (informational, non-blocking) … one-minor-release deprecation window … (one minor release; sunset = qfai 1.10.0) …
+89: - REQ-0117: QFAI-AUD-001 deprecation-window downgrade for slot-less contracts — …
+    key-absent → severity=info (informational, non-blocking) … one-minor-release deprecation window …
+    (one minor release; sunset = qfai 1.10.0) …
 ```
 
 From `.qfai/specs/spec-0013/04_Business-Rules.md`:
 
 ```text
-120: - … Pre-existing UI contracts that lack the slot are treated under deprecation-window semantics (informational rather than blocking) until they are re-authored or until the next minor escalates the warning.
+120: - … Pre-existing UI contracts that lack the slot are treated under deprecation-window semantics
+     (informational rather than blocking) until they are re-authored or until the next minor escalates the warning.
 ```
 
 From `.qfai/specs/spec-0013/06_Test-Cases.md`:
@@ -82,8 +85,11 @@ sunset, and blocking once it has passed. Correct the header comment of
 - Not blocked by this CR: every other `spec-0013` row. `TDD-0020` shares the
   test file, and its obligation, the lane failing on an empty list, does not
   read the legacy window.
-- Overlapping open CRs: `CR-20260913-0003` and `CR-20260913-0007` edit other
-  statements of the same pack. The three blocked sets do not intersect.
+- Overlapping open CRs: `CR-20260913-0003` and `CR-20260913-0007` name files
+  this record names too — `06_Test-Cases.md`, `09_delta.md` and
+  `tdd/test-list.md`. **This record is applied first**; `CR-20260913-0007` and
+  then `CR-20260913-0003` assume it has landed. The three blocked sets do not
+  intersect.
 
 ## Impact scope
 
