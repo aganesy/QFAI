@@ -163,7 +163,9 @@ through the aggregate directories cannot say which iteration produced it.
   without screen contracts — holds under every outcome. Under option 1 the
   lookup beneath them and their test file change, so action 3 re-verifies them
   in place.
-- Overlapping open CRs: `none`
+- Overlapping open CRs: `CR-20260913-0006`, under option 2. It decides the
+  form a `Unit` row's evidence takes when its cases pass over code no row of
+  its pack built, which is the form `TDD-0033` needs under that option.
 
 ## Impact scope
 
@@ -187,6 +189,8 @@ through the aggregate directories cannot say which iteration produced it.
   | `.qfai/specs/spec-0014/tdd/test-list.md`          | every option    |
   | `.qfai/contracts/cli/qfai-prototyping-iterate.md` | option 1        |
   | `.qfai/specs/spec-0012/09_delta.md`               | option 1        |
+  | `.qfai/specs/spec-0004/tdd/test-list.md`          | option 1        |
+  | `.qfai/specs/spec-0004/09_delta.md`               | option 1        |
   | `.qfai/specs/_policies/06_Glossary.md`            | option 1        |
   | `.qfai/specs/_policies/07_Constraints.md`         | option 1        |
   | `.qfai/specs/_policies/05_Contracts.md`           | option 1        |
@@ -241,8 +245,9 @@ withdraw its layout obligation altogether (option 3)?
    Each rerun records this Change Request as one row of a delta's
    `## Change Requests` table — `CR ID`, `Upstream artifact`, `Mode`,
    `Approved by`, `Applied at` — not as a `## Triage` row: `spec-0014`'s under
-   every option, and under option 1 `spec-0012`'s for the contract rerun and
-   `_policies/10_delta.md` for the policy rerun. Every `spec-0014` rerun's
+   every option, and under option 1 `spec-0012`'s for the contract rerun,
+   `_policies/10_delta.md` for the policy rerun and `spec-0004`'s for the
+   `confirm-only` rerun action 3 runs. Every `spec-0014` rerun's
    Phase 2b also migrates that ledger's columns and seeds the `E2E` rows named
    under the options table.
 
@@ -273,6 +278,20 @@ withdraw its layout obligation altogether (option 3)?
    which option 1 makes a failure. `TDD-0033` is a `unit` row, so the cases are
    this stage's to write.
 
+   **`spec-0004`'s three rows are made re-runnable before they are
+   re-verified.** Their selectors — `missing screenshot`, `missing html` and
+   `no screen contract skip` — occur in no case title of
+   `uiEvidenceArtifacts.test.ts`, and the cross-spec pass may not edit another
+   spec's ledger, so as they stand the pass below could not run them. In the
+   same work, each of those rows gets a case of its own under a title that
+   names its obligation: a declared screen with no screenshot, one with no
+   HTML snapshot, and a project with no `contracts/ui` directory. The one case
+   that asserts both missing files today is split in two for it. The three
+   `Selector` cells are then corrected by hand under this approval to those
+   titles, and `/qfai-sdd spec-0004`, mode `confirm-only`, confirms the edit
+   and records this Change Request as one row of `spec-0004/09_delta.md`'s
+   `## Change Requests` table. Only then does the re-verification run.
+
    **The same run re-verifies other specs' `done` rows in place**, by
    `.qfai/assistant/skills/qfai-implement/references/cross-spec-ownership.md`.
    `spec-0004/TDD-0003`, `TDD-0004` and `TDD-0005` name the edited test file;
@@ -285,6 +304,16 @@ withdraw its layout obligation altogether (option 3)?
    it.
 
    Options 2 and 3 edit no product or test path.
+
+   **Under option 2, `/qfai-implement spec-0014` then takes `TDD-0033` from
+   `todo`.** Its cases already pass, so its RED is taken through
+   `.qfai/assistant/skills/qfai-implement/references/red-not-observable.md`,
+   and that reference gives this row no `Satisfied-by` form: no `spec-0014`
+   row built the lookup, a production path is accepted only on an
+   `E2E` / `API` / `Integration` row, and the row was not resumed from
+   `blocked`. That is the position `CR-20260913-0006` puts to the user for
+   `spec-0014/TDD-0034`, so `TDD-0033` completes by the form that record
+   settles, and it stays at `todo` until that record is applied.
 
 4. **`/qfai-atdd spec-0014` then refreshes
    `.qfai/evidence/coverage-depth-spec-0014.md`, under every option, after the
