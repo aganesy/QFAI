@@ -675,16 +675,18 @@ async function validateSummarySchema(
       ? [
           issue(
             declaresForm ? "QFAI-REVIEW-007" : "QFAI-REVIEW-009",
-            "`revision` の形式が不正です。git rev (7-64 hex) か `working-tree+<64 hex>`（content hash）を指定してください。`working-tree+<porcelain digest>` は内容が変わっても動かないため受理しません。" +
+            "`revision` is not a form this gate reads. Give a git rev (7-64 hex) or " +
+              "`working-tree+<64 hex>` — a content hash, in lowercase hex. " +
+              "`working-tree+<porcelain digest>` is refused: it does not move when the contents do." +
               (declaresForm
                 ? ""
-                : `（この pack は \`revision_form: "${REVISION_FORM_LEGACY}"\` を宣言しているため warning 扱いです。当時の tree は復元できず、移行先の content hash が存在しません。）`),
+                : ` This pack declares \`revision_form: "${REVISION_FORM_LEGACY}"\`, so it is a warning: the tree it was written against cannot be rebuilt, and there is no content hash to migrate the value to.`),
             declaresForm ? "error" : "warning",
             summaryPath,
             "reviewArtifacts.summaryRevision",
             [revisionText],
             "canonical",
-            "`.qfai/assistant/skills/qfai-implement/references/evidence-revision.md` を参照してください。",
+            "The two forms and the procedure behind the content hash are in `.qfai/assistant/skills/qfai-implement/references/evidence-revision.md`.",
           ),
         ]
       : [];
@@ -712,8 +714,11 @@ async function validateSummarySchema(
             // reference below: it names the changed paths and their states, so
             // re-editing the very file under review leaves it identical and a
             // stale verdict passes the freshness check this field exists for.
-            "レビュー対象の状態を `revision` に記録してください（git rev、または未コミット時は `working-tree+<content hash>` — HEAD・tracked diff・ソート済み untracked manifest の内容ハッシュ）。" +
-              "`.qfai/assistant/skills/qfai-implement/references/evidence-revision.md` を参照。",
+            "Record the state under review in `revision`: a git rev, or " +
+              "`working-tree+<content hash>` while it is uncommitted. The procedure for that " +
+              "hash is in `.qfai/assistant/skills/qfai-implement/references/evidence-revision.md` " +
+              "and is not summarised here — a summary would be a second procedure, and two of " +
+              "them give one tree two addresses.",
           ),
         ]
       : [];
