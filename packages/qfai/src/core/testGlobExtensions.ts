@@ -8,6 +8,8 @@
  * selected on purpose is not dropped.
  */
 
+import { BraceRangeRefused, braceRangeMembers } from "./globBraceRange.js";
+
 /**
  * Whether a glob entry withdraws files. A leading `!` does, except where it opens
  * a negated extglob group, which selects: `!(fixtures)/*.py` is a selector.
@@ -120,7 +122,15 @@ export function namedTestFileMatcher(globs: readonly string[]): (filePath: strin
     // SIMPLIFIED: a glob this reader cannot translate — an unclosed group, brace
     // or bracket, or a negated group inside another group — vouches for no file.
     // Lift when: a project names its tests with a glob of that shape.
-    const source = globPathPattern(glob);
+    let source: string | null;
+    try {
+      source = globPathPattern(glob);
+    } catch (error) {
+      // fast-glob refuses a pattern holding a range it will not expand, so the
+      // glob selects no file and vouches for none.
+      if (error instanceof BraceRangeRefused) continue;
+      throw error;
+    }
     if (source === null) continue;
     try {
       patterns.push(new RegExp(`^${source}$`));
@@ -181,7 +191,9 @@ function segmentPattern(segment: string, nested = false): string | null {
       index = close;
     } else if (char === "{") {
       const close = segment.indexOf("}", index + 1);
-      const group = close < 0 ? null : alternation(segment.slice(index + 1, close).split(","));
+      if (close < 0) return null;
+      const body = segment.slice(index + 1, close);
+      const group = body.includes(",") ? alternation(body.split(",")) : braceBody(body);
       if (group === null) return null;
       source += group;
       index = close;
@@ -200,6 +212,24 @@ function segmentPattern(segment: string, nested = false): string | null {
     }
   }
   return source;
+}
+
+/**
+ * A brace group with no comma. A range expands to the values it spans, as
+ * fast-glob expands `{1..3}`; any other body is text, braces included, as
+ * fast-glob leaves `{a}`. A list's own members are never ranges, so
+ * `{0..2,9}` names the text `0..2`.
+ *
+ * @throws {BraceRangeRefused} for a range fast-glob refuses to expand.
+ */
+function braceBody(body: string): string | null {
+  const members = braceRangeMembers(body);
+  if (members !== null) {
+    if (members.length === 0) return "(?!)";
+    return `(?:${members.map((member) => member.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("|")})`;
+  }
+  const inner = segmentPattern(body, true);
+  return inner === null ? null : `\\{${inner}\\}`;
 }
 
 function alternation(alternatives: readonly string[]): string | null {

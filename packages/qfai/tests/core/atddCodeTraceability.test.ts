@@ -1514,6 +1514,49 @@ describe("acceptance tests outside paths.testsDir", () => {
     });
   });
 
+  it("counts a source a glob with a numeric brace range names", async () => {
+    await withProject(async (root) => {
+      await seedSpec(root, "0001", ["US-0001"], ["TC-0001"]);
+      await seedPackageTest(root, "checkout", "e2e", "journey.test.ts", [
+        "/* QFAI:SPEC-0001:US-0001 */",
+      ]);
+      // fast-glob expands `{1..3}`, so the glob selects `test_2.zig` by name.
+      await seedPackageTest(root, "checkout", "integration", "test_2.zig", [
+        "// QFAI:SPEC-0001:TC-0001",
+      ]);
+
+      const result = await evaluateAtddCodeTraceability(
+        root,
+        withProjectGlobs(["packages/*/tests/**/*.test.ts", "packages/*/tests/**/test_{1..3}.*"]),
+      );
+
+      expect(result.missing.tc).toEqual([]);
+    });
+  });
+
+  it("recognizes a CMake project as a package, and a CMake test directory as a test root", async () => {
+    await withProject(async (root) => {
+      await seedSpec(root, "0001", ["US-0001"], ["TC-0001"]);
+      await seedTest(root, "integration", "a.test.ts", "/* QFAI:SPEC-0001:TC-0001 */");
+      // `project()` declares a package, so `e2e/` beside it is a source directory, not an E2E layer.
+      const dir = path.join(root, "packages", "tests", "e2e");
+      await mkdir(dir, { recursive: true });
+      await writeFile(
+        path.join(root, "packages", "tests", "CMakeLists.txt"),
+        ["cmake_minimum_required(VERSION 3.20)", "project(tests CXX)", ""].join("\n"),
+        "utf-8",
+      );
+      await writeFile(path.join(dir, "client.spec.ts"), "/* QFAI:SPEC-0001:US-0001 */\n", "utf-8");
+
+      const result = await evaluateAtddCodeTraceability(
+        root,
+        withProjectGlobs(["packages/*/**/*.spec.ts"]),
+      );
+
+      expect(result.missing.us).toEqual(["SPEC-0001:US-0001"]);
+    });
+  });
+
   it("recognizes a package manifest from any ecosystem it reads tests in", async () => {
     await withProject(async (root) => {
       await seedSpec(root, "0001", ["US-0001"], ["TC-0001"]);
@@ -1627,6 +1670,10 @@ describe("acceptance tests outside paths.testsDir", () => {
 
   it.each([
     ["setup.cfg", ["[tool:pytest]", "addopts = -q", ""].join("\n")],
+    [
+      "CMakeLists.txt",
+      ["add_executable(pay_test pay.cpp)", "add_test(NAME pay COMMAND pay_test)", ""].join("\n"),
+    ],
     ["pyproject.toml", ["[tool.pytest.ini_options]", 'addopts = "-q"', ""].join("\n")],
     ["package.json", JSON.stringify({ type: "module" })],
     // A name inside a comment or a nested object names no package.

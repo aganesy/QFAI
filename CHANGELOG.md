@@ -271,7 +271,8 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   group in the file name, as in `*.!(json)`, keeps every file it selects. A glob
   that names the file or its extension, such as `*.test.*` or `*.zig`, is read
   against the whole path it selects, so a file only another package's broad
-  glob collected passes on neither.
+  glob collected passes on neither. A numeric or character brace range in such
+  a glob, as in `test_{1..3}.*`, selects the names fast-glob expands it to.
 
   The coverage scan reads a collected file the same way: a data file an
   extension-broad glob sweeps into an acceptance layer is not a source, so an
@@ -291,7 +292,9 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   reaches that cannot be read no longer empties the ATDD scan either: the other
   patterns are read, and `QFAI-ATDD-134` names each pattern it could not read.
   A scan that stops at the file limit is an error under the same code, where it
-  was only a flag in the summary artifact.
+  was only a flag in the summary artifact. A partly unreadable scan claims no
+  obligation is covered by a carrier alone, as a truncated one does, and the
+  summary artifact lists the globs it could not read.
   A stub-scan notice about a project glob names
   `validation.traceability.testFileGlobs` rather than `paths.testsDir`.
 
@@ -310,7 +313,8 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   Python or Go workspace can name a package that way too. Only a file counts as
   a manifest, so a fixture directory called `go.mod` does not. A file a
   suite also keeps for its runner — `package.json`, `deno.json`, `deno.jsonc`,
-  `pyproject.toml`, `setup.cfg` — counts only when it names a package, and
+  `pyproject.toml`, `setup.cfg`, `CMakeLists.txt` — counts only when it names a
+  package, as a CMake `project()` command does, and
   `deno.jsonc` is parsed with its comments and trailing commas, so a `name`
   nested in another object or left in a comment names nothing.
   The glob `qfai init` derives reaches colocated sources, so reading the file's

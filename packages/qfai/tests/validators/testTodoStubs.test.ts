@@ -704,6 +704,19 @@ describe("the ATDD gate's file selection", () => {
     expect(issues.filter((issue) => issue.code === "QFAI-TEST-002")).toEqual([]);
   });
 
+  it("keeps a file a glob with a numeric brace range selects", async () => {
+    const root = await newTempDir();
+    const config = atddConfig(["packages/*/tests/**/test_{1..3}.*"]);
+    await writeTestFile(root, "packages/checkout/tests/integration/test_2.zig", 'test "pays" {}\n');
+
+    const issues = await validateTestTodoStubs(root, config, {
+      globs: atddAcceptanceTestGlobs(root, config, STUB_SOURCE_FILE_PATTERN),
+      fileFilter: atddAcceptanceLayerFilter(root, config),
+    });
+
+    expect(issues.find((issue) => issue.code === "QFAI-TEST-002")?.refs).toEqual([".zig"]);
+  });
+
   it("keeps a file a test-name glob selects whatever its extension", async () => {
     const root = await newTempDir();
     const config = atddConfig(["packages/*/tests/**/*.test.*"]);

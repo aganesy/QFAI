@@ -7,7 +7,7 @@
  * profiles.
  */
 
-import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
@@ -208,6 +208,49 @@ describe("the stage says when the glob matcher refuses its globs", () => {
     const root = await projectWithAcceptanceTest();
     const found = await codes(root, ["tests/**/test_[z-a].*", "tests/**/*.ts"]);
     expect(Array.isArray(found)).toBe(true);
+  });
+
+  it("claims nothing is carrier-only when part of the scan could not be read, and records why", async () => {
+    // The runnable test that references an obligation may sit under the glob
+    // that failed, so a prose carrier found elsewhere proves nothing.
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-atdd-unreadable-"));
+    tempDirs.push(root);
+    const specDir = path.join(root, ".qfai", "specs", "spec-0001");
+    await mkdir(specDir, { recursive: true });
+    await writeFile(path.join(specDir, "01_Spec.md"), "# 01 Spec\n", "utf-8");
+    await writeFile(
+      path.join(specDir, "06_Test-Cases.md"),
+      "# 06 Test cases\n\n## TC-0001: title\n- Parent: EX-0001\n",
+      "utf-8",
+    );
+    await mkdir(path.join(root, "tests", "integration"), { recursive: true });
+    await writeFile(
+      path.join(root, "tests", "integration", "notes.md"),
+      "QFAI:SPEC-0001:TC-0001\n",
+      "utf-8",
+    );
+    const denied = Object.assign(new Error("EACCES: permission denied, scandir 'locked'"), {
+      code: "EACCES",
+    });
+    scanFailure.error = denied;
+    scanFailure.when = (globs) => globs.some((glob) => glob.startsWith("locked/"));
+    try {
+      const config = configWith(["locked/**/*.test.ts"]);
+      const result = await evaluateAtddCodeTraceability(root, config);
+      expect(result.scan.unreadable).not.toEqual([]);
+      expect(result.coveredByCarrierOnly.tc).toEqual([]);
+
+      await validateAtddCodeTraceability(root, config);
+      const reportDir = path.join(root, ".qfai", "report", "atdd-traceability");
+      const summary = JSON.parse(await readFile(path.join(reportDir, "summary.json"), "utf-8"));
+      expect(summary.scan.unreadable.join("\n")).toContain("locked/**/*.test.ts: EACCES");
+      const markdown = await readFile(path.join(reportDir, "summary.md"), "utf-8");
+      expect(markdown).toContain("Part of the test globs could not be read");
+      expect(markdown).toContain("  - locked/**/*.test.ts: EACCES");
+    } finally {
+      scanFailure.error = null;
+      scanFailure.when = () => true;
+    }
   });
 
   it("names each test glob the ATDD scan could not read, and still counts the rest", async () => {

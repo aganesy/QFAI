@@ -755,7 +755,8 @@ export async function evaluateAtddCodeTraceability(
   } = partitionMissingTcByStatus(owedTc, specRefs.tcStatuses);
   missing.tc = stillOwedTc;
   const missingTcHomes = buildMissingTcHomes(missing.tc, tcLevels);
-  // A truncated scan cannot support the negative claim this partition makes.
+  // A truncated or partly unreadable scan cannot support the negative claim
+  // this partition makes.
   // `collectFilesByGlobs` stops at the limit, so the executable test that
   // references the same ID may simply sit past the cut — reporting the
   // obligation as carrier-only would then be a false "nothing runs for this".
@@ -763,18 +764,19 @@ export async function evaluateAtddCodeTraceability(
   // `QFAI-ATDD-134` and persisted into the summary artifact, so a downstream
   // gate reads an indeterminate scan there instead of an empty list it can
   // trust.
-  const coveredByCarrierOnly = scanResult.truncated
-    ? { us: [], tc: [], conApi: [], conDb: [] }
-    : buildCarrierOnlyRefs({
-        usRefs,
-        usObligationScope: uiBearingSpecs,
-        tcRefs,
-        apiRefs,
-        apiContractIds: activeApiContractIds,
-        dbRefs,
-        dbContractIds: activeDbContractIds,
-        executableCarriers,
-      });
+  const coveredByCarrierOnly =
+    scanResult.truncated || unreadable.length > 0
+      ? { us: [], tc: [], conApi: [], conDb: [] }
+      : buildCarrierOnlyRefs({
+          usRefs,
+          usObligationScope: uiBearingSpecs,
+          tcRefs,
+          apiRefs,
+          apiContractIds: activeApiContractIds,
+          dbRefs,
+          dbContractIds: activeDbContractIds,
+          executableCarriers,
+        });
 
   return {
     declaredSpecDirs: specRefs.declaredSpecDirs,
@@ -2851,6 +2853,9 @@ const CONFIGURABLE_MANIFESTS = new Map<string, (content: string) => boolean>([
   ["deno.jsonc", (content) => declaresName(withoutJsoncSyntax(content))],
   ["pyproject.toml", (content) => /^\s*\[(?:project|tool\.poetry)\]\s*$/m.test(content)],
   ["setup.cfg", (content) => /^\s*\[metadata\]\s*$/m.test(content)],
+  // A test directory keeps a `CMakeLists.txt` to add its targets; only a
+  // `project()` command declares a package.
+  ["CMakeLists.txt", (content) => /^\s*project\s*\(/im.test(content)],
 ]);
 
 function isPackageManifest(absoluteDir: string, entry: string): boolean {

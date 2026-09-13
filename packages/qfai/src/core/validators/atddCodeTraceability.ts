@@ -385,6 +385,8 @@ type AtddTraceabilitySummary = {
     truncated: boolean;
     limit: number;
     globs: string[];
+    /** Each glob the scan could not read, with the reason. */
+    unreadable: string[];
   };
 };
 
@@ -1207,6 +1209,7 @@ async function writeAtddTraceabilityReport(
       truncated: result.scan.truncated,
       limit: result.scan.limit,
       globs: result.scan.globs,
+      unreadable: result.scan.unreadable,
     },
   };
 
@@ -1251,6 +1254,11 @@ function buildSummaryMarkdown(summary: AtddTraceabilitySummary): string {
     // carrier-only", when the scan simply stopped before it could tell.
     lines.push(
       "> Scan truncated at the file limit: this partition is indeterminate and was suppressed. Treat it as unknown, not as empty.",
+    );
+    lines.push("");
+  } else if (summary.scan.unreadable.length > 0) {
+    lines.push(
+      "> Part of the test globs could not be read: this partition is indeterminate and was suppressed. Treat it as unknown, not as empty.",
     );
     lines.push("");
   }
@@ -1303,6 +1311,10 @@ function buildSummaryMarkdown(summary: AtddTraceabilitySummary): string {
   lines.push("- globs:");
   for (const glob of summary.scan.globs) {
     lines.push(`  - ${glob}`);
+  }
+  lines.push(`- unreadable:${summary.scan.unreadable.length === 0 ? " none" : ""}`);
+  for (const entry of summary.scan.unreadable) {
+    lines.push(`  - ${entry}`);
   }
   lines.push("");
   return `${lines.join("\n")}\n`;
