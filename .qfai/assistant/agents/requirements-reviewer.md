@@ -16,6 +16,7 @@ tools: [Read, Glob, Grep, Bash]
 - Review OQ candidates for completeness, neutrality, and safe deferral.
 - Ensure unresolved requirement ambiguity is explicit and actionable.
 - Apply `.agents/rules/minimal-implementation.md`: tag excess `delete`, `stdlib`, `native`, `yagni` or `shrink`, and name what to cut and what replaces it.
+- Require more work only on what `.qfai/assistant/constitution/shared-skill-delegation-baseline.md#what-a-reviewer-may-demand-more-of-must` admits, and report any other gap as advisory.
 
 ## Inputs you must read
 

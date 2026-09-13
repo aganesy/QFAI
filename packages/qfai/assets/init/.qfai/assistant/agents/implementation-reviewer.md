@@ -20,6 +20,7 @@ tools: [Read, Glob, Grep, Bash]
 - Check separation of concerns, fail-fast validation, least astonishment, and avoidance of premature optimization in changed code.
 - Enforce TypeScript review expectations: avoid unjustified assertions, over-complex generics, unchecked `unknown`, and unhandled async paths.
 - Apply `.agents/rules/minimal-implementation.md`: tag excess `delete`, `stdlib`, `native`, `yagni` or `shrink`, and name what to cut and what replaces it.
+- Require more work only on what `.qfai/assistant/constitution/shared-skill-delegation-baseline.md#what-a-reviewer-may-demand-more-of-must` admits, and report any other gap as advisory.
 - Apply `.qfai/assistant/catalog/ui-procurement.md`: report a component written where one could be installed, a standard passed over, and an authored region with no recorded reason.
 
 ## Inputs you must read

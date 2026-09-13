@@ -425,6 +425,9 @@ a quality bar that upstream SSOT does not contain and the changed artifacts do n
 "It would be better if the feature also did X" is scope. "The feature does not do what it says" is
 a defect.
 
+A demand for more work is bounded by the artifact it is made on as well:
+`.qfai/assistant/constitution/shared-skill-delegation-baseline.md#what-a-reviewer-may-demand-more-of-must`.
+
 ### Provenance and routing
 
 - Every reviewer finding declares a `Traces to:` value. See

@@ -359,6 +359,26 @@ starts routing blocking reviewers, so the in/out split is not re-derived per run
 - A `none` advisory takes the Change Request / Open Question path (`.qfai/assistant/constitution/drift-protocol.md#reviewer-originated-obligations`); a `record:*` advisory takes the queue above. Neither goes to the implementer.
 - Only `blocking` findings — those citing a behaviour-governing obligation or a defect class — force `REVISE`.
 
+### What a reviewer may demand more of (MUST)
+
+A finding that asks for more work — another item, more detail, a wider set — is admissible only on
+the concrete artifacts.
+
+| Admissible on                                                           | Inadmissible on                                                                   |
+| ----------------------------------------------------------------------- | --------------------------------------------------------------------------------- |
+| business flows, user stories, acceptance criteria, examples, test cases | business rules, non-functional requirements, policies and decisions, architecture |
+
+Two demands stay admissible on any artifact:
+
+- that an abstract item already recorded carry its mandatory pair, such as a quality floor naming
+  its verification method;
+- that a safety-floor item be met: security, accessibility, data-loss handling, or validation at a
+  trust boundary (`.agents/rules/minimal-implementation.md` § 2).
+
+This bounds what a reviewer may require, never what a reviewer may report. A demand the table does
+not admit, such as one for another business rule, is recorded as `advisory` and cannot force
+`REVISE`.
+
 ### Reviewer budget exhausted
 
 A blocking review that cannot be delegated because the agent budget is spent is a `saturated`

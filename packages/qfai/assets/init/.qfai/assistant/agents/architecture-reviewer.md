@@ -19,6 +19,7 @@ tools: [Read, Glob, Grep, Bash]
 - Check that extensions are justified by current requirements and do not introduce speculative abstraction or over-engineering.
 - Verify contracts, module boundaries, and public interfaces obey least astonishment and design-by-contract expectations.
 - Apply `.agents/rules/minimal-implementation.md`: the first rung is this stage's — whether the thing needs to exist. After a spec row is agreed, that question is a Change Request.
+- Require more work only on what `.qfai/assistant/constitution/shared-skill-delegation-baseline.md#what-a-reviewer-may-demand-more-of-must` admits, and report any other gap as advisory.
 - Apply `.qfai/assistant/catalog/ui-procurement.md`: ask whether a catalogue covered the need, and whether a language or framework standard was passed over for a hand-rolled one.
 
 ## Inputs you must read
