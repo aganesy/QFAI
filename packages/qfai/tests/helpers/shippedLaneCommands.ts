@@ -1327,8 +1327,13 @@ export const ALLOWED_INIT_CONTENT: ReadonlyMap<string, string> = new Map([
     // message — then drop the added bullet and confirm the previous digest comes back byte for
     // byte. That check is what keeps a re-pin a review of one line rather than a re-blessing of
     // the whole file.
+    //
+    // Re-pinned for the grilling bullet, which now says a session ends in one of four named
+    // endings instead of on an empty frontier and the user's confirmation. Derived by running
+    // `qfai init` into a temp root; restoring the old wording in the written file reproduces
+    // `a246e728…` byte for byte.
     ".github/copilot-instructions.md",
-    "a246e728b78099a29460764aaa7e09f3b11cdb420f0ffe061a1812e9fa8c38c2",
+    "0dbc8fe16877386b3ce243c5e9871363aedc46946bec8b0f0ea9ebf8b0527c2d",
   ],
   // `qfai init` copies this file verbatim, so it is pinned like every other
   // adopter-facing file here — and for one reason none of the others has: it
@@ -1447,8 +1452,12 @@ export const ALLOWED_INIT_CONTENT: ReadonlyMap<string, string> = new Map([
   // the project deleted stays deleted. Restoring the old sentence in both files
   // reproduces `fff9e210…` and `7203ba75…` byte for byte, which is what makes
   // this a review of one sentence per file.
-  ["AGENTS.md", "d3d39ba436dfbb657845fd0f339e18a174cba0ad38ca8137c116415ca8efa64a"],
-  ["CLAUDE.md", "5b6487bad9c1b9f46901650be64f04cb3aaf000d9d3c51327ec7c62653f64001"],
+  //
+  // Re-pinned for the grilling bullet in the same block, which now says a session ends in one
+  // of four named endings. Derived by running `qfai init` into a temp root; restoring the old
+  // wording in both written files reproduces `d3d39ba4…` and `5b6487ba…` byte for byte.
+  ["AGENTS.md", "04f04e43e05652ffb75a24beb43723bc24b3b7543185e6a8a0c2d68fd0af0ffc"],
+  ["CLAUDE.md", "8da8af3fef0a3628261e35352325daca55634eb941d00c477a7c823f51bd7845"],
   // Inside `.claude/`, and pinned anyway — see the paragraph above the path set.
   // These are the hooks that restate a rule at the moment it applies: the writing
   // rule when a pull request, issue or review is posted through the GitHub tools
