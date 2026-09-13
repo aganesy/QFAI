@@ -47,6 +47,27 @@ Tests are in the same position. The ladder shapes how a test is built — reuse 
 helper that exists before adding a harness — and never how many obligations are
 verified.
 
+### Which failures are handled here
+
+Subject to the safety floor in this section, handle a failure where it occurs
+only when both hold: no type or schema excludes it, and the specification, a
+contract or an actual observation names it. Other failures propagate to the
+caller. Every promise is awaited or returned to a caller that awaits or adopts
+it, never dropped.
+
+Subject to the same floor, when a callback runtime ignores returned promises,
+use an explicit adapter that adopts the asynchronous result and handles
+rejections at that trust boundary. Do not make the callback async and assume
+its ignored outer promise is consumed. An ignored return is a dropped promise,
+not propagation.
+
+An observation has a test-case row in
+`<paths.specsDir>/spec-*/06_Test-Cases.md`. Resolve `paths.specsDir` from
+`qfai.config.yaml`; `.qfai/specs` is only the default.
+The process entry point is a trust boundary and handles failures that propagate
+that far. A dropped rejection remains a correctness defect under
+`.qfai/assistant/constitution/drift-protocol.md`.
+
 ## 3. Marking a deliberate simplification
 
 A shortcut taken on purpose is written down where it is taken, with two things:
