@@ -224,6 +224,18 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   first, and the second is named. The prototyping profile, which certification
   accepts, reports the finding as well.
 
+- **A ledger row observes the property it owns** (#1700). One prototyping-loop
+  test asserted five properties of the cycle-0 hard reset in a single case, and
+  a ledger row owning one of them, the `fullHarness` deletion, named no case at
+  all: its selector, `cycle 0 deletes fullHarness`, matched no title. A case
+  stops at its first failing assertion, and the row's property came second, so
+  a regression in the `reviewerGate` deletion before it failed the case without
+  reaching the row's property, and a failing case did not say which of the five
+  had regressed.
+
+  The case is split into five, one per property, over the same seeded state, and
+  the row's selector now names the case that asserts its property alone.
+
 - **A committed record is held to the artifacts the repository carries**
   (#1652). Evidence files name paths under the generated trees — a review pack,
   a validate report, a discussion pack — and those trees are ignored. On every

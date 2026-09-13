@@ -16,10 +16,8 @@
 
 `TC-0014-0034` is `Level: unit` and expects that "iterate deletes the fullHarness
 block as part of the hard reset". Its row, `spec-0014/TDD-0034`, is `done` with a
-prose `Evidence` cell and a `Selector`, `cycle 0 deletes fullHarness`, that
-matches no case title. The case that carries the obligation is
-`re-seeds acceptedIterationIndex / stopReason and deletes reviewerGate /
-fullHarness / executionPlan on cycle 0` in
+prose `Evidence` cell and a `Selector`, `cycle 0 deletes fullHarness`, which is
+the title of the case that carries the obligation in
 `packages/qfai/tests/cli/commands/prototypingIterate.test.ts`.
 
 The implementation shipped long before the record, so evidence for the row
@@ -40,11 +38,10 @@ reaching `exception` from `done` takes a reset it has not been given.
 
 The obligation itself is not in dispute: the case deletes `fullHarness`, and a
 mutation that stops deleting it leaves the case failing on
-`expect("fullHarness" in body).toBe(false)`. The case also asserts four
-outcomes the test case does not name — two further deletions and two re-seeds
-— but those are other obligations, and a mutation of the `fullHarness` deletion
-alone fails at its own assertion, so this row needs no split. What is open is
-where the row's evidence can come from.
+`expect("fullHarness" in body).toBe(false)`, the only assertion the case makes.
+The reset's other four outcomes — two further deletions and two re-seeds — are
+cases of their own beside it. What is open is where the row's evidence can come
+from.
 
 ## Proposed change
 
@@ -52,11 +49,11 @@ Give `TDD-0034` a completable form by one of the options below.
 
 ## Options (at least 3) and recommendation
 
-| #   | Option                                                                                                                                                                                                                                                                                                                                                                                                                 | Cost                                                                                                                                                                           | Risk                                                                                                                                                                                                              | Recommended |
-| --- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------- |
-| 1   | Record the row as `exception` with an accepted-risk decision, as the reference prescribes for a unit row satisfied by code no row owns                                                                                                                                                                                                                                                                                 | A decision record in `07_Decisions.md`, the row reset from `done` and moved to `exception` with that decision in `DR-ID`                                                       | The obligation is tested and still reads as an exception, and the risk the decision accepts is the absence of a row owning the code                                                                               |             |
-| 2   | Re-level `TC-0014-0034` to `integration`, since its case drives `runPrototypingIterate` over files on disk, so the path-and-symbol form opens; move the case into the integration layer and record the evidence against it                                                                                                                                                                                             | `06_Test-Cases.md`, the ledger row's `Layer`, `Test file` and `Selector`, and moving one case between suites                                                                   | The layer then describes where the case sits more than what the obligation is; a later reader may take `integration` as a claim about scope                                                                       |             |
-| 3   | Retire `TC-0014-0034` with the chain above it — `AC-0014-0006`, `BR-0014-0006` and `EX-0014-0027`, which no other test case reaches — and `TDD-0034`, and delete the case with them. The block it deletes comes only from legacy runs no current writer produces, and the retirement contract admits no test left without an owner: no surviving obligation states the cycle-0 reset, so the case cannot be re-pointed | `03_Acceptance-Criteria.md`, `04_Business-Rules.md`, `05_Examples.md` and `06_Test-Cases.md`, the ledger row and its reservation, and the case in `prototypingIterate.test.ts` | The cycle-0 reset loses its only assertion, for the four outcomes no obligation names as well as for this one: a regression in any of them fails nothing, and the pack no longer says the reset removes the block |             |
+| #   | Option                                                                                                                                                                                                                                                                                                                                                                                                                 | Cost                                                                                                                                                                           | Risk                                                                                                                                                                                                                   | Recommended |
+| --- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------- |
+| 1   | Record the row as `exception` with an accepted-risk decision, as the reference prescribes for a unit row satisfied by code no row owns                                                                                                                                                                                                                                                                                 | A decision record in `07_Decisions.md`, the row reset from `done` and moved to `exception` with that decision in `DR-ID`                                                       | The obligation is tested and still reads as an exception, and the risk the decision accepts is the absence of a row owning the code                                                                                    |             |
+| 2   | Re-level `TC-0014-0034` to `integration`, since its case drives `runPrototypingIterate` over files on disk, so the path-and-symbol form opens; move the case into the integration layer and record the evidence against it                                                                                                                                                                                             | `06_Test-Cases.md`, the ledger row's `Layer`, `Test file` and `Selector`, and moving one case between suites                                                                   | The layer then describes where the case sits more than what the obligation is; a later reader may take `integration` as a claim about scope                                                                            |             |
+| 3   | Retire `TC-0014-0034` with the chain above it — `AC-0014-0006`, `BR-0014-0006` and `EX-0014-0027`, which no other test case reaches — and `TDD-0034`, and delete the case with them. The block it deletes comes only from legacy runs no current writer produces, and the retirement contract admits no test left without an owner: no surviving obligation states the cycle-0 reset, so the case cannot be re-pointed | `03_Acceptance-Criteria.md`, `04_Business-Rules.md`, `05_Examples.md` and `06_Test-Cases.md`, the ledger row and its reservation, and the case in `prototypingIterate.test.ts` | The `fullHarness` block loses its only assertion: a regression that keeps it fails nothing, and the pack no longer says the reset removes it. The four other reset outcomes keep their cases, which no obligation owns |             |
 
 Option 2 is recommended. The case is an integration-shaped test already: it
 seeds a project, runs the command's entry function and reads the file it
@@ -136,7 +133,7 @@ with the chain above it and its row (option 3)?
      `current iterate cycle-0 reset suite pass` — and its id reserved in that
      ledger's `## TDD-ID reservations` before the row is deleted. Its test
      disposition: delete
-     `packages/qfai/tests/cli/commands/prototypingIterate.test.ts` "re-seeds acceptedIterationIndex / stopReason and deletes reviewerGate / fullHarness / executionPlan on cycle 0".
+     `packages/qfai/tests/cli/commands/prototypingIterate.test.ts` "cycle 0 deletes fullHarness".
 
 ## Resolution
 
