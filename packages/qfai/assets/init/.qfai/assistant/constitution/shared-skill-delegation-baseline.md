@@ -310,6 +310,8 @@ else.
 - Reviewers must verify test-layer policy enforcement when relevant.
 - Do not treat test volume ratios or floors as hard gates unless the skill explicitly says so.
 - Do not declare DONE until all routed blocking reviewers return `PASS`.
+- Any in-scope blocking finding from an invoked reviewer prevents DONE until resolved;
+  `blocking_agents` names the verdicts the phase always requires.
 - Every reviewer returning `FAIL` or `REVISE` must include a concrete fix proposal.
 
 ### Round budget and convergence (MUST)

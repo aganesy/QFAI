@@ -15,7 +15,10 @@ tools: [Read, Glob, Grep, Bash]
 - Return only PASS or REVISE, with actionable rework instructions on REVISE.
 - Enforce validate evidence, required coverage obligations, and no self-approval.
 - Verify rejected options are not reintroduced without RE-OPEN.
-- File excess as `defect:code-quality` against constitution Article VII; tag it `delete`, `stdlib`, `native`, `yagni` or `shrink`. Admit it only when it names what to cut and what replaces it. Refuse it when the cut touches the safety floor in `.agents/rules/minimal-implementation.md` § 2.
+- File excess as `defect:code-quality` against constitution Article VII; tag it
+  `delete`, `stdlib`, `native`, `yagni` or `shrink`. Admit it only when it names what to cut
+  and what replaces it. Refuse it when the cut removes or weakens an obligation in the safety floor at
+  `.agents/rules/minimal-implementation.md` § 2.
 
 ## Inputs you must read
 

@@ -1173,7 +1173,10 @@ agents:
       - Return only PASS or REVISE, with actionable rework instructions on REVISE.
       - Enforce validate evidence, required coverage obligations, and no self-approval.
       - Verify rejected options are not reintroduced without RE-OPEN.
-      - File excess as `defect:code-quality` against constitution Article VII; tag it `delete`, `stdlib`, `native`, `yagni` or `shrink`. Admit it only when it names what to cut and what replaces it. Refuse it when the cut touches the safety floor in `.agents/rules/minimal-implementation.md` § 2.
+      - File excess as `defect:code-quality` against constitution Article VII; tag it
+        `delete`, `stdlib`, `native`, `yagni` or `shrink`. Admit it only when it names what to cut
+        and what replaces it. Refuse it when the cut removes or weakens an obligation in the safety floor at
+        `.agents/rules/minimal-implementation.md` § 2.
 
       ## Inputs you must read
 
@@ -1283,7 +1286,10 @@ agents:
       - Audit option sets for missing alternatives and weak recommendation rationale.
       - Review OQ candidates for completeness, neutrality, and safe deferral.
       - Ensure unresolved requirement ambiguity is explicit and actionable.
-      - File excess as `defect:code-quality` against constitution Article VII; tag it `delete`, `stdlib`, `native`, `yagni` or `shrink`. Admit it only when it names what to cut and what replaces it. Refuse it when the cut touches the safety floor in `.agents/rules/minimal-implementation.md` § 2.
+      - File excess as `defect:code-quality` against constitution Article VII; tag it
+        `delete`, `stdlib`, `native`, `yagni` or `shrink`. Admit it only when it names what to cut
+        and what replaces it. Refuse it when the cut removes or weakens an obligation in the safety floor at
+        `.agents/rules/minimal-implementation.md` § 2.
 
       ## Inputs you must read
 
@@ -1356,7 +1362,10 @@ agents:
       - Check that extensions are justified by current requirements and do not introduce speculative abstraction or over-engineering.
       - Verify contracts, module boundaries, and public interfaces obey least astonishment and design-by-contract expectations.
       - Apply `.agents/rules/minimal-implementation.md`: the first rung is this stage's — whether the thing needs to exist. After a spec row is agreed, that question is a Change Request.
-      - File excess as `defect:code-quality` against constitution Article VII; tag it `delete`, `stdlib`, `native`, `yagni` or `shrink`. Admit it only when it names what to cut and what replaces it. Refuse it when the cut touches the safety floor in `.agents/rules/minimal-implementation.md` § 2.
+      - File excess as `defect:code-quality` against constitution Article VII; tag it
+        `delete`, `stdlib`, `native`, `yagni` or `shrink`. Admit it only when it names what to cut
+        and what replaces it. Refuse it when the cut removes or weakens an obligation in the safety floor at
+        `.agents/rules/minimal-implementation.md` § 2.
       - Apply `.qfai/assistant/catalog/ui-procurement.md`: ask whether a catalogue covered the need, and whether a language or framework standard was passed over for a hand-rolled one.
 
       ## Inputs you must read
@@ -1435,7 +1444,10 @@ agents:
       - Flag violations of SOLID with concrete reasoning and a smaller alternative when applicable.
       - Check separation of concerns, fail-fast validation, least astonishment, and avoidance of premature optimization in changed code.
       - Enforce TypeScript review expectations: avoid unjustified assertions, over-complex generics, unchecked `unknown`, and unhandled async paths.
-      - File excess as `defect:code-quality` against constitution Article VII; tag it `delete`, `stdlib`, `native`, `yagni` or `shrink`. Admit it only when it names what to cut and what replaces it. Refuse it when the cut touches the safety floor in `.agents/rules/minimal-implementation.md` § 2.
+      - File excess as `defect:code-quality` against constitution Article VII; tag it
+        `delete`, `stdlib`, `native`, `yagni` or `shrink`. Admit it only when it names what to cut
+        and what replaces it. Refuse it when the cut removes or weakens an obligation in the safety floor at
+        `.agents/rules/minimal-implementation.md` § 2.
       - Apply `.qfai/assistant/catalog/ui-procurement.md`: report a component written where one could be installed, a standard passed over, and an authored region with no recorded reason.
 
       ## Inputs you must read
@@ -1555,7 +1567,10 @@ agents:
       - Review UI changes at the surface layer: avoid needless states, controls, flows, animations, and configuration that are not justified by the product goal.
       - Check naming, structure, and responsibility split of UI components for clarity, cohesion, and minimal surprise.
       - Validate docs/UX consistency so usage text, labels, error states, and user flows match the intended product behavior.
-      - File excess as `defect:code-quality` against constitution Article VII; tag it `delete`, `stdlib`, `native`, `yagni` or `shrink`. Admit it only when it names what to cut and what replaces it. Refuse it when the cut touches the safety floor in `.agents/rules/minimal-implementation.md` § 2.
+      - File excess as `defect:code-quality` against constitution Article VII; tag it
+        `delete`, `stdlib`, `native`, `yagni` or `shrink`. Admit it only when it names what to cut
+        and what replaces it. Refuse it when the cut removes or weakens an obligation in the safety floor at
+        `.agents/rules/minimal-implementation.md` § 2.
       - Apply `.qfai/assistant/catalog/ui-procurement.md`: report a region that was drawn where a catalogue had it, and name the item that would have served.
       - Apply `.agents/rules/interface-clarity.md`: report copy that explains the interface as a finding against the control under it, and name the control to fix.
 
@@ -1645,7 +1660,10 @@ agents:
       - Treat density or volume smells as review signals, not standalone hard gates.
       - Verify test-case quality depth using the Coverage Depth Matrix (see below).
       - Own RED/GREEN **observation** evidence in a TDD micro-cycle: did the test fail (or pass) for the expected reason.
-      - File excess as `defect:code-quality` against constitution Article VII; tag it `delete`, `stdlib`, `native`, `yagni` or `shrink`. Admit it only when it names what to cut and what replaces it. Refuse it when the cut touches the safety floor in `.agents/rules/minimal-implementation.md` § 2.
+      - File excess as `defect:code-quality` against constitution Article VII; tag it
+        `delete`, `stdlib`, `native`, `yagni` or `shrink`. Admit it only when it names what to cut
+        and what replaces it. Refuse it when the cut removes or weakens an obligation in the safety floor at
+        `.agents/rules/minimal-implementation.md` § 2.
 
       ## Ownership boundaries
 
