@@ -56,6 +56,11 @@ const DYNAMIC_CODE_SITES = new Map<string, ReadonlyMap<string, number>>([
   ["validators/agentDefinition.ts", new Map([["code", 1]])],
   ["validators/designAudit.ts", new Map([["finding.ruleId", 1]])],
   ["validators/designFidelity.ts", new Map([["issueCode", 1]])],
+  // One emission site for two stages, each with its own code, taken from the
+  // subject table beside it. Both codes are module-level constants the
+  // ownership scan reads there, so the codes are attributed; what is dynamic is
+  // only which of the two a given run reaches.
+  ["validators/grillingTrace.ts", new Map([["subject.code", 1]])],
   ["validators/layerCoverage.ts", new Map([["group.code", 1]])],
   [
     "validators/orphanProhibition.ts",
@@ -153,6 +158,10 @@ const DYNAMIC_SITE_CODES = new Map<string, readonly string[]>([
       "QFAI-FID-011",
     ],
   ],
+  // One per stage. The check reads a record a stage was told to write, and the
+  // two stages are gated by different profiles — a single code would be claimed
+  // whole by both while each evaluated half of it.
+  ["validators/grillingTrace.ts", ["QFAI-GRILL-001", "QFAI-GRILL-002"]],
   [
     "validators/layerCoverage.ts",
     [
