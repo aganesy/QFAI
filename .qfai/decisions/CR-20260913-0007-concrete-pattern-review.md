@@ -31,6 +31,23 @@ Option 1 is selected under that direction. The approval fields record this
 delegated scope, not a separate user answer to these options. `Approved at`
 is the time that authorization was recorded.
 
+## Requirement source
+
+The current session's delegated implementation scope authorizes the change
+captured in this tracked CR. The requested behavior is defined in Proposed
+change below. This record is the requirement source for the affected
+specification and shared decision.
+
+## Acceptance signals
+
+| Input or operation                                                         | Required result                                                                                                               |
+| -------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| A proposed concrete addition                                               | It concerns business-flow, US, AC, EX or TC coverage and includes a rationale; no numeric growth target applies.              |
+| Empty or abstract-only artifacts, including ID-bearing items               | Optional review returns N/A; no additional BR, NFR, policy, decision or architectural items are required.                     |
+| A preserved manifest with a legacy numeric target                          | The catalog bound makes numeric targets, including default_target, ineffective. Init and upgrade retain the adopter manifest. |
+| A receipted older catalog                                                  | Normal reinit retains it; forced reinit adopts the shipped catalog bound without changing the adopter manifest.               |
+| Missing mandatory pairings or independently required obligations and gates | They remain required. Optional review and N/A excuse none of them.                                                            |
+
 ## Proposed change
 
 - Keep `pattern-doubler` optional and advisory across skills.
@@ -138,8 +155,10 @@ individual option answer is claimed.
   Sequential authors completed Phases 0/1, requirement and test-design Phase 2,
   canonical seeding, obligation reconciliation and Phase 3 plan. Existing
   spec 01..06 and 10 plus DR-0012-002 carry the concrete scope. Phase 4 records
-  the CR in both deltas. Final required validation and independent reviews
-  remain pending.
+  the CR in both deltas. Observed scoped SDD validation passes with zero
+  errors; full scoped validation retains 61 baseline errors and global SDD
+  validation retains 96. Historical independent review results and current
+  pending attestations are distinguished in the evidence below.
 - Action 2: the ledger has 53 rows in one canonical table. Its 37 existing
   rows remain; only the approved TDD-0007 selector narrows to the original
   abstract-only boundary. The executing owner reset only TDD-0006/0007 to
@@ -151,16 +170,25 @@ individual option answer is claimed.
   No row or TC is retired or renumbered. New E2E test identities remain unset.
 - Actions 3/4: source profile/catalog and synchronized operating mirrors
   contain no numeric default and expressly override legacy numeric targets.
-  Existing real-init preservation is unchanged. The regression author observed
+  The mode bound uses the registered `pattern-doubler` key. Existing
+  real-init preservation is unchanged. The regression author observed
   RED with 3 failing assertions and 14 passing controls; subsequent integration
   runs pass all 17 tests, including normal and force reinit. Related checks
   pass 44 tests; ledger/structural checks pass 174. The narrowed selector runs
-  exactly one passing test and intentionally skips 16.
+  exactly one passing test and intentionally skips 16. The existing init
+  oracle now also seeds an actual older catalog and its prior provenance
+  receipt. A controlled wrong-receipt mutation fails the selected adoption
+  assertion; restoring the correct receipt passes, and the full suite passes
+  all 17 tests. This is oracle mutation proof, not a production defect claim.
 - Action 5: both canonical Change Requests tables reference this approved
   re-derive; DR-0012-002's Related includes the CR. Applied at remains `-`
-  until required owner gates complete. The global SDD baseline fails with
-  96 errors and scoped full baseline with 61; these are observations, not
-  waived gates. The repository operating-memory refresh remains unapplied
-  under the source/mirror boundary.
+  until required owner gates complete. Full scoped and global SDD validation
+  retain the same 61 and 96 baseline errors; no gate is waived. Historical
+  architecture review passed at c56caf1ab6d085eea439d4745245cef99ef6ab1f.
+  Completion and QA reviews at fa981919a4be88f30e01b90cdfbcf54a17000952
+  retain whole-workflow REVISE, while confirming the scoped acceptance and
+  corrected ledger note. Attestations for the current source fixes remain
+  pending. The operating-memory refresh remains unapplied under the
+  source/mirror boundary.
 
 Factual phase and command evidence is in `.qfai/evidence/sdd-spec-0015.md`.

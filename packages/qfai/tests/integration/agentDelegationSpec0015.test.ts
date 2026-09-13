@@ -26,6 +26,11 @@ import { isMap, parseDocument, parse as parseYaml } from "yaml";
 
 import { runInit } from "../../src/cli/commands/init.js";
 import { parseAgentFrontmatter } from "../../src/core/agentFrontmatter.js";
+import {
+  hashAssistantAssetText,
+  readAssistantAssetsLock,
+  writeAssistantAssetsLock,
+} from "../../src/core/assistantAssetProvenance.js";
 import { captureStdout } from "../helpers/stdout.js";
 import { removeTempTree } from "../helpers/tempTree.js";
 
@@ -259,8 +264,8 @@ describe("TC-0015-0007: Pattern-Doubler N/A Default", () => {
   it("bounds more requests to concrete artifacts and overrides preserved numeric targets", async () => {
     const rules = await readYamlMapping(path.join(CATALOG_DIR, "review-gate.rules.yml"));
     const modes = yamlMapping(rules.optional_review_modes, "optional_review_modes");
-    expect(modes).toHaveProperty("pattern_doubler");
-    const patternDoubler = yamlMapping(modes.pattern_doubler, "pattern_doubler");
+    expect(modes).toHaveProperty("pattern-doubler");
+    const patternDoubler = yamlMapping(modes["pattern-doubler"], "pattern-doubler");
 
     expect(modes.supported).toContain("pattern-doubler");
     expect(patternDoubler.more_scope).toEqual(["business-flow", "US", "AC", "EX", "TC"]);
@@ -284,6 +289,19 @@ describe("TC-0015-0007: Pattern-Doubler N/A Default", () => {
         await runInit({ dir: root, force: false, dryRun: false, yes: true });
       });
       const assistantDir = path.join(root, ".qfai", "assistant");
+      const catalogPath = path.join(assistantDir, "catalog", "review-gate.rules.yml");
+      const currentCatalog = await readAsset(catalogPath);
+      const catalog = parseDocument(currentCatalog);
+      expect(catalog.getIn(["optional_review_modes", "pattern-doubler", "numeric_targets"])).toBe(
+        "ignored",
+      );
+      expect(
+        catalog.getIn([
+          "optional_review_modes",
+          "pattern-doubler",
+          "preserved_manifest_precedence",
+        ]),
+      ).toBe(PATTERN_REVIEW_BOUND);
       const profilesPath = path.join(assistantDir, "manifest", "review-profiles.yml");
       const profiles = parseDocument(await readAsset(profilesPath));
       const modes = profiles.get("optional_modes");
@@ -295,6 +313,33 @@ describe("TC-0015-0007: Pattern-Doubler N/A Default", () => {
       const adopterProfiles = profiles.toString({ lineWidth: 0 });
       await writeFile(profilesPath, adopterProfiles, "utf-8");
 
+      await captureStdout(async () => {
+        await runInit({ dir: root, force: false, dryRun: false, yes: true });
+      });
+      expect(await readAsset(profilesPath)).toBe(adopterProfiles);
+      expect(await readAsset(catalogPath)).toBe(currentCatalog);
+
+      catalog.set("optional_review_modes", {
+        review_profiles_ssot: ".qfai/assistant/manifest/review-profiles.yml",
+        supported: ["devils-advocate", "pattern-doubler"],
+      });
+      const olderCatalog = catalog.toString({ lineWidth: 0 });
+      await writeFile(catalogPath, olderCatalog, "utf-8");
+      expect(
+        yamlMapping(
+          (await readYamlMapping(catalogPath)).optional_review_modes,
+          "optional_review_modes",
+        ),
+      ).not.toHaveProperty("pattern-doubler");
+      const previousReceipt = await readAssistantAssetsLock(assistantDir);
+      if (previousReceipt === null) throw new Error("initializer wrote no asset receipt");
+      const olderCatalogHash = hashAssistantAssetText(olderCatalog);
+      previousReceipt.files["catalog/review-gate.rules.yml"] = olderCatalogHash;
+      await writeAssistantAssetsLock(assistantDir, previousReceipt);
+      expect(
+        (await readAssistantAssetsLock(assistantDir))?.files["catalog/review-gate.rules.yml"],
+      ).toBe(olderCatalogHash);
+
       for (const force of [false, true]) {
         await captureStdout(async () => {
           await runInit({ dir: root, force, dryRun: false, yes: true });
@@ -302,13 +347,14 @@ describe("TC-0015-0007: Pattern-Doubler N/A Default", () => {
         expect(await readAsset(profilesPath), `force=${force}: adopter profiles changed`).toBe(
           adopterProfiles,
         );
+        if (!force) {
+          expect(await readAsset(catalogPath)).toBe(olderCatalog);
+        }
       }
-      const rules = await readYamlMapping(
-        path.join(assistantDir, "catalog", "review-gate.rules.yml"),
-      );
+      const rules = await readYamlMapping(catalogPath);
       const reviewModes = yamlMapping(rules.optional_review_modes, "optional_review_modes");
-      expect(reviewModes).toHaveProperty("pattern_doubler");
-      const bound = yamlMapping(reviewModes.pattern_doubler, "pattern_doubler");
+      expect(reviewModes).toHaveProperty("pattern-doubler");
+      const bound = yamlMapping(reviewModes["pattern-doubler"], "pattern-doubler");
       expect(bound.numeric_targets).toBe("ignored");
       expect(bound.preserved_manifest_precedence).toBe(PATTERN_REVIEW_BOUND);
     } finally {

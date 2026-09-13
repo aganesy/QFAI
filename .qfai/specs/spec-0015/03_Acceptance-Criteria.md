@@ -24,9 +24,10 @@ Given 3 consecutive devils-advocate FAILs, when checked, then advisory demotion 
 
 - US-Refs: US-0015-0005
 
+Requirement provenance: [approved acceptance signals](../../decisions/CR-20260913-0007-concrete-pattern-review.md#acceptance-signals).
+
 ```gherkin
 # AC-0015-0006
-# Source: discussion-20260913135257933#DAC-004-05
 Scenario: Concrete additions have rationale without a numeric target
   Given optional advisory pattern review of concrete behavior
   When the mode proposes additions
@@ -39,9 +40,10 @@ Scenario: Concrete additions have rationale without a numeric target
 
 - US-Refs: US-0015-0005
 
+Requirement provenance: [approved acceptance signals](../../decisions/CR-20260913-0007-concrete-pattern-review.md#acceptance-signals).
+
 ```gherkin
 # AC-0015-0007
-# Source: discussion-20260913135257933#DAC-004-05
 Scenario: Abstract-only artifacts do not require more patterns
   Given an empty artifact or only BR, NFR, policy, decision or architectural items
   When optional pattern review evaluates the artifact
@@ -56,9 +58,10 @@ Given any reviewer returning FAIL, when checked, then feedback includes a concre
 
 ## AC-0015-0009: Routing SSOT
 
+Requirement provenance: [approved acceptance signals](../../decisions/CR-20260913-0007-concrete-pattern-review.md#acceptance-signals).
+
 ```gherkin
 # AC-0015-0009
-# Source: discussion-20260913135257933#DAC-004-05
 Scenario: Catalog bounds govern preserved optional-mode settings
   Given agent-routing.yml and review-profiles.yml as the routing and optional-mode registries
   And an adopter review-profiles.yml containing a legacy numeric target

@@ -32,8 +32,11 @@
 - When the mode evaluates the artifact
 - Then it returns N/A without demanding more abstract items; missing mandatory pairings, independently required product obligations and blocking gates remain required
 - Given a preserved adopter `review-profiles.yml` with a numeric `default_target`
-- When init runs again, with or without force
-- Then the manifest bytes remain unchanged and the emitted review-gate catalog makes that numeric target ineffective without waiving mandatory pairings or independently required obligations and gates
+- When init runs again against the current catalog without force
+- Then both files remain unchanged and the catalog makes that numeric target ineffective without waiving mandatory pairings or independently required obligations and gates
+- Given an older review-gate catalog without that bound and a matching prior asset receipt
+- When init runs without force, then with force
+- Then the first run preserves the older catalog; the forced run refreshes its bound while both runs preserve the adopter manifest bytes
 
 ## EX-0015-0005: Delegation Failure Hard Stop Reporting
 

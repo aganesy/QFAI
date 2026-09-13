@@ -38,7 +38,8 @@ As a QFAI user, I want a devils-advocate reviewer that challenges assumptions an
 ## US-0015-0005: Pattern-Doubler Reviewer
 
 - Parent: CAP-0015
-- Source: discussion-20260913135257933#DUS-004
+
+Requirement provenance: [approved concrete-review change](../../decisions/CR-20260913-0007-concrete-pattern-review.md#requirement-source).
 
 As a QFAI user, I want optional advisory review that proposes missing concrete business-flow, US, AC, EX or TC coverage with rationale, so that real behavior is covered without numeric targets or demands for more abstract rules.
 

@@ -49,6 +49,7 @@
 ## Evidence Summary
 
 - Evidence: agent catalog, routing files, review gate rules, shared delegation baseline
+- Concrete-pattern requirement source: [approved change](../../decisions/CR-20260913-0007-concrete-pattern-review.md#requirement-source).
 
 ## Relevant Requirements
 

@@ -66,7 +66,7 @@ optional_review_modes:
   supported:
     - devils-advocate
     - pattern-doubler
-  pattern_doubler:
+  pattern-doubler:
     more_scope: [business-flow, US, AC, EX, TC]
     excluded_more_scope: [BR, nonfunctional-floor, policy, decision, architecture]
     abstract_only_result: N/A

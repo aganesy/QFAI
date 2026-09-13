@@ -43,8 +43,8 @@
 - EX-Ref: EX-0015-0004
 - AC-Refs: AC-0015-0007, AC-0015-0009
 - Boundary `abstract-only-na`: verify empty and abstract-only artifacts return N/A even when BR, NFR, policy, decision or architectural items carry IDs. Concrete proposals remain eligible for advisory review. Missing mandatory pairings, independently required product obligations and blocking gates remain required.
-- Boundary `legacy-profile-preservation`: run real init, seed a legacy numeric `default_target` and adopter description, then rerun without force and with force. Verify byte-for-byte manifest preservation and that the emitted catalog ignores the preserved target without waiving mandatory pairings or independently required obligations and gates.
-- Negative controls: removing the abstract-only N/A rule, applying the preserved numeric target or overwriting either adopter field fails the corresponding oracle.
+- Boundary `legacy-profile-preservation`: run real init and seed a legacy numeric `default_target` and adopter description. Verify normal reinit preserves the manifest and current catalog bytes. Seed an older catalog without the bound and its matching prior asset receipt; normal reinit preserves it, while forced reinit refreshes its bound. Verify both paths preserve the adopter manifest and the refreshed catalog ignores numeric targets without waiving mandatory pairings or independently required obligations and gates.
+- Negative controls: removing the abstract-only N/A rule, applying the preserved numeric target or overwriting either adopter field fails the corresponding oracle. A mismatching prior catalog receipt prevents forced refresh and fails the updated-bound assertion.
 
 ## TC-0015-0008: All-Reviewer FAIL Obligation
 
