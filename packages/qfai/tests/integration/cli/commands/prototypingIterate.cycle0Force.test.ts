@@ -259,6 +259,44 @@ describe("iterate --cycle 0 destructive-rerun gate", () => {
       "prior loop seed",
     );
     expect(stderr.join("")).toContain("back in place");
+    // Nothing claims a move the reset put back.
+    const log = await readFile(path.join(evidenceRoot, "mutation-log.jsonl"), "utf-8").catch(
+      () => "",
+    );
+    expect(log).not.toContain("screenshots/home.png");
+  });
+
+  it("puts the aggregate directories back when the iter-00 backup fails", async () => {
+    const root = await newTempDir();
+    await seedProject(root);
+    await seedExistingIter00(root, "prior loop seed");
+    const evidenceRoot = path.join(root, ".qfai/evidence/prototyping");
+    await mkdir(path.join(evidenceRoot, "screenshots"), { recursive: true });
+    await writeFile(path.join(evidenceRoot, "screenshots", "home.png"), "prior capture", "utf-8");
+    // A non-empty directory already at the `iter-00` backup refuses that move.
+    const FIXED_ISO = "2026-01-01T00:00:00.000Z";
+    vi.spyOn(Date.prototype, "toISOString").mockReturnValue(FIXED_ISO);
+    const collision = path.join(evidenceRoot, `iter-00.backup-${FIXED_ISO.replace(/[:.]/g, "-")}`);
+    await mkdir(collision, { recursive: true });
+    await writeFile(path.join(collision, "stop-rename.marker"), "x", "utf-8");
+    const stderr = captureStderr();
+
+    const exit = await runPrototypingIterate({
+      root,
+      cycle: 0,
+      targetUrl: "http://localhost:5173",
+      force: true,
+    });
+
+    expect(exit).toBe(2);
+    expect(await readFile(path.join(evidenceRoot, "screenshots", "home.png"), "utf-8")).toBe(
+      "prior capture",
+    );
+    expect(stderr.join("")).toContain("back in place");
+    const log = await readFile(path.join(evidenceRoot, "mutation-log.jsonl"), "utf-8").catch(
+      () => "",
+    );
+    expect(log).not.toContain("screenshots/home.png");
   });
 
   it("previews the aggregate move under --dry-run and moves nothing", async () => {

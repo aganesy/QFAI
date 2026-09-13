@@ -131,8 +131,10 @@ beside `iter-00.backup-<ISO>/` and with the same `<ISO>` when both are
 written, and logs each moved file to `mutation-log.jsonl`. The
 required-path check reads the aggregate directories before the
 iteration directories, so a restarted loop holds no evidence until it
-captures again. A move that fails stops the run before any evidence is
-cleared, with whatever the reset had already moved put back.
+captures again. The move comes before the `iter-00` backup, and the log
+entries are written once both have succeeded: a failure in either stops
+the run before any evidence is cleared and puts back what the reset had
+moved.
 
 ## `--capture` and `--auto-serve` (REQ-0109 / REQ-0110)
 

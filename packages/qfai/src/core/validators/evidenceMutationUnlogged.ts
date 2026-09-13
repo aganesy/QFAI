@@ -66,6 +66,14 @@ export const EVIDENCE_MUTATION_PAIRS: readonly EvidenceMutationPair[] = [
     mutationTokens: ["await rm(abs, { recursive: true, force: true })"],
     logTokens: ["logEvidenceDelete"],
   },
+  {
+    // The cycle-0 reset moves the aggregate `screenshots/` and `html/`
+    // directories aside, and logs each file once the move is kept.
+    clause: "iterate-cycle-0-aggregate-move",
+    sourceRel: "packages/qfai/src/cli/commands/prototypingIterate.ts",
+    mutationTokens: ["await rename(sourceAbs"],
+    logTokens: ["logEvidenceMove"],
+  },
 ];
 
 const FINDING_CODE = "R-EVIDENCE-MUTATION-UNLOGGED";
