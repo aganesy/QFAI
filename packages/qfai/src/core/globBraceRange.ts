@@ -65,7 +65,8 @@ function numericRangeMembers(
   // fast-glob expands one written with an increment whatever its length.
   // Lift when: a project's glob names a range of more than ten thousand values.
   if (count > BRACE_RANGE_MEMBER_CAP) return [];
-  const padded = [from, to, increment].some((part) => /^[+-]?0\d/.test(part));
+  // A leading minus sign still pads, and a leading plus sign never does.
+  const padded = [from, to, increment].some((part) => /^-?0\d/.test(part));
   const width = padded ? Math.max(from.length, to.length, increment.length) : 0;
   const direction = start <= end ? 1 : -1;
   return Array.from({ length: count }, (_, index) => {
