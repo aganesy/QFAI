@@ -97,6 +97,27 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   characters. Freshness is compared exactly, so accepting both cases would let
   one tree be recorded as two revisions and read a correct row as stale.
 
+- **Four spec-0013 rules the product states otherwise are recorded where the
+  Drift Protocol looks for them** (#1629). Two test cases in one pack require
+  opposite things of one value: the UI contract template must ship an empty
+  task list, and the validate lane must fail at error on exactly that value.
+  A legacy-contract rule is written without the sunset condition its business
+  rule carries, three lines below a file comment describing the behaviour that
+  sunset replaced. An obligation naming a stage is covered by a test that
+  drives a helper no code calls. And a finding specified as a warning inside a
+  deprecation window is emitted as an unconditional error, because the
+  version-keyed severity mechanism those layers name was retired.
+
+  Three records hold them. `CR-20260913-0007` and `CR-20260913-0008` are
+  defects the pack shows on its own, each with its one correction: the template
+  slot restated as a key holding authored tasks, and the legacy-contract test
+  case given the sunset its business rule already carries. `CR-20260913-0003`
+  puts the other two to the user with options: the unwired helper, whose
+  resolver half every option restates to the fallback `spec-0012` specifies,
+  and the finding's severity, where restoring a window needs a release only the
+  user can name. Each blocks the ledger rows its items change, and no rule or
+  code changes until it is applied.
+
 ## [1.12.0] - 2026-09-12
 
 ### Added
