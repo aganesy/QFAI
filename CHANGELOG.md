@@ -224,6 +224,16 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   first, and the second is named. The prototyping profile, which certification
   accepts, reports the finding as well.
 
+- **An unreadable directory under the acceptance test directories is reported,
+  and the run finishes** (#1755). A directory the account running
+  `qfai validate` cannot read stopped the ATDD scan's glob walk, and the
+  rejection ended `--profile atdd` with no finding and none of its other
+  results. The scan now reads past each such directory and
+  `QFAI-ATDD-135` names it. No test inside is counted, so the carrier-only
+  partition is suppressed as it is for a truncated scan, and the summary
+  artifact lists the directories. The scaffold placeholder scan reads past
+  them too.
+
 ## [1.12.0] - 2026-09-12
 
 ### Added

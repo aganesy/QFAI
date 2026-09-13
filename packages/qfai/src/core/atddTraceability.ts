@@ -1,6 +1,7 @@
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 
+import fg from "fast-glob";
 import { parse as parseYaml } from "yaml";
 
 import type { QfaiConfig } from "./config.js";
@@ -11,6 +12,7 @@ import { collectApiContractFiles, collectDbContractFiles } from "./discovery.js"
 import {
   collectFilesByGlobs,
   DEFAULT_GLOB_FILE_LIMIT,
+  isFileSystemError,
   unusableGlobReason,
   type CollectFilesByGlobsResult,
 } from "./fs.js";
@@ -191,6 +193,12 @@ export type AtddTraceabilityScan = {
   matchedFileCount: number;
   truncated: boolean;
   limit: number;
+  /**
+   * Directories under the scanned roots the scan could not read, in POSIX form:
+   * relative to the repository, or absolute where `paths.testsDir` lies outside
+   * it. No test inside one is counted.
+   */
+  unreadable: string[];
 };
 
 /**
@@ -313,8 +321,9 @@ export type AtddCodeTraceabilityResult = {
    * renaming the ledger cannot clear the obligation. Skip state is out of
    * scope, so this asserts a test is *declared*, never that it is enabled.
    *
-   * Empty whenever `scan.truncated` is set: an executable carrier may sit past
-   * the file limit, so the claim is unproven and suppressed rather than guessed.
+   * Empty whenever `scan.truncated` is set or `scan.unreadable` names a
+   * directory: an executable carrier may sit past the file limit or inside that
+   * directory, so the claim is unproven and suppressed rather than guessed.
    */
   coveredByCarrierOnly: AtddObligationRefs;
   /**
@@ -455,7 +464,7 @@ export async function evaluateAtddCodeTraceability(
     testsRoot,
     deriveAtddFilePattern(config.validation.traceability.testFileGlobs),
   );
-  const scanResult = await collectTestFiles(root, scanGlobs);
+  const { scan: scanResult, unreadable } = await collectReadableTestFiles(root, scanGlobs);
 
   const usRefs: AtddSpecRefs = new Map<string, Map<string, Set<string>>>();
   const tcRefs: AtddSpecRefs = new Map<string, Map<string, Set<string>>>();
@@ -675,19 +684,21 @@ export async function evaluateAtddCodeTraceability(
   // obligation as carrier-only would then be a false "nothing runs for this".
   // Suppressed rather than guessed; `scan.truncated` is already warned on by
   // the CLI and persisted into the summary artifact, so a downstream gate reads
-  // an indeterminate scan there instead of an empty list it can trust.
-  const coveredByCarrierOnly = scanResult.truncated
-    ? { us: [], tc: [], conApi: [], conDb: [] }
-    : buildCarrierOnlyRefs({
-        usRefs,
-        usObligationScope: uiBearingSpecs,
-        tcRefs,
-        apiRefs,
-        apiContractIds: activeApiContractIds,
-        dbRefs,
-        dbContractIds: activeDbContractIds,
-        executableCarriers,
-      });
+  // an indeterminate scan there instead of an empty list it can trust. A
+  // directory the scan could not read leaves the same gap.
+  const coveredByCarrierOnly =
+    scanResult.truncated || unreadable.length > 0
+      ? { us: [], tc: [], conApi: [], conDb: [] }
+      : buildCarrierOnlyRefs({
+          usRefs,
+          usObligationScope: uiBearingSpecs,
+          tcRefs,
+          apiRefs,
+          apiContractIds: activeApiContractIds,
+          dbRefs,
+          dbContractIds: activeDbContractIds,
+          executableCarriers,
+        });
 
   return {
     declaredSpecDirs: specRefs.declaredSpecDirs,
@@ -730,6 +741,7 @@ export async function evaluateAtddCodeTraceability(
       matchedFileCount: scanResult.matchedFileCount,
       truncated: scanResult.truncated,
       limit: scanResult.limit,
+      unreadable,
     },
   };
 }
@@ -2365,12 +2377,57 @@ export function atddAcceptanceTestGlobs(
   return buildAtddTestGlobs(root, resolvePath(root, config, "testsDir"), filePattern);
 }
 
-async function collectTestFiles(root: string, globs: string[]): Promise<CollectFilesByGlobsResult> {
-  return collectFilesByGlobs(root, {
-    globs,
-    ignore: DEFAULT_TEST_FILE_EXCLUDE_GLOBS,
-    limit: DEFAULT_GLOB_FILE_LIMIT,
-  });
+/**
+ * The acceptance tests the scan reads, and the directories it could not.
+ *
+ * A directory the account running the scan cannot read stops the glob walk.
+ * Rejected, that failure ended `--profile atdd` with no finding and none of
+ * the profile's other results, so the walk is taken again past each such
+ * directory, and the directory is named instead.
+ *
+ * SIMPLIFIED: one more walk per unreadable directory.
+ * Lift when: a tree holds enough unreadable directories for the repeated walks
+ * to be measured as slow.
+ */
+async function collectReadableTestFiles(
+  root: string,
+  globs: string[],
+): Promise<{ scan: CollectFilesByGlobsResult; unreadable: string[] }> {
+  const unreadable: string[] = [];
+  for (;;) {
+    try {
+      const scan = await collectFilesByGlobs(root, {
+        globs,
+        ignore: [
+          ...DEFAULT_TEST_FILE_EXCLUDE_GLOBS,
+          ...unreadable.map((directory) => `${fg.escapePath(directory)}/**`),
+        ],
+        limit: DEFAULT_GLOB_FILE_LIMIT,
+      });
+      return { scan, unreadable: [...unreadable].sort() };
+    } catch (error) {
+      const directory = unreadableDirectoryOf(root, error);
+      // A failure that names no directory, or one the walk already passes over,
+      // is not one reading past can clear.
+      if (directory === null || unreadable.includes(directory)) throw error;
+      unreadable.push(directory);
+    }
+  }
+}
+
+/**
+ * The directory a file-system error names, in POSIX form: relative to `root`
+ * where it lies inside, and absolute where it does not, since a configured
+ * `paths.testsDir` may point outside the repository.
+ */
+function unreadableDirectoryOf(root: string, error: unknown): string | null {
+  if (!isFileSystemError(error) || !(error instanceof Error)) return null;
+  if (!("path" in error) || typeof error.path !== "string") return null;
+  const absolute = path.resolve(root, error.path);
+  const relative = path.relative(root, absolute);
+  if (relative === "") return null;
+  const outside = relative.startsWith("..") || path.isAbsolute(relative);
+  return toPosixPath(outside ? absolute : relative);
 }
 
 function resolveTestKind(
