@@ -1568,6 +1568,31 @@ function fencedEvidenceValueEnd(lines: readonly string[], start: number): number
   return lines.length - 1;
 }
 
+/**
+ * Whether a table row in the region the audited subject is taken from holds a
+ * `reviewer verdict` or `Round N: Review pack` cell beside a cell of another
+ * field.
+ *
+ * The subject drops a line that opens with one of those fields, and a table
+ * row is one line, while the field readers take every label and value pair on
+ * it. A phase-authored cell after the reviewer's is then read by the completion
+ * checks and hashed by no reviewer, so it can be edited after the verdict with
+ * nothing moving; one before it keeps the reviewer's own cell in the subject.
+ * A row holding only those fields' labels, each followed by its value, is
+ * dropped whole and hides nothing.
+ */
+function hasFieldBesideReviewerAppendedCell(section: string): boolean {
+  const visibleLines = maskEvidenceRegions(section.replace(/\r\n/g, "\n")).split("\n");
+  const boundary = visibleLines.findIndex((line) => GATE_COMPLETED_EVIDENCE_FIELD.test(line));
+  return visibleLines.slice(0, boundary < 0 ? undefined : boundary).some((line) => {
+    if (!/^\s*\|/.test(line)) return false;
+    const labels = splitMarkdownRow(line).map((cell) =>
+      REVIEWER_APPENDED_ROUND_FIELD.test(`${cell} |`),
+    );
+    return labels.some(Boolean) && labels.some((reviewer, index) => index % 2 === 0 && !reviewer);
+  });
+}
+
 function phaseAuthoredEvidence(section: string, tddId: string): string {
   const normalized = section.replace(/\r\n/g, "\n");
   const originalLines = normalized.split("\n");
@@ -2012,14 +2037,82 @@ function requestNamesReviewUnit(
   tddId: string,
   reviewUnit: ReadonlySet<string>,
 ): boolean {
-  const values = visibleLineFieldValues(request, "TDD-ID");
-  if (values.length !== 1) return false;
-  const members = (values[0] ?? "").split(/[\s,]+/).filter((member) => member.length > 0);
+  const members = requestedTddIds(request);
   return (
+    members !== null &&
     members.filter((member) => member === tddId).length === 1 &&
     new Set(members).size === members.length &&
     members.every((member) => reviewUnit.has(member))
   );
+}
+
+/**
+ * The ids a request's one visible `TDD-ID` line lists, in order, or `null` when
+ * the request states that line other than once or lists nothing on it.
+ */
+function requestedTddIds(request: string): string[] | null {
+  const values = visibleLineFieldValues(request, "TDD-ID");
+  if (values.length !== 1) return null;
+  const members = (values[0] ?? "").split(/[\s,]+/).filter((member) => member.length > 0);
+  return members.length === 0 ? null : members;
+}
+
+/**
+ * The ids a pack's responses answer for: the ones its request lists, or this
+ * row alone when the request lists none readably. A request naming the wrong
+ * ids is reported by the check that reads it.
+ */
+function packReviewMembers(
+  files: ReadonlyArray<ReviewPackFile>,
+  packPath: string,
+  tddId: string,
+): string[] {
+  const request = reviewPackArtifact(files, packPath, "review_request.md");
+  return (request === null ? null : requestedTddIds(request)) ?? [tddId];
+}
+
+/**
+ * A hash line's value read as one sha256 hash, alone or beside one token naming
+ * the id it belongs to, as in `TDD-0001 <hash>`, `TDD-0001: <hash>` or
+ * `<hash> (TDD-0001)`; `null` when it holds more than that.
+ */
+function auditedHashEntry(value: string): { member: string | null; hash: string } | null {
+  const tokens = value.split(/\s+/).filter((token) => token.length > 0);
+  const hashes = tokens.filter((token) => SHA256_VALUE.test(token));
+  const named = tokens.filter((token) => !SHA256_VALUE.test(token));
+  const hash = hashes[0];
+  if (hash === undefined || hashes.length > 1 || named.length > 1) return null;
+  const label = named[0];
+  if (label === undefined) return { member: null, hash };
+  return { member: /^\((.+)\)$/.exec(label)?.[1] ?? label.replace(/:$/, ""), hash };
+}
+
+/**
+ * The `Audited evidence hash` a response gives each id in `members`, or `null`
+ * unless it gives every one of them exactly one visible sha256 hash.
+ *
+ * A request listing one id is answered by the template's one line, which may
+ * name that id. A T1 group's request lists every member, and the shared
+ * response carries one line per member with the hash beside the id it belongs
+ * to (`audited-evidence-hash.md`), so a row's hash is the one on the line
+ * naming it. A line naming no listed id cannot be attributed to any row, and a
+ * second line for one id leaves a reader free to take either hash.
+ */
+function memberAuditedHashes(
+  response: string,
+  members: readonly string[],
+): Map<string, string> | null {
+  const lines = visibleLineFieldValues(response, "Audited evidence hash");
+  if (lines.length !== members.length) return null;
+  const hashes = new Map<string, string>();
+  for (const line of lines) {
+    const entry = auditedHashEntry(line);
+    const member = entry?.member ?? (members.length === 1 ? members[0] : undefined);
+    if (entry === null || member === undefined || !members.includes(member)) return null;
+    if (hashes.has(member)) return null;
+    hashes.set(member, entry.hash);
+  }
+  return hashes;
 }
 
 /**
@@ -2979,6 +3072,11 @@ function missingCompletedEvidenceFields(
   if (hasPhaseAuthoredFieldAfterGate(entrySection)) {
     missing.push("all phase-authored fields before review and checkpoint fields");
   }
+  if (hasFieldBesideReviewerAppendedCell(entrySection)) {
+    missing.push(
+      "reviewer verdict and Round N: Review pack cells on table rows holding no other field",
+    );
+  }
 
   const failureMode = rowEvidenceFieldValue(section, "RED failure mode")?.toLowerCase();
   let latestRevision: string | null = null;
@@ -3314,6 +3412,7 @@ async function invalidCompletedEvidenceArtifacts(
     // responses say.
     const responses = reviewPackResponses(packFiles, expectedRole);
     const response = responses[0];
+    const members = packReviewMembers(packFiles, packPath, expected.tddId);
     if (
       request === null ||
       !requestNamesReviewUnit(request, expected.tddId, expected.reviewUnit) ||
@@ -3331,7 +3430,7 @@ async function invalidCompletedEvidenceArtifacts(
       ) ||
       !exactLineField(response, "Reviewed revision", recordedRevision) ||
       auditedHash === null ||
-      !exactLineField(response, "Audited evidence hash", auditedHash)
+      memberAuditedHashes(response, members)?.get(expected.tddId) !== auditedHash
     ) {
       invalid.push(
         `${prefix} review pack carrying request, summary, and named reviewer PASS provenance`,
@@ -3353,15 +3452,22 @@ async function invalidCompletedEvidenceArtifacts(
     const reviewedRevision = rowEvidenceFieldValue(section, `${prefix} reviewed revision`);
     closing.set(role, { hash, revision: reviewedRevision });
   }
+  const namedPacks = new Set<string>();
   for (const round of rounds) {
     invalid.push(
-      ...(await invalidRoundReviewPacks(root, section, round, {
-        tddId: expected.tddId,
-        reviewUnit: expected.reviewUnit,
-        specNumber: expected.specNumber,
-        specsRelative: context.specsRelative,
-        closing: round === rounds.at(-1) ? closing : null,
-      })),
+      ...(await invalidRoundReviewPacks(
+        root,
+        section,
+        round,
+        {
+          tddId: expected.tddId,
+          reviewUnit: expected.reviewUnit,
+          specNumber: expected.specNumber,
+          specsRelative: context.specsRelative,
+          closing: round === rounds.at(-1) ? closing : null,
+        },
+        namedPacks,
+      )),
     );
   }
 
@@ -3409,6 +3515,12 @@ const CANONICAL_REVIEW_PACK = /^\.qfai\/review\/review-\d{17}$/;
  * the canonical shape, as a row-level pack is, because review packs are
  * local-only.
  *
+ * Every review creates a new pack, so no two attempts of a row name one, in
+ * this round or any other: `namedPacks` holds the packs the row's earlier
+ * attempts named, and an attempt naming one of them is a review that left no
+ * artifact of its own. The members of a T1 group name the one pack their shared
+ * attempt wrote, each in its own entry, which is one attempt per row.
+ *
  * `row.closing` is present for the last round only: the attempt it closed on
  * is the review the row-level verdicts record, so it holds one response per
  * routed reviewer, over the tree and the audited hash that reviewer's verdict
@@ -3422,6 +3534,7 @@ async function invalidRoundReviewPacks(
   section: string,
   round: number,
   row: RoundPackRow,
+  namedPacks: Set<string>,
 ): Promise<string[]> {
   const inRound = (field: string, includeBlank = false): EvidenceFieldOccurrence[] =>
     evidenceFieldOccurrences(section, field, includeBlank).filter(
@@ -3435,19 +3548,25 @@ async function invalidRoundReviewPacks(
   const attempts = new Set([...verdicts, ...packs, ...seals].map(({ attempt }) => attempt));
   const invalid: string[] = [];
   for (const attempt of attempts) {
+    const label = `Round ${round}: Review pack${attempt === null ? "" : ` (attempt ${attempt})`}`;
     const count = (occurrences: readonly EvidenceFieldOccurrence[]): number =>
       occurrences.filter((occurrence) => occurrence.attempt === attempt).length;
     if (count(packs) > 1 || count(seals) > 1) {
-      const qualifier = attempt === null ? "" : ` (attempt ${attempt})`;
-      invalid.push(`Round ${round}: Review pack${qualifier} and its seal recorded once`);
+      invalid.push(`${label} and its seal recorded once`);
       continue;
     }
+    const pack = lastAttemptValue(packs, attempt);
+    if (pack !== null && namedPacks.has(pack)) {
+      invalid.push(`${label} naming a new pack, not an earlier attempt's`);
+      continue;
+    }
+    if (pack !== null) namedPacks.add(pack);
     invalid.push(
       ...(await invalidRoundAttemptPack(root, {
         ...row,
         round,
         attempt,
-        pack: lastAttemptValue(packs, attempt),
+        pack,
         seal: lastAttemptValue(seals, attempt),
         verdict: lastAttemptValue(verdicts, attempt),
         closing: attempt === closingAttempt ? row.closing : null,
@@ -3512,7 +3631,15 @@ async function invalidRoundAttemptPack(root: string, entry: RoundAttemptPack): P
   if (!roundPackRecordsSubject(packFiles, entry.pack, entry)) {
     invalid.push(`${label} reviewing this row's spec at one revision`);
   }
-  if (entry.closing !== null && !roundPackRecordsClosing(packFiles, entry.pack, entry.closing)) {
+  if (!roundPackRecordsHashes(packFiles, entry.pack, entry.tddId)) {
+    invalid.push(
+      `${label} holding one sha256 Audited evidence hash per TDD-ID its request lists, in every response`,
+    );
+  }
+  if (
+    entry.closing !== null &&
+    !roundPackRecordsClosing(packFiles, entry.pack, entry.tddId, entry.closing)
+  ) {
     invalid.push(
       `${label} holding one response per closing reviewer, at the revision and hash its verdict records`,
     );
@@ -3525,6 +3652,24 @@ function allReviewPackResponses(packFiles: ReadonlyArray<ReviewPackFile>): strin
   return packFiles
     .filter(({ relativePath }) => /^R\d{2}_.+\.md$/.test(path.posix.basename(relativePath)))
     .map(({ content }) => content);
+}
+
+/**
+ * Whether every response in a round attempt's pack gives each id its request
+ * lists one visible sha256 `Audited evidence hash` (`review-artifact-layout.md`).
+ * Only the closing attempt's hashes can be recomputed, because no earlier
+ * attempt's subject is recorded anywhere, but a response that omits one, states
+ * it twice or shows it only inside a fence is not a verdict in any attempt.
+ */
+function roundPackRecordsHashes(
+  packFiles: ReadonlyArray<ReviewPackFile>,
+  packPath: string,
+  tddId: string,
+): boolean {
+  const members = packReviewMembers(packFiles, packPath, tddId);
+  return allReviewPackResponses(packFiles).every(
+    (response) => memberAuditedHashes(response, members) !== null,
+  );
 }
 
 /**
@@ -3606,22 +3751,25 @@ function roundPackRecordsSubject(
  * Whether the attempt the last round closed on is the review the row-level
  * verdicts record: one response from each reviewer whose verdict the row
  * records, over the revision `summary.json` names and that verdict records, and
- * carrying that verdict's audited hash. A pack answering for one reviewer alone
+ * giving this row that verdict's audited hash — on the line naming the row,
+ * where the request lists a T1 group. A pack answering for one reviewer alone
  * would otherwise satisfy every other reviewer's hash vacuously.
  */
 function roundPackRecordsClosing(
   packFiles: ReadonlyArray<ReviewPackFile>,
   packPath: string,
+  tddId: string,
   closing: ReadonlyMap<string, ClosingVerdict>,
 ): boolean {
   const revision = reviewPackSummary(packFiles, packPath)?.["revision"];
+  const members = packReviewMembers(packFiles, packPath, tddId);
   for (const [role, verdict] of closing) {
     const answered = reviewPackResponses(packFiles, role);
     if (
       answered.length !== 1 ||
       verdict.revision === null ||
       revision !== verdict.revision ||
-      !exactLineField(answered[0] ?? "", "Audited evidence hash", verdict.hash)
+      memberAuditedHashes(answered[0] ?? "", members)?.get(tddId) !== verdict.hash
     ) {
       return false;
     }

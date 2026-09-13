@@ -268,6 +268,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   round, every attempt before the last is a `REVISE`. A blank attempt counts as
   one.
 
+  Every response in a present round pack must state one visible SHA-256
+  `Audited evidence hash` per `TDD-ID` its request lists, and a T1 group
+  member's hash is read from the line naming it, in round and row-level packs
+  alike. No two review attempts of a row may name one pack, and a
+  `reviewer verdict` or `Round N: Review pack` cell may not share a table row
+  with another field, since the audited subject drops that row whole.
+
 ## [1.12.0] - 2026-09-12
 
 ### Added
