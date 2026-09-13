@@ -402,15 +402,13 @@ delegated independently and returns only `PASS` or `REVISE`"; under
 blocking reviewers return `PASS`".
 
 `validateReviewArtifacts` is wired into the full-scan verify profile, but reads
-a review pack's `PASS` / `FAIL` / `NA` roster and never a `REVISE` verdict. No
-case in the package reads either clause. So the row needs a test over the
-shipped skill, not a decision about the obligation.
-
-One case does feed verify a `REVISE`, from a render critique rather than a
-reviewer that verify routes: `prototypingExplorationRelaxationScope.test.ts` requires
-`QFAI-CRIT-008` at `error` from a `verify`-profile run over one. The matrix
-credits it in part. It sits in a file the row does not name, so it backs no
-backfill of the row either.
+a review pack's `PASS` / `FAIL` / `NA` roster and never a `REVISE` verdict.
+`packages/qfai/tests/integration/spec0014VerifyReviewerGate.test.ts` covers the
+obligation from both sides: it feeds verify's binding gate a render critique
+the reviewer returned `REVISE` and requires the error that fails it, and it
+reads both clauses in the shipped and the installed skill. The row does not
+name that file yet. `CR-20260913-0005` proposes pointing it there, and until
+that request is approved and applied the row names the migration-guidance suite described above.
 
 `TDD-0018` is not backfilled, and the reason is not its coverage. Its
 obligation, `TC-0014-0018`, is that the full-scan verify path depends on the
@@ -450,13 +448,15 @@ repair goes to the ledger owner with the rest.
 Both cases the row is about enter by calling `runPrototypingCertify`
 with the scope as an argument. The seal itself is discriminated — one mutation
 kills the `scope` field, a second drops a gate from the notes, and each leaves
-the other intact — but the parsing and dispatch that turn the flag into that
-argument are exercised by nothing that runs. The only case invoking the command
-line sits in a block that is skipped. A parser that stopped forwarding the flag
-would leave both cases green.
+the other intact — but neither case parses the flag, so a parser that stopped
+forwarding it would leave both green.
 
-So the row proves the seal and not the entry path the obligation names. It needs
-a case that drives the command line.
+So the cases the row names prove the seal and not the entry path the obligation
+names. The command line is driven now, in cases the row does not name:
+`packages/qfai/tests/integration/spec0014SaasPackageCertify.test.ts` runs it
+through the CLI entry point, and the end-to-end suite through the built binary.
+`CR-20260913-0005` proposes pointing the row at the integration case; until that
+request is applied, the row names the function-level suite.
 
 `TDD-0036` is not backfilled either, for a different reason. Its obligation,
 `TC-0014-0036`, holds two boundaries: `--upgrade-scope full` is refused while a
@@ -470,7 +470,10 @@ on a row, and sends a matrix-shaped obligation to `/qfai-sdd` Phase 2b: the row
 is split there, into two rows carrying the same `TC-Refs`, never in place at
 evidence time. A `Selector` naming both cases would pack both boundaries behind
 one identifier, which is the shape that rule forbids. The row therefore stays as
-it stands and needs a Change Request that decomposes it.
+it stands and needs a Change Request that decomposes it. `CR-20260913-0005`
+proposes that decomposition: the refusal would stay on `TDD-0036` and the
+promotion would move to a new `TDD-0037`, both on the command-line cases, with a
+`Boundary` naming each. Until it is applied, the ledger holds the one row.
 
 **And as it stands the `Selector` selects nothing.** The runner contract reads
 `-t` as a regular expression over the full test name
