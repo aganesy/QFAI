@@ -25,6 +25,10 @@ describe("the retained-failure test stays under the safety floor", () => {
     );
     expect(flat).toContain("callback runtime ignores returned promises");
     expect(flat).toContain("Subject to the same floor");
+    expect(flat).toContain("use an explicit adapter that adopts the asynchronous result");
+    expect(flat).toContain(
+      "Do not make the callback async and assume its ignored outer promise is consumed",
+    );
     expect(flat).toContain(".qfai/specs/spec-*/06_Test-Cases.md");
     expect(flat).toContain("process entry point is a trust boundary");
     expect(flat).toContain("A dropped rejection remains a correctness defect");

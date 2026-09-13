@@ -55,8 +55,10 @@ caller. Every promise is awaited or returned to a caller that awaits or adopts
 it, never dropped.
 
 Subject to the same floor, when a callback runtime ignores returned promises,
-await its work and handle rejections at that trust boundary. An ignored return
-is a dropped promise, not propagation.
+use an explicit adapter that adopts the asynchronous result and handles
+rejections at that trust boundary. Do not make the callback async and assume
+its ignored outer promise is consumed. An ignored return is a dropped promise,
+not propagation.
 
 An observation has a test-case row in `.qfai/specs/spec-*/06_Test-Cases.md`.
 The process entry point is a trust boundary and handles failures that propagate
