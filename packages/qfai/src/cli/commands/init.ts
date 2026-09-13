@@ -213,6 +213,10 @@ export async function runInit(options: InitOptions): Promise<void> {
     );
   }
 
+  if (!options.dryRun) {
+    await preflightGovernedCreation(assistantAssets, rootAssets, destRoot);
+  }
+
   // If --upgrade-assistant-tree is supplied, run the migration FIRST.
   // This relocates user-edited content from the 2 legacy pre-recut
   // surfaces (instructions/, steering/) into the new 4-layer tree
@@ -649,6 +653,105 @@ export async function runInit(options: InitOptions): Promise<void> {
 
 function withoutPaths(paths: string[], excluded: ReadonlySet<string>): string[] {
   return paths.filter((candidate) => !excluded.has(candidate));
+}
+
+/** Reject unsupported exclusive creation before copying or migrating any assets. */
+async function preflightGovernedCreation(
+  assistantAssets: string,
+  rootAssets: string,
+  destRoot: string,
+): Promise<void> {
+  let shipped: Record<string, string>;
+  try {
+    shipped = await buildShippedAssistantHashes(assistantAssets);
+  } catch {
+    // The governed sync cannot publish files from an unreadable shipped set.
+    return;
+  }
+  const isContained = makeGovernedContainmentGuard(destRoot);
+  const probed = new Set<string>();
+  for (const relative of Object.keys(shipped)) {
+    if (!(await isContained(relative))) continue;
+    const dest = path.join(destRoot, ...ASSISTANT_DIR.split("/"), ...relative.split("/"));
+    try {
+      await lstat(dest);
+      continue;
+    } catch (cause: unknown) {
+      if (!isEnoent(cause)) continue;
+    }
+    if (
+      relative === "constitution/constitution.md" &&
+      !(await canPlanConstitutionCreation(rootAssets, destRoot))
+    ) {
+      continue;
+    }
+    let directory = path.dirname(dest);
+    for (;;) {
+      try {
+        await stat(directory);
+        break;
+      } catch (cause: unknown) {
+        if (!isEnoent(cause) || directory === path.dirname(directory)) throw cause;
+        directory = path.dirname(directory);
+      }
+    }
+    if (probed.has(directory)) continue;
+    await probeExclusiveLink(directory);
+    probed.add(directory);
+  }
+}
+
+async function canPlanConstitutionCreation(rootAssets: string, destRoot: string): Promise<boolean> {
+  if (await canSyncConstitution(rootAssets, destRoot, false)) return true;
+  const name = "minimal-implementation.md";
+  const relative = path.join(AGENTS_RULES_DIR_REL, name);
+  if (!(await hasRealGovernedAssistantParents(destRoot, relative.split(path.sep).join("/")))) {
+    return false;
+  }
+  try {
+    await lstat(path.join(destRoot, relative));
+  } catch (cause: unknown) {
+    if (isEnoent(cause)) {
+      return (
+        (await hashAssistantAssetFile(path.join(rootAssets, relative), { allowSymlink: true })) !==
+        null
+      );
+    }
+    return false;
+  }
+  try {
+    const plans = await planRuleMasterUpdates(
+      path.join(rootAssets, AGENTS_RULES_DIR_REL),
+      path.join(destRoot, AGENTS_RULES_DIR_REL),
+    );
+    return plans.some((plan) => plan.name === name && plan.verdict === "update");
+  } catch {
+    return false;
+  }
+}
+
+async function probeExclusiveLink(directory: string): Promise<void> {
+  const source = path.join(directory, `${ASSISTANT_STAGING_PREFIX}${randomUUID()}.tmp`);
+  const dest = path.join(directory, `${ASSISTANT_STAGING_PREFIX}${randomUUID()}.tmp`);
+  let ownsSource = false;
+  let ownsDest = false;
+  try {
+    const handle = await open(source, "wx");
+    ownsSource = true;
+    await handle.close();
+    try {
+      await link(source, dest);
+      ownsDest = true;
+    } catch (cause: unknown) {
+      throw new Error(
+        "qfai init cannot create hard links here. Use a filesystem and permissions supporting hard links, then rerun; no assets were changed.",
+        { cause },
+      );
+    }
+  } finally {
+    if (ownsDest) await rm(dest, { force: true }).catch(() => {});
+    if (ownsSource) await rm(source, { force: true }).catch(() => {});
+  }
 }
 
 type GovernedAssetsResult = {

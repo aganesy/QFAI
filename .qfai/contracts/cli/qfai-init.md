@@ -140,6 +140,15 @@ A dry run includes the constitution when the same plan would create or update
 its compatible rule master under unlinked parents. A planned write through a
 linked parent cannot authorize the preview. It writes neither file.
 
+Creating missing governed assets requires hard-link support and permission.
+Before any asset copy or migration, init probes the nearest existing directory
+for each eligible absent governed path. It removes only its own probe files.
+A failed link check aborts with recovery guidance and preserves existing assets;
+it never falls back to a partial final-path copy or an overwriting rename.
+Existing governed paths and a constitution deferred by an edited safety master
+need no creation probe. Dry runs perform no probe or writes. The check cannot
+prevent a filesystem or permission change later in the run.
+
 ## Shipped GitHub Actions workflows
 
 `qfai init` writes the shipped workflow set into `<root>/.github/workflows/`.

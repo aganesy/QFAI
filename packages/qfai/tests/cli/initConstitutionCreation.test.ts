@@ -1,5 +1,5 @@
 import type * as fsPromises from "node:fs/promises";
-import { lstat, mkdir, mkdtemp, readFile, rmdir, writeFile } from "node:fs/promises";
+import { lstat, mkdir, mkdtemp, readdir, readFile, rm, rmdir, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -10,9 +10,10 @@ import { captureStdout } from "../helpers/stdout.js";
 import { removeTempTree } from "../helpers/tempTree.js";
 
 type FsPromises = typeof fsPromises;
-const { copyFileSpy, lstatSpy } = vi.hoisted(() => ({
+const { copyFileSpy, linkSpy, lstatSpy } = vi.hoisted(() => ({
   copyFileSpy:
     vi.fn<(actual: FsPromises, ...args: Parameters<FsPromises["copyFile"]>) => Promise<void>>(),
+  linkSpy: vi.fn<(actual: FsPromises, ...args: Parameters<FsPromises["link"]>) => Promise<void>>(),
   lstatSpy:
     vi.fn<
       (
@@ -27,6 +28,7 @@ vi.mock("node:fs/promises", async () => {
   return {
     ...actual,
     copyFile: (...args: Parameters<FsPromises["copyFile"]>) => copyFileSpy(actual, ...args),
+    link: (...args: Parameters<FsPromises["link"]>) => linkSpy(actual, ...args),
     lstat: (...args: Parameters<FsPromises["lstat"]>) => lstatSpy(actual, ...args),
   };
 });
@@ -39,10 +41,14 @@ const FLOOR = path.join(".agents", "rules", "minimal-implementation.md");
 
 function passThrough(): void {
   copyFileSpy.mockImplementation((actual, ...args) => actual.copyFile(...args));
+  linkSpy.mockImplementation((actual, ...args) => actual.link(...args));
   lstatSpy.mockImplementation((actual, ...args) => actual.lstat(...args));
 }
 
-beforeEach(passThrough);
+beforeEach(() => {
+  passThrough();
+  linkSpy.mockClear();
+});
 
 async function withProject(task: (root: string) => Promise<void>): Promise<void> {
   const root = await mkdtemp(path.join(os.tmpdir(), "qfai-constitution-create-"));
@@ -58,6 +64,96 @@ const init = (root: string): Promise<string> =>
   captureStdout(() => runInit({ dir: root, force: false, dryRun: false, yes: true }));
 
 describe("constitution creation preserves a path it cannot claim", () => {
+  it.each(["EPERM", "ENOTSUP", "EOPNOTSUPP"])(
+    "rejects %s hard-link failure before copying or migrating assets",
+    async (code) => {
+      await withProject(async (root) => {
+        const instructions = path.join(root, ".qfai", "assistant", "instructions");
+        await mkdir(instructions, { recursive: true });
+        const legacy = path.join(instructions, "quality.md");
+        const legacyText = "# Adopter quality rules\n";
+        await writeFile(legacy, legacyText);
+        await writeFile(path.join(root, "AGENTS.md"), "# Adopter instructions\n");
+        const rootBefore = (await readdir(root)).sort();
+        const assistantBefore = (await readdir(path.dirname(instructions))).sort();
+        linkSpy.mockImplementation(() =>
+          Promise.reject(Object.assign(new Error("hard links unavailable"), { code })),
+        );
+
+        const failure = await captureStdout(() =>
+          runInit({
+            dir: root,
+            force: false,
+            dryRun: false,
+            yes: true,
+            upgradeAssistantTree: true,
+          }),
+        ).then(
+          () => null,
+          (cause: unknown) => cause,
+        );
+        expect(failure).toBeInstanceOf(Error);
+        expect((await readdir(root)).sort()).toEqual(rootBefore);
+        expect((await readdir(path.dirname(instructions))).sort()).toEqual(assistantBefore);
+        expect(await readFile(legacy, "utf-8")).toBe(legacyText);
+        expect(await readFile(path.join(root, "AGENTS.md"), "utf-8")).toBe(
+          "# Adopter instructions\n",
+        );
+        expect(failure).toMatchObject({
+          message: expect.stringContaining("hard links"),
+          cause: { code },
+        });
+        await expect(lstat(path.join(root, CONSTITUTION))).rejects.toMatchObject({
+          code: "ENOENT",
+        });
+        await expect(
+          lstat(path.join(root, ".qfai", "assistant", ".assets.lock.json")),
+        ).rejects.toMatchObject({ code: "ENOENT" });
+      });
+    },
+  );
+
+  it("does not probe hard links or change assets during a dry run", async () => {
+    await withProject(async (root) => {
+      linkSpy.mockImplementation(() =>
+        Promise.reject(Object.assign(new Error("hard links unavailable"), { code: "EPERM" })),
+      );
+      await captureStdout(() =>
+        runInit({ dir: root, force: false, dryRun: true, yes: true, upgradeAssistantTree: true }),
+      );
+      expect(linkSpy).not.toHaveBeenCalled();
+      expect(await readdir(root)).toEqual([]);
+    });
+  });
+
+  it("does not require hard links when governed assets already exist", async () => {
+    await withProject(async (root) => {
+      await init(root);
+      linkSpy.mockClear();
+      linkSpy.mockImplementation(() =>
+        Promise.reject(Object.assign(new Error("hard links unavailable"), { code: "ENOTSUP" })),
+      );
+      await captureStdout(() => runInit({ dir: root, force: true, dryRun: false, yes: true }));
+      expect(linkSpy).not.toHaveBeenCalled();
+    });
+  });
+
+  it("does not probe a missing constitution deferred by an edited safety master", async () => {
+    await withProject(async (root) => {
+      await init(root);
+      await writeFile(path.join(root, FLOOR), "# Adopter safety rules\n");
+      await rm(path.join(root, CONSTITUTION));
+      linkSpy.mockClear();
+      linkSpy.mockImplementation(() =>
+        Promise.reject(Object.assign(new Error("hard links unavailable"), { code: "EOPNOTSUPP" })),
+      );
+      const output = await init(root);
+      expect(linkSpy).not.toHaveBeenCalled();
+      expect(output).toContain("manual merge of the safety master");
+      await expect(lstat(path.join(root, CONSTITUTION))).rejects.toMatchObject({ code: "ENOENT" });
+    });
+  });
+
   it("explains how to recover from a non-file constitution occupant without removing it", async () => {
     await withProject(async (root) => {
       const target = path.join(root, CONSTITUTION);
