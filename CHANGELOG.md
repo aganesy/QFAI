@@ -224,6 +224,16 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   first, and the second is named. The prototyping profile, which certification
   accepts, reports the finding as well.
 
+- **The completion gate checks an `n/a (not UI-affecting)` against the clauses**
+  (#1735). A row that records `n/a` owes no product-surface review, no capture
+  manifest and no parity hash, and the gate took the value as given. It now
+  evaluates the clauses of `ui-affecting.md` it can read from the tree, and
+  refuses the `n/a` naming the first that holds: clause 1 where `Owning module`
+  is declared, clause 2 on `Test file`, and clause 3 on an obligation a UI
+  contract names or whose entry names a UI contract id. Clause 1's fallback,
+  which reads the row's own change, is not evaluated, and `ui-affecting.md` says
+  so.
+
 ## [1.12.0] - 2026-09-12
 
 ### Added

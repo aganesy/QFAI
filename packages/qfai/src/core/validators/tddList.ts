@@ -51,6 +51,7 @@ import {
 // progress figure cannot disagree about which TCs a spec declares.
 import { collectTestCaseIds, TEST_CASES_FILE_NAME } from "../testCaseCoverageTargets.js";
 import type { Issue } from "../types.js";
+import { UiAffectingClauses } from "../uiAffectingClauses.js";
 // The same `AC` / `BR` / `EX` / `TC` walk `layerCoverage.ts` scores coverage
 // with. The review-group key is derived from those very edges, so re-parsing
 // the layer files here is how the derived key and the coverage graph would come
@@ -2661,6 +2662,36 @@ function manifestLines(manifest: string): string[] {
     .filter((line) => line.length > 0);
 }
 
+/**
+ * An `n/a (not UI-affecting)` verdict a clause of `ui-affecting.md` contradicts.
+ *
+ * `n/a` owes no product-surface review, no capture manifest and no parity
+ * hash, so it is the cheapest answer and was read as given. Clause 1 is
+ * evaluated only where `Owning module` is declared: its fallback reads the
+ * row's own change, which the tree the gate reads does not record.
+ */
+async function contradictedNotApplicableParity(
+  clauses: UiAffectingClauses,
+  entrySection: string,
+  ref: LedgerRowRef,
+): Promise<string[]> {
+  if (parityVerdict(entryOwnFields(entrySection)) !== "not-applicable") return [];
+  const holding = await clauses.firstHolding({
+    owningModule: cell(ref, "Owning module"),
+    testFile: cell(ref, "Test file"),
+    obligations: ["TC-Refs", "US-Refs", "CON-API-Refs"].flatMap((column) =>
+      cell(ref, column)
+        .split(/[\s,]+/)
+        .filter((value) => /^(?:TC|US|CON-API)-[A-Za-z0-9-]+$/.test(value)),
+    ),
+  });
+  return holding === null
+    ? []
+    : [
+        `a product-surface review rather than n/a (not UI-affecting), since clause ${String(holding.clause)} holds: ${holding.because}`,
+      ];
+}
+
 /** Minimum phase and review evidence required once a row reaches `done`. */
 function missingCompletedEvidenceFields(
   entrySection: string,
@@ -4246,6 +4277,7 @@ export async function validateTddList(
       gate,
       recordIds,
       srcRelDir,
+      config.paths.contractsDir,
     );
     issues.push(...demoteRetiredSpecIssues(specIssues, entry));
   }
@@ -4560,6 +4592,7 @@ async function validateSpecTddList(
   gate: BlockedWorklogGate,
   recordIds: ReadonlySet<string>,
   srcRelDir: string,
+  contractsDir: string,
 ): Promise<Issue[]> {
   // The whole entry, not its directory: Check 8c derives the review-group key
   // from the spec's layer files, and `SpecEntry` is what already resolves those
@@ -5696,6 +5729,10 @@ async function validateSpecTddList(
   // its parsed sections (and a missing-file sentinel) so each path is read once.
   const evidenceIndexCache = new Map<string, MarkdownEvidenceIndex | null>();
   const evidenceContext = completedEvidenceContext(root, specsRoot);
+  const uiAffecting = new UiAffectingClauses(root, contractsDir, {
+    testCases: specEntry.testCasesPath,
+    userStories: specEntry.userStoriesPath,
+  });
   for (const ref of ledgerRows()) {
     const status = cell(ref, "Status").toLowerCase();
     if (!EVIDENCE_CHECK_STATUSES.has(status)) continue;
@@ -5913,6 +5950,7 @@ async function validateSpecTddList(
             section,
             expectation,
           )),
+          ...(await contradictedNotApplicableParity(uiAffecting, section, ref)),
         ];
         if (missing.length > 0) {
           anchorFailure = `${anchor.file}#${anchor.fragment} is missing completed evidence fields: ${missing.join(", ")}`;
