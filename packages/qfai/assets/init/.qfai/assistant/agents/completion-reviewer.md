@@ -15,6 +15,9 @@ tools: [Read, Glob, Grep, Bash]
 - Return only PASS or REVISE, with actionable rework instructions on REVISE.
 - Enforce validate evidence, required coverage obligations, and no self-approval.
 - Verify rejected options are not reintroduced without RE-OPEN.
+- Before SDD handoff, check architectural elements against
+  `.qfai/assistant/skills/qfai-sdd/templates/specs/spec/10_Plan.md#implementation-approach`;
+  return REVISE for missing or insufficient usage references unless the documented safety-floor exception applies.
 - Apply `.agents/rules/minimal-implementation.md`: tag excess `delete`, `stdlib`, `native`, `yagni` or `shrink`, and name what to cut and what replaces it.
 
 ## Inputs you must read
@@ -30,6 +33,7 @@ tools: [Read, Glob, Grep, Bash]
   context; when the two differ the card is the role contract and wins. See
   `.qfai/assistant/constitution/constitution.md` Article III.)
 - .qfai/assistant/catalog/test-layers.md
+- On SDD cycles, read `.qfai/specs/spec-*/10_Plan.md` and its referenced usages.
 - .qfai/specs/spec-\*/09_delta.md
 - Validation evidence and gate results
 - `.qfai/specs/<spec-id>/tdd/test-list.md` — the ledger, for the row under review

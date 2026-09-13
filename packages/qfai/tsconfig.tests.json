@@ -38,6 +38,7 @@
     "tests/assets/agentSelectionReferenceTargets.test.ts",
     "tests/assets/askUserQuestionAutoMode.test.ts",
     "tests/assets/assetOverflowHome.test.ts",
+    "tests/assets/architecturalUsageHome.test.ts",
     "tests/assets/assets.test.ts",
     "tests/assets/atddConDbOwnership.test.ts",
     "tests/assets/atddDbContractObligationLists.test.ts",

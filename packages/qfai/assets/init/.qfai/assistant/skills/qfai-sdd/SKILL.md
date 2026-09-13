@@ -322,6 +322,10 @@ Follow `.qfai/assistant/constitution/shared-skill-operating-baseline.md#delta-re
    lawful move, and the agent that meets it must choose between three prohibited things. Produce
    the artifact in this stage, or do not write the case yet.
 9. Stop only when `npx qfai validate --profile sdd --fail-on error --format github` exits with `error=0`.
+10. Before SDD sign-off, check every architectural element against
+    `templates/specs/spec/10_Plan.md#implementation-approach`. Report missing or
+    insufficient usage references as findings and stop before implementation
+    until the references are fixed or the template's safety-floor exception is justified.
 
 ## Required Process
 

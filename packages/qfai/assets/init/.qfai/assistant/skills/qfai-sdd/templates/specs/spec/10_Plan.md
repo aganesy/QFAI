@@ -14,6 +14,14 @@ judgement nowhere in the spec pack.
 - `<the shape of the change: which modules, which seams, in what order>`
 - `<the alternative considered and why this one>`
 
+For each architectural element, cite at least three distinct concrete usages
+(case, example, contract or interaction references). Planned future usage and
+three links to one usage do not count. If the safety floor in
+`.agents/rules/minimal-implementation.md` § 2 requires an element with fewer
+usages, cite the necessary usages and the obligation that requires that element;
+never cut the obligation to clear the count. Shared code still waits for its
+third actual caller; documentation references do not prove three callers.
+
 ## Test approach
 
 - `<what is proven at which layer — see catalog/test-layers.md>`
