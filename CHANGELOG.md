@@ -23,6 +23,19 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **The completion gate holds reviewers to the tree after the refactor** (#1732).
+  `evidence-revision.md` says the reviews judge the final tree, which
+  `Refactor verify revision` names, while a round's `Revision` names the tree
+  before the refactor. The gate compared every `reviewed revision` with the
+  round's `Revision`, so a row whose refactor changed a byte was reported when
+  its reviewers recorded the tree they judged. The gate now compares them with
+  `Refactor verify revision`, checks that it names a revision, and keeps the
+  round's `Revision` for a row that records none. The staleness check measures
+  from the same revision, and the field counts as phase-authored, so one written
+  after the review fields is refused. `ui-affecting.md`,
+  `parallelization-policy.md` and the skill now say items 6, 7 and 8 share the
+  revision. No completed row in this repository changes result.
+
 - **The completion gate recomputes the checkpoint seal over the checkpoint's own
   revision** (#1738). `checkpoint-verification.md` seals the checkpoint command
   and result together with `Checkpoint verification revision`, the tree that
