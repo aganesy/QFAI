@@ -23,6 +23,10 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- Completion and implementation review stop conditions now include demonstrated
+  regressions against named constitution or catalog rules (#1799). New upstream
+  product obligations remain advisory.
+
 - **The working-tree address excludes a nested project's own records, and stops on
   a FIFO or socket git does not list** (#1747). The collection reads the lists
   from the worktree root, but rooted the `.qfai/evidence`, `.qfai/review` and
