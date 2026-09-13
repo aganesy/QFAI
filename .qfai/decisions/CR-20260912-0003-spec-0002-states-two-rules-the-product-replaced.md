@@ -802,6 +802,18 @@ items` by id, with these dispositions:
    reset the same way under `2B`. Each is left as it stands under every other
    outcome.
 
+   **A progressed matrix row stops a rerun at that row, in every pack this plan
+   re-derives.** Phase 2b re-scopes a `done` row that runs several independently
+   observable cases behind one `Selector` only under a Change Request naming the
+   row and the order of its split
+   (`.qfai/assistant/skills/qfai-sdd/references/sdd-phase-checklists.md`), and
+   this record names no such split. In `spec-0013`, `TDD-0019`, `TDD-0021` and
+   `TDD-0022` are of that shape, and the requests restating their obligations
+   name their splits, so a `spec-0013` rerun under this plan runs after those
+   have been applied. Any other such row a rerun meets is raised then as a
+   request of its own and left as it is until that request is approved; the
+   rest of the rerun does not wait on it.
+
    The repair is recorded in `.qfai/evidence/coverage-depth-spec-0002.md`
    finding 7 and needs its own record. **That record lands first**, and this one
    is applied after it, against a ledger Phase 2b has nothing left to seed.
