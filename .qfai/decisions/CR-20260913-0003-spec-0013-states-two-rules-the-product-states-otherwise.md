@@ -230,6 +230,15 @@ ask for.
    asserts. This is not optional under any outcome: text stating the opposite of
    the case beneath it is what let both of these sit unreported.
 
+   **One of those titles is a row's `Selector`.** `TDD-0026` selects on
+   `D-SURFACE-TYPE-MISSING warns on companion-without-frontmatter`, the
+   `describe` title in `surfaceTypePopulate.test.ts`, so renaming it without the
+   row would leave the row selecting nothing. Under `2a` the rerun re-points the
+   row to the renamed title in the step that resets it. Under `2b` the title is
+   true again once the window is restored, and it stays. Under `2c` no rerun
+   runs to re-point the row, so that title stays and only the comments and the
+   assertion message are corrected.
+
 ## Resolution
 
 Not yet resolved.
