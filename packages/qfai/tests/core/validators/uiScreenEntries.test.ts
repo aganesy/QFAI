@@ -176,6 +176,15 @@ describe("a UI contract entry no screen is read from is reported", () => {
     expect(codes.filter((code) => code === "QFAI-CONTRACT-042")).toHaveLength(1);
   });
 
+  it("names a repeat before a missing route, since a route would not clear it", async () => {
+    const root = await projectWith({
+      "a.yaml": ["screens:", ...screen("home", "/"), "  - id: home"],
+    });
+    const findings = await validateUiScreenEntries(root, defaultConfig);
+    expect(findings).toHaveLength(1);
+    expect(findings[0]?.message).toContain("repeats the `id` `home`");
+  });
+
   it("names a repeated id inside one file", async () => {
     const root = await projectWith({
       "a.yaml": ["screens:", ...screen("home", "/"), ...screen("home", "/again")],

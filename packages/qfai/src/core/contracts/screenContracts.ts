@@ -229,14 +229,16 @@ export async function findUnreadUiScreenEntries(
         unread.push({ file: relativePath, index, reason: "missing-id" });
         return;
       }
-      if (!route) {
-        unread.push({ file: relativePath, index, reason: "missing-route", screenId });
-        return;
-      }
       // One `id` per contract scope: each spec's own contract is read on its
       // own, so a second spec reusing `home` there is a screen of that spec.
       const key = JSON.stringify([scope, screenId]);
       const first = firstById.get(key);
+      // A repeat is named before a missing route: given a route, the entry is
+      // still the second for its `id` and still not read.
+      if (!route && first === undefined) {
+        unread.push({ file: relativePath, index, reason: "missing-route", screenId });
+        return;
+      }
       if (first === undefined) {
         firstById.set(key, { file: relativePath, index });
         return;
