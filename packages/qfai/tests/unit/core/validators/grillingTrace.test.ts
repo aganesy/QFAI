@@ -287,6 +287,22 @@ describe("validateGrillingTrace", () => {
     });
   });
 
+  it("takes an absolute run list as it stands", async () => {
+    // `paths.discussionDir` may be absolute, and the discussion CLI resolves it
+    // that way. Joining it to the project root instead points at a directory
+    // nobody wrote, so every run there reads as having no packs at all.
+    await withRoot(async (root) => {
+      await withRoot(async (elsewhere) => {
+        await mkdir(path.join(elsewhere, "discussion-20260418170937652"), { recursive: true });
+
+        const issues = await validateGrillingTrace(root, { discussionDir: elsewhere });
+
+        expect(issues).toHaveLength(1);
+        expect(issues[0]?.file).toBe(".qfai/evidence/discussion-20260418170937652.md");
+      });
+    });
+  });
+
   it("reads only the stages the caller names", async () => {
     // Two runners dispatch this and a full run calls both, so a call reading
     // every stage would report each finding twice.

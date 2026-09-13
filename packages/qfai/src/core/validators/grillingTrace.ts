@@ -294,7 +294,10 @@ async function withOwedRuns(
   const out = [...candidates];
   for (const subject of SUBJECTS) {
     if (subject.packs === undefined || !stages.includes(subject.stage)) continue;
-    const packsDir = path.join(root, ...(options.discussionDir ?? DISCUSSION_DIR_REL).split("/"));
+    // `path.resolve`, not `path.join`, so an absolute `paths.discussionDir` is
+    // used as it stands rather than hung off the project root —
+    // `cli/commands/discussion.ts` resolves the same key the same way.
+    const packsDir = path.resolve(root, options.discussionDir ?? DISCUSSION_DIR_REL);
     const pack = await findLatestPack(packsDir, subject.packs);
     if (pack === null) continue;
 
