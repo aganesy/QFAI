@@ -526,28 +526,18 @@ offered stays in `## Options` and in `## Decision needed from user`.
   owns the write, so following the diagnostic repeats something that cannot
   repair the mismatch, and the completed `spec-0012` rows naming that command
   take the in-place re-verification with it; **and
-  `packages/qfai/src/cli/commands/prototypingCertify.ts` with its message
-  coverage**, which tells a user whose lock is malformed to "re-run `/qfai-sdd`
-  Phase 0 to regenerate the lock before sealing" — the same instruction from the
-  other command, and the one that leaves certification unrecoverable if it is
-  left naming a stage that can no longer write the lock, so the rows covering
-  that message take the in-place re-verification too; **and
+  `packages/qfai/src/cli/commands/prototypingCertify.ts` with
+  `packages/qfai/tests/cli/prototypingCertify.test.ts`**, which tells a user
+  whose lock is malformed to "re-run `/qfai-sdd` Phase 0 to regenerate the lock
+  before sealing" — the same instruction from the other command, and the one
+  that leaves certification unrecoverable if it is left naming a stage that can
+  no longer write the lock. No case constructs a malformed lock today: the
+  nearest one reads an unreadable lock and asserts only that it could not be
+  read. So that file gains a case that seals over a malformed lock and asserts
+  the recovery names the authoring step, and the rows covering the command take
+  the in-place re-verification; **and
   `packages/qfai/src/core/validators/designContractReadiness.ts` with
   `packages/qfai/tests/core/validators/designContractReadiness.test.ts`**.
-
-  **And every source comment naming the old producer**, because a comment
-  shipped in `dist` is documentation a consumer reads:
-  `packages/qfai/src/core/index.ts`, whose public entry says the design
-  primitives implement the freeze procedure `qfai-sdd/SKILL.md` documents;
-  `packages/qfai/src/core/design/designMdPatchZone.ts`, which says a future lock
-  field is written by `/qfai-sdd` at Phase 0; and
-  `packages/qfai/src/core/design/designMd.ts`, `packages/qfai/src/core/doctor.ts`,
-  `packages/qfai/src/core/validate.ts` and
-  `packages/qfai/src/core/validators/autopilotPolicy.ts`, each naming
-  `/qfai-sdd` Phase 0 as the stage that authors or freezes `DESIGN.md`. A
-  search of `packages/qfai/src` for `Phase 0` beside `DESIGN.md` or its lock
-  found these. The rerun repeats the search before editing, and a match this
-  list lacks refreshes this record rather than widening the edit.
 
   Without the second the sub-option does not work at all. `/qfai-sdd` ends on
   `npx qfai validate --profile sdd --fail-on error`, that profile runs
@@ -560,6 +550,22 @@ offered stays in `## Options` and in `## Decision needed from user`.
   has to learn that a pack which has not reached prototyping owes neither
   artifact yet — which is a product change, and an option that does not name it
   authorises a rerun that cannot finish.
+
+  **And every source comment naming the old producer**, because a comment
+  shipped in `dist` is documentation a consumer reads:
+  `packages/qfai/src/core/index.ts`, whose public entry says the design
+  primitives implement the freeze procedure `qfai-sdd/SKILL.md` documents;
+  `packages/qfai/src/core/design/designMdPatchZone.ts`, which says a future lock
+  field is written by `/qfai-sdd` at Phase 0;
+  `packages/qfai/src/core/validators/designMdPatchZone.ts`, which says `/qfai-sdd`
+  Phase 0 writes the backup baseline beside the lock; and
+  `packages/qfai/src/core/design/designMd.ts`, `packages/qfai/src/core/doctor.ts`,
+  `packages/qfai/src/core/validate.ts` and
+  `packages/qfai/src/core/validators/autopilotPolicy.ts`, each naming
+  `/qfai-sdd` Phase 0 as the stage that authors or freezes `DESIGN.md`. A
+  search of `packages/qfai/src` for `Phase 0` beside `DESIGN.md` or its lock
+  found these. The rerun repeats the search before editing, and a match this
+  list lacks refreshes this record rather than widening the edit.
 
 - Schema: `none`
 - Upstream paths edited under this CR:
