@@ -30,6 +30,12 @@ const CHANGE_REQUEST = path.join(
   ".qfai/decisions/CR-20260913-0001-spec-0013-keeps-the-primary-tasks-lower-bound-the-validator-dropped.md",
 );
 
+/** The defect record for the template path the band statements name. */
+const TEMPLATE_PATH_REQUEST = path.join(
+  repoRoot,
+  ".qfai/decisions/CR-20260913-0010-spec-0013-and-dr-0267-name-a-ui-contract-template-the-package-does-not-ship.md",
+);
+
 /** Collapse markdown soft wraps so assertions pin wording, not the wrap column. */
 const unwrap = (markdown: string): string => markdown.replace(/\s*\n\s*/g, " ");
 
@@ -40,63 +46,70 @@ describe("the primary_tasks band drift has a Change Request", () => {
     expect(unwrap(await changeRequest())).toContain(unwrap(phrase));
   };
 
-  it("carries the header fields the protocol reads, as a legal combination", async () => {
-    // The values move as the record is resolved, and each status fixes what the
-    // others may hold: an approval with no option is unresolved under the reset
-    // preflight, and an open record naming one claims a choice nobody made.
-    const text = await changeRequest();
-    await expectPhrase("- ID: `CR-20260913-0001`");
-    await expectPhrase("- Class: `intent`");
-    const field = (name: string): string | undefined =>
-      new RegExp(`^- ${name}: \u0060([^\u0060]*)\u0060$`, "m").exec(text)?.[1];
-    const timestamp = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$/;
-    const heading = text.indexOf("\n## Resolution\n");
-    // Every status carries the section; a record that lost it would read as all resolution.
-    expect(heading).toBeGreaterThan(-1);
-    const resolution = text.slice(heading + "\n## Resolution\n".length);
-    const resolved = resolution.replace(/<!--[\s\S]*?-->/g, "").trim().length > 0;
-    const status = field("Status");
-    const approvedBy = field("Approved by");
-    const approvedAt = field("Approved at") ?? "";
-    const option = field("Approved option");
-    const appliedAt = field("Applied at") ?? "";
-    const supersededBy = field("Superseded by");
+  it.each([
+    [CHANGE_REQUEST, "CR-20260913-0001", "intent", /^[123]$/],
+    // A defect has one repair, so its approval names no option.
+    [TEMPLATE_PATH_REQUEST, "CR-20260913-0010", "defect", /^-$/],
+  ])(
+    "%s carries the header fields the protocol reads, as a legal combination",
+    async (file, id, recordClass, optionForm) => {
+      // The values move as the record is resolved, and each status fixes what the
+      // others may hold: an approval with no option is unresolved under the reset
+      // preflight, and an open record naming one claims a choice nobody made.
+      const text = await readFile(file, "utf-8");
+      expect(text).toContain(`- ID: \`${id}\``);
+      expect(text).toContain(`- Class: \`${recordClass}\``);
+      const field = (name: string): string | undefined =>
+        new RegExp(`^- ${name}: \u0060([^\u0060]*)\u0060$`, "m").exec(text)?.[1];
+      const timestamp = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$/;
+      const heading = text.indexOf("\n## Resolution\n");
+      // Every status carries the section; a record that lost it would read as all resolution.
+      expect(heading).toBeGreaterThan(-1);
+      const resolution = text.slice(heading + "\n## Resolution\n".length);
+      const resolved = resolution.replace(/<!--[\s\S]*?-->/g, "").trim().length > 0;
+      const status = field("Status");
+      const approvedBy = field("Approved by");
+      const approvedAt = field("Approved at") ?? "";
+      const option = field("Approved option");
+      const appliedAt = field("Applied at") ?? "";
+      const supersededBy = field("Superseded by");
 
-    expect(["open", "approved", "rejected", "superseded"]).toContain(status);
-    if (status === "open") {
-      expect([approvedBy, approvedAt, option, appliedAt, supersededBy]).toEqual([
-        "-",
-        "-",
-        "-",
-        "-",
-        "-",
-      ]);
-      expect(resolved).toBe(false);
-      return;
-    }
-    expect(approvedBy ?? "").toMatch(/^(?!-$)\S.*$/);
-    expect(approvedAt).toMatch(timestamp);
-    if (status === "approved") {
-      // This record offers options 1, 2 and 3, and nothing else.
-      expect(option).toMatch(/^[123]$/);
-      expect(supersededBy).toBe("-");
-      // Approval alone does not release the gate; once applied, it says how.
-      if (appliedAt === "-") {
+      expect(["open", "approved", "rejected", "superseded"]).toContain(status);
+      if (status === "open") {
+        expect([approvedBy, approvedAt, option, appliedAt, supersededBy]).toEqual([
+          "-",
+          "-",
+          "-",
+          "-",
+          "-",
+        ]);
         expect(resolved).toBe(false);
-      } else {
-        expect(appliedAt).toMatch(timestamp);
-        expect(resolved).toBe(true);
+        return;
       }
-      return;
-    }
-    expect(appliedAt).toBe("-");
-    expect(resolved).toBe(true);
-    if (status === "rejected") {
-      expect([option, supersededBy]).toEqual(["-", "-"]);
-    } else {
-      expect(supersededBy).toMatch(/^CR-\d{8}-\d{4}$/);
-    }
-  });
+      expect(approvedBy ?? "").toMatch(/^(?!-$)\S.*$/);
+      expect(approvedAt).toMatch(timestamp);
+      if (status === "approved") {
+        // The intent record offers options 1, 2 and 3; the defect record none.
+        expect(option).toMatch(optionForm);
+        expect(supersededBy).toBe("-");
+        // Approval alone does not release the gate; once applied, it says how.
+        if (appliedAt === "-") {
+          expect(resolved).toBe(false);
+        } else {
+          expect(appliedAt).toMatch(timestamp);
+          expect(resolved).toBe(true);
+        }
+        return;
+      }
+      expect(appliedAt).toBe("-");
+      expect(resolved).toBe(true);
+      if (status === "rejected") {
+        expect([option, supersededBy]).toEqual(["-", "-"]);
+      } else {
+        expect(supersededBy).toMatch(/^CR-\d{8}-\d{4}$/);
+      }
+    },
+  );
 
   it("states both sides of the contradiction by artifact", async () => {
     await expectPhrase("`QFAI-AUD-020` is a ceiling today");

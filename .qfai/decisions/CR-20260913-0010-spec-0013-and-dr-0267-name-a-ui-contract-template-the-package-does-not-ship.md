@@ -132,10 +132,10 @@ No `spec-0004` statement names either file.
 
 ## Blocked downstream items
 
-| Item                                                                                                     | Kind         | Why it depends on the artifact                                                                                                                         |
-| -------------------------------------------------------------------------------------------------------- | ------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `spec-0013/TDD-0027`                                                                                     | `ledger-row` | Carries `TC-0013-0032`, which names the file this record corrects. Its test reads the shipped one                                                      |
-| Every other `spec-0013` row whose `TC-Refs` names `TC-0013-0032` or whose `US-Refs` names `US-0013-0014` | `ledger-row` | Carries a statement this record corrects. None exists today: `CR-20260913-0009` appends two for `TC-0013-0032` and seeds `E2E` rows for `US-0013-0014` |
+| Item                                                                                                     | Kind         | Why it depends on the artifact                                                                                             |
+| -------------------------------------------------------------------------------------------------------- | ------------ | -------------------------------------------------------------------------------------------------------------------------- |
+| `spec-0013/TDD-0027`                                                                                     | `ledger-row` | Carries `TC-0013-0032`, which names the file this record corrects. Its test reads the shipped one                          |
+| Every other `spec-0013` row whose `TC-Refs` names `TC-0013-0032` or whose `US-Refs` names `US-0013-0014` | `ledger-row` | Carries a statement this record corrects. None exists today, and the rule reaches any the ledger holds when the sweep runs |
 
 - Not blocked by this CR:
   - `spec-0013/TDD-0028`. It carries `TC-0013-0033`, which states the count
@@ -154,10 +154,6 @@ No `spec-0004` statement names either file.
     statements say the file documents and keep the file named here, and option
     3 edits no statement. `TDD-0027` resumes only once both records have
     released it.
-  - `CR-20260913-0009` also blocks `TDD-0027`, and splits it. This record edits
-    statement text, and that one edits the ledger's shape and rows, so they
-    apply in either order. Whichever applies second finds `TDD-0027` at `todo`
-    and adds its own ID to `DR-ID`.
 
 ## Impact scope
 
@@ -219,9 +215,7 @@ the ledger rows that carry those statements?
    2b over its ledger, which has nine of the template's fifteen columns and one
    `E2E` row for fourteen stories. This repository declares no UI-bearing spec,
    so every story is active, and Phase 2b would add the six missing columns and
-   seed an `E2E` row for each story without one. Those writes are owed, but
-   `CR-20260913-0009` is the record that proposes them, and a file-name
-   correction does not authorise them.
+   seed an `E2E` row for each story without one. Those writes are owed, but a file-name correction does not authorise them.
 
 3. **Downstream ledger sweep, after the reruns.** `/qfai-implement spec-0013`'s
    Change Request preflight resets these rows to `todo`, recording this Change
@@ -255,4 +249,4 @@ it only once both records have released it.
 
 ## Resolution
 
-Not yet resolved.
+<!-- Filled in when Status leaves `open`. -->

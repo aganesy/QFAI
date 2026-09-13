@@ -339,9 +339,10 @@ stands.
    active story.** This repository declares no UI-bearing spec, so all sixteen
    of the pack's stories are active, and no test annotates ten of them:
    `US-0004-0001`, `US-0004-0016`, `US-0004-0020` and `US-0004-0027` to
-   `US-0004-0033`. The pass writes those ten. The pack has no ATDD-owned row at
-   `todo`. The impact scope lists the tests and both files, and the options'
-   costs count them.
+   `US-0004-0033`. The pass writes those ten once their rows exist, as the
+   paragraph after next sets out. The pack has no ATDD-owned row at `todo`.
+   The impact scope lists the tests and both files, and the options' costs
+   count them.
 
    **`/qfai-atdd spec-0013` refreshes `.qfai/evidence/atdd-spec-0013.md` and
    `.qfai/evidence/coverage-depth-spec-0013.md` under every option.** The
@@ -353,12 +354,26 @@ stands.
    re-reviewed. Like the `spec-0004` pass, the invocation is a full pass. It
    takes up the ATDD-owned rows still owed, `TDD-0016` to `TDD-0018`, and
    writes an `E2E` test for each of the ten stories no test annotates,
-   `US-0013-0001` to `US-0013-0010`, since all fourteen of the pack's stories
-   are active. Under option 3 the refresh runs after
+   `US-0013-0001` to `US-0013-0010`, once their rows exist, since all fourteen
+   of the pack's stories are active. Under option 3 the refresh runs after
    action 4, so it scores the restored floor rather than the ceiling it
    replaces. The matrix is owned from the ATDD
    stage onward (`qfai-atdd/SKILL.md`), so the refresh goes through that
    stage's reviewer gate.
+
+   **Both passes wait on their pack's `E2E` rows.** `/qfai-atdd` writes a test
+   only for a row the ledger holds, and it reports a missing Phase 2b row
+   rather than seeding one. Neither ledger carries the `E2E` rows its active
+   stories are owed, thirteen short in each pack, and a `confirm-only` rerun
+   seeds none. So each pass runs once its pack's ledger carries those rows,
+   and until then the reset rows stay at `todo` in this record's blocked set.
+
+   **Then `/qfai-implement spec-0013` and `/qfai-implement spec-0004` consume
+   the handoffs.** `/qfai-atdd` writes no ledger cell, so under options 1 and
+   2 the reset rows leave `todo` only when those runs write their `Status`,
+   `DR-ID` and `Evidence` from the handoff each pass recorded. Under option 3
+   the re-verification lines above are those runs' work. This record's
+   `Applied at` is written after both.
 
 4. Under option 3 only, and ahead of action 3's re-verification and refresh:
    `packages/qfai/src/core/validators/designAudit.ts`,
