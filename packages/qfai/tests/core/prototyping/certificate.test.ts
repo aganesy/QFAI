@@ -202,11 +202,14 @@ describe("checkCompletionCertificate", () => {
       "aggregate.backup-2026-01-01T00-00-00-000Z/screenshots/home.png": "old",
       // Named like a backup, but a file a reset never writes: still evidence.
       "aggregate.backup-summary.json": "{}\n",
+      // A reset backs up `iter-00` only, so this is a directory someone made.
+      "iter-01.backup-2026-01-01T00-00-00-000Z/kept.review.json": "{}\n",
     });
     const cert = await buildCompletionCertificate(baseInputs(evidenceRoot));
     expect(cert.evidenceDigests.map((entry) => entry.path)).toEqual([
       "aggregate.backup-summary.json",
       "iter-00/home.review.json",
+      "iter-01.backup-2026-01-01T00-00-00-000Z/kept.review.json",
     ]);
     await writeCompletionCertificate(root, cert);
 
@@ -214,6 +217,31 @@ describe("checkCompletionCertificate", () => {
       recursive: true,
     });
     expect((await checkCompletionCertificate(root)).ok).toBe(true);
+  });
+
+  it("verifies a certificate that lists files under a reset's backups", async () => {
+    // Such a certificate was sealed with the backups inside its digest tree,
+    // and the scan now leaves them out: compared as they stand, every one would
+    // read as removed.
+    const root = await newTempDir();
+    const evidenceRoot = await seedEvidence(root, {
+      "iter-00/home.review.json": "{}\n",
+      "iter-00.backup-2026-01-01T00-00-00-000Z/old.review.json": "changed since",
+    });
+    const cert = await buildCompletionCertificate(baseInputs(evidenceRoot));
+    await writeCompletionCertificate(root, {
+      ...cert,
+      evidenceDigests: [
+        ...cert.evidenceDigests,
+        {
+          path: "aggregate.backup-2026-01-01T00-00-00-000Z/html/home.html",
+          sha256: "0".repeat(64),
+        },
+        { path: "iter-00.backup-2026-01-01T00-00-00-000Z/old.review.json", sha256: "0".repeat(64) },
+      ],
+    });
+
+    expect(await checkCompletionCertificate(root)).toEqual({ ok: true });
   });
 
   it("excludes the certificate file itself from the digest tree", async () => {

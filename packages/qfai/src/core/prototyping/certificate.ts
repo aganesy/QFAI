@@ -302,7 +302,13 @@ export async function checkCompletionCertificate(root: string): Promise<CertifyC
   const evidenceRoot = path.join(root, ".qfai/evidence/prototyping");
   const currentDigests = await scanEvidenceDigests(evidenceRoot);
 
-  const certMap = new Map(cert.evidenceDigests.map((entry) => [entry.path, entry.sha256]));
+  // A certificate can list files under a reset's backups, which are not this
+  // loop's evidence. The scan leaves them out, so the certificate's side does too.
+  const certMap = new Map(
+    cert.evidenceDigests
+      .filter((entry) => !inResetBackup(entry.path))
+      .map((entry) => [entry.path, entry.sha256]),
+  );
   const currMap = new Map(currentDigests.map((entry) => [entry.path, entry.sha256]));
 
   for (const [p, hash] of certMap) {
@@ -348,9 +354,18 @@ export async function checkCompletionCertificate(root: string): Promise<CertifyC
   return reasons.length === 0 ? { ok: true } : { ok: false, reasons };
 }
 
-/** The directories a cycle-0 reset moves the previous loop's evidence into. */
+/**
+ * The directories a cycle-0 reset moves the previous loop's evidence into:
+ * `iter-00` and the aggregate directories, under the stamp the reset gives them.
+ */
 const RESET_BACKUP_DIRECTORY =
-  /^(?:iter-\d{2,}|aggregate)\.backup-\d{4}-\d{2}-\d{2}T\d{2}-\d{2}-\d{2}-\d{3}Z$/;
+  /^(?:iter-00|aggregate)\.backup-\d{4}-\d{2}-\d{2}T\d{2}-\d{2}-\d{2}-\d{3}Z$/;
+
+/** Whether an evidence path lies inside one of a reset's backup directories. */
+function inResetBackup(relPath: string): boolean {
+  const slash = relPath.indexOf("/");
+  return slash > 0 && RESET_BACKUP_DIRECTORY.test(relPath.slice(0, slash));
+}
 
 /**
  * Walk every file under `evidenceRoot` (recursively), computing
@@ -393,9 +408,9 @@ async function walk(
       continue;
     }
     // A cycle-0 reset's backups hold the previous loop's evidence. Sealed into
-    // this loop's certificate, removing a backup once it is no longer needed
-    // failed `certify --check` although nothing of this loop changed. Only the
-    // directories a reset writes are skipped, by the exact name it gives them.
+    // this loop's certificate, a backup removed once it is no longer needed
+    // would fail `certify --check` although nothing of this loop changed. Only
+    // the directories a reset writes are skipped, by the exact name it gives them.
     if (dir === rootDir && s.isDirectory() && RESET_BACKUP_DIRECTORY.test(name)) continue;
     if (s.isDirectory()) {
       await walk(rootDir, full, out);
