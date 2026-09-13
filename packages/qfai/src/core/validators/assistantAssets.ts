@@ -407,7 +407,8 @@ export async function validateAssistantAssets(root: string, config: QfaiConfig):
       // graph decided.
       const target = await stat(resolved).then(
         (stats) => (stats.isFile() ? "file" : "not-a-file"),
-        (error: unknown) => (isEnoent(error) ? "not-a-file" : "unknown"),
+        // A link to nothing and a link cycle hold no text either.
+        (error: unknown) => (isEnoent(error) || isLinkLoop(error) ? "not-a-file" : "unknown"),
       );
       if (target !== "not-a-file") entryPointUnread = true;
       continue;
@@ -1366,10 +1367,10 @@ async function collectSkillFiles(dirs: string[]): Promise<string[]> {
  * point to check and no `SKILL.md` the marker checks read. Those walks skip the
  * directory rather than drop its files afterwards, which would leave a
  * directory this process may not traverse failing the run over a skill the
- * host never loads. The document crawl still reads it: a registered skill can
- * name a document there, and the reference graph reports one it reaches that
- * cannot be read. A dot-prefixed directory inside a skill is not one, and is
- * read like any other.
+ * host never loads. The document crawl skips it as well. A registered skill can
+ * still name a document there, and the reference graph reads that one when a
+ * reachable step names it, reporting it if it cannot be read. A dot-prefixed
+ * directory inside a skill is not one, and is read like any other.
  */
 function isHiddenSkillDirectory(skillsDir: string, directory: string): boolean {
   const relative = path.relative(skillsDir, directory);
@@ -1739,6 +1740,17 @@ async function collectReferenceGraphIssues(
   // tree. A document there is opened only where a reachable step names it, so it
   // is read then, and what it cites is followed in turn.
   const attempted = new Set<string>();
+  // A path the graph holds under another spelling — another case on a volume
+  // that folds it — is that document, not a second one to read and report.
+  const aliasOf = new Map<string, string>();
+  let identities: Map<string, string> | undefined;
+  const knownAs = async (candidate: string): Promise<string | undefined> => {
+    if (identities === undefined) {
+      identities = new Map();
+      for (const file of graph.keys()) identities.set(await fileIdentity(file), file);
+    }
+    return identities.get(await fileIdentity(candidate));
+  };
   let reachable = collectReachableDocuments(context, graph);
   for (
     let unresolved = unresolvedCitations(context, graph, reachable);
@@ -1751,9 +1763,17 @@ async function collectReferenceGraphIssues(
         if (graph.has(candidate)) break;
         if (attempted.has(candidate)) continue;
         attempted.add(candidate);
+        const same = await knownAs(candidate);
+        if (same !== undefined) {
+          graph.set(candidate, graph.get(same) ?? "");
+          aliasOf.set(candidate, same);
+          added = true;
+          break;
+        }
         const read = await readCitedDocument(candidate);
         if (read.kind === "missing") continue;
         graph.set(candidate, read.kind === "text" ? read.text : "");
+        identities?.set(await fileIdentity(candidate), candidate);
         if (read.kind === "unreadable") {
           reported.push(read.finding);
           unreadableFiles.push(candidate);
@@ -1765,6 +1785,9 @@ async function collectReferenceGraphIssues(
     if (!added) break;
     reachable = collectReachableDocuments(context, graph);
   }
+  for (const [alias, original] of aliasOf) {
+    if (reachable.has(alias)) reachable.add(original);
+  }
   if (unread.undecided || unreadableFiles.some((file) => reachable.has(file))) {
     return reported;
   }
@@ -1774,6 +1797,7 @@ async function collectReferenceGraphIssues(
       (file) =>
         isReferenceDocument(skillsDir, file) &&
         !entryPointAliases.has(file) &&
+        !aliasOf.has(file) &&
         !inHiddenSkillDirectory(skillsDir, file) &&
         !reachable.has(file),
     )
@@ -1811,14 +1835,21 @@ function unresolvedCitations(
     const content = graph.get(file) ?? "";
     for (const token of citationTokensIn(content)) {
       const candidates = citationCandidates(context, file, token);
-      if (candidates.some((candidate) => graph.has(candidate))) continue;
-      const inside = candidates.filter(
+      // The host opens the first candidate that exists, so one the crawl passed
+      // over ahead of a crawled fallback is the document the step names.
+      const known = candidates.findIndex((candidate) => graph.has(candidate));
+      const ahead = (known === -1 ? candidates : candidates.slice(0, known)).filter(
         (candidate) => !escapesRoot(toPosixRelative(context.skillsDir, candidate)),
       );
-      if (inside.length > 0) unresolved.push(inside);
+      if (ahead.length > 0) unresolved.push(ahead);
     }
   }
   return unresolved;
+}
+
+/** Whether a file system error says a path is a chain of links that loops. */
+function isLinkLoop(error: unknown): boolean {
+  return hasErrnoCode(error) && error.code === "ELOOP";
 }
 
 type CitedDocument =
@@ -1847,6 +1878,7 @@ async function readCitedDocument(file: string): Promise<CitedDocument> {
     (stats): "file" | "not-a-file" => (stats.isFile() ? "file" : "not-a-file"),
     async (error: unknown): Promise<"missing" | "not-a-file" | { error: unknown }> => {
       if (hasErrnoCode(error) && error.code === "ENOTDIR") return "missing";
+      if (isLinkLoop(error)) return "not-a-file";
       if (!isEnoent(error)) return { error };
       // A link whose target is gone is still a name the host tries to open.
       return (await lstat(file).then(

@@ -466,8 +466,9 @@ describe("the gate reads a skill as the host does", () => {
   });
 
   it("leaves a SKILL.md in a skill's vendored tree out of the marker checks", async () => {
-    // The document crawl reads such a tree, since a step can name a file there;
-    // the marker checks are about the documents the skill's author wrote.
+    // Neither the document crawl nor the marker checks walk such a tree: the
+    // marker checks are about the documents the skill's author wrote, and a file
+    // there that a step names is read when the step is reached.
     const root = await projectWithSkill(['description: "Does the thing."']);
     const skillDir = path.join(root, ".qfai", "assistant", "skills", "qfai-example");
     const vendored = path.join(skillDir, "node_modules", "pkg", "SKILL.md");
@@ -755,6 +756,74 @@ describe("the gate reads a skill as the host does", () => {
 
     const found = await validateAssistantAssets(root, defaultConfig);
     expect(found.some((item) => item.code === "QFAI-SKILLS-014" && item.file === link)).toBe(true);
+  });
+
+  it("reads the candidate a step names ahead of a crawled fallback", async () => {
+    // From `references/tmp/notes.md`, `guide.md` names the file beside it first;
+    // the crawled `qfai-example/guide.md` is only the fallback.
+    const root = await projectWithSkill(['description: "Does the thing."']);
+    const skillDir = path.join(root, ".qfai", "assistant", "skills", "qfai-example");
+    const entryPoint = path.join(skillDir, "SKILL.md");
+    await writeFile(
+      entryPoint,
+      `${await readFile(entryPoint, "utf-8")}\nSee references/tmp/notes.md.\n`,
+      "utf-8",
+    );
+    const tmp = path.join(skillDir, "references", "tmp");
+    await mkdir(tmp, { recursive: true });
+    await writeFile(path.join(tmp, "notes.md"), "# notes\n\nSee guide.md.\n", "utf-8");
+    const beside = path.join(tmp, "guide.md");
+    await writeFile(beside, Buffer.concat([Buffer.from("# guide\n"), Buffer.from([0xff])]));
+    await writeFile(path.join(skillDir, "guide.md"), "# fallback\n", "utf-8");
+
+    const found = await validateAssistantAssets(root, defaultConfig);
+    expect(found.some((item) => item.code === "QFAI-SKILLS-014" && item.file === beside)).toBe(
+      true,
+    );
+  });
+
+  it("reports a document a step names in another case once", async () => {
+    // On a volume that folds case the citation and the crawled name are one file;
+    // elsewhere the citation names nothing. Either way the file is reported once.
+    const root = await projectWithSkill(['description: "Does the thing."']);
+    const skillDir = path.join(root, ".qfai", "assistant", "skills", "qfai-example");
+    const entryPoint = path.join(skillDir, "SKILL.md");
+    await writeFile(
+      entryPoint,
+      `${await readFile(entryPoint, "utf-8")}\nSee references/guide.md.\n`,
+      "utf-8",
+    );
+    await mkdir(path.join(skillDir, "references"), { recursive: true });
+    const file = path.join(skillDir, "references", "Guide.md");
+    await writeFile(file, Buffer.concat([Buffer.from("# guide\n"), Buffer.from([0xff])]));
+
+    const found = (await validateAssistantAssets(root, defaultConfig)).filter(
+      (item) => item.code === "QFAI-SKILLS-014" && item.file?.toLowerCase() === file.toLowerCase(),
+    );
+    expect(found).toHaveLength(1);
+  });
+
+  it("keeps uncited references reported beside an entry point that is a link cycle", async () => {
+    // A cycle holds no text and cites nothing, so the graph stays decided.
+    const root = await projectWithSkill(['description: "Does the thing."']);
+    const skills = path.join(root, ".qfai", "assistant", "skills");
+    await mkdir(path.join(skills, "qfai-example", "references"), { recursive: true });
+    const orphan = path.join(skills, "qfai-example", "references", "orphan.md");
+    await writeFile(orphan, "# orphan\n", "utf-8");
+    const looped = path.join(skills, "qfai-loop");
+    await mkdir(looped, { recursive: true });
+    try {
+      await symlink(path.join(looped, "OTHER.md"), path.join(looped, "SKILL.md"));
+      await symlink(path.join(looped, "SKILL.md"), path.join(looped, "OTHER.md"));
+    } catch {
+      // A host without permission to link cannot exercise this case.
+      return;
+    }
+
+    const found = await validateAssistantAssets(root, defaultConfig);
+    expect(found.some((item) => item.code === "QFAI-SKILLS-013" && item.file === orphan)).toBe(
+      true,
+    );
   });
 
   it("passes over a dependency tree no step names", async () => {
