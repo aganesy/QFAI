@@ -186,6 +186,11 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   because the same reset removes the iteration directories they were copied
   from.
 
+  Both backups a reset writes, this one and the `iter-00` backup, are left out
+  of the completion certificate's evidence digests. They hold the previous
+  loop's evidence, and sealed into the next certificate, removing one failed
+  `certify --check` although nothing of the new loop had changed.
+
 ## [1.12.0] - 2026-09-12
 
 ### Added

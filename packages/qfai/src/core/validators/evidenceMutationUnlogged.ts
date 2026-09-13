@@ -54,7 +54,9 @@ export const EVIDENCE_MUTATION_PAIRS: readonly EvidenceMutationPair[] = [
     clause: "iterate-cycle-0-force-rename",
     sourceRel: "packages/qfai/src/cli/commands/prototypingIterate.ts",
     mutationTokens: ["await rename(iter00Abs"],
-    logTokens: ["logEvidenceMove"],
+    // The call that logs this move, not the helper behind it: the aggregate move
+    // uses the same helper, so its name would pass with this call removed.
+    logTokens: ["logMovedFiles(options.root, movedFiles)"],
   },
   {
     // Mutation-log wiring-depth extension: every
@@ -72,7 +74,7 @@ export const EVIDENCE_MUTATION_PAIRS: readonly EvidenceMutationPair[] = [
     clause: "iterate-cycle-0-aggregate-move",
     sourceRel: "packages/qfai/src/cli/commands/prototypingIterate.ts",
     mutationTokens: ["await rename(sourceAbs"],
-    logTokens: ["logEvidenceMove"],
+    logTokens: ["logMovedFiles(options.root, aggregateMove.files)"],
   },
 ];
 

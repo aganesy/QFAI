@@ -355,6 +355,9 @@ export async function checkCompletionCertificate(root: string): Promise<CertifyC
  * The certificate file itself is excluded so that re-checking after
  * write does not detect itself as a "new file".
  */
+/** The directories a cycle-0 reset moves the previous loop's evidence into. */
+const RESET_BACKUP_DIRECTORY = /^(?:iter-\d{2,}|aggregate)\.backup-/;
+
 async function scanEvidenceDigests(
   evidenceRoot: string,
 ): Promise<Array<{ path: string; sha256: string }>> {
@@ -381,6 +384,10 @@ async function walk(
     // in a sub-directory is still digested (defense against accidental
     // shadowing of the digest tree).
     if (dir === rootDir && name === "completion-certificate.json") continue;
+    // A cycle-0 reset's backups hold the previous loop's evidence. Sealed into
+    // this loop's certificate, removing a backup once it is no longer needed
+    // failed `certify --check` although nothing of this loop changed.
+    if (dir === rootDir && RESET_BACKUP_DIRECTORY.test(name)) continue;
     const full = path.join(dir, name);
     let s: Awaited<ReturnType<typeof stat>>;
     try {

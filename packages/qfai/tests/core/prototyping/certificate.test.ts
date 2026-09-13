@@ -192,6 +192,25 @@ describe("checkCompletionCertificate", () => {
     }
   });
 
+  it("leaves a cycle-0 reset's backups out of the digest tree", async () => {
+    // They hold the previous loop's evidence, and removing one after certify
+    // must not read as this loop's evidence changing.
+    const root = await newTempDir();
+    const evidenceRoot = await seedEvidence(root, {
+      "iter-00/home.review.json": "{}\n",
+      "iter-00.backup-2026-01-01T00-00-00-000Z/old.review.json": "{}\n",
+      "aggregate.backup-2026-01-01T00-00-00-000Z/screenshots/home.png": "old",
+    });
+    const cert = await buildCompletionCertificate(baseInputs(evidenceRoot));
+    expect(cert.evidenceDigests.map((entry) => entry.path)).toEqual(["iter-00/home.review.json"]);
+    await writeCompletionCertificate(root, cert);
+
+    await rm(path.join(evidenceRoot, "aggregate.backup-2026-01-01T00-00-00-000Z"), {
+      recursive: true,
+    });
+    expect((await checkCompletionCertificate(root)).ok).toBe(true);
+  });
+
   it("excludes the certificate file itself from the digest tree", async () => {
     // If the certificate file were included in its own digest tree, every
     // check would fail. Verify exclusion.

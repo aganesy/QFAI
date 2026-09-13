@@ -620,7 +620,8 @@ export async function runPrototypingCertify(
       );
       error(
         "  The cycle-0 re-run is DESTRUCTIVE, and --force does not make it safe: it renames " +
-          "only iter-00 to iter-00.backup-<ISO>. Everything else in " +
+          "only iter-00 to iter-00.backup-<ISO>, and moves the aggregate screenshots/ and " +
+          "html/ to aggregate.backup-<ISO>. Everything else in " +
           `${PROTOTYPING_EVIDENCE_REL}/ is then reset — iter-01 and up are deleted outright, ` +
           "and prototyping.json#iterations / #reviewerGate are cleared. Copy the whole " +
           `${PROTOTYPING_EVIDENCE_REL}/ directory somewhere safe first if the earlier ` +
