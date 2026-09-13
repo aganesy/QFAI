@@ -43,7 +43,7 @@ defect in what the pack declares rather than a disagreement with the product:
 the declaration names a condition with no instance, and there is one correct
 repair.
 
-**The absent pointer is not one condition across the two readers.** The helper
+**The absent pointer is not one condition across its readers.** The helper
 rejects an absent pointer whatever candidates exist. `qfai discussion list
 --active` rejects it only when there is no candidate or there are several: with
 exactly one, it prints that pack and says on stderr that it assumed it
@@ -51,6 +51,17 @@ exactly one, it prints that pack and says on stderr that it assumed it
 `packages/qfai/tests/integration/cli/commands/discussion.test.ts:169-215` pins
 that outcome. The statements above word the absent case as one rejection, so a
 rerun that only drops the duplicate state would leave them contradicting the
+command's single-candidate read.
+
+**Stage 0 is a third reader, and it falls back rather than rejecting.**
+`qfai sdd preflight` resolves the pointer through the helper only when it is
+set. When it is absent, the preflight takes the newest pack
+(`resolveSelectedPackDir` in `packages/qfai/src/cli/commands/sddPreflight.ts`),
+because nothing in the shipped skill set writes the pointer and requiring it
+would block Stage 0 for every default project. The pointer cases in
+`packages/qfai/tests/cli/commands/sddPreflight.test.ts` and the Stage 0 step
+of the shipped `qfai-sdd/SKILL.md` rest on that. A statement saying `/qfai-sdd`
+rejects an absent pointer contradicts Stage 0 as much as it contradicts the
 command's single-candidate read.
 
 ## Reproduction
@@ -140,7 +151,7 @@ uncovered, when the uncovered third is a state no test can construct.
 
 - Specs: `spec-0010`, `spec-0013`, and `_policies` for `DR-0266`
 - Plans: `.qfai/specs/spec-0010/10_Plan.md`, `.qfai/specs/spec-0013/10_Plan.md`
-- Tests: `spec-0013/TDD-0024` — `packages/qfai/tests/core/activeDiscussionPack.test.ts`,
+- Tests: `spec-0013/TDD-0023` and `spec-0013/TDD-0024` — `packages/qfai/tests/core/activeDiscussionPack.test.ts`,
   whose header and `describe` name the duplicate state and whose file-time
   guard moves between its two `describe` blocks; and
   `packages/qfai/tests/integration/cli/commands/discussion.test.ts`, for the
@@ -191,7 +202,10 @@ them?
    as the no-candidate and several-candidate cases, so the rerun does not turn
    the fallback `discussion.test.ts:169-215` pins into an obligation to reject.
    Steps 2 and 3 carry the same distinction wherever their statements name the
-   command.
+   command. **It keeps Stage 0's fallback too**: wherever a statement describes
+   how `/qfai-sdd` finds its pack, it says an absent pointer leaves Stage 0 on
+   the newest pack, so no rerun turns that fallback into a rejection. Neither
+   fallback changes, so no code, test or shipped guidance for either is edited.
 
 2. `/qfai-sdd spec-0010`, mode `re-derive`, over `AC-0010-0012`,
    `BR-0010-0012` and the two `10_Plan.md` lines that restate the rejection,
@@ -259,20 +273,24 @@ them?
    missing-pointer message. Correct every comment that still names the
    duplicate state, each of which is false once the branches go:
 
-   | File                                                           | Lines    | What it says                                                           |
-   | -------------------------------------------------------------- | -------- | ---------------------------------------------------------------------- |
-   | `packages/qfai/src/core/discussionPack.ts`                     | 195-216  | the reason type's doc and the error's doc name the duplicate state     |
-   | `packages/qfai/src/core/discussionPack.ts`                     | 243-245  | the helper's doc lists a duplicate match among the errors it throws    |
-   | `packages/qfai/src/cli/commands/discussion.ts`                 | 181-182  | `discussion use` says the missing/duplicate condition surfaces at read |
-   | `packages/qfai/src/cli/commands/discussion.ts`                 | 240      | `list --active` says a missing/duplicate dir fails with several packs  |
-   | `packages/qfai/src/core/validators/designContractReadiness.ts` | 271, 326 | a duplicate pointer does not fall back, and makes the answer unknown   |
-   | `packages/qfai/src/core/validators/researchSummary.ts`         | 672      | a `currentId` naming no pack "(or two)"                                |
+   | File                                                           | Lines    | What it says                                                                 |
+   | -------------------------------------------------------------- | -------- | ---------------------------------------------------------------------------- |
+   | `packages/qfai/src/core/discussionPack.ts`                     | 195-216  | the reason type's doc and the error's doc name the duplicate state           |
+   | `packages/qfai/src/core/discussionPack.ts`                     | 243-245  | the helper's doc lists a duplicate match among the errors it throws          |
+   | `packages/qfai/src/cli/commands/discussion.ts`                 | 181-182  | `discussion use` says the missing/duplicate condition surfaces at read       |
+   | `packages/qfai/src/cli/commands/discussion.ts`                 | 240      | `list --active` says a missing/duplicate dir fails with several packs        |
+   | `packages/qfai/src/core/validators/designContractReadiness.ts` | 271, 326 | a duplicate pointer does not fall back, and makes the answer unknown         |
+   | `packages/qfai/src/core/validators/researchSummary.ts`         | 536-539  | `brokenPointer`'s doc says a set pointer may resolve "to more than one" pack |
+   | `packages/qfai/src/core/validators/researchSummary.ts`         | 672      | a `currentId` naming no pack "(or two)"                                      |
 
-   Correct the header and `describe` of `activeDiscussionPack.test.ts`, which
-   still name the duplicate state, and move its file-time guard case from
-   `TC-0013-0029`'s `describe` into `TC-0013-0028`'s, as action 4 sets out.
-   Both suites keep passing unchanged, because neither exercises a duplicate —
-   no test could construct one.
+   **The test edits go through `/qfai-atdd spec-0013`, ahead of that work.**
+   `TDD-0023`, `TDD-0024` and the new absent-pointer row are `Integration`
+   rows, whose tests `/qfai-atdd` writes and `/qfai-implement` does not
+   (`qfai-implement/SKILL.md`). That run corrects the header and `describe` of
+   `activeDiscussionPack.test.ts`, which still name the duplicate state, and
+   moves its file-time guard case from `TC-0013-0029`'s `describe` into
+   `TC-0013-0028`'s, as action 4 sets out. Both suites keep passing unchanged,
+   because neither exercises a duplicate — no test could construct one.
 
    **These edits are cross-spec.** Before making them, the run takes the
    detection step `.qfai/assistant/skills/qfai-implement/references/cross-spec-ownership.md`
@@ -286,7 +304,8 @@ them?
    | `packages/qfai/tests/core/validators/designContractReadiness.test.ts`      | `spec-0004/TDD-0008` to `TDD-0010`, `spec-0012/TDD-0355` |
 
    The walk at run time decides the full set. Each match is recorded under
-   `## Cross-spec obligations` in `.qfai/evidence/implement-spec-0013.md`, its
+   `## Cross-spec obligations` in `.qfai/evidence/atdd-spec-0013.md`, the
+   evidence file of the `Integration` rows these edits are made for, its
    `Selector` is re-run against the changed tree, and `completion-reviewer`
    reviews those rows' obligations beside `spec-0013`'s, with the fresh results
    as its input.
