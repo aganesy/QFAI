@@ -295,9 +295,9 @@ jobs:
               return line;
             }).replace(/<!--[\s\S]*?-->/g, block => block.replace(/[^\r\n]/g, ' '));
             const match = section.exec(visible);
-            const answer = (match?.[1] ?? '').replace(/<!--[\s\S]*?-->/g, '').replace(/^[ \t]*(?:[-*+]|\d+[.)])[ \t]*(?:\[[ xX-]?\][ \t]*)?/gm, '').replace(/[`*_]/g, '').trim();
+            const answer = (match?.[1] ?? '').replace(/^[ \t]*(?:[-*+]|\d+[.)])[ \t]*(?:\[[ xX-]?\][ \t]*)?/gm, '').replace(/^[ \t]*>+[ \t]*/gm, '').replace(/\[([^\]]*)\]\([^\)\r\n]*\)/g, '$1').replace(/<\/?[A-Za-z][A-Za-z0-9:-]*(?:[ \t][^>]*|[ \t]*\/?)>/g, '').replace(/[`*_]/g, '').trim();
             let next = existing;
-            if (!answer || /^(?:TBD|TODO|\[.*\])\.?$/i.test(answer)) {
+            if (!/[\p{L}\p{N}]/u.test(answer) || /^(?:TBD|TODO|\[.*\])\.?$/i.test(answer)) {
               const replacement = section.exec(generated)?.[0];
               if (!replacement) throw new Error('Generated release body lacks its removal answer');
               next = match

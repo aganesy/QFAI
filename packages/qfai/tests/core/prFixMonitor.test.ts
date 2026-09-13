@@ -132,6 +132,11 @@ describe("run-pr-fix strict monitor", { timeout: 120000 }, () => {
     ["empty task", "## What this change made unnecessary\n\n- [ ]\n"],
     ["empty lists", "## What this change made unnecessary\n\n- [ ]\n*\n1.\n"],
     ["listed unresolved", "## What this change made unnecessary\n\n- TBD\n"],
+    ["thematic break", "## What this change made unnecessary\n\n---\n"],
+    ["empty quotation", "## What this change made unnecessary\n\n>\n"],
+    ["empty link", "## What this change made unnecessary\n\n[]()\n"],
+    ["empty link with target", "## What this change made unnecessary\n\n[](https://example.com)\n"],
+    ["HTML break", "## What this change made unnecessary\n\n<br>\n"],
     ["fenced", "```md\n## What this change made unnecessary\n\nNothing.\n```\n"],
     ["longer backtick close", "```md\n## What this change made unnecessary\n\nNothing.\n````\n"],
     ["longer tilde close", "~~~md\n## What this change made unnecessary\n\nNothing.\n~~~~\n"],
@@ -167,7 +172,7 @@ describe("run-pr-fix strict monitor", { timeout: 120000 }, () => {
     "~~~md\n## What this change made unnecessary\n\nExample only.\n~~~~\n\n",
   ])("preserves an authored removal answer while repairing other metadata", async (prefix) => {
     const answer =
-      "A duplicate check. The existing validator stays because it covers malformed inputs.";
+      "A duplicate check. The existing validator stays because it covers malformed inputs.\n\n```sh\nobsolete-check --strict\n## This is command data\n```\n\nThe canonical validator retains that input check.";
     const result = await runPrFix({
       extraArgs: ["-DryRun"],
       scenario: makeScenario({

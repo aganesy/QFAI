@@ -106,7 +106,8 @@ $pr = gh pr view --json number,headRefName,baseRefName,url
 ## 進め方
 
 Read `REVIEW.md` before writing or repairing a PR description. Body repair keeps
-an authored removal-list answer. A missing answer blocks repair; neither a
+an authored removal-list answer, including its fenced command or config examples.
+A missing answer blocks repair; neither a
 template placeholder nor an imported fenced copy supplies one. Complete the
 saved preview from the actual diff, upload it with the displayed
 `gh pr edit <number> --body-file "<preview>"` command, then rerun. Each live

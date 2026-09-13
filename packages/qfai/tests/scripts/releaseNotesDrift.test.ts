@@ -311,6 +311,11 @@ describe("resuming a release pull-request description", () => {
     ["missing", ""],
     ["empty", "## What this change made unnecessary\n\n<!-- Answer required. -->\n"],
     ["Markdown-only", "## What this change made unnecessary\n\n- [ ]\n"],
+    ["thematic break", "## What this change made unnecessary\n\n---\n"],
+    ["empty quotation", "## What this change made unnecessary\n\n>\n"],
+    ["empty link", "## What this change made unnecessary\n\n[]()\n"],
+    ["empty link with target", "## What this change made unnecessary\n\n[](https://example.com)\n"],
+    ["HTML break", "## What this change made unnecessary\n\n<br>\n"],
     ["fenced example", "```md\n## What this change made unnecessary\n\nNothing.\n```\n"],
     ["longer backtick close", "```md\n## What this change made unnecessary\n\nNothing.\n````\n"],
     [
