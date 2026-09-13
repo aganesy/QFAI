@@ -60,6 +60,19 @@ const CITATION_CHARACTER = /[A-Za-z0-9._/*?+-]/;
  */
 const NAME_CHARACTER = /[^\s`"'<>|,;:()[\]{}\\!#]/u;
 
+/**
+ * Punctuation a file name can hold that ends a citation in prose, and belongs to
+ * it inside a code span, which delimits the name.
+ */
+const CODE_SPAN_PUNCTUATION: ReadonlySet<string> = new Set([",", ";", "!", ":"]);
+
+/**
+ * Quotes and angle brackets, which a code span holds around a path as often as
+ * inside a name: `".qfai/report/*"` is a quoted glob and `<pack>` a placeholder.
+ * One of them followed by more of the name makes the token unreadable.
+ */
+const CODE_SPAN_QUOTE = /['"<>]/;
+
 /** What closes each kind of group a citation can open. */
 const GROUP_CLOSERS: Readonly<Record<string, string>> = { "(": ")", "{": "}", "[": "]" };
 
@@ -199,11 +212,7 @@ function citationsIn(line: string, spans: readonly CodeSpan[] = codeSpanRanges(l
         // whole citation away.
       } else if ((character === "@" || character === "!") && line[index + 1] === "(") {
         // An extglob introducer, which is one only where a group follows it.
-      } else if (
-        span !== undefined &&
-        index < span[1] &&
-        (character === "," || character === ";" || character === "!" || character === ":")
-      ) {
+      } else if (span !== undefined && index < span[1] && CODE_SPAN_PUNCTUATION.has(character)) {
         // Punctuation a code span delimits, part of the name it holds. A `!` that
         // opens a group was read as an extglob above.
       } else if (NAME_CHARACTER.test(character)) {
@@ -211,6 +220,17 @@ function citationsIn(line: string, spans: readonly CodeSpan[] = codeSpanRanges(l
         // the `@` of `@missing.md` or a letter outside ASCII. Stopping before it
         // measured the prefix, which resolved against its directory.
       } else {
+        // Inside a code span a quote the name runs on past is part of a name the
+        // scan cannot read, and the prefix before it names a different path.
+        if (
+          span !== undefined &&
+          index < span[1] &&
+          CODE_SPAN_QUOTE.test(character) &&
+          index + 1 < span[1] &&
+          NAME_CHARACTER.test(line[index + 1] ?? "")
+        ) {
+          usable = false;
+        }
         break;
       }
       index += 1;
@@ -1022,6 +1042,7 @@ function withinMatchBudget(cited: string): boolean {
     if (segment === "**") return true;
     let parts = 0;
     let lastStar = -2;
+    let run = 0;
     for (const index of outsideClasses(segment)) {
       const character = segment[index] ?? "";
       if ("@?*+!".includes(character) && segment[index + 1] === "(") {
@@ -1029,9 +1050,11 @@ function withinMatchBudget(cited: string): boolean {
         const body = close === -1 ? "" : segment.slice(index + 2, close);
         if ((character === "*" || character === "+") && /[^\w.-]/.test(body)) return false;
         parts += 1;
-      } else if (character === "*" && lastStar !== index - 1) {
-        // A run of stars compiles to one wildcard.
-        parts += 1;
+      } else if (character === "*") {
+        // The compiler reads stars two at a time, so a run of them is one
+        // wildcard per pair, and a run of thirty is fifteen.
+        run = lastStar === index - 1 ? run + 1 : 1;
+        if (run % 2 === 1) parts += 1;
       }
       if (character === "*") lastStar = index;
     }
@@ -2089,6 +2112,21 @@ describe("a glob is a claim about a set", () => {
     expect(withinMatchBudget(".qfai/report/+(run-).json")).toBe(true);
     expect(withinMatchBudget(".qfai/report/[*][*][*][*][*].json")).toBe(true);
     expect(withinMatchBudget(".qfai/discussion/discussion-*/**/0?_*.md")).toBe(true);
+  });
+
+  it("counts every wildcard a run of stars compiles to", () => {
+    // The compiler emits one wildcard per pair of stars, and against a tracked
+    // pack's name a run of thirty took seconds while counting as one part.
+    expect(withinMatchBudget(`.qfai/discussion/discussion-${"*".repeat(29)}b`)).toBe(false);
+    expect(withinMatchBudget(".qfai/report/a**b*c*d.json")).toBe(true);
+  });
+
+  it("reads no prefix of a name a code span continues past a quote", () => {
+    // The prefix is a tracked file, and resolving it passed a record naming one
+    // the tree does not have.
+    expect(citationsIn("see `.qfai/report/preflight_summary.md'missing` here")).toEqual([]);
+    // A quote closing the path is punctuation around it, as a quoted glob is.
+    expect(citationsIn('see `".qfai/report/*"` here')).toEqual([".qfai/report/*"]);
   });
 
   it("keeps a colon a code span delimits", () => {
