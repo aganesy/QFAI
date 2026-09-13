@@ -130,12 +130,12 @@ describe("a UI contract entry no screen is read from is reported", () => {
     ]);
   });
 
-  it("reads an id each spec's own contract reuses as a screen of that spec", async () => {
+  it("reads an id each spec's own contract reuses for the same route as a screen of that spec", async () => {
     // Certification reads one spec's contract on its own, so `home` in two
     // specs' contracts is two screens. Inside one spec's files it repeats.
     const root = await projectWith({
       "spec-0001.yaml": ["screens:", ...screen("home", "/")],
-      "spec-0002.yaml": ["screens:", ...screen("home", "/two")],
+      "spec-0002.yaml": ["screens:", ...screen("home", "/")],
     });
     expect(await validateUiScreenEntries(root, defaultConfig)).toEqual([]);
 
@@ -143,13 +143,36 @@ describe("a UI contract entry no screen is read from is reported", () => {
     for (const name of ["a.yaml", "b.yaml"]) {
       await writeFile(
         path.join(root, ".qfai", "contracts", "ui", "spec-0003", name),
-        ["screens:", ...screen("home", "/three"), ""].join("\n"),
+        ["screens:", ...screen("home", "/"), ""].join("\n"),
         "utf-8",
       );
     }
+    const findings = await validateUiScreenEntries(root, defaultConfig);
+    expect(findings).toHaveLength(1);
+    expect(findings[0]?.message).toContain("spec-0003/b.yaml");
+    expect(findings[0]?.message).toContain("repeats the `id` `home`");
+  });
+
+  it("names an id another spec's contract reuses for a different route", async () => {
+    // The project-wide list the prototyping loop captures from keeps the first
+    // route only, so the second is never captured.
+    const root = await projectWith({
+      "spec-0001.yaml": ["screens:", ...screen("home", "/")],
+      "spec-0002.yaml": ["screens:", ...screen("home", "/two")],
+    });
+    const findings = await validateUiScreenEntries(root, defaultConfig);
+    expect(findings).toHaveLength(1);
+    expect(findings[0]?.file).toBe(".qfai/contracts/ui/spec-0002.yaml");
+    expect(findings[0]?.message).toContain("keeps only the first route");
+    expect(findings[0]?.suggested_action).toContain("the same `route`");
+  });
+
+  it("asks a repeat with no route for a route as well as a different id", async () => {
+    const root = await projectWith({
+      "a.yaml": ["screens:", ...screen("home", "/"), "  - id: home"],
+    });
     const [finding] = await validateUiScreenEntries(root, defaultConfig);
-    expect(finding?.message).toContain("spec-0003/b.yaml");
-    expect(finding?.message).toContain("repeats the `id` `home`");
+    expect(finding?.suggested_action).toContain("a different `id` and a `route`");
   });
 
   it("finds the contracts of a project whose path holds a glob character", async () => {

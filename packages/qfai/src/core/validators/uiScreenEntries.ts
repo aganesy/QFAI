@@ -57,6 +57,11 @@ function describe(entry: UnreadScreenEntry): string {
       const instead = first === undefined ? "an earlier entry" : locate(first.file, first.index);
       return `${where} repeats the \`id\` \`${entry.screenId ?? ""}\` of ${instead}. Only the first entry for an \`id\` is read, so nothing checks what this one states.`;
     }
+    case "route-shadowed": {
+      const first = entry.readInstead;
+      const other = first === undefined ? "another contract" : locate(first.file, first.index);
+      return `${where} gives the \`id\` \`${entry.screenId ?? ""}\` a different \`route\` from ${other}. Certification reads each spec's contract on its own, but the project-wide screen list the prototyping loop captures from keeps only the first route, so this one is never captured.`;
+    }
   }
 }
 
@@ -75,6 +80,11 @@ function remedy(entry: UnreadScreenEntry): string {
         ? "Give the entry a `route` and an `id` no other entry of this contract uses, or remove it."
         : "Give the entry a `route`, or remove it.";
     case "repeated-id":
-      return "Give one of the two entries a different `id`, or remove the one that should not be there.";
+      // Given only a new `id`, an entry with no route would still not be read.
+      return entry.routeMissing === true
+        ? "Give this entry a different `id` and a `route`, or remove it."
+        : "Give one of the two entries a different `id`, or remove the one that should not be there.";
+    case "route-shadowed":
+      return "Give one of the two screens a different `id`, or the same `route`.";
   }
 }

@@ -190,7 +190,12 @@ function toPosix(value: string): string {
 
 /** Why a `screens[]` entry is not among the screens the reader returns. */
 export type UnreadScreenEntryReason =
-  "not-a-list" | "not-a-mapping" | "missing-id" | "missing-route" | "repeated-id";
+  | "not-a-list"
+  | "not-a-mapping"
+  | "missing-id"
+  | "missing-route"
+  | "repeated-id"
+  | "route-shadowed";
 
 export type UnreadScreenEntry = {
   /** The contract file, repository-relative. */
@@ -200,10 +205,15 @@ export type UnreadScreenEntry = {
   reason: UnreadScreenEntryReason;
   /** The entry's `id`, where it has one. */
   screenId?: string;
-  /** For a repeated `id`, the entry that is read in its place. */
+  /**
+   * For a repeated `id`, the entry that is read in its place; for a shadowed
+   * route, the entry whose route the project-wide screen list keeps.
+   */
   readInstead?: { file: string; index: number };
   /** For a missing route, whether another entry of the same contract has this `id`. */
   idShared?: boolean;
+  /** For a repeated `id`, whether the entry has no route either. */
+  routeMissing?: boolean;
 };
 
 /**
@@ -221,6 +231,9 @@ export async function findUnreadUiScreenEntries(
   const uiDir = path.resolve(root, contractsDirRelative, "ui");
   const unread: UnreadScreenEntry[] = [];
   const firstById = new Map<string, { file: string; index: number }>();
+  // The project-wide screen list keeps one entry per `id` across every
+  // contract, and the prototyping loop captures from it.
+  const firstAnywhere = new Map<string, { file: string; index: number; route: string }>();
   const documents = (await readUiContractDocuments(uiDir, root)).map((document) => ({
     ...document,
     scope: specScopeOf(toPosix(path.relative(uiDir, path.resolve(root, document.relativePath)))),
@@ -273,6 +286,21 @@ export async function findUnreadUiScreenEntries(
       }
       if (first === undefined) {
         firstById.set(key, { file: relativePath, index });
+        // Another spec's contract may reuse the `id` for its own screen, which
+        // certification reads. Under a different route, though, the project-wide
+        // list keeps the first route only, and this one is never captured.
+        const anywhere = firstAnywhere.get(screenId);
+        if (anywhere === undefined) {
+          firstAnywhere.set(screenId, { file: relativePath, index, route });
+        } else if (anywhere.route !== route) {
+          unread.push({
+            file: relativePath,
+            index,
+            reason: "route-shadowed",
+            screenId,
+            readInstead: { file: anywhere.file, index: anywhere.index },
+          });
+        }
         return;
       }
       unread.push({
@@ -281,6 +309,7 @@ export async function findUnreadUiScreenEntries(
         reason: "repeated-id",
         screenId,
         readInstead: first,
+        routeMissing: !route,
       });
     });
   }
