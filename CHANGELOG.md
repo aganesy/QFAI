@@ -161,7 +161,8 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   and carry responses that agree with the attempt's verdict. It must also review
   this row's spec at one revision, and the attempt the last round closed on must
   hold one response per reviewer the row records, at the tree and audited hash
-  that reviewer's verdict records. A request may list a T1 group's members. Every
+  that reviewer's verdict records. A request names the row once and otherwise only T1
+  rows sharing its `BR-Ref`, and each response in a pack states its verdict. Every
   review pack's seal now hashes Markdown and HTML normalized and every other file
   as its bytes, as the audit-hash procedure does, so a producer's seal over a
   `summary.json` with a carriage return recomputes. The completion gate also holds those

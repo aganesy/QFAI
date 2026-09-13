@@ -496,6 +496,19 @@ function ledger(rows: Row[]): string {
   return `${HEADER}\n${body}\n`;
 }
 
+/** `ledgerText` with a `BR-Ref` column holding `key` on every row. */
+function withBrRef(ledgerText: string, key: string): string {
+  return ledgerText
+    .split("\n")
+    .map((line) => {
+      if (line.startsWith("| TDD-ID ")) return `${line} BR-Ref |`;
+      if (line.startsWith("| ------ ")) return `${line} ------ |`;
+      if (line.startsWith("| TDD-")) return `${line} ${key} |`;
+      return line;
+    })
+    .join("\n");
+}
+
 async function withProject(fn: (root: string) => Promise<void>): Promise<void> {
   const root = path.join(
     os.tmpdir(),
@@ -2134,11 +2147,14 @@ describe("QFAI-TDDLIST-008", () => {
   });
 
   it("reads a round pack's request as the list of ids its review covered", async () => {
-    // A T1 group is reviewed in one round, and its request lists every member.
-    // An id listed twice is not a list of members.
+    // A T1 group is reviewed in one round, and its request lists members that
+    // share the row's `BR-Ref`. A repeated id, a row outside that group or a word
+    // that is no id names a different review.
     for (const [request, accepted] of [
       ["TDD-ID: TDD-0001, TDD-0002\n", true],
       ["TDD-ID: TDD-0001, TDD-0001\n", false],
+      ["TDD-ID: TDD-0001, TDD-9999\n", false],
+      ["TDD-ID: TDD-0001 garbage\n", false],
     ] as const) {
       await withProject(async (root) => {
         const pack = ".qfai/review/review-20260101000000000";
@@ -2163,7 +2179,13 @@ describe("QFAI-TDDLIST-008", () => {
         );
         const issues = await runIssuesOn(
           root,
-          ledger([{ status: "done", evidence: IMPLEMENT_POINTER }]),
+          withBrRef(
+            ledger([
+              { status: "done", evidence: IMPLEMENT_POINTER },
+              { status: "todo", evidence: "-" },
+            ]),
+            "BR-0001",
+          ),
           { ".qfai/evidence/implement-spec-0001.md": evidence },
         );
         const carrying = issues.some((issue) =>
@@ -2172,6 +2194,45 @@ describe("QFAI-TDDLIST-008", () => {
         expect(carrying, request).toBe(!accepted);
       });
     }
+  });
+
+  it("refuses a REVISE pack holding a response that states no verdict", async () => {
+    // Each response states its `Result` once, visibly; one `REVISE` beside a
+    // response with none is not a pack the attempt could have closed on.
+    await withProject(async (root) => {
+      const pack = ".qfai/review/review-20260101000000000";
+      await mkdir(path.join(root, pack), { recursive: true });
+      await writeFile(path.join(root, pack, "review_request.md"), "TDD-ID: TDD-0001\n");
+      await writeFile(
+        path.join(root, pack, "R01_completion-reviewer.md"),
+        `Result: REVISE\nReviewed revision: ${DEFAULT_REVISION}\n`,
+      );
+      await writeFile(
+        path.join(root, pack, "R01_implementation-reviewer.md"),
+        `Reviewed revision: ${DEFAULT_REVISION}\n`,
+      );
+      await writeFile(path.join(root, pack, "summary.json"), roundSummary(DEFAULT_REVISION));
+      const evidence = completeEntry("Unit").replace(
+        "- Refactor verify command: npm test",
+        [
+          "- Round 1: reviewer verdict (attempt 1): REVISE — the assertion names no boundary",
+          `- Round 1: Review pack (attempt 1): ${pack}`,
+          `- Round 1: Review pack seal (attempt 1): sha256:${await packSeal(root, pack)}`,
+          "- Round 1: reviewer verdict (attempt 2): PASS",
+          "- Round 1: Review pack (attempt 2): .qfai/review/review-20260101010000000",
+          `- Round 1: Review pack seal (attempt 2): sha256:${"b".repeat(64)}`,
+          "- Refactor verify command: npm test",
+        ].join("\n"),
+      );
+      const issues = await runIssuesOn(
+        root,
+        ledger([{ status: "done", evidence: IMPLEMENT_POINTER }]),
+        { ".qfai/evidence/implement-spec-0001.md": evidence },
+      );
+      expect(issues.map((issue) => issue.message).join("\n")).toContain(
+        "Round 1: Review pack (attempt 1) carrying this row's request and responses agreeing with its verdict",
+      );
+    });
   });
 
   it("seals a round pack's JSON as the bytes on disk", async () => {

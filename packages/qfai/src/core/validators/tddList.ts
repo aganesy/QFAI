@@ -1973,9 +1973,8 @@ async function collectReviewPackFiles(
 /**
  * A review pack's seal, by the audit-hash procedure the pack is sealed with
  * (`audited-evidence-hash.md`): a `.md` or `.html` record normalized, and every
- * other record hashed as its raw bytes. Normalizing `summary.json` as well gave
- * a producer's conforming seal a different digest from this one for any pack
- * whose JSON carried a carriage return or no final newline.
+ * other record hashed as its raw bytes, so the digest does not depend on how a
+ * reader decodes a non-text file.
  */
 function reviewPackSeal(files: ReadonlyArray<ReviewPackFile>): string {
   const records = files.map(({ relativePath, content, bytes }) => {
@@ -1992,15 +1991,45 @@ interface ReviewPackFile {
 }
 
 /**
- * Whether a request's one visible `TDD-ID` line lists `tddId`, once. The line
- * holds a list: one id for a row reviewed alone, and every member for a T1
- * group reviewed in one round (`review-artifact-layout.md`).
+ * Whether a request's one visible `TDD-ID` line names this row's review: the
+ * row's own id once, and otherwise only ids of rows it could have been reviewed
+ * with. The line is a list — one id for a row reviewed alone, the members for
+ * a T1 group reviewed in one round (`review-artifact-layout.md`) — so a foreign
+ * id, a repeated one or a word that is no id at all names a different review.
  */
-function requestListsTddId(request: string, tddId: string): boolean {
+function requestNamesReviewUnit(
+  request: string,
+  tddId: string,
+  reviewUnit: ReadonlySet<string>,
+): boolean {
   const values = visibleLineFieldValues(request, "TDD-ID");
   if (values.length !== 1) return false;
   const members = (values[0] ?? "").split(/[\s,]+/).filter((member) => member.length > 0);
-  return members.filter((member) => member === tddId).length === 1;
+  return (
+    members.filter((member) => member === tddId).length === 1 &&
+    new Set(members).size === members.length &&
+    members.every((member) => reviewUnit.has(member))
+  );
+}
+
+/**
+ * The ids a row's review may name. A T2 or T3 row is reviewed alone, and so is
+ * a row whose `BR-Ref` is `-` or blank, which opens a group of one. A T1 row is
+ * reviewed with the T1 rows sharing its `BR-Ref`, the coherent-group key
+ * (`volume-policy.md#batched-review`): the members a round held are among
+ * them, and which of them is decided when the group closes, not by this ledger.
+ */
+function reviewUnitOf(ref: LedgerRowRef, rows: readonly LedgerRowRef[]): Set<string> {
+  const tddId = cell(ref, "TDD-ID");
+  const t1 = (row: LedgerRowRef): boolean =>
+    ["", "-", "t1"].includes(cell(row, "Tier").toLowerCase());
+  const key = cell(ref, BR_REF_COLUMN);
+  if (!t1(ref) || key === "" || key === "-") return new Set([tddId]);
+  return new Set(
+    rows
+      .filter((row) => t1(row) && cell(row, BR_REF_COLUMN) === key)
+      .map((row) => cell(row, "TDD-ID")),
+  );
 }
 
 /** The named artifact of a review pack, or `null` when the pack omits it. */
@@ -2108,6 +2137,8 @@ interface CompletedEvidenceExpectation {
   obligationField: "TC-ref" | "US-ref" | "CON-API-ref";
   obligationValue: string;
   preSplit: boolean;
+  /** The ids a review pack's request may name for this row. */
+  reviewUnit: ReadonlySet<string>;
 }
 
 /**
@@ -2178,7 +2209,8 @@ async function completedLedgerExpectation(
 ): Promise<CompletedEvidenceExpectation | null> {
   const specNumber = /-spec-(\d{4})\.md$/i.exec(evidenceFile)?.[1];
   if (specNumber === undefined) return null;
-  for (const ref of checkedLedgerRows(await specLedgerTables(context, specNumber))) {
+  const rows = [...checkedLedgerRows(await specLedgerTables(context, specNumber))];
+  for (const ref of rows) {
     if (cell(ref, "TDD-ID") !== tddId) continue;
     if (cell(ref, "Status").toLowerCase() !== "done") return null;
     const evidence = cell(ref, "Evidence");
@@ -2206,6 +2238,7 @@ async function completedLedgerExpectation(
       obligationField,
       obligationValue: cell(ref, obligationColumn),
       preSplit: usesPreSplitEvidence(layer, evidence),
+      reviewUnit: reviewUnitOf(ref, rows),
     } satisfies CompletedEvidenceExpectation;
   }
   return null;
@@ -3252,7 +3285,7 @@ async function invalidCompletedEvidenceArtifacts(
     const response = responses[0];
     if (
       request === null ||
-      !requestListsTddId(request, expected.tddId) ||
+      !requestNamesReviewUnit(request, expected.tddId, expected.reviewUnit) ||
       response === undefined ||
       responses.length !== 1 ||
       !everyResponsePasses(responses) ||
@@ -3293,6 +3326,7 @@ async function invalidCompletedEvidenceArtifacts(
     invalid.push(
       ...(await invalidRoundReviewPacks(root, section, round, {
         tddId: expected.tddId,
+        reviewUnit: expected.reviewUnit,
         specNumber: expected.specNumber,
         specsRelative: context.specsRelative,
         closing: round === rounds.at(-1) ? closing : null,
@@ -3405,6 +3439,7 @@ type ClosingVerdict = { hash: string; revision: string | null };
 /** The row every round pack of it answers to. */
 type RoundPackRow = {
   tddId: string;
+  reviewUnit: ReadonlySet<string>;
   specNumber: string;
   specsRelative: string;
   closing: ReadonlyMap<string, ClosingVerdict> | null;
@@ -3474,12 +3509,19 @@ function roundPackRecordsVerdict(
   entry: RoundAttemptPack,
 ): boolean {
   const request = reviewPackArtifact(packFiles, packPath, "review_request.md");
-  if (request === null || !requestListsTddId(request, entry.tddId)) return false;
+  if (request === null || !requestNamesReviewUnit(request, entry.tddId, entry.reviewUnit)) {
+    return false;
+  }
   const responses = allReviewPackResponses(packFiles);
   const verdict = (entry.verdict ?? "").trim();
   if (/^PASS\b/i.test(verdict)) return everyResponsePasses(responses);
   if (/^REVISE\b/i.test(verdict)) {
-    return responses.some((response) => exactLineField(response, "Result", "REVISE"));
+    const states = (response: string, value: string): boolean =>
+      exactLineField(response, "Result", value);
+    return (
+      responses.every((response) => states(response, "PASS") || states(response, "REVISE")) &&
+      responses.some((response) => states(response, "REVISE"))
+    );
   }
   return false;
 }
@@ -6249,6 +6291,7 @@ async function validateSpecTddList(
           obligationField,
           obligationValue: cell(ref, obligationColumn),
           preSplit: usesPreSplitEvidence(layer, evidence),
+          reviewUnit: reviewUnitOf(ref, [...ledgerRows()]),
         } satisfies CompletedEvidenceExpectation;
         // A backfilled row is exempt from the reviewer-pack fields, and the
         // exemption is reported rather than applied silently. The gate's whole
