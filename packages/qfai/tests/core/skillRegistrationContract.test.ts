@@ -413,6 +413,39 @@ describe("the gate reads a skill as the host does", () => {
     expect(finding?.suggested_action).not.toContain("Set `name:` to `My Skill`");
   });
 
+  it("asks for the rename after a front matter repair where the directory can be no name", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-skill-registration-"));
+    tempDirs.push(root);
+    const skillDir = path.join(root, ".qfai", "assistant", "skills", "My Skill");
+    await mkdir(skillDir, { recursive: true });
+    await writeFile(
+      path.join(skillDir, "SKILL.md"),
+      ["---", "name: my-skill", "description: [", "---", "", "# x", ""].join("\n"),
+      "utf-8",
+    );
+
+    const [finding] = await registrationFindings(root);
+    expect(finding?.message).toContain("front matter a host cannot read");
+    expect(finding?.suggested_action).toContain("rename the skill's directory");
+    expect(finding?.suggested_action).not.toContain("`name:` is `My Skill`");
+  });
+
+  it("leaves a SKILL.md in a skill's vendored tree out of the marker checks", async () => {
+    // The document crawl reads such a tree, since a step can name a file there;
+    // the marker checks are about the documents the skill's author wrote.
+    const root = await projectWithSkill(['description: "Does the thing."']);
+    const skillDir = path.join(root, ".qfai", "assistant", "skills", "qfai-example");
+    const vendored = path.join(skillDir, "node_modules", "pkg", "SKILL.md");
+    await mkdir(path.dirname(vendored), { recursive: true });
+    await writeFile(vendored, "# vendored\n", "utf-8");
+
+    const codes = (await validateAssistantAssets(root, defaultConfig))
+      .filter((item) => item.file === vendored)
+      .map((item) => item.code);
+    expect(codes).not.toContain("QFAI-SKILLS-010");
+    expect(codes).not.toContain("QFAI-SKILLS-011");
+  });
+
   it("passes over a directory the host does not list", async () => {
     // A dot-prefixed skill directory is one the host never loads.
     const root = await projectWithSkill(['description: "Does the thing."']);

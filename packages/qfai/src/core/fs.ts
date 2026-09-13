@@ -3,7 +3,14 @@ import path from "node:path";
 
 import fg from "fast-glob";
 
-const DEFAULT_IGNORE_DIRS = new Set(["node_modules", ".git", "dist", ".pnpm", "tmp", ".mcp-tools"]);
+export const DEFAULT_IGNORE_DIRS: ReadonlySet<string> = new Set([
+  "node_modules",
+  ".git",
+  "dist",
+  ".pnpm",
+  "tmp",
+  ".mcp-tools",
+]);
 
 export type CollectFilesOptions = {
   extensions?: string[];

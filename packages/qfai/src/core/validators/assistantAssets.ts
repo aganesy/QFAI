@@ -24,7 +24,7 @@ import type {
 import type { QfaiConfig } from "../config.js";
 import { resolvePath } from "../config.js";
 import { parseSkillFrontmatter, skillFrontmatterMapping } from "../agentFrontmatter.js";
-import { collectFiles } from "../fs.js";
+import { collectFiles, DEFAULT_IGNORE_DIRS } from "../fs.js";
 import { hasErrnoCode, isEnoent } from "../fs/errno.js";
 import { readBoundedRegularFile } from "../../shared/boundedRead.js";
 import { parseHeadings } from "../parse/markdown.js";
@@ -1296,7 +1296,12 @@ async function collectSkillEntryPoints(skillsDir: string): Promise<string[]> {
 async function collectSkillFiles(dirs: string[]): Promise<string[]> {
   const files = await Promise.all(
     dirs.map((dir) =>
-      collectFiles(dir, { skipDirectory: (directory) => isHiddenSkillDirectory(dir, directory) }),
+      // The marker checks keep the default pruning: a `SKILL.md` inside a
+      // vendored or built tree is not a document the skill's author wrote.
+      collectFiles(dir, {
+        ignoreDirs: [...DEFAULT_IGNORE_DIRS],
+        skipDirectory: (directory) => isHiddenSkillDirectory(dir, directory),
+      }),
     ),
   );
   return files
@@ -1496,6 +1501,14 @@ function collectSkillRegistrationIssues(skillFile: string, content: string): Iss
   // block parses.
   const unreadable = parseSkillFrontmatter(content)?.parseError;
   if (unreadable !== undefined) {
+    // Both fields, because the block is unreadable and neither has been looked
+    // at: told to repair one, the operator writes valid front matter that fails
+    // this same finding again on the other. A directory no name can match is
+    // renamed first, for the reason the name finding gives.
+    const directory = path.basename(path.dirname(skillFile));
+    const repair = usableAsSkillName(directory)
+      ? `Repair the front matter first, then make sure \`name:\` is \`${directory}\` and \`description:\` carries a sentence saying what the skill does.`
+      : `Repair the front matter first. Then rename the skill's directory, \`${printable(directory)}\`, to lowercase letters, digits and single hyphens within ${SKILL_NAME_MAX_LENGTH} characters, set \`name:\` to the new name, and make sure \`description:\` carries a sentence saying what the skill does.`;
     return [
       issue(
         "QFAI-SKILLS-015",
@@ -1505,10 +1518,7 @@ function collectSkillRegistrationIssues(skillFile: string, content: string): Iss
         "skills.description",
         undefined,
         "change",
-        // Both fields, because the block is unreadable and neither has been
-        // looked at: told to repair one, the operator writes valid front matter
-        // that fails this same finding again on the other.
-        `Repair the front matter first, then make sure \`name:\` is \`${path.basename(path.dirname(skillFile))}\` and \`description:\` carries a sentence saying what the skill does.`,
+        repair,
       ),
     ];
   }
