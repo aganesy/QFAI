@@ -264,7 +264,7 @@ reviewer returned. So item 9's entry carries both:
   carries it.
 
 Gate item 10 re-checks both against the current tree, alongside items 3, 5, 7 and 8: item 9's
-`Reviewed revision` must agree with the `Revision` items 5, 7 and 8 share, and the hash is
+`Reviewed revision` must agree with the `Refactor verify revision` items 6, 7 and 8 share, and the hash is
 recomputed over the same inputs. A mismatch means the surface moved under the verdict — the row
 re-runs the clauses and, if one still fires, takes a fresh parity review before `done`.
 
