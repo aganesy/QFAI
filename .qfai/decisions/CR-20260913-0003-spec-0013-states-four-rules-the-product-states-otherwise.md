@@ -56,7 +56,7 @@ and asserts that no `info`-severity finding is produced.
 
 `BR-0013-0016` states the same rule **with** its condition: informational "until
 they are re-authored or until the next minor escalates the warning". The sunset
-named throughout is `qfai 1.10.0` and the package is at `1.11.1`, so that
+named throughout is `qfai 1.10.0` and the package is at `1.12.0`, so that
 condition has been met and the product is right.
 
 What is wrong is what carries the condition. The test case dropped it, and the
@@ -90,7 +90,7 @@ as follow-up".
 window logic of any kind. **The mechanism those four layers name no longer
 exists**: it was removed by `retire the version-keyed severity mechanism`, a
 change whose own title says what it did. Two facts follow, and they point the
-same way — the window's named sunset is `1.10.0` and the package is `1.11.1`, so
+same way — the window's named sunset is `1.10.0` and the package is `1.12.0`, so
 even on the retired mechanism the finding would now be `error`.
 
 The comments around the covering cases are wrong under either reading. Both pin
