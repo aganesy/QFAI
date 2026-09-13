@@ -469,7 +469,7 @@ project_memory:
 - On a falsifiability row, keep the boundary the predicate its Satisfied-by names covers, falling back to that same order.
 - Phase 2b seeds four groups, all at Status = todo: coverage-target TC, integration-level TC, `Layer = E2E` row per active `US-*`, and `Layer = API` row per active `CON-API-*` the spec owns. TC groups carry TC-Refs; E2E carries US-Refs and API carries CON-API-Refs, never TC-Refs.
 - The integration-level TC group includes L3/integration, blank or unrecognized Level, and system / acceptance. The two TC groups are exclusive; each matrix-shaped obligation splits by independently observable boundary.
-- Seed Tier from Layer, what the row touches (infrastructure, public API, CON-* contract or persisted schema = T2; UI or rendered output = T3) and criticality. Never derive it from Evidence.
+- Seed Tier from Layer, what the row touches (infrastructure, public API, CON-* contract or persisted schema = T2; UI or rendered output = T3) and criticality. Write this value to the Tier column, never to Evidence.
 - Active uses the catalog/test-layers.md exemption: skip a planned CON-API and skip a US in a spec with no user-facing surface only after project-wide surface opt-in. When surface typing is unused, every non-planned US-* remains required.
 - A spec owns a `CON-API-*` named by its own `spec-*/01..10` or `16_*` files; the lowest-numbered spec wins when several name it, and an unnamed contract waits for Phase 2c.
 - The API-row delta is re-run twice more: after Phase 2c for contracts that gained an owner, and after Phase 0 on the `--contract` route.

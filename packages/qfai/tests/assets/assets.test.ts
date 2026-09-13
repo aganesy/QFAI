@@ -2606,6 +2606,7 @@ describe("assets guardrails", () => {
       /integration-level TC group.*blank.*unrecognized.*system \/ acceptance/,
       /surface typing is unused.*every.*US-\*/,
       /Tier.*Layer.*infrastructure.*public API.*persisted schema.*criticality/,
+      /Write.*Tier column.*never.*Evidence/,
     ]) {
       expect(sddMemory).toMatch(clause);
     }
