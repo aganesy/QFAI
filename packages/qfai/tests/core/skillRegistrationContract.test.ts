@@ -648,6 +648,39 @@ describe("the gate reads a skill as the host does", () => {
     expect(codes).not.toContain("QFAI-SKILLS-013");
   });
 
+  it("reports an entry point linked to an unreadable document as an entry point", async () => {
+    // The host opens the entry point through the link to register the skill, so
+    // the bytes at the other end stop the skill, whatever the target's own
+    // finding says about the target.
+    const root = await projectWithSkill(['description: "Does the thing."']);
+    const skills = path.join(root, ".qfai", "assistant", "skills");
+    const skillDir = path.join(skills, "qfai-example");
+    const target = path.join(skills, "shared", "entry.md");
+    await mkdir(path.dirname(target), { recursive: true });
+    await writeFile(
+      target,
+      Buffer.concat([Buffer.from("# skill\nSee references/guide.md.\n"), Buffer.from([0xff])]),
+    );
+    await mkdir(path.join(skillDir, "references"), { recursive: true });
+    await writeFile(path.join(skillDir, "references", "guide.md"), "# guide\n", "utf-8");
+    const entryPoint = path.join(skillDir, "SKILL.md");
+    await rm(entryPoint);
+    try {
+      await symlink(target, entryPoint);
+    } catch {
+      // A host without symlink permission cannot exercise this case.
+      return;
+    }
+
+    const findings = await validateAssistantAssets(root, defaultConfig);
+    const unreadable = findings.filter((item) => item.code === "QFAI-SKILLS-014");
+    expect(unreadable.find((item) => item.file === entryPoint)?.message).toContain("entry point");
+    expect(unreadable.find((item) => item.file === target)?.message).toContain(
+      "only where a step names it",
+    );
+    expect(findings.map((item) => item.code)).not.toContain("QFAI-SKILLS-013");
+  });
+
   it("calls a nested SKILL.md a reference, not an entry point", async () => {
     // A template named SKILL.md inside a skill registers nothing, so an invalid
     // byte in it stops the step that names it rather than the skill.

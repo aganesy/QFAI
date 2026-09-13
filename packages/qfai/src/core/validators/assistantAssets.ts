@@ -327,19 +327,32 @@ export async function validateAssistantAssets(root: string, config: QfaiConfig):
     ...unreadable.flatMap((item) => (item.file === undefined ? [] : [item.file])),
   ];
   for (const crawledFile of crawledFiles) crawled.set(await fileIdentity(crawledFile), crawledFile);
+  // A skill whose entry point cannot be read has no root to reach its documents
+  // from, so its references are not reported as uncited: the entry point's
+  // `QFAI-SKILLS-014` is the finding to act on.
+  const unrootedSkills: string[] = [];
   for (const entryPoint of await collectSkillEntryPoints(skillsDir)) {
     const crawledAs = crawled.get(await fileIdentity(entryPoint));
-    if (crawledAs !== undefined) {
-      const content = documents.get(crawledAs);
-      // Absent from the map means the crawl could not read it, and has already
-      // said so. Reading it again here reports the same fault twice.
-      if (content !== undefined)
-        issues.push(...collectSkillRegistrationIssues(entryPoint, content));
+    const content = crawledAs === undefined ? undefined : documents.get(crawledAs);
+    if (content !== undefined) {
+      issues.push(...collectSkillRegistrationIssues(entryPoint, content));
       continue;
     }
-    // Outside the crawl — a skill directory reached through a link, which the
-    // walk does not follow — so nothing has reported this file, and a read that
-    // fails here is the only chance to say the skill cannot be loaded.
+    // Crawled as this skill's own entry point, the file could not be read, and
+    // the crawl has already said so. Reading it again reports the same fault
+    // twice.
+    if (
+      crawledAs !== undefined &&
+      path.dirname(crawledAs) === path.dirname(entryPoint) &&
+      (await namesSkillEntryPoint(skillsDir, crawledAs))
+    ) {
+      unrootedSkills.push(path.dirname(entryPoint));
+      continue;
+    }
+    // Not crawled as this entry point: a skill directory reached through a link,
+    // which the walk does not follow, or an entry point linked to a document the
+    // crawl reported as the document it is. Nothing has said the skill cannot be
+    // loaded, and a read that fails here is the only chance to.
     //
     // Through the bounded reader rather than a bare read: the path is whatever
     // the adopter's tree holds, and a FIFO does not fail on open — it blocks
@@ -363,6 +376,7 @@ export async function validateAssistantAssets(root: string, config: QfaiConfig):
           "Make the entry point an ordinary readable file — grant read permission, repair a broken symlink, replace a directory or a device with the document — or delete it if it does not belong under `skills`.",
         ),
       );
+      unrootedSkills.push(path.dirname(entryPoint));
       continue;
     }
     // Decoded strictly. A lenient decode turns an invalid byte into a
@@ -382,20 +396,12 @@ export async function validateAssistantAssets(root: string, config: QfaiConfig):
           "Save the entry point as UTF-8. A byte that is not part of a valid sequence is usually text pasted from another encoding, or a binary file left at the path.",
         ),
       );
+      unrootedSkills.push(path.dirname(entryPoint));
       continue;
     }
     issues.push(...collectSkillRegistrationIssues(entryPoint, text));
   }
 
-  // A skill whose entry point cannot be read has no root to reach its documents
-  // from, so its references are not reported as uncited: the entry point's
-  // `QFAI-SKILLS-014` is the finding to act on.
-  const unrootedSkills: string[] = [];
-  for (const item of unreadable) {
-    if (item.file !== undefined && (await namesSkillEntryPoint(skillsDir, item.file))) {
-      unrootedSkills.push(path.dirname(item.file));
-    }
-  }
   issues.push(...collectReferenceGraphIssues(root, skillsDir, documents, unrootedSkills));
 
   return issues;
@@ -1795,15 +1801,6 @@ function collectReachableDocuments(
 }
 
 /**
- * The entry point a skill run actually opens: `<skillsDir>/<skill>/SKILL.md`.
- *
- * Rooting the closure at every file merely *named* `SKILL.md` would let a
- * generator template or an example copy under `templates/` or `references/`
- * seed it, so a reference only that copy cites would count as reachable even
- * though no run can open it. The skill loader reads one `SKILL.md` per direct
- * subdirectory of `skillsDir`, and the graph starts at exactly that set.
- */
-/**
  * Whether `file` is the entry point the host loads for its skill, by file
  * identity: on a case-insensitive file system `skill.md` is the same file as
  * the `SKILL.md` the host opens, and on any other it is a different one.
@@ -1824,6 +1821,15 @@ async function namesSkillEntryPoint(skillsDir: string, file: string): Promise<bo
   return probed !== probe && probed === found;
 }
 
+/**
+ * The entry point a skill run actually opens: `<skillsDir>/<skill>/SKILL.md`.
+ *
+ * Rooting the closure at every file merely *named* `SKILL.md` would let a
+ * generator template or an example copy under `templates/` or `references/`
+ * seed it, so a reference only that copy cites would count as reachable even
+ * though no run can open it. The skill loader reads one `SKILL.md` per direct
+ * subdirectory of `skillsDir`, and the graph starts at exactly that set.
+ */
 function isSkillEntryPoint(skillsDir: string, file: string): boolean {
   const segments = toPosixRelative(skillsDir, file).split("/");
   return (
