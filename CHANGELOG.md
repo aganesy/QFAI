@@ -36,6 +36,11 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   so a run that wrote no record could otherwise finish its own gate without the
   finding, and a full run calls both runners.
 
+  Which discussion run to ask about comes from the pack tree rather than from
+  the evidence listing. A run that wrote no record is invisible among the
+  records, and the run before it would otherwise answer in its place with a
+  record that is not about it.
+
   Two more ways a record could exist and say nothing are closed with it. The
   session table the discussion skill shows now carries placeholders in its
   run-specific cells, as the spec template does, so copying it and replacing

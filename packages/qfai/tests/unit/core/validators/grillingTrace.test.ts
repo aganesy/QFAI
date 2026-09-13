@@ -98,6 +98,11 @@ async function evidence(root: string, name: string, body: string): Promise<void>
   await writeFile(path.join(dir, name), body, "utf-8");
 }
 
+/** `.qfai/discussion/<name>/`, the stage's own record that a run happened. */
+async function pack(root: string, name: string): Promise<void> {
+  await mkdir(path.join(root, ".qfai", "discussion", name), { recursive: true });
+}
+
 describe("validateGrillingTrace", () => {
   it("reports spec evidence with no session section", async () => {
     await withRoot(async (root) => {
@@ -225,6 +230,60 @@ describe("validateGrillingTrace", () => {
       );
 
       expect(await validateGrillingTrace(root)).toEqual([]);
+    });
+  });
+
+  it("reports a discussion run that wrote no record at all", async () => {
+    // Read from the evidence files alone, a run that wrote none is invisible,
+    // and under the latest-run rule the run before it answers in its place
+    // with a record that is not about it. The pack tree says which runs
+    // happened, so the absence is the finding.
+    await withRoot(async (root) => {
+      await evidence(root, "discussion-20260415161758193.md", POPULATED_DISCUSSION);
+      await pack(root, "discussion-20260415161758193");
+      await pack(root, "discussion-20260418170937652");
+
+      const issues = await validateGrillingTrace(root);
+
+      expect(issues).toHaveLength(1);
+      expect(issues[0]?.file).toBe(".qfai/evidence/discussion-20260418170937652.md");
+      expect(issues[0]?.message).toContain("does not exist");
+    });
+  });
+
+  it("says nothing when the newest run's record is the newest file", async () => {
+    await withRoot(async (root) => {
+      await evidence(root, "discussion-20260418170937652.md", POPULATED_DISCUSSION);
+      await pack(root, "discussion-20260415161758193");
+      await pack(root, "discussion-20260418170937652");
+
+      expect(await validateGrillingTrace(root)).toEqual([]);
+    });
+  });
+
+  it("still reports a newest run whose record is there and says nothing", async () => {
+    // The pack does not excuse the file: an owed file that exists is read for
+    // its rows like any other.
+    await withRoot(async (root) => {
+      await evidence(root, "discussion-20260418170937652.md", "# Evidence\n");
+      await pack(root, "discussion-20260418170937652");
+
+      const issues = await validateGrillingTrace(root);
+
+      expect(issues).toHaveLength(1);
+      expect(issues[0]?.message).toContain("records no grilling session");
+    });
+  });
+
+  it("reads the stage's run list from the configured directory", async () => {
+    await withRoot(async (root) => {
+      await mkdir(path.join(root, "packs", "discussion-20260418170937652"), { recursive: true });
+
+      const found = await validateGrillingTrace(root, { discussionDir: "packs" });
+      const missed = await validateGrillingTrace(root);
+
+      expect(found).toHaveLength(1);
+      expect(missed).toEqual([]);
     });
   });
 

@@ -620,7 +620,10 @@ async function runDiscussionValidators(
     // no record could otherwise finish its own gate without the finding. The
     // stage is named because `runSddValidators` dispatches this too and a full
     // run calls both.
-    ...(await validateGrillingTrace(root, { subjects: ["discussion"] })),
+    ...(await validateGrillingTrace(root, {
+      subjects: ["discussion"],
+      discussionDir: config.paths.discussionDir,
+    })),
     // The RCP footer names `--profile discussion` as the review-cycle gate and
     // mandates `review_request.md` / `Rxx_*.md` / `summary.json` in the same
     // breath. Without this the command it prescribes could not see the

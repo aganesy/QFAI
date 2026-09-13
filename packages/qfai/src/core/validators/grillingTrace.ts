@@ -24,6 +24,12 @@
  * project. What that costs is a session skipped two runs ago and grilled since,
  * which is inside what a record-exists check claims anyway.
  *
+ * **Which run is the most recent comes from the stage, not from the files.** A
+ * run that wrote no record is invisible in a listing of records, and under the
+ * rule above the run before it would answer in its place with a record that is
+ * not about it. The stage's own tree of runs says which one to ask about, so a
+ * run with no record at all is the finding rather than a gap.
+ *
  * **Two stages, not three.** A spec stage and a discussion run each write a
  * record, at a path each names. Prototyping's
  * `.qfai/evidence/prototyping/grilling.md` is a loop input rather than a
@@ -37,6 +43,7 @@ import { readdir, readFile } from "node:fs/promises";
 import path from "node:path";
 
 import { isEnoent } from "../fs/errno.js";
+import { findLatestPack, type PackKind } from "../packLocator.js";
 import type { Issue } from "../types.js";
 import { exists, issue } from "./utils.js";
 
@@ -79,6 +86,20 @@ type Subject = {
    * check has one finding to spend.
    */
   readonly reads: "each" | "latest";
+  /**
+   * Where the stage's own runs are listed, for a `latest` subject.
+   *
+   * Read from the files alone, the check sees only runs that wrote one, so a
+   * run that wrote no record at all is invisible — and under `latest` an
+   * earlier run's populated record answers in its place. The pack tree is the
+   * stage's own list of what it ran, so a pack with no record beside it is the
+   * finding rather than a gap.
+   *
+   * A spec stage has no equivalent and needs none: there, a missing evidence
+   * file means the stage never ran on that spec, which is another validator's
+   * subject.
+   */
+  readonly packs?: PackKind;
 };
 
 const SUBJECTS: readonly Subject[] = [
@@ -103,6 +124,7 @@ const SUBJECTS: readonly Subject[] = [
     row: "session row",
     specKeyed: false,
     reads: "latest",
+    packs: "discussion",
   },
 ];
 
@@ -115,6 +137,15 @@ const SUBJECTS: readonly Subject[] = [
  * second spelling here would be a second answer to where the tree is.
  */
 const EVIDENCE_DIR_REL = ".qfai/evidence";
+
+/**
+ * Where discussion packs live when a caller names no other place.
+ *
+ * Unlike the evidence tree this one is configurable, so a caller passes
+ * `paths.discussionDir`. The default matches `core/config.ts`'s, and is here so
+ * a caller that reads the discussion stage still looks somewhere real.
+ */
+const DISCUSSION_DIR_REL = ".qfai/discussion";
 
 /** A markdown table's separator, e.g. `| --- | :-: |`. */
 const SEPARATOR_RE = /^\s*\|[\s|:-]*\|\s*$/;
@@ -181,12 +212,20 @@ function ownRowsUnder(text: string, section: string): string[] | null {
   return table.slice(separator + 1).filter((line) => !rowIsUnwritten(line));
 }
 
-/** The message for a run whose section is absent, or present with no row. */
-function remediation(relPath: string, id: string, subject: Subject, present: boolean): string {
-  const opening = present
-    ? `${relPath} carries "${subject.section}" for ${id} with no ${subject.row} of its own — ` +
-      `every row still holds the template's placeholders.`
-    : `${relPath} records no grilling session for ${id}.`;
+/** What the file the finding names is: absent, present and bare, or unwritten. */
+type State = "absent" | "no-section" | "unwritten";
+
+/** The message for each state the finding reports. */
+function remediation(relPath: string, id: string, subject: Subject, state: State): string {
+  const opening = {
+    absent:
+      `${relPath} does not exist, and the stage's own tree holds a run for ${id}. ` +
+      `The stage opens this file before it writes anything else, so a run with no file wrote no record.`,
+    "no-section": `${relPath} records no grilling session for ${id}.`,
+    unwritten:
+      `${relPath} carries "${subject.section}" for ${id} with no ${subject.row} of its own — ` +
+      `every row still holds the template's placeholders.`,
+  }[state];
   return (
     `${GRILLING_TRACE_CODE}: ${opening} ` +
     `Each grilling-covered phase runs one before it writes and records it under ` +
@@ -197,7 +236,13 @@ function remediation(relPath: string, id: string, subject: Subject, present: boo
 }
 
 /** One evidence file this run will read, with the subject that claimed it. */
-type Candidate = { readonly name: string; readonly id: string; readonly subject: Subject };
+type Candidate = {
+  readonly name: string;
+  readonly id: string;
+  readonly subject: Subject;
+  /** Whether the stage's own tree says this file is owed. */
+  readonly owed?: boolean;
+};
 
 /**
  * The evidence files to read, in one order.
@@ -232,11 +277,46 @@ function candidatesIn(
 }
 
 /**
+ * The candidates, with a `latest` subject's newest run taken from its own tree.
+ *
+ * Read from the evidence directory alone, the newest run is the newest one that
+ * wrote a file — so a run that wrote none is invisible, and under `latest` the
+ * run before it answers in its place with a record that is not about it. The
+ * pack tree says which runs happened, so the newest of the two is the run this
+ * reports on, and its file is owed whether or not it exists.
+ */
+async function withOwedRuns(
+  candidates: Candidate[],
+  root: string,
+  options: { discussionDir?: string | undefined },
+  stages: readonly GrillingSubject[],
+): Promise<Candidate[]> {
+  const out = [...candidates];
+  for (const subject of SUBJECTS) {
+    if (subject.packs === undefined || !stages.includes(subject.stage)) continue;
+    const packsDir = path.join(root, ...(options.discussionDir ?? DISCUSSION_DIR_REL).split("/"));
+    const pack = await findLatestPack(packsDir, subject.packs);
+    if (pack === null) continue;
+
+    const at = out.findIndex((c) => c.subject === subject);
+    const seen = at === -1 ? null : out[at]?.name;
+    const name = `${pack.name}.md`;
+    // `localeCompare` on a fixed-width stamp is the same order the listing uses.
+    if (seen !== null && seen !== undefined && seen.localeCompare(name) >= 0) continue;
+    const candidate: Candidate = { name, id: pack.name, subject, owed: true };
+    if (at === -1) out.push(candidate);
+    else out[at] = candidate;
+  }
+  return out.sort((a, b) => a.name.localeCompare(b.name));
+}
+
+/**
  * Stage evidence with no grilling record of its own.
  *
  * Keyed on the evidence file rather than on the stage, because the evidence is
  * what the stage wrote: a spec with no evidence file has not run the stage, and
- * reporting that is another validator's job.
+ * reporting that is another validator's job. A stage that keeps its own list of
+ * runs is the exception — see `Subject.packs`.
  *
  * `specScope` is the `--spec` selection when a run has one — the four-digit
  * numbers, as `core/specScope.ts` normalizes them.
@@ -244,20 +324,24 @@ function candidatesIn(
  * `subjects` is the stages this call gates, defaulting to all of them. Two
  * runners dispatch this and a full run calls both, so each names its own rather
  * than reporting the other's findings a second time.
+ *
+ * `discussionDir` is `paths.discussionDir`, which the discussion stage's own
+ * run list lives under.
  */
 export async function validateGrillingTrace(
   root: string,
   options: {
     specScope?: ReadonlySet<string> | undefined;
     subjects?: readonly GrillingSubject[] | undefined;
+    discussionDir?: string | undefined;
   } = {},
 ): Promise<Issue[]> {
   const evidenceDir = path.join(root, ...EVIDENCE_DIR_REL.split("/"));
-  if (!(await exists(evidenceDir))) return [];
-
   let entries;
   try {
-    entries = await readdir(evidenceDir, { withFileTypes: true });
+    entries = (await exists(evidenceDir))
+      ? await readdir(evidenceDir, { withFileTypes: true })
+      : [];
   } catch (err: unknown) {
     if (isEnoent(err)) return [];
     throw err;
@@ -270,17 +354,27 @@ export async function validateGrillingTrace(
 
   const issues: Issue[] = [];
   const stages = options.subjects ?? GRILLING_SUBJECTS;
-  for (const { name, id, subject } of candidatesIn(names, options.specScope, stages)) {
+  const candidates = await withOwedRuns(
+    candidatesIn(names, options.specScope, stages),
+    root,
+    options,
+    stages,
+  );
+  for (const { name, id, subject, owed } of candidates) {
     const text = await textOf(path.join(evidenceDir, name));
-    if (text === null) continue;
-    const rows = ownRowsUnder(text, subject.section);
+    // A file that vanished between the listing and the read is a race, not a
+    // finding — unless the stage's own tree says it is owed, which is the one
+    // case where absence is what this reports.
+    if (text === null && owed !== true) continue;
+    const rows = text === null ? null : ownRowsUnder(text, subject.section);
     if (rows !== null && rows.length > 0) continue;
+    const state: State = text === null ? "absent" : rows === null ? "no-section" : "unwritten";
 
     const relPath = `${EVIDENCE_DIR_REL}/${name}`;
     issues.push(
       issue(
         GRILLING_TRACE_CODE,
-        remediation(relPath, id, subject, rows !== null),
+        remediation(relPath, id, subject, state),
         "warning",
         relPath,
         "grilling.traceMissing",
