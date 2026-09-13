@@ -549,22 +549,27 @@ export function findClassClose(pattern: string, open: number): number {
  * A regular expression has no POSIX class, so each is written out. Left as it
  * stands, `[[:digit:]]` compiles to a class of `[`, `:` and the letters of
  * `digit`.
+ *
+ * Written exactly as the matcher's own table writes them, order included: a
+ * member beside a named class can join its first range, so `[T-[:alpha:]]` is
+ * the valid `[T-a-zA-Z]` there, and with the ranges swapped it was the
+ * descending `T-A`, a class that matches nothing.
  */
 const POSIX_CLASS_MEMBERS: Readonly<Record<string, string>> = {
-  alnum: "A-Za-z0-9",
-  alpha: "A-Za-z",
+  alnum: "a-zA-Z0-9",
+  alpha: "a-zA-Z",
   ascii: "\\x00-\\x7F",
   blank: " \\t",
   cntrl: "\\x00-\\x1F\\x7F",
   digit: "0-9",
   graph: "\\x21-\\x7E",
   lower: "a-z",
-  print: "\\x20-\\x7E",
-  punct: "!-/:-@\\[-`{-~",
+  print: "\\x20-\\x7E ",
+  punct: "\\-!\"#$%&'()\\*+,./:;<=>?@[\\]^_`{|}~",
   space: " \\t\\r\\n\\v\\f",
   upper: "A-Z",
   word: "A-Za-z0-9_",
-  xdigit: "0-9A-Fa-f",
+  xdigit: "A-Fa-f0-9",
 };
 
 /**

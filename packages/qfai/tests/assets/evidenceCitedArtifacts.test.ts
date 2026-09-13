@@ -1272,6 +1272,9 @@ function resolves(cited: string, paths: ReturnType<typeof trackedPaths> = tracke
   }
   const root = GENERATED_ROOTS.find((candidate) => cited.startsWith(candidate));
   if (root === undefined || !staysInsideRoot(cited, root)) return false;
+  // `./` and a doubled separator name the path the file system opens.
+  const normalized = path.posix.normalize(cited);
+  if (normalized !== cited) return resolves(normalized, paths);
   // Braces that did not expand are literal text, which the compiler would read
   // as a list. Nothing the tree tracks is spelled with them, so the citation
   // is unresolved rather than matched against the name inside them.
@@ -1650,6 +1653,16 @@ describe("a glob is a claim about a set", () => {
       expect(compiled(pattern).test("TC-0000-0000.test.ts"), pattern).toBe(false);
     }
     expect(compiled("[[:alpha:]]*.test.ts").test("TC-0000-0000.test.ts")).toBe(true);
+  });
+
+  it("writes a named class the way the matcher does, so a range beside it keeps its meaning", () => {
+    // The matcher reads `[T-[:alpha:]]` as `[T-a-zA-Z]`. Written `A-Za-z`, the
+    // range became the descending `T-A` and the class matched nothing.
+    expect(compiled("[T-[:alpha:]]C-*.test.ts").test("TC-0000-0000.test.ts")).toBe(true);
+    expect(compiled("[[:punct:]T]C-*.test.ts").test("TC-0000-0000.test.ts")).toBe(true);
+    // An escaped hyphen between two members is a member, not a range.
+    expect(compiled("[T\\-A]C-*.test.ts").test("TC-0000-0000.test.ts")).toBe(true);
+    expect(compiled("[T\\-A]C-*.test.ts").test("BC-0000-0000.test.ts")).toBe(false);
   });
 
   it("keeps a brace inside a class a member of the class", () => {
@@ -2056,6 +2069,14 @@ describe("a glob is a claim about a set", () => {
     const cited = ".qfai/report/[ x]missing.json";
     expect(citationsIn(`see \`${cited}\` here`)).toEqual([cited]);
     expect(citationsIn(`see ${cited} here`)).toEqual([]);
+  });
+
+  it("resolves a citation spelled with a redundant segment as the path it names", () => {
+    const trackedFile = ".qfai/report/preflight_summary.md";
+    const paths = { files: new Set([trackedFile]), directories: new Set<string>(), links: [] };
+    expect(resolves(".qfai/report/./preflight_summary.md", paths)).toBe(true);
+    expect(resolves(".qfai/report//preflight_summary.md", paths)).toBe(true);
+    expect(resolves(".qfai/report/./missing.md", paths)).toBe(false);
   });
 
   it("leaves a citation unresolved where matching it would backtrack past any bound", () => {
