@@ -68,8 +68,12 @@ fi
 # fenced block, which holds an example. The workflow-pinned lists are appended to what the list
 # names, because `pin-guard-bytes.mjs` rewrites them from the tree.
 has_conflict_markers() {
-  case "$1" in
-    *.md | *.MD | *.markdown | *.Markdown) fenced=1 ;;
+  # The extension is compared lowercased, and a name that is only an extension has none, as
+  # Node's `path.extname` reads it.
+  name=$(printf '%s' "${1##*/}" | tr '[:upper:]' '[:lower:]')
+  case "${name}" in
+    .md | .markdown) fenced=0 ;;
+    *.md | *.markdown) fenced=1 ;;
     *) fenced=0 ;;
   esac
   awk -v fenced="${fenced}" '

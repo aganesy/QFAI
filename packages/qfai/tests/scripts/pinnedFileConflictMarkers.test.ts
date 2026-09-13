@@ -168,8 +168,8 @@ describe("the re-pin program, on a pinned file carrying conflict markers", () =>
   });
 
   it("names a conflict in the scanner it would otherwise load", async () => {
-    // A module carrying a conflict block does not parse, so loading it first
-    // ended the run before any path was named.
+    // The scanner is checked before it is loaded: a module carrying a conflict
+    // block does not parse, so the run would end before any path is named.
     await plantConflict("scripts/check-conflict-markers.mjs");
 
     // The staged copy runs, so the scanner it loads is the one carrying the block.
@@ -190,33 +190,37 @@ describe("the re-pin program, on a pinned file carrying conflict markers", () =>
 });
 
 describe("a fenced example in a pinned Markdown file", () => {
-  it("is not a conflict to either program", async () => {
-    const example = "scripts/conflict-example.md";
-    await appendFile(
-      path.join(staged, example),
-      [
-        "# Resolving a conflict",
-        "",
-        "```text",
-        "<<<<<<< HEAD",
-        "ours",
-        "=======",
-        "theirs",
-        ">>>>>>> origin/main",
-        "```",
-        "",
-      ].join("\n"),
-      "utf-8",
-    );
+  // Both programs compare the extension lowercased, so its spelling decides nothing.
+  it.each(["md", "mD", "MARKDOWN"])(
+    "is not a conflict to either program in a .%s file",
+    async (extension) => {
+      const example = `scripts/conflict-example.${extension}`;
+      await appendFile(
+        path.join(staged, example),
+        [
+          "# Resolving a conflict",
+          "",
+          "```text",
+          "<<<<<<< HEAD",
+          "ours",
+          "=======",
+          "theirs",
+          ">>>>>>> origin/main",
+          "```",
+          "",
+        ].join("\n"),
+        "utf-8",
+      );
 
-    const pinned = await runPin();
-    expect(pinned.status).toBe(0);
-    expect(pinned.output).not.toContain("nothing was pinned");
+      const pinned = await runPin();
+      expect(pinned.status).toBe(0);
+      expect(pinned.output).not.toContain("nothing was pinned");
 
-    const guarded = await runGuard();
-    expect(guarded.status).toBe(0);
-    expect(guarded.output).not.toContain("merge conflict markers");
-  });
+      const guarded = await runGuard();
+      expect(guarded.status).toBe(0);
+      expect(guarded.output).not.toContain("merge conflict markers");
+    },
+  );
 
   it("is a conflict to both once it sits outside the fence", async () => {
     const example = "scripts/conflict-example.md";
