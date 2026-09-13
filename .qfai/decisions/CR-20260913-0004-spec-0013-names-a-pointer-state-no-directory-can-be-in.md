@@ -165,7 +165,6 @@ uncovered, when the uncovered third is a state no test can construct.
   `.qfai/specs/spec-0010/04_Business-Rules.md`,
   `.qfai/specs/spec-0010/09_delta.md`,
   `.qfai/specs/spec-0010/10_Plan.md`,
-  `.qfai/specs/spec-0010/tdd/test-list.md`,
   `.qfai/specs/spec-0013/01_Spec.md`,
   `.qfai/specs/spec-0013/02_User-stories.md`,
   `.qfai/specs/spec-0013/03_Acceptance-Criteria.md`,
@@ -189,13 +188,18 @@ them?
 
 ## Approved actions (owner skill rerun plan)
 
-1. **The shared decision first.** A policy-level `/qfai-sdd` rerun, mode
-   `re-derive`, removes the duplicate state from `DR-0266`'s rejection clause,
-   keeping the absent and missing pointer, and adds this Change Request's row to
-   the `## Change Requests` table of `_policies/10_delta.md`. It also adds this
-   record's ID to `DR-0266`'s `Related` field, which that record lacks today:
-   the drift protocol records a Change Request on the Decision Record it amends
-   as well as in the delta. Both packs follow that decision, so narrowing
+1. **The shared decision first.** `DR-0266`'s rejection clause is edited by
+   hand under this approval, removing the duplicate state and keeping the
+   absent and missing pointer, and this record's ID is added to its `Related`
+   field, which it lacks today: the drift protocol records a Change Request on
+   the Decision Record it amends as well as in the delta. A policy-level
+   `/qfai-sdd` rerun, mode `confirm-only`, then confirms the edit and adds this
+   Change Request's row to the `## Change Requests` table of
+   `_policies/10_delta.md`. **`confirm-only`, not `re-derive`**: without an
+   argument `/qfai-sdd` targets every capability and fans Phase 2 through
+   Phase 4 out over every spec, so a `re-derive` there would rewrite and
+   re-seed packs this record does not reach, while `confirm-only` writes
+   nothing but the Change Request reference. Both packs follow that decision, so narrowing
    either one first would leave it disagreeing with the record it cites.
    **The clause keeps the command's single-candidate read**: it states the
    helper's rejection of an absent pointer as unconditional, and the command's
@@ -207,30 +211,41 @@ them?
    the newest pack, so no rerun turns that fallback into a rejection. Neither
    fallback changes, so no code, test or shipped guidance for either is edited.
 
-2. `/qfai-sdd spec-0010`, mode `re-derive`, over `AC-0010-0012`,
-   `BR-0010-0012` and the two `10_Plan.md` lines that restate the rejection,
-   with its own row in that pack's `09_delta.md` `## Change Requests` table.
-   `TC-0010-0013` is not edited: it names no duplicate state.
+2. `AC-0010-0012`, `BR-0010-0012` and the two `10_Plan.md` lines that restate
+   the rejection are edited by hand under this approval, and
+   `/qfai-sdd spec-0010`, mode `confirm-only`, confirms them and records its own
+   row in that pack's `09_delta.md` `## Change Requests` table.
+   `TC-0010-0013` is not edited: it names no duplicate state. **`confirm-only`
+   because no `spec-0010` row changes identity**: a `re-derive` would run
+   Phase 2b over a ledger that lacks the template's columns, `Tier` among them,
+   and every story's `E2E` row, and would migrate it, derive every row's tier
+   and seed rows this record does not reach.
 
 3. `/qfai-sdd spec-0013`, mode `re-derive`, over the requirement line in
    `01_Spec.md`, `US-0013-0012`, `AC-0013-0021`, `BR-0013-0017`,
    `TC-0013-0029`, and the restatements in `07_Decisions.md` and `10_Plan.md`:
-   each drops the duplicate state and keeps the absent and missing ones. The
+   each drops the duplicate state and keeps the missing pack. **Which
+   absent-pointer rule each keeps depends on whose reading it states.**
+   `AC-0013-0021`, `BR-0013-0017` and `TC-0013-0029` state the helper's, which
+   rejects an absent pointer. The two `01_Spec.md` lines that state the rule
+   (`REQ-0155` and the resolution line beneath it) and `US-0013-0012` describe
+   how `/qfai-sdd` finds its pack, so they say Stage 0 resolves a set pointer
+   through the helper and takes the newest pack when the pointer is absent. The
+   restatements in `07_Decisions.md` and `10_Plan.md` follow the statement each
+   restates. The
    rerun records it as one row in `spec-0013/09_delta.md`'s
    `## Change Requests` table — `CR ID`, `Upstream artifact`, `Mode`,
    `Approved by`, `Applied at` — not as a `## Triage` row — and adds this
    record's ID to the `Related` field of `DR-0013-0002`, which lacks one, as
    step 1 does for `DR-0266`.
 
-   Both pack reruns run Phase 2b, which also seeds, at `todo`, the `E2E` rows
-   those ledgers lack, and migrates `spec-0010`'s eight-column table. The
-   stories without a row are all twelve of `spec-0010`'s and thirteen of
-   `spec-0013`'s fourteen. **That is a floor on the rows, not their count.**
-   Phase 2b seeds one row per independently observable boundary a story's
-   criteria name, so `US-0010-0011` and `US-0010-0012`, each mapped to two
-   criteria, may take two rows each. The count is the one that derivation
-   reaches, and the approval covers the rows it seeds. They are owed whatever
-   this record decides.
+   **This rerun is a `re-derive` because Phase 2b splits `TDD-0024`** (action
+   4), and only Phase 2b writes row identity. **`spec-0013`'s ledger repair
+   lands first, as its own record**: that repair migrates the ledger to the
+   template's columns, derives every row's `Tier` with the resets a raised tier
+   owes, and seeds the `E2E` rows the stories lack. This record is applied
+   after it, so its Phase 2b meets nothing to migrate, seed or re-tier beyond
+   the rows action 4 re-scopes, and it authorises no other ledger write.
 
    **This record re-scopes no progressed row but `TDD-0024`.** Phase 2b touches
    a `done` row that runs several independently observable cases behind one
@@ -241,9 +256,9 @@ them?
    `TDD-0022`, the fourteenth story's row, the template slot and both
    directions of the lane. The requests that restate those rows' obligations
    name their splits, so the `spec-0013` rerun runs after they have been
-   applied. A progressed row of that shape either rerun still meets, in either
-   pack, is raised then as a request of its own and left as it is until that
-   request is approved; nothing else in this plan waits on it.
+   applied. A progressed row of that shape the rerun still meets is raised then
+   as a request of its own and left as it is until that request is approved;
+   nothing else in this plan waits on it.
 
 4. Downstream ledger sweep for `spec-0013/TDD-0024`. `TC-0013-0029` keeps two
    independently observable rejections once the duplicate state goes — an
