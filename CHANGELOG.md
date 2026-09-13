@@ -6,6 +6,17 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **The prototyping preflight refuses a screen with no primary task** (#1698).
+  The audit lane reported an empty `primary_tasks` as `QFAI-AUD-001`, but
+  `qfai prototyping preflight` never read the field, so the stage started on a
+  contract the lane refused. The preflight's UI contract check now fails and
+  names each screen that has no primary task.
+
+  The primary-task obligations also gained the cases they named and lacked: the
+  preflight refusing, and a structured task missing `label`. Before these
+  cases, dropping `label` from the required keys, or letting the stage start,
+  left every case passing.
+
 - **The ATDD traceability scan reads every package's acceptance tests, not only
   the one under `paths.testsDir`** (#1588). That setting holds a single path, so
   a repository whose suites live one per package could name at most one of them.
