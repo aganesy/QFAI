@@ -25,9 +25,10 @@
  * does not write one.
  *
  * `QFAI-TEST-002` (info) names the states in which the scan produced no
- * evidence: extensions with no dialect, and an empty
+ * evidence: extensions with no dialect, an empty
  * `validation.traceability.testFileGlobs` (the value `qfai init` ships), where
- * no file is selected at all. Neither may be mistaken for "no stubs".
+ * no file is selected at all, and a selection the glob matcher refuses. None
+ * may be mistaken for "no stubs".
  *
  * This validator closes the gap by emitting a finding for each stub found,
  * making qfai validate / CI reject the error-severity ones. Projects that need
@@ -40,7 +41,13 @@ import path from "node:path";
 
 import type { QfaiConfig } from "../config.js";
 import { SCAFFOLD_PLACEHOLDER_MARKER } from "../atdd/scaffold.js";
-import { collectFilesByGlobs, DEFAULT_GLOB_FILE_LIMIT } from "../fs.js";
+import {
+  collectFilesByGlobs,
+  DEFAULT_GLOB_FILE_LIMIT,
+  isFileSystemError,
+  unusableGlobReason,
+  type CollectFilesByGlobsResult,
+} from "../fs.js";
 import { DEFAULT_TEST_FILE_EXCLUDE_GLOBS, normalizeGlobs } from "../traceability.js";
 import type { Issue, IssueSeverity } from "../types.js";
 import { maskJsNonCode } from "./jsSourceMask.js";
@@ -1322,6 +1329,35 @@ function reportTruncatedScan(limit: number, callerGlobs: boolean): Issue {
   );
 }
 
+/**
+ * The refusal form of `QFAI-TEST-002`: the glob matcher refused some or all of
+ * the selection, so the files only those patterns select were not opened.
+ *
+ * Rethrown, the refusal would end the whole validate run under `tdd` and
+ * `full` before `QFAI-TRACE-124` reports the same configuration as an error.
+ */
+function reportRefusedScan(error: unknown, callerGlobs: boolean, scannedRest: boolean): Issue {
+  const reason = error instanceof Error ? error.message : String(error);
+  const key = callerGlobs ? "paths.testsDir" : "validation.traceability.testFileGlobs";
+  const selection = callerGlobs
+    ? "the acceptance directories this gate scans"
+    : "`validation.traceability.testFileGlobs`";
+  return issue(
+    "QFAI-TEST-002",
+    scannedRest
+      ? `The stub scan could not read part of ${selection}: ${reason}. The other patterns were scanned, and a clean result is not evidence that the files only this one selects hold no stub.`
+      : `The stub scan could not read ${selection}: ${reason}. No file was opened, so a clean result is not evidence that the tests hold no stub.`,
+    "info",
+    "qfai.config.yaml",
+    key,
+    [key],
+    "canonical",
+    isFileSystemError(error)
+      ? "A directory the selection reaches could not be read. Make it readable to the account running `qfai validate`, or exclude it with `validation.traceability.testFileExcludeGlobs` where it holds no test."
+      : `Fix \`${key}\` in qfai.config.yaml so the glob matcher accepts the selection.`,
+  );
+}
+
 export async function validateTestTodoStubs(
   root: string,
   config: QfaiConfig,
@@ -1348,15 +1384,68 @@ export async function validateTestTodoStubs(
     ]),
   );
 
-  const { files, truncated, limit } = await collectFilesByGlobs(root, {
-    globs: Array.from(globs),
-    ignore: excludeGlobs,
-    limit: DEFAULT_GLOB_FILE_LIMIT,
+  // A pattern the matcher cannot use is set aside, and the rest are still
+  // scanned: refusing the whole batch dropped the stubs a readable pattern
+  // would have reported.
+  const callerGlobs = options.globs !== undefined;
+  const accepted = globs.filter((glob) => unusableGlobReason(glob) === null);
+  const issues: Issue[] = globs.flatMap((glob) => {
+    const reason = unusableGlobReason(glob);
+    return reason === null ? [] : [reportRefusedScan(reason, callerGlobs, accepted.length > 0)];
   });
+  if (accepted.length === 0) return issues;
+
+  let scan: CollectFilesByGlobsResult;
+  try {
+    scan = await collectFilesByGlobs(root, {
+      globs: accepted,
+      ignore: excludeGlobs,
+      limit: DEFAULT_GLOB_FILE_LIMIT,
+    });
+  } catch (error) {
+    // A directory one pattern reaches failing the combined scan does not stop
+    // the others: each is scanned on its own, and the ones still failing are
+    // reported beside the stubs the rest select.
+    // A negative entry excludes from every pattern, so each scan carries all of
+    // them; scanned on its own it would select nothing.
+    const isExclusion = (glob: string): boolean => glob.startsWith("!") && !glob.startsWith("!(");
+    const exclusions = accepted.filter(isExclusion);
+    const separate = await Promise.all(
+      accepted
+        .filter((glob) => !isExclusion(glob))
+        .map(async (glob) => {
+          try {
+            const alone = await collectFilesByGlobs(root, {
+              globs: [glob, ...exclusions],
+              ignore: excludeGlobs,
+              limit: DEFAULT_GLOB_FILE_LIMIT,
+            });
+            return { kind: "scanned" as const, scan: alone };
+          } catch (failure) {
+            return { kind: "failed" as const, failure };
+          }
+        }),
+    );
+    const scanned = separate.flatMap((entry) => (entry.kind === "scanned" ? [entry.scan] : []));
+    const failures = separate.flatMap((entry) => (entry.kind === "failed" ? [entry.failure] : []));
+    issues.push(
+      ...(failures.length === 0 ? [error] : failures).map((failure) =>
+        reportRefusedScan(failure, callerGlobs, scanned.length > 0),
+      ),
+    );
+    if (scanned.length === 0) return issues;
+    const union = [...new Set(scanned.flatMap((entry) => entry.files))];
+    scan = {
+      files: union.slice(0, DEFAULT_GLOB_FILE_LIMIT),
+      truncated: union.length > DEFAULT_GLOB_FILE_LIMIT || scanned.some((entry) => entry.truncated),
+      matchedFileCount: Math.min(union.length, DEFAULT_GLOB_FILE_LIMIT),
+      limit: DEFAULT_GLOB_FILE_LIMIT,
+    };
+  }
+  const { files, truncated, limit } = scan;
 
   const skippedTestSeverity = "error";
 
-  const issues: Issue[] = [];
   const unscannedExtensions = new Set<string>();
   for (const absFile of files) {
     const relFile = path.relative(root, absFile).replace(/\\/g, "/");

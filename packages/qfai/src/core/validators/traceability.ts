@@ -782,16 +782,19 @@ async function validateTestFileGlobsConfiguration(
     // all. Swallowing it returned "no finding", which reads as "configuration
     // fine" and let `--fail-on error` pass over a gate that never executed.
     // `doctor.ts` already reports this class as `error`; validate now agrees.
+    // Each pattern is quoted, so a control character in one, such as the NUL
+    // byte that makes the scan refuse it, reaches the output escaped.
+    const quoted = globs.map((glob) => JSON.stringify(glob));
     return [
       issue(
         "QFAI-TRACE-124",
-        `validation.traceability.testFileGlobs の走査に失敗しました ` +
-          `(globs: ${globs.join(", ")}): ${formatScanError(error)}。` +
-          `パターンが不正か、ファイルシステムエラーです。SC のコード参照検査は実行されていません。`,
+        `validation.traceability.testFileGlobs could not be scanned ` +
+          `(globs: ${quoted.join(", ")}): ${formatScanError(error)}. ` +
+          `A pattern is invalid or the file system returned an error, so the SC code-reference check did not run.`,
         "error",
         configPath,
         "traceability.layered.testFileGlobsScanFailed",
-        globs,
+        quoted,
         "canonical",
         fix,
       ),
