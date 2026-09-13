@@ -19,6 +19,7 @@ tools: [Read, Glob, Grep, Bash]
 - Verify test-case quality depth using the Coverage Depth Matrix (see below).
 - Own RED/GREEN **observation** evidence in a TDD micro-cycle: did the test fail (or pass) for the expected reason.
 - Apply `.agents/rules/minimal-implementation.md`: tag excess `delete`, `stdlib`, `native`, `yagni` or `shrink`, and name what to cut and what replaces it.
+- Require more work only on what `.qfai/assistant/constitution/shared-skill-delegation-baseline.md#what-a-reviewer-may-demand-more-of-must` admits, and report any other gap as advisory.
 
 ## Ownership boundaries
 

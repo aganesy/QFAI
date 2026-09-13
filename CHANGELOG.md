@@ -6,6 +6,16 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Added
 
+- **A reviewer may demand more work only on the concrete artifacts** (#1809).
+  A reviewer could ask for another business rule, quality target, policy or
+  piece of architecture without limit, and each such demand made the next review
+  cycle larger. The delegation baseline now admits a demand for more on business
+  flows, user stories, acceptance criteria, examples and test cases, and not on
+  business rules, non-functional requirements, policies and decisions, or
+  architecture. Two demands stay admissible anywhere: a recorded item carrying
+  its mandatory pair, and a safety-floor item. Any other demand is recorded as
+  advisory. The drift protocol and the six reviewer cards point at the rule.
+
 - **A legacy ledger outside the obligation-column protection is reported**
   (#1663). A seeded `E2E` or `API` row has `TC-Refs` forbidden to it, so the
   `US-Refs` and `CON-API-Refs` columns are the only place its obligation can

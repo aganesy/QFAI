@@ -1174,6 +1174,7 @@ agents:
       - Enforce validate evidence, required coverage obligations, and no self-approval.
       - Verify rejected options are not reintroduced without RE-OPEN.
       - Apply `.agents/rules/minimal-implementation.md`: tag excess `delete`, `stdlib`, `native`, `yagni` or `shrink`, and name what to cut and what replaces it.
+      - Require more work only on what `.qfai/assistant/constitution/shared-skill-delegation-baseline.md#what-a-reviewer-may-demand-more-of-must` admits, and report any other gap as advisory.
 
       ## Inputs you must read
 
@@ -1284,6 +1285,7 @@ agents:
       - Review OQ candidates for completeness, neutrality, and safe deferral.
       - Ensure unresolved requirement ambiguity is explicit and actionable.
       - Apply `.agents/rules/minimal-implementation.md`: tag excess `delete`, `stdlib`, `native`, `yagni` or `shrink`, and name what to cut and what replaces it.
+      - Require more work only on what `.qfai/assistant/constitution/shared-skill-delegation-baseline.md#what-a-reviewer-may-demand-more-of-must` admits, and report any other gap as advisory.
 
       ## Inputs you must read
 
@@ -1356,6 +1358,7 @@ agents:
       - Check that extensions are justified by current requirements and do not introduce speculative abstraction or over-engineering.
       - Verify contracts, module boundaries, and public interfaces obey least astonishment and design-by-contract expectations.
       - Apply `.agents/rules/minimal-implementation.md`: the first rung is this stage's — whether the thing needs to exist. After a spec row is agreed, that question is a Change Request.
+      - Require more work only on what `.qfai/assistant/constitution/shared-skill-delegation-baseline.md#what-a-reviewer-may-demand-more-of-must` admits, and report any other gap as advisory.
       - Apply `.qfai/assistant/catalog/ui-procurement.md`: ask whether a catalogue covered the need, and whether a language or framework standard was passed over for a hand-rolled one.
 
       ## Inputs you must read
@@ -1435,6 +1438,7 @@ agents:
       - Check separation of concerns, fail-fast validation, least astonishment, and avoidance of premature optimization in changed code.
       - Enforce TypeScript review expectations: avoid unjustified assertions, over-complex generics, unchecked `unknown`, and unhandled async paths.
       - Apply `.agents/rules/minimal-implementation.md`: tag excess `delete`, `stdlib`, `native`, `yagni` or `shrink`, and name what to cut and what replaces it.
+      - Require more work only on what `.qfai/assistant/constitution/shared-skill-delegation-baseline.md#what-a-reviewer-may-demand-more-of-must` admits, and report any other gap as advisory.
       - Apply `.qfai/assistant/catalog/ui-procurement.md`: report a component written where one could be installed, a standard passed over, and an authored region with no recorded reason.
 
       ## Inputs you must read
@@ -1555,6 +1559,7 @@ agents:
       - Check naming, structure, and responsibility split of UI components for clarity, cohesion, and minimal surprise.
       - Validate docs/UX consistency so usage text, labels, error states, and user flows match the intended product behavior.
       - Apply `.agents/rules/minimal-implementation.md`: tag excess `delete`, `stdlib`, `native`, `yagni` or `shrink`, and name what to cut and what replaces it.
+      - Require more work only on what `.qfai/assistant/constitution/shared-skill-delegation-baseline.md#what-a-reviewer-may-demand-more-of-must` admits, and report any other gap as advisory.
       - Apply `.qfai/assistant/catalog/ui-procurement.md`: report a region that was drawn where a catalogue had it, and name the item that would have served.
       - Apply `.agents/rules/interface-clarity.md`: report copy that explains the interface as a finding against the control under it, and name the control to fix.
 
@@ -1645,6 +1650,7 @@ agents:
       - Verify test-case quality depth using the Coverage Depth Matrix (see below).
       - Own RED/GREEN **observation** evidence in a TDD micro-cycle: did the test fail (or pass) for the expected reason.
       - Apply `.agents/rules/minimal-implementation.md`: tag excess `delete`, `stdlib`, `native`, `yagni` or `shrink`, and name what to cut and what replaces it.
+      - Require more work only on what `.qfai/assistant/constitution/shared-skill-delegation-baseline.md#what-a-reviewer-may-demand-more-of-must` admits, and report any other gap as advisory.
 
       ## Ownership boundaries
 
