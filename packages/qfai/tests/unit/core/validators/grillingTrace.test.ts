@@ -39,6 +39,25 @@ const SPEC_EVIDENCE_TEMPLATE = path.join(
   "assets/init/.qfai/assistant/skills/qfai-sdd/templates/evidence/sdd-spec.md",
 );
 
+/** The discussion skill, whose `## Grilling Session` block a run copies. */
+const DISCUSSION_SKILL = path.join(
+  packageRoot,
+  "assets/init/.qfai/assistant/skills/qfai-discussion/SKILL.md",
+);
+
+/** The `## Grilling Session` block the discussion skill shows, verbatim. */
+async function shippedDiscussionBlock(): Promise<string> {
+  const skill = await readFile(DISCUSSION_SKILL, "utf-8");
+  const rows = skill
+    .split(/\r?\n/)
+    .filter((line) => line.trim().startsWith("| ") && line.includes("|"));
+  const header = rows.findIndex((line) => line.includes("Authoring began"));
+  expect(header, "the skill no longer shows a session table").toBeGreaterThanOrEqual(0);
+  return ["# Evidence", "", "## Grilling Session", "", ...rows.slice(header, header + 3), ""].join(
+    "\n",
+  );
+}
+
 /** A section with one phase row, which is what a run that grilled writes. */
 const POPULATED = [
   "# Evidence",
@@ -59,7 +78,7 @@ const POPULATED_DISCUSSION = [
   "",
   "| Ended | Ended at | Authoring began | Frontier | Lookups | Decisions | Escalated |",
   "| ----- | -------- | --------------- | -------- | ------- | --------- | --------- |",
-  "| confirmed | 2026-01-01T09:14:00Z | 2026-01-01T09:15:20Z | empty | none in flight | 12 | 0 |",
+  "| confirmed | 2026-04-18T17:09:37Z | 2026-04-18T17:11:02Z | empty | none in flight | 12 | 0 |",
   "",
 ].join("\n");
 
@@ -154,6 +173,76 @@ describe("validateGrillingTrace", () => {
       expect(issues[0]?.file).toBe(".qfai/evidence/discussion-20260418170937653.md");
       expect(issues[0]?.message).toContain("## Grilling Session");
       expect(issues[0]?.message).toContain("at least one session row");
+    });
+  });
+
+  it("reports the shipped discussion example, copied and filled in with nothing", async () => {
+    // The same shortcut the spec template had, on the other stage: an agent
+    // copies the block the skill shows and replaces none of it. It is caught
+    // the same way, so the skill's example carries placeholders where the spec
+    // template's does.
+    await withRoot(async (root) => {
+      await evidence(root, "discussion-20260418170937652.md", await shippedDiscussionBlock());
+
+      expect(await validateGrillingTrace(root)).toHaveLength(1);
+    });
+  });
+
+  it("reports a row whose cells are all empty", async () => {
+    // The review-request template ships the table with an empty row for the
+    // reviewer to fill. Copied into the evidence and left as it is, it holds a
+    // row and says nothing, which is the state a placeholder scan alone misses.
+    await withRoot(async (root) => {
+      await evidence(
+        root,
+        "sdd-spec-0007.md",
+        [
+          "## Pre-draft Grilling",
+          "",
+          "| Phase | Session | Ended at | Wrote at | Frontier | Evidence |",
+          "| ----- | ------- | -------- | -------- | -------- | -------- |",
+          "|       |         |          |          |          |          |",
+          "",
+        ].join("\n"),
+      );
+
+      expect(await validateGrillingTrace(root)).toHaveLength(1);
+    });
+  });
+
+  it("keeps a row carrying a link or an inline tag", async () => {
+    // A row is prose as well as values. Reading every angle-bracketed
+    // construct as a placeholder drops the row and reports the evidence as
+    // missing, which is a finding against a stage that did the work.
+    await withRoot(async (root) => {
+      await evidence(
+        root,
+        "sdd-spec-0007.md",
+        POPULATED.replace(
+          "#work-orders-summary",
+          "see <https://example.invalid/run> <br> and #wos",
+        ),
+      );
+
+      expect(await validateGrillingTrace(root)).toEqual([]);
+    });
+  });
+
+  it("reads only the stages the caller names", async () => {
+    // Two runners dispatch this and a full run calls both, so a call reading
+    // every stage would report each finding twice.
+    await withRoot(async (root) => {
+      await evidence(root, "sdd-spec-0007.md", "# Evidence\n");
+      await evidence(root, "discussion-20260418170937652.md", "# Evidence\n");
+
+      const spec = await validateGrillingTrace(root, { subjects: ["spec"] });
+      const discussion = await validateGrillingTrace(root, { subjects: ["discussion"] });
+
+      expect(spec.map((i) => i.file)).toEqual([".qfai/evidence/sdd-spec-0007.md"]);
+      expect(discussion.map((i) => i.file)).toEqual([
+        ".qfai/evidence/discussion-20260418170937652.md",
+      ]);
+      expect(await validateGrillingTrace(root)).toHaveLength(2);
     });
   });
 

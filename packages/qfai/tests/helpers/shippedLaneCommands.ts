@@ -1426,14 +1426,15 @@ export const ALLOWED_INIT_CONTENT: ReadonlyMap<string, string> = new Map([
   // reading what it wrote.
   //
   // Re-pinned again for the discussion stage's evidence, which the same rule
-  // reads for its `## Grilling Session` section:
+  // reads for its `## Grilling Session` section. The stamp is spelled out to
+  // its full width, as the import-lite negation spells out its own:
   //
-  //     !.qfai/evidence/discussion-*.md
+  //     !.qfai/evidence/discussion-[0-9]…[0-9].md
   //
   // Derived the same way, and checked the way the note below asks: removing
   // that one line from what the run wrote reproduces `cd2c521c…` byte for byte,
   // which is what makes this a review of one line.
-  [".gitignore", "4b12347203927042767bb2b7df83abe4f1e6aee191066590bb1947a5aa2ad8ba"],
+  [".gitignore", "c208ecdc03ad18a379512fd21bd13e32035bb1df008144cde7ea32b4fc9b798c"],
   // One bullet each, inside the managed cross-AI rules block: the
   // `documentation-clarity.md` master that the same run seeds beside them.
   // Removing that line from both files reproduces the previous digests

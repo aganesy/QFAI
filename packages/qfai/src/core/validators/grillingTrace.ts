@@ -43,8 +43,21 @@ import { exists, issue } from "./utils.js";
 /** The finding this validator emits. */
 export const GRILLING_TRACE_CODE = "QFAI-GRILL-001";
 
+/**
+ * The stages this reads, by the profile that gates each.
+ *
+ * A caller names its own: `runSddValidators` and `runDiscussionValidators` both
+ * dispatch this, and a full run calls both, so a call reading every stage would
+ * report each finding twice.
+ */
+export const GRILLING_SUBJECTS = ["spec", "discussion"] as const;
+
+export type GrillingSubject = (typeof GRILLING_SUBJECTS)[number];
+
 /** A stage whose evidence carries a grilling record. */
 type Subject = {
+  /** Which stage this is, as a caller names it. */
+  readonly stage: GrillingSubject;
   /** The evidence file's name, capturing what the finding calls the run. */
   readonly file: RegExp;
   /** The heading the stage writes its rows under. */
@@ -70,6 +83,7 @@ type Subject = {
 
 const SUBJECTS: readonly Subject[] = [
   {
+    stage: "spec",
     // Anchored on the spec id rather than on anything after `sdd-`, so a file a
     // project named `sdd-notes.md` is not held to a contract it never entered.
     file: /^sdd-(spec-\d{4})\.md$/,
@@ -79,6 +93,7 @@ const SUBJECTS: readonly Subject[] = [
     reads: "each",
   },
   {
+    stage: "discussion",
     // The discussion run opens its evidence under its own stamp before it
     // writes anything else, so the record has a path from the first moment the
     // session can end. The stamp is fixed-width, so the greatest name is the
@@ -104,8 +119,31 @@ const EVIDENCE_DIR_REL = ".qfai/evidence";
 /** A markdown table's separator, e.g. `| --- | :-: |`. */
 const SEPARATOR_RE = /^\s*\|[\s|:-]*\|\s*$/;
 
-/** A cell left at a template placeholder, in any column. */
-const UNREPLACED_RE = /<[^<>]*>/;
+/**
+ * A cell that is nothing but an angle-bracket token.
+ *
+ * Anchored on the whole cell, as `deltaV1.ts` and `importLiteEvidence.ts` both
+ * anchor theirs. A row is prose as well as values, and a cell carrying an
+ * autolink or an inline tag inside a sentence has been written — reading every
+ * angle-bracketed construct as a placeholder would drop that row and report the
+ * evidence as missing.
+ */
+const UNREPLACED_CELL_RE = /^<[^<>]*>$/;
+
+/**
+ * Whether a markdown table row is still the template's.
+ *
+ * Two shapes qualify, and both are what a copied template looks like: a cell
+ * left at its placeholder, and a row whose cells are all empty.
+ */
+function rowIsUnwritten(line: string): boolean {
+  const cells = line
+    .replace(/^\s*\|/, "")
+    .replace(/\|\s*$/, "")
+    .split("|")
+    .map((cell) => cell.trim());
+  return cells.every((cell) => cell === "") || cells.some((cell) => UNREPLACED_CELL_RE.test(cell));
+}
 
 /** A file's text, or `null` when it is not there. */
 async function textOf(file: string): Promise<string | null> {
@@ -140,7 +178,7 @@ function ownRowsUnder(text: string, section: string): string[] | null {
   }
   const separator = table.findIndex((line) => SEPARATOR_RE.test(line));
   if (separator === -1) return [];
-  return table.slice(separator + 1).filter((line) => !UNREPLACED_RE.test(line));
+  return table.slice(separator + 1).filter((line) => !rowIsUnwritten(line));
 }
 
 /** The message for a run whose section is absent, or present with no row. */
@@ -171,9 +209,10 @@ type Candidate = { readonly name: string; readonly id: string; readonly subject:
 function candidatesIn(
   names: readonly string[],
   scope: ReadonlySet<string> | undefined,
+  stages: readonly GrillingSubject[],
 ): Candidate[] {
   const picked: Candidate[] = [];
-  for (const subject of SUBJECTS) {
+  for (const subject of SUBJECTS.filter((s) => stages.includes(s.stage))) {
     const matched: Candidate[] = [];
     for (const name of names) {
       const id = subject.file.exec(name)?.[1];
@@ -201,10 +240,17 @@ function candidatesIn(
  *
  * `specScope` is the `--spec` selection when a run has one — the four-digit
  * numbers, as `core/specScope.ts` normalizes them.
+ *
+ * `subjects` is the stages this call gates, defaulting to all of them. Two
+ * runners dispatch this and a full run calls both, so each names its own rather
+ * than reporting the other's findings a second time.
  */
 export async function validateGrillingTrace(
   root: string,
-  options: { specScope?: ReadonlySet<string> | undefined } = {},
+  options: {
+    specScope?: ReadonlySet<string> | undefined;
+    subjects?: readonly GrillingSubject[] | undefined;
+  } = {},
 ): Promise<Issue[]> {
   const evidenceDir = path.join(root, ...EVIDENCE_DIR_REL.split("/"));
   if (!(await exists(evidenceDir))) return [];
@@ -223,7 +269,8 @@ export async function validateGrillingTrace(
     .sort((a, b) => a.localeCompare(b));
 
   const issues: Issue[] = [];
-  for (const { name, id, subject } of candidatesIn(names, options.specScope)) {
+  const stages = options.subjects ?? GRILLING_SUBJECTS;
+  for (const { name, id, subject } of candidatesIn(names, options.specScope, stages)) {
     const text = await textOf(path.join(evidenceDir, name));
     if (text === null) continue;
     const rows = ownRowsUnder(text, subject.section);

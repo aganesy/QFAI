@@ -31,9 +31,23 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   that has not reached a loop and one whose loop wrote nothing are the same
   absence there.
 
-  `qfai init` keeps `.qfai/evidence/discussion-*.md` out of the ignore block as
-  it already does for the spec stage's evidence. A record no checkout can see is
-  one the check could only ever report nothing about.
+  `--profile discussion` runs the check as well as `--profile sdd`, each naming
+  its own stage. The discussion stage names that profile as its completion gate,
+  so a run that wrote no record could otherwise finish its own gate without the
+  finding, and a full run calls both runners.
+
+  Two more ways a record could exist and say nothing are closed with it. The
+  session table the discussion skill shows now carries placeholders in its
+  run-specific cells, as the spec template does, so copying it and replacing
+  nothing is caught; and a row whose cells are all empty no longer counts as a
+  row. A cell is read as a placeholder only when it is nothing else, so a row
+  carrying a link or an inline tag inside a sentence is left alone.
+
+  `qfai init` keeps `.qfai/evidence/discussion-<ts>.md` out of the ignore block
+  as it already does for the spec stage's evidence, and the shipped instructions
+  classify both as committed rather than as regenerable stage logs. A record no
+  checkout can see is one the check could only ever report nothing about, and a
+  negation alone does not stage a file.
 
 - **The prototyping preflight refuses a screen with no primary task** (#1698).
   The audit lane reported an empty `primary_tasks` as `QFAI-AUD-001`, but

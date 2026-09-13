@@ -43,8 +43,8 @@ tools: [Read, Write, Edit, Glob, Grep, Bash]
 - Evidence summary for `.qfai/evidence/` (mostly gitignored; do not commit the
   regenerable stage logs). The governance records there are the exception and
   **must** be committed: `implement-<spec-id>.md`, `atdd-<spec-id>.md`,
-  `coverage-depth-*.md`, `change-request-*.md`, `decision-*.md` and
-  `decisions/`. See
+  `sdd-<spec-id>.md`, `discussion-<ts>.md`, `coverage-depth-*.md`,
+  `change-request-*.md`, `decision-*.md` and `decisions/`. See
   `.qfai/assistant/constitution/drift-protocol.md#which-evidence-is-committed`.
 
 ## Stop conditions

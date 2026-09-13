@@ -2832,10 +2832,9 @@ const LEGACY_EVIDENCE_IGNORE_NEGATIONS: readonly string[] = [
   // skipped every session as for one that grilled every phase.
   "!sdd-*.md",
   // A discussion run's own evidence, which the same rule reads for the same
-  // reason. Its stamp is not spelled out here: the nested file is a migration
-  // for projects that already hold one, and a narrower glob would leave a
-  // record the rule reads hidden on exactly those projects.
-  "!discussion-*.md",
+  // reason. The stamp is spelled out to its full width, which is the only
+  // width the check accepts, so a draft or a backup beside it stays ignored.
+  `!discussion-${CANONICAL_TIMESTAMP_GLOB}.md`,
   // The import-lite record, for the same reason: on a spec set that arrived
   // without a discussion pack it is the only input source in the repository,
   // and the nested `*` hides it from the fresh clone that CI validates. Both

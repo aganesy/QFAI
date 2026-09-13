@@ -615,6 +615,12 @@ async function runDiscussionValidators(
     ...(await validateDiscussionVisuals(root)),
     ...(await validateResearchSummary(root, config)),
     ...(await runCanonicalUixValidators(root, config)),
+    // `QFAI-GRILL-001` (warning) on this run's own session record. The stage
+    // names `--profile discussion` as its completion gate, so a run that wrote
+    // no record could otherwise finish its own gate without the finding. The
+    // stage is named because `runSddValidators` dispatches this too and a full
+    // run calls both.
+    ...(await validateGrillingTrace(root, { subjects: ["discussion"] })),
     // The RCP footer names `--profile discussion` as the review-cycle gate and
     // mandates `review_request.md` / `Rxx_*.md` / `summary.json` in the same
     // breath. Without this the command it prescribes could not see the
@@ -775,7 +781,7 @@ async function runSddValidators(
     // no trace in the evidence it wrote. Warning because it reads a record the
     // agent wrote about its own run: it establishes that the record exists, not
     // that a session happened, and an error would claim the second.
-    ...(await validateGrillingTrace(root, { specScope })),
+    ...(await validateGrillingTrace(root, { specScope, subjects: ["spec"] })),
     // Self-governance group: Pair IV (`R-HANDOFF-SCHEMA-DRIFT`, schema ↔
     // writer) and Pair III (`R-SKILL-MANIFEST-DRIFT`, probe-impl ↔
     // manifest-schema). Both are skill-governance surfaces so they live

@@ -232,7 +232,7 @@ session condition off:
 ```text
 | Ended | Ended at | Authoring began | Frontier | Lookups | Decisions | Escalated |
 | ----- | -------- | --------------- | -------- | ------- | --------- | --------- |
-| confirmed | 2026-01-01T09:14:00Z | 2026-01-01T09:15:20Z | empty | none in flight | 12 | 0 |
+| confirmed | <ISO8601> | <ISO8601> | empty | none in flight | <n> | <n> |
 ```
 
 **Both times, and the first written before the pack is.** A row holding only the final state reads the same whether the session ran first, ran after, or never ran: it is written at the end either way. Writing `Ended at` before the first pack file makes the order a record rather than a claim.
