@@ -253,6 +253,33 @@ describe("staleEvidenceFiles", () => {
     ).toBeNull();
   });
 
+  it("reads the refactor verify revision, which observed the refactor's own changes", async () => {
+    // The refactor is committed after the round's GREEN, and the re-run after it
+    // names the new commit. Measured from the round, its own edit read as stale.
+    const { root, head } = await repoAtOneCommit();
+    await commit(root, "src/lease.ts", "export const rate = 2;\n");
+    const refactored = execFileSync("git", ["rev-parse", "HEAD"], {
+      cwd: root,
+      encoding: "utf-8",
+    }).trim();
+    const refactorSection = [
+      "### TDD-0001",
+      "",
+      `- Round 1: Revision: ${head}`,
+      `- Refactor verify revision: ${refactored}`,
+      "- Status: done",
+      "",
+    ].join("\n");
+
+    expect(
+      staleEvidenceFiles(root, "src", refactorSection, "tests/integration/lease.test.ts"),
+    ).toBeNull();
+    await commit(root, "src/lease.ts", "export const rate = 3;\n");
+    expect(
+      staleEvidenceFiles(root, "src", refactorSection, "tests/integration/lease.test.ts"),
+    ).toEqual(["src/lease.ts"]);
+  });
+
   it("still reports when the newest round is itself stale", async () => {
     const { root, head } = await repoAtOneCommit();
     await commit(root, "src/lease.ts", "export const rate = 2;\n");
