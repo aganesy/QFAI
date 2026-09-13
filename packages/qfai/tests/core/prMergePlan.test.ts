@@ -133,6 +133,8 @@ describe("run-pr-merge plan", () => {
   it.each([
     ["absent", ""],
     ["Markdown-only", "## What this change made unnecessary\n\n---\n"],
+    ["None marker", "## What this change made unnecessary\n\nNone.\n"],
+    ["N/A marker", "## What this change made unnecessary\n\nN/A\n"],
     ["fenced", "```md\n## What this change made unnecessary\n\nNothing.\n````\n"],
   ])("blocks a %s removal answer without a handoff or merge", async (_name, body) => {
     const baseline = makeScenario({});

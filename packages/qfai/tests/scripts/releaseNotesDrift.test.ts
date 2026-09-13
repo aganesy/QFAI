@@ -311,6 +311,8 @@ describe("resuming a release pull-request description", () => {
     ["missing", ""],
     ["empty", "## What this change made unnecessary\n\n<!-- Answer required. -->\n"],
     ["Markdown-only", "## What this change made unnecessary\n\n- [ ]\n"],
+    ["None marker", "## What this change made unnecessary\n\nNone.\n"],
+    ["N/A marker", "## What this change made unnecessary\n\nN/A\n"],
     ["thematic break", "## What this change made unnecessary\n\n---\n"],
     ["empty quotation", "## What this change made unnecessary\n\n>\n"],
     ["empty link", "## What this change made unnecessary\n\n[]()\n"],
@@ -336,6 +338,10 @@ describe("resuming a release pull-request description", () => {
     [
       "authored after tilde fence",
       "~~~md\n## What this change made unnecessary\n\nExample only.\n~~~~\n\n## What this change made unnecessary\n\nA superseded pin. Notes stay to document this release.\n",
+    ],
+    [
+      "authored after commented fence",
+      "<!--\n```md\n## What this change made unnecessary\n\nExample only.\n-->\n\n## What this change made unnecessary\n\nA superseded pin. Notes stay to document this release.\n",
     ],
   ])("preserves other prose when the removal answer is %s", async (name, section) => {
     const workflow = await readFile(

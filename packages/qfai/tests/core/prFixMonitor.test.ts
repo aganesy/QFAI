@@ -132,6 +132,10 @@ describe("run-pr-fix strict monitor", { timeout: 120000 }, () => {
     ["empty task", "## What this change made unnecessary\n\n- [ ]\n"],
     ["empty lists", "## What this change made unnecessary\n\n- [ ]\n*\n1.\n"],
     ["listed unresolved", "## What this change made unnecessary\n\n- TBD\n"],
+    ["None marker", "## What this change made unnecessary\n\nNone.\n"],
+    ["N/A marker", "## What this change made unnecessary\n\nN/A\n"],
+    ["imported answer", "## Auto-import\n\n## What this change made unnecessary\n\nNothing.\n"],
+    ["import-only body", "## Auto-import\n\n"],
     ["thematic break", "## What this change made unnecessary\n\n---\n"],
     ["empty quotation", "## What this change made unnecessary\n\n>\n"],
     ["empty link", "## What this change made unnecessary\n\n[]()\n"],
@@ -142,11 +146,14 @@ describe("run-pr-fix strict monitor", { timeout: 120000 }, () => {
     ["longer tilde close", "~~~md\n## What this change made unnecessary\n\nNothing.\n~~~~\n"],
     ["short close", "````md\n```\n## What this change made unnecessary\n\nNothing.\n````\n"],
     ["wrong marker close", "```md\n~~~\n## What this change made unnecessary\n\nNothing.\n````\n"],
-  ])("blocks a %s removal answer without inventing nothing", async (_name, section) => {
-    const body = compliantPrBody().replace(
-      /## What this change made unnecessary\n\nNothing\.\n\n/,
-      section,
-    );
+  ])("blocks a %s removal answer without inventing nothing", async (name, section) => {
+    const body =
+      name === "import-only body"
+        ? section + compliantPrBody()
+        : compliantPrBody().replace(
+            /## What this change made unnecessary\n\nNothing\.\n\n/,
+            section,
+          );
     const result = await runPrFix({
       extraArgs: ["-DryRun"],
       scenario: makeScenario({
@@ -170,6 +177,8 @@ describe("run-pr-fix strict monitor", { timeout: 120000 }, () => {
     "",
     "```md\n## What this change made unnecessary\n\nExample only.\n````\n\n",
     "~~~md\n## What this change made unnecessary\n\nExample only.\n~~~~\n\n",
+    "```md\n## Auto-import\n\n## What this change made unnecessary\n\nExample only.\n````\n\n",
+    "<!--\n```md\n## Auto-import\n\n## What this change made unnecessary\n\nExample only.\n-->\n\n",
   ])("preserves an authored removal answer while repairing other metadata", async (prefix) => {
     const answer =
       "A duplicate check. The existing validator stays because it covers malformed inputs.\n\n```sh\nobsolete-check --strict\n## This is command data\n```\n\nThe canonical validator retains that input check.";
