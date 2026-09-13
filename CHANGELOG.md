@@ -53,10 +53,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   life of the project, and a list nobody can empty is the list people stop
   reading.
 
-  Prototyping stays out, with the reason now stated: its `grilling.md` is one
-  file per project holding the current state of the decision tree, so a project
-  that has not reached a loop and one whose loop wrote nothing are the same
-  absence there.
+  Prototyping stays out, and not because its absence is undecidable — the skill
+  writes that file before cycle 0 whether or not the session settled anything.
+  What rules it out is the shape of the record: an empty session is written as
+  prose, which this check's row test would report; the file is one per project
+  and rewritten in place, so there is no run to key a finding on; and escalated
+  rows are a state no row count can read.
 
   `--profile discussion` runs the check as well as `--profile sdd`, each naming
   its own stage. The discussion stage names that profile as its completion gate,
