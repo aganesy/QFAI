@@ -692,6 +692,29 @@ describe("the gate reads a skill as the host does", () => {
     expect(codes).toContain("QFAI-SKILLS-014");
   });
 
+  it("reads a document a step names under an uncrawled tree whatever its size", async () => {
+    // The host sets no size limit on a document, so a large one is not a
+    // document the host fails to open.
+    const root = await projectWithSkill(['description: "Does the thing."']);
+    const skillDir = path.join(root, ".qfai", "assistant", "skills", "qfai-example");
+    const entryPoint = path.join(skillDir, "SKILL.md");
+    await writeFile(
+      entryPoint,
+      `${await readFile(entryPoint, "utf-8")}\nSee references/tmp/large.md.\n`,
+      "utf-8",
+    );
+    const tmp = path.join(skillDir, "references", "tmp");
+    await mkdir(tmp, { recursive: true });
+    const file = path.join(tmp, "large.md");
+    // Over nine mebibytes of prose, past the ceiling an entry point is read within.
+    await writeFile(file, `# large\n\n${"A line of prose.\n".repeat(600_000)}`, "utf-8");
+
+    const codes = (await validateAssistantAssets(root, defaultConfig))
+      .filter((item) => item.file === file)
+      .map((item) => item.code);
+    expect(codes).toEqual([]);
+  });
+
   it("roots a skill whose entry point links to a document crawled under another name", async () => {
     // The host loads the link as the entry point, so the document is a root and
     // its citations resolve from the skill's directory.

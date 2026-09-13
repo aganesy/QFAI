@@ -1902,14 +1902,16 @@ async function readCitedDocument(file: string): Promise<CitedDocument> {
       "Make the document, and each directory above it, readable to the account running `qfai validate`, or stop naming it.",
     );
   }
+  // Read with no size ceiling, as the crawl reads the documents it reaches: the
+  // host opens a document of any size, so only the kind of file is checked.
   const bytes = await readBoundedRegularFile(
     await realpath(file).catch(() => file),
-    SKILL_DOCUMENT_MAX_BYTES,
+    Number.MAX_SAFE_INTEGER,
   );
   if (bytes === undefined) {
     return unreadable(
-      `A document under \`skills\` that a step names is not an ordinary file this run can read within ${String(SKILL_DOCUMENT_MAX_BYTES)} bytes. The host opens it only where a step names it, and a step that does fails there.`,
-      "Make the document an ordinary readable file within that size, or stop naming it.",
+      "A document under `skills` that a step names is not an ordinary file this run can read. The host opens it only where a step names it, and a step that does fails there.",
+      "Make the document an ordinary readable file, or stop naming it.",
     );
   }
   const text = decodeUtf8(bytes);
