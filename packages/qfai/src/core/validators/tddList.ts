@@ -1112,12 +1112,11 @@ interface EvidenceFieldOccurrence {
 
 /**
  * The `(attempt M)` qualifier a round with several review attempts writes
- * after `reviewer verdict` (`round-evidence.md`). It is part of the field
- * name, so a reader that stopped at the bare name read no verdict at all from
- * a valid multi-attempt round and reported the round as never closed.
+ * after `reviewer verdict` (`round-evidence.md`). It is part of that field's
+ * name, so a verdict line is read with or without it.
  *
- * Read on that field only. Accepted on every field, `Round 1: Revision
- * (attempt 2)` satisfied a field the round contract records once per round.
+ * Only that field takes it. The other round fields are recorded once per
+ * round, so `Round 1: Revision (attempt 2)` is not a spelling of any of them.
  */
 const ATTEMPT_QUALIFIER = "(?:[ \\t]*\\(attempt[ \\t]+(?<attempt>\\d+)\\))?";
 const ATTEMPT_QUALIFIER_TAIL = /\s*\(attempt\s+(\d+)\)\s*$/i;
@@ -1141,7 +1140,19 @@ function inlineFieldValue(captured: string | undefined, closesAfterColon: boolea
   return (closesAfterColon ? raw.replace(/^\*\*/, "") : raw).trim().replace(/^`([^`]*)`$/, "$1");
 }
 
-function evidenceFieldOccurrences(section: string, field: string): EvidenceFieldOccurrence[] {
+/**
+ * Every occurrence of `field` in `section`, in document order.
+ *
+ * An occurrence with neither an inline nor a fenced value is left out unless
+ * `includeBlank` is set, in which case it is kept with an empty value. A check
+ * that counts a round's review attempts needs the blank one: dropped, a blank
+ * last attempt leaves the attempt before it looking like the round's close.
+ */
+function evidenceFieldOccurrences(
+  section: string,
+  field: string,
+  includeBlank = false,
+): EvidenceFieldOccurrence[] {
   const normalized = section.replace(/\r\n/g, "\n");
   const originalLines = normalized.split("\n");
   const visibleLines = maskEvidenceRegions(normalized).split("\n");
@@ -1172,11 +1183,11 @@ function evidenceFieldOccurrences(section: string, field: string): EvidenceField
         const value = (cells[cellIndex + 1] ?? "").trim().replace(/^`([^`]*)`$/, "$1");
         const resolved =
           value.length > 0 ? value : fencedEvidenceValue(originalLines, lineIndex + 1);
-        if (resolved !== null) {
+        if (resolved !== null || includeBlank) {
           occurrences.push({
             round: roundMatch?.[1] ? Number(roundMatch[1]) : null,
             attempt: attemptMatch?.[1] ? Number(attemptMatch[1]) : null,
-            value: resolved,
+            value: resolved ?? "",
           });
         }
       }
@@ -1190,11 +1201,11 @@ function evidenceFieldOccurrences(section: string, field: string): EvidenceField
       groups.open !== undefined && groups.close === undefined,
     );
     const resolved = value.length > 0 ? value : fencedEvidenceValue(originalLines, lineIndex + 1);
-    if (resolved !== null) {
+    if (resolved !== null || includeBlank) {
       occurrences.push({
         round: groups.round ? Number(groups.round) : null,
         attempt: groups.attempt ? Number(groups.attempt) : null,
-        value: resolved,
+        value: resolved ?? "",
       });
     }
   }
@@ -1224,13 +1235,14 @@ function roundEvidenceFieldValue(section: string, round: number, field: string):
  * Attempts are numbered from 1 in review order, and a round holding a single
  * attempt may leave the qualifier off. A round whose numbers skip, repeat or
  * start past 1 has lost an attempt from its audit trail, and the last line
- * written is then not known to be the attempt the round closed on.
+ * written is then not known to be the attempt the round closed on. A blank
+ * attempt counts as an attempt, and its empty value closes nothing.
  */
 function roundReviewVerdict(
   section: string,
   round: number,
 ): { value: string | null; numbered: boolean } {
-  const attempts = evidenceFieldOccurrences(section, "reviewer verdict").filter(
+  const attempts = evidenceFieldOccurrences(section, "reviewer verdict", true).filter(
     (occurrence) => occurrence.round === round,
   );
   const numbered =
@@ -1469,13 +1481,13 @@ function hasPhaseAuthoredFieldAfterGate(section: string): boolean {
  * opens N+1), so every legitimate review-fix -> Round 2 row disagreed with the
  * hash recomputed here and reported as unresolved.
  */
-// The `(attempt M)` qualifier is part of the field name a round with several
-// review attempts records (`round-evidence.md`), so a pattern that stopped at
-// `reviewer verdict` left those lines in the subject the reviewer who wrote
-// them hashes — and a reviewer following the contract then computed a different
-// digest from the gate for every valid multi-attempt round.
+// A round with several review attempts qualifies its verdict with
+// `(attempt M)`, and records a `Round N: Review pack` and `Review pack seal`
+// pair beside each attempt (`round-evidence.md`). All of these are written once
+// the review they belong to has run, so none of them is in the subject that
+// review hashes, qualified or not.
 const REVIEWER_APPENDED_ROUND_FIELD =
-  /^\s*(?:\|\s*)?(?:[-*][ \t]+)?(?:\*\*)?(?:Round[ \t]+\d+:[ \t]*)?reviewer verdict(?:[ \t]*\(attempt[ \t]+\d+\))?(?:\*\*)?[ \t]*(?::|\|)[ \t]*(.*)$/i;
+  /^\s*(?:\|\s*)?(?:[-*][ \t]+)?(?:\*\*)?(?:(?:Round[ \t]+\d+:[ \t]*)?reviewer verdict|Round[ \t]+\d+:[ \t]*Review pack(?:[ \t]+seal)?)(?:[ \t]*\(attempt[ \t]+\d+\))?(?:\*\*)?[ \t]*(?::|\|)[ \t]*(.*)$/i;
 
 /**
  * What the reviewer wrote on the verdict line itself, with the field name's
@@ -2993,7 +3005,7 @@ function missingCompletedEvidenceFields(
       if (verdict.value === null || !/^REVISE\b/i.test(verdict.value)) {
         missing.push(`Round ${round}: reviewer verdict opening the next round`);
       }
-    } else if (verdict.value !== null && !/^PASS\b/i.test(verdict.value)) {
+    } else if (verdict.value !== null && verdict.value.trim() !== "PASS") {
       // A done row's last round closed on a pass. A REVISE left last is a
       // review nobody answered, whatever the row-level verdicts say.
       missing.push(`Round ${round}: reviewer verdict: PASS`);

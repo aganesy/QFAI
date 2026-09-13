@@ -51,9 +51,10 @@ function normalizeArtifact(value: string): string {
 }
 
 /**
- * The subject minus `Round N: reviewer verdict` — the one field the completion
- * reviewers write inside a round block, after they have read it, so what they
- * hashed never contained it. A fenced verdict owns its fence lines too.
+ * The subject minus `Round N: reviewer verdict` and the `Round N: Review pack`
+ * pair beside each attempt — the fields the completion reviewers write inside a
+ * round block, after they have read it, so what they hashed never contained
+ * them. A fenced value owns its fence lines too.
  */
 function withoutReviewerVerdicts(text: string): string {
   const lines = text.split("\n");
@@ -66,7 +67,7 @@ function withoutReviewerVerdicts(text: string): string {
       ? `${(tableRow[1] ?? "").trim()}: ${(tableRow[2] ?? "").trim()}`
       : line;
     const verdict =
-      /^\s*(?:- )?(?:\*\*)?(?:Round[ \t]+\d+:[ \t]*)?reviewer verdict(?:[ \t]*\(attempt[ \t]+\d+\))?(?:\*\*)?[ \t]*:[ \t]*(.*)$/i.exec(
+      /^\s*(?:- )?(?:\*\*)?(?:(?:Round[ \t]+\d+:[ \t]*)?reviewer verdict|Round[ \t]+\d+:[ \t]*Review pack(?:[ \t]+seal)?)(?:[ \t]*\(attempt[ \t]+\d+\))?(?:\*\*)?[ \t]*:[ \t]*(.*)$/i.exec(
         asField,
       );
     if (verdict === null) {
@@ -1857,6 +1858,60 @@ describe("QFAI-TDDLIST-008", () => {
       );
       const finding = issues.find((issue) => issue.code === "QFAI-TDDLIST-008");
       expect(finding?.message).toContain("Round 1: reviewer verdict: PASS");
+    });
+  });
+
+  it.each([
+    [
+      "a PASS with more text after it",
+      ["- Round 1: reviewer verdict: PASS but verification is still pending"],
+    ],
+    [
+      "a blank last attempt",
+      ["- Round 1: reviewer verdict (attempt 1): PASS", "- Round 1: reviewer verdict (attempt 2):"],
+    ],
+  ])("rejects a last round that closes on %s", async (_shape, verdictLines) => {
+    // The closing verdict is `PASS` exactly. A blank attempt is still an
+    // attempt, so it cannot leave the one before it standing as the close.
+    await withProject(async (root) => {
+      const evidence = completeEntry("Unit").replace(
+        "- Refactor verify command: npm test",
+        [...verdictLines, "- Refactor verify command: npm test"].join("\n"),
+      );
+      const issues = await runIssuesOn(
+        root,
+        ledger([{ status: "done", evidence: IMPLEMENT_POINTER }]),
+        { ".qfai/evidence/implement-spec-0001.md": evidence },
+      );
+      const finding = issues.find((issue) => issue.code === "QFAI-TDDLIST-008");
+      expect(finding?.message).toContain("Round 1: reviewer verdict: PASS");
+    });
+  });
+
+  it("drops each attempt's review pack pair from the subject", async () => {
+    // Each review creates its own pack, and the pair naming it is written once
+    // that review has run. Left in the region, it put bytes the reviewer never
+    // read into what the reviewer hashed, and the recorded digest failed.
+    await withProject(async (root) => {
+      const evidence = completeEntry("Unit").replace(
+        "- Refactor verify command: npm test",
+        [
+          "- Round 1: reviewer verdict (attempt 1): REVISE — the assertion names no boundary",
+          "- Round 1: Review pack (attempt 1): .qfai/review/review-20260101T000000000",
+          `- Round 1: Review pack seal (attempt 1): sha256:${"a".repeat(64)}`,
+          "- Round 1: reviewer verdict (attempt 2): PASS",
+          "- Round 1: Review pack (attempt 2): .qfai/review/review-20260101T010000000",
+          `- Round 1: Review pack seal (attempt 2): sha256:${"b".repeat(64)}`,
+          "- Refactor verify command: npm test",
+        ].join("\n"),
+      );
+      const codes = await runOn(root, ledger([{ status: "done", evidence: IMPLEMENT_POINTER }]), {
+        ".qfai/evidence/implement-spec-0001.md": evidence,
+      });
+
+      // `completeEntry`'s hashes are taken over the subject without these lines,
+      // so the row completes only if the validator drops them the same way.
+      expect(codes).not.toContain("QFAI-TDDLIST-008");
     });
   });
 

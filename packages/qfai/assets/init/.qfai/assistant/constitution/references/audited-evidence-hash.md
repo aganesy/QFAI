@@ -58,6 +58,10 @@ procedure, in four steps:
      ends in two asterisks, and a reader who counts those as an answer keeps the
      fence below: hashing a reviewer's own answer into what that reviewer
      hashes is the one line that cannot be in its own subject;
+   - the `Round N: Review pack` and `Round N: Review pack seal` pair a round
+     records beside each review attempt is dropped the same way, **qualified by
+     `(attempt M)` or not**: both name the pack that review wrote, so both are
+     written once the review has run, after the reviewer read the region;
    - the heading is **synthesized** as `### <TDD-ID>` rather than copied, so an
      entry whose heading carries extra text hashes the same before and after
      that text is tidied.

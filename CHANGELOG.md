@@ -64,10 +64,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   A round with several review attempts qualifies its verdict field, and the
   extraction now drops that form too: the contract said every verdict line goes
   and the code matched only the unqualified one, so a multi-attempt round gave
-  the reviewer and the gate two digests. The completion gate also holds those
+  the reviewer and the gate two digests. The `Round N: Review pack` pair written
+  beside each attempt is dropped the same way. The completion gate also holds those
   attempts to the numbering the contract gives them, from 1 in review order,
   and reads the attempt a round ends on: a round before the last has to end on
-  a `REVISE`, and the last round of a done row on a `PASS`.
+  a `REVISE`, and the last round of a done row on exactly `PASS`. A blank
+  attempt counts as one.
 
 ## [1.12.0] - 2026-09-12
 
