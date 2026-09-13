@@ -6,6 +6,16 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Added
 
+- **Constitution Article VII states the cutting doctrine** (#1794). The least
+  that satisfies the requirement is the right amount, and producing more is what
+  has to be justified. The article now governs how much code implements a
+  behaviour as well as which behaviours a change carries, with
+  `.agents/rules/minimal-implementation.md` as the procedure. It yields to that
+  rule's floor and takes precedence over every other article, so a finding about
+  excess has a constitution rule to trace to. The floor gains the traceability
+  annotations a check requires and whatever the repository's gates require, so
+  no cut can demand a change that fails a gate.
+
 - **The minimal-implementation ladder asks whether the codebase already has it,
   second** (#1795), **and its floor keeps unit-level coverage of the failures
   the code retains** (#1793). The ladder sent an agent to the standard library

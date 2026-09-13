@@ -43,6 +43,8 @@ The ladder trims code, not obligations. These stay whatever rung you stop at.
 - Security.
 - Accessibility.
 - Unit-level coverage of the failures the code retains.
+- The traceability annotations a check requires, and whatever the
+  repository's gates require to pass.
 - Anything the spec asks for.
 
 A **trust boundary** is wherever a value arrives from a caller or a source the
@@ -89,7 +91,7 @@ the standard library has one is not a simplification; it is rung 3.
 ## Related
 
 - Writing standard for the comment you leave: `documentation-clarity.md`
-- Scope of a single change, and how an expansion is declared:
-  Article VII of `.qfai/assistant/constitution/constitution.md`
+- The doctrine this procedure carries out, its precedence, and how a scope
+  expansion is declared: Article VII of `.qfai/assistant/constitution/constitution.md`
 - The same ladder for a screen's components and layouts:
   `.qfai/assistant/catalog/ui-procurement.md`

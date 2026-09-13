@@ -245,6 +245,7 @@ describe("cross-AI rules surface (.agents/rules/ master)", () => {
         /failures the code retains/i,
         /published library.s exported function/i,
         /plugin or tenant context/i,
+        /traceability annotations a check requires/i,
         /trust boundary/i,
         /accessibility/i,
         /SIMPLIFIED:/,
@@ -253,6 +254,25 @@ describe("cross-AI rules surface (.agents/rules/ master)", () => {
       ]) {
         expect(text).toMatch(clause);
       }
+    });
+
+    // The doctrine lives in the constitution, where a finding about excess can
+    // trace to it, and the floor stays in the rule master: a second copy of the
+    // floor in the article would drift from the first.
+    it.each([
+      "packages/qfai/assets/init/.qfai/assistant/constitution/constitution.md",
+      ".qfai/assistant/constitution/constitution.md",
+    ])("%s states the doctrine and its precedence, and not the floor", async (rel) => {
+      const text = await readFile(path.join(ROOT, rel), "utf-8");
+      const start = text.indexOf("## Article VII");
+      const article = text.slice(start, text.indexOf("## Article VIII")).replace(/\s+/g, " ");
+      expect(article).toContain("The least that satisfies the requirement is the right amount.");
+      expect(article).toContain(
+        "yields to the floor in `.agents/rules/minimal-implementation.md` § 2",
+      );
+      expect(article).toContain("takes precedence over every other article");
+      expect(article).not.toContain("error handling that prevents data loss");
+      expect(article).not.toMatch(/Validation of input crossing a trust boundary/i);
     });
 
     // The two halves of the marker are one obligation. A ceiling with no

@@ -292,14 +292,24 @@ found them — settled quietly, on an assumption nobody was asked about.
 
 ## Article VII — Minimal scope with explicit deltas
 
-Make the smallest change that satisfies the spec and passes gates.
+The least that satisfies the requirement is the right amount. Producing more is
+what has to be justified.
+
+This article governs both **which behaviours** a change carries and **how much
+code** implements them. `.agents/rules/minimal-implementation.md` is the
+procedure: its ladder is how the amount is found, and its § 2 is the floor that
+no cut removes. The first rung — whether a thing needs to exist at all —
+belongs here while the scope is still open. Once a spec row is agreed, asking it
+again is a Change Request.
+
 If you must expand scope, declare it explicitly in a **Delta** section.
 
-This article decides **which behaviours** a change carries. How much code
-implements one of them is a separate question, and
-`.agents/rules/minimal-implementation.md` answers it. The first rung of that
-rule — whether a thing needs to exist at all — belongs here, while the scope is
-still open. Once a spec row is agreed, asking it again is a Change Request.
+### Precedence
+
+- This article yields to the floor in `.agents/rules/minimal-implementation.md`
+  § 2, and takes precedence over every other article.
+- Article IV holds through the floor, which keeps anything the spec asks for.
+- The Output Language rule above the articles stays above this one.
 
 ### Prototyping exception (scope floor)
 
