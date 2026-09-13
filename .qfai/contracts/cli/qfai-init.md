@@ -133,7 +133,8 @@ the destination hash. The create-only template copier never writes this
 constitution. The check is not an atomic filesystem transaction with the write.
 
 A dry run includes the constitution when the same plan would create or update
-its compatible rule master. It writes neither file.
+its compatible rule master under unlinked parents. A planned write through a
+linked parent cannot authorize the preview. It writes neither file.
 
 ## Shipped GitHub Actions workflows
 

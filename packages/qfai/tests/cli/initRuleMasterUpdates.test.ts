@@ -319,6 +319,23 @@ describe("the constitution and its safety floor upgrade together", () => {
     expect(await readFile(constitutionPath(), "utf-8")).toBe(previous);
   });
 
+  it("does not preview a constitution upgrade through a linked planned master parent", async () => {
+    const previous = await olderConstitution();
+    await unlink(minimumPath());
+    const original = path.join(root, RULES_REL);
+    const held = path.join(root, "held-rules");
+    await rename(original, held);
+    await symlink(held, original, process.platform === "win32" ? "junction" : "dir");
+
+    const output = await captureStdout(() =>
+      runInit({ dir: root, force: true, dryRun: true, yes: true }),
+    );
+
+    expect(output).not.toMatch(/^ {4}- \.qfai\/assistant\/constitution\/constitution\.md$/m);
+    expect(output).toContain("manual merge");
+    expect(await readFile(constitutionPath(), "utf-8")).toBe(previous);
+  });
+
   it("previews the paired upgrade without writing either file", async () => {
     const older = olderFloor(await readFile(minimumPath(), "utf-8"));
     await writeFile(minimumPath(), older, "utf-8");

@@ -720,8 +720,7 @@ async function syncGovernedAssistantAssets(
     const previousHash = previous[relative];
     if (
       relative === "constitution/constitution.md" &&
-      !options.plannedSafetyFloor &&
-      !(await hasShippedMinimumRule(options.rootAssets, destRoot))
+      !(await canSyncConstitution(options.rootAssets, destRoot, options.plannedSafetyFloor))
     ) {
       skipped.push(dest);
       if (previousHash !== undefined) recorded[relative] = previousHash;
@@ -2947,11 +2946,16 @@ async function ensureLegacyEvidenceIgnoreNegations(
 const AGENTS_RULES_DIR_REL = path.join(".agents", "rules");
 
 /** The constitution cannot demote obligations an older or edited floor still omits. */
-async function hasShippedMinimumRule(rootAssets: string, destRoot: string): Promise<boolean> {
+async function canSyncConstitution(
+  rootAssets: string,
+  destRoot: string,
+  plannedSafetyFloor: boolean,
+): Promise<boolean> {
   const relative = path.join(AGENTS_RULES_DIR_REL, "minimal-implementation.md");
   if (!(await hasRealGovernedAssistantParents(destRoot, relative.split(path.sep).join("/")))) {
     return false;
   }
+  if (plannedSafetyFloor) return true;
   const [shipped, installed] = await Promise.all([
     hashAssistantAssetFile(path.join(rootAssets, relative), { allowSymlink: true }),
     hashAssistantAssetFile(path.join(destRoot, relative)),
