@@ -115,6 +115,11 @@ import {
   readRuleLock,
   writeRuleLock,
 } from "../../core/ruleMasterUpdates.js";
+import {
+  type PendingCitations,
+  readPendingCitations,
+  writePendingCitations,
+} from "../../core/pendingRuleCitations.js";
 import { resolveToolVersion } from "../../core/version.js";
 import {
   RETIRED_WORKFLOW_NAMES,
@@ -3022,18 +3027,41 @@ async function ensureAgentEntryPointRules(
 
   if (!dryRun) await reclaimEntryPointStaging(destRoot);
 
+  // A master an earlier run wrote and could not cite is owed alongside the ones
+  // this run wrote. A master the project has since removed is owed nothing.
+  const rulesDir = path.join(destRoot, ".agents", "rules");
+  const pending = await readPendingCitations(rulesDir);
+  const owed = async (entryPoint: string): Promise<string[]> => {
+    const recorded = await Promise.all(
+      (pending[entryPoint] ?? []).map(async (master) =>
+        (await lstat(path.join(destRoot, ...master.split("/"))).then(
+          () => true,
+          () => false,
+        ))
+          ? [master]
+          : [],
+      ),
+    );
+    return [...new Set([...newlyWritten, ...recorded.flat()])].sort();
+  };
+
   // Under `--force` the wrapper sync writes the Copilot file whole, from the
   // same source, later in this run. Adding a line here first is work thrown
   // away, and its refusals would name a file this run goes on to replace.
   if (!force) {
-    await citeNewMastersInCopilotInstructions(rootAssets, destRoot, dryRun, newlyWritten, {
-      copied,
-      skipped,
-    });
+    await citeNewMastersInCopilotInstructions(
+      rootAssets,
+      destRoot,
+      dryRun,
+      await owed(COPILOT_INSTRUCTIONS_ENTRY),
+      { copied, skipped },
+      pending,
+    );
   }
 
   for (const name of AGENT_ENTRY_POINT_FILES) {
     const target = path.join(destRoot, name);
+    const toCite = await owed(name);
     const existing = await readTextFileIfPresent(target);
     if (existing === null) {
       // Absent: the create-only copy above owns this case, and on a dry run
@@ -3076,17 +3104,19 @@ async function ensureAgentEntryPointRules(
       // The section is already there. A master this run wrote is one the file
       // cannot have cited, so its bullet is added; everything else is left as
       // the project has it, including a bullet the project deleted.
-      const merged = addRuleCitations(existing, section, newlyWritten);
+      const merged = addRuleCitations(existing, section, toCite);
+      const shown = new Set(citedRuleMastersOutsideCode(existing));
+      const uncited = toCite.filter((master) => !shown.has(master));
       if (merged === existing) {
+        if (!dryRun && uncited.length === 0) pending[name] = [];
         skipped.push(target);
         continue;
       }
       const refusal = await refuseUnsafeEntryPointRewrite(target, existing, destRoot);
       if (refusal !== null) {
-        const shown = new Set(citedRuleMastersOutsideCode(existing));
-        const pending = newlyWritten.filter((master) => !shown.has(master));
+        if (!dryRun) pending[name] = uncited;
         error(
-          `  WARNING: ${formatReportPath(target)} was left unchanged. ${refusal}${pendingNote(pending)}`,
+          `  WARNING: ${formatReportPath(target)} was left unchanged. ${refusal}${pendingNote(uncited)}`,
         );
         skipped.push(target);
         continue;
@@ -3098,10 +3128,14 @@ async function ensureAgentEntryPointRules(
       }
       const wrote = await replaceEntryPointFile(target, merged, destRoot, existing);
       if (wrote !== null) {
-        error(`  WARNING: ${formatReportPath(target)} was left unchanged. ${wrote}`);
+        pending[name] = uncited;
+        error(
+          `  WARNING: ${formatReportPath(target)} was left unchanged. ${wrote}${pendingNote(uncited)}`,
+        );
         skipped.push(target);
         continue;
       }
+      pending[name] = [];
       info(
         `  updated: ${formatReportPath(target)} (cited the newly shipped rule masters; nothing else changed)`,
       );
@@ -3148,6 +3182,7 @@ async function ensureAgentEntryPointRules(
           skipped.push(target);
           continue;
         }
+        pending[name] = [];
         info(
           `  updated: ${formatReportPath(target)} (cited the uncited rule masters; nothing else changed)`,
         );
@@ -3186,12 +3221,14 @@ async function ensureAgentEntryPointRules(
       skipped.push(target);
       continue;
     }
+    pending[name] = [];
     info(
       `  updated: ${formatReportPath(target)} (appended .agents/rules section; existing content kept)`,
     );
     copied.push(target);
   }
 
+  if (!dryRun) await writePendingCitations(rulesDir, pending);
   return { copied, skipped };
 }
 
@@ -3203,6 +3240,9 @@ async function ensureAgentEntryPointRules(
  * and decoded in full for one line.
  */
 const COPILOT_INSTRUCTIONS_MAX_BYTES = 512 * 1024;
+
+/** The Copilot instruction file, as the record of owed citations names it. */
+const COPILOT_INSTRUCTIONS_ENTRY = ".github/copilot-instructions.md";
 
 /**
  * Cites a newly shipped master in an existing `.github/copilot-instructions.md`.
@@ -3219,6 +3259,7 @@ async function citeNewMastersInCopilotInstructions(
   dryRun: boolean,
   newlyWritten: readonly string[],
   report: { copied: string[]; skipped: string[] },
+  pending: PendingCitations,
 ): Promise<void> {
   // Nothing to cite: no read, no stat, no risk of blocking on a path that is
   // not an ordinary file.
@@ -3234,7 +3275,11 @@ async function citeNewMastersInCopilotInstructions(
     () => true,
     (cause: unknown) => !isEnoent(cause),
   );
-  if (!present) return;
+  if (!present) {
+    // Written whole later in this run, with every master in it.
+    if (!dryRun) pending[COPILOT_INSTRUCTIONS_ENTRY] = [];
+    return;
+  }
 
   // One open, one descriptor, a ceiling on the read. The file belongs to the
   // adopter: a FIFO blocks until a writer closes it, a device never ends, and an
@@ -3245,8 +3290,9 @@ async function citeNewMastersInCopilotInstructions(
   if (bytes === undefined) {
     error(
       `  WARNING: ${formatReportPath(target)} was left unchanged. It is not an ordinary file this run can ` +
-        `read, or it is larger than ${String(COPILOT_INSTRUCTIONS_MAX_BYTES)} bytes. Add the rule citations by hand.`,
+        `read, or it is larger than ${String(COPILOT_INSTRUCTIONS_MAX_BYTES)} bytes.${pendingNote(newlyWritten)}`,
     );
+    if (!dryRun) pending[COPILOT_INSTRUCTIONS_ENTRY] = [...newlyWritten];
     report.skipped.push(target);
     return;
   }
@@ -3260,6 +3306,7 @@ async function citeNewMastersInCopilotInstructions(
   const uncited = newlyWritten.filter((master) => !shown.has(master));
   const merged = addRuleCitationsToList(existing, section, uncited);
   if (merged === existing) {
+    if (!dryRun && uncited.length === 0) pending[COPILOT_INSTRUCTIONS_ENTRY] = [];
     if (uncited.length > 0) {
       // A project that wrote its own Copilot instructions: no generated heading
       // and no rule bullet, so there is no list to add a line to. The wrapper
@@ -3276,9 +3323,9 @@ async function citeNewMastersInCopilotInstructions(
   }
   const refusal = await refuseUnsafeEntryPointRewrite(target, existing, destRoot);
   if (refusal !== null) {
-    const pending = uncited;
+    if (!dryRun) pending[COPILOT_INSTRUCTIONS_ENTRY] = uncited;
     error(
-      `  WARNING: ${formatReportPath(target)} was left unchanged. ${refusal}${pendingNote(pending)}`,
+      `  WARNING: ${formatReportPath(target)} was left unchanged. ${refusal}${pendingNote(uncited)}`,
     );
     report.skipped.push(target);
     return;
@@ -3290,10 +3337,14 @@ async function citeNewMastersInCopilotInstructions(
   }
   const wrote = await replaceEntryPointFile(target, merged, destRoot, existing);
   if (wrote !== null) {
-    error(`  WARNING: ${formatReportPath(target)} was left unchanged. ${wrote}`);
+    pending[COPILOT_INSTRUCTIONS_ENTRY] = uncited;
+    error(
+      `  WARNING: ${formatReportPath(target)} was left unchanged. ${wrote}${pendingNote(uncited)}`,
+    );
     report.skipped.push(target);
     return;
   }
+  pending[COPILOT_INSTRUCTIONS_ENTRY] = [];
   info(
     `  updated: ${formatReportPath(target)} (cited the newly shipped rule masters; nothing else changed)`,
   );
@@ -3321,16 +3372,16 @@ function quoteList(paths: readonly string[]): string {
 }
 
 /**
- * What a refused rewrite leaves undone, appended to the refusal.
+ * What a refused rewrite leaves owed, appended to the refusal.
  *
- * A master this run copied is one no later run will offer again: the file is on
- * disk, so the next copy skips it and the list of newly written masters comes
- * back empty. Repairing the file therefore does not bring the citation with it,
- * and a refusal that does not say so reads as one.
+ * A master this run copied is one no later copy offers again: the file is on
+ * disk, so the next copy skips it. The run records the masters it could not
+ * cite instead, and a later run cites them once the file can be rewritten,
+ * which is what the note tells the reader to expect.
  */
 function pendingNote(masters: readonly string[]): string {
   if (masters.length === 0) return "";
-  return ` A later run does not retry this: add ${quoteList(masters)} to the file yourself.`;
+  return ` The citations of ${quoteList(masters)} are kept, and a later run adds them once the file can be rewritten.`;
 }
 /**
  * The name shape `replaceEntryPointFile` stages under.
