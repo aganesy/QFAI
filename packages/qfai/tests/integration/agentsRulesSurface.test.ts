@@ -1,4 +1,4 @@
-import { readdirSync } from "node:fs";
+import { readFileSync, readdirSync } from "node:fs";
 import { lstat, readFile, realpath } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -251,6 +251,37 @@ describe("cross-AI rules surface (.agents/rules/ master)", () => {
       ]) {
         expect(text).toMatch(clause);
       }
+    });
+
+    // The preflight names where to look before writing, and the ladder's second
+    // rung is this repository. A preflight that sent an agent outside the
+    // repository first would put the rungs back in the order the ladder left.
+    it.each([
+      "packages/qfai/assets/init/.qfai/assistant/constitution/constitution.md",
+      ".qfai/assistant/constitution/constitution.md",
+    ])("%s names this repository first among the reuse rungs", async (rel) => {
+      const text = (await readFile(path.join(ROOT, rel), "utf-8")).replace(/\s+/g, " ");
+      expect(text).toContain(
+        "in the order the reuse rungs of `.agents/rules/minimal-implementation.md` give: this repository",
+      );
+    });
+
+    // A card that cites the ladder by number goes stale whenever a rung is
+    // added, so cards name a rung by what it asks.
+    it("no agent card or generated copy cites a rung by number", () => {
+      const cards = [
+        "packages/qfai/assets/init/.qfai/assistant/agents",
+        ".qfai/assistant/agents",
+        ".codex/agents",
+      ].flatMap((dir) =>
+        readdirSync(path.join(ROOT, dir))
+          .filter((name) => /\.(?:md|toml)$/.test(name))
+          .map((name) => `${dir}/${name}`),
+      );
+      const numbered = cards.filter((rel) =>
+        /\brungs? \d/i.test(readFileSync(path.join(ROOT, rel), "utf-8")),
+      );
+      expect(numbered).toEqual([]);
     });
 
     // The two halves of the marker are one obligation. A ceiling with no
