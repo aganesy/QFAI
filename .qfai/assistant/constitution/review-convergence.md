@@ -126,6 +126,13 @@ A demand already answered MUST NOT be re-raised under another wording. Close a
 repeat by citing its recorded answer. This bounds what a reviewer may require,
 not what a reviewer may report.
 
+A demand is answered only after the authoritative reviewer accepts the fix or a
+reasoned decline, or the user adjudicates it. Record that disposition and its
+evidence in the existing Response and Evidence cells. A producer's reply alone
+does not close a demand. An unresolved blocking demand remains REVISE when
+repeated; cite its prior finding and unresolved disposition instead of requiring
+new work under another wording.
+
 Carry prior answers forward, alongside newly answered demands, into the next
 cycle's `review_request.md` before dispatching reviewers. Each entry names the
 original finding source, demand, response and evidence supporting the response.

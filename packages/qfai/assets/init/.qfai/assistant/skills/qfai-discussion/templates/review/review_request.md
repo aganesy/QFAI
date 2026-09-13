@@ -17,10 +17,12 @@
 Carry prior answers and newly answered demands before reviewer dispatch, under
 `.qfai/assistant/constitution/review-convergence.md#answered-demands-must`.
 Replace the example row with actual answers; if there are none, write `None`.
+Record reviewer acceptance or user adjudication in Response and its proof in
+Evidence. An unaccepted reply does not resolve a blocking demand.
 
-| Finding source            | Demand         | Response                   | Evidence                          |
-| ------------------------- | -------------- | -------------------------- | --------------------------------- |
-| `<reviewer-file#finding>` | `<the demand>` | `<answer and disposition>` | `<artifact, anchor and revision>` |
+| Finding source            | Demand         | Response                                       | Evidence                                            |
+| ------------------------- | -------------- | ---------------------------------------------- | --------------------------------------------------- |
+| `<reviewer-file#finding>` | `<the demand>` | `<accepted answer, authority and disposition>` | `<acceptance proof, artifact, anchor and revision>` |
 
 ## Review Focus
 
