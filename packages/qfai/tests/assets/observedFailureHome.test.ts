@@ -31,12 +31,15 @@ describe("an observed failure has one home, a test-case row", () => {
   for (const tree of QFAI_TREES) {
     it(`${tree}: the test-case template says which row carries it`, async () => {
       const template = await read(tree, TEMPLATE);
-      // After the Type legend, whose `error` value the row uses.
+      // The scenario selects its Type from the legend, not from the incident's origin.
       expect(template.indexOf("### Type column values")).toBeGreaterThan(-1);
       expect(template.indexOf(HEADING)).toBeGreaterThan(template.indexOf("### Type column values"));
       const body = flat(section(template, HEADING));
-      expect(body).toContain("`TC-*` row of its own");
-      expect(body).toContain("`Type` is `error`.");
+      expect(body).toContain("Reuse a row for the same behavior and boundary");
+      expect(body).toContain("Add a new `TC-*` row only for a distinct behavior or boundary");
+      expect(body).toContain(
+        "`Type` follows the scenario in the legend above, not the observation's origin",
+      );
       expect(body).toContain("`AC-Refs` or `EX-Ref` names the behavior that failed.");
       expect(body).toContain("`Notes` says where it was seen");
       expect(body).toContain("The coverage depth checklist scores test-case rows");
@@ -57,7 +60,7 @@ describe("an observed failure has one home, a test-case row", () => {
     it(`${tree}: the skill sends the author to that section`, async () => {
       const skill = flat(await read(tree, `${SKILL}/SKILL.md`));
       expect(skill).toContain(
-        "Record a failure observed in use as its own `error` row, as the template's _A failure observed in use_ says.",
+        "Record a failure observed in use in its matching test-case row, as the template's _A failure observed in use_ says.",
       );
     });
   }

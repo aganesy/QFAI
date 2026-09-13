@@ -6,6 +6,9 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Added
 
+- Record observed failures on the test cases that exercise them, preserving
+  scenario types and reusing matching behavior/boundary rows (#1801).
+
 - **A failure observed in use has one home: a test-case row** (#1801). An
   observation is one of the things that can name a failure the code has to
   handle, and nothing said where it was written down. The coverage depth
