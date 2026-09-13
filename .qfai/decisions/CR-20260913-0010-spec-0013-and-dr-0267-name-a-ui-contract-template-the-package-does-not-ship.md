@@ -158,10 +158,6 @@ No `spec-0004` statement names either file.
     statement text, and that one edits the ledger's shape and rows, so they
     apply in either order. Whichever applies second finds `TDD-0027` at `todo`
     and adds its own ID to `DR-ID`.
-  - `CR-20260913-0003`, `CR-20260913-0004`, `CR-20260913-0007` and
-    `CR-20260913-0008` edit other statements in these files. None names a
-    statement or a row this record names, so their order against this one does
-    not matter.
 
 ## Impact scope
 
@@ -170,8 +166,9 @@ No `spec-0004` statement names either file.
 - Tests: `spec-0013/TDD-0027` and the rows the second line of the blocked set
   selects — `packages/qfai/tests/integration/primaryTasksBand.test.ts`, re-run
   and not edited, since it already reads the shipped template; and, through the
-  `/qfai-atdd spec-0013` pass in action 4, every other ATDD-owned `spec-0013`
-  row still owed when that pass runs, with `.qfai/evidence/atdd-spec-0013.md`
+  `/qfai-atdd spec-0013` pass in action 4, the tests for `TDD-0016` to
+  `TDD-0018` and the new `E2E` tests under `packages/qfai/tests/e2e/**` for
+  `US-0013-0001` to `US-0013-0010`, with `.qfai/evidence/atdd-spec-0013.md`
   and `.qfai/evidence/coverage-depth-spec-0013.md`
 - Contracts: `none`
 - Schema: `none`
@@ -242,9 +239,11 @@ the ledger rows that carry those statements?
 4. **`/qfai-atdd spec-0013`, after the sweep.** `TDD-0027`'s test is an
    ATDD-owned `Integration` test, so that stage writes the evidence for
    re-executing it, in `.qfai/evidence/atdd-spec-0013.md`. The test needs no
-   edit. The invocation is a full pass rather than a repair of one row: it
-   takes up every ATDD-owned `spec-0013` row still owed, and refreshes
-   `.qfai/evidence/atdd-spec-0013.md` and
+   edit. The invocation is a full pass rather than a repair of one row. It
+   takes up the ATDD-owned rows still owed, `TDD-0016` to `TDD-0018` today,
+   and writes an `E2E` test for each story no test annotates, `US-0013-0001`
+   to `US-0013-0010`, since all fourteen of the pack's stories are active. It
+   refreshes `.qfai/evidence/atdd-spec-0013.md` and
    `.qfai/evidence/coverage-depth-spec-0013.md`, whose findings name the
    missing file, through that stage's reviewer gate.
 
