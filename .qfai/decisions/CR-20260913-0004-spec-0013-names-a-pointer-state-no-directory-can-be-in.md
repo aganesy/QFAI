@@ -126,7 +126,9 @@ uncovered, when the uncovered third is a state no test can construct.
 | -------------------- | ------------ | ------------------------------------------------------------------------------------------------------------------ |
 | `spec-0013/TDD-0024` | `ledger-row` | Carries `TC-0013-0029`, whose obligation names the duplicate state. Its evidence cannot discharge a third it names |
 
-- Not blocked by this CR: every other `spec-0013` row. The row's test,
+- Not blocked by this CR: every other `spec-0013` row. `TDD-0023` is reset by
+  action 4 although its obligation does not change, because a case it owns moves
+  under its `Selector`. The row's test,
   `packages/qfai/tests/core/activeDiscussionPack.test.ts`, already proves the two
   reachable conditions, and nothing else in the pack reads the duplicate state.
 - Not blocked either: `spec-0010/TDD-0017`. It carries `TC-0010-0013`, which
@@ -139,7 +141,8 @@ uncovered, when the uncovered third is a state no test can construct.
 - Specs: `spec-0010`, `spec-0013`, and `_policies` for `DR-0266`
 - Plans: `.qfai/specs/spec-0010/10_Plan.md`, `.qfai/specs/spec-0013/10_Plan.md`
 - Tests: `spec-0013/TDD-0024` — `packages/qfai/tests/core/activeDiscussionPack.test.ts`,
-  whose header and `describe` name the duplicate state; and
+  whose header and `describe` name the duplicate state and whose file-time
+  guard moves between its two `describe` blocks; and
   `packages/qfai/tests/integration/cli/commands/discussion.test.ts`, for the
   command's branch
 - Contracts: `none`
@@ -178,14 +181,17 @@ them?
 1. **The shared decision first.** A policy-level `/qfai-sdd` rerun, mode
    `re-derive`, removes the duplicate state from `DR-0266`'s rejection clause,
    keeping the absent and missing pointer, and adds this Change Request's row to
-   the `## Change Requests` table of `_policies/10_delta.md`. Both packs follow that
-   decision, so narrowing either one first would leave it disagreeing with the
-   record it cites. **The clause keeps the command's single-candidate read**:
-   it states the helper's rejection of an absent pointer as unconditional, and
-   the command's as the no-candidate and several-candidate cases, so the rerun
-   does not turn the fallback `discussion.test.ts:169-215` pins into an
-   obligation to reject. Steps 2 and 3 carry the same distinction wherever
-   their statements name the command.
+   the `## Change Requests` table of `_policies/10_delta.md`. It also adds this
+   record's ID to `DR-0266`'s `Related` field, which that record lacks today:
+   the drift protocol records a Change Request on the Decision Record it amends
+   as well as in the delta. Both packs follow that decision, so narrowing
+   either one first would leave it disagreeing with the record it cites.
+   **The clause keeps the command's single-candidate read**: it states the
+   helper's rejection of an absent pointer as unconditional, and the command's
+   as the no-candidate and several-candidate cases, so the rerun does not turn
+   the fallback `discussion.test.ts:169-215` pins into an obligation to reject.
+   Steps 2 and 3 carry the same distinction wherever their statements name the
+   command.
 
 2. `/qfai-sdd spec-0010`, mode `re-derive`, over `AC-0010-0012`,
    `BR-0010-0012` and the two `10_Plan.md` lines that restate the rejection,
@@ -198,12 +204,28 @@ them?
    each drops the duplicate state and keeps the absent and missing ones. The
    rerun records it as one row in `spec-0013/09_delta.md`'s
    `## Change Requests` table — `CR ID`, `Upstream artifact`, `Mode`,
-   `Approved by`, `Applied at` — not as a `## Triage` row.
+   `Approved by`, `Applied at` — not as a `## Triage` row — and adds this
+   record's ID to the `Related` field of `DR-0013-0002`, which lacks one, as
+   step 1 does for `DR-0266`.
 
-   Both pack reruns run Phase 2b, which also seeds the `E2E` rows those ledgers
-   lack, at `todo`: twelve in `spec-0010`, whose eight-column table it migrates
-   as well, and thirteen in `spec-0013`. Those rows are owed whatever this
-   record decides, and they are listed so the approval covers them.
+   Both pack reruns run Phase 2b, which also seeds, at `todo`, the `E2E` rows
+   those ledgers lack, and migrates `spec-0010`'s eight-column table. The
+   stories without a row are all twelve of `spec-0010`'s and thirteen of
+   `spec-0013`'s fourteen. **That is a floor on the rows, not their count.**
+   Phase 2b seeds one row per independently observable boundary a story's
+   criteria name, so `US-0010-0011` and `US-0010-0012`, each mapped to two
+   criteria, may take two rows each. The count is the one that derivation
+   reaches, and the approval covers the rows it seeds. They are owed whatever
+   this record decides.
+
+   **`spec-0013/TDD-0022` is the fourteenth story's row, and this record does
+   not re-scope it.** It is `done`, with one `Selector` over `AC-0013-0018`
+   and `AC-0013-0019`. Phase 2b touches a progressed row that conflates
+   boundaries only under a Change Request naming the row and the order of its
+   split (`.qfai/assistant/skills/qfai-sdd/references/sdd-phase-checklists.md`),
+   and this record names neither. So the `spec-0013` rerun raises that record
+   and leaves the row as it is until it is approved. Nothing else in this plan
+   waits on it.
 
 4. Downstream ledger sweep for `spec-0013/TDD-0024`. `TC-0013-0029` keeps two
    independently observable rejections once the duplicate state goes — an
@@ -218,6 +240,14 @@ them?
      with this CR's ID in `DR-ID`.
 
    No row is retired: the obligation survives, narrowed and split.
+
+   **`TDD-0023` is reset to `todo` as well**, with this CR's ID in `DR-ID`. The
+   case asserting that the helper infers nothing from file times belongs to
+   `TC-0013-0028`, which `TDD-0023` carries, but it sits in `TC-0013-0029`'s
+   `describe` and runs only under `TDD-0024`'s whole-`describe` `Selector`.
+   Narrowing that selector would leave the case under no row, so action 5 moves
+   it into the `describe` that `TDD-0023`'s `Selector` runs. That selector then
+   runs a case its recorded evidence does not cover.
 
 5. Under `/qfai-implement`, remove from
    `packages/qfai/src/core/discussionPack.ts` the `matches.length > 1` branch,
@@ -239,8 +269,27 @@ them?
    | `packages/qfai/src/core/validators/researchSummary.ts`         | 672      | a `currentId` naming no pack "(or two)"                                |
 
    Correct the header and `describe` of `activeDiscussionPack.test.ts`, which
-   still name the duplicate state. Both suites keep passing unchanged, because
-   neither exercises a duplicate — no test could construct one.
+   still name the duplicate state, and move its file-time guard case from
+   `TC-0013-0029`'s `describe` into `TC-0013-0028`'s, as action 4 sets out.
+   Both suites keep passing unchanged, because neither exercises a duplicate —
+   no test could construct one.
+
+   **These edits are cross-spec.** Before making them, the run takes the
+   detection step `.qfai/assistant/skills/qfai-implement/references/cross-spec-ownership.md`
+   sets out over every file above, reading every other spec's `done` rows.
+   Some matches are visible now:
+
+   | Test the edit reaches                                                      | `done` rows it certifies                                 |
+   | -------------------------------------------------------------------------- | -------------------------------------------------------- |
+   | `packages/qfai/tests/integration/cli/commands/discussion.test.ts`          | `spec-0010/TDD-0016`, `spec-0010/TDD-0017`               |
+   | `packages/qfai/tests/integration/spec0010DiscussionMockAndPointer.test.ts` | `spec-0010/TDD-0013`, `spec-0010/TDD-0014`               |
+   | `packages/qfai/tests/core/validators/designContractReadiness.test.ts`      | `spec-0004/TDD-0008` to `TDD-0010`, `spec-0012/TDD-0355` |
+
+   The walk at run time decides the full set. Each match is recorded under
+   `## Cross-spec obligations` in `.qfai/evidence/implement-spec-0013.md`, its
+   `Selector` is re-run against the changed tree, and `completion-reviewer`
+   reviews those rows' obligations beside `spec-0013`'s, with the fresh results
+   as its input.
 
 ## Resolution
 
