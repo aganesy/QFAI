@@ -157,6 +157,23 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   `parallelization-policy.md` and the skill now say items 6, 7 and 8 share the
   revision. No completed row in this repository changes result.
 
+- **A UI contract entry no screen is read from is reported** (#1734). Every
+  consumer of UI contracts reads screens the same way: it keeps the first entry
+  for each `id`, skips an entry with no `id` or no `route`, and reads no screen
+  from a `screens` value that is not a list. That reading stays.
+  What such an entry stated was checked by nothing, and nothing said so. An
+  empty `primary_tasks` on it passed the audit lane and the prototyping
+  preflight, and a different route was prototyped as the entry it repeated.
+  `QFAI-CONTRACT-042` now names each such entry with its file and position,
+  and for a repeated `id` it also names the entry read in its place. A
+  `screens` value that is not a list is named the same way. An `id` is repeated
+  only within one contract: each spec's own contract is read on its own, so
+  another spec may reuse it for a screen with the same `title`, `route` and
+  `primary_tasks`. Where those differ, the project-wide screen list the
+  prototyping loop captures from and the design audit reads keeps only the
+  first, and the second is named. The prototyping profile, which certification
+  accepts, reports the finding as well.
+
 - **The completion gate checks an `n/a (not UI-affecting)` against the clauses**
   (#1735). A row that records `n/a` owes no product-surface review, no capture
   manifest and no parity hash, and the gate took the value as given. It now
