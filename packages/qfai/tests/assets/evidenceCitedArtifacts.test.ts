@@ -5,7 +5,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { describe, expect, it } from "vitest";
-import { parseDocument, visit } from "yaml";
+import { parseAllDocuments, visit } from "yaml";
 
 import { compileGlob, findClassClose } from "../../src/core/atdd/scaffoldDialect.js";
 
@@ -599,14 +599,20 @@ function decodedJson(text: string): string {
  * unread.
  */
 function decodedRecord(text: string): string {
-  const document = parseDocument(text, { uniqueKeys: false });
-  if (document.errors.length > 0) return text;
+  // Every document of a stream. Read as one, a second document is a parse
+  // error, and the record would fall back to its raw text, where an escaped
+  // path holds no root.
+  const documents = parseAllDocuments(text, { uniqueKeys: false });
+  const list = Array.isArray(documents) ? documents : [];
+  if (list.some((document) => document.errors.length > 0)) return text;
   const strings: string[] = [];
-  visit(document, {
-    Scalar(_key, node) {
-      if (typeof node.value === "string") strings.push(...node.value.split("\n"));
-    },
-  });
+  for (const document of list) {
+    visit(document, {
+      Scalar(_key, node) {
+        if (typeof node.value === "string") strings.push(...node.value.split("\n"));
+      },
+    });
+  }
   return strings.join("\n");
 }
 
@@ -1074,6 +1080,10 @@ function alignsWithDotPolicy(parts: readonly string[], segments: readonly string
  * `.gitignore` through the first and `gitignore` through the second, so the
  * explicit spelling read as a wildcard's reach. Each alternative is therefore
  * asked on its own, and the segment admits the name when one of them spells it.
+ *
+ * An alternative spells the dot the way the matcher decides it: it starts with
+ * a `.`, escaped or not, or with a bracket expression that matches `.`. A `*` or
+ * a `?` there never does. So `[.g]*` and `[!g]*` both admit `.gitignore`.
  */
 function segmentAdmits(part: string, segment: string): boolean {
   const matches = (candidate: string, source: string): boolean =>
@@ -1086,8 +1096,16 @@ function segmentAdmits(part: string, segment: string): boolean {
   const alternatives = topLevelAlternativesOf(part);
   if (alternatives === null) return false;
   return alternatives.some(
-    (alternative) => matches(segment, alternative) && !matches(segment.slice(1), alternative),
+    (alternative) => spellsLeadingDot(alternative) && matches(segment, alternative),
   );
+}
+
+/** Whether a pattern's first element can consume a leading `.`, which the matcher asks of a dot-leading name. */
+function spellsLeadingDot(pattern: string): boolean {
+  if (pattern.startsWith(".") || pattern.startsWith("\\.")) return true;
+  if (!pattern.startsWith("[")) return false;
+  const close = findClassClose(pattern, 0);
+  return close !== -1 && new RegExp(`^${compileGlob(pattern.slice(0, close + 1))}$`).test(".");
 }
 
 /**
@@ -1833,6 +1851,33 @@ describe("a glob is a claim about a set", () => {
     // Negated, the separator joins what the class excludes.
     expect(compiled("tests[!a]integration").test("tests/integration")).toBe(false);
     expect(compiled("tests[!a]integration").test("testsbintegration")).toBe(true);
+  });
+
+  it("reads a leading class that matches a dot as spelling it", () => {
+    // The matcher admits `.gitignore` through `[.g]*` and `[!g]*`, since the
+    // class consumes the dot, and through no `*` or `?`.
+    expect(segmentAdmits("[.g]*", ".gitignore")).toBe(true);
+    expect(segmentAdmits("[!g]*", ".gitignore")).toBe(true);
+    expect(segmentAdmits("[g]*", ".gitignore")).toBe(false);
+    expect(segmentAdmits("?gitignore", ".gitignore")).toBe(false);
+  });
+
+  it("reads a bracket with no marker terminator as a class member", () => {
+    // `[[.T]` is a class of `[`, `.` and `T` to the matcher, not an unfinished
+    // collating symbol.
+    expect(findClassClose("[[.T]C", 0)).toBe(4);
+    expect(new RegExp(`^${compileGlob("[[.T]C-*.test.ts")}$`).test("TC-0000-0000.test.ts")).toBe(
+      true,
+    );
+  });
+
+  it("reads every document of a YAML stream", () => {
+    const record = ["note: first", "---", 'path: ".qfai\\u002freport\\u002fmissing.json"', ""].join(
+      "\n",
+    );
+    expect(citationsOf("x.yaml", decodedRecord(record)).map(([, cited]) => cited)).toEqual([
+      ".qfai/report/missing.json",
+    ]);
   });
 
   it("keeps a class whose first member is a bracket whole", () => {

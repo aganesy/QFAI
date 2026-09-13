@@ -531,9 +531,12 @@ export function findClassClose(pattern: string, open: number): number {
     const marker = char === "[" ? (pattern[index + 1] ?? "") : "";
     if (marker === ":" || marker === "=" || marker === ".") {
       const end = pattern.indexOf(`${marker}]`, index + 2);
-      if (end === -1) return -1;
-      index = end + 2;
-      continue;
+      // With no terminator the `[` is a member, as it is to the matcher:
+      // `[[.T]` holds `[`, `.` and `T`.
+      if (end !== -1) {
+        index = end + 2;
+        continue;
+      }
     }
     index += 1;
   }
