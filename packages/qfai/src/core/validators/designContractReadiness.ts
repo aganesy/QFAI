@@ -1033,7 +1033,7 @@ async function validatePrototypeHandoff(
     }
   }
 
-  issues.push(...procurementIssues(parsed.value.procurement, filePathRel));
+  issues.push(...procurementIssues(parsed.value, filePathRel));
 
   return issues;
 }
@@ -1052,9 +1052,21 @@ const PROCUREMENT_ROW_CELLS: Readonly<Record<string, readonly string[]>> = {
   authored: ["screen", "region", "why"],
 };
 
+/**
+ * A value left at an angle-bracket placeholder, as the shipped examples write
+ * one: `<screen id>`, `<what was looked for and did not serve>`.
+ *
+ * `PLACEHOLDER_RE` beside it knows the word forms (`tbd`, `todo`, `n/a`) and
+ * none of these, so the documented example copied with nothing replaced passed
+ * every cell — the unfilled template satisfying the check written to catch it.
+ */
+const ANGLE_PLACEHOLDER_RE = /^<[^<>]*>$/;
+
 /** Whether a cell holds something a later reader can act on. */
 function cellIsWritten(value: unknown): boolean {
-  return typeof value === "string" && value.trim().length > 0 && !PLACEHOLDER_RE.test(value.trim());
+  if (typeof value !== "string") return false;
+  const trimmed = value.trim();
+  return trimmed.length > 0 && !PLACEHOLDER_RE.test(trimmed) && !ANGLE_PLACEHOLDER_RE.test(trimmed);
 }
 
 /**
@@ -1068,8 +1080,13 @@ function cellIsWritten(value: unknown): boolean {
  * with no `why` satisfies the reviewer's last-resort criterion on its face
  * while recording none of what that criterion asks for.
  */
-function procurementIssues(procurement: unknown, filePathRel: string): Issue[] {
-  if (procurement === undefined || procurement === null) return [];
+function procurementIssues(handoff: Record<string, unknown>, filePathRel: string): Issue[] {
+  // Absent, not empty. The contract lets a screen drawn entirely from what the
+  // project already had omit the key; a bare `procurement:` parses as `null`,
+  // which is a declaration present and saying nothing, and reading the two as
+  // one let the second past the shape check below.
+  if (!("procurement" in handoff)) return [];
+  const procurement = handoff.procurement;
   const report = (message: string): Issue =>
     issue(
       "QFAI-DCON-013",
@@ -1087,6 +1104,19 @@ function procurementIssues(procurement: unknown, filePathRel: string): Issue[] {
   }
 
   const issues: Issue[] = [];
+  // A closed key set, as `prototyping/handoff.ts` keeps for the schema beside
+  // this one: "closed schema; protects against schema drift and typos". A
+  // misspelled list left both known names absent, so no row was read and the
+  // manifest passed while exposing nothing to either consumer.
+  const unknown = Object.keys(procurement).filter((key) => !(key in PROCUREMENT_ROW_CELLS));
+  if (unknown.length > 0) {
+    issues.push(
+      report(
+        `field 'procurement' carries ${unknown.map((key) => `'${key}'`).join(", ")}, which ` +
+          `nothing reads. The lists are 'procured' and 'authored'.`,
+      ),
+    );
+  }
   for (const [list, cells] of Object.entries(PROCUREMENT_ROW_CELLS)) {
     const rows = procurement[list];
     if (rows === undefined || rows === null) continue;

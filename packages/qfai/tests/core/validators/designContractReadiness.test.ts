@@ -421,6 +421,54 @@ describe("validateSddDesignContractReadiness (TC-3.8.x)", () => {
       expect(await seeded([])).toEqual([]);
     });
 
+    it("reports a key present and saying nothing", async () => {
+      // A bare `procurement:` parses as null. The contract permits omitting the
+      // key, not declaring it and leaving it empty, and reading the two as one
+      // let a present declaration past the shape check.
+      const messages = await seeded(["procurement:"]);
+      expect(messages).toHaveLength(1);
+      expect(messages[0]).toContain("must be a mapping");
+    });
+
+    it("reports the shipped example, copied and filled in with nothing", async () => {
+      // The documented example writes its cells as `<screen id>` and the like,
+      // and the word-form placeholder list knows none of them — so the unfilled
+      // template satisfied the check written to catch it. Read out of the
+      // shipped file rather than restated, so the two cannot drift apart.
+      const handoff = await readFile(
+        path.join(
+          getInitAssetsDir(),
+          ".qfai/assistant/skills/qfai-prototyping/references/handoff.md",
+        ),
+        "utf-8",
+      );
+      const lines = handoff.split(/\r?\n/);
+      const at = lines.findIndex((line) => line.trimEnd() === "procurement:");
+      expect(at, "handoff.md no longer shows a procurement block").toBeGreaterThanOrEqual(0);
+      const block: string[] = [];
+      for (const line of lines.slice(at)) {
+        if (block.length > 0 && /^\S/.test(line)) break;
+        block.push(line);
+      }
+      expect(block.join("\n")).toContain("<screen id>");
+
+      const messages = await seeded(block);
+
+      // Every row of the example, each named for the cells it does not carry.
+      expect(messages.length).toBeGreaterThan(0);
+      for (const message of messages) expect(message).toContain("names no screen, region");
+    });
+
+    it("reports a list name nothing reads", async () => {
+      // A closed key set, as the sibling schema keeps. Misspelled, both known
+      // names are absent, so no row is read and the manifest passes while
+      // exposing nothing to either consumer.
+      const messages = await seeded(["procurement:", "  procurred:", '    - screen: "dashboard"']);
+      expect(messages).toHaveLength(1);
+      expect(messages[0]).toContain("'procurred'");
+      expect(messages[0]).toContain("which nothing reads");
+    });
+
     it("says nothing about well-formed rows", async () => {
       expect(
         await seeded([

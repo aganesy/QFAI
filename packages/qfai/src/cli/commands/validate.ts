@@ -1804,7 +1804,7 @@ export const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
   "QFAI-DCON-009": "design-system.yaml must parse as an object-shaped YAML document.",
   "QFAI-DCON-012": "prototype-handoff.yaml must parse as an object-shaped YAML document.",
   "QFAI-DCON-013":
-    "prototype-handoff.yaml must contain source prototypes, surface profiles, screens, visual DNA, and implementation handoff guidance.",
+    "prototype-handoff.yaml must carry `finalIterIndex` and the scalar paths `finalArtifact`, `designMdPath`, `designMdSha256`, `designSystemMirror` and `implementationNotes`, and each `procurement` row must name what realises the region — `screen`, `region`, `item` for a procured one and `screen`, `region`, `why` for an authored one.",
   "QFAI-DCON-019":
     "design-system.yaml and prototype-handoff.yaml are produced by /qfai-prototyping, not /qfai-sdd.",
   "QFAI-DCON-030":
