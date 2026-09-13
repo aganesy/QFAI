@@ -626,9 +626,17 @@ function decodedRecord(text: string): string {
   // path holds no root.
   const documents = parseAllDocuments(text, { uniqueKeys: false });
   const list = Array.isArray(documents) ? documents : [];
-  if (list.some((document) => document.errors.length > 0)) return text;
+  if (list.length === 0) return text;
   const strings: string[] = [];
   for (const document of list) {
+    // A document that does not parse is read as its own text, and the others in
+    // the stream still decode: falling back to the whole record's text left an
+    // escaped path in a valid document with no root to find.
+    if (document.errors.length > 0) {
+      const [start, , end] = document.range;
+      strings.push(...text.slice(start, end).split("\n"));
+      continue;
+    }
     visit(document, {
       Scalar(_key, node) {
         if (typeof node.value === "string") strings.push(...node.value.split("\n"));
@@ -1019,6 +1027,9 @@ function globToRegExp(cited: string): RegExp {
   return new RegExp(`^${compileGlob(cited)}$`);
 }
 
+/** The longest path a file system opens, `PATH_MAX` on Linux; a longer citation names nothing. */
+const CITATION_LENGTH_LIMIT = 4096;
+
 /** The most variable-width parts one segment of a matched citation may hold. */
 const MATCH_PART_LIMIT = 4;
 
@@ -1283,6 +1294,9 @@ function splitAlternatives(body: string): string[] {
  * of what a set-naming citation claims.
  */
 function resolves(cited: string, paths: ReturnType<typeof trackedPaths> = tracked): boolean {
+  // No file system opens a longer path, and every pass below grows faster than
+  // the citation: ten thousand nested literal braces took seconds to scan.
+  if (cited.length > CITATION_LENGTH_LIMIT) return false;
   // Every name, not one of them: a brace list claims all of what it names, and
   // a check that any member resolves passes a pack missing two of three.
   // Whenever expansion changed the citation, not only where it produced several
@@ -2112,6 +2126,21 @@ describe("a glob is a claim about a set", () => {
     expect(withinMatchBudget(".qfai/report/+(run-).json")).toBe(true);
     expect(withinMatchBudget(".qfai/report/[*][*][*][*][*].json")).toBe(true);
     expect(withinMatchBudget(".qfai/discussion/discussion-*/**/0?_*.md")).toBe(true);
+  });
+
+  it("leaves a citation longer than any path unresolved without scanning it", () => {
+    const nested = `.qfai/report/${"{".repeat(10_000)}x${"}".repeat(10_000)}`;
+    const started = Date.now();
+    expect(resolves(nested)).toBe(false);
+    expect(Date.now() - started).toBeLessThan(1000);
+  });
+
+  it("decodes the documents of a stream that parse beside one that does not", () => {
+    const record = ['path: ".qfai\\u002freport\\u002fmissing.json"', "---", "a: [unclosed"].join(
+      "\n",
+    );
+    expect(decodedRecord(record)).toContain(".qfai/report/missing.json");
+    expect(decodedRecord(record)).toContain("a: [unclosed");
   });
 
   it("counts every wildcard a run of stars compiles to", () => {

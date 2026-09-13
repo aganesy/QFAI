@@ -494,15 +494,6 @@ export function compileGlob(pattern: string): string {
   return source;
 }
 
-/**
- * Where the bracket expression opened at `open` ends, or `-1`.
- *
- * Two things make a `]` something other than the terminator: one written first
- * in the class, where it is an ordinary member, and the `]` that closes a POSIX
- * sub-expression. A scan for the first `]` stops inside `[[:digit:]]` and
- * compiles a class over the characters of the word `digit`, which matches none
- * of the names the pattern was written for.
- */
 /** An expression that matches nothing, for a class the author wrote wrongly. */
 const NEVER_MATCHES = "(?!)";
 
@@ -516,6 +507,15 @@ function isUsableExpression(source: string): boolean {
   }
 }
 
+/**
+ * Where the bracket expression opened at `open` ends, or `-1`.
+ *
+ * Two things make a `]` something other than the terminator: one written first
+ * in the class, where it is an ordinary member, and the `]` that closes a POSIX
+ * sub-expression. A scan for the first `]` stops inside `[[:digit:]]` and
+ * compiles a class over the characters of the word `digit`, which matches none
+ * of the names the pattern was written for.
+ */
 export function findClassClose(pattern: string, open: number): number {
   let index = open + 1;
   if (pattern[index] === "!" || pattern[index] === "^") index += 1;
