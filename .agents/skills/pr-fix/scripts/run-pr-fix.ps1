@@ -165,7 +165,22 @@ function StripAutoImport([string]$Body) {
 
 function RemovalAnswer([string]$Body) {
   $text = StripAutoImport $Body
-  $text = [regex]::Replace($text, '(?ms)^[ \t]{0,3}(?<fence>`{3,}|~{3,})[^\n]*\n.*?^[ \t]{0,3}\k<fence>[ \t]*$', '')
+  $fence = ""
+  $text = (@(foreach ($line in ($text -split "`n")) {
+    if ($fence.Length -gt 0) {
+      $closing = [regex]::Match($line, '^[ \t]{0,3}(`{3,}|~{3,})[ \t]*$').Groups[1].Value
+      if ($closing.Length -ge $fence.Length -and $closing[0] -eq $fence[0]) { $fence = "" }
+      ""
+      continue
+    }
+    $opening = [regex]::Match($line, '^[ \t]{0,3}(`{3,}|~{3,})(.*)$')
+    if ($opening.Success -and -not ($opening.Groups[1].Value[0] -eq '`' -and $opening.Groups[2].Value.Contains('`'))) {
+      $fence = $opening.Groups[1].Value
+      ""
+      continue
+    }
+    $line
+  })) -join "`n"
   $text = [regex]::Replace($text, '(?s)<!--.*?-->', '')
   $match = [regex]::Match($text, '(?ms)^## What (?:this|a) change made unnecessary[ \t]*\n(?<answer>.*?)(?=^#{1,2} |\z)')
   if (-not $match.Success) { return "" }
@@ -555,13 +570,15 @@ while ($streak -lt $effectiveRequiredZeroStreak) {
   $firstPoll = $false
 
   $snapshot = RunJson "gh" @("pr", "view", "$targetPrNumber", "--json", "number,title,body,baseRefName,headRefName,statusCheckRollup,url") "Failed to refresh PR details."
-  $bodyCheck = Compliance ([string]$snapshot.body)
-  if (-not $bodyCheck.IsCompliant) {
-    $streak = 0
-    $bodyArtifact = "pr-{0}-body-compliance.json" -f $targetPrNumber
-    [void](SaveJson -Root $root -Name $bodyArtifact -Value $bodyCheck)
-    [void](SaveMonitorStatus -Root $root -Number $targetPrNumber -Mode $mode -EffectiveSleep $effectiveSleepSeconds -EffectiveStreak $effectiveRequiredZeroStreak -CurrentStreak $streak -State "action_required_body" -BlockingArtifact $bodyArtifact -NextAction "Restore the required authored PR sections, update the PR body, then rerun the live monitor.")
-    throw "PR body is no longer template-compliant. Update the PR body, then rerun the live monitor."
+  if (-not $DryRun) {
+    $bodyCheck = Compliance ([string]$snapshot.body)
+    if (-not $bodyCheck.IsCompliant) {
+      $streak = 0
+      $bodyArtifact = "pr-{0}-body-compliance.json" -f $targetPrNumber
+      [void](SaveJson -Root $root -Name $bodyArtifact -Value $bodyCheck)
+      [void](SaveMonitorStatus -Root $root -Number $targetPrNumber -Mode $mode -EffectiveSleep $effectiveSleepSeconds -EffectiveStreak $effectiveRequiredZeroStreak -CurrentStreak $streak -State "action_required_body" -BlockingArtifact $bodyArtifact -NextAction "Restore the required authored PR sections, update the PR body, then rerun the live monitor.")
+      throw "PR body is no longer template-compliant. Update the PR body, then rerun the live monitor."
+    }
   }
   $threads = @(Threads -Owner ([string]$repo.owner.login) -Repo ([string]$repo.name) -Number $targetPrNumber)
   $checkState = EvaluateChecks $snapshot

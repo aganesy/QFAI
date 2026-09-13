@@ -280,7 +280,20 @@ jobs:
             const existing = readFileSync(existingPath, 'utf8');
             const generated = readFileSync(bodyPath, 'utf8');
             const section = /^## What (?:this|a) change made unnecessary[ \t]*\r?\n([\s\S]*?)(?=^#{1,2} |(?![\s\S]))/m;
-            const visible = existing.replace(/^[ \t]{0,3}(`{3,}|~{3,})[^\n]*\n[\s\S]*?^[ \t]{0,3}\1[ \t]*$/gm, block => block.replace(/[^\r\n]/g, ' ')).replace(/<!--[\s\S]*?-->/g, block => block.replace(/[^\r\n]/g, ' '));
+            let fence = '';
+            const visible = existing.replace(/^[^\n]*/gm, line => {
+              if (fence) {
+                const closing = /^[ \t]{0,3}(`{3,}|~{3,})[ \t]*\r?$/.exec(line)?.[1] ?? '';
+                if (closing[0] === fence[0] && closing.length >= fence.length) fence = '';
+                return line.replace(/[^\r\n]/g, ' ');
+              }
+              const opening = /^[ \t]{0,3}(`{3,}|~{3,})(.*)\r?$/.exec(line);
+              if (opening && !(opening[1][0] === '`' && opening[2].includes('`'))) {
+                fence = opening[1];
+                return line.replace(/[^\r\n]/g, ' ');
+              }
+              return line;
+            }).replace(/<!--[\s\S]*?-->/g, block => block.replace(/[^\r\n]/g, ' '));
             const match = section.exec(visible);
             const answer = (match?.[1] ?? '').replace(/<!--[\s\S]*?-->/g, '').replace(/^[ \t]*(?:[-*+]|\d+[.)])[ \t]*(?:\[[ xX-]?\][ \t]*)?/gm, '').replace(/[`*_]/g, '').trim();
             let next = existing;

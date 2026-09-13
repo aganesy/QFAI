@@ -84,6 +84,7 @@ type FakePageInfo = {
 
 type RunResult = {
   code: number | null;
+  ghState: Record<string, unknown>;
   repoDir: string;
   stderr: string;
   stdout: string;
@@ -132,6 +133,10 @@ describe("run-pr-fix strict monitor", { timeout: 120000 }, () => {
     ["empty lists", "## What this change made unnecessary\n\n- [ ]\n*\n1.\n"],
     ["listed unresolved", "## What this change made unnecessary\n\n- TBD\n"],
     ["fenced", "```md\n## What this change made unnecessary\n\nNothing.\n```\n"],
+    ["longer backtick close", "```md\n## What this change made unnecessary\n\nNothing.\n````\n"],
+    ["longer tilde close", "~~~md\n## What this change made unnecessary\n\nNothing.\n~~~~\n"],
+    ["short close", "````md\n```\n## What this change made unnecessary\n\nNothing.\n````\n"],
+    ["wrong marker close", "```md\n~~~\n## What this change made unnecessary\n\nNothing.\n````\n"],
   ])("blocks a %s removal answer without inventing nothing", async (_name, section) => {
     const body = compliantPrBody().replace(
       /## What this change made unnecessary\n\nNothing\.\n\n/,
@@ -156,7 +161,11 @@ describe("run-pr-fix strict monitor", { timeout: 120000 }, () => {
     expect(preview.split("## Auto-import")[0]).not.toContain("Nothing.");
   });
 
-  it("preserves an authored removal answer while repairing other metadata", async () => {
+  it.each([
+    "",
+    "```md\n## What this change made unnecessary\n\nExample only.\n````\n\n",
+    "~~~md\n## What this change made unnecessary\n\nExample only.\n~~~~\n\n",
+  ])("preserves an authored removal answer while repairing other metadata", async (prefix) => {
     const answer =
       "A duplicate check. The existing validator stays because it covers malformed inputs.";
     const result = await runPrFix({
@@ -165,19 +174,22 @@ describe("run-pr-fix strict monitor", { timeout: 120000 }, () => {
         changedFiles: ["REVIEW.md"],
         prViews: [
           makePrView([successCheck()], {
-            body: `## What this change made unnecessary\n\n${answer}\n`,
+            body: `${prefix}## What this change made unnecessary\n\n${answer}\n`,
           }),
-          makePrView([successCheck()], { body: compliantPrBody().replace("Nothing.", answer) }),
         ],
         threads: [[]],
       }),
     });
     expect(result.code).toBe(0);
+    expect(combinedOutput(result)).toContain("Dry-run completed.");
+    expect(result.ghState.prEditCount ?? 0).toBe(0);
+    expect(result.ghState.threadsCount).toBe(1);
     const preview = await readFile(
       path.join(result.repoDir, "tmp", "pr-fix", "pr-166-body-repaired.md"),
       "utf-8",
     );
     expect(preview.split("## Auto-import")[0]).toContain(answer);
+    expect(preview.split("## Auto-import")[0]).not.toContain("Example only.");
   });
 
   it("extracts version markers from non-feature branch prefixes and blocks mismatches", async () => {
@@ -768,7 +780,7 @@ async function runPrFix(options: {
     QFAI_FAKE_STATE_PATH: statePath,
   });
 
-  return { ...result, repoDir };
+  return { ...result, ghState: await readJson(statePath), repoDir };
 }
 
 function toPowerShellToken(value: string): string {
@@ -928,6 +940,8 @@ function ghStubScript(): string {
     "}",
     "",
     'if (args[0] === "pr" && args[1] === "edit") {',
+    "  state.prEditCount = (state.prEditCount ?? 0) + 1;",
+    "  saveState();",
     "  process.exit(0);",
     "}",
     "",

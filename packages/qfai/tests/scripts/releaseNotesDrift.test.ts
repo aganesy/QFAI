@@ -19,6 +19,7 @@ import { fileURLToPath } from "node:url";
 
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+import { maskFencedCodeBlocks } from "../../src/core/ids.js";
 import {
   TRUNCATION_MARKER,
   entryTitles,
@@ -311,10 +312,25 @@ describe("resuming a release pull-request description", () => {
     ["empty", "## What this change made unnecessary\n\n<!-- Answer required. -->\n"],
     ["Markdown-only", "## What this change made unnecessary\n\n- [ ]\n"],
     ["fenced example", "```md\n## What this change made unnecessary\n\nNothing.\n```\n"],
+    ["longer backtick close", "```md\n## What this change made unnecessary\n\nNothing.\n````\n"],
+    [
+      "longer tilde close",
+      "~~~md\r\n## What this change made unnecessary\r\n\r\nNothing.\r\n~~~~\r\n",
+    ],
+    ["short close", "````md\n```\n## What this change made unnecessary\n\nNothing.\n````\n"],
+    ["wrong marker close", "```md\n~~~\n## What this change made unnecessary\n\nNothing.\n````\n"],
     ["commented example", "<!--\n## What this change made unnecessary\n\nNothing.\n-->\n"],
     [
       "authored",
       "## What this change made unnecessary\n\nA superseded pin. Notes stay to document this release.\n",
+    ],
+    [
+      "authored after backtick fence",
+      "```md\n## What this change made unnecessary\n\nExample only.\n````\n\n## What this change made unnecessary\n\nA superseded pin. Notes stay to document this release.\n",
+    ],
+    [
+      "authored after tilde fence",
+      "~~~md\n## What this change made unnecessary\n\nExample only.\n~~~~\n\n## What this change made unnecessary\n\nA superseded pin. Notes stay to document this release.\n",
     ],
   ])("preserves other prose when the removal answer is %s", async (name, section) => {
     const workflow = await readFile(
@@ -354,11 +370,11 @@ describe("resuming a release pull-request description", () => {
     const updated = await readFile(bodyPath, "utf-8");
     expect(updated.startsWith(retained)).toBe(true);
     expect(updated).not.toContain("Generated prose.");
-    if (name === "authored") {
+    if (name.startsWith("authored")) {
       expect(updated).toBe(existing);
     } else {
       expect(updated).toContain(answer);
-      const outsideCode = updated.replace(/```[\s\S]*?```/g, "").replace(/<!--[\s\S]*?-->/g, "");
+      const outsideCode = maskFencedCodeBlocks(updated).replace(/<!--[\s\S]*?-->/g, "");
       expect(outsideCode.match(/^## What this change made unnecessary$/gm)).toHaveLength(1);
     }
   });
