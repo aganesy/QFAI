@@ -24,6 +24,9 @@ describe("repository async guidance agrees with the retained-failure test", () =
       expect(flat).toContain(
         "do not add a catch for a failure that no specification, contract or observation names",
       );
+      expect(flat).toContain(
+        "at a callback boundary that ignores return values, require an adapter that adopts asynchronous work and handles rejections under the same floor",
+      );
       expect(text).not.toContain("every async path must have explicit error handling");
       if (file === "REVIEW.md") {
         expect(text).not.toContain("Missing error handling or incomplete error messages");

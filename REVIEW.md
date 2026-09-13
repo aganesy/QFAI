@@ -9,7 +9,9 @@ Do not suppress any actionable finding.
 Await or return every promise. Returning propagates only when its caller awaits
 or adopts the promise. Subject to the safety floor in
 `.agents/rules/minimal-implementation.md` § 2, do not add a catch for a failure
-that no specification, contract or observation names.
+that no specification, contract or observation names. At a callback boundary
+that ignores return values, require an adapter that adopts asynchronous work
+and handles rejections under the same floor.
 
 - Style and formatting inconsistencies
 - Naming improvements (variables, functions, types, files)

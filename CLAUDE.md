@@ -10,7 +10,9 @@ Quality-First AI (QFAI) — specification-driven development の検証フレー�
 - TypeScript: await or return every promise. Returning propagates only when its
   caller awaits or adopts the promise. Subject to the safety floor in
   `.agents/rules/minimal-implementation.md` § 2, do not add a catch for a failure
-  that no specification, contract or observation names.
+  that no specification, contract or observation names. At a callback boundary
+  that ignores return values, require an adapter that adopts asynchronous work
+  and handles rejections under the same floor.
 - Keep functions focused; extract when a function exceeds ~50 lines.
 - Try solutions in the order `.claude/rules/minimal-implementation.md`
   (master: `.agents/rules/minimal-implementation.md`) sets out, and mark a
