@@ -542,7 +542,13 @@ function decodedJson(text: string): string {
   const collect = (value: unknown): void => {
     if (typeof value === "string") strings.push(...value.split("\n"));
     else if (Array.isArray(value)) value.forEach(collect);
-    else if (typeof value === "object" && value !== null) Object.values(value).forEach(collect);
+    else if (typeof value === "object" && value !== null) {
+      // A key is a string too, and a manifest often keys its entries by path.
+      for (const [name, member] of Object.entries(value)) {
+        strings.push(...name.split("\n"));
+        collect(member);
+      }
+    }
   };
   try {
     collect(JSON.parse(text));
@@ -586,21 +592,28 @@ function citationsOf(file: string, text: string): Citation[] {
  */
 function disclaimedByLine(text: string): Array<"all" | Set<string> | undefined> {
   const lines = text.split("\n");
-  const disclaimed: Array<"all" | Set<string> | undefined> = lines.map((line) =>
-    NOT_A_CITATION.test(line) ? "all" : undefined,
-  );
+  const disclaimed: Array<"all" | Set<string> | undefined> = lines.map(() => undefined);
   let open: { character: string; length: number } | null = null;
   let covers: Set<string> | null = null;
   lines.forEach((line, index) => {
+    // Only outside a fence: inside one the marker is part of what the command
+    // printed, and read as a disclaimer it hid every citation on the line.
+    const outside = (): void => {
+      if (open === null && NOT_A_CITATION.test(line)) disclaimed[index] = "all";
+    };
     const fence = /^ {0,3}(`{3,}|~{3,})(.*)$/.exec(line);
     if (fence === null) {
       if (open !== null && covers !== null) disclaimed[index] = covers;
+      outside();
       return;
     }
     const run = fence[1] ?? "";
     const rest = fence[2] ?? "";
     if (open === null) {
-      if (run.startsWith("`") && rest.includes("`")) return;
+      if (run.startsWith("`") && rest.includes("`")) {
+        outside();
+        return;
+      }
       open = { character: run[0] ?? "`", length: run.length };
       covers = disclaimedPaths(lines[index - 1] ?? "");
       return;
@@ -676,27 +689,33 @@ function expandBraces(cited: string): string[] {
  * names three files, not one called `1..3`.
  */
 function braceRange(body: string): string[] | null {
-  const numeric = /^(-?\d+)\.\.(-?\d+)$/.exec(body);
+  const numeric = /^(-?\d+)\.\.(-?\d+)(?:\.\.(-?\d+))?$/.exec(body);
   if (numeric !== null) {
     const [from, to] = [numeric[1] ?? "", numeric[2] ?? ""];
     const width = /^-?0\d/.test(from) || /^-?0\d/.test(to) ? Math.max(from.length, to.length) : 0;
     const [start, end] = [Number(from), Number(to)];
-    const step = start <= end ? 1 : -1;
+    const step = (start <= end ? 1 : -1) * rangeIncrement(numeric[3]);
     const members: string[] = [];
     for (let value = start; step > 0 ? value <= end : value >= end; value += step) {
       members.push(String(value).padStart(width, "0"));
     }
     return members;
   }
-  const alphabetic = /^([A-Za-z])\.\.([A-Za-z])$/.exec(body);
+  const alphabetic = /^([A-Za-z])\.\.([A-Za-z])(?:\.\.(-?\d+))?$/.exec(body);
   if (alphabetic === null) return null;
   const [start, end] = [(alphabetic[1] ?? "").charCodeAt(0), (alphabetic[2] ?? "").charCodeAt(0)];
-  const step = start <= end ? 1 : -1;
+  const step = (start <= end ? 1 : -1) * rangeIncrement(alphabetic[3]);
   const members: string[] = [];
   for (let code = start; step > 0 ? code <= end : code >= end; code += step) {
     members.push(String.fromCharCode(code));
   }
   return members;
+}
+
+/** A range's increment, `{1..5..2}`: its size, and 1 where it names none or 0. */
+function rangeIncrement(written: string | undefined): number {
+  const size = Math.abs(Number(written ?? 1));
+  return size === 0 ? 1 : size;
 }
 
 /**
@@ -1330,6 +1349,31 @@ describe("a glob is a claim about a set", () => {
     ]);
     expect(expandBraces("r-{08..10}")).toEqual(["r-08", "r-09", "r-10"]);
     expect(expandBraces("r-{c..a}")).toEqual(["r-c", "r-b", "r-a"]);
+  });
+
+  it("expands a stepped brace range", () => {
+    expect(expandBraces("run-{1..5..2}")).toEqual(["run-1", "run-3", "run-5"]);
+    expect(expandBraces("run-{a..e..2}")).toEqual(["run-a", "run-c", "run-e"]);
+  });
+
+  it("reads a marker inside a fence as transcript text", () => {
+    const FENCE = "`".repeat(3);
+    const text = [
+      FENCE,
+      "wrote .qfai/report/missing.json <!-- qfai:not-a-citation -->",
+      FENCE,
+      "prose about .qfai/report/other.json <!-- qfai:not-a-citation -->",
+    ].join("\n");
+    expect(citationsOf("x.md", text).map(([, cited]) => cited)).toEqual([
+      ".qfai/report/missing.json",
+    ]);
+  });
+
+  it("reads a JSON record's keys as well as its values", () => {
+    const record = JSON.stringify({ ".qfai/report/missing.json": "sha256:0" });
+    expect(citationsOf("x.json", decodedJson(record)).map(([, cited]) => cited)).toEqual([
+      ".qfai/report/missing.json",
+    ]);
   });
 
   it("counts nothing where a Windows path holds the root", () => {
