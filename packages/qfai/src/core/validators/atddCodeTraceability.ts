@@ -418,6 +418,10 @@ async function collectUnreadableTestGlobs(root: string, config: QfaiConfig): Pro
     });
     return [];
   } catch (error) {
+    // A directory the globs reach that cannot be read is not this stage's to
+    // report: it scans only its own acceptance directories, rebuilt from the
+    // extensions, and a `tests/unit` it never opens cannot fail the stage.
+    if (isFileSystemError(error)) return [];
     const reason = error instanceof Error ? error.message : String(error);
     return [
       issue(
@@ -428,9 +432,7 @@ async function collectUnreadableTestGlobs(root: string, config: QfaiConfig): Pro
         "atddCodeTraceability.testFileGlobs",
         globs.map((glob) => JSON.stringify(glob)),
         "canonical",
-        isFileSystemError(error)
-          ? "A directory the configured test globs reach could not be read. Make it readable to the account running `qfai validate`, or exclude it with `validation.traceability.testFileExcludeGlobs` where it holds no test."
-          : "Fix `validation.traceability.testFileGlobs` so the glob matcher accepts every pattern, and run `/qfai-configure` to set them against the real layout.",
+        "Fix `validation.traceability.testFileGlobs` so the glob matcher accepts every pattern, and run `/qfai-configure` to set them against the real layout.",
       ),
     ];
   }

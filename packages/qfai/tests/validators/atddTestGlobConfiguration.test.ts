@@ -143,8 +143,9 @@ describe("the stage says when the glob matcher refuses its globs", () => {
     expect(probe?.ignore).toEqual([...DEFAULT_TEST_FILE_EXCLUDE_GLOBS, "tests/locked/**"]);
   });
 
-  it("sends a directory it could not read to a permission fix, not a pattern fix", async () => {
-    // The pattern was accepted; what failed is a directory it reached.
+  it("leaves a directory it never reads to the scans that do, and sends those to a permission fix", async () => {
+    // The pattern was accepted; what failed is a directory it reached. The ATDD
+    // stage never opens it, and the stub scan, which does, names the repair.
     const root = await projectWithAcceptanceTest();
     const denied = Object.assign(new Error("EACCES: permission denied, scandir"), {
       code: "EACCES",
@@ -156,7 +157,7 @@ describe("the stage says when the glob matcher refuses its globs", () => {
       const [atdd] = (await validateAtddCodeTraceability(root, config, { evaluated })).filter(
         (finding) => finding.code === "QFAI-ATDD-134",
       );
-      expect(atdd?.suggested_action).toContain("readable");
+      expect(atdd).toBeUndefined();
       const [stub] = (await validateTestTodoStubs(root, config)).filter(
         (finding) => finding.code === "QFAI-TEST-002",
       );
