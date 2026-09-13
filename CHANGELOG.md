@@ -25,7 +25,9 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 - The implementation rule handles only failures not excluded by types or schemas
   and named by a specification, contract or observation, subject to the safety
-  floor. Other failures propagate; promises must be awaited or returned (#1802).
+  floor. Other failures propagate; promises must be awaited or returned to a
+  consuming caller. Callback hosts that ignore returns require an explicit
+  adapter that adopts the asynchronous result and handles boundary rejections (#1802).
 
 - **The working-tree address excludes a nested project's own records, and stops on
   a FIFO or socket git does not list** (#1747). The collection reads the lists

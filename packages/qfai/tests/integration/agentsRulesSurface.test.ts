@@ -21,6 +21,9 @@ describe("the retained-failure test stays under the safety floor", () => {
     expect(flat).toContain("no type or schema excludes it");
     expect(flat).toContain("the specification, a contract or an actual observation names it");
     expect(flat).toContain(
+      "only when both hold: no type or schema excludes it, and the specification, a contract or an actual observation names it. Other failures propagate to the caller.",
+    );
+    expect(flat).toContain(
       "Every promise is awaited or returned to a caller that awaits or adopts it, never dropped",
     );
     expect(flat).toContain("callback runtime ignores returned promises");
@@ -29,7 +32,8 @@ describe("the retained-failure test stays under the safety floor", () => {
     expect(flat).toContain(
       "Do not make the callback async and assume its ignored outer promise is consumed",
     );
-    expect(flat).toContain(".qfai/specs/spec-*/06_Test-Cases.md");
+    expect(flat).toContain("<paths.specsDir>/spec-*/06_Test-Cases.md");
+    expect(flat).toContain("Resolve `paths.specsDir` from `qfai.config.yaml`");
     expect(flat).toContain("process entry point is a trust boundary");
     expect(flat).toContain("A dropped rejection remains a correctness defect");
     expect(flat).toContain("06_Test-Cases.md");

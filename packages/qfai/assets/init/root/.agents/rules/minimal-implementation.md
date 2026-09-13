@@ -60,7 +60,9 @@ rejections at that trust boundary. Do not make the callback async and assume
 its ignored outer promise is consumed. An ignored return is a dropped promise,
 not propagation.
 
-An observation has a test-case row in `.qfai/specs/spec-*/06_Test-Cases.md`.
+An observation has a test-case row in
+`<paths.specsDir>/spec-*/06_Test-Cases.md`. Resolve `paths.specsDir` from
+`qfai.config.yaml`; `.qfai/specs` is only the default.
 The process entry point is a trust boundary and handles failures that propagate
 that far. A dropped rejection remains a correctness defect under
 `.qfai/assistant/constitution/drift-protocol.md`.
