@@ -95,7 +95,19 @@ writer.
 - Tests: `packages/qfai/tests/integration/cli/commands/prototypingIterate.aggregateMirror.test.ts` / `spec-0012/TDD-0484`
 - Contracts: `-` — `.qfai/contracts/cli/qfai-prototyping-iterate.md`, `.qfai/contracts/cli/qfai-prototyping.md`
 - Schema: `-`
-- Upstream paths edited under this CR: `.qfai/specs/spec-0012/01_Spec.md`, `.qfai/specs/spec-0012/02_User-stories.md`, `.qfai/specs/spec-0012/03_Acceptance-Criteria.md`, `.qfai/specs/spec-0012/04_Business-Rules.md`, `.qfai/specs/spec-0012/05_Examples.md`, `.qfai/specs/spec-0012/06_Test-Cases.md`, `.qfai/specs/spec-0012/tdd/test-list.md`, `.qfai/contracts/cli/qfai-prototyping-iterate.md`, `.qfai/contracts/cli/qfai-prototyping.md`
+- Upstream paths edited under this CR, by outcome:
+
+  | Path                                              | Kept under      |
+  | ------------------------------------------------- | --------------- |
+  | `.qfai/specs/spec-0012/01_Spec.md`                | options 1 and 3 |
+  | `.qfai/specs/spec-0012/02_User-stories.md`        | options 1 and 3 |
+  | `.qfai/specs/spec-0012/03_Acceptance-Criteria.md` | options 1 and 3 |
+  | `.qfai/specs/spec-0012/04_Business-Rules.md`      | options 1 and 3 |
+  | `.qfai/specs/spec-0012/05_Examples.md`            | options 1 and 3 |
+  | `.qfai/specs/spec-0012/06_Test-Cases.md`          | options 1 and 3 |
+  | `.qfai/specs/spec-0012/tdd/test-list.md`          | every option    |
+  | `.qfai/contracts/cli/qfai-prototyping-iterate.md` | options 1 and 3 |
+  | `.qfai/contracts/cli/qfai-prototyping.md`         | options 1 and 3 |
 
 ## Decision needed from user
 
