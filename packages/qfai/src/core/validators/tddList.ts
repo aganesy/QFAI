@@ -3605,11 +3605,25 @@ type RoundAttemptPack = RoundPackRow & {
   verdict: string | null;
 };
 
+/** The outcome an attempt's `reviewer verdict` states, or `null` when it states neither. */
+function attemptOutcome(verdict: string | null): "PASS" | "REVISE" | null {
+  const value = (verdict ?? "").trim();
+  if (/^PASS\b/i.test(value)) return "PASS";
+  return /^REVISE\b/i.test(value) ? "REVISE" : null;
+}
+
 /** What is wrong with one review attempt's pack pair, in the order a repair takes. */
 async function invalidRoundAttemptPack(root: string, entry: RoundAttemptPack): Promise<string[]> {
   const qualifier = entry.attempt === null ? "" : ` (attempt ${entry.attempt})`;
   const label = `Round ${entry.round}: Review pack${qualifier}`;
   if (entry.pack === null) return [`${label} beside that attempt's reviewer verdict`];
+  // A pack absent from the checkout is skipped below, so the attempt's verdict,
+  // which the entry itself records, is read before that absence excuses the pair.
+  if (attemptOutcome(entry.verdict) === null) {
+    return [
+      `Round ${entry.round}: reviewer verdict${qualifier} stating PASS or REVISE beside that attempt's Review pack`,
+    ];
+  }
   if (entry.seal === null || !SHA256_VALUE.test(entry.seal)) {
     return [`Round ${entry.round}: Review pack seal${qualifier}: sha256`];
   }
@@ -3623,12 +3637,27 @@ async function invalidRoundAttemptPack(root: string, entry: RoundAttemptPack): P
   }
   const packFiles = await collectReviewPackFiles(root, entry.pack);
   if (packFiles === null) return [`${label} resolving to regular files`];
+  return invalidPresentRoundPack(packFiles, { ...entry, pack: entry.pack, seal: entry.seal });
+}
+
+/** What is wrong with the contents of a round attempt's pack present in the checkout. */
+function invalidPresentRoundPack(
+  packFiles: ReadonlyArray<ReviewPackFile>,
+  entry: RoundAttemptPack & { pack: string; seal: string },
+): string[] {
+  const qualifier = entry.attempt === null ? "" : ` (attempt ${entry.attempt})`;
+  const label = `Round ${entry.round}: Review pack${qualifier}`;
   const invalid: string[] = [];
   if (reviewPackSeal(packFiles) !== bareSha256(entry.seal)) {
     invalid.push(`Round ${entry.round}: Review pack seal${qualifier} matching pack contents`);
   }
   if (!roundPackRecordsVerdict(packFiles, entry.pack, entry)) {
     invalid.push(`${label} carrying this row's request and responses agreeing with its verdict`);
+  }
+  if (!roundPackSummaryRecordsVerdict(packFiles, entry.pack, entry)) {
+    invalid.push(
+      `${label} with a summary.json whose overall_status and reviewers agree with its verdict and responses`,
+    );
   }
   if (!roundPackRecordsSubject(packFiles, entry.pack, entry)) {
     invalid.push(`${label} reviewing this row's spec at one revision`);
@@ -3677,9 +3706,11 @@ function roundPackRecordsHashes(
 /**
  * Whether a round attempt's pack is that attempt's own: its request names the
  * row, and its responses say what the attempt's verdict says — every one `PASS`
- * for a `PASS`, and at least one `REVISE` for a `REVISE`. A sealed pack from
- * another row or another review would otherwise stand in for this one, because
- * the pair is outside every audited subject.
+ * for a `PASS`, and for a `REVISE` at least one `REVISE`, or no response at all
+ * from a round whose reviewers wrote nothing, which its summary has to declare
+ * ({@link roundPackSummaryRecordsVerdict}). A sealed pack from another row or
+ * another review would otherwise stand in for this one, because the pair is
+ * outside every audited subject.
  */
 function roundPackRecordsVerdict(
   packFiles: ReadonlyArray<ReviewPackFile>,
@@ -3690,18 +3721,70 @@ function roundPackRecordsVerdict(
   if (request === null || !requestNamesReviewUnit(request, entry.tddId, entry.reviewUnit)) {
     return false;
   }
-  const responses = allReviewPackResponses(packFiles);
-  const verdict = (entry.verdict ?? "").trim();
-  if (/^PASS\b/i.test(verdict)) return everyResponsePasses(responses);
-  if (/^REVISE\b/i.test(verdict)) {
-    const states = (response: string, value: string): boolean =>
-      exactLineField(response, "Result", value);
-    return (
-      responses.every((response) => states(response, "PASS") || states(response, "REVISE")) &&
-      responses.some((response) => states(response, "REVISE"))
-    );
+  const statuses = reviewerStatuses(packFiles);
+  const outcome = attemptOutcome(entry.verdict);
+  if (statuses === null || outcome === null) return false;
+  const recorded = [...statuses.values()];
+  return outcome === "PASS"
+    ? recorded.length > 0 && recorded.every((status) => status === "PASS")
+    : recorded.length === 0 || recorded.includes("FAIL");
+}
+
+/**
+ * The status each reviewer's responses in a pack give it, spelled as
+ * `summary.json` spells it: `FAIL` when any of its responses says `REVISE`, and
+ * `PASS` otherwise. `null` when a response states neither exactly once.
+ */
+function reviewerStatuses(
+  packFiles: ReadonlyArray<ReviewPackFile>,
+): Map<string, "PASS" | "FAIL"> | null {
+  const statuses = new Map<string, "PASS" | "FAIL">();
+  for (const { relativePath, content } of packFiles) {
+    const role = /^R\d{2}_(.+)\.md$/.exec(path.posix.basename(relativePath))?.[1];
+    if (role === undefined) continue;
+    const passes = exactLineField(content, "Result", "PASS");
+    if (!passes && !exactLineField(content, "Result", "REVISE")) return null;
+    statuses.set(role, passes && statuses.get(role) !== "FAIL" ? "PASS" : "FAIL");
   }
-  return false;
+  return statuses;
+}
+
+/**
+ * Whether a round attempt's `summary.json` records what its verdict and its
+ * responses record (`review-artifact-layout.md`): `overall_status` is `PASS` for
+ * a `PASS` and `FAIL` for a `REVISE`, and `reviewers[]` gives each reviewer that
+ * responded the one status its responses give it. An entry for a reviewer with
+ * no response states `NA`, and a round whose reviewers wrote nothing declares
+ * `reviewers: []`. No other check a `tdd` run makes reads a round pack's
+ * recorded outcome, so a `PASS` sealed over a `REVISE` attempt would otherwise
+ * stand.
+ */
+function roundPackSummaryRecordsVerdict(
+  packFiles: ReadonlyArray<ReviewPackFile>,
+  packPath: string,
+  entry: RoundAttemptPack,
+): boolean {
+  const summary = reviewPackSummary(packFiles, packPath);
+  const reviewers = summary?.["reviewers"];
+  const statuses = reviewerStatuses(packFiles);
+  const outcome = attemptOutcome(entry.verdict);
+  if (statuses === null || outcome === null || !Array.isArray(reviewers)) return false;
+  if (summary?.["overall_status"] !== (outcome === "PASS" ? "PASS" : "FAIL")) return false;
+  const declared = new Map<string, Set<unknown>>();
+  for (const reviewer of reviewers) {
+    const record = jsonRecord(reviewer);
+    const role = record?.["reviewer"];
+    if (typeof role !== "string") return false;
+    declared.set(role, (declared.get(role) ?? new Set<unknown>()).add(record?.["status"]));
+  }
+  if (statuses.size === 0 && declared.size > 0) return false;
+  for (const [role, status] of statuses) {
+    const recorded = declared.get(role);
+    if (recorded === undefined || recorded.size !== 1 || !recorded.has(status)) return false;
+  }
+  return [...declared].every(
+    ([role, recorded]) => statuses.has(role) || [...recorded].every((status) => status === "NA"),
+  );
 }
 
 /**

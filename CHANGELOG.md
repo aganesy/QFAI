@@ -274,6 +274,10 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   alike. No two review attempts of a row may name one pack, and a
   `reviewer verdict` or `Round N: Review pack` cell may not share a table row
   with another field, since the audited subject drops that row whole.
+  A round pack pair needs its attempt's `PASS` or `REVISE` verdict even when
+  the pack is absent, and a present pack's `summary.json` must record that
+  verdict: `overall_status` `PASS` or `FAIL`, and each responding reviewer's
+  status in `reviewers[]`, or `reviewers: []` for a round no reviewer answered.
 
 ## [1.12.0] - 2026-09-12
 

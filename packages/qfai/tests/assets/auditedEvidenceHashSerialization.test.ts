@@ -2,17 +2,18 @@
  * The audit hash's step 1 says what the extraction produces, not only which
  * fields it reads.
  *
- * Naming the fields settles which lines are taken and leaves open what they
- * become. Six choices were each open — the list marker, the `Round N: ` prefix,
- * the fenced value, the heading line, the field order, and the separator — so
- * two readers taking the same fields computed different digests, and a recorded
- * value meant something only inside the run that wrote it. A hash nobody else
- * can recompute is not a check; it is a number.
+ * A recorded digest is a check only when a second party, holding the reference
+ * alone, computes the same bytes. The reference therefore fixes every choice
+ * that decides those bytes: the extraction is a region of the entry kept
+ * verbatim, with its list markers, `Round N: ` prefixes, fenced values and the
+ * lines between fields; its heading is synthesized; the lines a reviewer
+ * appends are dropped; and it ends at the first field its subject could not
+ * have read.
  *
- * The pins below anchor on the clauses that settle each choice, and on the
- * sentence that separates this value from the tree address it is repeatedly
- * confused with. They are deliberately short: the rule is the subject, and a
- * reword of the surrounding prose must not redden this file.
+ * Each pin below anchors on one clause that fixes one of those choices, or on
+ * the sentence that tells this value apart from the working-tree revision. The
+ * pins are short so that rewording the prose around a clause keeps this file
+ * passing, while removing or changing the clause fails it.
  */
 import { readFile } from "node:fs/promises";
 import path from "node:path";
@@ -84,8 +85,8 @@ describe.each(TREES)("%s — the audit hash's extraction is one text", (tree) =>
   });
 
   it("says the gate computes it this way today", async () => {
-    // A contract no tool implements is the state this paragraph was written
-    // for: the recorded values were reproducible only by their own run.
+    // The reference names the tool that computes the subject this way, which is
+    // what lets a recorded value be recomputed outside the run that wrote it.
     await expectPhrase("computes the completion subject exactly this way");
     await expectPhrase("reproducible only inside the run that wrote it");
   });
