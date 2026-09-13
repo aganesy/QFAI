@@ -885,16 +885,23 @@ agents:
         required for coverage judgments that depend on a type or schema. Include the
         actual validation boundary, not a type assertion alone.
 
-      A spec references a contract from either of two places: `Contract-Refs` in
-      `04_Business-Rules.md`, and a `QFAI-CONTRACT-REF` line in `01_Spec.md`. Read
-      both before deciding a conditional input does not apply. A spec that names a
-      `CON-DB-*` only in `01_Spec.md` reads as having none if the second place is
-      skipped, and the estimate then omits the Integration work that contract carries.
+      Resolve `paths.specsDir` and `paths.contractsDir` from `qfai.config.yaml` first.
+      Before reporting no referenced contract, read all existing `01..10` and `16_*`
+      Markdown files of the reviewed spec, including `Contract-Refs` in
+      `04_Business-Rules.md`, and a `QFAI-CONTRACT-REF` line in `01_Spec.md`.
+      Use the same full scan for shared ownership, including sibling specs, under
+      `.qfai/assistant/skills/qfai-atdd/references/cross-spec-obligations.md`.
+      Normalize short API-NNNN and DB-NNNN references under that rule; do not invent
+      a local row for a sibling's obligation. Conditional absence follows the full
+      scan, not only the two named files.
 
       Read `06_Test-Cases.md` and `02_User-stories.md` as the obligation set in full — `TC-*` and `US-*` — independently of whichever
       rows an execution ledger happens to hold: a coverage-target `TC-*` whose row was dropped is invisible to a check that starts from
-      the rows. `US-*` seeds no ledger row, so its absence from one is never a missing-row finding — it is read for layer ownership, and
-      discharged by the acceptance tests' annotations.
+      the rows. An active `US-*` has an E2E row carrying `US-Refs`; an active, owned
+      `CON-API-*` has an API row carrying `CON-API-Refs`. Read their declared scope
+      before judging missing rows. Seeded E2E/API rows keep Test file and Selector at
+      `-` until `/qfai-implement` fills them from the ATDD handoff; do not invent a
+      test identity before the test exists.
 
       `.qfai/contracts/api/**` joins that obligation set **only where it applies**:
       in `qfai-implement`'s `plan` phase, SDD and `qfai-atdd`'s blocking `coverage` phase
@@ -1987,9 +1994,9 @@ agents:
         `04_Business-Rules.md` and `06_Test-Cases.md` — **conditional**: required for
         coverage review, not an unrelated item observation or Skeleton gate.
       - Referenced CON-API and CON-DB contracts under configured `paths.contractsDir`
-        — **conditional**: required for coverage review when `Contract-Refs` in
-        `04_Business-Rules.md` or `QFAI-CONTRACT-REF` in `01_Spec.md` names them.
-        Unreferenced contracts are not missing required inputs.
+        — **conditional**: required for coverage review when the reviewed spec's
+        full ownership scan names them. Unreferenced contracts are not missing
+        required inputs.
       - Relevant types and schemas governing the reviewed values — **conditional**:
         required for a kept-failure or n/a judgment that depends on them. Read the
         actual validation boundary; a type assertion does not prove validation.
@@ -2035,6 +2042,16 @@ agents:
         sibling's success reads as this spec's PASS
       - `.qfai/report/specs-coverage/spec-*.md`
       - Runtime evidence and prototyping evidence artifacts
+
+      For coverage review, resolve `paths.specsDir` and `paths.contractsDir` from
+      `qfai.config.yaml` first. Before reporting no referenced contract, read all
+      existing `01..10` and `16_*` Markdown files of the reviewed spec, including
+      `Contract-Refs` in `04_Business-Rules.md` and `QFAI-CONTRACT-REF` in `01_Spec.md`.
+      Use the same full scan for shared ownership, including sibling specs, under
+      `.qfai/assistant/skills/qfai-atdd/references/cross-spec-obligations.md`.
+      Normalize short API-NNNN and DB-NNNN references under that rule; preserve
+      cross-spec obligations rather than inventing local coverage. Conditional
+      absence follows the full scan, not only the two named files.
 
       **Branch 3 gets its own verdict.** The observation gate admits an observed RED
       or a falsifiability trio and calls anything else "never neither" — but a genuine

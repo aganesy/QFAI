@@ -85,16 +85,23 @@ carry it.
   required for coverage judgments that depend on a type or schema. Include the
   actual validation boundary, not a type assertion alone.
 
-A spec references a contract from either of two places: `Contract-Refs` in
-`04_Business-Rules.md`, and a `QFAI-CONTRACT-REF` line in `01_Spec.md`. Read
-both before deciding a conditional input does not apply. A spec that names a
-`CON-DB-*` only in `01_Spec.md` reads as having none if the second place is
-skipped, and the estimate then omits the Integration work that contract carries.
+Resolve `paths.specsDir` and `paths.contractsDir` from `qfai.config.yaml` first.
+Before reporting no referenced contract, read all existing `01..10` and `16_*`
+Markdown files of the reviewed spec, including `Contract-Refs` in
+`04_Business-Rules.md`, and a `QFAI-CONTRACT-REF` line in `01_Spec.md`.
+Use the same full scan for shared ownership, including sibling specs, under
+`.qfai/assistant/skills/qfai-atdd/references/cross-spec-obligations.md`.
+Normalize short API-NNNN and DB-NNNN references under that rule; do not invent
+a local row for a sibling's obligation. Conditional absence follows the full
+scan, not only the two named files.
 
 Read `06_Test-Cases.md` and `02_User-stories.md` as the obligation set in full — `TC-*` and `US-*` — independently of whichever
 rows an execution ledger happens to hold: a coverage-target `TC-*` whose row was dropped is invisible to a check that starts from
-the rows. `US-*` seeds no ledger row, so its absence from one is never a missing-row finding — it is read for layer ownership, and
-discharged by the acceptance tests' annotations.
+the rows. An active `US-*` has an E2E row carrying `US-Refs`; an active, owned
+`CON-API-*` has an API row carrying `CON-API-Refs`. Read their declared scope
+before judging missing rows. Seeded E2E/API rows keep Test file and Selector at
+`-` until `/qfai-implement` fills them from the ATDD handoff; do not invent a
+test identity before the test exists.
 
 `.qfai/contracts/api/**` joins that obligation set **only where it applies**:
 in `qfai-implement`'s `plan` phase, SDD and `qfai-atdd`'s blocking `coverage` phase

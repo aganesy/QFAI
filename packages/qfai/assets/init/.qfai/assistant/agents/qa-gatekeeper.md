@@ -350,9 +350,9 @@ and written to `.qfai/evidence/coverage-depth-<spec-id>.md` — a committed gove
   `04_Business-Rules.md` and `06_Test-Cases.md` — **conditional**: required for
   coverage review, not an unrelated item observation or Skeleton gate.
 - Referenced CON-API and CON-DB contracts under configured `paths.contractsDir`
-  — **conditional**: required for coverage review when `Contract-Refs` in
-  `04_Business-Rules.md` or `QFAI-CONTRACT-REF` in `01_Spec.md` names them.
-  Unreferenced contracts are not missing required inputs.
+  — **conditional**: required for coverage review when the reviewed spec's
+  full ownership scan names them. Unreferenced contracts are not missing
+  required inputs.
 - Relevant types and schemas governing the reviewed values — **conditional**:
   required for a kept-failure or n/a judgment that depends on them. Read the
   actual validation boundary; a type assertion does not prove validation.
@@ -398,6 +398,16 @@ and written to `.qfai/evidence/coverage-depth-<spec-id>.md` — a committed gove
   sibling's success reads as this spec's PASS
 - `.qfai/report/specs-coverage/spec-*.md`
 - Runtime evidence and prototyping evidence artifacts
+
+For coverage review, resolve `paths.specsDir` and `paths.contractsDir` from
+`qfai.config.yaml` first. Before reporting no referenced contract, read all
+existing `01..10` and `16_*` Markdown files of the reviewed spec, including
+`Contract-Refs` in `04_Business-Rules.md` and `QFAI-CONTRACT-REF` in `01_Spec.md`.
+Use the same full scan for shared ownership, including sibling specs, under
+`.qfai/assistant/skills/qfai-atdd/references/cross-spec-obligations.md`.
+Normalize short API-NNNN and DB-NNNN references under that rule; preserve
+cross-spec obligations rather than inventing local coverage. Conditional
+absence follows the full scan, not only the two named files.
 
 **Branch 3 gets its own verdict.** The observation gate admits an observed RED
 or a falsifiability trio and calls anything else "never neither" — but a genuine

@@ -195,9 +195,22 @@ describe.each(TREES)("%s", (tree) => {
   });
 
   it("splits mixed inputs and scopes only the failure side before implementation", async () => {
+    for (const rel of [
+      "assistant/skills/qfai-sdd/SKILL.md",
+      "assistant/skills/qfai-sdd/references/sdd-quality-gate.md",
+      "assistant/skills/qfai-sdd/templates/specs/spec/06_Test-Cases.md",
+    ]) {
+      const binding = flat(await read(tree, rel));
+      expect(binding, rel).toContain("normal path and declared valid boundaries per AC");
+      expect(binding, rel).toContain("require failures only for kept failures");
+      expect(binding, rel).not.toContain("with normal-path plus error/boundary coverage");
+      expect(binding, rel).not.toContain("Error or boundary coverage is present");
+      expect(binding, rel).not.toContain("One `error` or `boundary` test case");
+    }
     const checklist = flat(await read(tree, CHECKLIST));
     for (const clause of [
-      "A failure named by a specification, a contract or an actual observation, unless a type or schema excludes it",
+      "A failure named by a specification or an actual observation, unless a type or schema excludes it",
+      "A failure declared by an active CON-API or CON-DB owned by the reviewed spec",
       "A failure required by the safety floor in `.agents/rules/minimal-implementation.md` § 2",
       "whether or not handling code exists yet",
       "Valid special-value partitions (null, empty, zero, default)",
@@ -252,6 +265,14 @@ describe.each(TREES)("%s", (tree) => {
     expect(checklist).toContain("Happy-path annotations alone do not cover the failure");
     expect(checklist).toContain("If no existing US/TC row owns it, record DRIFT");
     expect(checklist).toContain("before a clean coverage verdict");
+    expect(checklist).toContain(
+      "Contract-derived failures are scored only for active, owned whole contracts",
+    );
+    expect(checklist).toContain(
+      "a planned contract contributes no contract-derived failure obligation in this slice",
+    );
+    expect(checklist).toContain("never an API operation");
+    expect(checklist).toContain("standalone SQL comment");
   });
 
   it("carries governing specs, referenced contracts and relevant types into production and review", async () => {
@@ -265,6 +286,10 @@ describe.each(TREES)("%s", (tree) => {
       expect(inputs).toContain("06_Test-Cases.md");
       expect(inputs).toContain("QFAI-CONTRACT-REF");
       expect(inputs).toContain("conditional");
+      expect(inputs).toContain("all existing `01..10` and `16_*` Markdown files");
+      expect(inputs).toContain("Before reporting no referenced contract");
+      expect(inputs).toContain("paths.specsDir");
+      expect(inputs).toContain("same full scan for shared ownership");
     }
     expect(flat(await read(tree, ANALYST))).not.toContain(
       "in `qfai-implement`'s `plan` phase, and there only",
@@ -272,6 +297,9 @@ describe.each(TREES)("%s", (tree) => {
     expect(flat(await read(tree, SKILL))).toContain(
       "referenced contracts and relevant types/schemas for kept-failure judgments",
     );
+    const analyst = flat(await read(tree, ANALYST));
+    expect(analyst).not.toContain("`US-*` seeds no ledger row");
+    expect(analyst).toContain("active `US-*` has an E2E row carrying `US-Refs`");
   });
 
   it("excludes failures only after validation and routes declared conflicts upstream", async () => {
@@ -284,6 +312,9 @@ describe.each(TREES)("%s", (tree) => {
     expect(checklist).toContain("record DRIFT and route it to the upstream owner");
     expect(checklist).toContain(
       "Do not erase the declared obligation or mark it n/a while that conflict is unresolved",
+    );
+    expect(checklist).toContain(
+      "Explicit specification failures and actual observations remain kept even when a contract is deferred",
     );
   });
 });

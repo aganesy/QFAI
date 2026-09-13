@@ -4,7 +4,7 @@
 
 - Verify examples and acceptance criteria with explicit refs.
 - Include both `AC-Refs` and `EX-Ref` whenever possible.
-- Ensure test cases cover not only normal paths but also error paths, boundary values, and edge cases.
+- Require normal path and declared valid boundaries per AC; require failures only for kept failures.
 
 Derive each row's `Level` with
 `.qfai/assistant/catalog/test-layers.md#layer-derivation-procedure-normative`.
@@ -150,7 +150,10 @@ is not the answer either.
 Each AC should have at minimum:
 
 - One `normal` test case.
-- One `error` or `boundary` test case.
+- Tests for every declared valid boundary.
+- Failure tests only for kept failures.
 
-If an AC has only `normal` type test cases, the test case set is considered incomplete.
+A normal-only AC is incomplete only when a declared valid boundary or kept
+failure is uncovered. The sample error row illustrates a type; it is not a
+requirement to invent an absent failure.
 Refer to `.qfai/assistant/skills/qfai-atdd/references/test-case-depth-checklist.md` for the full depth checklist.

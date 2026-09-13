@@ -5,15 +5,27 @@ Reviewers MUST use this checklist when evaluating test case completeness during 
 
 ## Scoring scope
 
-A **kept failure** is either:
+A **kept failure** is one of:
 
-- A failure named by a specification, a contract or an actual observation,
+- A failure named by a specification or an actual observation,
+  unless a type or schema excludes it.
+- A failure declared by an active CON-API or CON-DB owned by the reviewed spec,
   unless a type or schema excludes it.
 - A failure required by the safety floor in
   `.agents/rules/minimal-implementation.md` § 2.
 
 Score every kept failure whether or not handling code exists yet. Declared
 valid behavior always remains scored; failure-side bullets apply only to kept failures.
+
+Contract-derived failures are scored only for active, owned whole contracts;
+a planned contract contributes no contract-derived failure obligation in this
+slice. Read API `x-qfai-status: planned` at the document root or, when absent or
+unreadable, in a column-0 comment, never an API operation. A DB marker is a
+standalone SQL comment, `-- x-qfai-status: planned`; leading whitespace is
+allowed, trailing SQL is not. Explicit specification failures and actual
+observations remain kept even when a contract is deferred, as do safety-floor
+failures. Sibling ownership follows
+`.qfai/assistant/skills/qfai-atdd/references/cross-spec-obligations.md`.
 
 A type or schema excludes a failure only after the value has passed that type
 or schema's validation. Untrusted input still requires boundary validation and
