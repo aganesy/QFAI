@@ -1341,12 +1341,14 @@ async function collectSkillFiles(dirs: string[]): Promise<string[]> {
  * Whether a directory is a skill directory the host does not list: a
  * dot-prefixed one directly under the skills root.
  *
- * A draft parked as `.draft/` is a skill nothing registers. The walk is what
- * applies it, so the tree is never read: dropping its files afterwards leaves a
- * directory this process may not traverse failing the whole run, over a skill
- * the host never loads. A dot-prefixed directory inside a skill is not one — a
- * registered skill can name a document under it — so it is read like any
- * other.
+ * A draft parked as `.draft/` is a skill nothing registers, so it has no entry
+ * point to check and no `SKILL.md` the marker checks read. Those walks skip the
+ * directory rather than drop its files afterwards, which would leave a
+ * directory this process may not traverse failing the run over a skill the
+ * host never loads. The document crawl still reads it: a registered skill can
+ * name a document there, and the reference graph reports one it reaches that
+ * cannot be read. A dot-prefixed directory inside a skill is not one, and is
+ * read like any other.
  */
 function isHiddenSkillDirectory(skillsDir: string, directory: string): boolean {
   const relative = path.relative(skillsDir, directory);
