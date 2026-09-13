@@ -157,6 +157,20 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   `parallelization-policy.md` and the skill now say items 6, 7 and 8 share the
   revision. No completed row in this repository changes result.
 
+- **When the aggregate prototyping mirror runs is recorded as a Change
+  Request** (#1766). `spec-0012`, from its requirement down to its test case,
+  and both prototyping command contracts place the mirror into `screenshots/`
+  and `html/` on convergence, copying the accepted iteration. The command runs
+  it at the end of every capture pass, before that capture is reviewed, and the
+  test for it pins that reading. While a loop runs, and after one stops at its
+  iteration limit, the directories hold a capture nobody accepted.
+
+  `CR-20260913-0009` records both sides, blocks the ledger row and the
+  statements the options reword, and puts the choice: reword the documents to
+  match the command, move the mirror to the converged stop as the documents
+  already say, or keep the per-capture mirror and move the directories aside
+  when a loop stops without converging.
+
 ## [1.12.0] - 2026-09-12
 
 ### Added
