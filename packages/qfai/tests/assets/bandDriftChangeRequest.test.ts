@@ -125,7 +125,11 @@ describe("the primary_tasks band drift has a Change Request", () => {
     // upstream moves, so the rows keep their status and are re-verified.
     await expectPhrase("3. Downstream ledger sweep, under options 1 and 2.");
     await expectPhrase("**Under option 3 no row is reset.**");
-    await expectPhrase("**those rows are re-verified in place**");
+    await expectPhrase(
+      "**every `done` row whose test runs the changed validator is re-verified in place**",
+    );
+    // A row a pending reset already returned to `todo` takes its own cycle.
+    await expectPhrase("returned to `todo` by then is re-executed by its own cycle instead");
   });
 
   it("routes the acceptance tests through the stage that writes them", async () => {
@@ -194,9 +198,7 @@ describe("the primary_tasks band drift has a Change Request", () => {
     // this file on the very resolution the record exists to make possible.
     const text = await changeRequest();
     if (!/^- Status: `open`$/m.test(text)) return;
-    await expectPhrase(
-      "**Under option 3 it reduces to the files carrying the template path and the three delta files**",
-    );
+    await expectPhrase("**Under option 3 it reduces to the three delta files**");
     await expectPhrase("reduced to the approved outcome before `Status: approved` is written");
   });
 });
