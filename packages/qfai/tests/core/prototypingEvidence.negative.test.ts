@@ -26,9 +26,8 @@ function readmePath(): string {
   return path.join(pkgRoot, "README.md");
 }
 
-describe("TC-0012-0238..0248: negative case meta-tests (v1.7.15 rev9)", () => {
-  // QFAI:SPEC-0012:TC-0012-0238
-  it("TC-0012-0238: tests/core/ fixtures have zero synthetic token evidenceRefs (boundary)", async () => {
+describe("negative case meta-tests", () => {
+  it("tests/core/ fixtures have zero synthetic token evidenceRefs (boundary)", async () => {
     const allFiles = await glob("**/*.ts", { cwd: coreTestsDir(), absolute: true });
     // Exclude files that intentionally test negative/invalid patterns
     const files = allFiles.filter(
@@ -52,8 +51,7 @@ describe("TC-0012-0238..0248: negative case meta-tests (v1.7.15 rev9)", () => {
     }
   });
 
-  // QFAI:SPEC-0012:TC-0012-0239
-  it("TC-0012-0239: validator regression coverage exists for prototyping-adjacent evidence checks", async () => {
+  it("validator regression coverage exists for prototyping-adjacent evidence checks", async () => {
     const testFile = path.join(unitValidatorsDir(), "uiEvidenceArtifacts.test.ts");
     const src = await readFile(testFile, "utf-8");
     expect(src).toContain("validateUiEvidenceArtifacts");
@@ -61,8 +59,7 @@ describe("TC-0012-0238..0248: negative case meta-tests (v1.7.15 rev9)", () => {
     expect(src).toContain("QFAI-UIE-002");
   });
 
-  // QFAI:SPEC-0012:TC-0012-0241
-  it("TC-0012-0241: README.md enumerates all concrete-ref leaf fields (normal path)", async () => {
+  it("README.md enumerates all concrete-ref leaf fields (normal path)", async () => {
     const src = await readFile(readmePath(), "utf-8");
     // All 5 leaf-field categories must be documented
     expect(src).toContain("ui[].declaredRef");
@@ -72,8 +69,7 @@ describe("TC-0012-0238..0248: negative case meta-tests (v1.7.15 rev9)", () => {
     expect(src).toContain("reviewerLogs[].evidenceRefs");
   });
 
-  // QFAI:SPEC-0012:TC-0012-0248
-  it("TC-0012-0248: ui evidence regression tests cover screenshot and HTML absence", async () => {
+  it("ui evidence regression tests cover screenshot and HTML absence", async () => {
     const testFile = path.join(unitValidatorsDir(), "uiEvidenceArtifacts.test.ts");
     const src = await readFile(testFile, "utf-8");
     expect(src).toContain("orders-dashboard.png");

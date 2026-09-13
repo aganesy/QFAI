@@ -1,9 +1,3 @@
-// QFAI:SPEC-0012:TC-0012-0001
-// QFAI:SPEC-0012:TC-0012-0002
-// QFAI:SPEC-0012:TC-0012-0006
-// QFAI:SPEC-0012:TC-0012-0007
-// QFAI:SPEC-0012:TC-0012-0014
-
 import { mkdtemp, readFile, rm } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
@@ -52,7 +46,6 @@ describe("HandoffWriter", () => {
     };
   }
 
-  // TC-0012-0001
   it("writes handoff at iteration 5 with planner/generator/evaluator keys", async () => {
     const artifact = makeArtifact({ iteration: 5 });
     const outputPath = path.join(tmpDir, "handoff.json");
@@ -71,7 +64,6 @@ describe("HandoffWriter", () => {
     expect(parsed.evaluator.scores).toHaveLength(2);
   });
 
-  // TC-0012-0002
   it("writes valid JSON at iteration 1 with minimal arrays", async () => {
     const artifact = makeArtifact({
       iteration: 1,
@@ -93,7 +85,6 @@ describe("HandoffWriter", () => {
     expect(parsed.evaluator.decisions).toEqual([]);
   });
 
-  // TC-0012-0006
   it("contains no absolute user-specific paths in artifact", async () => {
     // Use a path under cwd so relative conversion is meaningful cross-platform
     const absolutePath = path.resolve(process.cwd(), "src", "file.ts");
@@ -115,7 +106,6 @@ describe("HandoffWriter", () => {
     expect(parsed.generator.outputs[0]).toBe(path.join("src", "file.ts"));
   });
 
-  // TC-0012-0007
   it("redacts credential values from artifact", async () => {
     const artifact = makeArtifact();
     // Inject credential-like keys into the planner strategies
@@ -147,7 +137,6 @@ describe("HandoffWriter", () => {
     expect(raw).not.toContain("hunter2");
   });
 
-  // TC-0012-0014
   it("writes valid artifact at iteration 1 with no generator output", async () => {
     const artifact = makeArtifact({
       iteration: 1,
