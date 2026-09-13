@@ -97,6 +97,26 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   characters. Freshness is compared exactly, so accepting both cases would let
   one tree be recorded as two revisions and read a correct row as stale.
 
+- **A test glob the glob matcher refuses no longer ends the run, and
+  `--profile atdd` reports it** (#1703). `QFAI-ATDD-134`. A pattern holding a
+  NUL byte is valid YAML. Given one ahead of a wildcard, such as
+  `tests/\0/*.ts`, the matcher raised the error inside its directory walk,
+  where nothing could catch it, and `qfai validate` exited under every profile.
+  The scan now refuses the pattern before the walk starts. Under the `tdd` and
+  `full` profiles `QFAI-TRACE-124` reports it, and the stub scan reports
+  `QFAI-TEST-002` for it and still reads the other patterns.
+
+  The ATDD stage reads only the extensions out of these globs, so under
+  `--profile atdd` nothing said a glob was unusable. `QFAI-ATDD-134` says it
+  there. A glob the matcher accepts is not reported, whatever it selects:
+  `tests/**` names no extension, and the stage scans the JavaScript and
+  TypeScript set for it, as documented.
+
+  A glob starting with `!` excludes files, and the ATDD stage no longer takes an
+  extension from it. One starting with `!(` is a negated extglob, which selects,
+  and still gives its extension. `!tests/e2e/legacy/**/*.ts` beside a Python glob added
+  TypeScript to what the stage scans.
+
 ## [1.12.0] - 2026-09-12
 
 ### Added

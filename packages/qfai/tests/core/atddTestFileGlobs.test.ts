@@ -40,6 +40,30 @@ describe("deriveAtddFilePattern", () => {
     ).toBe("**/*.{feature,go,markdown,md}");
   });
 
+  it("takes no extension from an exclusion", () => {
+    // Counted, the excluded TypeScript joined what a Python project scans, and a
+    // legacy file the project excluded could satisfy an obligation.
+    expect(deriveAtddFilePattern(["tests/**/*.py", "!tests/e2e/legacy/**/*.ts"])).toBe(
+      "**/*.{feature,markdown,md,py}",
+    );
+  });
+
+  it("takes every member of a brace set the matcher can use, and no other", () => {
+    // Copied into the scan pattern, a NUL byte made the scan throw before any
+    // finding. A wildcard member selects files the configured glob selects.
+    const nul = String.fromCharCode(0);
+    expect(deriveAtddFilePattern([`tests/**/*.{ts,${nul}}`, "tests/**/*.{py,test-*.js}"])).toBe(
+      "**/*.{feature,markdown,md,py,test-*.js,ts}",
+    );
+    expect(deriveAtddFilePattern(["tests/**/*.{test.ts,spec-e2e.js}"])).toBe(
+      "**/*.{feature,markdown,md,spec-e2e.js,test.ts}",
+    );
+  });
+
+  it("reads a leading negated extglob as a selector, not an exclusion", () => {
+    expect(deriveAtddFilePattern(["!(fixtures)/**/*.py"])).toBe("**/*.{feature,markdown,md,py}");
+  });
+
   it("falls back when no glob carries a recoverable extension", () => {
     expect(deriveAtddFilePattern(["tests/**"])).toBe(
       "**/*.{ts,tsx,js,jsx,mjs,cjs,mts,cts,feature,md,markdown}",
