@@ -122,7 +122,8 @@ line-ending differences are ignored. Other edits remain protected and require
 a manual merge of the rule and constitution. A matching substring is not
 authorization: Markdown outside § 2 can make the floor non-operative.
 
-A missing, unreadable or non-regular master, including a leaf symlink, cannot
+A missing, unreadable or non-regular master, including a leaf symlink or linked
+`.agents` / `.agents/rules` parent, cannot
 authorize the upgrade. Init keeps the previous constitution and its receipt,
 and reports that the shipped master could not be verified. A first init in that
 state does not install the constitution or record it as written.

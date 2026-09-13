@@ -12,7 +12,16 @@
  * question.
  */
 
-import { access, mkdir, mkdtemp, readFile, symlink, unlink, writeFile } from "node:fs/promises";
+import {
+  access,
+  mkdir,
+  mkdtemp,
+  readFile,
+  rename,
+  symlink,
+  unlink,
+  writeFile,
+} from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
@@ -292,6 +301,18 @@ describe("the constitution and its safety floor upgrade together", () => {
     await unlink(minimumPath());
     await symlink(target, minimumPath(), "file");
     const previous = await olderConstitution();
+
+    await captureStdout(() => runInit({ dir: root, force: true, dryRun: false, yes: true }));
+
+    expect(await readFile(constitutionPath(), "utf-8")).toBe(previous);
+  });
+
+  it.each([".agents", ".agents/rules"])("does not authorize a linked %s parent", async (parent) => {
+    const previous = await olderConstitution();
+    const original = path.join(root, parent);
+    const held = path.join(root, "held-parent");
+    await rename(original, held);
+    await symlink(held, original, process.platform === "win32" ? "junction" : "dir");
 
     await captureStdout(() => runInit({ dir: root, force: true, dryRun: false, yes: true }));
 
