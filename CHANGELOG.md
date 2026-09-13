@@ -144,6 +144,19 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   is unchanged until it is applied. `CR-20260913-0006` puts the one row whose
   evidence has no form it can take to the user.
 
+- **The completion gate holds reviewers to the tree after the refactor** (#1732).
+  `evidence-revision.md` says the reviews judge the final tree, which
+  `Refactor verify revision` names, while a round's `Revision` names the tree
+  before the refactor. The gate compared every `reviewed revision` with the
+  round's `Revision`, so a row whose refactor changed a byte was reported when
+  its reviewers recorded the tree they judged. The gate now compares them with
+  `Refactor verify revision`, checks that it names a revision, and keeps the
+  round's `Revision` for a row that records none. The staleness check measures
+  from the same revision, and the field counts as phase-authored, so one written
+  after the review fields is refused. `ui-affecting.md`,
+  `parallelization-policy.md` and the skill now say items 6, 7 and 8 share the
+  revision. No completed row in this repository changes result.
+
 - **A ledger row observes the property it owns** (#1700). One prototyping-loop
   test asserted five properties of the cycle-0 hard reset in a single case,
   and a ledger row named it as the selector for one of them. A test function

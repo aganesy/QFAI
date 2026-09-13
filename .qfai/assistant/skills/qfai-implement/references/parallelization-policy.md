@@ -504,9 +504,10 @@ merged row can never reach `done`:
    worktree — the sibling slices landed in it. Every field that must name the
    state the item finally landed at is therefore stale on arrival however
    complete the block is: the GREEN `Revision` and the `Oracle proof` bound to
-   it, each reviewer's `Reviewed revision` and `Audited evidence hash`, the
-   `Round N: Review pack` and its `Round N: Review pack seal`, and all three
-   checkpoint verification fields. Gate item 10 requires items 5, 7 and 8 to
+   it, the three `Refactor verify` fields, each reviewer's `Reviewed revision`
+   and `Audited evidence hash`, the `Round N: Review pack` and its
+   `Round N: Review pack seal`, and all four checkpoint verification fields.
+   Gate item 10 requires items 6, 7 and 8 to
    agree on one revision, so applying the worker's payload verbatim leaves every
    merged row unable to reach `done`
    (`evidence-revision.md#what-makes-evidence-stale`). **Re-take those
@@ -520,6 +521,11 @@ merged row can never reach `done`:
      integrated worktree, and have `qa-gatekeeper` confirm both. A _RED not
      observable_ row owes nothing here: its falsifiability fields already
      satisfy item 5, and those are step 1's to preserve.
+   - **The refactor re-verification, before the reviews.** The reviewers'
+     revisions are compared with `Refactor verify revision`, so a slice's value
+     rejects every refreshed verdict. Re-run the item's relevant suite on the
+     integrated tree and replace `Refactor verify command`,
+     `Refactor verify result` and `Refactor verify revision` together.
    - **Both reviewers, and the pack each round writes.** A re-dispatch is a new
      review round, so it produces a new `review-<timestamp>/`
      (`review-artifact-layout.md`). Replace `Round N: Review pack` **and**
@@ -528,12 +534,14 @@ merged row can never reach `done`:
      seal under the new path leaves the fresh verdict unprotected
      (`evidence-revision.md`).
    - **The checkpoint verification, re-run.** Its seal is an audit hash over the
-     recorded command and result _together with_ the `Revision` the checkpoint
-     ran against, so refreshing `Revision` alone breaks the seal, and refreshing
+     recorded command and result _together with_ the
+     `Checkpoint verification revision` the checkpoint ran on, so refreshing
+     `Checkpoint verification revision` alone breaks the seal, and refreshing
      neither leaves item 12 ruling on the worker's private tree. Re-run the
      per-item command set on the integrated tree and replace
-     `Checkpoint verification command`, `Checkpoint verification result` and
-     `Checkpoint verification seal` (`checkpoint-verification.md`).
+     `Checkpoint verification command`, `Checkpoint verification result`,
+     `Checkpoint verification revision` and `Checkpoint verification seal`
+     (`checkpoint-verification.md`).
 
    All of it is re-observation, not new code, so it stays inside the
    orchestrator's delegation. Post-merge integration verify does not cover it:
