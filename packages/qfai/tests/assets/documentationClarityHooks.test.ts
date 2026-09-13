@@ -167,9 +167,7 @@ describe.each(SETTINGS_PATHS)("%s", (rel) => {
 
   it("points at the floor and the interface rule instead of restating them", () => {
     const text = (hooks.get("PostToolUse") ?? [])[1]?.hooks[0]?.args[1] ?? "";
-    // A copy of the floor's items leaves out whatever the floor gains later, and
-    // the reminder then vouches for a shorter floor than the rule holds.
-    expect(text).toContain("§ 2 of that rule");
+    expect(text).toContain("The ladder never removes what § 2 of that rule lists.");
     expect(text).not.toContain("error handling that prevents data loss");
     expect(text).toContain("is it already in this codebase");
     expect(text).toContain(".agents/rules/interface-clarity.md");

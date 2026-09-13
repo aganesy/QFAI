@@ -6,25 +6,11 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Added
 
-- **The minimal-implementation ladder asks whether the codebase already has it,
-  second** (#1795), **and its floor keeps unit-level coverage of the failures
-  the code retains** (#1793). The ladder sent an agent to the standard library
-  before its own repository, although reusing what a mature codebase already
-  holds is the rung that answers most often, and the procurement ladder for a
-  screen already puts the installed design system second. The ladder now has
-  seven rungs. The failure paths the code keeps are where untested failures
-  concentrate, so their unit coverage is now a floor item the ladder never
-  removes. The floor also defines a trust boundary (#1803): wherever a value
-  arrives from a caller or a source the code does not control, which includes a
-  published library's exported function and a plugin or tenant context, not
-  process entry alone. All three changes are made in the shipped copy as well.
-
 - **The minimal-implementation reminder points at the floor instead of listing
-  it** (#1815). The hook that restates the rule after every write listed the
-  floor's items, and left out the ones the floor gained since. It now asks the
-  reuse question first, says the ladder never removes what § 2 of the rule lists,
-  and names `.agents/rules/interface-clarity.md` for a change to a screen or to
-  terminal output. A project that already ran `init` keeps its old reminder text.
+  it** (#1815). After each write, the hook asks about repository reuse, refers to
+  the entire floor in the rule's § 2 and names `interface-clarity.md` for screen
+  or terminal changes. Referring to the floor keeps the reminder from promising
+  a shorter obligation set. Existing projects keep their old reminder text.
 
 - **A legacy ledger outside the obligation-column protection is reported**
   (#1663). A seeded `E2E` or `API` row has `TC-Refs` forbidden to it, so the

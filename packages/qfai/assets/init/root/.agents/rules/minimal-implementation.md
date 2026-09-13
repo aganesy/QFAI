@@ -20,15 +20,13 @@ Try these in order and stop at the first that holds.
 
 1. **Does this need to exist at all?** The cheapest code is the code nobody
    writes.
-2. **Is it already in this codebase?** Reuse what the repository already has
-   before writing its equivalent.
-3. **Does the standard library do it?** Check before writing a helper.
-4. **Does a native platform feature cover it?** The runtime, the shell, the
+2. **Does the standard library do it?** Check before writing a helper.
+3. **Does a native platform feature cover it?** The runtime, the shell, the
    file system, the database.
-5. **Does an already-installed dependency solve it?** Reach for what the
+4. **Does an already-installed dependency solve it?** Reach for what the
    project already carries before adding anything.
-6. **Can it be one line?**
-7. **Only then**: the least code that works.
+5. **Can it be one line?**
+6. **Only then**: the least code that works.
 
 Rung 1 belongs to requirements and design. Once a spec row is agreed, asking
 whether it should exist is a Change Request, not a choice made later in the
@@ -42,20 +40,7 @@ The ladder trims code, not obligations. These stay whatever rung you stop at.
 - Error handling that prevents data loss.
 - Security.
 - Accessibility.
-- Unit-level coverage of the failures the code retains.
 - Anything the spec asks for.
-
-A **trust boundary** is wherever a value arrives from a caller or a source the
-code does not control:
-
-- process entry, the common case: external input, a received request, a file or
-  database read, an environment variable, user input;
-- a published library's exported function;
-- a plugin or tenant context.
-
-A call between functions under the code's own control is not one. A value
-crossing a boundary is parsed there into a form that cannot hold an invalid
-value, so the code past it carries no branch for that value.
 
 Tests are in the same position. The ladder shapes how a test is built — reuse a
 helper that exists before adding a harness — and never how many obligations are
@@ -76,7 +61,7 @@ from an oversight, and the deferral becomes permanent with nobody deciding it
 should.
 
 Do not mark what the ladder simply answered. A helper you did not write because
-the standard library has one is not a simplification; it is rung 3.
+the standard library has one is not a simplification; it is rung 2.
 
 ## 4. What this rule is not
 

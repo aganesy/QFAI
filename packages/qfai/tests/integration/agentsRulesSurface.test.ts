@@ -239,12 +239,8 @@ describe("cross-AI rules surface (.agents/rules/ master)", () => {
       // One token per clause that no other clause in the file carries, so a
       // clause cannot be dropped and still leave the master looking complete.
       for (const clause of [
-        /already in this codebase/i,
         /standard library/i,
         /already-installed dependency/i,
-        /failures the code retains/i,
-        /published library.s exported function/i,
-        /plugin or tenant context/i,
         /trust boundary/i,
         /accessibility/i,
         /SIMPLIFIED:/,
