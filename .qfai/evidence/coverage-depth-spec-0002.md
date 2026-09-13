@@ -38,9 +38,9 @@ pack's own notes record that it was retired together with the exploration-sideca
 rows carry seventeen of the twenty-eight `❌` depth cells the five test-case rows hold, and the
 reason is not thin testing — it is an obligation with no subject left to test.
 
-Committed, because it is a governance record. Section "Every `❌` cell, named" enumerates all 92 of
+Committed, because it is a governance record. Section "Every `❌` cell, named" enumerates all 91 of
 them so that "one justification per `❌`" is checkable rather than asserted, and section "Every `⚠️`
-cell, named" does the same for all 16 partial scores, which the PASS criterion also requires a
+cell, named" does the same for all 17 partial scores, which the PASS criterion also requires a
 rationale for.
 
 ## What was measured, and how
@@ -108,10 +108,10 @@ this matrix.
 | TC-0002-0008 | ❌                     | ✅          | ❌         | ❌         | ❌              | ❌             | ❌                | ❌            | ❌              | ❌     |
 | TC-0002-0009 | ❌                     | ❌          | ❌         | ❌         | ❌              | ❌             | ❌                | ❌            | ❌              | ❌     |
 | TC-0002-0010 | ⚠️                     | ✅          | ✅         | ❌         | ❌              | ❌             | ❌                | ⚠️            | ✅              | ⚠️     |
-| TC-0002-0011 | ⚠️                     | ⚠️          | ❌         | ⚠️         | ❌              | ❌             | ❌                | ❌            | ⚠️              | ❌     |
+| TC-0002-0011 | ⚠️                     | ⚠️          | ❌         | ⚠️         | ❌              | ❌             | ❌                | ⚠️            | ⚠️              | ❌     |
 
 Totals across the nine depth columns of 12 rows — 7 stories and 5 test cases, 108 cells:
-**✅ 6 / ⚠️ 11 / ❌ 91**.
+**✅ 6 / ⚠️ 12 / ❌ 90**.
 
 Only the mark cells are scored. `US/TC ID` holds an identifier and `Status` holds the row verdict,
 so neither is in that total. Over the same 12 rows the verdicts read **✅ 0 / ⚠️ 2 / ❌ 10**.
@@ -143,10 +143,10 @@ has no branch to cover. It is not used anywhere an obligation exists and is unme
 
 ## Every ❌ cell, named
 
-The matrix carries 91 `❌` depth cells and the business rule table carries 1 in its scored columns —
-92 in all. Each is named below with its own reason.
+The matrix carries 90 `❌` depth cells and the business rule table carries 1 in its scored columns —
+91 in all. Each is named below with its own reason.
 A row's `Status` is `❌` when the obligation is not discharged at the depth the case describes; that
-verdict is the row's own, is stated once per row, and is not one of the 92.
+verdict is the row's own, is stated once per row, and is not one of the 91.
 
 ### The seven stories — `US-0002-0001`, `-0002`, `-0003`, `-0005`, `-0008`, `-0009` and `-0010`
 
@@ -285,13 +285,20 @@ Partly addressed by `tests/assets/sddStage0PrototypingOptional.test.ts`, which r
 across both shipped trees (`packages/qfai/assets/init/.qfai` and `.qfai`), and by the
 `prototyping.yaml` cases in `tests/assets/assets.test.ts`.
 
-**The case names a README and there is no README.** The four artifacts those tests read are the
-discussion `SKILL.md`, the SDD execution playbook, `discussion-artifact-rules.md` and
-`discussion-completion-matrix.md`. No `README` file exists anywhere under
-`.qfai/assistant/skills/qfai-discussion/` or under the shipped `assets/init` copy of it. A case in
-`assets.test.ts` titled "discussion README and SKILL.md agree on prototyping.yaml optionality" reads
-`SKILL.md` and nothing else, so its title asserts a comparison it does not make. This row has
-**five `❌` depth cells** plus `Status`.
+**Both surfaces the case names are read.** The five artifacts those tests open are
+`packages/qfai/README.md`, the discussion `SKILL.md`, the SDD execution playbook,
+`discussion-artifact-rules.md` and `discussion-completion-matrix.md`. Two cases in `assets.test.ts`
+read the README: `ensures qfai-discussion skill and artifact rules use canonical pack wording`
+requires one requiredness sentence in the README, the skill and the artifact rules alike, and
+`keeps package README aligned with discussion completion contract` requires the same sentence in
+the README on its own. The file that does not exist is a `README` under
+`.qfai/assistant/skills/qfai-discussion/`, which is not the README the rule is about.
+
+One nearby case is mis-titled. `assets.test.ts`'s "discussion README and SKILL.md agree on
+prototyping.yaml optionality" reads `SKILL.md` and nothing else, so its title asserts a comparison
+it does not make. That is a defect in the title, not a gap in this row's coverage.
+
+This row has **four `❌` depth cells** plus `Status`.
 
 - **Error path** — the tests carry absence assertions over the real artifacts: the retired blocking
   sentence must not appear in the playbook, and legacy-permissive wording must not appear in the
@@ -303,11 +310,11 @@ discussion `SKILL.md`, the SDD execution playbook, `discussion-artifact-rules.md
   read as they stand.
 - **State transitions** — reading wording has no state machine, and no multi-step process is
   exercised.
-- **Combinatorial** — the case names an agreement between two artifacts and no test evaluates the
-  pair. The two-tree loop repeats each predicate in a second location rather than combining two
-  conditions, and the six predicates are never crossed with one another.
-- **Status** — half the artifacts the case names do not exist, and the half that does is covered by
-  wording checks against a rule with no runtime behind it.
+- **Status** — both artifacts the case names exist and both are read, so what caps the row is not a
+  missing surface. It is that the case's expected result is that requiredness "matches active rule",
+  and the rule has no runtime to match: `src/**` never reads `prototyping.yaml`, and
+  `isPrototypingRequiredForDiscussionPack` returns a constant `false` whatever it is given. Every
+  covering case checks a sentence for presence, and none compares the sentence with the behaviour.
 
 ### The ❌ cells of the business rule table
 
@@ -321,12 +328,14 @@ One scored cell, and the two row verdicts that sit outside the count but still o
   first is addressed only in guidance prose; the second names an emission with no emitter. The rule
   is documented and unenforced.
 - **BR-0002-0010 × Status** — the rule's own Notes name "README / SKILL canonical wording" as the
-  surface it governs. There is no README in either shipped tree, and `src/**` never reads
-  `prototyping.yaml`, so neither the artifact set nor the runtime the rule assumes exists.
+  surface it governs. Both halves of that surface exist and are asserted, so the gap is on the other
+  side of the rule: `src/**` never reads `prototyping.yaml`, and
+  `isPrototypingRequiredForDiscussionPack` returns a constant `false` whatever it is given. Nothing
+  at runtime acts on the requiredness the wording states.
 
 ## Every ⚠️ cell, named
 
-11 depth cells in the matrix and 5 scored cells in the business rule table are `⚠️` — 16 in all. The
+12 depth cells in the matrix and 5 scored cells in the business rule table are `⚠️` — 17 in all. The
 PASS criterion requires a documented rationale for each, so each is named here. Four rows also carry
 a `⚠️` verdict. Those are outside the count and are named here too, because a verdict weaker than
 the cells beneath it needs a reason of its own.
@@ -370,16 +379,26 @@ the cells beneath it needs a reason of its own.
   with the forbidden-legacy-file check that shares the same guard.
 - **TC-0002-0011 × Equivalence partitions** — the requiredness rule's two classification partitions
   both have a representative: `ui-bearing discussion packs may include prototyping.yaml` and
-  `non-ui discussion packs typically omit it`. The artifact partition the case names has only one
-  of its two members, because the README does not exist.
-- **TC-0002-0011 × Normal path** — the SKILL half is covered well: exact-sentence assertions on the
-  conditional-emission rule and the optional-artifact rule, repeated across both shipped trees. The
-  README half has no case, and no artifact for a case to read. Scored `⚠️` rather than `✅` because
-  the case names two surfaces and one of them is absent.
+  `non-ui discussion packs typically omit it`. Both members of the artifact partition are
+  represented too, the README as well as the skill. The invalid partition is not: a document whose
+  wording states the opposite requiredness is never supplied, so every representative scored here
+  belongs to the conforming class.
+- **TC-0002-0011 × Normal path** — both named surfaces carry exact-sentence assertions: the
+  conditional-emission rule and the optional-artifact rule in the skill, repeated across both
+  shipped trees, and the optional-artifact sentence in `packages/qfai/README.md`, required by two
+  cases. Scored `⚠️` rather than `✅` because the case's expected result is that requiredness
+  "matches active rule", and nothing compares the two: the sentences are checked for presence, never
+  against `isPrototypingRequiredForDiscussionPack`, which returns a constant.
 - **TC-0002-0011 × Edge cases** — one edge is guarded, and guarded thoughtfully: the completion
   matrix is sliced to the `## UI-bearing Packs` section and the slice's end is chosen at the next
   `## ` heading rather than at `## Non-UI Packs`, with `expect(uiBearing.length).toBeGreaterThan(0)`
   to stop an empty slice passing vacuously. No other edge is identified or tested.
+- **TC-0002-0011 × Combinatorial** — the case names an agreement between the README and the skill,
+  and one test evaluates it across documents: `ensures qfai-discussion skill and artifact rules use
+  canonical pack wording` reads the README, the skill and the artifact rules together and requires
+  the same canonical sentence in all three. That is the pair the case names, held in one assertion
+  set. Capped at `⚠️` because agreement is established only on that one sentence, and the other
+  predicates are never crossed with one another.
 - **TC-0002-0011 × Oracle strength** — one assertion is a real oracle over a real artifact: the
   cited schema path is opened from the project root and required to carry the `prototyping.yaml`
   schema heading, so a renamed heading or a dangling citation reddens it. The rest are substring
@@ -409,9 +428,11 @@ the cells beneath it needs a reason of its own.
   assertions: the screen explorations are governed and must be carried unranked, and the brand
   direction is the stated exception. Neither branch is exercised against a pack; both are addressed
   at the level of the sentence that describes them.
-- **BR-0002-0010 × Positive case** — the requiredness wording is asserted present in four artifacts
-  across both shipped trees, which is thorough for what it measures. It is `⚠️` because the rule's
-  own Notes name README and SKILL, and the README half has no artifact.
+- **BR-0002-0010 × Positive case** — the requiredness wording is asserted present in every artifact
+  the rule names: the skill in both shipped trees, the artifact rules, and `packages/qfai/README.md`
+  under two cases. It is `⚠️` because presence is all that is measured. No pack is classified and
+  found to be treated the way the wording says, so the positive direction is established for the
+  sentence and not for the rule.
 - **BR-0002-0010 × Negative case** — the negative direction is genuinely present in shape: the
   retired blocking sentences must not appear in the Stage 0 playbook, and legacy-permissive wording
   must not appear in the skill. Both are absence assertions over the real tree rather than a planted
@@ -432,8 +453,9 @@ the cells beneath it needs a reason of its own.
 
 ## Findings
 
-Seven things were found while producing this matrix that the reviewing stage should act on. None is
-repaired here; this artifact scores coverage and does not edit tests, ledgers or specs.
+Seven things were found while producing this matrix that the reviewing stage should act on. This
+artifact scores coverage and edits no test, ledger or spec; where a finding has since been acted on,
+it says so and names what carries it now.
 
 1. **`TC-0002-0009` specifies a finding that nothing emits.** The case requires a planner-first
    violation when an artifact claims a single winner is final. `discussionDesignHardening` was
@@ -442,24 +464,35 @@ repaired here; this artifact scores coverage and does not edit tests, ledgers or
    direction not be required as a completion condition — it does not ask for an emission. The case
    is stricter than the criterion it refs and stricter than the product. It needs a Change Request,
    not a test.
-2. **`TC-0002-0011` names an artifact that does not exist.** The case and `BR-0002-0010` both name
-   "README / SKILL canonical wording". There is no README under `qfai-discussion/` in either the
-   working tree or the shipped `assets/init` copy. A case in `assets.test.ts` titled "discussion
-   README and SKILL.md agree on prototyping.yaml optionality" reads only `SKILL.md`, so the title
-   claims an agreement check that is not performed. Either the artifact set in the case is stale, or
-   the README is missing.
+2. **A test title claims a comparison the test does not perform.** `assets.test.ts`'s "discussion
+   README and SKILL.md agree on prototyping.yaml optionality" reads `SKILL.md` and nothing else, so
+   nothing in it compares two documents. The comparison the title describes is performed elsewhere,
+   by `ensures qfai-discussion skill and artifact rules use canonical pack wording`, which requires
+   one sentence in `packages/qfai/README.md`, the skill and the artifact rules alike. A reader
+   scanning titles would take the first case for the agreement proof and would be reading a
+   single-file presence check. Rename it for what it does.
 3. **`it("non-UI skip")` passes under a mutation of the behaviour its title names.** Removing the
    `isUiBearingSpec` guard from `validateThreeLayerModel` leaves all ten cases in
    `tests/validators/uix/threeLayer.test.ts` green, because the fixture has no sidecar files for the
    loop to read. A reader scanning test titles would take it for the safe-skip proof for
    `TC-0002-0010`; it is not evidence of that or of anything else. Either give it a fixture with
-   sidecars present, so the guard is the only thing producing the empty result, or retire it.
-4. **Three ledger rows name a selector that appears in no file.** `TDD-0008`, `TDD-0009` and
-   `TDD-0010` are all at `Status = done` over selectors that a search of `packages/qfai/tests/**`
-   does not find. `TDD-0012` names a selector that does resolve — `legacy 4-axis format is error` —
-   to a case about legacy heading formats in a UI sidecar, which has nothing to do with the
+   sidecars present, so the guard is the only thing producing the empty result, or retire it. Both
+   are edits to the file `TDD-0011`'s recorded observation covers, so either one restarts that
+   row's cycle. `CR-20260912-0003` carries `TDD-0011` for that reason — not because its obligation
+   is in doubt, but because the repair to this file moves the observation the row rests on. It is
+   re-verified there rather than reset: nothing upstream invalidates `TC-0002-0010`, so the row owes
+   a fresh observation over the edited file and keeps its `done`.
+4. **Four ledger rows recorded a completion that was never measured.** `TDD-0008`, `TDD-0009` and
+   `TDD-0010` sat at `Status = done` over selectors that a search of `packages/qfai/tests/**` does
+   not find. `TDD-0012` names a selector that does resolve — `legacy 4-axis format is error` — to a
+   case about legacy heading formats in a UI sidecar, which has nothing to do with the
    `prototyping.yaml` requiredness wording its `TC-0002-0011` describes. A `done` over a selector
    that cannot be run, or that runs something else, records a completion that was never measured.
+   All four are named in the blocked set of `CR-20260912-0003`, which asks whether the two upstream
+   statements they rest on survive. The rows are untouched until it resolves. Repointing a selector
+   at a passing test would resolve the cell while discharging nothing, which is the defect rather
+   than its repair; and `done` is not a status a row can be blocked at, so the ledger has no edge
+   that records the wait. The Change Request and its work-log entry carry it instead.
 5. **Every obligation in this pack is reported carrier-only.** All five `TC-0002-*` appear under
    `coveredByCarrierOnly.tc` in `.qfai/report/atdd-traceability/summary.json`, referenced only from
    `tests/integration/qfai-traceability.md`, a file that documents itself as an annotation carrier
@@ -472,7 +505,16 @@ repaired here; this artifact scores coverage and does not edit tests, ledgers or
 6. **An annotated file carries test-case IDs that no longer exist.**
    `tests/validators/uix/threeLayer.test.ts` declares `TC-0002-0012` and `TC-0002-0026`. Neither
    appears in `06_Test-Cases.md`, whose active table holds five rows. The annotations point at
-   obligations that were removed or never registered.
+   obligations that were removed or never registered. The third id the file declares beside the
+   obligation it reaches is in a different position: **`TC-0002-0011` is live**, an active row of
+   `06_Test-Cases.md` that `TDD-0012` still names. That annotation is misplaced rather than
+   dangling: the file reads no README and no `SKILL.md`, so it cannot discharge a wording
+   obligation, and removing it is a different act from removing an id nothing declares.
+   `threeLayer.test.ts` is the file `TDD-0011`'s recorded observation covers, so editing it stales
+   that observation and the row owes a fresh one. The route is the shared-artifact
+   re-verification `CR-20260912-0003` step 7 sets out, which keeps the row at `done` and needs no
+   approval from that Change Request: the row's obligation does not move under any of its
+   outcomes, so nothing authorises a reset and nothing needs one.
 7. **The ledger is seven rows short of what seeds it.** `qfai-sdd`'s Phase 2b seeds
    `tdd/test-list.md` in four groups, and one of them is "one `Layer = E2E` row per **active**
    `US-*` from `02_User-stories.md` (obligation in `US-Refs`, `TC-Refs` = `-`)"
@@ -487,7 +529,7 @@ repaired here; this artifact scores coverage and does not edit tests, ledgers or
 `QFAI-ATDD-133` requires the stage evidence to carry a `## Coverage Depth Matrix` section that links
 this file and restates the counted totals beside it. Those totals are:
 
-**✅ 11 / ⚠️ 16 / ❌ 92**, with `n/a 1`, across 120 scored cells — 108 matrix depth cells (12 rows ×
+**✅ 11 / ⚠️ 17 / ❌ 91**, with `n/a 1`, across 120 scored cells — 108 matrix depth cells (12 rows ×
 9 columns) and 12 business rule cells (4 rows × 3 columns). The 16 row verdicts are outside them.
 
 Four of the pack's six ledger rows carry no evidence, and none of them can until the row is true.
