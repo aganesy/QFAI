@@ -362,6 +362,7 @@ alone has 28. Filed as `CR-20260820-0011`; not this spec's work, recorded as a c
 
 ## Commands executed + key outputs
 
+<!-- qfai:not-a-citation .qfai/report/validate.log -->
 ```text
 pnpm -C packages/qfai exec vitest run --project e2e tests/e2e/spec0017LayeredCiScaffoldE2E.test.ts
   -> Tests 13 passed (13), exit 0
@@ -972,7 +973,7 @@ stated now.** The checkable statement is the rule: the artifact is committed, an
 to a fresh `--profile atdd --fail-on error --spec 0017` run. That holds at any revision and needs no
 number, which is the third time this one sentence has taught the same lesson.
 
-**Validate Hard Gate evidence** is those two paths, not `.qfai/report/validate.log`. This skill's
+**Validate Hard Gate evidence** is those two paths, not `.qfai/report/validate.log`. This skill's <!-- qfai:not-a-citation -->
 CRITICAL CONSTRAINTS name the per-run directory and this spec's `validate.spec-<id>.json` as the two
 admissible citations, because `validate.log` and the run-log pointer are shared by every run, scoped
 or not, and nothing serializes them — a concurrent stage can leave that pointer naming its run rather
@@ -2129,7 +2130,7 @@ matching line for line; the scoped gate at `error=2` with the right content, its
 Delta Rejected Guard.
 
 **One thing they vindicated rather than merely accepted.** `qa-gatekeeper` reports that the tracked
-`.qfai/report/validate.log` was rewritten _during its review_ by another process — unscoped,
+`.qfai/report/validate.log` was rewritten _during its review_ by another process — unscoped, <!-- qfai:not-a-citation -->
 `warnings: 376`, five specs — provably not its own, since both of its runs wrote into its shadow root.
 That is the exact hazard this record cites when it declines to use `validate.log` as Hard Gate
 evidence. Had the citation been `validate.log`, this section would now be quoting another stage's
@@ -2260,7 +2261,7 @@ a merge can invalidate has no author to hold responsible for it.
 The count and its split across the two include roots are on one line, and both are derived by the same
 walk:
 
-e2e callsites at this tree: 2182 (packages/qfai/tests/assets 2012, packages/qfai/tests/e2e 170)
+e2e callsites at this tree: 2258 (packages/qfai/tests/assets 2088, packages/qfai/tests/e2e 170)
 
 **That line is the repair, and it is the seventh attempt at this defect.** Rounds 4, 5, 6, 7, 10 and 11
 each found the per-root totals a round behind, and each repair re-typed them. The seventh INSTANCE is
@@ -2335,7 +2336,7 @@ the same pack state. The row below is kept with that noted rather than deleted, 
 decomposition is which rules produce the number, and this is a worked example of the answer changing
 without the subject moving.
 
-**`.qfai/report/validate.log` is not cited here and was not committed with this round.** It is tracked,
+**`.qfai/report/validate.log` is not cited here and was not committed with this round.** It is tracked, <!-- qfai:not-a-citation -->
 it is shared by every run on this machine scoped or not, and round 19's gate found it rewritten mid-review
 by a sibling reviewer's unscoped run — `errors: 49, warnings: 403` — at a revision whose scoped gate is
 `error=1`. That has now happened in two of the two rounds where anyone looked, so it is the normal case

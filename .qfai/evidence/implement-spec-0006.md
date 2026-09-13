@@ -515,7 +515,7 @@ and must stay there until the three reviews run. Nothing about this is recoverab
 the engineer's report more carefully.
 
 Disk state verified after the failures: no stray `git worktree` was left behind (only the main
-tree is registered), the working tree is clean apart from `.qfai/report/validate.log`, `HEAD` is
+tree is registered), the working tree is clean apart from `.qfai/report/validate.log`, `HEAD` is <!-- qfai:not-a-citation -->
 `bfc14f1b`, and the new module's blob is unchanged. So a resumed session can dispatch the same
 three reviewers against the same revision with no reconstruction work.
 
@@ -1222,7 +1222,7 @@ packaging; correctly not fixed from this row.
   than shipped silently. The minimal type would be `{ workflowsDir, modified }`.
 - **8**: `title` is retained despite having zero consumers in `src/`, because `DoctorCheck.title` is a
   required field and removing it is a `--format json` surface change no row owns. Correct.
-- **1**: `.qfai/report/validate.log` going clean between snapshots has a mundane cause — I staged and
+- **1**: `.qfai/report/validate.log` going clean between snapshots has a mundane cause — I staged and <!-- qfai:not-a-citation -->
   committed it in `bfc14f1b`. Nothing reverted it.
 
 ## Items processed

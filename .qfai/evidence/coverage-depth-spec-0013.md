@@ -280,6 +280,7 @@ and records nothing the gate does not already say.
 The layer gap is real and is the subject of its own issue; it is recorded here as the condition
 every row sits under rather than as a mark on each of them.
 
+<!-- qfai:not-a-citation ./.qfai/report/atdd-traceability/summary.json -->
 ```text
 $ node packages/qfai/dist/cli/index.mjs validate --profile atdd --fail-on never
 $ node -e 'const s=require("./.qfai/report/atdd-traceability/summary.json");
