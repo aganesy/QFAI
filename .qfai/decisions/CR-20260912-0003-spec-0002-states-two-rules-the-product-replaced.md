@@ -122,7 +122,7 @@ obligation it reaches — two that this spec's table does not hold, and a live
 one the file cannot discharge — do edit the file its recorded observation
 covers, so the
 row owes a fresh observation. That is the shared-artifact re-verification of step
-6, which needs no approval from this Change Request and no reset.
+7, which needs no approval from this Change Request and no reset.
 
 Listing it here would have blocked it: the open-CR preflight suppresses every
 row in this set until the user settles two product decisions the row has nothing
@@ -139,7 +139,7 @@ to do with. A row whose obligation is unchanged waits on nobody.
 - Not yet listed: the `E2E` rows the two ledger repairs will seed for
   `US-0002-0005`, `US-0010-0008` and `US-0010-0009`. They join this set by id
   when this record is refreshed after those repairs, as approved actions 1 and
-  4 set out, and before it is approved.
+  5 set out, and before it is approved.
 - Overlapping open CRs: `none`
 
 ## Impact scope
@@ -600,7 +600,7 @@ internally contradictory.
    and is released unchanged under `2A`, where the obligation does not move.
 
    **`spec-0010`'s ledger repair is a prerequisite too, on the same terms as
-   `spec-0002`'s (step 4).** That ledger has eight columns and no `E2E` row for
+   `spec-0002`'s (step 5).** That ledger has eight columns and no `E2E` row for
    any of its twelve stories, all of them active, so this `re-derive`'s Phase 2b
    would migrate the table and seed twelve rows this record does not authorise.
    The repair lands first as its own record. This record is then refreshed
@@ -669,6 +669,10 @@ items` by id, with these dispositions:
    specified, and changing it while those packs still require the old behaviour
    leaves the product satisfying neither.
 
+4. **The policy layer, under the outcomes its table names.** This action is
+   not limited to `2a`: every statement-A outcome, `2B` and `2a` each reach a
+   policy statement, so an approval of any of them runs it.
+
    **The policy layer states three of these rules globally, and each outcome
    reaches a different one.** A pack-level rerun leaves the shared record
    contradicting both the product and the packs it just repaired, so the policy
@@ -693,9 +697,10 @@ items` by id, with these dispositions:
    the producer `2a` selects, and records the change in
    `.qfai/specs/_policies/10_delta.md` as that layer requires. Both paths are in
    `## Impact scope`; without them the correction would fail `QFAI-DRIFT-001`
-   and the index would keep contradicting every pack the action above repairs.
+   and the index would keep contradicting every pack the pack reruns above
+   repair.
 
-4. `/qfai-sdd` rerun scope: the statements the chosen option names, plus the
+5. `/qfai-sdd` rerun scope: the statements the chosen option names, plus the
    `06_Test-Cases.md` rows that read them.
 
    The seven ledger rows the seeding contract requires and this pack does not
@@ -706,6 +711,15 @@ items` by id, with these dispositions:
    the ledger untouched cannot be followed: a rerun under this approval either
    performs the repair unauthorised, or stops short of a phase its owner skill
    requires, and neither completes the Change Request.
+
+   **The same holds for every other pack an approved outcome re-derives.**
+   `spec-0004`, `spec-0012` and `spec-0013` have nine-column ledgers with `E2E`
+   rows for 3 of 16, 19 of 52 and 1 of 14 stories, so a `2a` rerun of them, or a
+   `2B` rerun of `spec-0013`, would migrate each table to the template's columns
+   and seed the missing rows as well. Their ledger repairs are prerequisites on
+   the same terms, and this record is refreshed after each one to name, by id,
+   any seeded row whose story an approved outcome changes, with its
+   disposition.
 
    The repair is recorded in `.qfai/evidence/coverage-depth-spec-0002.md`
    finding 7 and needs its own record. **That record lands first**, and this one
@@ -732,7 +746,7 @@ items` by id, with these dispositions:
    two. It is recorded in `.qfai/evidence/coverage-depth-spec-0002.md` and needs
    its own.
 
-5. Downstream ledger sweep. The two statements are settled independently, so the
+6. Downstream ledger sweep. The two statements are settled independently, so the
    plan is read per statement and not per bundle, so every dependent identifier
    is assigned to one of them here rather than left in the combined option
    bodies — a split cannot be applied from a list that names only part of a
@@ -757,7 +771,7 @@ items` by id, with these dispositions:
    Nothing in statement A's list touches statement B's rows or the reverse, so
    `1A/2B` is option 1 applied to A's rows and option 2 applied to B's, with no
    overlap to resolve. `TDD-0011` is re-verified under every combination —
-   not reset — for a reason belonging to neither statement, given at step 6.
+   not reset — for a reason belonging to neither statement, given at step 7.
 
    The three option bodies below each describe **both** statements, because that
    is how they are compared. Applying one to a single statement means taking only
@@ -838,7 +852,7 @@ items` by id, with these dispositions:
    | Option | Who authors `DESIGN.md`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
    | ------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
    | `2a`   | `/qfai-prototyping` gains a direction-selection step and authors the file **and `.qfai/contracts/design/DESIGN.md.lock.yaml`**, with its tests. The prototyping skill lists both among its inputs, and the lock is what freezes the file: `prototyping iterate` refuses a lock that is malformed, unreadable or mismatched. It does not refuse a missing one — a run with no lock proceeds unfrozen — so authoring the file without writing the lock would leave every run unfrozen with nothing reporting it. `2a` keeps that branch as it is: the step that authors the file writes the lock, as `/qfai-sdd` Phase 0 does today. Discussion still chooses nothing, and the contract that has prototyping read it read-only changes with it |
-   | `2b`   | `/qfai-sdd` Phase 0 authors it from the spec, with no interview anywhere. The requirement is met with no user-facing choice, and whatever a brand needs that a spec does not carry is lost. **It narrows `US-0002-0005` with the rest of statement A**: that story requires prototyping to remain where the direction is chosen, and `2b` moves the authoring to `/qfai-sdd`, so leaving the story as written would contradict the option settling it                                                                                                                                                                                                                                                                                        |
+   | `2b`   | `/qfai-sdd` Phase 0 authors it from the discussion pack it already reads — the requirements, context and constraints — because Phase 0 runs before a new project has any spec, and no phase order changes. There is no interview anywhere. The requirement is met with no user-facing choice, and whatever a brand needs that the discussion pack does not carry is lost. **It narrows `US-0002-0005` with the rest of statement A**: that story requires prototyping to remain where the direction is chosen, and `2b` moves the authoring to `/qfai-sdd`, so leaving the story as written would contradict the option settling it                                                                                                          |
 
    `2A` with no letter authorises neither, and withdrawing every producer
    without naming a replacement leaves a new UI project unable to enter
@@ -952,7 +966,7 @@ items` by id, with these dispositions:
      other rows; `packages/qfai/tests/validators/uix/threeLayer.test.ts` stays
      with `spec-0002/TDD-0011`.
 
-6. `spec-0002/TDD-0011` is **re-verified, not reset**, under every option. Its
+7. `spec-0002/TDD-0011` is **re-verified, not reset**, under every option. Its
    obligation `TC-0002-0010` does not move and its case `skips non-UI packs` is
    not edited; what changes is the file around it — the annotations, and the
    sibling case's fixture. A `CR-*` reset is for a row whose obligation an
@@ -966,7 +980,7 @@ items` by id, with these dispositions:
    Recording only the hash would leave the row asserting a verification nobody
    performed, which is the shape of defect this Change Request exists to clear.
 
-7. Reserve every retired `TDD-ID` in the ledger's `## TDD-ID reservations`
+8. Reserve every retired `TDD-ID` in the ledger's `## TDD-ID reservations`
    section before the row is deleted. The ledger allocates the next id as
    `max + 1`, so deleting the highest row hands its number to the next one
    written, and two runs then share an identifier that this Change Request is

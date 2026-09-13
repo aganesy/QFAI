@@ -152,13 +152,17 @@ All four are owner re-derivations in the rerun plan, not cross-spec
 re-verifications: what disagrees is a requirement, and re-running a test
 confirms the observation rather than the requirement it was taken against.
 
-Three prerequisites land before the Change Request is applied, each as its own
+These prerequisites land before the Change Request is applied, each as its own
 record:
 
 - `spec-0002`'s ledger repair. Phase 2b of the `re-derive` would otherwise seed
   its missing rows unauthorised.
 - `spec-0010`'s ledger repair, for the same reason: eight columns and no `E2E`
   row for any of twelve active stories.
+- The ledger repairs of `spec-0004`, `spec-0012` and `spec-0013`, before an
+  approval that re-derives them: `2a` reaches all three and `2B` reaches
+  `spec-0013`. Their nine-column tables would otherwise be migrated and seeded
+  by the same rerun.
 - `spec-0013`'s duplicate id. Its `03_Acceptance-Criteria.md` declares
   `AC-0013-0009` twice, so a rerun keyed to that id sweeps whichever of the two
   it finds, and `2B` waits on it.

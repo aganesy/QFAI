@@ -512,7 +512,7 @@ it says so and names what carries it now.
    obligation, and removing it is a different act from removing an id nothing declares.
    `threeLayer.test.ts` is the file `TDD-0011`'s recorded observation covers, so editing it stales
    that observation and the row owes a fresh one. The route is the shared-artifact
-   re-verification `CR-20260912-0003` step 6 sets out, which keeps the row at `done` and needs no
+   re-verification `CR-20260912-0003` step 7 sets out, which keeps the row at `done` and needs no
    approval from that Change Request: the row's obligation does not move under any of its
    outcomes, so nothing authorises a reset and nothing needs one.
 7. **The ledger is seven rows short of what seeds it.** `qfai-sdd`'s Phase 2b seeds
