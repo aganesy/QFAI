@@ -3,11 +3,32 @@ import path from "node:path";
 
 import fg from "fast-glob";
 
-const DEFAULT_IGNORE_DIRS = new Set(["node_modules", ".git", "dist", ".pnpm", "tmp", ".mcp-tools"]);
+export const DEFAULT_IGNORE_DIRS: ReadonlySet<string> = new Set([
+  "node_modules",
+  ".git",
+  "dist",
+  ".pnpm",
+  "tmp",
+  ".mcp-tools",
+]);
 
 export type CollectFilesOptions = {
   extensions?: string[];
   ignoreDirs?: string[];
+  /**
+   * Directories to walk past, decided from each one's path rather than listed.
+   *
+   * A caller that skips a whole class of directory — every dot-prefixed one
+   * directly under the root, say — cannot enumerate the class in `ignoreDirs`,
+   * and filtering the result afterwards is too late: the walk has already read
+   * inside, so a directory this process may not traverse fails the collection
+   * rather than being passed over.
+   *
+   * Given, it replaces the default list of directory names to skip: a caller
+   * deciding by path decides every directory, and a `dist` or `tmp` it wants
+   * read is not pruned by name behind its back.
+   */
+  skipDirectory?: (directory: string) => boolean;
 };
 
 export type CollectFilesByGlobOptions = {
@@ -65,10 +86,13 @@ export async function collectFiles(
     return entries;
   }
 
-  const ignoreDirs = new Set([...DEFAULT_IGNORE_DIRS, ...(options.ignoreDirs ?? [])]);
+  const ignoreDirs = new Set([
+    ...(options.skipDirectory === undefined ? DEFAULT_IGNORE_DIRS : []),
+    ...(options.ignoreDirs ?? []),
+  ]);
   const extensions = options.extensions?.map((ext) => ext.toLowerCase()) ?? [];
 
-  await walk(root, root, ignoreDirs, extensions, entries);
+  await walk(root, root, ignoreDirs, options.skipDirectory, extensions, entries);
   return entries;
 }
 
@@ -110,6 +134,7 @@ async function walk(
   base: string,
   current: string,
   ignoreDirs: Set<string>,
+  skipDirectory: ((directory: string) => boolean) | undefined,
   extensions: string[],
   out: string[],
 ): Promise<void> {
@@ -119,10 +144,10 @@ async function walk(
     const fullPath = path.join(current, item.name);
 
     if (item.isDirectory()) {
-      if (ignoreDirs.has(item.name)) {
+      if (ignoreDirs.has(item.name) || skipDirectory?.(fullPath) === true) {
         continue;
       }
-      await walk(base, fullPath, ignoreDirs, extensions, out);
+      await walk(base, fullPath, ignoreDirs, skipDirectory, extensions, out);
       continue;
     }
 

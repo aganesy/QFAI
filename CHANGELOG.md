@@ -117,6 +117,24 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   and still gives its extension. `!tests/e2e/legacy/**/*.ts` beside a Python glob added
   TypeScript to what the stage scans.
 
+- **A skill the gate accepts is one the host accepts** (#1707). Four cases
+  parted company with the host `QFAI-SKILLS-015` is modelled on: a description
+  past 1024 characters, a skill directory whose own name is not a legal one, a
+  dot-prefixed directory the host does not list, and an entry point holding a
+  byte that is not valid UTF-8. Each is now decided the way the host decides
+  it — reported where the host refuses the skill, and passed over where the
+  host never loads it. A description is measured trimmed and in characters, and
+  one holding `<` or `>` is refused, as the host's validator refuses it.
+
+  A directory that has to be renamed gets an action that can be followed: no
+  value in `name:` clears both the form and the directory match, so the rename
+  comes first.
+
+  A fifth case was not a host disagreement. A value read out of a `SKILL.md` now
+  reaches an operator-facing message with its control characters escaped. The
+  document is a file the run did not write, and the text formatter prints a
+  message straight to the terminal.
+
 ## [1.12.0] - 2026-09-12
 
 ### Added

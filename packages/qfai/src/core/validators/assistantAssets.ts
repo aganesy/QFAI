@@ -24,7 +24,7 @@ import type {
 import type { QfaiConfig } from "../config.js";
 import { resolvePath } from "../config.js";
 import { parseSkillFrontmatter, skillFrontmatterMapping } from "../agentFrontmatter.js";
-import { collectFiles } from "../fs.js";
+import { collectFiles, DEFAULT_IGNORE_DIRS } from "../fs.js";
 import { hasErrnoCode, isEnoent } from "../fs/errno.js";
 import { readBoundedRegularFile } from "../../shared/boundedRead.js";
 import { parseHeadings } from "../parse/markdown.js";
@@ -318,19 +318,53 @@ export async function validateAssistantAssets(root: string, config: QfaiConfig):
   // SKILL.md: a template or an example copy below a skill is registered by
   // nothing, and a skill in a directory the crawl ignores is registered all the
   // same.
-  const crawled = new Set(skillFiles);
+  // By file identity rather than by spelling: on a case-insensitive file system
+  // the crawl's `skill.md` and the probe's `SKILL.md` are one file, read and
+  // reported once. A hard link gives one identity several crawled paths, so
+  // every one is kept.
+  const unreadableFiles = unreadable.flatMap((item) =>
+    item.file === undefined ? [] : [item.file],
+  );
+  const crawled = new Map<string, string[]>();
+  for (const crawledFile of [...documents.keys(), ...unreadableFiles]) {
+    const identity = await fileIdentity(crawledFile);
+    crawled.set(identity, [...(crawled.get(identity) ?? []), crawledFile]);
+  }
+  // A skill whose entry point cannot be read reports no reference as uncited:
+  // there is no root to reach its documents from, and the `QFAI-SKILLS-014` is
+  // the finding to act on. The graph below adds a reached document that cannot
+  // be read.
+  const indeterminateSkills: string[] = [];
   for (const entryPoint of await collectSkillEntryPoints(skillsDir)) {
-    if (crawled.has(entryPoint)) {
-      const content = documents.get(entryPoint);
-      // Absent from the map means the crawl could not read it, and has already
-      // said so. Reading it again here reports the same fault twice.
-      if (content !== undefined)
-        issues.push(...collectSkillRegistrationIssues(entryPoint, content));
+    const aliases = crawled.get(await fileIdentity(entryPoint)) ?? [];
+    const content = aliases
+      .map((alias) => documents.get(alias))
+      .find((text): text is string => text !== undefined);
+    if (content !== undefined) {
+      issues.push(...collectSkillRegistrationIssues(entryPoint, content));
       continue;
     }
-    // Outside the crawl — a directory on the shared ignore list — so nothing has
-    // reported this file, and a read that fails here is the only chance to say
-    // the skill cannot be loaded.
+    // Crawled as this skill's own entry point, the file could not be read, and
+    // the crawl has already said so. Reading it again reports the same fault
+    // twice.
+    let reportedAsEntryPoint = false;
+    for (const alias of aliases) {
+      if (
+        path.dirname(alias) === path.dirname(entryPoint) &&
+        (await namesSkillEntryPoint(skillsDir, alias))
+      ) {
+        reportedAsEntryPoint = true;
+        break;
+      }
+    }
+    if (reportedAsEntryPoint) {
+      indeterminateSkills.push(path.dirname(entryPoint));
+      continue;
+    }
+    // Not crawled as this entry point: a skill directory reached through a link,
+    // which the walk does not follow, or an entry point linked to a document the
+    // crawl reported as the document it is. Nothing has said the skill cannot be
+    // loaded, and a read that fails here is the only chance to.
     //
     // Through the bounded reader rather than a bare read: the path is whatever
     // the adopter's tree holds, and a FIFO does not fail on open — it blocks
@@ -354,12 +388,41 @@ export async function validateAssistantAssets(root: string, config: QfaiConfig):
           "Make the entry point an ordinary readable file — grant read permission, repair a broken symlink, replace a directory or a device with the document — or delete it if it does not belong under `skills`.",
         ),
       );
+      indeterminateSkills.push(path.dirname(entryPoint));
       continue;
     }
-    issues.push(...collectSkillRegistrationIssues(entryPoint, bytes.toString("utf-8")));
+    // Decoded strictly. A lenient decode turns an invalid byte into a
+    // replacement character and hands back metadata that reads as usable, while
+    // the host reports the file unreadable and omits the skill.
+    const text = decodeUtf8(bytes);
+    if (text === undefined) {
+      issues.push(
+        issue(
+          "QFAI-SKILLS-014",
+          "A skill's entry point holds bytes that are not valid UTF-8, so the host reports it unreadable and does not load the skill.",
+          "error",
+          entryPoint,
+          "skills.documentReadable",
+          undefined,
+          "canonical",
+          "Save the entry point as UTF-8. A byte that is not part of a valid sequence is usually text pasted from another encoding, or a binary file left at the path.",
+        ),
+      );
+      indeterminateSkills.push(path.dirname(entryPoint));
+      continue;
+    }
+    issues.push(...collectSkillRegistrationIssues(entryPoint, text));
   }
 
-  issues.push(...collectReferenceGraphIssues(root, skillsDir, documents));
+  issues.push(
+    ...collectReferenceGraphIssues(
+      root,
+      skillsDir,
+      documents,
+      indeterminateSkills,
+      unreadableFiles,
+    ),
+  );
 
   return issues;
 }
@@ -1193,10 +1256,26 @@ function isUnfilledValue(raw: string): boolean {
  */
 const SKILL_DOCUMENT_MAX_BYTES = 8 * 1024 * 1024;
 
+/**
+ * A document's text, or `undefined` where the bytes are not valid UTF-8.
+ *
+ * Through a fatal decoder, because the lenient one substitutes a replacement
+ * character and produces a document that parses: the front matter then reads as
+ * usable metadata for a file the host refuses to open.
+ */
+function decodeUtf8(bytes: Buffer): string | undefined {
+  try {
+    return new TextDecoder("utf-8", { fatal: true, ignoreBOM: true }).decode(bytes);
+  } catch {
+    return undefined;
+  }
+}
+
 async function collectSkillEntryPoints(skillsDir: string): Promise<string[]> {
   const entries = await readdir(skillsDir, { withFileTypes: true }).catch(() => []);
   const found: string[] = [];
   for (const entry of entries) {
+    if (isHiddenSkillDirectory(skillsDir, path.join(skillsDir, entry.name))) continue;
     // A symlinked skill directory is a shape this CLI itself writes, and
     // `isDirectory()` is false for the link. What matters is what it resolves
     // to — and a link that resolves to nothing, or to something this process
@@ -1235,11 +1314,36 @@ async function collectSkillEntryPoints(skillsDir: string): Promise<string[]> {
 }
 
 async function collectSkillFiles(dirs: string[]): Promise<string[]> {
-  const files = await Promise.all(dirs.map((dir) => collectFiles(dir)));
+  const files = await Promise.all(
+    dirs.map((dir) =>
+      // The marker checks keep the default pruning: a `SKILL.md` inside a
+      // vendored or built tree is not a document the skill's author wrote.
+      collectFiles(dir, {
+        ignoreDirs: [...DEFAULT_IGNORE_DIRS],
+        skipDirectory: (directory) => isHiddenSkillDirectory(dir, directory),
+      }),
+    ),
+  );
   return files
     .flat()
     .filter((filePath) => path.basename(filePath) === "SKILL.md")
     .sort((a, b) => a.localeCompare(b));
+}
+
+/**
+ * Whether a directory is a skill directory the host does not list: a
+ * dot-prefixed one directly under the skills root.
+ *
+ * A draft parked as `.draft/` is a skill nothing registers. The walk is what
+ * applies it, so the tree is never read: dropping its files afterwards leaves a
+ * directory this process may not traverse failing the whole run, over a skill
+ * the host never loads. A dot-prefixed directory inside a skill is not one — a
+ * registered skill can name a document under it — so it is read like any
+ * other.
+ */
+function isHiddenSkillDirectory(skillsDir: string, directory: string): boolean {
+  const relative = path.relative(skillsDir, directory);
+  return relative.startsWith(".") && relative !== ".." && !relative.includes(path.sep);
 }
 
 function extractReviewerGateSection(content: string): string | null {
@@ -1274,6 +1378,13 @@ function collectSkillNameIssue(
   const value = typeof name === "string" ? name.trim() : "";
   const wrong = skillNameProblem(value, directory);
   if (wrong === null) return [];
+  // A directory whose own name is not a legal one leaves no value that clears
+  // both halves: its spelling fails what a host accepts, and every spelling
+  // that passes differs from it. Telling the operator to copy it in would be an
+  // action nobody can follow, so the rename comes first.
+  const action = usableAsSkillName(directory)
+    ? `Set \`name:\` to \`${directory}\` — the skill's own directory, which is what a host lists it under.`
+    : `Rename the skill's directory, \`${printable(directory)}\`, to lowercase letters, digits and single hyphens within ${SKILL_NAME_MAX_LENGTH} characters, then set \`name:\` to the new name. A host lists the skill under the directory, so no value in this field can stand in for one it will not accept.`;
   return [
     issue(
       "QFAI-SKILLS-015",
@@ -1283,9 +1394,34 @@ function collectSkillNameIssue(
       "skills.name",
       undefined,
       "change",
-      `Set \`name:\` to \`${directory}\` — the skill's own directory, which is what a host lists it under.`,
+      action,
     ),
   ];
+}
+
+/** The bidirectional controls that reorder the text after them on a terminal. */
+const BIDIRECTIONAL_CONTROLS: ReadonlySet<number> = new Set([
+  0x061c, 0x200e, 0x200f, 0x202a, 0x202b, 0x202c, 0x202d, 0x202e, 0x2066, 0x2067, 0x2068, 0x2069,
+]);
+
+/**
+ * A value out of a `SKILL.md`, safe to print.
+ *
+ * The document is a file the run did not write, and the text formatter writes a
+ * message straight to the terminal. A name carrying a newline or an escape
+ * sequence forges lines in that output, and a bidirectional control reorders
+ * the text after it, so every character below ` `, the delete character, the
+ * C1 block and those controls are written as their escapes instead.
+ */
+function printable(value: string): string {
+  let out = "";
+  for (const character of value) {
+    const code = character.codePointAt(0) ?? 0;
+    const unprintable =
+      code < 0x20 || (code >= 0x7f && code <= 0x9f) || BIDIRECTIONAL_CONTROLS.has(code);
+    out += unprintable ? `\\u${code.toString(16).padStart(4, "0")}` : character;
+  }
+  return out;
 }
 
 /**
@@ -1298,6 +1434,60 @@ function collectSkillNameIssue(
 const SKILL_NAME_FORM = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 const SKILL_NAME_MAX_LENGTH = 64;
 
+/**
+ * How long a `description:` a host accepts.
+ *
+ * The field is registration metadata rather than the document: a host reads it
+ * to decide whether to load the skill and whether to offer it, and refuses one
+ * past this length outright. What a reader needs beyond a sentence or two is in
+ * the document, which is loaded after the skill is registered.
+ */
+const SKILL_DESCRIPTION_MAX_LENGTH = 1024;
+
+/**
+ * The whitespace the host's strip removes from both ends.
+ *
+ * The host strips with Python's `str.strip()`, whose set differs from
+ * JavaScript's `trim()`: it removes U+0085 and U+001C to U+001F, and keeps
+ * U+FEFF. Trimmed the JavaScript way, a description one of those characters
+ * lengthens is measured at a length the host does not see.
+ */
+const HOST_STRIP_WHITESPACE: ReadonlySet<number> = new Set([
+  0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x1c, 0x1d, 0x1e, 0x1f, 0x20, 0x85, 0xa0, 0x1680, 0x2000, 0x2001,
+  0x2002, 0x2003, 0x2004, 0x2005, 0x2006, 0x2007, 0x2008, 0x2009, 0x200a, 0x2028, 0x2029, 0x202f,
+  0x205f, 0x3000,
+]);
+
+/** `text` with the host's whitespace stripped from both ends. */
+function hostStrip(text: string): string {
+  let start = 0;
+  let end = text.length;
+  while (start < end && HOST_STRIP_WHITESPACE.has(text.charCodeAt(start))) start += 1;
+  while (end > start && HOST_STRIP_WHITESPACE.has(text.charCodeAt(end - 1))) end -= 1;
+  return text.slice(start, end);
+}
+
+/**
+ * How many characters `text` holds, counted as code points, as a host counts
+ * them. Counted without building a copy: a crawled document has no size
+ * ceiling, and a description the size of the document would be copied whole.
+ */
+function codePointCount(text: string): number {
+  let count = 0;
+  for (let index = 0; index < text.length; index += 1) {
+    const unit = text.charCodeAt(index);
+    const next = text.charCodeAt(index + 1);
+    if (unit >= 0xd800 && unit <= 0xdbff && next >= 0xdc00 && next <= 0xdfff) index += 1;
+    count += 1;
+  }
+  return count;
+}
+
+/** Whether a name is one a host accepts, whoever wrote it. */
+function usableAsSkillName(value: string): boolean {
+  return value.length <= SKILL_NAME_MAX_LENGTH && SKILL_NAME_FORM.test(value);
+}
+
 /** Why a `name:` is unusable, or `null` where it is not. */
 function skillNameProblem(value: string, directory: string): string | null {
   if (value === "") return "the field is missing, empty, or not text";
@@ -1305,11 +1495,13 @@ function skillNameProblem(value: string, directory: string): string | null {
     return `it is ${value.length} characters, past the ${SKILL_NAME_MAX_LENGTH} a host accepts`;
   }
   if (!SKILL_NAME_FORM.test(value)) {
-    return `\`${value}\` is not lowercase letters, digits and single hyphens`;
+    return `\`${printable(value)}\` is not lowercase letters, digits and single hyphens`;
   }
   // The directory is what a host lists the skill under, so a name that differs
   // from it names one the user will not find under either spelling.
-  if (value !== directory) return `\`${value}\` is not the skill's directory, \`${directory}\``;
+  if (value !== directory) {
+    return `\`${printable(value)}\` is not the skill's directory, \`${printable(directory)}\``;
+  }
   return null;
 }
 
@@ -1336,6 +1528,14 @@ function collectSkillRegistrationIssues(skillFile: string, content: string): Iss
   // block parses.
   const unreadable = parseSkillFrontmatter(content)?.parseError;
   if (unreadable !== undefined) {
+    // Both fields, because the block is unreadable and neither has been looked
+    // at: told to repair one, the operator writes valid front matter that fails
+    // this same finding again on the other. A directory no name can match is
+    // renamed first, for the reason the name finding gives.
+    const directory = path.basename(path.dirname(skillFile));
+    const repair = usableAsSkillName(directory)
+      ? `Repair the front matter first, then make sure \`name:\` is \`${directory}\` and \`description:\` carries a sentence saying what the skill does.`
+      : `Repair the front matter first. Then rename the skill's directory, \`${printable(directory)}\`, to lowercase letters, digits and single hyphens within ${SKILL_NAME_MAX_LENGTH} characters, set \`name:\` to the new name, and make sure \`description:\` carries a sentence saying what the skill does.`;
     return [
       issue(
         "QFAI-SKILLS-015",
@@ -1345,10 +1545,7 @@ function collectSkillRegistrationIssues(skillFile: string, content: string): Iss
         "skills.description",
         undefined,
         "change",
-        // Both fields, because the block is unreadable and neither has been
-        // looked at: told to repair one, the operator writes valid front matter
-        // that fails this same finding again on the other.
-        `Repair the front matter first, then make sure \`name:\` is \`${path.basename(path.dirname(skillFile))}\` and \`description:\` carries a sentence saying what the skill does.`,
+        repair,
       ),
     ];
   }
@@ -1358,8 +1555,40 @@ function collectSkillRegistrationIssues(skillFile: string, content: string): Iss
   // and offers. A document carrying one without the other is not loaded.
   const missingName = collectSkillNameIssue(skillFile, frontMatter);
   const description = frontMatter?.["description"];
-  if (typeof description === "string" && description.trim() !== "") {
-    return missingName;
+  if (typeof description === "string" && hostStrip(description) !== "") {
+    // Measured as the host reads it: stripped of the whitespace its own strip
+    // removes, and counted in code points rather than UTF-16 units.
+    const length = codePointCount(hostStrip(description));
+    if (/[<>]/.test(description)) {
+      return [
+        ...missingName,
+        issue(
+          "QFAI-SKILLS-015",
+          "SKILL.md has a `description:` holding `<` or `>`, which a host refuses. The skill is not registered, and the user cannot invoke it by name.",
+          "error",
+          skillFile,
+          "skills.description",
+          undefined,
+          "change",
+          "Write `description:` without angle brackets: name the input in words, such as `a file path`, instead of `<file>`.",
+        ),
+      ];
+    }
+    return length > SKILL_DESCRIPTION_MAX_LENGTH
+      ? [
+          ...missingName,
+          issue(
+            "QFAI-SKILLS-015",
+            `SKILL.md has a \`description:\` of ${length} characters, past the ${SKILL_DESCRIPTION_MAX_LENGTH} a host accepts. It is refused there, so the skill is not registered and the user cannot invoke it by name.`,
+            "error",
+            skillFile,
+            "skills.description",
+            undefined,
+            "change",
+            `Cut \`description:\` to ${SKILL_DESCRIPTION_MAX_LENGTH} characters — one or two sentences saying what the skill does and when to reach for it. What a reader needs beyond that belongs in the document below the front matter, which the host loads once the skill is registered.`,
+          ),
+        ]
+      : missingName;
   }
   const optsOut = frontMatter?.["disable-model-invocation"] === true;
   // A key that is there and unusable is repaired by replacing its value. Told
@@ -1441,11 +1670,40 @@ function collectReferenceGraphIssues(
   root: string,
   skillsDir: string,
   documents: Map<string, string>,
+  indeterminateSkills: readonly string[] = [],
+  unreadableFiles: readonly string[] = [],
 ): Issue[] {
-  const reachable = collectReachableDocuments(citationContext(root, skillsDir), documents);
+  // A document that cannot be read stands in the graph with no text: a citation
+  // still reaches it, and what it would cite is unknown. Reached, it leaves the
+  // uncited references of its skill undecided; unreached, it makes nothing
+  // reachable and decides nothing.
+  const graph = new Map<string, string>([
+    ...documents,
+    ...unreadableFiles.map((file): [string, string] => [file, ""]),
+  ]);
+  const reachable = collectReachableDocuments(citationContext(root, skillsDir), graph);
+  const undecided = [
+    ...indeterminateSkills,
+    ...unreadableFiles
+      .filter((file) => reachable.has(file))
+      .flatMap((file) => {
+        const skill = toPosixRelative(skillsDir, file).split("/")[0];
+        return skill === undefined || skill === "" || skill === ".."
+          ? []
+          : [path.join(skillsDir, skill)];
+      }),
+  ];
   const severity = "error";
+  const inIndeterminateSkill = (file: string): boolean =>
+    undecided.some((dir) => {
+      const relative = path.relative(dir, file);
+      return relative !== "" && !relative.startsWith("..") && !path.isAbsolute(relative);
+    });
   const unreachable = [...documents.keys()]
-    .filter((file) => isReferenceDocument(skillsDir, file) && !reachable.has(file))
+    .filter(
+      (file) =>
+        isReferenceDocument(skillsDir, file) && !reachable.has(file) && !inIndeterminateSkill(file),
+    )
     .sort((a, b) => a.localeCompare(b))
     .map((file) =>
       issue(
@@ -1470,6 +1728,19 @@ type SkillDocuments = {
 };
 
 /**
+ * The file a path names, as the file system identifies it: its device and
+ * inode, or the path itself where it cannot be read.
+ */
+async function fileIdentity(file: string): Promise<string> {
+  try {
+    const identity = await stat(file, { bigint: true });
+    return `${String(identity.dev)}:${String(identity.ino)}`;
+  } catch {
+    return file;
+  }
+}
+
+/**
  * A document that cannot be read is reported, not dropped.
  *
  * Swallowing the failure would delete the file from the graph: it would cite
@@ -1479,13 +1750,46 @@ type SkillDocuments = {
  * read error becomes its own issue.
  */
 async function readSkillDocuments(skillsDir: string): Promise<SkillDocuments> {
-  const files = await collectFiles(skillsDir, { extensions: [".md", ".yaml", ".yml"] });
+  // A hidden skill directory is one the host does not list, so the walk never
+  // enters it, and its documents answer no rule a registered skill answers.
+  // Nothing else is pruned by name: a skill can name a document under its own
+  // `tmp/` or `dist/`, and the host opens it.
+  const files = await collectFiles(skillsDir, {
+    extensions: [".md", ".yaml", ".yml"],
+    skipDirectory: (directory) => isHiddenSkillDirectory(skillsDir, directory),
+  });
   const documents = new Map<string, string>();
   const unreadable: Issue[] = [];
   const severity = "error";
   for (const file of files.sort((a, b) => a.localeCompare(b))) {
     try {
-      documents.set(file, await readFile(file, "utf-8"));
+      // Decoded strictly, like an uncrawled entry point: the lenient read turns
+      // an invalid byte into a replacement character, so the document parses
+      // and its metadata reads as usable while the host refuses the file.
+      const text = decodeUtf8(await readFile(file));
+      if (text === undefined) {
+        // What the host does about it turns on which document this is. It reads
+        // an entry point to register the skill at all, and a reference only
+        // once a step names one — so the same byte stops the skill in the first
+        // case and a step partway through the work in the second.
+        const message = (await namesSkillEntryPoint(skillsDir, file))
+          ? "A skill's entry point holds bytes that are not valid UTF-8, so the host reports it unreadable and registers no skill from it."
+          : "A document under `skills` holds bytes that are not valid UTF-8. The host opens it only where a step names it, and a step that does fails there.";
+        unreadable.push(
+          issue(
+            "QFAI-SKILLS-014",
+            message,
+            severity,
+            file,
+            "skills.documentReadable",
+            undefined,
+            "canonical",
+            "Save the document as UTF-8. A byte that is not part of a valid sequence is usually text pasted from another encoding, or a binary file left at the path.",
+          ),
+        );
+        continue;
+      }
+      documents.set(file, text);
     } catch (error) {
       unreadable.push(
         issue(
@@ -1551,6 +1855,27 @@ function collectReachableDocuments(
     }
   }
   return reachable;
+}
+
+/**
+ * Whether `file` is the entry point the host loads for its skill, by file
+ * identity: on a case-insensitive file system `skill.md` is the same file as
+ * the `SKILL.md` the host opens, and on any other it is a different one.
+ */
+async function namesSkillEntryPoint(skillsDir: string, file: string): Promise<boolean> {
+  if (isSkillEntryPoint(skillsDir, file)) return true;
+  const segments = toPosixRelative(skillsDir, file).split("/");
+  if (
+    segments.length !== 2 ||
+    segments[0] === "" ||
+    segments[0] === ".." ||
+    segments[1]?.toLowerCase() !== "skill.md"
+  ) {
+    return false;
+  }
+  const probe = path.join(path.dirname(file), "SKILL.md");
+  const [probed, found] = await Promise.all([fileIdentity(probe), fileIdentity(file)]);
+  return probed !== probe && probed === found;
 }
 
 /**
