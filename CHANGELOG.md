@@ -14,6 +14,10 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   traceability, repository gates, and their evidence are protected in the
   safety floor rather than repeated in the article.
 
+- **Retained failures keep unit-level coverage** (#1793). The
+  minimal-implementation safety floor protects coverage of the failure paths
+  production code retains.
+
 - **A legacy ledger outside the obligation-column protection is reported**
   (#1663). A seeded `E2E` or `API` row has `TC-Refs` forbidden to it, so the
   `US-Refs` and `CON-API-Refs` columns are the only place its obligation can
@@ -29,7 +33,28 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   it. It follows the reasoning the backfilled-evidence warning already gives, and
   the SDD profile hears it, since the columns are that stage's to write.
 
+### Changed
+
+- **`QFAI-DENSITY-005` names cutting before splitting** (#1808). The warning for an
+  oversized business-rule cell told the author to split the row into two rules,
+  which adds an abstract item where the cell most often carries examples,
+  rationale or history rather than a second rule. It now asks the author to cut
+  what the cell carries beyond its rule first, and to split only when what remains
+  is two rules that can each be falsified on their own. The warning, its threshold
+  and its severity are unchanged, and its message is now in English.
+
 ### Fixed
+
+- Repository async guidance requires awaited or returned promises and points to
+  the shared implementation rule for consuming callers, kept failures and
+  callback boundaries. Required handling and incomplete error messages remain
+  review findings (#1804).
+
+- The implementation rule handles only failures not excluded by types or schemas
+  and named by a specification, contract or observation, subject to the safety
+  floor. Other failures propagate; promises must be awaited or returned to a
+  consuming caller. Callback hosts that ignore returns require an explicit
+  adapter that adopts the asynchronous result and handles boundary rejections (#1802).
 
 - **The working-tree address excludes a nested project's own records, and stops on
   a FIFO or socket git does not list** (#1747). The collection reads the lists
@@ -231,6 +256,18 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   prototyping loop captures from and the design audit reads keeps only the
   first, and the second is named. The prototyping profile, which certification
   accepts, reports the finding as well.
+
+- **A ledger row observes the property it owns** (#1700). One prototyping-loop
+  test asserted five properties of the cycle-0 hard reset in a single case, and
+  a ledger row owning one of them, the `fullHarness` deletion, named no case at
+  all: its selector, `cycle 0 deletes fullHarness`, matched no title. A case
+  stops at its first failing assertion, and the row's property came second, so
+  a regression in the `reviewerGate` deletion before it failed the case without
+  reaching the row's property, and a failing case did not say which of the five
+  had regressed.
+
+  The case is split into five, one per property, over the same seeded state, and
+  the row's selector now names the case that asserts its property alone.
 
 ## [1.12.0] - 2026-09-12
 
