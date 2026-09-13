@@ -104,13 +104,17 @@ function digestOf(root, rel) {
 }
 
 /**
- * The pinned paths that still carry a merge conflict, read as the tracked-file
- * scan reads them, so a fenced example in a Markdown file is not one.
+ * The paths that still carry a merge conflict, read as the tracked-file scan
+ * reads them, so a fenced example in a Markdown file is not one.
  *
  * Resealing computes a digest over whatever bytes are there, so a conflict block
  * would be pinned rather than reported, and a list this program rewrites from
  * the tree would drop a conflict inside it with nothing left to read. Every file
- * it seals is scanned, the workflow-pinned lists included.
+ * it seals or rewrites is scanned: the workflow-pinned lists, and the
+ * declaration and workflow that take the new digests. A conflict in the workflow
+ * would otherwise survive around the digest lines written into it, and one in
+ * the declaration would stop the run as unparseable JSON after the list was
+ * already written.
  */
 async function pathsWithConflictMarkers(root, rels) {
   let scanner;
@@ -146,7 +150,13 @@ async function main(root) {
 
   const listPath = path.join(root, LIST_REL);
   const conflicted = await pathsWithConflictMarkers(root, [
-    ...new Set([...rels, ...WORKFLOW_PINNED, ...lifecycleManifestPaths(root)]),
+    ...new Set([
+      ...rels,
+      ...WORKFLOW_PINNED,
+      ...lifecycleManifestPaths(root),
+      DECLARATION_REL,
+      WORKFLOW_REL,
+    ]),
   ]);
   if (conflicted.length > 0) {
     stdout.write(

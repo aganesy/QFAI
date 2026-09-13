@@ -167,6 +167,24 @@ describe("the re-pin program, on a pinned file carrying conflict markers", () =>
     );
   });
 
+  it.each([".github/workflows/ci.yml", ".github/required-status-contexts.json"])(
+    "refuses a conflict in %s, which it rewrites, before writing anything",
+    async (rewritten) => {
+      // Neither is pinned by bytes, but both take the new digests: the workflow
+      // would keep the conflict around them, and the declaration would stop the
+      // run as unparseable JSON after the list was written.
+      const listBefore = await readFile(path.join(staged, LIST_REL), "utf-8");
+      await plantConflict(rewritten);
+
+      const result = await runPin();
+
+      expect(result.status).toBe(1);
+      expect(result.output).toContain("nothing was pinned");
+      expect(result.output).toContain(rewritten);
+      expect(await readFile(path.join(staged, LIST_REL), "utf-8")).toBe(listBefore);
+    },
+  );
+
   it("refuses a conflict in a manifest the lifecycle list names, before writing anything", async () => {
     // Its projection is resealed, so a merge left in it is named rather than read as bad JSON.
     const listBefore = await readFile(path.join(staged, LIST_REL), "utf-8");

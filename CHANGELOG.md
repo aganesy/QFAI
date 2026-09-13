@@ -243,6 +243,8 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   read that file too, although the list does not name itself, and the two other
   lists the workflow step pins. That step now scans its pinned inputs before it
   checks their digests, so a conflict in one of them is named there as well.
+  The re-pin program also scans the files it writes the new digests into, the
+  status-context declaration and the workflow, before it writes anything.
 
 ## [1.12.0] - 2026-09-12
 
