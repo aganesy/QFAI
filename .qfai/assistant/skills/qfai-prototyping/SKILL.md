@@ -235,9 +235,9 @@ the help text wins and this section is stale.
   throughout Step 2-C.
 - `--force` — **required**, not optional, to re-run cycle 0 once an
   `iter-00` exists: the destructive-rerun gate refuses to overwrite it
-  otherwise. Backs `iter-00` up to `iter-00.backup-<ISO>` and clears
-  stale `iter-NN` directories and the captures mirrored beside them.
-  Detail: `references/iteration-loop.md#sealed-loop`.
+  otherwise. Backs `iter-00` up to `iter-00.backup-<ISO>`, moves the
+  mirrored captures to `aggregate.backup-<ISO>` and clears stale
+  `iter-NN` directories. Detail: `references/iteration-loop.md#sealed-loop`.
 - `--dry-run` — plan the cycle and write nothing. Reports what a real
   run would create, move or overwrite — including the `iter-00` backup
   `--force` would take — and exits without touching the tree. Use it to

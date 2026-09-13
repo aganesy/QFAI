@@ -724,6 +724,9 @@ export async function runPrototypingIterate(
   //     `--dry-run` preview below: a preview that exits 0 where the run
   //     it previews exits 2 is the same defect in a new place.
   let cycleZeroReset: { evidenceRootAbs: string; iter00Abs: string } | null = null;
+  // The aggregate copies of a prior loop's captures, which every cycle-0 run
+  // moves aside, whether or not there is an `iter-00` to back up.
+  let aggregateDirsToMove: string[] = [];
   if (options.cycle === 0) {
     const evidenceRootAbs = path.join(options.root, PROTOTYPING_EVIDENCE_REL);
     const iter00Abs = path.join(evidenceRootAbs, "iter-00");
@@ -739,6 +742,7 @@ export async function runPrototypingIterate(
       }
       cycleZeroReset = { evidenceRootAbs, iter00Abs };
     }
+    aggregateDirsToMove = await presentAggregateDirs(evidenceRootAbs);
   }
 
   // 3c) `--dry-run` stops here, the last point before any write.
@@ -755,17 +759,17 @@ export async function runPrototypingIterate(
       specCount: specs.length,
       ...(options.targetUrl !== undefined ? { targetUrl: options.targetUrl } : {}),
       reset: cycleZeroReset,
+      aggregateDirs: aggregateDirsToMove,
     });
     return 0;
   }
 
+  // One stamp for every backup this reset writes, so they read as one reset.
+  const resetStamp = new Date().toISOString().replace(/[:.]/g, "-");
   if (cycleZeroReset !== null) {
     {
       const { evidenceRootAbs, iter00Abs } = cycleZeroReset;
-      const backupAbs = path.join(
-        evidenceRootAbs,
-        `iter-00.backup-${new Date().toISOString().replace(/[:.]/g, "-")}`,
-      );
+      const backupAbs = path.join(evidenceRootAbs, `iter-00.backup-${resetStamp}`);
       // Every destructive iter-NN mutation MUST funnel through the
       // mutation-log writer. Walk the iter-00 tree once BEFORE the
       // rename so each moved file gets one JSONL line.
@@ -808,6 +812,31 @@ export async function runPrototypingIterate(
         return 2;
       }
     }
+  }
+
+  // The required-path check reads the aggregate directories before any
+  // iteration directory, so a restarted loop that kept them passed it on the
+  // previous loop's captures. They are moved, not deleted: the same reset
+  // removes the iteration directories they were copied from.
+  if (aggregateDirsToMove.length > 0) {
+    const moved = await moveAggregateDirsAside(
+      options.root,
+      path.join(options.root, PROTOTYPING_EVIDENCE_REL),
+      aggregateDirsToMove,
+      resetStamp,
+    );
+    if (!moved.ok) {
+      const reason = moved.cause instanceof Error ? moved.cause.message : String(moved.cause);
+      error(
+        `qfai prototyping iterate --cycle 0: could not move ${toRootRelative(options.root, moved.failedDir)} aside (${reason}). ` +
+          "Aborting before clearing evidence. " +
+          "Resolve the filesystem error (Windows file lock / EACCES / EBUSY are common causes) and rerun.",
+      );
+      return 2;
+    }
+    info(
+      `qfai prototyping iterate --cycle 0: moved ${aggregateDirsToMove.join(" and ")} aside to ${toRootRelative(options.root, moved.backupAbs)}.`,
+    );
   }
 
   // 4) Persist seed metadata to prototyping.json on cycle 0:
@@ -856,9 +885,7 @@ export async function runPrototypingIterate(
     // current reviewer gate has not approved. Certify already anchors
     // its scan to prototyping.json#iterations[] (which we just reset),
     // but deleting the on-disk dirs guarantees no resolver can stumble
-    // into them. The aggregate `screenshots/` and `html/` copies of the
-    // prior loop's captures go with them, whether or not an `iter-00`
-    // was there to back up.
+    // into them.
     //
     // Fail closed when rm fails: surface the failed dir + cause instead
     // of swallowing the error and continuing, so the operator can clear
@@ -2187,6 +2214,7 @@ function reportIterateDryRun(input: {
   specCount: number;
   targetUrl?: string;
   reset: { evidenceRootAbs: string; iter00Abs: string } | null;
+  aggregateDirs: readonly string[];
 }): void {
   const lines = [
     `qfai prototyping iterate --dry-run: would run cycle ${String(input.cycle)} in ${input.mode} mode ` +
@@ -2197,13 +2225,18 @@ function reportIterateDryRun(input: {
     const iterRel = path.relative(input.root, input.reset.iter00Abs).replace(/\\/g, "/");
     lines.push(
       `  would MOVE ${iterRel} to ${iterRel}.backup-<ISO> and log every file in it to ` +
-        `${PROTOTYPING_EVIDENCE_REL}/mutation-log.jsonl, then clear the evidence iteration dirs ` +
-        "and the aggregate screenshots/ and html/ dirs.",
+        `${PROTOTYPING_EVIDENCE_REL}/mutation-log.jsonl, then clear the evidence iteration dirs.`,
     );
   } else if (input.cycle === 0) {
     lines.push(
-      `  no existing ${PROTOTYPING_EVIDENCE_REL}/iter-00 to back up; the cycle-0 reset would create it fresh ` +
-        "and clear any other evidence iteration dirs and the aggregate screenshots/ and html/ dirs.",
+      `  no existing ${PROTOTYPING_EVIDENCE_REL}/iter-00 to back up; the cycle-0 reset would create it fresh.`,
+    );
+  }
+  if (input.aggregateDirs.length > 0) {
+    const names = input.aggregateDirs.map((name) => `${PROTOTYPING_EVIDENCE_REL}/${name}`);
+    lines.push(
+      `  would MOVE ${names.join(" and ")} into ${PROTOTYPING_EVIDENCE_REL}/aggregate.backup-<ISO> ` +
+        "and log every file in them.",
     );
   }
   lines.push(
@@ -2378,15 +2411,65 @@ async function collectFilesRecursively(absDir: string): Promise<string[]> {
   return out;
 }
 
-/**
- * The project-wide directories a capture pass mirrors an iteration into.
- *
- * They hold copies of one loop's captures, and the required-path check reads
- * them before the iteration directories. So the cycle-0 reset clears them with
- * the iteration directories: left in place, a restarted loop passed that check
- * on the previous loop's captures before capturing anything.
- */
+/** The project-wide directories a capture pass mirrors an iteration into. */
 const AGGREGATE_EVIDENCE_DIRS: readonly string[] = ["screenshots", "html"];
+
+/** The aggregate evidence directories present under `evidenceRootAbs`. */
+async function presentAggregateDirs(evidenceRootAbs: string): Promise<string[]> {
+  const present: string[] = [];
+  for (const name of AGGREGATE_EVIDENCE_DIRS) {
+    if (await dirExists(path.join(evidenceRootAbs, name))) present.push(name);
+  }
+  return present;
+}
+
+/** `absPath` relative to `root`, with `/` separators. */
+function toRootRelative(root: string, absPath: string): string {
+  return path.relative(root, absPath).replace(/\\/g, "/");
+}
+
+/**
+ * Move each named aggregate directory into `aggregate.backup-<stamp>/`, after
+ * logging every file in it as moved. Stops at the first directory that cannot be
+ * moved, naming it.
+ */
+async function moveAggregateDirsAside(
+  root: string,
+  evidenceRootAbs: string,
+  names: readonly string[],
+  stamp: string,
+): Promise<{ ok: true; backupAbs: string } | { ok: false; failedDir: string; cause: unknown }> {
+  const backupAbs = path.join(evidenceRootAbs, `aggregate.backup-${stamp}`);
+  try {
+    await mkdir(backupAbs, { recursive: true });
+  } catch (cause) {
+    return { ok: false, failedDir: backupAbs, cause };
+  }
+  for (const name of names) {
+    const sourceAbs = path.join(evidenceRootAbs, name);
+    try {
+      const { logEvidenceMove } = await import("../../core/prototyping/mutationLog.js");
+      for (const fileAbs of await collectFilesRecursively(sourceAbs)) {
+        const priorSize = await stat(fileAbs).then(
+          (stats) => stats.size,
+          () => 0,
+        );
+        await logEvidenceMove(root, "iterate", toRootRelative(root, fileAbs), priorSize);
+      }
+    } catch (logCause) {
+      // Advisory, as for the iter-00 backup: the move itself still happens.
+      warn(
+        `qfai prototyping iterate --cycle 0: mutation-log write failed for ${name} (${String(logCause)}); proceeding with the move.`,
+      );
+    }
+    try {
+      await rename(sourceAbs, path.join(backupAbs, name));
+    } catch (cause) {
+      return { ok: false, failedDir: sourceAbs, cause };
+    }
+  }
+  return { ok: true, backupAbs };
+}
 
 async function clearEvidenceIterDirs(
   evidenceRootAbs: string,
@@ -2417,7 +2500,7 @@ async function clearEvidenceIterDirs(
     }
   }
   for (const name of entries) {
-    if (!/^iter-\d{2,}$/.test(name) && !AGGREGATE_EVIDENCE_DIRS.includes(name)) continue;
+    if (!/^iter-\d{2,}$/.test(name)) continue;
     const abs = path.join(evidenceRootAbs, name);
     // Restrict the cleanup to actual directories: a stray `iter-NN`
     // file (e.g. an operator artifact saved without an extension)
