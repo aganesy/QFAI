@@ -31,16 +31,19 @@ const scanFailure = vi.hoisted(
     when: () => true,
   }),
 );
+// Whether every scan reports itself cut at the file limit, while a case sets it.
+const scanTruncation = vi.hoisted((): { on: boolean } => ({ on: false }));
 vi.mock("../../src/core/fs.js", async () => {
   const actual = await vi.importActual<typeof fsModule>("../../src/core/fs.js");
   return {
     ...actual,
-    collectFilesByGlobs: (...args: Parameters<typeof actual.collectFilesByGlobs>) => {
+    collectFilesByGlobs: async (...args: Parameters<typeof actual.collectFilesByGlobs>) => {
       scanCalls.push(args[1]);
       if (scanFailure.error !== null && scanFailure.when(args[1].globs)) {
-        return Promise.reject(scanFailure.error);
+        throw scanFailure.error;
       }
-      return actual.collectFilesByGlobs(...args);
+      const scan = await actual.collectFilesByGlobs(...args);
+      return scanTruncation.on ? { ...scan, truncated: true } : scan;
     },
   };
 });
@@ -243,6 +246,32 @@ describe("the stage says when the glob matcher refuses its globs", () => {
     });
     const refused = found.find((finding) => finding.code === "QFAI-TEST-002");
     expect(refused?.refs).toEqual(["validation.traceability.testFileGlobs"]);
+  });
+
+  it("reports a scan cut at the file limit as an error naming the setting that narrows it", async () => {
+    // References past the limit are never read, so a clean result there is
+    // not evidence of coverage, and `--fail-on error` must not pass it.
+    const root = await projectWithAcceptanceTest();
+    const truncation = (found: Awaited<ReturnType<typeof validateAtddCodeTraceability>>) =>
+      found.find(
+        (finding) =>
+          finding.code === "QFAI-ATDD-134" && finding.message.includes("stopped at that limit"),
+      );
+    scanTruncation.on = true;
+    try {
+      const configured = truncation(
+        await validateAtddCodeTraceability(root, configWith(["tests/**/*.test.ts"])),
+      );
+      expect(configured?.severity).toBe("error");
+      expect(configured?.refs).toEqual(["validation.traceability.testFileGlobs"]);
+
+      // With no project glob, only the exclusions can shrink the selection.
+      const shipped = truncation(await validateAtddCodeTraceability(root, configWith([])));
+      expect(shipped?.refs).toEqual(["validation.traceability.testFileExcludeGlobs"]);
+    } finally {
+      scanTruncation.on = false;
+    }
+    expect(truncation(await validateAtddCodeTraceability(root, configWith([])))).toBeUndefined();
   });
 
   it("says nothing about a broad glob", async () => {

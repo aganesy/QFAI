@@ -446,6 +446,26 @@ describe("--profile tdd can observe the ATDD routing gates", () => {
     });
   });
 
+  it("reads the acceptance directories for skeletons under --profile tdd whatever testFileGlobs holds", async () => {
+    // The coverage check `--profile tdd` runs reads those directories on the
+    // config `qfai init` ships, so a skeleton's annotation clears its missing
+    // reference there. The stub gate reads them too, and reports it once when
+    // the configured globs select it as well.
+    await withCiEnv(false, async () => {
+      await withProject(async (root) => {
+        await seedScaffold(root, "tests/integration/spec-0001");
+        await runValidate({ root, strict: false, profile: "tdd" });
+        const shipped = (await findings(root)).filter((entry) => entry.code === "QFAI-TEST-003");
+        expect(shipped).toHaveLength(1);
+
+        await seedRepoWideTestGlobs(root);
+        await runValidate({ root, strict: false, profile: "tdd" });
+        const both = (await findings(root)).filter((entry) => entry.code === "QFAI-TEST-003");
+        expect(both).toHaveLength(1);
+      });
+    });
+  });
+
   it("stops listing the stub gate among what --profile atdd skipped", async () => {
     // The notice is derived from `PROFILE_GATE_GROUPS`; leaving `QFAI-TEST-001`
     // in the tdd group would tell the reader that the run it just made did not

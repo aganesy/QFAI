@@ -1728,7 +1728,7 @@ export const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
   "QFAI-ATDD-133":
     "`## Coverage Depth Matrix` in `.qfai/evidence/atdd-<spec-id>.md` exists and is a link plus counted totals.",
   "QFAI-ATDD-134":
-    "The glob matcher accepts every pattern in `validation.traceability.testFileGlobs`.",
+    "The ATDD scan reads every test its globs select: the glob matcher accepts every pattern, every directory the patterns reach is readable, and the selection fits under the file limit.",
   "QFAI-ATDD-901":
     "ATDD traceability report output failures are warning-only, but report generation should be repaired.",
   "QFAI-BFLOW-005":

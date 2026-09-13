@@ -25,12 +25,7 @@ import {
   resolveTestCaseTables,
 } from "./specPackParsers.js";
 import { UNIT_COMPONENT_LAYERS } from "./tddHelpers.js";
-import {
-  globExtensions,
-  isGlobExclusion,
-  namedTestFileMatcher,
-  namesExtensionlessSource,
-} from "./testGlobExtensions.js";
+import { isGlobExclusion, namedTestFileMatcher } from "./testGlobExtensions.js";
 import { DEFAULT_TEST_FILE_EXCLUDE_GLOBS, normalizeGlobs } from "./traceability.js";
 import { maskJsNonCode } from "./validators/jsSourceMask.js";
 
@@ -175,7 +170,20 @@ const DB_CONTRACT_ID_RE = /^CON-DB-\d+$/;
  * nothing at all.) `QFAI-ATDD-111/112/113` therefore reported obligations as
  * uncovered no matter how many correctly annotated tests existed.
  */
-const DEFAULT_TEST_FILE_GLOB = "**/*.{ts,tsx,js,jsx,mjs,cjs,mts,cts,feature,md,markdown}";
+const DEFAULT_TEST_FILE_EXTENSIONS = [
+  "ts",
+  "tsx",
+  "js",
+  "jsx",
+  "mjs",
+  "cjs",
+  "mts",
+  "cts",
+  "feature",
+  "md",
+  "markdown",
+] as const;
+const DEFAULT_TEST_FILE_GLOB = `**/*.{${DEFAULT_TEST_FILE_EXTENSIONS.join(",")}}`;
 
 export type AtddTestKind = "e2e" | "api" | "integration";
 
@@ -479,11 +487,7 @@ export async function evaluateAtddCodeTraceability(
     config.validation.traceability.testFileGlobs,
   );
   const acceptanceLayer = atddAcceptanceLayerFilter(root, config);
-  const acceptanceSource = acceptanceSourceFilter(
-    root,
-    deriveAtddFilePattern(config.validation.traceability.testFileGlobs),
-    normalizeGlobs(config.validation.traceability.testFileGlobs),
-  );
+  const acceptanceSource = acceptanceSourceFilter(root, scanGlobs);
   // One probe for the whole scan, so a manifest is stat-ed once however many
   // files sit under the directory that carries it.
   const scanPackageRoot = packageRootProbe();
@@ -755,9 +759,10 @@ export async function evaluateAtddCodeTraceability(
   // `collectFilesByGlobs` stops at the limit, so the executable test that
   // references the same ID may simply sit past the cut — reporting the
   // obligation as carrier-only would then be a false "nothing runs for this".
-  // Suppressed rather than guessed; `scan.truncated` is already warned on by
-  // the CLI and persisted into the summary artifact, so a downstream gate reads
-  // an indeterminate scan there instead of an empty list it can trust.
+  // Suppressed rather than guessed; the truncation is reported as
+  // `QFAI-ATDD-134` and persisted into the summary artifact, so a downstream
+  // gate reads an indeterminate scan there instead of an empty list it can
+  // trust.
   const coveredByCarrierOnly = scanResult.truncated
     ? { us: [], tc: [], conApi: [], conDb: [] }
     : buildCarrierOnlyRefs({
@@ -2476,24 +2481,19 @@ export function deriveAtddFilePattern(testFileGlobs: readonly string[]): string 
  * A project glob used as written may be extension-broad, and one that is
  * collects a data file inside an acceptance layer as readily as a test. A
  * fixture value is not an annotation, so a file counts only when its extension
- * is one the scan's file pattern covers or one a project glob names outright,
- * or when a project glob names the file itself, as `*.test.*` names
- * `pay.test.zig`.
+ * is one the scan reads where no glob names one, or when a scan glob naming its
+ * files matches its whole path. `packages/b/tests/**\/*.json` vouches for a
+ * `.json` file under `packages/b/tests`, and never for one only
+ * `packages/a/tests/**\/*` collected.
  */
 function acceptanceSourceFilter(
   root: string,
-  filePattern: string,
-  projectGlobs: readonly string[],
+  scanGlobs: readonly string[],
 ): (absolutePath: string) => boolean {
-  const patternExtensions = /\{([^}]*)\}$/.exec(filePattern)?.[1] ?? "";
-  const extensions = new Set([
-    ...patternExtensions.split(",").map((ext) => `.${ext.trim().toLowerCase()}`),
-    ...globExtensions(projectGlobs).map((ext) => ext.toLowerCase()),
-  ]);
-  if (namesExtensionlessSource(projectGlobs)) extensions.add("");
-  const namedTestFile = namedTestFileMatcher(projectGlobs);
+  const defaults = new Set(DEFAULT_TEST_FILE_EXTENSIONS.map((ext) => `.${ext}`));
+  const namedTestFile = namedTestFileMatcher(scanGlobs);
   return (absolutePath) =>
-    extensions.has(path.extname(absolutePath).toLowerCase()) ||
+    defaults.has(path.extname(absolutePath).toLowerCase()) ||
     namedTestFile(toPosixPath(path.relative(root, absolutePath))) ||
     namedTestFile(toPosixPath(absolutePath));
 }

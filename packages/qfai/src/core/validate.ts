@@ -112,6 +112,7 @@ import {
   validateImportLiteEvidencePresence,
   stubSourceFilePattern,
 } from "./validators/index.js";
+import type { TestTodoStubOptions } from "./validators/testTodoStubs.js";
 import { atddAcceptanceLayerFilter, atddAcceptanceTestGlobs } from "./atddTraceability.js";
 import type { HtmlMockTiming } from "./validators/index.js";
 import { readSafe } from "./validators/utils.js";
@@ -955,22 +956,33 @@ async function runAtddValidators(
     // one in a package-local suite is outside that validator, so exempting it
     // here would leave it reported by neither.
     ...(await validateTestTodoStubs(root, config, {
-      // The pattern carries the project's own extensions as well. The layer
-      // globs this builds under `paths.testsDir` are generated from it, and an
-      // extension named only by a package glob — `packages/**/*.sol` beside a
-      // `tests/integration/pay.sol` — reaches that path through them alone,
-      // because the package glob does not. A source the gate never collects
-      // cannot be reported as unscanned either.
-      globs: atddAcceptanceTestGlobs(
-        root,
-        config,
-        stubSourceFilePattern(config.validation.traceability.testFileGlobs),
-      ),
-      projectGlobs: config.validation.traceability.testFileGlobs,
-      fileFilter: atddAcceptanceLayerFilter(root, config),
+      ...acceptanceStubScan(root, config),
       placeholderScanned: scaffoldPlaceholderScannedFilter(root, config),
     })),
   ];
+}
+
+/**
+ * The selection the ATDD stage's stub scan reads: the layer directories under
+ * `paths.testsDir` and the project's own `testFileGlobs`, kept to the
+ * acceptance layers.
+ */
+function acceptanceStubScan(root: string, config: ConfigLoadResult["config"]): TestTodoStubOptions {
+  return {
+    // The pattern carries the project's own extensions as well. The layer
+    // globs this builds under `paths.testsDir` are generated from it, and an
+    // extension named only by a package glob — `packages/**/*.sol` beside a
+    // `tests/integration/pay.sol` — reaches that path through them alone,
+    // because the package glob does not. A source the gate never collects
+    // cannot be reported as unscanned either.
+    globs: atddAcceptanceTestGlobs(
+      root,
+      config,
+      stubSourceFilePattern(config.validation.traceability.testFileGlobs),
+    ),
+    projectGlobs: config.validation.traceability.testFileGlobs,
+    fileFilter: atddAcceptanceLayerFilter(root, config),
+  };
 }
 
 async function runTddValidators(
@@ -1007,13 +1019,20 @@ async function runTddValidators(
     // has that validator. `full` runs the ATDD profile beside this one, which is
     // what the opt-out above says; `--profile tdd` runs no such validator, so
     // there a skeleton whose tests never run is this gate's to report.
-    ...(await validateTestTodoStubs(
-      root,
-      config,
-      includeAtddCodeTraceability
-        ? {}
-        : { placeholderScanned: scaffoldPlaceholderScannedFilter(root, config) },
-    )),
+    //
+    // `--profile tdd` also runs the acceptance check below, which reads the
+    // acceptance directories whatever `testFileGlobs` holds, so a skeleton's
+    // annotation there clears a missing reference. Those directories are read
+    // here as well: the configured globs alone never reach them where the
+    // shipped config lists none. `full` reads them in the ATDD profile.
+    ...(includeAtddCodeTraceability
+      ? dedupeStubFindings([
+          ...(await validateTestTodoStubs(root, config)),
+          ...(await validateTestTodoStubs(root, config, acceptanceStubScan(root, config))),
+        ])
+      : await validateTestTodoStubs(root, config, {
+          placeholderScanned: scaffoldPlaceholderScannedFilter(root, config),
+        })),
     // `qfai-implement` names `--profile tdd` as its only completion gate, and
     // it is the stage that creates test-routing obligations. Without this the
     // profile was structurally incapable of observing QFAI-ATDD-111/112/113/

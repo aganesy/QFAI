@@ -48,12 +48,7 @@ import {
   unusableGlobReason,
   type CollectFilesByGlobsResult,
 } from "../fs.js";
-import {
-  globExtensions,
-  isGlobExclusion,
-  namedTestFileMatcher,
-  namesExtensionlessSource,
-} from "../testGlobExtensions.js";
+import { globExtensions, isGlobExclusion, namedTestFileMatcher } from "../testGlobExtensions.js";
 import { DEFAULT_TEST_FILE_EXCLUDE_GLOBS, normalizeGlobs } from "../traceability.js";
 import type { Issue, IssueSeverity } from "../types.js";
 import { maskJsNonCode } from "./jsSourceMask.js";
@@ -1480,26 +1475,14 @@ export async function validateTestTodoStubs(
   // rather than in the glob, because slicing a project glob is the defect that
   // list exists to avoid.
   const sourceExtensions =
-    options.globs === undefined
-      ? null
-      : new Set([
-          ...STUB_SOURCE_EXTENSIONS.map((ext) => `.${ext}`),
-          // An extension the project's own globs name is scanned whatever this
-          // validator knows about it: dropped, it never reaches
-          // `unscannedExtensions`, and a suite in a language with no dialect
-          // reads as a clean scan rather than an unscannable one. What the
-          // intersection is for is the file an extension-**broad** glob sweeps
-          // in, which names nothing. Lowercased for the comparison only — the
-          // glob that collected the file keeps the project's own spelling.
-          ...globExtensions(accepted).map((ext) => ext.toLowerCase()),
-          // The same holds for a glob that selects files with no extension at
-          // all. `path.extname` reads those as "", so without this entry the
-          // file never reaches `QFAI-TEST-002` either.
-          ...(namesExtensionlessSource(accepted) ? [""] : []),
-        ]);
-  // A glob naming its files, as `*.test.*` does, selects a test whatever its
-  // extension, so a file it matches is kept even when no glob names that
-  // extension.
+    options.globs === undefined ? null : new Set(STUB_SOURCE_EXTENSIONS.map((ext) => `.${ext}`));
+  // A glob naming its files selects them whatever this validator knows about
+  // their extension: `*.zig` by extension, `*.test.*` by name, `test_pay`
+  // whole. A file one matches is kept, because dropped it never reaches
+  // `unscannedExtensions`, and a suite in a language with no dialect reads as a
+  // clean scan rather than an unscannable one. Each glob is read against the
+  // whole path, so an extension one package's glob names does not keep a file
+  // only another package's broad glob swept in.
   const namedTestFile = options.globs === undefined ? null : namedTestFileMatcher(accepted);
   const wanted = (absolutePath: string): boolean => {
     const relative = path.relative(root, absolutePath).replace(/\\/g, "/");

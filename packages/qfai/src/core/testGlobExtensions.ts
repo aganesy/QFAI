@@ -97,20 +97,19 @@ export function globExtensions(globs: readonly string[]): string[] {
 }
 
 /**
- * A predicate for a file path that a glob selects by name rather than by
- * extension: a glob whose last segment names something besides wildcards, as
- * `*.test.*`, `*.{test,spec}.*` and `test_[0-9].*` do.
+ * A predicate for a file path that a glob naming its files selects: a glob
+ * whose last segment names something besides wildcards, whether an extension
+ * as `*.json` does, a name as `*.test.*` and `test_[0-9].*` do, or a whole file
+ * name as `test_pay` does.
  *
- * Such a glob selects a test by its name whatever the extension, so a file it
- * matches is a source even when no glob names that extension. A negated group
- * names what it leaves out, so `*.!(json)` selects `pay.zig` this way. Each
- * glob is read against the whole path it would select, so a name one
- * package's glob selects does not vouch for a file only another package's
- * broad glob collected. A last segment of wildcards alone names nothing, a
- * negative entry selects nothing, and a glob this reader cannot translate —
- * an unclosed group, brace or bracket, or a range the pattern engine rejects —
- * is left to {@link globExtensions}. Matched case-sensitively, as the glob
- * that collected the file was, against a path written with `/`.
+ * Such a glob vouches for what it selects, so a file it matches is a source
+ * whatever extensions the caller reads by default. A negated group names what
+ * it leaves out, so `*.!(json)` selects `pay.zig` this way. Each glob is read
+ * against the whole path it would select, so what one package's glob names
+ * does not vouch for a file only another package's broad glob collected. A
+ * last segment of wildcards alone names nothing, and a negative entry selects
+ * nothing. Matched case-sensitively, as the glob that collected the file was,
+ * against a path written with `/`.
  */
 export function namedTestFileMatcher(globs: readonly string[]): (filePath: string) => boolean {
   const patterns: RegExp[] = [];
@@ -118,14 +117,16 @@ export function namedTestFileMatcher(globs: readonly string[]): (filePath: strin
     if (isGlobExclusion(glob)) continue;
     const last = glob.split("/").at(-1) ?? "";
     if (!/[^*?.]/.test(last)) continue;
+    // SIMPLIFIED: a glob this reader cannot translate — an unclosed group, brace
+    // or bracket, or a negated group inside another group — vouches for no file.
+    // Lift when: a project names its tests with a glob of that shape.
     const source = globPathPattern(glob);
     if (source === null) continue;
     try {
       patterns.push(new RegExp(`^${source}$`));
     } catch {
-      // A class the engine rejects, such as the reversed range `[z-a]`. No file
-      // is selected through it, so it names none. Thrown, it ended the run
-      // before the scan could report the glob.
+      // A class the engine rejects, such as the reversed range `[z-a]`, selects
+      // no file, so it vouches for none.
     }
   }
   return (filePath) => patterns.some((pattern) => pattern.test(filePath));
@@ -209,18 +210,4 @@ function alternation(alternatives: readonly string[]): string | null {
     sources.push(source);
   }
   return `(?:${sources.join("|")})`;
-}
-
-/**
- * Whether a glob selects files that have no extension: its last segment names
- * something and carries no dot, as `tests/integration/test_pay` does. A last
- * segment of wildcards alone names nothing, so an extension-broad glob whose
- * last segment is `*` does not count, and a negative entry selects nothing.
- */
-export function namesExtensionlessSource(globs: readonly string[]): boolean {
-  return globs.some((glob) => {
-    if (isGlobExclusion(glob)) return false;
-    const last = glob.split("/").at(-1) ?? "";
-    return last.length > 0 && !last.includes(".") && !/^\*+$/.test(last);
-  });
 }

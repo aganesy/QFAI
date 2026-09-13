@@ -474,6 +474,28 @@ export async function validateAtddCodeTraceability(
     );
   }
 
+  if (result.scan.truncated) {
+    // Narrowing `testFileGlobs` shrinks the selection only where it contributed.
+    const projectGlobs = normalizeGlobs(config.validation.traceability.testFileGlobs).length > 0;
+    const key = projectGlobs
+      ? "validation.traceability.testFileGlobs"
+      : "validation.traceability.testFileExcludeGlobs";
+    issues.push(
+      issue(
+        "QFAI-ATDD-134",
+        `The ATDD scan read the first ${result.scan.limit} test files its globs select and stopped at that limit, so the rest were never opened. A reference missing from what was read is not evidence that the tests hold none, and a test past the limit was not checked for its layer.`,
+        "error",
+        path.join(root, "qfai.config.yaml"),
+        "atddCodeTraceability.testFileGlobs",
+        [key],
+        "canonical",
+        projectGlobs
+          ? "Narrow `validation.traceability.testFileGlobs`, or widen `validation.traceability.testFileExcludeGlobs`, so the selection fits under the limit and every acceptance test is read."
+          : "Widen `validation.traceability.testFileExcludeGlobs` so the selection fits under the limit and every acceptance test is read.",
+      ),
+    );
+  }
+
   issues.push(
     ...buildUnknownIssues(
       result.unknown,

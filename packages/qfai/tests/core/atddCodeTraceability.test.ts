@@ -1112,6 +1112,55 @@ describe("acceptance tests outside paths.testsDir", () => {
     });
   });
 
+  it("counts an extension a glob names only where that glob selects the file", async () => {
+    await withProject(async (root) => {
+      await seedSpec(root, "0001", ["US-0001"], ["TC-0001", "TC-0002"]);
+      await seedPackageTest(root, "billing", "e2e", "journey.test.ts", [
+        "/* QFAI:SPEC-0001:US-0001 */",
+      ]);
+      // Only billing's broad glob collects this fixture. `.json` is named by
+      // checkout's glob, which does not reach billing.
+      await seedPackageTest(root, "billing", "integration", "data.json", [
+        "// QFAI:SPEC-0001:TC-0001",
+      ]);
+      await seedPackageTest(root, "checkout", "integration", "case.json", [
+        "// QFAI:SPEC-0001:TC-0002",
+      ]);
+
+      const result = await evaluateAtddCodeTraceability(
+        root,
+        withProjectGlobs(["packages/billing/tests/**/*", "packages/checkout/tests/**/*.json"]),
+      );
+
+      expect(result.missing.tc).toEqual(["SPEC-0001:TC-0001"]);
+    });
+  });
+
+  it("counts a file with no extension only where the glob naming it selects it", async () => {
+    await withProject(async (root) => {
+      await seedSpec(root, "0001", ["US-0001"], ["TC-0001", "TC-0002"]);
+      await seedPackageTest(root, "billing", "e2e", "journey.test.ts", [
+        "/* QFAI:SPEC-0001:US-0001 */",
+      ]);
+      await seedPackageTest(root, "billing", "integration", "test_data", [
+        "// QFAI:SPEC-0001:TC-0001",
+      ]);
+      await seedPackageTest(root, "checkout", "integration", "test_pay", [
+        "// QFAI:SPEC-0001:TC-0002",
+      ]);
+
+      const result = await evaluateAtddCodeTraceability(
+        root,
+        withProjectGlobs([
+          "packages/billing/tests/**/*",
+          "packages/checkout/tests/integration/test_*",
+        ]),
+      );
+
+      expect(result.missing.tc).toEqual(["SPEC-0001:TC-0001"]);
+    });
+  });
+
   it("reads a name glob against the path it selects, not the file name alone", async () => {
     await withProject(async (root) => {
       await seedSpec(root, "0001", ["US-0001"], ["TC-0001"]);

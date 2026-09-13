@@ -269,14 +269,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   or for the scan's own file pattern; one opening a negated extglob, such as
   `!(fixtures)/**/*.zig`, selects, and names its extension to both. A negated
   group in the file name, as in `*.!(json)`, keeps every file it selects. A glob
-  that names the file, such as `*.test.*`, is read against the whole path it
-  selects, so a file only another package's broad glob collected does not pass
-  on its name.
+  that names the file or its extension, such as `*.test.*` or `*.zig`, is read
+  against the whole path it selects, so a file only another package's broad
+  glob collected passes on neither.
 
   The coverage scan reads a collected file the same way: a data file an
   extension-broad glob sweeps into an acceptance layer is not a source, so an
   annotation-shaped fixture value in `tests/integration/data.json` discharges
-  nothing.
+  nothing, even where another package's glob names `.json`.
 
   A file in no acceptance layer is dropped while the stream runs, before it is
   counted against the collection limit. A project glob may match a whole
@@ -290,6 +290,8 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   nothing, and every other glob is still read. A directory one of the globs
   reaches that cannot be read no longer empties the ATDD scan either: the other
   patterns are read, and `QFAI-ATDD-134` names each pattern it could not read.
+  A scan that stops at the file limit is an error under the same code, where it
+  was only a flag in the summary artifact.
   A stub-scan notice about a project glob names
   `validation.traceability.testFileGlobs` rather than `paths.testsDir`.
 
@@ -324,7 +326,8 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   basename patterns. A marked skeleton outside either was exempt from this gate
   and uncollected by that one, leaving the ATDD gate green over a suite that
   does not run. `--profile tdd` runs no such validator, so there the stub gate
-  reports every marked skeleton it reads.
+  reports every marked skeleton it reads, and it reads the acceptance
+  directories as well as `testFileGlobs`, as the coverage check it runs does.
 
 ## [1.12.0] - 2026-09-12
 
