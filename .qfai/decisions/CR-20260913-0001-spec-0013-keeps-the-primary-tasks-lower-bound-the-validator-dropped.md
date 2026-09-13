@@ -146,7 +146,12 @@ because what they were rejected against is still written where they are.
   under options 1 and 2
   `packages/qfai/tests/integration/spec0004SaasPackageAndPackLocation.test.ts`
   and `packages/qfai/tests/e2e/spec0004SaasPackageAndPackLocationE2E.test.ts`,
-  whose skipped cases require the finding to name `3..7`
+  whose skipped cases require the finding to name `3..7`; and under option 3
+  the four suites action 4 rewrites,
+  `packages/qfai/tests/integration/primaryTasksBand.test.ts`,
+  `packages/qfai/tests/unit/core/validators/auditProfileBandReject.test.ts`,
+  `packages/qfai/tests/integration/spec0013ActivePointerSurfaceType.test.ts` and
+  `packages/qfai/tests/e2e/spec0013ActivePointerSurfaceTypeE2E.test.ts`
 - Contracts: `none`
 - Schema: `none`
 - Upstream paths edited under this CR: the `Specs` and `Plans` paths above.

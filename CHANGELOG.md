@@ -81,7 +81,7 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   shares the decision — and says which it leaves alone, and puts the part
   a rerun cannot settle by following the product: three decision records chose
   the band, the removal overturned them on the opposite rationale, and whether a
-  reversed decision is rewritten or superseded is the user's to choose.
+  reversed decision is rewritten or superseded was left to the user to choose.
 
 ## [1.12.0] - 2026-09-12
 
