@@ -97,6 +97,19 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   characters. Freshness is compared exactly, so accepting both cases would let
   one tree be recorded as two revisions and read a correct row as stale.
 
+- **The `primary_tasks` band drift is recorded where the Drift Protocol looks
+  for it** (#1621). `QFAI-AUD-020` lost its lower bound as product work, and
+  `spec-0013` still specifies the band: its test case says one task warns and
+  the test pinning it says nothing is emitted, with a `done` ledger row joining
+  the two.
+
+  `CR-20260913-0001` records both sides, blocks the three rows whose
+  obligations the product contradicts — two of one pack and one of another that
+  shares the decision — and says which it leaves alone, and puts the part
+  a rerun cannot settle by following the product: three decision records chose
+  the band, the removal overturned them on the opposite rationale, and whether a
+  reversed decision is rewritten or superseded is the user's to choose.
+
 ## [1.12.0] - 2026-09-12
 
 ### Added
