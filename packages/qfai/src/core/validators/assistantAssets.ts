@@ -339,6 +339,8 @@ export async function validateAssistantAssets(root: string, config: QfaiConfig):
   // the reference graph like any other: a skill named `dist` still cites the
   // references it opens.
   const probedEntryPoints = new Map<string, string>();
+  // The names the crawl read an entry point under, where that is not its own.
+  const entryPointAliases = new Set<string>();
   for (const entryPoint of await collectSkillEntryPoints(skillsDir)) {
     const aliases = crawled.get(await fileIdentity(entryPoint)) ?? [];
     const content = aliases
@@ -346,6 +348,14 @@ export async function validateAssistantAssets(root: string, config: QfaiConfig):
       .find((text): text is string => text !== undefined);
     if (content !== undefined) {
       issues.push(...collectSkillRegistrationIssues(entryPoint, content));
+      // Crawled only under another name, such as the target of a link: the host
+      // loads it as this skill's entry point, so it is a root under this path
+      // and its citations resolve from here. The other names are the same
+      // document, not references nothing cites.
+      if (!documents.has(entryPoint)) {
+        probedEntryPoints.set(entryPoint, content);
+        for (const alias of aliases) entryPointAliases.add(alias);
+      }
       continue;
     }
     // Crawled as this skill's own entry point, the file could not be read, and
@@ -436,6 +446,7 @@ export async function validateAssistantAssets(root: string, config: QfaiConfig):
         unreadableFiles,
         undecided: entryPointUnread || unreadableDirectories.length > 0,
       },
+      entryPointAliases,
     )),
   );
 
@@ -1704,6 +1715,8 @@ async function collectReferenceGraphIssues(
     /** Whether an entry point or a directory could not be read. */
     readonly undecided: boolean;
   } = { unreadable: [], unreadableFiles: [], undecided: false },
+  /** Documents that are an entry point read under another name. */
+  entryPointAliases: ReadonlySet<string> = new Set(),
 ): Promise<Issue[]> {
   // A document that cannot be read stands in the graph with no text: a citation
   // still reaches it, and what it would cite is unknown. Reached, it may cite
@@ -1760,6 +1773,7 @@ async function collectReferenceGraphIssues(
     .filter(
       (file) =>
         isReferenceDocument(skillsDir, file) &&
+        !entryPointAliases.has(file) &&
         !inHiddenSkillDirectory(skillsDir, file) &&
         !reachable.has(file),
     )
@@ -1830,11 +1844,26 @@ async function readCitedDocument(file: string): Promise<CitedDocument> {
     ),
   });
   const found = await stat(file).then(
-    (stats): "file" | "missing" => (stats.isFile() ? "file" : "missing"),
-    (error: unknown): "missing" | { error: unknown } =>
-      isEnoent(error) || (hasErrnoCode(error) && error.code === "ENOTDIR") ? "missing" : { error },
+    (stats): "file" | "not-a-file" => (stats.isFile() ? "file" : "not-a-file"),
+    async (error: unknown): Promise<"missing" | "not-a-file" | { error: unknown }> => {
+      if (hasErrnoCode(error) && error.code === "ENOTDIR") return "missing";
+      if (!isEnoent(error)) return { error };
+      // A link whose target is gone is still a name the host tries to open.
+      return (await lstat(file).then(
+        () => true,
+        () => false,
+      ))
+        ? "not-a-file"
+        : "missing";
+    },
   );
   if (found === "missing") return { kind: "missing" };
+  if (found === "not-a-file") {
+    return unreadable(
+      "A path under `skills` that a step names is not an ordinary file — a directory, a device, or a link to nothing — so the host cannot open it, and the step that names it fails there.",
+      "Put the document the step expects at that path, or stop naming it.",
+    );
+  }
   if (found !== "file") {
     return unreadable(
       `A document under \`skills\` that a step names could not be reached (${describeReadError(found.error)}). The host opens it only where a step names it, and a step that does fails there.`,

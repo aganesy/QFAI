@@ -691,6 +691,72 @@ describe("the gate reads a skill as the host does", () => {
     expect(codes).toContain("QFAI-SKILLS-014");
   });
 
+  it("roots a skill whose entry point links to a document crawled under another name", async () => {
+    // The host loads the link as the entry point, so the document is a root and
+    // its citations resolve from the skill's directory.
+    const root = await projectWithSkill(['description: "Does the thing."']);
+    const skillDir = path.join(root, ".qfai", "assistant", "skills", "qfai-example");
+    await mkdir(path.join(skillDir, "references"), { recursive: true });
+    const entry = path.join(skillDir, "references", "entry.md");
+    await writeFile(
+      entry,
+      `${await readFile(path.join(skillDir, "SKILL.md"), "utf-8")}\nSee references/guide.md.\n`,
+      "utf-8",
+    );
+    await writeFile(path.join(skillDir, "references", "guide.md"), "# guide\n", "utf-8");
+    await rm(path.join(skillDir, "SKILL.md"));
+    try {
+      await symlink(entry, path.join(skillDir, "SKILL.md"));
+    } catch {
+      // A host without symlink permission cannot exercise this case.
+      return;
+    }
+
+    const found = await validateAssistantAssets(root, defaultConfig);
+    expect(found.filter((item) => item.code === "QFAI-SKILLS-013")).toEqual([]);
+  });
+
+  it("reports a path a step names that is not an ordinary file", async () => {
+    // A directory at the named path exists, and the host still cannot open it.
+    const root = await projectWithSkill(['description: "Does the thing."']);
+    const skillDir = path.join(root, ".qfai", "assistant", "skills", "qfai-example");
+    const entryPoint = path.join(skillDir, "SKILL.md");
+    await writeFile(
+      entryPoint,
+      `${await readFile(entryPoint, "utf-8")}\nSee references/tmp/guide.md.\n`,
+      "utf-8",
+    );
+    const directory = path.join(skillDir, "references", "tmp", "guide.md");
+    await mkdir(directory, { recursive: true });
+
+    const found = await validateAssistantAssets(root, defaultConfig);
+    expect(found.some((item) => item.code === "QFAI-SKILLS-014" && item.file === directory)).toBe(
+      true,
+    );
+  });
+
+  it("reports a link a step names whose target is gone", async () => {
+    const root = await projectWithSkill(['description: "Does the thing."']);
+    const skillDir = path.join(root, ".qfai", "assistant", "skills", "qfai-example");
+    const entryPoint = path.join(skillDir, "SKILL.md");
+    await writeFile(
+      entryPoint,
+      `${await readFile(entryPoint, "utf-8")}\nSee references/tmp/guide.md.\n`,
+      "utf-8",
+    );
+    await mkdir(path.join(skillDir, "references", "tmp"), { recursive: true });
+    const link = path.join(skillDir, "references", "tmp", "guide.md");
+    try {
+      await symlink(path.join(skillDir, "references", "tmp", "gone.md"), link);
+    } catch {
+      // A host without symlink permission cannot exercise this case.
+      return;
+    }
+
+    const found = await validateAssistantAssets(root, defaultConfig);
+    expect(found.some((item) => item.code === "QFAI-SKILLS-014" && item.file === link)).toBe(true);
+  });
+
   it("passes over a dependency tree no step names", async () => {
     // An installed package can hold more documents than every skill together,
     // and the host opens none of them unless a step names one.
