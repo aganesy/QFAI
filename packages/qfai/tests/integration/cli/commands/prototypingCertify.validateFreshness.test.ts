@@ -195,6 +195,32 @@ describe("certify relates validate.json to the evidence it seals", () => {
     expect(lines.join("")).not.toContain("changed after");
   });
 
+  it("seals when only a file in a reset backup is newer than the run", async () => {
+    // The certificate leaves a cycle-0 reset's backups out, so a copy touched
+    // inside one after the run changes nothing it seals.
+    const root = await newTempDir();
+    await seedHappyPath(root, PASS_VERIFY);
+    await backdateEvidence(root, 60_000);
+    await stampValidateJson(root, new Date().toISOString());
+    const backup = path.join(
+      root,
+      ".qfai/evidence/prototyping/iter-00.backup-2026-01-01T00-00-00-000Z",
+    );
+    await mkdir(backup, { recursive: true });
+    const copied = path.join(backup, "index.html");
+    await writeFile(copied, "<html></html>", "utf-8");
+    const later = new Date(Date.now() + 60_000);
+    await utimes(copied, later, later);
+
+    const lines = captureStderr();
+    try {
+      expect(await runPrototypingCertify({ root, check: false })).toBe(0);
+    } finally {
+      vi.restoreAllMocks();
+    }
+    expect(lines.join("")).not.toContain("changed after");
+  });
+
   it("refuses when an evidence file is newer than the run", async () => {
     // Validate passes, the evidence then changes, certify
     // is asked to seal it. The stored result is no longer a verdict on this

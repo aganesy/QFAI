@@ -361,10 +361,19 @@ export async function checkCompletionCertificate(root: string): Promise<CertifyC
 const RESET_BACKUP_DIRECTORY =
   /^(?:iter-00|aggregate)\.backup-\d{4}-\d{2}-\d{2}T\d{2}-\d{2}-\d{2}-\d{3}Z$/;
 
+/**
+ * Whether a directory at the top of the prototyping evidence tree is one of a
+ * cycle-0 reset's backups, which hold the previous loop's evidence and are not
+ * part of what a certificate seals.
+ */
+export function isResetBackupDirectory(name: string): boolean {
+  return RESET_BACKUP_DIRECTORY.test(name);
+}
+
 /** Whether an evidence path lies inside one of a reset's backup directories. */
 function inResetBackup(relPath: string): boolean {
   const slash = relPath.indexOf("/");
-  return slash > 0 && RESET_BACKUP_DIRECTORY.test(relPath.slice(0, slash));
+  return slash > 0 && isResetBackupDirectory(relPath.slice(0, slash));
 }
 
 /**
@@ -411,7 +420,7 @@ async function walk(
     // this loop's certificate, a backup removed once it is no longer needed
     // would fail `certify --check` although nothing of this loop changed. Only
     // the directories a reset writes are skipped, by the exact name it gives them.
-    if (dir === rootDir && s.isDirectory() && RESET_BACKUP_DIRECTORY.test(name)) continue;
+    if (dir === rootDir && s.isDirectory() && isResetBackupDirectory(name)) continue;
     if (s.isDirectory()) {
       await walk(rootDir, full, out);
     } else if (s.isFile()) {

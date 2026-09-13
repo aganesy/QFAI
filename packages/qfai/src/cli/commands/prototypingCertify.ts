@@ -59,6 +59,7 @@ import {
   buildCompletionCertificate,
   checkCompletionCertificate,
   COMPLETION_CERTIFICATE_REL_PATH,
+  isResetBackupDirectory,
   loadCompletionCertificate,
   writeCompletionCertificate,
   type CompletionCertificate,
@@ -2145,6 +2146,9 @@ async function findEvidenceNewerThan(
     for (const entry of entries) {
       const absolute = path.join(dir, entry.name);
       if (entry.isDirectory()) {
+        // A reset's backups are not sealed, so a change inside one is not a
+        // change to the tree the run judged.
+        if (dir === evidenceRoot && isResetBackupDirectory(entry.name)) continue;
         await visit(absolute);
         continue;
       }
