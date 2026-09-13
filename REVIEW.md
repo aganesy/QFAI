@@ -6,12 +6,8 @@ The following categories must ALWAYS be reported as inline PR comments,
 regardless of confidence level or severity.
 Do not suppress any actionable finding.
 
-Await or return every promise. Returning propagates only when its caller awaits
-or adopts the promise. Subject to the safety floor in
-`.agents/rules/minimal-implementation.md` § 2, do not add a catch for a failure
-that no specification, contract or observation names. At a callback boundary
-that ignores return values, require an adapter that adopts asynchronous work
-and handles rejections under the same floor.
+Await or return every promise. `.agents/rules/minimal-implementation.md`
+§ 2 governs consuming callers, kept failures and callback boundaries.
 
 - Style and formatting inconsistencies
 - Naming improvements (variables, functions, types, files)
