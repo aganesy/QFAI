@@ -1466,8 +1466,12 @@ export const ALLOWED_INIT_CONTENT: ReadonlyMap<string, string> = new Map([
   // Re-pinned for the grilling bullet in the same block, which now says a session ends in one
   // of four named endings. Derived by running `qfai init` into a temp root; restoring the old
   // wording in both written files reproduces `d3d39ba4…` and `5b6487ba…` byte for byte.
-  ["AGENTS.md", "04f04e43e05652ffb75a24beb43723bc24b3b7543185e6a8a0c2d68fd0af0ffc"],
-  ["CLAUDE.md", "8da8af3fef0a3628261e35352325daca55634eb941d00c477a7c823f51bd7845"],
+  //
+  // Re-pinned for the sentence on later runs, which now says a run rewords a bullet still as an
+  // earlier release wrote it. Derived by running `qfai init` into a temp root; restoring the old
+  // sentence in both written files reproduces `04f04e43…` and `8da8af3f…` byte for byte.
+  ["AGENTS.md", "4317f660fb2b3312b1067fecb26488b2adef946f799a0d492bc582c900ed7e4d"],
+  ["CLAUDE.md", "40e0888fe7fb50db9138ce3c148da0a7c71bd4914b1a38fb5f88cf256ef852ca"],
   // Inside `.claude/`, and pinned anyway — see the paragraph above the path set.
   // These are the hooks that restate a rule at the moment it applies: the writing
   // rule when a pull request, issue or review is posted through the GitHub tools

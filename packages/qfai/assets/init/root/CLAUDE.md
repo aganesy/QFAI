@@ -25,8 +25,9 @@ the master rather than this file.
 This section, markers included, is the only part `npx qfai init` writes. A
 repository that already had a `CLAUDE.md` gets it appended once. A later run
 adds a bullet for a rule it is shipping into this project for the first time,
-and changes nothing else: a bullet you deleted stays deleted, and everything you
-wrote inside the section is left as you wrote it.
+and rewords a bullet still as an earlier release wrote it. It changes nothing
+else: a bullet you deleted stays deleted, and everything you wrote inside the
+section is left as you wrote it.
 
 <!-- qfai:cross-ai-rules:end -->
 
