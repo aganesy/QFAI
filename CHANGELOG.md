@@ -33,6 +33,56 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   `Revision` for a row that records none. The contract also says each value
   enters the seal without a code span around it.
 
+- **The grilling-trace check accepts the template it was written to reject**
+  (#1739). `QFAI-GRILL-001` counted any table row under `## Pre-draft Grilling`
+  as a record, and the shipped evidence template carries three worked rows. So
+  the section copied with nothing replaced produced no finding, which is the
+  one state the check names as the reason it exists. A row still holding a
+  template placeholder no longer counts, and the finding says which of the two
+  states the file is in.
+
+- **The grilling-trace check reads the discussion stage's record too** (#1740).
+  It was written when no stage but the spec stage named a file to write a
+  session record to. Two changes the same day gave the discussion run and the
+  prototyping loop theirs, and the reason the check gave for covering neither
+  stayed in place after it stopped being true.
+
+  Only the most recent discussion run is read. Every run opens its evidence
+  under its own stamp and never returns to an earlier one, so a finding on a run
+  that is over could not be cleared by any later run — it would stand for the
+  life of the project, and a list nobody can empty is the list people stop
+  reading.
+
+  Prototyping stays out, and not because its absence is undecidable — the skill
+  writes that file before cycle 0 whether or not the session settled anything.
+  What rules it out is the shape of the record: an empty session is written as
+  prose, which this check's row test would report; the file is one per project
+  and rewritten in place, so there is no run to key a finding on; and escalated
+  rows are a state no row count can read.
+
+  `--profile discussion` runs the check as well as `--profile sdd`, each naming
+  its own stage. The discussion stage names that profile as its completion gate,
+  so a run that wrote no record could otherwise finish its own gate without the
+  finding, and a full run calls both runners.
+
+  Which discussion run to ask about comes from the pack tree rather than from
+  the evidence listing. A run that wrote no record is invisible among the
+  records, and the run before it would otherwise answer in its place with a
+  record that is not about it.
+
+  Two more ways a record could exist and say nothing are closed with it. The
+  session table the discussion skill shows now carries placeholders in its
+  run-specific cells, as the spec template does, so copying it and replacing
+  nothing is caught; and a row whose cells are all empty no longer counts as a
+  row. A cell is read as a placeholder only when it is nothing else, so a row
+  carrying a link or an inline tag inside a sentence is left alone.
+
+  `qfai init` keeps `.qfai/evidence/discussion-<ts>.md` out of the ignore block
+  as it already does for the spec stage's evidence, and the shipped instructions
+  classify both as committed rather than as regenerable stage logs. A record no
+  checkout can see is one the check could only ever report nothing about, and a
+  negation alone does not stage a file.
+
 - **The prototyping preflight refuses a screen with no primary task** (#1698).
   The audit lane reported an empty `primary_tasks` as `QFAI-AUD-001`, but
   `qfai prototyping preflight` never read the field, so the stage started on a

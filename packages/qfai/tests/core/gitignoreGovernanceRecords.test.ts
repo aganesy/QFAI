@@ -140,6 +140,11 @@ describe("git honours the managed block against a broad pre-existing rule", () =
     // either would put a file in the repository nothing reads.
     ".qfai/evidence/import-lite-draft.md",
     ".qfai/evidence/import-lite-2026.md",
+    // The same two shapes for a discussion run's record. The grilling check
+    // reads `discussion-` plus exactly the canonical stamp width, so a draft or
+    // a wrong-width backup names a run nothing resolves.
+    ".qfai/evidence/discussion-draft.md",
+    ".qfai/evidence/discussion-2026.md",
   ];
   /** Governance records that must stay reachable. */
   const stillTracked = [
@@ -153,6 +158,9 @@ describe("git honours the managed block against a broad pre-existing rule", () =
     // rule finds nothing on a fresh clone and reports the same clean result it
     // reports for a run that grilled every phase.
     ".qfai/evidence/sdd-spec-0001.md",
+    // A discussion run's record, which the same rule reads for the same reason,
+    // named with the canonical run stamp the check and the pack tree share.
+    ".qfai/evidence/discussion-20260101000000000.md",
     // The stand-in for a discussion pack on the imported-spec-set route, named
     // with the canonical 17-digit run stamp, and the template-named copy the
     // check also accepts.

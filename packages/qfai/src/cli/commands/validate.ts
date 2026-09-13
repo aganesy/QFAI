@@ -516,6 +516,22 @@ export const GATE_GROUP_FAMILIES = {
   "skills-integrity": ["QFAI-SKILLS-*"],
   "assistant-assets": ["QFAI-ASSETS-*"],
   discussion: ["QFAI-DPACK-*", "QFAI-VIS-*"],
+  // Its own group for the reason `research-summary` has one:
+  // `validateGrillingTrace` is dispatched from `runDiscussionValidators` and
+  // from `runSddValidators`, each naming its own stage, so filing it under
+  // either would make the other profile list as unevaluated a family it had
+  // just emitted.
+  //
+  // SIMPLIFIED: each of those profiles evaluates half of this group and neither
+  // notice says so. `sdd` reads no discussion record, `discussion` reads no
+  // spec record, and both suppress the family from their unevaluated list. The
+  // narrower groups two entries above (`contracts` / `contract-references`,
+  // `traceability-code-references`) split for exactly this, and the split is
+  // unavailable here: the family holds one code, so two groups would print the
+  // same pattern twice.
+  // Lift when: the discussion half takes a code of its own. The grammar admits
+  // one, and the groups then partition rather than sample.
+  grilling: ["QFAI-GRILL-*"],
   // `validateResearchSummary` and `runCanonicalUixValidators` are called from
   // both `runDiscussionValidators` and `runUiuxValidators`, so neither can sit
   // inside `discussion`: a prototyping run listed as unevaluated a family it
@@ -625,9 +641,6 @@ export const GATE_GROUP_FAMILIES = {
     "R-CERTIFY-VERIFY-CIRCULAR",
     "R-PROMPT-SCANNER-DRIFT",
     "R-AUTOPILOT-POLICY-*",
-    // Dispatched from the same group: `validateGrillingTrace` runs beside
-    // `validateAutopilotPolicy` in `runSddValidators`.
-    "QFAI-GRILL-*",
     "R-HANDOFF-INCOMPLETE",
     "R-WORKLOG-DRIFT",
     "R-REJECTED-READOPT",
@@ -927,6 +940,9 @@ const PROFILE_GATE_GROUPS: Record<ValidationProfile, readonly GateGroup[]> = {
     "research-summary",
     "canonical-uix",
     "review-artifacts",
+    // The stage names this profile as its completion gate, and the run's own
+    // session record is one of the things that gate reads.
+    "grilling",
     // `runDiscussionValidators` calls `validateRootDesignMdParse` directly:
     // the skill mandates a parsable root DESIGN.md and names this profile as
     // its gate.
@@ -937,6 +953,7 @@ const PROFILE_GATE_GROUPS: Record<ValidationProfile, readonly GateGroup[]> = {
   sdd: [
     "sdd",
     "reviewer-gate-sdd",
+    "grilling",
     // `runSddValidators` calls `runPackageSelfGovernanceValidators`, so sdd
     // evaluates this group too — subject to the per-code precondition check.
     "package-self-governance",

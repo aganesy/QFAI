@@ -1424,7 +1424,17 @@ export const ALLOWED_INIT_CONTENT: ReadonlyMap<string, string> = new Map([
   //
   // Derived the way its predecessors were — `qfai init` into a temp root, then
   // reading what it wrote.
-  [".gitignore", "cd2c521c777ae0cee4c0ff38f44d70d53d5ea82af5b9eccb60bd8ae54df5118e"],
+  //
+  // Re-pinned again for the discussion stage's evidence, which the same rule
+  // reads for its `## Grilling Session` section. The stamp is spelled out to
+  // its full width, as the import-lite negation spells out its own:
+  //
+  //     !.qfai/evidence/discussion-[0-9]…[0-9].md
+  //
+  // Derived the same way, and checked the way the note below asks: removing
+  // that one line from what the run wrote reproduces `cd2c521c…` byte for byte,
+  // which is what makes this a review of one line.
+  [".gitignore", "c208ecdc03ad18a379512fd21bd13e32035bb1df008144cde7ea32b4fc9b798c"],
   // One bullet each, inside the managed cross-AI rules block: the
   // `documentation-clarity.md` master that the same run seeds beside them.
   // Removing that line from both files reproduces the previous digests

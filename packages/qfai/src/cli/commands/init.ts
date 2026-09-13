@@ -2831,6 +2831,10 @@ const LEGACY_EVIDENCE_IGNORE_NEGATIONS: readonly string[] = [
   // rule whose input is hidden reports the same clean result for a run that
   // skipped every session as for one that grilled every phase.
   "!sdd-*.md",
+  // A discussion run's own evidence, which the same rule reads for the same
+  // reason. The stamp is spelled out to its full width, which is the only
+  // width the check accepts, so a draft or a backup beside it stays ignored.
+  `!discussion-${CANONICAL_TIMESTAMP_GLOB}.md`,
   // The import-lite record, for the same reason: on a spec set that arrived
   // without a discussion pack it is the only input source in the repository,
   // and the nested `*` hides it from the fresh clone that CI validates. Both

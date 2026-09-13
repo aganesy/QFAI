@@ -155,6 +155,16 @@ export const QFAI_GITIGNORE_GOVERNANCE_NEGATIONS: readonly string[] = [
   // a record only the machine that produced it can see is one no review and no
   // CI checkout ever reads.
   "!.qfai/evidence/sdd-*.md",
+  // The discussion stage's evidence, for that reason exactly: the same rule
+  // reads its `## Grilling Session` section. Ignored, the rule's discussion
+  // half can only ever report nothing, which reads in a summary like a project
+  // that grilled every run.
+  //
+  // The stamp is spelled out to its full width, as the import-lite negation
+  // below spells out its own and for the same reason: the check reads
+  // `discussion-` followed by exactly that many digits and nothing else, so a
+  // wider negation would commit a draft or a backup no reader consumes.
+  `!.qfai/evidence/discussion-${CANONICAL_TIMESTAMP_GLOB}.md`,
   "!.qfai/evidence/atdd-*.md",
   // The import-lite record. On the route where a spec set arrives without a
   // discussion pack, this file is the only thing standing in for the pack: it
