@@ -521,6 +521,16 @@ export const GATE_GROUP_FAMILIES = {
   // from `runSddValidators`, each naming its own stage, so filing it under
   // either would make the other profile list as unevaluated a family it had
   // just emitted.
+  //
+  // SIMPLIFIED: each of those profiles evaluates half of this group and neither
+  // notice says so. `sdd` reads no discussion record, `discussion` reads no
+  // spec record, and both suppress the family from their unevaluated list. The
+  // narrower groups two entries above (`contracts` / `contract-references`,
+  // `traceability-code-references`) split for exactly this, and the split is
+  // unavailable here: the family holds one code, so two groups would print the
+  // same pattern twice.
+  // Lift when: the discussion half takes a code of its own. The grammar admits
+  // one, and the groups then partition rather than sample.
   grilling: ["QFAI-GRILL-*"],
   // `validateResearchSummary` and `runCanonicalUixValidators` are called from
   // both `runDiscussionValidators` and `runUiuxValidators`, so neither can sit

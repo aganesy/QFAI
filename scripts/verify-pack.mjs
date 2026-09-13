@@ -384,7 +384,12 @@ if (!existsSync(path.join(githubAgentsDir, "delivery-planner.agent.md"))) {
 // Empty scaffold init omits generated discussion-pack files.
 // Seed a minimal discussion-pack so pack-time validate has realistic inputs.
 const discussionDir = path.join(outputDir, ".qfai", "discussion");
-const seededDiscussionPackDir = path.join(discussionDir, "discussion-20260216000000000");
+// One stamp for the run this fixture stands for. The pack and the stage
+// evidence a real run writes carry the same one, and the grilling check pairs
+// them by it — spelled twice, a rename of either half silently stops the
+// fixture exercising the path it was seeded for.
+const seededDiscussionPack = "discussion-20260216000000000";
+const seededDiscussionPackDir = path.join(discussionDir, seededDiscussionPack);
 mkdirSync(seededDiscussionPackDir, { recursive: true });
 
 const seededDiscussionPackFiles = {
@@ -593,9 +598,9 @@ for (const [fileName, lines] of Object.entries(seededDiscussionPackFiles)) {
 const seededDiscussionEvidenceDir = path.join(outputDir, ".qfai", "evidence");
 mkdirSync(seededDiscussionEvidenceDir, { recursive: true });
 writeFileSync(
-  path.join(seededDiscussionEvidenceDir, "discussion-20260216000000000.md"),
+  path.join(seededDiscussionEvidenceDir, `${seededDiscussionPack}.md`),
   [
-    "# Evidence: /qfai-discussion (discussion-20260216000000000)",
+    `# Evidence: /qfai-discussion (${seededDiscussionPack})`,
     "",
     "## Grilling Session",
     "",
@@ -642,7 +647,7 @@ writeFileSync(
   [
     "# Review Request",
     "",
-    "Target: .qfai/discussion/discussion-20260216000000000",
+    `Target: .qfai/discussion/${seededDiscussionPack}`,
     "Purpose: verify-pack smoke validation.",
     "",
   ].join("\n"),
@@ -671,7 +676,7 @@ writeFileSync(
       created_at: "2026-02-16T00:00:00.000Z",
       target: {
         kind: "discussion",
-        path: ".qfai/discussion/discussion-20260216000000000",
+        path: `.qfai/discussion/${seededDiscussionPack}`,
       },
       routing_profile: "completion",
       reviewers: [{ reviewer: "completion-reviewer", status: "PASS", feedback_count: 0 }],

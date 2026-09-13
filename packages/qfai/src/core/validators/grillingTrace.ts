@@ -19,10 +19,17 @@
  * session.
  *
  * **A finding it raises is one somebody can clear.** Where every run opens its
- * own file, only the most recent is read: an earlier run is over, the next one
- * writes somewhere else, and a finding on it would stand for the life of the
- * project. What that costs is a session skipped two runs ago and grilled since,
- * which is inside what a record-exists check claims anyway.
+ * own file, only the most recent is read. An earlier run is over and the next
+ * one writes somewhere else, so a finding against it would stand for the life
+ * of the project. What that costs is a session skipped two runs ago and grilled
+ * since, which is inside what a record-exists check claims anyway.
+ *
+ * The two stages differ in how the repair arrives rather than in whether it
+ * can. A spec's record has a path the next run of that spec opens anyway, so
+ * the occasion comes with the work; a per-run stamp has no such occasion, which
+ * is why only its newest run is asked about. A run that predates the record
+ * obligation is reported until the stage next runs — the record cannot be
+ * written for a session that ended, and the next run is the repair.
  *
  * **Which run is the most recent comes from the stage, not from the files.** A
  * run that wrote no record is invisible in a listing of records, and under the
@@ -30,25 +37,45 @@
  * not about it. The stage's own tree of runs says which one to ask about, so a
  * run with no record at all is the finding rather than a gap.
  *
- * **Two stages, not three.** A spec stage and a discussion run each write a
- * record, at a path each names. Prototyping's
- * `.qfai/evidence/prototyping/grilling.md` is a loop input rather than a
- * per-run record: one file per project, holding the current state of the
- * decision tree, read by the generator and the reviewer every cycle. A project
- * that has not reached a prototyping loop and one whose loop wrote nothing are
- * the same absence there, so a check on the same terms would report the first.
+ * **Two stages, not three.** Prototyping's
+ * `.qfai/evidence/prototyping/grilling.md` is out for three reasons, and the
+ * one about absence is not among them — the skill writes that file before cycle
+ * 0 whether or not the session settled anything, so its absence is decidable
+ * exactly as a discussion pack's is. What rules it out is the shape of the
+ * record: an empty session is written as `none` under the heading, which is a
+ * legal record this check's row test would report; the file is one per project
+ * and rewritten in place, so there is no run to key a finding on and both rules
+ * above need one; and `## Escalated` rows are a state no row count can read.
  */
 
+import type { Dirent } from "node:fs";
 import { readdir, readFile } from "node:fs/promises";
 import path from "node:path";
 
 import { isEnoent } from "../fs/errno.js";
-import { findLatestPack, type PackKind } from "../packLocator.js";
+import {
+  CANONICAL_TIMESTAMP_DIGITS,
+  findPacks,
+  latestPack,
+  type PackKind,
+} from "../packLocator.js";
 import type { Issue } from "../types.js";
 import { exists, issue } from "./utils.js";
 
 /** The finding this validator emits. */
 export const GRILLING_TRACE_CODE = "QFAI-GRILL-001";
+
+/**
+ * The heading each stage writes its rows under.
+ *
+ * Exported because the skills that write these sections spell the same strings,
+ * and a test that holds the two together is what keeps a rename in one from
+ * leaving the other reading a heading nobody writes.
+ */
+export const GRILLING_SECTIONS = {
+  spec: "## Pre-draft Grilling",
+  discussion: "## Grilling Session",
+} as const satisfies Readonly<Record<GrillingSubject, string>>;
 
 /**
  * The stages this reads, by the profile that gates each.
@@ -61,8 +88,8 @@ export const GRILLING_SUBJECTS = ["spec", "discussion"] as const;
 
 export type GrillingSubject = (typeof GRILLING_SUBJECTS)[number];
 
-/** A stage whose evidence carries a grilling record. */
-type Subject = {
+/** What every stage this reads has in common. */
+type SubjectBase = {
   /** Which stage this is, as a caller names it. */
   readonly stage: GrillingSubject;
   /** The evidence file's name, capturing what the finding calls the run. */
@@ -73,34 +100,20 @@ type Subject = {
   readonly row: string;
   /** Whether the name holds a spec id, so a `--spec` run can place it. */
   readonly specKeyed: boolean;
-  /**
-   * Which of the matching files are read.
-   *
-   * `each` where a stage keeps one file per subject and later runs write to it
-   * again: the finding names a file the next run repairs, so it clears.
-   *
-   * `latest` where every run opens a file under its own stamp. An earlier run's
-   * record cannot be written now — the run is over and the next one writes
-   * somewhere else — so a finding on one would stand for the life of the
-   * project. A list nobody can empty is the list people stop reading, and this
-   * check has one finding to spend.
-   */
-  readonly reads: "each" | "latest";
-  /**
-   * Where the stage's own runs are listed, for a `latest` subject.
-   *
-   * Read from the files alone, the check sees only runs that wrote one, so a
-   * run that wrote no record at all is invisible — and under `latest` an
-   * earlier run's populated record answers in its place. The pack tree is the
-   * stage's own list of what it ran, so a pack with no record beside it is the
-   * finding rather than a gap.
-   *
-   * A spec stage has no equivalent and needs none: there, a missing evidence
-   * file means the stage never ran on that spec, which is another validator's
-   * subject.
-   */
-  readonly packs?: PackKind;
 };
+
+/**
+ * A stage whose evidence carries a grilling record.
+ *
+ * The two shapes are the two ways a stage keeps its records, and the union is
+ * what stops them being mixed. A `latest` subject reads one run of many and
+ * needs the stage's own list of runs to know which; an `each` subject has one
+ * file per subject and no such list, and giving it one would let a run this
+ * check invented replace a record the stage actually wrote.
+ */
+type Subject =
+  | (SubjectBase & { readonly reads: "each"; readonly packs?: undefined })
+  | (SubjectBase & { readonly reads: "latest"; readonly packs: PackKind });
 
 const SUBJECTS: readonly Subject[] = [
   {
@@ -108,7 +121,7 @@ const SUBJECTS: readonly Subject[] = [
     // Anchored on the spec id rather than on anything after `sdd-`, so a file a
     // project named `sdd-notes.md` is not held to a contract it never entered.
     file: /^sdd-(spec-\d{4})\.md$/,
-    section: "## Pre-draft Grilling",
+    section: GRILLING_SECTIONS.spec,
     row: "phase row",
     specKeyed: true,
     reads: "each",
@@ -116,11 +129,13 @@ const SUBJECTS: readonly Subject[] = [
   {
     stage: "discussion",
     // The discussion run opens its evidence under its own stamp before it
-    // writes anything else, so the record has a path from the first moment the
-    // session can end. The stamp is fixed-width, so the greatest name is the
-    // most recent run.
-    file: /^(discussion-\d{17})\.md$/,
-    section: "## Grilling Session",
+    // writes anything else, and opens its pack under that same stamp, so the
+    // two names agree and the greatest is the most recent run. The width comes
+    // from `packLocator.ts` rather than being written again here: it is the
+    // only width that resolves a pack, so a second spelling could drift into
+    // reading records no pack will ever be found for.
+    file: new RegExp(`^(discussion-\\d{${String(CANONICAL_TIMESTAMP_DIGITS)}})\\.md$`),
+    section: GRILLING_SECTIONS.discussion,
     row: "session row",
     specKeyed: false,
     reads: "latest",
@@ -142,30 +157,40 @@ const EVIDENCE_DIR_REL = ".qfai/evidence";
  * Where discussion packs live when a caller names no other place.
  *
  * Unlike the evidence tree this one is configurable, so a caller passes
- * `paths.discussionDir`. The default matches `core/config.ts`'s, and is here so
- * a caller that reads the discussion stage still looks somewhere real.
+ * `paths.discussionDir`. The default is `core/config.ts`'s, and a test holds
+ * the two together — a caller that reads this stage without naming a directory
+ * would otherwise look somewhere the project does not keep its runs.
  */
-const DISCUSSION_DIR_REL = ".qfai/discussion";
-
-/** A markdown table's separator, e.g. `| --- | :-: |`. */
-const SEPARATOR_RE = /^\s*\|[\s|:-]*\|\s*$/;
+export const DISCUSSION_DIR_REL = ".qfai/discussion";
 
 /**
- * A cell that is nothing but an angle-bracket token.
+ * A markdown table's delimiter row, with either outer pipe optional.
  *
- * Anchored on the whole cell, as `deltaV1.ts` and `importLiteEvidence.ts` both
- * anchor theirs. A row is prose as well as values, and a cell carrying an
- * autolink or an inline tag inside a sentence has been written — reading every
- * angle-bracketed construct as a placeholder would drop that row and report the
- * evidence as missing.
+ * GFM writes the outer pipes as a courtesy rather than a requirement, so a
+ * table that leaves them off is a table. Reading only the pipe-led form found
+ * no rows in one and reported a record that was there as missing.
  */
-const UNREPLACED_CELL_RE = /^<[^<>]*>$/;
+const DELIMITER_RE = /^\s*\|?\s*:?-+:?\s*(?:\|\s*:?-+:?\s*)*\|?\s*$/;
+
+/**
+ * A cell that is nothing but a template placeholder.
+ *
+ * Anchored on the whole cell, as `deltaV1.ts` and `importLiteEvidence.ts`
+ * anchor theirs: a cell carrying an angle-bracketed construct inside a sentence
+ * has been written. The first character must be a letter and the token must
+ * carry no colon, which is what separates `<ISO8601>` and `<ref>` from an HTML
+ * comment and from an autolink — both of which are content, and both of which a
+ * looser pattern dropped, reporting a written record as missing.
+ */
+const UNREPLACED_CELL_RE = /^<[A-Za-z][^<>:]*>$/;
 
 /**
  * Whether a markdown table row is still the template's.
  *
  * Two shapes qualify, and both are what a copied template looks like: a cell
- * left at its placeholder, and a row whose cells are all empty.
+ * left at its placeholder, and a row whose cells are all empty. A row with some
+ * cells filled and some not is not one of them — it is a partial record, and
+ * saying so is a judgement this check does not make.
  */
 function rowIsUnwritten(line: string): boolean {
   const cells = line
@@ -186,42 +211,78 @@ async function textOf(file: string): Promise<string | null> {
   }
 }
 
-/**
- * The table rows under `section` that the stage wrote itself.
- *
- * Everything up to and including the separator is the table's header, so what
- * follows it is the data — which is what makes this independent of the column
- * a table happens to start with. A table with no separator is not one, and its
- * header alone would otherwise read as a row.
- *
- * `null` when the section is absent, which the caller reports differently from
- * a section present and empty.
- */
-function ownRowsUnder(text: string, section: string): string[] | null {
-  const lines = text.split(/\r?\n/);
-  const start = lines.findIndex((line) => line.trimEnd() === section);
-  if (start === -1) return null;
-
-  const table: string[] = [];
-  for (const line of lines.slice(start + 1)) {
-    if (line.trimStart().startsWith("## ")) break;
-    if (line.trim().startsWith("|")) table.push(line);
-  }
-  const separator = table.findIndex((line) => SEPARATOR_RE.test(line));
-  if (separator === -1) return [];
-  return table.slice(separator + 1).filter((line) => !rowIsUnwritten(line));
+/** `value`, with every character a regular expression reads as syntax escaped. */
+function literal(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
-/** What the file the finding names is: absent, present and bare, or unwritten. */
-type State = "absent" | "no-section" | "unwritten";
+/** The heading, and what ends the section it opens. */
+function headingPatterns(section: string): { heading: RegExp; ends: RegExp } {
+  const parsed = /^(#+)\s+(.*)$/.exec(section);
+  const hashes = parsed?.[1] ?? "##";
+  const title = parsed?.[2] ?? section;
+  return {
+    // As CommonMark admits an ATX heading: up to three leading spaces, and an
+    // optional closing run of hashes. An exact-line match reported a written
+    // record as missing for both.
+    heading: new RegExp(`^ {0,3}${hashes}\\s+${literal(title)}\\s*#*\\s*$`),
+    ends: new RegExp(`^ {0,3}#{1,${String(hashes.length)}}\\s`),
+  };
+}
+
+/** What one section holds: the rows the stage wrote, and the ones it did not. */
+type SectionRows = { readonly written: string[]; readonly unwritten: number };
+
+/**
+ * The rows of the table under `section`.
+ *
+ * The delimiter is what identifies the table, so everything up to and including
+ * it is the header and the rows are the contiguous block after it. Contiguous,
+ * because a section may hold more than one table: reading to the end of the
+ * section let a second table's own header stand in for the record, and a
+ * subsection with any table in it satisfied the check.
+ *
+ * `null` when the section is absent, which the caller reports differently from
+ * a section present with nothing readable under it.
+ */
+function ownRowsUnder(text: string, section: string): SectionRows | null {
+  const { heading, ends } = headingPatterns(section);
+  const lines = text.split(/\r?\n/);
+  const start = lines.findIndex((line) => heading.test(line));
+  if (start === -1) return null;
+
+  const body: string[] = [];
+  for (const line of lines.slice(start + 1)) {
+    if (ends.test(line)) break;
+    body.push(line);
+  }
+
+  const delimiter = body.findIndex((line) => DELIMITER_RE.test(line));
+  if (delimiter === -1) return { written: [], unwritten: 0 };
+
+  const rows: string[] = [];
+  for (const line of body.slice(delimiter + 1)) {
+    if (!line.includes("|")) break;
+    rows.push(line);
+  }
+  const written = rows.filter((line) => !rowIsUnwritten(line));
+  return { written, unwritten: rows.length - written.length };
+}
+
+/** What the file the finding names is. */
+type State = "absent" | "no-section" | "no-table" | "unwritten";
 
 /** The message for each state the finding reports. */
 function remediation(relPath: string, id: string, subject: Subject, state: State): string {
+  // Each opening says only what was observed. One that names the placeholders
+  // where none were read sends an operator whose table is written to look for
+  // something that is not there.
   const opening = {
     absent:
       `${relPath} does not exist, and the stage's own tree holds a run for ${id}. ` +
       `The stage opens this file before it writes anything else, so a run with no file wrote no record.`,
     "no-section": `${relPath} records no grilling session for ${id}.`,
+    "no-table": `${relPath} carries "${subject.section}" for ${id} with no table under it.`,
     unwritten:
       `${relPath} carries "${subject.section}" for ${id} with no ${subject.row} of its own — ` +
       `every row still holds the template's placeholders.`,
@@ -247,9 +308,9 @@ type Candidate = {
 /**
  * The evidence files to read, in one order.
  *
- * `names` is sorted, so `readdir` returning a different order twice cannot
- * reshuffle the findings, and the last name a `latest` subject matches is its
- * most recent run.
+ * `names` is sorted, and two things rest on it: two runs over one tree report
+ * in one order, which `readdir` does not promise, and the last name a `latest`
+ * subject matches is its most recent run.
  */
 function candidatesIn(
   names: readonly string[],
@@ -263,17 +324,34 @@ function candidatesIn(
       const id = subject.file.exec(name)?.[1];
       if (id === undefined) continue;
       // A `--spec` run is gating on its own spec, so a sibling it was told not
-      // to look at is left alone. A run that names no spec cannot be placed in
-      // that selection at all, which is the same position from the operator's
-      // side: a finding they cannot act on from where they are.
-      if (scope !== undefined && (!subject.specKeyed || !scope.has(id.replace("spec-", "")))) {
+      // to look at is left alone. A run that names no spec is the other case
+      // and the opposite answer: `core/specScope.ts#isFindingInSpecScope` keeps
+      // an unattributed finding in every slice, and `reviewArtifactsScope` says
+      // so of a discussion pack by name. Dropping it here would be this one
+      // validator answering a question the repository has already settled.
+      if (scope !== undefined && subject.specKeyed && !scope.has(id.replace("spec-", ""))) {
         continue;
       }
       matched.push({ name, id, subject });
     }
-    picked.push(...(subject.reads === "latest" ? matched.slice(-1) : matched));
+    picked.push(...(subject.reads === "latest" ? newest(matched) : matched));
   }
   return picked.sort((a, b) => a.name.localeCompare(b.name));
+}
+
+/**
+ * The greatest name among `matched`, or nothing when there is none.
+ *
+ * Taken by comparison rather than by position, so the pick does not rest on
+ * `readdir` having returned a sorted listing. The sort above fixes the order
+ * findings are reported in; it is not load-bearing for which run is read.
+ */
+function newest(matched: readonly Candidate[]): Candidate[] {
+  let best: Candidate | undefined;
+  for (const candidate of matched) {
+    if (best === undefined || candidate.name.localeCompare(best.name) > 0) best = candidate;
+  }
+  return best === undefined ? [] : [best];
 }
 
 /**
@@ -288,7 +366,7 @@ function candidatesIn(
 async function withOwedRuns(
   candidates: Candidate[],
   root: string,
-  options: { discussionDir?: string | undefined },
+  discussionDir: string | undefined,
   stages: readonly GrillingSubject[],
 ): Promise<Candidate[]> {
   const out = [...candidates];
@@ -297,15 +375,21 @@ async function withOwedRuns(
     // `path.resolve`, not `path.join`, so an absolute `paths.discussionDir` is
     // used as it stands rather than hung off the project root —
     // `cli/commands/discussion.ts` resolves the same key the same way.
-    const packsDir = path.resolve(root, options.discussionDir ?? DISCUSSION_DIR_REL);
-    const pack = await findLatestPack(packsDir, subject.packs);
+    const packsDir = path.resolve(root, discussionDir ?? DISCUSSION_DIR_REL);
+    // `throw` rather than the default, which reports every read failure as an
+    // empty listing. A misconfigured or unreadable tree would otherwise leave
+    // this whole branch inert and the run reporting clean, which is the answer
+    // a project that grilled every run gets.
+    const packs = await findPacks(packsDir, subject.packs, { onReadFailure: "throw" });
+    const pack = latestPack(packs);
     if (pack === null) continue;
 
-    const at = out.findIndex((c) => c.subject === subject);
-    const seen = at === -1 ? null : out[at]?.name;
+    const at = out.findIndex((candidate) => candidate.subject === subject);
+    const seen = at === -1 ? undefined : out[at]?.name;
     const name = `${pack.name}.md`;
-    // `localeCompare` on a fixed-width stamp is the same order the listing uses.
-    if (seen !== null && seen !== undefined && seen.localeCompare(name) >= 0) continue;
+    // A record newer than the newest pack is the record of a run whose pack is
+    // not there to be read; it answers for itself and this adds nothing.
+    if (seen !== undefined && seen.localeCompare(name) >= 0) continue;
     const candidate: Candidate = { name, id: pack.name, subject, owed: true };
     if (at === -1) out.push(candidate);
     else out[at] = candidate;
@@ -340,7 +424,7 @@ export async function validateGrillingTrace(
   } = {},
 ): Promise<Issue[]> {
   const evidenceDir = path.join(root, ...EVIDENCE_DIR_REL.split("/"));
-  let entries;
+  let entries: Dirent[];
   try {
     entries = (await exists(evidenceDir))
       ? await readdir(evidenceDir, { withFileTypes: true })
@@ -360,7 +444,7 @@ export async function validateGrillingTrace(
   const candidates = await withOwedRuns(
     candidatesIn(names, options.specScope, stages),
     root,
-    options,
+    options.discussionDir,
     stages,
   );
   for (const { name, id, subject, owed } of candidates) {
@@ -369,9 +453,16 @@ export async function validateGrillingTrace(
     // finding — unless the stage's own tree says it is owed, which is the one
     // case where absence is what this reports.
     if (text === null && owed !== true) continue;
-    const rows = text === null ? null : ownRowsUnder(text, subject.section);
-    if (rows !== null && rows.length > 0) continue;
-    const state: State = text === null ? "absent" : rows === null ? "no-section" : "unwritten";
+    const section = text === null ? null : ownRowsUnder(text, subject.section);
+    if (section !== null && section.written.length > 0) continue;
+    const state: State =
+      text === null
+        ? "absent"
+        : section === null
+          ? "no-section"
+          : section.unwritten > 0
+            ? "unwritten"
+            : "no-table";
 
     const relPath = `${EVIDENCE_DIR_REL}/${name}`;
     issues.push(
