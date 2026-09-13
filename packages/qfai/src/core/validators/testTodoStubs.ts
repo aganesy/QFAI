@@ -1406,19 +1406,25 @@ export async function validateTestTodoStubs(
     // A directory one pattern reaches failing the combined scan does not stop
     // the others: each is scanned on its own, and the ones still failing are
     // reported beside the stubs the rest select.
+    // A negative entry excludes from every pattern, so each scan carries all of
+    // them; scanned on its own it would select nothing.
+    const isExclusion = (glob: string): boolean => glob.startsWith("!") && !glob.startsWith("!(");
+    const exclusions = accepted.filter(isExclusion);
     const separate = await Promise.all(
-      accepted.map(async (glob) => {
-        try {
-          const alone = await collectFilesByGlobs(root, {
-            globs: [glob],
-            ignore: excludeGlobs,
-            limit: DEFAULT_GLOB_FILE_LIMIT,
-          });
-          return { kind: "scanned" as const, scan: alone };
-        } catch (failure) {
-          return { kind: "failed" as const, failure };
-        }
-      }),
+      accepted
+        .filter((glob) => !isExclusion(glob))
+        .map(async (glob) => {
+          try {
+            const alone = await collectFilesByGlobs(root, {
+              globs: [glob, ...exclusions],
+              ignore: excludeGlobs,
+              limit: DEFAULT_GLOB_FILE_LIMIT,
+            });
+            return { kind: "scanned" as const, scan: alone };
+          } catch (failure) {
+            return { kind: "failed" as const, failure };
+          }
+        }),
     );
     const scanned = separate.flatMap((entry) => (entry.kind === "scanned" ? [entry.scan] : []));
     const failures = separate.flatMap((entry) => (entry.kind === "failed" ? [entry.failure] : []));

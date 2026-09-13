@@ -169,6 +169,14 @@ describe("the stage says when the glob matcher refuses its globs", () => {
   it("still reports the stubs a readable pattern selects beside an unreadable directory", async () => {
     const root = await projectWithAcceptanceTest();
     await writeFile(path.join(root, "tests", "e2e", "a.test.ts"), `it${TODO}("later");\n`, "utf-8");
+    // An excluded stub stays excluded when the patterns are scanned one by one.
+    await mkdir(path.join(root, "tests", "e2e", "legacy"), { recursive: true });
+    await writeFile(
+      path.join(root, "tests", "e2e", "legacy", "b.test.ts"),
+      `it${TODO}("old");
+`,
+      "utf-8",
+    );
     const denied = Object.assign(new Error("EACCES: permission denied, scandir"), {
       code: "EACCES",
     });
@@ -177,10 +185,11 @@ describe("the stage says when the glob matcher refuses its globs", () => {
     try {
       const found = await validateTestTodoStubs(
         root,
-        configWith(["tests/**/*.test.ts", "locked/**/*.test.ts"]),
+        configWith(["tests/**/*.test.ts", "!tests/e2e/legacy/**", "locked/**/*.test.ts"]),
       );
       const codes = found.map((finding) => finding.code);
       expect(codes).toContain("QFAI-TEST-001");
+      expect(found.some((finding) => finding.file?.includes("legacy") === true)).toBe(false);
       const refusal = found.find((finding) => finding.code === "QFAI-TEST-002");
       expect(refusal?.message).toContain("could not read part of");
     } finally {
