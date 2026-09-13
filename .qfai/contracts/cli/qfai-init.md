@@ -46,6 +46,22 @@ Reinit behavior (existing `.qfai/` present):
 - User-authored work-log entries (`.qfai/steering/*.md` that match the entry frontmatter schema with `id` matching filename stem) MUST NOT be overwritten.
 - Collisions where the user-edited file lives at an old (pre-recut) path surface a `W-USER-EDIT-PRESERVED` finding via the validate gate (REQ-0013).
 
+#### Same-marker reminder upgrade gap
+
+Existing `.claude/settings.json` hook groups are recognized by their
+status-message marker set within the same event. Ordinary init and `--force`
+preserve an existing same-marker group's command, arguments, matcher and custom
+fields, including older shipped reminder text. Only missing groups are added.
+An older implementation reminder therefore needs a manual update; force does
+not deliver its changed text automatically.
+
+Obtain a fresh settings file with the installed release's
+`qfai init --dir <scratch-dir>` in an unused scratch directory. Back up the
+project's settings, compare the same event and marker set, then manually update
+the chosen `command` and `args`. Preserve existing markers, matchers, custom
+fields and unrelated settings. Do not append a duplicate group or change its
+markers to request an update; a different identity can run both reminders.
+
 Exit codes:
 
 | Code | Meaning                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |

@@ -13,6 +13,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   DOCUMENTATION_CLARITY_HOOK_MARKER,
+  MINIMAL_IMPLEMENTATION_HOOK_MARKER,
   carriesDocumentationClarityHooks,
   mergeDocumentationClarityHooks,
   serializeClaudeSettings,
@@ -165,6 +166,52 @@ describe("mergeDocumentationClarityHooks", () => {
     const settings = mergedSettings(JSON.stringify({ hooks: { PreToolUse: [reworded] } }));
 
     expect(groupsFor(settings, "PreToolUse")).toEqual([reworded]);
+  });
+
+  it("keeps an older same-marker implementation reminder without adding a duplicate", () => {
+    const own = { matcher: "Bash", hooks: [{ type: "command", command: "./own.sh" }] };
+    const older = {
+      matcher: "Edit",
+      customSetting: "keep",
+      hooks: [
+        {
+          type: "command",
+          statusMessage: MINIMAL_IMPLEMENTATION_HOOK_MARKER,
+          command: "project-node",
+          args: ["-e", "console.log('older reminder')"],
+        },
+      ],
+    };
+    const current = {
+      matcher: "Write|Edit",
+      hooks: [
+        {
+          type: "command",
+          statusMessage: MINIMAL_IMPLEMENTATION_HOOK_MARKER,
+          command: "node",
+          args: ["-e", "console.log('current safety-floor pointer')"],
+        },
+      ],
+    };
+    const missing = {
+      matcher: "Write|Edit",
+      hooks: [{ type: "command", statusMessage: DOCUMENTATION_CLARITY_HOOK_MARKER }],
+    };
+    const template = JSON.stringify({ hooks: { PostToolUse: [current, missing] } });
+    const existing = JSON.stringify({
+      permissions: { allow: ["Bash(git status)"] },
+      hooks: { PostToolUse: [own, older] },
+    });
+
+    const result = mergeDocumentationClarityHooks(existing, template);
+    expect(result.outcome).toBe("merged");
+    if (result.outcome !== "merged") return;
+    expect(result.events).toEqual(["PostToolUse"]);
+    expect(groupsFor(result.settings, "PostToolUse")).toEqual([own, older, missing]);
+    expect(result.settings.permissions).toEqual({ allow: ["Bash(git status)"] });
+    expect(
+      mergeDocumentationClarityHooks(serializeClaudeSettings(result.settings), template).outcome,
+    ).toBe("already-present");
   });
 
   it("treats a marker written by hand as carrying that group", () => {

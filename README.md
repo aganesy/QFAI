@@ -752,6 +752,18 @@ readable JSON is left untouched and reported. Each hook runs `node` directly and
 prints one fixed message — no shell, no file reads, no network. Remove the
 entries to turn the reminder off; the rule still applies.
 
+An older implementation reminder with the same status-message markers keeps its
+old text on reinit, including with `--force`. Init adds missing groups; it does
+not refresh an existing same-marker group. This is a manual-upgrade gap.
+
+To update it, run `npx qfai init --dir <scratch-dir>` with the installed release
+in an unused scratch directory and compare its `.claude/settings.json` with
+your project's file. Match the same hook event and status-message marker set.
+Manually update the chosen `command` and `args` to the current reminder while
+preserving existing markers, matchers and custom fields. Do not append a second
+group or change its markers: that creates a different identity and can run both
+reminders. Back up your settings before editing; other settings remain yours.
+
 ## Contributing (for QFAI maintainers)
 
 This repository is a monorepo, and the distributable package is under `packages/qfai`.
