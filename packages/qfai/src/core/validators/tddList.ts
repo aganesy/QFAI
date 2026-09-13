@@ -1246,12 +1246,14 @@ function roundEvidenceFieldValue(section: string, round: number, field: string):
  * attempt may leave the qualifier off. A round whose numbers skip, repeat or
  * start past 1 has lost an attempt from its audit trail, and the last line
  * written is then not known to be the attempt the round closed on. A blank
- * attempt counts as an attempt, and its empty value closes nothing.
+ * attempt counts as an attempt, and its empty value closes nothing. Every
+ * attempt but the last is a `REVISE`: a later attempt exists only to answer
+ * one, so a `PASS` ahead of it had already closed the review.
  */
 function roundReviewVerdict(
   section: string,
   round: number,
-): { value: string | null; numbered: boolean } {
+): { value: string | null; numbered: boolean; revisedBeforeLast: boolean } {
   const attempts = evidenceFieldOccurrences(section, "reviewer verdict", true).filter(
     (occurrence) => occurrence.round === round,
   );
@@ -1259,7 +1261,10 @@ function roundReviewVerdict(
     attempts.length === 1
       ? attempts[0]?.attempt === null || attempts[0]?.attempt === 1
       : attempts.every((occurrence, index) => occurrence.attempt === index + 1);
-  return { value: attempts.at(-1)?.value ?? null, numbered };
+  const revisedBeforeLast = attempts
+    .slice(0, -1)
+    .every((occurrence) => /^REVISE\b/i.test(occurrence.value.trim()));
+  return { value: attempts.at(-1)?.value ?? null, numbered, revisedBeforeLast };
 }
 
 /**
@@ -3019,6 +3024,9 @@ function missingCompletedEvidenceFields(
     if (!verdict.numbered) {
       missing.push(`Round ${round}: reviewer verdict attempts numbered from 1 in review order`);
     }
+    if (!verdict.revisedBeforeLast) {
+      missing.push(`Round ${round}: every reviewer verdict attempt before the last: REVISE`);
+    }
     if (round < (rounds.at(-1) ?? round)) {
       if (verdict.value === null || !/^REVISE\b/i.test(verdict.value)) {
         missing.push(`Round ${round}: reviewer verdict opening the next round`);
@@ -3246,7 +3254,7 @@ async function invalidCompletedEvidenceArtifacts(
   }
 
   for (const round of rounds) {
-    invalid.push(...(await invalidRoundReviewPacks(root, section, round)));
+    invalid.push(...(await invalidRoundReviewPacks(root, section, round, expected.tddId)));
   }
 
   const checkpointCommand = rowEvidenceFieldValue(section, "Checkpoint verification command");
@@ -3276,63 +3284,120 @@ async function invalidCompletedEvidenceArtifacts(
   return invalid;
 }
 
+/** The only path shape a review pack may have, present or not. */
+const CANONICAL_REVIEW_PACK = /^\.qfai\/review\/review-\d{17}$/;
+
 /**
  * The review pack pairs a round records, one per review attempt, each
- * recomputed from the pack it names (`record-contract.md`).
+ * recomputed from the pack it names and read for the verdict it records
+ * (`record-contract.md`).
  *
  * The pair is written after its review has run, so it is left out of every
  * audited subject, and this is the check that sees a pack edited after its
- * attempt closed. A pack absent from the checkout is skipped, as a row-level
- * pack is, because review packs are local-only. A pair missing half of itself
- * is reported: nothing then says which pack the attempt closed on, or whether
- * that pack still holds what was reviewed.
+ * attempt closed or a pack from another review. A round that records any pair
+ * owes one for every verdict attempt: the last attempt's pack is the one the
+ * round closed on. A pack absent from the checkout is skipped once its path has
+ * the canonical shape, as a row-level pack is, because review packs are
+ * local-only.
  */
 async function invalidRoundReviewPacks(
   root: string,
   section: string,
   round: number,
+  tddId: string,
 ): Promise<string[]> {
-  const inRound = (field: string): EvidenceFieldOccurrence[] =>
-    evidenceFieldOccurrences(section, field).filter((occurrence) => occurrence.round === round);
-  const lastFor = (occurrences: EvidenceFieldOccurrence[], attempt: number | null): string | null =>
-    occurrences.filter((occurrence) => occurrence.attempt === attempt).at(-1)?.value ?? null;
+  const inRound = (field: string, includeBlank = false): EvidenceFieldOccurrence[] =>
+    evidenceFieldOccurrences(section, field, includeBlank).filter(
+      (occurrence) => occurrence.round === round,
+    );
   const packs = inRound("Review pack");
   const seals = inRound("Review pack seal");
-  const attempts = new Set([...packs, ...seals].map(({ attempt }) => attempt));
+  if (packs.length === 0 && seals.length === 0) return [];
+  const verdicts = inRound("reviewer verdict", true);
+  const attempts = new Set([...verdicts, ...packs, ...seals].map(({ attempt }) => attempt));
   const invalid: string[] = [];
   for (const attempt of attempts) {
-    const qualifier = attempt === null ? "" : ` (attempt ${attempt})`;
-    const label = `Round ${round}: Review pack${qualifier}`;
-    const pack = lastFor(packs, attempt);
-    const seal = lastFor(seals, attempt);
-    if (pack === null) {
-      invalid.push(`${label} naming the pack its seal covers`);
-      continue;
-    }
-    if (seal === null || !SHA256_VALUE.test(seal)) {
-      invalid.push(`Round ${round}: Review pack seal${qualifier}: sha256`);
-      continue;
-    }
-    const safePackPath = safeRepoRelativePath(pack);
-    if (safePackPath === null) {
-      invalid.push(`${label} naming a repository path`);
-      continue;
-    }
-    try {
-      await lstat(path.join(root, ...safePackPath.split("/")));
-    } catch (error) {
-      if (isEnoent(error)) continue;
-      invalid.push(`${label} path readable when present`);
-      continue;
-    }
-    const packFiles = await collectReviewPackFiles(root, pack);
-    if (packFiles === null) {
-      invalid.push(`${label} resolving to regular files`);
-    } else if (reviewPackSeal(packFiles) !== bareSha256(seal)) {
-      invalid.push(`Round ${round}: Review pack seal${qualifier} matching pack contents`);
-    }
+    invalid.push(
+      ...(await invalidRoundAttemptPack(root, {
+        round,
+        attempt,
+        tddId,
+        pack: lastAttemptValue(packs, attempt),
+        seal: lastAttemptValue(seals, attempt),
+        verdict: lastAttemptValue(verdicts, attempt),
+      })),
+    );
   }
   return invalid;
+}
+
+function lastAttemptValue(
+  occurrences: readonly EvidenceFieldOccurrence[],
+  attempt: number | null,
+): string | null {
+  return occurrences.filter((occurrence) => occurrence.attempt === attempt).at(-1)?.value ?? null;
+}
+
+type RoundAttemptPack = {
+  round: number;
+  attempt: number | null;
+  tddId: string;
+  pack: string | null;
+  seal: string | null;
+  verdict: string | null;
+};
+
+/** What is wrong with one review attempt's pack pair, in the order a repair takes. */
+async function invalidRoundAttemptPack(root: string, entry: RoundAttemptPack): Promise<string[]> {
+  const qualifier = entry.attempt === null ? "" : ` (attempt ${entry.attempt})`;
+  const label = `Round ${entry.round}: Review pack${qualifier}`;
+  if (entry.pack === null) return [`${label} beside that attempt's reviewer verdict`];
+  if (entry.seal === null || !SHA256_VALUE.test(entry.seal)) {
+    return [`Round ${entry.round}: Review pack seal${qualifier}: sha256`];
+  }
+  if (!CANONICAL_REVIEW_PACK.test(entry.pack)) {
+    return [`${label}: canonical .qfai/review/review-<17-digit timestamp> path`];
+  }
+  try {
+    await lstat(path.join(root, ...entry.pack.split("/")));
+  } catch (error) {
+    return isEnoent(error) ? [] : [`${label} path readable when present`];
+  }
+  const packFiles = await collectReviewPackFiles(root, entry.pack);
+  if (packFiles === null) return [`${label} resolving to regular files`];
+  const invalid: string[] = [];
+  if (reviewPackSeal(packFiles) !== bareSha256(entry.seal)) {
+    invalid.push(`Round ${entry.round}: Review pack seal${qualifier} matching pack contents`);
+  }
+  if (!roundPackRecordsVerdict(packFiles, entry.pack, entry)) {
+    invalid.push(`${label} carrying this row's request and responses agreeing with its verdict`);
+  }
+  return invalid;
+}
+
+/**
+ * Whether a round attempt's pack is that attempt's own: its request names the
+ * row, and its responses say what the attempt's verdict says — every one `PASS`
+ * for a `PASS`, and at least one `REVISE` for a `REVISE`. A sealed pack from
+ * another row or another review would otherwise stand in for this one, because
+ * the pair is outside every audited subject.
+ */
+function roundPackRecordsVerdict(
+  packFiles: ReadonlyArray<ReviewPackFile>,
+  packPath: string,
+  entry: RoundAttemptPack,
+): boolean {
+  const request = reviewPackArtifact(packFiles, packPath, "review_request.md");
+  if (request === null || !exactLineField(request, "TDD-ID", entry.tddId)) return false;
+  const responses = packFiles
+    .filter(({ relativePath }) => /^R\d{2}_.+\.md$/.test(path.posix.basename(relativePath)))
+    .map(({ content }) => content);
+  const verdict = (entry.verdict ?? "").trim();
+  if (/^PASS\b/i.test(verdict)) return everyResponsePasses(responses);
+  if (/^REVISE\b/i.test(verdict)) {
+    return responses.some((response) => exactLineField(response, "Result", "REVISE"));
+  }
+  return false;
 }
 
 /**

@@ -73,9 +73,9 @@ describe.each(TREES)("%s — the audit hash's extraction is one text", (tree) =>
   });
 
   it("synthesizes the heading rather than copying it", async () => {
-    // A heading carrying extra text would otherwise move the digest when the
-    // text is tidied.
+    // The entry is found by its anchor, so its heading carries the id alone.
     await expectPhrase("the heading is **synthesized** as `### <TDD-ID>` rather than copied");
+    await expectPhrase("**the entry's own heading is exactly that**");
   });
 
   it("carries a field's fenced value with the field", async () => {

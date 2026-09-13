@@ -124,11 +124,15 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   the reviewer and the gate two digests. The `Round N: Review pack` pair written
   beside each attempt is dropped the same way, and the gate recomputes each
   attempt's seal from the pack it names instead, so a pack edited after its
-  attempt closed is still reported. The completion gate also holds those
+  attempt closed is still reported. A round that records any pair owes one for
+  every verdict attempt, a pair's path must have the canonical pack shape even
+  when the pack is absent, and a present pack must name the row in its request
+  and carry responses that agree with the attempt's verdict. The completion gate also holds those
   attempts to the numbering the contract gives them, from 1 in review order,
   and reads the attempt a round ends on: a round before the last has to end on
-  a `REVISE`, and the last round of a done row on exactly `PASS`. A blank
-  attempt counts as one.
+  a `REVISE`, and the last round of a done row on exactly `PASS`. Within a
+  round, every attempt before the last is a `REVISE`. A blank attempt counts as
+  one.
 
 ## [1.12.0] - 2026-09-12
 

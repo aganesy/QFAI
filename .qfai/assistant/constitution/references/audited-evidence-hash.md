@@ -62,9 +62,10 @@ procedure, in four steps:
      records beside each review attempt is dropped the same way, **qualified by
      `(attempt M)` or not**: both name the pack that review wrote, so both are
      written once the review has run, after the reviewer read the region;
-   - the heading is **synthesized** as `### <TDD-ID>` rather than copied, so an
-     entry whose heading carries extra text hashes the same before and after
-     that text is tidied.
+   - the heading is **synthesized** as `### <TDD-ID>` rather than copied, and
+     **the entry's own heading is exactly that**: its anchor is the one the
+     ledger's `Evidence` cell resolves, and a heading carrying more text
+     resolves to a different anchor, so the entry is never reached at all.
 
    A region rather than a selection, because that is what the gate computes: a
    selection would also have to state an order, a separator and a spelling for
