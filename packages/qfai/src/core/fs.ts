@@ -27,6 +27,21 @@ export const DEFAULT_GLOB_FILE_LIMIT = 20000;
 
 const NUL = String.fromCharCode(0);
 
+/**
+ * Why the glob matcher cannot use `glob`, or `null` when nothing known stops it.
+ *
+ * Given a NUL byte ahead of a wildcard, fast-glob passes the path to `readdir`
+ * from inside its directory walk. The error is thrown there, not through the
+ * stream, so no caller can catch it and the process exits. Refused before the
+ * walk, it reaches the caller as a rejection like any other scan failure, and
+ * a caller holding several globs can set this one aside and scan the rest.
+ */
+export function unusableGlobReason(glob: string): string | null {
+  return glob.includes(NUL)
+    ? `The glob ${JSON.stringify(glob)} holds a NUL byte, which no file path can hold`
+    : null;
+}
+
 export async function collectFiles(
   root: string,
   options: CollectFilesOptions = {},
@@ -51,16 +66,9 @@ export async function collectFilesByGlobs(
   if (options.globs.length === 0) {
     return { files: [], truncated: false, matchedFileCount: 0, limit };
   }
-  // Given a NUL byte ahead of a wildcard, fast-glob passes the path to
-  // `readdir` from inside its directory walk. The error is thrown there, not
-  // through the stream, so no caller can catch it and the process exits.
-  // Refused here, it reaches the caller as a rejection like any other scan
-  // failure.
-  const unusable = options.globs.find((glob) => glob.includes(NUL));
-  if (unusable !== undefined) {
-    throw new Error(
-      `The glob ${JSON.stringify(unusable)} holds a NUL byte, which no file path can hold`,
-    );
+  for (const glob of options.globs) {
+    const reason = unusableGlobReason(glob);
+    if (reason !== null) throw new Error(reason);
   }
 
   const stream = fg.stream(options.globs, {

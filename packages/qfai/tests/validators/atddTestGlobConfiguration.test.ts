@@ -11,11 +11,27 @@ import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { defaultConfig } from "../../src/core/config.js";
+import type * as fsModule from "../../src/core/fs.js";
+import { DEFAULT_TEST_FILE_EXCLUDE_GLOBS } from "../../src/core/traceability.js";
 import { validateProject } from "../../src/core/validate.js";
 import { validateAtddCodeTraceability } from "../../src/core/validators/atddCodeTraceability.js";
+
+// Every glob scan, recorded and passed through, so a case can read what the
+// probe asked the matcher for.
+const scanCalls = vi.hoisted((): Array<{ ignore?: string[]; limit?: number }> => []);
+vi.mock("../../src/core/fs.js", async () => {
+  const actual = await vi.importActual<typeof fsModule>("../../src/core/fs.js");
+  return {
+    ...actual,
+    collectFilesByGlobs: (...args: Parameters<typeof actual.collectFilesByGlobs>) => {
+      scanCalls.push(args[1]);
+      return actual.collectFilesByGlobs(...args);
+    },
+  };
+});
 
 const tempDirs: string[] = [];
 const NUL = String.fromCharCode(0);
@@ -90,6 +106,29 @@ describe("the stage says when the glob matcher refuses its globs", () => {
     const found = result.issues.map((finding) => finding.code);
     expect(found).toContain("QFAI-ATDD-134");
     expect(found).toContain("QFAI-TEST-001");
+  });
+
+  it("reports a NUL byte inside a brace set, and still finishes the profile run", async () => {
+    const root = await projectWithAcceptanceTest();
+    await writeFile(
+      path.join(root, "qfai.config.yaml"),
+      `validation:\n  traceability:\n    testFileGlobs: [${JSON.stringify(`tests/**/*.{ts,${NUL}}`)}]\n`,
+      "utf-8",
+    );
+    const result = await validateProject(root, undefined, { profile: "atdd" });
+    expect(result.issues.map((finding) => finding.code)).toContain("QFAI-ATDD-134");
+  });
+
+  it("probes with the exclusions the scan uses", async () => {
+    // A directory the scan never enters, such as one `testFileExcludeGlobs`
+    // names, must not be able to fail the probe.
+    const root = await projectWithAcceptanceTest();
+    const config = configWith(["tests/**/*.ts"]);
+    config.validation.traceability.testFileExcludeGlobs = ["tests/locked/**"];
+    scanCalls.length = 0;
+    await validateAtddCodeTraceability(root, config);
+    const probe = scanCalls.find((options) => options.limit === 1);
+    expect(probe?.ignore).toEqual([...DEFAULT_TEST_FILE_EXCLUDE_GLOBS, "tests/locked/**"]);
   });
 
   it("says nothing about a broad glob", async () => {

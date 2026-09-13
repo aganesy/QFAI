@@ -14,6 +14,7 @@ import {
   type AtddUnknownRef,
 } from "../atddTraceability.js";
 import type { SpecScope } from "../specScope.js";
+import { DEFAULT_TEST_FILE_EXCLUDE_GLOBS, normalizeGlobs } from "../traceability.js";
 import type { Issue } from "../types.js";
 import { issue } from "./utils.js";
 
@@ -401,14 +402,20 @@ type AtddTraceabilitySummary = {
  * for it, which is the documented fallback.
  */
 async function collectUnreadableTestGlobs(root: string, config: QfaiConfig): Promise<Issue[]> {
-  const globs = config.validation.traceability.testFileGlobs.filter(
-    (glob) => glob.trim().length > 0,
-  );
+  const globs = normalizeGlobs(config.validation.traceability.testFileGlobs);
   if (globs.length === 0) return [];
   try {
     // Stops at the first match. A pattern the matcher refuses is refused before
-    // the walk starts.
-    await collectFilesByGlobs(root, { globs, limit: 1 });
+    // the walk starts. The exclusions are the scan's own, so a directory the
+    // scan never enters cannot fail the probe.
+    await collectFilesByGlobs(root, {
+      globs,
+      ignore: [
+        ...DEFAULT_TEST_FILE_EXCLUDE_GLOBS,
+        ...normalizeGlobs(config.validation.traceability.testFileExcludeGlobs),
+      ],
+      limit: 1,
+    });
     return [];
   } catch (error) {
     const reason = error instanceof Error ? error.message : String(error);

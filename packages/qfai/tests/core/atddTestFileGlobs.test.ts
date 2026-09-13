@@ -48,6 +48,18 @@ describe("deriveAtddFilePattern", () => {
     );
   });
 
+  it("takes no member of a brace set that is not an extension", () => {
+    // Copied into the scan pattern, a NUL byte made the scan throw before any
+    // finding, and a wildcard widened what the stage reads.
+    const nul = String.fromCharCode(0);
+    expect(deriveAtddFilePattern([`tests/**/*.{ts,${nul}}`, "tests/**/*.{py,*}"])).toBe(
+      "**/*.{feature,markdown,md,py,ts}",
+    );
+    expect(deriveAtddFilePattern(["tests/**/*.{test.ts,spec-e2e.js}"])).toBe(
+      "**/*.{feature,markdown,md,spec-e2e.js,test.ts}",
+    );
+  });
+
   it("falls back when no glob carries a recoverable extension", () => {
     expect(deriveAtddFilePattern(["tests/**"])).toBe(
       "**/*.{ts,tsx,js,jsx,mjs,cjs,mts,cts,feature,md,markdown}",

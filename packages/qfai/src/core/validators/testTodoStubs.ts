@@ -44,6 +44,7 @@ import { SCAFFOLD_PLACEHOLDER_MARKER } from "../atdd/scaffold.js";
 import {
   collectFilesByGlobs,
   DEFAULT_GLOB_FILE_LIMIT,
+  unusableGlobReason,
   type CollectFilesByGlobsResult,
 } from "../fs.js";
 import { DEFAULT_TEST_FILE_EXCLUDE_GLOBS, normalizeGlobs } from "../traceability.js";
@@ -1328,13 +1329,13 @@ function reportTruncatedScan(limit: number, callerGlobs: boolean): Issue {
 }
 
 /**
- * The refusal form of `QFAI-TEST-002`: the glob matcher refused the selection,
- * so no file was opened.
+ * The refusal form of `QFAI-TEST-002`: the glob matcher refused some or all of
+ * the selection, so the files only those patterns select were not opened.
  *
  * Rethrown, the refusal would end the whole validate run under `tdd` and
  * `full` before `QFAI-TRACE-124` reports the same configuration as an error.
  */
-function reportRefusedScan(error: unknown, callerGlobs: boolean): Issue {
+function reportRefusedScan(error: unknown, callerGlobs: boolean, scannedRest: boolean): Issue {
   const reason = error instanceof Error ? error.message : String(error);
   const key = callerGlobs ? "paths.testsDir" : "validation.traceability.testFileGlobs";
   const selection = callerGlobs
@@ -1342,7 +1343,9 @@ function reportRefusedScan(error: unknown, callerGlobs: boolean): Issue {
     : "`validation.traceability.testFileGlobs`";
   return issue(
     "QFAI-TEST-002",
-    `The stub scan could not read ${selection}: ${reason}. No file was opened, so a clean result is not evidence that the tests hold no stub.`,
+    scannedRest
+      ? `The stub scan could not read part of ${selection}: ${reason}. The other patterns were scanned, and a clean result is not evidence that the files only this one selects hold no stub.`
+      : `The stub scan could not read ${selection}: ${reason}. No file was opened, so a clean result is not evidence that the tests hold no stub.`,
     "info",
     "qfai.config.yaml",
     key,
@@ -1378,21 +1381,31 @@ export async function validateTestTodoStubs(
     ]),
   );
 
+  // A pattern the matcher cannot use is set aside, and the rest are still
+  // scanned: refusing the whole batch dropped the stubs a readable pattern
+  // would have reported.
+  const callerGlobs = options.globs !== undefined;
+  const accepted = globs.filter((glob) => unusableGlobReason(glob) === null);
+  const issues: Issue[] = globs.flatMap((glob) => {
+    const reason = unusableGlobReason(glob);
+    return reason === null ? [] : [reportRefusedScan(reason, callerGlobs, accepted.length > 0)];
+  });
+  if (accepted.length === 0) return issues;
+
   let scan: CollectFilesByGlobsResult;
   try {
     scan = await collectFilesByGlobs(root, {
-      globs: Array.from(globs),
+      globs: accepted,
       ignore: excludeGlobs,
       limit: DEFAULT_GLOB_FILE_LIMIT,
     });
   } catch (error) {
-    return [reportRefusedScan(error, options.globs !== undefined)];
+    return [...issues, reportRefusedScan(error, callerGlobs, false)];
   }
   const { files, truncated, limit } = scan;
 
   const skippedTestSeverity = "error";
 
-  const issues: Issue[] = [];
   const unscannedExtensions = new Set<string>();
   for (const absFile of files) {
     const relFile = path.relative(root, absFile).replace(/\\/g, "/");

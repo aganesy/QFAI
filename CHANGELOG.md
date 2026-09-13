@@ -24,7 +24,7 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   where nothing could catch it, and `qfai validate` exited under every profile.
   The scan now refuses the pattern before the walk starts. Under the `tdd` and
   `full` profiles `QFAI-TRACE-124` reports it, and the stub scan reports
-  `QFAI-TEST-002`, so its clean result is not read as evidence.
+  `QFAI-TEST-002` for it and still reads the other patterns.
 
   The ATDD stage reads only the extensions out of these globs, so under
   `--profile atdd` nothing said a glob was unusable. `QFAI-ATDD-134` says it

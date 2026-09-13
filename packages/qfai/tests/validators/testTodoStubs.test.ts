@@ -229,6 +229,28 @@ describe("spec-0004 validateTestTodoStubs", () => {
     expect(issues[0]?.message).toContain("a clean result is not evidence");
   });
 
+  it("still reports the stubs a readable pattern selects beside a refused one", async () => {
+    const root = await newTempDir();
+    await writeTestFile(
+      root,
+      "tests/a.test.ts",
+      'import { it } from "vitest";\nit' + TODO + '("x");\n',
+    );
+    const refused = `tests/${String.fromCharCode(0)}/*.test.ts`;
+
+    const issues = await validateTestTodoStubs(
+      root,
+      configWith({}, { testFileGlobs: ["tests/**/*.test.ts", refused] }),
+    );
+
+    const codes = issues.map((entry) => entry.code);
+    expect(codes).toContain("QFAI-TEST-001");
+    expect(codes).toContain("QFAI-TEST-002");
+    const refusal = issues.find((entry) => entry.code === "QFAI-TEST-002");
+    expect(refusal?.message).toContain("could not read part of");
+    expect(refusal?.message).toContain(JSON.stringify(refused));
+  });
+
   it("emits QFAI-TEST-002 when testFileGlobs holds only blank entries", async () => {
     const root = await newTempDir();
     await writeTestFile(
