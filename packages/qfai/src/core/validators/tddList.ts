@@ -842,11 +842,20 @@ function evidenceAnchorText(specId: string, layerClass: EvidenceLayerClass, tddI
     : owned;
 }
 
+/**
+ * The `working-tree+` revision as an operator reads it.
+ *
+ * One wording for the grammar line and the field hint, because the form is
+ * checked case-sensitively: an operator who follows a correction that leaves
+ * the case out writes the same rejected value again.
+ */
+const WORKING_TREE_REVISION_TEXT = "working-tree+<64 lowercase hex>";
+
 /** The grammar as an operator reads it, for the finding message. */
 function evidenceGrammarText(redProvenance: string, anchorText: string): string {
   return (
     `RED:<${redProvenance}> GREEN:pass ORACLE:<proved|equivalent-mutant> ` +
-    `[TIER:<T1|T2|T3>] REV:<rev|working-tree+<sha256>> -> ${anchorText}`
+    `[TIER:<T1|T2|T3>] REV:<rev|${WORKING_TREE_REVISION_TEXT}> -> ${anchorText}`
   );
 }
 
@@ -1308,9 +1317,15 @@ const SHA256_VALUE = /^(?:sha256:)?[a-f0-9]{64}$/i;
  * bound is the longer object id; a length in between is a valid abbreviation of
  * one format or the other, and the form check does not adjudicate which.
  */
-const EVIDENCE_REVISION_FORM = /^(?:[0-9a-f]{7,64}|working-tree\+[0-9a-f]{64})$/i;
+// Built from the shared source rather than written again, and with no `i` flag:
+// the content address is produced by a procedure that fixes its notation as
+// lowercase, so accepting both cases here would let one tree be recorded as two
+// revisions while the freshness comparison — which is exact — reads a correct
+// row as stale. A git rev stays case-insensitive, which the source's own class
+// carries.
+const EVIDENCE_REVISION_FORM = new RegExp(`^${REVISION_FORM_SOURCE}$`);
 
-const REVISION_FORM_HINT = "a git rev or working-tree+<sha256>";
+const REVISION_FORM_HINT = `a git rev or ${WORKING_TREE_REVISION_TEXT}`;
 
 function sha256(value: string | Buffer): string {
   return createHash("sha256").update(value).digest("hex");
