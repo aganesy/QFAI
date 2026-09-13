@@ -128,6 +128,35 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   and still gives its extension. `!tests/e2e/legacy/**/*.ts` beside a Python glob added
   TypeScript to what the stage scans.
 
+- **The saas-package certify cases run through the command line, and the verify
+  reviewer gate has a test** (#1636, #1637, #1638). Every case credited to the
+  two certify obligations called the command function with the flag already
+  parsed, so dropping `--scope` or `--upgrade-scope` from the command line left
+  them all passing. The two suites that did run the command line were skipped.
+  They now run: the integration suite through the CLI entry point, and the
+  end-to-end suite through the built binary. New cases feed verify's binding
+  gate a render critique the reviewer returned `REVISE`, and read
+  `/qfai-verify`'s reviewer-gate clauses in the shipped and installed skill.
+
+  `CR-20260913-0005`, awaiting approval, proposes pointing three `spec-0014`
+  ledger rows at those cases, splitting the upgrade-scope row at its boundary,
+  and recording that four delta chains name reassigned identifiers. The ledger
+  is unchanged until it is applied. `CR-20260913-0006` puts the one row whose
+  evidence has no form it can take to the user.
+
+- **The completion gate holds reviewers to the tree after the refactor** (#1732).
+  `evidence-revision.md` says the reviews judge the final tree, which
+  `Refactor verify revision` names, while a round's `Revision` names the tree
+  before the refactor. The gate compared every `reviewed revision` with the
+  round's `Revision`, so a row whose refactor changed a byte was reported when
+  its reviewers recorded the tree they judged. The gate now compares them with
+  `Refactor verify revision`, checks that it names a revision, and keeps the
+  round's `Revision` for a row that records none. The staleness check measures
+  from the same revision, and the field counts as phase-authored, so one written
+  after the review fields is refused. `ui-affecting.md`,
+  `parallelization-policy.md` and the skill now say items 6, 7 and 8 share the
+  revision. No completed row in this repository changes result.
+
 - **The audited evidence hash says what its extraction produces, not only which
   fields it reads** (#1616). Naming the fields settled which lines are taken and
   left open what they become, so two readers taking the same fields computed
