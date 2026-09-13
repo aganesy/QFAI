@@ -18,7 +18,7 @@ tools: [Read, Glob, Grep, Bash]
 - Treat density or volume smells as review signals, not standalone hard gates.
 - Verify test-case quality depth using the Coverage Depth Matrix (see below).
 - Own RED/GREEN **observation** evidence in a TDD micro-cycle: did the test fail (or pass) for the expected reason.
-- Apply `.agents/rules/minimal-implementation.md`: tag excess `delete`, `stdlib`, `native`, `yagni` or `shrink`, and name what to cut and what replaces it.
+- File excess as `defect:code-quality` against Article VII of `.qfai/assistant/constitution/constitution.md`, tagged `delete`, `stdlib`, `native`, `yagni` or `shrink` from `.agents/rules/minimal-implementation.md`. It is admissible only where it names what replaces the thing it cuts, and refused where the cut touches that rule's § 2 floor.
 
 ## Ownership boundaries
 

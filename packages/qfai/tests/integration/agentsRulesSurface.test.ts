@@ -275,6 +275,42 @@ describe("cross-AI rules surface (.agents/rules/ master)", () => {
       expect(article).not.toMatch(/Validation of input crossing a trust boundary/i);
     });
 
+    // A finding traced to a rule master is neither an upstream obligation nor a
+    // defect class, so it could only ever be advisory. Traced to Article VII as
+    // `defect:code-quality`, excess can block.
+    const REVIEWER_CARDS = [
+      "architecture-reviewer",
+      "completion-reviewer",
+      "implementation-reviewer",
+      "product-surface-reviewer",
+      "qa-gatekeeper",
+      "requirements-reviewer",
+    ];
+    it.each(
+      ["packages/qfai/assets/init/.qfai/assistant/agents", ".qfai/assistant/agents"].flatMap(
+        (dir) => REVIEWER_CARDS.map((card) => `${dir}/${card}.md`),
+      ),
+    )("%s files excess as defect:code-quality against Article VII", async (rel) => {
+      const text = (await readFile(path.join(ROOT, rel), "utf-8")).replace(/\s+/g, " ");
+      expect(text).toContain("File excess as `defect:code-quality` against Article VII");
+      expect(text).toContain("admissible only where it names what replaces the thing it cuts");
+      expect(text).toContain("refused where the cut touches that rule's § 2 floor");
+      expect(text).not.toContain("Apply `.agents/rules/minimal-implementation.md`: tag excess");
+    });
+
+    // The card's parenthetical is what a reviewer reads without opening the
+    // drift protocol, so it carries both halves of the class.
+    it.each(["completion-reviewer", "implementation-reviewer"])(
+      "%s names a regression against a named rule as a demonstrable defect",
+      async (card) => {
+        const rel = `packages/qfai/assets/init/.qfai/assistant/agents/${card}.md`;
+        const text = (await readFile(path.join(ROOT, rel), "utf-8")).replace(/\s+/g, " ");
+        expect(text).toContain(
+          "a regression against a repository quality gate or a named constitution / catalog rule",
+        );
+      },
+    );
+
     // The two halves of the marker are one obligation. A ceiling with no
     // lifting condition reads as an oversight, which is the state the marker
     // exists to keep a deliberate shortcut out of — so a master that named only

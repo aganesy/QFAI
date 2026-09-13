@@ -15,7 +15,7 @@ tools: [Read, Glob, Grep, Bash]
 - Audit option sets for missing alternatives and weak recommendation rationale.
 - Review OQ candidates for completeness, neutrality, and safe deferral.
 - Ensure unresolved requirement ambiguity is explicit and actionable.
-- Apply `.agents/rules/minimal-implementation.md`: tag excess `delete`, `stdlib`, `native`, `yagni` or `shrink`, and name what to cut and what replaces it.
+- File excess as `defect:code-quality` against Article VII of `.qfai/assistant/constitution/constitution.md`, tagged `delete`, `stdlib`, `native`, `yagni` or `shrink` from `.agents/rules/minimal-implementation.md`. It is admissible only where it names what replaces the thing it cuts, and refused where the cut touches that rule's § 2 floor.
 
 ## Inputs you must read
 

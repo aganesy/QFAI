@@ -6,6 +6,16 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Added
 
+- **A reviewer files excess as a blocking defect against Article VII** (#1798,
+  #1799). The reviewer cards told a reviewer to apply the minimal-implementation
+  rule, and a finding traced to a rule master is neither an upstream obligation
+  nor a defect class, so excess could only ever be advisory. The six reviewer
+  cards now file it as `defect:code-quality` against Article VII, admissible only
+  where it names what replaces the thing it cuts and refused where the cut
+  touches the floor; `architecture-reviewer` gains the line. The two cards whose
+  stop condition describes a demonstrable defect now name a regression against a
+  named constitution or catalog rule as well as against a quality gate.
+
 - **Constitution Article VII states the cutting doctrine** (#1794). The least
   that satisfies the requirement is the right amount, and producing more is what
   has to be justified. The article now governs how much code implements a

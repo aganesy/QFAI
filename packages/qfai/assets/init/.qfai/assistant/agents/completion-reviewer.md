@@ -15,7 +15,7 @@ tools: [Read, Glob, Grep, Bash]
 - Return only PASS or REVISE, with actionable rework instructions on REVISE.
 - Enforce validate evidence, required coverage obligations, and no self-approval.
 - Verify rejected options are not reintroduced without RE-OPEN.
-- Apply `.agents/rules/minimal-implementation.md`: tag excess `delete`, `stdlib`, `native`, `yagni` or `shrink`, and name what to cut and what replaces it.
+- File excess as `defect:code-quality` against Article VII of `.qfai/assistant/constitution/constitution.md`, tagged `delete`, `stdlib`, `native`, `yagni` or `shrink` from `.agents/rules/minimal-implementation.md`. It is admissible only where it names what replaces the thing it cuts, and refused where the cut touches that rule's § 2 floor.
 
 ## Inputs you must read
 
@@ -80,8 +80,8 @@ being asked to judge, and falls into its own Stop condition ("Required evidence
 - The finding would add a product obligation upstream never asked for. Do not raise it as blocking;
   raise it as an advisory finding plus a Change Request proposal per
   `.qfai/assistant/constitution/drift-protocol.md#reviewer-originated-obligations`. A defect you can
-  demonstrate from the changed artifacts (correctness, security / data integrity, or a repository
-  quality gate) is NOT in this category: it stays blocking and traces to its `defect:*` class.
+  demonstrate from the changed artifacts (correctness, security / data integrity, or a regression
+  against a repository quality gate or a named constitution / catalog rule) is NOT in this category: it stays blocking and traces to its `defect:*` class.
 
 ## Sign-off
 
