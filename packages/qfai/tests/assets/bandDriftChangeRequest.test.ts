@@ -64,12 +64,19 @@ describe("the primary_tasks band drift has a Change Request", () => {
     await expectPhrase("| `spec-0004/TDD-0050` | `ledger-row` |");
   });
 
+  it("resets those rows whichever option is approved", async () => {
+    // Restoring the floor rewrites the validators and tests the rows certify,
+    // and a done row is selected again only once a Change Request resets it.
+    await expectPhrase("3. Downstream ledger sweep, **under every option**.");
+    await expectPhrase("**So the reset is owed under option 3 as well**");
+  });
+
   it("names an invocation per artifact class, with its mode", async () => {
     // A bare invocation cannot reach a spec-local file and a scoped one cannot
     // reach the policy record.
     await expectPhrase("| `/qfai-sdd spec-0013` |");
     await expectPhrase("| `/qfai-sdd spec-0004` |");
-    await expectPhrase("naming one invocation would leave half the edit unauthorised");
+    await expectPhrase("naming one invocation would leave part of the record unwritten");
   });
 
   it("says which rows it does not block, and why", async () => {
@@ -117,7 +124,7 @@ describe("the primary_tasks band drift has a Change Request", () => {
     // this file on the very resolution the record exists to make possible.
     const text = await changeRequest();
     if (!/^- Status: `open`$/m.test(text)) return;
-    await expectPhrase("**Under option 3 this list is empty**");
+    await expectPhrase("**Under option 3 it reduces to the three delta files**");
     await expectPhrase("reduced to the approved outcome before `Status: approved` is written");
   });
 });

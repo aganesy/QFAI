@@ -246,12 +246,18 @@ stands.
      entrenches one that exists today outside it. What a rewritten record owes
      is the reason the alternatives were not taken, and `Consequences` is where
      that belongs.
-3. Downstream ledger sweep, under options 1 and 2. Reset to `todo`, recording
+3. Downstream ledger sweep, **under every option**. Reset to `todo`, recording
    this CR's ID in their `DR-ID` column: `spec-0013/TDD-0027`,
    `spec-0013/TDD-0028`, `spec-0004/TDD-0050`. None is retired: every
-   obligation survives with a changed statement, so the rows are re-derived
-   rather than deleted.
-   Under option 3 no row moves — the product changes to meet them.
+   obligation survives, so the rows are re-derived rather than deleted.
+
+   Under options 1 and 2 their obligations change. Under option 3 the
+   obligations stand and the product changes to meet them, which rewrites the
+   validators and tests these rows certify: their evidence then describes code
+   that no longer exists, and `/qfai-implement` selects a `done` row only once
+   an approved Change Request resets it. **So the reset is owed under option 3
+   as well**, and it is what lets action 4's work be re-run and re-reviewed on
+   those rows.
 
    Under options 1 and 2, `/qfai-implement` also updates the two skipped cases
    the `Tests` line names — `spec0004SaasPackageAndPackLocation.test.ts` lines
