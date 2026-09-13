@@ -356,10 +356,9 @@ export async function validateAssistantAssets(root: string, config: QfaiConfig):
       );
       continue;
     }
-    // Decoded strictly. `toString("utf-8")` turns an invalid byte into a
+    // Decoded strictly. A lenient decode turns an invalid byte into a
     // replacement character and hands back metadata that reads as usable, while
-    // the host reports the file unreadable and omits the skill — so a run
-    // passed an entry point nothing could load.
+    // the host reports the file unreadable and omits the skill.
     const text = decodeUtf8(bytes);
     if (text === undefined) {
       issues.push(
@@ -1390,6 +1389,29 @@ const SKILL_NAME_MAX_LENGTH = 64;
 const SKILL_DESCRIPTION_MAX_LENGTH = 1024;
 
 /**
+ * The whitespace the host's strip removes from both ends.
+ *
+ * The host strips with Python's `str.strip()`, whose set differs from
+ * JavaScript's `trim()`: it removes U+0085 and U+001C to U+001F, and keeps
+ * U+FEFF. Trimmed the JavaScript way, a description one of those characters
+ * lengthens is measured at a length the host does not see.
+ */
+const HOST_STRIP_WHITESPACE: ReadonlySet<number> = new Set([
+  0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x1c, 0x1d, 0x1e, 0x1f, 0x20, 0x85, 0xa0, 0x1680, 0x2000, 0x2001,
+  0x2002, 0x2003, 0x2004, 0x2005, 0x2006, 0x2007, 0x2008, 0x2009, 0x200a, 0x2028, 0x2029, 0x202f,
+  0x205f, 0x3000,
+]);
+
+/** `text` with the host's whitespace stripped from both ends. */
+function hostStrip(text: string): string {
+  let start = 0;
+  let end = text.length;
+  while (start < end && HOST_STRIP_WHITESPACE.has(text.charCodeAt(start))) start += 1;
+  while (end > start && HOST_STRIP_WHITESPACE.has(text.charCodeAt(end - 1))) end -= 1;
+  return text.slice(start, end);
+}
+
+/**
  * How many characters `text` holds, counted as code points, as a host counts
  * them. Counted without building a copy: a crawled document has no size
  * ceiling, and a description the size of the document would be copied whole.
@@ -1472,11 +1494,10 @@ function collectSkillRegistrationIssues(skillFile: string, content: string): Iss
   // and offers. A document carrying one without the other is not loaded.
   const missingName = collectSkillNameIssue(skillFile, frontMatter);
   const description = frontMatter?.["description"];
-  if (typeof description === "string" && description.trim() !== "") {
-    // Measured as a host reads it: trimmed, and in characters rather than UTF-16
-    // units. Counted with its padding, or with an emoji as two, a description
-    // within the limit was refused.
-    const length = codePointCount(description.trim());
+  if (typeof description === "string" && hostStrip(description) !== "") {
+    // Measured as the host reads it: stripped of the whitespace its own strip
+    // removes, and counted in code points rather than UTF-16 units.
+    const length = codePointCount(hostStrip(description));
     if (/[<>]/.test(description)) {
       return [
         ...missingName,
@@ -1626,11 +1647,10 @@ type SkillDocuments = {
  * read error becomes its own issue.
  */
 async function readSkillDocuments(skillsDir: string): Promise<SkillDocuments> {
-  // A hidden tree is one the host does not list, so the walk never enters it:
-  // collected, a draft's own references were held to the reachability rule and
-  // its citations vouched for live documents. Nothing else is pruned by name:
-  // a skill can name a document under its own `tmp/` or `dist/`, and the host
-  // opens it.
+  // A hidden skill directory is one the host does not list, so the walk never
+  // enters it, and its documents answer no rule a registered skill answers.
+  // Nothing else is pruned by name: a skill can name a document under its own
+  // `tmp/` or `dist/`, and the host opens it.
   const files = await collectFiles(skillsDir, {
     extensions: [".md", ".yaml", ".yml"],
     skipDirectory: (directory) => isHiddenSkillDirectory(skillsDir, directory),

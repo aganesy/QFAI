@@ -396,7 +396,7 @@ describe("what the gate and the host disagreed about", () => {
 
   it("tells the operator to rename a directory no name can match", async () => {
     // The directory's own spelling fails the form, and every legal spelling
-    // differs from it — so an action naming the directory cannot be followed.
+    // differs from it, so the action names the rename.
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-skill-registration-"));
     tempDirs.push(root);
     const skillDir = path.join(root, ".qfai", "assistant", "skills", "My Skill");
@@ -413,8 +413,7 @@ describe("what the gate and the host disagreed about", () => {
   });
 
   it("passes over a directory the host does not list", async () => {
-    // A draft parked as a dot-prefixed directory is a skill nothing registers,
-    // so reporting it fails a run over something the host never loads.
+    // A dot-prefixed skill directory is one the host never loads.
     const root = await projectWithSkill(['description: "Does the thing."']);
     const skills = path.join(root, ".qfai", "assistant", "skills");
     await mkdir(path.join(skills, ".draft"), { recursive: true });
@@ -424,9 +423,8 @@ describe("what the gate and the host disagreed about", () => {
   });
 
   it("reports a crawled document that is not valid UTF-8", async () => {
-    // The crawl read every document leniently, so an invalid byte became a
-    // replacement character and the metadata around it parsed — while the host
-    // refuses the file and loads no skill from it.
+    // An entry point holding a byte that is not UTF-8 is one the host refuses,
+    // so it is reported, however well its metadata would parse.
     const root = await projectWithSkill(['description: "Does the thing."']);
     const skillDir = path.join(root, ".qfai", "assistant", "skills", "qfai-example");
     await writeFile(
@@ -443,9 +441,8 @@ describe("what the gate and the host disagreed about", () => {
   });
 
   it("reads nothing under a hidden tree, references included", async () => {
-    // Filtered only out of the registration loop, a draft's own references were
-    // still held to the reachability rule, and its citations could vouch for a
-    // live document.
+    // Nothing under a hidden skill directory is read: its references answer no
+    // rule, and its citations vouch for no document.
     const root = await projectWithSkill(['description: "Does the thing."']);
     const skills = path.join(root, ".qfai", "assistant", "skills");
     await mkdir(path.join(skills, ".draft", "references"), { recursive: true });
@@ -458,8 +455,7 @@ describe("what the gate and the host disagreed about", () => {
     expect(reported).toEqual([]);
   });
   it("reports an entry point that is not valid UTF-8", async () => {
-    // The lenient decoder substitutes a replacement character and hands back
-    // metadata that parses, while the host reports the file unreadable.
+    // A byte that is not UTF-8 makes the document unreadable, as the host reads it.
     const root = await projectWithSkill(['description: "Does the thing."']);
     const skills = path.join(root, ".qfai", "assistant", "skills");
     const dist = path.join(skills, "dist");
@@ -479,9 +475,8 @@ describe("what the gate and the host disagreed about", () => {
   });
 
   it("escapes a control character in the name it reports", async () => {
-    // The document is a file the run did not write, and the text formatter
-    // writes a message straight to the terminal — so a name carrying a newline
-    // or an escape sequence could forge lines in the run's own output.
+    // A value read out of a document reaches the terminal escaped, so a newline
+    // or an escape sequence in it cannot forge lines in the run's output.
     const root = await projectWithSkillDocument(
       ["---", 'name: "qfai-\u001b[31mexample"', 'description: "Does the thing."', "---", ""].join(
         "\n",
@@ -493,9 +488,8 @@ describe("what the gate and the host disagreed about", () => {
   });
 
   it("asks for a rename when the directory is longer than a name may be", async () => {
-    // The directory's spelling is legal and its length is not. An action naming
-    // it sends the operator to write a `name:` that fails the same check the
-    // finding is reporting.
+    // The directory's spelling is legal and its length is not, so the action
+    // names the rename rather than a `name:` that fails the same check.
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-skill-registration-"));
     tempDirs.push(root);
     const overlong = "a".repeat(65);
@@ -515,9 +509,8 @@ describe("what the gate and the host disagreed about", () => {
   });
 
   it("passes over a hidden directory whose name begins with two dots", async () => {
-    // The host lists no dot-prefixed directory, `..draft` included. Read as a
-    // path leaving the skills root, it was collected instead, and a draft's own
-    // documents were held to the rules a registered skill answers.
+    // The host lists no dot-prefixed directory, `..draft` included: it is a
+    // name under the skills root, not a path leaving it.
     const root = await projectWithSkill(['description: "Does the thing."']);
     const skills = path.join(root, ".qfai", "assistant", "skills");
     await mkdir(path.join(skills, "..draft", "references"), { recursive: true });
@@ -531,10 +524,9 @@ describe("what the gate and the host disagreed about", () => {
   });
 
   it("passes over a hidden directory it cannot enumerate", async () => {
-    // Dropped from the collected files afterwards, the walk had already read
-    // inside, and a tree the host never lists failed the whole run. Permission
-    // is the portable way to produce one, and neither Windows nor root honours
-    // it.
+    // The walk does not enter a hidden skill directory, so one this process
+    // cannot read fails nothing. Permission is the portable way to produce one,
+    // and neither Windows nor root honours it.
     if (process.platform === "win32" || process.getuid?.() === 0) return;
     const root = await projectWithSkill(['description: "Does the thing."']);
     const hidden = path.join(root, ".qfai", "assistant", "skills", ".draft");
@@ -550,8 +542,8 @@ describe("what the gate and the host disagreed about", () => {
 
   it("says what an unreadable reference stops, and what it does not", async () => {
     // The host registers the skill from its entry point and reads a reference
-    // only where a step names one. Told the skill does not load, an operator
-    // reads a failure at load for one that arrives partway through the work.
+    // only where a step names one, so the finding says the step fails, not the
+    // load.
     const root = await projectWithSkill(['description: "Does the thing."']);
     const references = path.join(
       root,
@@ -573,8 +565,8 @@ describe("what the gate and the host disagreed about", () => {
   });
 
   it("reads a hidden directory inside a registered skill", async () => {
-    // Pruned at every depth, a document under a nested dot-prefixed directory
-    // was never decoded, though the skill can name it and the host then opens it.
+    // Inside a registered skill, a dot-prefixed directory is read: the skill can
+    // name a document under it, and the host then opens it.
     const root = await projectWithSkill(['description: "Does the thing."']);
     const internal = path.join(
       root,
@@ -596,8 +588,8 @@ describe("what the gate and the host disagreed about", () => {
   });
 
   it("reads a directory named like a build output inside a registered skill", async () => {
-    // The walk pruned `tmp`, `dist` and `node_modules` by name at every depth,
-    // so a document the skill names under one was never decoded.
+    // Inside a registered skill, a directory named like build output is read:
+    // the skill can name a document under it.
     const root = await projectWithSkill(['description: "Does the thing."']);
     const tmp = path.join(
       root,
@@ -634,7 +626,7 @@ describe("what the gate and the host disagreed about", () => {
   });
 
   it("measures a description as a host reads it, trimmed", async () => {
-    // Counted with its padding, a description within the limit was refused.
+    // Padding around the text is not part of the value the host measures.
     const padded = await projectWithSkill([`description: " ${"a".repeat(1024)} "`]);
     expect(await registrationFindings(padded)).toEqual([]);
     const over = await projectWithSkill([`description: " ${"a".repeat(1025)}"`]);
@@ -653,6 +645,14 @@ describe("what the gate and the host disagreed about", () => {
     expect(finding?.message).toContain("1025 characters");
   });
 
+  it("strips a description with the host's whitespace set", async () => {
+    // U+FEFF is kept by the host's strip and counted; U+0085 is removed.
+    const bom = await projectWithSkill([`description: "${"a".repeat(1024)}\uFEFF"`]);
+    expect((await registrationFindings(bom))[0]?.message).toContain("1025 characters");
+    const nel = await projectWithSkill([`description: "${"a".repeat(1024)}\u0085"`]);
+    expect(await registrationFindings(nel)).toEqual([]);
+  });
+
   it("refuses a description holding an angle bracket, as a host does", async () => {
     const root = await projectWithSkill(['description: "Use <file> inputs."']);
     const [finding] = await registrationFindings(root);
@@ -660,8 +660,8 @@ describe("what the gate and the host disagreed about", () => {
   });
 
   it("does not read front matter behind a byte order mark", async () => {
-    // A strict decoder drops the mark by default, so the document parsed while
-    // a host that keeps it finds no opening delimiter and registers nothing.
+    // The host keeps a leading byte order mark, so it finds no opening
+    // delimiter behind one and registers nothing.
     const body = [
       "---",
       "name: qfai-example",
