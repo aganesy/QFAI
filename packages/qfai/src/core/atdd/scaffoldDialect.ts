@@ -297,6 +297,65 @@ function escapeRegExp(value: string): string {
   return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
+/**
+ * The most members fast-glob expands a numeric brace range to. It refuses a
+ * pattern whose range reaches this many steps, so such a glob selects nothing.
+ */
+const BRACE_RANGE_LIMIT = 1000;
+
+/**
+ * The members a brace body expands to when it is a range, as fast-glob expands
+ * it, or `null` when the body is not one.
+ *
+ * Two integers give a numeric range, `1..5` or `5..1`, zero-padded to the wider
+ * endpoint when either is written with a leading zero, as `01..10` is. Two
+ * single characters give a range over their code points, as `a..e` does. A
+ * third part is the increment, whose sign is ignored and which is `1` when it
+ * is `0` or empty. An empty array is a range fast-glob refuses, which selects
+ * no file.
+ */
+function braceRangeMembers(body: string): readonly string[] | null {
+  const parts = body.split("..");
+  if (parts.length < 2 || parts.length > 3) return null;
+  const [from = "", to = "", increment = ""] = parts;
+  if (!/^[+-]?\d*$/.test(increment)) return null;
+  const step = Math.max(1, Math.abs(Number(increment)));
+  const integer = /^[+-]?\d+$/;
+  if (integer.test(from) && integer.test(to)) return numericRangeMembers(from, to, step);
+  if ([...from].length === 1 && [...to].length === 1) return characterRangeMembers(from, to, step);
+  return null;
+}
+
+function numericRangeMembers(from: string, to: string, step: number): readonly string[] {
+  const start = Number(from);
+  const end = Number(to);
+  // fast-glob's own test: it measures an ascending range only.
+  if ((end - start) / step >= BRACE_RANGE_LIMIT) return [];
+  const padded = /^[+-]?0\d/.test(from) || /^[+-]?0\d/.test(to);
+  const width = padded ? Math.max(from.length, to.length) : 0;
+  const direction = start <= end ? 1 : -1;
+  const count = Math.floor(Math.abs(end - start) / step) + 1;
+  return Array.from({ length: count }, (_, index) => {
+    const value = start + direction * index * step;
+    const sign = value < 0 ? "-" : "";
+    return sign + String(Math.abs(value)).padStart(width - sign.length, "0");
+  });
+}
+
+function characterRangeMembers(from: string, to: string, step: number): readonly string[] {
+  const start = from.codePointAt(0) ?? 0;
+  const end = to.codePointAt(0) ?? 0;
+  const count = Math.floor(Math.abs(end - start) / step) + 1;
+  // SIMPLIFIED: a character range past the numeric limit selects nothing here,
+  // though fast-glob expands it whole.
+  // Lift when: a project's glob names a range of more than a thousand characters.
+  if (count > BRACE_RANGE_LIMIT) return [];
+  const direction = start <= end ? 1 : -1;
+  return Array.from({ length: count }, (_, index) =>
+    String.fromCodePoint(start + direction * index * step),
+  );
+}
+
 /** Last path segment of a glob — the basename convention it prescribes. */
 function globBasename(glob: string): string {
   const normalized = glob.replace(/\\/g, "/");
@@ -360,7 +419,8 @@ function splitGlobAlternatives(inner: string): string[] {
  * Compile one glob into regex source.
  *
  * Handles the constructs fast-glob's own matcher does inside a single path
- * segment: `*`, `?`, brace alternation `{a,b}`, and the extglob forms
+ * segment: `*`, `?`, brace alternation `{a,b}`, a brace range `{1..5}` or
+ * `{a..e}`, and the extglob forms
  * `@(a|b)`, `?(a|b)`, `*(a|b)`, `+(a|b)`, `!(a|b)`. Alternatives are compiled
  * recursively, so a wildcard nested in a group keeps its meaning. The
  * cross-segment globstar `**` is handled too, so a whole configured glob —
@@ -424,10 +484,7 @@ function compileGlob(pattern: string): string {
     if (char === "{") {
       const close = findGroupClose(pattern, index, "{", "}");
       if (close !== -1) {
-        const alternatives = splitGlobAlternatives(pattern.slice(index + 1, close))
-          .map((alternative) => compileGlob(alternative.trim()))
-          .join("|");
-        source += `(?:${alternatives})`;
+        source += compileBraces(pattern.slice(index + 1, close));
         index = close;
         continue;
       }
@@ -435,6 +492,22 @@ function compileGlob(pattern: string): string {
     source += escapeRegExp(char);
   }
   return source;
+}
+
+/**
+ * One brace group, given its interior. A list expands to its members and a
+ * range to the values it spans. A body that is neither stays text, braces
+ * included, as fast-glob leaves `{a}` and `{1..}`.
+ */
+function compileBraces(body: string): string {
+  const alternatives = splitGlobAlternatives(body);
+  if (alternatives.length > 1) {
+    return `(?:${alternatives.map((alternative) => compileGlob(alternative.trim())).join("|")})`;
+  }
+  const members = braceRangeMembers(body);
+  if (members === null) return `\\{${compileGlob(body)}\\}`;
+  // A range fast-glob refuses selects no file, so nothing matches it.
+  return members.length === 0 ? "(?!)" : `(?:${members.map(escapeRegExp).join("|")})`;
 }
 
 /** `./tests/**\/*.py` -> `tests/**\/*.py`; backslashes folded to POSIX. */

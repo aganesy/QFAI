@@ -330,6 +330,38 @@ describe("the scaffold writes a name the project's own runner collects", () => {
     );
   });
 
+  it.each([
+    ["a zero-padded range", "tests/**/TC-0000-{0000..0999}.test.ts"],
+    ["a range with an increment", "tests/**/TC-{0000..0010..5}-0000.test.ts"],
+    ["a descending range", "tests/**/TC-{0010..0000}-0000.test.ts"],
+    ["a letter range", "tests/**/*.{s..u}est.ts"],
+    ["a range inside a list", "tests/**/TC-{{0000..0002},9999}-0000.test.ts"],
+  ])("reads %s as the members fast-glob expands it to", (_shape, glob) => {
+    // A range has no comma, so reading its body as a list matched only the
+    // text between the braces and refused a name the project's scan collects.
+    expect(requireDialect([glob]).id).toBe("js-ts");
+  });
+
+  it("refuses a name outside the range", () => {
+    expect(resolveScaffoldDialect(["tests/**/TC-{0001..0999}-0000.test.ts"]).outcome).toBe(
+      "naming-mismatch",
+    );
+    expect(resolveScaffoldDialect(["tests/**/TC-{0..10..3}-0000.test.ts"]).outcome).toBe(
+      "naming-mismatch",
+    );
+  });
+
+  it("refuses a range fast-glob does not expand, and reads a body that is no range as text", () => {
+    // fast-glob refuses a range of a thousand steps or more, so that glob
+    // selects no file; `{TC-0000-0000}` is text, braces included.
+    for (const glob of [
+      "tests/**/TC-0000-{0000..9999}.test.ts",
+      "tests/**/{TC-0000-0000}.test.ts",
+    ]) {
+      expect(resolveScaffoldDialect([glob]).outcome, glob).toBe("naming-mismatch");
+    }
+  });
+
   it("follows the configured pytest basename convention", () => {
     const dialect = requireDialect(["tests/**/*_test.py"]);
     expect(dialect.id).toBe("python");
