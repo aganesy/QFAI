@@ -2557,6 +2557,22 @@ describe("assets guardrails", () => {
     ).toEqual([]);
   });
 
+  it("holds the narrowed workflow baselines and skill bodies to the default width", async () => {
+    for (const relativePath of [
+      "assistant/constitution/shared-skill-delegation-baseline.md",
+      "assistant/constitution/shared-skill-operating-baseline.md",
+      "assistant/skills/qfai-atdd/SKILL.md",
+      "assistant/skills/qfai-discussion/SKILL.md",
+      "assistant/skills/qfai-sdd/SKILL.md",
+    ]) {
+      expect(WIDTH_BUDGET_BACKLOG.has(relativePath), relativePath).toBe(false);
+      const content = await readFile(path.join(templateQfaiDir, relativePath), "utf-8");
+      expect(widestMeasurableLine(content), relativePath).toBeLessThanOrEqual(
+        ASSISTANT_ASSET_MAX_LINE_CHARS,
+      );
+    }
+  });
+
   it("pins every width backlog entry to the file's real width", async () => {
     // A recorded backlog is only a ratchet while its numbers track the files.
     // An entry merely ABOVE the real width is a licence: reflow a file from 900
