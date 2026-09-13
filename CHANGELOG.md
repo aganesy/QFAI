@@ -178,26 +178,6 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   and still gives its extension. `!tests/e2e/legacy/**/*.ts` beside a Python glob added
   TypeScript to what the stage scans.
 
-- **An unresolved merge in a pinned file is named as one** (#1722). A conflict
-  block changes a pinned file's bytes like any other edit, so the byte guard
-  that opens the lint job failed it as a digest mismatch and named resealing as
-  the repair. The scan that would have named the real cause runs later in the
-  same job, and a job stops at its first failure, so the cause arrived a CI
-  round late, after the operator had followed the wrong advice once.
-
-  The guard now scans the pinned paths for marker lines before comparing
-  digests, and says that resealing is not the repair. The re-pin program
-  refuses the same tree rather than sealing a conflict block as the reviewed
-  bytes. Both read markers as the tracked-file scan does, so a fenced example
-  in a Markdown file is not one.
-
-  One path had no later reader at all: the pinned-bytes list is rewritten from
-  the tree rather than edited, so a conflict inside it was discarded by the
-  reseal and the only trace was a routine-looking re-pin commit. Both checks
-  read that file too, although the list does not name itself, and the two other
-  lists the workflow step pins. That step now scans its pinned inputs before it
-  checks their digests, so a conflict in one of them is named there as well.
-
 - **The saas-package certify cases run through the command line, and the verify
   reviewer gate has a test** (#1636, #1637, #1638). Every case credited to the
   two certify obligations called the command function with the flag already
@@ -243,6 +223,26 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   prototyping loop captures from and the design audit reads keeps only the
   first, and the second is named. The prototyping profile, which certification
   accepts, reports the finding as well.
+
+- **An unresolved merge in a pinned file is named as one** (#1722). A conflict
+  block changes a pinned file's bytes like any other edit, so the byte guard
+  that opens the lint job failed it as a digest mismatch and named resealing as
+  the repair. The scan that would have named the real cause runs later in the
+  same job, and a job stops at its first failure, so the cause arrived a CI
+  round late, after the operator had followed the wrong advice once.
+
+  The guard now scans the pinned paths for marker lines before comparing
+  digests, and says that resealing is not the repair. The re-pin program
+  refuses the same tree rather than sealing a conflict block as the reviewed
+  bytes. Both read markers as the tracked-file scan does, so a fenced example
+  in a Markdown file is not one.
+
+  One path had no later reader at all: the pinned-bytes list is rewritten from
+  the tree rather than edited, so a conflict inside it was discarded by the
+  reseal and the only trace was a routine-looking re-pin commit. Both checks
+  read that file too, although the list does not name itself, and the two other
+  lists the workflow step pins. That step now scans its pinned inputs before it
+  checks their digests, so a conflict in one of them is named there as well.
 
 ## [1.12.0] - 2026-09-12
 
