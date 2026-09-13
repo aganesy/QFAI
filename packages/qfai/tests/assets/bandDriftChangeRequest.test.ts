@@ -40,14 +40,59 @@ describe("the primary_tasks band drift has a Change Request", () => {
     expect(unwrap(await changeRequest())).toContain(unwrap(phrase));
   };
 
-  it("carries the header fields the protocol reads, at a legal value", async () => {
-    // The values move as the record is resolved; that they exist and are legal
-    // is what a reader and `QFAI-DRIFT-001` both depend on.
+  it("carries the header fields the protocol reads, as a legal combination", async () => {
+    // The values move as the record is resolved, and each status fixes what the
+    // others may hold: an approval with no option is unresolved under the reset
+    // preflight, and an open record naming one claims a choice nobody made.
     const text = await changeRequest();
     await expectPhrase("- ID: `CR-20260913-0001`");
     await expectPhrase("- Class: `intent`");
-    expect(text).toMatch(/^- Status: `(open|approved|rejected|superseded)`$/m);
-    expect(text).toMatch(/^- Approved option: `(-|[123][ab]?)`$/m);
+    const field = (name: string): string | undefined =>
+      new RegExp(`^- ${name}: \u0060([^\u0060]*)\u0060$`, "m").exec(text)?.[1];
+    const timestamp = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$/;
+    const resolution = text.slice(text.indexOf("## Resolution") + "## Resolution".length);
+    const resolved = resolution.replace(/<!--[\s\S]*?-->/g, "").trim().length > 0;
+    const status = field("Status");
+    const approvedBy = field("Approved by");
+    const approvedAt = field("Approved at") ?? "";
+    const option = field("Approved option");
+    const appliedAt = field("Applied at") ?? "";
+    const supersededBy = field("Superseded by");
+
+    expect(["open", "approved", "rejected", "superseded"]).toContain(status);
+    if (status === "open") {
+      expect([approvedBy, approvedAt, option, appliedAt, supersededBy]).toEqual([
+        "-",
+        "-",
+        "-",
+        "-",
+        "-",
+      ]);
+      expect(resolved).toBe(false);
+      return;
+    }
+    expect(approvedBy).not.toBe("-");
+    expect(approvedAt).toMatch(timestamp);
+    if (status === "approved") {
+      // This record offers options 1, 2 and 3, and nothing else.
+      expect(option).toMatch(/^[123]$/);
+      expect(supersededBy).toBe("-");
+      // Approval alone does not release the gate; once applied, it says how.
+      if (appliedAt === "-") {
+        expect(resolved).toBe(false);
+      } else {
+        expect(appliedAt).toMatch(timestamp);
+        expect(resolved).toBe(true);
+      }
+      return;
+    }
+    expect(appliedAt).toBe("-");
+    expect(resolved).toBe(true);
+    if (status === "rejected") {
+      expect([option, supersededBy]).toEqual(["-", "-"]);
+    } else {
+      expect(supersededBy).toMatch(/^CR-\d{8}-\d{4}$/);
+    }
   });
 
   it("states both sides of the contradiction by artifact", async () => {
@@ -62,6 +107,14 @@ describe("the primary_tasks band drift has a Change Request", () => {
     // The two packs share the decision, so settling it for one leaves the
     // shared record and one of its readers disagreeing.
     await expectPhrase("| `spec-0004/TDD-0050` | `ledger-row` |");
+  });
+
+  it("leaves the rows' stale selectors to the stage that may rewrite them", async () => {
+    // A `confirm-only` rerun writes no row cell, and a selector that resolves
+    // is no longer the executing stage's to repair.
+    await expectPhrase(
+      "**The three rows' `Selector` cells still state the band, and none of them resolves.**",
+    );
   });
 
   it("re-verifies those rows in place when the product changes to meet them", async () => {
@@ -83,6 +136,9 @@ describe("the primary_tasks band drift has a Change Request", () => {
     // reach the policy record.
     await expectPhrase("| `/qfai-sdd spec-0013` |");
     await expectPhrase("| `/qfai-sdd spec-0004` |");
+    // The bare invocation is the policy record's owner. The prose naming it
+    // would survive the row's removal, so the row itself is what is pinned.
+    expect(await changeRequest()).toMatch(/^\s*\| `\/qfai-sdd` +\| `_policies\/08_Decisions\.md`/m);
     await expectPhrase("naming one invocation would leave part of the record unwritten");
   });
 
@@ -121,6 +177,10 @@ describe("the primary_tasks band drift has a Change Request", () => {
     // `Status` belongs to the whole record, and the composite adopts two
     // decisions this record does not reach. Setting it would withdraw them.
     await expectPhrase("`DR-0004-0014` is not superseded as a record.");
+    // The option an approver reads says so too, not only the action beneath it.
+    await expectPhrase(
+      "the composite `DR-0004-0014` stays standing, with only its band entry marked superseded",
+    );
     await expectPhrase("The other two\nadoptions are not touched.");
   });
 
