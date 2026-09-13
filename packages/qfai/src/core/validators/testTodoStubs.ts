@@ -727,16 +727,14 @@ function collectStubIssues(
   //
   // That validator scans four directories under `paths.testsDir`, and this gate
   // also reads a monorepo's package-local acceptance suites. A marked skeleton
-  // there is outside its scan, so deferring to it left the file reported by
-  // neither and the ATDD gate green over a suite that does not run.
+  // there is outside its scan, so it stays this gate's to report.
   //
   // And it reports a file only when the sentinel sits beside a per-TC
   // `TODO: implement assertion for` line. A skeleton whose TODO lines have been
-  // written out but whose sentinel survives is progressed, so that validator
-  // passes over it — and a hand-off keyed to the sentinel alone suppressed this
-  // finding over exactly that file, leaving its `it.skip` to discharge an
-  // obligation with no gate reading it. `scaffoldPlaceholderReportsBody` is the
-  // predicate that validator applies, so the two cannot drift apart.
+  // written out but whose sentinel survives is progressed and passes that
+  // validator, so the hand-off needs both the sentinel and a TODO line.
+  // `scaffoldPlaceholderReportsBody` is the predicate that validator applies,
+  // so the two cannot drift apart.
   const scaffolded = scaffoldPlaceholderReportsBody(content) && placeholderScanned(relFile);
   // Offsets and line breaks survive both passes, so a match position in the
   // scanned text is still a position in the file the finding names.

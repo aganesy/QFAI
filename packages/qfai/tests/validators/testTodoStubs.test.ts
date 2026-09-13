@@ -591,6 +591,23 @@ describe("the ATDD gate's file selection", () => {
     expect(issues.map((issue) => issue.code)).toContain("QFAI-TEST-002");
   });
 
+  it.each([
+    ["a brace set", "packages/*/tests/**/*.{test,spec}.*", "pay.spec.zig"],
+    ["a character class", "packages/*/tests/**/test_[0-9].*", "test_1.zig"],
+    ["an extglob group", "packages/*/tests/**/*.@(test|spec).*", "pay.test.zig"],
+  ])("keeps a file a test-name glob with %s selects", async (_shape, glob, name) => {
+    const root = await newTempDir();
+    const config = atddConfig([glob]);
+    await writeTestFile(root, `packages/checkout/tests/integration/${name}`, 'test "pays" {}\n');
+
+    const issues = await validateTestTodoStubs(root, config, {
+      globs: atddAcceptanceTestGlobs(root, config, STUB_SOURCE_FILE_PATTERN),
+      fileFilter: atddAcceptanceLayerFilter(root, config),
+    });
+
+    expect(issues.map((issue) => issue.code)).toContain("QFAI-TEST-002");
+  });
+
   it("keeps a wildcard-only glob from admitting a data file", async () => {
     const root = await newTempDir();
     const config = atddConfig(["packages/*/tests/**/*.*"]);

@@ -110,8 +110,9 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   is what that report is for. The same holds for a glob naming a file with no
   extension, such as `tests/integration/test_pay`, or an extension through a
   short character class, such as `*.[z]ig`, or a glob that names the file itself
-  and leaves the extension open, such as `*.test.*`. A negative entry names no
-  extension.
+  and leaves the extension open, such as `*.test.*`, `*.{test,spec}.*` or
+  `test_[0-9].*`. A negative entry names no extension, either for the stub gate
+  or for the scan's own file pattern.
 
   The coverage scan reads a collected file the same way: a data file an
   extension-broad glob sweeps into an acceptance layer is not a source, so an
@@ -140,8 +141,9 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   named `tests`, `test` or `__tests__`, or the one `paths.testsDir` points at,
   and in either case one that carries no package manifest, since a workspace
   package named `tests` is a package rather than a suite root. The manifest is
-  read for every ecosystem this toolkit has a stub dialect for, not Node's
-  alone: a Python or Go workspace can name a package that way too. A file a
+  read for the ecosystems a workspace declares packages in, not Node's alone: a
+  Python or Go workspace can name a package that way too. Only a file counts as
+  a manifest, so a fixture directory called `go.mod` does not. A file a
   suite also keeps for its runner — `package.json`, `deno.json`, `deno.jsonc`,
   `pyproject.toml`, `setup.cfg` — counts only when it names a package, and
   `deno.jsonc` is parsed with its comments and trailing commas, so a `name`

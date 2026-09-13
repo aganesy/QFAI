@@ -1,4 +1,4 @@
-import { readdirSync, readFileSync } from "node:fs";
+import { readdirSync, readFileSync, statSync, type Dirent } from "node:fs";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 
@@ -2363,6 +2363,9 @@ function isAnnotationOnlyCarrier(
 export function deriveTestFileExtensions(testFileGlobs: readonly string[]): Set<string> {
   const extensions = new Set<string>();
   for (const glob of testFileGlobs) {
+    // A negative entry withdraws files; the extension it names is not one the
+    // project selected.
+    if (glob.startsWith("!")) continue;
     for (const match of glob.matchAll(/\.\{([^}]+)\}$/g)) {
       for (const ext of (match[1] ?? "").split(",")) {
         const trimmed = ext.trim();
@@ -2673,9 +2676,10 @@ function testsDirName(root: string, config: QfaiConfig): string {
  * Package-manifest basenames that name a package whatever they hold, across the
  * ecosystems this toolkit reads tests in.
  *
- * The stub validator carries a dialect for each of these languages, so a
- * workspace in any of them can have a package called `tests` — and the
- * discriminator has to be its own manifest, not Node's.
+ * The list follows the ecosystems a workspace declares packages in, not the
+ * languages the stub validator has a dialect for: a package called `tests` has
+ * to be told apart from a test root in any of them, and the discriminator has
+ * to be its own manifest, not Node's.
  */
 const PACKAGE_MANIFEST_NAMES = new Set([
   "setup.py",
@@ -2799,6 +2803,21 @@ function isPackageManifest(absoluteDir: string, entry: string): boolean {
 }
 
 /**
+ * Whether a directory entry is a file, or a link to one. A fixture directory
+ * that happens to be called `go.mod` is not a manifest, and taking it for one
+ * would clear a genuine test root.
+ */
+function isFileEntry(absoluteDir: string, entry: Dirent): boolean {
+  if (entry.isFile()) return true;
+  if (!entry.isSymbolicLink()) return false;
+  try {
+    return statSync(path.join(absoluteDir, entry.name)).isFile();
+  } catch {
+    return false;
+  }
+}
+
+/**
  * Whether a directory carries a package manifest, memoised per scan.
  *
  * One `readdirSync` per candidate directory — the same cost class as a stat,
@@ -2817,7 +2836,9 @@ export function packageRootProbe(): (absoluteDir: string) => boolean {
     }
     let answer: boolean;
     try {
-      answer = readdirSync(absoluteDir).some((entry) => isPackageManifest(absoluteDir, entry));
+      answer = readdirSync(absoluteDir, { withFileTypes: true }).some(
+        (entry) => isFileEntry(absoluteDir, entry) && isPackageManifest(absoluteDir, entry.name),
+      );
     } catch {
       // Unreadable, or a path that is not a directory at all. Neither is a
       // package root, and neither is this function's to report.

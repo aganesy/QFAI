@@ -90,28 +90,75 @@ export function globExtensions(globs: readonly string[]): string[] {
 /**
  * A predicate for a file name that a glob selects by name rather than by
  * extension: the last segment of a glob naming something besides wildcards,
- * as `*.test.*` does.
+ * as `*.test.*`, `*.{test,spec}.*` and `test_[0-9].*` do.
  *
  * Such a glob selects a test by its name whatever the extension, so a file it
  * matches is a source even when no glob names that extension. A last segment
  * of wildcards alone names nothing, a negative entry selects nothing, and a
- * segment using braces, brackets or an extglob group is left to
- * {@link globExtensions}. Matched case-sensitively, as the glob that collected
- * the file was.
+ * segment this reader cannot translate — a negated extglob group, an unclosed
+ * brace or bracket — is left to {@link globExtensions}. Matched
+ * case-sensitively, as the glob that collected the file was.
  */
 export function namedTestFileMatcher(globs: readonly string[]): (fileName: string) => boolean {
   const patterns: RegExp[] = [];
   for (const glob of globs) {
     if (glob.startsWith("!")) continue;
     const last = glob.split("/").at(-1) ?? "";
-    if (!/^[^{}[\]()!@+]*$/.test(last) || !/[^*?.]/.test(last)) continue;
-    const source = last
-      .replace(/[.^$|\\]/g, "\\$&")
-      .replaceAll("*", "[^/]*")
-      .replaceAll("?", "[^/]");
-    patterns.push(new RegExp(`^${source}$`));
+    if (!/[^*?.]/.test(last)) continue;
+    const source = segmentPattern(last);
+    if (source !== null) patterns.push(new RegExp(`^${source}$`));
   }
   return (fileName) => patterns.some((pattern) => pattern.test(fileName));
+}
+
+/**
+ * One glob path segment as a regular-expression source, or `null` for syntax
+ * this reader does not translate. Braces and extglob groups become
+ * alternations, a bracket expression stays a character class, and `*` and `?`
+ * stay inside the segment.
+ */
+function segmentPattern(segment: string): string | null {
+  let source = "";
+  for (let index = 0; index < segment.length; index += 1) {
+    const char = segment[index] ?? "";
+    if ("@?+*!".includes(char) && segment[index + 1] === "(") {
+      const close = segment.indexOf(")", index + 2);
+      if (char === "!" || close < 0) return null;
+      const group = alternation(segment.slice(index + 2, close).split("|"));
+      if (group === null) return null;
+      source += char === "@" ? group : `${group}${char}`;
+      index = close;
+    } else if (char === "{") {
+      const close = segment.indexOf("}", index + 1);
+      const group = close < 0 ? null : alternation(segment.slice(index + 1, close).split(","));
+      if (group === null) return null;
+      source += group;
+      index = close;
+    } else if (char === "[") {
+      const close = segment.indexOf("]", index + 2);
+      if (close < 0) return null;
+      const members = segment.slice(index + 1, close).replaceAll("\\", "\\\\");
+      source += `[${members.replace(/^[!^]/, "^")}]`;
+      index = close;
+    } else if (char === "*") {
+      source += "[^/]*";
+    } else if (char === "?") {
+      source += "[^/]";
+    } else {
+      source += char.replace(/[.^$|\\+(){}[\]]/g, "\\$&");
+    }
+  }
+  return source;
+}
+
+function alternation(alternatives: readonly string[]): string | null {
+  const sources: string[] = [];
+  for (const alternative of alternatives) {
+    const source = segmentPattern(alternative);
+    if (source === null) return null;
+    sources.push(source);
+  }
+  return `(?:${sources.join("|")})`;
 }
 
 /**

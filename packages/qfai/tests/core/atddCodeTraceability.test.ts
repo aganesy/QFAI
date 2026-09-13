@@ -1090,6 +1090,49 @@ describe("acceptance tests outside paths.testsDir", () => {
     });
   });
 
+  it("reads no extension off a negative glob entry when choosing what counts", async () => {
+    await withProject(async (root) => {
+      await seedSpec(root, "0001", ["US-0001"], ["TC-0001"]);
+      await seedPackageTest(root, "checkout", "e2e", "journey.test.ts", [
+        "/* QFAI:SPEC-0001:US-0001 */",
+      ]);
+      await seedPackageTest(root, "checkout", "integration", "data.json", [
+        "// QFAI:SPEC-0001:TC-0001",
+      ]);
+
+      const result = await evaluateAtddCodeTraceability(
+        root,
+        withProjectGlobs(["packages/*/tests/**/*", "!packages/*/tests/fixtures/**/*.json"]),
+      );
+
+      // A JSON file outside the withdrawn subtree is not a source, so its text
+      // discharges nothing; the TypeScript journey still counts.
+      expect(result.missing.tc).toEqual(["SPEC-0001:TC-0001"]);
+      expect(result.missing.us).toEqual([]);
+    });
+  });
+
+  it("does not take a fixture directory named like a manifest for a package", async () => {
+    await withProject(async (root) => {
+      await seedSpec(root, "0001", ["US-0001"], ["TC-0001"]);
+      await seedPackageTest(root, "checkout", "e2e", "journey.test.ts", [
+        "/* QFAI:SPEC-0001:US-0001 */",
+      ]);
+      await seedPackageTest(root, "checkout", "integration", "pay.test.ts", [
+        "/* QFAI:SPEC-0001:TC-0001 */",
+      ]);
+      await mkdir(path.join(root, "packages", "checkout", "tests", "go.mod"), { recursive: true });
+
+      const result = await evaluateAtddCodeTraceability(
+        root,
+        withProjectGlobs(["packages/*/tests/**/*.test.ts"]),
+      );
+
+      expect(result.missing.tc).toEqual([]);
+      expect(result.missing.us).toEqual([]);
+    });
+  });
+
   it("names the package-local file a misplaced test-case reference sits in", async () => {
     await withProject(async (root) => {
       await seedSpec(root, "0001", ["US-0001"], ["TC-0001"]);

@@ -226,7 +226,10 @@ also reads the project's own `validation.traceability.testFileGlobs`, minus its
 directory **inside its own test root**: the segment after the deepest `tests`,
 `test` or `__tests__` on the path, or after the configured `paths.testsDir`
 basename. `packages/checkout/tests/integration/pay.test.ts` answers an `L3`
-obligation exactly as `<testsDir>/integration/pay.test.ts` does.
+obligation exactly as `<testsDir>/integration/pay.test.ts` does. A deeper test
+root with no directory after it is a container inside the layer rather than a
+root of its own, so `packages/app/tests/e2e/__tests__/journey.test.ts` answers
+`E2E`.
 
 A directory carrying a package manifest is a package rather than a test root,
 whatever it is called: without that, a workspace package named `tests` would
