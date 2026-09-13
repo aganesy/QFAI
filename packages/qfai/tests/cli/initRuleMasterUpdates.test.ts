@@ -377,7 +377,11 @@ describe("the constitution and its safety floor upgrade together", () => {
       const edited = olderFloor(await readFile(minimumPath(), "utf-8"));
       await writeFile(path.join(fresh, RULES_REL, "minimal-implementation.md"), edited, "utf-8");
 
-      await captureStdout(() => runInit({ dir: fresh, force: false, dryRun: false, yes: true }));
+      const output = await captureStdout(() =>
+        runInit({ dir: fresh, force: false, dryRun: false, yes: true }),
+      );
+      expect(output).toContain("rerun `qfai init` to install the missing constitution");
+      expect(output).not.toContain("running `qfai init --force` again");
 
       const assistant = path.join(fresh, ".qfai", "assistant");
       await expect(

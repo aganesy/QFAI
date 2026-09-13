@@ -724,8 +724,11 @@ async function syncGovernedAssistantAssets(
     ) {
       skipped.push(dest);
       if (previousHash !== undefined) recorded[relative] = previousHash;
+      const recovery = (await pathExists(dest))
+        ? "A manual merge of the safety master and existing constitution is needed; keep adopter edits protected."
+        : "A manual merge of the safety master is needed; then rerun `qfai init` to install the missing constitution.";
       manualMergeNotes.push(
-        `NOTE: ${formatReportPath(dest)} was not installed or refreshed: .agents/rules/minimal-implementation.md could not be verified as the shipped master. The safety floor and constitution need a manual merge before running \`qfai init --force\` again.`,
+        `NOTE: ${formatReportPath(dest)} was not installed or refreshed: .agents/rules/minimal-implementation.md could not be verified as the shipped master. ${recovery}`,
       );
       continue;
     }
