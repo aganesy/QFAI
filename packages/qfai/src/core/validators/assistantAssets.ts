@@ -318,19 +318,28 @@ export async function validateAssistantAssets(root: string, config: QfaiConfig):
   // SKILL.md: a template or an example copy below a skill is registered by
   // nothing, and a skill in a directory the crawl ignores is registered all the
   // same.
-  const crawled = new Set(skillFiles);
+  // By file identity rather than by spelling: on a case-insensitive file system
+  // the crawl's `skill.md` and the probe's `SKILL.md` are one file, and compared
+  // as strings it was read and reported twice.
+  const crawled = new Map<string, string>();
+  const crawledFiles = [
+    ...documents.keys(),
+    ...unreadable.flatMap((item) => (item.file === undefined ? [] : [item.file])),
+  ];
+  for (const crawledFile of crawledFiles) crawled.set(await fileIdentity(crawledFile), crawledFile);
   for (const entryPoint of await collectSkillEntryPoints(skillsDir)) {
-    if (crawled.has(entryPoint)) {
-      const content = documents.get(entryPoint);
+    const crawledAs = crawled.get(await fileIdentity(entryPoint));
+    if (crawledAs !== undefined) {
+      const content = documents.get(crawledAs);
       // Absent from the map means the crawl could not read it, and has already
       // said so. Reading it again here reports the same fault twice.
       if (content !== undefined)
         issues.push(...collectSkillRegistrationIssues(entryPoint, content));
       continue;
     }
-    // Outside the crawl — a directory on the shared ignore list — so nothing has
-    // reported this file, and a read that fails here is the only chance to say
-    // the skill cannot be loaded.
+    // Outside the crawl — a skill directory reached through a link, which the
+    // walk does not follow — so nothing has reported this file, and a read that
+    // fails here is the only chance to say the skill cannot be loaded.
     //
     // Through the bounded reader rather than a bare read: the path is whatever
     // the adopter's tree holds, and a FIFO does not fail on open — it blocks
@@ -1638,6 +1647,19 @@ type SkillDocuments = {
 };
 
 /**
+ * The file a path names, as the file system identifies it: its device and
+ * inode, or the path itself where it cannot be read.
+ */
+async function fileIdentity(file: string): Promise<string> {
+  try {
+    const identity = await stat(file, { bigint: true });
+    return `${String(identity.dev)}:${String(identity.ino)}`;
+  } catch {
+    return file;
+  }
+}
+
+/**
  * A document that cannot be read is reported, not dropped.
  *
  * Swallowing the failure would delete the file from the graph: it would cite
@@ -1671,7 +1693,7 @@ async function readSkillDocuments(skillsDir: string): Promise<SkillDocuments> {
         // case and a step partway through the work in the second.
         const message = isSkillEntryPoint(skillsDir, file)
           ? "A skill's entry point holds bytes that are not valid UTF-8, so the host reports it unreadable and registers no skill from it."
-          : "A document under `skills` holds bytes that are not valid UTF-8. The host registers the skill from its entry point and reads this file only where a step names it, so the failure arrives partway through the work.";
+          : "A document under `skills` holds bytes that are not valid UTF-8. The host opens it only where a step names it, and a step that does fails there.";
         unreadable.push(
           issue(
             "QFAI-SKILLS-014",

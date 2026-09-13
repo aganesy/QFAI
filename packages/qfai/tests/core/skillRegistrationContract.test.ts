@@ -610,6 +610,21 @@ describe("what the gate and the host disagreed about", () => {
     expect(codes).toContain("QFAI-SKILLS-014");
   });
 
+  it("reports an unreadable entry point once, whatever case it is spelled in", async () => {
+    // On a case-insensitive file system the crawl and the entry-point probe name
+    // one file two ways.
+    const root = await projectWithSkill(['description: "Does the thing."']);
+    const skillDir = path.join(root, ".qfai", "assistant", "skills", "qfai-example");
+    await rm(path.join(skillDir, "SKILL.md"));
+    const file = path.join(skillDir, "skill.md");
+    await writeFile(file, Buffer.concat([Buffer.from("# skill\n"), Buffer.from([0xff])]));
+
+    const unreadable = (await validateAssistantAssets(root, defaultConfig)).filter(
+      (item) => item.code === "QFAI-SKILLS-014" && item.file?.toLowerCase() === file.toLowerCase(),
+    );
+    expect(unreadable).toHaveLength(1);
+  });
+
   it("calls a nested SKILL.md a reference, not an entry point", async () => {
     // A template named SKILL.md inside a skill registers nothing, so an invalid
     // byte in it stops the step that names it rather than the skill.
