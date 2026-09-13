@@ -97,6 +97,21 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   characters. Freshness is compared exactly, so accepting both cases would let
   one tree be recorded as two revisions and read a correct row as stale.
 
+- **An active-pointer state no directory can be in is recorded where the Drift
+  Protocol looks for it** (#1693). A shared decision and both packs that follow
+  it say a recovery error is raised when the pointer resolves to a duplicate
+  pack. The helper and the `discussion list --active` command both take their
+  candidates from one directory listing and match on an exact name, so no two
+  can match, and that has been true since the branch was written: it has never
+  been reachable.
+
+  `CR-20260913-0004`, a defect-class request awaiting approval, proposes
+  removing the duplicate state from the rule, keeping its absent and missing
+  conditions — at the shared decision first, then in both packs — while keeping the command's
+  single-candidate read, and lists both unreachable branches for removal. No
+  rule or code changes until it is applied. It blocks the one ledger row whose
+  obligation names the duplicate state.
+
 ## [1.12.0] - 2026-09-12
 
 ### Added
