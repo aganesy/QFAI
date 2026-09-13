@@ -15,7 +15,7 @@
  * `disable-model-invocation: true` beside it.
  */
 import { existsSync } from "node:fs";
-import { chmod, mkdir, mkdtemp, rm, symlink, writeFile } from "node:fs/promises";
+import { chmod, mkdir, mkdtemp, readFile, rm, symlink, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
@@ -710,6 +710,32 @@ describe("the gate reads a skill as the host does", () => {
     expect(unreadable.find((item) => item.file === entryPoint)?.message).toContain("entry point");
     expect(unreadable.find((item) => item.file === target)?.message).toContain(
       "only where a step names it",
+    );
+    expect(findings.map((item) => item.code)).not.toContain("QFAI-SKILLS-013");
+  });
+
+  it("reports no uncited reference beside a document that cannot be read", async () => {
+    // What the unreadable document cites is unknown, so the reference it may
+    // cite is not called uncited; the decoding failure is the finding.
+    const root = await projectWithSkill(['description: "Does the thing."']);
+    const skillDir = path.join(root, ".qfai", "assistant", "skills", "qfai-example");
+    const entryPoint = path.join(skillDir, "SKILL.md");
+    await writeFile(
+      entryPoint,
+      `${await readFile(entryPoint, "utf-8")}\nSee references/bad.md.\n`,
+      "utf-8",
+    );
+    await mkdir(path.join(skillDir, "references"), { recursive: true });
+    const bad = path.join(skillDir, "references", "bad.md");
+    await writeFile(
+      bad,
+      Buffer.concat([Buffer.from("# bad\nSee references/guide.md.\n"), Buffer.from([0xff])]),
+    );
+    await writeFile(path.join(skillDir, "references", "guide.md"), "# guide\n", "utf-8");
+
+    const findings = await validateAssistantAssets(root, defaultConfig);
+    expect(findings.some((item) => item.code === "QFAI-SKILLS-014" && item.file === bad)).toBe(
+      true,
     );
     expect(findings.map((item) => item.code)).not.toContain("QFAI-SKILLS-013");
   });

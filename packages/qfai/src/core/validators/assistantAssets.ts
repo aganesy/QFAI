@@ -327,10 +327,11 @@ export async function validateAssistantAssets(root: string, config: QfaiConfig):
     ...unreadable.flatMap((item) => (item.file === undefined ? [] : [item.file])),
   ];
   for (const crawledFile of crawledFiles) crawled.set(await fileIdentity(crawledFile), crawledFile);
-  // A skill whose entry point cannot be read has no root to reach its documents
-  // from, so its references are not reported as uncited: the entry point's
-  // `QFAI-SKILLS-014` is the finding to act on.
-  const unrootedSkills: string[] = [];
+  // A skill whose reference graph cannot be read whole reports no reference as
+  // uncited: an entry point that cannot be read leaves no root to reach its
+  // documents from, and a document that cannot be read may cite the ones the
+  // walk then misses. The `QFAI-SKILLS-014` is the finding to act on.
+  const indeterminateSkills: string[] = [];
   for (const entryPoint of await collectSkillEntryPoints(skillsDir)) {
     const crawledAs = crawled.get(await fileIdentity(entryPoint));
     const content = crawledAs === undefined ? undefined : documents.get(crawledAs);
@@ -346,7 +347,7 @@ export async function validateAssistantAssets(root: string, config: QfaiConfig):
       path.dirname(crawledAs) === path.dirname(entryPoint) &&
       (await namesSkillEntryPoint(skillsDir, crawledAs))
     ) {
-      unrootedSkills.push(path.dirname(entryPoint));
+      indeterminateSkills.push(path.dirname(entryPoint));
       continue;
     }
     // Not crawled as this entry point: a skill directory reached through a link,
@@ -376,7 +377,7 @@ export async function validateAssistantAssets(root: string, config: QfaiConfig):
           "Make the entry point an ordinary readable file — grant read permission, repair a broken symlink, replace a directory or a device with the document — or delete it if it does not belong under `skills`.",
         ),
       );
-      unrootedSkills.push(path.dirname(entryPoint));
+      indeterminateSkills.push(path.dirname(entryPoint));
       continue;
     }
     // Decoded strictly. A lenient decode turns an invalid byte into a
@@ -396,13 +397,20 @@ export async function validateAssistantAssets(root: string, config: QfaiConfig):
           "Save the entry point as UTF-8. A byte that is not part of a valid sequence is usually text pasted from another encoding, or a binary file left at the path.",
         ),
       );
-      unrootedSkills.push(path.dirname(entryPoint));
+      indeterminateSkills.push(path.dirname(entryPoint));
       continue;
     }
     issues.push(...collectSkillRegistrationIssues(entryPoint, text));
   }
 
-  issues.push(...collectReferenceGraphIssues(root, skillsDir, documents, unrootedSkills));
+  for (const item of unreadable) {
+    const skill =
+      item.file === undefined ? undefined : toPosixRelative(skillsDir, item.file).split("/")[0];
+    if (skill !== undefined && skill !== "" && skill !== "..") {
+      indeterminateSkills.push(path.join(skillsDir, skill));
+    }
+  }
+  issues.push(...collectReferenceGraphIssues(root, skillsDir, documents, indeterminateSkills));
 
   return issues;
 }
@@ -1643,19 +1651,19 @@ function collectReferenceGraphIssues(
   root: string,
   skillsDir: string,
   documents: Map<string, string>,
-  unrootedSkills: readonly string[] = [],
+  indeterminateSkills: readonly string[] = [],
 ): Issue[] {
   const reachable = collectReachableDocuments(citationContext(root, skillsDir), documents);
   const severity = "error";
-  const inUnrootedSkill = (file: string): boolean =>
-    unrootedSkills.some((dir) => {
+  const inIndeterminateSkill = (file: string): boolean =>
+    indeterminateSkills.some((dir) => {
       const relative = path.relative(dir, file);
       return relative !== "" && !relative.startsWith("..") && !path.isAbsolute(relative);
     });
   const unreachable = [...documents.keys()]
     .filter(
       (file) =>
-        isReferenceDocument(skillsDir, file) && !reachable.has(file) && !inUnrootedSkill(file),
+        isReferenceDocument(skillsDir, file) && !reachable.has(file) && !inIndeterminateSkill(file),
     )
     .sort((a, b) => a.localeCompare(b))
     .map((file) =>
