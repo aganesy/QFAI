@@ -233,8 +233,8 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   reaching the row's property, and a failing case did not say which of the five
   had regressed.
 
-  The case is five, one per property, over the same seeded state, and the row's
-  selector now names the case that asserts its property alone.
+  The case is split into five, one per property, over the same seeded state, and
+  the row's selector now names the case that asserts its property alone.
 
 ## [1.12.0] - 2026-09-12
 

@@ -1071,10 +1071,8 @@ describe("runPrototypingIterate cycle 0 hard reset", () => {
   }
 
   // One property per case. The reset clears three blocks and re-seeds two, and
-  // a single case asserting all five observes only the first to fail: a
-  // regression in one property then reports as a failure of whichever
-  // assertion runs first, and a mutation aimed at one of them is killed by an
-  // assertion that is not about it.
+  // a single case asserting all five reports only the first that fails, so a
+  // change that breaks two of them reads as one.
   it("cycle 0 deletes fullHarness", async () => {
     const body = await readProtoJson(await runCycleZeroFromPriorLoopState());
     expect("fullHarness" in body).toBe(false);
