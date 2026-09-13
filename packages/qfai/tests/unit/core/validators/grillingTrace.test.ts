@@ -293,6 +293,21 @@ describe("validateGrillingTrace", () => {
       });
     }
 
+    it("does not take a closing run glued to the text", async () => {
+      // CommonMark needs whitespace before a closing run, so `## Title###` is a
+      // heading whose text is `Title###`. Accepting it matched a heading nobody
+      // writes, and a file with no section of its own passed.
+      await withRoot(async (root) => {
+        await evidence(
+          root,
+          "sdd-spec-0007.md",
+          POPULATED.replace("## Pre-draft Grilling", "## Pre-draft Grilling###"),
+        );
+
+        expect(await validateGrillingTrace(root)).toHaveLength(1);
+      });
+    });
+
     it("does not take a deeper heading for the section", async () => {
       // A subsection of something else that happens to end in those words is
       // not the section, and reading the heading as a substring accepts one.
@@ -351,7 +366,38 @@ describe("validateGrillingTrace", () => {
         await shippedTable(REVIEW_REQUEST, "Authoring began", GRILLING_SECTIONS.discussion),
       );
 
-      expect(await validateGrillingTrace(root)).toHaveLength(1);
+      const issues = await validateGrillingTrace(root);
+
+      expect(issues).toHaveLength(1);
+      // Named for what it is. There are no placeholders in a blank row, and
+      // telling the operator to replace them sends them looking for nothing.
+      expect(issues[0]?.message).toContain("every row is empty");
+      expect(issues[0]?.message).not.toContain("still holds the template's placeholders");
+    });
+  });
+
+  it("names both shapes when the table holds one of each", async () => {
+    await withRoot(async (root) => {
+      await evidence(
+        root,
+        "sdd-spec-0007.md",
+        [
+          "## Pre-draft Grilling",
+          "",
+          "| Phase | Session |",
+          "| ----- | ------- |",
+          "|       |         |",
+          "| <n> | <state> |",
+          "",
+        ].join("\n"),
+      );
+
+      const issues = await validateGrillingTrace(root);
+
+      expect(issues).toHaveLength(1);
+      expect(issues[0]?.message).toContain(
+        "every row is empty or still holds the template's placeholders",
+      );
     });
   });
 

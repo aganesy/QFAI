@@ -207,20 +207,24 @@ const FENCE_RE = /^\s*(?:```|~~~)/;
 const UNREPLACED_CELL_RE = /^<[A-Za-z][^<>:]*>$/;
 
 /**
- * Whether a markdown table row is still the template's.
+ * Which of the two unwritten shapes a row is, or `null` for a written one.
  *
- * Two shapes qualify, and both are what a copied template looks like: a cell
- * left at its placeholder, and a row whose cells are all empty. A row with some
- * cells filled and some not is not one of them — it is a partial record, and
- * saying so is a judgement this check does not make.
+ * Both are what a copied template looks like — a cell left at its placeholder,
+ * and a row whose cells are all empty, which is the shape the review request
+ * ships for a reviewer to fill in. They are told apart because the finding says
+ * what was seen: naming placeholders where the row is simply blank sends an
+ * operator looking for something that is not there. A row with some cells
+ * filled and some not is neither — it is a partial record, and saying so is a
+ * judgement this check does not make.
  */
-function rowIsUnwritten(line: string): boolean {
+function unwrittenAs(line: string): "empty" | "placeheld" | null {
   const cells = line
     .replace(/^\s*\|/, "")
     .replace(/\|\s*$/, "")
     .split("|")
     .map((cell) => cell.trim());
-  return cells.every((cell) => cell === "") || cells.some((cell) => UNREPLACED_CELL_RE.test(cell));
+  if (cells.every((cell) => cell === "")) return "empty";
+  return cells.some((cell) => UNREPLACED_CELL_RE.test(cell)) ? "placeheld" : null;
 }
 
 /**
@@ -260,13 +264,21 @@ function headingPatterns(section: string): { heading: RegExp; ends: RegExp } {
     // As CommonMark admits an ATX heading: up to three leading spaces, and an
     // optional closing run of hashes. An exact-line match reported a written
     // record as missing for both.
-    heading: new RegExp(`^ {0,3}${hashes}\\s+${literal(title)}\\s*#*\\s*$`),
+    //
+    // The closing run needs whitespace before it. CommonMark reads
+    // `## Title###` as a heading whose text is `Title###`, so accepting it
+    // matched a heading nobody writes and let a file with no section pass.
+    heading: new RegExp(`^ {0,3}${hashes}\\s+${literal(title)}(?:\\s+#+)?\\s*$`),
     ends: new RegExp(`^ {0,3}#{1,${String(hashes.length)}}\\s`),
   };
 }
 
 /** What one section holds: the rows the stage wrote, and the ones it did not. */
-type SectionRows = { readonly written: string[]; readonly unwritten: number };
+type SectionRows = {
+  readonly written: string[];
+  readonly empty: number;
+  readonly placeheld: number;
+};
 
 /**
  * The rows of the table under `section`.
@@ -308,39 +320,60 @@ function ownRowsUnder(text: string, section: string): SectionRows | null {
   const delimiter = body.findIndex(
     (line, at) => at > 0 && DELIMITER_RE.test(line) && (body[at - 1] ?? "").includes("|"),
   );
-  if (delimiter === -1) return { written: [], unwritten: 0 };
+  if (delimiter === -1) return { written: [], empty: 0, placeheld: 0 };
 
-  const rows: string[] = [];
+  const written: string[] = [];
+  let empty = 0;
+  let placeheld = 0;
   for (const line of body.slice(delimiter + 1)) {
     if (!line.includes("|")) break;
     // A second delimiter is the table's furniture, not a row of it. Its cells
     // are neither empty nor placeholders, so counting it let a copied table
     // with two delimiters and no data satisfy the check.
     if (DELIMITER_RE.test(line)) continue;
-    rows.push(line);
+    const shape = unwrittenAs(line);
+    if (shape === null) written.push(line);
+    else if (shape === "empty") empty += 1;
+    else placeheld += 1;
   }
-  const written = rows.filter((line) => !rowIsUnwritten(line));
-  return { written, unwritten: rows.length - written.length };
+  return { written, empty, placeheld };
 }
 
 /** What the file the finding names is. */
-type State = "absent" | "no-section" | "no-table" | "unwritten";
+type State = "absent" | "no-section" | "no-table" | SectionRows;
+
+/** What an unwritten table's rows were, in the words of what was seen. */
+function sawInstead(rows: SectionRows): string {
+  if (rows.placeheld === 0) return "every row is empty";
+  if (rows.empty === 0) return "every row still holds the template's placeholders";
+  return "every row is empty or still holds the template's placeholders";
+}
 
 /** The message for each state the finding reports. */
 function remediation(relPath: string, id: string, subject: Subject, state: State): string {
   // Each opening says only what was observed. One that names the placeholders
-  // where none were read sends an operator whose table is written to look for
-  // something that is not there.
+  // where the row is simply blank sends an operator looking for something that
+  // is not there.
+  if (typeof state === "object") {
+    return tail(
+      `${relPath} carries "${subject.section}" for ${id} with no ${subject.row} of its own — ` +
+        `${sawInstead(state)}.`,
+      relPath,
+      subject,
+    );
+  }
   const opening = {
     absent:
       `${relPath} does not exist, and the stage's own tree holds a run for ${id}. ` +
       `The stage opens this file before it writes anything else, so a run with no file wrote no record.`,
     "no-section": `${relPath} records no grilling session for ${id}.`,
     "no-table": `${relPath} carries "${subject.section}" for ${id} with no table under it.`,
-    unwritten:
-      `${relPath} carries "${subject.section}" for ${id} with no ${subject.row} of its own — ` +
-      `every row still holds the template's placeholders.`,
   }[state];
+  return tail(opening, relPath, subject);
+}
+
+/** The half of the message every state shares. */
+function tail(opening: string, relPath: string, subject: Subject): string {
   return (
     `${subject.code}: ${opening} ` +
     `Each grilling-covered phase runs one before it writes and records it under ` +
@@ -519,8 +552,8 @@ export async function validateGrillingTrace(
         ? "absent"
         : section === null
           ? "no-section"
-          : section.unwritten > 0
-            ? "unwritten"
+          : section.empty + section.placeheld > 0
+            ? section
             : "no-table";
 
     const relPath = `${EVIDENCE_DIR_REL}/${name}`;
