@@ -1588,41 +1588,150 @@ function isSkillEntryPoint(skillsDir: string, file: string): boolean {
  * separator or drive letter is kept rather than dropped, so a path typed in
  * Windows form and a path that is absolute both still name their file.
  *
- * `~` is a path character here, not a delimiter. Without it the scan ENDS at
- * the tilde and the token is whatever follows: `references/notes~1.md` yielded
- * `1.md`, and an absolute path through a tilde-bearing directory yielded
- * everything past the tilde. Both spell legal names — `~` is a legal filename
- * character, backup conventions produce it, and `os.tmpdir()` on Windows is the
- * 8.3 short form (`C:\Users\RUNNER~1\…`) whenever the profile name exceeds
- * eight characters.
- *
- * Neither produced a false `QFAI-SKILLS-013` by the time this landed: the
- * by-path pass covers a target whose own name carries the tilde, and the
- * `skillsDirPrefix` recovery covers an absolute citation whose truncated tail
- * still holds that prefix. What was left is the token being WRONG — resolved
- * through a fallback rather than by the scan, which is the quadratic pass
- * {@link collectReachableDocuments} keeps small on purpose, and one edit to
- * either cover away from a live false positive. Admitting the character is the
- * direct fix; the two covers stay as covers.
+ * `~` is a path character here, not a delimiter. Ending the token at a tilde
+ * leaves only what follows it: `references/notes~1.md` would read as `1.md`,
+ * and an absolute path through a tilde-bearing directory as everything past the
+ * tilde. Both spell legal names — backup conventions produce a tilde, and
+ * `os.tmpdir()` on Windows is the 8.3 short form (`C:\Users\RUNNER~1\…`)
+ * whenever the profile name exceeds eight characters. The by-path pass and the
+ * `skillsDirPrefix` recovery can still resolve such a truncated token, but
+ * through a fallback rather than by the scan, and the by-path pass is the
+ * quadratic one {@link collectReachableDocuments} keeps small on purpose.
  */
-const CITATION_SEGMENT_SOURCE = String.raw`(?:[\p{L}\p{N}\p{M}._~-]|%[0-9A-Fa-f]{2})+`;
+const CITATION_UNIT = new RegExp(String.raw`[\p{L}\p{N}\p{M}._~-]|%[0-9A-Fa-f]{2}`, "iuy");
+/** A drive letter, read with the flags the unit is read with. */
+const CITATION_DRIVE = /[A-Za-z]:/iuy;
+/** The extension a citation ends with. */
+const CITATION_EXTENSION = /\.(?:md|ya?ml)\b/iuy;
+
 /**
  * The path-ish tokens {@link resolveCitations} will try to resolve, in order.
+ *
+ * A token is an optional drive letter and separator, then segments of units
+ * joined by single separators, then an extension that follows a unit of the
+ * same segment. Tokens are taken leftmost first, and each runs to the last
+ * extension its segments reach: the matches of
+ * `/(?:[A-Za-z]:)?[\\/]?S(?:[\\/]S)*\.(?:md|ya?ml)\b/giu` for a segment `S`.
+ *
+ * The scan reads the document once. That regular expression retries from every
+ * position of a run that holds no extension and reads to the run's end each
+ * time, which is quadratic in the run's length, and a run of a few mebibytes
+ * exhausts its backtracking stack. Here a run read without finding a token is
+ * skipped whole, because any start inside it reaches the same end and fewer
+ * extensions. The exception is a letter just before the colon that ended the
+ * run, where a drive letter can start a token the run could not.
  *
  * @internal Exported for direct unit-testing — not part of the package's
  * public surface. The token is the unit the defect lives in, and every
  * end-to-end reading of it passes through two fallbacks that can cover a wrong
- * token up. A case on the reachability graph passes against the broken pattern
- * — measured — so it could not have pinned this.
+ * token up. A case on the reachability graph passes against a wrong token, so
+ * it could not have pinned this.
  */
 export function citationTokensIn(content: string): string[] {
-  return [...content.matchAll(DOCUMENT_CITATION_PATTERN)].map((match) => match[0]);
+  const tokens: string[] = [];
+  let start = 0;
+  while (start < content.length) {
+    let index = start;
+    if (isDriveLetterAt(content, index)) index += 2;
+    if (isPathSeparatorAt(content, index)) index += 1;
+    if (citationUnitLength(content, index) === 0) {
+      start += (content.codePointAt(start) ?? 0) > 0xffff ? 2 : 1;
+      continue;
+    }
+    const { end, tokenEnd } = readCitationSegments(content, index);
+    if (tokenEnd !== null) {
+      tokens.push(content.slice(start, tokenEnd));
+      start = tokenEnd;
+    } else {
+      start = end - 1 > start && isDriveLetterAt(content, end - 1) ? end - 1 : end;
+    }
+  }
+  return tokens;
 }
 
-const DOCUMENT_CITATION_PATTERN = new RegExp(
-  String.raw`(?:[A-Za-z]:)?[\\/]?${CITATION_SEGMENT_SOURCE}(?:[\\/]${CITATION_SEGMENT_SOURCE})*\.(?:md|ya?ml)\b`,
-  "giu",
-);
+/**
+ * Reads path segments from `index`, which starts a unit, to where they stop.
+ * `tokenEnd` ends the last extension that follows a unit of its own segment,
+ * and is `null` when no extension does.
+ */
+function readCitationSegments(
+  content: string,
+  index: number,
+): { end: number; tokenEnd: number | null } {
+  let position = index;
+  let tokenEnd: number | null = null;
+  let afterUnit = false;
+  for (;;) {
+    const length = citationUnitLength(content, position);
+    if (length > 0) {
+      if (afterUnit && content[position] === ".") {
+        CITATION_EXTENSION.lastIndex = position;
+        const extension = CITATION_EXTENSION.exec(content);
+        if (extension !== null) tokenEnd = position + extension[0].length;
+      }
+      afterUnit = true;
+      position += length;
+    } else if (
+      afterUnit &&
+      isPathSeparatorAt(content, position) &&
+      citationUnitLength(content, position + 1) > 0
+    ) {
+      afterUnit = false;
+      position += 1;
+    } else {
+      return { end: position, tokenEnd };
+    }
+  }
+}
+
+/** The length of the unit at `index`, or 0 where none starts. */
+function citationUnitLength(content: string, index: number): number {
+  if (index >= content.length) return 0;
+  const code = content.charCodeAt(index);
+  // ASCII is read without the expression: no ASCII character outside the unit
+  // folds into it, so the answer is the same and the scan stays cheap per character.
+  if (code < 0x80) {
+    if (code === 0x25) {
+      return isHexDigitCode(content.charCodeAt(index + 1)) &&
+        isHexDigitCode(content.charCodeAt(index + 2))
+        ? 3
+        : 0;
+    }
+    return isAsciiNameCode(code) ? 1 : 0;
+  }
+  CITATION_UNIT.lastIndex = index;
+  return CITATION_UNIT.exec(content)?.[0].length ?? 0;
+}
+
+function isAsciiNameCode(code: number): boolean {
+  return (
+    (code >= 0x30 && code <= 0x39) ||
+    (code >= 0x41 && code <= 0x5a) ||
+    (code >= 0x61 && code <= 0x7a) ||
+    code === 0x2e ||
+    code === 0x5f ||
+    code === 0x7e ||
+    code === 0x2d
+  );
+}
+
+function isHexDigitCode(code: number): boolean {
+  return (
+    (code >= 0x30 && code <= 0x39) ||
+    (code >= 0x41 && code <= 0x46) ||
+    (code >= 0x61 && code <= 0x66)
+  );
+}
+
+function isPathSeparatorAt(content: string, index: number): boolean {
+  return content[index] === "/" || content[index] === "\\";
+}
+
+function isDriveLetterAt(content: string, index: number): boolean {
+  if (content[index + 1] !== ":") return false;
+  CITATION_DRIVE.lastIndex = index;
+  return CITATION_DRIVE.test(content);
+}
 
 /** Everything a citation token is resolved against, derived from the config. */
 type CitationContext = {
@@ -1671,8 +1780,8 @@ function resolveCitations(
   unscannableTargets: readonly string[],
 ): string[] {
   const cited = new Set<string>();
-  for (const match of content.matchAll(DOCUMENT_CITATION_PATTERN)) {
-    const target = citationCandidates(context, citingFile, match[0]).find((candidate) =>
+  for (const token of citationTokensIn(content)) {
+    const target = citationCandidates(context, citingFile, token).find((candidate) =>
       documents.has(candidate),
     );
     if (target !== undefined) {
