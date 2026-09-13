@@ -25,7 +25,12 @@ describe("reviewer cards give excess a blocking route bounded by the safety floo
       );
       expect(text.replace(/\s+/g, " ")).toContain(
         "Any in-scope blocking finding from an invoked reviewer prevents DONE until resolved; " +
-          "`blocking_agents` names the verdicts the phase always requires.",
+          "`blocking_agents` requires a reviewer's PASS only when that reviewer is routed.",
+      );
+      const remit = text.split("### Reviewer remit")[1]?.split("### Finding provenance")[0];
+      expect(remit?.replace(/\s+/g, " ")).toContain(
+        "Article VII excess in the reviewing stage's own artifacts is in scope; " +
+          "quality of downstream implementation code is deferred at upstream stages.",
       );
     },
   );
