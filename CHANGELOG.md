@@ -6,6 +6,11 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Added
 
+- **Repository reuse is the second of seven minimal-implementation rungs**
+  (#1795). Check the codebase before the standard library, platform and installed
+  dependencies. Existing repository code can answer the accepted behavior
+  without a duplicate implementation. The shipped copy has the same order.
+
 - **Retained failures keep unit-level coverage** (#1793). The
   minimal-implementation safety floor protects coverage of the failure paths
   production code retains.
