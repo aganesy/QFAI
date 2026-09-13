@@ -54,8 +54,10 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   through the repository's own glob compiler rather than a second
   implementation of the same notation. A citation opens only where the text
   before it is not path text, so a runner's temporary directory or another
-  clone's path is not read as this repository's file, and a wildcard does not
-  stand in for a dot-leading name that has to be written.
+  clone's path is not read as this repository's file, whether written with `/` or
+  `\`, and a wildcard does not stand in for a dot-leading name that has to be
+  written. A brace range names every member between its ends, and a JSON record
+  is read as its decoded strings.
 
   A record that explains why an artifact is absent says so with
   `<!-- qfai:not-a-citation -->` on the line, or on the line before a fenced
@@ -66,7 +68,8 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   such as `[[:digit:]]` and leaves a pattern matching the letters of the name.
   The class's real terminator is found now, and each named class is written out
   as the members a regular expression takes — so a project whose test glob uses
-  one is no longer told the file it generated does not match it.
+  one is no longer told the file it generated does not match it. A backslash in
+  a class escapes the member after it, so `[\-T]` names a hyphen and `T`.
 
 ## [1.12.0] - 2026-09-12
 

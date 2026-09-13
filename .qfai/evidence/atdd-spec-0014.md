@@ -507,7 +507,7 @@ when the escalation resolves, by the stage that owns it.
 - Review pack seal: none
 
 **Both are absent rather than empty.** `pack-seal.md` requires a sealed
-`.qfai/review/review-<timestamp>/` pack beside a stage verdict, and this run
+`.qfai/review/review-<timestamp>/` pack beside a stage verdict, and this run <!-- qfai:not-a-citation -->
 retained none — the rounds were taken and their responses summarised without a
 pack being archived. A seal computed now would address a directory that does not
 exist, so the fields record the absence. It is part of what the escalation puts

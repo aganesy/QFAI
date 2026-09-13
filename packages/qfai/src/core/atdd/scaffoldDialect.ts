@@ -513,6 +513,11 @@ export function findClassClose(pattern: string, open: number): number {
   if (pattern[index] === "]") index += 1;
   while (index < pattern.length) {
     const char = pattern[index];
+    // An escaped member is a member, `]` included.
+    if (char === "\\") {
+      index += 2;
+      continue;
+    }
     if (char === "]") return index;
     const marker = char === "[" ? (pattern[index + 1] ?? "") : "";
     if (marker === ":" || marker === "=" || marker === ".") {
@@ -578,6 +583,15 @@ function compileClassBody(body: string): string | null {
       }
     }
     const char = body[index] ?? "";
+    // The matcher reads a backslash as escaping the member after it, so `[\-T]`
+    // names a hyphen and `T`. Copied as a backslash member, it made a range
+    // no expression accepts, and the class matched nothing.
+    if (char === "\\" && index + 1 < body.length) {
+      const member = body[index + 1] ?? "";
+      source += /[\\\][^-]/.test(member) ? `\\${member}` : member;
+      index += 2;
+      continue;
+    }
     source += char === "\\" || char === "]" ? `\\${char}` : char;
     index += 1;
   }

@@ -88,7 +88,10 @@ function citationOpener(line: string, from: number): string | null {
       ? line.slice(opener, start)
       : "";
   const before = emphasis === "" ? start : opener;
-  if (before !== 0 && CITATION_CHARACTER.test(line[before - 1] ?? "")) return null;
+  // A backslash before the root is Windows path text: `C:\run\.qfai/report/…` names
+  // a machine's file, as a POSIX absolute path does.
+  const previous = line[before - 1] ?? "";
+  if (before !== 0 && (CITATION_CHARACTER.test(previous) || previous === "\\")) return null;
   return emphasis;
 }
 
@@ -522,9 +525,31 @@ type Citation = readonly [file: string, cited: string, occurrence: number];
 async function measureCitations(): Promise<Citation[]> {
   const measured: Citation[] = [];
   for (const file of evidenceFiles) {
-    measured.push(...citationsOf(file, await readFile(path.join(repoRoot, file), "utf-8")));
+    const text = await readFile(path.join(repoRoot, file), "utf-8");
+    measured.push(...citationsOf(file, file.endsWith(".json") ? decodedJson(text) : text));
   }
   return measured;
+}
+
+/**
+ * A JSON record's string values, one per line, as the record means them.
+ *
+ * JSON may write a separator as `\/` or `\u002f`, and the raw text then holds no
+ * root to find. A record that does not parse is read as the text it is.
+ */
+function decodedJson(text: string): string {
+  const strings: string[] = [];
+  const collect = (value: unknown): void => {
+    if (typeof value === "string") strings.push(...value.split("\n"));
+    else if (Array.isArray(value)) value.forEach(collect);
+    else if (typeof value === "object" && value !== null) Object.values(value).forEach(collect);
+  };
+  try {
+    collect(JSON.parse(text));
+  } catch {
+    return text;
+  }
+  return strings.join("\n");
 }
 
 /** The citations one evidence file's text carries, numbered per path. */
@@ -637,9 +662,41 @@ function expandBraces(cited: string): string[] {
   if (close === -1) return [cited];
   const before = cited.slice(0, open);
   const after = cited.slice(close + 1);
-  return topLevelAlternatives(cited.slice(open + 1, close)).flatMap((part) =>
+  const body = cited.slice(open + 1, close);
+  return (braceRange(body) ?? topLevelAlternatives(body)).flatMap((part) =>
     expandBraces(`${before}${part}${after}`),
   );
+}
+
+/**
+ * The members of a brace range, `1..3`, `01..03` or `a..c`, or `null` when
+ * the body is not one.
+ *
+ * The matcher expands a range to every member between its ends, so `{1..3}`
+ * names three files, not one called `1..3`.
+ */
+function braceRange(body: string): string[] | null {
+  const numeric = /^(-?\d+)\.\.(-?\d+)$/.exec(body);
+  if (numeric !== null) {
+    const [from, to] = [numeric[1] ?? "", numeric[2] ?? ""];
+    const width = /^-?0\d/.test(from) || /^-?0\d/.test(to) ? Math.max(from.length, to.length) : 0;
+    const [start, end] = [Number(from), Number(to)];
+    const step = start <= end ? 1 : -1;
+    const members: string[] = [];
+    for (let value = start; step > 0 ? value <= end : value >= end; value += step) {
+      members.push(String(value).padStart(width, "0"));
+    }
+    return members;
+  }
+  const alphabetic = /^([A-Za-z])\.\.([A-Za-z])$/.exec(body);
+  if (alphabetic === null) return null;
+  const [start, end] = [(alphabetic[1] ?? "").charCodeAt(0), (alphabetic[2] ?? "").charCodeAt(0)];
+  const step = start <= end ? 1 : -1;
+  const members: string[] = [];
+  for (let code = start; step > 0 ? code <= end : code >= end; code += step) {
+    members.push(String.fromCharCode(code));
+  }
+  return members;
 }
 
 /**
@@ -800,7 +857,9 @@ function segmentAdmits(part: string, segment: string): boolean {
  * group, is a pattern in its own right. `+(…)` and `*(…)` match a run of
  * members, and a leading dot the group spells is spelled by the first, so each
  * member comes back followed by the group again. A plain wildcard is one
- * pattern, and comes back as itself.
+ * pattern, and comes back as itself. A member holding a group of its own is
+ * opened too: `@(@(.git|g*)ignore|x)` spells `.gitignore` only inside, and
+ * left whole its `g*` sibling read the spelling as a wildcard's reach.
  */
 function topLevelAlternativesOf(part: string): string[] {
   const open = outsideClasses(part).find(
@@ -813,7 +872,9 @@ function topLevelAlternativesOf(part: string): string[] {
   const after = part.slice(close + 1);
   const repeat = part[open] === "+" || part[open] === "*" ? `*(${body})` : "";
   return splitAlternatives(body).flatMap((member) =>
-    expandBraces(`${before}${member}${repeat}${after}`),
+    topLevelAlternativesOf(member).flatMap((inner) =>
+      expandBraces(`${before}${inner}${repeat}${after}`),
+    ),
   );
 }
 
@@ -1249,6 +1310,40 @@ describe("a glob is a claim about a set", () => {
     }
   });
 
+  it("reads a backslash in a class as escaping the member after it", () => {
+    expect(compiled("[\\-T]C-*").test("TC-0001")).toBe(true);
+    expect(compiled("[\\-T]C-*").test("-C-0001")).toBe(true);
+    expect(compiled("[\\-T]C-*").test("UC-0001")).toBe(false);
+    expect(compiled("[\\]]x").test("]x")).toBe(true);
+  });
+
+  it("reads nested extended groups to the alternative that spells a dot-leading name", () => {
+    expect(segmentAdmits("@(@(.git|g*)ignore|x)", ".gitignore")).toBe(true);
+    expect(segmentAdmits("@(@(g*)ignore|x)", ".gitignore")).toBe(false);
+  });
+
+  it("expands a brace range to every member between its ends", () => {
+    expect(expandBraces(".qfai/report/run-{1..3}.json")).toEqual([
+      ".qfai/report/run-1.json",
+      ".qfai/report/run-2.json",
+      ".qfai/report/run-3.json",
+    ]);
+    expect(expandBraces("r-{08..10}")).toEqual(["r-08", "r-09", "r-10"]);
+    expect(expandBraces("r-{c..a}")).toEqual(["r-c", "r-b", "r-a"]);
+  });
+
+  it("counts nothing where a Windows path holds the root", () => {
+    expect(citationsIn("C:\\tmp\\run\\.qfai/report/validate.json")).toEqual([]);
+  });
+
+  it("reads a JSON record's strings decoded", () => {
+    const record = JSON.stringify({ source: ".qfai/report/missing.json" }).replaceAll("/", "\\/");
+    expect(record).not.toContain(".qfai/report/");
+    expect(citationsOf("x.json", decodedJson(record)).map(([, cited]) => cited)).toEqual([
+      ".qfai/report/missing.json",
+    ]);
+  });
+
   it("keeps a negated class's leading hyphen a member", () => {
     // Written beside the members, the separator made a range with the hyphen:
     // `[!-a-z]` compiled to a class whose `/-a` also excluded every capital, so
@@ -1342,9 +1437,8 @@ describe("a glob is a claim about a set", () => {
     expect(globToRegExp(".qfai/report/!(draft).json").test(".qfai/report/draft.json")).toBe(false);
     expect(globToRegExp(".qfai/report/!(draft).json").test(".qfai/report/final.json")).toBe(true);
     // The dialect reads the negation by prefix rather than by the pattern
-    // around it, so a name merely starting with the excluded text is refused
-    // where fast-glob admits it. Filed separately; pinned here so the fix has
-    // a case to flip rather than a silent behaviour change.
+    // around it, so a name that merely starts with the excluded text is refused
+    // where fast-glob admits it.
     expect(globToRegExp(".qfai/report/!(draft).json").test(".qfai/report/draftx.json")).toBe(false);
   });
 
