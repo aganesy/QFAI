@@ -224,6 +224,16 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   first, and the second is named. The prototyping profile, which certification
   accepts, reports the finding as well.
 
+- **A completed row's verdicts have to come from one review pack** (#1742).
+  `review-artifact-layout.md` writes one pack per review round, and the gate
+  checked each verdict's pack on its own. A row could present the completion,
+  implementation and product-surface verdicts from three unrelated review
+  requests as one round. `QFAI-TDDLIST-008` now reports a row whose
+  `Spec review pack`, `Code quality review pack` and `Prototype parity review
+pack` name different paths or seals. The layout says a round after a REVISE
+  asks every routed reviewer again, since each verdict has to name the final
+  tree.
+
 ## [1.12.0] - 2026-09-12
 
 ### Added
