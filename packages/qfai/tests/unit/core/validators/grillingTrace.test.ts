@@ -11,17 +11,45 @@
  * that matters goes with it.
  */
 
-import { mkdir, mkdtemp, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 
 import { describe, expect, it } from "vitest";
 
 import {
   GRILLING_TRACE_CODE,
+  TEMPLATE_PLACEHOLDERS,
+  validateDiscussionGrillingTrace,
   validateGrillingTrace,
 } from "../../../../src/core/validators/grillingTrace.js";
 import { removeTempTree } from "../../../helpers/tempTree.js";
+
+/** The spec stage's evidence template, as `qfai init` ships it. */
+const SPEC_EVIDENCE_TEMPLATE = path.resolve(
+  path.dirname(fileURLToPath(import.meta.url)),
+  "../../../../assets/init/.qfai/assistant/skills/qfai-sdd/templates/evidence/sdd-spec.md",
+);
+
+/** The discussion stage's session row, which is what a run that grilled writes. */
+const DISCUSSION_POPULATED = [
+  "# Evidence",
+  "",
+  "## Grilling Session",
+  "",
+  "| Ended | Ended at | Authoring began | Frontier | Lookups | Decisions | Escalated |",
+  "| ----- | -------- | --------------- | -------- | ------- | --------- | --------- |",
+  "| confirmed | 2026-01-01T09:14:00Z | 2026-01-01T09:15:20Z | empty | none in flight | 12 | 0 |",
+  "",
+].join("\n");
+
+/** The table `POPULATED` carries, without the heading above it. */
+const PHASE_TABLE = [
+  "| Phase | Session | Ended at | Wrote at | Frontier | Evidence |",
+  "| ----- | ------- | -------- | -------- | -------- | -------- |",
+  "| 0 | run | 2026-01-01T00:00:00Z | 2026-01-01T00:01:00Z | 4 settled, 0 escalated | #work-orders-summary |",
+].join("\n");
 
 /** A section with one phase row, which is what a run that grilled writes. */
 const POPULATED = [
@@ -49,6 +77,17 @@ async function evidence(root: string, name: string, body: string): Promise<void>
   const dir = path.join(root, ".qfai", "evidence");
   await mkdir(dir, { recursive: true });
   await writeFile(path.join(dir, name), body, "utf-8");
+}
+
+/**
+ * A discussion run stamped `stamp`: its pack directory, and its evidence file
+ * with `body` unless the run wrote none.
+ */
+async function discussionRun(root: string, stamp: string, body?: string): Promise<void> {
+  await mkdir(path.join(root, ".qfai", "discussion", `discussion-${stamp}`), {
+    recursive: true,
+  });
+  if (body !== undefined) await evidence(root, `discussion-${stamp}.md`, body);
 }
 
 describe("validateGrillingTrace", () => {
@@ -83,6 +122,94 @@ describe("validateGrillingTrace", () => {
       expect(issues).toHaveLength(1);
       expect(issues[0]?.message).toContain("at least one phase row");
     });
+  });
+
+  it("reports the template copied with nothing replaced", async () => {
+    // The shipped template's worked rows are table rows, so a check that only
+    // skipped the header and the separator counted a copy nobody filled in.
+    await withRoot(async (root) => {
+      const template = await readFile(SPEC_EVIDENCE_TEMPLATE, "utf-8");
+      await evidence(root, "sdd-spec-0007.md", template);
+
+      const issues = await validateGrillingTrace(root);
+
+      expect(issues).toHaveLength(1);
+      expect(issues[0]?.file).toBe(".qfai/evidence/sdd-spec-0007.md");
+    });
+  });
+
+  it("accepts the template once one row is filled in", async () => {
+    await withRoot(async (root) => {
+      const template = await readFile(SPEC_EVIDENCE_TEMPLATE, "utf-8");
+      const filled = template.replace(
+        "| 0     | run       | <ISO8601> | <ISO8601> | <n> settled, 0 escalated   | #work-orders-summary |",
+        "| 0     | run       | 2026-01-01T00:00:00Z | 2026-01-01T00:01:00Z | 4 settled, 0 escalated | #work-orders-summary |",
+      );
+      expect(filled, "the template's Phase 0 row changed shape").not.toBe(template);
+      await evidence(root, "sdd-spec-0007.md", filled);
+
+      expect(await validateGrillingTrace(root)).toEqual([]);
+    });
+  });
+
+  it.each([
+    ["a level-three heading", `# Evidence\n\n### Pre-draft Grilling\n\n${PHASE_TABLE}\n`],
+    [
+      "a mention in prose",
+      `# Evidence\n\nRecorded under \`## Pre-draft Grilling\` below.\n\n${PHASE_TABLE}\n`,
+    ],
+    [
+      "a fenced example",
+      `# Evidence\n\n\`\`\`markdown\n## Pre-draft Grilling\n\n${PHASE_TABLE}\n\`\`\`\n`,
+    ],
+  ])("does not take %s for the section", async (_form, body) => {
+    await withRoot(async (root) => {
+      await evidence(root, "sdd-spec-0007.md", body);
+
+      expect(await validateGrillingTrace(root)).toHaveLength(1);
+    });
+  });
+
+  it("reads no row from a table header left without its separator", async () => {
+    // Without the separator the lines are not a table, so the header is not a
+    // phase row somebody wrote.
+    await withRoot(async (root) => {
+      const header = PHASE_TABLE.split("\n")[0] ?? "";
+      await evidence(
+        root,
+        "sdd-spec-0007.md",
+        `# Evidence\n\n## Pre-draft Grilling\n\n${header}\n`,
+      );
+
+      expect(await validateGrillingTrace(root)).toHaveLength(1);
+    });
+  });
+
+  it("counts a filled row carrying angle-bracket Markdown", async () => {
+    await withRoot(async (root) => {
+      const row =
+        "| 0 | run | 2026-01-01T00:00:00Z | 2026-01-01T00:01:00Z | 4 settled,<br>0 escalated | <https://example.com/review> |";
+      const table = PHASE_TABLE.split("\n").slice(0, 2).concat(row).join("\n");
+      await evidence(root, "sdd-spec-0007.md", `# Evidence\n\n## Pre-draft Grilling\n\n${table}\n`);
+
+      expect(await validateGrillingTrace(root)).toEqual([]);
+    });
+  });
+
+  it("knows every placeholder the shipped template leaves in its rows", async () => {
+    // A placeholder the list does not name would let a copied row pass as one
+    // somebody wrote.
+    const template = await readFile(SPEC_EVIDENCE_TEMPLATE, "utf-8");
+    const after = template.split("\n## Pre-draft Grilling\n")[1] ?? "";
+    const rows = (after.split("\n## ")[0] ?? "")
+      .split("\n")
+      .filter((line) => /^\| [^-]/.test(line));
+    const tokens = rows.flatMap((line) => line.match(/<[^<>|]+>/g) ?? []);
+
+    expect(tokens.length, "the template's rows carry no placeholder").toBeGreaterThan(0);
+    for (const token of tokens) {
+      expect(TEMPLATE_PLACEHOLDERS).toContain(token);
+    }
   });
 
   it("accepts a populated section", async () => {
@@ -166,6 +293,14 @@ describe("validateGrillingTrace", () => {
     });
   });
 
+  it("ignores discussion evidence, which the discussion check reads", async () => {
+    await withRoot(async (root) => {
+      await evidence(root, "discussion-20260101000000000.md", "# Evidence\n");
+
+      expect(await validateGrillingTrace(root)).toEqual([]);
+    });
+  });
+
   it("ignores a directory named like the evidence file", async () => {
     // `readdir` returns both kinds, and reading a directory throws EISDIR
     // rather than reporting anything useful.
@@ -173,6 +308,139 @@ describe("validateGrillingTrace", () => {
       await mkdir(path.join(root, ".qfai", "evidence", "sdd-spec-0007.md"), { recursive: true });
 
       expect(await validateGrillingTrace(root)).toEqual([]);
+    });
+  });
+});
+
+describe("validateDiscussionGrillingTrace", () => {
+  it("reports the latest discussion run with no session section", async () => {
+    // The stage opens its evidence before writing anything else and records the
+    // session at every ending it admits, so no section is a run that wrote no
+    // record.
+    await withRoot(async (root) => {
+      await discussionRun(root, "20260101000000000", "# Evidence\n\n## Research Summary\n");
+
+      const issues = await validateDiscussionGrillingTrace(root);
+
+      expect(issues).toHaveLength(1);
+      expect(issues[0]?.code).toBe(GRILLING_TRACE_CODE);
+      expect(issues[0]?.severity).toBe("warning");
+      expect(issues[0]?.file).toBe(".qfai/evidence/discussion-20260101000000000.md");
+      expect(issues[0]?.message).toContain("## Grilling Session");
+    });
+  });
+
+  it("accepts a populated session row", async () => {
+    await withRoot(async (root) => {
+      await discussionRun(root, "20260101000000000", DISCUSSION_POPULATED);
+
+      expect(await validateDiscussionGrillingTrace(root)).toEqual([]);
+    });
+  });
+
+  it("reads the latest run only", async () => {
+    // An earlier run is history, and a record written for it now would be a
+    // claim rather than a record.
+    await withRoot(async (root) => {
+      await discussionRun(root, "20250101000000000", "# Evidence\n");
+      await discussionRun(root, "20260101000000000", DISCUSSION_POPULATED);
+
+      expect(await validateDiscussionGrillingTrace(root)).toEqual([]);
+
+      await discussionRun(root, "20270101000000000", "# Evidence\n");
+
+      const issues = await validateDiscussionGrillingTrace(root);
+      expect(issues.map((finding) => finding.file)).toEqual([
+        ".qfai/evidence/discussion-20270101000000000.md",
+      ]);
+    });
+  });
+
+  it("does not take a level-three heading for the section", async () => {
+    await withRoot(async (root) => {
+      await discussionRun(
+        root,
+        "20260101000000000",
+        DISCUSSION_POPULATED.replace("## Grilling Session", "### Grilling Session"),
+      );
+
+      expect(await validateDiscussionGrillingTrace(root)).toHaveLength(1);
+    });
+  });
+
+  it("says nothing in a scoped run", async () => {
+    // Discussion evidence belongs to no spec, so a `--spec` run could not act on
+    // the finding.
+    await withRoot(async (root) => {
+      await discussionRun(root, "20260101000000000", "# Evidence\n");
+
+      expect(await validateDiscussionGrillingTrace(root, { specScope: new Set(["0007"]) })).toEqual(
+        [],
+      );
+    });
+  });
+
+  it("says nothing without a discussion pack", async () => {
+    // Evidence files alone are no run: the run is the pack they belong to.
+    await withRoot(async (root) => {
+      await evidence(root, "sdd-spec-0007.md", "# Evidence\n");
+      await evidence(root, "discussion-notes.md", "# Notes\n");
+      await evidence(root, "discussion-20260101000000000.md", "# Evidence\n");
+
+      expect(await validateDiscussionGrillingTrace(root)).toEqual([]);
+    });
+  });
+
+  it("reports the latest pack's missing evidence while an older run's record is populated", async () => {
+    // The record belongs to the run whose stamp it carries, so an older
+    // populated file does not stand for a newer pack that wrote none.
+    await withRoot(async (root) => {
+      await discussionRun(root, "20260101000000000", DISCUSSION_POPULATED);
+      await discussionRun(root, "20270101000000000");
+
+      const issues = await validateDiscussionGrillingTrace(root);
+
+      expect(issues.map((finding) => finding.file)).toEqual([
+        ".qfai/evidence/discussion-20270101000000000.md",
+      ]);
+      expect(issues[0]?.message).toContain("has no evidence file");
+    });
+  });
+
+  it("reads packs from the configured discussion directory", async () => {
+    await withRoot(async (root) => {
+      await mkdir(path.join(root, "packs", "discussion-20260101000000000"), { recursive: true });
+      await evidence(root, "discussion-20260101000000000.md", "# Evidence\n");
+
+      const issues = await validateDiscussionGrillingTrace(root, {
+        discussionDir: path.join(root, "packs"),
+      });
+
+      expect(issues).toHaveLength(1);
+    });
+  });
+
+  it("ends the section at a level-one heading", async () => {
+    // A table under a later `# Appendix` is not a session row.
+    await withRoot(async (root) => {
+      await discussionRun(
+        root,
+        "20260101000000000",
+        [
+          "# Evidence",
+          "",
+          "## Grilling Session",
+          "",
+          "# Appendix",
+          "",
+          "| Term | Meaning |",
+          "| ---- | ------- |",
+          "| pack | a discussion run's directory |",
+          "",
+        ].join("\n"),
+      );
+
+      expect(await validateDiscussionGrillingTrace(root)).toHaveLength(1);
     });
   });
 });

@@ -153,6 +153,9 @@ describe("git honours the managed block against a broad pre-existing rule", () =
     // rule finds nothing on a fresh clone and reports the same clean result it
     // reports for a run that grilled every phase.
     ".qfai/evidence/sdd-spec-0001.md",
+    // The discussion stage's evidence, for the same reason: the rule reads the
+    // latest run's session row there.
+    ".qfai/evidence/discussion-20260101000000000.md",
     // The stand-in for a discussion pack on the imported-spec-set route, named
     // with the canonical 17-digit run stamp, and the template-named copy the
     // check also accepts.

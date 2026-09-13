@@ -521,6 +521,11 @@ export const GATE_GROUP_FAMILIES = {
   // inside `discussion`: a prototyping run listed as unevaluated a family it
   // had just emitted.
   "research-summary": ["QFAI-RESEARCH-*"],
+  // `QFAI-GRILL-001` has two emitters: the spec stage's check in
+  // `runSddValidators` and the discussion stage's in `runDiscussionValidators`.
+  // Inside either stage's group, the other profile was told it had not
+  // evaluated a code it had just emitted.
+  "grilling-trace": ["QFAI-GRILL-*"],
   // Enumerated. This entry WAS `["UIX-VAL-*"]`, and that glob is a PREFIX of
   // every `UIX-VAL-SKILL-*` code, which `prototyping-skill` owns — so all
   // twelve belonged to two groups at once until this list replaced it.
@@ -625,9 +630,6 @@ export const GATE_GROUP_FAMILIES = {
     "R-CERTIFY-VERIFY-CIRCULAR",
     "R-PROMPT-SCANNER-DRIFT",
     "R-AUTOPILOT-POLICY-*",
-    // Dispatched from the same group: `validateGrillingTrace` runs beside
-    // `validateAutopilotPolicy` in `runSddValidators`.
-    "QFAI-GRILL-*",
     "R-HANDOFF-INCOMPLETE",
     "R-WORKLOG-DRIFT",
     "R-REJECTED-READOPT",
@@ -931,12 +933,14 @@ const PROFILE_GATE_GROUPS: Record<ValidationProfile, readonly GateGroup[]> = {
     // the skill mandates a parsable root DESIGN.md and names this profile as
     // its gate.
     "root-design-md-parse",
+    "grilling-trace",
   ],
   // `runSddValidators` also calls `validateTddListSeedShape`: the stage that
   // seeds the ledger is gated on the shape it seeded.
   sdd: [
     "sdd",
     "reviewer-gate-sdd",
+    "grilling-trace",
     // `runSddValidators` calls `runPackageSelfGovernanceValidators`, so sdd
     // evaluates this group too — subject to the per-code precondition check.
     "package-self-governance",

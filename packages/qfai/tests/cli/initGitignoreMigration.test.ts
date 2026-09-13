@@ -134,6 +134,8 @@ describe("a legacy per-directory evidence ignore is migrated, not ignored", () =
         "!decisions/**",
         "!implement-*.md",
         "!atdd-*.md",
+        "!sdd-*.md",
+        "!discussion-*.md",
         "!import-lite.md",
         `!import-lite-${CANONICAL_TIMESTAMP_GLOB}.md`,
       ]) {
@@ -149,6 +151,7 @@ describe("a legacy per-directory evidence ignore is migrated, not ignored", () =
       for (const name of [
         "implement-spec-0001.md",
         "atdd-spec-0001.md",
+        "discussion-20260101000000000.md",
         "import-lite-20260101000000000.md",
       ]) {
         await writeFile(path.join(root, ".qfai", "evidence", name), "# evidence\n", "utf-8");
@@ -191,6 +194,8 @@ describe("a legacy per-directory evidence ignore is migrated, not ignored", () =
         ".qfai/evidence/change-request-0001.md",
         ".qfai/evidence/decision-0001.md",
         ".qfai/evidence/decisions/20260101T000000000.json",
+        ".qfai/evidence/sdd-spec-0001.md",
+        ".qfai/evidence/discussion-20260101000000000.md",
         ".qfai/evidence/import-lite-20260101000000000.md",
         ".qfai/evidence/import-lite.md",
       ]) {
