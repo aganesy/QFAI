@@ -14,6 +14,10 @@
 
 ## Review Focus
 
+- Verify repository-fact lookup evidence under
+  `.qfai/assistant/skills/qfai-discussion/SKILL.md#reviewer-gate-must`.
+- Judge planning-stage decisions under
+  `.qfai/assistant/constitution/review-convergence.md#discussion-review-precision`.
 - Correctness against source requirements
 - Consistency with upstream/downstream artifacts
 - Testability and acceptance clarity

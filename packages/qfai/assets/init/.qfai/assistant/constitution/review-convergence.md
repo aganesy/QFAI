@@ -120,6 +120,17 @@ which owns the delegation rules these sit beside.
   the escalation exit in the round budget withholds _Accept as Open Question_
   for this same class, so a user choice cannot supersede it either.
 
+### Discussion review precision
+
+A discussion review judges what the planning stage decides, not implementation
+precision. Exact code-line edits, generated-copy updates and merge mechanics
+belong to the stage implementing the change. They may be reported as advice,
+not demanded as extra discussion completion work.
+
+Wrong repository facts, missing decision traceability, scope contradictions and
+defects in the pack's own safety obligations remain in remit. Non-normative
+status is not permission to pass those.
+
 ### Agent-to-agent grilling (MUST)
 
 A grilling session between agents has no user answering its questions, so the

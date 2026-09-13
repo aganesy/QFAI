@@ -20,6 +20,8 @@ tree with no packs only warns, so the cycle passes `--fail-on error` unreviewed:
 2. Apply the footer SSOT from `rcp_footer.md`.
 3. Run only the routed reviewers for the current phase and conditions.
 4. On `REVISE`, rerun only that reviewer and any reviewer whose scope changed. `REVISE` is the in-flight verdict (`.qfai/assistant/constitution/shared-skill-delegation-baseline.md#reviewer-response-template`); it becomes `status: "FAIL"` only when the pack's `summary.json` is written.
+   Fix the finding with the smallest edit that resolves it; leave unaffected
+   content alone.
 5. Mark fixed only when all routed blocking reviewers are `PASS`.
 
 ## summary.json

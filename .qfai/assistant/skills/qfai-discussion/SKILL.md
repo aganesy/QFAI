@@ -196,6 +196,9 @@ Before declaring completion, you MUST:
 
 Reviewer checks must confirm:
 
+- each repository fact the pack states names where it was read: a file and
+  heading, or a command and its observed output; read that source and verify
+  the claim rather than treating a citation as proof;
 - the stage evidence's `## Grilling Session` row shows the session ended before authoring began,
   with `Ended` one of `confirmed`, `user-closed` or `no-question`;
   and every decision it settled is recorded where `references/oq-and-deferred-rules.md` says;
