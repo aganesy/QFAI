@@ -67,11 +67,12 @@ const NAME_CHARACTER = /[^\s`"'<>|,;:()[\]{}\\!#]/u;
 const CODE_SPAN_PUNCTUATION: ReadonlySet<string> = new Set([",", ";", "!", ":"]);
 
 /**
- * Quotes and angle brackets, which a code span holds around a path as often as
- * inside a name: `".qfai/report/*"` is a quoted glob and `<pack>` a placeholder.
- * One of them followed by more of the name makes the token unreadable.
+ * Quotes, angle brackets and a pipe outside a group, which a code span holds
+ * around a path as often as inside a name: `".qfai/report/*"` is a quoted glob,
+ * `<pack>` a placeholder and `a.md|b.md` two names. One of them followed by more
+ * of the name makes the token unreadable.
  */
-const CODE_SPAN_QUOTE = /['"<>]/;
+const CODE_SPAN_QUOTE = /['"<>|]/;
 
 /** What closes each kind of group a citation can open. */
 const GROUP_CLOSERS: Readonly<Record<string, string>> = { "(": ")", "{": "}", "[": "]" };
@@ -285,18 +286,18 @@ const NOT_A_CITATION = /<!--\s*qfai:not-a-citation(?=\s|-->)[^>]*-->/;
  * untouched, so the only way to reach this number after adding a citation is to
  * remove one that was really there — and either edit is visible.
  */
-const INITIAL_CENSUS_SIZE = 127;
+const INITIAL_CENSUS_SIZE = 128;
 
 /**
  * The census keys themselves, as one digest.
  *
  * A length alone is not the no-growth rule: replacing a repaired entry with a
- * new one keeps it at 127, and every other check then passes while a fresh
+ * new one keeps it at 128, and every other check then passes while a fresh
  * citation inherits the retired slot. The digest moves for any substitution, and
  * does not move when an entry is repaired — repair adds to `CLEARED` and leaves
  * the census alone.
  */
-const INITIAL_CENSUS_DIGEST = "61beb69a762bcf0d473e43f8aa8d91155aa1fa926391ab79d6e3e8bca8b521f9";
+const INITIAL_CENSUS_DIGEST = "f48e0938b5dbd9ed21c8277d000172b3497c8256c48d37a96629571476290aab";
 
 /**
  * Every citation the first census found unresolved. **Append nothing here.**
@@ -342,6 +343,7 @@ const INITIAL_CENSUS: ReadonlyArray<Citation> = [
   [".qfai/evidence/atdd-spec-0017.md", ".qfai/review/review-20260822180000000", 1],
   [".qfai/evidence/atdd-spec-0017.md", ".qfai/review/review-20260823000000000", 1],
   [".qfai/evidence/coverage-depth-spec-0002.md", ".qfai/report/atdd-traceability/summary.json", 1],
+  [".qfai/evidence/coverage-depth-spec-0014.md", ".qfai/report/atdd-traceability/summary.json", 1],
   [".qfai/evidence/discussion-20260330153902875.md", ".qfai/discussion/README.md", 1],
   [".qfai/evidence/discussion-20260330153902875.md", ".qfai/discussion/README.md", 2],
   [".qfai/evidence/discussion-20260415161758193.md", ".qfai/discussion/README.md", 1],
@@ -2163,8 +2165,14 @@ describe("a glob is a claim about a set", () => {
     // The prefix is a tracked file, and resolving it passed a record naming one
     // the tree does not have.
     expect(citationsIn("see `.qfai/report/preflight_summary.md'missing` here")).toEqual([]);
+    // A pipe outside a group is the same: the name runs on past it.
+    expect(citationsIn("see `.qfai/report/preflight_summary.md|missing` here")).toEqual([]);
     // A quote closing the path is punctuation around it, as a quoted glob is.
     expect(citationsIn('see `".qfai/report/*"` here')).toEqual([".qfai/report/*"]);
+    // Inside a group a pipe separates alternatives.
+    expect(citationsIn("see `.qfai/report/@(a|b).json` here")).toEqual([
+      ".qfai/report/@(a|b).json",
+    ]);
   });
 
   it("keeps a colon a code span delimits", () => {
