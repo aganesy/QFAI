@@ -57,7 +57,7 @@ contradicting its own acceptance criterion. See Findings 1, 2, 3 and 8.
 
 Section "Every `❌` cell, named" accounts for all 312 of them in named groups whose coordinates are
 fully enumerated, so that "one justification per `❌`" is checkable rather than asserted, and section
-"Every `⚠️` cell, named" does the same for all 117 partial scores, which the PASS criterion also
+"Every `⚠️` cell, named" does the same for all 116 partial scores, which the PASS criterion also
 requires a rationale for.
 
 ## What was measured, and how
@@ -90,18 +90,18 @@ no run behind it, which is the defect this whole document is written against.
 | `tests/core/sddTriage.test.ts`                                | 46 passed  |
 | `tests/core/sddPreflight.test.ts`                             | 26 passed  |
 | `tests/integration/sddUiTemplate.test.ts`                     | 2 passed   |
-| `tests/integration/sddPrimaryTasksLane.test.ts`               | 4 passed   |
+| `tests/integration/sddPrimaryTasksLane.test.ts`               | 5 passed   |
 | `tests/e2e/spec0013UiContractPrimaryTasksE2E.test.ts`         | 3 passed   |
 | `tests/e2e/spec0013ActivePointerSurfaceTypeE2E.test.ts`       | 6 passed   |
 | `tests/core/activeDiscussionPack.test.ts`                     | 4 passed   |
 | `tests/core/surfaceTypePopulate.test.ts`                      | 6 passed   |
 | `tests/integration/primaryTasksBand.test.ts`                  | 8 passed   |
-| `tests/integration/primaryTasksStructured.test.ts`            | 6 passed   |
+| `tests/integration/primaryTasksStructured.test.ts`            | 7 passed   |
 | `tests/integration/spec0013ActivePointerSurfaceType.test.ts`  | 8 passed   |
 | `tests/cli/commands/sddPreflight.test.ts`                     | 12 passed  |
 | `tests/validators/importLite.test.ts`                         | 94 passed  |
 | `tests/core/validators/designContractReadiness.test.ts`       | 63 passed  |
-|                                                               | **361**    |
+|                                                               | **363**    |
 
 Two sets are counted here and they are not the same set. Thirteen files carry a `QFAI:SPEC-0013`
 annotation, and every one of them is in the table. Four carry none and are scored under step 2 of
@@ -337,7 +337,7 @@ $ node packages/qfai/dist/cli/index.mjs validate --profile tdd --spec 0013 --fai
 
 **No spec-0013 obligation depends on a skipped test.** All sixteen belong to spec-0004, spec-0006,
 spec-0008 and spec-0014. None of the seventeen files that carry spec-0013 coverage contains a `.skip`,
-`.only` or `.todo` modifier of any kind, and all 361 of their cases ran. The sixteen findings are
+`.only` or `.todo` modifier of any kind, and all 363 of their cases ran. The sixteen findings are
 in this pack's *report* scope because the validator scans the whole test tree; they are not in its
 *coverage* scope, and they contribute to no cell in this matrix.
 
@@ -384,7 +384,7 @@ in this pack's *report* scope because the validator scans the whole test tree; t
 | TC-0013-0023 | ❌                     | ❌          | ❌         | ❌         | ❌              | ❌             | ❌                | ❌            | ❌              | ❌     |
 | TC-0013-0024 | ❌                     | ❌          | ❌         | ❌         | ❌              | ❌             | ❌                | ❌            | ❌              | ❌     |
 | TC-0013-0025 | ⚠️ | ❌ | ❌ | ⚠️ | ❌ | ❌ | ❌ | ❌ | ⚠️ | ⚠️ |
-| TC-0013-0026 | ✅ | ✅ | ⚠️ | ⚠️ | ✅ | ⚠️ | ❌ | ⚠️ | ✅ | ⚠️ |
+| TC-0013-0026 | ✅ | ✅ | ✅ | ⚠️ | ✅ | ⚠️ | ❌ | ⚠️ | ✅ | ⚠️ |
 | TC-0013-0027 | ✅                     | ✅          | ❌         | ⚠️         | ⚠️              | ⚠️             | ❌                | ⚠️            | ⚠️              | ❌     |
 | TC-0013-0028 | ⚠️                     | ✅          | ❌         | ❌         | ❌              | ❌             | ❌                | ❌            | ⚠️              | ⚠️     |
 | TC-0013-0029 | ⚠️                     | ✅          | ✅         | ⚠️         | ❌              | ❌             | ❌                | ⚠️            | ✅              | ⚠️     |
@@ -408,7 +408,7 @@ Per scored depth column, 49 cells each:
 | ---------------------- | --- | --- | --- |
 | Equivalence partitions | 13  | 14  | 22  |
 | Normal path | 19 | 11 | 19 |
-| Error path | 8 | 7 | 34 |
+| Error path | 9 | 6 | 34 |
 | Edge cases             | 2   | 14  | 33  |
 | Boundary values        | 1   | 11  | 37  |
 | Special values         | 1   | 8   | 40  |
@@ -965,11 +965,11 @@ obligation, and a mark is the second claim.
 
 ## Every ⚠️ cell, named
 
-102 scored depth cells in the matrix and 15 scored cells in the business rule table are `⚠️` —
-**117 in all**. The PASS criterion requires a documented rationale for each, so each is named here,
+101 scored depth cells in the matrix and 15 scored cells in the business rule table are `⚠️` —
+**116 in all**. The PASS criterion requires a documented rationale for each, so each is named here,
 grouped by column with a per-coordinate reason.
 
-### Matrix depth cells (102)
+### Matrix depth cells (101)
 
 **`Equivalence partitions`, 14 cells** — `US-0013-0003`, `US-0013-0012`, `TC-0013-0003`, `-0014`,
 `-0017`, `-0018`, `-0019`, `-0020`, `-0021`, `-0022`, `-0025`, `-0028`, `-0029`, `-0032`.
@@ -1056,14 +1056,14 @@ grouped by column with a per-coordinate reason.
   appears in none of the three artifacts and in no assertion; what is pinned is a ceiling with no
   floor, in a file the row does not name.
 
-**`Error path`, 7 cells** — `US-0013-0011`, `US-0013-0014`, `TC-0013-0003`, `-0014`, `-0021`,
-`-0026`, `-0035`.
+**`Error path`, 6 cells** — `US-0013-0011`, `US-0013-0014`, `TC-0013-0003`, `-0014`, `-0021`,
+`-0035`.
 
-- `US-0013-0011` and `TC-0013-0026` — the refusal is produced and the message is required to name
-  the file, the screen and the rule token, which is a real error oracle. Both obligations put the
-  refusal in the `/qfai-prototyping` preflight, and every selected case stops at `runValidate` or
-  `validateDesignAudit`; nothing drives that preflight. A preflight that proceeded despite
-  `QFAI-AUD-001` leaves both cells green.
+- `US-0013-0011` — the refusal is produced and the message is required to name the file, the
+  screen and the rule token, which is a real error oracle. The story puts the refusal in the
+  `/qfai-prototyping` preflight as well, and every case selected for it stops at `runValidate`; the
+  case that drives the preflight is `TC-0013-0026`'s. A preflight that proceeded despite
+  `QFAI-AUD-001` leaves this row's cases green.
 - `US-0013-0014` and `TC-0013-0035` — the closed-schema rejection is driven and the message names
   the offending field and item. It is the same entrypoint gap the `Normal path` entry above records:
   the rejection is observed through `designAudit.ts`, and `auditProfile.ts` is what the obligation
@@ -1146,8 +1146,8 @@ grouped by column with a per-coordinate reason.
   the best boundary work in the pack. Both are `⚠️` because the **floor the obligation declares is
   exercised with the opposite verdict**: counts 1 and 2 are required to be silent and the obligation
   requires them to warn.
-- `TC-0013-0035` — two of the three required fields have a missing-field case (`acceptance`, `id`).
-  `label` has none, and neither does an item with zero keys or an item carrying two extra keys.
+- `TC-0013-0035` — each of the three required fields has a missing-field case (`id`, `label`,
+  `acceptance`). An item with zero keys and an item carrying two extra keys are not supplied.
 
 **`Special values`, 8 cells** — `US-0013-0003`, `US-0013-0014`, `TC-0013-0016`, `-0018`, `-0026`,
 `-0027`, `-0033`, `-0035`.
@@ -1525,7 +1525,7 @@ rather than by the spec.
 `QFAI-ATDD-133` requires the stage evidence to carry a `## Coverage Depth Matrix` section that links
 to this file and restates the counted totals beside it. Those totals are:
 
-**✅ 65 / ⚠️ 117 / ❌ 312**, with `n/a 7`, across all 501 scored cells — 441 matrix depth cells and
+**✅ 66 / ⚠️ 116 / ❌ 312**, with `n/a 7`, across all 501 scored cells — 441 matrix depth cells and
 60 business rule scored cells. `Status` is a row verdict, not a mark, and is excluded from all four
 counts.
 

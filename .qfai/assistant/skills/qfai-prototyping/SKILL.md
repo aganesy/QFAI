@@ -187,7 +187,8 @@ current `DESIGN.md` hash does not match the lock.
   both exist; confirm `.qfai/contracts/ui/*.yaml` exists.
 - Run `npx qfai prototyping preflight --target-url <url>` (alias for
   `npx qfai doctor --profile prototyping`) — verifies DESIGN.md parses and
-  matches the lock sha256.
+  matches the lock sha256, and refuses while a UI contract screen has no
+  primary task.
 
 ### Step 2-B — Verify Environment Preconditions
 
