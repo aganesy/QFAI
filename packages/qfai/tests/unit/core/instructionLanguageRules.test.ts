@@ -20,6 +20,7 @@
 import { mkdtemp, mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 
 import { describe, expect, it } from "vitest";
 
@@ -33,6 +34,32 @@ import {
 
 const CODE_REVIEW = "code-review.instructions.md";
 const PRINCIPLES = "principles.instructions.md";
+const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../../../..");
+
+describe("generated async guidance preserves propagation and the whole floor", () => {
+  it("does not permit a dropped promise or require catches for unnamed failures", () => {
+    const block = languageRulesFor(CODE_REVIEW, "typescript");
+    expect(block).not.toBeNull();
+    const flat = block?.replace(/\s+/g, " ");
+    expect(flat).toContain("Flag a Promise that is neither awaited nor returned");
+    expect(flat).toContain("its caller awaits or adopts the Promise");
+    expect(flat).toContain("Subject to the safety floor");
+    expect(flat).toContain(".agents/rules/minimal-implementation.md");
+    expect(flat).toContain("§ 2");
+    expect(flat).toContain("no specification, contract or observation names");
+    expect(block).not.toContain("without `.catch` or `void` annotation");
+  });
+
+  it("agrees byte-for-byte with the repository's TypeScript block", async () => {
+    const block = languageRulesFor(CODE_REVIEW, "typescript");
+    if (block === null) throw new Error("TypeScript review rules must exist.");
+    const current = await readFile(
+      path.join(REPO_ROOT, ".github/instructions", CODE_REVIEW),
+      "utf-8",
+    );
+    expect(current.replace(/\r\n/g, "\n")).toContain(block);
+  });
+});
 
 /** A shipped template's shape: prose, a blank line, then the slot. */
 const template = (): string => `Constraints:\n\n- something\n\n${LANGUAGE_RULES_MARKER}\n`;
@@ -154,6 +181,8 @@ describe("qfai init writes no slot into a project", () => {
 
       const review = await slotIn(root, CODE_REVIEW);
       expect(review).toContain("TypeScript specific checks:");
+      expect(review).toContain("Flag a Promise that is neither awaited nor returned");
+      expect(review).toContain("Subject to the safety floor");
       expect(review).not.toContain(LANGUAGE_RULES_MARKER);
       expect(await slotIn(root, PRINCIPLES)).not.toContain(LANGUAGE_RULES_MARKER);
     });

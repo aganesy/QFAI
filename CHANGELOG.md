@@ -23,6 +23,10 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- Generated TypeScript review guidance flags dropped promises and preserves
+  propagation rather than requiring catches for unnamed failures. The repository
+  copy matches the generated block (#1806).
+
 - **The working-tree address excludes a nested project's own records, and stops on
   a FIFO or socket git does not list** (#1747). The collection reads the lists
   from the worktree root, but rooted the `.qfai/evidence`, `.qfai/review` and
