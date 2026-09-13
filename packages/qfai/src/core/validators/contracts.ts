@@ -27,6 +27,7 @@ import { validateDbContractApplyOrder } from "./dbContractApplyOrder.js";
 import { validateDbContractExecutability } from "./dbContractExecutability.js";
 import { validateUiMarkerPresence } from "./uiMarkerPresence.js";
 import { validateUiPrototypeMode } from "./uiPrototypeMode.js";
+import { validateUiScreenEntries } from "./uiScreenEntries.js";
 import { issue } from "./utils.js";
 
 const SQL_DANGEROUS_PATTERNS: Array<{ pattern: RegExp; label: string }> = [
@@ -115,6 +116,9 @@ export async function validateContracts(root: string, config: QfaiConfig): Promi
   // marker rule checks the selectors under `prototype`, this one the word
   // beside them.
   issues.push(...(await validateUiPrototypeMode(root, config)));
+  // The entries every consumer reads past: a screen with no `id` or `route`, and
+  // the second entry for an `id`.
+  issues.push(...(await validateUiScreenEntries(root, config)));
 
   return issues;
 }
