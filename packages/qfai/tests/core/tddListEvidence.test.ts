@@ -2829,6 +2829,142 @@ result, so the assertion cannot be tightened without drift.
     });
   }
 
+  describe("the tree the reviewers judge", () => {
+    // The round's `Revision` names the tree before the refactor. The reviews
+    // judge the tree after it, which `Refactor verify revision` names.
+    const FINAL_TREE = "fed9870000000000000000000000000000000000";
+    const refactoredEntry = (options: {
+      readonly reviewed: string;
+      readonly refactor?: string;
+      readonly checkpoint?: string;
+    }): string =>
+      completeEntry("Unit")
+        .replace(
+          "- Refactor verify result: 1 passed",
+          [
+            "- Refactor verify result: 1 passed",
+            ...(options.refactor === undefined
+              ? []
+              : [`- Refactor verify revision: ${options.refactor}`]),
+          ].join("\n"),
+        )
+        .replaceAll(
+          `reviewed revision: ${DEFAULT_REVISION}`,
+          `reviewed revision: ${options.reviewed}`,
+        )
+        .replace(
+          "- Checkpoint verification seal: {{CHECKPOINT_SEAL}}",
+          [
+            ...(options.checkpoint === undefined
+              ? []
+              : [`- Checkpoint verification revision: ${options.checkpoint}`]),
+            "- Checkpoint verification seal: {{CHECKPOINT_SEAL}}",
+          ].join("\n"),
+        );
+    const unresolvedFor = async (root: string, evidence: string, revision: string) =>
+      (
+        await runIssuesOn(
+          root,
+          ledger([{ status: "done", evidence: IMPLEMENT_POINTER }]),
+          { ".qfai/evidence/implement-spec-0001.md": evidence },
+          { revision },
+        )
+      ).find((issue) => issue.code === "QFAI-TDDLIST-008");
+
+    it("accepts reviewers naming the final tree after a refactor that changed it", async () => {
+      await withProject(async (root) => {
+        const evidence = refactoredEntry({
+          reviewed: FINAL_TREE,
+          refactor: FINAL_TREE,
+          checkpoint: FINAL_TREE,
+        });
+        expect(await unresolvedFor(root, evidence, FINAL_TREE)).toBeUndefined();
+      });
+    });
+
+    it("refuses a reviewer naming the tree before a refactor that changed it", async () => {
+      await withProject(async (root) => {
+        const evidence = refactoredEntry({ reviewed: DEFAULT_REVISION, refactor: FINAL_TREE });
+        const found = await unresolvedFor(root, evidence, DEFAULT_REVISION);
+        expect(found?.message).toContain(
+          "Spec reviewed revision matching Refactor verify revision",
+        );
+        expect(found?.message).toContain(
+          "Code quality reviewed revision matching Refactor verify revision",
+        );
+      });
+    });
+
+    it("holds a row that records no refactor revision to the round's Revision", async () => {
+      await withProject(async (root) => {
+        const evidence = refactoredEntry({ reviewed: FINAL_TREE, checkpoint: FINAL_TREE });
+        const found = await unresolvedFor(root, evidence, FINAL_TREE);
+        expect(found?.message).toContain("Spec reviewed revision matching latest Revision");
+      });
+    });
+
+    it("refuses a refactor revision written after the review fields", async () => {
+      // Past that boundary the field is outside what the reviewers hashed, and
+      // it decides which tree their revisions have to name.
+      await withProject(async (root) => {
+        const evidence = refactoredEntry({ reviewed: FINAL_TREE, checkpoint: FINAL_TREE }).replace(
+          "- Checkpoint verification command: npm test",
+          `- Refactor verify revision: ${FINAL_TREE}\n- Checkpoint verification command: npm test`,
+        );
+        const found = await unresolvedFor(root, evidence, FINAL_TREE);
+        expect(found?.message).toContain(
+          "all phase-authored fields before review and checkpoint fields",
+        );
+      });
+    });
+
+    it("refuses a refactor revision on the table row that opens the review fields", async () => {
+      // That row is left out of the audited phase evidence whole, so a cell on it
+      // is unaudited wherever it sits.
+      await withProject(async (root) => {
+        const evidence = refactoredEntry({ reviewed: FINAL_TREE, checkpoint: FINAL_TREE }).replace(
+          "- Spec review: PASS",
+          `| Spec review | PASS | Refactor verify revision | ${FINAL_TREE} |`,
+        );
+        const found = await unresolvedFor(root, evidence, FINAL_TREE);
+        expect(found?.message).toContain(
+          "all phase-authored fields before review and checkpoint fields",
+        );
+      });
+    });
+
+    it("refuses a refactor revision written as a round's field, or written twice", async () => {
+      await withProject(async (root) => {
+        const prefixed = refactoredEntry({ reviewed: FINAL_TREE, checkpoint: FINAL_TREE }).replace(
+          "- Refactor verify result: 1 passed",
+          `- Refactor verify result: 1 passed\n- Round 1: Refactor verify revision: ${FINAL_TREE}`,
+        );
+        const found = await unresolvedFor(root, prefixed, FINAL_TREE);
+        expect(found?.message).toContain("Refactor verify revision without a Round N: prefix");
+      });
+      await withProject(async (root) => {
+        const twice = refactoredEntry({
+          reviewed: FINAL_TREE,
+          refactor: FINAL_TREE,
+          checkpoint: FINAL_TREE,
+        }).replace(
+          "- Refactor verify result: 1 passed",
+          `- Refactor verify result: 1 passed\n- Refactor verify revision: ${DEFAULT_REVISION}`,
+        );
+        const found = await unresolvedFor(root, twice, FINAL_TREE);
+        expect(found?.message).toContain("exactly one Refactor verify revision");
+      });
+    });
+
+    it("refuses a refactor revision that names no revision", async () => {
+      await withProject(async (root) => {
+        const evidence = refactoredEntry({ reviewed: DEFAULT_REVISION, refactor: "latest" });
+        const found = await unresolvedFor(root, evidence, DEFAULT_REVISION);
+        expect(found?.message).toContain("Refactor verify revision naming");
+      });
+    });
+  });
+
   describe("Checkpoint verification revision", () => {
     const FINAL_TREE = "fed9870000000000000000000000000000000000";
     const sealedOver = (sealRevision: string, checkpointRevision = FINAL_TREE): string =>
