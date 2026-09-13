@@ -164,9 +164,11 @@ function citationsIn(line: string, spans: readonly CodeSpan[] = codeSpanRanges(l
         // resolves.
         const close = findClassClose(line, index);
         // Bounded to the token: a class that never closes inside the citation
-        // would otherwise borrow a `]` out of the sentence around it.
+        // would otherwise borrow a `]` out of the sentence around it. A code span
+        // delimits the token, so a class closing inside one may hold a space.
         const body = close === -1 ? "" : line.slice(index, close);
-        if (close !== -1 && body.trim() === body && !body.includes(" ")) {
+        const delimitedClass = span !== undefined && close !== -1 && close < span[1];
+        if (close !== -1 && (delimitedClass || (body.trim() === body && !body.includes(" ")))) {
           index = close + 1;
           continue;
         }
@@ -200,7 +202,7 @@ function citationsIn(line: string, spans: readonly CodeSpan[] = codeSpanRanges(l
       } else if (
         span !== undefined &&
         index < span[1] &&
-        (character === "," || character === ";" || character === "!")
+        (character === "," || character === ";" || character === "!" || character === ":")
       ) {
         // Punctuation a code span delimits, part of the name it holds. A `!` that
         // opens a group was read as an extglob above.
@@ -837,10 +839,12 @@ function namesSomethingInside(cited: string): boolean {
  * alternation: one member matching is enough for a matcher, and not enough for
  * a claim. An empty member is a member: `{,draft-}validate.json` names the base
  * report as well as the draft. Braces naming more than
- * {@link BRACE_NAME_LIMIT} paths come back as written.
+ * {@link BRACE_NAME_LIMIT} paths, or a range the guard does not expand, come
+ * back as `null`: the matcher does not read them as the text they are spelled
+ * with, so no tracked name stands for the set they name.
  */
-function expandBraces(cited: string): string[] {
-  return expandWithin(cited, BRACE_NAME_LIMIT) ?? [cited];
+function expandBraces(cited: string): string[] | null {
+  return expandWithin(cited, BRACE_NAME_LIMIT);
 }
 
 /** The paths `cited` names, or `null` once they number more than `limit`. */
@@ -853,7 +857,9 @@ function expandWithin(cited: string, limit: number): string[] | null {
     const list = topLevelAlternatives(body);
     // A body with no top-level comma and no range is literal text to the
     // matcher: `{discussion-1}` names a directory spelled with its braces.
-    const members = braceRange(body) ?? (list.length > 1 ? list : null);
+    const range = braceRange(body);
+    if (range === "unexpanded") return null;
+    const members = range ?? (list.length > 1 ? list : null);
     if (members === null) continue;
     const before = cited.slice(0, open);
     const after = cited.slice(close + 1);
@@ -873,7 +879,8 @@ function expandWithin(cited: string, limit: number): string[] | null {
 
 /**
  * The members of a brace range, `1..3`, `01..03` or `a..c`, with an optional
- * increment, or `null` when the body is not one the guard expands.
+ * increment; `"unexpanded"` for a range the guard does not expand, and `null`
+ * when the body is not a range.
  *
  * The matcher expands a range to every member between its ends, so `{1..3}`
  * names three files, not one called `1..3`.
@@ -884,17 +891,19 @@ function expandWithin(cited: string, limit: number): string[] | null {
  * would otherwise step past the precision a number holds and never end.
  * Lift when: a record cites such a range and needs it resolved.
  */
-function braceRange(body: string): string[] | null {
+function braceRange(body: string): string[] | "unexpanded" | null {
   const numeric = /^(\d+)\.\.(\d+)(?:\.\.(-?\d+))?$/.exec(body);
   const alphabetic = /^([A-Za-z])\.\.([A-Za-z])(?:\.\.(-?\d+))?$/.exec(body);
   const match = numeric ?? alphabetic;
-  if (match === null) return null;
+  if (match === null) {
+    return /^-?\d+\.\.-?\d+(?:\.\.-?\d+)?$/.test(body) ? "unexpanded" : null;
+  }
   const [from, to] = [match[1] ?? "", match[2] ?? ""];
   const [start, end] =
     numeric === null ? [from.charCodeAt(0), to.charCodeAt(0)] : [Number(from), Number(to)];
   const increment = rangeIncrement(match[3]);
-  if (!Number.isSafeInteger(start) || !Number.isSafeInteger(end)) return null;
-  if (Math.abs(end - start) / increment + 1 > BRACE_NAME_LIMIT) return null;
+  if (!Number.isSafeInteger(start) || !Number.isSafeInteger(end)) return "unexpanded";
+  if (Math.abs(end - start) / increment + 1 > BRACE_NAME_LIMIT) return "unexpanded";
   const width =
     numeric !== null && (/^0\d/.test(from) || /^0\d/.test(to))
       ? Math.max(from.length, to.length)
@@ -1210,15 +1219,16 @@ function splitAlternatives(body: string): string[] {
  * A glob resolves when it matches at least one tracked path, which is the whole
  * of what a set-naming citation claims.
  */
-function resolves(cited: string): boolean {
+function resolves(cited: string, paths: ReturnType<typeof trackedPaths> = tracked): boolean {
   // Every name, not one of them: a brace list claims all of what it names, and
   // a check that any member resolves passes a pack missing two of three.
   // Whenever expansion changed the citation, not only where it produced several
   // names: a one-member list is still a list, and resolving the brace token
   // itself reports a tracked artifact as missing.
   const names = expandBraces(cited);
+  if (names === null) return false;
   if (names.length !== 1 || names[0] !== cited) {
-    return names.every((name) => resolves(name));
+    return names.every((name) => resolves(name, paths));
   }
   const root = GENERATED_ROOTS.find((candidate) => cited.startsWith(candidate));
   if (root === undefined || !staysInsideRoot(cited, root)) return false;
@@ -1226,7 +1236,7 @@ function resolves(cited: string): boolean {
   // as a list. Nothing the tree tracks is spelled with them, so the citation
   // is unresolved rather than matched against the name inside them.
   if (outsideClasses(cited).some((index) => cited[index] === "{")) {
-    return tracked.files.has(cited) || tracked.directories.has(cited);
+    return paths.files.has(cited) || paths.directories.has(cited);
   }
   if (namesASet(cited)) {
     // Directories as well as files: `.qfai/discussion/discussion-*` names a set
@@ -1234,12 +1244,12 @@ function resolves(cited: string): boolean {
     // reading files alone reports a citation unresolved while the tree holds
     // every pack it names.
     const pattern = globToRegExp(cited);
-    for (const candidate of [...tracked.files, ...tracked.directories]) {
+    for (const candidate of [...paths.files, ...paths.directories]) {
       if (pattern.test(candidate) && !hidesADotName(cited, candidate)) return true;
     }
     return false;
   }
-  return tracked.files.has(cited) || tracked.directories.has(cited);
+  return paths.files.has(cited) || paths.directories.has(cited);
 }
 
 const key = ([file, cited, occurrence]: Citation): string => `${file} -> ${cited} #${occurrence}`;
@@ -1785,7 +1795,7 @@ describe("a glob is a claim about a set", () => {
   it("stops expanding braces that name more paths than it counts", () => {
     // Each range is inside the limit, and side by side they name a billion paths.
     const cited = ".qfai/report/run-{0..999}-{0..999}-{0..999}.json";
-    expect(expandBraces(cited)).toEqual([cited]);
+    expect(expandBraces(cited)).toBeNull();
     expect(resolves(cited)).toBe(false);
     expect(expandBraces("run-{0..9}{0..9}{0..9}")).toHaveLength(1000);
   });
@@ -1984,11 +1994,33 @@ describe("a glob is a claim about a set", () => {
   it("does not expand a range past what it can count", () => {
     // A 17-digit timestamp is past a number's precision; stepped there, the
     // loop never ends.
-    expect(expandBraces("run-{20260913000000000..20260913000000001}")).toEqual([
-      "run-{20260913000000000..20260913000000001}",
-    ]);
-    expect(expandBraces("run-{0..5000}")).toEqual(["run-{0..5000}"]);
-    expect(expandBraces("run-{-2..2}")).toEqual(["run-{-2..2}"]);
+    expect(expandBraces("run-{20260913000000000..20260913000000001}")).toBeNull();
+    expect(expandBraces("run-{0..5000}")).toBeNull();
+    expect(expandBraces("run-{-2..2}")).toBeNull();
+  });
+
+  it("does not resolve a range it does not expand against a name spelled like it", () => {
+    // The matcher reads the braces as a range, so a file spelled with them is
+    // not the set of names the citation claims.
+    for (const cited of [".qfai/report/run-{0..5000}.json", ".qfai/report/run-{-2..2}.json"]) {
+      const paths = { files: new Set([cited]), directories: new Set<string>(), links: [] };
+      expect(resolves(cited, paths)).toBe(false);
+    }
+    const literal = ".qfai/discussion/{pack}";
+    const paths = { files: new Set([literal]), directories: new Set<string>(), links: [] };
+    expect(resolves(literal, paths)).toBe(true);
+  });
+
+  it("keeps a class holding a space whole where a code span delimits it", () => {
+    const cited = ".qfai/report/[ x]missing.json";
+    expect(citationsIn(`see \`${cited}\` here`)).toEqual([cited]);
+    expect(citationsIn(`see ${cited} here`)).toEqual([]);
+  });
+
+  it("keeps a colon a code span delimits", () => {
+    const cited = ".qfai/report/preflight_summary.md:missing";
+    expect(citationsIn(`see \`${cited}\` here`)).toEqual([cited]);
+    expect(citationsIn(`see ${cited} here`)).toEqual([".qfai/report/preflight_summary.md"]);
   });
 
   it("reads a fence inside a list item as a fence", () => {
