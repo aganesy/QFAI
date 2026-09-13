@@ -59,7 +59,7 @@
 ## Notes
 
 - All ledger rows share the leading table. Missing canonical columns are seeded without changing existing run states or evidence.
-- TDD-0006 / TDD-0007 await the CR-20260913-0007 executing-owner reset. Their prior evidence remains history, not proof of the changed obligations. TDD-0039 owns the new legacy-profile preservation boundary.
+- The executing owner reset TDD-0006 / TDD-0007 under CR-20260913-0007. Their prior evidence remains history, not proof of the changed obligations. TDD-0039 owns the new legacy-profile preservation boundary.
 - The project has no UI-bearing surface typing. All sixteen user stories are active; fourteen missing E2E rows are seeded at `todo`. Their test paths and selectors await the acceptance-test and executing owners.
 - Tier derives from actual scope, not an absent legacy column: pure policy-parser unit rows are T1; filesystem, persisted-schema and public command work are T2. No row is UI-affecting. Bundled rules with no single module retain `Owning module = -`.
 
