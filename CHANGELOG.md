@@ -174,6 +174,15 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   first, and the second is named. The prototyping profile, which certification
   accepts, reports the finding as well.
 
+- **The UI evidence check reads the captures where iterate writes them**
+  (#1769). `qfai prototyping iterate` writes screenshots and HTML under
+  `.qfai/evidence/prototyping`, and every other evidence reader looks under
+  `.qfai/evidence`. `QFAI-UIE-001` and `QFAI-UIE-002` alone looked beside
+  `paths.specsDir`, so with the specs directory moved they reported every
+  captured screen missing, and were satisfied by files iterate never wrote. The
+  check now reads `.qfai/evidence/prototyping` too, and its suggested action
+  names that path.
+
 ## [1.12.0] - 2026-09-12
 
 ### Added
