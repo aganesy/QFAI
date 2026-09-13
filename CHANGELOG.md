@@ -49,12 +49,17 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   sunset replaced. An obligation naming a stage is covered by a test that
   drives a helper no code calls. And a finding specified as a warning inside a
   deprecation window is emitted as an unconditional error, because the
-  version-keyed severity mechanism those four layers name was retired.
+  version-keyed severity mechanism those layers name was retired.
 
-  `CR-20260913-0003` states each side, blocks the four ledger rows that carry
-  the disputed obligations, names what it leaves alone and which other open
-  records reach the same pack, and puts one question per item with its own
-  options — so a reader can settle them separately rather than as a bundle.
+  Three records hold them. `CR-20260913-0007` and `CR-20260913-0008` are
+  defects the pack shows on its own, each with its one correction: the template
+  slot restated as a key holding authored tasks, and the legacy-contract test
+  case given the sunset its business rule already carries. `CR-20260913-0003`
+  puts the other two to the user with options: the unwired helper, whose
+  resolver half every option restates to the fallback `spec-0012` specifies,
+  and the finding's severity, where restoring a window needs a release only the
+  user can name. Each blocks the ledger rows its items change, and no rule or
+  code changes until it is applied.
 
 ## [1.12.0] - 2026-09-12
 
