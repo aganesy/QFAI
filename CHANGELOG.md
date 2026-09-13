@@ -4,17 +4,34 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ## [Unreleased]
 
+### Added
+
+- **A legacy ledger outside the obligation-column protection is reported**
+  (#1663). A seeded `E2E` or `API` row has `TC-Refs` forbidden to it, so the
+  `US-Refs` and `CON-API-Refs` columns are the only place its obligation can
+  live, and an empty cell there is an error. On a ledger written before those
+  columns existed the check is waived — the shape is sanctioned — and the waiver
+  also meant nothing said that those rows could reach `done` with no auditable
+  target.
+
+  `QFAI-TDDLIST-020` now says it, at `warning`, once per absent column, naming
+  each row by its `TDD-ID`. Not an error, because that would revoke the
+  sanction and force a migration the shipped reference says is not owed; not
+  silence, because a row outside the protection should not read like one inside
+  it. It follows the reasoning the backfilled-evidence warning already gives, and
+  the SDD profile hears it, since the columns are that stage's to write.
+
 ### Fixed
 
-- **The completion gate checks an `n/a (not UI-affecting)` against the clauses**
-  (#1735). A row that records `n/a` owes no product-surface review, no capture
-  manifest and no parity hash, and the gate took the value as given. It now
-  evaluates the clauses of `ui-affecting.md` it can read from the tree, and
-  refuses the `n/a` naming the first that holds: clause 1 where `Owning module`
-  is declared, clause 2 on `Test file`, and clause 3 on an obligation a UI
-  contract names or whose entry names a UI contract id. Clause 1's fallback,
-  which reads the row's own change, is not evaluated, and `ui-affecting.md` says
-  so.
+- **The completion gate recomputes the checkpoint seal over the checkpoint's own
+  revision** (#1738). `checkpoint-verification.md` seals the checkpoint command
+  and result together with `Checkpoint verification revision`, the tree that
+  run was made on. The gate took the latest round's `Revision` instead, which
+  names the tree before the refactor, so a row sealed as the contract says was
+  reported whenever its refactor changed a byte. The gate now reads the
+  checkpoint revision, checks that it names a revision, and keeps the round's
+  `Revision` for a row that records none. The contract also says each value
+  enters the seal without a code span around it.
 
 - **The prototyping preflight refuses a screen with no primary task** (#1698).
   The audit lane reported an empty `primary_tasks` as `QFAI-AUD-001`, but
@@ -49,6 +66,46 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   come before the verdicts, like the other phase-authored fields. Captures are
   ignored stage evidence, so where one is absent from the checkout, as on a fresh
   clone, the gate skips the recomputation. It does the same for a review pack.
+
+- **The working-tree address is written one way** (#1651). The procedure said
+  "a hash over HEAD and the working tree", and that is not one value: a
+  producer and a reviewer could each pick a defensible separator, record shape
+  or way of reading a file, get different answers for the same tree, and leave
+  an ordinary uncommitted item stale for nobody's mistake.
+
+  Git names the paths and the bytes come off the filesystem, because a diff is
+  a rendering and what renders it — `core.autocrlf`, `core.eol`, a
+  `.gitattributes` driver — is checkout-local. Each record carries the path,
+  the kind, the mode and the SHA-256 of the bytes, and how every part is
+  written is fixed: a mode is four octal digits, a digest is 64 lowercase
+  characters, a symlink's bytes are its own payload, and the sequence is hashed
+  as bytes rather than as a decoded string. Directories are in it too, so
+  removing the execute bit from a source directory moves the address.
+
+  A state the records cannot describe stops the address rather than being
+  recorded as clean: an unborn `HEAD`, a submodule, an untracked embedded
+  repository, a link used as a directory, a file with several links, and a path
+  the process cannot read. The tree has to hold still while it is read, so the
+  writers are stopped first. Collecting twice is a check on that, not a proof of
+  it, because a writer repeating one change can hand both runs the same mixture
+  of old and new files. The ledger's
+  own directory is read from the project's configuration rather than assumed,
+  so a project that moved its specs is not hashing its own bookkeeping writes.
+
+  The recorded value is checked where it is committed, and in the one case the
+  procedure produces: `working-tree+` followed by 64 lowercase hexadecimal
+  characters. Freshness is compared exactly, so accepting both cases would let
+  one tree be recorded as two revisions and read a correct row as stale.
+
+- **The completion gate checks an `n/a (not UI-affecting)` against the clauses**
+  (#1735). A row that records `n/a` owes no product-surface review, no capture
+  manifest and no parity hash, and the gate took the value as given. It now
+  evaluates the clauses of `ui-affecting.md` it can read from the tree, and
+  refuses the `n/a` naming the first that holds: clause 1 where `Owning module`
+  is declared, clause 2 on `Test file`, and clause 3 on an obligation a UI
+  contract names or whose entry names a UI contract id. Clause 1's fallback,
+  which reads the row's own change, is not evaluated, and `ui-affecting.md` says
+  so.
 
 ## [1.12.0] - 2026-09-12
 
