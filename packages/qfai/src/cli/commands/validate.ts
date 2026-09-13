@@ -516,6 +516,16 @@ export const GATE_GROUP_FAMILIES = {
   "skills-integrity": ["QFAI-SKILLS-*"],
   "assistant-assets": ["QFAI-ASSETS-*"],
   discussion: ["QFAI-DPACK-*", "QFAI-VIS-*"],
+  // One group per stage, because one validator answers for two and each
+  // profile runs half of it. `runSddValidators` passes `subjects: ["spec"]` and
+  // `runDiscussionValidators` passes `subjects: ["discussion"]`, so a single
+  // `QFAI-GRILL-*` family was claimed whole by both while neither evaluated it
+  // whole — the notice reported partial coverage as complete. This is what
+  // `contracts` / `contract-references` and `traceability-code-references`
+  // above were split for, and the split needs two codes because a family of one
+  // cannot be halved by pattern.
+  "grilling-spec": ["QFAI-GRILL-001"],
+  "grilling-discussion": ["QFAI-GRILL-002"],
   // `validateResearchSummary` and `runCanonicalUixValidators` are called from
   // both `runDiscussionValidators` and `runUiuxValidators`, so neither can sit
   // inside `discussion`: a prototyping run listed as unevaluated a family it
@@ -625,9 +635,6 @@ export const GATE_GROUP_FAMILIES = {
     "R-CERTIFY-VERIFY-CIRCULAR",
     "R-PROMPT-SCANNER-DRIFT",
     "R-AUTOPILOT-POLICY-*",
-    // Dispatched from the same group: `validateGrillingTrace` runs beside
-    // `validateAutopilotPolicy` in `runSddValidators`.
-    "QFAI-GRILL-*",
     "R-HANDOFF-INCOMPLETE",
     "R-WORKLOG-DRIFT",
     "R-REJECTED-READOPT",
@@ -932,6 +939,10 @@ const PROFILE_GATE_GROUPS: Record<ValidationProfile, readonly GateGroup[]> = {
     "research-summary",
     "canonical-uix",
     "review-artifacts",
+    // The stage names this profile as its completion gate, and the run's own
+    // session record is one of the things that gate reads. Its half only: this
+    // profile inspects no spec evidence.
+    "grilling-discussion",
     // `runDiscussionValidators` calls `validateRootDesignMdParse` directly:
     // the skill mandates a parsable root DESIGN.md and names this profile as
     // its gate.
@@ -942,6 +953,7 @@ const PROFILE_GATE_GROUPS: Record<ValidationProfile, readonly GateGroup[]> = {
   sdd: [
     "sdd",
     "reviewer-gate-sdd",
+    "grilling-spec",
     // `runSddValidators` calls `runPackageSelfGovernanceValidators`, so sdd
     // evaluates this group too — subject to the per-code precondition check.
     "package-self-governance",
