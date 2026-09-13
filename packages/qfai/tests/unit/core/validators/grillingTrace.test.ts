@@ -22,6 +22,7 @@ import { defaultConfig } from "../../../../src/core/config.js";
 import { CANONICAL_TIMESTAMP_DIGITS } from "../../../../src/core/packLocator.js";
 import {
   DISCUSSION_DIR_REL,
+  GRILLING_COLUMNS,
   GRILLING_SECTIONS,
   GRILLING_TRACE_CODES,
   validateGrillingTrace,
@@ -697,6 +698,90 @@ describe("validateGrillingTrace", () => {
 
         expect(await validateGrillingTrace(root)).toHaveLength(1);
       });
+    });
+  });
+
+  describe("a table that is not the record", () => {
+    it("does not answer for one", async () => {
+      // A section may hold a table about something else. One under the heading
+      // answered for the record it is not: a row was there, which was true, and
+      // it was the session's, which was not.
+      await withRoot(async (root) => {
+        await evidence(
+          root,
+          "sdd-spec-0007.md",
+          [
+            "## Pre-draft Grilling",
+            "",
+            "| Note | Detail |",
+            "| ---- | ------ |",
+            "| a | b |",
+            "",
+          ].join("\n"),
+        );
+
+        expect(await validateGrillingTrace(root)).toHaveLength(1);
+      });
+    });
+
+    for (const [stage, file, marker] of [
+      ["spec", SPEC_EVIDENCE_TEMPLATE, "Phase"],
+      ["discussion", DISCUSSION_SKILL, "Authoring began"],
+    ] as const) {
+      it(`${stage}: the columns named are the ones the asset writes`, async () => {
+        // Two spellings of one column drift in silence: the stage keeps writing
+        // its table and the check stops recognising it, and the run reads clean.
+        const header = (await shippedTable(file, marker, GRILLING_SECTIONS[stage])).split("\n")[4];
+        for (const column of GRILLING_COLUMNS[stage]) {
+          expect(header).toContain(column);
+        }
+      });
+    }
+  });
+
+  it("does not take an indented example for the record", async () => {
+    // Four spaces makes a block an example of a document rather than part of
+    // one, exactly as a fence does.
+    await withRoot(async (root) => {
+      await evidence(
+        root,
+        "sdd-spec-0007.md",
+        [
+          "## Pre-draft Grilling",
+          "",
+          "    | Phase | Session |",
+          "    | ----- | ------- |",
+          "    | 0 | run |",
+          "",
+        ].join("\n"),
+      );
+
+      expect(await validateGrillingTrace(root)).toHaveLength(1);
+    });
+  });
+
+  it("does not splice a table across a fence", async () => {
+    // Dropping the fenced lines closed the gap over them, so a header written
+    // above a fence and a delimiter written below it became adjacent and read
+    // as a table the document does not contain.
+    await withRoot(async (root) => {
+      await evidence(
+        root,
+        "sdd-spec-0007.md",
+        [
+          "## Pre-draft Grilling",
+          "",
+          "| Phase | Session |",
+          "```text",
+          "an example",
+          "```",
+          "| ----- | ------- |",
+          "| 0 | run |",
+          "",
+        ].join("\n"),
+      );
+
+      expect(await validateGrillingTrace(root)).toHaveLength(1);
     });
   });
 

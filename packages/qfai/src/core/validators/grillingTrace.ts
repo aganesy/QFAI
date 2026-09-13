@@ -93,6 +93,20 @@ export const GRILLING_SECTIONS = {
 } as const satisfies Readonly<Record<GrillingSubject, string>>;
 
 /**
+ * Columns that identify each stage's table, so another table under the heading
+ * is not read as the record.
+ *
+ * A section may hold a table about something else, and one under the heading
+ * answered for the record it is not — the check said a row was there, which was
+ * true, and meant it was the session's, which was not. Two columns each, held
+ * against the shipped templates by a test.
+ */
+export const GRILLING_COLUMNS = {
+  spec: ["Phase", "Session"],
+  discussion: ["Ended", "Authoring began"],
+} as const satisfies Readonly<Record<GrillingSubject, readonly string[]>>;
+
+/**
  * The stages this reads, by the profile that gates each.
  *
  * A caller names its own: `runSddValidators` and `runDiscussionValidators` both
@@ -115,6 +129,8 @@ type SubjectBase = {
   readonly section: string;
   /** What the finding calls one row. */
   readonly row: string;
+  /** Columns whose presence in a header identifies this stage's table. */
+  readonly columns: readonly string[];
   /** Whether the name holds a spec id, so a `--spec` run can place it. */
   readonly specKeyed: boolean;
 };
@@ -141,6 +157,7 @@ const SUBJECTS: readonly Subject[] = [
     file: /^sdd-(spec-\d{4})\.md$/,
     section: GRILLING_SECTIONS.spec,
     row: "phase row",
+    columns: GRILLING_COLUMNS.spec,
     specKeyed: true,
     reads: "each",
   },
@@ -156,6 +173,7 @@ const SUBJECTS: readonly Subject[] = [
     file: new RegExp(`^(discussion-\\d{${String(CANONICAL_TIMESTAMP_DIGITS)}})\\.md$`),
     section: GRILLING_SECTIONS.discussion,
     row: "session row",
+    columns: GRILLING_COLUMNS.discussion,
     specKeyed: false,
     reads: "latest",
     packs: "discussion",
@@ -190,6 +208,15 @@ export const DISCUSSION_DIR_REL = ".qfai/discussion";
  * no rows in one and reported a record that was there as missing.
  */
 const DELIMITER_RE = /^\s*\|?\s*:?-+:?\s*(?:\|\s*:?-+:?\s*)*\|?\s*$/;
+
+/**
+ * A line CommonMark reads as an indented code block.
+ *
+ * Four spaces makes a block an example of a document rather than part of one,
+ * exactly as a fence does, and an indented table example under the section
+ * answered for the record.
+ */
+const INDENTED_CODE_RE = /^ {4,}\S/;
 
 /** A fenced block's opening or closing line, in either of the two spellings. */
 const FENCE_RE = /^\s*(?:```|~~~)/;
@@ -304,8 +331,8 @@ type SectionRows = {
  * `null` when the section is absent, which the caller reports differently from
  * a section present with nothing readable under it.
  */
-function ownRowsUnder(text: string, section: string): SectionRows | null {
-  const heading = headingRe(section);
+function ownRowsUnder(text: string, subject: Subject): SectionRows | null {
+  const heading = headingRe(subject.section);
   // Fenced blocks are dropped before anything is located in the text. A fence
   // is an example of a document rather than part of one, so a worked example
   // inside the section supplied the rows — a section showing what to write and
@@ -318,9 +345,13 @@ function ownRowsUnder(text: string, section: string): SectionRows | null {
   for (const line of text.split(/\r?\n/)) {
     if (FENCE_RE.test(line)) {
       fenced = !fenced;
+      lines.push("");
       continue;
     }
-    if (!fenced) lines.push(line);
+    // Blanked rather than dropped. Removing the lines closed the gap over them,
+    // so a header written above a fence and a delimiter written below it became
+    // adjacent and read as a table the document does not contain.
+    lines.push(fenced || INDENTED_CODE_RE.test(line) ? "" : line);
   }
 
   const start = lines.findIndex((line) => heading.test(line));
@@ -338,7 +369,13 @@ function ownRowsUnder(text: string, section: string): SectionRows | null {
   const delimiter = body.findIndex((line, at) => {
     const header = body[at - 1];
     if (at === 0 || header === undefined || !header.includes("|")) return false;
-    return DELIMITER_RE.test(line) && cellsOf(line).length === cellsOf(header).length;
+    if (!DELIMITER_RE.test(line) || cellsOf(line).length !== cellsOf(header).length) return false;
+    // And the header names this stage's table. A section may hold a table about
+    // something else, and one under the heading answered for the record it is
+    // not: a row was there, which was true, and it was the session's, which was
+    // not.
+    const named = cellsOf(header).map((cell) => cell.trim());
+    return subject.columns.every((column) => named.includes(column));
   });
   if (delimiter === -1) return { written: [], empty: 0, placeheld: 0 };
 
@@ -565,7 +602,7 @@ export async function validateGrillingTrace(
     // finding — unless the stage's own tree says it is owed, which is the one
     // case where absence is what this reports.
     if (text === null && owed !== true) continue;
-    const section = text === null ? null : ownRowsUnder(text, subject.section);
+    const section = text === null ? null : ownRowsUnder(text, subject);
     if (section !== null && section.written.length > 0) continue;
     const state: State =
       text === null
