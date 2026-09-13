@@ -6,6 +6,20 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **The saas-package certify cases run through the command line, and the verify
+  reviewer gate has a test** (#1636, #1637, #1638). Every case credited to the
+  two certify obligations called the command function with the flag already
+  parsed, so dropping `--scope` or `--upgrade-scope` from the command line left
+  them all passing. The two suites that did run the command line were skipped.
+  They now run: the integration suite through the CLI entry point, and the
+  end-to-end suite through the built binary. A new case reads `/qfai-verify`'s
+  reviewer-gate clauses in the shipped and installed skill.
+
+  `CR-20260913-0005` points three `spec-0014` ledger rows at those cases, splits
+  the upgrade-scope row at its boundary, and records that four delta chains name
+  reassigned identifiers. `CR-20260913-0006` puts the one row whose evidence has
+  no form it can take to the user.
+
 - **The prototyping preflight refuses a screen with no primary task** (#1698).
   The audit lane reported an empty `primary_tasks` as `QFAI-AUD-001`, but
   `qfai prototyping preflight` never read the field, so the stage started on a

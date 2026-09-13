@@ -405,6 +405,8 @@ blocking reviewers return `PASS`".
 a review pack's `PASS` / `FAIL` / `NA` roster and never a `REVISE` verdict. No
 case in the package reads either clause. So the row needs a test over the
 shipped skill, not a decision about the obligation.
+`packages/qfai/tests/integration/spec0014VerifyReviewerGate.test.ts` is that
+test, and `CR-20260913-0005` re-points the row to it.
 
 One case does feed verify a `REVISE`, from a render critique rather than a
 reviewer that verify routes: `prototypingExplorationRelaxationScope.test.ts` requires
@@ -457,6 +459,8 @@ would leave both cases green.
 
 So the row proves the seal and not the entry path the obligation names. It needs
 a case that drives the command line.
+`packages/qfai/tests/integration/spec0014SaasPackageCertify.test.ts` drives it,
+and `CR-20260913-0005` re-points the row there.
 
 `TDD-0036` is not backfilled either, for a different reason. Its obligation,
 `TC-0014-0036`, holds two boundaries: `--upgrade-scope full` is refused while a
@@ -470,7 +474,9 @@ on a row, and sends a matrix-shaped obligation to `/qfai-sdd` Phase 2b: the row
 is split there, into two rows carrying the same `TC-Refs`, never in place at
 evidence time. A `Selector` naming both cases would pack both boundaries behind
 one identifier, which is the shape that rule forbids. The row therefore stays as
-it stands and needs a Change Request that decomposes it.
+it stands and needs a Change Request that decomposes it. `CR-20260913-0005` is
+that record: the refusal stays on `TDD-0036` and the promotion moves to a new
+`TDD-0037`, both on the command-line cases.
 
 **And as it stands the `Selector` selects nothing.** The runner contract reads
 `-t` as a regular expression over the full test name

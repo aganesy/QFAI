@@ -109,6 +109,12 @@ observable boundary on a row and sends a matrix-shaped obligation to
 `/qfai-sdd` Phase 2b to be split, never to be split at evidence time. So the row
 needs decomposition before any single mutation can prove it.
 
+`CR-20260913-0006` puts the choice of evidence form to the user. It reads the
+second obstacle more narrowly: `TC-0014-0034` names only the `fullHarness`
+deletion, and a mutation of that deletion alone fails at its own assertion, so
+the other four outcomes the case asserts belong to other obligations rather than
+to a split of this row.
+
 `TDD-0033` is not backfilled either. Its obligation, `TC-0014-0033`, reads
 "active layout uses `.qfai/evidence/prototyping/iter-NN/` only", and its parent
 `AC-0014-0005` adds that the legacy `screenshots/` / `html/` directory layout is
