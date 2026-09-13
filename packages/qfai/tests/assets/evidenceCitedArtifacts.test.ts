@@ -1058,7 +1058,12 @@ function segmentAdmits(part: string, segment: string): boolean {
     new RegExp(`^${compileGlob(source)}$`).test(candidate);
   if (!matches(segment, part)) return false;
   if (!segment.startsWith(".")) return true;
-  return topLevelAlternativesOf(part).some(
+  // SIMPLIFIED: past the limit no alternative is listed, and the name counts as
+  // one the pattern does not spell, so the citation is reported unresolved.
+  // Lift when: a record cites such a pattern and needs it resolved.
+  const alternatives = topLevelAlternativesOf(part);
+  if (alternatives === null) return false;
+  return alternatives.some(
     (alternative) => matches(segment, alternative) && !matches(segment.slice(1), alternative),
   );
 }
@@ -1074,13 +1079,16 @@ function segmentAdmits(part: string, segment: string): boolean {
  * pattern, and comes back as itself. A member holding a group of its own is
  * opened too: `@(@(.git|g*)ignore|x)` spells `.gitignore` only inside, and
  * left whole its `g*` sibling read the spelling as a wildcard's reach.
+ *
+ * `null` once the alternatives number more than `limit`: groups side by side
+ * multiply, and thirty `?(x)` groups name over a billion.
  */
-function topLevelAlternativesOf(part: string): string[] {
+function topLevelAlternativesOf(part: string, limit = BRACE_NAME_LIMIT): string[] | null {
   const open = outsideClasses(part).find(
     (index) => "@?+*".includes(part[index] ?? "") && part[index + 1] === "(",
   );
   const close = open === undefined ? -1 : groupClose(part, open + 1);
-  if (open === undefined || close === -1) return expandBraces(part);
+  if (open === undefined || close === -1) return expandWithin(part, limit);
   const before = part.slice(0, open);
   const body = part.slice(open + 2, close);
   const after = part.slice(close + 1);
@@ -1091,14 +1099,23 @@ function topLevelAlternativesOf(part: string): string[] {
     ...splitAlternatives(body),
     ...(part[open] === "?" || part[open] === "*" ? [""] : []),
   ];
-  const rests = topLevelAlternativesOf(after);
-  return members.flatMap((member) =>
-    topLevelAlternativesOf(member).flatMap((inner) =>
-      rests.flatMap((rest) =>
-        expandBraces(`${before}${inner}${inner === "" ? "" : repeat}${rest}`),
-      ),
-    ),
-  );
+  const rests = topLevelAlternativesOf(after, limit);
+  if (rests === null) return null;
+  const names: string[] = [];
+  for (const member of members) {
+    const inners = topLevelAlternativesOf(member, limit);
+    if (inners === null) return null;
+    for (const inner of inners) {
+      for (const rest of rests) {
+        const joined = `${before}${inner}${inner === "" ? "" : repeat}${rest}`;
+        const expanded = expandWithin(joined, limit - names.length);
+        if (expanded === null) return null;
+        names.push(...expanded);
+        if (names.length > limit) return null;
+      }
+    }
+  }
+  return names;
 }
 
 /** The index of the `)` closing the group opened at `open`, or `-1`. */
@@ -1686,6 +1703,15 @@ describe("a glob is a claim about a set", () => {
     expect(citationsOf("x.json", decodedJson(record)).map(([, cited]) => cited)).toEqual([
       ".qfai/report/missing.json",
     ]);
+  });
+
+  it("stops listing sibling groups that name more alternatives than it counts", () => {
+    // Every group can match nothing, so the pattern matches the dot-leading name,
+    // and listing the ways it could costs over a billion alternatives.
+    const part = `${"?(x)".repeat(30)}.gitignore`;
+    expect(topLevelAlternativesOf(part)).toBeNull();
+    expect(segmentAdmits(part, ".gitignore")).toBe(false);
+    expect(topLevelAlternativesOf(`${"?(x)".repeat(9)}.gitignore`)).toHaveLength(512);
   });
 
   it("stops expanding braces that name more paths than it counts", () => {
