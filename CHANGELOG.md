@@ -4,16 +4,34 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ## [Unreleased]
 
+### Added
+
+- **A legacy ledger outside the obligation-column protection is reported**
+  (#1663). A seeded `E2E` or `API` row has `TC-Refs` forbidden to it, so the
+  `US-Refs` and `CON-API-Refs` columns are the only place its obligation can
+  live, and an empty cell there is an error. On a ledger written before those
+  columns existed the check is waived — the shape is sanctioned — and the waiver
+  also meant nothing said that those rows could reach `done` with no auditable
+  target.
+
+  `QFAI-TDDLIST-020` now says it, at `warning`, once per absent column, naming
+  each row by its `TDD-ID`. Not an error, because that would revoke the
+  sanction and force a migration the shipped reference says is not owed; not
+  silence, because a row outside the protection should not read like one inside
+  it. It follows the reasoning the backfilled-evidence warning already gives, and
+  the SDD profile hears it, since the columns are that stage's to write.
+
 ### Fixed
 
-- **The evidence revision reference says how a revision is read after a squash
-  merge** (#1696). A squash merge lands a commit with no branch revision among
-  its ancestors, so a recorded `<git rev>` did not resolve in a clone of the
-  default branch, and staleness had nothing to start from.
-  `evidence-revision.md` now says the rev resolves by fetching the pull
-  request's ref, and staleness is computed from it as before. It also says a
-  `working-tree+` address does not survive the merge, so a record meant to
-  outlive the branch is taken on a commit.
+- **The completion gate recomputes the checkpoint seal over the checkpoint's own
+  revision** (#1738). `checkpoint-verification.md` seals the checkpoint command
+  and result together with `Checkpoint verification revision`, the tree that
+  run was made on. The gate took the latest round's `Revision` instead, which
+  names the tree before the refactor, so a row sealed as the contract says was
+  reported whenever its refactor changed a byte. The gate now reads the
+  checkpoint revision, checks that it names a revision, and keeps the round's
+  `Revision` for a row that records none. The contract also says each value
+  enters the seal without a code span around it.
 
 - **The prototyping preflight refuses a screen with no primary task** (#1698).
   The audit lane reported an empty `primary_tasks` as `QFAI-AUD-001`, but
@@ -78,6 +96,15 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   procedure produces: `working-tree+` followed by 64 lowercase hexadecimal
   characters. Freshness is compared exactly, so accepting both cases would let
   one tree be recorded as two revisions and read a correct row as stale.
+
+- **The evidence revision reference says how a revision is read after a squash
+  merge** (#1696). A squash merge lands a commit with no branch revision among
+  its ancestors, so a recorded `<git rev>` did not resolve in a clone of the
+  default branch, and staleness had nothing to start from.
+  `evidence-revision.md` now says the rev resolves by fetching the pull
+  request's ref, and staleness is computed from it as before. It also says a
+  `working-tree+` address does not survive the merge, so a record meant to
+  outlive the branch is taken on a commit.
 
 ## [1.12.0] - 2026-09-12
 
