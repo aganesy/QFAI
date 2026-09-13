@@ -26,6 +26,7 @@ import type {
 import { locateToolAgainstProject, resolveToolVersion } from "./version.js";
 import { applyWaivers } from "./waivers.js";
 import { validateContracts } from "./validators/contracts.js";
+import { validateUiScreenEntries } from "./validators/uiScreenEntries.js";
 import { validateDiscussionMermaid } from "./validators/discussMermaid.js";
 import { validateAssistantAssets } from "./validators/assistantAssets.js";
 import { validateSkillsIntegrity } from "./validators/skillsIntegrity.js";
@@ -864,7 +865,13 @@ async function runPrototypingProfileValidators(
   timings: TimingsSink,
   platformOption?: string,
 ): Promise<Issue[]> {
-  const raw = await runPrototypingValidators(root, config, timings, platformOption);
+  const raw = [
+    ...(await runPrototypingValidators(root, config, timings, platformOption)),
+    // The profile certification accepts, so an entry no screen is read from is
+    // reported here too. Kept out of `runPrototypingValidators`: `full` also
+    // runs `validateContracts`, which composes it already.
+    ...(await validateUiScreenEntries(root, config)),
+  ];
   return await relaxPrototypingIssuesIfExploration(root, raw);
 }
 

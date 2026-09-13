@@ -112,28 +112,12 @@ export async function readUiContractScreenContracts(
   // the repo accept both extensions (e.g. fast-glob brace expansion in
   // validators/uiEvidenceArtifacts.ts), so harmonising here closes a
   // least-astonishment gap rather than expanding surface.
-  const pattern = path.posix.join(uiDir.replace(/\\/g, "/"), "**/*.{yaml,yml}");
-  const files = await fg(pattern, { absolute: true });
   const screens: CanonicalScreenContract[] = [];
-
-  for (const filePath of files) {
-    const raw = await readSafe(filePath);
-    if (!raw) {
-      continue;
-    }
-
-    let parsed: unknown;
-    try {
-      parsed = parseYaml(raw);
-    } catch {
-      continue;
-    }
-
+  for (const { relativePath, parsed } of await readUiContractDocuments(uiDir, root)) {
     const fileScreens = extractUiScreens(parsed).map((screen) => ({
       ...screen,
-      sourceRef: `${path.relative(root, filePath).replace(/\\/g, "/")}#${screen.screenId}`,
+      sourceRef: `${relativePath}#${screen.screenId}`,
     }));
-
     screens.push(...fileScreens);
   }
 
@@ -143,6 +127,131 @@ export async function readUiContractScreenContracts(
   );
 }
 
+/**
+ * Every UI contract file under `uiDir`, parsed, in the order the walk returns
+ * them. A file that cannot be read or does not parse contributes nothing.
+ *
+ * One walk for the screen reader and for the report of the entries it leaves
+ * out, so the two agree on which entry of a repeated `id` is the first.
+ */
+async function readUiContractDocuments(
+  uiDir: string,
+  root: string,
+): Promise<Array<{ relativePath: string; parsed: unknown }>> {
+  // The directory is the walk's `cwd` rather than part of the pattern: a project
+  // under `/tmp/build[1]` holds a literal `[`, which a pattern reads as syntax,
+  // and the walk then found no contract at all.
+  const files = await fg("**/*.{yaml,yml}", { cwd: uiDir, absolute: true });
+  const documents: Array<{ relativePath: string; parsed: unknown }> = [];
+  for (const filePath of files) {
+    const raw = await readSafe(filePath);
+    if (!raw) continue;
+    let parsed: unknown;
+    try {
+      parsed = parseYaml(raw);
+    } catch {
+      continue;
+    }
+    documents.push({ relativePath: toPosix(path.relative(root, filePath)), parsed });
+  }
+  return documents;
+}
+
+/**
+ * The spec a UI contract file belongs to by its name, or `null` for a file
+ * read project-wide: the names `qfai prototyping certify` resolves one spec's
+ * screens from, `spec-0001.yaml`, `0001.yaml`, `ui-0001.yaml`,
+ * `ui-0001-<part>.yaml` and anything under `spec-0001/`.
+ */
+function specScopeOf(pathInUiDir: string): string | null {
+  const match =
+    /^spec-(\d+)\/.+\.yaml$/u.exec(pathInUiDir) ??
+    /^(?:spec-|ui-)?(\d+)\.yaml$/u.exec(pathInUiDir) ??
+    /^ui-(\d+)-[^/]+\.yaml$/u.exec(pathInUiDir);
+  return match?.[1] ?? null;
+}
+
+/** `value` with every path separator written as `/`. */
+function toPosix(value: string): string {
+  return value.split(path.sep).join("/");
+}
+
+/** Why a `screens[]` entry is not among the screens the reader returns. */
+export type UnreadScreenEntryReason =
+  "not-a-list" | "not-a-mapping" | "missing-id" | "missing-route" | "repeated-id";
+
+export type UnreadScreenEntry = {
+  /** The contract file, repository-relative. */
+  file: string;
+  /** The entry's index in that file's `screens` list, from 0, or none where `screens` is not a list. */
+  index?: number;
+  reason: UnreadScreenEntryReason;
+  /** The entry's `id`, where it has one. */
+  screenId?: string;
+  /** For a repeated `id`, the entry that is read in its place. */
+  readInstead?: { file: string; index: number };
+};
+
+/**
+ * Every `screens[]` entry `readUiContractScreenContracts` leaves out, and why.
+ *
+ * The reader keeps the first entry for each `id` and drops an entry with no
+ * `id` or no `route`, for every consumer at once. That keeps one reading of a
+ * contract, and leaves whatever a dropped entry states checked by nothing, so
+ * the dropped entries are named here instead of passing in silence.
+ */
+export async function findUnreadUiScreenEntries(
+  root: string,
+  contractsDirRelative = ".qfai/contracts",
+): Promise<UnreadScreenEntry[]> {
+  const uiDir = path.resolve(root, contractsDirRelative, "ui");
+  const unread: UnreadScreenEntry[] = [];
+  const firstById = new Map<string, { file: string; index: number }>();
+  for (const { relativePath, parsed } of await readUiContractDocuments(uiDir, root)) {
+    const scope = specScopeOf(toPosix(path.relative(uiDir, path.resolve(root, relativePath))));
+    if (!parsed || typeof parsed !== "object" || !("screens" in parsed)) continue;
+    const screens = parsed.screens;
+    // An empty `screens:` states nothing. A mapping or a scalar in its place
+    // holds screens nothing reads.
+    if (screens === null || screens === undefined) continue;
+    if (!Array.isArray(screens)) {
+      unread.push({ file: relativePath, reason: "not-a-list" });
+      continue;
+    }
+    screens.forEach((entry: unknown, index) => {
+      if (!entry || typeof entry !== "object" || Array.isArray(entry)) {
+        unread.push({ file: relativePath, index, reason: "not-a-mapping" });
+        return;
+      }
+      const screenId = "id" in entry && typeof entry.id === "string" ? entry.id.trim() : "";
+      const route = "route" in entry && typeof entry.route === "string" ? entry.route.trim() : "";
+      if (!screenId) {
+        unread.push({ file: relativePath, index, reason: "missing-id" });
+        return;
+      }
+      if (!route) {
+        unread.push({ file: relativePath, index, reason: "missing-route", screenId });
+        return;
+      }
+      // One `id` per contract scope: each spec's own contract is read on its
+      // own, so a second spec reusing `home` there is a screen of that spec.
+      const key = JSON.stringify([scope, screenId]);
+      const first = firstById.get(key);
+      if (first === undefined) {
+        firstById.set(key, { file: relativePath, index });
+        return;
+      }
+      unread.push({
+        file: relativePath,
+        index,
+        reason: "repeated-id",
+        screenId,
+        readInstead: first,
+      });
+    });
+  }
+  return unread;
+}
 export function parseCanonicalScreenContracts(content: string): CanonicalScreenContract[] {
   const screens: CanonicalScreenContract[] = [];
   const lines = content.split(/\r?\n/);

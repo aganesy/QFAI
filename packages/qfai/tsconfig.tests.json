@@ -175,6 +175,7 @@
     "tests/core/tddListTier.test.ts",
     "tests/core/toolProvenance.test.ts",
     "tests/core/uiuxConfigFieldUsage.test.ts",
+    "tests/core/validators/uiScreenEntries.test.ts",
     "tests/core/validators/skillDocumentReadability.test.ts",
     "tests/core/validators/skillReferenceReachability.test.ts",
     "tests/e2e/spec0003ShippedWorkflowSetE2E.test.ts",

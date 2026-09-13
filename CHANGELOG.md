@@ -117,6 +117,20 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   and still gives its extension. `!tests/e2e/legacy/**/*.ts` beside a Python glob added
   TypeScript to what the stage scans.
 
+- **A UI contract entry no screen is read from is reported** (#1734). Every
+  consumer of UI contracts reads screens the same way: it keeps the first entry
+  for each `id`, skips an entry with no `id` or no `route`, and reads no screen
+  from a `screens` value that is not a list. That reading stays.
+  What such an entry stated was checked by nothing, and nothing said so. An
+  empty `primary_tasks` on it passed the audit lane and the prototyping
+  preflight, and a different route was prototyped as the entry it repeated.
+  `QFAI-CONTRACT-042` now names each such entry with its file and position,
+  and for a repeated `id` it also names the entry read in its place. A
+  `screens` value that is not a list is named the same way. An `id` is repeated
+  only within one contract: each spec's own contract is read on its own, so
+  another spec may reuse it. The prototyping profile, which certification
+  accepts, reports the finding as well.
+
 ## [1.12.0] - 2026-09-12
 
 ### Added
