@@ -19,8 +19,9 @@ For each architectural element, cite at least three distinct concrete usages
 three links to one usage do not count. If the safety floor in
 `.agents/rules/minimal-implementation.md` § 2 requires an element with fewer
 usages, cite the necessary usages and the obligation that requires that element;
-never cut the obligation to clear the count. Shared code still waits for its
-third actual caller; documentation references do not prove three callers.
+never cut the obligation to clear the count. Subject to the same floor, shared
+code still waits for its third actual caller; documentation references do not
+prove three callers.
 
 ## Test approach
 

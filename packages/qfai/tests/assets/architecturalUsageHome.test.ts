@@ -24,7 +24,9 @@ describe("architectural elements have concrete usage references before implement
         "cite the necessary usages and the obligation that requires that element",
       );
       expect(plan).toContain("never cut the obligation to clear the count");
-      expect(plan).toContain("Shared code still waits for its third actual caller");
+      expect(plan).toContain(
+        "Subject to the same floor, shared code still waits for its third actual caller",
+      );
       expect(plan).toContain("documentation references do not prove three callers");
     });
 
@@ -33,6 +35,13 @@ describe("architectural elements have concrete usage references before implement
       expect(skill).toContain("templates/specs/spec/10_Plan.md#implementation-approach");
       expect(skill).toContain("Report missing or insufficient usage references as findings");
       expect(skill).toContain("stop before implementation");
+      expect(skill.includes("in a spec-scoped run that finalizes `10_Plan.md`")).toBe(true);
+      expect(skill.includes("Contract-scoped runs do not apply this Plan gate")).toBe(true);
+      expect(
+        skill.includes(
+          "halt to widen the Change Request to a spec-scoped run; do not write the Plan",
+        ),
+      ).toBe(true);
     });
 
     it(`${tree}: the required completion reviewer reads and enforces the check`, async () => {
@@ -41,8 +50,14 @@ describe("architectural elements have concrete usage references before implement
       expect(card).toContain("return REVISE for missing or insufficient usage references");
       expect(card).toContain("unless the documented safety-floor exception applies");
       expect(card).toContain(
-        "On SDD cycles, read `.qfai/specs/spec-*/10_Plan.md` and its referenced usages",
+        "On spec-scoped SDD cycles that finalize a Plan, read `.qfai/specs/spec-*/10_Plan.md` and its referenced usages",
       );
+      expect(card.includes("In contract-scoped SDD, do not apply this Plan gate")).toBe(true);
+      expect(
+        card.includes(
+          "halt to widen the Change Request to a spec-scoped run; do not authorize Plan writes",
+        ),
+      ).toBe(true);
       const profile = await read(tree, "assistant/manifest/review-profiles.yml");
       expect(profile).toContain("always_required: [completion-reviewer]");
     });
