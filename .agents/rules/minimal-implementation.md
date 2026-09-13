@@ -42,6 +42,18 @@ The ladder trims code, not obligations. These stay whatever rung you stop at.
 - Accessibility.
 - Anything the spec asks for.
 
+A **trust boundary** is wherever a value arrives from a caller or a source the
+code does not control:
+
+- process entry, the common case: external input, a received request, a file or
+  database read, an environment variable, user input;
+- a published library's exported function;
+- a plugin or tenant context.
+
+A call between functions under the code's own control is not one. A value
+crossing a boundary is parsed there into a form that cannot hold an invalid
+value, so the code past it carries no branch for that value.
+
 Tests are in the same position. The ladder shapes how a test is built — reuse a
 helper that exists before adding a harness — and never how many obligations are
 verified.
