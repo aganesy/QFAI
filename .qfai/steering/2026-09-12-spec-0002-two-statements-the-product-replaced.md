@@ -3,7 +3,7 @@ id: 2026-09-12-spec-0002-two-statements-the-product-replaced
 status: active
 kind: consultation-needed
 created: 2026-09-12
-updated: 2026-09-12
+updated: 2026-09-13
 scope: spec-0002
 blocking: true
 promote-to: null
@@ -47,11 +47,11 @@ validator emits the violation `TC-0002-0009` names — the `discussionDesignHard
 validator that did was retired in v1.8.9 with the exploration-sidecar family.
 
 `TC-0002-0011` has a test that discharges it against the product:
-`packages/qfai/tests/assets/assets.test.ts`, `ensures qfai-discussion skill and
-artifact rules
-use canonical pack wording`, which reads the skill, the artifact rules and the
-package README and requires the same sentence in all three. It cannot be pointed
-at while the criterion says the opposite of what that sentence says.
+`packages/qfai/tests/assets/assets.test.ts`,
+`ensures qfai-discussion skill and artifact rules use canonical pack wording`,
+which reads the skill, the artifact rules and the package README and requires
+the same sentence in all three. It cannot be pointed at while the criterion
+says the opposite of what that sentence says.
 
 ## What the next session picks up
 
@@ -103,6 +103,13 @@ under every combination, because the annotation repairs edit the file its
 observation covers while its obligation stands. No test is deleted under any
 combination except `3bB`, whose disposition is the deletion of
 `legacy 4-axis format is error`.
+
+This entry closes with the Change Request. Its approved action 10 runs in the
+change that sets the record's `Applied at`: it adds the approved option and
+that date to this section, sets `status: archived`, `blocking: false` and
+`updated`, and fills `closure-rationale`. `promote-to` stays `null`, because
+the decision lives in the Change Request, the Decision Records its reruns
+amend and each delta's `## Change Requests` table.
 
 ## Four other packs are re-derived, and a fifth is re-verified
 
@@ -170,7 +177,14 @@ record:
 - The ledger repairs of `spec-0004`, `spec-0012` and `spec-0013`, before an
   approval that re-derives them: `2a` reaches all three and `2B` reaches
   `spec-0013`. Their nine-column tables would otherwise be migrated and seeded
-  by the same rerun.
+  by the same rerun. `spec-0013`'s is `CR-20260913-0009`, which also splits the
+  thirteen progressed rows there that run several boundaries behind one
+  `Selector`. The repairs of `spec-0004` and `spec-0012` have no record yet,
+  and neither have the two above.
+- Under `2a`, the splits of the progressed rows in `spec-0004` and `spec-0012`
+  whose `Selector` runs more than one case: three and twenty-one rows, which the
+  Change Request lists. No record names those splits, so a `2a` rerun raises a
+  request for each row that conflates boundaries and waits on its approval.
 - `spec-0013`'s duplicate id. Its `03_Acceptance-Criteria.md` declares
   `AC-0013-0009` twice, so a rerun keyed to that id sweeps whichever of the two
   it finds, and `2B` waits on it.
@@ -179,9 +193,9 @@ After each ledger repair an approved outcome reaches, the Change Request is
 refreshed before approval: every seeded `E2E` row whose story that outcome
 changes joins its blocked set by id, with the disposition its approved
 actions give it. The first two repairs seed the rows for `US-0002-0005`,
-`US-0010-0008` and `US-0010-0009`. `spec-0013`'s seeds the row for
-`US-0013-0009`, the lock story, which resets under `2a`, and the row for
-`US-0013-0008`, the side-artifact story, which resets under `2B`.
+`US-0010-0008` and `US-0010-0009`. `CR-20260913-0009` seeds the rows for
+`US-0013-0009`, the lock story, which reset under `2a`, and for
+`US-0013-0008`, the side-artifact story, which reset under `2B`.
 
 `spec-0010/TDD-0011` is not parked. It is listed in the Change Request's
 blocked set, and that listing is what suppresses it. It stays at `todo`, and
