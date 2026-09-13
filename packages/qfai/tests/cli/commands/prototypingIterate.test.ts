@@ -1033,15 +1033,16 @@ describe("runPrototypingIterate cycle 0 hard reset", () => {
   });
 
   /**
-   * The hard reset's subject: a `prototyping.json` holding a stale value for
-   * each of the five properties the cases below assert, and a value the reset
-   * does not write for each of the two it re-seeds.
+   * Runs cycle 0 over a `prototyping.json` holding a stale value for each of
+   * the five properties the cases below assert, and a value the reset does not
+   * write for each of the two it re-seeds. Returns the project root once the
+   * command has exited 0, so a caller reads what the reset left.
    *
-   * Seeded once per case rather than shared across them, because each case
-   * below owns one property of the reset and a shared root would make the
-   * second case depend on what the first left.
+   * Run once per case rather than shared across them, because each case below
+   * owns one property of the reset and a shared root would make the second
+   * case depend on what the first left.
    */
-  async function seedProjectWithPriorLoopState(): Promise<string> {
+  async function runCycleZeroFromPriorLoopState(): Promise<string> {
     const root = await newTempDir();
     await seedMinimalProject(root);
     await seedRawPrototypingJson(root, {
@@ -1075,28 +1076,28 @@ describe("runPrototypingIterate cycle 0 hard reset", () => {
   // assertion runs first, and a mutation aimed at one of them is killed by an
   // assertion that is not about it.
   it("cycle 0 deletes fullHarness", async () => {
-    const body = await readProtoJson(await seedProjectWithPriorLoopState());
+    const body = await readProtoJson(await runCycleZeroFromPriorLoopState());
     expect("fullHarness" in body).toBe(false);
   });
 
   it("cycle 0 deletes reviewerGate", async () => {
-    const body = await readProtoJson(await seedProjectWithPriorLoopState());
+    const body = await readProtoJson(await runCycleZeroFromPriorLoopState());
     expect("reviewerGate" in body).toBe(false);
   });
 
   it("cycle 0 deletes executionPlan", async () => {
-    const body = await readProtoJson(await seedProjectWithPriorLoopState());
+    const body = await readProtoJson(await runCycleZeroFromPriorLoopState());
     expect("executionPlan" in body).toBe(false);
   });
 
   it("cycle 0 re-seeds acceptedIterationIndex rather than removing it", async () => {
-    const body = await readProtoJson(await seedProjectWithPriorLoopState());
+    const body = await readProtoJson(await runCycleZeroFromPriorLoopState());
     expect(body.acceptedIterationIndex).toBe(0);
   });
 
   it("cycle 0 re-seeds stopReason as null rather than removing it", async () => {
     // The loop is running, so the field is present and empty rather than gone.
-    const body = await readProtoJson(await seedProjectWithPriorLoopState());
+    const body = await readProtoJson(await runCycleZeroFromPriorLoopState());
     expect(body.stopReason).toBe(null);
   });
 
