@@ -11,6 +11,23 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   and replacement, and refuse cuts that remove or weaken a referenced
   safety-floor obligation.
 
+- **Article VII makes cutting the governing doctrine** (#1794). The least
+  that satisfies a requirement is the right amount; additional scope or code
+  needs justification. The article ranks above other articles and conflicting
+  constitution instructions, below the referenced safety floor. The absolute
+  output-language rule and prototyping scope floor remain unchanged. Required
+  traceability, repository gates, and their evidence are protected in the
+  safety floor rather than repeated in the article.
+
+- **Repository reuse is the second of seven minimal-implementation rungs**
+  (#1795). Check the codebase before the standard library, platform and installed
+  dependencies. Existing repository code can answer the accepted behavior
+  without a duplicate implementation. The shipped copy has the same order.
+
+- **Retained failures keep unit-level coverage** (#1793). The
+  minimal-implementation safety floor protects coverage of the failure paths
+  production code retains.
+
 - **A legacy ledger outside the obligation-column protection is reported**
   (#1663). A seeded `E2E` or `API` row has `TC-Refs` forbidden to it, so the
   `US-Refs` and `CON-API-Refs` columns are the only place its obligation can
@@ -26,7 +43,28 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   it. It follows the reasoning the backfilled-evidence warning already gives, and
   the SDD profile hears it, since the columns are that stage's to write.
 
+### Changed
+
+- **`QFAI-DENSITY-005` names cutting before splitting** (#1808). The warning for an
+  oversized business-rule cell told the author to split the row into two rules,
+  which adds an abstract item where the cell most often carries examples,
+  rationale or history rather than a second rule. It now asks the author to cut
+  what the cell carries beyond its rule first, and to split only when what remains
+  is two rules that can each be falsified on their own. The warning, its threshold
+  and its severity are unchanged, and its message is now in English.
+
 ### Fixed
+
+- Repository async guidance requires awaited or returned promises and points to
+  the shared implementation rule for consuming callers, kept failures and
+  callback boundaries. Required handling and incomplete error messages remain
+  review findings (#1804).
+
+- The implementation rule handles only failures not excluded by types or schemas
+  and named by a specification, contract or observation, subject to the safety
+  floor. Other failures propagate; promises must be awaited or returned to a
+  consuming caller. Callback hosts that ignore returns require an explicit
+  adapter that adopts the asynchronous result and handles boundary rejections (#1802).
 
 - **The working-tree address excludes a nested project's own records, and stops on
   a FIFO or socket git does not list** (#1747). The collection reads the lists

@@ -10,6 +10,8 @@
 - Default read set: this file + relevant contracts only
 - `_policies` is read-only escalation context and must not be read by default
 - SSOT for concrete agent definitions lives in `.qfai/assistant/agents/*.md`
+- Optional pattern review is advisory. It proposes missing concrete business-flow, US, AC, EX or TC coverage with rationale and no numeric target. Empty or abstract-only artifacts return N/A, even when BR, NFR, policy, decision or architectural items carry IDs.
+- `catalog/review-gate.rules.yml` bounds optional-mode settings in `manifest/review-profiles.yml`, including numeric targets in preserved manifests. Independently required product obligations, missing mandatory pairings and blocking gates remain required; N/A waives none of them. Init and upgrade retain adopter manifests.
 - Cross-skill governance behavior (CHG-006, v1.9.2):
   - Every SKILL.md MUST carry a `## Default Autopilot Policy` section with three named buckets — auto-decide (formatting / ID-numbering / append-vs-create / equivalent-option pick), ask-user (approval-required governance operations / destructive / version-pin / scope-expansion, plus an interview skill's own grilling-session decisions), hard-required (brand intent / primarySpecId). The three enumerations are a **prototype**, not a verbatim copy: a SKILL.md MAY narrow any of the three buckets (drop an entry the skill cannot reach), and MAY instantiate the ask-user category `approval-required governance operations` with the operations its own run cannot authorize for itself — the triage ops in `/qfai-sdd`, the `TDDLIST-001` accepted-risk waiver, the Drift-Protocol Change-Request escalation and item-level parallelism consent in `/qfai-implement`. Instantiating a category is not widening; introducing an entry outside the prototype's categories is, and stays barred (DR-0269 Amendment 2). Reviewer Gate emits `R-AUTOPILOT-POLICY-MISSING` (error) when the section is absent OR is present but missing one or more required buckets (REQ-0160 / DR-0269).
   - When an `AskUserQuestion` names one of four envelope-deviation contexts (skill-envelope / architectural-decision / rejected-option re-adoption / scope-expansion), the skill body writes `.qfai/evidence/decisions/<ISO8601-ts>.json` `{question, answer, scope, operatorIdentity, timestamp, envelopeContractClause}` (tracked in version control — governance record, negated in the managed `.gitignore` block) (REQ-0158 / DR-0270).
@@ -47,6 +49,7 @@
 ## Evidence Summary
 
 - Evidence: agent catalog, routing files, review gate rules, shared delegation baseline
+- Concrete-pattern requirement source: [approved change](../../decisions/CR-20260913-0007-concrete-pattern-review.md#requirement-source).
 
 ## Relevant Requirements
 
@@ -54,7 +57,7 @@
 - REQ-0002: standard contract structure stays consistent
 - REQ-0003: orchestrator remains delegation-only
 - REQ-0004: work order schema remains explicit
-- REQ-0005: review modes remain centrally registered
+- REQ-0005: review modes remain centrally registered within the review-gate catalog's bounds
 - REQ-0006: routing policy remains centralized
 - REQ-0012: all-reviewer FAIL obligations stay in force
 - REQ-0013: prototyping review profile is defined in terms of current skill-led evaluation/reviewer routing, not a removed runtime entrypoint

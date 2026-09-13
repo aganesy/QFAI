@@ -46,6 +46,25 @@ Reinit behavior (existing `.qfai/` present):
 - User-authored work-log entries (`.qfai/steering/*.md` that match the entry frontmatter schema with `id` matching filename stem) MUST NOT be overwritten.
 - Collisions where the user-edited file lives at an old (pre-recut) path surface a `W-USER-EDIT-PRESERVED` finding via the validate gate (REQ-0013).
 
+#### Same-marker reminder upgrade gap
+
+Existing `.claude/settings.json` hook groups are recognized by their
+sorted status-message list within the same event, including repeated markers.
+Removing a repeated marker changes the identity. Ordinary init and `--force`
+preserve an existing same-marker group's command, arguments, matcher and custom
+fields, including older shipped reminder text. Only missing groups are added.
+An older implementation reminder therefore needs a manual update; force does
+not deliver its changed text automatically.
+
+Obtain a fresh settings file with the installed release's
+`qfai init --dir <scratch-dir>` in an unused scratch directory. Back up the
+project's settings and compare the same event and sorted marker list. Compare
+each field before editing. Refresh only the message-bearing argument; preserve
+a customized executable, unrelated arguments, markers, matchers, custom fields
+and unrelated settings. Do not replace the existing `command` or entire `args`
+with template values, append a duplicate group or change its markers to request
+an update; a different identity can run both reminders.
+
 Exit codes:
 
 | Code | Meaning                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
@@ -113,6 +132,57 @@ Roll back in two moves, by status:
 - `M` / `D` rows — files that existed before. Restore them with Git (`git restore -- <path>`); they are not the addition set.
 
 Then read `git diff` separately for the in-place edits the flow makes outside `.qfai/assistant/` (the managed `.gitignore` block, the integration wrappers). The `W-USER-EDIT-PRESERVED` notes printed by the run name the destinations that were left alone.
+
+## Constitution and safety-floor compatibility
+
+The constitution is installed or refreshed only when the complete regular file
+`.agents/rules/minimal-implementation.md` matches the shipped master. Only
+line-ending differences are ignored. Other edits remain protected and require
+a manual merge of the rule and constitution. A matching substring is not
+authorization: Markdown outside § 2 can make the floor non-operative.
+
+A missing, unreadable or non-regular master, including a leaf symlink or linked
+`.agents` / `.agents/rules` parent, cannot
+authorize the upgrade. Init keeps the previous constitution and its receipt,
+and reports that the shipped master could not be verified. A first init in that
+state does not install the constitution or record it as written.
+For an absent constitution, the note asks for a manual merge of the safety
+master only, then a normal `qfai init` to install it. An existing constitution
+requires a manual merge of both files; the note does not request a force rewrite
+of unrelated adopter assets.
+
+The governed writer rechecks the master after the other template copies and
+the destination hash. The create-only template copier never writes this
+constitution. The check is not an atomic filesystem transaction with the write.
+
+A dry run includes the constitution when the same plan would create or update
+its compatible rule master under unlinked parents. A planned write through a
+linked parent cannot authorize the preview. It writes neither file.
+
+Creating missing governed assets requires hard-link support and permission.
+Before any asset copy or migration, init probes the nearest existing directory
+for each eligible absent governed path. It removes only its own probe files.
+The creation handle pins the probe's device and inode. Before each removal,
+init rechecks the no-follow identity. A changed or unverifiable occupant is
+preserved and aborts initialization with inspection guidance, not a deletion
+instruction. Metadata verification and removal are not an atomic transaction.
+If removal fails, init attempts the remaining owned cleanup, reports every
+retained probe path and aborts before copying or migrating package assets.
+Restore access and remove only the reported probe files before retrying.
+A failed probe creation or link check aborts with the affected directory,
+write-access and hard-link recovery guidance, and preserves existing assets;
+it never falls back to a partial final-path copy or an overwriting rename.
+Existing governed paths and a constitution deferred by an edited safety master
+need no creation probe. Dry runs perform no probe or writes. The check cannot
+prevent a filesystem or permission change later in the run.
+
+If cleanup fails after exclusive publication, init keeps the complete published
+file and its receipt. It reports the staging path and asks the user to restore
+access, remove only that staging file and rerun init. The published file is not
+removed or rewritten to clean up its hard-link alias.
+If exclusive publication loses a creation race and staging cleanup fails,
+init reports that retained staging path before propagating the original write
+error. Accepting a concurrent destination never hides this cleanup warning.
 
 ## Shipped GitHub Actions workflows
 
