@@ -842,11 +842,20 @@ function evidenceAnchorText(specId: string, layerClass: EvidenceLayerClass, tddI
     : owned;
 }
 
+/**
+ * The `working-tree+` revision as an operator reads it.
+ *
+ * One wording for the grammar line and the field hint, because the form is
+ * checked case-sensitively: an operator who follows a correction that leaves
+ * the case out writes the same rejected value again.
+ */
+const WORKING_TREE_REVISION_TEXT = "working-tree+<64 lowercase hex>";
+
 /** The grammar as an operator reads it, for the finding message. */
 function evidenceGrammarText(redProvenance: string, anchorText: string): string {
   return (
     `RED:<${redProvenance}> GREEN:pass ORACLE:<proved|equivalent-mutant> ` +
-    `[TIER:<T1|T2|T3>] REV:<rev|working-tree+<sha256>> -> ${anchorText}`
+    `[TIER:<T1|T2|T3>] REV:<rev|${WORKING_TREE_REVISION_TEXT}> -> ${anchorText}`
   );
 }
 
@@ -1308,9 +1317,15 @@ const SHA256_VALUE = /^(?:sha256:)?[a-f0-9]{64}$/i;
  * bound is the longer object id; a length in between is a valid abbreviation of
  * one format or the other, and the form check does not adjudicate which.
  */
-const EVIDENCE_REVISION_FORM = /^(?:[0-9a-f]{7,64}|working-tree\+[0-9a-f]{64})$/i;
+// Built from the shared source rather than written again, and with no `i` flag:
+// the content address is produced by a procedure that fixes its notation as
+// lowercase, so accepting both cases here would let one tree be recorded as two
+// revisions while the freshness comparison — which is exact — reads a correct
+// row as stale. A git rev stays case-insensitive, which the source's own class
+// carries.
+const EVIDENCE_REVISION_FORM = new RegExp(`^${REVISION_FORM_SOURCE}$`);
 
-const REVISION_FORM_HINT = "a git rev or working-tree+<sha256>";
+const REVISION_FORM_HINT = `a git rev or ${WORKING_TREE_REVISION_TEXT}`;
 
 function sha256(value: string | Buffer): string {
   return createHash("sha256").update(value).digest("hex");
@@ -3698,6 +3713,25 @@ export const EVIDENCE_ANCHOR_UNRESOLVED_CODE = "QFAI-TDDLIST-008";
 export const EVIDENCE_BACKFILLED_CODE = "QFAI-TDDLIST-019";
 
 /**
+ * Finding code for a ledger whose table predates an obligation column, holding
+ * a row whose `Layer` owns that column.
+ *
+ * The shipped reference sanctions the shape: an eight-column ledger written
+ * before `US-Refs` and `CON-API-Refs` existed is a legacy ledger, not a broken
+ * one. What it lacks is the protection those columns give — a seeded `E2E` or
+ * `API` row has `TC-Refs` forbidden to it, so without its own column it can
+ * reach `done` with no auditable target at all.
+ *
+ * Reported at `warning`, on the reasoning `QFAI-TDDLIST-019` gives. Not an
+ * error: the sanction stands, and erroring would revoke it for every adopter
+ * whose ledgers predate the columns, forcing a migration the reference says is
+ * not owed. Not silence: a row outside a protection must not be
+ * indistinguishable, in the output an operator reads, from one inside it. A
+ * project that will carry no such row treats warnings as failures.
+ */
+export const OBLIGATION_COLUMN_ABSENT_CODE = "QFAI-TDDLIST-020";
+
+/**
  * `Revision` names a tree that files the observation covered have moved past.
  *
  * `evidence-revision.md#what-makes-evidence-stale` defines staleness
@@ -4352,6 +4386,9 @@ export const TDD_LIST_SEED_SHAPE_CODES: ReadonlySet<string> = new Set([
   // change the reader is forbidden to make.
   "TDDLIST_INVALID_OBLIGATION_REF",
   "TDDLIST_OBLIGATION_LAYER_MISMATCH",
+  // The columns themselves are Phase 2b's to write, so a ledger that predates
+  // them is that phase's to migrate, and its gate is where the gap is heard.
+  "QFAI-TDDLIST-020",
   // The remaining three read cells the same phase authors, and were missing
   // for no reason the ownership split supports:
   //
@@ -6134,10 +6171,21 @@ function validateObligationColumn(
   spec: ObligationColumnSpec,
 ): Issue[] {
   const issues: Issue[] = [];
+  // Rows whose `Layer` owns this column, in a ledger table that has no such
+  // column. Per table, not per file: an appended table can lack a column the
+  // first one carries, and its rows are just as unprotected. Collected rather than reported per row: the gap is the
+  // ledger's shape, and one finding naming every affected row says that.
+  const unprotected: string[] = [];
   for (const ref of rows) {
-    // An absent column reads as an empty cell, which is the same "this row
-    // carries no such obligation" the optional column already means.
-    if (ref.scan.headers.indexOf(spec.column) < 0) continue;
+    if (ref.scan.headers.indexOf(spec.column) < 0) {
+      if (cell(ref, "Layer").toLowerCase() === spec.layer) {
+        // The TDD-ID is what an operator searches the ledger for; the position
+        // disambiguates the same id across tables.
+        const id = cell(ref, "TDD-ID");
+        unprotected.push(id.length > 0 ? `${id} (${ref.label})` : ref.label);
+      }
+      continue;
+    }
     const value = cell(ref, spec.column);
     if (value.length === 0 || value === "-") {
       if (cell(ref, "Layer").toLowerCase() === spec.layer) {
@@ -6185,6 +6233,20 @@ function validateObligationColumn(
         [spec.column, rawLayer],
         "change",
         `Set Layer to ${spec.layer.toUpperCase()} for this row, or move the obligation to the column its Layer owns (TC-Refs for Unit/Component/Integration, US-Refs for E2E, CON-API-Refs for API).`,
+      ),
+    );
+  }
+  if (unprotected.length > 0) {
+    issues.push(
+      issue(
+        OBLIGATION_COLUMN_ABSENT_CODE,
+        `${String(unprotected.length)} Layer=${spec.layer.toUpperCase()} row(s) in tdd/test-list.md for spec-${spec.specNumber} sit in a ledger table with no ${spec.column} column, so they record no obligation it can check: ${unprotected.join(", ")}`,
+        "warning",
+        spec.relPath,
+        `${spec.rule}ColumnAbsent`,
+        [spec.column, spec.layer.toUpperCase(), ...unprotected],
+        "change",
+        `Add the ${spec.column} column to the ledger and record the ${spec.expected} each of these rows covers. Until then a Layer=${spec.layer.toUpperCase()} row can reach done with no auditable target: TC-Refs is forbidden on it, and there is no other cell for its obligation.`,
       ),
     );
   }
