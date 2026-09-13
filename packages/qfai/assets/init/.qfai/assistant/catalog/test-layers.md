@@ -218,6 +218,79 @@ answer to a cell qfai cannot read, never a supported spelling: fix the cell
 (see [Obligation spanning more than one layer](#obligation-spanning-more-than-one-layer)).
 `TDDLIST_UNKNOWN_LEVEL` (`warning`) names such a cell on the ledger side.
 
+**Where that directory may be.** `paths.testsDir` holds one path, so a repository
+whose suites live one per package can name at most one of them there, and the
+acceptance tests of every other package sit outside the scan. The scan therefore
+also reads the project's own `validation.traceability.testFileGlobs`, minus its
+`testFileExcludeGlobs`, and a file collected that way is answered by the layer
+directory **inside its own test root**: the segment after the deepest `tests`,
+`test` or `__tests__` on the path, or after the configured `paths.testsDir`
+basename. `packages/checkout/tests/integration/pay.test.ts` answers an `L3`
+obligation exactly as `<testsDir>/integration/pay.test.ts` does. A deeper test
+root with no directory after it is a container inside the layer rather than a
+root of its own, so `packages/app/tests/e2e/__tests__/journey.test.ts` answers
+`E2E`.
+
+A directory carrying a package manifest is a package rather than a test root,
+whatever it is called: without that, a workspace package named `tests` would
+make `packages/tests/api/**` an API layer, which is the same defect one
+directory further out. A suite also keeps some of those files for its runner's
+settings, so those count only when they name a package:
+
+| Manifest                                                                                                                                                                                                     | Makes its directory a package               |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------- |
+| `setup.py`, `go.mod`, `Cargo.toml`, `pom.xml`, `build.gradle`, `build.gradle.kts`, `build.sbt`, `Gemfile`, `composer.json`, `Package.swift`, `pubspec.yaml`, `*.gemspec`, `*.csproj`, `*.vbproj`, `*.fsproj` | Always                                      |
+| `package.json`, `deno.json`, `deno.jsonc`                                                                                                                                                                    | When it declares a top-level `name`         |
+| `pyproject.toml`                                                                                                                                                                                             | With a `[project]` or `[tool.poetry]` table |
+| `setup.cfg`                                                                                                                                                                                                  | With a `[metadata]` section                 |
+
+**The configured root answers by containment and needs no segment of its own.**
+With `paths.testsDir` at the repository root, `e2e/journey.test.ts` carries no
+`tests` / `test` / `__tests__` segment and is still read: the three layer
+directories sit at the top level, and containment in the configured one is the
+answer. What needs a named root is an _extra_ suite beside the configured one.
+
+Anchoring it there rather than scanning ancestors is what keeps a package name
+out of the answer. A package may legitimately be called `api`, and reading any
+ancestor makes every test under it an API test —
+`packages/api/tests/unit/pay.test.ts` included, which owes ATDD nothing.
+
+**A named test root is required.** `packages/app/spec/acceptance/e2e/**` has no
+segment to anchor on, so its files answer no layer and their obligations are
+reported as uncovered. Name the root `tests`, `test` or `__tests__`, or point
+`paths.testsDir` at it, and the anchored rule reads the suite.
+
+**A file's own directory never answers its layer.** The glob `npx qfai init`
+derives reaches colocated sources, and there the file's own directory is a source
+directory: `src/api/client.spec.ts` is a unit test, and reading it as an API
+acceptance one would let its annotations discharge an obligation and its unfilled
+stubs block a gate that owns no unit test. Reporting a suite as uncovered is the
+safe direction; claiming one is not.
+
+Three things do not change.
+
+| Unchanged                                    | Why it matters                                        |
+| -------------------------------------------- | ----------------------------------------------------- |
+| The three directory names                    | Nothing new becomes a home; only where a home may sit |
+| A collected file in none of the three        | It answers nothing and is not reported as misplaced   |
+| `<testsDir>` as the home a single suite uses | `npx qfai atdd scaffold` still writes there           |
+
+The second row is the one to read twice. A unit suite owes ATDD nothing wherever
+it sits, so telling an author to move every collected file into `integration/`
+would be the all-integration collapse this file lists as an anti-pattern.
+
+What `QFAI-ATDD-105` reports is narrower than "under `<testsDir>` and in none of
+the three": the probe reads **`<testsDir>/atdd/**`** and nothing else. That is
+the legacy location of `npx qfai atdd scaffold` output, and the finding reports
+generated files no acceptance layer owns — not a project's own layout. An annotated file the project keeps somewhere else under
+`<testsDir>` answers no layer and is reported by nothing, which is the quiet
+side that keeps a layout decision the project made from arriving as a finding.
+
+The project's globs are used as written. A base is never derived by slicing one:
+a glob whose directory part carries a wildcard slices to a base with the wildcard
+still in it, and a layer glob synthesized under that base addresses a directory
+the project never configured.
+
 Exactly one directory, never two: an annotation outside the one its `Level` names is both uncovered
 and rejected (`QFAI-ATDD-121` / `QFAI-ATDD-122` / `QFAI-ATDD-123`), and the rejection is symmetric —
 an annotation left in `<testsDir>/integration/**` after its TC moved to `L4`/`L5` is rejected the

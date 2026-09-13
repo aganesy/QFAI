@@ -11,7 +11,17 @@ import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 
 import { defaultConfig, type QfaiConfig } from "../../src/core/config.js";
-import { validateTestTodoStubs } from "../../src/core/validators/testTodoStubs.js";
+import {
+  atddAcceptanceLayerFilter,
+  atddAcceptanceTestGlobs,
+} from "../../src/core/atddTraceability.js";
+import { SCAFFOLD_PLACEHOLDER_MARKER } from "../../src/core/atdd/scaffold.js";
+import { scaffoldPlaceholderScannedFilter } from "../../src/core/validators/scaffoldPlaceholder.js";
+import {
+  STUB_SOURCE_FILE_PATTERN,
+  stubSourceFilePattern,
+  validateTestTodoStubs,
+} from "../../src/core/validators/testTodoStubs.js";
 
 // Source-level split of the `*.todo(` token so this validator's own test
 // file does not false-positive when scanned by validateTestTodoStubs. The
@@ -377,5 +387,389 @@ describe("a stub token that is not executing code", () => {
     const issues = await validateTestTodoStubs(root, configWith());
     expect(issues).toHaveLength(1);
     expect(issues[0]?.loc?.line).toBe(2);
+  });
+});
+
+describe("the ATDD gate's file selection", () => {
+  // The ATDD scan reads the project's own test globs as well as the three layer
+  // directories under `paths.testsDir`, so a package's acceptance suite now
+  // satisfies the coverage rules. The stub gate has to read the same files, or
+  // a package test that never runs discharges an obligation and passes.
+  const atddConfig = (globs: string[]): QfaiConfig => ({
+    ...defaultConfig,
+    validation: {
+      ...defaultConfig.validation,
+      traceability: {
+        ...defaultConfig.validation.traceability,
+        testFileGlobs: globs,
+      },
+    },
+  });
+
+  it("the ATDD gate reads a package's acceptance suite", async () => {
+    const root = await newTempDir();
+    await writeTestFile(
+      root,
+      "packages/checkout/tests/integration/pay.test.ts",
+      `it${TODO}("pays");\n`,
+    );
+
+    const issues = await validateTestTodoStubs(
+      root,
+      atddConfig(["packages/*/tests/**/*.test.ts"]),
+      {
+        globs: atddAcceptanceTestGlobs(
+          root,
+          atddConfig(["packages/*/tests/**/*.test.ts"]),
+          "**/*.ts",
+        ),
+        fileFilter: atddAcceptanceLayerFilter(root, atddConfig(["packages/*/tests/**/*.test.ts"])),
+      },
+    );
+
+    expect(issues.map((issue) => issue.code)).toContain("QFAI-TEST-001");
+  });
+
+  it("and leaves a package's unit suite to the gate that owns it", async () => {
+    const root = await newTempDir();
+    await writeTestFile(root, "packages/checkout/tests/unit/pure.test.ts", `it${TODO}("adds");\n`);
+
+    const issues = await validateTestTodoStubs(
+      root,
+      atddConfig(["packages/*/tests/**/*.test.ts"]),
+      {
+        globs: atddAcceptanceTestGlobs(
+          root,
+          atddConfig(["packages/*/tests/**/*.test.ts"]),
+          "**/*.ts",
+        ),
+        fileFilter: atddAcceptanceLayerFilter(root, atddConfig(["packages/*/tests/**/*.test.ts"])),
+      },
+    );
+
+    // A unit test's stub is real and is somebody's problem. Blocking the ATDD
+    // gate on it is the all-integration collapse in another form: the stage
+    // owns three directories, and a stub outside them is not its finding.
+    expect(issues.filter((issue) => issue.code === "QFAI-TEST-001")).toEqual([]);
+  });
+
+  // `D-SCAFFOLD-PLACEHOLDER` is what reports an unfilled skeleton, so this gate
+  // stands aside for one — but only where that validator looks. It scans four
+  // directories under `paths.testsDir`; this gate also reads a monorepo's
+  // package-local acceptance suites, and a marked skeleton there was exempt
+  // here and unseen by it.
+  const scaffolded = (): string =>
+    [
+      `// ${SCAFFOLD_PLACEHOLDER_MARKER}`,
+      "// TODO: implement assertion for TC-0001-0001",
+      "it.skip('TC-0001-0001: pays', () => {});",
+      "",
+    ].join("\n");
+
+  // The same skeleton with its TODO written out and the sentinel left behind.
+  // `D-SCAFFOLD-PLACEHOLDER` requires both, so it reports nothing here.
+  const progressed = (): string =>
+    [
+      `// ${SCAFFOLD_PLACEHOLDER_MARKER}`,
+      "it.skip('TC-0001-0001: pays', () => {",
+      "  expect(pay()).toBe(true);",
+      "});",
+      "",
+    ].join("\n");
+
+  it("leaves a fixture an extension-broad project glob swept in", async () => {
+    const root = await newTempDir();
+    const config = atddConfig(["packages/*/tests/**/*"]);
+    await writeTestFile(
+      root,
+      "packages/checkout/tests/integration/pay.test.ts",
+      `it${TODO}("pays");\n`,
+    );
+    // A data file no stub dialect owns. Collected through the project's own
+    // glob, it was reported as a language this validator cannot scan.
+    await writeTestFile(root, "packages/checkout/tests/integration/data.json", "{}\n");
+
+    const issues = await validateTestTodoStubs(root, config, {
+      globs: atddAcceptanceTestGlobs(root, config, STUB_SOURCE_FILE_PATTERN),
+      fileFilter: atddAcceptanceLayerFilter(root, config),
+    });
+
+    expect(issues.map((issue) => issue.code)).toContain("QFAI-TEST-001");
+    expect(issues.filter((issue) => issue.code === "QFAI-TEST-002")).toEqual([]);
+  });
+
+  it("keeps an extension the project's globs name outright", async () => {
+    const root = await newTempDir();
+    const config = atddConfig(["packages/*/tests/**/*.zig"]);
+    // A language this validator has no dialect for, named by the project. Drop
+    // it and `QFAI-TEST-002` never fires, so a suite nothing can scan reads as
+    // a clean one.
+    await writeTestFile(root, "packages/checkout/tests/integration/pay.zig", 'test "pays" {}\n');
+
+    const issues = await validateTestTodoStubs(root, config, {
+      globs: atddAcceptanceTestGlobs(root, config, STUB_SOURCE_FILE_PATTERN),
+      fileFilter: atddAcceptanceLayerFilter(root, config),
+    });
+
+    expect(issues.map((issue) => issue.code)).toContain("QFAI-TEST-002");
+  });
+
+  it("keeps an extension a dotted brace alternative names", async () => {
+    const root = await newTempDir();
+    const config = atddConfig(["packages/*/tests/**/*.{test.zig,spec.zig}"]);
+    // Each alternative carries its own dot. Rejecting them for that dropped
+    // the extension the project had selected outright.
+    await writeTestFile(
+      root,
+      "packages/checkout/tests/integration/pay.test.zig",
+      'test "pays" {}\n',
+    );
+
+    const issues = await validateTestTodoStubs(root, config, {
+      globs: atddAcceptanceTestGlobs(root, config, STUB_SOURCE_FILE_PATTERN),
+      fileFilter: atddAcceptanceLayerFilter(root, config),
+    });
+
+    expect(issues.map((issue) => issue.code)).toContain("QFAI-TEST-002");
+  });
+
+  it("keeps an extension an extglob group names", async () => {
+    const root = await newTempDir();
+    const config = atddConfig(["packages/*/tests/**/*.@(sol|zig)"]);
+    // The group selects its members as a brace set does. Read as neither, the
+    // file it collected was filtered out before its language could be reported.
+    await writeTestFile(
+      root,
+      "packages/checkout/tests/integration/pay.sol",
+      "contract PayTest { function testPays() public {} }\n",
+    );
+
+    const issues = await validateTestTodoStubs(root, config, {
+      globs: atddAcceptanceTestGlobs(root, config, STUB_SOURCE_FILE_PATTERN),
+      fileFilter: atddAcceptanceLayerFilter(root, config),
+    });
+
+    expect(issues.map((issue) => issue.code)).toContain("QFAI-TEST-002");
+  });
+
+  it("reads no extension off a negative glob entry", async () => {
+    const root = await newTempDir();
+    const config = atddConfig(["packages/*/tests/**/*", "!packages/*/tests/fixtures/**/*.json"]);
+    await writeTestFile(
+      root,
+      "packages/checkout/tests/integration/pay.test.ts",
+      `it${TODO}("pays");\n`,
+    );
+    // Outside the excluded subtree. The negative entry withdraws JSON there; it
+    // does not select JSON anywhere else.
+    await writeTestFile(root, "packages/checkout/tests/integration/data.json", "{}\n");
+
+    const issues = await validateTestTodoStubs(root, config, {
+      globs: atddAcceptanceTestGlobs(root, config, STUB_SOURCE_FILE_PATTERN),
+      fileFilter: atddAcceptanceLayerFilter(root, config),
+    });
+
+    expect(issues.filter((issue) => issue.code === "QFAI-TEST-002")).toEqual([]);
+  });
+
+  it("keeps a file a test-name glob selects whatever its extension", async () => {
+    const root = await newTempDir();
+    const config = atddConfig(["packages/*/tests/**/*.test.*"]);
+    // The glob names the test by its name, so a language nothing names by
+    // extension is still a source, and a suite nothing can scan is reported.
+    await writeTestFile(
+      root,
+      "packages/checkout/tests/integration/pay.test.zig",
+      'test "pays" {}\n',
+    );
+
+    const issues = await validateTestTodoStubs(root, config, {
+      globs: atddAcceptanceTestGlobs(root, config, STUB_SOURCE_FILE_PATTERN),
+      fileFilter: atddAcceptanceLayerFilter(root, config),
+    });
+
+    expect(issues.map((issue) => issue.code)).toContain("QFAI-TEST-002");
+  });
+
+  it.each([
+    ["a brace set", "packages/*/tests/**/*.{test,spec}.*", "pay.spec.zig"],
+    ["a character class", "packages/*/tests/**/test_[0-9].*", "test_1.zig"],
+    ["an extglob group", "packages/*/tests/**/*.@(test|spec).*", "pay.test.zig"],
+  ])("keeps a file a test-name glob with %s selects", async (_shape, glob, name) => {
+    const root = await newTempDir();
+    const config = atddConfig([glob]);
+    await writeTestFile(root, `packages/checkout/tests/integration/${name}`, 'test "pays" {}\n');
+
+    const issues = await validateTestTodoStubs(root, config, {
+      globs: atddAcceptanceTestGlobs(root, config, STUB_SOURCE_FILE_PATTERN),
+      fileFilter: atddAcceptanceLayerFilter(root, config),
+    });
+
+    expect(issues.map((issue) => issue.code)).toContain("QFAI-TEST-002");
+  });
+
+  it("keeps a wildcard-only glob from admitting a data file", async () => {
+    const root = await newTempDir();
+    const config = atddConfig(["packages/*/tests/**/*.*"]);
+    await writeTestFile(
+      root,
+      "packages/checkout/tests/integration/pay.test.ts",
+      `it${TODO}("pays");\n`,
+    );
+    // A last segment of wildcards names nothing, so it selects no file by name.
+    await writeTestFile(root, "packages/checkout/tests/integration/data.json", "{}\n");
+
+    const issues = await validateTestTodoStubs(root, config, {
+      globs: atddAcceptanceTestGlobs(root, config, STUB_SOURCE_FILE_PATTERN),
+      fileFilter: atddAcceptanceLayerFilter(root, config),
+    });
+
+    expect(issues.filter((issue) => issue.code === "QFAI-TEST-002")).toEqual([]);
+  });
+
+  it("keeps an extension a character-class glob names", async () => {
+    const root = await newTempDir();
+    const config = atddConfig(["packages/*/tests/**/*.[z]ig"]);
+    await writeTestFile(root, "packages/checkout/tests/integration/pay.zig", 'test "pays" {}\n');
+
+    const issues = await validateTestTodoStubs(root, config, {
+      globs: atddAcceptanceTestGlobs(root, config, STUB_SOURCE_FILE_PATTERN),
+      fileFilter: atddAcceptanceLayerFilter(root, config),
+    });
+
+    expect(issues.map((issue) => issue.code)).toContain("QFAI-TEST-002");
+  });
+
+  it("keeps a file with no extension that a project glob names", async () => {
+    const root = await newTempDir();
+    const config = atddConfig(["packages/*/tests/integration/test_pay"]);
+    // `path.extname` reads it as "", which no extension set holds, so the file
+    // was dropped before its missing dialect could be reported.
+    await writeTestFile(root, "packages/checkout/tests/integration/test_pay", "check pays\n");
+
+    const issues = await validateTestTodoStubs(root, config, {
+      globs: atddAcceptanceTestGlobs(root, config, STUB_SOURCE_FILE_PATTERN),
+      fileFilter: atddAcceptanceLayerFilter(root, config),
+    });
+
+    const unscanned = issues.find((issue) => issue.code === "QFAI-TEST-002");
+    expect(unscanned?.message).toContain("(no extension)");
+  });
+
+  it("leaves a file with no extension an extension-broad glob swept in", async () => {
+    const root = await newTempDir();
+    const config = atddConfig(["packages/*/tests/**/*"]);
+    await writeTestFile(
+      root,
+      "packages/checkout/tests/integration/pay.test.ts",
+      `it${TODO}("pays");\n`,
+    );
+    await writeTestFile(root, "packages/checkout/tests/integration/LICENSE", "MIT\n");
+
+    const issues = await validateTestTodoStubs(root, config, {
+      globs: atddAcceptanceTestGlobs(root, config, STUB_SOURCE_FILE_PATTERN),
+      fileFilter: atddAcceptanceLayerFilter(root, config),
+    });
+
+    expect(issues.filter((issue) => issue.code === "QFAI-TEST-002")).toEqual([]);
+  });
+
+  it("keeps the spelling a project glob gave its extension", async () => {
+    const root = await newTempDir();
+    const config = atddConfig(["packages/**/*.TS"]);
+    // The canonical globs are matched against paths. Lowercasing the extension
+    // built `*.ts`, which on a case-sensitive filesystem does not reach the
+    // file the project selected, and the stub in it cleared coverage silently.
+    await writeTestFile(root, "tests/integration/pay.TS", `it${TODO}("pays");\n`);
+
+    const issues = await validateTestTodoStubs(root, config, {
+      globs: atddAcceptanceTestGlobs(root, config, stubSourceFilePattern(["packages/**/*.TS"])),
+      fileFilter: atddAcceptanceLayerFilter(root, config),
+    });
+
+    expect(issues.map((issue) => issue.code)).toContain("QFAI-TEST-001");
+  });
+
+  it("stands aside for a marked skeleton the placeholder validator scans", async () => {
+    const root = await newTempDir();
+    const config = atddConfig(["packages/*/tests/**/*.test.ts"]);
+    await writeTestFile(root, "tests/integration/pay.test.ts", scaffolded());
+
+    const issues = await validateTestTodoStubs(root, config, {
+      globs: atddAcceptanceTestGlobs(root, config, "**/*.ts"),
+      fileFilter: atddAcceptanceLayerFilter(root, config),
+      placeholderScanned: scaffoldPlaceholderScannedFilter(root, config),
+    });
+
+    expect(issues.filter((issue) => issue.code === "QFAI-TEST-003")).toEqual([]);
+  });
+
+  it("reports a progressed skeleton the placeholder validator passes over", async () => {
+    const root = await newTempDir();
+    const config = atddConfig(["packages/*/tests/**/*.test.ts"]);
+    // Inside the scanned directory, so the path half of the hand-off holds.
+    // What does not hold is the content half: the TODO line is written out,
+    // so the placeholder validator reports nothing and the sentinel is all
+    // that is left. Suppressing on the sentinel alone left the file reported
+    // by neither, with its skipped case discharging an obligation.
+    await writeTestFile(root, "tests/integration/pay.test.ts", progressed());
+
+    const issues = await validateTestTodoStubs(root, config, {
+      globs: atddAcceptanceTestGlobs(root, config, "**/*.ts"),
+      fileFilter: atddAcceptanceLayerFilter(root, config),
+      placeholderScanned: scaffoldPlaceholderScannedFilter(root, config),
+    });
+
+    expect(issues.map((issue) => issue.code)).toContain("QFAI-TEST-003");
+  });
+
+  it("reports a marked skeleton outside that scan rather than exempting it", async () => {
+    const root = await newTempDir();
+    const config = atddConfig(["packages/*/tests/**/*.test.ts"]);
+    await writeTestFile(root, "packages/checkout/tests/integration/pay.test.ts", scaffolded());
+
+    const issues = await validateTestTodoStubs(root, config, {
+      globs: atddAcceptanceTestGlobs(root, config, "**/*.ts"),
+      fileFilter: atddAcceptanceLayerFilter(root, config),
+      placeholderScanned: scaffoldPlaceholderScannedFilter(root, config),
+    });
+
+    // Exempting it here would leave the file reported by neither validator, and
+    // the ATDD gate green over a suite whose tests do not run.
+    expect(issues.map((issue) => issue.code)).toContain("QFAI-TEST-003");
+  });
+
+  it("reports a marked skeleton under a dot directory the placeholder scan skips", async () => {
+    const root = await newTempDir();
+    const config = atddConfig(["tests/integration/.generated/**/*.test.ts"]);
+    // The directory is a scanned one and the basename is the writer's own, so
+    // both halves of the earlier check hold. But the placeholder scan globs
+    // with `dot: false` and never enters `.generated`, while the project glob
+    // names it and this gate reads it — so standing aside left the skeleton
+    // reported by neither.
+    await writeTestFile(root, "tests/integration/.generated/pay.test.ts", scaffolded());
+
+    const issues = await validateTestTodoStubs(root, config, {
+      globs: ["tests/integration/.generated/**/*.test.ts"],
+      placeholderScanned: scaffoldPlaceholderScannedFilter(root, config),
+    });
+
+    expect(issues.map((issue) => issue.code)).toContain("QFAI-TEST-003");
+  });
+
+  it("reports a marked file the placeholder validator's globs do not collect", async () => {
+    const root = await newTempDir();
+    const config = atddConfig(["packages/*/tests/**/*.test.ts"]);
+    // `pay.ts` sits in a scanned directory and matches no scaffold basename
+    // pattern, so `D-SCAFFOLD-PLACEHOLDER` never opens it. Standing aside on
+    // the directory alone would leave the file reported by neither.
+    await writeTestFile(root, "tests/integration/pay.ts", scaffolded());
+
+    const issues = await validateTestTodoStubs(root, config, {
+      globs: ["tests/integration/**/*.ts"],
+      placeholderScanned: scaffoldPlaceholderScannedFilter(root, config),
+    });
+
+    expect(issues.map((issue) => issue.code)).toContain("QFAI-TEST-003");
   });
 });

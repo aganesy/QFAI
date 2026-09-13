@@ -5,8 +5,18 @@ import path from "node:path";
 import { describe, expect, it } from "vitest";
 
 import { defaultConfig } from "../../src/core/config.js";
+import type { QfaiConfig } from "../../src/core/config.js";
 import { evaluateAtddCodeTraceability } from "../../src/core/atddTraceability.js";
 import { validateAtddCodeTraceability } from "../../src/core/validators/atddCodeTraceability.js";
+
+/**
+ * A glob `fast-glob` rejects, spelled so this file stays text.
+ *
+ * The value needs a NUL byte, and a raw one in tracked source is its own
+ * defect: `sourceEncodingHygiene.test.ts` scans every tracked text file for byte
+ * zero, and text tooling reads such a file as binary.
+ */
+const INVALID_GLOB = `a${String.fromCharCode(0)}b`;
 
 describe("validateAtddCodeTraceability", () => {
   it("passes when US/TC/CON-API are fully referenced in required test layers", async () => {
@@ -21,7 +31,12 @@ describe("validateAtddCodeTraceability", () => {
       expect(issues.filter((entry) => entry.severity === "error")).toEqual([]);
 
       const reportPath = path.join(root, ".qfai", "report", "atdd-traceability", "summary.json");
-      await expect(readFile(reportPath, "utf-8")).resolves.toContain('"missing"');
+      const summary = await readFile(reportPath, "utf-8");
+      expect(summary).toContain('"missing"');
+      // The scan total reaches the report, and it counts only what an
+      // acceptance layer owns — so a reader can take it for "acceptance tests
+      // scanned" without discounting anything.
+      expect(JSON.parse(summary).scan).toMatchObject({ matchedFileCount: 3 });
     });
   });
 
@@ -72,6 +87,22 @@ describe("validateAtddCodeTraceability", () => {
 
       const issues = await validateAtddCodeTraceability(root, defaultConfig);
       expect(issues.some((entry) => entry.code === "QFAI-ATDD-112")).toBe(true);
+    });
+  });
+
+  it("separates the missing identifiers from the package-suite hint", async () => {
+    await withProject(async (root) => {
+      await seedSpec(root, "0001", ["US-0001"], ["TC-0001"]);
+      await seedApiContract(root, "CON-API-0001");
+      await seedTest(root, "e2e", "a.test.ts", "/* QFAI:SPEC-0001:US-0001 */");
+      await seedTest(root, "api", "a.test.ts", "/* QFAI:CON-API-0001 */");
+
+      const issues = await validateAtddCodeTraceability(root, defaultConfig);
+      const fix = issues.find((entry) => entry.code === "QFAI-ATDD-112")?.suggested_action ?? "";
+      // Appended straight after the last identifier the two ran together as
+      // `TC-0001A package with…`, which reads as one token.
+      expect(fix).not.toMatch(/TC-\d{4}(?:-\d{4})?A package/);
+      expect(fix).toMatch(/TC-\d{4}(?:-\d{4})?\. A package with a suite of its own/);
     });
   });
 
@@ -488,6 +519,9 @@ describe("QFAI-ATDD-113 deferral via x-qfai-status: planned", () => {
       const deferral = issues.find((entry) => entry.code === "QFAI-ATDD-114");
       expect(deferral?.severity).toBe("info");
       expect(deferral?.refs).toEqual(["CON-API-0002"]);
+      // The fix names a layer directory, so it carries the package-suite hint
+      // every such remediation does.
+      expect(deferral?.suggested_action).toContain("A package with a suite of its own");
     });
   });
 
@@ -920,3 +954,823 @@ describe("QFAI-ATDD-124: coverage that rests on a suite bound at runtime", () =>
     });
   });
 });
+
+describe("acceptance tests outside paths.testsDir", () => {
+  // `paths.testsDir` holds one path, so a repository with a suite per package
+  // could name at most one of them. Every other package's acceptance tests sat
+  // outside the three globs built from it, their annotations counted towards
+  // nothing, and the coverage rules were satisfied by whatever remained under
+  // the configured root — in this repository, two prose carriers.
+  const withProjectGlobs = (globs: string[], excludeGlobs: string[] = []): QfaiConfig => ({
+    ...defaultConfig,
+    validation: {
+      ...defaultConfig.validation,
+      traceability: {
+        ...defaultConfig.validation.traceability,
+        testFileGlobs: globs,
+        testFileExcludeGlobs: excludeGlobs,
+      },
+    },
+  });
+
+  it.each([
+    ["testFileExcludeGlobs", ["tests/**/*.test.ts"], ["tests/e2e/legacy/**"]],
+    ["a negative testFileGlobs entry", ["tests/**/*.test.ts", "!tests/e2e/legacy/**"], []],
+  ])(
+    "a test the configuration excludes through %s discharges nothing",
+    async (_, globs, excludes) => {
+      await withProject(async (root) => {
+        await seedSpec(root, "0001", ["US-0001"], ["TC-0001"]);
+        await seedTest(root, "integration", "a.test.ts", "/* QFAI:SPEC-0001:TC-0001 */");
+        // The project withdrew this directory from its test selection. Read anyway,
+        // its annotation satisfied the story while every other scan skipped it.
+        const dir = path.join(root, "tests", "e2e", "legacy");
+        await mkdir(dir, { recursive: true });
+        await writeFile(
+          path.join(dir, "journey.test.ts"),
+          [
+            "/* QFAI:SPEC-0001:US-0001 */",
+            "describe('journey', () => {",
+            "  it('runs', () => {});",
+            "});",
+            "",
+          ].join("\n"),
+          "utf-8",
+        );
+
+        const result = await evaluateAtddCodeTraceability(root, withProjectGlobs(globs, excludes));
+
+        expect(result.missing.us).toEqual(["SPEC-0001:US-0001"]);
+      });
+    },
+  );
+
+  it("a suite outside testsDir answers from its own layer directory", async () => {
+    await withProject(async (root) => {
+      await seedSpec(root, "0001", ["US-0001"], ["TC-0001"]);
+      await seedPackageTest(root, "checkout", "integration", "pay.test.ts", [
+        "/* QFAI:SPEC-0001:TC-0001 */",
+      ]);
+      await seedPackageTest(root, "checkout", "e2e", "journey.test.ts", [
+        "/* QFAI:SPEC-0001:US-0001 */",
+      ]);
+
+      const result = await evaluateAtddCodeTraceability(
+        root,
+        withProjectGlobs(["packages/*/tests/**/*.test.ts"]),
+      );
+
+      expect(result.missing.us).toEqual([]);
+      expect(result.missing.tc).toEqual([]);
+      expect(result.scan.matchedFileCount).toBe(2);
+    });
+  });
+
+  it("a data file an extension-broad glob sweeps into a layer discharges nothing", async () => {
+    await withProject(async (root) => {
+      await seedSpec(root, "0001", ["US-0001"], ["TC-0001"]);
+      await seedPackageTest(root, "checkout", "e2e", "journey.test.ts", [
+        "/* QFAI:SPEC-0001:US-0001 */",
+      ]);
+      // A fixture value that happens to spell an annotation. The glob collects
+      // it, but it is data, not a test source.
+      const dir = path.join(root, "packages", "checkout", "tests", "integration");
+      await mkdir(dir, { recursive: true });
+      await writeFile(
+        path.join(dir, "data.json"),
+        '{ "note": "QFAI:SPEC-0001:TC-0001" }\n',
+        "utf-8",
+      );
+
+      const result = await evaluateAtddCodeTraceability(
+        root,
+        withProjectGlobs(["packages/*/tests/**/*"]),
+      );
+
+      expect(result.missing.tc).toEqual(["SPEC-0001:TC-0001"]);
+      expect(result.missing.us).toEqual([]);
+    });
+  });
+
+  it("a source whose extension a project glob names outright still counts", async () => {
+    await withProject(async (root) => {
+      await seedSpec(root, "0001", ["US-0001"], ["TC-0001"]);
+      await seedPackageTest(root, "checkout", "e2e", "journey.test.ts", [
+        "/* QFAI:SPEC-0001:US-0001 */",
+      ]);
+      await seedPackageTest(root, "checkout", "integration", "pay.sol", [
+        "// QFAI:SPEC-0001:TC-0001",
+      ]);
+
+      const result = await evaluateAtddCodeTraceability(
+        root,
+        withProjectGlobs(["packages/*/tests/**/*.test.ts", "packages/*/tests/**/*.@(sol|zig)"]),
+      );
+
+      expect(result.missing.tc).toEqual([]);
+    });
+  });
+
+  it("a source a test-name glob selects counts whatever its extension", async () => {
+    await withProject(async (root) => {
+      await seedSpec(root, "0001", ["US-0001"], ["TC-0001"]);
+      await seedPackageTest(root, "checkout", "e2e", "journey.test.ts", [
+        "/* QFAI:SPEC-0001:US-0001 */",
+      ]);
+      await seedPackageTest(root, "checkout", "integration", "pay.test.zig", [
+        "// QFAI:SPEC-0001:TC-0001",
+      ]);
+
+      const result = await evaluateAtddCodeTraceability(
+        root,
+        withProjectGlobs(["packages/*/tests/**/*.test.*"]),
+      );
+
+      expect(result.missing.tc).toEqual([]);
+    });
+  });
+
+  it("reads no extension off a negative glob entry when choosing what counts", async () => {
+    await withProject(async (root) => {
+      await seedSpec(root, "0001", ["US-0001"], ["TC-0001"]);
+      await seedPackageTest(root, "checkout", "e2e", "journey.test.ts", [
+        "/* QFAI:SPEC-0001:US-0001 */",
+      ]);
+      await seedPackageTest(root, "checkout", "integration", "data.json", [
+        "// QFAI:SPEC-0001:TC-0001",
+      ]);
+
+      const result = await evaluateAtddCodeTraceability(
+        root,
+        withProjectGlobs(["packages/*/tests/**/*", "!packages/*/tests/fixtures/**/*.json"]),
+      );
+
+      // A JSON file outside the withdrawn subtree is not a source, so its text
+      // discharges nothing; the TypeScript journey still counts.
+      expect(result.missing.tc).toEqual(["SPEC-0001:TC-0001"]);
+      expect(result.missing.us).toEqual([]);
+    });
+  });
+
+  it("does not take a fixture directory named like a manifest for a package", async () => {
+    await withProject(async (root) => {
+      await seedSpec(root, "0001", ["US-0001"], ["TC-0001"]);
+      await seedPackageTest(root, "checkout", "e2e", "journey.test.ts", [
+        "/* QFAI:SPEC-0001:US-0001 */",
+      ]);
+      await seedPackageTest(root, "checkout", "integration", "pay.test.ts", [
+        "/* QFAI:SPEC-0001:TC-0001 */",
+      ]);
+      await mkdir(path.join(root, "packages", "checkout", "tests", "go.mod"), { recursive: true });
+
+      const result = await evaluateAtddCodeTraceability(
+        root,
+        withProjectGlobs(["packages/*/tests/**/*.test.ts"]),
+      );
+
+      expect(result.missing.tc).toEqual([]);
+      expect(result.missing.us).toEqual([]);
+    });
+  });
+
+  it("names the package-local file a misplaced test-case reference sits in", async () => {
+    await withProject(async (root) => {
+      await seedSpec(root, "0001", ["US-0001"], ["TC-0001"]);
+      await seedTest(root, "integration", "a.test.ts", "/* QFAI:SPEC-0001:TC-0001 */");
+      await seedPackageTest(root, "checkout", "e2e", "journey.test.ts", [
+        "/* QFAI:SPEC-0001:US-0001 */",
+      ]);
+      await seedPackageTest(root, "checkout", "api", "client.test.ts", [
+        "/* QFAI:SPEC-0001:TC-0001 */",
+      ]);
+
+      const issues = await validateAtddCodeTraceability(
+        root,
+        withProjectGlobs(["packages/*/tests/**/*.test.ts"]),
+      );
+      const misplaced = issues.find((entry) => entry.code === "QFAI-ATDD-121");
+
+      // The fix edits the file that carries the reference, not the configured
+      // central directory.
+      expect(misplaced?.suggested_action).toContain("packages/checkout/tests/api/client.test.ts");
+    });
+  });
+
+  it("the layer is the segment inside the test root, not an ancestor", async () => {
+    await withProject(async (root) => {
+      await seedSpec(root, "0001", ["US-0001"], ["TC-0001"]);
+      // A package may be called `api`. Scanning ancestors put every test under
+      // it in the API layer — including this unit suite, which owes ATDD
+      // nothing and would have had its stub block the gate.
+      await seedPackageTest(root, "api", "unit", "pure.test.ts", ["/* no annotation */"]);
+      await seedPackageTest(root, "api", "integration", "pay.test.ts", [
+        "/* QFAI:SPEC-0001:TC-0001 */",
+      ]);
+      await seedTest(root, "e2e", "a.test.ts", "/* QFAI:SPEC-0001:US-0001 */");
+
+      const result = await evaluateAtddCodeTraceability(
+        root,
+        withProjectGlobs(["packages/*/tests/**/*.test.ts"]),
+      );
+
+      expect(result.missing.tc).toEqual([]);
+      expect(result.forbidden.tcInApi).toEqual([]);
+      // Two acceptance files: the package's integration suite and the e2e
+      // carrier. The unit suite is dropped before it is counted.
+      expect(result.scan.matchedFileCount).toBe(2);
+    });
+  });
+
+  it("a collected file in no layer directory is neither counted nor reported as misplaced", async () => {
+    await withProject(async (root) => {
+      await seedSpec(root, "0001", ["US-0001"], ["TC-0001"]);
+      await seedTest(root, "e2e", "a.test.ts", "/* QFAI:SPEC-0001:US-0001 */");
+      await seedTest(root, "integration", "a.test.ts", "/* QFAI:SPEC-0001:TC-0001 */");
+      // A unit suite owes ATDD nothing wherever it sits. Reporting it as a file
+      // to move into `integration/` would be the all-integration collapse
+      // `catalog/test-layers.md` lists as an anti-pattern.
+      await seedPackageTest(root, "checkout", "unit", "pure.test.ts", ["/* no annotation */"]);
+
+      const result = await evaluateAtddCodeTraceability(
+        root,
+        withProjectGlobs(["packages/*/tests/**/*.test.ts"]),
+      );
+
+      expect(result.scan.matchedFileCount).toBe(2);
+      expect(result.skippedTestFiles).toEqual([]);
+    });
+  });
+
+  it("a glob the project excludes is not read", async () => {
+    await withProject(async (root) => {
+      await seedSpec(root, "0001", ["US-0001"], ["TC-0001"]);
+      await seedTest(root, "e2e", "a.test.ts", "/* QFAI:SPEC-0001:US-0001 */");
+      await seedPackageTest(root, "legacy", "integration", "old.test.ts", [
+        "/* QFAI:SPEC-0001:TC-0001 */",
+      ]);
+
+      const result = await evaluateAtddCodeTraceability(
+        root,
+        withProjectGlobs(["packages/*/tests/**/*.test.ts"], ["packages/legacy/**"]),
+      );
+
+      // The annotation is real and the file is real; the project withdrew the
+      // path, so no lane may read it — least of all one that would then report
+      // the obligation as covered.
+      expect(result.missing.tc).toEqual(["SPEC-0001:TC-0001"]);
+    });
+  });
+
+  it("an excluded glob written with surrounding whitespace is still honoured", async () => {
+    await withProject(async (root) => {
+      await seedSpec(root, "0001", ["US-0001"], ["TC-0001"]);
+      await seedTest(root, "e2e", "a.test.ts", "/* QFAI:SPEC-0001:US-0001 */");
+      await seedPackageTest(root, "legacy", "integration", "old.test.ts", [
+        "/* QFAI:SPEC-0001:TC-0001 */",
+      ]);
+
+      // The config loader keeps the padding, and every other scan of this list
+      // trims it. A raw pattern here excluded nothing, so the withdrawn suite
+      // was read and its annotation reported the obligation as covered.
+      const result = await evaluateAtddCodeTraceability(
+        root,
+        withProjectGlobs(["packages/*/tests/**/*.test.ts"], ["  packages/legacy/**  "]),
+      );
+
+      expect(result.missing.tc).toEqual(["SPEC-0001:TC-0001"]);
+    });
+  });
+
+  it("a package named for a layer does not decide its tests' layer", async () => {
+    await withProject(async (root) => {
+      await seedSpec(root, "0001", ["US-0001"], ["TC-0001"]);
+      // A package may legitimately be called `api`. Reading the path outwards
+      // classified everything under it as an API test, so an L3 annotation was
+      // reported uncovered and forbidden at once. The directory holding the
+      // test is the one that names its layer.
+      await seedPackageTest(root, "api", "integration", "pay.test.ts", [
+        "/* QFAI:SPEC-0001:TC-0001 */",
+      ]);
+      await seedTest(root, "e2e", "a.test.ts", "/* QFAI:SPEC-0001:US-0001 */");
+
+      const result = await evaluateAtddCodeTraceability(
+        root,
+        withProjectGlobs(["packages/*/tests/**/*.test.ts"]),
+      );
+
+      expect(result.missing.tc).toEqual([]);
+      expect(result.forbidden.tcInApi).toEqual([]);
+    });
+  });
+
+  it.each([
+    ["testFileExcludeGlobs", ["packages/*/tests/**/*.test.ts"], ["tests/atdd/**"]],
+    ["a negative testFileGlobs entry", ["packages/*/tests/**/*.test.ts", "!tests/atdd/**"], []],
+  ])(
+    "a scaffold excluded through %s is not reported as a file to move",
+    async (_, globs, excludes) => {
+      await withProject(async (root) => {
+        await seedSpec(root, "0001", ["US-0001"], ["TC-0001"]);
+        await seedTest(root, "e2e", "a.test.ts", "/* QFAI:SPEC-0001:US-0001 */");
+        await seedTest(root, "integration", "a.test.ts", "/* QFAI:SPEC-0001:TC-0001 */");
+        const scaffoldDir = path.join(root, "tests", "atdd");
+        await mkdir(scaffoldDir, { recursive: true });
+        await writeFile(
+          path.join(scaffoldDir, "old.test.ts"),
+          "/* QFAI:SPEC-0001:TC-0001 */\ndescribe('x', () => { it('y', () => {}); });\n",
+          "utf-8",
+        );
+
+        const result = await evaluateAtddCodeTraceability(root, withProjectGlobs(globs, excludes));
+
+        // The project withdrew the path. Asking an operator to move a file they
+        // took out of scope is advice about a file no lane reads.
+        expect(result.skippedTestFiles).toEqual([]);
+      });
+    },
+  );
+
+  it("still reports a scaffold the configuration leaves in scope", async () => {
+    await withProject(async (root) => {
+      await seedSpec(root, "0001", ["US-0001"], ["TC-0001"]);
+      await seedTest(root, "e2e", "a.test.ts", "/* QFAI:SPEC-0001:US-0001 */");
+      await seedTest(root, "integration", "a.test.ts", "/* QFAI:SPEC-0001:TC-0001 */");
+      const scaffoldDir = path.join(root, "tests", "atdd");
+      await mkdir(scaffoldDir, { recursive: true });
+      await writeFile(
+        path.join(scaffoldDir, "old.test.ts"),
+        "/* QFAI:SPEC-0001:TC-0001 */\ndescribe('x', () => { it('y', () => {}); });\n",
+        "utf-8",
+      );
+
+      const result = await evaluateAtddCodeTraceability(
+        root,
+        withProjectGlobs(["packages/*/tests/**/*.test.ts", "!tests/other/**"]),
+      );
+
+      expect(result.skippedTestFiles).toEqual(["tests/atdd/old.test.ts"]);
+    });
+  });
+
+  it("a colocated unit test is not read as its source directory's layer", async () => {
+    await withProject(async (root) => {
+      await seedSpec(root, "0001", ["US-0001"], ["TC-0001"]);
+      await seedTest(root, "integration", "a.test.ts", "/* QFAI:SPEC-0001:TC-0001 */");
+      // The glob `qfai init` derives reaches colocated sources, and `src/api/`
+      // is a source directory rather than an acceptance layer. Answering from
+      // the file's own parent would let a unit test discharge an API
+      // obligation, so a path carrying no test root answers nothing.
+      const dir = path.join(root, "packages", "app", "src", "api");
+      await mkdir(dir, { recursive: true });
+      await writeFile(
+        path.join(dir, "client.spec.ts"),
+        [
+          "/* QFAI:SPEC-0001:US-0001 */",
+          "describe('client', () => {",
+          "  it('runs', () => {});",
+          "});",
+          "",
+        ].join("\n"),
+        "utf-8",
+      );
+
+      const result = await evaluateAtddCodeTraceability(
+        root,
+        withProjectGlobs(["packages/*/src/**/*.spec.ts"]),
+      );
+
+      expect(result.missing.us).toEqual(["SPEC-0001:US-0001"]);
+      // Not misplaced either: a unit test owes ATDD nothing wherever it sits.
+      expect(result.skippedTestFiles).toEqual([]);
+    });
+  });
+
+  it("a suite outside the named roots is read once its root is named", async () => {
+    await withProject(async (root) => {
+      await seedSpec(root, "0001", ["US-0001"], ["TC-0001"]);
+      await seedTest(root, "integration", "a.test.ts", "/* QFAI:SPEC-0001:TC-0001 */");
+      // `spec/acceptance/e2e/` anchors on nothing, so the suite is reported as
+      // uncovered. The escape is the project's own: name the root `tests`,
+      // `test` or `__tests__`, or point `paths.testsDir` at it.
+      const write = async (...segments: string[]): Promise<void> => {
+        const dir = path.join(root, ...segments);
+        await mkdir(dir, { recursive: true });
+        await writeFile(
+          path.join(dir, "journey.test.ts"),
+          [
+            "/* QFAI:SPEC-0001:US-0001 */",
+            "describe('suite', () => {",
+            "  it('runs', () => {});",
+            "});",
+            "",
+          ].join("\n"),
+          "utf-8",
+        );
+      };
+
+      await write("packages", "app", "spec", "acceptance", "e2e");
+      expect(
+        (
+          await evaluateAtddCodeTraceability(
+            root,
+            withProjectGlobs(["packages/*/spec/**/*.test.ts"]),
+          )
+        ).missing.us,
+      ).toEqual(["SPEC-0001:US-0001"]);
+
+      await write("packages", "app", "tests", "e2e");
+      expect(
+        (
+          await evaluateAtddCodeTraceability(
+            root,
+            withProjectGlobs(["packages/*/spec/**/*.test.ts", "packages/*/tests/**/*.test.ts"]),
+          )
+        ).missing.us,
+      ).toEqual([]);
+    });
+  });
+
+  it("a package named like a test root does not become one", async () => {
+    await withProject(async (root) => {
+      await seedSpec(root, "0001", ["US-0001"], ["TC-0001"]);
+      await seedTest(root, "integration", "a.test.ts", "/* QFAI:SPEC-0001:TC-0001 */");
+      // `packages/tests/` is a workspace package whose name happens to match a
+      // test root, and `api/` under it is a source directory. Reading the
+      // segment after it would put every test of that package in the API
+      // layer, which is the ancestor-scanning defect one directory further out.
+      const dir = path.join(root, "packages", "tests", "api");
+      await mkdir(dir, { recursive: true });
+      await writeFile(
+        path.join(root, "packages", "tests", "package.json"),
+        JSON.stringify({ name: "tests", version: "0.0.0" }),
+        "utf-8",
+      );
+      await writeFile(
+        path.join(dir, "client.spec.ts"),
+        [
+          "/* QFAI:SPEC-0001:US-0001 */",
+          "describe('client', () => {",
+          "  it('runs', () => {});",
+          "});",
+          "",
+        ].join("\n"),
+        "utf-8",
+      );
+
+      const result = await evaluateAtddCodeTraceability(
+        root,
+        withProjectGlobs(["packages/*/**/*.spec.ts"]),
+      );
+
+      expect(result.missing.us).toEqual(["SPEC-0001:US-0001"]);
+    });
+  });
+
+  it("recognizes a package manifest from any ecosystem it reads tests in", async () => {
+    await withProject(async (root) => {
+      await seedSpec(root, "0001", ["US-0001"], ["TC-0001"]);
+      await seedTest(root, "integration", "a.test.ts", "/* QFAI:SPEC-0001:TC-0001 */");
+      // A Python workspace package called `tests`. Reading only Node's manifest
+      // would make `api/` its acceptance layer, which is the same defect the
+      // discriminator exists to stop.
+      const dir = path.join(root, "packages", "tests", "api");
+      await mkdir(dir, { recursive: true });
+      await writeFile(
+        path.join(root, "packages", "tests", "pyproject.toml"),
+        ["[project]", 'name = "tests"', ""].join("\n"),
+        "utf-8",
+      );
+      await writeFile(
+        path.join(dir, "client.spec.ts"),
+        [
+          "/* QFAI:SPEC-0001:US-0001 */",
+          "describe('client', () => {",
+          "  it('runs', () => {});",
+          "});",
+          "",
+        ].join("\n"),
+        "utf-8",
+      );
+
+      const result = await evaluateAtddCodeTraceability(
+        root,
+        withProjectGlobs(["packages/*/**/*.spec.ts"]),
+      );
+
+      expect(result.missing.us).toEqual(["SPEC-0001:US-0001"]);
+    });
+  });
+
+  it("reads a deno.jsonc package name through its comments", async () => {
+    await withProject(async (root) => {
+      await seedSpec(root, "0001", ["US-0001"], ["TC-0001"]);
+      await seedTest(root, "integration", "a.test.ts", "/* QFAI:SPEC-0001:TC-0001 */");
+      // Comments and a trailing comma are legal JSONC. The top-level name makes
+      // `packages/tests/` a package, so its `api/` is a source directory.
+      const dir = path.join(root, "packages", "tests", "api");
+      await mkdir(dir, { recursive: true });
+      await writeFile(
+        path.join(root, "packages", "tests", "deno.jsonc"),
+        [
+          "{",
+          "  /* the workspace member */",
+          '  "name": "tests",',
+          '  "version": "0.0.0",',
+          "}",
+          "",
+        ].join("\n"),
+        "utf-8",
+      );
+      await writeFile(
+        path.join(dir, "client.spec.ts"),
+        [
+          "/* QFAI:SPEC-0001:US-0001 */",
+          "describe('client', () => {",
+          "  it('runs', () => {});",
+          "});",
+          "",
+        ].join("\n"),
+        "utf-8",
+      );
+
+      const result = await evaluateAtddCodeTraceability(
+        root,
+        withProjectGlobs(["packages/*/**/*.spec.ts"]),
+      );
+
+      expect(result.missing.us).toEqual(["SPEC-0001:US-0001"]);
+    });
+  });
+
+  it("and a suite directory inside that package still is one", async () => {
+    await withProject(async (root) => {
+      await seedSpec(root, "0001", ["US-0001"], ["TC-0001"]);
+      await seedTest(root, "integration", "a.test.ts", "/* QFAI:SPEC-0001:TC-0001 */");
+      // The discriminator is the manifest, not the name: `packages/tests/` is a
+      // package and `packages/tests/tests/` is its suite, so the deeper one
+      // anchors and the layer beneath it answers.
+      const dir = path.join(root, "packages", "tests", "tests", "e2e");
+      await mkdir(dir, { recursive: true });
+      await writeFile(
+        path.join(root, "packages", "tests", "package.json"),
+        JSON.stringify({ name: "tests", version: "0.0.0" }),
+        "utf-8",
+      );
+      await writeFile(
+        path.join(dir, "journey.test.ts"),
+        [
+          "/* QFAI:SPEC-0001:US-0001 */",
+          "describe('journey', () => {",
+          "  it('runs', () => {});",
+          "});",
+          "",
+        ].join("\n"),
+        "utf-8",
+      );
+
+      const result = await evaluateAtddCodeTraceability(
+        root,
+        withProjectGlobs(["packages/*/**/*.test.ts"]),
+      );
+
+      expect(result.missing.us).toEqual([]);
+    });
+  });
+
+  it.each([
+    ["setup.cfg", ["[tool:pytest]", "addopts = -q", ""].join("\n")],
+    ["pyproject.toml", ["[tool.pytest.ini_options]", 'addopts = "-q"', ""].join("\n")],
+    ["package.json", JSON.stringify({ type: "module" })],
+    // A name inside a comment or a nested object names no package.
+    [
+      "deno.jsonc",
+      ["{", '  // "name": "tests",', '  "tasks": { "name": "check" },', "}", ""].join("\n"),
+    ],
+  ])("a suite keeping %s for its runner is still a test root", async (manifest, content) => {
+    await withProject(async (root) => {
+      await seedSpec(root, "0001", ["US-0001"], ["TC-0001"]);
+      await seedTest(root, "e2e", "a.test.ts", "/* QFAI:SPEC-0001:US-0001 */");
+      // The file configures the suite and names no package. Read by name, it
+      // made `tests/` itself a package and dropped the acceptance file below it.
+      const dir = path.join(root, "packages", "app", "tests", "integration");
+      await mkdir(dir, { recursive: true });
+      await writeFile(path.join(root, "packages", "app", "tests", manifest), content, "utf-8");
+      await writeFile(
+        path.join(dir, "pay.test.ts"),
+        [
+          "/* QFAI:SPEC-0001:TC-0001 */",
+          "describe('pay', () => {",
+          "  it('runs', () => {});",
+          "});",
+          "",
+        ].join("\n"),
+        "utf-8",
+      );
+
+      const result = await evaluateAtddCodeTraceability(
+        root,
+        withProjectGlobs(["packages/*/tests/**/*.test.ts"]),
+      );
+
+      expect(result.missing.tc).toEqual([]);
+    });
+  });
+
+  it("keeps the layer when a suite nests a second conventional root", async () => {
+    await withProject(async (root) => {
+      await seedSpec(root, "0001", ["US-0001"], ["TC-0001"]);
+      await seedTest(root, "integration", "a.test.ts", "/* QFAI:SPEC-0001:TC-0001 */");
+      // The documented `<package>/tests/<layer>/**` layout with one more
+      // directory inside it. Taking the deepest root unconditionally put the
+      // boundary past the layer, where nothing follows.
+      const dir = path.join(root, "packages", "app", "tests", "e2e", "__tests__");
+      await mkdir(dir, { recursive: true });
+      await writeFile(
+        path.join(dir, "journey.test.ts"),
+        [
+          "/* QFAI:SPEC-0001:US-0001 */",
+          "describe('journey', () => {",
+          "  it('runs', () => {});",
+          "});",
+          "",
+        ].join("\n"),
+        "utf-8",
+      );
+
+      const result = await evaluateAtddCodeTraceability(
+        root,
+        withProjectGlobs(["packages/*/tests/**/*.test.ts"]),
+      );
+
+      expect(result.missing.us).toEqual([]);
+    });
+  });
+
+  it("answers nothing when a nested root declares a layer this stage does not own", async () => {
+    await withProject(async (root) => {
+      await seedSpec(root, "0001", ["US-0001"], ["TC-0001"]);
+      await seedTest(root, "integration", "a.test.ts", "/* QFAI:SPEC-0001:TC-0001 */");
+      // A unit suite nested under a fixture tree. Leaving the outer `e2e` root
+      // standing would let its annotation discharge the story and its stubs
+      // block a gate that owns no unit test.
+      const dir = path.join(root, "packages", "app", "tests", "e2e", "fixtures", "tests", "unit");
+      await mkdir(dir, { recursive: true });
+      await writeFile(
+        path.join(dir, "pay.test.ts"),
+        [
+          "/* QFAI:SPEC-0001:US-0001 */",
+          "describe('pay', () => {",
+          "  it('runs', () => {});",
+          "});",
+          "",
+        ].join("\n"),
+        "utf-8",
+      );
+
+      const result = await evaluateAtddCodeTraceability(
+        root,
+        withProjectGlobs(["packages/*/tests/**/*.test.ts"]),
+      );
+
+      expect(result.missing.us).toEqual(["SPEC-0001:US-0001"]);
+      // A unit suite owes ATDD nothing wherever it sits.
+      expect(result.skippedTestFiles).toEqual([]);
+    });
+  });
+
+  it("drops a file under a package nested inside an acceptance fixture", async () => {
+    await withProject(async (root) => {
+      await seedSpec(root, "0001", ["US-0001"], ["TC-0001", "TC-0002"]);
+      await seedTest(root, "integration", "a.test.ts", "/* QFAI:SPEC-0001:TC-0001 */");
+      // A package embedded under the outer suite's fixtures. Its `api`
+      // directory belongs to that package, not to the outer layout. With the
+      // outer `tests` still standing over it the file read as `Integration`,
+      // and the annotation below discharged an obligation the inner package
+      // does not own.
+      const fixtureRoot = path.join(root, "packages", "app", "tests", "integration", "fixtures");
+      const dir = path.join(fixtureRoot, "tests", "api");
+      await mkdir(dir, { recursive: true });
+      await writeFile(
+        path.join(fixtureRoot, "tests", "package.json"),
+        JSON.stringify({ name: "inner-fixture" }),
+        "utf-8",
+      );
+      await writeFile(
+        path.join(dir, "client.test.ts"),
+        [
+          "/* QFAI:SPEC-0001:TC-0002 */",
+          "describe('client', () => {",
+          "  it('runs', () => {});",
+          "});",
+          "",
+        ].join("\n"),
+        "utf-8",
+      );
+
+      const result = await evaluateAtddCodeTraceability(
+        root,
+        withProjectGlobs(["packages/*/tests/**/*.test.ts"]),
+      );
+
+      // The outer suite covers the first obligation; the nested fixture
+      // covers nothing, so the second is still missing.
+      expect(result.missing.tc).toEqual(["SPEC-0001:TC-0002"]);
+    });
+  });
+
+  it("finds a deeper root past one an earlier fixture path invalidated", async () => {
+    await withProject(async (root) => {
+      await seedSpec(root, "0001", ["US-0001"], ["TC-0001"]);
+      await seedTest(root, "integration", "a.test.ts", "/* QFAI:SPEC-0001:TC-0001 */");
+      // `examples/test/projects/` is a fixture path whose `test` is followed by
+      // no layer; the suite is the `tests/e2e` below it. Stopping at
+      // the first invalidation dropped the acceptance test entirely.
+      const dir = path.join(
+        root,
+        "packages",
+        "app",
+        "examples",
+        "test",
+        "projects",
+        "demo",
+        "tests",
+        "e2e",
+      );
+      await mkdir(dir, { recursive: true });
+      await writeFile(
+        path.join(dir, "pay.test.ts"),
+        [
+          "/* QFAI:SPEC-0001:US-0001 */",
+          "describe('pay', () => {",
+          "  it('runs', () => {});",
+          "});",
+          "",
+        ].join("\n"),
+        "utf-8",
+      );
+
+      const result = await evaluateAtddCodeTraceability(
+        root,
+        withProjectGlobs(["packages/*/examples/**/*.test.ts"]),
+      );
+
+      expect(result.missing.us).toEqual([]);
+    });
+  });
+
+  it("a malformed project glob does not abort the run", async () => {
+    await withProject(async (root) => {
+      await seedSpec(root, "0001", ["US-0001"], ["TC-0001"]);
+      await seedTest(root, "e2e", "a.test.ts", "/* QFAI:SPEC-0001:US-0001 */");
+      await seedTest(root, "integration", "a.test.ts", "/* QFAI:SPEC-0001:TC-0001 */");
+
+      // The pattern is valid YAML and invalid as a glob. Letting it reject
+      // turns every other result in the batch into a generic incomplete run,
+      // and the finding the user can act on — the invalid-glob configuration
+      // one — never reaches them.
+      const result = await evaluateAtddCodeTraceability(
+        root,
+        withProjectGlobs(["packages/*/tests/**/*.test.ts", INVALID_GLOB]),
+      );
+
+      expect(result.scan.matchedFileCount).toBe(0);
+      expect(result.scan.truncated).toBe(false);
+    });
+  });
+  it("a file in no acceptance layer never costs a collection slot", async () => {
+    await withProject(async (root) => {
+      await seedSpec(root, "0001", ["US-0001"], ["TC-0001"]);
+      await seedTest(root, "e2e", "a.test.ts", "/* QFAI:SPEC-0001:US-0001 */");
+      await seedTest(root, "integration", "a.test.ts", "/* QFAI:SPEC-0001:TC-0001 */");
+      await seedPackageTest(root, "checkout", "unit", "pure.test.ts", ["/* no annotation */"]);
+
+      const result = await evaluateAtddCodeTraceability(
+        root,
+        withProjectGlobs(["packages/*/tests/**/*.test.ts"]),
+      );
+
+      // Three files match the globs and two are owned by a layer. The third is
+      // dropped while the stream runs, not after: a project glob may match a
+      // whole monorepo, and files no rule reads would otherwise spend the
+      // collection limit before the later packages' suites are reached.
+      expect(result.scan.matchedFileCount).toBe(2);
+      expect(result.scan.truncated).toBe(false);
+    });
+  });
+});
+
+async function seedPackageTest(
+  root: string,
+  packageName: string,
+  layerPath: string,
+  fileName: string,
+  lines: string[],
+): Promise<void> {
+  const dir = path.join(root, "packages", packageName, "tests", ...layerPath.split("/"));
+  await mkdir(dir, { recursive: true });
+  await writeFile(
+    path.join(dir, fileName),
+    [...lines, "describe('sample', () => {", "  it('works', () => {});", "});", ""].join("\n"),
+    "utf-8",
+  );
+}

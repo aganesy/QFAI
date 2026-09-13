@@ -184,6 +184,25 @@ restated here.
     to: `L3`/`Integration` -> `tests/integration/**`, `L4`/`API` ->
     `tests/api/**`, `L5`/`E2E` -> `tests/e2e/**`. Every other `Level` routes to
     `tests/integration/**` — blank, a spelling that names no layer, and `system` / `acceptance`. Route by the annotation's destination, not by whether the word is familiar: those last two are in the layer vocabulary, so a list phrased the other way drops them (`references/red-provenance.md`).
+  - **`tests/` above is `<testsDir>`, and it is not the only place those three
+    directories may sit.** The scan also reads the project's own
+    `validation.traceability.testFileGlobs` (minus `testFileExcludeGlobs`), and a
+    file collected that way is answered by the layer directory inside its own
+    test root — the segment after the deepest `tests` / `test` / `__tests__` or
+    the configured `paths.testsDir` basename, because a package may legitimately
+    be called `api`. A path carrying no such segment answers no layer, and a
+    directory carrying a package manifest is a package rather than a test root
+    whatever it is called. The manifests are those the catalog table lists for
+    each ecosystem, and a runner settings file among them (`package.json`,
+    `deno.json`, `deno.jsonc`, `pyproject.toml`, `setup.cfg`) counts only when it
+    names a package. **The configured root itself needs no segment**: with
+    `paths.testsDir` at the repository root, `e2e/**` is answered by containment
+    in the configured layer directory, and it is an _extra_ suite beside it that
+    needs a named root — so in a repository with one suite per
+    package, `packages/<name>/tests/integration/**` answers an `L3` obligation
+    just as `<testsDir>/integration/**` does. Write new tests where that package's
+    suite already lives; do not move a package's tests to satisfy the gate
+    (`catalog/test-layers.md#annotation-routing`).
   - **`L1`/`Unit` and `L2`/`Component` owe nothing here** — out of this skill's
     scope, excluded from `QFAI-ATDD-112`, gated by `tdd/test-list.md` under
     `/qfai-implement`, and named on every run by `QFAI-ATDD-117` (`info`). Do

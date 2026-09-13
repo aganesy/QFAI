@@ -14,8 +14,9 @@
  * implemented, while a `.skip` keeps its body and the fix is to drop the
  * modifier.
  *
- * A file still carrying {@link SCAFFOLD_PLACEHOLDER_MARKER} is exempt from
- * `QFAI-TEST-003`. `qfai atdd scaffold` writes its skeletons as `it.skip`, and
+ * A file `D-SCAFFOLD-PLACEHOLDER` will report — an unfilled skeleton, carrying
+ * the scaffold sentinel beside a per-test-case TODO line, in a directory that
+ * validator scans — is exempt from `QFAI-TEST-003`. `qfai atdd scaffold` writes its skeletons as `it.skip`, and
  * `D-SCAFFOLD-PLACEHOLDER` already owns an unfilled scaffold — with a
  * deliberate ladder that stays a warning for `atdd.scaffoldEscalateCycles`
  * validate runs before it becomes an error. Reporting the same block here as
@@ -39,11 +40,16 @@ import { readFile } from "node:fs/promises";
 import path from "node:path";
 
 import type { QfaiConfig } from "../config.js";
-import { SCAFFOLD_PLACEHOLDER_MARKER } from "../atdd/scaffold.js";
 import { collectFilesByGlobs, DEFAULT_GLOB_FILE_LIMIT } from "../fs.js";
+import {
+  globExtensions,
+  namedTestFileMatcher,
+  namesExtensionlessSource,
+} from "../testGlobExtensions.js";
 import { DEFAULT_TEST_FILE_EXCLUDE_GLOBS, normalizeGlobs } from "../traceability.js";
 import type { Issue, IssueSeverity } from "../types.js";
 import { maskJsNonCode } from "./jsSourceMask.js";
+import { scaffoldPlaceholderReportsBody } from "./scaffoldPlaceholder.js";
 import { issue } from "./utils.js";
 
 /**
@@ -709,13 +715,27 @@ function collectStubIssues(
   content: string,
   dialect: StubDialect,
   skippedTestSeverity: IssueSeverity,
+  placeholderScanned: (relativePath: string) => boolean,
 ): Issue[] {
   const issues: Issue[] = [];
   // An unfilled scaffold is `D-SCAFFOLD-PLACEHOLDER`'s, and its `it.skip` is
   // what this scan would otherwise read as a parked suite. The marker is the
   // scaffold's own, so it is gone the moment the block is authored — after
   // which a `.skip` left behind is a hand-written one and is reported.
-  const scaffolded = content.includes(SCAFFOLD_PLACEHOLDER_MARKER);
+  //
+  // The marker alone is not enough to hand it over, for two reasons.
+  //
+  // That validator scans four directories under `paths.testsDir`, and this gate
+  // also reads a monorepo's package-local acceptance suites. A marked skeleton
+  // there is outside its scan, so it stays this gate's to report.
+  //
+  // And it reports a file only when the sentinel sits beside a per-TC
+  // `TODO: implement assertion for` line. A skeleton whose TODO lines have been
+  // written out but whose sentinel survives is progressed and passes that
+  // validator, so the hand-off needs both the sentinel and a TODO line.
+  // `scaffoldPlaceholderReportsBody` is the predicate that validator applies,
+  // so the two cannot drift apart.
+  const scaffolded = scaffoldPlaceholderReportsBody(content) && placeholderScanned(relFile);
   // Offsets and line breaks survive both passes, so a match position in the
   // scanned text is still a position in the file the finding names.
   const masked = dialect.mask(content);
@@ -820,14 +840,30 @@ const UNDIALECTED_TEST_SOURCE_EXTENSIONS: readonly string[] = [
  * `QFAI-TEST-001` for the extensions with a dialect, `QFAI-TEST-002` for the
  * ones without.
  */
-export const STUB_SOURCE_FILE_PATTERN = `**/*.{${Array.from(
+const STUB_SOURCE_EXTENSIONS: readonly string[] = Array.from(
   new Set([
     ...STUB_DIALECTS.flatMap((dialect) => dialect.extensions.map((ext) => ext.slice(1))),
     ...UNDIALECTED_TEST_SOURCE_EXTENSIONS,
   ]),
-)
-  .sort()
-  .join(",")}}`;
+).sort();
+
+export const STUB_SOURCE_FILE_PATTERN = `**/*.{${STUB_SOURCE_EXTENSIONS.join(",")}}`;
+
+/**
+ * The same pattern widened by the extensions a project's own globs name.
+ *
+ * A caller builds its canonical `<testsDir>` globs from this, and an extension
+ * named only by a package glob reaches a path under the configured root through
+ * those globs alone, because the package glob does not match there. The
+ * post-collection filter cannot recover a file nothing collected.
+ */
+export function stubSourceFilePattern(projectGlobs: readonly string[]): string {
+  const extensions = new Set([
+    ...STUB_SOURCE_EXTENSIONS,
+    ...globExtensions(projectGlobs).map((ext) => ext.slice(1)),
+  ]);
+  return `**/*.{${[...extensions].sort().join(",")}}`;
+}
 
 /**
  * Blanks every comment and string-literal span, keeping offsets and line
@@ -1247,6 +1283,27 @@ export type TestTodoStubOptions = {
    * the gate scanned nothing at all on a freshly initialised repository.
    */
   globs?: readonly string[];
+  /**
+   * Narrows the collected set to the files this caller owns.
+   *
+   * Globs alone cannot express it: the ATDD scan reads the project's own test
+   * globs, which match a package's unit suite as well as its acceptance one,
+   * and a unit test's stub must not block a gate that owns none of it. The
+   * predicate takes a repository-relative, posix-slashed path.
+   */
+  fileFilter?: (relativePath: string) => boolean;
+  /**
+   * Whether `D-SCAFFOLD-PLACEHOLDER` scans this file.
+   *
+   * A file carrying the scaffold marker is exempt from `QFAI-TEST-003` only
+   * where that validator reports it instead. It scans four directories under
+   * `paths.testsDir` and nothing else, so a marked skeleton anywhere else — a
+   * package-local acceptance suite, which this gate does read — stays this
+   * gate's to report. Absent, every marked file is exempt, which is what a
+   * caller scanning only those directories wants. The predicate takes a
+   * repository-relative, posix-slashed path.
+   */
+  placeholderScanned?: (relativePath: string) => boolean;
 };
 
 /**
@@ -1344,15 +1401,73 @@ export async function validateTestTodoStubs(
   const excludeGlobs = Array.from(
     new Set([
       ...DEFAULT_TEST_FILE_EXCLUDE_GLOBS,
-      ...config.validation.traceability.testFileExcludeGlobs,
+      // The includes are normalised above; the excludes are the same list's
+      // other half, and a padded entry that the traceability scan honours but
+      // this one does not makes the two gates read different files.
+      ...normalizeGlobs(config.validation.traceability.testFileExcludeGlobs),
     ]),
   );
 
-  const { files, truncated, limit } = await collectFilesByGlobs(root, {
-    globs: Array.from(globs),
-    ignore: excludeGlobs,
-    limit: DEFAULT_GLOB_FILE_LIMIT,
-  });
+  // A caller that supplied globs also supplied the pattern it wants, and the
+  // ATDD gate's set is that pattern **plus the project's own `testFileGlobs`,
+  // used as written**. An extension-broad project glob therefore reaches a
+  // fixture — `tests/integration/data.json` — which no dialect owns and which
+  // is then reported as an unscanned language. The intersection belongs here
+  // rather than in the glob, because slicing a project glob is the defect that
+  // list exists to avoid.
+  const sourceExtensions =
+    options.globs === undefined
+      ? null
+      : new Set([
+          ...STUB_SOURCE_EXTENSIONS.map((ext) => `.${ext}`),
+          // An extension the project's own globs name is scanned whatever this
+          // validator knows about it: dropped, it never reaches
+          // `unscannedExtensions`, and a suite in a language with no dialect
+          // reads as a clean scan rather than an unscannable one. What the
+          // intersection is for is the file an extension-**broad** glob sweeps
+          // in, which names nothing. Lowercased for the comparison only — the
+          // glob that collected the file keeps the project's own spelling.
+          ...globExtensions(globs).map((ext) => ext.toLowerCase()),
+          // The same holds for a glob that selects files with no extension at
+          // all. `path.extname` reads those as "", so without this entry the
+          // file never reaches `QFAI-TEST-002` either.
+          ...(namesExtensionlessSource(globs) ? [""] : []),
+        ]);
+  // A glob naming its files, as `*.test.*` does, selects a test whatever its
+  // extension, so a file it matches is kept even when no glob names that
+  // extension.
+  const namedTestFile = options.globs === undefined ? null : namedTestFileMatcher(globs);
+  const wanted = (absolutePath: string): boolean => {
+    if (
+      sourceExtensions &&
+      !sourceExtensions.has(path.extname(absolutePath).toLowerCase()) &&
+      !(namedTestFile?.(path.basename(absolutePath)) ?? false)
+    ) {
+      return false;
+    }
+    const relative = path.relative(root, absolutePath).replace(/\\/g, "/");
+    return options.fileFilter ? options.fileFilter(relative) : true;
+  };
+
+  let collected;
+  try {
+    collected = await collectFilesByGlobs(root, {
+      globs: Array.from(globs),
+      ignore: excludeGlobs,
+      limit: DEFAULT_GLOB_FILE_LIMIT,
+      // In the stream, not after it. A caller's globs may match a whole
+      // monorepo, and files this gate does not own would otherwise spend the
+      // limit before its own reach it — reported as an `info`, which
+      // `--fail-on error` passes.
+      ...(options.fileFilter || sourceExtensions ? { filter: wanted } : {}),
+    });
+  } catch {
+    // A malformed glob is the user's to fix and has its own finding from the
+    // validator that reads the same list. Rejecting here would abort the
+    // whole batch and take that finding down with the rest.
+    return [];
+  }
+  const { files, truncated, limit } = collected;
 
   const skippedTestSeverity = "error";
 
@@ -1375,7 +1490,15 @@ export async function validateTestTodoStubs(
       continue;
     }
 
-    issues.push(...collectStubIssues(relFile, content, dialect, skippedTestSeverity));
+    issues.push(
+      ...collectStubIssues(
+        relFile,
+        content,
+        dialect,
+        skippedTestSeverity,
+        options.placeholderScanned ?? (() => true),
+      ),
+    );
   }
 
   if (truncated) {

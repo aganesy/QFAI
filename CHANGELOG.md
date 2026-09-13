@@ -97,6 +97,98 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   characters. Freshness is compared exactly, so accepting both cases would let
   one tree be recorded as two revisions and read a correct row as stale.
 
+- **The ATDD traceability scan reads every package's acceptance tests, not only
+  the one under `paths.testsDir`** (#1588, #1745). That setting holds a single path, so
+  a repository whose suites live one per package could name at most one of them.
+  The three globs the scan built from it matched whatever was under the
+  configured root, and in this repository that was two prose annotation carriers
+  and no test at all. Every obligation was then satisfied by a list of IDs, and
+  `QFAI-ATDD-111` and `-112` could not report a coverage gap.
+
+  The scan now also collects from the project's own
+  `validation.traceability.testFileGlobs`, minus its `testFileExcludeGlobs` and
+  any negative entry in the list itself, which the scan used to read anyway, and
+  a file collected that way is answered by the segment **inside its test
+  root** — `<package>/tests/<layer>/**`. Read from any ancestor instead, every
+  test of a package called `api` lands in the API layer, including its unit
+  suite. The globs are used as written: a base is
+  never derived by slicing one, because a glob whose directory part carries a
+  wildcard slices to a base with the wildcard still in it, and a layer glob
+  synthesized under that base addresses a directory the project never
+  configured.
+
+  Measured on this repository: obligations covered by an annotation carrier
+  alone fall from 781 to 384 — 93 user stories and 304 test cases move to a test
+  that exists and runs — with no new finding at any severity.
+
+  A collected file in none of the three directories answers nothing and is not
+  reported as misplaced. A unit suite owes ATDD nothing wherever it sits, so
+  `QFAI-ATDD-105` keeps its subject: a file under `paths.testsDir` that no layer
+  owns. It skips a file the project withdrew, whether through
+  `testFileExcludeGlobs` or a negative `testFileGlobs` entry.
+
+  The stub gate collects the extensions its own pattern names, plus any a
+  project glob names outright — and those reach the layer globs it generates
+  under `paths.testsDir` as well, so an extension named only by a package glob
+  is collected from the configured root too. A glob used as written may be extension-broad, so
+  a fixture beside the suite — `tests/integration/data.json` — reached a scan
+  that had nothing to say about it and was reported as an unscanned language;
+  and a glob naming `.zig` selects a language with no dialect on purpose, which
+  is what that report is for. The same holds for a glob naming a file with no
+  extension, such as `tests/integration/test_pay`, or an extension through a
+  short character class, such as `*.[z]ig`, or a glob that names the file itself
+  and leaves the extension open, such as `*.test.*`, `*.{test,spec}.*` or
+  `test_[0-9].*`. A negative entry names no extension, either for the stub gate
+  or for the scan's own file pattern.
+
+  The coverage scan reads a collected file the same way: a data file an
+  extension-broad glob sweeps into an acceptance layer is not a source, so an
+  annotation-shaped fixture value in `tests/integration/data.json` discharges
+  nothing.
+
+  A file in no acceptance layer is dropped while the stream runs, before it is
+  counted against the collection limit. A project glob may match a whole
+  monorepo, and files no acceptance rule reads would otherwise spend the limit
+  on the first packages and never reach the later ones — reported only as an
+  `info`, which `--fail-on error` passes. `scan.matchedFileCount` therefore
+  counts acceptance files rather than glob matches.
+
+  A malformed `validation.traceability.testFileGlobs` entry no longer rejects
+  the whole validator batch. It degrades to an empty scan, so the finding the
+  user can act on still reaches them alongside every other result.
+
+  A misplaced test-case reference is fixed in the file that carries it, and the
+  remediation now names that file, whichever package's suite it sits in. Every
+  remediation that names a layer directory, the missing-coverage ones and
+  the deferral notices alike, names the package's own suite as well as
+  `paths.testsDir`, so an author following the canonical fix does not build a
+  parallel central suite the shipped skill tells them not to build.
+
+  A collected file answers a layer only from inside a test root — a directory
+  named `tests`, `test` or `__tests__`, or the one `paths.testsDir` points at,
+  and in either case one that carries no package manifest, since a workspace
+  package named `tests` is a package rather than a suite root. The manifest is
+  read for the ecosystems a workspace declares packages in, not Node's alone: a
+  Python or Go workspace can name a package that way too. Only a file counts as
+  a manifest, so a fixture directory called `go.mod` does not. A file a
+  suite also keeps for its runner — `package.json`, `deno.json`, `deno.jsonc`,
+  `pyproject.toml`, `setup.cfg` — counts only when it names a package, and
+  `deno.jsonc` is parsed with its comments and trailing commas, so a `name`
+  nested in another object or left in a comment names nothing.
+  The glob `qfai init` derives reaches colocated sources, so reading the file's
+  own parent instead would have made every `src/api/client.spec.ts` an API
+  acceptance test: its annotation could then discharge an obligation, and an
+  unfilled stub in it could block a gate that owns no unit test. A suite kept
+  outside those roots is reported as uncovered until its root is named, which
+  is the safe direction of the two.
+
+  The scaffold marker still hands an unfilled skeleton to
+  `D-SCAFFOLD-PLACEHOLDER`, but only where that validator looks — both halves of
+  its scan, the four directories under `paths.testsDir` and the writer's own
+  basename patterns. A marked skeleton outside either was exempt from this gate
+  and uncollected by that one, leaving the ATDD gate green over a suite that
+  does not run.
+
 ## [1.12.0] - 2026-09-12
 
 ### Added

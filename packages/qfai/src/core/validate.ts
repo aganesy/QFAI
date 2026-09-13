@@ -43,7 +43,10 @@ import { validateTraceability } from "./validators/traceability.js";
 import { evaluateAtddCodeTraceability } from "./atddTraceability.js";
 import { validateAtddCodeTraceability } from "./validators/atddCodeTraceability.js";
 import { validateAtddCoverageDepth } from "./validators/atddCoverageDepth.js";
-import { validateScaffoldPlaceholder } from "./validators/scaffoldPlaceholder.js";
+import {
+  scaffoldPlaceholderScannedFilter,
+  validateScaffoldPlaceholder,
+} from "./validators/scaffoldPlaceholder.js";
 import {
   detectPlatform,
   validateAgentDefinition,
@@ -106,9 +109,9 @@ import {
   runPackageSelfGovernanceValidators,
   validateStaleReferences,
   validateImportLiteEvidencePresence,
-  STUB_SOURCE_FILE_PATTERN,
+  stubSourceFilePattern,
 } from "./validators/index.js";
-import { atddAcceptanceTestGlobs } from "./atddTraceability.js";
+import { atddAcceptanceLayerFilter, atddAcceptanceTestGlobs } from "./atddTraceability.js";
 import type { HtmlMockTiming } from "./validators/index.js";
 import { readSafe } from "./validators/utils.js";
 
@@ -921,13 +924,34 @@ async function runAtddValidators(
     // skill instructs the operator to run. Unscoped like the contract rules:
     // the finding names a test file, which no spec owns.
     //
-    // Selection is the stage's own three directories, not
-    // `validation.traceability.testFileGlobs`: that list is repo-wide, so a
-    // `tests/**/*.test.ts` project would have had a `tests/unit/**` stub block
-    // a gate that owns none of it, and the shipped `qfai.config.yaml` leaves
-    // it empty, which made the validator return before reading anything.
+    // Selection is the stage's own, and the stage reads two glob sets: the
+    // three layer directories under `paths.testsDir`, and the project's own
+    // `validation.traceability.testFileGlobs`, which is where a monorepo's other
+    // packages keep their acceptance suites. The second set also matches unit
+    // and component files, and a unit test's stub must not block a gate that
+    // owns none of it — so the layer filter, not the globs, is what keeps them
+    // out. Neither set suffices alone: the configured globs reach unit suites,
+    // and the shipped `qfai.config.yaml` leaves them empty, where the layer
+    // directories are the only acceptance tests there are.
+    //
+    // The marker exemption is handed the same stage's scan boundary. A marked
+    // skeleton under `paths.testsDir` is `D-SCAFFOLD-PLACEHOLDER`'s to report;
+    // one in a package-local suite is outside that validator, so exempting it
+    // here would leave it reported by neither.
     ...(await validateTestTodoStubs(root, config, {
-      globs: atddAcceptanceTestGlobs(root, config, STUB_SOURCE_FILE_PATTERN),
+      // The pattern carries the project's own extensions as well. The layer
+      // globs this builds under `paths.testsDir` are generated from it, and an
+      // extension named only by a package glob — `packages/**/*.sol` beside a
+      // `tests/integration/pay.sol` — reaches that path through them alone,
+      // because the package glob does not. A source the gate never collects
+      // cannot be reported as unscanned either.
+      globs: atddAcceptanceTestGlobs(
+        root,
+        config,
+        stubSourceFilePattern(config.validation.traceability.testFileGlobs),
+      ),
+      fileFilter: atddAcceptanceLayerFilter(root, config),
+      placeholderScanned: scaffoldPlaceholderScannedFilter(root, config),
     })),
   ];
 }

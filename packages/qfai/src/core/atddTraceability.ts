@@ -1,3 +1,4 @@
+import { readdirSync, readFileSync, statSync, type Dirent } from "node:fs";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 
@@ -22,7 +23,12 @@ import {
   resolveTestCaseTables,
 } from "./specPackParsers.js";
 import { UNIT_COMPONENT_LAYERS } from "./tddHelpers.js";
-import { DEFAULT_TEST_FILE_EXCLUDE_GLOBS } from "./traceability.js";
+import {
+  globExtensions,
+  namedTestFileMatcher,
+  namesExtensionlessSource,
+} from "./testGlobExtensions.js";
+import { DEFAULT_TEST_FILE_EXCLUDE_GLOBS, normalizeGlobs } from "./traceability.js";
 import { maskJsNonCode } from "./validators/jsSourceMask.js";
 
 // The short form carries `(?!-)`; the long form does not.
@@ -187,6 +193,13 @@ export type AtddSpecRefs = Map<string, Map<string, Set<string>>>;
 
 export type AtddTraceabilityScan = {
   globs: string[];
+  /**
+   * Files collected, which is also the number an acceptance layer owns.
+   *
+   * The collector drops a file in no acceptance layer before it is counted,
+   * so this is the count the coverage rules are computed from rather than a
+   * match total a reader has to discount.
+   */
   matchedFileCount: number;
   truncated: boolean;
   limit: number;
@@ -449,12 +462,46 @@ export async function evaluateAtddCodeTraceability(
   const apiRoot = path.join(testsRoot, "api");
   const integrationRoot = path.join(testsRoot, "integration");
 
-  const scanGlobs = buildAtddTestGlobs(
+  const scanTestsDirName = testsDirName(root, config);
+  const scanGlobs = buildAtddScanGlobs(
     root,
     testsRoot,
     deriveAtddFilePattern(config.validation.traceability.testFileGlobs),
+    config.validation.traceability.testFileGlobs,
   );
-  const scanResult = await collectTestFiles(root, scanGlobs);
+  const acceptanceLayer = atddAcceptanceLayerFilter(root, config);
+  const acceptanceSource = acceptanceSourceFilter(
+    deriveAtddFilePattern(config.validation.traceability.testFileGlobs),
+    normalizeGlobs(config.validation.traceability.testFileGlobs),
+  );
+  // One probe for the whole scan, so a manifest is stat-ed once however many
+  // files sit under the directory that carries it.
+  const scanPackageRoot = packageRootProbe();
+  let scanResult: CollectFilesByGlobsResult;
+  try {
+    scanResult = await collectTestFiles(
+      root,
+      scanGlobs,
+      // Trimmed and emptied the way every other scan of this list is, so a
+      // padded entry excludes here exactly what it excludes there.
+      normalizeGlobs(config.validation.traceability.testFileExcludeGlobs),
+      // A project glob may match a whole monorepo. Charging the limit for files
+      // no acceptance rule reads would spend it on the first packages and never
+      // reach the later ones, and the truncation that reports it is an `info`.
+      (file) => acceptanceSource(file) && acceptanceLayer(path.relative(root, file)),
+    );
+  } catch {
+    // A malformed `testFileGlobs` entry is the user's to fix and already has a
+    // finding: `QFAI-TRACE-124`, from the validator that reads the same list.
+    // Rejecting here instead would abort the whole batch and replace every
+    // other result with a generic incomplete run.
+    scanResult = {
+      files: [],
+      truncated: false,
+      matchedFileCount: 0,
+      limit: DEFAULT_GLOB_FILE_LIMIT,
+    };
+  }
 
   const usRefs: AtddSpecRefs = new Map<string, Map<string, Set<string>>>();
   const tcRefs: AtddSpecRefs = new Map<string, Map<string, Set<string>>>();
@@ -485,16 +532,24 @@ export async function evaluateAtddCodeTraceability(
 
   for (const file of scanResult.files) {
     const kind = resolveTestKind(file, {
+      root,
+      testsDirName: scanTestsDirName,
       e2eRoot,
       apiRoot,
       integrationRoot,
+      isPackageRoot: scanPackageRoot,
     });
     if (!kind) {
-      // Recorded, not dropped. A correctly annotated test outside the three
-      // scanned roots contributes nothing to coverage and used to vanish with
-      // no diagnostic — which is how `qfai atdd scaffold` could write files
-      // that every gate then reported as zero coverage.
-      skippedTestFiles.push(toPosixPath(path.relative(root, file)));
+      // Dropped, not recorded. A unit or component suite owes ATDD nothing
+      // wherever it sits, and every conventional `tests/unit` tree is matched
+      // by an ordinary `tests/**` glob — so recording them here would tell an
+      // operator to move each one into `integration/`, which is the
+      // all-integration collapse `catalog/test-layers.md` lists as an
+      // anti-pattern.
+      //
+      // A generated file outside every acceptance layer is reported by
+      // `collectUncountedTestFiles` alone: it reads the directories qfai itself
+      // writes to, which is where such a file lands.
       continue;
     }
 
@@ -631,7 +686,17 @@ export async function evaluateAtddCodeTraceability(
   // scan is glob-scoped to the three roots and never sees them. `tcLevels` is
   // passed because "contributes nothing" is not the same as "should be moved":
   // an L1/L2 annotation is owed to no ATDD directory at all.
-  skippedTestFiles.push(...(await collectUncountedTestFiles(root, testsRoot, tcLevels)));
+  skippedTestFiles.push(
+    ...(await collectUncountedTestFiles(
+      root,
+      testsRoot,
+      tcLevels,
+      normalizeGlobs(config.validation.traceability.testFileExcludeGlobs),
+      normalizeGlobs(config.validation.traceability.testFileGlobs)
+        .map((glob) => toPosixPath(glob))
+        .filter((glob) => glob.startsWith("!")),
+    )),
+  );
 
   // Active = declared minus deferred, mirroring the contract collectors:
   // `x-qfai-status: planned` suspends the E2E obligation for that one story, it
@@ -784,16 +849,33 @@ async function collectUncountedTestFiles(
   root: string,
   testsRoot: string,
   tcLevels: Map<string, Map<string, string>>,
+  excludeGlobs: readonly string[] = [],
+  withdrawnGlobs: readonly string[] = [],
 ): Promise<string[]> {
+  // Repository-relative, like every other glob here. An absolute pattern
+  // produces absolute entries, and a project's own `testFileExcludeGlobs` are
+  // written relative to the repository root, so an absolute scan could not be
+  // filtered by them at all.
+  const relativeTestsRoot = path.relative(root, testsRoot);
+  const base =
+    relativeTestsRoot.length === 0 ||
+    (!relativeTestsRoot.startsWith("..") && !path.isAbsolute(relativeTestsRoot))
+      ? toPosixPath(relativeTestsRoot.length === 0 ? "." : relativeTestsRoot)
+      : toPosixPath(testsRoot);
   const patterns = UNCOUNTED_TEST_DIRS.map(
     (dir) =>
-      `${toPosixPath(path.join(testsRoot, dir)).replace(/\/+$/, "")}/**/*.{ts,tsx,js,jsx,mjs,cjs,mts,cts,feature,md,markdown}`,
+      `${base.replace(/\/+$/, "")}/${dir}/**/*.{ts,tsx,js,jsx,mjs,cjs,mts,cts,feature,md,markdown}`,
   );
   let files: string[];
   try {
     const collected = await collectFilesByGlobs(root, {
-      globs: patterns,
-      ignore: DEFAULT_TEST_FILE_EXCLUDE_GLOBS,
+      // The project's own exclusions apply here as well, both kinds: its
+      // `testFileExcludeGlobs` and the negative entries of its `testFileGlobs`,
+      // which the acceptance scan honours as patterns. A path it withdrew is
+      // withdrawn from every lane, and reporting an excluded scaffold as a file
+      // to move would ask the operator to act on something they took out.
+      globs: [...patterns, ...withdrawnGlobs],
+      ignore: [...DEFAULT_TEST_FILE_EXCLUDE_GLOBS, ...excludeGlobs],
       limit: DEFAULT_GLOB_FILE_LIMIT,
     });
     files = collected.files;
@@ -2281,6 +2363,9 @@ function isAnnotationOnlyCarrier(
 export function deriveTestFileExtensions(testFileGlobs: readonly string[]): Set<string> {
   const extensions = new Set<string>();
   for (const glob of testFileGlobs) {
+    // A negative entry withdraws files; the extension it names is not one the
+    // project selected.
+    if (glob.startsWith("!")) continue;
     for (const match of glob.matchAll(/\.\{([^}]+)\}$/g)) {
       for (const ext of (match[1] ?? "").split(",")) {
         const trimmed = ext.trim();
@@ -2320,6 +2405,32 @@ export function deriveAtddFilePattern(testFileGlobs: readonly string[]): string 
   return `**/*.{${sorted.join(",")}}`;
 }
 
+/**
+ * Whether a collected file is a source this scan reads for annotations.
+ *
+ * A project glob used as written may be extension-broad, and one that is
+ * collects a data file inside an acceptance layer as readily as a test. A
+ * fixture value is not an annotation, so a file counts only when its extension
+ * is one the scan's file pattern covers or one a project glob names outright,
+ * or when a project glob names the file itself, as `*.test.*` names
+ * `pay.test.zig`.
+ */
+function acceptanceSourceFilter(
+  filePattern: string,
+  projectGlobs: readonly string[],
+): (absolutePath: string) => boolean {
+  const patternExtensions = /\{([^}]*)\}$/.exec(filePattern)?.[1] ?? "";
+  const extensions = new Set([
+    ...patternExtensions.split(",").map((ext) => `.${ext.trim().toLowerCase()}`),
+    ...globExtensions(projectGlobs).map((ext) => ext.toLowerCase()),
+  ]);
+  if (namesExtensionlessSource(projectGlobs)) extensions.add("");
+  const namedTestFile = namedTestFileMatcher(projectGlobs);
+  return (absolutePath) =>
+    extensions.has(path.extname(absolutePath).toLowerCase()) ||
+    namedTestFile(path.basename(absolutePath));
+}
+
 function buildAtddTestGlobs(root: string, testsRoot: string, filePattern: string): string[] {
   const relativeTestsRoot = path.relative(root, testsRoot);
   const isInsideRoot =
@@ -2337,34 +2448,103 @@ function buildAtddTestGlobs(root: string, testsRoot: string, filePattern: string
 }
 
 /**
- * The acceptance-test globs this stage owns, for a scanner that brings its own
+ * Every glob the scan collects from.
+ *
+ * Two sources, because one of them cannot answer for a monorepo.
+ * `paths.testsDir` is a single value, so in a repository whose suites live one
+ * per package there is no second `testsDir` for the other packages to be named
+ * by, and the three layer globs built from it match a directory holding no
+ * tests at all. The project's own `validation.traceability.testFileGlobs` name
+ * those suites already.
+ *
+ * The project's globs are used as written, never sliced for a base to build a
+ * layer glob under. A glob whose directory part carries a wildcard slices to a
+ * base with the wildcard still in it, and the layer glob synthesized under that
+ * base addresses a directory the project never configured.
+ */
+function buildAtddScanGlobs(
+  root: string,
+  testsRoot: string,
+  filePattern: string,
+  projectTestFileGlobs: readonly string[],
+): string[] {
+  const globs = new Set(buildAtddTestGlobs(root, testsRoot, filePattern));
+  for (const glob of projectTestFileGlobs) {
+    const normalized = toPosixPath(glob).trim();
+    if (normalized.length > 0) {
+      globs.add(normalized);
+    }
+  }
+  return [...globs];
+}
+
+/**
+ * The acceptance-test globs this stage reads, for a scanner that brings its own
  * file pattern.
  *
- * `/qfai-atdd` owns `tests/{e2e,api,integration}/**` and nothing else, so a
- * validator wired into `--profile atdd` must select files the same way the
- * ATDD scan does — following `paths.testsDir` — rather than reusing
- * `validation.traceability.testFileGlobs`, which describes the whole
- * repository's tests.
+ * Two sources, the same two the ATDD scan uses: the layer directories under
+ * `paths.testsDir`, built from the pattern, and the project's own
+ * `validation.traceability.testFileGlobs`, which is where a monorepo's other
+ * packages keep their acceptance suites.
+ *
+ * **The result is not acceptance-only.** The project globs describe the whole
+ * repository's tests, unit and component suites included, so a caller must
+ * apply `atddAcceptanceLayerFilter` to what these globs collect. The globs
+ * decide what can be read; the filter decides what this stage owns.
  */
 export function atddAcceptanceTestGlobs(
   root: string,
   config: QfaiConfig,
   filePattern: string,
 ): string[] {
-  return buildAtddTestGlobs(root, resolvePath(root, config, "testsDir"), filePattern);
+  return buildAtddScanGlobs(
+    root,
+    resolvePath(root, config, "testsDir"),
+    filePattern,
+    config.validation.traceability.testFileGlobs,
+  );
 }
 
-async function collectTestFiles(root: string, globs: string[]): Promise<CollectFilesByGlobsResult> {
+async function collectTestFiles(
+  root: string,
+  globs: string[],
+  excludeGlobs: readonly string[] = [],
+  filter?: (absolutePath: string) => boolean,
+): Promise<CollectFilesByGlobsResult> {
   return collectFilesByGlobs(root, {
+    ...(filter ? { filter } : {}),
     globs,
-    ignore: DEFAULT_TEST_FILE_EXCLUDE_GLOBS,
+    // The project's own exclusions travel with its own globs. Without them a
+    // path the project declared and then withdrew is collected here alone, and
+    // the annotations in it count towards coverage no other lane reads.
+    ignore: [...DEFAULT_TEST_FILE_EXCLUDE_GLOBS, ...excludeGlobs],
     limit: DEFAULT_GLOB_FILE_LIMIT,
   });
 }
 
+/**
+ * Directory names that declare an acceptance layer.
+ *
+ * The same three the contract names. A file outside `paths.testsDir` already
+ * says which layer it is by sitting in one of them; reading that is what lets
+ * a second package's acceptance tests count.
+ */
+const ATDD_LAYER_SEGMENTS = new Map<string, AtddTestKind>([
+  ["e2e", "e2e"],
+  ["api", "api"],
+  ["integration", "integration"],
+]);
+
 function resolveTestKind(
   filePath: string,
-  roots: { e2eRoot: string; apiRoot: string; integrationRoot: string },
+  roots: {
+    root: string;
+    testsDirName: string;
+    e2eRoot: string;
+    apiRoot: string;
+    integrationRoot: string;
+    isPackageRoot: (absoluteDir: string) => boolean;
+  },
 ): AtddTestKind | null {
   if (isWithinPath(roots.e2eRoot, filePath)) {
     return "e2e";
@@ -2375,7 +2555,325 @@ function resolveTestKind(
   if (isWithinPath(roots.integrationRoot, filePath)) {
     return "integration";
   }
-  return null;
+  return resolveTestKindFromPath(roots.root, filePath, roots.testsDirName, roots.isPackageRoot);
+}
+
+/**
+ * Directory names a test suite is rooted at.
+ *
+ * The layer is read from the segment **after** one of these, not from any
+ * ancestor that happens to share a layer's name. Scanning ancestors put every
+ * test of a package called `api` — including its unit suite — in the API layer,
+ * and `packages/api/tests/helpers/` has no deeper layer segment to correct it.
+ *
+ * The configured `paths.testsDir` basename joins this set per project, so a
+ * project that renamed the directory is read the same way.
+ */
+const TEST_ROOT_SEGMENTS = new Set(["tests", "test", "__tests__"]);
+
+/**
+ * The layer a file outside `paths.testsDir` declares by where it sits.
+ *
+ * One segment decides it: the one immediately inside the deepest test root on
+ * the path. That is the shape the contract describes — `<testsDir>/<layer>/**` —
+ * and reading it there rather than anywhere in the path keeps a package name
+ * out of the answer.
+ *
+ * `null` for a path outside the repository root, for one with no test root on
+ * it, and for a file sitting directly in a test root with no layer directory
+ * between them.
+ *
+ * The second of those is the reason a configured glob does not get its own
+ * rule. A colocated `src/api/client.spec.ts` is a unit test, and answering from
+ * the file's own directory would read it as an API acceptance one — after which
+ * an annotation in it discharges an obligation, and an unfilled stub blocks a
+ * gate that owns none of it. A project whose suites sit outside a directory
+ * named here anchors them by naming their root `tests`, `test` or `__tests__`,
+ * or by pointing `paths.testsDir` at one; missing such a file is the safe
+ * direction, and claiming one is not.
+ */
+function resolveTestKindFromPath(
+  root: string,
+  filePath: string,
+  testsDirName: string,
+  isPackageRoot: (absoluteDir: string) => boolean,
+): AtddTestKind | null {
+  const relative = path.relative(root, filePath);
+  if (relative.length === 0 || relative.startsWith("..") || path.isAbsolute(relative)) {
+    return null;
+  }
+  const directories = toPosixPath(relative).split("/").slice(0, -1);
+  let testRoot = -1;
+  directories.forEach((directory, index) => {
+    if (!TEST_ROOT_SEGMENTS.has(directory) && directory !== testsDirName) {
+      return;
+    }
+    // A package may be called `tests`, and `packages/tests/api/client.spec.ts`
+    // is then a source tree whose second segment reads as a layer. What
+    // separates the two is the manifest: a workspace package has one, a suite
+    // directory inside a package does not.
+    if (isPackageRoot(path.join(root, ...directories.slice(0, index + 1)))) {
+      // A package root clears every outer candidate, because the directories
+      // below it belong to that package rather than to the outer layout. In
+      // `packages/app/tests/integration/fixtures/tests/api/client.test.ts`,
+      // with a manifest in the inner `tests`, the file answers no layer of the
+      // outer suite: its annotation discharges nothing there, and its stub
+      // gates nothing that package owns.
+      //
+      // The scan continues, so a genuine test root deeper still is reached.
+      testRoot = -1;
+      return;
+    }
+    // A deeper root answers or invalidates; it never leaves an outer one
+    // standing over a suite that declares something else.
+    const below = directories[index + 1];
+    if (below === undefined) {
+      // A terminal container: `<pkg>/tests/integration/__tests__/pay.test.ts`
+      // is the documented layout with one more directory inside it, and the
+      // outer root's layer is still the file's.
+      return;
+    }
+    if (!ATDD_LAYER_SEGMENTS.has(below)) {
+      // The deeper root declares a layer this stage does not own —
+      // `.../fixtures/tests/unit/pay.test.ts` is a unit suite — so the outer
+      // candidate goes too. The file belongs to that unit suite, which owes
+      // ATDD nothing, so neither its annotation nor its stub answers the outer
+      // `integration` layer.
+      //
+      // The scan continues: a still deeper root may be the real one, as in
+      // `examples/test/projects/app/tests/integration/**`, where the first
+      // pair is a fixture path and the second is the suite.
+      testRoot = -1;
+      return;
+    }
+    testRoot = index;
+  });
+  if (testRoot < 0) {
+    return null;
+  }
+  const layer = directories[testRoot + 1];
+  return layer === undefined ? null : (ATDD_LAYER_SEGMENTS.get(layer) ?? null);
+}
+
+/**
+ * The basename `resolveTestKindFromPath` reads as a test root for this project.
+ *
+ * Empty when `paths.testsDir` is the repository root: there the layer directories
+ * sit at the top level and the containment check answers for them, so taking
+ * the checkout's own directory name as a test root would only let an unrelated
+ * path match it.
+ */
+function testsDirName(root: string, config: QfaiConfig): string {
+  const testsRoot = resolvePath(root, config, "testsDir");
+  if (path.relative(root, testsRoot) === "") {
+    return "";
+  }
+  const base = toPosixPath(testsRoot).replace(/\/+$/, "");
+  return base.slice(base.lastIndexOf("/") + 1);
+}
+
+/**
+ * Package-manifest basenames that name a package whatever they hold, across the
+ * ecosystems this toolkit reads tests in.
+ *
+ * The list follows the ecosystems a workspace declares packages in, not the
+ * languages the stub validator has a dialect for: a package called `tests` has
+ * to be told apart from a test root in any of them, and the discriminator has
+ * to be its own manifest, not Node's.
+ */
+const PACKAGE_MANIFEST_NAMES = new Set([
+  "setup.py",
+  "go.mod",
+  "Cargo.toml",
+  "pom.xml",
+  "build.gradle",
+  "build.gradle.kts",
+  "build.sbt",
+  "Gemfile",
+  "composer.json",
+  "Package.swift",
+  "pubspec.yaml",
+]);
+
+/** Manifest extensions whose basename a project chooses. */
+const PACKAGE_MANIFEST_EXTENSIONS = new Set([".gemspec", ".csproj", ".vbproj", ".fsproj"]);
+
+/** Whether a JSON manifest's top level declares a string `name`. */
+function declaresName(content: string): boolean {
+  try {
+    const parsed: unknown = JSON.parse(content);
+    return (
+      typeof parsed === "object" &&
+      parsed !== null &&
+      "name" in parsed &&
+      typeof parsed.name === "string"
+    );
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * JSONC with its comments and trailing commas taken out, so `JSON.parse` reads
+ * it. A `//` or `/*` inside a string is text, not a comment.
+ */
+function withoutJsoncSyntax(content: string): string {
+  let out = "";
+  let inString = false;
+  for (let i = 0; i < content.length; i += 1) {
+    const char = content[i] ?? "";
+    const next = content[i + 1] ?? "";
+    if (inString) {
+      out += char;
+      if (char === "\\") {
+        out += next;
+        i += 1;
+      } else if (char === '"') {
+        inString = false;
+      }
+      continue;
+    }
+    if (char === '"') {
+      inString = true;
+      out += char;
+    } else if (char === "/" && next === "/") {
+      const end = content.indexOf("\n", i);
+      i = end === -1 ? content.length : end - 1;
+    } else if (char === "/" && next === "*") {
+      const end = content.indexOf("*/", i + 2);
+      i = end === -1 ? content.length : end + 1;
+    } else if (char === "," && /^\s*[}\]]/.test(withoutLeadingComments(content.slice(i + 1)))) {
+      // A trailing comma: the next thing that is not a comment closes the value.
+    } else {
+      out += char;
+    }
+  }
+  return out;
+}
+
+/** Text with leading whitespace and comments removed, up to its first token. */
+function withoutLeadingComments(text: string): string {
+  let rest = text;
+  for (;;) {
+    const trimmed = rest.trimStart();
+    if (trimmed.startsWith("//")) {
+      const end = trimmed.indexOf("\n");
+      rest = end === -1 ? "" : trimmed.slice(end + 1);
+    } else if (trimmed.startsWith("/*")) {
+      const end = trimmed.indexOf("*/");
+      rest = end === -1 ? "" : trimmed.slice(end + 2);
+    } else {
+      return trimmed;
+    }
+  }
+}
+
+/**
+ * Manifests a test root also keeps for its runner's settings, with what makes
+ * one a package's.
+ *
+ * A suite may hold `setup.cfg` or a tool-only `pyproject.toml` for pytest, or a
+ * `package.json` holding only `"type"` to set its module format, so each of
+ * these counts only when its contents name a package. Anything else would make
+ * the suite's own directory a package, and no acceptance file below it would
+ * answer a layer.
+ */
+const CONFIGURABLE_MANIFESTS = new Map<string, (content: string) => boolean>([
+  ["package.json", declaresName],
+  ["deno.json", declaresName],
+  ["deno.jsonc", (content) => declaresName(withoutJsoncSyntax(content))],
+  ["pyproject.toml", (content) => /^\s*\[(?:project|tool\.poetry)\]\s*$/m.test(content)],
+  ["setup.cfg", (content) => /^\s*\[metadata\]\s*$/m.test(content)],
+]);
+
+function isPackageManifest(absoluteDir: string, entry: string): boolean {
+  const namesPackage = CONFIGURABLE_MANIFESTS.get(entry);
+  if (namesPackage) {
+    try {
+      return namesPackage(readFileSync(path.join(absoluteDir, entry), "utf-8"));
+    } catch {
+      // A manifest that cannot be read says nothing about a package.
+      return false;
+    }
+  }
+  return (
+    PACKAGE_MANIFEST_NAMES.has(entry) ||
+    PACKAGE_MANIFEST_EXTENSIONS.has(path.extname(entry).toLowerCase())
+  );
+}
+
+/**
+ * Whether a directory entry is a file, or a link to one. A fixture directory
+ * that happens to be called `go.mod` is not a manifest, and taking it for one
+ * would clear a genuine test root.
+ */
+function isFileEntry(absoluteDir: string, entry: Dirent): boolean {
+  if (entry.isFile()) return true;
+  if (!entry.isSymbolicLink()) return false;
+  try {
+    return statSync(path.join(absoluteDir, entry.name)).isFile();
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Whether a directory carries a package manifest, memoised per scan.
+ *
+ * One `readdirSync` per candidate directory — the same cost class as a stat,
+ * and it answers the named manifests and the ones whose basename the project
+ * chooses in one read; a manifest a suite may keep for configuration is read
+ * as well. A scan asks about the same few directories over and
+ * over, so the answer is cached. Synchronous because the layer question is
+ * asked from a predicate the file stream calls per file, which cannot await.
+ */
+export function packageRootProbe(): (absoluteDir: string) => boolean {
+  const seen = new Map<string, boolean>();
+  return (absoluteDir: string): boolean => {
+    const cached = seen.get(absoluteDir);
+    if (cached !== undefined) {
+      return cached;
+    }
+    let answer: boolean;
+    try {
+      answer = readdirSync(absoluteDir, { withFileTypes: true }).some(
+        (entry) => isFileEntry(absoluteDir, entry) && isPackageManifest(absoluteDir, entry.name),
+      );
+    } catch {
+      // Unreadable, or a path that is not a directory at all. Neither is a
+      // package root, and neither is this function's to report.
+      answer = false;
+    }
+    seen.set(absoluteDir, answer);
+    return answer;
+  };
+}
+
+/**
+ * Whether a repository-relative path sits in an acceptance layer.
+ *
+ * The stub gate's filter. It asks the same question the scan asks and gets it
+ * from the same function, so a file the scan declines cannot be a file the gate
+ * reads — which is what keeps a unit test's stub from blocking a gate that owns
+ * none of it.
+ */
+export function atddAcceptanceLayerFilter(
+  root: string,
+  config: QfaiConfig,
+): (relativePath: string) => boolean {
+  const testsRoot = resolvePath(root, config, "testsDir");
+  const roots = {
+    root,
+    testsDirName: testsDirName(root, config),
+    e2eRoot: path.join(testsRoot, "e2e"),
+    apiRoot: path.join(testsRoot, "api"),
+    integrationRoot: path.join(testsRoot, "integration"),
+    isPackageRoot: packageRootProbe(),
+  };
+  // The whole of `resolveTestKind`, not the path half. A layout rooted at the
+  // repository (`testsDir: "."`) puts the layer directories at the top level,
+  // where no test-root segment precedes them and only containment answers.
+  return (relativePath) => resolveTestKind(path.resolve(root, relativePath), roots) !== null;
 }
 
 function isWithinPath(base: string, target: string): boolean {
