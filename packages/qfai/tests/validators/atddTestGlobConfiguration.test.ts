@@ -25,14 +25,21 @@ import { validateTestTodoStubs } from "../../src/core/validators/testTodoStubs.j
 // probe asked the matcher for.
 const scanCalls = vi.hoisted((): Array<{ ignore?: string[]; limit?: number }> => []);
 // A failure every scan throws instead, while a case sets one.
-const scanFailure = vi.hoisted((): { error: Error | null } => ({ error: null }));
+const scanFailure = vi.hoisted(
+  (): { error: Error | null; when: (globs: readonly string[]) => boolean } => ({
+    error: null,
+    when: () => true,
+  }),
+);
 vi.mock("../../src/core/fs.js", async () => {
   const actual = await vi.importActual<typeof fsModule>("../../src/core/fs.js");
   return {
     ...actual,
     collectFilesByGlobs: (...args: Parameters<typeof actual.collectFilesByGlobs>) => {
       scanCalls.push(args[1]);
-      if (scanFailure.error !== null) return Promise.reject(scanFailure.error);
+      if (scanFailure.error !== null && scanFailure.when(args[1].globs)) {
+        return Promise.reject(scanFailure.error);
+      }
       return actual.collectFilesByGlobs(...args);
     },
   };
@@ -156,6 +163,29 @@ describe("the stage says when the glob matcher refuses its globs", () => {
       expect(stub?.suggested_action).toContain("readable");
     } finally {
       scanFailure.error = null;
+    }
+  });
+
+  it("still reports the stubs a readable pattern selects beside an unreadable directory", async () => {
+    const root = await projectWithAcceptanceTest();
+    await writeFile(path.join(root, "tests", "e2e", "a.test.ts"), `it${TODO}("later");\n`, "utf-8");
+    const denied = Object.assign(new Error("EACCES: permission denied, scandir"), {
+      code: "EACCES",
+    });
+    scanFailure.error = denied;
+    scanFailure.when = (globs) => globs.some((glob) => glob.startsWith("locked/"));
+    try {
+      const found = await validateTestTodoStubs(
+        root,
+        configWith(["tests/**/*.test.ts", "locked/**/*.test.ts"]),
+      );
+      const codes = found.map((finding) => finding.code);
+      expect(codes).toContain("QFAI-TEST-001");
+      const refusal = found.find((finding) => finding.code === "QFAI-TEST-002");
+      expect(refusal?.message).toContain("could not read part of");
+    } finally {
+      scanFailure.error = null;
+      scanFailure.when = () => true;
     }
   });
 

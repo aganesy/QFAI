@@ -1403,7 +1403,38 @@ export async function validateTestTodoStubs(
       limit: DEFAULT_GLOB_FILE_LIMIT,
     });
   } catch (error) {
-    return [...issues, reportRefusedScan(error, callerGlobs, false)];
+    // A directory one pattern reaches failing the combined scan does not stop
+    // the others: each is scanned on its own, and the ones still failing are
+    // reported beside the stubs the rest select.
+    const separate = await Promise.all(
+      accepted.map(async (glob) => {
+        try {
+          const alone = await collectFilesByGlobs(root, {
+            globs: [glob],
+            ignore: excludeGlobs,
+            limit: DEFAULT_GLOB_FILE_LIMIT,
+          });
+          return { kind: "scanned" as const, scan: alone };
+        } catch (failure) {
+          return { kind: "failed" as const, failure };
+        }
+      }),
+    );
+    const scanned = separate.flatMap((entry) => (entry.kind === "scanned" ? [entry.scan] : []));
+    const failures = separate.flatMap((entry) => (entry.kind === "failed" ? [entry.failure] : []));
+    issues.push(
+      ...(failures.length === 0 ? [error] : failures).map((failure) =>
+        reportRefusedScan(failure, callerGlobs, scanned.length > 0),
+      ),
+    );
+    if (scanned.length === 0) return issues;
+    const union = [...new Set(scanned.flatMap((entry) => entry.files))];
+    scan = {
+      files: union.slice(0, DEFAULT_GLOB_FILE_LIMIT),
+      truncated: union.length > DEFAULT_GLOB_FILE_LIMIT || scanned.some((entry) => entry.truncated),
+      matchedFileCount: Math.min(union.length, DEFAULT_GLOB_FILE_LIMIT),
+      limit: DEFAULT_GLOB_FILE_LIMIT,
+    };
   }
   const { files, truncated, limit } = scan;
 
