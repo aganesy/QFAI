@@ -27,8 +27,11 @@ describe("the retained-failure test stays under the safety floor", () => {
       "Every promise is awaited or returned to a caller that awaits or adopts it, never dropped",
     );
     expect(flat).toContain("callback runtime ignores returned promises");
-    expect(flat).toContain("Subject to the same floor");
-    expect(flat).toContain("use an explicit adapter that adopts the asynchronous result");
+    expect(flat).toContain(
+      "Subject to the same floor, when a callback runtime ignores returned promises, " +
+        "use an explicit adapter that adopts the asynchronous result and handles " +
+        "rejections at that trust boundary.",
+    );
     expect(flat).toContain(
       "Do not make the callback async and assume its ignored outer promise is consumed",
     );
