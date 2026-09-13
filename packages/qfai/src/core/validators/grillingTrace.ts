@@ -54,12 +54,14 @@ import { readdir, readFile } from "node:fs/promises";
 import path from "node:path";
 
 import { isEnoent } from "../fs/errno.js";
+import { maskFencedCodeBlocks } from "../ids.js";
 import {
   CANONICAL_TIMESTAMP_DIGITS,
   findPacks,
   latestPack,
   type PackKind,
 } from "../packLocator.js";
+import { splitMarkdownRow } from "../specPackParsers.js";
 import type { Issue } from "../types.js";
 import { exists, issue } from "./utils.js";
 
@@ -212,26 +214,31 @@ const DELIMITER_RE = /^\s*\|?\s*:?-+:?\s*(?:\|\s*:?-+:?\s*)*\|?\s*$/;
 /**
  * A line CommonMark reads as an indented code block.
  *
- * Four spaces makes a block an example of a document rather than part of one,
+ * Four columns makes a block an example of a document rather than part of one,
  * exactly as a fence does, and an indented table example under the section
- * answered for the record.
+ * answered for the record. A tab is four columns, so it opens one on its own.
  */
-const INDENTED_CODE_RE = /^ {4,}\S/;
+const INDENTED_CODE_RE = /^(?: {4,}|\t)\s*\S/;
 
-/** A fenced block's opening or closing line, in either of the two spellings. */
-const FENCE_RE = /^\s*(?:```|~~~)/;
+/** An HTML comment's opening and closing lines. */
+const HTML_COMMENT_OPEN_RE = /^ {0,3}<!--/;
+const HTML_COMMENT_CLOSE_RE = /-->/;
 
 /**
  * A cell that is nothing but a template placeholder.
  *
  * Anchored on the whole cell, as `deltaV1.ts` and `importLiteEvidence.ts`
  * anchor theirs: a cell carrying an angle-bracketed construct inside a sentence
- * has been written. The first character must be a letter and the token must
- * carry no colon, which is what separates `<ISO8601>` and `<ref>` from an HTML
- * comment and from an autolink — both of which are content, and both of which a
- * looser pattern dropped, reporting a written record as missing.
+ * has been written.
+ *
+ * Named the way the templates name theirs — `<ISO8601>`, `<n>`, `<screen id>`,
+ * `<hex from DESIGN.md.lock.yaml>` — rather than by what it is not. Every
+ * autolink CommonMark admits carries a character this does not: a URL its
+ * scheme colon, an email its `@`, an HTML tag its slash or its `!`. Each of
+ * those is content, and reading one as a placeholder dropped its row and
+ * reported a written record as missing.
  */
-const UNREPLACED_CELL_RE = /^<[A-Za-z][^<>:]*>$/;
+const UNREPLACED_CELL_RE = /^<[A-Za-z][A-Za-z0-9 ._-]*>$/;
 
 /**
  * Which of the two unwritten shapes a row is, or `null` for a written one.
@@ -245,11 +252,7 @@ const UNREPLACED_CELL_RE = /^<[A-Za-z][^<>:]*>$/;
  * judgement this check does not make.
  */
 function unwrittenAs(line: string): "empty" | "placeheld" | null {
-  const cells = line
-    .replace(/^\s*\|/, "")
-    .replace(/\|\s*$/, "")
-    .split("|")
-    .map((cell) => cell.trim());
+  const cells = cellsOf(line);
   if (cells.every((cell) => cell === "")) return "empty";
   return cells.some((cell) => UNREPLACED_CELL_RE.test(cell)) ? "placeheld" : null;
 }
@@ -263,7 +266,7 @@ function unwrittenAs(line: string): "empty" | "placeheld" | null {
  * `EISDIR` out of the whole command over a directory sitting where a record
  * belongs — a crash where the finding is what an operator needs.
  */
-const NO_FILE_THERE = new Set(["EISDIR", "ENOTDIR"]);
+const NO_FILE_THERE = new Set(["EISDIR", "ENOTDIR", "ELOOP", "ENAMETOOLONG", "EINVAL"]);
 
 /** A file's text, or `null` when no readable file is there. */
 async function textOf(file: string): Promise<string | null> {
@@ -304,12 +307,61 @@ function headingRe(section: string): RegExp {
  * to the subsection. The record's rows go directly under the section heading,
  * so reading past a `###` let a table that belongs to something else stand in
  * for a table the stage never wrote.
+ *
+ * The text is optional, because CommonMark admits an empty heading: a bare
+ * `###` opens a subsection whose title is nothing, and requiring a title read
+ * one as prose and carried on into the table below it.
  */
-const ANY_HEADING_RE = /^ {0,3}#{1,6}\s/;
+const ANY_HEADING_RE = /^ {0,3}#{1,6}(?:\s|$)/;
 
-/** The cells of a markdown table row, outer pipes off. */
+/**
+ * The cells of a markdown table row.
+ *
+ * `splitMarkdownRow` rather than a split on the character: a pipe escaped as
+ * `\\|` is cell content, and counting it as a separator made a header wider
+ * than its own delimiter — so a written table failed the arity check below and
+ * its record was reported as missing.
+ */
 function cellsOf(line: string): string[] {
-  return line.trim().replace(/^\|/, "").replace(/\|$/, "").split("|");
+  return splitMarkdownRow(line);
+}
+
+/**
+ * The document with everything that is not Markdown blanked out.
+ *
+ * Blanked rather than removed, and the line count is kept: closing the gap over
+ * a masked block made a header written above one and a delimiter written below
+ * it adjacent, and the two read as a table the document does not contain.
+ *
+ * Fences come from `maskFencedCodeBlocks`, which is where this repository keeps
+ * the rule — a fence closes only on its own marker at its own length or more,
+ * so a `~~~` block quoting a backtick line is one block rather than two. A
+ * private toggle got that wrong, ended the block at the inner line, and hid the
+ * table that followed the real closer.
+ *
+ * Indented blocks and HTML comments are masked for the same reason a fence is:
+ * their contents are an example of a document rather than part of one, and a
+ * `### Example` inside a comment ended the section before the table under it.
+ */
+function maskedLines(text: string): string[] {
+  const lines = maskFencedCodeBlocks(text).split("\n");
+  const out: string[] = [];
+  let inComment = false;
+  for (const line of lines) {
+    if (inComment) {
+      const closes = HTML_COMMENT_CLOSE_RE.test(line);
+      out.push("");
+      inComment = !closes;
+      continue;
+    }
+    if (HTML_COMMENT_OPEN_RE.test(line)) {
+      inComment = !HTML_COMMENT_CLOSE_RE.test(line);
+      out.push("");
+      continue;
+    }
+    out.push(INDENTED_CODE_RE.test(line) ? "" : line);
+  }
+  return out;
 }
 
 /** What one section holds: the rows the stage wrote, and the ones it did not. */
@@ -333,27 +385,7 @@ type SectionRows = {
  */
 function ownRowsUnder(text: string, subject: Subject): SectionRows | null {
   const heading = headingRe(subject.section);
-  // Fenced blocks are dropped before anything is located in the text. A fence
-  // is an example of a document rather than part of one, so a worked example
-  // inside the section supplied the rows — a section showing what to write and
-  // writing nothing read as a record, and an example above the real table
-  // answered in its place. Dropped after the heading was located, a fenced copy
-  // of the heading itself opened the section in the middle of a fence and
-  // inverted the tracking for everything below it.
-  const lines: string[] = [];
-  let fenced = false;
-  for (const line of text.split(/\r?\n/)) {
-    if (FENCE_RE.test(line)) {
-      fenced = !fenced;
-      lines.push("");
-      continue;
-    }
-    // Blanked rather than dropped. Removing the lines closed the gap over them,
-    // so a header written above a fence and a delimiter written below it became
-    // adjacent and read as a table the document does not contain.
-    lines.push(fenced || INDENTED_CODE_RE.test(line) ? "" : line);
-  }
-
+  const lines = maskedLines(text);
   const start = lines.findIndex((line) => heading.test(line));
   if (start === -1) return null;
 

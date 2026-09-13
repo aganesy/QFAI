@@ -739,6 +739,94 @@ describe("validateGrillingTrace", () => {
     }
   });
 
+  describe("what Markdown reads, not what a line looks like", () => {
+    const table = ["| Phase | Session |", "| ----- | ------- |", "| 0 | run |"];
+    const under = (...body: string[]): string =>
+      ["## Pre-draft Grilling", "", ...body, ""].join("\n");
+
+    it("closes a fence only on its own marker", async () => {
+      // A `~~~` block quoting a backtick line is one block. A toggle that
+      // flipped on any fence-looking line ended it at the inner line and hid
+      // the table that followed the real closer.
+      await withRoot(async (root) => {
+        await evidence(root, "sdd-spec-0007.md", under("~~~text", "```", "~~~", "", ...table));
+
+        expect(await validateGrillingTrace(root)).toEqual([]);
+      });
+    });
+
+    it("reads a tab as the four columns it is", async () => {
+      await withRoot(async (root) => {
+        await evidence(
+          root,
+          "sdd-spec-0007.md",
+          under("\t| Phase | Session |", "\t| ----- | ------- |", "\t| 0 | run |"),
+        );
+
+        expect(await validateGrillingTrace(root)).toHaveLength(1);
+      });
+    });
+
+    it("counts an escaped pipe as cell content", async () => {
+      // `\\|` is content, and counting it as a separator made the header wider
+      // than its own delimiter — so a written table failed the arity check and
+      // its record was reported as missing.
+      await withRoot(async (root) => {
+        await evidence(
+          root,
+          "sdd-spec-0007.md",
+          under(
+            "| Phase | Session | Notes \\| evidence |",
+            "| ----- | ------- | ---------------- |",
+            "| 0 | run | see the log |",
+          ),
+        );
+
+        expect(await validateGrillingTrace(root)).toEqual([]);
+      });
+    });
+
+    it("leaves a cell holding an email autolink alone", async () => {
+      // Every autolink CommonMark admits carries a character a placeholder does
+      // not — a URL its scheme colon, an email its `@` — and reading one as a
+      // placeholder dropped its row.
+      await withRoot(async (root) => {
+        await evidence(
+          root,
+          "sdd-spec-0007.md",
+          under(
+            "| Phase | Session | Who |",
+            "| ----- | ------- | --- |",
+            "| 0 | run | <operator@example.com> |",
+          ),
+        );
+
+        expect(await validateGrillingTrace(root)).toEqual([]);
+      });
+    });
+
+    it("ends the section at a heading with no text", async () => {
+      // CommonMark admits an empty heading, so a bare `###` opens a subsection
+      // whose title is nothing. Requiring a title read it as prose and carried
+      // on into the table below it.
+      await withRoot(async (root) => {
+        await evidence(root, "sdd-spec-0007.md", under("###", "", ...table));
+
+        expect(await validateGrillingTrace(root)).toHaveLength(1);
+      });
+    });
+
+    it("does not end the section inside an HTML comment", async () => {
+      // A comment's contents are an example of a document rather than part of
+      // one, so a `### Example` inside one ended the section before the table.
+      await withRoot(async (root) => {
+        await evidence(root, "sdd-spec-0007.md", under("<!--", "### Example", "-->", "", ...table));
+
+        expect(await validateGrillingTrace(root)).toEqual([]);
+      });
+    });
+  });
+
   it("does not take an indented example for the record", async () => {
     // Four spaces makes a block an example of a document rather than part of
     // one, exactly as a fence does.
