@@ -6,6 +6,15 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **The evidence revision reference says how a revision is read after a squash
+  merge** (#1696). A squash merge lands a commit with no branch revision among
+  its ancestors, so a recorded `<git rev>` did not resolve in a clone of the
+  default branch, and staleness had nothing to start from.
+  `evidence-revision.md` now says the rev resolves by fetching the pull
+  request's ref, and staleness is computed from it as before. It also says a
+  `working-tree+` address does not survive the merge, so a record meant to
+  outlive the branch is taken on a commit.
+
 - **The prototyping preflight refuses a screen with no primary task** (#1698).
   The audit lane reported an empty `primary_tasks` as `QFAI-AUD-001`, but
   `qfai prototyping preflight` never read the field, so the stage started on a

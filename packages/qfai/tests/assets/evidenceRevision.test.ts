@@ -520,6 +520,16 @@ describe("evidence and verdicts carry a revision", () => {
       );
     });
 
+    it(`${tree}: says which form survives a squash merge, and how a rev is read after it`, async () => {
+      const reference = flat(await read(tree, REFERENCE));
+      // Squash merging leaves no recorded rev an ancestor of the default branch,
+      // so the document says where one resolves and which form cannot.
+      expect(reference).toContain("## After a squash merge");
+      expect(reference).toContain("A `<git rev>` survives through its pull request.");
+      expect(reference).toContain('git fetch origin "refs/pull/<number>/head"');
+      expect(reference).toContain("A `working-tree+<content hash>` does not survive.");
+    });
+
     it(`${tree}: the SKILL points at the reference from every place it binds`, async () => {
       const skill = await read(tree, SKILL);
       const occurrences = skill.split("references/evidence-revision.md").length - 1;

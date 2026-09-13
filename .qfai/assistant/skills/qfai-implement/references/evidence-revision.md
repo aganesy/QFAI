@@ -24,7 +24,8 @@ check. Gate item 10 rejects any other shape wherever a revision is recorded:
 `reviewed revision` fields.
 
 - **`<git rev>`** — the output of `git rev-parse HEAD` at the moment of the
-  observation. Preferred: it is exact and someone else can reproduce from it.
+  observation. Preferred: it is exact and someone else can reproduce from it,
+  after the branch is merged as well (_After a squash merge_).
 - **`working-tree+<content hash>`** — for an uncommitted tree. Not as good as
   a rev, and honest about not being as good: it says "this observation was made
   against a state that was never committed".
@@ -600,6 +601,33 @@ working tree and never committed, so there is no object to derive. Record a muta
 literal needle text + literal replacement text** — that is what makes it reproducible — and keep its
 `git hash-object` value if you took one. The base half still follows the rule above: name the revision,
 not the base blob.
+
+## After a squash merge
+
+A squash merge lands one new commit whose only parent is the base tip. No
+revision recorded on the branch is an ancestor of it, so a clone of the default
+branch alone cannot resolve one, and the interval below has nothing to start
+from.
+
+- **A `<git rev>` survives through its pull request.** The hosting service
+  keeps a pull request's commits under a ref of its own after the branch is
+  deleted — `refs/pull/<number>/head` on GitHub — and the squash commit names
+  the pull request. Fetch that ref and the rev resolves, and staleness is
+  computed from it exactly as below:
+
+  ```bash
+  git fetch origin "refs/pull/<number>/head"
+  git diff --name-only <the revision this observation names>..HEAD -- src tests
+  ```
+
+  The revision is no longer an ancestor of `HEAD`, so the list is every covered
+  file whose content differs from the tree the observation ran against, which
+  is the question staleness asks.
+
+- **A `working-tree+<content hash>` does not survive.** It names a state that
+  was never committed, so once the branch is gone nothing can recompute it or
+  diff against it. A record meant to be read after the merge is taken on a
+  commit.
 
 ## What makes evidence stale
 
