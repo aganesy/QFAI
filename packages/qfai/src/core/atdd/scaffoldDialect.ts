@@ -478,8 +478,7 @@ export function compileGlob(pattern: string): string {
         // written into a negated class beside the members, it made a range with
         // a leading hyphen, and `[!-a-z]` excluded every capital letter.
         const members = compileClassBody(body.slice(negated ? 1 : 0));
-        const compiled =
-          members === null ? NEVER_MATCHES : `(?!/)[${negated ? "^" : ""}${members}]`;
+        const compiled = `(?!/)[${negated ? "^" : ""}${members}]`;
         // A class the author wrote wrongly — a descending range, say — matches
         // nothing, which is what the project's own scan does with it. Left to
         // build a regular expression it threw instead, out of a command whose
@@ -511,10 +510,14 @@ function isUsableExpression(source: string): boolean {
  * Where the bracket expression opened at `open` ends, or `-1`.
  *
  * Two things make a `]` something other than the terminator: one written first
- * in the class, where it is an ordinary member, and the `]` that closes a POSIX
- * sub-expression. A scan for the first `]` stops inside `[[:digit:]]` and
- * compiles a class over the characters of the word `digit`, which matches none
- * of the names the pattern was written for.
+ * in the class, where it is an ordinary member, and the `]` that closes a named
+ * class. A scan for the first `]` stops inside `[[:digit:]]` and compiles a
+ * class over the characters of the word `digit`, which matches none of the names
+ * the pattern was written for.
+ *
+ * A named class is the only element the matcher reads inside a class: `[:`, a
+ * name its table carries, and `:]`. Every other `[` is a member, so `[[.T]`
+ * holds `[`, `.` and `T` and ends at its own `]`, however far a later `.]` is.
  */
 export function findClassClose(pattern: string, open: number): number {
   let index = open + 1;
@@ -528,17 +531,7 @@ export function findClassClose(pattern: string, open: number): number {
       continue;
     }
     if (char === "]") return index;
-    const marker = char === "[" ? (pattern[index + 1] ?? "") : "";
-    if (marker === ":" || marker === "=" || marker === ".") {
-      const end = pattern.indexOf(`${marker}]`, index + 2);
-      // With no terminator the `[` is a member, as it is to the matcher:
-      // `[[.T]` holds `[`, `.` and `T`.
-      if (end !== -1) {
-        index = end + 2;
-        continue;
-      }
-    }
-    index += 1;
+    index = namedClassAt(pattern, index)?.end ?? index + 1;
   }
   return -1;
 }
@@ -572,32 +565,33 @@ const POSIX_CLASS_MEMBERS: Readonly<Record<string, string>> = {
   xdigit: "A-Fa-f0-9",
 };
 
+/** The named class written at `index`, when the matcher's table carries the name. */
+function namedClassAt(text: string, index: number): { members: string; end: number } | null {
+  const named = /\[:([a-z]+):\]/y;
+  named.lastIndex = index;
+  const name = named.exec(text)?.[1];
+  if (name === undefined || !Object.hasOwn(POSIX_CLASS_MEMBERS, name)) return null;
+  return { members: POSIX_CLASS_MEMBERS[name] ?? "", end: named.lastIndex };
+}
+
 /**
- * One bracket expression's members, as a regular expression writes them, or
- * `null` where the expression holds an element this table cannot write.
+ * One bracket expression's members, as a regular expression writes them.
  *
  * Ranges pass through — `a-z` means the same on both sides — and only the two
- * characters that would end the class early are escaped. A named class the
- * table does not carry, an equivalence class (`[=a=]`) and a collating symbol
- * (`[.a.]`) each make the project's own scan match nothing with the whole
- * expression. Copied in as characters, `[[:TC:]]` accepted the `T` a skeleton
- * name starts with, for a file that scan never collects.
+ * characters that would end the class early are escaped. A named class is
+ * written out from the table. Any other `[` is a member, as it is to the
+ * matcher: `[[:TC:]]` is a class of `[`, `:`, `T` and `C` followed by a literal
+ * `]`, and so is never the `TC-` a skeleton name starts with.
  */
-function compileClassBody(body: string): string | null {
+function compileClassBody(body: string): string {
   let source = "";
   let index = 0;
   while (index < body.length) {
-    const marker = body[index] === "[" ? body[index + 1] : undefined;
-    if (marker === ":" || marker === "=" || marker === ".") {
-      const end = body.indexOf(`${marker}]`, index + 2);
-      if (end !== -1) {
-        const members =
-          marker === ":" ? POSIX_CLASS_MEMBERS[body.slice(index + 2, end)] : undefined;
-        if (members === undefined) return null;
-        source += members;
-        index = end + 2;
-        continue;
-      }
+    const named = namedClassAt(body, index);
+    if (named !== null) {
+      source += named.members;
+      index = named.end;
+      continue;
     }
     const char = body[index] ?? "";
     // The matcher reads a backslash as escaping the member after it, so `[\-T]`

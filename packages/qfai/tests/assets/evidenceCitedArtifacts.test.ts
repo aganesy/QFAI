@@ -1674,21 +1674,24 @@ describe("a glob is a claim about a set", () => {
     expect(compiled("[z-a]*.test.ts").test("TC-0000-0000.test.ts")).toBe(false);
   });
 
-  it("matches nothing with a class holding an element it cannot write", () => {
-    // Copied in as characters, `[[:TC:]]` accepted the `T` a skeleton name
-    // starts with, while the project's own scan collects nothing for it. The
-    // same holds negated, beside known members, and for the equivalence and
-    // collating forms.
+  it("reads a bracket holding no name the matcher knows as members and a literal `]`", () => {
+    // The matcher's class ends at the first `]`, so `[[:TC:]]` is a class of `[`,
+    // `:`, `T` and `C` followed by a literal `]`: it collects `T]C-…` and never
+    // the `TC-…` a skeleton name starts with. The same holds beside known
+    // members, and for the equivalence and collating forms, which the matcher
+    // does not have.
     for (const pattern of [
       "[[:TC:]]*.test.ts",
-      "[![:TC:]]*.test.ts",
       "[a[:TC:]]*.test.ts",
       "[[:digit:][:TC:]]*.test.ts",
       "[[=T=]]*.test.ts",
       "[[.T.]]*.test.ts",
     ]) {
       expect(compiled(pattern).test("TC-0000-0000.test.ts"), pattern).toBe(false);
+      expect(compiled(pattern).test("T]C-0000-0000.test.ts"), pattern).toBe(true);
     }
+    expect(compiled("[![:TC:]]*.test.ts").test("T]C-0000-0000.test.ts")).toBe(false);
+    expect(compiled("[![:TC:]]*.test.ts").test("x]C-0000-0000.test.ts")).toBe(true);
     expect(compiled("[[:alpha:]]*.test.ts").test("TC-0000-0000.test.ts")).toBe(true);
   });
 
@@ -1970,6 +1973,12 @@ describe("a glob is a claim about a set", () => {
     expect(new RegExp(`^${compileGlob("[[.T]C-*.test.ts")}$`).test("TC-0000-0000.test.ts")).toBe(
       true,
     );
+    // A `.]` further on belongs to a later class, not to this one.
+    expect(findClassClose("[[.T]C-*.test[.]ts", 0)).toBe(4);
+    expect(new RegExp(`^${compileGlob("[[.T]C-*.test[.]ts")}$`).test("TC-0000-0000.test.ts")).toBe(
+      true,
+    );
+    expect(findClassClose("[[:T]C-*.test[:]ts", 0)).toBe(4);
   });
 
   it("reads every document of a YAML stream", () => {
