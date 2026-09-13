@@ -191,6 +191,9 @@ export const DISCUSSION_DIR_REL = ".qfai/discussion";
  */
 const DELIMITER_RE = /^\s*\|?\s*:?-+:?\s*(?:\|\s*:?-+:?\s*)*\|?\s*$/;
 
+/** A fenced block's opening or closing line, in either of the two spellings. */
+const FENCE_RE = /^\s*(?:```|~~~)/;
+
 /**
  * A cell that is nothing but a template placeholder.
  *
@@ -284,12 +287,27 @@ function ownRowsUnder(text: string, section: string): SectionRows | null {
   if (start === -1) return null;
 
   const body: string[] = [];
+  let fenced = false;
   for (const line of lines.slice(start + 1)) {
+    // A fenced block is an example of a table rather than one. Read as content,
+    // a worked example inside the section supplied the rows — so a section
+    // showing what to write, and writing nothing, read as a record, and an
+    // example above the real table answered in its place.
+    if (FENCE_RE.test(line)) {
+      fenced = !fenced;
+      continue;
+    }
+    if (fenced) continue;
     if (ends.test(line)) break;
     body.push(line);
   }
 
-  const delimiter = body.findIndex((line) => DELIMITER_RE.test(line));
+  // A delimiter under a header, which is the only place GFM puts one. Matched
+  // anywhere, a thematic break took the role and whatever followed it read as
+  // the table's rows.
+  const delimiter = body.findIndex(
+    (line, at) => at > 0 && DELIMITER_RE.test(line) && (body[at - 1] ?? "").includes("|"),
+  );
   if (delimiter === -1) return { written: [], unwritten: 0 };
 
   const rows: string[] = [];

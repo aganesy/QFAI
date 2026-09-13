@@ -615,6 +615,61 @@ describe("validateGrillingTrace", () => {
     });
   });
 
+  describe("a table shown rather than written", () => {
+    const fenced = ["```text", "| Phase | Session |", "| ----- | ------- |", "| 0 | run |", "```"];
+
+    it("is not the record", async () => {
+      // A fenced block is an example of a table, not one. Read as content, a
+      // section that shows what to write and writes nothing read as a record.
+      await withRoot(async (root) => {
+        await evidence(
+          root,
+          "sdd-spec-0007.md",
+          ["## Pre-draft Grilling", "", ...fenced, ""].join("\n"),
+        );
+
+        expect(await validateGrillingTrace(root)).toHaveLength(1);
+      });
+    });
+
+    it("does not answer for the table under it", async () => {
+      await withRoot(async (root) => {
+        await evidence(
+          root,
+          "sdd-spec-0007.md",
+          [
+            "## Pre-draft Grilling",
+            "",
+            ...fenced,
+            "",
+            "| Phase | Session |",
+            "| ----- | ------- |",
+            "| <n> | <state> |",
+            "",
+          ].join("\n"),
+        );
+
+        expect(await validateGrillingTrace(root)).toHaveLength(1);
+      });
+    });
+  });
+
+  it("does not take a thematic break for a delimiter", async () => {
+    // GFM puts a delimiter under a header and nowhere else. Matched anywhere,
+    // a break took the role and whatever followed it read as the table's rows.
+    await withRoot(async (root) => {
+      await evidence(
+        root,
+        "sdd-spec-0007.md",
+        ["## Pre-draft Grilling", "", "The session ran.", "---", "See the table | below.", ""].join(
+          "\n",
+        ),
+      );
+
+      expect(await validateGrillingTrace(root)).toHaveLength(1);
+    });
+  });
+
   it("does not take a repeated delimiter for a row", async () => {
     // A second delimiter is the table's furniture. Its cells are neither empty
     // nor placeholders, so counting it let a copied table with two delimiters
