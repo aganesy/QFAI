@@ -49,7 +49,8 @@ Reinit behavior (existing `.qfai/` present):
 #### Same-marker reminder upgrade gap
 
 Existing `.claude/settings.json` hook groups are recognized by their
-status-message marker set within the same event. Ordinary init and `--force`
+sorted status-message list within the same event, including repeated markers.
+Removing a repeated marker changes the identity. Ordinary init and `--force`
 preserve an existing same-marker group's command, arguments, matcher and custom
 fields, including older shipped reminder text. Only missing groups are added.
 An older implementation reminder therefore needs a manual update; force does
@@ -57,10 +58,12 @@ not deliver its changed text automatically.
 
 Obtain a fresh settings file with the installed release's
 `qfai init --dir <scratch-dir>` in an unused scratch directory. Back up the
-project's settings, compare the same event and marker set, then manually update
-the chosen `command` and `args`. Preserve existing markers, matchers, custom
-fields and unrelated settings. Do not append a duplicate group or change its
-markers to request an update; a different identity can run both reminders.
+project's settings and compare the same event and sorted marker list. Compare
+each field before editing. Refresh only the message-bearing argument; preserve
+a customized executable, unrelated arguments, markers, matchers, custom fields
+and unrelated settings. Do not replace the existing `command` or entire `args`
+with template values, append a duplicate group or change its markers to request
+an update; a different identity can run both reminders.
 
 Exit codes:
 

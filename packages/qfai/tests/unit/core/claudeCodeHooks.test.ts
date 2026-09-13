@@ -214,6 +214,31 @@ describe("mergeDocumentationClarityHooks", () => {
     ).toBe("already-present");
   });
 
+  it("includes repeated markers in a hook group's identity", () => {
+    const entry = {
+      type: "command",
+      statusMessage: DOCUMENTATION_CLARITY_HOOK_MARKER,
+      command: "project-node",
+      args: ["--project-option", "-e", "console.log('our reminder')"],
+    };
+    const existingGroup = { matcher: "Edit", hooks: [entry, { ...entry, command: "other-node" }] };
+    const singleMarkerGroup = { matcher: "Write|Edit", hooks: [{ ...entry, command: "node" }] };
+    const existing = JSON.stringify({ hooks: { PostToolUse: [existingGroup] } });
+    const sameMarkers = JSON.stringify({
+      hooks: { PostToolUse: [{ matcher: "Write|Edit", hooks: [entry, entry] }] },
+    });
+    expect(mergeDocumentationClarityHooks(existing, sameMarkers).outcome).toBe("already-present");
+
+    const template = JSON.stringify({ hooks: { PostToolUse: [singleMarkerGroup] } });
+    const result = mergeDocumentationClarityHooks(existing, template);
+    expect(result.outcome).toBe("merged");
+    if (result.outcome !== "merged") return;
+    expect(groupsFor(result.settings, "PostToolUse")).toEqual([existingGroup, singleMarkerGroup]);
+    expect(
+      mergeDocumentationClarityHooks(serializeClaudeSettings(result.settings), template).outcome,
+    ).toBe("already-present");
+  });
+
   it("treats a marker written by hand as carrying that group", () => {
     // The hand-written group answers for the event it is under. The other event
     // has nothing, so it is still added.

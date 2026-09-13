@@ -758,10 +758,12 @@ not refresh an existing same-marker group. This is a manual-upgrade gap.
 
 To update it, run `npx qfai init --dir <scratch-dir>` with the installed release
 in an unused scratch directory and compare its `.claude/settings.json` with
-your project's file. Match the same hook event and status-message marker set.
-Manually update the chosen `command` and `args` to the current reminder while
-preserving existing markers, matchers and custom fields. Do not append a second
-group or change its markers: that creates a different identity and can run both
+your project's file. Match the same hook event and sorted status-message list,
+including repeated markers. Removing one repeated marker changes its identity.
+Compare each field before editing. Refresh only the message-bearing argument;
+keep a customized executable, unrelated arguments, markers, matchers and custom
+fields. Do not copy the template's `command` or entire `args` over your settings,
+append a second group or change its markers. A different identity can run both
 reminders. Back up your settings before editing; other settings remain yours.
 
 ## Contributing (for QFAI maintainers)
