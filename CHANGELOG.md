@@ -6,6 +6,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Added
 
+- **Article VII makes cutting the governing doctrine** (#1794). The least
+  that satisfies a requirement is the right amount; additional scope or code
+  needs justification. The article ranks above other articles and conflicting
+  constitution instructions, below the referenced safety floor. The absolute
+  output-language rule and prototyping scope floor remain unchanged. Required
+  traceability, repository gates, and their evidence are protected in the
+  safety floor rather than repeated in the article.
+
 - **A legacy ledger outside the obligation-column protection is reported**
   (#1663). A seeded `E2E` or `API` row has `TC-Refs` forbidden to it, so the
   `US-Refs` and `CON-API-Refs` columns are the only place its obligation can

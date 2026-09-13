@@ -36,6 +36,8 @@ implementation.
 
 The ladder trims code, not obligations. These stay whatever rung you stop at.
 
+- Required traceability annotations.
+- Repository quality gates and their verification evidence.
 - Validation of input crossing a trust boundary.
 - Error handling that prevents data loss.
 - Security.
