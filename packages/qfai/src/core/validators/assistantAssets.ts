@@ -390,11 +390,12 @@ export async function validateAssistantAssets(root: string, config: QfaiConfig):
   // A skill whose entry point cannot be read has no root to reach its documents
   // from, so its references are not reported as uncited: the entry point's
   // `QFAI-SKILLS-014` is the finding to act on.
-  const unrootedSkills = unreadable.flatMap((item) =>
-    item.file !== undefined && isSkillEntryPoint(skillsDir, item.file)
-      ? [path.dirname(item.file)]
-      : [],
-  );
+  const unrootedSkills: string[] = [];
+  for (const item of unreadable) {
+    if (item.file !== undefined && (await namesSkillEntryPoint(skillsDir, item.file))) {
+      unrootedSkills.push(path.dirname(item.file));
+    }
+  }
   issues.push(...collectReferenceGraphIssues(root, skillsDir, documents, unrootedSkills));
 
   return issues;
@@ -1708,7 +1709,7 @@ async function readSkillDocuments(skillsDir: string): Promise<SkillDocuments> {
         // an entry point to register the skill at all, and a reference only
         // once a step names one — so the same byte stops the skill in the first
         // case and a step partway through the work in the second.
-        const message = isSkillEntryPoint(skillsDir, file)
+        const message = (await namesSkillEntryPoint(skillsDir, file))
           ? "A skill's entry point holds bytes that are not valid UTF-8, so the host reports it unreadable and registers no skill from it."
           : "A document under `skills` holds bytes that are not valid UTF-8. The host opens it only where a step names it, and a step that does fails there.";
         unreadable.push(
@@ -1802,6 +1803,27 @@ function collectReachableDocuments(
  * though no run can open it. The skill loader reads one `SKILL.md` per direct
  * subdirectory of `skillsDir`, and the graph starts at exactly that set.
  */
+/**
+ * Whether `file` is the entry point the host loads for its skill, by file
+ * identity: on a case-insensitive file system `skill.md` is the same file as
+ * the `SKILL.md` the host opens, and on any other it is a different one.
+ */
+async function namesSkillEntryPoint(skillsDir: string, file: string): Promise<boolean> {
+  if (isSkillEntryPoint(skillsDir, file)) return true;
+  const segments = toPosixRelative(skillsDir, file).split("/");
+  if (
+    segments.length !== 2 ||
+    segments[0] === "" ||
+    segments[0] === ".." ||
+    segments[1]?.toLowerCase() !== "skill.md"
+  ) {
+    return false;
+  }
+  const probe = path.join(path.dirname(file), "SKILL.md");
+  const [probed, found] = await Promise.all([fileIdentity(probe), fileIdentity(file)]);
+  return probed !== probe && probed === found;
+}
+
 function isSkillEntryPoint(skillsDir: string, file: string): boolean {
   const segments = toPosixRelative(skillsDir, file).split("/");
   return (

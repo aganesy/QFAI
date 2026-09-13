@@ -14,6 +14,7 @@
  * that should not be offered to the model says so with
  * `disable-model-invocation: true` beside it.
  */
+import { existsSync } from "node:fs";
 import { chmod, mkdir, mkdtemp, rm, symlink, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
@@ -623,6 +624,11 @@ describe("the gate reads a skill as the host does", () => {
       (item) => item.code === "QFAI-SKILLS-014" && item.file?.toLowerCase() === file.toLowerCase(),
     );
     expect(unreadable).toHaveLength(1);
+    // Where the file system folds case, `skill.md` is the entry point the host
+    // loads, and the finding calls it one; elsewhere it is a document like any
+    // other.
+    const foldsCase = existsSync(path.join(skillDir, "SKILL.md"));
+    expect(unreadable[0]?.message.includes("entry point")).toBe(foldsCase);
   });
 
   it("reports no uncited reference in a skill whose entry point cannot be read", async () => {
