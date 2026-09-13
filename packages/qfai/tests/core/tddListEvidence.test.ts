@@ -150,6 +150,7 @@ function phaseAuditHash(
   content: string,
   tddId = "TDD-0001",
   matrixRecord: string | null = null,
+  surfaceRecords: readonly string[] = [],
 ): string {
   const after = content.split(new RegExp(`^### ${tddId}\\s*$`, "m"))[1] ?? "";
   // Stop at the next entry heading, so a file that carries an editing item
@@ -162,8 +163,22 @@ function phaseAuditHash(
   const artifact = normalizeArtifact(withoutReviewerVerdicts(`### ${tddId}\n${authored}`));
   const records = [`${evidenceFile}\0${digest(artifact)}`];
   if (matrixRecord !== null) records.push(matrixRecord);
-  records.sort();
+  records.push(...surfaceRecords);
+  records.sort((left, right) => Buffer.from(left).compare(Buffer.from(right)));
   return digest(records.join("\n"));
+}
+
+/**
+ * A capture's record in a product-surface-reviewer's subject: a `.md` or
+ * `.html` capture normalized like the entry, and every other extension hashed
+ * as the bytes on disk.
+ */
+function surfaceRecord(relativePath: string, body: string | Buffer): string {
+  const bytes = typeof body === "string" ? Buffer.from(body, "utf8") : body;
+  const hashed = /\.(?:md|html)$/.test(relativePath)
+    ? normalizeArtifact(bytes.toString("utf8"))
+    : bytes;
+  return `${relativePath}\0${digest(hashed)}`;
 }
 
 function checkpointSeal(revision: string, command: string, result: string): string {
@@ -244,6 +259,11 @@ interface EvidenceOptions {
   secondResponseRole?: string;
   /** Where the spec pack lives, when the project moved `paths.specsDir`. */
   specsDir?: string;
+  /**
+   * The captures a product-surface-reviewer's verdict was taken on, written
+   * before `{{PARITY_AUDIT_HASH}}` is computed over them.
+   */
+  surfaceArtifacts?: Readonly<Record<string, string | Buffer>>;
 }
 
 const STAGE_PACK_PATH = ".qfai/review/review-20260811000000005";
@@ -362,15 +382,38 @@ async function materializeEvidence(
     phaseAuditHash(evidenceFile, content, "TDD-0002", matrixRecord),
   );
   content = content.replaceAll("{{AUDIT_HASH}}", auditHash);
+  const captures = Object.entries(options.surfaceArtifacts ?? {});
+  for (const [relativePath, body] of captures) {
+    const capturePath = path.join(root, relativePath);
+    await mkdir(path.dirname(capturePath), { recursive: true });
+    await writeFile(capturePath, body);
+  }
+  const parityAuditHash = phaseAuditHash(
+    evidenceFile,
+    content,
+    "TDD-0001",
+    matrixRecord,
+    captures.map(([relativePath, body]) => surfaceRecord(relativePath, body)),
+  );
+  content = content.replaceAll("{{PARITY_AUDIT_HASH}}", parityAuditHash);
 
-  for (const [name, role, placeholder] of [
-    ["20260811000000001", "completion-reviewer", "{{SPEC_PACK_SEAL}}"],
-    ["20260811000000002", "implementation-reviewer", "{{CODE_PACK_SEAL}}"],
-  ] as const) {
+  const packs: Array<readonly [string, string, string, string]> = [
+    ["20260811000000001", "completion-reviewer", "{{SPEC_PACK_SEAL}}", auditHash],
+    ["20260811000000002", "implementation-reviewer", "{{CODE_PACK_SEAL}}", auditHash],
+  ];
+  if (content.includes("{{PARITY_PACK_SEAL}}")) {
+    packs.push([
+      "20260811000000003",
+      "product-surface-reviewer",
+      "{{PARITY_PACK_SEAL}}",
+      parityAuditHash,
+    ]);
+  }
+  for (const [name, role, placeholder, packAuditHash] of packs) {
     const packPath = `.qfai/review/review-${name}`;
     const packDir = path.join(root, packPath);
     await mkdir(packDir, { recursive: true });
-    const passRecord = `Result: PASS\nReviewed revision: ${revision}\nAudited evidence hash: ${auditHash}\n`;
+    const passRecord = `Result: PASS\nReviewed revision: ${revision}\nAudited evidence hash: ${packAuditHash}\n`;
     await writeFile(
       path.join(packDir, "review_request.md"),
       options.requestOnlyPassRole === role
@@ -386,7 +429,7 @@ async function materializeEvidence(
     if (options.secondResponseRole === role) {
       await writeFile(
         path.join(packDir, `R02_${role}.md`),
-        `Result: REVISE\nReviewed revision: ${revision}\nAudited evidence hash: ${auditHash}\n`,
+        `Result: REVISE\nReviewed revision: ${revision}\nAudited evidence hash: ${packAuditHash}\n`,
         "utf8",
       );
     }
@@ -1844,26 +1887,344 @@ REVISE — needs new production behaviour
     });
   });
 
-  for (const [parity, expected] of [
-    ["PASS", false],
-    ["REVISE", true],
-  ] as const) {
-    it(`${expected ? "rejects" : "accepts"} a completed entry with Prototype parity ${parity}`, async () => {
+  describe("Prototype parity", () => {
+    const SCREENSHOT = ".qfai/evidence/prototyping/screen.png";
+    const HTML_CAPTURE = ".qfai/evidence/prototyping/screen.html";
+    // Bytes step 2 rewrites where it applies: a CRLF pair and trailing
+    // whitespace. A gate that normalized the screenshot, or hashed the HTML as
+    // it sits on disk, computes a digest the reviewer did not.
+    const CAPTURES = {
+      [SCREENSHOT]: Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x20, 0x0d, 0x0a, 0x1a, 0x0a]),
+      [HTML_CAPTURE]: "<main>\r\n  <h1>Screen</h1>  \r\n</main>\r\n",
+    };
+    const VERDICT = [
+      "- Prototype parity: PASS (clause 1)",
+      `- Prototype parity reviewed revision: ${DEFAULT_REVISION}`,
+      "- Prototype parity audited evidence hash: {{PARITY_AUDIT_HASH}}",
+      "- Prototype parity review pack: .qfai/review/review-20260811000000003",
+      "- Prototype parity review pack seal: {{PARITY_PACK_SEAL}}",
+    ];
+    const FENCE = "`".repeat(3);
+
+    /** The complete entry with these parity lines beside the other verdicts. */
+    function withParity(lines: readonly string[]): string {
+      return completeEntry("Unit").replace(
+        "- Checkpoint verification command: npm test",
+        [...lines, "- Checkpoint verification command: npm test"].join("\n"),
+      );
+    }
+
+    /** A UI-affecting entry: its manifest among the phase-authored fields. */
+    function verdictEntry(manifest: readonly string[] = [SCREENSHOT, HTML_CAPTURE]): string {
+      const block = ["- Surface artifacts:", "", `${FENCE}text`, ...manifest, FENCE, ""];
+      return withParity(VERDICT).replace(
+        "- qa-gatekeeper: PASS",
+        [...block, "- qa-gatekeeper: PASS"].join("\n"),
+      );
+    }
+
+    const LEDGER = ledger([{ status: "done", evidence: IMPLEMENT_POINTER }]);
+
+    async function unresolved(
+      root: string,
+      evidence: string,
+      options: EvidenceOptions = {},
+    ): Promise<Array<{ code: string; message: string }>> {
+      const issues = await runIssuesOn(
+        root,
+        LEDGER,
+        { ".qfai/evidence/implement-spec-0001.md": evidence },
+        options,
+      );
+      return issues.filter((issue) => issue.code === "QFAI-TDDLIST-008");
+    }
+
+    it("rejects a verdict that says REVISE", async () => {
       // Gate item 9 makes a UI-affecting row's completion conditional on the
-      // product-surface-reviewer's PASS. Reading only the other three verdicts
-      // let a row whose parity said `REVISE` reach `done` on a full field set.
+      // product-surface-reviewer's PASS.
       await withProject(async (root) => {
-        const evidence = completeEntry("Unit").replace(
-          "- Checkpoint verification command: npm test",
-          `- Prototype parity: ${parity}\n- Checkpoint verification command: npm test`,
+        const [issue] = await unresolved(
+          root,
+          withParity(["- Prototype parity: REVISE (clause 1)"]),
         );
-        const codes = await runOn(root, ledger([{ status: "done", evidence: IMPLEMENT_POINTER }]), {
-          ".qfai/evidence/implement-spec-0001.md": evidence,
-        });
-        expect(codes.includes("QFAI-TDDLIST-008")).toBe(expected);
+        expect(issue?.message).toContain("Prototype parity: PASS");
       });
     });
-  }
+
+    it("accepts a row no clause selects, with the revision the clauses were evaluated at", async () => {
+      // The form the contract writes. Compared whole against `PASS`, it was
+      // refused, and so was every row that recorded why it is not UI-affecting.
+      await withProject(async (root) => {
+        const issues = await unresolved(
+          root,
+          withParity([
+            "- Prototype parity: n/a (not UI-affecting)",
+            `- Prototype parity reviewed revision: ${DEFAULT_REVISION}`,
+          ]),
+        );
+        expect(issues).toEqual([]);
+      });
+    });
+
+    it("asks an n/a row for its revision and nothing a reviewer writes", async () => {
+      await withProject(async (root) => {
+        const [issue] = await unresolved(
+          root,
+          withParity(["- Prototype parity: n/a (not UI-affecting)"]),
+        );
+        expect(issue?.message).toContain("Prototype parity reviewed revision");
+        expect(issue?.message).not.toContain("Prototype parity audited evidence hash");
+      });
+    });
+
+    it("holds an n/a row's revision to the latest Revision", async () => {
+      await withProject(async (root) => {
+        const [issue] = await unresolved(
+          root,
+          withParity([
+            "- Prototype parity: n/a (not UI-affecting)",
+            `- Prototype parity reviewed revision: ${"f".repeat(40)}`,
+          ]),
+        );
+        expect(issue?.message).toContain(
+          "Prototype parity reviewed revision matching latest Revision",
+        );
+      });
+    });
+
+    // Read by its first word, `n/a (UI-affecting)` passed as a row with no
+    // surface and skipped the review, the captures and the hash; a verdict with
+    // no clause names no declaration the routing can be re-run against.
+    for (const value of [
+      "looks right",
+      "PASS",
+      "PASS (unknown)",
+      "PASS (clause 0)",
+      "PASS (clause 999)",
+      "n/a (UI-affecting)",
+      "N/A",
+    ]) {
+      it(`names the forms a parity value takes when it holds ${value}`, async () => {
+        await withProject(async (root) => {
+          const [issue] = await unresolved(root, withParity([`- Prototype parity: ${value}`]));
+          expect(issue?.message).toContain("PASS (clause N) or n/a (not UI-affecting)");
+          expect(issue?.message).not.toContain("Prototype parity reviewed revision");
+        });
+      });
+    }
+
+    it("reads the recorded forms in either case", async () => {
+      await withProject(async (root) => {
+        const issues = await unresolved(
+          root,
+          withParity([
+            "- Prototype parity: N/A (Not UI-affecting)",
+            `- Prototype parity reviewed revision: ${DEFAULT_REVISION}`,
+          ]),
+        );
+        expect(issues).toEqual([]);
+      });
+    });
+
+    it("holds the manifest to the phase-authored fields ahead of the verdicts", async () => {
+      // Written after the gate fields, the manifest sits outside the entry the
+      // reviewers hashed, so what they read did not say which captures counted.
+      await withProject(async (root) => {
+        const late = withParity([...VERDICT, `- Surface artifacts: ${SCREENSHOT}`]);
+        const [issue] = await unresolved(root, late, { surfaceArtifacts: CAPTURES });
+        expect(issue?.message).toContain(
+          "all phase-authored fields before review and checkpoint fields",
+        );
+      });
+    });
+
+    it("requires a verdict's labelled fields and the manifest of what it was taken on", async () => {
+      // A verdict with none of its siblings was accepted, so a UI-affecting row
+      // reached `done` with no hash over the surface it was judged on.
+      await withProject(async (root) => {
+        const [issue] = await unresolved(root, withParity(["- Prototype parity: PASS (clause 1)"]));
+        for (const field of [
+          "Prototype parity reviewed revision",
+          "Prototype parity audited evidence hash",
+          "Prototype parity review pack",
+          "Prototype parity review pack seal",
+          "Surface artifacts",
+        ]) {
+          expect(issue?.message).toContain(field);
+        }
+      });
+    });
+
+    it("accepts a verdict whose hash recomputes over a raw screenshot and a normalized capture", async () => {
+      await withProject(async (root) => {
+        const issues = await unresolved(root, verdictEntry(), { surfaceArtifacts: CAPTURES });
+        expect(issues).toEqual([]);
+      });
+    });
+
+    it("rejects a verdict whose screenshot was replaced after it", async () => {
+      // `Reviewed revision` excludes the evidence tree, so before the captures
+      // were in the subject nothing the gate read moved.
+      await withProject(async (root) => {
+        await seedProject(
+          root,
+          LEDGER,
+          [],
+          { ".qfai/evidence/implement-spec-0001.md": verdictEntry() },
+          { surfaceArtifacts: CAPTURES },
+        );
+        await writeFile(path.join(root, SCREENSHOT), Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x00]));
+
+        const issue = (await validateTddList(root, defaultConfig)).find(
+          (found) => found.code === "QFAI-TDDLIST-008",
+        );
+        expect(issue?.message).toContain("Prototype parity audited evidence hash matching");
+      });
+    });
+
+    it("leaves the hash to a checkout that holds the captures", async () => {
+      // Captures are stage evidence that the evidence tree's ignore rules keep
+      // out of the repository, so a fresh clone has none to hash.
+      await withProject(async (root) => {
+        await seedProject(
+          root,
+          LEDGER,
+          [],
+          { ".qfai/evidence/implement-spec-0001.md": verdictEntry() },
+          { surfaceArtifacts: CAPTURES },
+        );
+        await rm(path.join(root, ".qfai", "evidence", "prototyping"), {
+          recursive: true,
+          force: true,
+        });
+
+        const issues = (await validateTddList(root, defaultConfig)).filter(
+          (found) => found.code === "QFAI-TDDLIST-008",
+        );
+        expect(issues).toEqual([]);
+      });
+    });
+
+    it("refuses a manifest that names no capture under the evidence tree", async () => {
+      // A path outside the tree adds no record, so the verdict would be hashed
+      // over fields alone.
+      await withProject(async (root) => {
+        const [issue] = await unresolved(root, verdictEntry(["docs/screen.png"]));
+        expect(issue?.message).toContain(
+          "Surface artifacts naming repository-relative paths under .qfai/evidence/, not docs/screen.png",
+        );
+      });
+    });
+
+    it("refuses a capture that is not a regular file", async () => {
+      await withProject(async (root) => {
+        const shots = ".qfai/evidence/prototyping/shots";
+        await mkdir(path.join(root, shots), { recursive: true });
+        const [issue] = await unresolved(root, verdictEntry([shots]));
+        expect(issue?.message).toContain(`Surface artifacts naming a regular file at ${shots}`);
+      });
+    });
+
+    it("refuses a second parity verdict", async () => {
+      // Only the last verdict is read, so a refusal followed by `n/a` passed on
+      // the second while the first stayed on the page.
+      await withProject(async (root) => {
+        const [issue] = await unresolved(
+          root,
+          withParity([
+            "- Prototype parity: REVISE (clause 1)",
+            "- Prototype parity: n/a (not UI-affecting)",
+            `- Prototype parity reviewed revision: ${DEFAULT_REVISION}`,
+          ]),
+        );
+        expect(issue?.message).toContain("exactly one Prototype parity");
+      });
+    });
+
+    it("refuses reviewer provenance on a row no clause selects", async () => {
+      // No reviewer ran on an `n/a` row, so a hash or a pack there is provenance
+      // for a review that did not happen, and nothing checks it.
+      await withProject(async (root) => {
+        const [issue] = await unresolved(
+          root,
+          withParity([
+            "- Prototype parity: n/a (not UI-affecting)",
+            `- Prototype parity reviewed revision: ${DEFAULT_REVISION}`,
+            `- Prototype parity audited evidence hash: ${"a".repeat(64)}`,
+            "- Prototype parity review pack: .qfai/review/review-20260811000000003",
+          ]),
+        );
+        expect(issue?.message).toContain("no Prototype parity audited evidence hash on an n/a");
+        expect(issue?.message).toContain("no Prototype parity review pack on an n/a");
+      });
+    });
+    it("refuses a second Surface artifacts field", async () => {
+      // Only the last manifest is read, so a capture only the first one named
+      // could be replaced with nothing the gate recomputes moving.
+      await withProject(async (root) => {
+        const twice = verdictEntry().replace(
+          "- qa-gatekeeper: PASS",
+          [`- Surface artifacts: ${HTML_CAPTURE}`, "- qa-gatekeeper: PASS"].join("\n"),
+        );
+        const [issue] = await unresolved(root, twice, { surfaceArtifacts: CAPTURES });
+        expect(issue?.message).toContain("exactly one Surface artifacts");
+      });
+    });
+
+    it("ends the phase-authored subject at whichever parity field comes first", async () => {
+      // Written before the verdict line, the sibling fields fell inside the
+      // subject, audited hash included, and no recorded hash could match it.
+      await withProject(async (root) => {
+        const [verdict, ...siblings] = VERDICT;
+        const reordered = verdictEntry()
+          .replace([verdict, ...siblings].join("\n") + "\n", "")
+          .replace("- Spec review: PASS", [...siblings, verdict, "- Spec review: PASS"].join("\n"));
+        expect(reordered.indexOf(siblings[0] ?? "")).toBeLessThan(
+          reordered.indexOf("- Spec review: PASS"),
+        );
+        const issues = await unresolved(root, reordered, { surfaceArtifacts: CAPTURES });
+        expect(issues).toEqual([]);
+      });
+    });
+    it("refuses a manifest entry that is not a path under the evidence tree", async () => {
+      // Dropped beside a valid capture, the entry left part of the manifest out
+      // of the hash, so replacing that file moved nothing.
+      for (const entry of ["/tmp/screen.png", "../outside/screen.png", "docs/screen.png"]) {
+        await withProject(async (root) => {
+          const [issue] = await unresolved(root, verdictEntry([SCREENSHOT, entry]), {
+            surfaceArtifacts: { [SCREENSHOT]: CAPTURES[SCREENSHOT] },
+          });
+          expect(issue?.message, entry).toContain(
+            `Surface artifacts naming repository-relative paths under .qfai/evidence/, not ${entry}`,
+          );
+        });
+      }
+    });
+
+    it("orders capture records by the bytes of their paths", async () => {
+      // A supplementary-plane name and a high BMP name sort one way by UTF-16
+      // code unit and the other way by UTF-8 byte. A reviewer ordering by path
+      // bytes, as the contract says, computed a hash the gate did not.
+      const high = `.qfai/evidence/prototyping/${String.fromCodePoint(0xff21)}.png`;
+      const astral = `.qfai/evidence/prototyping/${String.fromCodePoint(0x1f600)}.png`;
+      const captures = { [high]: Buffer.from([1]), [astral]: Buffer.from([2]) };
+      await withProject(async (root) => {
+        const issues = await unresolved(root, verdictEntry([high, astral]), {
+          surfaceArtifacts: captures,
+        });
+        expect(issues).toEqual([]);
+      });
+    });
+    it("reads the parity pack as the product-surface-reviewer's own verdict", async () => {
+      await withProject(async (root) => {
+        const [issue] = await unresolved(root, verdictEntry(), {
+          surfaceArtifacts: CAPTURES,
+          requestOnlyPassRole: "product-surface-reviewer",
+        });
+        expect(issue?.message).toContain("Prototype parity review pack carrying request");
+      });
+    });
+  });
 
   for (const [field, invalid] of [
     ["Round 1: RED command", "skipped"],

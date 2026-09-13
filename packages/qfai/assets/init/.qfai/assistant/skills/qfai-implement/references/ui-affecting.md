@@ -276,7 +276,9 @@ hand.
 The field is required of every row **this skill takes through the gate**. A row already at `done`
 from a run that predates it is skipped on re-execution (`SKILL.md`, Required Process) and is not
 retroactively blocked: a blank `Prototype parity` on such a row is a pre-field row, not a gate
-failure, and no repair path is owed for it. It acquires a value only if an approved Change Request
+failure, and no repair path is owed for it. The exemption covers a blank field only. A value
+outside the two recorded forms, a bare `PASS` included, names no clause and is reported like any
+other malformed gate field. It acquires a value only if an approved Change Request
 resets it, at which point it runs the clauses like any other row. Do not backfill a guess onto a
 `done` row — an unevaluated value is worse than a blank one, because it can no longer be told apart
 from one that was evaluated.
