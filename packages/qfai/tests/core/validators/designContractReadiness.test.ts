@@ -20,6 +20,7 @@ import { defaultConfig } from "../../../src/core/config.js";
 import { hashDesignMd } from "../../../src/core/design/designMd.js";
 import { writeDiscussionCurrentId } from "../../../src/core/state.js";
 import {
+  PROCUREMENT_PLACEHOLDERS,
   validatePrototypingDesignContractReadiness,
   validateSddDesignContractReadiness,
 } from "../../../src/core/validators/designContractReadiness.js";
@@ -432,6 +433,39 @@ describe("validateSddDesignContractReadiness (TC-3.8.x)", () => {
       expect(messages).toHaveLength(1);
       expect(messages[0]).toContain("'constructor'");
     });
+
+    it("names the placeholders the shipped example writes", async () => {
+      // Two spellings of one placeholder drift in silence: the example keeps
+      // writing its phrase and the check stops recognising it, so an unfilled
+      // copy reads as a manifest somebody wrote.
+      const handoff = await readFile(
+        path.join(
+          getInitAssetsDir(),
+          ".qfai/assistant/skills/qfai-prototyping/references/handoff.md",
+        ),
+        "utf-8",
+      );
+      for (const placeholder of PROCUREMENT_PLACEHOLDERS) {
+        expect(handoff).toContain(placeholder);
+      }
+    });
+
+    for (const item of ["<DataTable>", '<DataTable density="compact">', "<button type='submit'>"]) {
+      it(`leaves a component written as ${item} alone`, async () => {
+        // These columns are free text, and a component is named and invoked in
+        // angle brackets. Any pattern wide enough to cover the example's
+        // phrases covers one of these, and reports a row that was written.
+        expect(
+          await seeded([
+            "procurement:",
+            "  procured:",
+            '    - screen: "dashboard"',
+            '      region: "summary cards"',
+            `      item: "${item.replace(/"/g, '\\"')}"`,
+          ]),
+        ).toEqual([]);
+      });
+    }
 
     it("leaves a component named in angle brackets alone", async () => {
       // Every placeholder the shipped example writes is two words or more, and

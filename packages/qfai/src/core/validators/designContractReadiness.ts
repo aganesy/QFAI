@@ -1053,26 +1053,34 @@ const PROCUREMENT_ROW_CELLS: Readonly<Record<string, readonly string[]>> = {
 };
 
 /**
- * A value left at an angle-bracket placeholder, as the shipped examples write
- * one: `<screen id>`, `<what was looked for and did not serve>`.
+ * The values the shipped handoff example writes in a `procurement` row.
  *
- * `PLACEHOLDER_RE` beside it knows the word forms (`tbd`, `todo`, `n/a`) and
- * none of these, so the documented example copied with nothing replaced passed
- * every cell — the unfilled template satisfying the check written to catch it.
+ * Named literally rather than matched by shape. A cell in these columns is
+ * free text — a component is named `<DataTable>` and invoked
+ * `<DataTable density="compact">` — so any pattern wide enough to cover the
+ * example's phrases covers a component somebody chose, and a row that was
+ * written is reported.
  *
- * A phrase, not a token: every placeholder the example writes is two words or
- * more, and a one-word angle token is how a component is named — `<DataTable>`
- * is a plausible `item`, and rejecting it would report a row somebody wrote.
- * The test reads the block out of the shipped file, so an example that ever
- * uses a single word fails there rather than going quiet here.
+ * A test holds this set against the block the shipped file carries, so a
+ * placeholder reworded there is a failing test rather than a value nothing
+ * recognises.
  */
-const ANGLE_PLACEHOLDER_RE = /^<[^<>]*\s[^<>]*>$/;
+export const PROCUREMENT_PLACEHOLDERS: ReadonlySet<string> = new Set([
+  "<screen id>",
+  "<what part of the screen>",
+  "<catalogue item, or the project component it already had>",
+  "<what was looked for and did not serve>",
+]);
 
 /** Whether a cell holds something a later reader can act on. */
 function cellIsWritten(value: unknown): boolean {
   if (typeof value !== "string") return false;
   const trimmed = value.trim();
-  return trimmed.length > 0 && !PLACEHOLDER_RE.test(trimmed) && !ANGLE_PLACEHOLDER_RE.test(trimmed);
+  return (
+    trimmed.length > 0 &&
+    !PLACEHOLDER_RE.test(trimmed) &&
+    !PROCUREMENT_PLACEHOLDERS.has(trimmed.toLowerCase())
+  );
 }
 
 /**
@@ -1100,6 +1108,12 @@ function procurementIssues(handoff: Record<string, unknown>, filePathRel: string
       "error",
       filePathRel,
       "designContractReadiness.prototypeHandoffProcurement",
+      undefined,
+      "canonical",
+      "Repair `procurement` in prototype-handoff.yaml: it is a mapping of a `procured` and an " +
+        "`authored` list, each row naming one screen region and what realises it — `screen`, " +
+        "`region`, `item` for a procured region and `screen`, `region`, `why` for an authored " +
+        "one, with one row per region across both lists.",
     );
   if (!isRecord(procurement)) {
     return [
@@ -1115,15 +1129,15 @@ function procurementIssues(handoff: Record<string, unknown>, filePathRel: string
    *
    * One realisation per region: the contract says each region names what
    * realises it, singular. Two rows for one region tell the implementer to
-   * install and to author the same part, and reading rows independently let
-   * them both pass — across the two lists as well as within one.
+   * install and to author the same part, so the pairs are collected across both
+   * lists rather than judged a row at a time.
    */
   const realised = new Map<string, string>();
   const duplicates: { key: string; first: string; second: string }[] = [];
   // A closed key set, as `prototyping/handoff.ts` keeps for the schema beside
   // this one: "closed schema; protects against schema drift and typos". A
-  // misspelled list left both known names absent, so no row was read and the
-  // manifest passed while exposing nothing to either consumer.
+  // misspelling leaves both contract names absent, which is a manifest that
+  // exposes nothing to either consumer while reading as one that does.
   const unknown = Object.keys(procurement).filter(
     (key) => !Object.hasOwn(PROCUREMENT_ROW_CELLS, key),
   );
@@ -1136,15 +1150,15 @@ function procurementIssues(handoff: Record<string, unknown>, filePathRel: string
     );
   }
   for (const [list, cells] of Object.entries(PROCUREMENT_ROW_CELLS)) {
-    // `Object.hasOwn`, because `key in` reaches the prototype: `constructor`
-    // and `toString` read as declared lists, and the value read back was a
-    // function rather than anything the contract describes.
+    // An own key. `key in` reaches the prototype, where `constructor` and
+    // `toString` answer to a name the contract never defined and hold a
+    // function rather than a list.
     if (!Object.hasOwn(procurement, list)) continue;
     const rows = procurement[list];
-    // A list declared and left empty is present, not omitted. `procured:` with
-    // nothing under it parses as `null`, and reading that as an absent key let
-    // a declaration saying nothing past the shape check — the same distinction
-    // the key itself is held to one level up.
+    // A list declared and left empty is present rather than omitted: `procured:`
+    // with nothing under it parses as `null`, and a declaration saying nothing
+    // is the shape this reports. It is the distinction the key itself carries
+    // one level up.
     if (!Array.isArray(rows)) {
       issues.push(
         report(
