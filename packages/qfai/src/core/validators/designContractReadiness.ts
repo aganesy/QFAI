@@ -1059,8 +1059,14 @@ const PROCUREMENT_ROW_CELLS: Readonly<Record<string, readonly string[]>> = {
  * `PLACEHOLDER_RE` beside it knows the word forms (`tbd`, `todo`, `n/a`) and
  * none of these, so the documented example copied with nothing replaced passed
  * every cell — the unfilled template satisfying the check written to catch it.
+ *
+ * A phrase, not a token: every placeholder the example writes is two words or
+ * more, and a one-word angle token is how a component is named — `<DataTable>`
+ * is a plausible `item`, and rejecting it would report a row somebody wrote.
+ * The test reads the block out of the shipped file, so an example that ever
+ * uses a single word fails there rather than going quiet here.
  */
-const ANGLE_PLACEHOLDER_RE = /^<[^<>]*>$/;
+const ANGLE_PLACEHOLDER_RE = /^<[^<>]*\s[^<>]*>$/;
 
 /** Whether a cell holds something a later reader can act on. */
 function cellIsWritten(value: unknown): boolean {
@@ -1108,7 +1114,9 @@ function procurementIssues(handoff: Record<string, unknown>, filePathRel: string
   // this one: "closed schema; protects against schema drift and typos". A
   // misspelled list left both known names absent, so no row was read and the
   // manifest passed while exposing nothing to either consumer.
-  const unknown = Object.keys(procurement).filter((key) => !(key in PROCUREMENT_ROW_CELLS));
+  const unknown = Object.keys(procurement).filter(
+    (key) => !Object.hasOwn(PROCUREMENT_ROW_CELLS, key),
+  );
   if (unknown.length > 0) {
     issues.push(
       report(
@@ -1118,8 +1126,15 @@ function procurementIssues(handoff: Record<string, unknown>, filePathRel: string
     );
   }
   for (const [list, cells] of Object.entries(PROCUREMENT_ROW_CELLS)) {
+    // `Object.hasOwn`, because `key in` reaches the prototype: `constructor`
+    // and `toString` read as declared lists, and the value read back was a
+    // function rather than anything the contract describes.
+    if (!Object.hasOwn(procurement, list)) continue;
     const rows = procurement[list];
-    if (rows === undefined || rows === null) continue;
+    // A list declared and left empty is present, not omitted. `procured:` with
+    // nothing under it parses as `null`, and reading that as an absent key let
+    // a declaration saying nothing past the shape check — the same distinction
+    // the key itself is held to one level up.
     if (!Array.isArray(rows)) {
       issues.push(
         report(

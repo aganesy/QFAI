@@ -415,6 +415,39 @@ describe("validateSddDesignContractReadiness (TC-3.8.x)", () => {
       return issues.filter((i) => i.code === "QFAI-DCON-013").map((i) => i.message);
     };
 
+    it("reports a list declared and left empty", async () => {
+      // `procured:` with nothing under it parses as null. That is a declaration
+      // saying nothing, not an omission, and reading the two as one let it past
+      // the shape check — the same distinction the key itself is held to.
+      const messages = await seeded(["procurement:", "  procured:"]);
+      expect(messages).toHaveLength(1);
+      expect(messages[0]).toContain("'procurement.procured' must be a list");
+    });
+
+    it("reads only the mapping's own keys", async () => {
+      // `key in` reaches the prototype, so `constructor` and `toString` read as
+      // declared lists and the value read back was a function rather than
+      // anything the contract describes.
+      const messages = await seeded(["procurement:", "  constructor:", "    - screen: a"]);
+      expect(messages).toHaveLength(1);
+      expect(messages[0]).toContain("'constructor'");
+    });
+
+    it("leaves a component named in angle brackets alone", async () => {
+      // Every placeholder the shipped example writes is two words or more, and
+      // a one-word angle token is how a component is named. Rejecting it would
+      // report a row somebody wrote.
+      expect(
+        await seeded([
+          "procurement:",
+          "  procured:",
+          '    - screen: "dashboard"',
+          '      region: "summary cards"',
+          '      item: "<DataTable>"',
+        ]),
+      ).toEqual([]);
+    });
+
     it("says nothing when the key is absent", async () => {
       // The handoff contract lets a screen drawn entirely from what the
       // project already had omit both lists, so absence is legal here.
