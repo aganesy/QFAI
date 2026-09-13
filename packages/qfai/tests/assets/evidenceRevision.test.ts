@@ -22,8 +22,10 @@
  * distinctive clauses, deliberately not on whole paragraphs: the rule is the
  * subject, and a reword of the surrounding prose must not redden this file.
  */
+import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
-import { readFile } from "node:fs/promises";
+import { lstat, mkdir, mkdtemp, readFile, readlink, rm, writeFile } from "node:fs/promises";
+import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -530,6 +532,53 @@ describe("evidence and verdicts carry a revision", () => {
   }
 });
 
+const sha256 = (input: Buffer): Buffer => createHash("sha256").update(input).digest();
+const sha256Hex = (input: Buffer): string => sha256(input).toString("hex");
+
+/**
+ * One record per path, as step 3 fixes them.
+ *
+ * A regular file, a symlink and a directory: the three kinds the procedure
+ * names, with the symlink's bytes being its own payload rather than what it
+ * points at, and the directory's the empty string.
+ */
+type PathRecord = {
+  readonly path: Buffer;
+  readonly kind: "file" | "symlink" | "dir" | "absent";
+  readonly mode: string;
+  readonly bytes: Buffer;
+};
+
+/** Steps 3 and 4 over a set of records, under the reading the options name. */
+function address(options: {
+  readonly digestAsHex: boolean;
+  readonly trailingNewline: boolean;
+  readonly revision: string;
+  readonly records: readonly PathRecord[];
+}): string {
+  const parts: Buffer[] = [Buffer.from(`HEAD\u0000${options.revision}`, "utf-8")];
+  for (const record of options.records) {
+    // The path is concatenated as the bytes it is. Interpolating it into a
+    // string decodes and re-encodes it, which turns two distinct invalid-byte
+    // names into one — the collapse the notation table forbids, and one a
+    // fixture built from strings cannot catch an implementation making.
+    parts.push(
+      Buffer.concat([
+        record.path,
+        Buffer.from(`\u0000${record.kind}\u0000${record.mode}\u0000`, "utf-8"),
+        options.digestAsHex ? Buffer.from(sha256Hex(record.bytes), "utf-8") : sha256(record.bytes),
+      ]),
+    );
+  }
+  const joined: Buffer[] = [];
+  parts.forEach((part, index) => {
+    if (index > 0) joined.push(Buffer.from("\n", "utf-8"));
+    joined.push(part);
+  });
+  if (options.trailingNewline) joined.push(Buffer.from("\n", "utf-8"));
+  return `working-tree+${sha256Hex(Buffer.concat(joined))}`;
+}
+
 /**
  * The address is one value, or it is not an address.
  *
@@ -559,23 +608,6 @@ describe("the working-tree address has one notation", () => {
    */
   const RECORDED = "working-tree+fd5686a9d446725fba950775308babffc54a647a54386ede74db2f7b0e98f793";
 
-  const sha256 = (input: Buffer): Buffer => createHash("sha256").update(input).digest();
-  const sha256Hex = (input: Buffer): string => sha256(input).toString("hex");
-
-  /**
-   * One record per path, as step 3 fixes them.
-   *
-   * A regular file, a symlink and a directory: the three kinds the procedure
-   * names, with the symlink's bytes being its own payload rather than what it
-   * points at, and the directory's the empty string.
-   */
-  type PathRecord = {
-    readonly path: Buffer;
-    readonly kind: "file" | "symlink" | "dir" | "absent";
-    readonly mode: string;
-    readonly bytes: Buffer;
-  };
-
   const RECORDS: readonly PathRecord[] = [
     // The repository root, and the path components of everything below, which
     // step 1 records too: a
@@ -601,43 +633,11 @@ describe("the working-tree address has one notation", () => {
     { path: Buffer.from("tmp/hold"), kind: "dir", mode: "0755", bytes: Buffer.alloc(0) },
   ];
 
-  /** Steps 3 and 4 over those records. */
-  function address(options: {
-    readonly digestAsHex: boolean;
-    readonly trailingNewline: boolean;
-    readonly revision: string;
-    readonly records?: readonly PathRecord[];
-  }): string {
-    const records = options.records ?? RECORDS;
-    const parts: Buffer[] = [Buffer.from(`HEAD\u0000${options.revision}`, "utf-8")];
-    for (const record of records) {
-      // The path is concatenated as the bytes it is. Interpolating it into a
-      // string decodes and re-encodes it, which turns two distinct invalid-byte
-      // names into one — the collapse the notation table forbids, and one a
-      // fixture built from strings cannot catch an implementation making.
-      parts.push(
-        Buffer.concat([
-          record.path,
-          Buffer.from(`\u0000${record.kind}\u0000${record.mode}\u0000`, "utf-8"),
-          options.digestAsHex
-            ? Buffer.from(sha256Hex(record.bytes), "utf-8")
-            : sha256(record.bytes),
-        ]),
-      );
-    }
-    const joined: Buffer[] = [];
-    parts.forEach((part, index) => {
-      if (index > 0) joined.push(Buffer.from("\n", "utf-8"));
-      joined.push(part);
-    });
-    if (options.trailingNewline) joined.push(Buffer.from("\n", "utf-8"));
-    return `working-tree+${sha256Hex(Buffer.concat(joined))}`;
-  }
-
   const HEX_FULL_NO_TRAILING = {
     digestAsHex: true,
     trailingNewline: false,
     revision: REVISION,
+    records: RECORDS,
   } as const;
 
   for (const tree of QFAI_TREES) {
@@ -682,8 +682,12 @@ describe("the working-tree address has one notation", () => {
       expect(text).toContain("--exclude-per-directory=.gitignore");
       // Declared and not applied is the same as not declared: a ledger write
       // during the phase moves the address the phase is recording.
-      expect(text).toContain(":(exclude,glob).qfai/evidence/**");
-      expect(text).toContain(":(exclude,glob).qfai/review/**");
+      expect(text).toContain('$(escape "$prefix").qfai/evidence/**');
+      expect(text).toContain('$(escape "$prefix").qfai/review/**');
+      // The lists are read from the worktree's root, and a project nested below
+      // it keeps its records under its own directory.
+      expect(text).toContain("git rev-parse --show-prefix");
+      expect(text).toContain("The exclusions are rooted at the project");
       // The ledger's directory is a project setting, so the pathspec is built
       // from the resolved value. Writing the default excludes nothing in a
       // project that moved its specs, and the phase's own bookkeeping then
@@ -716,7 +720,7 @@ describe("the working-tree address has one notation", () => {
       expect(text).toContain('root=$(env "${unset[@]}" git rev-parse --show-toplevel)');
       // One spelling is both: `C:/specs` is another drive on Windows and an
       // ordinary directory on POSIX, so git answers whether it is inside.
-      expect(text).toContain('git -C "$root" ls-files -z -- ":(literal)$specs"');
+      expect(text).toContain('git -C "$root" ls-files -z -- ":(literal)$prefix$specs"');
       // `--local-env-vars` does not list the variables that set pathspec magic,
       // so under `GIT_LITERAL_PATHSPECS=1` the exclusions were names to match.
       expect(text).toContain("unset=(-u GIT_LITERAL_PATHSPECS -u GIT_GLOB_PATHSPECS");
@@ -760,6 +764,9 @@ describe("the working-tree address has one notation", () => {
       expect(text).toContain("A submodule stops the address");
       expect(text).toContain("A tracked path the filesystem does not have is a record, not a stop");
       expect(text).toContain("A tracked path that is none of the three kinds stops the address");
+      // Git lists none of these, so only the filesystem can say one is there.
+      expect(text).toContain("An untracked FIFO, socket or device stops the address too");
+      expect(text).toContain("-type p -o -type s -o -type b -o -type c");
       expect(text).toContain("--deduplicate");
       expect(text).toContain("An untracked embedded repository stops the address");
       // Decoding a path that is not valid UTF-8 turns distinct names into one.
@@ -854,6 +861,203 @@ describe("the working-tree address has one notation", () => {
     expect(address({ ...HEX_FULL_NO_TRAILING, records: invalid(0xfe) })).not.toBe(
       address({ ...HEX_FULL_NO_TRAILING, records: invalid(0xff) }),
     );
+  });
+});
+
+/**
+ * Step 1, run.
+ *
+ * The vector above holds the notation and says nothing about which paths the
+ * collection names, and the text pins hold how the commands are spelled rather
+ * than what they do. This runs the reference's own commands in a temporary
+ * worktree whose project sits below the root, and takes the address over what
+ * they print.
+ */
+describe("the working-tree address follows the tree it is taken over", () => {
+  /** The environment with no variable pointing git at another repository. */
+  const gitEnv = (): NodeJS.ProcessEnv =>
+    Object.fromEntries(Object.entries(process.env).filter(([name]) => !name.startsWith("GIT_")));
+  const git = (cwd: string, ...args: string[]): void => {
+    execFileSync("git", ["-c", "commit.gpgsign=false", ...args], { cwd, env: gitEnv() });
+  };
+
+  /** What step 1 printed, one command at a time. */
+  type Collected = {
+    readonly head: string;
+    readonly tracked: readonly string[];
+    readonly others: readonly string[];
+    readonly directories: readonly string[];
+    readonly special: string;
+  };
+
+  /**
+   * Step 1's block as the reference writes it, each command's output sent to a
+   * file of its own: printed together, one NUL-separated list runs into the next.
+   */
+  async function collectionScript(output: string): Promise<string> {
+    const text = await read("packages/qfai/assets/init/.qfai", REFERENCE);
+    const open = text.indexOf("```bash\n", text.indexOf("1. **Collect**"));
+    const close = text.indexOf("```", open + "```bash\n".length);
+    const lines: string[] = [];
+    let commands = 0;
+    for (const written of text.slice(open + "```bash\n".length, close).split("\n")) {
+      const line = written.replace(/^ {5}/, "");
+      if (/^(?:"\$\{common\[@\]\}"|\(cd "\$root")/.test(line)) {
+        lines.push(`${line} > "${output}/${String(commands)}"`);
+        commands += 1;
+      } else {
+        lines.push(line);
+      }
+    }
+    expect(commands, "step 1 no longer runs the six commands this reads").toBe(6);
+    return ["set -euo pipefail", ...lines].join("\n");
+  }
+
+  /** Runs step 1 from `project` and reads back what each command printed. */
+  async function collect(project: string, scratch: string): Promise<Collected> {
+    const output = await mkdtemp(path.join(scratch, "collected-"));
+    execFileSync("bash", ["-c", await collectionScript(output)], {
+      cwd: project,
+      env: {
+        ...gitEnv(),
+        PATH: `${path.join(scratch, "bin")}${path.delimiter}${process.env.PATH ?? ""}`,
+      },
+    });
+    const printed = (index: number): Promise<string> =>
+      readFile(path.join(output, String(index)), "utf-8");
+    const listed = async (index: number): Promise<string[]> =>
+      (await printed(index)).split("\u0000").filter((entry) => entry !== "");
+    return {
+      head: (await printed(0)).trimEnd(),
+      tracked: await listed(1),
+      others: await listed(2),
+      directories: await listed(3),
+      special: await printed(5),
+    };
+  }
+
+  /** Step 3's records for what step 1 printed, read off the filesystem. */
+  async function recordsOf(worktree: string, collected: Collected): Promise<PathRecord[]> {
+    const files = [...collected.tracked, ...collected.others];
+    const directories = new Set(["."]);
+    for (const file of files) {
+      const parts = file.split("/");
+      for (let end = 1; end < parts.length; end += 1) {
+        directories.add(parts.slice(0, end).join("/"));
+      }
+    }
+    for (const entry of collected.directories) {
+      if (entry.endsWith("/") && !files.some((file) => file.startsWith(entry))) {
+        directories.add(entry.slice(0, -1));
+      }
+    }
+    const records: PathRecord[] = [];
+    for (const name of [...files, ...directories]) {
+      const target = path.join(worktree, name);
+      const stats = await lstat(target).catch(() => undefined);
+      const kind =
+        stats === undefined
+          ? "absent"
+          : stats.isDirectory()
+            ? "dir"
+            : stats.isSymbolicLink()
+              ? "symlink"
+              : "file";
+      records.push({
+        path: Buffer.from(name),
+        kind,
+        mode: stats === undefined ? "0000" : (stats.mode & 0o7777).toString(8).padStart(4, "0"),
+        bytes:
+          kind === "file"
+            ? await readFile(target)
+            : kind === "symlink"
+              ? await readlink(target, { encoding: "buffer" })
+              : Buffer.alloc(0),
+      });
+    }
+    return records.sort((left, right) => Buffer.compare(left.path, right.path));
+  }
+
+  it("moves on a nested project's code and stays on the phase's own records", async () => {
+    // The procedure is a bash script, and a FIFO needs a POSIX file system.
+    if (process.platform === "win32") return;
+    const scratch = await mkdtemp(path.join(os.tmpdir(), "qfai-address-"));
+    try {
+      const worktree = path.join(scratch, "worktree");
+      const project = path.join(worktree, "packages", "app-a");
+      const write = async (name: string, body: string): Promise<void> => {
+        await mkdir(path.dirname(path.join(project, name)), { recursive: true });
+        await writeFile(path.join(project, name), body, "utf-8");
+      };
+      // The doctor query, answered as the tool answers it for a default project.
+      const doctor = { checks: [{ id: "paths.specsDir", details: { path: ".qfai/specs" } }] };
+      await mkdir(path.join(scratch, "bin"));
+      await writeFile(
+        path.join(scratch, "bin", "npx"),
+        `#!/bin/sh\nprintf '%s' '${JSON.stringify(doctor)}'\n`,
+        { mode: 0o755 },
+      );
+      for (const name of [
+        "src/a.ts",
+        "src/gone.ts",
+        ".qfai/specs/spec-1/01_Spec.md",
+        ".qfai/specs/spec-1/tdd/test-list.md",
+        ".qfai/evidence/red.md",
+        ".qfai/review/review-1/summary.json",
+      ]) {
+        await write(name, `${name}\n`);
+      }
+      git(worktree, "init", "-q");
+      git(worktree, "add", "-A");
+      git(
+        worktree,
+        "-c",
+        "user.name=qfai",
+        "-c",
+        "user.email=qfai@example.com",
+        "commit",
+        "-qm",
+        "x",
+      );
+
+      const addressNow = async (): Promise<string> => {
+        const collected = await collect(project, scratch);
+        return address({
+          digestAsHex: true,
+          trailingNewline: false,
+          revision: collected.head,
+          records: await recordsOf(worktree, collected),
+        });
+      };
+
+      // The project's code: a tracked edit, an untracked file and a deletion.
+      let current = await addressNow();
+      for (const change of [
+        () => write("src/a.ts", "edited\n"),
+        () => write("src/new.ts", "new\n"),
+        () => rm(path.join(project, "src", "gone.ts")),
+      ]) {
+        await change();
+        const moved = await addressNow();
+        expect(moved).not.toBe(current);
+        current = moved;
+      }
+
+      // The phase's own records, under each directory the address leaves out.
+      await write(".qfai/specs/spec-1/tdd/test-list.md", "green\n");
+      await write(".qfai/evidence/green.md", "green\n");
+      await write(".qfai/review/review-1/answer.md", "PASS\n");
+      await write(".qfai/review/review-2/summary.json", "{}\n");
+      expect(await addressNow()).toBe(current);
+
+      // A FIFO no list names is printed by the command that stops the address.
+      execFileSync("mkfifo", [path.join(project, "src", "pipe")]);
+      const collected = await collect(project, scratch);
+      expect([...collected.tracked, ...collected.others]).not.toContain("packages/app-a/src/pipe");
+      expect(collected.special).toContain("packages/app-a/src/pipe");
+    } finally {
+      await rm(scratch, { recursive: true, force: true });
+    }
   });
 });
 

@@ -77,6 +77,14 @@ const binaryExtensions = new Set([
 const fencedExtensions = new Set([".md", ".markdown"]);
 
 /**
+ * Whether `markersIn` skips fenced blocks for this path: a Markdown file's fence
+ * holds an example, and a fence means nothing in any other file.
+ */
+export function readsFences(relative) {
+  return fencedExtensions.has(path.extname(relative).toLowerCase());
+}
+
+/**
  * Every tracked path, or `null` when git cannot answer.
  *
  * `null` is a distinct outcome rather than an empty list: a caller outside a
@@ -168,8 +176,7 @@ export function run(cwd = process.cwd()) {
       continue;
     }
     scanned += 1;
-    const fenced = fencedExtensions.has(path.extname(relative).toLowerCase());
-    for (const hit of markersIn(text, { fenced })) {
+    for (const hit of markersIn(text, { fenced: readsFences(relative) })) {
       findings.push({ file: relative, ...hit });
     }
   }

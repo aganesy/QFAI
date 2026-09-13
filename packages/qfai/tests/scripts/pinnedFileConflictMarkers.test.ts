@@ -1,21 +1,8 @@
 /**
- * A pinned file carrying merge conflict markers is named as one.
- *
- * The repository already scans tracked files for markers, and the scan works.
- * It runs in `ci:lint`, which is a later step of the lint job than the byte
- * guard — and a job stops at its first failure. A conflict block changes a
- * pinned file's bytes like any other edit, so the byte guard fails first, calls
- * it a digest mismatch, and names resealing as the repair. Resealing succeeds,
- * the next run reaches the marker scan, and the cause is reported a CI round
- * later than it was known.
- *
- * One pinned path is worse than that. `.github/pinned-bytes.txt` is rewritten
- * from the tree rather than edited, so a conflict inside it is discarded by the
- * reseal with nothing left for any later check to read.
- *
- * Both refusals are held here, because they are one rule with two enforcement
- * points: the guard that runs first in CI, and the program its old message sent
- * the operator to.
+ * A pinned file carrying merge conflict markers is refused as a conflict, before
+ * any digest is compared or written, by the byte guard and by the program that
+ * reseals the digests. Both read markers as the tracked-file scan does, so a
+ * fenced example in a Markdown file is not one.
  */
 import { execFile } from "node:child_process";
 import { appendFile, cp, mkdir, mkdtemp, readFile } from "node:fs/promises";
@@ -114,8 +101,7 @@ describe("the byte guard, on a pinned file carrying conflict markers", () => {
   });
 
   it("says resealing is not the repair", async () => {
-    // The old message's remedy. Following it here pins the conflict block as
-    // the reviewed bytes, which is the failure this refusal exists to prevent.
+    // Resealing would pin the conflict block as the reviewed bytes.
     await plantConflict(PINNED_DATA_REL);
 
     const result = await runGuard();
@@ -124,9 +110,7 @@ describe("the byte guard, on a pinned file carrying conflict markers", () => {
   });
 
   it("reads the list's own path, which the list does not name", async () => {
-    // `.github/pinned-bytes.txt` pins `.github/actions/**` and `scripts/**`,
-    // never itself — its digest lives in the workflow step. A conflict in it is
-    // the case with no later reader at all, so this check is the only one.
+    // The list's digest lives in the workflow step, so the list is not among its own entries.
     const listed = await readFile(path.join(staged, LIST_REL), "utf-8");
     expect(listed).not.toContain(`  ${LIST_REL}`);
 
@@ -139,8 +123,6 @@ describe("the byte guard, on a pinned file carrying conflict markers", () => {
   });
 
   it("passes a tree whose pinned files are clean", async () => {
-    // The refusal has to be quiet on the ordinary case, or it replaces one
-    // misleading failure with another.
     const result = await runGuard();
 
     expect(result.status).toBe(0);
@@ -162,9 +144,6 @@ describe("the re-pin program, on a pinned file carrying conflict markers", () =>
   });
 
   it("refuses a conflict in the list it would otherwise overwrite", async () => {
-    // Without this the reseal regenerates the list from the tree, so the
-    // conflict block leaves the repository through a commit that reads as a
-    // routine re-pin.
     await plantConflict(LIST_REL);
 
     const result = await runPin();
@@ -175,8 +154,7 @@ describe("the re-pin program, on a pinned file carrying conflict markers", () =>
   });
 
   it("refuses a conflict in a list only the workflow pins", async () => {
-    // `command-files.txt` is sealed into the workflow step, not into the list,
-    // so a scan of the list's roots alone would pin its conflict block.
+    // `command-files.txt` is sealed into the workflow step, not into the list.
     await plantConflict(".github/command-files.txt");
     const workflowBefore = await readFile(path.join(staged, ".github/workflows/ci.yml"), "utf-8");
 
@@ -195,6 +173,46 @@ describe("the re-pin program, on a pinned file carrying conflict markers", () =>
     expect(result.status).toBe(0);
     expect(result.output).toContain("pinned");
     expect(result.output).not.toContain("nothing was pinned");
+  });
+});
+
+describe("a fenced example in a pinned Markdown file", () => {
+  it("is not a conflict to either program", async () => {
+    const example = "scripts/conflict-example.md";
+    await appendFile(
+      path.join(staged, example),
+      [
+        "# Resolving a conflict",
+        "",
+        "```text",
+        "<<<<<<< HEAD",
+        "ours",
+        "=======",
+        "theirs",
+        ">>>>>>> origin/main",
+        "```",
+        "",
+      ].join("\n"),
+      "utf-8",
+    );
+
+    const pinned = await runPin();
+    expect(pinned.status).toBe(0);
+    expect(pinned.output).not.toContain("nothing was pinned");
+
+    const guarded = await runGuard();
+    expect(guarded.status).toBe(0);
+    expect(guarded.output).not.toContain("merge conflict markers");
+  });
+
+  it("is a conflict to both once it sits outside the fence", async () => {
+    const example = "scripts/conflict-example.md";
+    await appendFile(path.join(staged, example), "# Notes\n\n", "utf-8");
+    await plantConflict(example);
+
+    const pinned = await runPin();
+    expect(pinned.status).toBe(1);
+    expect(pinned.output).toContain(example);
   });
 });
 

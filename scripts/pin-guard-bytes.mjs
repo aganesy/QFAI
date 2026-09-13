@@ -28,6 +28,7 @@ import path from "node:path";
 import { argv, cwd, exit, stdout } from "node:process";
 import { fileURLToPath } from "node:url";
 
+import { markersIn, readsFences } from "./check-conflict-markers.mjs";
 import { LIFECYCLE_MANIFESTS_REL, lifecycleProjection } from "./check-lifecycle-manifests.mjs";
 import { writeFormattedJson } from "./lib/write-declaration.mjs";
 
@@ -80,21 +81,21 @@ function digestOf(root, rel) {
     .digest("hex");
 }
 
-/** Seven of one marker character, then a space or the end of the line. */
-const MARKER_RE = /^(?:<{7}|={7}|>{7}|\|{7})(?: |$)/m;
-
 /**
- * The pinned paths that still carry a merge conflict.
+ * The pinned paths that still carry a merge conflict, read as the tracked-file
+ * scan reads them, so a fenced example in a Markdown file is not one.
  *
  * Resealing computes a digest over whatever bytes are there, so a conflict block
- * would be pinned rather than reported — and the lists this program rewrites
- * from the tree rather than edits would lose a conflict inside them with nothing
- * left to read. Every file it seals is scanned, the workflow-pinned lists included. Both are refused here, where the operator is
- * already looking, because the byte guard that sent them here reports an
- * unresolved merge as a digest mismatch and names resealing as the repair.
+ * would be pinned rather than reported, and a list this program rewrites from
+ * the tree would drop a conflict inside it with nothing left to read. Every file
+ * it seals is scanned, the workflow-pinned lists included.
  */
 function pathsWithConflictMarkers(root, rels) {
-  return rels.filter((rel) => MARKER_RE.test(readFileSync(path.join(root, rel), "utf-8")));
+  return rels.filter(
+    (rel) =>
+      markersIn(readFileSync(path.join(root, rel), "utf-8"), { fenced: readsFences(rel) }).length >
+      0,
+  );
 }
 
 async function main(root) {

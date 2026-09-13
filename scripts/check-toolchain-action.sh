@@ -60,21 +60,44 @@ if ! command -v sha256sum > /dev/null 2>&1; then
 fi
 # BEFORE the digests: a file carrying a merge conflict is a different failure with a different
 # repair, and the message below names resealing, which would pin the conflict block as the
-# reviewed bytes. The scan the repository already has for this runs in `ci:lint`, a later step in
-# this job — and a job stops at its first failure, so without this the cause is reported one CI
-# round later, after the operator has done the wrong thing once.
+# reviewed bytes.
 #
-# `grep` only, like the rest of this script. Seven of a marker character followed by a space or
-# the end of the line: git writes `<<<<<<< ours`, `=======`, `>>>>>>> theirs` and `||||||| base`,
-# and requiring that boundary keeps a row of eight equals signs used as a rule from matching.
-#
-# The workflow-pinned lists are appended to what the list names. `pin-guard-bytes.mjs` rewrites
-# them from the tree rather than editing them, so a conflict inside one is discarded by a reseal
-# with nothing left for any later check to read.
+# Read as `scripts/check-conflict-markers.mjs` reads a tracked file, without the toolchain this
+# step runs ahead of: seven of a marker character followed by a space or the end of the line,
+# with a carriage return before the newline ignored, and in a Markdown file nothing inside a
+# fenced block, which holds an example. The workflow-pinned lists are appended to what the list
+# names, because `pin-guard-bytes.mjs` rewrites them from the tree.
+has_conflict_markers() {
+  case "$1" in
+    *.md | *.MD | *.markdown | *.Markdown) fenced=1 ;;
+    *) fenced=0 ;;
+  esac
+  awk -v fenced="${fenced}" '
+    {
+      line = $0
+      sub(/\r$/, "", line)
+      if (fenced == 1) {
+        s = line
+        sub(/^[ \t]?[ \t]?[ \t]?/, "", s)
+        c = substr(s, 1, 1)
+        n = 0
+        if (c == "`" || c == "~") { while (substr(s, n + 1, 1) == c) n++ }
+        if (n >= 3) {
+          if (open == "") { open = c; width = n }
+          else if (c == open && n >= width) { open = "" }
+          next
+        }
+        if (open != "") next
+      }
+      if (line ~ /^(<<<<<<<|=======|>>>>>>>|[|][|][|][|][|][|][|])( |$)/) { found = 1; exit }
+    }
+    END { exit found ? 0 : 1 }
+  ' "$1"
+}
 conflicted=""
 while IFS= read -r pinned_path; do
   [ -n "${pinned_path}" ] || continue
-  if (cd "${root}" && grep -qE "^(<{7}|={7}|>{7}|\|{7})( |$)" "${pinned_path}" 2> /dev/null); then
+  if (cd "${root}" && has_conflict_markers "${pinned_path}" 2> /dev/null); then
     conflicted="${conflicted} ${pinned_path}"
   fi
 done <<EOF
