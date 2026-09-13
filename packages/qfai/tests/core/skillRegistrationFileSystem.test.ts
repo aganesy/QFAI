@@ -77,8 +77,8 @@ async function projectWithSkills(
 
 describe("the skill gate on file systems that answer differently", () => {
   it("reads each skill as itself on a volume that reports no inode numbers", async () => {
-    // Every file there reports the same inode, and taken as an identity that
-    // handed the first document's text to every entry point.
+    // Every file there reports the same inode, so each entry point is told apart
+    // by its path and read as itself.
     const root = await projectWithSkills({
       "qfai-a": ['description: "Does the thing."'],
       "qfai-b": [],
@@ -89,6 +89,22 @@ describe("the skill gate on file systems that answer differently", () => {
       (item) => item.code === "QFAI-SKILLS-015" && item.message.includes("description"),
     );
     expect(missing.map((item) => path.basename(path.dirname(item.file ?? "")))).toEqual(["qfai-b"]);
+  });
+
+  it("reports an unreadable entry point once, whatever its case, with no inode numbers", async () => {
+    // Where the volume folds case, the crawl's `skill.md` and the probe's
+    // `SKILL.md` are one file, and the canonical path names them as one.
+    const root = await projectWithSkills({ "qfai-a": ['description: "Does the thing."'] });
+    const skillDir = path.join(root, ".qfai", "assistant", "skills", "qfai-a");
+    await rm(path.join(skillDir, "SKILL.md"));
+    const file = path.join(skillDir, "skill.md");
+    await writeFile(file, Buffer.concat([Buffer.from("# skill\n"), Buffer.from([0xff])]));
+    fault.zeroInode = true;
+
+    const unreadable = (await validateAssistantAssets(root, defaultConfig)).filter(
+      (item) => item.code === "QFAI-SKILLS-014" && item.file?.toLowerCase() === file.toLowerCase(),
+    );
+    expect(unreadable).toHaveLength(1);
   });
 
   it("reports a directory it cannot list inside a skill, and finishes", async () => {

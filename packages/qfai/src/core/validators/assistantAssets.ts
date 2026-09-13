@@ -1759,8 +1759,9 @@ async function fileIdentity(file: string): Promise<string> {
   try {
     const identity = await stat(file, { bigint: true });
     // Some volumes report no inode number, and every file there reads as `0`.
-    // Taken as an identity it would make every file one file.
-    if (identity.ino === 0n) return file;
+    // The canonical path stands in: it keeps files apart, and on a volume that
+    // folds case it still names `skill.md` and `SKILL.md` as one file.
+    if (identity.ino === 0n) return await realpath(file).catch(() => file);
     return `${String(identity.dev)}:${String(identity.ino)}`;
   } catch {
     return file;
