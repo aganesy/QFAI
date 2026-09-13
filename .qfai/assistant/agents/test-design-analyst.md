@@ -32,7 +32,8 @@ From the ATDD stage onward:
 
 - For each US/TC, verify that test cases exist for: equivalence partitions, normal path, error path, edge cases, boundary values, special values, state transitions, and combinatorial scenarios.
 - Produce the Coverage Depth Matrix as a required deliverable, plus the business rule coverage table under it when the spec declares `BR-*`. Flag any ❌ cells in either as gaps.
-- Test cases covering only normal (happy) paths are INCOMPLETE. Return REVISE with specific missing scenarios.
+- Failure-side coverage follows the checklist's kept-failure scope. Return
+  REVISE for a normal-only row only when an applicable obligation is uncovered.
 
 Exception — `qfai-implement`'s `plan` phase:
 

@@ -1,7 +1,19 @@
 # Test Case Depth Checklist
 
-This checklist ensures test cases cover not only happy paths but also boundary values, error paths, edge cases, and combinatorial scenarios.
+This checklist covers declared behavior, boundaries, combinations and kept failures.
 Reviewers MUST use this checklist when evaluating test case completeness during ATDD and SDD review gates.
+
+## Scoring scope
+
+A **kept failure** is either:
+
+- A failure named by a specification, a contract or an actual observation,
+  unless a type or schema excludes it.
+- A failure required by the safety floor in
+  `.agents/rules/minimal-implementation.md` § 2.
+
+Score every kept failure whether or not handling code exists yet. Declared
+valid behavior always remains scored; failure-side bullets apply only to kept failures.
 
 ## Where the matrix lives
 
@@ -24,8 +36,9 @@ Scored as the `Equivalence partitions` cell of the matrix below.
 For each input parameter or condition:
 
 - [ ] Valid partitions identified with at least one representative test case each.
-- [ ] Invalid partitions identified with at least one representative test case each.
-- [ ] Special value partitions identified (null, empty, zero, default) with test cases.
+- [ ] Invalid partitions identified with at least one representative test case each, only for kept failures.
+- [ ] Valid special-value partitions (null, empty, zero, default) identified with test cases.
+- [ ] Invalid special-value partitions (null, empty, zero, default) tested only for kept failures.
 
 ## 2. Boundary Value Analysis (境界値分析)
 
@@ -33,35 +46,40 @@ For each numeric, date, string-length, or ordered domain:
 
 - [ ] Minimum valid value tested.
 - [ ] Maximum valid value tested.
-- [ ] Just below minimum (invalid) tested.
-- [ ] Just above maximum (invalid) tested.
-- [ ] Off-by-one boundaries tested where applicable.
+- [ ] Just below minimum (invalid) tested only for kept failures.
+- [ ] Just above maximum (invalid) tested only for kept failures.
+- [ ] Off-by-one boundaries within the declared valid domain tested where applicable.
 
 ## 3. Normal / Error / Edge Path Coverage (正常系・異常系・エッジケース)
 
 Scored as the `Normal path`, `Error path` and `Edge cases` cells of the matrix
-below — one cell per bullet, so the edge-case bullet cannot pass unscored on a
-row whose normal and error cells are ✅.
+below. Both edge-case bullets belong to `Edge cases`; neither can pass
+unscored on a row whose normal and error cells are ✅.
 
 For each US or TC:
 
 - [ ] At least one normal (happy) path test case exists.
-- [ ] At least one error/failure path test case exists (invalid input, missing data, unauthorized access, etc.).
-- [ ] Edge cases identified and tested (concurrent access, timing, empty collections, maximum payload, etc.).
+- [ ] At least one error/failure path test case exists only for kept failures (invalid input, missing data, unauthorized access).
+- [ ] Valid edge cases identified and tested (concurrent access, timing, empty collections, maximum payload).
+- [ ] Failure edge cases tested only for kept failures (concurrent access, timing, empty collections, payload limits).
 
 ## 4. Special Values (特殊値)
 
-- [ ] Null / undefined / missing values handled.
-- [ ] Empty strings, empty arrays, empty objects handled.
-- [ ] Maximum-length strings or maximum-size payloads handled.
-- [ ] Special characters (Unicode, control characters, SQL injection patterns) considered where applicable.
+- [ ] Null / undefined / missing values tested where valid.
+- [ ] Invalid null / undefined / missing values tested only for kept failures.
+- [ ] Empty strings, empty arrays, empty objects tested where valid.
+- [ ] Invalid empty strings, arrays or objects tested only for kept failures.
+- [ ] Maximum-length strings and maximum-size payloads tested where valid.
+- [ ] Length or payload-limit failures tested only for kept failures.
+- [ ] Special characters tested where valid (Unicode, control characters, literal SQL-like text).
+- [ ] Special-character failures tested only for kept failures (Unicode, control characters, SQL injection patterns).
 
 ## 5. State Transitions (状態遷移)
 
 For business flows with state machines or multi-step processes:
 
 - [ ] All valid state transitions have test cases.
-- [ ] Invalid state transitions are tested and rejected.
+- [ ] Invalid state transitions tested and rejected only for kept failures.
 - [ ] Terminal / end states are reachable and verified.
 
 ## 6. Combinatorial Coverage (組み合わせ)
@@ -69,7 +87,7 @@ For business flows with state machines or multi-step processes:
 When multiple conditions interact:
 
 - [ ] Key condition combinations tested (at minimum pairwise for high-risk interactions).
-- [ ] Conflicting or contradictory input combinations tested.
+- [ ] Conflicting or contradictory input combinations tested only for kept failures.
 
 ## 7. Business Rule Coverage (ビジネスルール網羅)
 
@@ -78,7 +96,8 @@ Scored in the **Business rule coverage** table below the matrix, one row per
 spans several `TC`s and one `TC` realizes several `BR-*`, so it has no matrix
 row to sit in and gets its own table in the same file.
 
-- [ ] Every active BR-\* declared in 04_Business-Rules.md has at least one positive and one negative test case.
+- [ ] Every active BR-\* declared in 04_Business-Rules.md has at least one positive test case.
+- [ ] Negative business-rule cases tested only for kept failures.
 - [ ] Conditional business rules have test cases for each branch.
 
 ## 8. Oracle Strength (オラクル強度)
@@ -148,7 +167,8 @@ an unjustified ❌ here is the same REVISE.
   a missing ✅, or no row filled in as templated could ever pass.
 - **PASS**: All scored cells in both tables are ✅, ⚠️ with documented rationale
   for partial coverage, or `n/a`. `n/a` says the category does not exist for
-  this row — an unconditional `BR-*` has no branches to cover — and is the
+  this row — an unconditional `BR-*` has no branches to cover, and an `Error
+path` or `Negative case` cell may have no kept failures — and is the
   templated value of `Conditional branches`; it is not a coverage gap and never
   needs a justification. Use it only where the obligation is absent, not where
   it is unmet: an uncovered category is ❌.

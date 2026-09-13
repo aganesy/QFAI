@@ -125,9 +125,8 @@ describe.each(TREES)("%s", (tree) => {
     // stated as "✅ or ⚠️" alone locked out every unconditional BR-*.
     const checklist = flat(await read(tree, CHECKLIST));
     expect(checklist).toContain("for partial coverage, or `n/a`.");
-    expect(checklist).toContain(
-      "an unconditional `BR-*` has no branches to cover — and is the templated value of `Conditional branches`",
-    );
+    expect(checklist).toContain("an unconditional `BR-*` has no branches to cover");
+    expect(checklist).toContain("templated value of `Conditional branches`");
   });
 
   it("scopes the business rule table to active declarations", async () => {
@@ -141,8 +140,9 @@ describe.each(TREES)("%s", (tree) => {
     expect(checklist).toContain("Neither form is an obligation, so neither gets a row");
     expect(checklist).not.toContain("One row per `BR-*` referenced in `04_Business-Rules.md`");
     expect(checklist).toContain(
-      "Every active BR-\\* declared in 04_Business-Rules.md has at least one positive and one negative test case.",
+      "Every active BR-\\* declared in 04_Business-Rules.md has at least one positive test case.",
     );
+    expect(checklist).toContain("Negative business-rule cases tested only for kept failures.");
   });
 
   it("asks the gatekeeper for the table only where BR-* are declared", async () => {
@@ -196,5 +196,46 @@ describe.each(TREES)("%s", (tree) => {
       );
       expect(text).toContain("recorded per BR in the business rule coverage table");
     }
+  });
+
+  it("splits mixed inputs and scopes only the failure side before implementation", async () => {
+    const checklist = flat(await read(tree, CHECKLIST));
+    for (const clause of [
+      "A failure named by a specification, a contract or an actual observation, unless a type or schema excludes it",
+      "A failure required by the safety floor in `.agents/rules/minimal-implementation.md` § 2",
+      "whether or not handling code exists yet",
+      "Valid special-value partitions (null, empty, zero, default)",
+      "Invalid special-value partitions (null, empty, zero, default) tested only for kept failures",
+      "Valid edge cases identified and tested (concurrent access, timing, empty collections, maximum payload)",
+      "Failure edge cases tested only for kept failures (concurrent access, timing, empty collections, payload limits)",
+      "Null / undefined / missing values tested where valid",
+      "Empty strings, empty arrays, empty objects tested where valid",
+      "Maximum-length strings and maximum-size payloads tested where valid",
+      "Special characters tested where valid",
+      "Invalid state transitions tested and rejected only for kept failures",
+      "Conflicting or contradictory input combinations tested only for kept failures",
+      "Oracle strength is not waivable by category coverage",
+    ]) {
+      expect(checklist.includes(clause), clause).toBe(true);
+    }
+    for (const clause of [
+      "At least one error/failure path test case exists only for kept failures",
+      "Just below minimum (invalid) tested only for kept failures",
+      "Just above maximum (invalid) tested only for kept failures",
+      "Invalid partitions identified with at least one representative test case each, only for kept failures",
+      "Conditional business rules have test cases for each branch",
+    ]) {
+      expect(checklist.includes(clause), clause).toBe(true);
+    }
+    const gatekeeper = flat(await read(tree, "assistant/agents/qa-gatekeeper.md"));
+    expect(
+      gatekeeper.includes("Failure-side coverage follows the checklist's kept-failure scope"),
+    ).toBe(true);
+    expect(gatekeeper).not.toContain("normal path AND error/failure path");
+    const analyst = flat(await read(tree, ANALYST));
+    expect(
+      analyst.includes("Failure-side coverage follows the checklist's kept-failure scope"),
+    ).toBe(true);
+    expect(analyst).not.toContain("Test cases covering only normal (happy) paths are INCOMPLETE");
   });
 });

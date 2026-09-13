@@ -305,8 +305,9 @@ In addition to traceability-based coverage (US/TC/CON-API/CON-DB existence), ver
   Missing matrix: REVISE from the ATDD review cycle onward; on an SDD review cycle record it as a finding. See the scope note.
   A matrix that exists only inside `.qfai/evidence/atdd-<spec-id>.md` is a **missing** matrix: that committed file is the
   ledger's per-item evidence payload, not the dedicated matrix artifact whose justifications this gate reads.
-- Check that each US/TC has test cases for at minimum: normal path AND error/failure path.
-- Flag any US/TC that has only normal-path test cases as a coverage gap.
+- Check each US/TC's normal path and applicable checklist categories.
+- Failure-side coverage follows the checklist's kept-failure scope. Normal-only
+  cases are gaps only where an applicable obligation remains uncovered.
 - Reference: `.qfai/assistant/skills/qfai-atdd/references/test-case-depth-checklist.md`
 - Which verdict applies depends on the review cycle, per the scope note below.
   On an **SDD** cycle this check is a review signal, not a hard gate that blocks validation.
