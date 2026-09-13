@@ -22,11 +22,14 @@
  * distinctive clauses, deliberately not on whole paragraphs: the rule is the
  * subject, and a reword of the surrounding prose must not redden this file.
  */
+import { createHash } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { describe, expect, it } from "vitest";
+
+import { REVISION_FORM } from "../../src/core/evidenceRevision.js";
 
 // tests/assets/<this file> -> packages/qfai -> packages -> repo root
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "..", "..");
@@ -525,4 +528,358 @@ describe("evidence and verdicts carry a revision", () => {
       expect(occurrences).toBeGreaterThanOrEqual(3);
     });
   }
+});
+
+/**
+ * The address is one value, or it is not an address.
+ *
+ * Step 3 builds a string of records and step 4 hashes it, and every part of
+ * that string has a notation the document fixes: a digest is written as 64
+ * lowercase characters and never as its 32 raw bytes, records are joined with
+ * one newline and none follows the last, and a revision is the whole object id
+ * git printed. Each is a choice two honest implementations could make
+ * differently, which would give one clean tree two addresses.
+ *
+ * A second implementation is what holds a notation that a prose rule cannot.
+ * The block below builds the string the document describes, from records
+ * covering every kind it names, and asserts two things of it: the fixed reading
+ * reproduces the address recorded for those records, and each reading the
+ * document rules out gives a different one. The records are a vector written by
+ * hand, not a checkout, so step 1 is not what this holds.
+ */
+describe("the working-tree address has one notation", () => {
+  /** A full object id. The vector holds how a revision is written, not which tree it names. */
+  const REVISION = "649d8111147436408c90cbbe1b9f9b07e34da8cb";
+  /**
+   * The address of `RECORDS` under `REVISION`, taken once by the procedure.
+   *
+   * A synthetic vector for steps 3 and 4: the records are written by hand rather
+   * than collected from a checkout, so it holds the notation and says nothing
+   * about which paths step 1 lists.
+   */
+  const RECORDED = "working-tree+fd5686a9d446725fba950775308babffc54a647a54386ede74db2f7b0e98f793";
+
+  const sha256 = (input: Buffer): Buffer => createHash("sha256").update(input).digest();
+  const sha256Hex = (input: Buffer): string => sha256(input).toString("hex");
+
+  /**
+   * One record per path, as step 3 fixes them.
+   *
+   * A regular file, a symlink and a directory: the three kinds the procedure
+   * names, with the symlink's bytes being its own payload rather than what it
+   * points at, and the directory's the empty string.
+   */
+  type PathRecord = {
+    readonly path: Buffer;
+    readonly kind: "file" | "symlink" | "dir" | "absent";
+    readonly mode: string;
+    readonly bytes: Buffer;
+  };
+
+  const RECORDS: readonly PathRecord[] = [
+    // The repository root, and the path components of everything below, which
+    // step 1 records too: a
+    // fixture without them is one a conforming collector cannot reproduce, and
+    // the pin would then pass an implementation that omits directory modes.
+    { path: Buffer.from("."), kind: "dir", mode: "0755", bytes: Buffer.alloc(0) },
+    { path: Buffer.from("src"), kind: "dir", mode: "0755", bytes: Buffer.alloc(0) },
+    {
+      path: Buffer.from("src/a.ts"),
+      kind: "file",
+      mode: "0644",
+      bytes: Buffer.from("export const a = 1;\n"),
+    },
+    { path: Buffer.from("src/gone.ts"), kind: "absent", mode: "0000", bytes: Buffer.alloc(0) },
+    { path: Buffer.from("src/link"), kind: "symlink", mode: "0777", bytes: Buffer.from("a.ts") },
+    {
+      path: Buffer.from("src/run.sh"),
+      kind: "file",
+      mode: "0755",
+      bytes: Buffer.from("#!/bin/sh\n"),
+    },
+    { path: Buffer.from("tmp"), kind: "dir", mode: "0755", bytes: Buffer.alloc(0) },
+    { path: Buffer.from("tmp/hold"), kind: "dir", mode: "0755", bytes: Buffer.alloc(0) },
+  ];
+
+  /** Steps 3 and 4 over those records. */
+  function address(options: {
+    readonly digestAsHex: boolean;
+    readonly trailingNewline: boolean;
+    readonly revision: string;
+    readonly records?: readonly PathRecord[];
+  }): string {
+    const records = options.records ?? RECORDS;
+    const parts: Buffer[] = [Buffer.from(`HEAD\u0000${options.revision}`, "utf-8")];
+    for (const record of records) {
+      // The path is concatenated as the bytes it is. Interpolating it into a
+      // string decodes and re-encodes it, which turns two distinct invalid-byte
+      // names into one — the collapse the notation table forbids, and one a
+      // fixture built from strings cannot catch an implementation making.
+      parts.push(
+        Buffer.concat([
+          record.path,
+          Buffer.from(`\u0000${record.kind}\u0000${record.mode}\u0000`, "utf-8"),
+          options.digestAsHex
+            ? Buffer.from(sha256Hex(record.bytes), "utf-8")
+            : sha256(record.bytes),
+        ]),
+      );
+    }
+    const joined: Buffer[] = [];
+    parts.forEach((part, index) => {
+      if (index > 0) joined.push(Buffer.from("\n", "utf-8"));
+      joined.push(part);
+    });
+    if (options.trailingNewline) joined.push(Buffer.from("\n", "utf-8"));
+    return `working-tree+${sha256Hex(Buffer.concat(joined))}`;
+  }
+
+  const HEX_FULL_NO_TRAILING = {
+    digestAsHex: true,
+    trailingNewline: false,
+    revision: REVISION,
+  } as const;
+
+  for (const tree of QFAI_TREES) {
+    it(`${tree}: step 3 fixes the notation of every part`, async () => {
+      const text = flat(await read(tree, REFERENCE));
+      expect(text).toContain("How each part is written is fixed");
+      // What the index contributes is stated: the tracked path list, and no record content.
+      expect(text).toContain("The index names the tracked paths, and nothing more.");
+      expect(text).toContain("Its 64 lowercase hexadecimal characters");
+      expect(text).toContain("Never its 32 raw bytes, and never the bytes it is a digest of");
+      // The whole of what git printed, not a fixed width: a repository created
+      // with the SHA-256 object format prints 64 characters, and a rule naming
+      // 40 would have its producer truncate a real revision.
+      expect(text).toContain("The object id `git rev-parse HEAD` printed");
+      expect(text).toContain("a SHA-256 repository gives 64 characters where a SHA-1 one gives 40");
+      // Every mode has one spelling, including one below `0100` and one with a
+      // special bit: three digits cannot hold `4755`, and "no padding" has no
+      // answer for `064`.
+      expect(text).toContain("Exactly four octal digits, zero-padded, no prefix");
+      expect(text).toContain("the mode masked with `07777`");
+      // The captured output ends in a newline; a shell substitution drops it.
+      expect(text).toContain("with its trailing newline removed");
+      expect(text).toContain("The repository-relative bytes `-z` returned, unquoted and unescaped");
+      expect(text).toContain("between records, and none after the last");
+      // The address is compared as a string, so the final digest has a case too.
+      expect(text).toContain("record its 64 lowercase hexadecimal characters");
+      // `-z` is part of the collect command, or the path bytes are the display
+      // spelling and `core.quotePath` moves the address for one tree.
+      // Run from the repository root, or `ls-files --others` enumerates only
+      // what is under the current directory and names it relative to there.
+      expect(text).toContain("git rev-parse --show-toplevel");
+      // Git names the files. It does not read them: every rendering setting a
+      // diff consults is a setting a reviewer need not share, and no list of
+      // pinned flags closes that class.
+      expect(text).toContain("Git names the files. It does not read them");
+      expect(text).toContain("The bytes are what the filesystem holds");
+      expect(text).toContain("core.quotePath=false");
+      // A local replacement ref makes the recorded rev name a tree nobody read.
+      expect(text).toContain("--no-replace-objects");
+      // `--exclude-standard` reads exclusions from outside the tree, so one
+      // producer's untracked file is another's invisible one.
+      expect(text).toContain("--exclude-per-directory=.gitignore");
+      // Declared and not applied is the same as not declared: a ledger write
+      // during the phase moves the address the phase is recording.
+      expect(text).toContain(":(exclude,glob).qfai/evidence/**");
+      expect(text).toContain(":(exclude,glob).qfai/review/**");
+      // The ledger's directory is a project setting, so the pathspec is built
+      // from the resolved value. Writing the default excludes nothing in a
+      // project that moved its specs, and the phase's own bookkeeping then
+      // moves the address between the observations item 10 requires to agree.
+      expect(text).toContain("/*/tdd/test-list.md");
+      expect(text).toContain("qfai doctor --format json");
+      expect(text).toContain("paths.specsDir");
+      expect(text).toContain('-- . "${exclude[@]}"');
+      // The setting takes an absolute path, and a pathspec outside the worktree
+      // is refused outright, so no address could be taken at all.
+      expect(text).toContain("A ledger outside the worktree is not excluded");
+      // An untracked name differing only in case from a tracked one is taken
+      // for the tracked file, so edits to it never move the address.
+      expect(text).toContain("core.ignoreCase=false");
+      // The listing commands name no ordinary directory, so a mode change on
+      // one — the execute bit off `src/` — left every file's bytes and the
+      // address where they were.
+      expect(text).toContain("A directory is a record too, and the first two lists name none");
+      expect(text).toContain("every path component of every path in the first two lists");
+      // A directory with nothing git lists under it has no path to derive it
+      // from, and is created, removed and re-moded like any other.
+      expect(text).toContain("others=(ls-files --others --exclude-per-directory=.gitignore -z)");
+      expect(text).toContain('${others[@]}" --directory');
+      expect(text).toContain("every entry of the third pass that ends in the separator");
+      // That pass names untracked files too, so read as directories they are a
+      // second record for one path, and two readers derive two addresses.
+      expect(text).toContain("an entry without the separator is a file the second list");
+      // `GIT_DIR` and `GIT_WORK_TREE` choose the repository, so a root resolved
+      // before they are cleared belongs to another one.
+      expect(text).toContain('root=$(env "${unset[@]}" git rev-parse --show-toplevel)');
+      // One spelling is both: `C:/specs` is another drive on Windows and an
+      // ordinary directory on POSIX, so git answers whether it is inside.
+      expect(text).toContain('git -C "$root" ls-files -z -- ":(literal)$specs"');
+      // `--local-env-vars` does not list the variables that set pathspec magic,
+      // so under `GIT_LITERAL_PATHSPECS=1` the exclusions were names to match.
+      expect(text).toContain("unset=(-u GIT_LITERAL_PATHSPECS -u GIT_GLOB_PATHSPECS");
+      // The tracked list names a submodule as it names a file; only its mode
+      // says what it is.
+      expect(text).toContain('ls-files --stage -z -- . "${exclude[@]}"');
+      expect(text).toContain("an entry whose mode is `160000`");
+      // That pass reports the topmost untracked directory only, whatever
+      // pathspec it is given, so an empty one inside another is named by no
+      // list and derivable from no path. The ceiling is written down, with what
+      // lifts it, rather than left for a reader to discover.
+      expect(text).toContain(
+        "SIMPLIFIED: an empty directory inside an untracked one is not a record",
+      );
+      expect(text).toContain("SIMPLIFIED: an ignored file is not in the address");
+      // Pathspec magic is read from the environment as well as the argument.
+      expect(text).toContain("GIT_LITERAL_PATHSPECS");
+      // The root has a mode too, and taking the write bit off it stops a run
+      // creating anything at the top level while every child is identical.
+      expect(text).toContain("The repository root is one of them, written");
+      // The configured name reaches a glob pathspec, where a directory really
+      // called `[specs]` is otherwise read as a class and excluded nothing.
+      expect(text).toContain("really called `[specs]` is matched rather than read as a class");
+      // Two states the records cannot tell apart while the tests can.
+      expect(text).toContain("A symlink used as a directory component stops the address");
+      expect(text).toContain("A regular file with more than one link stops the address");
+      // A search bit taken off a directory leaves the index listing what is
+      // under it and every record's own read failing.
+      expect(text).toContain("A path the process cannot read stops the address");
+      // Collection is many reads, and a tree edited between them addresses a
+      // state that never existed.
+      expect(text).toContain("The tree has to hold still while you read it");
+      // Two equal runs are evidence that the tree was quiet, not a proof: a
+      // writer repeating one change can hand both runs a pair the filesystem
+      // never held. The stop is what makes the address attributable.
+      expect(text).toContain("So the writers stop, and the repeat is a check rather than the rule");
+      expect(text).toContain("GIT_INDEX_FILE");
+      // States that leave the address where it was while the filesystem the
+      // tests read is a different one.
+      expect(text).toContain("An unborn HEAD has no address");
+      expect(text).toContain("A submodule stops the address");
+      expect(text).toContain("A tracked path the filesystem does not have is a record, not a stop");
+      expect(text).toContain("A tracked path that is none of the three kinds stops the address");
+      expect(text).toContain("--deduplicate");
+      expect(text).toContain("An untracked embedded repository stops the address");
+      // Decoding a path that is not valid UTF-8 turns distinct names into one.
+      expect(text).toContain("Bytes, never a decoded string");
+      // A link to a 0640 file reports 0640 followed and 0777 as itself.
+      expect(text).toContain("Read without following the link");
+      // A symlink payload read through a command gains or loses a newline.
+      expect(text).toContain("No command-output terminator is serialized");
+    });
+  }
+
+  it("reproduces the vector address under the reading the document fixes", () => {
+    expect(address(HEX_FULL_NO_TRAILING)).toBe(RECORDED);
+  });
+
+  it("gives a different address under each reading the document rules out", () => {
+    // Named individually rather than counted: a reading that quietly started
+    // agreeing would be the drift this suite exists to catch, and a count of
+    // distinct values would not say which one moved.
+    expect(address({ ...HEX_FULL_NO_TRAILING, digestAsHex: false })).not.toBe(RECORDED);
+    expect(address({ ...HEX_FULL_NO_TRAILING, trailingNewline: true })).not.toBe(RECORDED);
+    expect(address({ ...HEX_FULL_NO_TRAILING, revision: REVISION.slice(0, 12) })).not.toBe(
+      RECORDED,
+    );
+    // Order is in the address: contents alone collide on a rename or a swap.
+    expect(address({ ...HEX_FULL_NO_TRAILING, records: [...RECORDS].reverse() })).not.toBe(
+      RECORDED,
+    );
+    // The mode, so an uncommitted `chmod +x` moves it.
+    expect(
+      address({
+        ...HEX_FULL_NO_TRAILING,
+        records: RECORDS.map((record) =>
+          record.path.equals(Buffer.from("src/a.ts")) ? { ...record, mode: "0755" } : record,
+        ),
+      }),
+    ).not.toBe(RECORDED);
+    // The kind, so a symlink flattened into a regular file moves it.
+    expect(
+      address({
+        ...HEX_FULL_NO_TRAILING,
+        records: RECORDS.map((record) =>
+          record.kind === "symlink" ? { ...record, kind: "file" as const } : record,
+        ),
+      }),
+    ).not.toBe(RECORDED);
+    // The link's own payload, not the target's contents.
+    expect(
+      address({
+        ...HEX_FULL_NO_TRAILING,
+        records: RECORDS.map((record) =>
+          record.kind === "symlink"
+            ? { ...record, bytes: Buffer.from("export const a = 1;\n") }
+            : record,
+        ),
+      }),
+    ).not.toBe(RECORDED);
+    // The path, so two files swapping names move it.
+    expect(
+      address({
+        ...HEX_FULL_NO_TRAILING,
+        records: RECORDS.map((record) =>
+          record.path.equals(Buffer.from("src/a.ts"))
+            ? { ...record, path: Buffer.from("src/b.ts") }
+            : record,
+        ),
+      }),
+    ).not.toBe(RECORDED);
+    // A tracked path with nothing on disk is a record, not a stop, and it
+    // differs from the record the file would have had.
+    expect(
+      address({
+        ...HEX_FULL_NO_TRAILING,
+        records: RECORDS.map((record) =>
+          record.kind === "absent"
+            ? { ...record, kind: "file" as const, mode: "0644", bytes: Buffer.from("x") }
+            : record,
+        ),
+      }),
+    ).not.toBe(RECORDED);
+    // Two names that differ only in bytes no decoding keeps apart. An
+    // implementation that decodes a path collapses both onto one replacement
+    // character and gives them the same address.
+    const invalid = (byte: number): readonly PathRecord[] => [
+      {
+        path: Buffer.concat([Buffer.from("src/"), Buffer.from([byte]), Buffer.from(".ts")]),
+        kind: "file",
+        mode: "0644",
+        bytes: Buffer.from("x"),
+      },
+    ];
+    expect(address({ ...HEX_FULL_NO_TRAILING, records: invalid(0xfe) })).not.toBe(
+      address({ ...HEX_FULL_NO_TRAILING, records: invalid(0xff) }),
+    );
+  });
+});
+
+/**
+ * The spelling the gates accept, and the one the procedure produces.
+ *
+ * Two producers whose addresses differ only in case pass the form check and
+ * fail the freshness comparison, which is exact — so a correct row never
+ * reaches `done` and nothing says why. The document fixes the notation; this is
+ * the gate agreeing with it.
+ */
+describe("the revision form accepts one spelling of a content address", () => {
+  const digest = "a".repeat(64);
+
+  it("accepts the lowercase address the procedure produces", () => {
+    expect(REVISION_FORM.test(`working-tree+${digest}`)).toBe(true);
+  });
+
+  it("refuses an uppercase address for the same tree", () => {
+    expect(REVISION_FORM.test(`working-tree+${digest.toUpperCase()}`)).toBe(false);
+  });
+
+  it("still accepts a git rev in either case", () => {
+    // Not the procedure's output: a rev is whatever git printed, and a human
+    // quoting an abbreviated one may upper-case it.
+    expect(REVISION_FORM.test("4d76ad29018415e7264adb6a3811a9b26f81a50c")).toBe(true);
+    expect(REVISION_FORM.test("4D76AD29018415E7264ADB6A3811A9B26F81A50C")).toBe(true);
+  });
 });
