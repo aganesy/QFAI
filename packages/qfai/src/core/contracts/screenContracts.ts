@@ -138,8 +138,10 @@ async function readUiContractDocuments(
   uiDir: string,
   root: string,
 ): Promise<Array<{ relativePath: string; parsed: unknown }>> {
-  const pattern = path.posix.join(uiDir.replace(/\\/g, "/"), "**/*.{yaml,yml}");
-  const files = await fg(pattern, { absolute: true });
+  // The directory is the walk's `cwd` rather than part of the pattern: a project
+  // under `/tmp/build[1]` holds a literal `[`, which a pattern reads as syntax,
+  // and the walk then found no contract at all.
+  const files = await fg("**/*.{yaml,yml}", { cwd: uiDir, absolute: true });
   const documents: Array<{ relativePath: string; parsed: unknown }> = [];
   for (const filePath of files) {
     const raw = await readSafe(filePath);
@@ -153,6 +155,20 @@ async function readUiContractDocuments(
     documents.push({ relativePath: toPosix(path.relative(root, filePath)), parsed });
   }
   return documents;
+}
+
+/**
+ * The spec a UI contract file belongs to by its name, or `null` for a file
+ * read project-wide: the names `qfai prototyping certify` resolves one spec's
+ * screens from, `spec-0001.yaml`, `0001.yaml`, `ui-0001.yaml`,
+ * `ui-0001-<part>.yaml` and anything under `spec-0001/`.
+ */
+function specScopeOf(pathInUiDir: string): string | null {
+  const match =
+    /^spec-(\d+)\/.+\.yaml$/u.exec(pathInUiDir) ??
+    /^(?:spec-|ui-)?(\d+)\.yaml$/u.exec(pathInUiDir) ??
+    /^ui-(\d+)-[^/]+\.yaml$/u.exec(pathInUiDir);
+  return match?.[1] ?? null;
 }
 
 /** `value` with every path separator written as `/`. */
@@ -192,6 +208,7 @@ export async function findUnreadUiScreenEntries(
   const unread: UnreadScreenEntry[] = [];
   const firstById = new Map<string, { file: string; index: number }>();
   for (const { relativePath, parsed } of await readUiContractDocuments(uiDir, root)) {
+    const scope = specScopeOf(toPosix(path.relative(uiDir, path.resolve(root, relativePath))));
     if (!parsed || typeof parsed !== "object" || !("screens" in parsed)) continue;
     const screens = parsed.screens;
     // An empty `screens:` states nothing. A mapping or a scalar in its place
@@ -216,9 +233,12 @@ export async function findUnreadUiScreenEntries(
         unread.push({ file: relativePath, index, reason: "missing-route", screenId });
         return;
       }
-      const first = firstById.get(screenId);
+      // One `id` per contract scope: each spec's own contract is read on its
+      // own, so a second spec reusing `home` there is a screen of that spec.
+      const key = JSON.stringify([scope, screenId]);
+      const first = firstById.get(key);
       if (first === undefined) {
-        firstById.set(screenId, { file: relativePath, index });
+        firstById.set(key, { file: relativePath, index });
         return;
       }
       unread.push({

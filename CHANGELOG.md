@@ -126,7 +126,10 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   preflight, and a different route was prototyped as the entry it repeated.
   `QFAI-CONTRACT-042` now names each such entry with its file and position,
   and for a repeated `id` it also names the entry read in its place. A
-  `screens` value that is not a list is named the same way.
+  `screens` value that is not a list is named the same way. An `id` is repeated
+  only within one contract: each spec's own contract is read on its own, so
+  another spec may reuse it. The prototyping profile, which certification
+  accepts, reports the finding as well.
 
 ## [1.12.0] - 2026-09-12
 

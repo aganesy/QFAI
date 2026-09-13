@@ -37,11 +37,13 @@ Discussion UI/UX files are **non-normative** discovery / reference artifacts —
   not only where the attribute is written out — a framework that builds the
   attribute from a variable still writes the marker somewhere.
 - **Every entry under `screens` is a screen, once.** `screens` is a list, each
-  entry is a mapping with an `id` and a `route`, and no two entries share an
-  `id`. The tooling reads the first entry for an `id`, skips an entry missing
-  either key, and reads no screen from a `screens` that is not a list, so
-  anything else such an entry states is checked by nothing. `QFAI-CONTRACT-042`
-  names each one.
+  entry is a mapping with an `id` and a `route`, and no two entries of one
+  contract share an `id`. One spec's own contract (`spec-0001.yaml`,
+  `ui-0001-*.yaml`, `spec-0001/`) is read on its own, so another spec may reuse
+  its `id`s. The tooling reads the first entry for an `id`, skips an entry
+  missing either key, and reads no screen from a `screens` that is not a list,
+  so anything else such an entry states is checked by nothing.
+  `QFAI-CONTRACT-042` names each one.
 - `api/`, `db/`, and `ui/` contracts must declare `QFAI-CONTRACT-ID` at the top.
 - Use prefixes `CON-API-*`, `CON-DB-*`, and `CON-UI-*`.
 - `design/` files do not require `QFAI-CONTRACT-ID`, but they are execution-time SSOT for UI-bearing work. Having no ID, they are addressed by repo-relative path when an owner rerun targets them: `/qfai-sdd --contract .qfai/contracts/design/<file>`. The same path form addresses an `api/` / `db/` / `ui/` contract whose ID is the thing under repair.

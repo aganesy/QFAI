@@ -680,11 +680,12 @@ export const GATE_GROUP_FAMILIES = {
     // joining on its own. It comes from the same `validateContractConsistency`
     // as `-040`, so it has the same two profiles.
     "QFAI-CONTRACT-041",
-    // `validateUiScreenEntries`, composed by `validateContracts` with the other
-    // UI contract checks, and reachable from the same two profiles.
-    "QFAI-CONTRACT-042",
     "QFAI-DB-*",
   ],
+  // `validateUiScreenEntries`: composed by `validateContracts`, so sdd and tdd
+  // reach it, and run by the prototyping profile on its own, since that is the
+  // profile certification accepts.
+  "ui-screen-entries": ["QFAI-CONTRACT-042"],
   // `validateContractReferences` — `runSddValidators` only. Five codes, not
   // one: the gate reports a missing reference, and four shapes of a reference
   // that resolves to the wrong thing.
@@ -905,6 +906,7 @@ const FULL_GATE_GROUPS: readonly GateGroup[] = ALL_GATE_GROUPS.filter(
 /** `runPrototypingValidators`, shared by the `prototyping` and `saas-package` profiles. */
 const PROTOTYPING_GATE_GROUPS: readonly GateGroup[] = [
   "prototyping",
+  "ui-screen-entries",
   "reviewer-gate-shared",
   "design-contract-readiness",
   "design-contract-readiness-prototyping",
@@ -947,6 +949,7 @@ const PROFILE_GATE_GROUPS: Record<ValidationProfile, readonly GateGroup[]> = {
     "reviewer-gate-shared",
     "reviewer-justification-only",
     "contracts",
+    "ui-screen-entries",
     "contract-references",
     "contract-ssot-modules",
     "design-contract-readiness",
@@ -979,6 +982,7 @@ const PROFILE_GATE_GROUPS: Record<ValidationProfile, readonly GateGroup[]> = {
     "atdd-traceability",
     "drift",
     "contracts",
+    "ui-screen-entries",
     "contract-ssot-modules",
     "traceability-ledger",
     "traceability-impl-drift",
@@ -1855,7 +1859,7 @@ export const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
   "QFAI-CONTRACT-041":
     "Every `-- Derived (not stored): <column> = <values> from <inputs>` declaration in a DB contract parses, and every value it names is one the paired API contract requires and the DB domain cannot store. A declaration that does not parse was not read, and one that covers a stored or unrequested value is a claim about the schema that is not true of it.",
   "QFAI-CONTRACT-042":
-    "`screens` in a UI contract is a list, every entry in it is a mapping with an `id` and a `route`, and no two entries share an `id`, so each entry is a screen every consumer reads.",
+    "`screens` in a UI contract is a list, every entry in it is a mapping with an `id` and a `route`, and no two entries of one contract share an `id` (each spec's own contract is one), so each entry is a screen every consumer reads.",
   // Same rule as `QFAI-BPAP-001` below: `paths.contractsDir` is configurable, so
   // the expected state names the contracts root by role. Pinning the default
   // path sent a project that moved its contracts to repair a directory it does

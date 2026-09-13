@@ -15,6 +15,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import { defaultConfig } from "../../../src/core/config.js";
 import { readUiContractScreenContracts } from "../../../src/core/contracts/screenContracts.js";
 import { validateContracts } from "../../../src/core/validators/contracts.js";
+import { validateProject } from "../../../src/core/validate.js";
 import { validateUiScreenEntries } from "../../../src/core/validators/uiScreenEntries.js";
 
 const roots: string[] = [];
@@ -127,6 +128,52 @@ describe("a UI contract entry no screen is read from is reported", () => {
       expect.stringContaining("`screens` in .qfai/contracts/ui/a.yaml is not a list"),
       expect.stringContaining("`screens` in .qfai/contracts/ui/b.yaml is not a list"),
     ]);
+  });
+
+  it("reads an id each spec's own contract reuses as a screen of that spec", async () => {
+    // Certification reads one spec's contract on its own, so `home` in two
+    // specs' contracts is two screens. Inside one spec's files it repeats.
+    const root = await projectWith({
+      "spec-0001.yaml": ["screens:", ...screen("home", "/")],
+      "spec-0002.yaml": ["screens:", ...screen("home", "/two")],
+    });
+    expect(await validateUiScreenEntries(root, defaultConfig)).toEqual([]);
+
+    await mkdir(path.join(root, ".qfai", "contracts", "ui", "spec-0003"), { recursive: true });
+    for (const name of ["a.yaml", "b.yaml"]) {
+      await writeFile(
+        path.join(root, ".qfai", "contracts", "ui", "spec-0003", name),
+        ["screens:", ...screen("home", "/three"), ""].join("\n"),
+        "utf-8",
+      );
+    }
+    const [finding] = await validateUiScreenEntries(root, defaultConfig);
+    expect(finding?.message).toContain("spec-0003/b.yaml");
+    expect(finding?.message).toContain("repeats the `id` `home`");
+  });
+
+  it("finds the contracts of a project whose path holds a glob character", async () => {
+    const parent = await mkdtemp(path.join(os.tmpdir(), "qfai-ui-screens-"));
+    roots.push(parent);
+    const root = path.join(parent, "build[1]");
+    const uiDir = path.join(root, ".qfai", "contracts", "ui");
+    await mkdir(uiDir, { recursive: true });
+    await writeFile(
+      path.join(uiDir, "a.yaml"),
+      ["screens:", ...screen("home", "/"), "  - just a string", ""].join("\n"),
+      "utf-8",
+    );
+    const [finding] = await validateUiScreenEntries(root, defaultConfig);
+    expect(finding?.message).toContain("is not a mapping");
+  });
+
+  it("is reported by the prototyping profile, which certification accepts", async () => {
+    const root = await projectWith({
+      "a.yaml": ["screens:", ...screen("home", "/"), "  - id: draft"],
+    });
+    const result = await validateProject(root, undefined, { profile: "prototyping" });
+    const codes = result.issues.map((finding) => finding.code);
+    expect(codes.filter((code) => code === "QFAI-CONTRACT-042")).toHaveLength(1);
   });
 
   it("names a repeated id inside one file", async () => {
