@@ -1033,6 +1033,84 @@ async function validatePrototypeHandoff(
     }
   }
 
+  issues.push(...procurementIssues(parsed.value.procurement, filePathRel));
+
+  return issues;
+}
+
+/**
+ * The cells each `procurement` row carries, by list.
+ *
+ * `procured` says what realises a region so the implementer installs rather
+ * than reconstructs. `authored` says what was written instead, and why: the
+ * procurement ladder's last rung is the only one that has to explain itself,
+ * and a row with no reason is what an unexplained rung looks like once it
+ * reaches the handoff.
+ */
+const PROCUREMENT_ROW_CELLS: Readonly<Record<string, readonly string[]>> = {
+  procured: ["screen", "region", "item"],
+  authored: ["screen", "region", "why"],
+};
+
+/** Whether a cell holds something a later reader can act on. */
+function cellIsWritten(value: unknown): boolean {
+  return typeof value === "string" && value.trim().length > 0 && !PLACEHOLDER_RE.test(value.trim());
+}
+
+/**
+ * Shape findings for `prototype-handoff.yaml#procurement`.
+ *
+ * The key itself is optional: the handoff contract lets a screen drawn
+ * entirely from what the project already had omit both lists, so an absent
+ * `procurement` is not reported here. What is reported is a present one a
+ * reader cannot act on. `/qfai-implement` installs what this names rather than
+ * rebuilding it, so a row with no `item` names nothing to install, and a row
+ * with no `why` satisfies the reviewer's last-resort criterion on its face
+ * while recording none of what that criterion asks for.
+ */
+function procurementIssues(procurement: unknown, filePathRel: string): Issue[] {
+  if (procurement === undefined || procurement === null) return [];
+  const report = (message: string): Issue =>
+    issue(
+      "QFAI-DCON-013",
+      `prototype-handoff.yaml ${message}`,
+      "error",
+      filePathRel,
+      "designContractReadiness.prototypeHandoffProcurement",
+    );
+  if (!isRecord(procurement)) {
+    return [
+      report(
+        `field 'procurement' must be a mapping carrying 'procured' and 'authored' lists (got ${describeValueForDiagnostic(procurement)}).`,
+      ),
+    ];
+  }
+
+  const issues: Issue[] = [];
+  for (const [list, cells] of Object.entries(PROCUREMENT_ROW_CELLS)) {
+    const rows = procurement[list];
+    if (rows === undefined || rows === null) continue;
+    if (!Array.isArray(rows)) {
+      issues.push(
+        report(
+          `field 'procurement.${list}' must be a list (got ${describeValueForDiagnostic(rows)}).`,
+        ),
+      );
+      continue;
+    }
+    rows.forEach((row: unknown, index) => {
+      const where = `procurement.${list}[${index}]`;
+      const missing = isRecord(row) ? cells.filter((cell) => !cellIsWritten(row[cell])) : cells;
+      if (missing.length > 0) {
+        issues.push(
+          report(
+            `row '${where}' names no ${missing.join(", ")}. Each row carries ${cells.join(", ")}, ` +
+              `because an implementer reads this to install rather than to reconstruct.`,
+          ),
+        );
+      }
+    });
+  }
   return issues;
 }
 
