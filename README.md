@@ -82,6 +82,10 @@ number copied from prose goes stale on the next release.
 > You must enable **Developer Mode** (Settings → System → For developers → Developer Mode: ON)
 > before running `npx qfai init`, otherwise symlink creation will fail due to insufficient privileges.
 
+Creating missing governed assistant assets requires filesystem support and
+permission for hard links. Init checks this before copying or migrating assets
+and stops with recovery guidance when the check fails. `--dry-run` does not probe it.
+
 ```bash
 # 1) Initialize QFAI assets in your repository
 npx qfai init
