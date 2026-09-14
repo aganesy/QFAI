@@ -20,7 +20,12 @@ tools: [Read, Glob, Grep, Bash]
 - Check separation of concerns, fail-fast validation, least astonishment, and avoidance of premature optimization in changed code.
 - Enforce TypeScript review expectations: avoid unjustified assertions, over-complex generics and unchecked `unknown`.
   Flag a promise that is neither awaited nor returned. A return propagates only when its caller awaits or adopts the promise.
-- Apply `.agents/rules/minimal-implementation.md`: tag excess `delete`, `stdlib`, `native`, `yagni` or `shrink`, and name what to cut and what replaces it.
+- File excess as `defect:code-quality` against constitution Article VII; tag it
+  `delete`, `stdlib`, `native`, `yagni` or `shrink`. Admit it only when it names what to cut
+  and what replaces it. Refuse it when the cut removes or weakens an obligation in the safety floor at
+  `.agents/rules/minimal-implementation.md` § 2.
+  Use this route only where the installed Article VII governs the artifact.
+  Otherwise report unsupported Article VII excess as advisory and follow the installed constitution.
 - Apply `.qfai/assistant/catalog/ui-procurement.md`: report a component written where one could be installed, a standard passed over, and an authored region with no recorded reason.
 
 ## Inputs you must read
@@ -81,8 +86,9 @@ which is the one thing the contract says must not happen.
 - The finding would add a product obligation upstream never asked for. Do not raise it as blocking;
   raise it as an advisory finding plus a Change Request proposal per
   `.qfai/assistant/constitution/drift-protocol.md#reviewer-originated-obligations`. A defect you can
-  demonstrate from the changed artifacts (correctness, security / data integrity, or a repository
-  quality gate) is NOT in this category: it stays blocking and traces to its `defect:*` class.
+  demonstrate from the changed artifacts (correctness, security / data integrity, a repository
+  quality gate, or a regression against a named constitution or catalog rule) is NOT in this category:
+  it stays blocking and traces to its `defect:*` class.
 
 ## Sign-off
 

@@ -6,6 +6,30 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Added
 
+- **Reviewer cards file excess as a blocking code-quality defect** (#1798).
+  All six reviewer roles trace excess to Article VII, require a concrete cut
+  and replacement, and refuse cuts that remove or weaken a referenced
+  safety-floor obligation. The route uses installed Article VII authority;
+  refreshed cards cannot override a retained older constitution.
+
+- **Article VII makes cutting the governing doctrine** (#1794). The least
+  that satisfies a requirement is the right amount; additional scope or code
+  needs justification. The article ranks above other articles and conflicting
+  constitution instructions, below the referenced safety floor. The absolute
+  output-language rule, required evidence and fact verification, mandatory
+  approvals, irreversible-action confirmations and prototyping scope floor
+  remain protected. Required
+  traceability, repository gates, and their evidence are protected in the
+  safety floor rather than repeated in the article. Every missing governed
+  asset uses exclusive full-byte publication, shipped permissions, destination
+  identity and byte verification, and pinned staging cleanup with inspection
+  causes. Unchanged governed assets stay in the verbose skipped report.
+  Forced repairs publish exclusively after displacing an unreadable occupant.
+  Creation probes precede displacement; publication preserves later regular files.
+  An unreadable shipped set stops before copies or migration. Edited masters
+  retain their customizations with manual constitution reconciliation or a
+  backed-up restoration of the exact shipped master for automatic installation.
+
 - **Implementation agent cards name repository-first reuse** (#1797). Backend,
   frontend and DevOps agents check this codebase before the standard library,
   platform or installed dependencies. Their operating, catalog and Codex copies
@@ -54,6 +78,10 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 - The implementation reviewer flags promises neither awaited nor returned rather
   than requiring catches on propagated async failures. A dropped rejection keeps
   its correctness class (#1805).
+
+- Completion and implementation review stop conditions now include demonstrated
+  regressions against named constitution or catalog rules (#1799). New upstream
+  product obligations remain advisory.
 
 - Repository async guidance requires awaited or returned promises and points to
   the shared implementation rule for consuming callers, kept failures and
