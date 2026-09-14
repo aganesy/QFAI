@@ -347,6 +347,10 @@ describe("resuming a release pull-request description", () => {
       "authored after commented fence",
       "<!--\n```md\n## What this change made unnecessary\n\nExample only.\n-->\n\n## What this change made unnecessary\n\nA superseded pin. Notes stay to document this release.\n",
     ],
+    [
+      "authored heading that interrupts a backtick paragraph",
+      "`\n## What this change made unnecessary\nNothing.\n`\n",
+    ],
   ])("preserves other prose when the removal answer is %s", async (name, section) => {
     const workflow = await readFile(
       path.join(REPO_ROOT, ".github/workflows/prepare-release.yml"),

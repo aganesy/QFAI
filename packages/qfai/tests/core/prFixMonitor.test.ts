@@ -123,6 +123,27 @@ describe("pr-fix wrapper docs", () => {
 });
 
 describe("run-pr-fix strict monitor", { timeout: 120000 }, () => {
+  it("accepts a visible removal heading that interrupts a backtick paragraph", async () => {
+    const section = "`\n## What this change made unnecessary\nNothing.\n`\n";
+    const body = compliantPrBody().replace(
+      /## What this change made unnecessary\n\nNothing\.\n\n/,
+      `${section}\n`,
+    );
+    expect(body).toContain(section);
+    const result = await runPrFix({
+      extraArgs: ["-DryRun", "-SleepSeconds", "0", "-RequiredZeroStreak", "1"],
+      scenario: makeScenario({
+        changedFiles: ["REVIEW.md"],
+        prViews: [makePrView([successCheck()], { body })],
+        threads: [[]],
+      }),
+    });
+    expect(result.code).toBe(0);
+    expect(combinedOutput(result)).toContain("Dry-run completed.");
+    expect(result.ghState.prEditCount ?? 0).toBe(0);
+    expect(result.ghState.threadsCount).toBe(1);
+  });
+
   it.each([
     ["absent", ""],
     ["empty", "## What this change made unnecessary\n\n"],

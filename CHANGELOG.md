@@ -118,6 +118,8 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   does not supply the repository's own review policy. PR readers reject
   placeholder answers, preserve literal comment markers in code and refuse
   release-body repairs hidden by unfinished Markdown blocks.
+  Existing list-item directives are reused without rewriting project text.
+  A heading that interrupts a paragraph remains visible to description readers.
 
 - **The completion gate recomputes the checkpoint seal over the checkpoint's own
   revision** (#1738). `checkpoint-verification.md` seals the checkpoint command

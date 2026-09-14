@@ -290,7 +290,7 @@ export function addReviewPointer(existing: string, template: string | null): str
       visible += raw.charAt(index);
       index += 1;
     }
-    if (visible.trim() === pointer) return existing;
+    if (visible.trim().replace(/^(?:[-*+]|\d{1,9}[.)])[ \t]+/, "") === pointer) return existing;
     offset += raw.length + 1;
   }
 
