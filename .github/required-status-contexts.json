@@ -73,6 +73,7 @@
         "Adding a lane is two edits on purpose."
       ],
       "dependencyConditions": {
+        "lint-mirror": "${{ needs.detect.outputs.full == 'true' }}",
         "check-types": "${{ needs.detect.outputs.full == 'true' }}",
         "check-types-future": "${{ needs.detect.outputs.full == 'true' }}",
         "node-floor": "${{ needs.detect.outputs.full == 'true' }}",
@@ -220,6 +221,7 @@
         "scripts/pin-guard-bytes.mjs": "672f5c8c410c9fc31852b07721a89b7ed3fb68c5277f546bdaec0dc2556dc1cb",
         "scripts/pin-stage-evidence-counts.mjs": "9cf2034c8ce05387e50b7b22c0cd33f2e5ff4544f3e5913e469786044a201099",
         "scripts/pin-verification-bodies.mjs": "ada370be9bd4d331a705d5a02e01ba4d4f378c862ddc62680af9ad831eb881cf",
+        "scripts/run-lint-mirror.sh": "d5062a17e8805de99f3956e162716b35b21e601baf890177fccd7dc94cf2de7e",
         "scripts/sync-init-to-root.mjs": "f25f4410273d41085119c50cf0f439564e300ae25fb8f83bae869c763be29e6c",
         "scripts/verify-pack.mjs": "98fe8d88a5b7a130737a0870393d5c69b6a5fe7136903cfc79fd6c9092e62b40"
       },
@@ -314,6 +316,7 @@
       ],
       "verificationSet": [
         "Classify the change against the enumerated directory lists",
+        "Classify the lint schedule",
         "Verify the toolchain action before running it",
         "Derive the verdict from the serialized needs map",
         "Run build & pack verification",
@@ -322,8 +325,7 @@
         "QFAI self-validate this repo (dogfooding — SDD gates)",
         "QFAI self-validate this repo (dogfooding — full profile)",
         "Run qfai validate gate (fail on error)",
-        "Run lint gate",
-        "Run mirror surface shard"
+        "Run lint gate"
       ],
       "verificationSetNote": [
         "Step names, because a step name is what a reader of the workflow sees and what a",
@@ -340,6 +342,7 @@
         "cannot fail the job, so it is not a verification however it is named."
       ],
       "gatedVerifications": {
+        "Run mirror surface shard": "lint-mirror",
         "Run type check": "check-types",
         "Run future TypeScript compatibility check": "check-types-future",
         "Run the package test suite on the floor": "node-floor",
@@ -371,7 +374,8 @@
       ],
       "verificationBodies": {
         "Classify the change against the enumerated directory lists": "ef6e64eb3cba709c",
-        "Verify the toolchain action before running it": "cfb47693193de024",
+        "Classify the lint schedule": "ef6e64eb3cba709c",
+        "Verify the toolchain action before running it": "2c85002fe43be3c0",
         "Derive the verdict from the serialized needs map": "b700f852a69f52d2",
         "Run build & pack verification": "e9b6a63cbebe4062",
         "Sanity grep — no internal spec IDs or version markers leak (post-build)": "abe312b8d2c8fc6f",
@@ -379,7 +383,7 @@
         "QFAI self-validate this repo (dogfooding — SDD gates)": "9efc82ef75f7a622",
         "QFAI self-validate this repo (dogfooding — full profile)": "3537948e49d1d967",
         "Run qfai validate gate (fail on error)": "64fb079758255e4c",
-        "Run lint gate": "15026645a799c7be",
+        "Run lint gate": "966ae9fabbda626f",
         "Run mirror surface shard": "47680e1761694883",
         "Run type check": "51c5eeee942920dc",
         "Run future TypeScript compatibility check": "c58cfcd12f363478",

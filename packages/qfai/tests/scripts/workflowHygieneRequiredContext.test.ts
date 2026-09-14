@@ -1336,7 +1336,7 @@ describe("what runs beside and before a verification is pinned too", () => {
       if (!isRecord(parsed) || !isRecord(parsed["scripts"])) {
         throw new Error("the planted manifest carries no scripts map");
       }
-      parsed["scripts"]["preci:lint:checks"] = 'node -e "process.exit(0)"';
+      parsed["scripts"]["preci:lint"] = 'node -e "process.exit(0)"';
       writeFileSync(manifest, `${JSON.stringify(parsed, null, 2)}\n`, "utf-8");
     });
     try {

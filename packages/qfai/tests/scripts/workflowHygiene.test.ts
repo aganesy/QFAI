@@ -65,7 +65,7 @@ import path from "node:path";
 import { pathToFileURL } from "node:url";
 
 import { describe, expect, it } from "vitest";
-import { parse as parseYaml } from "yaml";
+import { parse as parseYaml, stringify as stringifyYaml } from "yaml";
 
 import {
   invokedFileDigests,
@@ -92,6 +92,28 @@ import {
 
 const WORKFLOWS_DIR = path.join(REPO_ROOT, ".github", "workflows");
 const ACTIONS_DIR = path.join(REPO_ROOT, ".github", "actions");
+
+function rewriteNamedStep(
+  text: string,
+  name: string | undefined,
+  mutate: (step: Record<string, unknown>, workflow: Record<string, unknown>) => void,
+): string {
+  if (name === undefined) {
+    throw new Error("the workflow fixture names no verification item");
+  }
+  const workflow: unknown = parseYaml(text);
+  if (!isRecord(workflow) || !isRecord(workflow["jobs"])) {
+    throw new Error("the workflow fixture has no jobs mapping");
+  }
+  for (const job of Object.values(workflow["jobs"])) {
+    if (!isRecord(job) || !Array.isArray(job["steps"])) continue;
+    const step = job["steps"].filter(isRecord).find((candidate) => candidate["name"] === name);
+    if (step === undefined) continue;
+    mutate(step, workflow);
+    return stringifyYaml(workflow);
+  }
+  throw new Error(`the workflow fixture has no step named ${name}`);
+}
 
 /**
  * The jobs that legitimately need full history.
@@ -967,20 +989,20 @@ describe("TC-0017-0059 (TDD-0059): skippable-through-a-dependency and a shrunk s
       const declared = firstContext(d);
       const item = declared.verificationSet[0];
       editWorkflow(d, declared.workflow, (text) => {
-        const at = text.indexOf(`- name: ${item}`);
-        if (at === -1) throw new Error(`no step named ${item} — the needle is stale`);
-        const lineEnd = text.indexOf("\n", at);
-        const nextStep = text.indexOf("      - name:", lineEnd);
-        const stop = nextStep === -1 ? text.length : nextStep;
-        const original = text.slice(at, stop);
-
-        // Hollow the real one…
-        const hollowed = `${text.slice(0, lineEnd + 1)}        run: true\n\n${text.slice(stop)}`;
-
-        // …and paste the original into `lint`, a job the declared context depends on.
-        const lintAt = hollowed.indexOf("      - name: Run lint gate");
-        if (lintAt === -1) throw new Error("the lint anchor is stale");
-        return `${hollowed.slice(0, lintAt)}      ${original.trim()}\n${hollowed.slice(lintAt)}`;
+        return rewriteNamedStep(text, item, (step, workflow) => {
+          const original = { ...step };
+          delete original["id"];
+          step["run"] = "true";
+          const jobs = workflow["jobs"];
+          const lint = isRecord(jobs) ? jobs["lint"] : undefined;
+          const steps = isRecord(lint) ? lint["steps"] : undefined;
+          if (!Array.isArray(steps)) throw new Error("the fixture has no lint steps");
+          const lintAt = steps.findIndex(
+            (candidate) => isRecord(candidate) && candidate["name"] === "Run lint gate",
+          );
+          if (lintAt === -1) throw new Error("the lint anchor is stale");
+          steps.splice(lintAt, 0, original);
+        });
       });
     });
     try {
@@ -1841,12 +1863,9 @@ ${run.output}`,
       // Both halves of the move, because either alone is already caught: the hollowed body by the
       // digest comparison, the missing key by this row. Together they were caught by nothing.
       editWorkflow(d, declared.workflow, (text) => {
-        const at = text.indexOf(`- name: ${item}`);
-        if (at === -1) throw new Error(`no step named ${item} — the needle is stale`);
-        const lineEnd = text.indexOf("\n", at);
-        const nextStep = text.indexOf("      - name:", lineEnd);
-        const stop = nextStep === -1 ? text.length : nextStep;
-        return `${text.slice(0, lineEnd + 1)}        run: true\n\n${text.slice(stop)}`;
+        return rewriteNamedStep(text, item, (step) => {
+          step["run"] = "true";
+        });
       });
       editDeclaration(d, (decl) => {
         const context = onlyContext(decl);
@@ -1881,13 +1900,9 @@ ${run.output}`,
       const declared = firstContext(d);
       const guarded = declared.verificationSet[0];
       editWorkflow(d, declared.workflow, (text) => {
-        // The whole point of the finding: the name is untouched, and only the body changes.
-        const at = text.indexOf(`- name: ${guarded}`);
-        if (at === -1) throw new Error(`no step named ${guarded} — the needle is stale`);
-        const lineEnd = text.indexOf("\n", at);
-        const nextStep = text.indexOf("      - name:", lineEnd);
-        const stop = nextStep === -1 ? text.length : nextStep;
-        return `${text.slice(0, lineEnd + 1)}        run: true\n\n${text.slice(stop)}`;
+        return rewriteNamedStep(text, guarded, (step) => {
+          step["run"] = "true";
+        });
       });
     });
     try {
@@ -3166,11 +3181,14 @@ describe("TC-0017-0054 (TDD-0054): an unsanctioned third-party reference exits 1
 
 describe("TC-0017-0055 (TDD-0055): the lane is invoked from an aggregate pull requests execute", () => {
   it("appears in the lint aggregate, and that aggregate runs in an unconditional pull-request job", () => {
-    const lintAggregate = manifestScript(path.join(REPO_ROOT, "package.json"), "ci:lint");
+    const lintBodies = invokedScriptBodies("pnpm ci:lint", REPO_ROOT);
 
     // CLAIM 1 — the lane is a member of the lint aggregate.
     expect
-      .soft(lintAggregate, "the hygiene lane must be a member of ci:lint")
+      .soft(
+        lintBodies.map(([, body]) => body ?? "").join("\n"),
+        "the hygiene lane must be a member of ci:lint",
+      )
       .toContain("check-workflow-hygiene.mjs");
 
     // CLAIM 2 — and that aggregate is actually executed by a pull request. Membership in an
@@ -3178,7 +3196,24 @@ describe("TC-0017-0055 (TDD-0055): the lane is invoked from an aggregate pull re
     // asserted too: a job that invokes it, in a workflow triggered by pull_request, with no
     // condition that could skip it.
     const ci = readFileSync(path.join(REPO_ROOT, ".github", "workflows", "ci.yml"), "utf-8");
-    expect.soft(ci, "ci.yml must invoke the lint aggregate").toContain("pnpm ci:lint");
+    const workflow: unknown = parseYaml(ci);
+    const jobs = isRecord(workflow) ? workflow["jobs"] : undefined;
+    const lint = isRecord(jobs) ? jobs["lint"] : undefined;
+    expect(isRecord(lint), "the unconditional lint job must exist").toBe(true);
+    if (!isRecord(lint) || !Array.isArray(lint["steps"])) throw new Error("CI has no lint steps");
+    expect(lint["if"]).toBeUndefined();
+    expect(lint["needs"]).toBeUndefined();
+    const commands = lint["steps"].filter(isRecord).flatMap((step) =>
+      String(step["run"] ?? "")
+        .split(/\r?\n/)
+        .map((line) => line.trim()),
+    );
+    expect
+      .soft(
+        commands.filter((line) => line === "pnpm ci:lint"),
+        "CI must execute the exact aggregate",
+      )
+      .toHaveLength(1);
     expect
       .soft(ci, "and be triggered by pull requests")
       .toMatch(/^on:\s*$[\s\S]{0,80}pull_request:/m);

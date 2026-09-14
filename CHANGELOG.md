@@ -72,9 +72,10 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
-- Run the complete lint mirror surface across eight independent CI shards.
-  Keep every other lint check and the local lint entry point unchanged.
-  All shard results contribute to the existing required CI verdict (#1870).
+- Run the complete lint mirror surface across eight independent CI shards on
+  source changes. Documentation-only changes retain the four-runner ceiling
+  and run every mirror check in lint. All results reach the required CI
+  verdict, and the full local lint entry point remains unchanged (#1870).
 
 - **`QFAI-DENSITY-005` names cutting before splitting** (#1808). The warning for an
   oversized business-rule cell told the author to split the row into two rules,

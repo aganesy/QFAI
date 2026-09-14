@@ -913,11 +913,11 @@ describe("TC-0017-0073 (TDD-0073): the folded run joins the enumerated verificat
         // run, so two literal edits inside its heredoc skipped them into an accepting `skipped`
         // — including the lane whose tests execute that heredoc.
         "Classify the change against the enumerated directory lists",
+        "Classify the lint schedule",
         "Verify the toolchain action before running it",
         "Derive the verdict from the serialized needs map",
         ...REQUIRED,
         "Run lint gate",
-        "Run mirror surface shard",
       ]);
   });
 });
@@ -956,13 +956,7 @@ const REQUIRED_CONTEXT_JOB = "build";
  * exempts it by name — it carries the formatter, the Markdown linter, the leakage
  * guard and the pin guard, every one of which a documentation change can break.
  */
-const UNCONDITIONAL_JOBS = [
-  DETECT_JOB,
-  LINT_JOB,
-  "lint-mirror",
-  REQUIRED_CONTEXT_JOB,
-  VERDICT_JOB,
-] as const;
+const UNCONDITIONAL_JOBS = [DETECT_JOB, LINT_JOB, REQUIRED_CONTEXT_JOB, VERDICT_JOB] as const;
 
 /** `needs` normalized to an array; a scalar `needs` is legal YAML. */
 function needsOf(job: Record<string, unknown>): string[] {
@@ -1068,11 +1062,11 @@ function runClassifier(input: {
   }
 }
 
-describe("TC-0017-0006 (TDD-0006): documentation-only CI preserves the unconditional guard set", () => {
-  it("runs every unconditional guard and derives every selected job's condition from detection", () => {
+describe("TC-0017-0006 (TDD-0006): a documentation-only change executes at most four instances", () => {
+  it("leaves exactly four jobs unconditional and derives every other job's condition from detection", () => {
     const jobs = ciJobs();
 
-    // Mirror checks remain unconditional when their execution moves out of lint.
+    // Documentation-only mirror checks execute in the existing lint job.
     // "Unconditional" means the job cannot be prevented from running, which is not
     // the same as carrying no `if`. The verdict carries `if: always()` on purpose —
     // it must run when its needs are SKIPPED, which is precisely the documentation-only
@@ -1097,9 +1091,14 @@ describe("TC-0017-0006 (TDD-0006): documentation-only CI preserves the unconditi
     expect
       .soft(
         unconditional,
-        "a documentation-only run must execute detection, both lint lanes, build and the verdict",
+        "a documentation-only run may execute only detection, lint, build and the verdict",
       )
       .toEqual([...UNCONDITIONAL_JOBS].sort());
+    expect(unconditional).toHaveLength(4);
+    for (const id of unconditional) {
+      const strategy = jobs[id]?.["strategy"];
+      expect(isRecord(strategy) ? strategy["matrix"] : undefined).toBeUndefined();
+    }
 
     const selected = Object.entries(jobs).filter(([id]) => !listHas(UNCONDITIONAL_JOBS, id));
 
@@ -1588,16 +1587,32 @@ describe("TC-0017-0041 (TDD-0041): layer separation adds no workflow file and no
     const matrixJobs = Object.entries(jobs)
       .filter(([, job]) => {
         const strategy = job["strategy"];
-        return isRecord(strategy) && isRecord(strategy["matrix"]);
+        const matrix = isRecord(strategy) ? strategy["matrix"] : undefined;
+        return isRecord(matrix) && Array.isArray(matrix["slice"]);
       })
       .map(([id]) => id);
     expect
       .soft(matrixJobs, "the layer split is expressed as the matrix of a single job")
-      .toEqual(["lint-mirror", "test"]);
+      .toEqual(["test"]);
   });
 });
 
 describe("lint mirror sharding preserves coverage and the merge gate", () => {
+  it("uses the same pinned classifier without making lint depend on detection", () => {
+    const lint = stepsOf("lint");
+    const classify = lint.findIndex((step) => step["id"] === "classify");
+    const refusal = lint.findIndex(
+      (step) => named(step) === "Verify the toolchain action before running it",
+    );
+    const original = stepsOf("detect").find((step) => step["id"] === "classify");
+    expect(original).toBeDefined();
+    expect(classify).toBeGreaterThan(refusal);
+    expect(refusal).toBeGreaterThan(-1);
+    expect(lint[classify]?.["run"]).toBe(original?.["run"]);
+    expect(lint[classify]?.["env"]).toEqual(original?.["env"]);
+    expect(needsOf(ciJobs()["lint"] ?? {})).not.toContain("detect");
+  });
+
   it("partitions the complete lint entry point without removing a command", () => {
     const manifest: unknown = JSON.parse(
       readFileSync(path.join(REPO_ROOT, "package.json"), "utf-8"),
@@ -1611,21 +1626,114 @@ describe("lint mirror sharding preserves coverage and the merge gate", () => {
     expect(typeof full).toBe("string");
     expect(typeof checks).toBe("string");
     if (typeof full !== "string" || typeof checks !== "string") return;
-    const mirror = "pnpm -C packages/qfai lint:mirror-surface";
-    const commands = full.split(" && ");
-    expect(commands.filter((command) => command === mirror)).toHaveLength(1);
-    expect(checks.split(" && ")).toEqual(commands.filter((command) => command !== mirror));
-    expect(stepsOf("lint").find((step) => named(step) === "Run lint gate")?.["run"]).toBe(
-      "pnpm ci:lint:checks",
+    expect(full).toBe(
+      "node ./scripts/check-workflow-hygiene.mjs --report-dir .qfai/review/workflow-hygiene && pnpm ci:lint:checks && bash ./scripts/run-lint-mirror.sh",
     );
+    expect(checks.split(" && ")).toEqual([
+      "pnpm format:check",
+      "pnpm lint",
+      "pnpm lint:md",
+      "pnpm lint:mermaid",
+      "pnpm lint:mdschema",
+      "node ./scripts/check-bidi.mjs",
+      "node ./scripts/check-conflict-markers.mjs",
+      "node ./scripts/check-tracked-scratch.mjs",
+      "node ./scripts/check-readme-alignment.mjs",
+      "node ./scripts/check-instructions-size.mjs",
+      "node ./scripts/check-review-profile-consistency.mjs",
+      "node ./scripts/check-prompt-scanner-pair.mjs",
+      "node ./scripts/check-doc-clarity.mjs",
+      "node ./scripts/check-simplification-ledger.mjs",
+      "pnpm -C packages/qfai lint:shipping",
+      "pnpm -C packages/qfai lint:workflow-shape",
+      "node ./scripts/check-atdd-annotation-ledger.mjs --spec 0017",
+      "node ./packages/qfai/scripts/check-pack-locations.mjs",
+    ]);
+    expect(stepsOf("lint").find((step) => named(step) === "Run lint gate")?.["env"]).toEqual({
+      FULL_LINT: "${{ steps.classify.outputs.full }}",
+    });
   });
 
-  it("runs every mirror shard independently, without fail-fast cancellation", () => {
+  it.each([
+    ["true", "pnpm ci:lint schedule=sharded", 0, 0],
+    ["false", "pnpm ci:lint schedule=inline", 0, 0],
+    ["true", "pnpm ci:lint schedule=sharded", 7, 7],
+    ["false", "pnpm ci:lint schedule=inline", 7, 7],
+    ["", "", 0, 1],
+    ["unknown", "", 0, 1],
+  ] as const)(
+    "executes detection %j through %j with command exit %i and verdict %i",
+    (full, command, commandStatus, status) => {
+      const body = stepsOf("lint").find((step) => named(step) === "Run lint gate")?.["run"];
+      expect(typeof body).toBe("string");
+      const run = spawnSync(
+        "bash",
+        [
+          "-e",
+          "-o",
+          "pipefail",
+          "-c",
+          'pnpm() { printf "pnpm %s schedule=%s\\n" "$*" "${QFAI_LINT_MIRROR_SCHEDULE:-missing}"; return "${PNPM_STATUS:-0}"; }\n' +
+            String(body),
+        ],
+        {
+          encoding: "utf-8",
+          env: { ...process.env, FULL_LINT: full, PNPM_STATUS: String(commandStatus) },
+        },
+      );
+      expect(run.status).toBe(status);
+      const called = String(run.stdout ?? "")
+        .split(/\r?\n/)
+        .filter((line) => line.startsWith("pnpm "));
+      expect(called).toEqual(command === "" ? [] : [command]);
+    },
+  );
+
+  it.each([
+    ["inline", "", 0, 0, true],
+    ["", "", 0, 0, true],
+    ["inline", "true", 7, 7, true],
+    ["sharded", "true", 0, 0, false],
+    ["sharded", "", 0, 1, false],
+    ["unknown", "true", 0, 1, false],
+  ] as const)(
+    "executes mirror schedule %j in Actions %j with command exit %i and verdict %i",
+    (schedule, actions, commandStatus, status, called) => {
+      const body = readFileSync(path.join(REPO_ROOT, "scripts", "run-lint-mirror.sh"), "utf-8");
+      const run = spawnSync(
+        "bash",
+        [
+          "-e",
+          "-o",
+          "pipefail",
+          "-c",
+          'pnpm() { printf "pnpm %s\\n" "$*"; return "${PNPM_STATUS:-0}"; }\n' + body,
+        ],
+        {
+          encoding: "utf-8",
+          env: {
+            ...process.env,
+            QFAI_LINT_MIRROR_SCHEDULE: schedule,
+            GITHUB_ACTIONS: actions,
+            PNPM_STATUS: String(commandStatus),
+          },
+        },
+      );
+      expect(run.status).toBe(status);
+      expect(
+        String(run.stdout ?? "")
+          .split(/\r?\n/)
+          .filter((line) => line.startsWith("pnpm ")),
+      ).toEqual(called ? ["pnpm -C packages/qfai lint:mirror-surface"] : []);
+    },
+  );
+
+  it("runs every selected mirror shard independently, without fail-fast cancellation", () => {
     const job = ciJobs()["lint-mirror"];
     expect(job).toBeDefined();
     if (job === undefined) return;
-    expect(job["needs"]).toBeUndefined();
-    expect(job["if"]).toBeUndefined();
+    expect(needsOf(job)).toEqual(["detect"]);
+    expect(job["if"]).toBe("${{ needs.detect.outputs.full == 'true' }}");
     const strategy = job["strategy"];
     expect(isRecord(strategy) ? strategy["fail-fast"] : undefined).toBe(false);
     expect(isRecord(strategy) ? strategy["matrix"] : undefined).toEqual({
@@ -1951,6 +2059,7 @@ const VERIFICATION_SET = [
   // audit found it pinned by nothing — the wiring was declared and the program behind it was
   // not.
   "Classify the change against the enumerated directory lists",
+  "Classify the lint schedule",
   // First, and in `lint` rather than in the declared job: the pre-flight refusal of the local
   // composite actions has to run before any job invokes one: a step at the top of
   // `./.github/actions/setup` writing `BASH_ENV` would make every later `shell: bash`
@@ -1964,11 +2073,10 @@ const VERIFICATION_SET = [
   "QFAI self-validate this repo (dogfooding — SDD gates)",
   "QFAI self-validate this repo (dogfooding — full profile)",
   "Run qfai validate gate (fail on error)",
-  // Last, and in `lint`: `pnpm ci:lint` is that job's own work. A declared
+  // In `lint`: `pnpm ci:lint` is that job's own work. A declared
   // dependency pins only the name and the condition on its own, and nothing about
   // whether the step still does anything.
   "Run lint gate",
-  "Run mirror surface shard",
 ] as const;
 
 /**
