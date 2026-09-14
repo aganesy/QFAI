@@ -913,7 +913,6 @@ describe("TC-0017-0073 (TDD-0073): the folded run joins the enumerated verificat
         // run, so two literal edits inside its heredoc skipped them into an accepting `skipped`
         // — including the lane whose tests execute that heredoc.
         "Classify the change against the enumerated directory lists",
-        "Classify the lint schedule",
         "Verify the toolchain action before running it",
         "Derive the verdict from the serialized needs map",
         ...REQUIRED,
@@ -1015,7 +1014,6 @@ function extractClassifier(): string {
 interface Classification {
   status: number;
   full: boolean | null;
-  diffVerified: boolean | null;
   reason: string;
   annotations: string[];
   raw: string;
@@ -1025,7 +1023,6 @@ interface Classification {
 function runClassifier(input: {
   paths?: readonly string[] | null;
   diffError?: string;
-  diffStatus?: string;
 }): Classification {
   const dir = mkdtempSync(path.join(tmpdir(), "qfai-detect-"));
   try {
@@ -1040,10 +1037,8 @@ function runClassifier(input: {
     writeFileSync(errFile, input.diffError ?? "", "utf-8");
     const outFile = path.join(dir, "github-output.txt");
     writeFileSync(outFile, "", "utf-8");
-    const statusFile = path.join(dir, "diff-status.txt");
-    writeFileSync(statusFile, input.diffStatus ?? "0", "utf-8");
 
-    const run = spawnSync(process.execPath, [program, pathsFile, errFile, statusFile], {
+    const run = spawnSync(process.execPath, [program, pathsFile, errFile], {
       encoding: "utf-8",
       env: { ...process.env, GITHUB_OUTPUT: outFile },
     });
@@ -1051,11 +1046,9 @@ function runClassifier(input: {
     const written = readFileSync(outFile, "utf-8");
     const full = /^full=(.*)$/m.exec(written);
     const reason = /^reason=(.*)$/m.exec(written);
-    const verified = /^diff_verified=(.*)$/m.exec(written);
     return {
       status: run.status ?? -1,
       full: full === null ? null : group(full, 1).trim() === "true",
-      diffVerified: verified === null ? null : group(verified, 1).trim() === "true",
       reason: reason === null ? "" : group(reason, 1).trim(),
       annotations: raw
         .split(/\r?\n/)
@@ -1072,7 +1065,9 @@ describe("TC-0017-0006 (TDD-0006): a documentation-only change executes at most 
   it("leaves exactly four jobs unconditional and derives every other job's condition from detection", () => {
     const jobs = ciJobs();
 
-    // Documentation-only mirror checks execute in the existing lint job.
+    // CLAIM 1 — the four that always run are exactly the four `EX-0017-0007` names.
+    // A set equality rather than "at least these", because the ceiling IS the
+    // requirement: a fifth unconditional job breaks it however useful it is.
     // "Unconditional" means the job cannot be prevented from running, which is not
     // the same as carrying no `if`. The verdict carries `if: always()` on purpose —
     // it must run when its needs are SKIPPED, which is precisely the documentation-only
@@ -1100,11 +1095,6 @@ describe("TC-0017-0006 (TDD-0006): a documentation-only change executes at most 
         "a documentation-only run may execute only detection, lint, build and the verdict",
       )
       .toEqual([...UNCONDITIONAL_JOBS].sort());
-    expect(unconditional).toHaveLength(4);
-    for (const id of unconditional) {
-      const strategy = jobs[id]?.["strategy"];
-      expect(isRecord(strategy) ? strategy["matrix"] : undefined).toBeUndefined();
-    }
 
     const selected = Object.entries(jobs).filter(([id]) => !listHas(UNCONDITIONAL_JOBS, id));
 
@@ -1495,8 +1485,10 @@ const OWN_WORKFLOW_FILES = [
 /**
  * Every check name the own-CI workflow reports, as literals.
  *
- * Pinned from job names and matrix expansion. Mirror checks have fixed names on
- * independently selectable jobs, so skipping them does not collapse a matrix's names.
+ * Derived once by hand from the job keys and the matrix expansion, and then frozen. No job
+ * in this file declares a `name:` override, so each check name is its job key — which is
+ * exactly what makes `EX-0017-0004`'s falsifying observation work: "a rename shows as a
+ * diff on the job key".
  *
  * A matrix job reports one check per leg, named `<job> (<value>)`. That is why the seven
  * legs appear here individually: they are seven check names, and removing a leg removes
@@ -1522,14 +1514,6 @@ const CI_CHECK_NAMES = [
   "ci-pass",
   "detect",
   "lint",
-  "lint-mirror (1)",
-  "lint-mirror (2)",
-  "lint-mirror (3)",
-  "lint-mirror (4)",
-  "lint-mirror (5)",
-  "lint-mirror (6)",
-  "lint-mirror (7)",
-  "lint-mirror (8)",
   "node-floor",
   "scanner-coverage",
   "test (cli)",
@@ -1591,245 +1575,13 @@ describe("TC-0017-0041 (TDD-0041): layer separation adds no workflow file and no
     const matrixJobs = Object.entries(jobs)
       .filter(([, job]) => {
         const strategy = job["strategy"];
-        const matrix = isRecord(strategy) ? strategy["matrix"] : undefined;
-        return isRecord(matrix) && Array.isArray(matrix["slice"]);
+        return isRecord(strategy) && isRecord(strategy["matrix"]);
       })
       .map(([id]) => id);
     expect
       .soft(matrixJobs, "the layer split is expressed as the matrix of a single job")
       .toEqual(["test"]);
   });
-});
-
-describe("lint mirror sharding preserves coverage and the merge gate", () => {
-  const mirrorJobs = [
-    "lint-mirror-1",
-    "lint-mirror-2",
-    "lint-mirror-3",
-    "lint-mirror-4",
-    "lint-mirror-5",
-    "lint-mirror-6",
-    "lint-mirror-7",
-    "lint-mirror-8",
-  ] as const;
-
-  it("uses the same pinned classifier without making lint depend on detection", () => {
-    const lint = stepsOf("lint");
-    const classify = lint.findIndex((step) => step["id"] === "classify");
-    const refusal = lint.findIndex(
-      (step) => named(step) === "Verify the toolchain action before running it",
-    );
-    const original = stepsOf("detect").find((step) => step["id"] === "classify");
-    expect(original).toBeDefined();
-    expect(classify).toBeGreaterThan(refusal);
-    expect(refusal).toBeGreaterThan(-1);
-    expect(lint[classify]?.["run"]).toBe(original?.["run"]);
-    expect(lint[classify]?.["env"]).toEqual(original?.["env"]);
-    expect(needsOf(ciJobs()["lint"] ?? {})).not.toContain("detect");
-  });
-
-  it("partitions the complete lint entry point without removing a command", () => {
-    const manifest: unknown = JSON.parse(
-      readFileSync(path.join(REPO_ROOT, "package.json"), "utf-8"),
-    );
-    if (!isRecord(manifest) || !isRecord(manifest["scripts"])) {
-      throw new Error("the root package has no scripts map");
-    }
-    const scripts = manifest["scripts"];
-    const full = scripts["ci:lint"];
-    const checks = scripts["ci:lint:checks"];
-    expect(typeof full).toBe("string");
-    expect(typeof checks).toBe("string");
-    if (typeof full !== "string" || typeof checks !== "string") return;
-    expect(full).toBe(
-      "node ./scripts/check-workflow-hygiene.mjs --report-dir .qfai/review/workflow-hygiene && pnpm ci:lint:checks && bash ./scripts/run-lint-mirror.sh",
-    );
-    expect(checks.split(" && ")).toEqual([
-      "pnpm format:check",
-      "pnpm lint",
-      "pnpm lint:md",
-      "pnpm lint:mermaid",
-      "pnpm lint:mdschema",
-      "node ./scripts/check-bidi.mjs",
-      "node ./scripts/check-conflict-markers.mjs",
-      "node ./scripts/check-tracked-scratch.mjs",
-      "node ./scripts/check-readme-alignment.mjs",
-      "node ./scripts/check-instructions-size.mjs",
-      "node ./scripts/check-review-profile-consistency.mjs",
-      "node ./scripts/check-prompt-scanner-pair.mjs",
-      "node ./scripts/check-doc-clarity.mjs",
-      "node ./scripts/check-simplification-ledger.mjs",
-      "pnpm -C packages/qfai lint:shipping",
-      "pnpm -C packages/qfai lint:workflow-shape",
-      "node ./scripts/check-atdd-annotation-ledger.mjs --spec 0017",
-      "node ./packages/qfai/scripts/check-pack-locations.mjs",
-    ]);
-    expect(stepsOf("lint").find((step) => named(step) === "Run lint gate")?.["env"]).toEqual({
-      FULL_LINT: "${{ steps.classify.outputs.full }}",
-      DIFF_VERIFIED: "${{ steps.classify.outputs.diff_verified }}",
-    });
-  });
-
-  it.each([
-    ["true", "true", "pnpm ci:lint schedule=sharded", 0, 0],
-    ["false", "true", "pnpm ci:lint schedule=inline", 0, 0],
-    ["true", "false", "pnpm ci:lint schedule=inline", 0, 0],
-    ["false", "false", "pnpm ci:lint schedule=inline", 0, 0],
-    ["true", "true", "pnpm ci:lint schedule=sharded", 7, 7],
-    ["false", "true", "pnpm ci:lint schedule=inline", 7, 7],
-    ["true", "false", "pnpm ci:lint schedule=inline", 7, 7],
-    ["", "true", "", 0, 1],
-    ["unknown", "true", "", 0, 1],
-    ["true", "", "", 0, 1],
-    ["true", "unknown", "", 0, 1],
-  ] as const)(
-    "executes detection %j with verification %j through %j with command exit %i and verdict %i",
-    (full, verified, command, commandStatus, status) => {
-      const body = stepsOf("lint").find((step) => named(step) === "Run lint gate")?.["run"];
-      expect(typeof body).toBe("string");
-      const run = spawnSync(
-        "bash",
-        [
-          "-e",
-          "-o",
-          "pipefail",
-          "-c",
-          'pnpm() { printf "pnpm %s schedule=%s\\n" "$*" "${QFAI_LINT_MIRROR_SCHEDULE:-missing}"; return "${PNPM_STATUS:-0}"; }\n' +
-            String(body),
-        ],
-        {
-          encoding: "utf-8",
-          env: {
-            ...process.env,
-            FULL_LINT: full,
-            DIFF_VERIFIED: verified,
-            PNPM_STATUS: String(commandStatus),
-          },
-        },
-      );
-      expect(run.status).toBe(status);
-      const called = String(run.stdout ?? "")
-        .split(/\r?\n/)
-        .filter((line) => line.startsWith("pnpm "));
-      expect(called).toEqual(command === "" ? [] : [command]);
-    },
-  );
-
-  it.each([
-    { paths: [".codex/skills/anything.md"], verified: true, full: false },
-    { paths: ["packages/qfai/src/index.ts"], verified: true, full: true },
-    { paths: null, verified: false, full: true },
-    { paths: [], verified: false, full: true },
-    { paths: [".codex/skills/anything.md"], diffStatus: "128", verified: false, full: true },
-  ] as const)("certifies sharding only for a complete changed-path list: %j", (input) => {
-    const result = runClassifier(input);
-    expect(result.status).toBe(0);
-    expect(result.full).toBe(input.full);
-    expect(result.diffVerified).toBe(input.verified);
-  });
-
-  it.each([
-    ["inline", "", 0, 0, true],
-    ["", "", 0, 0, true],
-    ["inline", "true", 7, 7, true],
-    ["sharded", "true", 0, 0, false],
-    ["sharded", "", 0, 1, false],
-    ["unknown", "true", 0, 1, false],
-  ] as const)(
-    "executes mirror schedule %j in Actions %j with command exit %i and verdict %i",
-    (schedule, actions, commandStatus, status, called) => {
-      const body = readFileSync(path.join(REPO_ROOT, "scripts", "run-lint-mirror.sh"), "utf-8");
-      const run = spawnSync(
-        "bash",
-        [
-          "-e",
-          "-o",
-          "pipefail",
-          "-c",
-          'pnpm() { printf "pnpm %s\\n" "$*"; return "${PNPM_STATUS:-0}"; }\n' + body,
-        ],
-        {
-          encoding: "utf-8",
-          env: {
-            ...process.env,
-            QFAI_LINT_MIRROR_SCHEDULE: schedule,
-            GITHUB_ACTIONS: actions,
-            PNPM_STATUS: String(commandStatus),
-          },
-        },
-      );
-      expect(run.status).toBe(status);
-      expect(
-        String(run.stdout ?? "")
-          .split(/\r?\n/)
-          .filter((line) => line.startsWith("pnpm ")),
-      ).toEqual(called ? ["pnpm -C packages/qfai lint:mirror-surface"] : []);
-    },
-  );
-
-  it("runs every selected mirror shard independently, without fail-fast cancellation", () => {
-    const jobs = ciJobs();
-    expect(Object.keys(jobs).filter((id) => id.startsWith("lint-mirror"))).toEqual([...mirrorJobs]);
-    for (const [index, id] of mirrorJobs.entries()) {
-      const job = jobs[id];
-      expect(job).toBeDefined();
-      if (job === undefined) throw new Error(`missing mirror job ${id}`);
-      expect(job["name"]).toBe(`lint-mirror (${index + 1})`);
-      expect(needsOf(job)).toEqual(["detect"]);
-      expect(job["if"]).toBe("${{ needs.detect.outputs.full == 'true' }}");
-      expect(job["strategy"]).toBeUndefined();
-      expect(job["continue-on-error"]).toBeUndefined();
-      const steps = stepsOf(id);
-      const preflight = steps.findIndex(
-        (step) => named(step) === "Verify the toolchain action before running it",
-      );
-      const setup = steps.findIndex((step) => step["uses"] === "./.github/actions/setup");
-      expect(preflight).toBeGreaterThan(-1);
-      expect(setup).toBeGreaterThan(preflight);
-      expect(steps[preflight]?.["run"]).toBe(
-        stepsOf("lint").find(
-          (step) => named(step) === "Verify the toolchain action before running it",
-        )?.["run"],
-      );
-      const shard = steps.find((step) => named(step) === `Run mirror surface shard ${index + 1}`);
-      expect(shard?.["env"]).toEqual({ SHARD: String(index + 1) });
-      expect(shard?.["run"]).toBe('pnpm -C packages/qfai lint:mirror-surface --shard="${SHARD}/8"');
-      expect(shard?.["if"]).toBeUndefined();
-      expect(shard?.["continue-on-error"]).toBeUndefined();
-      const run = spawnSync(
-        "bash",
-        [
-          "-e",
-          "-o",
-          "pipefail",
-          "-c",
-          'pnpm() { printf "pnpm %s\\n" "$*"; }\n' + String(shard?.["run"]),
-        ],
-        {
-          encoding: "utf-8",
-          env: { ...process.env, SHARD: String(index + 1) },
-        },
-      );
-      expect(run.status).toBe(0);
-      expect(String(run.stdout).trim()).toBe(
-        `pnpm -C packages/qfai lint:mirror-surface --shard=${index + 1}/8`,
-      );
-      expect(verdictNeeds()).toContain(id);
-    }
-  });
-
-  it.each(["failure", "cancelled", "timed_out", undefined])(
-    "rejects each mirror shard whose result is %s",
-    (result) => {
-      for (const id of mirrorJobs) {
-        const needs: Record<string, { result?: string }> = allNeeds("success");
-        needs[id] = result === undefined ? {} : { result };
-        const run = evaluateVerdict(needs);
-        expect(run.exitCode).toBe(1);
-        expect(run.output).toContain(id);
-      }
-    },
-  );
 });
 
 /**
@@ -2120,7 +1872,6 @@ const VERIFICATION_SET = [
   // audit found it pinned by nothing — the wiring was declared and the program behind it was
   // not.
   "Classify the change against the enumerated directory lists",
-  "Classify the lint schedule",
   // First, and in `lint` rather than in the declared job: the pre-flight refusal of the local
   // composite actions has to run before any job invokes one: a step at the top of
   // `./.github/actions/setup` writing `BASH_ENV` would make every later `shell: bash`
@@ -2134,7 +1885,7 @@ const VERIFICATION_SET = [
   "QFAI self-validate this repo (dogfooding — SDD gates)",
   "QFAI self-validate this repo (dogfooding — full profile)",
   "Run qfai validate gate (fail on error)",
-  // In `lint`: `pnpm ci:lint` is that job's own work. A declared
+  // Last, and in `lint`: `pnpm ci:lint` is that job's own work. A declared
   // dependency pins only the name and the condition on its own, and nothing about
   // whether the step still does anything.
   "Run lint gate",

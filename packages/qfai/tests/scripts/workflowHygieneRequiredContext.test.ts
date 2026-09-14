@@ -43,10 +43,10 @@ describe("the aggregate's dependency topology is declared, not inferred", () => 
     // topology test that would notice runs inside that very job.
     const dir = plantedTree((d) => {
       editWorkflow(d, firstContext(d).workflow, (text) => {
-        if (!text.includes("        test,\n")) {
+        if (!text.includes("test, scanner-coverage")) {
           throw new Error("the needs list is not in the shape this row plants into");
         }
-        return text.replace("        test,\n", "");
+        return text.replace("test, scanner-coverage", "scanner-coverage");
       });
     });
     try {
@@ -1329,7 +1329,7 @@ describe("what runs beside and before a verification is pinned too", () => {
   // that follows a step's `run:` into its package script.
 
   it("reports a pre-script added beside a script a verification invokes", () => {
-    // A package pre-script runs before the CI checks it names.
+    // `preci:lint` runs before `ci:lint`, and a digest that never covers it would miss it.
     const dir = plantedTree((d) => {
       const manifest = path.join(d, "package.json");
       const parsed: unknown = JSON.parse(readFileSync(manifest, "utf-8"));

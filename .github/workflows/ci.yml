@@ -42,7 +42,7 @@ jobs:
           persist-credentials: false
       - name: Classify the change against the enumerated directory lists
         id: classify
-        env: &classification-inputs
+        env:
           # Both event shapes. On a pull request the base commit; on a push the
           # previous head. Empty on neither, which matters because an empty base
           # makes the diff fail and the classifier fail open — correct, but it
@@ -63,7 +63,7 @@ jobs:
           # previous head, and three-dot would silently drop everything the old head carried that
           # the new one does not — the force-push case the shipped detection lane records.
           EVENT_NAME: ${{ github.event_name }}
-        run: &classify-change |
+        run: |
           set -uo pipefail
           # The diff is ATTEMPTED here and decided by the program. `|| true` is
           # deliberate: a shallow clone or an unreachable base ref must reach the
@@ -206,9 +206,8 @@ jobs:
             }
           }
 
-          function emit(full, reason, diffVerified = false) {
-            const line = "full=" + (full ? "true" : "false") + "\n" + "reason=" + oneLine(reason) + "\n" +
-              "diff_verified=" + (diffVerified ? "true" : "false") + "\n";
+          function emit(full, reason) {
+            const line = "full=" + (full ? "true" : "false") + "\n" + "reason=" + oneLine(reason) + "\n";
             const target = process.env.GITHUB_OUTPUT;
             if (typeof target === "string" && target.length > 0) appendFileSync(target, line);
             else process.stdout.write(line);
@@ -297,7 +296,7 @@ jobs:
             }
 
             const verdict = classify(paths);
-            emit(verdict.full, verdict.reason, true);
+            emit(verdict.full, verdict.reason);
           }
 
           main();
@@ -335,7 +334,7 @@ jobs:
       # So this one runs with only `actions/checkout` ahead of it, which sets no environment
       # file, and needs nothing the setup action provides — `bash` and `grep`, both on the image.
       - name: Verify the toolchain action before running it
-        run: &verify-toolchain |
+        run: |
           set -euo pipefail
           # The refusal's OWN bytes first, against a digest held HERE rather than in the file it
           # checks. Review finding [101]: everything this step runs comes out of the pull
@@ -366,16 +365,12 @@ jobs:
           # body, which `verificationBodies` pins and a reviewer reads in the diff.
           sha256sum -c --quiet <<'PINNED_INPUTS'
           fff07d335dc0d74e7c2e6eca7683abd21ae87f7b68e2e39e83467647cc89e180  scripts/check-toolchain-action.sh
-          c228bbb781d756c262ca509e4ea19f1f940d66ec955bfb5023375bd0d600c373  .github/pinned-bytes.txt
+          ab83a0c13d2a2fa325939e7d6280f2f3c82de2f3b31da62e1eb64d52c9ea30d2  .github/pinned-bytes.txt
           bb649cb2684f9db02bdbe3872f029571a8e52c4c6e2ab95e8c8fcf804370af41  .github/lifecycle-manifests.txt
           43d2586975550f5062b4af23112223068cc5676f0906c04fce2bc231df471a9e  .github/command-files.txt
           PINNED_INPUTS
           bash ./scripts/check-toolchain-action.sh
         shell: bash
-      - name: Classify the lint schedule
-        id: classify
-        env: *classification-inputs
-        run: *classify-change
       - name: Ensure base ref is fetched (for pair-changed CI lane)
         run: |
           # PR runs already have origin/main as a remote-tracking ref
@@ -393,156 +388,12 @@ jobs:
       # `.github/actions/setup/action.yml`. It stood inline here six times.
       - uses: ./.github/actions/setup
       - name: Run lint gate
-        env:
-          FULL_LINT: ${{ steps.classify.outputs.full }}
-          DIFF_VERIFIED: ${{ steps.classify.outputs.diff_verified }}
-        shell: bash
-        run: |
-          case "${FULL_LINT}:${DIFF_VERIFIED}" in
-            true:true)
-              export QFAI_LINT_MIRROR_SCHEDULE=sharded
-              ;;
-            true:false|false:true|false:false)
-              export QFAI_LINT_MIRROR_SCHEDULE=inline
-              ;;
-            *)
-              echo "::error::Missing or invalid change-detection result"
-              exit 1
-              ;;
-          esac
-          pnpm ci:lint
+        run: pnpm ci:lint
       - name: Sanity grep — no internal spec IDs or version markers leak
         run: bash packages/qfai/scripts/check-no-internal-version-leakage.sh
       - name: Verify branch name version pin matches package.json#version
         run: bash packages/qfai/scripts/check-branch-version-pin.sh
         shell: bash
-
-  lint-mirror-1:
-    name: lint-mirror (1)
-    needs: [detect]
-    if: ${{ needs.detect.outputs.full == 'true' }}
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    steps:
-      - &mirror-checkout
-        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
-        with:
-          persist-credentials: false
-      - &mirror-preflight
-        name: Verify the toolchain action before running it
-        run: *verify-toolchain
-        shell: bash
-      - &mirror-setup
-        uses: ./.github/actions/setup
-      - name: Run mirror surface shard 1
-        env:
-          SHARD: "1"
-        run: pnpm -C packages/qfai lint:mirror-surface --shard="${SHARD}/8"
-
-  lint-mirror-2:
-    name: lint-mirror (2)
-    needs: [detect]
-    if: ${{ needs.detect.outputs.full == 'true' }}
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    steps:
-      - *mirror-checkout
-      - *mirror-preflight
-      - *mirror-setup
-      - name: Run mirror surface shard 2
-        env:
-          SHARD: "2"
-        run: pnpm -C packages/qfai lint:mirror-surface --shard="${SHARD}/8"
-
-  lint-mirror-3:
-    name: lint-mirror (3)
-    needs: [detect]
-    if: ${{ needs.detect.outputs.full == 'true' }}
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    steps:
-      - *mirror-checkout
-      - *mirror-preflight
-      - *mirror-setup
-      - name: Run mirror surface shard 3
-        env:
-          SHARD: "3"
-        run: pnpm -C packages/qfai lint:mirror-surface --shard="${SHARD}/8"
-
-  lint-mirror-4:
-    name: lint-mirror (4)
-    needs: [detect]
-    if: ${{ needs.detect.outputs.full == 'true' }}
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    steps:
-      - *mirror-checkout
-      - *mirror-preflight
-      - *mirror-setup
-      - name: Run mirror surface shard 4
-        env:
-          SHARD: "4"
-        run: pnpm -C packages/qfai lint:mirror-surface --shard="${SHARD}/8"
-
-  lint-mirror-5:
-    name: lint-mirror (5)
-    needs: [detect]
-    if: ${{ needs.detect.outputs.full == 'true' }}
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    steps:
-      - *mirror-checkout
-      - *mirror-preflight
-      - *mirror-setup
-      - name: Run mirror surface shard 5
-        env:
-          SHARD: "5"
-        run: pnpm -C packages/qfai lint:mirror-surface --shard="${SHARD}/8"
-
-  lint-mirror-6:
-    name: lint-mirror (6)
-    needs: [detect]
-    if: ${{ needs.detect.outputs.full == 'true' }}
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    steps:
-      - *mirror-checkout
-      - *mirror-preflight
-      - *mirror-setup
-      - name: Run mirror surface shard 6
-        env:
-          SHARD: "6"
-        run: pnpm -C packages/qfai lint:mirror-surface --shard="${SHARD}/8"
-
-  lint-mirror-7:
-    name: lint-mirror (7)
-    needs: [detect]
-    if: ${{ needs.detect.outputs.full == 'true' }}
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    steps:
-      - *mirror-checkout
-      - *mirror-preflight
-      - *mirror-setup
-      - name: Run mirror surface shard 7
-        env:
-          SHARD: "7"
-        run: pnpm -C packages/qfai lint:mirror-surface --shard="${SHARD}/8"
-
-  lint-mirror-8:
-    name: lint-mirror (8)
-    needs: [detect]
-    if: ${{ needs.detect.outputs.full == 'true' }}
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    steps:
-      - *mirror-checkout
-      - *mirror-preflight
-      - *mirror-setup
-      - name: Run mirror surface shard 8
-        env:
-          SHARD: "8"
-        run: pnpm -C packages/qfai lint:mirror-surface --shard="${SHARD}/8"
 
   # ── 2. Type checking (current TypeScript) ────────────────────────
   check-types:
@@ -951,24 +802,7 @@ jobs:
     # nothing verified. Failing OPEN is a decision the classifier makes and records;
     # failing HARD must reach the gate.
     needs:
-      [
-        detect,
-        lint,
-        lint-mirror-1,
-        lint-mirror-2,
-        lint-mirror-3,
-        lint-mirror-4,
-        lint-mirror-5,
-        lint-mirror-6,
-        lint-mirror-7,
-        lint-mirror-8,
-        check-types,
-        check-types-future,
-        node-floor,
-        test,
-        scanner-coverage,
-        build,
-      ]
+      [detect, lint, check-types, check-types-future, node-floor, test, scanner-coverage, build]
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:

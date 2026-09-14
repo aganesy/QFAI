@@ -26,7 +26,7 @@
  *
  * This file grows row by row; each describe block is one ledger row.
  */
-import { cp, readdir, readFile, rm, writeFile } from "node:fs/promises";
+import { cp, mkdir, readdir, readFile, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -923,6 +923,11 @@ describe("TC-0003-0050 (TDD-0050): gate is wired into the lint aggregate and not
 
   it("an uncalled script cannot replace either named check in the lint invocation path", async () => {
     const root = await newTempDir();
+    await mkdir(path.join(root, "scripts"), { recursive: true });
+    await cp(
+      path.join(repoRoot, "scripts/run-lint-checks.sh"),
+      path.join(root, "scripts/run-lint-checks.sh"),
+    );
     const scripts = await readScripts(path.join(repoRoot, "package.json"));
     const manifest = path.join(root, "package.json");
     await writeFile(manifest, JSON.stringify({ scripts }), "utf-8");
