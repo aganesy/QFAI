@@ -298,8 +298,9 @@ to both the behaviours a change carries and the code that implements them.
 If you must expand scope, declare it explicitly in a **Delta** section.
 
 The safety floor in `.agents/rules/minimal-implementation.md` § 2, the
-unnumbered Absolute Rule — Output Language, and
-mandatory approvals and irreversible-action confirmations outrank this article.
+unnumbered Absolute Rule — Output Language, required evidence and fact
+verification, and mandatory approvals and irreversible-action confirmations
+outrank this article.
 This article takes precedence over every other article and over conflicting
 instructions in other constitution documents.
 

@@ -1,8 +1,10 @@
 import type * as fsPromises from "node:fs/promises";
+import { execFile } from "node:child_process";
 import { lstat, mkdir, mkdtemp, readdir, readFile, rm, rmdir, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { promisify } from "node:util";
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -10,7 +12,7 @@ import { captureStdout } from "../helpers/stdout.js";
 import { removeTempTree } from "../helpers/tempTree.js";
 
 type FsPromises = typeof fsPromises;
-const { copyFileSpy, linkSpy, lstatSpy, openSpy, rmSpy } = vi.hoisted(() => ({
+const { copyFileSpy, linkSpy, lstatSpy, openSpy, renameSpy, rmSpy } = vi.hoisted(() => ({
   copyFileSpy:
     vi.fn<(actual: FsPromises, ...args: Parameters<FsPromises["copyFile"]>) => Promise<void>>(),
   linkSpy: vi.fn<(actual: FsPromises, ...args: Parameters<FsPromises["link"]>) => Promise<void>>(),
@@ -28,6 +30,8 @@ const { copyFileSpy, linkSpy, lstatSpy, openSpy, rmSpy } = vi.hoisted(() => ({
         ...args: Parameters<FsPromises["open"]>
       ) => ReturnType<FsPromises["open"]>
     >(),
+  renameSpy:
+    vi.fn<(actual: FsPromises, ...args: Parameters<FsPromises["rename"]>) => Promise<void>>(),
   rmSpy: vi.fn<(actual: FsPromises, ...args: Parameters<FsPromises["rm"]>) => Promise<void>>(),
 }));
 
@@ -39,6 +43,7 @@ vi.mock("node:fs/promises", async () => {
     link: (...args: Parameters<FsPromises["link"]>) => linkSpy(actual, ...args),
     lstat: (...args: Parameters<FsPromises["lstat"]>) => lstatSpy(actual, ...args),
     open: (...args: Parameters<FsPromises["open"]>) => openSpy(actual, ...args),
+    rename: (...args: Parameters<FsPromises["rename"]>) => renameSpy(actual, ...args),
     rm: (...args: Parameters<FsPromises["rm"]>) => rmSpy(actual, ...args),
   };
 });
@@ -55,6 +60,7 @@ function passThrough(): void {
   linkSpy.mockImplementation((actual, ...args) => actual.link(...args));
   lstatSpy.mockImplementation((actual, ...args) => actual.lstat(...args));
   openSpy.mockImplementation((actual, ...args) => actual.open(...args));
+  renameSpy.mockImplementation((actual, ...args) => actual.rename(...args));
   rmSpy.mockImplementation((actual, ...args) => actual.rm(...args));
 }
 
@@ -75,6 +81,184 @@ async function withProject(task: (root: string) => Promise<void>): Promise<void>
 
 const init = (root: string): Promise<string> =>
   captureStdout(() => runInit({ dir: root, force: false, dryRun: false, yes: true }));
+
+describe("governed force repairs retain exclusive publication", () => {
+  it("stops before repair when force preflight cannot inspect the occupant", async () => {
+    await withProject(async (root) => {
+      await init(root);
+      const target = path.join(root, ".qfai", "assistant", "catalog", "test-layers.md");
+      await rm(target);
+      await mkdir(target);
+      const cause = Object.assign(new Error("occupant inspection denied"), { code: "EACCES" });
+      let inspected = false;
+      let displaced = false;
+      lstatSpy.mockImplementation((actual, ...args) => {
+        if (String(args[0]) === target && !inspected) {
+          inspected = true;
+          return Promise.reject(cause);
+        }
+        return actual.lstat(...args);
+      });
+      renameSpy.mockImplementation(async (actual, ...args) => {
+        if (String(args[0]) === target) displaced = true;
+        await actual.rename(...args);
+      });
+
+      const failure = await captureStdout(() =>
+        runInit({ dir: root, force: true, dryRun: false, yes: true }),
+      ).then(
+        () => null,
+        (error: unknown) => error,
+      );
+      expect(inspected).toBe(true);
+      expect(displaced).toBe(false);
+      expect(failure).toMatchObject({ cause });
+      expect((await lstat(target)).isDirectory()).toBe(true);
+    });
+  });
+
+  it.each(["ENOTSUP", "EPERM", "EOPNOTSUPP"])(
+    "rejects unsupported publication before displacing an occupied governed asset: %s",
+    async (code) => {
+      await withProject(async (root) => {
+        await init(root);
+        const target = path.join(root, ".qfai", "assistant", "catalog", "test-layers.md");
+        const legacy = path.join(root, ".qfai", "assistant", "instructions", "quality.md");
+        await rm(target);
+        await mkdir(target);
+        await mkdir(path.dirname(legacy));
+        await writeFile(legacy, "# Adopter quality rules\n");
+        const agents = await readFile(path.join(root, "AGENTS.md"));
+        const receiptPath = path.join(root, ".qfai", "assistant", ".assets.lock.json");
+        const receipt = await readFile(receiptPath);
+        let displaced = false;
+        renameSpy.mockImplementation(async (actual, ...args) => {
+          if (String(args[0]) === target) displaced = true;
+          await actual.rename(...args);
+        });
+        linkSpy.mockImplementation(() =>
+          Promise.reject(Object.assign(new Error("hard links unavailable"), { code })),
+        );
+
+        const failure = await captureStdout(() =>
+          runInit({
+            dir: root,
+            force: true,
+            dryRun: false,
+            yes: true,
+            upgradeAssistantTree: true,
+          }),
+        ).then(
+          () => null,
+          (cause: unknown) => cause,
+        );
+        expect(displaced).toBe(false);
+        expect(failure).toMatchObject({ cause: { code } });
+        expect((await lstat(target)).isDirectory()).toBe(true);
+        expect(await readFile(legacy, "utf-8")).toBe("# Adopter quality rules\n");
+        expect((await readFile(path.join(root, "AGENTS.md"))).equals(agents)).toBe(true);
+        expect((await readFile(receiptPath)).equals(receipt)).toBe(true);
+        expect(
+          (await readdir(path.dirname(target))).filter((name) => name.startsWith(".qfai-staging-")),
+        ).toEqual([]);
+      });
+    },
+  );
+
+  it.each([
+    { force: false, dryRun: false },
+    { force: true, dryRun: true },
+  ])("leaves occupied assets untouched with force=$force and dryRun=$dryRun", async (options) => {
+    await withProject(async (root) => {
+      await init(root);
+      const target = path.join(root, ".qfai", "assistant", "catalog", "test-layers.md");
+      await rm(target);
+      await mkdir(target);
+      const receiptPath = path.join(root, ".qfai", "assistant", ".assets.lock.json");
+      const receipt = await readFile(receiptPath);
+      linkSpy.mockClear();
+      linkSpy.mockImplementation(() =>
+        Promise.reject(Object.assign(new Error("hard links unavailable"), { code: "ENOTSUP" })),
+      );
+
+      const output = await captureStdout(() => runInit({ dir: root, ...options, yes: true }));
+      expect(linkSpy).not.toHaveBeenCalled();
+      expect((await lstat(target)).isDirectory()).toBe(true);
+      expect((await readFile(receiptPath)).equals(receipt)).toBe(true);
+      if (options.dryRun) expect(output).toContain("not done: --dry-run");
+    });
+  });
+
+  for (const scenario of [
+    { relative: "catalog/test-layers.md", kind: "directory" },
+    { relative: "constitution/constitution.md", kind: "directory" },
+    { relative: "constitution/constitution.md", kind: "symlink" },
+    { relative: "catalog/test-layers.md", kind: "fifo" },
+  ].flatMap((occupant) => [false, true].map((canonical) => ({ ...occupant, canonical })))) {
+    it.skipIf(scenario.kind === "fifo" && process.platform === "win32")(
+      `preserves concurrent ${scenario.canonical ? "canonical" : "adopter"} bytes after force displacement: ${scenario.kind} ${scenario.relative}`,
+      async () => {
+        await withProject(async (root) => {
+          await init(root);
+          const { relative } = scenario;
+          const target = path.join(root, ".qfai", "assistant", relative);
+          const source = path.join(ROOT, "packages/qfai/assets/init/.qfai/assistant", relative);
+          const replacement = scenario.canonical
+            ? await readFile(source)
+            : Buffer.from("# Concurrent adopter policy\n");
+          const previous = await readAssistantAssetsLock(path.join(root, ".qfai", "assistant"));
+          await rm(target);
+          if (scenario.kind === "directory") await mkdir(target);
+          if (scenario.kind === "symlink") {
+            const actual = await vi.importActual<FsPromises>("node:fs/promises");
+            await actual.symlink(path.join(root, "missing-policy.md"), target, "file");
+          }
+          if (scenario.kind === "fifo") await promisify(execFile)("mkfifo", [target]);
+          let displaced = false;
+          let collision = false;
+          renameSpy.mockImplementation(async (actual, ...args) => {
+            await actual.rename(...args);
+            if (String(args[0]) !== target || displaced) return;
+            displaced = true;
+            await actual.writeFile(target, replacement, { flag: "wx" });
+          });
+          linkSpy.mockImplementation(async (actual, ...args) => {
+            try {
+              await actual.link(...args);
+            } catch (cause: unknown) {
+              if (String(args[1]) === target) {
+                expect(cause).toMatchObject({ code: "EEXIST" });
+                collision = true;
+              }
+              throw cause;
+            }
+          });
+
+          const output = await captureStdout(() =>
+            runInit({ dir: root, force: true, dryRun: false, yes: true }),
+          );
+          expect(displaced).toBe(true);
+          expect((await readFile(target)).equals(replacement)).toBe(true);
+          expect(collision).toBe(true);
+          const recorded = await readAssistantAssetsLock(path.join(root, ".qfai", "assistant"));
+          expect(recorded?.files[relative]).toBe(previous?.files[relative]);
+          if (!scenario.canonical) {
+            expect(output).toContain("was created during initialization and left unchanged");
+          }
+          expect(output).not.toContain("so it was replaced with the shipped file");
+          expect(
+            (await readdir(path.dirname(target))).filter((name) =>
+              name.startsWith(".qfai-staging-"),
+            ),
+          ).toEqual([]);
+          passThrough();
+          await captureStdout(() => runInit({ dir: root, force: true, dryRun: false, yes: true }));
+          expect((await readFile(target)).equals(replacement)).toBe(true);
+        });
+      },
+    );
+  }
+});
 
 describe("constitution creation preserves a path it cannot claim", () => {
   it.each([

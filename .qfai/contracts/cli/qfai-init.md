@@ -161,11 +161,15 @@ A dry run includes the constitution when the same plan would create or update
 its compatible rule master under unlinked parents. A planned write through a
 linked parent cannot authorize the preview. It writes neither file.
 
-Creating missing governed assets requires hard-link support and permission.
+Creating missing governed assets, including publication after a forced occupant
+repair, requires hard-link support and permission.
+An uninspectable force-repair candidate stops the run with its original cause
+before copies, migration or repair.
 Init first verifies the complete readable shipped governed set. Failure stops
 before any copy or migration and asks the user to restore or reinstall QFAI.
 Before any asset copy or migration, init probes the nearest existing directory
-for each eligible absent governed path. It removes only its own probe files.
+for each eligible absent governed path or force-repaired unreadable occupant.
+It removes only its own probe files.
 The creation handle pins the probe's device and inode. Before each removal,
 init rechecks the no-follow identity. A changed or unverifiable occupant is
 preserved and aborts initialization with inspection guidance, not a deletion
@@ -176,9 +180,9 @@ Restore access and remove only the reported probe files before retrying.
 A failed probe creation or link check aborts with the affected directory,
 write-access and hard-link recovery guidance, and preserves existing assets;
 it never falls back to a partial final-path copy or an overwriting rename.
-Existing governed paths and a constitution deferred by an edited safety master
-need no creation probe. Dry runs perform no probe or writes. The check cannot
-prevent a filesystem or permission change later in the run.
+Existing readable regular governed files and a constitution deferred by an
+edited safety master need no creation probe. Dry runs perform no probe or writes.
+The check cannot prevent a filesystem or permission change later in the run.
 
 If cleanup fails after exclusive publication, init keeps the complete published
 file and its receipt. It reports the staging path and asks the user to restore
