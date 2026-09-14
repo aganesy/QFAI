@@ -1023,3 +1023,42 @@ describe("an open fact survives the surfaces that report a session", () => {
     expect(text).toMatch(/where\s+one\s+is\s+permitted/);
   });
 });
+
+describe("trust boundaries depend on the caller's control", () => {
+  it.each([
+    ".agents/rules/minimal-implementation.md",
+    "packages/qfai/assets/init/root/.agents/rules/minimal-implementation.md",
+  ])("%s defines external and internal calls", async (relative) => {
+    const text = await readFile(path.join(ROOT, relative), "utf-8");
+    const floor = text.split("## 2. What the ladder never removes")[1]?.split(/^## /m)[0];
+    expect(floor).toBeDefined();
+    const flat = floor?.replace(/\s+/g, " ");
+    expect(flat).toContain("caller or a source the code does not control");
+    for (const example of [
+      "process entry",
+      "external input",
+      "a received request",
+      "a file or database read",
+      "an environment variable",
+      "user input",
+      "a published library's exported function",
+      "a plugin or tenant context",
+    ]) {
+      expect(flat).toContain(example);
+    }
+    expect(flat).toContain("A call between functions under the code's own control is not one");
+    expect(flat).toContain("parsed there into a form that cannot hold an invalid value");
+    expect(flat).toContain("the code past it carries no branch for that value");
+    expect(flat).toContain("Validation of input crossing a trust boundary");
+  });
+
+  it("keeps the operating and shipped masters byte-identical", async () => {
+    const [operating, shipped] = await Promise.all([
+      readFile(path.join(ROOT, ".agents/rules/minimal-implementation.md")),
+      readFile(
+        path.join(ROOT, "packages/qfai/assets/init/root/.agents/rules/minimal-implementation.md"),
+      ),
+    ]);
+    expect(operating.equals(shipped)).toBe(true);
+  });
+});

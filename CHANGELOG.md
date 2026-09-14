@@ -44,6 +44,9 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   dependencies. Existing repository code can answer the accepted behavior
   without a duplicate implementation. The shipped copy has the same order.
 
+- Define a trust boundary by uncontrolled callers and sources, including public
+  library exports and plugin or tenant contexts (#1803).
+
 - **Retained failures keep unit-level coverage** (#1793). The
   minimal-implementation safety floor protects coverage of the failure paths
   production code retains.
